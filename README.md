@@ -1,2 +1,2 @@
-# MossBenchMark
+# MossBenchmark
 Running Moss with benchmark
