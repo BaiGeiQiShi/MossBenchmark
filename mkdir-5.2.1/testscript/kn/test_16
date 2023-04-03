@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+touch file
+timeout ${TIMEOUT}s $BIN "-v" file  &>$OUTDIR/o16
+retval=$?
+if [[ $retval -eq 124 ]]; then
+    echo 1 &>>$OUTDIR/o16
+elif [[ $retval -gt 128 ]]; then
+    echo 1 &>>$OUTDIR/o16
+else
+    echo 0 &>>$OUTDIR/o16
+fi

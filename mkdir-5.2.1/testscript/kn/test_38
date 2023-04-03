@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+mkdir -p $(pwd)/linuxize
+timeout -k 9 ${TIMEOUT}s $BIN $(pwd)/linuxize/Music/Rock/Gothic &>$OUTDIR/o38
+
+echo "$?" >>$OUTDIR/o38
+info=`ls -ald $(pwd)/linuxize | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o38
+info=`ls -ald $(pwd)/linuxize/Music | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o38
+info=`ls -ald $(pwd)/linuxize/Music/Rock | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o38
+info=`ls -ald $(pwd)/linuxize/Music/Rock/Gothic | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o38
+
+rm -fr $(pwd)/linuxize

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+touch file
+timeout ${TIMEOUT}s $BIN "--help" file  &>$OUTDIR/o17
+retval=$?
+if [[ $retval -eq 124 ]]; then
+    echo 1 &>>$OUTDIR/o17
+elif [[ $retval -gt 128 ]]; then
+    echo 1 &>>$OUTDIR/o17
+else
+    echo 0 &>>$OUTDIR/o17
+fi

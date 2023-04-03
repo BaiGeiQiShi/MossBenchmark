@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+mkdir $(pwd)/tmp/pkumar
+
+timeout -k 9 ${TIMEOUT}s $BIN -v $(pwd)/tmp/pkumar/{dir1,dir2,dir3} &>$OUTDIR/o34
+
+echo "$?" >>$OUTDIR/o34
+info=`ls -ald $(pwd)/tmp/pkumar/dir1 | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o34
+info=`ls -ald $(pwd)/tmp/pkumar/dir2 | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o34
+info=`ls -ald $(pwd)/tmp/pkumar/dir3 | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o34
+
+rm -fr $(pwd)/tmp/pkumar

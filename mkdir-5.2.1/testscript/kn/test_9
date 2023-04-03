@@ -1,0 +1,19 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+option="-p"
+
+rm -rf d1
+
+timeout ${TIMEOUT}s $BIN $option d1/d2  &>$OUTDIR/o9
+
+test -d d1
+echo "$?" >$OUTDIR/o9
+
+test -d d1/d2
+echo "$?" >>$OUTDIR/o9
+

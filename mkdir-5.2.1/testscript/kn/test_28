@@ -1,0 +1,18 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+mkdir -p $(pwd)/tmp
+timeout -k 9 ${TIMEOUT}s $BIN $(pwd)/tmp/{codedb,sysdb,backupdb} &>$OUTDIR/o28
+
+echo "$?" >>$OUTDIR/o28
+info=`ls -ald $(pwd)/tmp/codedb | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o28
+info=`ls -ald $(pwd)/tmp/sysdb | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o28
+info=`ls -ald $(pwd)/tmp/backupdb | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o28
+
+rm -fr $(pwd)/tmp/codedb $(pwd)/tmp/sysdb $(pwd)/tmp/backupdb

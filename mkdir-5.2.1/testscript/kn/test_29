@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+mkdir -p $(pwd)/sysadmins
+timeout -k 9 ${TIMEOUT}s $BIN $(pwd)/sysadmins/engineers &>$OUTDIR/o29
+
+echo "$?" >>$OUTDIR/o29
+info=`ls -ald $(pwd)/sysadmins | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o29
+info=`ls -ald $(pwd)/sysadmins/engineers | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o29
+
+rm -fr $(pwd)/sysadmins

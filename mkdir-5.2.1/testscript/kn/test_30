@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+mkdir -p $(pwd)/debop_script/mkdir/tmp/sysadmins
+timeout -k 9 ${TIMEOUT}s $BIN -p $(pwd)/debop_script/mkdir/tmp/sysadmins/engineers &>$OUTDIR/o30
+
+echo "$?" >>$OUTDIR/o30
+info=`ls -ald $(pwd)/debop_script/mkdir/tmp/sysadmins | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o30
+info=`ls -ald $(pwd)/debop_script/mkdir/tmp/sysadmins/engineers | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
+echo ${info} >>$OUTDIR/o30
+
+rm -fr $(pwd)/debop_script/mkdir/tmp/sysadmins
+

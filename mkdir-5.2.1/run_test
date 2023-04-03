@@ -1,0 +1,27 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+CURRDIR=$(pwd)
+KNOUTDIR=${OUTDIR}/kn
+UKNOUTDIR=${OUTDIR}/ukn
+KNINDIR=${INDIR}/kn
+UKNINDIR=${INDIR}/ukn
+INDIR_CP=$CURRDIR/inputfile
+
+#Copy input files (in case tests might change them)
+if [ -d $KNINDIR ]; then
+    cp -r $KNINDIR ${INDIR_CP}
+fi
+cp -r input.origin/* $INDIR_CP
+#Run known tests
+./run_test_kn.py $BIN $KNOUTDIR $TIMEOUT ${INDIR_CP} True
+
+#Remove copied files
+if [ -d ${INDIR_CP} ]; then
+    chmod 755 -R ${INDIR_CP} #In case permissions are changed
+    rm -fr ${INDIR_CP}
+fi
