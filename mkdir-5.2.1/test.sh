@@ -17,6 +17,7 @@ ORIGIN_SRC=$CURRDIR/$PROGNAME.c.cov.origin.c
 ORIGIN_BIN=$CURRDIR/$PROGNAME.cov.origin
 ORIGIN_OUTDIR=$CURRDIR/output.origin
 DOMGAD=/usr/local/Moss/CovPath/
+debdce=/usr/local/debdce/build/bin/debdce
 
 clearProgram(){
  cwtty=$(tty)
@@ -31,23 +32,43 @@ echo "-1" >> eval_rslt.txt
 echo "-1" >> eval_rslt.txt
 
 if [ ! -f ${BASE_BIN} ]; then
-   ./compile.sh $BASE_SRC $BASE_BIN "-O3 -w"
+   cp ${BASE_SRC} $SRC
+   ./compile.sh $SRC $BASE_BIN "-O3 -w"
 fi
 #Generate Oracle Bin (if needed)
 if [ ! -f ${ORIGIN_BIN} ]; then
-    ./compile.sh ${ORIGIN_SRC} ${ORIGIN_BIN} "-O3 -w"
+    cp ${ORIGIN_SRC} $SRC
+    ./compile.sh ${SRC} ${ORIGIN_BIN} "-O3 -w"
 fi
 #Generate Oracle Outputs (if needed)
 if [ ! -d ${ORIGIN_OUTDIR} ]; then
     mkdir ${ORIGIN_OUTDIR}
-    ./compile.sh ${ORIGIN_SRC} ${BIN} "-O3 -w"                    #NOTE: Do NOT use ORIGIN_BIN here!
+    cp ${ORIGIN_SRC} $SRC
+    ./compile.sh ${SRC} ${BIN} "-O3 -w"                    #NOTE: Do NOT use ORIGIN_BIN here!
     ./run_test ${BIN} ${ORIGIN_OUTDIR} $TIMEOUT $INDIR #NOTE: Do NOT use ORIGIN_BIN here!
     rm ${BIN}
 fi 
 clearProgram
 
-#Compile Reduced Program
+#Dead Code Eliminate
 cp $CURRDIR/$PROGNAME.c $SRC
+
+inputfname=$(basename $SRC)
+if [ -d debdcetmp ]; then
+    rm -rf debdcetmp/*
+else
+    mkdir debdcetmp
+fi
+cp $SRC debdcetmp/$inputfname
+cd debdcetmp
+$debdce debdcetest.sh $inputfname
+
+cd ..
+mv debdcetmp/$inputfname.dce.c $SRC
+rm -rf debdcetmp
+
+
+#Compile Reduced Program
 ./compile.sh $SRC $BIN "-O3 -w"
 
 #Compute Size Reduction
@@ -55,6 +76,9 @@ original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cu
 reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5` - `ls -l ${BASE_BIN} | cut -d' ' -f5`))
 #original_size=`$DOMGAD/build/bin/instrumenter -S ${ORIGIN_SRC}`
 #reduced_size=`$DOMGAD/build/bin/instrumenter -S ${SRC}`
+#original_size=$(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)
+#reduced_size=$(ls -l ${BIN} | cut -d' ' -f5)
+
 
 #Compute Gadget Reduction
 original_gdt=`${GDTBIN} --binary ${ORIGIN_BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
@@ -69,6 +93,8 @@ clearProgram
 pass_all=`grep 'pass-' $CURRDIR/compare.txt | wc -l`
 total_all=$(ls $CURRDIR/testscript/kn | wc -l) #total (all=kn) inputs
 #rm $CURRDIR/compare.txt
+#mv compare.txt compare-$(date +%H:%M:%S).txt
+
 
 #Output to file
 echo "${original_size}" > eval_rslt.txt

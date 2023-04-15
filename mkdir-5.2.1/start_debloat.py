@@ -6,11 +6,11 @@ PROGNAME="mkdir-5.2.1"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="20s"
-alphas=map(str,[0.5])
+TIMEOUT="1h"
+alphas=list(map(str,[0.25,0.5,0.75]))
 ks=map(str,[50,])
-#betas=map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9])
-betas=map(str,[0.5])
+betas=map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9])
+#betas=map(str,[0.1,0.5,0.9])
 CURRDIR=os.getcwd()
 DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
 DEBOP_BIN=f"{DEBOP_DIR}/build/bin/reducer"
@@ -24,7 +24,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -I BaseInputs.txt -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -53,7 +53,7 @@ def BASICBLOCK(_rid):
 def COVBLOAT(_rid):
     try:
         os.system(f"diff {PROGNAME}.c {CURRDIR}/TMCMCBEST.c");print("\n"*5)
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -I ./BaseInputs.txt -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -82,7 +82,7 @@ def TMCMC(alpha,beta,k):
 
     subprocess.run(["cp",f"{CURRDIR}/getsize.sh",f"{CURRDIR}/tmp/getsize.sh"])
     subprocess.run(["cp",f"{CURRDIR}/compile.sh",f"{CURRDIR}/tmp/compile.sh"])
-    rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v{METHOD[version]}"
+    rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3"
     os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"1",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
     subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/domgad_sample_output","-r"])
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{rid}.txt", f"{CURRDIR}/log/stat.{rid}.txt"])
@@ -90,30 +90,39 @@ def TMCMC(alpha,beta,k):
         best=rid.readline().split()
         os.system(f"cp {CURRDIR}/tmp/sample_output/{best[0]}.c {CURRDIR}/TMCMCBEST.c")
 
-os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
-#subprocess.run([f"{CURRDIR}/basegen.sh", PROGNAME, COV])
-subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
-subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
+#os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
+##########################################subprocess.run([f"{CURRDIR}/basegen.sh", PROGNAME, COV])
+#subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
+#subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
+
 for k in ks:
     for alpha in alphas:
         for beta in betas:
+            os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
+            subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
+            subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
+
+
+#            print(beta);os.system("sleep 1")
             #region init envs and do some cleaning
             os.system(f"echo {PROGNAME}.c.origin.c {PROGNAME}.c | xargs -n 1 cp {PROGNAME}.c.{realorcov}.origin.c")
-            subprocess.run(["rm","-rf","output.origin","inputfile","*BEST.c"])
+#            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile","*BEST.c"]),shell=True)
+            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile"]),shell=True)
             # subprocess.run(["source","/etc/profile"])
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for version in ("TMCMC","COVBLOAT","DEBOP"):
-                    while(True):
-                        try:
-                            if(version=="TMCMC"):eval(version)(alpha,beta,k)
-                            else:eval(version)(f"{realorcov}.{filter}.s{debop_samplenum}.a{alpha}.b{beta}.k{k}.v{METHOD[version]}")
-                            #subprocess.run(["cp",f"{CURRDIR}/{version}BEST.c",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c"])
-                            subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c",f"{CURRDIR}/{PROGNAME}.c"])
-                            break
-                        except IndexError as ie:
-                            print(ie) #just pass this iter if it do nothing
+                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
+                    try:
+#                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
+                        if(subversion=="TMCMC"):
+                            eval(subversion)(alpha,beta,k)
+                        else:
+                            eval(subversion)(f"{realorcov}.{filter}.s{debop_samplenum}.a{alpha}.b{beta}.k{k}.v{METHOD[subversion]}")
+                        #subprocess.run(["cp",f"{CURRDIR}/{subversion}BEST.c",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c"])
+                        subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c",f"{CURRDIR}/{PROGNAME}.c"])
+                    except IndexError as ie:
+                        print(ie) #just pass this iter if it do nothing
 
             else:
                 rid = f"{realorcov}.{filter}.s{debop_samplenum}.a{alpha}.b{beta}.k{k}.v{METHOD[version]}"

@@ -5,12 +5,12 @@ OUTDIR=$2
 TIMEOUT=$3
 INDIR=$4
 mkdir -p $(pwd)/linuxbuzz
-timeout -k 9 ${TIMEOUT}s $BIN -Z $(pwd)/linuxbuzz &>$OUTDIR/o250
+timeout -k 9 ${TIMEOUT}s $BIN -Z $(pwd)/linuxbuzz &>$OUTDIR/o25
 
-echo "$?" >>$OUTDIR/o250
+echo "$?" >>$OUTDIR/o25
 info=`ls -ald $(pwd)/linuxbuzz | tr -s ' ' | cut -d ' ' -f 1,2,3,4`
-echo ${info} >>$OUTDIR/o250
+echo ${info} >>$OUTDIR/o25
 info=`ls -Zd $(pwd)/linuxbuzz`
-echo ${info} >>$OUTDIR/o250
+echo ${info} >>$OUTDIR/o25
 
 rm -fr $(pwd)/linuxbuzz

@@ -5,6 +5,6 @@ OUTDIR=$2
 TIMEOUT=$3
 INDIR=$4
 
-timeout -k 9 ${TIMEOUT}s $BIN --version &>$OUTDIR/o261
+timeout -k 9 ${TIMEOUT}s $BIN --version &>$OUTDIR/o26
 
-echo "$?" >>$OUTDIR/o261
+echo "$?" >>$OUTDIR/o26
