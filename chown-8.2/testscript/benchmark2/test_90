@@ -1,0 +1,21 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+uname=$(whoami)
+uid=`id -u ${uname}`
+
+cp -r $INDIR/I8/Documents ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -R ${uname}:${uname} Documents; } &>$OUTDIR/o90
+
+echo "$?" >>$OUTDIR/o90
+own0=`ls -al Documents | tr -s ' ' | cut -d ' ' -f 3`
+own1=`ls -al Documents | tr -s ' ' | cut -d ' ' -f 4`
+echo "${own0} ${own1}" >>$OUTDIR/o90
+
+
+#parentI812
