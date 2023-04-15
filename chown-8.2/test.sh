@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 PROGNAME=chown-8.2
-TIMEOUT=0.5
+TIMEOUT=0.1
 #GDTBIN="python3 /home/qxin6/ROPgadget/ROPgadget.py"
 GDTBIN=ROPgadget
 INPUTROOTDIR=$(pwd)
