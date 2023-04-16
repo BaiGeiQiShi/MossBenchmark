@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/input/tc.297 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN 1 4 2 < tc.297 &> $OUTDIR/o216
+

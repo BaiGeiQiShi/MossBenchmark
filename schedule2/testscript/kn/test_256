@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/input/lu13 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN 3  10  5  < lu13 &> $OUTDIR/o256
+

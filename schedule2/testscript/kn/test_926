@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/input/inp.55 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN 2 8 0 < inp.55 &> $OUTDIR/o926
+
