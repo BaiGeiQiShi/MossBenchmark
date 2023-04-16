@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 PROGNAME=totinfo
-TIMEOUT=0.5
+TIMEOUT=0.2
 #GDTBIN="python3 /home/qxin6/ROPgadget/ROPgadget.py"
 GDTBIN=ROPgadget
 INPUTROOTDIR=$(pwd)
