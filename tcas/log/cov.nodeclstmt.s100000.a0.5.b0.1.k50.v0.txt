@@ -1,0 +1,280 @@
+Input: tcas.tmp.c
+Iteration 1 (Word: 1044)
+Oracle: ./test.sh
+Input: tcas.c
+Output Directory: /moss-script/moss/tcas/debop-out.cov.nodeclstmt.s100000.a0.5.b0.1.k50.v0
+Reduce File: tcas.c
+Start reduction
+Max Samples: 100000
+Max Iterations: 100000000
+Alpha Value: 0.500000
+Beta Value: 0.100000
+K Value: 50.000000
+Generality Factor: 1.000000
+Element Select Probability: -1.000000
+Block: 0
+ProgElement 0: Positive_RA_Alt_Thresh[0] = 400;
+ProgElement 1: Positive_RA_Alt_Thresh[1] = 500;
+ProgElement 2: Positive_RA_Alt_Thresh[2] = 640;
+ProgElement 3: Positive_RA_Alt_Thresh[3] = 740;
+ProgElement 4: return;
+Block: 1
+ProgElement 5: return (Positive_RA_Alt_Thresh[Alt_Layer_Value]);
+Block: 2
+ProgElement 6: return (tmp);
+Block: 3
+ProgElement 7: tmp = Up_Separation;
+Block: 4
+ProgElement 8: tmp = Up_Separation + 100;
+Block: 5
+ProgElement 9: return (result);
+Block: 6
+ProgElement 10: result = tmp___6;
+Block: 7
+ProgElement 11: tmp___6 = 0;
+Block: 8
+ProgElement 12: tmp___6 = 0;
+Block: 9
+ProgElement 13: tmp___6 = 1;
+Block: 10
+ProgElement 14: tmp___5 = ALIM();
+Block: 11
+ProgElement 15: tmp___4 = Own_Above_Threat();
+Block: 12
+ProgElement 16: result = tmp___3;
+Block: 13
+ProgElement 17: tmp___3 = 1;
+Block: 14
+ProgElement 18: tmp___3 = 1;
+Block: 15
+ProgElement 19: tmp___3 = 0;
+Block: 16
+ProgElement 20: tmp___2 = ALIM();
+Block: 17
+ProgElement 21: tmp___1 = Own_Below_Threat();
+Block: 18
+ProgElement 22: tmp___0 = Own_Below_Threat();
+Block: 19
+ProgElement 23: tmp = Inhibit_Biased_Climb();
+ProgElement 24: upward_preferred = tmp > Down_Separation;
+Block: 20
+ProgElement 25: return (result);
+Block: 21
+ProgElement 26: result = tmp___6;
+Block: 22
+ProgElement 27: tmp___6 = 1;
+Block: 23
+ProgElement 28: tmp___6 = 0;
+Block: 24
+ProgElement 29: tmp___6 = 1;
+Block: 25
+ProgElement 30: tmp___5 = ALIM();
+Block: 26
+ProgElement 31: tmp___4 = Own_Above_Threat();
+Block: 27
+ProgElement 32: tmp___3 = Own_Above_Threat();
+Block: 28
+ProgElement 33: result = tmp___2;
+Block: 29
+ProgElement 34: tmp___2 = 0;
+Block: 30
+ProgElement 35: tmp___2 = 0;
+Block: 31
+ProgElement 36: tmp___2 = 1;
+Block: 32
+ProgElement 37: tmp___1 = ALIM();
+Block: 33
+ProgElement 38: tmp___0 = Own_Below_Threat();
+Block: 34
+ProgElement 39: tmp = Inhibit_Biased_Climb();
+ProgElement 40: upward_preferred = tmp > Down_Separation;
+Block: 35
+ProgElement 41: return (Own_Tracked_Alt < Other_Tracked_Alt);
+Block: 36
+ProgElement 42: return (Other_Tracked_Alt < Own_Tracked_Alt);
+Block: 37
+ProgElement 43: return (alt_sep);
+Block: 38
+ProgElement 44: alt_sep = 0;
+Block: 39
+ProgElement 45: alt_sep = 2;
+Block: 40
+ProgElement 46: alt_sep = 1;
+Block: 41
+ProgElement 47: need_downward_RA = tmp___6;
+Block: 42
+ProgElement 48: tmp___6 = 0;
+Block: 43
+ProgElement 49: tmp___6 = 0;
+Block: 44
+ProgElement 50: tmp___6 = 1;
+Block: 45
+ProgElement 51: tmp___5 = Own_Above_Threat();
+Block: 46
+ProgElement 52: need_upward_RA = tmp___3;
+ProgElement 53: tmp___4 = Non_Crossing_Biased_Descend();
+Block: 47
+ProgElement 54: tmp___3 = 0;
+Block: 48
+ProgElement 55: tmp___3 = 0;
+Block: 49
+ProgElement 56: tmp___3 = 1;
+Block: 50
+ProgElement 57: tmp___2 = Own_Below_Threat();
+Block: 51
+ProgElement 58: tmp___1 = Non_Crossing_Biased_Climb();
+Block: 52
+ProgElement 59: intent_not_known = tmp___0;
+ProgElement 60: alt_sep = 0;
+Block: 53
+ProgElement 61: tmp___0 = 0;
+Block: 54
+ProgElement 62: tmp___0 = 0;
+Block: 55
+ProgElement 63: tmp___0 = 1;
+Block: 56
+ProgElement 64: enabled = tmp;
+ProgElement 65: tcas_equipped = Other_Capability == 1;
+Block: 57
+ProgElement 66: tmp = 0;
+Block: 58
+ProgElement 67: tmp = 0;
+Block: 59
+ProgElement 68: tmp = 0;
+Block: 60
+ProgElement 69: tmp = 1;
+Block: 61
+ProgElement 70: initialize();
+ProgElement 71: Cur_Vertical_Sep = atoi(*(argv + 1));
+ProgElement 72: High_Confidence = atoi(*(argv + 2));
+ProgElement 73: Two_of_Three_Reports_Valid = atoi(*(argv + 3));
+ProgElement 74: Own_Tracked_Alt = atoi(*(argv + 4));
+ProgElement 75: Own_Tracked_Alt_Rate = atoi(*(argv + 5));
+ProgElement 76: Other_Tracked_Alt = atoi(*(argv + 6));
+ProgElement 77: Alt_Layer_Value = atoi(*(argv + 7));
+ProgElement 78: Up_Separation = atoi(*(argv + 8));
+ProgElement 79: Down_Separation = atoi(*(argv + 9));
+ProgElement 80: Other_RAC = atoi(*(argv + 10));
+ProgElement 81: Other_Capability = atoi(*(argv + 11));
+ProgElement 82: Climb_Inhibit = atoi(*(argv + 12));
+ProgElement 83: tmp = alt_sep_test();
+ProgElement 84: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"%d\n", tmp);
+ProgElement 85: exit(0);
+Block: 62
+ProgElement 86: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"Error: Command line arguments are\n");
+ProgElement 87: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"Cur_Vertical_Sep, High_Confidence, Two_of_Three_Reports_Valid\n");
+ProgElement 88: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"Own_Tracked_Alt, Own_Tracked_Alt_Rate, Other_Tracked_Alt\n");
+ProgElement 89: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"Alt_Layer_Value, Up_Separation, Down_Separation\n");
+ProgElement 90: fprintf((FILE * __restrict  )stdout, (char const   * __restrict  )"Other_RAC, Other_Capability, Climb_Inhibit\n");
+ProgElement 91: exit(1);
+Block: 63
+ProgElement 92: goto _L___0;
+Block: 64
+ProgElement 93: goto _L___1;
+Block: 65
+ProgElement 94: goto _L;
+Input: tcas.tmp.c
+Iteration 1 (Word: 692)
+Iteration 2 (Word: 342)
+Iteration 3 (Word: 299)
+Iteration 1 (Word: 299)
+
+Initial SR-Score: 1.000000; Initial AR-Score: 0.581818; Initial R-Score: 0.790909; Initial G-Score: 0.000000; Initial O-Score: 0.711818; Initial D-Score: 2863738164084736.000000
+
+Current Iteration: 0; Current Samples: 0
+Current Best Sample Id: -1
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.42718703
+Curren PROB is 0.4298998!
+Selected ProgElement Index: 8
+Adding back ProgElement of Index: 8
+Input: tcas.tmp.c
+Iteration 1 (Word: 697)
+Iteration 2 (Word: 357)
+Iteration 3 (Word: 314)
+Iteration 1 (Word: 314)
+Sample Id: 0
+SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Last SR-Score: 1.000000; Last AR-Score: 0.581818; Last R-Score: 0.790909; Last G-Score: 0.000000; Last O-Score: 0.711818; Last D-Score: 2863738164084736.000000
+Accepted? Yes
+
+Current Iteration: 1; Current Samples: 1
+Current Best Sample Id: 0
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.37863865
+Curren PROB is 0.38060525!
+Selected ProgElement Index: 81
+Adding back ProgElement of Index: 81
+Input: tcas.tmp.c
+Iteration 1 (Word: 702)
+Iteration 2 (Word: 362)
+Iteration 3 (Word: 319)
+Iteration 1 (Word: 319)
+Sample Id: 1
+SR-Score: 0.462963; AR-Score: 0.509091; R-Score: 0.486027; G-Score: 0.000000; O-Score: 0.437424; D-Score: 3151713280.000000
+Last SR-Score: 1.000000; Last AR-Score: 0.581818; Last R-Score: 0.790909; Last G-Score: 0.000000; Last O-Score: 0.711818; Last D-Score: 2863738164084736.000000
+Accepted? Yes
+
+Current Iteration: 2; Current Samples: 2
+Current Best Sample Id: 0
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.5720348
+Curren PROB is 0.575538!
+Selected ProgElement Index: 85
+Adding back ProgElement of Index: 85
+Input: tcas.tmp.c
+Iteration 1 (Word: 703)
+Iteration 2 (Word: 363)
+Iteration 3 (Word: 320)
+Iteration 1 (Word: 320)
+Sample Id: 2
+SR-Score: 0.333333; AR-Score: 0.527273; R-Score: 0.430303; G-Score: 0.000000; O-Score: 0.387273; D-Score: 256755808.000000
+Last SR-Score: 0.462963; Last AR-Score: 0.509091; Last R-Score: 0.486027; Last G-Score: 0.000000; Last O-Score: 0.437424; Last D-Score: 3151713280.000000
+Accepted? Yes
+
+Current Iteration: 3; Current Samples: 3
+Current Best Sample Id: 0
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.5422506
+Curren PROB is 0.54481876!
+Selected ProgElement Index: 78
+Adding back ProgElement of Index: 78
+Input: tcas.tmp.c
+Iteration 1 (Word: 708)
+Iteration 2 (Word: 368)
+Iteration 3 (Word: 325)
+Iteration 1 (Word: 325)
+Sample Id: 3
+SR-Score: 0.333333; AR-Score: 0.521212; R-Score: 0.427273; G-Score: 0.000000; O-Score: 0.384545; D-Score: 224025856.000000
+Last SR-Score: 0.333333; Last AR-Score: 0.527273; Last R-Score: 0.430303; Last G-Score: 0.000000; Last O-Score: 0.387273; Last D-Score: 256755808.000000
+Accepted? Yes
+
+Current Iteration: 4; Current Samples: 4
+Current Best Sample Id: 0
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.7933454
+Curren PROB is 0.80403346!
+Selected ProgElement Index: 52
+Adding back ProgElement of Index: 52
+Input: tcas.tmp.c
+Iteration 1 (Word: 711)
+Iteration 2 (Word: 374)
+Iteration 3 (Word: 364)
+Iteration 1 (Word: 364)
+Sample Id: 4
+SR-Score: 0.333333; AR-Score: 0.521212; R-Score: 0.427273; G-Score: 0.000000; O-Score: 0.384545; D-Score: 224025856.000000
+Last SR-Score: 0.333333; Last AR-Score: 0.521212; Last R-Score: 0.427273; Last G-Score: 0.000000; Last O-Score: 0.384545; Last D-Score: 224025856.000000
+Accepted? Yes
+
+Current Iteration: 5; Current Samples: 5
+Current Best Sample Id: 0
+Current Best SR-Score: 1.000000; AR-Score: 0.581818; R-Score: 0.790909; G-Score: 0.000000; O-Score: 0.711818; D-Score: 2863738164084736.000000
+Random PROB generated: 0.54233336
+Curren PROB is 0.5435758!
+Selected ProgElement Index: 34
+Adding back ProgElement of Index: 34
+Input: tcas.tmp.c
+Iteration 1 (Word: 714)
+Iteration 2 (Word: 404)
+Iteration 3 (Word: 394)
+Iteration 1 (Word: 394)
