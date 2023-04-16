@@ -1,0 +1,6 @@
+#!/bin/bash
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+timeout ${TIMEOUT} $BIN -u $INDIR/input/id:000008,sig:11,src:000032,op:havoc,rep:4  &>$OUTDIR/o72
