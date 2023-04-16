@@ -107,7 +107,7 @@ for k in ks:
             #region init envs and do some cleaning
             os.system(f"echo {PROGNAME}.c.origin.c {PROGNAME}.c | xargs -n 1 cp {PROGNAME}.c.{realorcov}.origin.c")
 #            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile","*BEST.c"]),shell=True)
-            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile"]),shell=True)
+            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile","*BEST.c"]),shell=True)
             # subprocess.run(["source","/etc/profile"])
             #endregion init envs and do some cleaning
 
