@@ -1,0 +1,3603 @@
+Program name: flex-2.5.4
+Max Number of Samples: 100
+Weight kr: 0.5
+Weight w: 0.9
+K-value: 50.0
+Total Number of Inputs used for Path Quantification: 670
+Max Generality: 1.0
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 37804)
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:06:31 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 0
+Generate sample id: 0
+Add trace 132
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 57412)
+Iteration 2 (Word: 54156)
+Iteration 3 (Word: 53692)
+Iteration 1 (Word: 53692)
+Origin #Stmts: 5381
+Reduced #Stmts: 2656
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5748
+Size Reduction: 0.50641143
+AttkSurf Reduction: 0.56837124
+Reduction: 0.5373913
+Generality: 0.0014925373
+OScore: 0.055082425
+DScore: 15.707232
+DScore Ratio: 0.10920493
+Trace Ids Covered: 132
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:06:51 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 1
+Generate sample id: 0
+Add trace 552
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 55913)
+Iteration 2 (Word: 52638)
+Iteration 3 (Word: 52174)
+Iteration 1 (Word: 52174)
+Origin #Stmts: 5381
+Reduced #Stmts: 2325
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5600
+Size Reduction: 0.5679242
+AttkSurf Reduction: 0.5794849
+Reduction: 0.57370454
+Generality: 0.0014925373
+OScore: 0.058713753
+DScore: 18.834448
+DScore Ratio: 0.13094698
+Trace Ids Covered: 552
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:07:09 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 2
+Generate sample id: 0
+Add trace 412
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 57246)
+Iteration 2 (Word: 53927)
+Iteration 3 (Word: 53437)
+Iteration 1 (Word: 53437)
+Origin #Stmts: 5381
+Reduced #Stmts: 2622
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5418
+Size Reduction: 0.51273
+AttkSurf Reduction: 0.5931516
+Reduction: 0.55294085
+Generality: 0.0014925373
+OScore: 0.05663738
+DScore: 16.977163
+DScore Ratio: 0.11803416
+Trace Ids Covered: 412
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:07:28 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 3
+Generate sample id: 0
+Add trace 299
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 57467)
+Iteration 2 (Word: 54217)
+Iteration 3 (Word: 53712)
+Iteration 1 (Word: 53712)
+Origin #Stmts: 5381
+Reduced #Stmts: 2650
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5496
+Size Reduction: 0.50752646
+AttkSurf Reduction: 0.58729446
+Reduction: 0.5474105
+Generality: 0.0014925373
+OScore: 0.056084346
+DScore: 16.514147
+DScore Ratio: 0.11481503
+Trace Ids Covered: 299
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:07:47 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 4
+Generate sample id: 0
+Add trace 176
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 54503)
+Iteration 2 (Word: 51378)
+Iteration 3 (Word: 50970)
+Iteration 1 (Word: 50970)
+Origin #Stmts: 5381
+Reduced #Stmts: 2153
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5804
+Size Reduction: 0.5998885
+AttkSurf Reduction: 0.5641661
+Reduction: 0.5820273
+Generality: 0.0059701493
+OScore: 0.06357588
+DScore: 24.017769
+DScore Ratio: 0.16698416
+Trace Ids Covered: 176
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:08:05 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 5
+Generate sample id: 0
+Add trace 652
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 54312)
+Iteration 2 (Word: 50803)
+Iteration 3 (Word: 50343)
+Iteration 1 (Word: 50343)
+Origin #Stmts: 5381
+Reduced #Stmts: 2004
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5303
+Size Reduction: 0.6275785
+AttkSurf Reduction: 0.6017872
+Reduction: 0.61468285
+Generality: 0.0014925373
+OScore: 0.06281158
+DScore: 23.117252
+DScore Ratio: 0.16072328
+Trace Ids Covered: 652
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:08:21 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 6
+Generate sample id: 0
+Add trace 111
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 54687)
+Iteration 2 (Word: 51662)
+Iteration 3 (Word: 51265)
+Iteration 1 (Word: 51265)
+Origin #Stmts: 5381
+Reduced #Stmts: 2295
+Origin #Gadgets: 13317
+Reduced #Gadgets: 4919
+Size Reduction: 0.5734993
+AttkSurf Reduction: 0.6306225
+Reduction: 0.6020609
+Generality: 0.0014925373
+OScore: 0.061549388
+DScore: 21.70341
+DScore Ratio: 0.15089351
+Trace Ids Covered: 111
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:08:38 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 7
+Generate sample id: 0
+Add trace 112
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 56155)
+Iteration 2 (Word: 52936)
+Iteration 3 (Word: 52470)
+Iteration 1 (Word: 52470)
+Origin #Stmts: 5381
+Reduced #Stmts: 2404
+Origin #Gadgets: 13317
+Reduced #Gadgets: 6201
+Size Reduction: 0.55324286
+AttkSurf Reduction: 0.53435457
+Reduction: 0.5437987
+Generality: 0.0029850747
+OScore: 0.057066448
+DScore: 17.345316
+DScore Ratio: 0.12059375
+Trace Ids Covered: 112
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:08:57 GMT 2023
+Best Sample Id: -1
+Best Size Reduction: 1.0
+Best AttkSurf Reduction: 0.98745966
+Best Reduction: 0.9937298
+Best Generality: 0.0
+Best OScore: 0.099373005
+Best DScore: 143.83263
+Best Trace Ids Covered: 
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 8
+Generate sample id: 0
+Add trace 494
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 38601)
+Iteration 2 (Word: 38279)
+Iteration 3 (Word: 38270)
+Iteration 1 (Word: 38270)
+Origin #Stmts: 5381
+Reduced #Stmts: 78
+Origin #Gadgets: 13317
+Reduced #Gadgets: 182
+Size Reduction: 0.98550457
+AttkSurf Reduction: 0.98633325
+Reduction: 0.9859189
+Generality: 0.0014925373
+OScore: 0.09993519
+DScore: 147.933
+DScore Ratio: 1.028508
+Trace Ids Covered: 494
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:09:04 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 9
+Generate sample id: 1
+Add trace 0
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 55887)
+Iteration 2 (Word: 52248)
+Iteration 3 (Word: 51788)
+Iteration 1 (Word: 51788)
+Origin #Stmts: 5381
+Reduced #Stmts: 2248
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5092
+Size Reduction: 0.5822338
+AttkSurf Reduction: 0.6176316
+Reduction: 0.5999327
+Generality: 0.0029850747
+OScore: 0.06267985
+DScore: 22.965485
+DScore Ratio: 0.15524247
+Trace Ids Covered: 0,494
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:09:21 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 10
+Generate sample id: 1
+Add trace 91
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 57396)
+Iteration 2 (Word: 53993)
+Iteration 3 (Word: 53503)
+Iteration 1 (Word: 53503)
+Origin #Stmts: 5381
+Reduced #Stmts: 2629
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5666
+Size Reduction: 0.51142913
+AttkSurf Reduction: 0.5745288
+Reduction: 0.542979
+Generality: 0.0029850747
+OScore: 0.05698448
+DScore: 17.274374
+DScore Ratio: 0.11677161
+Trace Ids Covered: 91,494
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:09:40 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 11
+Generate sample id: 1
+Add trace 320
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 56000)
+Iteration 2 (Word: 52575)
+Iteration 3 (Word: 52115)
+Iteration 1 (Word: 52115)
+Origin #Stmts: 5381
+Reduced #Stmts: 2326
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5535
+Size Reduction: 0.56773835
+AttkSurf Reduction: 0.58436584
+Reduction: 0.57605207
+Generality: 0.0029850747
+OScore: 0.06029179
+DScore: 20.380724
+DScore Ratio: 0.13776997
+Trace Ids Covered: 320,494
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:09:58 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 12
+Generate sample id: 1
+Add trace 467
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 46523)
+Iteration 2 (Word: 43662)
+Iteration 3 (Word: 43293)
+Iteration 1 (Word: 43293)
+Origin #Stmts: 5381
+Reduced #Stmts: 782
+Origin #Gadgets: 13317
+Reduced #Gadgets: 724
+Size Reduction: 0.85467386
+AttkSurf Reduction: 0.9456334
+Reduction: 0.90015364
+Generality: 0.0029850747
+OScore: 0.09270195
+DScore: 103.037964
+DScore Ratio: 0.69651777
+Trace Ids Covered: 467,494
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:10:07 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 13
+Generate sample id: 2
+Add trace 74
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 56733)
+Iteration 2 (Word: 53267)
+Iteration 3 (Word: 52822)
+Iteration 1 (Word: 52822)
+Origin #Stmts: 5381
+Reduced #Stmts: 2454
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5897
+Size Reduction: 0.5439509
+AttkSurf Reduction: 0.55718255
+Reduction: 0.55056673
+Generality: 0.0059701493
+OScore: 0.060429823
+DScore: 20.521868
+DScore Ratio: 0.19916803
+Trace Ids Covered: 74,467,494
+Reject. Revert.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:10:25 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 14
+Generate sample id: 2
+Add trace 608
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 55027)
+Iteration 2 (Word: 51603)
+Iteration 3 (Word: 51101)
+Iteration 1 (Word: 51101)
+Origin #Stmts: 5381
+Reduced #Stmts: 2165
+Origin #Gadgets: 13317
+Reduced #Gadgets: 5705
+Size Reduction: 0.59765846
+AttkSurf Reduction: 0.5716002
+Reduction: 0.5846293
+Generality: 0.0044776117
+OScore: 0.062492795
+DScore: 22.751698
+DScore Ratio: 0.22080888
+Trace Ids Covered: 467,494,608
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:10:43 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 15
+Generate sample id: 3
+Add trace 413
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 58362)
+Iteration 2 (Word: 55050)
+Iteration 3 (Word: 54614)
+Iteration 1 (Word: 54614)
+Origin #Stmts: 5381
+Reduced #Stmts: 2847
+Origin #Gadgets: 13317
+Reduced #Gadgets: 7127
+Size Reduction: 0.47091618
+AttkSurf Reduction: 0.4648194
+Reduction: 0.4678678
+Generality: 0.011940299
+OScore: 0.057533056
+DScore: 17.754744
+DScore Ratio: 0.78037006
+Trace Ids Covered: 413,467,494,608
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:11:04 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 16
+Generate sample id: 4
+Add trace 611
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 58912)
+Iteration 2 (Word: 55629)
+Iteration 3 (Word: 55180)
+Iteration 1 (Word: 55180)
+Origin #Stmts: 5381
+Reduced #Stmts: 2948
+Origin #Gadgets: 13317
+Reduced #Gadgets: 7354
+Size Reduction: 0.45214644
+AttkSurf Reduction: 0.44777352
+Reduction: 0.44996
+Generality: 0.046268657
+OScore: 0.086637795
+DScore: 76.08793
+DScore Ratio: 4.2854986
+Trace Ids Covered: 413,467,494,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:11:25 GMT 2023
+Best Sample Id: 0
+Best Size Reduction: 0.98550457
+Best AttkSurf Reduction: 0.98633325
+Best Reduction: 0.9859189
+Best Generality: 0.0014925373
+Best OScore: 0.09993519
+Best DScore: 147.933
+Best Trace Ids Covered: 494
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 17
+Generate sample id: 5
+Add trace 88
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 59163)
+Iteration 2 (Word: 55899)
+Iteration 3 (Word: 55502)
+Iteration 1 (Word: 55502)
+Origin #Stmts: 5381
+Reduced #Stmts: 3004
+Origin #Gadgets: 13317
+Reduced #Gadgets: 7619
+Size Reduction: 0.44173944
+AttkSurf Reduction: 0.42787415
+Reduction: 0.4348068
+Generality: 0.0761194
+OScore: 0.11198814
+DScore: 270.26614
+DScore Ratio: 3.552024
+Trace Ids Covered: 88,413,467,494,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:11:47 GMT 2023
+Best Sample Id: 5
+Best Size Reduction: 0.44173944
+Best AttkSurf Reduction: 0.42787415
+Best Reduction: 0.4348068
+Best Generality: 0.0761194
+Best OScore: 0.11198814
+Best DScore: 270.26614
+Best Trace Ids Covered: 88,413,467,494,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 18
+Generate sample id: 6
+Add trace 375
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 59419)
+Iteration 2 (Word: 56179)
+Iteration 3 (Word: 55795)
+Iteration 1 (Word: 55795)
+Origin #Stmts: 5381
+Reduced #Stmts: 3056
+Origin #Gadgets: 13317
+Reduced #Gadgets: 7685
+Size Reduction: 0.43207583
+AttkSurf Reduction: 0.42291808
+Reduction: 0.42749697
+Generality: 0.1
+OScore: 0.1327497
+DScore: 763.1736
+DScore Ratio: 2.8237853
+Trace Ids Covered: 88,375,413,467,494,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:12:09 GMT 2023
+Best Sample Id: 6
+Best Size Reduction: 0.43207583
+Best AttkSurf Reduction: 0.42291808
+Best Reduction: 0.42749697
+Best Generality: 0.1
+Best OScore: 0.1327497
+Best DScore: 763.1736
+Best Trace Ids Covered: 88,375,413,467,494,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 19
+Generate sample id: 7
+Add trace 516
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61102)
+Iteration 2 (Word: 58003)
+Iteration 3 (Word: 57619)
+Iteration 1 (Word: 57619)
+Origin #Stmts: 5381
+Reduced #Stmts: 3429
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10224
+Size Reduction: 0.36275786
+AttkSurf Reduction: 0.23225951
+Reduction: 0.2975087
+Generality: 0.123880595
+OScore: 0.1412434
+DScore: 1166.9747
+DScore Ratio: 1.5291078
+Trace Ids Covered: 88,375,413,467,494,516,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:12:35 GMT 2023
+Best Sample Id: 7
+Best Size Reduction: 0.36275786
+Best AttkSurf Reduction: 0.23225951
+Best Reduction: 0.2975087
+Best Generality: 0.123880595
+Best OScore: 0.1412434
+Best DScore: 1166.9747
+Best Trace Ids Covered: 88,375,413,467,494,516,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 20
+Generate sample id: 8
+Add trace 272
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61102)
+Iteration 2 (Word: 58003)
+Iteration 3 (Word: 57619)
+Iteration 1 (Word: 57619)
+Origin #Stmts: 5381
+Reduced #Stmts: 3429
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10224
+Size Reduction: 0.36275786
+AttkSurf Reduction: 0.23225951
+Reduction: 0.2975087
+Generality: 0.123880595
+OScore: 0.1412434
+DScore: 1166.9747
+DScore Ratio: 1.0
+Trace Ids Covered: 88,272,375,413,467,494,516,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:13:01 GMT 2023
+Best Sample Id: 7
+Best Size Reduction: 0.36275786
+Best AttkSurf Reduction: 0.23225951
+Best Reduction: 0.2975087
+Best Generality: 0.123880595
+Best OScore: 0.1412434
+Best DScore: 1166.9747
+Best Trace Ids Covered: 88,375,413,467,494,516,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 21
+Generate sample id: 9
+Add trace 570
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61132)
+Iteration 2 (Word: 58039)
+Iteration 3 (Word: 57655)
+Iteration 1 (Word: 57655)
+Origin #Stmts: 5381
+Reduced #Stmts: 3441
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10361
+Size Reduction: 0.36052778
+AttkSurf Reduction: 0.22197191
+Reduction: 0.29124984
+Generality: 0.19402985
+OScore: 0.20375185
+DScore: 26571.447
+DScore Ratio: 22.769514
+Trace Ids Covered: 88,272,375,413,467,494,516,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:13:27 GMT 2023
+Best Sample Id: 9
+Best Size Reduction: 0.36052778
+Best AttkSurf Reduction: 0.22197191
+Best Reduction: 0.29124984
+Best Generality: 0.19402985
+Best OScore: 0.20375185
+Best DScore: 26571.447
+Best Trace Ids Covered: 88,272,375,413,467,494,516,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 22
+Generate sample id: 10
+Add trace 567
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61208)
+Iteration 2 (Word: 58118)
+Iteration 3 (Word: 57734)
+Iteration 1 (Word: 57734)
+Origin #Stmts: 5381
+Reduced #Stmts: 3457
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10411
+Size Reduction: 0.35755435
+AttkSurf Reduction: 0.21821731
+Reduction: 0.28788584
+Generality: 0.23582089
+OScore: 0.24102738
+DScore: 171333.92
+DScore Ratio: 6.448046
+Trace Ids Covered: 88,272,375,413,467,494,516,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:13:53 GMT 2023
+Best Sample Id: 10
+Best Size Reduction: 0.35755435
+Best AttkSurf Reduction: 0.21821731
+Best Reduction: 0.28788584
+Best Generality: 0.23582089
+Best OScore: 0.24102738
+Best DScore: 171333.92
+Best Trace Ids Covered: 88,272,375,413,467,494,516,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 23
+Generate sample id: 11
+Add trace 313
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61250)
+Iteration 2 (Word: 58125)
+Iteration 3 (Word: 57741)
+Iteration 1 (Word: 57741)
+Origin #Stmts: 5381
+Reduced #Stmts: 3459
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10399
+Size Reduction: 0.35718268
+AttkSurf Reduction: 0.21911842
+Reduction: 0.28815055
+Generality: 0.28955224
+OScore: 0.28941208
+DScore: 1925322.2
+DScore Ratio: 11.23725
+Trace Ids Covered: 88,272,313,375,413,467,494,516,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:14:20 GMT 2023
+Best Sample Id: 11
+Best Size Reduction: 0.35718268
+Best AttkSurf Reduction: 0.21911842
+Best Reduction: 0.28815055
+Best Generality: 0.28955224
+Best OScore: 0.28941208
+Best DScore: 1925322.2
+Best Trace Ids Covered: 88,272,313,375,413,467,494,516,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 24
+Generate sample id: 12
+Add trace 543
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61262)
+Iteration 2 (Word: 58143)
+Iteration 3 (Word: 57759)
+Iteration 1 (Word: 57759)
+Origin #Stmts: 5381
+Reduced #Stmts: 3461
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10382
+Size Reduction: 0.356811
+AttkSurf Reduction: 0.22039498
+Reduction: 0.28860298
+Generality: 0.48208955
+OScore: 0.4627409
+DScore: 1.11761172E10
+DScore Ratio: 5804.803
+Trace Ids Covered: 88,272,313,375,413,467,494,516,543,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:14:46 GMT 2023
+Best Sample Id: 12
+Best Size Reduction: 0.356811
+Best AttkSurf Reduction: 0.22039498
+Best Reduction: 0.28860298
+Best Generality: 0.48208955
+Best OScore: 0.4627409
+Best DScore: 1.11761172E10
+Best Trace Ids Covered: 88,272,313,375,413,467,494,516,543,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 25
+Generate sample id: 13
+Add trace 266
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61262)
+Iteration 2 (Word: 58143)
+Iteration 3 (Word: 57759)
+Iteration 1 (Word: 57759)
+Origin #Stmts: 5381
+Reduced #Stmts: 3461
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10382
+Size Reduction: 0.356811
+AttkSurf Reduction: 0.22039498
+Reduction: 0.28860298
+Generality: 0.48208955
+OScore: 0.4627409
+DScore: 1.11761172E10
+DScore Ratio: 1.0
+Trace Ids Covered: 88,266,272,313,375,413,467,494,516,543,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:15:12 GMT 2023
+Best Sample Id: 12
+Best Size Reduction: 0.356811
+Best AttkSurf Reduction: 0.22039498
+Best Reduction: 0.28860298
+Best Generality: 0.48208955
+Best OScore: 0.4627409
+Best DScore: 1.11761172E10
+Best Trace Ids Covered: 88,272,313,375,413,467,494,516,543,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 26
+Generate sample id: 14
+Add trace 22
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61481)
+Iteration 2 (Word: 58355)
+Iteration 3 (Word: 57971)
+Iteration 1 (Word: 57971)
+Origin #Stmts: 5381
+Reduced #Stmts: 3513
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10445
+Size Reduction: 0.34714738
+AttkSurf Reduction: 0.2156642
+Reduction: 0.28140578
+Generality: 0.48656717
+OScore: 0.466051
+DScore: 1.3187711E10
+DScore Ratio: 1.1799904
+Trace Ids Covered: 22,88,266,272,313,375,413,467,494,516,543,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:15:39 GMT 2023
+Best Sample Id: 14
+Best Size Reduction: 0.34714738
+Best AttkSurf Reduction: 0.2156642
+Best Reduction: 0.28140578
+Best Generality: 0.48656717
+Best OScore: 0.466051
+Best DScore: 1.3187711E10
+Best Trace Ids Covered: 22,88,266,272,313,375,413,467,494,516,543,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 27
+Generate sample id: 15
+Add trace 334
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 61486)
+Iteration 2 (Word: 58372)
+Iteration 3 (Word: 57988)
+Iteration 1 (Word: 57988)
+Origin #Stmts: 5381
+Reduced #Stmts: 3518
+Origin #Gadgets: 13317
+Reduced #Gadgets: 10432
+Size Reduction: 0.34621817
+AttkSurf Reduction: 0.21664038
+Reduction: 0.2814293
+Generality: 0.4880597
+OScore: 0.46739665
+DScore: 1.41055334E10
+DScore Ratio: 1.0695968
+Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:16:06 GMT 2023
+Best Sample Id: 15
+Best Size Reduction: 0.34621817
+Best AttkSurf Reduction: 0.21664038
+Best Reduction: 0.2814293
+Best Generality: 0.4880597
+Best OScore: 0.46739665
+Best DScore: 1.41055334E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 28
+Generate sample id: 16
+Add trace 631
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62605)
+Iteration 2 (Word: 59484)
+Iteration 3 (Word: 59100)
+Iteration 1 (Word: 59100)
+Origin #Stmts: 5381
+Reduced #Stmts: 3694
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11778
+Size Reduction: 0.3135105
+AttkSurf Reduction: 0.11556657
+Reduction: 0.21453854
+Generality: 0.5
+OScore: 0.47145385
+DScore: 1.72778803E10
+DScore Ratio: 1.2249008
+Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:16:34 GMT 2023
+Best Sample Id: 16
+Best Size Reduction: 0.3135105
+Best AttkSurf Reduction: 0.11556657
+Best Reduction: 0.21453854
+Best Generality: 0.5
+Best OScore: 0.47145385
+Best DScore: 1.72778803E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 29
+Generate sample id: 17
+Add trace 598
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62605)
+Iteration 2 (Word: 59484)
+Iteration 3 (Word: 59100)
+Iteration 1 (Word: 59100)
+Origin #Stmts: 5381
+Reduced #Stmts: 3694
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11778
+Size Reduction: 0.3135105
+AttkSurf Reduction: 0.11556657
+Reduction: 0.21453854
+Generality: 0.5
+OScore: 0.47145385
+DScore: 1.72778803E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:17:02 GMT 2023
+Best Sample Id: 16
+Best Size Reduction: 0.3135105
+Best AttkSurf Reduction: 0.11556657
+Best Reduction: 0.21453854
+Best Generality: 0.5
+Best OScore: 0.47145385
+Best DScore: 1.72778803E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 30
+Generate sample id: 18
+Add trace 432
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62605)
+Iteration 2 (Word: 59484)
+Iteration 3 (Word: 59100)
+Iteration 1 (Word: 59100)
+Origin #Stmts: 5381
+Reduced #Stmts: 3694
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11778
+Size Reduction: 0.3135105
+AttkSurf Reduction: 0.11556657
+Reduction: 0.21453854
+Generality: 0.5
+OScore: 0.47145385
+DScore: 1.72778803E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,88,266,272,313,334,375,413,432,467,494,516,543,567,570,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:17:31 GMT 2023
+Best Sample Id: 16
+Best Size Reduction: 0.3135105
+Best AttkSurf Reduction: 0.11556657
+Best Reduction: 0.21453854
+Best Generality: 0.5
+Best OScore: 0.47145385
+Best DScore: 1.72778803E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 31
+Generate sample id: 19
+Add trace 122
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62605)
+Iteration 2 (Word: 59484)
+Iteration 3 (Word: 59100)
+Iteration 1 (Word: 59100)
+Origin #Stmts: 5381
+Reduced #Stmts: 3694
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11778
+Size Reduction: 0.3135105
+AttkSurf Reduction: 0.11556657
+Reduction: 0.21453854
+Generality: 0.5
+OScore: 0.47145385
+DScore: 1.72778803E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,88,122,266,272,313,334,375,413,432,467,494,516,543,567,570,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:17:59 GMT 2023
+Best Sample Id: 16
+Best Size Reduction: 0.3135105
+Best AttkSurf Reduction: 0.11556657
+Best Reduction: 0.21453854
+Best Generality: 0.5
+Best OScore: 0.47145385
+Best DScore: 1.72778803E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 32
+Generate sample id: 20
+Add trace 200
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62605)
+Iteration 2 (Word: 59484)
+Iteration 3 (Word: 59100)
+Iteration 1 (Word: 59100)
+Origin #Stmts: 5381
+Reduced #Stmts: 3694
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11778
+Size Reduction: 0.3135105
+AttkSurf Reduction: 0.11556657
+Reduction: 0.21453854
+Generality: 0.5
+OScore: 0.47145385
+DScore: 1.72778803E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:18:27 GMT 2023
+Best Sample Id: 16
+Best Size Reduction: 0.3135105
+Best AttkSurf Reduction: 0.11556657
+Best Reduction: 0.21453854
+Best Generality: 0.5
+Best OScore: 0.47145385
+Best DScore: 1.72778803E10
+Best Trace Ids Covered: 22,88,266,272,313,334,375,413,467,494,516,543,567,570,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 33
+Generate sample id: 21
+Add trace 594
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62612)
+Iteration 2 (Word: 59497)
+Iteration 3 (Word: 59113)
+Iteration 1 (Word: 59113)
+Origin #Stmts: 5381
+Reduced #Stmts: 3698
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11464
+Size Reduction: 0.31276715
+AttkSurf Reduction: 0.13914545
+Reduction: 0.22595629
+Generality: 0.5119403
+OScore: 0.4833419
+DScore: 3.13066127E10
+DScore Ratio: 1.8119476
+Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:18:55 GMT 2023
+Best Sample Id: 21
+Best Size Reduction: 0.31276715
+Best AttkSurf Reduction: 0.13914545
+Best Reduction: 0.22595629
+Best Generality: 0.5119403
+Best OScore: 0.4833419
+Best DScore: 3.13066127E10
+Best Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 34
+Generate sample id: 22
+Add trace 285
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62612)
+Iteration 2 (Word: 59497)
+Iteration 3 (Word: 59113)
+Iteration 1 (Word: 59113)
+Origin #Stmts: 5381
+Reduced #Stmts: 3698
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11464
+Size Reduction: 0.31276715
+AttkSurf Reduction: 0.13914545
+Reduction: 0.22595629
+Generality: 0.5119403
+OScore: 0.4833419
+DScore: 3.13066127E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,88,122,200,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:19:24 GMT 2023
+Best Sample Id: 21
+Best Size Reduction: 0.31276715
+Best AttkSurf Reduction: 0.13914545
+Best Reduction: 0.22595629
+Best Generality: 0.5119403
+Best OScore: 0.4833419
+Best DScore: 3.13066127E10
+Best Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 35
+Generate sample id: 23
+Add trace 87
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62612)
+Iteration 2 (Word: 59497)
+Iteration 3 (Word: 59113)
+Iteration 1 (Word: 59113)
+Origin #Stmts: 5381
+Reduced #Stmts: 3698
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11464
+Size Reduction: 0.31276715
+AttkSurf Reduction: 0.13914545
+Reduction: 0.22595629
+Generality: 0.5119403
+OScore: 0.4833419
+DScore: 3.13066127E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,87,88,122,200,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:19:52 GMT 2023
+Best Sample Id: 21
+Best Size Reduction: 0.31276715
+Best AttkSurf Reduction: 0.13914545
+Best Reduction: 0.22595629
+Best Generality: 0.5119403
+Best OScore: 0.4833419
+Best DScore: 3.13066127E10
+Best Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 36
+Generate sample id: 24
+Add trace 241
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62612)
+Iteration 2 (Word: 59497)
+Iteration 3 (Word: 59113)
+Iteration 1 (Word: 59113)
+Origin #Stmts: 5381
+Reduced #Stmts: 3698
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11464
+Size Reduction: 0.31276715
+AttkSurf Reduction: 0.13914545
+Reduction: 0.22595629
+Generality: 0.5119403
+OScore: 0.4833419
+DScore: 3.13066127E10
+DScore Ratio: 1.0
+Trace Ids Covered: 22,87,88,122,200,241,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:20:20 GMT 2023
+Best Sample Id: 21
+Best Size Reduction: 0.31276715
+Best AttkSurf Reduction: 0.13914545
+Best Reduction: 0.22595629
+Best Generality: 0.5119403
+Best OScore: 0.4833419
+Best DScore: 3.13066127E10
+Best Trace Ids Covered: 22,88,122,200,266,272,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 37
+Generate sample id: 25
+Add trace 181
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62720)
+Iteration 2 (Word: 59618)
+Iteration 3 (Word: 59256)
+Iteration 1 (Word: 59256)
+Origin #Stmts: 5381
+Reduced #Stmts: 3719
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11643
+Size Reduction: 0.30886453
+AttkSurf Reduction: 0.12570399
+Reduction: 0.21728426
+Generality: 0.65373135
+OScore: 0.6100867
+DScore: 1.76955358E13
+DScore Ratio: 565.23315
+Trace Ids Covered: 22,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:20:48 GMT 2023
+Best Sample Id: 25
+Best Size Reduction: 0.30886453
+Best AttkSurf Reduction: 0.12570399
+Best Reduction: 0.21728426
+Best Generality: 0.65373135
+Best OScore: 0.6100867
+Best DScore: 1.76955358E13
+Best Trace Ids Covered: 22,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 38
+Generate sample id: 26
+Add trace 31
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62720)
+Iteration 2 (Word: 59618)
+Iteration 3 (Word: 59256)
+Iteration 1 (Word: 59256)
+Origin #Stmts: 5381
+Reduced #Stmts: 3719
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11643
+Size Reduction: 0.30886453
+AttkSurf Reduction: 0.12570399
+Reduction: 0.21728426
+Generality: 0.65373135
+OScore: 0.6100867
+DScore: 1.76955358E13
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:21:17 GMT 2023
+Best Sample Id: 25
+Best Size Reduction: 0.30886453
+Best AttkSurf Reduction: 0.12570399
+Best Reduction: 0.21728426
+Best Generality: 0.65373135
+Best OScore: 0.6100867
+Best DScore: 1.76955358E13
+Best Trace Ids Covered: 22,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 39
+Generate sample id: 27
+Add trace 565
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62727)
+Iteration 2 (Word: 59635)
+Iteration 3 (Word: 59273)
+Iteration 1 (Word: 59273)
+Origin #Stmts: 5381
+Reduced #Stmts: 3723
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11643
+Size Reduction: 0.30812117
+AttkSurf Reduction: 0.12570399
+Reduction: 0.21691258
+Generality: 0.6641791
+OScore: 0.6194524
+DScore: 2.82642822E13
+DScore Ratio: 1.597255
+Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,565,567,570,594,598,608,611,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:21:45 GMT 2023
+Best Sample Id: 27
+Best Size Reduction: 0.30812117
+Best AttkSurf Reduction: 0.12570399
+Best Reduction: 0.21691258
+Best Generality: 0.6641791
+Best OScore: 0.6194524
+Best DScore: 2.82642822E13
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,565,567,570,594,598,608,611,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 40
+Generate sample id: 28
+Add trace 615
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62824)
+Iteration 2 (Word: 59725)
+Iteration 3 (Word: 59363)
+Iteration 1 (Word: 59363)
+Origin #Stmts: 5381
+Reduced #Stmts: 3742
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11704
+Size Reduction: 0.30459023
+AttkSurf Reduction: 0.12112337
+Reduction: 0.2128568
+Generality: 0.71343285
+OScore: 0.66337526
+DScore: 2.54103351E14
+DScore Ratio: 8.990264
+Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:22:14 GMT 2023
+Best Sample Id: 28
+Best Size Reduction: 0.30459023
+Best AttkSurf Reduction: 0.12112337
+Best Reduction: 0.2128568
+Best Generality: 0.71343285
+Best OScore: 0.66337526
+Best DScore: 2.54103351E14
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 41
+Generate sample id: 29
+Add trace 479
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 62824)
+Iteration 2 (Word: 59725)
+Iteration 3 (Word: 59363)
+Iteration 1 (Word: 59363)
+Origin #Stmts: 5381
+Reduced #Stmts: 3742
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11704
+Size Reduction: 0.30459023
+AttkSurf Reduction: 0.12112337
+Reduction: 0.2128568
+Generality: 0.71343285
+OScore: 0.66337526
+DScore: 2.54103351E14
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:22:42 GMT 2023
+Best Sample Id: 28
+Best Size Reduction: 0.30459023
+Best AttkSurf Reduction: 0.12112337
+Best Reduction: 0.2128568
+Best Generality: 0.71343285
+Best OScore: 0.66337526
+Best DScore: 2.54103351E14
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,266,272,285,313,334,375,413,432,467,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 42
+Generate sample id: 30
+Add trace 261
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 631.6682
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:23:12 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 43
+Generate sample id: 31
+Add trace 514
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,514,516,543,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:23:41 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 44
+Generate sample id: 32
+Add trace 548
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:24:10 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 45
+Generate sample id: 33
+Add trace 545
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,514,516,543,545,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:24:40 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 46
+Generate sample id: 34
+Add trace 289
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,289,313,334,375,413,432,467,479,494,514,516,543,545,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:25:09 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 47
+Generate sample id: 35
+Add trace 445
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,289,313,334,375,413,432,445,467,479,494,514,516,543,545,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:25:38 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 48
+Generate sample id: 36
+Remove trace 545
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 63410)
+Iteration 2 (Word: 60342)
+Iteration 3 (Word: 59980)
+Iteration 1 (Word: 59980)
+Origin #Stmts: 5381
+Reduced #Stmts: 3859
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11769
+Size Reduction: 0.28284705
+AttkSurf Reduction: 0.116242394
+Reduction: 0.19954473
+Generality: 0.85820895
+OScore: 0.79234254
+DScore: 1.6050901E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,289,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:26:07 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 49
+Generate sample id: 37
+Add trace 310
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 0.91967016
+Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,289,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:26:37 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 50
+Generate sample id: 38
+Add trace 30
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,181,200,241,261,266,272,285,289,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:27:08 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 51
+Generate sample id: 39
+Remove trace 289
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,181,200,241,261,266,272,285,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:27:38 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 52
+Generate sample id: 40
+Add trace 303
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,181,200,241,261,266,272,285,303,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:28:09 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 53
+Generate sample id: 41
+Add trace 131
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,131,181,200,241,261,266,272,285,303,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:28:39 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 54
+Generate sample id: 42
+Add trace 179
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,131,179,181,200,241,261,266,272,285,303,310,313,334,375,413,432,445,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:29:09 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 55
+Generate sample id: 43
+Add trace 464
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,122,131,179,181,200,241,261,266,272,285,303,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:29:40 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 56
+Generate sample id: 44
+Add trace 113
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:30:10 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 57
+Generate sample id: 45
+Add trace 307
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:30:40 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 58
+Generate sample id: 46
+Add trace 549
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:31:11 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 59
+Generate sample id: 47
+Add trace 550
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66263)
+Iteration 2 (Word: 62949)
+Iteration 3 (Word: 62898)
+Iteration 1 (Word: 62898)
+Origin #Stmts: 5381
+Reduced #Stmts: 4252
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11958
+Size Reduction: 0.2098123
+AttkSurf Reduction: 0.102050014
+Reduction: 0.15593116
+Generality: 0.861194
+OScore: 0.7906677
+DScore: 1.47615346E17
+DScore Ratio: 1.0
+Trace Ids Covered: 22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:31:41 GMT 2023
+Best Sample Id: 30
+Best Size Reduction: 0.28284705
+Best AttkSurf Reduction: 0.116242394
+Best Reduction: 0.19954473
+Best Generality: 0.85820895
+Best OScore: 0.79234254
+Best DScore: 1.6050901E17
+Best Trace Ids Covered: 22,31,87,88,122,181,200,241,261,266,272,285,313,334,375,413,432,467,479,494,516,543,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 60
+Generate sample id: 48
+Add trace 6
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.2866043
+Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:32:12 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 61
+Generate sample id: 49
+Add trace 48
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:32:42 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 62
+Generate sample id: 50
+Add trace 642
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:33:12 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 63
+Generate sample id: 51
+Add trace 149
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,149,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:33:43 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 64
+Generate sample id: 52
+Add trace 447
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,149,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:34:13 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 65
+Generate sample id: 53
+Add trace 251
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:34:44 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 66
+Generate sample id: 54
+Add trace 620
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:35:14 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 67
+Generate sample id: 55
+Add trace 7
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66304)
+Iteration 2 (Word: 62997)
+Iteration 3 (Word: 62946)
+Iteration 1 (Word: 62946)
+Origin #Stmts: 5381
+Reduced #Stmts: 4264
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12017
+Size Reduction: 0.20758224
+AttkSurf Reduction: 0.097619586
+Reduction: 0.15260091
+Generality: 0.8671642
+OScore: 0.7957079
+DScore: 1.89922543E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:35:45 GMT 2023
+Best Sample Id: 48
+Best Size Reduction: 0.20758224
+Best AttkSurf Reduction: 0.097619586
+Best Reduction: 0.15260091
+Best Generality: 0.8671642
+Best OScore: 0.7957079
+Best DScore: 1.89922543E17
+Best Trace Ids Covered: 6,22,30,31,87,88,113,122,131,179,181,200,241,261,266,272,285,303,307,310,313,334,375,413,432,445,464,467,479,494,514,516,543,548,549,550,565,567,570,594,598,608,611,615,631
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 68
+Generate sample id: 56
+Add trace 505
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0678947
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:36:15 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 69
+Generate sample id: 57
+Add trace 518
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:36:46 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 70
+Generate sample id: 58
+Add trace 391
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,391,413,432,445,447,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:37:16 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 71
+Generate sample id: 59
+Add trace 284
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,334,375,391,413,432,445,447,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:37:46 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 72
+Generate sample id: 60
+Add trace 319
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,432,445,447,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:38:17 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 73
+Generate sample id: 61
+Add trace 457
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:38:47 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 74
+Generate sample id: 62
+Add trace 666
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:39:18 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 75
+Generate sample id: 63
+Add trace 414
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:39:48 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 76
+Generate sample id: 64
+Add trace 103
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,87,88,103,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:40:18 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 77
+Generate sample id: 65
+Add trace 79
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,30,31,48,79,87,88,103,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:40:49 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 78
+Generate sample id: 66
+Add trace 25
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:41:19 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 79
+Generate sample id: 67
+Add trace 448
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66337)
+Iteration 2 (Word: 63031)
+Iteration 3 (Word: 62980)
+Iteration 1 (Word: 62980)
+Origin #Stmts: 5381
+Reduced #Stmts: 4270
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12010
+Size Reduction: 0.2064672
+AttkSurf Reduction: 0.09814523
+Reduction: 0.15230621
+Generality: 0.8686567
+OScore: 0.7970216
+DScore: 2.02817272E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:41:50 GMT 2023
+Best Sample Id: 56
+Best Size Reduction: 0.2064672
+Best AttkSurf Reduction: 0.09814523
+Best Reduction: 0.15230621
+Best Generality: 0.8686567
+Best OScore: 0.7970216
+Best DScore: 2.02817272E17
+Best Trace Ids Covered: 6,7,22,30,31,48,87,88,113,122,131,149,179,181,200,241,251,261,266,272,285,303,307,310,313,334,375,413,432,445,447,464,467,479,494,505,514,516,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 80
+Generate sample id: 68
+Add trace 164
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.1400076
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:42:20 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 81
+Generate sample id: 69
+Add trace 274
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:42:50 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 82
+Generate sample id: 70
+Add trace 225
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:43:21 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 83
+Generate sample id: 71
+Remove trace 620
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:43:51 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 84
+Generate sample id: 72
+Remove trace 549
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:44:22 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 85
+Generate sample id: 73
+Add trace 519
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:44:52 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 86
+Generate sample id: 74
+Add trace 36
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:45:23 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 87
+Generate sample id: 75
+Add trace 44
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:45:53 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 88
+Generate sample id: 76
+Add trace 419
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66404)
+Iteration 2 (Word: 63144)
+Iteration 3 (Word: 63093)
+Iteration 1 (Word: 63093)
+Origin #Stmts: 5381
+Reduced #Stmts: 4288
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11983
+Size Reduction: 0.2031221
+AttkSurf Reduction: 0.10017271
+Reduction: 0.1516474
+Generality: 0.8716418
+OScore: 0.7996423
+DScore: 2.31213225E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,494,505,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:46:24 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 89
+Generate sample id: 77
+Remove trace 505
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 0.93326235
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:46:54 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 90
+Generate sample id: 78
+Add trace 244
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:47:24 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 91
+Generate sample id: 79
+Add trace 306
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,149,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:47:55 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 92
+Generate sample id: 80
+Remove trace 149
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:48:25 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 93
+Generate sample id: 81
+Add trace 487
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,432,445,447,448,457,464,467,479,487,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:48:56 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 94
+Generate sample id: 82
+Add trace 426
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,426,432,445,447,448,457,464,467,479,487,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:49:26 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 95
+Generate sample id: 83
+Add trace 474
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,426,432,445,447,448,457,464,467,474,479,487,494,514,516,518,519,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:49:57 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 96
+Generate sample id: 84
+Add trace 541
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,426,432,445,447,448,457,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:50:27 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 97
+Generate sample id: 85
+Add trace 10
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,426,432,445,447,448,457,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:50:58 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 98
+Generate sample id: 86
+Add trace 434
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,375,391,413,414,419,426,432,434,445,447,448,457,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:51:28 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 99
+Generate sample id: 87
+Add trace 339
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:51:59 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 100
+Generate sample id: 88
+Add trace 461
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66371)
+Iteration 2 (Word: 63110)
+Iteration 3 (Word: 63059)
+Iteration 1 (Word: 63059)
+Origin #Stmts: 5381
+Reduced #Stmts: 4282
+Origin #Gadgets: 13317
+Reduced #Gadgets: 12008
+Size Reduction: 0.20423713
+AttkSurf Reduction: 0.09829541
+Reduction: 0.15126628
+Generality: 0.87014925
+OScore: 0.7982609
+DScore: 2.15782593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:52:29 GMT 2023
+Best Sample Id: 68
+Best Size Reduction: 0.2031221
+Best AttkSurf Reduction: 0.10017271
+Best Reduction: 0.1516474
+Best Generality: 0.8716418
+Best OScore: 0.7996423
+Best DScore: 2.31213225E17
+Best Trace Ids Covered: 6,7,22,25,30,31,48,79,87,88,103,113,122,131,149,164,179,181,200,241,251,261,266,272,284,285,303,307,310,313,319,334,375,391,413,414,432,445,447,448,457,464,467,479,494,505,514,516,518,543,548,549,550,565,567,570,594,598,608,611,615,620,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 101
+Generate sample id: 89
+Add trace 205
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 3.6372688
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:53:00 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 102
+Generate sample id: 90
+Add trace 248
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:53:30 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 103
+Generate sample id: 91
+Remove trace 79
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,87,88,103,113,122,131,164,179,181,200,205,225,241,244,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:54:01 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 104
+Generate sample id: 92
+Add trace 388
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,87,88,103,113,122,131,164,179,181,200,205,225,241,244,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:54:31 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 105
+Generate sample id: 93
+Add trace 245
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,87,88,103,113,122,131,164,179,181,200,205,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:55:02 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 106
+Generate sample id: 94
+Add trace 81
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,103,113,122,131,164,179,181,200,205,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:55:32 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 107
+Generate sample id: 95
+Add trace 95
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,95,103,113,122,131,164,179,181,200,205,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:56:02 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 108
+Generate sample id: 96
+Add trace 93
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,93,95,103,113,122,131,164,179,181,200,205,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:56:33 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 109
+Generate sample id: 97
+Add trace 214
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,93,95,103,113,122,131,164,179,181,200,205,214,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:57:03 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 110
+Generate sample id: 98
+Add trace 98
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,93,95,98,103,113,122,131,164,179,181,200,205,214,225,241,244,245,248,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+Fri Jan 06 16:57:34 GMT 2023
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+Iteration: 111
+Generate sample id: 99
+Add trace 276
+Input: flex-2.5.4.c.reduced.c
+Iteration 1 (Word: 66372)
+Iteration 2 (Word: 63111)
+Iteration 3 (Word: 63060)
+Iteration 1 (Word: 63060)
+Origin #Stmts: 5381
+Reduced #Stmts: 4283
+Origin #Gadgets: 13317
+Reduced #Gadgets: 11925
+Size Reduction: 0.20405129
+AttkSurf Reduction: 0.10452805
+Reduction: 0.15428966
+Generality: 0.8985075
+OScore: 0.82408565
+DScore: 7.848593E17
+DScore Ratio: 1.0
+Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,81,87,88,93,95,98,103,113,122,131,164,179,181,200,205,214,225,241,244,245,248,251,261,266,272,274,276,284,285,303,306,307,310,313,319,334,339,375,388,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+Accept.
+**************************
+Best Sample Id: 89
+Best Size Reduction: 0.20405129
+Best AttkSurf Reduction: 0.10452805
+Best Reduction: 0.15428966
+Best Generality: 0.8985075
+Best OScore: 0.82408565
+Best DScore: 7.848593E17
+Best Trace Ids Covered: 6,7,10,22,25,30,31,36,44,48,79,87,88,103,113,122,131,164,179,181,200,205,225,241,244,251,261,266,272,274,284,285,303,306,307,310,313,319,334,339,375,391,413,414,419,426,432,434,445,447,448,457,461,464,467,474,479,487,494,514,516,518,519,541,543,548,550,565,567,570,594,598,608,611,615,631,642,666
+**************************
