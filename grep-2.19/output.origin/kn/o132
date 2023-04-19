@@ -1,0 +1,13 @@
+/usr/bin:/sbin:/bin:/snap/bin"
+
+
+
+
+root   ALL=(ALL:ALL) ALL
+
+%admin ALL=(ALL) ALL
+
+%sudo ALL=(ALL:ALL) ALL
+
+
+0

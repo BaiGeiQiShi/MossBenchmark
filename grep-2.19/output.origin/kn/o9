@@ -1,0 +1,11 @@
+HTTPS_PROXY="http://127.0.0.1:2340"
+https_proxy="http://127.0.0.1:2340"
+HTTP_PROXY="http://127.0.0.1:2340"
+http_proxy="http://127.0.0.1:2340"
+#+ : root : 127.0.0.1
+Binary file /etc/alternatives/rlogin matches
+Binary file /etc/alternatives/rsh matches
+# localhost & 127.0.0.1).
+# localhost & 127.0.0.1).
+127.0.0.1	localhost
+0

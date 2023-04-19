@@ -1,0 +1,21 @@
+at.c:ExtractParameters("AT", "II", Text);
+at.c:ExtractParameters("DECIMAL", "I", Text);
+at.c:ExtractParameters("TONE", "II", Text);
+at.c:ExtractParameters("SUFFIX", "sI", Text);
+at.c:ExtractParameters("TICKER", "IISII", Text);
+at.c:ExtractParameters("GETXY", "ii", Text);
+date.c:ExtractParameters("DAYNAME", "sI", Text);
+date.c:ExtractParameters("MONTHNAME", "sI", Text);
+date.c:ExtractParameters("HOUR", "i", Text);
+date.c:ExtractParameters("MINUTE", "i", Text);
+date.c:ExtractParameters("SECOND", "i", Text);
+date.c:ExtractParameters("HUNDRED", "i", Text);
+date.c:ExtractParameters("YEAR", "i", Text);
+date.c:ExtractParameters("MONTH", "i", Text);
+date.c:ExtractParameters("DAY", "i", Text);
+files.c:ExtractParameters("FILE", "x", Text);
+files.c:ExtractParameters("CLOSE", "x", Text);
+files.c:ExtractParameters("OPEN", "xS", Text);
+files.c:ExtractParameters("FGETS", "xsIi", Text);
+files.c:ExtractParameters("FKILL", "x", Text);
+0

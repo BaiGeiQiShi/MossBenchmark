@@ -1,0 +1,9 @@
+/etc/environment:HTTPS_PROXY="http://127.0.0.1:2340"
+/etc/environment:https_proxy="http://127.0.0.1:2340"
+/etc/environment:HTTP_PROXY="http://127.0.0.1:2340"
+/etc/environment:http_proxy="http://127.0.0.1:2340"
+/etc/security/access.conf:#+ : root : 127.0.0.1
+/etc/java-11-openjdk/net.properties:# localhost & 127.0.0.1).
+/etc/java-11-openjdk/net.properties:# localhost & 127.0.0.1).
+/etc/hosts:127.0.0.1	localhost
+0

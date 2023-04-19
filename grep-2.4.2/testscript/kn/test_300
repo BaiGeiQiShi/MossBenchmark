@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/grep*.dat $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN -E "\bif a{1}g|if a""{1}out\b" grep*.dat  > $OUTDIR/o300 2>&1
+

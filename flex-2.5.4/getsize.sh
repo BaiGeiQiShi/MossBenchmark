@@ -38,6 +38,21 @@ fi
 #Dead Code Eliminate
 cp $WORKDIR/$PROGNAME.c.reduced.c $SRC
 
+inputfname=$(basename $SRC)
+if [ -d $WORKDIR/debdcetmp ]; then
+    rm -rf $WORKDIR/debdcetmp/*
+else
+    mkdir $WORKDIR/debdcetmp
+fi
+cp $SRC $WORKDIR/debdcetmp/$inputfname
+cd $WORKDIR/debdcetmp
+$debdce debdcetest.sh $inputfname
+
+cd ..
+mv debdcetmp/$inputfname.dce.c $SRC
+rm -rf debdcetmp
+
+
 #clang -w -o $BIN $SRC || exit 1
 ./compile.sh $SRC $BIN "-w -O3" || exit 1
 
@@ -51,6 +66,9 @@ reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5`-`ls -l $BASE_BIN | cut -d' ' -f5`
 #Count Gadgets
 original_gdt=`${GDTBIN} --binary ${ORIGIN_BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
 reduced_gdt=`${GDTBIN} --binary ${BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
+
+#Count Stmts
+original_stmts=-1
 if [ -f ${WORKDIR}/original_stmt_num.txt ]; then
     original_stmts=`head -n 1 ${WORKDIR}/original_stmt_num.txt`
 else

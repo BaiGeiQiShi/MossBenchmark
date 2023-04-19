@@ -35,8 +35,23 @@ if [ ! -f ${ORIGIN_BIN} ]; then
     ./compile.sh ${SRC} ${ORIGIN_BIN} "-w -O3 -lm" || exit 1
 fi
 
-#Compile Reduced Program
+#Dead Code Elimination
 cp $WORKDIR/$PROGNAME.c.reduced.c $SRC
+
+inputfname=$(basename $SRC)
+if [ -d $WORKDIR/debdcetmp ]; then
+	    rm -rf $WORKDIR/debdcetmp/*
+    else
+	        mkdir $WORKDIR/debdcetmp
+fi
+cp $SRC $WORKDIR/debdcetmp/$inputfname
+cd $WORKDIR/debdcetmp
+$debdce debdcetest.sh $inputfname
+
+cd ..
+mv debdcetmp/$inputfname.dce.c $SRC
+rm -rf debdcetmp
+
 ./compile.sh $SRC $BIN "-w -O3 -lm" || exit 1
 
 #Count Binary Bytes

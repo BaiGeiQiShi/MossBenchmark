@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/grep*.dat $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN -G 'Include\|n\{1\}.lude' grep*.dat  > $OUTDIR/o252 2>&1
+

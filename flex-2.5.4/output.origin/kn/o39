@@ -1,6 +1,0 @@
-%%
-1	frob
-2	[^ \011\012]+
-3	End Marker
-REJECT entails a large performance penalty
-Executable: REJECT cannot be used with -f or -F
