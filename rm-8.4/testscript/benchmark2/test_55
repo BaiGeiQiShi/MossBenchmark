@@ -1,0 +1,22 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I5/decepticons ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -r decepticons; } &>$OUTDIR/o55
+
+echo "$?" >>$OUTDIR/o55
+test -d decepticons
+echo "$?" >>$OUTDIR/o55
+test -f decepticons/shockwave.txt
+echo "$?" >>$OUTDIR/o55
+test -f decepticons/soundwave.txt
+echo "$?" >>$OUTDIR/o55
+test -f decepticons/starscream.txt
+echo "$?" >>$OUTDIR/o55
+
+

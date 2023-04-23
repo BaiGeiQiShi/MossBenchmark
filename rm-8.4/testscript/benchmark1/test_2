@@ -1,0 +1,19 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+mkdir dir
+timeout ${TIMEOUT}s $BIN -f dir  &>$OUTDIR/o2
+r=$?
+x=1
+if grep -q "cannot remove \`dir': Is a directory" $OUTDIR/o2; then
+  x=0
+fi
+if [[ $r -eq 1 && $x -eq 0 ]]; then
+	echo  0 >$OUTDIR/o2
+else
+	echo  1 >$OUTDIR/o2
+fi
