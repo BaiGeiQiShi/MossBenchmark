@@ -1,2 +1,2 @@
 # MossBenchmark
-Running Moss with benchmark
+Before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```
