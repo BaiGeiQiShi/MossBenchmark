@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I6/charm.c ./
+chown -R mychown:mychown charm.c
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname}:sudo charm.c; } &>$OUTDIR/o69
 

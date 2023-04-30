@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I3/1.txt ./
+chown -R mychown:mychown 1.txt
 
 { timeout -k 9 ${TIMEOUT}s $BIN --from=${uname} root 1.txt; } &>$OUTDIR/o28
 

@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I6/while.c ./
+chown -R mychown:mychown while.c
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname} while.c; } &>$OUTDIR/o64
 

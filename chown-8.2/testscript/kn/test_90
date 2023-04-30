@@ -9,6 +9,7 @@ uname=$(whoami)
 uid=`id -u ${uname}`
 
 cp -r $INDIR/I8/Documents ./
+chown -R mychown:mychown Documents
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R ${uname}:${uname} Documents; } &>$OUTDIR/o90
 

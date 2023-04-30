@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I4/greek1 ./
+chown -R mychown:mychown greek1
 
 { timeout -k 9 ${TIMEOUT}s $BIN -v ${uname}:sudo greek1; } &>$OUTDIR/o39
 

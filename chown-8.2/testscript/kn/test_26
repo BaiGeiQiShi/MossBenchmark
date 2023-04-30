@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I3/1.txt ./
 cp $INDIR/I3/2.txt ./
+chown -R mychown:mychown 1.txt 2.txt
 
 { timeout -k 9 ${TIMEOUT}s $BIN -c ${uname} 1.txt 2.txt; } &>$OUTDIR/o26
 

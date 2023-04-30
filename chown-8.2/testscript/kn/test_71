@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I6/at.c ./
+chown -R mychown:mychown at.c
 
 { timeout -k 9 ${TIMEOUT}s $BIN :sudo at.c; } &>$OUTDIR/o71
 

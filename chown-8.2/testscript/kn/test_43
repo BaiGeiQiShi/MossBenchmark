@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I4/greek2 ./
 cp $INDIR/I4/greek3 ./
+chown -R mychown:mychown greek2 greek3
 
 { timeout -k 9 ${TIMEOUT}s $BIN -c ${uname}:sudo greek2 greek3; } &>$OUTDIR/o43
 

@@ -17,6 +17,17 @@ if [ -d $KNINDIR ]; then
     cp -r $KNINDIR ${INDIR_CP}
 fi
 cp -r input.origin/* $INDIR_CP
+
+#Create New User
+#USERNAME=mychown
+#if id -u ${USERNAME} >/dev/null 2>&1 ; then
+#    groupadd mychown
+#    usermod -g mychown mychown
+#else
+#    groupadd mychown
+#    useradd -g mychown mychown
+#fi
+
 #Run known tests
 ./run_test_kn.py $BIN $KNOUTDIR $TIMEOUT ${INDIR_CP} True
 

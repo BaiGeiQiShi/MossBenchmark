@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I6/caps.c ./
+chown -R mychown:mychown caps.c
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname}: caps.c; } &>$OUTDIR/o70
 

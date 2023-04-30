@@ -11,6 +11,8 @@ cp $INDIR/I6/getval.c ./
 cp $INDIR/I6/global.c ./
 cp $INDIR/I6/goto.c ./
 
+chown -R mychown:mychown getval.c global.c goto.c
+
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname} getval.c global.c goto.c; } &>$OUTDIR/o65
 
 echo "$?" >>$OUTDIR/o65

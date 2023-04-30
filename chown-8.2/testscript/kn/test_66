@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I6/c*.* ./
+chown -R mychown:mychown c*.*
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname} c*.*; } &>$OUTDIR/o66
 

@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I7/tmpfile ./
 ln -s tmpfile tmpfile_symlnk
+chown -R mychown:mychown tmpfile_symlnk
 
 { timeout -k 9 ${TIMEOUT}s $BIN root:sudo tmpfile_symlnk; } &>$OUTDIR/o79
 

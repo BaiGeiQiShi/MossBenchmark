@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp -r $INDIR/I7/linux ./
 ln -s linux linux_symlnk
+chown -R mychown:mychown linux_symlnk
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R -H ${uname}:sudo linux_symlnk; } &>$OUTDIR/o76
 

@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp -r $INDIR/I6/archive ./
+chown -R mychown:mychown ./archive/
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R ${uname} ./archive/; } &>$OUTDIR/o68
 

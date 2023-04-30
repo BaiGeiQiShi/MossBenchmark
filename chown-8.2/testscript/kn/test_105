@@ -6,6 +6,8 @@ TIMEOUT=$3
 INDIR=$4
 
 uname=$(whoami)
+mkdir -p $(pwd)/TestUnix
+chown -R mychown:mychown $(pwd)/TestUnix
 
 { timeout -k 9 ${TIMEOUT}s $BIN :sudo $(pwd)/TestUnix; } &>$OUTDIR/o105
 

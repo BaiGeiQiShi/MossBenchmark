@@ -12,7 +12,7 @@ if [ -d $(pwd)/tmp/TestUnix ]; then
 fi
 mkdir -p $(pwd)/tmp/TestUnix
 cp $INDIR/I9/chownSample.txt $(pwd)/tmp/TestUnix/
-
+chown -R mychown:mychown /tmp/TestUnix/chownSample.txt $(pwd)/tmp/TestUnix
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname}:sudo /tmp/TestUnix/chownSample.txt $(pwd)/tmp/TestUnix; } &>$OUTDIR/o107
 

@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I5/sample3 ./
 cp -r $INDIR/I5/Dir1 ./
+chown -R mychown:mychown sample3 Dir1
 
 { timeout -k 9 ${TIMEOUT}s $BIN root sample3 Dir1; } &>$OUTDIR/o58
 

@@ -8,6 +8,8 @@ CURRDIR=$(pwd)
 uname=$(whoami)
 uid=`id -u ${uname}`
 mkdir -p $CURRDIR/foo/bar
+chown -R mychown:mychown $CURRDIR/foo/bar
+
 { timeout -k 9 ${TIMEOUT}s $BIN -hR ${uname}: ${CURRDIR}/foo/bar; } &>$OUTDIR/o20
 
 echo "$?" >>$OUTDIR/o20

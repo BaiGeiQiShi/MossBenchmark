@@ -10,6 +10,7 @@ uname=$(whoami)
 cp $INDIR/I8/file1 ./
 cp $INDIR/I8/file2 ./
 cp $INDIR/I8/file3 ./
+chown -R mychown:mychown file*
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname} file*; } &>$OUTDIR/o92
 

@@ -6,10 +6,10 @@ PROGNAME="chown-8.2"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="1h"
-alphas=list(map(str,[0.25,0.5,0.75]))
+TIMEOUT="1m"
+alphas=list(map(str,[0.5,]))
 ks=list(map(str,[50,]))
-betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
+betas=list(map(str,[0.9,]))
 #betas=map(str,[0.1,])
 CURRDIR=os.getcwd()
 DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
@@ -98,6 +98,7 @@ def TMCMC(alpha,beta,k):
 for k in ks:
     for alpha in alphas:
         for beta in betas:
+
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
