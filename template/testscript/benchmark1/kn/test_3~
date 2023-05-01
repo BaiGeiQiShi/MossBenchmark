@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+currdir=$(pwd)
+
+mkdir -p d1/d1/d1
+touch d1/d1/d1/file1
+
+{ timeout ${TIMEOUT}s $BIN -R $(whoami):sudo d1/d1/d1/file1; }  &>$OUTDIR/o3
+ls -al d1/d1/d1/file1 | cut -d ' ' -f 4 &>>$OUTDIR/o3
+
+{ timeout ${TIMEOUT}s $BIN -R $(whoami):$(whoami) d1/d1/d1/file1; } &>>$OUTDIR/o3
+ls -al d1/d1/d1/file1 | cut -d ' ' -f 4 &>>$OUTDIR/o3

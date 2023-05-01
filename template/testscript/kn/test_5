@@ -1,0 +1,19 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+CURRDIR=$(pwd)
+uname=$(whoami)
+mkdir -p $CURRDIR/foo
+{ timeout -k 9 ${TIMEOUT}s $BIN root:sudo ${CURRDIR}/foo; } &>$OUTDIR/o5 
+
+echo "$?" >>$OUTDIR/o5
+own0=`ls -al $(pwd)/foo | tr -s ' ' | cut -d ' ' -f 3`
+own1=`ls -al $(pwd)/foo | tr -s ' ' | cut -d ' ' -f 4`
+echo "${own0} ${own1}" >>$OUTDIR/o5
+
+chown -R root:root ${CURRDIR}/foo
+
+#parentI05

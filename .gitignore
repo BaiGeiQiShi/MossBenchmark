@@ -1,0 +1,12 @@
+*.vscode
+**/domgad-out
+**/identify_path
+**/log/**
+**/output*
+**/quantify_path
+**/tmp
+**/compare.txt
+**/Cov_info.txt
+**/debop-out*
+**/debdcetmp
+**/work*
