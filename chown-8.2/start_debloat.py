@@ -83,7 +83,7 @@ def TMCMC(alpha,beta,k):
     subprocess.run(["cp",f"{CURRDIR}/getsize.sh",f"{CURRDIR}/tmp/getsize.sh"])
     subprocess.run(["cp",f"{CURRDIR}/compile.sh",f"{CURRDIR}/tmp/compile.sh"])
     rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3"
-    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"1",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
+    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"2",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
     subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/domgad_sample_output","-r"])
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{rid}.txt", f"{CURRDIR}/log/stat.{rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{rid}.txt") as rid:

@@ -40,9 +40,9 @@ cp $WORKDIR/$PROGNAME.c.reduced.c $SRC
 
 inputfname=$(basename $SRC)
 if [ -d $WORKDIR/debdcetmp ]; then
-	    rm -rf $WORKDIR/debdcetmp/*
-    else
-	        mkdir $WORKDIR/debdcetmp
+	rm -rf $WORKDIR/debdcetmp/*
+else
+	mkdir $WORKDIR/debdcetmp
 fi
 cp $SRC $WORKDIR/debdcetmp/$inputfname
 cd $WORKDIR/debdcetmp
