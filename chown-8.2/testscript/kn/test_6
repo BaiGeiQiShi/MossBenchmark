@@ -7,6 +7,7 @@ INDIR=$4
 CURRDIR=$(pwd)
 uname=$(whoami)
 mkdir -p $CURRDIR/foo
+chown -R mychown:mychown $CURRDIR/foo
 { timeout -k 9 ${TIMEOUT}s $BIN -R root ${CURRDIR}/foo; } &>$OUTDIR/o6
 
 echo "$?" >>$OUTDIR/o6

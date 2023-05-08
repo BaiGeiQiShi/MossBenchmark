@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/uslin.732 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN uslin.732 &> $OUTDIR/o3022
+

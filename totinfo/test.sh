@@ -72,10 +72,10 @@ rm -rf debdcetmp
 ./compile.sh $SRC $BIN "-O3 -w -lm"
 
 #Compute Size Reduction
-original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))
-reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5` - `ls -l ${BASE_BIN} | cut -d' ' -f5`))
-#original_size=`$DOMGAD/build/bin/instrumenter -S ${ORIGIN_SRC}`
-#reduced_size=`$DOMGAD/build/bin/instrumenter -S ${SRC}`
+#original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))
+#reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5` - `ls -l ${BASE_BIN} | cut -d' ' -f5`))
+original_size=`$DOMGAD/build/bin/instrumenter -S ${ORIGIN_SRC}`
+reduced_size=`$DOMGAD/build/bin/instrumenter -S ${SRC}`
 #original_size=$(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)
 #reduced_size=$(ls -l ${BIN} | cut -d' ' -f5)
 

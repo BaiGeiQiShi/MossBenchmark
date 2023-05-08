@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp -r $INDIR/I8/otherfiles ./
+chown -R mychown:mychown otherfiles
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R ${uname}:${uname} otherfiles; } &>$OUTDIR/o93
 

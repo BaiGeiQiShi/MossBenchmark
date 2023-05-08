@@ -10,6 +10,7 @@ uid=`id -u ${uname}`
 
 cp $INDIR/I5/textfile ./
 ln -s textfile symblink
+chown -R mychown:mychown symblink
 
 { timeout -k 9 ${TIMEOUT}s $BIN -h ${uname}: symblink; } &>$OUTDIR/o51
 

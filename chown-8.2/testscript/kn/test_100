@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I8/file2 ./
+chown -R mychown:mychown file2
 
 { timeout -k 9 ${TIMEOUT}s $BIN :sudo file2; } &>$OUTDIR/o100
 

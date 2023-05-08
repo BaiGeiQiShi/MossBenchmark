@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp -r $INDIR/I7/linux ./
+chown -R mychown:mychown linux
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R ${uname}:sudo linux; } &>$OUTDIR/o85
 

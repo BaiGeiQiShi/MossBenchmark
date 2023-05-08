@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp $INDIR/I7/tmpfile ./
+chown -R mychown:mychown tmpfile
 
 { timeout -k 9 ${TIMEOUT}s $BIN root tmpfile; } &>$OUTDIR/o73
 

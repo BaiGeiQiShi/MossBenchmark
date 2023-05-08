@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I9/chownSample.txt ./
 ln -s chownSample.txt symlink
+chown -R mychown:mychown symlink
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname} symlink; } &>$OUTDIR/o108
 

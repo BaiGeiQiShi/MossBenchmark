@@ -1,0 +1,14 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp $INDIR/I2/tech.txt ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -f tech.txt; } &>$OUTDIR/o30
+
+echo "$?" >>$OUTDIR/o30
+test -f tech.txt
+echo "$?" >>$OUTDIR/o30

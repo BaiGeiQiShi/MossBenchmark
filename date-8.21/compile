@@ -1,0 +1,6 @@
+#!/bin/bash
+
+SRC=$1
+BIN=$2
+
+clang -w -O3 -o $BIN $SRC

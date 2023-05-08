@@ -1,0 +1,30 @@
+#!/bin/bash
+
+DEBOP_DIR=/usr/local/debop
+DEBOP_BIN=${DEBOP_DIR}/build/bin/reducer
+PROGNAME=rm-8.4
+realorcov=$1
+samplenum=$2
+iternum=$3
+alpha=$4
+beta=$5
+k=$6
+version=$7
+
+label=real
+if [ "${realorcov}" -eq "1" ]; then
+    label=real
+else
+    label=cov
+fi
+
+cp $PROGNAME.c.${label}.origin.c $PROGNAME.c.origin.c
+cp $PROGNAME.c.origin.c $PROGNAME.c
+
+filter=nodeclstmt
+
+rm -rf output.origin inputfile
+
+rid=${label}.${filter}.s${samplenum}.a${alpha}.b${beta}.k${k}.v${version}
+
+${DEBOP_BIN} -m ${samplenum} -i ${iternum} -t debop-out.${rid} -a ${alpha} -e ${beta} -k $k -s ./test.sh ${PROGNAME}.c > log/${rid}.txt

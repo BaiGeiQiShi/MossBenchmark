@@ -9,6 +9,7 @@ uname=$(whoami)
 uid=`id -u ${uname}`
 
 cp $INDIR/I6/at.c ./
+chown -R mychown:mychown at.c
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uid}:${uid} at.c; } &>$OUTDIR/o72
 

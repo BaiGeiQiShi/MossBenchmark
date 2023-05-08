@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp $INDIR/I3/1.txt ./
 ln -s 1.txt 1_link.txt
+chown -R mychown:mychown 1_link.txt
 
 { timeout -k 9 ${TIMEOUT}s $BIN -h root:sudo 1_link.txt; } &>$OUTDIR/o23
 

@@ -8,6 +8,7 @@ INDIR=$4
 uname=$(whoami)
 
 cp -r $INDIR/I3/sample ./
+chown -R mychown:mychown sample/
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R root sample/; } &>$OUTDIR/o30
 

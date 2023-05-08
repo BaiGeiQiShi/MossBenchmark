@@ -10,6 +10,7 @@ uid=`id -u ${uname}`
 
 cp $INDIR/I2/file1 ./
 ln -s file1 symfile1
+chown -R mychown:mychown symfile1
 
 { timeout -k 9 ${TIMEOUT}s $BIN -h ${uname} symfile1; } &>$OUTDIR/o18
 

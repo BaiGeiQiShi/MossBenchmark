@@ -9,6 +9,7 @@ uname=$(whoami)
 uid=`id -u ${uname}`
 
 cp $INDIR/I2/file1 ./
+chown -R mychown:mychown file1
 
 { timeout -k 9 ${TIMEOUT}s $BIN ${uname}:sudo file1; } &>$OUTDIR/o14
 

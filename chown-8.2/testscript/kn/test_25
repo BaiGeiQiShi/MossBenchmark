@@ -9,6 +9,7 @@ uname=$(whoami)
 
 cp -r $INDIR/I3/sample ./
 ln -s sample/ symbolic_folder
+chown -R mychown:mychown symbolic_folder
 
 { timeout -k 9 ${TIMEOUT}s $BIN -R -H root symbolic_folder; } &>$OUTDIR/o25
 

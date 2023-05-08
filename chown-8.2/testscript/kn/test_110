@@ -7,6 +7,8 @@ INDIR=$4
 
 uname=$(whoami)
 mkdir -p $(pwd)/TestUnix
+chown -R mychown $(pwd)/TestUnix
+
 { timeout -k 9 ${TIMEOUT}s $BIN -R ${uname} $(pwd)/TestUnix; } &>$OUTDIR/o110
 
 echo "$?" >>$OUTDIR/o110

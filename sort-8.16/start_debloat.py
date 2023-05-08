@@ -3,14 +3,14 @@ import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="sort-8.16"
-version=str.upper("DEBOP")
+version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="3h"
-alphas=list(map(str,[0.5,]))
-ks=map(str,[50,])
-#betas=map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9])
-betas=map(str,[0.1,0.5,0.9])
+TIMEOUT="20m"
+alphas=list(map(str,[0.25,0.5,0.75]))
+ks=list(map(str,[50,]))
+betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
+#betas=map(str,[0.1,])
 CURRDIR=os.getcwd()
 DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
 DEBOP_BIN=f"{DEBOP_DIR}/build/bin/reducer"
@@ -24,7 +24,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -83,7 +83,7 @@ def TMCMC(alpha,beta,k):
     subprocess.run(["cp",f"{CURRDIR}/getsize.sh",f"{CURRDIR}/tmp/getsize.sh"])
     subprocess.run(["cp",f"{CURRDIR}/compile.sh",f"{CURRDIR}/tmp/compile.sh"])
     rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3"
-    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"1",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
+    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"2",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
     subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/domgad_sample_output","-r"])
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{rid}.txt", f"{CURRDIR}/log/stat.{rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{rid}.txt") as rid:
