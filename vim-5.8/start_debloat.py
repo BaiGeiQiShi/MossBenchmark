@@ -92,8 +92,8 @@ def TMCMC(alpha,beta,k):
 for k in ks:
     for alpha in alphas:
         for beta in betas:
-            #os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
-            #subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
+            os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
+            subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
 
             #region init envs and do some cleaning
