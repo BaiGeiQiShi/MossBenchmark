@@ -70,6 +70,6 @@ shutil.copyfile(f"{CURRDIR}/extract_info.c",f"{TMP}/extract_info.c")
 os.system(" ".join(["g++","extract_info.c","-o","extract_info"]))
 os.system(" ".join(["./extract_info",">",f"{CURRDIR}/Cov_info.txt"]))
 os.system(" ".join(["sort","-n",f"{CURRDIR}/Cov_info.txt","-o",f"{CURRDIR}/Cov_info.txt"]))
-
+os.system(f"{CURRDIR}/cleanup")
 
 
