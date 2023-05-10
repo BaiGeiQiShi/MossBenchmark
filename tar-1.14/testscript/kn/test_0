@@ -1,0 +1,33 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I0/tecmint ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -cvf tecmint-14-09-12.tar ./tecmint; } &>$OUTDIR/o0
+
+echo "$?" >>$OUTDIR/o0
+rm -fr tecmint
+tar xf tecmint-14-09-12.tar
+
+diff tecmint/cleanfiles.sh $INDIR/I0/tecmint/cleanfiles.sh
+echo "$?" >>$OUTDIR/o0
+
+diff tecmint/openvpn-2.1.4.tar.gz $INDIR/I0/tecmint/openvpn-2.1.4.tar.gz
+echo "$?" >>$OUTDIR/o0
+
+diff tecmint/tecmint-14-09-12.tar $INDIR/I0/tecmint/tecmint-14-09-12.tar
+echo "$?" >>$OUTDIR/o0
+
+diff tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm $INDIR/I0/tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm
+echo "$?" >>$OUTDIR/o0
+
+diff tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm $INDIR/I0/tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+echo "$?" >>$OUTDIR/o0
+
+
+
+#I0

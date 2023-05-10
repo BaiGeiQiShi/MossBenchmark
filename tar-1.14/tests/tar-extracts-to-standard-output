@@ -1,0 +1,3 @@
+echo foo > foo
+./tar-1.14 cf foo.tar foo
+cat foo.tar | ./tar-1.14 Ox | cmp foo -

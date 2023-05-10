@@ -1,0 +1,5 @@
+touch foo
+./tar-1.14 cf foo.tar foo
+rm foo
+cat foo.tar | ./tar-1.14 x
+test -f foo

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I2/archive.tar ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -xvf archive.tar; } &>$OUTDIR/o26
+
+echo "$?" >>$OUTDIR/o26
+
+diff stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1
+echo "$?" >>$OUTDIR/o26
+diff stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2
+echo "$?" >>$OUTDIR/o26
+
+
+
+#I2

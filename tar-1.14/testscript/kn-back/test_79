@@ -1,0 +1,30 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I9/file1 ./
+cp -r $INDIR/I9/file2 ./
+cp -r $INDIR/I9/file3 ./
+cp -r $INDIR/I9/dir1 ./
+cp -r $INDIR/I9/dir2 ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -cf all.tar *; } &>$OUTDIR/o79
+
+echo "$?" >>$OUTDIR/o79
+rm -fr file* dir*
+tar xf all.tar
+diff file1 $INDIR/I9/file1
+echo "$?" >>$OUTDIR/o79
+diff file2 $INDIR/I9/file2
+echo "$?" >>$OUTDIR/o79
+diff file3 $INDIR/I9/file3
+echo "$?" >>$OUTDIR/o79
+diff dir1/file $INDIR/I9/dir1/file
+echo "$?" >>$OUTDIR/o79
+diff dir2/file $INDIR/I9/dir2/file
+echo "$?" >>$OUTDIR/o79
+
+#I9
