@@ -1,0 +1,13 @@
+#!/bin/bash 
+
+PROGRAM=$1
+COV=$2
+LCOV2GCOV_BIN=${COV}/bin/lcov2gcov
+GCOV_ANAL_BIN=${COV}/bin/gcovanalyzer
+PROGNAME=${PROGRAM##*/}
+
+llvm-profdata merge -o $PROGNAME.profdata default.profraw
+llvm-cov export -format=lcov $PROGRAM -instr-profile=$PROGNAME.profdata $PROGRAM.c > $PROGNAME.lcov
+
+$LCOV2GCOV_BIN $PROGNAME.lcov > $PROGNAME.real.gcov
+$GCOV_ANAL_BIN $PROGNAME.real.gcov getbcov > $PROGNAME.bin.gcov

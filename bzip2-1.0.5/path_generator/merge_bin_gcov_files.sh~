@@ -1,0 +1,6 @@
+#!/bin/bash
+  
+COV=$1
+GCOV_MERGER_BIN=${COV}/bin/gcovbasedcoveragemerger
+
+$GCOV_MERGER_BIN binary bin.gcov > merged.bin.gcov
