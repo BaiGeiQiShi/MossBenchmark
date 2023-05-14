@@ -3,7 +3,7 @@ import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="gzip-1.3"
-version=str.upper("TMCMC")
+version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
 TIMEOUT="1m"

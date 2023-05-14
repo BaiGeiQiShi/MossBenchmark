@@ -12,4 +12,4 @@ cp -r $INDIR/util/breakscript.sh $(pwd)/util/
 
 timeout -k 9 ${TIMEOUT}s $BIN $(pwd)/testdir/binaryfile1  > $OUTDIR/o164 2>&1 | tee -a $OUTDIR/o164
 
-$INDIR/util/breakscript.sh $(pwd) $OUTDIR/o164
+$INDIR/util/breakscript.sh $(pwd) $OUTDIR/o164 >>$OUTDIR/o164
