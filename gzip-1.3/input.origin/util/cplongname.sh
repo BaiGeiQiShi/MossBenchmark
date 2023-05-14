@@ -1,0 +1,8 @@
+#!/bin/bash
+
+INDIR=$1
+OUTFILE=$2
+
+cp $INDIR/length/abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcde $OUTFILE
+
+#$INDIR/util/cleanup.sh $INDIR
