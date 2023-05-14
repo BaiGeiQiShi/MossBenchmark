@@ -11,28 +11,28 @@ cp -r $INDIR/I0/Phpfiles-org.tar ./
 
 echo "$?" >>$OUTDIR/o7
 
-diff php/iframe_ew.php $INDIR/I0/php/iframe_ew.php
+diff php/iframe_ew.php $INDIR/I0/php/iframe_ew.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/videos_all.php $INDIR/I0/php/videos_all.php
+diff php/videos_all.php $INDIR/I0/php/videos_all.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/rss.php $INDIR/I0/php/rss.php
+diff php/rss.php $INDIR/I0/php/rss.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/index.php $INDIR/I0/php/index.php
+diff php/index.php $INDIR/I0/php/index.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/vendor.php $INDIR/I0/php/vendor.php
+diff php/vendor.php $INDIR/I0/php/vendor.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/video_title.php $INDIR/I0/php/video_title.php
+diff php/video_title.php $INDIR/I0/php/video_title.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/report.php $INDIR/I0/php/report.php
+diff php/report.php $INDIR/I0/php/report.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
-diff php/video.php $INDIR/I0/php/video.php
+diff php/video.php $INDIR/I0/php/video.php >/dev/null
 echo "$?" >>$OUTDIR/o7
 
 #I0

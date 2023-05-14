@@ -26,11 +26,11 @@ rm -fr etc2
 rm -fr opt2
 rm -fr home2
 tar xf myarchive.tar
-diff ${leadpath}/etc2/file $INDIR/I7/etc2/file
+diff ${leadpath}/etc2/file $INDIR/I7/etc2/file >/dev/null
 echo "$?" >>$OUTDIR/o59
-diff ${leadpath}/opt2/file $INDIR/I7/opt2/file
+diff ${leadpath}/opt2/file $INDIR/I7/opt2/file >/dev/null
 echo "$?" >>$OUTDIR/o59
-diff ${leadpath}/home2/file $INDIR/I7/home2/file
+diff ${leadpath}/home2/file $INDIR/I7/home2/file >/dev/null
 echo "$?" >>$OUTDIR/o59
 
 test -f ${leadpath}/etc2/sysconfig/kdump

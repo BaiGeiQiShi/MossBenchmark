@@ -13,19 +13,19 @@ cp -r $INDIR/I9/file7 ./
 echo "$?" >>$OUTDIR/o81
 rm -fr file7
 tar xf file.tar
-diff file1 $INDIR/I9/file1
+diff file1 $INDIR/I9/file1 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file2 $INDIR/I9/file2
+diff file2 $INDIR/I9/file2 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file3 $INDIR/I9/file3
+diff file3 $INDIR/I9/file3 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file4 $INDIR/I9/file4
+diff file4 $INDIR/I9/file4 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file5 $INDIR/I9/file5
+diff file5 $INDIR/I9/file5 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file6 $INDIR/I9/file6
+diff file6 $INDIR/I9/file6 >/dev/null
 echo "$?" >>$OUTDIR/o81
-diff file7 $INDIR/I9/file7
+diff file7 $INDIR/I9/file7 >/dev/null
 echo "$?" >>$OUTDIR/o81
 
 #I9

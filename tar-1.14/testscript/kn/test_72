@@ -10,7 +10,7 @@ cp -r $INDIR/I8/test.tar ./
 { timeout -k 9 ${TIMEOUT}s $BIN --extract -f test.tar test3; } &>$OUTDIR/o72
 
 echo "$?" >>$OUTDIR/o72
-diff test3 $INDIR/I8/test3
+diff test3 $INDIR/I8/test3 >/dev/null
 echo "$?" >>$OUTDIR/o72
 
 

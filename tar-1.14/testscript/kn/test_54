@@ -16,9 +16,9 @@ echo "$?" >>$OUTDIR/o54
 leadpath=`echo $CURRDIR | cut -c2-` #First "/" is ignored for compression
 rm etc_fstab
 tar xf data.tar
-diff file $INDIR/I7/file
+diff file $INDIR/I7/file >/dev/null
 echo "$?" >>$OUTDIR/o54
-diff ${leadpath}/etc_fstab $INDIR/I7/etc_fstab
+diff ${leadpath}/etc_fstab $INDIR/I7/etc_fstab >/dev/null
 echo "$?" >>$OUTDIR/o54
 
 

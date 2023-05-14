@@ -13,19 +13,19 @@ echo "$?" >>$OUTDIR/o0
 rm -fr tecmint
 tar xf tecmint-14-09-12.tar
 
-diff tecmint/cleanfiles.sh $INDIR/I0/tecmint/cleanfiles.sh
+diff tecmint/cleanfiles.sh $INDIR/I0/tecmint/cleanfiles.sh >/dev/null
 echo "$?" >>$OUTDIR/o0
 
-diff tecmint/openvpn-2.1.4.tar.gz $INDIR/I0/tecmint/openvpn-2.1.4.tar.gz
+diff tecmint/openvpn-2.1.4.tar.gz $INDIR/I0/tecmint/openvpn-2.1.4.tar.gz >/dev/null
 echo "$?" >>$OUTDIR/o0
 
-diff tecmint/tecmint-14-09-12.tar $INDIR/I0/tecmint/tecmint-14-09-12.tar
+diff tecmint/tecmint-14-09-12.tar $INDIR/I0/tecmint/tecmint-14-09-12.tar >/dev/null
 echo "$?" >>$OUTDIR/o0
 
-diff tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm $INDIR/I0/tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm
+diff tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm $INDIR/I0/tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm >/dev/null
 echo "$?" >>$OUTDIR/o0
 
-diff tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm $INDIR/I0/tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+diff tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm $INDIR/I0/tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm >/dev/null
 echo "$?" >>$OUTDIR/o0
 
 

@@ -14,11 +14,11 @@ cp -r $INDIR/I3/os4.c ./
 echo "$?" >>$OUTDIR/o28
 rm -f *.c
 tar xf file.tar
-diff os2.c $INDIR/I3/os2.c
+diff os2.c $INDIR/I3/os2.c >/dev/null
 echo "$?" >>$OUTDIR/o28
-diff os3.c $INDIR/I3/os3.c
+diff os3.c $INDIR/I3/os3.c >/dev/null
 echo "$?" >>$OUTDIR/o28
-diff os4.c $INDIR/I3/os4.c
+diff os4.c $INDIR/I3/os4.c >/dev/null
 echo "$?" >>$OUTDIR/o28
 
 

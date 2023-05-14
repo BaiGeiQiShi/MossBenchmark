@@ -13,7 +13,7 @@ cp -r $INDIR/I1/College ./
 echo "$?" >>$OUTDIR/o120
 rm -fr College
 tar xf Institution.tar ./College/Engineering/top.ppt
-diff College/Engineering/top.ppt $INDIR/I1/College/Engineering/top.ppt
+diff College/Engineering/top.ppt $INDIR/I1/College/Engineering/top.ppt >/dev/null
 echo "$?" >>$OUTDIR/o120
 
 #I1

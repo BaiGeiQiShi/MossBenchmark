@@ -12,7 +12,7 @@ cp -r $INDIR/I1/Latest ./
 echo "$?" >>$OUTDIR/o17
 rm -fr Latest
 tar xf Videos.tar
-diff Latest/file $INDIR/I1/Latest/file
+diff Latest/file $INDIR/I1/Latest/file >/dev/null
 echo "$?" >>$OUTDIR/o17
 
 

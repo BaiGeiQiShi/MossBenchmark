@@ -11,19 +11,19 @@ cp -r $INDIR/I0/public_html-14-09-12.tar ./
 
 echo "$?" >>$OUTDIR/o1
 
-diff public_html/videos/views.php $INDIR/I0/public_html/videos/views.php
+diff public_html/videos/views.php $INDIR/I0/public_html/videos/views.php >/dev/null
 echo "$?" >>$OUTDIR/o1
 
-diff public_html/videos/index.php $INDIR/I0/public_html/videos/index.php
+diff public_html/videos/index.php $INDIR/I0/public_html/videos/index.php >/dev/null
 echo "$?" >>$OUTDIR/o1
 
-diff public_html/videos/logout.php $INDIR/I0/public_html/videos/logout.php
+diff public_html/videos/logout.php $INDIR/I0/public_html/videos/logout.php >/dev/null
 echo "$?" >>$OUTDIR/o1
 
-diff public_html/videos/all_categories.php $INDIR/I0/public_html/videos/all_categories.php
+diff public_html/videos/all_categories.php $INDIR/I0/public_html/videos/all_categories.php >/dev/null
 echo "$?" >>$OUTDIR/o1
 
-diff public_html/videos/feeds.xml $INDIR/I0/public_html/videos/feeds.xml
+diff public_html/videos/feeds.xml $INDIR/I0/public_html/videos/feeds.xml >/dev/null
 echo "$?" >>$OUTDIR/o1
 
 

@@ -17,9 +17,9 @@ leadpath=`echo $CURRDIR | cut -c2-` #First "/" is ignored for compression
 rm -fr etc
 rm -fr anaconda-ks.cfg
 tar xf myarchive.tar
-diff ${leadpath}/etc/file $INDIR/I7/etc/file
+diff ${leadpath}/etc/file $INDIR/I7/etc/file >/dev/null
 echo "$?" >>$OUTDIR/o51
-diff ${leadpath}/anaconda-ks.cfg $INDIR/I7/anaconda-ks.cfg
+diff ${leadpath}/anaconda-ks.cfg $INDIR/I7/anaconda-ks.cfg >/dev/null
 echo "$?" >>$OUTDIR/o51
 
 

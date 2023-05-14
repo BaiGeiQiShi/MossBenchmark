@@ -11,9 +11,9 @@ cp -r $INDIR/I2/archive.tar ./
 
 echo "$?" >>$OUTDIR/o26
 
-diff stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1
+diff stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1 >/dev/null
 echo "$?" >>$OUTDIR/o26
-diff stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2
+diff stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2 >/dev/null
 echo "$?" >>$OUTDIR/o26
 
 

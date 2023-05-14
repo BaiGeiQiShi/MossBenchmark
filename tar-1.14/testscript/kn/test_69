@@ -11,17 +11,17 @@ cp -r $INDIR/I8/test2.tar ./
 
 echo "$?" >>$OUTDIR/o69
 tar xf test2.tar
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o69
-diff test1 $INDIR/I8/test1
+diff test1 $INDIR/I8/test1 >/dev/null
 echo "$?" >>$OUTDIR/o69
 test -f test2
 echo "$?" >>$OUTDIR/o69
-diff test3 $INDIR/I8/test3
+diff test3 $INDIR/I8/test3 >/dev/null
 echo "$?" >>$OUTDIR/o69
-diff test4 $INDIR/I8/test4
+diff test4 $INDIR/I8/test4 >/dev/null
 echo "$?" >>$OUTDIR/o69
-diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest
+diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
 echo "$?" >>$OUTDIR/o69
 
 

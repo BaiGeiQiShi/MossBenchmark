@@ -10,9 +10,9 @@ cp -r $INDIR/I1/Music.tar ./
 { timeout -k 9 ${TIMEOUT}s $BIN -xv -f Music.tar "new/two.mp3" "new/three.mp3"; } &>$OUTDIR/o14
 
 echo "$?" >>$OUTDIR/o14
-diff new/two.mp3 $INDIR/I1/new/two.mp3
+diff new/two.mp3 $INDIR/I1/new/two.mp3 >/dev/null
 echo "$?" >>$OUTDIR/o14
-diff new/three.mp3 $INDIR/I1/new/three.mp3
+diff new/three.mp3 $INDIR/I1/new/three.mp3 >/dev/null
 echo "$?" >>$OUTDIR/o14
 
 

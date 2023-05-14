@@ -15,7 +15,7 @@ if [ -f tmp/default.profraw ]; then
 fi
 
 echo "$?" >>$OUTDIR/o11
-diff tmp/bigfile $INDIR/I1/bigfile
+diff tmp/bigfile $INDIR/I1/bigfile >/dev/null
 echo "$?" >>$OUTDIR/o11
 
 

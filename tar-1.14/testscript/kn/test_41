@@ -13,13 +13,13 @@ cp -r $INDIR/I4/todo.txt ./
 echo "$?" >>$OUTDIR/o41
 rm *.txt
 tar xf archive.tar
-diff file1 $INDIR/I4/file1
+diff file1 $INDIR/I4/file1 >/dev/null
 echo "$?" >>$OUTDIR/o41
-diff file2 $INDIR/I4/file2
+diff file2 $INDIR/I4/file2 >/dev/null
 echo "$?" >>$OUTDIR/o41
-diff file3 $INDIR/I4/file3
+diff file3 $INDIR/I4/file3 >/dev/null
 echo "$?" >>$OUTDIR/o41
-diff todo.txt $INDIR/I4/todo.txt
+diff todo.txt $INDIR/I4/todo.txt >/dev/null
 echo "$?" >>$OUTDIR/o41
 
 

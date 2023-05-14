@@ -27,15 +27,15 @@ echo "$?" >>$OUTDIR/o24
 test -d ${leadpath}/ubuntu/.cache
 echo "$?" >>$OUTDIR/o24
 
-diff ${leadpath}/ubuntu/.ICEauthority $INDIR/I2/ubuntu/.ICEauthority
+diff ${leadpath}/ubuntu/.ICEauthority $INDIR/I2/ubuntu/.ICEauthority >/dev/null
 echo "$?" >>$OUTDIR/o24
-diff ${leadpath}/ubuntu/stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1
+diff ${leadpath}/ubuntu/stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1 >/dev/null
 echo "$?" >>$OUTDIR/o24
-diff ${leadpath}/ubuntu/stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2
+diff ${leadpath}/ubuntu/stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2 >/dev/null
 echo "$?" >>$OUTDIR/o24
-diff ${leadpath}/ubuntu/archive.tar.gz $INDIR/I2/ubuntu/archive.tar.gz
+diff ${leadpath}/ubuntu/archive.tar.gz $INDIR/I2/ubuntu/archive.tar.gz >/dev/null
 echo "$?" >>$OUTDIR/o24
-diff ${leadpath}/ubuntu/Documents/notes.txt $INDIR/I2/ubuntu/Documents/notes.txt
+diff ${leadpath}/ubuntu/Documents/notes.txt $INDIR/I2/ubuntu/Documents/notes.txt >/dev/null
 echo "$?" >>$OUTDIR/o24
 
 test -d ${leadpath}/ubuntu/Videos

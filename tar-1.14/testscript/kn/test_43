@@ -32,7 +32,7 @@ test -d upload/folder2
 echo "$?" >>$OUTDIR/o43
 test -f upload/folder2/file
 echo "$?" >>$OUTDIR/o43
-diff file $INDIR/I4/file
+diff file $INDIR/I4/file >/dev/null
 echo "$?" >>$OUTDIR/o43
 
 if [ -f default.profraw.backup ]; then

@@ -13,7 +13,7 @@ cp -r $INDIR/I1/pageone.txt ./
 echo "$?" >>$OUTDIR/o20
 rm pageone.txt
 tar xf Book.tar pageone.txt
-diff pageone.txt $INDIR/I1/pageone.txt
+diff pageone.txt $INDIR/I1/pageone.txt >/dev/null
 echo "$?" >>$OUTDIR/o20
 
 #I1

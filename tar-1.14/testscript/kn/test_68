@@ -13,17 +13,17 @@ cp -r $INDIR/I8/filenamenotcontainingtest ./
 echo "$?" >>$OUTDIR/o68
 rm filenamenotcontainingtest
 tar xf test.tar
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o68
-diff test1 $INDIR/I8/test1
+diff test1 $INDIR/I8/test1 >/dev/null
 echo "$?" >>$OUTDIR/o68
-diff test2 $INDIR/I8/test2
+diff test2 $INDIR/I8/test2 >/dev/null
 echo "$?" >>$OUTDIR/o68
-diff test3 $INDIR/I8/test3
+diff test3 $INDIR/I8/test3 >/dev/null
 echo "$?" >>$OUTDIR/o68
-diff test4 $INDIR/I8/test4
+diff test4 $INDIR/I8/test4 >/dev/null
 echo "$?" >>$OUTDIR/o68
-diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest
+diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
 echo "$?" >>$OUTDIR/o68
 
 

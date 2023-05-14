@@ -12,7 +12,7 @@ cp -r $INDIR/I5/my-dir ./
 echo "$?" >>$OUTDIR/o44
 rm -fr my-dir
 tar xf my-dir.tar
-diff my-dir/file $INDIR/I5/my-dir/file
+diff my-dir/file $INDIR/I5/my-dir/file >/dev/null
 echo "$?" >>$OUTDIR/o44
 
 

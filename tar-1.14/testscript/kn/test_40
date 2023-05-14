@@ -12,7 +12,7 @@ cp -r $INDIR/I4/todo.txt ./
 echo "$?" >>$OUTDIR/o40
 rm *.txt
 tar xf archive.tar
-diff todo.txt $INDIR/I4/todo.txt
+diff todo.txt $INDIR/I4/todo.txt >/dev/null
 echo "$?" >>$OUTDIR/o40
 
 

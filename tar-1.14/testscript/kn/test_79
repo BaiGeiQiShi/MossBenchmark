@@ -16,15 +16,15 @@ cp -r $INDIR/I9/dir2 ./
 echo "$?" >>$OUTDIR/o79
 rm -fr file* dir*
 tar xf all.tar
-diff file1 $INDIR/I9/file1
+diff file1 $INDIR/I9/file1 >/dev/null
 echo "$?" >>$OUTDIR/o79
-diff file2 $INDIR/I9/file2
+diff file2 $INDIR/I9/file2 >/dev/null
 echo "$?" >>$OUTDIR/o79
-diff file3 $INDIR/I9/file3
+diff file3 $INDIR/I9/file3 >/dev/null
 echo "$?" >>$OUTDIR/o79
-diff dir1/file $INDIR/I9/dir1/file
+diff dir1/file $INDIR/I9/dir1/file >/dev/null
 echo "$?" >>$OUTDIR/o79
-diff dir2/file $INDIR/I9/dir2/file
+diff dir2/file $INDIR/I9/dir2/file >/dev/null
 echo "$?" >>$OUTDIR/o79
 
 #I9

@@ -12,11 +12,11 @@ cp -r $INDIR/I8/archive.tar ./
 echo "$?" >>$OUTDIR/o675
 info=`ls -l | sed -n '1!p' | tr -s ' ' | cut -d' ' -f1,2,3,4`
 echo ${info} >>$OUTDIR/o675
-diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest
+diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
 echo "$?" >>$OUTDIR/o675
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o675
-diff file2 $INDIR/I8/file2
+diff file2 $INDIR/I8/file2 >/dev/null
 echo "$?" >>$OUTDIR/o675
 
 

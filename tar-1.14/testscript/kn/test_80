@@ -10,17 +10,17 @@ cp -r $INDIR/I9/file.tar ./
 { timeout -k 9 ${TIMEOUT}s $BIN -xvf file.tar; } &>$OUTDIR/o80
 
 echo "$?" >>$OUTDIR/o80
-diff file1 $INDIR/I9/file1
+diff file1 $INDIR/I9/file1 >/dev/null
 echo "$?" >>$OUTDIR/o80
-diff file2 $INDIR/I9/file2
+diff file2 $INDIR/I9/file2 >/dev/null
 echo "$?" >>$OUTDIR/o80
-diff file3 $INDIR/I9/file3
+diff file3 $INDIR/I9/file3 >/dev/null
 echo "$?" >>$OUTDIR/o80
-diff file4 $INDIR/I9/file4
+diff file4 $INDIR/I9/file4 >/dev/null
 echo "$?" >>$OUTDIR/o80
-diff file5 $INDIR/I9/file5
+diff file5 $INDIR/I9/file5 >/dev/null
 echo "$?" >>$OUTDIR/o80
-diff file6 $INDIR/I9/file6
+diff file6 $INDIR/I9/file6 >/dev/null
 echo "$?" >>$OUTDIR/o80
 
 #I9

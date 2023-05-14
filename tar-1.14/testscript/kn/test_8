@@ -13,7 +13,7 @@ cp -r $INDIR/I0/xyz.txt ./
 echo "$?" >>$OUTDIR/o8
 rm xyz.txt
 tar xf tecmint-14-09-12.tar xyz.txt
-diff xyz.txt $INDIR/I0/xyz.txt
+diff xyz.txt $INDIR/I0/xyz.txt >/dev/null
 echo "$?" >>$OUTDIR/o8
 
 #I0

@@ -11,9 +11,9 @@ cp -r $INDIR/I3/file.tar ./
 
 echo "$?" >>$OUTDIR/o32
 
-diff os2.c $INDIR/I3/os2.c
+diff os2.c $INDIR/I3/os2.c >/dev/null
 echo "$?" >>$OUTDIR/o32
-diff os3.c $INDIR/I3/os3.c
+diff os3.c $INDIR/I3/os3.c >/dev/null
 echo "$?" >>$OUTDIR/o32
 
 #I3

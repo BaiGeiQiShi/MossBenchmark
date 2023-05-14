@@ -15,13 +15,13 @@ test -f file1
 echo "$?" >>$OUTDIR/o82
 test -f file2
 echo "$?" >>$OUTDIR/o82
-diff file3 $INDIR/I9/file3
+diff file3 $INDIR/I9/file3 >/dev/null
 echo "$?" >>$OUTDIR/o82
-diff file4 $INDIR/I9/file4
+diff file4 $INDIR/I9/file4 >/dev/null
 echo "$?" >>$OUTDIR/o82
-diff file5 $INDIR/I9/file5
+diff file5 $INDIR/I9/file5 >/dev/null
 echo "$?" >>$OUTDIR/o82
-diff file6 $INDIR/I9/file6
+diff file6 $INDIR/I9/file6 >/dev/null
 echo "$?" >>$OUTDIR/o82
 
 

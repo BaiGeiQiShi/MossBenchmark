@@ -18,17 +18,17 @@ rm -fr Downloads
 rm -fr Documents
 
 tar xf archive.tar
-diff ${leadpath}/Downloads/song.mp3 $INDIR/I2/ubuntu/Downloads/song.mp3
+diff ${leadpath}/Downloads/song.mp3 $INDIR/I2/ubuntu/Downloads/song.mp3 >/dev/null
 echo "$?" >>$OUTDIR/o23
-diff ${leadpath}/Downloads/video.mp4 $INDIR/I2/ubuntu/Downloads/video.mp4
+diff ${leadpath}/Downloads/video.mp4 $INDIR/I2/ubuntu/Downloads/video.mp4 >/dev/null
 echo "$?" >>$OUTDIR/o23
-diff ${leadpath}/Downloads/image.png $INDIR/I2/ubuntu/Downloads/image.png
-echo "$?" >>$OUTDIR/o23
-
-diff ${leadpath}/Documents/notes.txt $INDIR/I2/ubuntu/Documents/notes.txt
+diff ${leadpath}/Downloads/image.png $INDIR/I2/ubuntu/Downloads/image.png >/dev/null
 echo "$?" >>$OUTDIR/o23
 
-diff $(pwd)/usr/local/mytest/file $(pwd)/usr/local/mytest/file
+diff ${leadpath}/Documents/notes.txt $INDIR/I2/ubuntu/Documents/notes.txt >/dev/null
+echo "$?" >>$OUTDIR/o23
+
+diff $(pwd)/usr/local/mytest/file $(pwd)/usr/local/mytest/file >/dev/null
 echo "$?" >>$OUTDIR/o23
 
 

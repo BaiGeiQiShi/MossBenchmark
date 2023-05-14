@@ -19,7 +19,7 @@ rm -fr opt
 tar xf myarchive.tar
 test -f ${leadpath}/opt/file.html
 echo "$?" >>$OUTDIR/o58
-diff ${leadpath}/etc/file $INDIR/I7/etc/file
+diff ${leadpath}/etc/file $INDIR/I7/etc/file >/dev/null
 echo "$?" >>$OUTDIR/o58
 
 

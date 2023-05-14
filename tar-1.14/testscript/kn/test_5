@@ -11,7 +11,7 @@ cp -r $INDIR/I0/cleanfiles.sh.tar ./
 
 echo "$?" >>$OUTDIR/o5
 
-diff cleanfiles.sh $INDIR/I0/cleanfiles.sh
+diff cleanfiles.sh $INDIR/I0/cleanfiles.sh >/dev/null
 echo "$?" >>$OUTDIR/o5
 
 

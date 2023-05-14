@@ -12,7 +12,7 @@ cp -r $INDIR/I6/dir ./
 echo "$?" >>$OUTDIR/o49
 rm -fr ./dir
 tar xf archiveToCreate.tar
-diff dir/file $INDIR/I6/dir/file
+diff dir/file $INDIR/I6/dir/file >/dev/null
 echo "$?" >>$OUTDIR/o49
 
 

@@ -12,9 +12,9 @@ cp -r $INDIR/I2/ubuntu/stuff ./
 echo "$?" >>$OUTDIR/o21
 rm -fr stuff
 tar xf archive.tar
-diff stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1
+diff stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1 >/dev/null
 echo "$?" >>$OUTDIR/o21
-diff stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2
+diff stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2 >/dev/null
 echo "$?" >>$OUTDIR/o21
 
 

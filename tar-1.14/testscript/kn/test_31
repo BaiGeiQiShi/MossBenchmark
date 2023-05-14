@@ -16,11 +16,11 @@ if [ tmp/default.profraw ]; then
     cp tmp/default.profraw ./ #Important!
 fi
 
-diff tmp/os2.c $INDIR/I3/os2.c
+diff tmp/os2.c $INDIR/I3/os2.c >/dev/null
 echo "$?" >>$OUTDIR/o31
-diff tmp/os3.c $INDIR/I3/os3.c
+diff tmp/os3.c $INDIR/I3/os3.c >/dev/null
 echo "$?" >>$OUTDIR/o31
-diff tmp/os4.c $INDIR/I3/os4.c
+diff tmp/os4.c $INDIR/I3/os4.c >/dev/null
 echo "$?" >>$OUTDIR/o31
 
 #I3

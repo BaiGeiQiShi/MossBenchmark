@@ -13,9 +13,9 @@ cp -r $INDIR/I9/dir2 ./
 echo "$?" >>$OUTDIR/o78
 rm -fr dir1 dir2
 tar xf dir.tar
-diff dir1/file $INDIR/I9/dir1/file
+diff dir1/file $INDIR/I9/dir1/file >/dev/null
 echo "$?" >>$OUTDIR/o78
-diff dir2/file $INDIR/I9/dir2/file
+diff dir2/file $INDIR/I9/dir2/file >/dev/null
 echo "$?" >>$OUTDIR/o78
 
 #I9

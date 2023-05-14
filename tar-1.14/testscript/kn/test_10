@@ -10,7 +10,7 @@ cp -r $INDIR/I1/bigfile.tar ./
 { timeout -k 9 ${TIMEOUT}s $BIN -xvf bigfile.tar; } &>$OUTDIR/o10
 
 echo "$?" >>$OUTDIR/o10
-diff bigfile $INDIR/I1/bigfile
+diff bigfile $INDIR/I1/bigfile >/dev/null
 echo "$?" >>$OUTDIR/o10
 
 

@@ -13,13 +13,13 @@ echo "0987654321" >test2
 echo "$?" >>$OUTDIR/o71
 mv test2 test2.origin
 tar xf test4.tar
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o71
-diff test1 $INDIR/I8/test1
+diff test1 $INDIR/I8/test1 >/dev/null
 echo "$?" >>$OUTDIR/o71
-diff test2 test2.origin
+diff test2 test2.origin >/dev/null
 echo "$?" >>$OUTDIR/o71
-diff test3 $INDIR/I8/test3
+diff test3 $INDIR/I8/test3 >/dev/null
 echo "$?" >>$OUTDIR/o71
 
 

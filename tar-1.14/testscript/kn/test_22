@@ -10,7 +10,7 @@ touch $(pwd)/usr/local/mytest/file
 
 echo "$?" >>$OUTDIR/o22
 tar xf archive.tar
-diff $(pwd)/usr/local/mytest/file $(pwd)/usr/local/mytest/file
+diff $(pwd)/usr/local/mytest/file $(pwd)/usr/local/mytest/file >/dev/null
 echo "$?" >>$OUTDIR/o22
 
 

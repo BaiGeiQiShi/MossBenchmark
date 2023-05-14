@@ -14,11 +14,11 @@ cp -r $INDIR/I6/file3 ./
 echo "$?" >>$OUTDIR/o48
 rm -fr file*
 tar xf archiveToCreate.tar
-diff file1 $INDIR/I6/file1
+diff file1 $INDIR/I6/file1 >/dev/null
 echo "$?" >>$OUTDIR/o48
-diff file2 $INDIR/I6/file2
+diff file2 $INDIR/I6/file2 >/dev/null
 echo "$?" >>$OUTDIR/o48
-diff file3 $INDIR/I6/file3
+diff file3 $INDIR/I6/file3 >/dev/null
 echo "$?" >>$OUTDIR/o48
 
 

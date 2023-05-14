@@ -11,10 +11,10 @@ cp -r $INDIR/I0/tecmint-14-09-12.tar ./
 
 echo "$?" >>$OUTDIR/o6
 
-diff tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm $INDIR/I0/tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm
+diff tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm $INDIR/I0/tecmint/rpmforge-release-0.5.2-2.el5.rf.i386.rpm >/dev/null
 echo "$?" >>$OUTDIR/o6
 
-diff tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm $INDIR/I0/tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm
+diff tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm $INDIR/I0/tecmint/phpmyadmin-2.11.11.3-1.el5.rf.noarch.rpm >/dev/null
 echo "$?" >>$OUTDIR/o6
 
 

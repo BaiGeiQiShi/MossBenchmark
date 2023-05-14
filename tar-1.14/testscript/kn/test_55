@@ -11,10 +11,10 @@ cp -r $INDIR/I7/myarchive.tar ./
 
 echo "$?" >>$OUTDIR/o55
 
-diff home/qxin6/debaug_expt/debaug/benchmark/tar-1.14_template/input.origin/I7/etc/file $INDIR/I7/etc/file
+diff home/qxin6/debaug_expt/debaug/benchmark/tar-1.14_template/input.origin/I7/etc/file $INDIR/I7/etc/file >/dev/null
 echo "$?" >>$OUTDIR/o55
 
-diff home/qxin6/debaug_expt/debaug/benchmark/tar-1.14_template/input.origin/I7/anaconda-ks.cfg $INDIR/I7/anaconda-ks.cfg
+diff home/qxin6/debaug_expt/debaug/benchmark/tar-1.14_template/input.origin/I7/anaconda-ks.cfg $INDIR/I7/anaconda-ks.cfg >/dev/null
 echo "$?" >>$OUTDIR/o55
 
 

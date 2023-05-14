@@ -12,7 +12,7 @@ cp -r $INDIR/I5/my-file.txt ./
 echo "$?" >>$OUTDIR/o45
 rm -fr my-file.txt
 tar xf archive.tar
-diff my-file.txt $INDIR/I5/my-file.txt
+diff my-file.txt $INDIR/I5/my-file.txt >/dev/null
 echo "$?" >>$OUTDIR/o45
 
 

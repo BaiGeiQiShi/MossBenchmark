@@ -16,19 +16,19 @@ if [ -f tmp/default.profraw ]; then
     cp tmp/default.profraw ./ #This is important!
 fi
 
-diff tmp/public_html/videos/views.php $INDIR/I0/public_html/videos/views.php
+diff tmp/public_html/videos/views.php $INDIR/I0/public_html/videos/views.php >/dev/null
 echo "$?" >>$OUTDIR/o2
 
-diff tmp/public_html/videos/index.php $INDIR/I0/public_html/videos/index.php
+diff tmp/public_html/videos/index.php $INDIR/I0/public_html/videos/index.php >/dev/null
 echo "$?" >>$OUTDIR/o2
 
-diff tmp/public_html/videos/logout.php $INDIR/I0/public_html/videos/logout.php
+diff tmp/public_html/videos/logout.php $INDIR/I0/public_html/videos/logout.php >/dev/null
 echo "$?" >>$OUTDIR/o2
 
-diff tmp/public_html/videos/all_categories.php $INDIR/I0/public_html/videos/all_categories.php
+diff tmp/public_html/videos/all_categories.php $INDIR/I0/public_html/videos/all_categories.php >/dev/null
 echo "$?" >>$OUTDIR/o2
 
-diff tmp/public_html/videos/feeds.xml $INDIR/I0/public_html/videos/feeds.xml
+diff tmp/public_html/videos/feeds.xml $INDIR/I0/public_html/videos/feeds.xml >/dev/null
 echo "$?" >>$OUTDIR/o2
 
 

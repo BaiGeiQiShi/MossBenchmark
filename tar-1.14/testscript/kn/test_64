@@ -14,7 +14,7 @@ info=`tar -tvf archive.tar | tr -s ' ' | cut -d' ' -f1,2`
 echo "${info}" >>$OUTDIR/o642
 rm test
 tar xf archive.tar
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o642
 
 

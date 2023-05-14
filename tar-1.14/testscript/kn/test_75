@@ -31,7 +31,7 @@ echo "$?" >>$OUTDIR/o75
 test -d testdir
 echo "$?" >>$OUTDIR/o75
 
-diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest
+diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
 echo "$?" >>$OUTDIR/o75
 
 

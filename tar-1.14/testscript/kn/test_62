@@ -18,28 +18,28 @@ cp -r $INDIR/I8/testdir ./
 echo "$?" >>$OUTDIR/o620
 rm -fr test test1 test2 test3 test4 filenamenotcontainingtest testdir
 tar xf test2.tar
-diff test $INDIR/I8/test
+diff test $INDIR/I8/test >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff test1 $INDIR/I8/test1
+diff test1 $INDIR/I8/test1 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff test2 $INDIR/I8/test2
+diff test2 $INDIR/I8/test2 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff test3 $INDIR/I8/test3
+diff test3 $INDIR/I8/test3 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff test4 $INDIR/I8/test4
+diff test4 $INDIR/I8/test4 >/dev/null
 echo "$?" >>$OUTDIR/o620
 test -f filenamenotcontainingtest
 echo "$?" >>$OUTDIR/o620
 
-diff testdir/test $INDIR/I8/testdir/test
+diff testdir/test $INDIR/I8/testdir/test >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff testdir/test1 $INDIR/I8/testdir/test1
+diff testdir/test1 $INDIR/I8/testdir/test1 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff testdir/test2 $INDIR/I8/testdir/test2
+diff testdir/test2 $INDIR/I8/testdir/test2 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff testdir/test3 $INDIR/I8/testdir/test3
+diff testdir/test3 $INDIR/I8/testdir/test3 >/dev/null
 echo "$?" >>$OUTDIR/o620
-diff testdir/test4 $INDIR/I8/testdir/test4
+diff testdir/test4 $INDIR/I8/testdir/test4 >/dev/null
 echo "$?" >>$OUTDIR/o620
 
 
