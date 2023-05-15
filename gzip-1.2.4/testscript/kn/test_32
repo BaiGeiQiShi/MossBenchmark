@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp $INDIR/I3/mydocument.odt ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN mydocument.odt; } &>$OUTDIR/o32
+
+echo "$?" >>$OUTDIR/o32
+test -f mydocument.odt
+echo "$?" >>$OUTDIR/o32
+gzip -d <mydocument.odt.gz >rslt
+cat rslt &>>$OUTDIR/o32
+
