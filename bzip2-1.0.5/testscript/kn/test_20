@@ -13,6 +13,6 @@ echo "$?" >>$OUTDIR/o20
 test -f linux-3.18.19.tar
 echo "$?" >>$OUTDIR/o20
 bzip2 -d linux-3.18.19.tar.bz2
-diff linux-3.18.19.tar $INDIR/I2/linux-3.18.19.tar
+diff linux-3.18.19.tar $INDIR/I2/linux-3.18.19.tar >/dev/null
 echo "$?" &>>$OUTDIR/o20
 

@@ -13,6 +13,6 @@ echo "$?" >>$OUTDIR/o26
 test -f backup.tar
 echo "$?" >>$OUTDIR/o26
 bzip2 -d backup.tar.bz2
-diff backup.tar $INDIR/I3/backup.tar
+diff backup.tar $INDIR/I3/backup.tar >/dev/null
 echo "$?" >>$OUTDIR/o26
 

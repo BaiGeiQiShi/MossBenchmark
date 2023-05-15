@@ -17,6 +17,6 @@ if [ -f file7.tar ]; then
     rm file7.tar #In case the file still exists
 fi
 bzip2 -d file7.tar.bz2
-diff file7.tar $INDIR/I8/file7.tar
+diff file7.tar $INDIR/I8/file7.tar >/dev/null
 echo "$?" >>$OUTDIR/o53
 
