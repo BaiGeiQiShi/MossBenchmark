@@ -14,7 +14,6 @@ $INDIR/util/makeoutputcleanup $OUTDIR/o264
 if [ -f default.profraw ]; then
     mv default.profraw ${CURRDIR}/
 fi
-sed -i -n '$d' $OUTDIR/o264
 
 cat hello >> $OUTDIR/o264
 cd ..

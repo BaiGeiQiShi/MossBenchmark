@@ -14,7 +14,6 @@ $INDIR/util/makeoutputcleanup $OUTDIR/o712
 if [ -f default.profraw ]; then
     mv default.profraw ${CURRDIR}/
 fi
-sed -i -n '$d' $OUTDIR/o712
 
 cat hello >> $OUTDIR/o712
 cd ..

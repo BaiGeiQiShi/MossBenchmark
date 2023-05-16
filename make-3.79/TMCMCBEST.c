@@ -13324,7 +13324,7 @@ int main(int argc, char **argv, char **envp)
         if (db_level)
         {
           {
-            print_version();
+
           }
         }
       }
@@ -16119,7 +16119,7 @@ static void print_version(void)
     }
     else
     {
-      tmp = "";
+
     }
     precede = (char *)tmp;
     if (printed_version)
@@ -18050,11 +18050,11 @@ static int read_makefile(char *filename, int flags)
         { // Added block
           if ((int)*(p2 + 0) == 58)
           {
-            if ((int)*(p2 + 1) == 0)
-            {
 
 
-            }
+
+
+
           }
         }
         if (!in_ignored_define)
@@ -18937,7 +18937,7 @@ static int read_makefile(char *filename, int flags)
                         two_colon = (int)*p2 == 58;
                         if (two_colon)
                         {
-                          p2++;
+
                         }
                         if ((int)*lb_next != 0)
                         {
@@ -20548,32 +20548,32 @@ static void record_files(struct nameseq *filenames, char *pattern, char *pattern
         else
         {
           {
-            f = lookup_file(name);
+
           }
-          if ((unsigned long)f != (unsigned long)((struct file *)0))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           {
-            if (f->is_target)
-            {
 
-
-
-
-
-
-
-
-            }
           }
-          {
-            f = enter_file(name);
-          }
-          if ((unsigned long)f->double_colon == (unsigned long)((struct file *)0))
-          {
-            f->double_colon = f;
-          }
-          f->is_target = 1U;
-          f->deps = this;
-          f->cmds = cmds;
+
+
+
+
+
+
+
         }
         if ((unsigned long)f != (unsigned long)((struct file *)0))
         {
@@ -21440,7 +21440,7 @@ static enum make_word_type get_next_mword(char *buffer, char *delim, char **star
       {
         if ((int)*p == 58)
         {
-          goto case_58___0;
+
         }
         if ((int)*p == 61)
         {
@@ -21448,9 +21448,9 @@ static enum make_word_type get_next_mword(char *buffer, char *delim, char **star
         }
         goto switch_break___0;
       case_58___0: ;/* CIL Label */
-        p++;
-        wtype = (enum make_word_type)5;
-        goto switch_break___0;
+
+
+
       case_61___0: ;/* CIL Label */
 
 

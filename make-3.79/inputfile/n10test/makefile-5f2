@@ -1,3 +1,0 @@
-
-temp:= $(subst (bar.c), (foo.c))
-

@@ -13324,7 +13324,7 @@ int main(int argc, char **argv, char **envp)
         if (db_level)
         {
           {
-            print_version();
+
           }
         }
       }
@@ -14974,7 +14974,7 @@ static void decode_switches(int argc, char **argv, int env)
         }
         if (c == -1)
         {
-
+          goto while_break;
         }
         else
         { // Added block
@@ -16119,7 +16119,7 @@ static void print_version(void)
     }
     else
     {
-      tmp = "";
+
     }
     precede = (char *)tmp;
     if (printed_version)

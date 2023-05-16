@@ -14,7 +14,6 @@ if [ -f default.profraw ]; then
     mv default.profraw ${CURRDIR}/
 fi
 
-sed -i -n '$d' $OUTDIR/o1740
 cat hello >> $OUTDIR/o1740
 cd ..
 rm -r -f sdir

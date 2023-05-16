@@ -14,4 +14,3 @@ if [ -f default.profraw ]; then
 fi
 
 rm -r -f sdir
-sed -i -n '$d' $OUTDIR/o464

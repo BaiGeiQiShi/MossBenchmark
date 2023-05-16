@@ -14,5 +14,4 @@ if [ -f default.profraw ]; then
 fi
 
 cat sdir/hello >> $OUTDIR/o172
-sed -i -n '$d' $OUTDIR/o172
 rm -r -f sdir

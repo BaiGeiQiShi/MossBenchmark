@@ -14,7 +14,6 @@ timeout -k 9 ${TIMEOUT}s $BIN > $OUTDIR/o690 2>&1
 $INDIR/util/makeoutputcleanup $OUTDIR/o690
 if [ -f default.profraw ]; then
     mv default.profraw ${CURRDIR}/
-sed -i -n '$d' $OUTDIR/o690
 fi
 
 cat hello >> $OUTDIR/o690
