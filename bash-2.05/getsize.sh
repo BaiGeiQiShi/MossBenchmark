@@ -54,7 +54,6 @@ rm -rf debdcetmp
 
 
 #clang -w -o $BIN $SRC || exit 1
-./compile.sh $SRC $BIN "-w -O3" "ccache clang"  || exit 1
 ./compile.sh $SRC $BIN "-w -O3"   || exit 1
 
 

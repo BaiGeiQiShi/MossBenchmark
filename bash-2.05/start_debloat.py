@@ -3,7 +3,7 @@ import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="bash-2.05"
-version=str.upper("TMCMC")
+version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(5)
 TIMEOUT="5m"
@@ -97,7 +97,7 @@ for k in ks:
     for alpha in alphas:
         for beta in betas:
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
-            #subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
+            subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
 
 

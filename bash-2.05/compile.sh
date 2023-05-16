@@ -11,7 +11,4 @@ if [ -z $4 ]; then
 else
     COMPILER=$4
 fi
-date
-$COMPILER -c -w $SRC -o $SRC.o ${flags}
-$COMPILER ${flags} -w -o $BIN $SRC.o -lbuiltins -lsh -lreadline -lhistory -ltermcap -lglob -ltilde -lmalloc  -ldl
-date
+$COMPILER $SRC ${flags} -w -o $BIN -lbuiltins -lsh -lreadline -lhistory -ltermcap -lglob -ltilde -lmalloc  -ldl

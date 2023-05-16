@@ -1151,7 +1151,7 @@ int main(int argc___0 , char **argv___0 , char **env )
                                
                            
                                       
-                                                                    
+  tmp___4 = parse_long_options(argv___0, (int )arg_index, argc___0);
                                        
   }
   if (want_initial_help) {
@@ -2421,7 +2421,7 @@ static int open_shell_script(char *script_name )
     {
                                  
                  
-                         
+    file_error(filename);
     }
     if (e == 2) {
                      
@@ -2606,7 +2606,7 @@ static void set_shell_name(char *argv0 )
 
 
   }
-  shell_name = argv0;
+                     
   {
   while (1) {
     while_continue: ;/* CIL Label */ ;
@@ -2761,7 +2761,7 @@ void get_current_user_info(void)
                
     }
   }
-         
+  return;
 }
 }
 extern int sh_setlinebuf() ;
@@ -11806,7 +11806,7 @@ int absolute_program(char *string )
 
   {
   {
-                                            
+  tmp = strchr((char const   *)string, '/');
   }
                                                                         
 }
@@ -20322,9 +20322,9 @@ void initialize_shell_variables(char **env , int privmode )
   {
   while (1) {
     while_continue___2: ;/* CIL Label */ ;
-                              
+    temp_var->attributes |= 1;
                            
-    goto while_break___2;
+                         
   }
   while_break___2: ;/* CIL Label */ ;
   }
@@ -20390,7 +20390,7 @@ void initialize_shell_variables(char **env , int privmode )
   {
   while (1) {
     while_continue___7: ;/* CIL Label */ ;
-                              
+    temp_var->attributes |= 1;
                            
                          
   }
@@ -20403,7 +20403,7 @@ void initialize_shell_variables(char **env , int privmode )
   }
   {
                            
-             
+  set_ppid();
                                                
                    
                                                
@@ -20451,7 +20451,7 @@ void initialize_shell_variables(char **env , int privmode )
     }
   }
   {
-                                                              
+  sbrand((int )((long )dollar_dollar_pid + shell_start_time));
   }
   if (interactive_shell) {
     {
@@ -20735,7 +20735,7 @@ void adjust_shell_level(int change )
 
   }
   {
-  temp_var = bind_variable((char *)"SHLVL", new_level);
+                                                       
   }
   {
   while (1) {
@@ -25764,7 +25764,7 @@ void file_error(char *filename )
   {
                            
                            
-                                            
+  report_error("%s: %s", filename, tmp___0);
   }
          
 }
@@ -25822,7 +25822,7 @@ void report_error(char const   *format  , ...)
 
     }
   }
-  return;
+         
 }
 }
 void fatal_error(char const   *format  , ...) 
@@ -27837,7 +27837,7 @@ int change_flag(int flag , int on_or_off )
     }
   }
   {
-                          
+  value = find_flag(flag);
   }
   if ((unsigned long )value == (unsigned long )((int *)0)) {
 
@@ -27896,7 +27896,7 @@ int change_flag(int flag , int on_or_off )
 
   switch_break: ;/* CIL Label */ ;
   }
-                     
+  return (old_value);
 }
 }
 char *which_set_flags(void) 
@@ -31295,7 +31295,7 @@ int initialize_job_control(int force )
   if (interactive == 0) {
     {
                     
-                       
+    original_pgrp = -1;
                                
     }
   } else {
@@ -42580,7 +42580,7 @@ HASH_TABLE *make_hash_table(int buckets )
 
   {
   {
-                                     
+  tmp = xmalloc(sizeof(HASH_TABLE ));
                                 
   }
   if (buckets == 0) {
@@ -42729,7 +42729,7 @@ BUCKET_CONTENTS *add_hash_item(char *string , HASH_TABLE *table )
       } else {
                          
       }
-                        
+      item = item->next;
     }
     while_break: ;/* CIL Label */ ;
     }
@@ -43449,14 +43449,14 @@ void initialize_traps(void)
                                                                    
                              
                                                
-                     
+  sigmodes[17] |= 12;
                                                                       
                                 
                                              
                    
                                                                       
                                 
-  set_signal_handler(3, original_signals[3]);
+                                             
                    
   }
   if (interactive) {
@@ -45871,7 +45871,7 @@ void initialize_signals(void)
 
   {
   {
-  initialize_shell_signals();
+                             
                            
   }
          
@@ -48985,7 +48985,7 @@ ARRAY_ELEMENT *new_array_element(arrayind_t indx , char *value )
   }
   if (value) {
     {
-                                            
+    tmp___0 = strlen((char const   *)value);
                                      
                                                                                        
                        
@@ -49042,7 +49042,7 @@ ARRAY *new_array(void)
                                                     
                  
                        
-                       
+  head->prev = tmp___1;
                  
   }
              
@@ -49175,7 +49175,7 @@ int array_add_element(ARRAY *a , arrayind_t i , char *v___0 )
     }
     while_break: ;/* CIL Label */ ;
     }
-                     
+    a->max_index = i;
                          
                
   }
@@ -55670,7 +55670,7 @@ void set_default_locale(void)
   if (default_locale) {
     {
                                                  
-                                 
+    tmp___0 = xmalloc(1UL + tmp);
                                                                                                 
                              
     }

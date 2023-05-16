@@ -69,7 +69,7 @@ rm -rf debdcetmp
 
 
 #Compile Reduced Program
-./compile.sh $SRC $BIN "-O3 -w" "ccache clang"
+./compile.sh $SRC $BIN "-O3 -w" 
 
 #Compute Size Reduction
 original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))
