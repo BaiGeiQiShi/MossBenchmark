@@ -17,5 +17,5 @@ echo "$?" >>$OUTDIR/o14
 test -f file2.txt
 echo "$?" >>$OUTDIR/o14
 bzip2 -d <file.bz2 >rslt
-cat rslt >>$OUTDIR/o14
+cat rslt &>>$OUTDIR/o14
 

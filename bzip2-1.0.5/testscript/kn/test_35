@@ -14,4 +14,3 @@ echo "$?" >>$OUTDIR/o35
 test -f filename.bz2
 echo "$?" >>$OUTDIR/o35
 cat filename &>>$OUTDIR/o35
-

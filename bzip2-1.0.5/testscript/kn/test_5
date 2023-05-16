@@ -14,4 +14,3 @@ test -f input.txt
 echo "$?" >>$OUTDIR/o5
 bzip2 -d <input.txt.bz2 >rslt
 cat rslt &>>$OUTDIR/o5
-

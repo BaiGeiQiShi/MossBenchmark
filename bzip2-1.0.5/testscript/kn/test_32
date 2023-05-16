@@ -13,5 +13,5 @@ bzip2 filename
 echo "$?" >>$OUTDIR/o32
 test -f filename.bz2
 echo "$?" >>$OUTDIR/o32
-cat filename >>$OUTDIR/o32
+cat filename &>>$OUTDIR/o32
 

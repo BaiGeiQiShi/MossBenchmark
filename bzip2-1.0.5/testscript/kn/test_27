@@ -13,5 +13,5 @@ echo "$?" >>$OUTDIR/o27
 test -f filename
 echo "$?" >>$OUTDIR/o27
 bzip2 -d <filename.bz2 >rslt
-cat rslt >>$OUTDIR/o27
+cat rslt &>>$OUTDIR/o27
 

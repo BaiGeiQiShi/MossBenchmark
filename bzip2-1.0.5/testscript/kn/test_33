@@ -13,5 +13,5 @@ bzip2 Etcher-linux-x64.AppImage
 echo "$?" >>$OUTDIR/o33
 test -f Etcher-linux-x64.AppImage.bz2
 echo "$?" >>$OUTDIR/o33
-cat Etcher-linux-x64.AppImage >>$OUTDIR/o33
+cat Etcher-linux-x64.AppImage &>>$OUTDIR/o33
 

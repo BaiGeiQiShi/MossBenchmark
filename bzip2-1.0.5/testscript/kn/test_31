@@ -13,5 +13,5 @@ echo "$?" >>$OUTDIR/o31
 test -f Etcher-linux-x64.AppImage
 echo "$?" >>$OUTDIR/o31
 bzip2 -d <Etcher-linux-x64.AppImage.bz2 >rslt
-cat rslt >>$OUTDIR/o31
+cat rslt &>>$OUTDIR/o31
 

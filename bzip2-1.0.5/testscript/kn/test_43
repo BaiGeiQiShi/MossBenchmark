@@ -13,4 +13,4 @@ echo "$?" >>$OUTDIR/o43
 test -f myfile.txt
 echo "$?" >>$OUTDIR/o43
 bzip2 -d <myfile.txt.bz2 >rslt
-cat rslt >>$OUTDIR/o43
+cat rslt &>>$OUTDIR/o43

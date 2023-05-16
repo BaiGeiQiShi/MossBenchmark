@@ -13,4 +13,4 @@ bzip2 myfile.txt
 echo "$?" >>$OUTDIR/o42
 test -f myfile.txt.bz2
 echo "$?" >>$OUTDIR/o42
-cat myfile.txt >>$OUTDIR/o42
+cat myfile.txt &>>$OUTDIR/o42
