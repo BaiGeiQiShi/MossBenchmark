@@ -7,7 +7,7 @@ INDIR=$4
 
 cp $INDIR/I6/* ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN -r *; } &>$OUTDIR/o58
+{ timeout -k 9 ${TIMEOUT}s $BIN -r $(pwd)/*; } &>$OUTDIR/o58
 
 echo "$?" >>$OUTDIR/o58
 test -f file1.txt

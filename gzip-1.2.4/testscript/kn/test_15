@@ -10,7 +10,7 @@ cp $INDIR/I1/file1.txt ./
 cp $INDIR/I1/file2.txt ./
 cp $INDIR/I1/file3.txt ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN -r *; } &>$OUTDIR/o15
+{ timeout -k 9 ${TIMEOUT}s $BIN -r $(pwd)/*; } &>$OUTDIR/o15
 
 echo "$?" >>$OUTDIR/o15
 test -f example/example.txt

@@ -12,7 +12,7 @@ gzip file
 gzip mydocument.odt
 gzip "this is my file.png"
 
-{ timeout -k 9 ${TIMEOUT}s $BIN -d *.gz; } &>$OUTDIR/o38
+{ timeout -k 9 ${TIMEOUT}s $BIN -d $(pwd)/*.gz; } &>$OUTDIR/o38
 
 echo "$?" >>$OUTDIR/o38
 test -f file.gz
