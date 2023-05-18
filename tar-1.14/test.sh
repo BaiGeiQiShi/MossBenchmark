@@ -91,7 +91,7 @@ chattr -i $CURRDIR/tmp $CURRDIR/output
 chattr -i $CURRDIR/*
 ./compare_output ${ORIGIN_OUTDIR} $OUTDIR $CURRDIR/compare.txt
 clearProgram
-rm -rf *.bz2 *.gz
+rm -rf *.bz2 *.gz *.tar
 
 #total_ukn=$(ls $CURRDIR/testscript/ukn | wc -l) #total ukn inputs
 pass_all=`grep 'pass-' $CURRDIR/compare.txt | wc -l`
