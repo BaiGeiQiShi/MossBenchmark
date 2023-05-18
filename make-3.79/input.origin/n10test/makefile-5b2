@@ -1,2 +1,0 @@
-
-tempfiles := $(foreach (tempdir), (tempdir2))

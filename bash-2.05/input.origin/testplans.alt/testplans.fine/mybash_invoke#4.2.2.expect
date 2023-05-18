@@ -1,3 +1,0 @@
-send "$env(BASH_SRC_DIR)/bash-2.05 --dump-strings\n"
-send "pwd\n"
-send "\004"

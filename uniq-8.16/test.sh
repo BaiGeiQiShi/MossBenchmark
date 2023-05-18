@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-PROGNAME=mkdir-5.2.1
+PROGNAME=uniq-8.16
 TIMEOUT=0.5
 #GDTBIN="python3 /home/qxin6/ROPgadget/ROPgadget.py"
 GDTBIN=ROPgadget

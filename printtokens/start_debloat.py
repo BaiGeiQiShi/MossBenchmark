@@ -25,7 +25,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -33,13 +33,13 @@ def DEBOP(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
         else:
             os.system(f"cp {CURRDIR}/COVBLOATBEST.c {CURRDIR}/DEBOPBEST.c")
 
 def BASICBLOCK(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -B -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -B -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -47,14 +47,14 @@ def BASICBLOCK(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
         else:
             os.system(f"cp {CURRDIR}/{PROGNAME}.c.cov.origin.c {CURRDIR}/BASICBLOCKBEST.c")
 
 def COVBLOAT(_rid):
     try:
         os.system(f"diff {PROGNAME}.c {CURRDIR}/TMCMCBEST.c");print("\n"*5)
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t debop-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -62,13 +62,13 @@ def COVBLOAT(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
         else:
             os.system(f"cp {CURRDIR}/TMCMCBEST.c {CURRDIR}/COVBLOATBEST.c")
 
 def TMCMC(alpha,beta,k):
     #make identify_path and quantify_path
-    os.system("rm -rf identify_path quantify_path domgad_sample_output")
+    os.system("rm -rf identify_path quantify_path moss-out.{rid}")
     os.system("mkdir identify_path")
     for test in os.listdir(f"{CURRDIR}/tmp/bin.gcov"):
         subprocess.run(["cp",f"{CURRDIR}/tmp/bin.gcov/{test}",f"{CURRDIR}/identify_path/{test[5:].split('.')[0]}"])
@@ -85,17 +85,15 @@ def TMCMC(alpha,beta,k):
     subprocess.run(["cp",f"{CURRDIR}/compile.sh",f"{CURRDIR}/tmp/compile.sh"])
     rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3"
     os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"2",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
-    subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/domgad_sample_output","-r"])
+    subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/moss-out.{rid}","-r"])
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{rid}.txt", f"{CURRDIR}/log/stat.{rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{rid}.txt") as rid:
         best=rid.readline().split()
         os.system(f"cp {CURRDIR}/tmp/sample_output/{best[0]}.c {CURRDIR}/TMCMCBEST.c")
 
-#os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
-##########################################subprocess.run([f"{CURRDIR}/basegen.sh", PROGNAME, COV])
-#subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
-#subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
-
+if(not os.path.isdir(f"{CURRDIR}/log")):
+    os.system(f"mkdir {CURRDIR}/log")
+    
 for k in ks:
     for alpha in alphas:
         for beta in betas:
