@@ -85,13 +85,9 @@ original_gdt=`${GDTBIN} --binary ${ORIGIN_BIN} | grep 'Unique gadgets' | cut -d'
 reduced_gdt=`${GDTBIN} --binary ${BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
 
 #Compute Generality
-chattr +i $CURRDIR/*
-chattr -i $CURRDIR/tmp $CURRDIR/output
 ./run_test $BIN $OUTDIR $TIMEOUT $INDIR
-chattr -i $CURRDIR/*
 ./compare_output ${ORIGIN_OUTDIR} $OUTDIR $CURRDIR/compare.txt
 clearProgram
-rm -rf *.bz2
 
 #total_ukn=$(ls $CURRDIR/testscript/ukn | wc -l) #total ukn inputs
 pass_all=`grep 'pass-' $CURRDIR/compare.txt | wc -l`

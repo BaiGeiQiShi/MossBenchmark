@@ -18,7 +18,12 @@ if [ -d $KNINDIR ]; then
 fi
 cp -r input.origin/* $INDIR_CP
 #Run known tests
+chattr +i $CURRDIR/*
+chattr -i $CURRDIR/tmp $CURRDIR/output $CURRDIR/output.origin
 ./run_test_kn.py $BIN $KNOUTDIR $TIMEOUT ${INDIR_CP} True
+chattr -i $CURRDIR/*
+rm -rf $CURRDIR/*.gz
+
 
 #Remove copied files
 if [ -d ${INDIR_CP} ]; then
