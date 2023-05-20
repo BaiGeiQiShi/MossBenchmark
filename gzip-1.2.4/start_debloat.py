@@ -104,7 +104,7 @@ if(not os.path.isdir(f"{CURRDIR}/log")):
 for k in ks:
     for alpha in alphas:
         for beta in betas:
-            os.system(f"chattr -i *")
+            os.system(f"chattr -i {CURRDIR}/*")
             os.system(f"chmod 755 /*")
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
