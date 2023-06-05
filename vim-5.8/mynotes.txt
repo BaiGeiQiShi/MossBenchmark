@@ -1,0 +1,17 @@
+1. For tests to run, you need to install expect (via sudo apt-get install expect).
+
+2. The directory for test running is ~/debaug_expt/debaug/working/vim/testplans.alt/XXX/YYY (XXX and YYY are the sub-dirs). In this directory, I've manually changed the setup files to use vim-5.8 to replace vim. Don't change the working dir. Otherwise, you may need to modify the files again.
+
+Search `$env(SUBJECTS_SRC_DIR)/vim-5.8` to find what files are changed.
+
+For Razor, I used the script below and ran it in XXX/working/vim/testplans.alt to have all the binary names changed.
+
+for i in {1..7}; do
+    for j in {1..20}; do
+        if [ -d ${i}/${i}.${j} ]; then
+            sed -i "s|vim-5.8|vim.orig|g" ${i}/${i}.${j}/*
+        fi
+    done
+done
+
+3. Given that the working dir is shared, don't run multiple tests (e.g., using multiple tools) for this program.
