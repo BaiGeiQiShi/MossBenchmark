@@ -1,3 +1,0 @@
-send -- "3R three-command"
-send -- "\033"
-sleep 1

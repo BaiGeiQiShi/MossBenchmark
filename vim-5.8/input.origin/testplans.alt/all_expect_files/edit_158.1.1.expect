@@ -1,4 +1,0 @@
-send -- "ismalls \033"
-send -- "g~j"
-send -- "iCAPS \033"
-

@@ -1,3 +1,0 @@
-send -- "This is a test\033"
-send -- "800000gUU"
-send -- "guu"

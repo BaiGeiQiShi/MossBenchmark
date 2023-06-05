@@ -1,5 +1,0 @@
-send ":redir >> option_123.1.1.out\r"
-send ":set mh\r"
-send ":set mh?\r"
-send ":redir END\r"
-

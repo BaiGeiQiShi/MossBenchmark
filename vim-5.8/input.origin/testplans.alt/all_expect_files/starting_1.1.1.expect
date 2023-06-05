@@ -1,6 +1,0 @@
-send "i"
-send "newly inserted text"
-send "\033"
-send ":e! $env(TESTS_SRC)/copy1\r"
-
-

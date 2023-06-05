@@ -1,6 +1,0 @@
-send ":redir >> option_128.1.1.out\r"
-send ":set nu\r"
-send ":set nu?\r"
-
-send ":redir END\r"
-

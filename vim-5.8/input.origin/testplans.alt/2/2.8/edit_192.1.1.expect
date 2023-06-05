@@ -1,5 +1,0 @@
-send -- "R"
-send -- "this text has replaced the previous text"
-send -- "\033"
-
-

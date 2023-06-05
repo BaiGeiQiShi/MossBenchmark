@@ -1,9 +1,0 @@
-send -- "O"
-
-send -- "test O"
-send -- "\033"
-
-
-
-
-

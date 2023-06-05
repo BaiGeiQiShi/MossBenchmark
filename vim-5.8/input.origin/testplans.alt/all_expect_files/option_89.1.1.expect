@@ -1,5 +1,0 @@
-send ":redir >> option_89.1.1.out\r"
-send ":set noinf\r"
-send ":set inf?\r"
-send ":redir END\r"
-

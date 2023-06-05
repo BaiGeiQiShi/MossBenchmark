@@ -1,8 +1,0 @@
-send ":redir >> mapping_24.1.1.out\r"
-send ":vnoremap b l\r"
-send ":vmap b\r"
-send ":redir END\r"
-
-
-
-

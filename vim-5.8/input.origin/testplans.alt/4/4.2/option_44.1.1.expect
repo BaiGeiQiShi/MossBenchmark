@@ -1,6 +1,0 @@
-send ":redir >> option_44.1.1.out\r"
-send ":set errorbells\r"
-
-send ":set errorbells?\r"
-send ":redir END\r"
-

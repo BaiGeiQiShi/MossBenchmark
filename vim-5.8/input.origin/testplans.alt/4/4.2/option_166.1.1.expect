@@ -1,5 +1,0 @@
-send ":redir >> option_166.1.1.out\r"
-send ":set ss\r"
-send ":set ss?\r"
-send ":redir END\r"
-

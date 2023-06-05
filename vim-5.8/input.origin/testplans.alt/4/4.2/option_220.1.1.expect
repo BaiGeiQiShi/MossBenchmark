@@ -1,5 +1,0 @@
-send ":redir >> option_220.1.1.out\r"
-send ":set wh\r"
-send ":set wh?\r"
-send ":redir END\r"
-

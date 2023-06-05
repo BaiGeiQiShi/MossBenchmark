@@ -1,5 +1,0 @@
-send ":redir >> option_22.1.1.out\r"
-send ":set brk\r"
-send ":set brk?\r"
-send ":redir END\r"
-

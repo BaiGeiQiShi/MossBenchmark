@@ -1,5 +1,0 @@
-send ":redir >> option_214.1.1.out\r"
-send ":set ut\r"
-send ":set ut?\r"
-send ":redir END\r"
-

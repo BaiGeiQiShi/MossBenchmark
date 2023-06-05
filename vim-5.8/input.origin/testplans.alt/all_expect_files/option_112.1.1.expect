@@ -1,5 +1,0 @@
-send ":redir >> option_112.1.1.out\r"
-send ":set mp\r"
-send ":set mp?\r"
-send ":redir END\r"
-

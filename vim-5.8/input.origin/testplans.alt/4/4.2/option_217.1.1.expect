@@ -1,5 +1,0 @@
-send ":redir >> option_217.1.1.out\r"
-send ":set warn\r"
-send ":set warn?\r"
-send ":redir END\r"
-

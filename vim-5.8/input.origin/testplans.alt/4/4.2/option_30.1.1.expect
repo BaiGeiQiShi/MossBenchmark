@@ -1,5 +1,0 @@
-send ":redir >> option_30.1.1.out\r"
-send ":set com\r"
-send ":set com?\r"
-send ":redir END\r"
-

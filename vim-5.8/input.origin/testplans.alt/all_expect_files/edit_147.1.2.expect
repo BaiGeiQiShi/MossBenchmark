@@ -1,2 +1,0 @@
-send -- "cc"
-send -- "change a line and enter insert mode"

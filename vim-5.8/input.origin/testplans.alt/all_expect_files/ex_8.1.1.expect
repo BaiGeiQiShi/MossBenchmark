@@ -1,6 +1,0 @@
-send ":redir >> ex_8.1.1.out\r"
-send ":?This  p 1\r"
-#expect "BOTTOM"
-#send "\r"
-send ":redir END\r"
-

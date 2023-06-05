@@ -1,5 +1,0 @@
-send ":redir >> option_4.1.1.out\r"
-send ":set invruler\r"
-send ":set ruler?\r"
-send ":redir END\r"
-

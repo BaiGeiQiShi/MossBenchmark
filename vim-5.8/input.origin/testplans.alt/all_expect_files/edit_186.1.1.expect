@@ -1,2 +1,0 @@
-send -- "8000>>"
-expect "lines*time"

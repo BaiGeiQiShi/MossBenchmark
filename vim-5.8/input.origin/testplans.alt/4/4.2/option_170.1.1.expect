@@ -1,5 +1,0 @@
-send ":redir >> option_170.1.1.out\r"
-send ":set nosi\r"
-send ":set si?\r"
-send ":redir END\r"
-

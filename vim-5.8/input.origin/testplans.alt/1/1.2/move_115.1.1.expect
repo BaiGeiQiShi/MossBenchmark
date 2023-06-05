@@ -1,6 +1,0 @@
-send ":goto 5"
-send "i"
-send " buffer bytes "
-send "\033"
-
-

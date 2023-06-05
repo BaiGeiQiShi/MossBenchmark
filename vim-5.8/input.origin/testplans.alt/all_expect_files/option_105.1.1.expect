@@ -1,5 +1,0 @@
-send ":redir >> option_105.1.1.out\r"
-send ":set nolisp\r"
-send ":set lisp?\r"
-send ":redir END\r"
-

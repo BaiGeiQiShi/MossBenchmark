@@ -1,6 +1,0 @@
-send -- "\011"
-send -- "\017"
-send -- "h"
-send -- "\033"
-sleep 1
-send -- "x"

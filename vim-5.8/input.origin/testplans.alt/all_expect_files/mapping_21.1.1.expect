@@ -1,8 +1,0 @@
-send ":redir >> mapping_21.1.1.out\r"
-send ":vmap b l\r"
-send ":vmap b\r"
-send ":redir END\r"
-
-
-
-

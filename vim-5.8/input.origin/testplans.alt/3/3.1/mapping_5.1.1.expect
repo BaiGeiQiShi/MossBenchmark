@@ -1,5 +1,0 @@
-send ":redir >> mapping_5.1.1.out\r"
-send ":no <F5> <Left>\r"
-send ":map <F5>\r"
-send ":redir END\r"
-

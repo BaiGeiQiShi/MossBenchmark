@@ -1,5 +1,0 @@
-send ":redir >> option_20.1.1.out\r"
-send ":set bin\r"
-send ":set bin?\r"
-send ":redir END\r"
-

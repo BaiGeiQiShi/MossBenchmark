@@ -1,7 +1,0 @@
-send -- "@prev"
-send -- "\033"
-send -- "19l"
-send -- "i"
-send -- "\000"
-
-

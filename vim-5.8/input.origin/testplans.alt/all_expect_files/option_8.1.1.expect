@@ -1,5 +1,0 @@
-send ":redir >> option_8.1.1.out\r"
-send ":set autowrite\r"
-send ":set autowrite?\r"
-send ":redir END\r"
-

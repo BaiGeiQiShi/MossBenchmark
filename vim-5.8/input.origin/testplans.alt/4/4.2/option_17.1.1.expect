@@ -1,5 +1,0 @@
-send ":redir >> option_17.1.1.out\r"
-send ":set bdir\r"
-send ":set bdir?\r"
-send ":redir END\r"
-

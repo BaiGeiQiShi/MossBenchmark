@@ -1,3 +1,0 @@
-send -- ":r! ls\r"
-#expect "lines"
-

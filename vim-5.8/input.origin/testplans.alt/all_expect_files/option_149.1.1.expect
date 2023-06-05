@@ -1,6 +1,0 @@
-send ":redir >> option_149.1.1.out\r"
-send ":set shcf\r"
-send ":set shcf?\r"
-
-send ":redir END\r"
-

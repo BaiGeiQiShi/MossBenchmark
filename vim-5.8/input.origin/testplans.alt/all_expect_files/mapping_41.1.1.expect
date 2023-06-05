@@ -1,4 +1,0 @@
-send ":redir >> mapping_41.1.1.out\r"
-send ":iab abbr abbreviate\r"
-send ":iab abbr\r"
-send ":redir END\r"

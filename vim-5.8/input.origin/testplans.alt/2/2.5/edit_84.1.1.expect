@@ -1,4 +1,0 @@
-send -- ":r $env(TESTS_SRC)/copy1\r"
-expect "copy1*1364C"
-send -- "\033"
-

@@ -1,5 +1,0 @@
-send -- "\013"
-send -- "pa"
-send -- "\033"
-
-# inserting dig(set digraph on)

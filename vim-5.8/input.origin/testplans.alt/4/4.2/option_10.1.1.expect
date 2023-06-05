@@ -1,5 +1,0 @@
-send ":redir >> option_10.1.1.out\r"
-send ":set background\r"
-send ":set background?\r"
-send ":redir END\r"
-

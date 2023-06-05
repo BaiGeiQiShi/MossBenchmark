@@ -1,3 +1,0 @@
-send -- "2S"
-send -- "change 2 lines(s)  and enter insert mode"
-

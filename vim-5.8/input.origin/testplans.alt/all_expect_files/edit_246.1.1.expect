@@ -1,4 +1,0 @@
-send -- "dd"
-send -- "u"
-send -- "\022"
-

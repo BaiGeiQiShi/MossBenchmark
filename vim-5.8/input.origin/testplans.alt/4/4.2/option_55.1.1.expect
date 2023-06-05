@@ -1,7 +1,0 @@
-send ":redir >> option_55.1.1.out\r"
-send ":set noexrc\r"
- 
-
-send ":set exrc?\r"
-send ":redir END\r"
-

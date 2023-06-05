@@ -1,4 +1,0 @@
-send ":redir >> mapping_44.1.1.out\r"
-send ":cab  a abbreviate\r"
-send ":cab  \026a\r"
-send ":redir END\r"

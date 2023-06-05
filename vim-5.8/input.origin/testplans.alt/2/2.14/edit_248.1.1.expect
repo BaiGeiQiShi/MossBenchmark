@@ -1,5 +1,0 @@
-send -- "i"
-send -- ":\013"
-send -- "pa\r"
-send -- "\033"
-#expect "Not an editor command:"

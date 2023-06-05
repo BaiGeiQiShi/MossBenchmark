@@ -1,6 +1,0 @@
-send ":redir >> option_147.1.1.out\r"
-send ":set nosecure\r"
-send ":set secure?\r"
-
-send ":redir END\r"
-

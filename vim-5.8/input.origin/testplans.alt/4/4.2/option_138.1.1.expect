@@ -1,6 +1,0 @@
-send ":redir >> option_138.1.1.out\r"
-send ":set ru\r"
-send ":set ru?\r"
-
-send ":redir END\r"
-

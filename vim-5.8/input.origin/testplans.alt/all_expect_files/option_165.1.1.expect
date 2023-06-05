@@ -1,5 +1,0 @@
-send ":redir >> option_165.1.1.out\r"
-send ":set nosmd\r"
-send ":set smd?\r"
-send ":redir END\r"
-

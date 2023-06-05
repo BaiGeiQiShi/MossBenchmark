@@ -1,8 +1,0 @@
-send ":redir >> ex_11.1.1.out\r"
-send "/a\r"
-send "\007"
-send "/a\r"
-send "\007"
-send "?a\r"
-send "\007"
-send ":redir END\r"

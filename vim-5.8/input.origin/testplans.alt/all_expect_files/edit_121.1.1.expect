@@ -1,5 +1,0 @@
-send -- ":redir >> edit_121.1.1.out\r"
-send -- "yy"
-send -- ":reg\r"
-expect "continue"
-send -- ":redir END\r"

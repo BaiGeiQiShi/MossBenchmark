@@ -1,5 +1,0 @@
-send ":redir >> option_181.1.1.out\r"
-send ":set notbs\r"
-send ":set tbs?\r"
-send ":redir END\r"
-

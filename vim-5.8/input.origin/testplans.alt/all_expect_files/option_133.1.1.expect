@@ -1,6 +1,0 @@
-send ":redir >> option_133.1.1.out\r"
-send ":set path\r"
-send ":set path?\r"
-
-send ":redir END\r"
-

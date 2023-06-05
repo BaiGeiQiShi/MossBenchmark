@@ -1,5 +1,0 @@
-send ":redir >> option_15.1.1.out\r"
-send ":set backup \r"
-send ":set backup?\r"
-send ":redir END\r"
-

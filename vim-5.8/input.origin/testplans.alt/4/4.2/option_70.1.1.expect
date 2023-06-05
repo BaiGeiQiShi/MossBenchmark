@@ -1,8 +1,0 @@
-send ":redir >> option_70.1.1.out\r"
-send ":set nogdefault\r"
- 
-
-send ":set gdefault?\r"
-
-send ":redir END\r"
-

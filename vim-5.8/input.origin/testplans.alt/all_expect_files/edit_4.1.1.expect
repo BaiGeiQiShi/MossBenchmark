@@ -1,9 +1,0 @@
-send -- "5A"
-
-send -- "eol"
-send -- "\033"
-sleep 1
-
-
-
-

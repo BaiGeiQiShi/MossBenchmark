@@ -1,5 +1,0 @@
-send ":redir >> option_100.1.1.out\r"
-send ":set nolz\r"
-send ":set lz?\r"
-send ":redir END\r"
-

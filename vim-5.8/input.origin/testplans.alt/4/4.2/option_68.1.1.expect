@@ -1,8 +1,0 @@
-send ":redir >> option_68.1.1.out\r"
-send ":set fp\r"
- 
-
-send ":set fp?\r"
-
-send ":redir END\r"
-

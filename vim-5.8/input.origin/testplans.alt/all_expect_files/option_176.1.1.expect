@@ -1,5 +1,0 @@
-send ":redir >> option_176.1.1.out\r"
-send ":set sol\r"
-send ":set sol?\r"
-send ":redir END\r"
-

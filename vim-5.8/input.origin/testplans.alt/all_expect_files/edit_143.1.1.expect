@@ -1,5 +1,0 @@
-send -- ":redir >> edit_143.1.1.out\r"
-send -- "20"
-send -- "yy"
-expect "lines yanked"
-send -- ":redir END\r"

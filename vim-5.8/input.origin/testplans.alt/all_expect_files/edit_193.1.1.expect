@@ -1,5 +1,0 @@
-send -- "3R"
-send -- "three times"
-send -- "\033"
-sleep 1
-

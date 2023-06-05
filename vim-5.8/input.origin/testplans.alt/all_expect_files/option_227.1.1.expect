@@ -1,5 +1,0 @@
-send ":redir >> option_227.1.1.out\r"
-send ":set writedelay\r"
-send ":set writedelay?\r"
-send ":redir END\r"
-

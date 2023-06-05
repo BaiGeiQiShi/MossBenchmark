@@ -1,5 +1,0 @@
-send ":redir >> option_211.1.1.out\r"
-send ":set tty\r"
-send ":set tty?\r"
-send ":redir END\r"
-

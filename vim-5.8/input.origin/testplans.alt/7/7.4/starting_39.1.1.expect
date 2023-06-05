@@ -1,3 +1,0 @@
-send "i"
-send "This file is being modified"
-send "\033"

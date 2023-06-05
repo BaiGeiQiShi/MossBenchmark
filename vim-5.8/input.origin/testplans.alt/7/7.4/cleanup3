@@ -1,4 +1,0 @@
-expect
-exit -onexit {
-interact
-}

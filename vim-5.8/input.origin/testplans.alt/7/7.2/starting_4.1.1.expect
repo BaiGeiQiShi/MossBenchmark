@@ -1,5 +1,0 @@
-send ":redir >> starting_4.1.1.out\r"
-send ":pwd\r"
-send ":redir END\r"
- 
-

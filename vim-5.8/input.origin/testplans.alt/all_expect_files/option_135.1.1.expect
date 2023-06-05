@@ -1,6 +1,0 @@
-send ":redir >> option_135.1.1.out\r"
-send ":set noremap\r"
-send ":set remap?\r"
-
-send ":redir END\r"
-

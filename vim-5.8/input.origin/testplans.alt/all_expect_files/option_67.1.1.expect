@@ -1,8 +1,0 @@
-send ":redir >> option_67.1.1.out\r"
-send ":set fo=b\r"
- 
-
-send ":set fo?\r"
-
-send ":redir END\r"
-

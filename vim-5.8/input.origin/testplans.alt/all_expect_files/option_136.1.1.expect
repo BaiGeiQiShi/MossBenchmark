@@ -1,6 +1,0 @@
-send ":redir >> option_136.1.1.out\r"
-send ":set report\r"
-send ":set report?\r"
-
-send ":redir END\r"
-

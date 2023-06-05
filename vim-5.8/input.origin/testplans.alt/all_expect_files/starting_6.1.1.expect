@@ -1,5 +1,0 @@
-send ":redir >> starting_6.1.1.out\r"
-send ":f\r"
-send ":redir END\r"
- 
-

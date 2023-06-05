@@ -1,5 +1,0 @@
-send -- ":q!\r"
-expect
-exit -onexit {
-interact
-}

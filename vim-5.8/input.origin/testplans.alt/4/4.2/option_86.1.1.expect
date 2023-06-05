@@ -1,5 +1,0 @@
-send ":redir >> option_86.1.1.out\r"
-send ":set is\r"
-send ":set is?\r"
-send ":redir END\r"
-

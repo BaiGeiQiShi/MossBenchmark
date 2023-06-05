@@ -1,8 +1,0 @@
-send -- "gI"
-
-send -- "test gI"
-send -- "\033"
-
-
-
-

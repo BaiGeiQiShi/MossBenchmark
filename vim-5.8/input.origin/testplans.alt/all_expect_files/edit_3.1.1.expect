@@ -1,8 +1,0 @@
-send -- "A"
-
-send -- "eol"
-send -- "\033"
-
-
-
-

@@ -1,1 +1,0 @@
-send ":rviminfo! $env(TESTS_SRC)/infofile\r"

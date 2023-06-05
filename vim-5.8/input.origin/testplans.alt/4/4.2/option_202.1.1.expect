@@ -1,5 +1,0 @@
-send ":redir >> option_202.1.1.out\r"
-send ":set titlelen\r"
-send ":set titlelen?\r"
-send ":redir END\r"
-

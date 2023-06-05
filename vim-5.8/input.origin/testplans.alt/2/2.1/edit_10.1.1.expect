@@ -1,4 +1,0 @@
-send -- "ngI"
-send -- "test ngI"
-send -- "\033"
-sleep 1

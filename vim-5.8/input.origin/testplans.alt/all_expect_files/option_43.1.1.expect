@@ -1,6 +1,0 @@
-send ":redir >> option_43.1.1.out\r"
-send ":set noedcompatible\r"
-
-send ":set edcompatible?\r"
-send ":redir END\r"
-

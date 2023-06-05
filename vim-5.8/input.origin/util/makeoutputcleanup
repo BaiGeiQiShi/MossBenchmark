@@ -1,6 +1,0 @@
-#!/bin/bash
-outputfile=$1
-
-sed -i 's/Finished Make.*/ /g' $outputfile
-sed -i 's/Last modified.*/ /g' $outputfile
-sed -i 's/Make data base.*/ /g' $outputfile

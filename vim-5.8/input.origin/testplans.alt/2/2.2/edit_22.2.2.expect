@@ -1,4 +1,0 @@
-send -- "\001"
-expect "text"
-expect "INSERT*--"
-sleep 1

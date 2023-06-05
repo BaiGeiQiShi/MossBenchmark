@@ -1,5 +1,0 @@
-send ":redir >> option_23.1.1.out\r"
-send ":set cindent\r"
-send ":set cindent?\r"
-send ":redir END\r"
-

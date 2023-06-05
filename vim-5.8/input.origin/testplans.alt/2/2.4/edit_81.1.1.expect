@@ -1,8 +1,0 @@
-send -- ":dig ee 165\r"
-send -- "i"
-send -- "\013"
-send -- "ee\r"
-send -- "\033"
-# resetting default 
-
-

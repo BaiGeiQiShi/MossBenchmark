@@ -1,3 +1,0 @@
-send ":redir >> other_56.1.1.out\r"
-send ":$ list 1\r"
-send ":redir END\r"

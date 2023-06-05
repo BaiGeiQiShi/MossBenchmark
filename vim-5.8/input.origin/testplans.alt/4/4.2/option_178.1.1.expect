@@ -1,5 +1,0 @@
-send ":redir >> option_178.1.1.out\r"
-send ":set su\r"
-send ":set su?\r"
-send ":redir END\r"
-

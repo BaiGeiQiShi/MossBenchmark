@@ -1,6 +1,0 @@
-send -- ":dig ee 164\r"
-send -- "ithis is  the digraph"
-send -- "\013"
-send -- "ee\r"
-send -- "\033"
-# resetting default name for 164"

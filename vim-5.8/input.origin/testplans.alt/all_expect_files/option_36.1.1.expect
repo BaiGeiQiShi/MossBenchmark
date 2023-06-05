@@ -1,6 +1,0 @@
-send ":redir >> option_36.1.1.out\r"
-send ":set dict=a,b\r"
-
-send ":set dict?\r"
-send ":redir END\r"
-

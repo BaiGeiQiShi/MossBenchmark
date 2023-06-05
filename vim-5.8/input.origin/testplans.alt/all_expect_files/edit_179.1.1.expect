@@ -1,4 +1,0 @@
-send -- ">>"
-send -- "<)"
-expect "lines*time"
-

@@ -1,3 +1,0 @@
-send ":ab abb abbreviation\r"
-send "i"
-send "abb\033"

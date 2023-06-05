@@ -1,5 +1,0 @@
-send ":redir >> option_72.1.1.out\r"
-send ":set hh\r"
-send ":set hh?\r"
-send ":redir END\r"
-

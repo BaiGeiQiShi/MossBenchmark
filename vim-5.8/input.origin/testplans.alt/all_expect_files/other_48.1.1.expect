@@ -1,4 +1,0 @@
-send ":redir >> other_48.1.1.out\r"
-send "ga"
-send ":redir END\r"
-

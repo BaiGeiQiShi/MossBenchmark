@@ -1,3 +1,0 @@
-send -- "2C"
-send -- "change 2 lines(s)to the end of the line  and enter insert mode"
-

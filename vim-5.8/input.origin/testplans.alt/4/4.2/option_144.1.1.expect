@@ -1,6 +1,0 @@
-send ":redir >> option_144.1.1.out\r"
-send ":set sbo\r"
-send ":set sbo?\r"
-
-send ":redir END\r"
-

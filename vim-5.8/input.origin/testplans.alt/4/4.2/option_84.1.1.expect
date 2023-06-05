@@ -1,5 +1,0 @@
-send ":redir >> option_84.1.1.out\r"
-send ":set noic\r"
-send ":set ic?\r"
-send ":redir END\r"
-

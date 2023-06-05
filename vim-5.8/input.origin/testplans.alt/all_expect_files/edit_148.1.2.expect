@@ -1,3 +1,0 @@
-send -- "2cc"
-send -- "change 2  lines  and enter insert mode"
-

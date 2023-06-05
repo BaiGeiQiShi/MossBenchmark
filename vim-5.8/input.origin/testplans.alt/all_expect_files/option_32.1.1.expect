@@ -1,5 +1,0 @@
-send ":redir >> option_32.1.1.out\r"
-send ":set cpt\r"
-send ":set cpt?\r"
-send ":redir END\r"
-

@@ -1,4 +1,0 @@
-send ":redir >> mapping_33.1.1.out\r"
-send ":vmapc\r"
-send ":vmap\r"
-send ":redir END\r"

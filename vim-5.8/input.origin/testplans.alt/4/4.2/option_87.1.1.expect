@@ -1,5 +1,0 @@
-send ":redir >> option_87.1.1.out\r"
-send ":set nois\r"
-send ":set is?\r"
-send ":redir END\r"
-

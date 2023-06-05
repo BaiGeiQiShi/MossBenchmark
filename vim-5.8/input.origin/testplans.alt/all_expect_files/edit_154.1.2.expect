@@ -1,3 +1,0 @@
-send -- "2s"
-send -- "change 2 alphabets(s) and enter insert mode"
-

@@ -1,6 +1,0 @@
-send -- "\033"
-send -- ":wq\r"
-expect
-exit -onexit {
-interact
-}

@@ -1,3 +1,0 @@
-send -- "2>)"
-expect "lines >ed 1 time"
-

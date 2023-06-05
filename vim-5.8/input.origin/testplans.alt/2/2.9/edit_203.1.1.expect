@@ -1,3 +1,0 @@
-send -- "2!)head -n 0\r"
-expect "continue"
-

@@ -1,5 +1,0 @@
-send ":redir >> option_27.1.1.out\r"
-send ":set cinw\r"
-send ":set cinw?\r"
-send ":redir END\r"
-
