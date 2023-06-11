@@ -72,7 +72,7 @@ def COVBLOAT(_rid):
 
 def TMCMC(alpha,beta,k):
     #make identify_path and quantify_path
-    os.system("rm -rf identify_path quantify_path moss-out.{rid}")
+    os.system("rm -rf identify_path quantify_path moss-out.{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3")
     os.system("mkdir identify_path")
     for test in os.listdir(f"{CURRDIR}/tmp/bin.gcov"):
         subprocess.run(["cp",f"{CURRDIR}/tmp/bin.gcov/{test}",f"{CURRDIR}/identify_path/{test[5:].split('.')[0]}"])
