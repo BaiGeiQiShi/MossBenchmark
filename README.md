@@ -19,4 +19,5 @@ you need to modify path of `lib` in `compile.sh`
 
 make
 
-you need to modify path of `lib` in `compile.sh`
+1. you need to modify path of `lib` in `compile.sh`
+2. `date-8.21` and `make-3.79` have crisis. Don't run them together.
