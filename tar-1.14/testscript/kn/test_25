@@ -1,0 +1,50 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I2/ubuntu ./
+CURRDIR=$(pwd)
+
+{ timeout -k 9 ${TIMEOUT}s $BIN -cvf archive.tar $CURRDIR/ubuntu --exclude=*.mp4; } &>$OUTDIR/o25
+
+echo "$?" >>$OUTDIR/o25
+
+leadpath=`echo $CURRDIR | cut -c2-` #First "/" is ignored for compression
+rm -fr ubuntu
+
+tar xf archive.tar
+diff ${leadpath}/ubuntu/Downloads/song.mp3 $INDIR/I2/ubuntu/Downloads/song.mp3 >/dev/null
+echo "$?" >>$OUTDIR/o25
+diff ${leadpath}/ubuntu/Downloads/image.png $INDIR/I2/ubuntu/Downloads/image.png >/dev/null
+echo "$?" >>$OUTDIR/o25
+test -f ${leadpath}/ubuntu/Downloads/video.mp4
+echo "$?" >>$OUTDIR/o25
+
+
+diff ${leadpath}/ubuntu/.ICEauthority $INDIR/I2/ubuntu/.ICEauthority >/dev/null
+echo "$?" >>$OUTDIR/o25
+diff ${leadpath}/ubuntu/stuff/test/file1 $INDIR/I2/ubuntu/stuff/test/file1 >/dev/null
+echo "$?" >>$OUTDIR/o25
+diff ${leadpath}/ubuntu/stuff/test/file2 $INDIR/I2/ubuntu/stuff/test/file2 >/dev/null
+echo "$?" >>$OUTDIR/o25
+diff ${leadpath}/ubuntu/archive.tar.gz $INDIR/I2/ubuntu/archive.tar.gz >/dev/null
+echo "$?" >>$OUTDIR/o25
+diff ${leadpath}/ubuntu/Documents/notes.txt $INDIR/I2/ubuntu/Documents/notes.txt >/dev/null
+echo "$?" >>$OUTDIR/o25
+
+test -d ${leadpath}/ubuntu/Videos
+echo "$?" >>$OUTDIR/o25
+test -d ${leadpath}/ubuntu/Pictures
+echo "$?" >>$OUTDIR/o25
+test -d ${leadpath}/ubuntu/Music
+echo "$?" >>$OUTDIR/o25
+test -d ${leadpath}/ubuntu/.cache
+echo "$?" >>$OUTDIR/o25
+
+
+
+
+#I2

@@ -45,7 +45,11 @@ def DoTestcase(args):
         finally:
             lock.release()
 
+<<<<<<< HEAD
 with Pool(10) as pool:
+=======
+with Pool(1) as pool:
+>>>>>>> main
     lock = Manager().Lock()
     pool.map(DoTestcase, ((t, UsedTime,lock) for t in os.listdir("%s/testscript/kn"%CURRDIR)))
 

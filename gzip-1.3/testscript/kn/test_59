@@ -1,0 +1,9 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/testdir/file2 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN -qr4 < file2 > $OUTDIR/o59 2>&1 | tee -a $OUTDIR/o59

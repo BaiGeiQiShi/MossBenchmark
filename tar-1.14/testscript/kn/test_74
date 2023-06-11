@@ -1,0 +1,50 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+cp -r $INDIR/I8/test ./
+cp -r $INDIR/I8/test1 ./
+cp -r $INDIR/I8/test2 ./
+cp -r $INDIR/I8/test3 ./
+cp -r $INDIR/I8/test4 ./
+cp -r $INDIR/I8/filenamenotcontainingtest ./
+
+{ timeout -k 9 ${TIMEOUT}s $BIN --create -f test.tar * --remove-files; } &>$OUTDIR/o74
+
+echo $(pwd) >>/moss-script/check.txt
+
+echo "$?" >>$OUTDIR/o74
+test -f test
+echo "$?" >>$OUTDIR/o74
+test -f test1
+echo "$?" >>$OUTDIR/o74
+test -f test2
+echo "$?" >>$OUTDIR/o74
+test -f test3
+echo "$?" >>$OUTDIR/o74
+test -f test4
+echo "$?" >>$OUTDIR/o74
+test -f filenamenotcontainingtest
+echo "$?" >>$OUTDIR/o74
+
+tar xf test.tar
+diff test $INDIR/I8/test >/dev/null
+echo "$?" >>$OUTDIR/o74
+diff test1 $INDIR/I8/test1 >/dev/null
+echo "$?" >>$OUTDIR/o74
+diff test2 $INDIR/I8/test2 >/dev/null
+echo "$?" >>$OUTDIR/o74
+diff test3 $INDIR/I8/test3 >/dev/null
+echo "$?" >>$OUTDIR/o74
+diff test4 $INDIR/I8/test4 >/dev/null
+echo "$?" >>$OUTDIR/o74
+diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
+echo "$?" >>$OUTDIR/o74
+
+
+
+
+#I8

@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-PROGNAME=mkdir-5.2.1
+PROGNAME=uniq-8.16
 TIMEOUT=1
 GDTBIN=ROPgadget
 DOMGAD=/usr/local/Moss/CovPath

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+mkdir $(pwd)/testdir
+cp -r $INDIR/testdir/file17 $(pwd)/testdir/
+mkdir $(pwd)/util
+cp -r $INDIR/util/cpopt4.sh $(pwd)/util/
+
+cp -r $INDIR/testdir/file17 $(pwd)/
+timeout -k 9 ${TIMEOUT}s $BIN $(pwd)/testdir/file17 -4  > $OUTDIR/o23 2>&1 | tee -a $OUTDIR/o23
+
+$INDIR/util/cpopt4.sh $(pwd) $OUTDIR/o23

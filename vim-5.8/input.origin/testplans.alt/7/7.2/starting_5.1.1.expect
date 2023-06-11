@@ -3,5 +3,9 @@ send ":pwd\r"
 send ":cd ..\r"
 send ":pwd\r"
 send ":redir END\r"
+<<<<<<< HEAD
 send ":cd 7.2\r" 
+=======
+send ":cd test_86\r" 
+>>>>>>> main
 

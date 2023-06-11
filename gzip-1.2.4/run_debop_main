@@ -1,0 +1,21 @@
+#!/bin/bash
+
+DEBOP_DIR=$1
+PROGNAME=$2
+DEBOP_BIN=${DEBOP_DIR}/build/bin/reducer
+iternum=$3
+
+realorcov=$4 #1 means real, others mean cov
+beta=$5
+version=$6  #1 means basicblock level, 0 means statement level
+
+for samplenum in $7
+do
+    for k in $8
+    do
+	for alpha in $9
+	do
+	    ./run_debop ${DEBOP_DIR} ${PROGNAME} ${realorcov} ${samplenum} ${iternum} ${alpha} ${beta} $k ${version}
+	done
+    done
+done

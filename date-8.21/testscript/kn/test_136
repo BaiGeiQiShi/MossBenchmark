@@ -7,3 +7,4 @@ INDIR=$4
 
 timeout -k 9 ${TIMEOUT}s $BIN 091619552014 &>$OUTDIR/o136
 echo "$?" >>$OUTDIR/o136
+hwclock -s

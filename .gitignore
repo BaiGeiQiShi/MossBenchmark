@@ -7,6 +7,7 @@
 **/tmp
 **/compare.txt
 **/Cov_info.txt
+<<<<<<< HEAD
 **/debop-out*
 **/debdcetmp
 **/work*
@@ -15,3 +16,9 @@
 **/*BEST.c
 **/inputfile
 **/moss-out*
+=======
+**/domgad_sample_output*
+**/moss-out.*
+**/debop-out.*
+**/time_info.txt
+>>>>>>> main
