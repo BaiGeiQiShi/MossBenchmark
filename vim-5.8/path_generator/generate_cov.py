@@ -46,11 +46,7 @@ def DoTestcase(args):
     print(testcase)
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase))
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
-<<<<<<< HEAD
-    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",OUTDIR,"2",INDIR_CP,"%s/tmp/%s"%(CURRDIR,testcase)])
-=======
     subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",OUTDIR,"4",INDIR_CP,"%s/tmp/%s"%(CURRDIR,testcase)])
->>>>>>> main
     if(not os.path.exists(f"{os.getcwd()}/default.profraw")):
         raise RuntimeError(testcase)
     os.system(" ".join([getbin, f"{TMP}/{PROGRAM}",COV,os.getcwd()]))
@@ -61,11 +57,7 @@ def DoTestcase(args):
     os.chmod("%s/tmp/%s"%(CURRDIR,testcase),755)
     os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
 
-<<<<<<< HEAD
-with Pool(10) as pool:
-=======
 with Pool(1) as pool:
->>>>>>> main
     pool.map(DoTestcase, os.listdir(INDIR))
 
 #get cov.origin.c

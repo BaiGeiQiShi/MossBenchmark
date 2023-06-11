@@ -1,11 +1,7 @@
 #!/bin/bash -x
 
 PROGNAME=vim-5.8
-<<<<<<< HEAD
-TIMEOUT=2
-=======
 TIMEOUT=4
->>>>>>> main
 #GDTBIN="python3 /home/qxin6/ROPgadget/ROPgadget.py"
 GDTBIN=ROPgadget
 INPUTROOTDIR=$(pwd)
