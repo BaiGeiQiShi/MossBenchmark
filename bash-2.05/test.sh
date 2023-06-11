@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 PROGNAME=bash-2.05
-TIMEOUT=2
+TIMEOUT=3
 #GDTBIN="python3 /home/qxin6/ROPgadget/ROPgadget.py"
 GDTBIN=ROPgadget
 INPUTROOTDIR=$(pwd)
@@ -72,10 +72,10 @@ rm -rf debdcetmp
 ./compile.sh $SRC $BIN "-O3 -w" 
 
 #Compute Size Reduction
-original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))
-reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5` - `ls -l ${BASE_BIN} | cut -d' ' -f5`))
-#original_size=`$DOMGAD/build/bin/instrumenter -S ${ORIGIN_SRC}`
-#reduced_size=`$DOMGAD/build/bin/instrumenter -S ${SRC}`
+#original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))
+#reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5` - `ls -l ${BASE_BIN} | cut -d' ' -f5`))
+original_size=`$DOMGAD/build/bin/instrumenter -S ${ORIGIN_SRC}`
+reduced_size=`$DOMGAD/build/bin/instrumenter -S ${SRC}`
 #original_size=$(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)
 #reduced_size=$(ls -l ${BIN} | cut -d' ' -f5)
 
@@ -86,6 +86,7 @@ reduced_gdt=`${GDTBIN} --binary ${BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
 
 #Compute Generality
 ./run_test $BIN $OUTDIR $TIMEOUT $INDIR
+#./run_test $BIN $OUTDIR $TIMEOUT $INDIR
 ./compare_output ${ORIGIN_OUTDIR} $OUTDIR $CURRDIR/compare.txt
 clearProgram
 

@@ -3,7 +3,7 @@
 # general setup
 # create an env variable which will be used by all
 # tests as a temporary directory 
-TESTDIR=${HOME}/tmp
+TESTDIR=/MossBenchmark/bash-2.05/tmp/
 mkdir -p ${TESTDIR}
 CURRDIR=`pwd`
 CURRPS1=${PS1}

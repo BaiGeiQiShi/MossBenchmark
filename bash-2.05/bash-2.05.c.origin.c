@@ -42676,6 +42676,10 @@ BUCKET_CONTENTS *remove_hash_item(char *string , HASH_TABLE *table )
     if (! temp___0) {
       goto while_break;
     }
+    if ((int )*(temp___0->key + 0) == (int )*(string + 0)) {
+      {
+
+      }
 
 
 
@@ -42685,13 +42689,9 @@ BUCKET_CONTENTS *remove_hash_item(char *string , HASH_TABLE *table )
 
 
 
-
-
-
-
-
-
-
+    }
+    prev = temp___0;
+    temp___0 = temp___0->next;
   }
   while_break: ;/* CIL Label */ ;
   }

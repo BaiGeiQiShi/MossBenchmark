@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 SRC=$1
 BIN=$2

@@ -1,0 +1,2 @@
+#!/bin/bash
+rm -rf output output.origin bash-2.05 bash-2.05.cov.origin

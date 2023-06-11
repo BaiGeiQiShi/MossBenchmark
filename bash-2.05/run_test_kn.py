@@ -32,10 +32,11 @@ def DoTestcase(args):
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase))
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
     t1 = time.perf_counter()
+    #print(' '.join([f"{CURRDIR}/testscript/kn/{testcase}",BIN,OUTDIR,TIMEOUT,INDIR,"%s/tmp/%s"%(CURRDIR,testcase)]))
     subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",BIN,OUTDIR,TIMEOUT,INDIR,"%s/tmp/%s"%(CURRDIR,testcase)])
     t = time.perf_counter()-t1
     os.chmod("%s/tmp/%s"%(CURRDIR,testcase),755)
-    os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
+    #os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
     #print(testcase)
     
     if(GetRunTest):

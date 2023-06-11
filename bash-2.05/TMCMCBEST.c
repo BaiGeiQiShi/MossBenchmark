@@ -1042,153 +1042,35 @@ static void shell_reinitialize(void) ;
 static void show_shell_usage(FILE *fp , int extra ) ;
 extern  __attribute__((__nothrow__)) time_t ( __attribute__((__leaf__)) time)(time_t *__timer ) ;
 int main(int argc___0 , char **argv___0 , char **env ) 
-{ 
-  register int i ;
-  int code ;
-  int saverst ;
-  int old_errexit_flag ;
-  int volatile   locally_skip_execution ;
-  int volatile   arg_index ;
-  int volatile   top_level_arg_index ;
-  char *tmp ;
-  char *tmp___0 ;
-  int tmp___1 ;
-  int tmp___2 ;
-  int tmp___3 ;
-  int tmp___4 ;
-  int tmp___5 ;
-  int tmp___6 ;
-  int tmp___7 ;
-  int tmp___8 ;
-  int tmp___9 ;
-  char *term___0 ;
-  int tmp___10 ;
-  int tmp___11 ;
-  int tmp___13 ;
-  int tmp___14 ;
-  int tmp___15 ;
-  int tmp___16 ;
-  int tmp___17 ;
-  time_t tmp___18 ;
-
-  {
-  {
-  code = __sigsetjmp(top_level, 1);
-  }
-  if (code) {
-    {
-
-    }
-  }
-  {
-  check_dev_tty();
-  }
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! debugging_login_shell) {
-      goto while_break;
-    }
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  {
-  set_default_locale();
-  running_setuid = uidget();
-  tmp = getenv("POSIXLY_CORRECT");
-  }
-  if (tmp) {
+{
 
-  } else {
-    {
-    tmp___0 = getenv("POSIX_PEDANTIC");
-    }
-    if (tmp___0) {
 
-    }
-  }
-  {
-  tmp___1 = __sigsetjmp(subshell_top_level, 1);
-  }
-  if (tmp___1) {
-
-
 
 
-  }
-  shell_reinitialized = 0;
-  arg_index = (int volatile   )1;
-  local_pending_command = (char *)((void *)0);
-  read_from_stdin = 0;
-  locally_skip_execution = (int volatile   )read_from_stdin;
-  want_pending_command = (int )locally_skip_execution;
-  default_input = stdin;
-  default_buffered_input = -1;
-  make_login_shell = 0;
-  login_shell = make_login_shell;
-  if (shell_initialized) {
 
-  } else { //Added block
-  if (shell_name) {
-    _L: ;
 
 
 
-    {
 
 
-    }
 
 
 
 
 
-  }
-  }
-  {
-  shell_environment = env;
-  set_shell_name(*(argv___0 + 0));
-  tmp___18 = time((time_t *)0);
-  tmp___3 = (int )tmp___18;
-  shell_start_time = (time_t )tmp___3;
-  tmp___4 = parse_long_options(argv___0, (int )arg_index, argc___0);
-  arg_index = (int volatile   )tmp___4;
-  }
-  if (want_initial_help) {
-    {
 
 
-    }
-  }
-  if (do_version) {
-    {
 
 
-    }
-  }
-  if (make_login_shell) {
 
 
-  }
-  {
-  this_command_name = shell_name;
-  tmp___5 = parse_shell_options(argv___0, (int )arg_index, argc___0);
-  arg_index = (int volatile   )tmp___5;
-  }
-  if (dump_po_strings) {
 
-  }
-  if (dump_translatable_strings) {
 
-  }
-  if (running_setuid) {
 
 
 
 
 
-  }
-  if (want_pending_command) {
 
 
 
@@ -1197,24 +1079,10 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-  }
-  this_command_name = (char *)((void *)0);
-  if (forced_interactive) {
-    {
 
-    }
-  } else { //Added block
-  if (! local_pending_command) {
-    if (wordexp_only == 0) {
-      if (arg_index == (int volatile   )argc___0) {
 
-      } else { //Added block
-      if (read_from_stdin) {
-        _L___0: ;
-        {
 
 
-        }
 
 
 
@@ -1234,24 +1102,8 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-      } else {
-        {
-        init_noninteractive();
-        }
-      }
-      }
-    } else {
-      {
 
-      }
-    }
-  } else {
-    {
 
-    }
-  }
-  }
-  if (login_shell) {
 
 
 
@@ -1268,21 +1120,9 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-  }
-  if (posixly_correct) {
-    {
 
 
-    }
-  }
-  {
-  shell_initialize();
-  set_default_locale_vars();
-  }
-  if (interactive_shell) {
-    {
 
-    }
 
 
 
@@ -1299,10 +1139,8 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-    {
 
 
-    }
 
 
 
@@ -1316,13 +1154,6 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-  }
-  {
-  top_level_arg_index = arg_index;
-  old_errexit_flag = exit_immediately_on_error;
-  code = __sigsetjmp(top_level, 1);
-  }
-  if (code) {
 
 
 
@@ -1334,152 +1165,289 @@ int main(int argc___0 , char **argv___0 , char **env )
 
 
 
-  }
-  arg_index = top_level_arg_index;
-  if (interactive_shell == 0) {
-    {
-    makunbound((char *)"PS1", shell_variables);
-    makunbound((char *)"PS2", shell_variables);
-    interactive = 0;
-    expand_aliases = posixly_correct;
-    }
-  } else {
-    {
 
 
-    }
-  }
-  {
-  restricted_shell = shell_is_restricted(shell_name);
-  saverst = restricted;
-  restricted = 0;
-  }
-  if (locally_skip_execution == (int volatile   )0) {
-    if (running_setuid == 0) {
-      {
-      old_errexit_flag = exit_immediately_on_error;
-      exit_immediately_on_error = 0;
-      run_startup_files();
-      exit_immediately_on_error += old_errexit_flag;
-      }
-    }
-  }
-  if (act_like_sh) {
-    {
 
 
-    }
-  }
-  if (saverst) {
 
-  } else { //Added block
-  if (restricted) {
 
-  } else {
-    tmp___15 = 0;
-  }
-  }
-  restricted = tmp___15;
-  if (shell_reinitialized == 0) {
-    {
-    maybe_make_restricted(shell_name);
-    }
-  }
-  if (wordexp_only) {
-    {
 
 
 
-    }
-  }
-  if (local_pending_command) {
-    {
 
 
 
 
 
-    }
-  }
-  if (arg_index != (int volatile   )argc___0) {
-    if (read_from_stdin == 0) {
-      {
-      open_shell_script(*(argv___0 + arg_index));
-      arg_index += (int volatile   )1;
-      }
-    } else {
 
-    }
-  } else { //Added block
-  _L___1: ;
 
 
 
 
 
-  }
-  {
-  set_bash_input();
-  tmp___17 = bind_args(argv___0, (int )arg_index, argc___0, 1);
-  arg_index = (int volatile   )tmp___17;
-  }
-  if (interactive_shell) {
-    {
 
 
 
-    }
 
 
 
 
 
-    {
 
-    }
-  }
-  {
-  shell_initialized = 1;
-  reader_loop();
-  exit_shell(last_command_exit_value);
-  }
-  return (0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static int parse_long_options(char **argv___0 , int arg_start , int arg_end ) 
-{ 
-  int arg_index ;
-  int longarg ;
-  int i ;
-  char *arg_string ;
-  int tmp ;
-
-  {
-  arg_index = arg_start;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (arg_index != arg_end) {
-      arg_string = *(argv___0 + arg_index);
-      if (arg_string) {
-        if (! ((int )*arg_string == 45)) {
-          goto while_break;
-        }
-      } else {
-
-      }
-    } else {
-
-    }
-
-
-
-
-
-
-
-
-    {
+{
 
 
 
@@ -1508,8 +1476,6 @@ static int parse_long_options(char **argv___0 , int arg_start , int arg_end )
 
 
 
-    while_break___0: ;/* CIL Label */ ;
-    }
 
 
 
@@ -1521,45 +1487,51 @@ static int parse_long_options(char **argv___0 , int arg_start , int arg_end )
 
 
 
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return (arg_index);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static int parse_shell_options(char **argv___0 , int arg_start , int arg_end ) 
-{ 
-  int arg_index ;
-  int arg_character ;
-  int on_or_off ;
-  int next_arg ;
-  int i ;
-  char *o_option ;
-  char *arg_string ;
-  int tmp ;
-  int tmp___0 ;
-  int tmp___1 ;
-  int tmp___2 ;
+{
 
-  {
-  arg_index = arg_start;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (arg_index != arg_end) {
-      arg_string = *(argv___0 + arg_index);
-      if (arg_string) {
-        if (! ((int )*arg_string == 45)) {
-          if (! ((int )*arg_string == 43)) {
-            goto while_break;
-          }
-        }
-      } else {
 
-      }
-    } else {
 
-    }
 
 
 
@@ -1574,7 +1546,6 @@ static int parse_shell_options(char **argv___0 , int arg_start , int arg_end )
 
 
 
-    {
 
 
 
@@ -1643,14 +1614,43 @@ static int parse_shell_options(char **argv___0 , int arg_start , int arg_end )
 
 
 
-    while_break___0: ;/* CIL Label */ ;
-    }
 
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return (arg_index);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void exit_shell(int s ) 
 {
@@ -1703,12 +1703,7 @@ void sh_exit(int s )
 
 }
 static void execute_env_file(char *env_file ) 
-{ 
-  char *fn ;
-  WORD_LIST *list___0 ;
-
-  {
-  if (env_file) {
+{
 
 
 
@@ -1739,76 +1734,33 @@ static void execute_env_file(char *env_file )
 
 
 
-  }
-  return;
-}
+
+
+
+
+
+
+
+
 }
 static void run_startup_files(void) 
-{ 
-  int old_job_control ;
-  int sourced_login ;
-  int run_by_ssh ;
-  SHELL_VAR *tmp ;
-  SHELL_VAR *tmp___0 ;
-  int tmp___1 ;
-  int tmp___2 ;
-  int tmp___3 ;
-  int tmp___4 ;
-  int tmp___5 ;
-  char *tmp___6 ;
-  int tmp___7 ;
-  int tmp___8 ;
-  int tmp___9 ;
-  int tmp___10 ;
-  char *tmp___11 ;
-  int tmp___12 ;
-  char *tmp___13 ;
-  int tmp___14 ;
+{
 
-  {
-  if (interactive_shell == 0) {
-    if (no_rc == 0) {
-      if (login_shell == 0) {
-        if (act_like_sh == 0) {
-          if (local_pending_command) {
-            {
 
 
 
 
-            }
-            if (run_by_ssh) {
 
-            } else {
-              {
 
 
-              }
-              if (tmp___2) {
-                _L: ;
 
 
 
 
 
 
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  if (interactive_shell) {
-    {
 
 
-    }
-  } else {
-    old_job_control = 0;
-  }
-  sourced_login = 0;
-  if (login_shell < 0) {
 
 
 
@@ -1837,31 +1789,9 @@ static void run_startup_files(void)
 
 
 
-  }
-  if (interactive_shell == 0) {
-    if (su_shell) {
 
 
 
-    } else {
-      _L___0: ;
-      if (posixly_correct == 0) {
-        if (act_like_sh == 0) {
-          if (privileged_mode == 0) {
-            tmp___7 = sourced_env;
-            sourced_env ++;
-            if (tmp___7 == 0) {
-              {
-              tmp___6 = get_string_value("BASH_ENV");
-              execute_env_file(tmp___6);
-              }
-            }
-          }
-        }
-      }
-      return;
-    }
-  }
 
 
 
@@ -1931,62 +1861,112 @@ static void run_startup_files(void)
 
 
 
-  {
 
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int shell_is_restricted(char *name ) 
-{ 
-  char *temp___0 ;
-  int tmp ;
-  int tmp___0 ;
-
-  {
-  if (restricted) {
-
-  }
-  {
-  temp___0 = base_pathname(name);
-  }
-  if ((int )*(temp___0 + 0) == (int )*("rbash" + 0)) {
-    {
-
-    }
+{
 
 
 
 
 
-  } else {
-    tmp___0 = 0;
-  }
-  return (tmp___0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int maybe_make_restricted(char *name ) 
-{ 
-  char *temp___0 ;
-  int tmp ;
-
-  {
-  {
-  temp___0 = base_pathname(shell_name);
-  }
-  if (restricted) {
-    {
-
-
-
-
-
-    }
-  } else { //Added block
-  if ((int )*(temp___0 + 0) == (int )*("rbash" + 0)) {
-    {
-
-    }
+{
 
 
 
@@ -1996,78 +1976,98 @@ int maybe_make_restricted(char *name )
 
 
 
-  }
-  }
-  return (restricted);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static int uidget(void) 
-{ 
-  uid_t u ;
-  int tmp ;
+{
 
-  {
-  {
-  u = getuid();
-  }
-  if (current_user.uid != u) {
-    {
-    while (1) {
-      while_continue: ;/* CIL Label */ ;
-      if (current_user.user_name) {
-        {
 
-        }
-      }
-      goto while_break;
-    }
-    while_break: ;/* CIL Label */ ;
-    }
-    {
-    while (1) {
-      while_continue___0: ;/* CIL Label */ ;
-      if (current_user.shell) {
-        {
 
-        }
-      }
-      goto while_break___0;
-    }
-    while_break___0: ;/* CIL Label */ ;
-    }
-    {
-    while (1) {
-      while_continue___1: ;/* CIL Label */ ;
-      if (current_user.home_dir) {
-        {
 
-        }
-      }
-      goto while_break___1;
-    }
-    while_break___1: ;/* CIL Label */ ;
-    }
-    current_user.home_dir = (char *)((void *)0);
-    current_user.shell = current_user.home_dir;
-    current_user.user_name = current_user.shell;
-  }
-  {
-  current_user.uid = u;
-  current_user.gid = getgid();
-  current_user.euid = geteuid();
-  current_user.egid = getegid();
-  }
-  if (current_user.uid != current_user.euid) {
 
-  } else { //Added block
-  if (current_user.gid != current_user.egid) {
 
-  } else {
-    tmp = 0;
-  }
-  }
-  return (tmp);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void disable_priv_mode(void) 
 {
@@ -2347,61 +2347,11 @@ void unbind_args(void)
 
 }
 static int open_shell_script(char *script_name ) 
-{ 
-  int fd ;
-  int e ;
-  int fd_is_tty ;
-  char *filename ;
-  char *path_filename ;
-  unsigned char sample[80] ;
-  int sample_len ;
-  struct stat sb ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  size_t tmp___2 ;
-  char *tmp___3 ;
-  char *tmp___4 ;
-  int *tmp___5 ;
-  int *tmp___6 ;
-  int *tmp___7 ;
-  int tmp___8 ;
-  int *tmp___9 ;
-  int tmp___10 ;
-  ssize_t tmp___11 ;
-  int *tmp___12 ;
-  int *tmp___13 ;
-  int tmp___14 ;
-  int tmp___15 ;
-  __off_t tmp___16 ;
+{
 
-  {
-  {
-  free((void *)dollar_vars[0]);
-  tmp = strlen((char const   *)script_name);
-  tmp___0 = xmalloc(1UL + tmp);
-  tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )script_name);
-  dollar_vars[0] = tmp___1;
-  tmp___2 = strlen((char const   *)script_name);
-  tmp___3 = xmalloc(1UL + tmp___2);
-  tmp___4 = strcpy((char * __restrict  )tmp___3, (char const   * __restrict  )script_name);
-  filename = tmp___4;
-  fd = open((char const   *)filename, 0);
-  }
-  if (fd < 0) {
-    {
-    tmp___7 = __errno_location();
-    }
-    if (*tmp___7 == 2) {
-      {
-      tmp___8 = absolute_program(filename);
-      }
-      if (tmp___8 == 0) {
-        {
 
 
 
-        }
 
 
 
@@ -2414,27 +2364,8 @@ static int open_shell_script(char *script_name )
 
 
 
-      }
-    }
-  }
-  if (fd < 0) {
-    {
-    tmp___9 = __errno_location();
-    e = *tmp___9;
-    file_error(filename);
-    }
-    if (e == 2) {
-      tmp___10 = 127;
-    } else {
 
-    }
-    {
-    exit(tmp___10);
-    }
-  }
-  {
 
-  }
 
 
 
@@ -2490,11 +2421,9 @@ static int open_shell_script(char *script_name )
 
 
 
-  {
 
 
 
-  }
 
 
 
@@ -2505,11 +2434,82 @@ static int open_shell_script(char *script_name )
 
 
 
-  {
 
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void set_bash_input(void) 
 {
@@ -2580,70 +2580,70 @@ void unset_bash_input(int check_zero )
 
 }
 static void set_shell_name(char *argv0 ) 
-{ 
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-
-  {
-  {
-  shell_name = base_pathname(argv0);
-  }
-  if ((int )*shell_name == 45) {
-
-  }
-  if ((int )*(shell_name + 0) == 115) {
+{
 
 
 
 
 
-  }
-  if ((int )*(shell_name + 0) == 115) {
 
 
 
 
 
-  }
-  shell_name = argv0;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (dollar_vars[0]) {
-      {
-
-      }
-    }
-    goto while_break;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  {
-  tmp = strlen((char const   *)shell_name);
-  tmp___0 = xmalloc(1UL + tmp);
-  tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )shell_name);
-  dollar_vars[0] = tmp___1;
-  }
-  if ((int )*shell_name == 45) {
-
-
-  }
-  if (! shell_name) {
-
-  } else { //Added block
-  if (! *shell_name) {
-
-  } else { //Added block
-  if ((int )*(shell_name + 0) == 45) {
 
 
 
-  }
-  }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void init_interactive(void) 
 {
@@ -2658,91 +2658,24 @@ static void init_interactive(void)
 
 }
 static void init_noninteractive(void) 
-{ 
+{
 
 
-  {
-  {
-  bash_history_reinit(0);
-  interactive = 0;
-  startup_state = interactive;
-  interactive_shell = startup_state;
-  expand_aliases = 0;
-  no_line_editing = 1;
-  set_job_control(0);
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void get_current_user_info(void) 
-{ 
-  struct passwd *entry ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  size_t tmp___2 ;
-  char *tmp___3 ;
-  char *tmp___4 ;
-  size_t tmp___5 ;
-  char *tmp___6 ;
-  char *tmp___7 ;
-  size_t tmp___8 ;
-  char *tmp___9 ;
-  char *tmp___10 ;
-  size_t tmp___11 ;
-  char *tmp___12 ;
-  char *tmp___13 ;
-  size_t tmp___14 ;
-  char *tmp___15 ;
-  char *tmp___16 ;
-  size_t tmp___17 ;
-  char *tmp___18 ;
-  char *tmp___19 ;
-
-  {
-  if ((unsigned long )current_user.user_name == (unsigned long )((char *)0)) {
-    {
-    entry = getpwuid(current_user.uid);
-    }
-    if (entry) {
-      {
-      tmp = strlen((char const   *)entry->pw_name);
-      tmp___0 = xmalloc(1UL + tmp);
-      tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )entry->pw_name);
-      current_user.user_name = tmp___1;
-      }
-      if (entry->pw_shell) {
-        if (*(entry->pw_shell + 0)) {
-          {
-          tmp___2 = strlen((char const   *)entry->pw_shell);
-          tmp___3 = xmalloc(1UL + tmp___2);
-          tmp___4 = strcpy((char * __restrict  )tmp___3, (char const   * __restrict  )entry->pw_shell);
-          current_user.shell = tmp___4;
-          }
-        } else {
-          {
-
-
-
-
-          }
-        }
-      } else {
-        {
-
-
-
-
-        }
-      }
-      {
-      tmp___8 = strlen((char const   *)entry->pw_dir);
-      tmp___9 = xmalloc(1UL + tmp___8);
-      tmp___10 = strcpy((char * __restrict  )tmp___9, (char const   * __restrict  )entry->pw_dir);
-      current_user.home_dir = tmp___10;
-      }
-    } else {
-      {
+{
 
 
 
@@ -2755,97 +2688,164 @@ void get_current_user_info(void)
 
 
 
-      }
-    }
-    {
-    endpwent();
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 extern int sh_setlinebuf() ;
 static void shell_initialize(void) 
-{ 
-  char hostname[256] ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  int tmp___2 ;
-  int tmp___3 ;
-  int tmp___4 ;
+{
 
-  {
-  if (shell_initialized == 0) {
-    {
-    sh_setlinebuf(stderr);
-    sh_setlinebuf(stdout);
-    }
-  }
-  {
-  initialize_shell_builtins();
-  initialize_traps();
-  initialize_signals();
-  }
-  if ((unsigned long )current_host_name == (unsigned long )((char *)0)) {
-    {
-    tmp___2 = gethostname(hostname, (size_t )255);
-    }
-    if (tmp___2 < 0) {
 
-    } else {
-      {
-      tmp = strlen((char const   *)(hostname));
-      tmp___0 = xmalloc(1UL + tmp);
-      tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )(hostname));
-      current_host_name = tmp___1;
-      }
-    }
-  }
-  if (interactive_shell) {
-    {
 
-    }
-  }
-  {
-  tilde_initialize();
-  }
-  if (privileged_mode) {
 
-  } else { //Added block
-  if (restricted) {
 
-  } else { //Added block
-  if (running_setuid) {
 
-  } else {
-    tmp___3 = 0;
-  }
-  }
-  }
-  {
-  initialize_shell_variables(shell_environment, tmp___3);
-  initialize_job_control(0);
-  initialize_bash_input();
-  }
-  if (privileged_mode) {
 
-  } else { //Added block
-  if (restricted) {
 
-  } else { //Added block
-  if (running_setuid) {
 
-  } else {
-    tmp___4 = 0;
-  }
-  }
-  }
-  {
-  initialize_shell_options(tmp___4);
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void shell_reinitialize(void) 
 {
@@ -4530,30 +4530,30 @@ int return_EOF(void)
 
 }
 void initialize_bash_input(void) 
-{ 
+{
 
 
-  {
-  bash_input.type = (enum stream_type )0;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (bash_input.name) {
-      {
 
-      }
-    }
-    goto while_break;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  bash_input.name = (char *)((void *)0);
-  bash_input.location.file = (FILE *)((void *)0);
-  bash_input.location.string = (char *)((void *)0);
-  bash_input.getter = (Function *)((void *)0);
-  bash_input.ungetter = (Function *)((void *)0);
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void init_yy_io(Function *get , Function *unget , enum stream_type type , char *name ,
                 INPUT_STREAM location ) 
@@ -11557,73 +11557,73 @@ int sh_unset_nodelay_mode(int fd )
 
 }
 void check_dev_tty(void) 
-{ 
-  int tty_fd ;
-  char *tty ;
-  int tmp ;
-  char *tmp___0 ;
-
-  {
-  {
-  tty_fd = open("/dev/tty", 2050);
-  }
-  if (tty_fd < 0) {
-    {
+{
 
 
 
-    }
 
 
 
-    {
 
-    }
-  }
-  {
-  close(tty_fd);
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int same_file(char *path1 , char *path2 , struct stat *stp1 , struct stat *stp2 ) 
-{ 
-  struct stat st1 ;
-  struct stat st2 ;
-  int tmp ;
-  int tmp___0 ;
-  int tmp___1 ;
+{
 
-  {
-  if ((unsigned long )stp1 == (unsigned long )((void *)0)) {
-    {
-    tmp = stat((char const   * __restrict  )path1, (struct stat * __restrict  )(& st1));
-    }
-    if (tmp != 0) {
 
-    }
-    stp1 = & st1;
-  }
-  if ((unsigned long )stp2 == (unsigned long )((void *)0)) {
-    {
-    tmp___0 = stat((char const   * __restrict  )path2, (struct stat * __restrict  )(& st2));
-    }
-    if (tmp___0 != 0) {
 
-    }
-    stp2 = & st2;
-  }
-  if (stp1->st_dev == stp2->st_dev) {
-    if (stp1->st_ino == stp2->st_ino) {
-      tmp___1 = 1;
-    } else {
 
-    }
-  } else {
 
-  }
-  return (tmp___1);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int move_to_high_fd(int fd , int check_new , int maxfd ) 
 {
@@ -11763,20 +11763,7 @@ char *make_absolute(char *string , char *dot_path )
 
 }
 int absolute_pathname(char *string ) 
-{ 
-
-
-  {
-  if ((unsigned long )string == (unsigned long )((char *)0)) {
-
-  } else { //Added block
-  if ((int )*string == 0) {
-
-  }
-  }
-  if ((int )*(string + 0) == 47) {
-    return (1);
-  }
+{
 
 
 
@@ -11798,45 +11785,58 @@ int absolute_pathname(char *string )
 
 
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int absolute_program(char *string ) 
-{ 
-  char *tmp ;
+{
 
-  {
-  {
-  tmp = strchr((char const   *)string, '/');
-  }
-  return ((unsigned long )tmp != (unsigned long )((char *)((void *)0)));
-}
+
+
+
+
+
+
+
 }
 char *base_pathname(char *string ) 
-{ 
-  char *p ;
-  int tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
+{
 
-  {
-  {
-  tmp = absolute_pathname(string);
-  }
-  if (tmp == 0) {
 
-  }
-  {
-  tmp___0 = strrchr((char const   *)string, '/');
-  p = tmp___0;
-  }
-  if (p) {
-    p ++;
-    tmp___1 = p;
-  } else {
 
-  }
-  return (tmp___1);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *full_pathname(char *file ) 
 {
@@ -12055,27 +12055,27 @@ static char *bash_special_tilde_expansions(char *text___0 )
 }
 static int times_called  =    0;
 void tilde_initialize(void) 
-{ 
-  int tmp ;
+{
 
-  {
-  tilde_expansion_preexpansion_hook = (tilde_hook_func_t *)((CPFunction *)(& bash_special_tilde_expansions));
-  tmp = times_called;
-  times_called ++;
-  if (tmp == 0) {
-    {
-    tilde_additional_prefixes = alloc_array(3);
-    *(tilde_additional_prefixes + 0) = (char *)"=~";
-    *(tilde_additional_prefixes + 1) = (char *)":~";
-    *(tilde_additional_prefixes + 2) = (char *)((void *)0);
-    tilde_additional_suffixes = alloc_array(3);
-    *(tilde_additional_suffixes + 0) = (char *)":";
-    *(tilde_additional_suffixes + 1) = (char *)"=~";
-    *(tilde_additional_suffixes + 2) = (char *)((void *)0);
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *bash_tilde_expand(char *s ) 
 {
@@ -20157,107 +20157,10 @@ static int qsort_var_comp(SHELL_VAR **var1 , SHELL_VAR **var2 ) ;
 static SHELL_VAR *bind_tempenv_variable(char *name , char *value ) ;
 extern int getopts_reset() ;
 void initialize_shell_variables(char **env , int privmode ) 
-{ 
-  char *name ;
-  char *string ;
-  char *temp_string ;
-  int c ;
-  int char_index ;
-  int string_index ;
-  int string_length ;
-  SHELL_VAR *temp_var ;
-  char *tmp ;
-  size_t tmp___0 ;
-  int tmp___1 ;
-  int tmp___2 ;
-  size_t tmp___3 ;
-  char *tmp___4 ;
-  char *tmp___5 ;
-  int tmp___6 ;
-  __pid_t tmp___7 ;
-  char *tmp___8 ;
-  char const   *tmp___9 ;
+{
 
-  {
-  if ((unsigned long )shell_variables == (unsigned long )((HASH_TABLE *)0)) {
-    {
-    shell_variables = make_hash_table(0);
-    }
-  }
-  if ((unsigned long )shell_functions == (unsigned long )((HASH_TABLE *)0)) {
-    {
-    shell_functions = make_hash_table(0);
-    }
-  }
-  string_index = 0;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    tmp___6 = string_index;
-    string_index ++;
-    string = *(env + tmp___6);
-    if (! string) {
-      goto while_break;
-    }
-    char_index = 0;
-    name = string;
-    {
-    while (1) {
-      while_continue___0: ;/* CIL Label */ ;
-      tmp = string;
-      string ++;
-      c = (int )*tmp;
-      if (c) {
-        if (! (c != 61)) {
-          goto while_break___0;
-        }
-      } else {
 
-      }
-    }
-    while_break___0: ;/* CIL Label */ ;
-    }
-    if ((int )*(string + -1) == 61) {
-      char_index = (int )((string - name) - 1L);
-    }
-    if (char_index == 0) {
 
-    }
-    *(name + char_index) = (char )'\000';
-    if (privmode == 0) {
-      if (read_but_dont_execute == 0) {
-        if ((int const   )*("() {" + 0) == (int const   )*(string + 0)) {
-          {
-
-          }
-
-
-
-
-
-        } else {
-          tmp___2 = 0;
-        }
-        if (tmp___2) {
-          {
-
-
-
-
-
-
-
-          }
-
-
-
-
-
-          {
-
-          }
-
-
 
 
 
@@ -20269,194 +20172,24 @@ void initialize_shell_variables(char **env , int privmode )
 
 
 
-        } else {
-          {
-          temp_var = bind_variable(name, string);
-          temp_var->attributes |= 129;
-          array_needs_making = 1;
-          }
-        }
-      } else {
-        {
-
-
-
-        }
-      }
-    } else {
-      {
-
-
-
-      }
-    }
-    *(name + char_index) = (char )'=';
-    if (temp_var) {
-      if ((temp_var->attributes & 32) == 0) {
-        {
-        while (1) {
-          while_continue___1: ;/* CIL Label */ ;
-          {
-          tmp___3 = strlen((char const   *)name);
-          tmp___4 = xmalloc(1UL + tmp___3);
-          tmp___5 = strcpy((char * __restrict  )tmp___4, (char const   * __restrict  )name);
-          temp_var->exportstr = tmp___5;
-          }
-          goto while_break___1;
-        }
-        while_break___1: ;/* CIL Label */ ;
-        }
-      }
-    }
-    __Cont: ;;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  {
-  set_pwd();
-  temp_var = bind_variable((char *)"_", dollar_vars[0]);
-  tmp___7 = getpid();
-  dollar_dollar_pid = tmp___7;
-  temp_var = set_if_not((char *)"PATH", (char *)"/usr/gnu/bin:/usr/local/bin:/usr/ucb:/bin:/usr/bin:.");
-  }
-  {
-  while (1) {
-    while_continue___2: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___2;
-  }
-  while_break___2: ;/* CIL Label */ ;
-  }
-  {
-  temp_var = set_if_not((char *)"TERM", (char *)"dumb");
-  }
-  {
-  while (1) {
-    while_continue___3: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___3;
-  }
-  while_break___3: ;/* CIL Label */ ;
-  }
-  if (interactive_shell) {
-    {
-
-
-    }
-  }
-  {
-  set_if_not((char *)"PS4", (char *)"+ ");
-  temp_var = bind_variable((char *)"IFS", (char *)" \t\n");
-  temp_var = set_if_not((char *)"HOSTTYPE", (char *)"");
-  }
-  {
-  while (1) {
-    while_continue___4: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___4;
-  }
-  while_break___4: ;/* CIL Label */ ;
-  }
-  {
-  temp_var = set_if_not((char *)"OSTYPE", (char *)"");
-  }
-  {
-  while (1) {
-    while_continue___5: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___5;
-  }
-  while_break___5: ;/* CIL Label */ ;
-  }
-  {
-  temp_var = set_if_not((char *)"MACHTYPE", (char *)"");
-  }
-  {
-  while (1) {
-    while_continue___6: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___6;
-  }
-  while_break___6: ;/* CIL Label */ ;
-  }
-  {
-  temp_var = set_if_not((char *)"HOSTNAME", current_host_name);
-  }
-  {
-  while (1) {
-    while_continue___7: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break___7;
-  }
-  while_break___7: ;/* CIL Label */ ;
-  }
-  if (interactive_shell) {
-    {
 
-    }
-  }
-  {
-  initialize_shell_level();
-  set_ppid();
-  bind_variable((char *)"OPTIND", (char *)"1");
-  getopts_reset(0);
-  bind_variable((char *)"OPTERR", (char *)"1");
-  sh_opterr = 1;
-  }
-  if (login_shell == 1) {
-    {
 
-    }
-  }
-  {
-  name = get_bash_name();
-  temp_var = bind_variable((char *)"BASH", name);
-  free((void *)name);
-  set_shell_var();
-  tmp___8 = shell_version_string();
-  bind_variable((char *)"BASH_VERSION", tmp___8);
-  make_vers_array();
-  temp_var = find_variable((char *)"POSIXLY_CORRECT");
-  }
-  if (! temp_var) {
-    {
-    temp_var = find_variable((char *)"POSIX_PEDANTIC");
-    }
-  }
-  if (temp_var) {
 
 
 
 
 
-  }
-  if (remember_on_history) {
 
 
 
 
 
-    {
 
 
 
 
 
-    }
-  }
-  {
-  sbrand((int )((long )dollar_dollar_pid + shell_start_time));
-  }
-  if (interactive_shell) {
-    {
 
-    }
 
 
 
@@ -20469,39 +20202,306 @@ void initialize_shell_variables(char **env , int privmode )
 
 
 
-  }
-  if (interactive_shell) {
 
 
 
 
 
 
-  }
-  {
-  temp_var = find_variable((char *)"SSH_CLIENT");
-  }
-  if (temp_var) {
 
 
 
 
-  }
-  {
-  temp_var = find_variable((char *)"SSH2_CLIENT");
-  }
-  if (temp_var) {
 
 
 
 
-  }
-  {
-  uidset();
-  initialize_dynamic_variables();
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *sh_get_home_dir(void) 
 {
@@ -20536,52 +20536,30 @@ static void set_home_var(void)
 
 }
 static void set_shell_var(void) 
-{ 
-  SHELL_VAR *temp_var ;
+{
 
-  {
-  {
-  temp_var = find_variable((char *)"SHELL");
-  }
-  if ((unsigned long )temp_var == (unsigned long )((SHELL_VAR *)0)) {
-    if ((unsigned long )current_user.shell == (unsigned long )((char *)0)) {
-      {
-      get_current_user_info();
-      }
-    }
-    {
-    temp_var = bind_variable((char *)"SHELL", current_user.shell);
-    }
-  }
-  temp_var->attributes |= 1;
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static char *get_bash_name(void) 
-{ 
-  char *name ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  size_t tmp___2 ;
-  char *tmp___3 ;
-  char *tmp___4 ;
-  char *cdir ;
-  int len___0 ;
-  size_t tmp___5 ;
-  size_t tmp___6 ;
-  size_t tmp___7 ;
-  char *tmp___8 ;
-  char *tmp___9 ;
-  char *tname ;
-  int s ;
-  char *tmp___10 ;
-  size_t tmp___11 ;
-  char *tmp___12 ;
-  char *tmp___13 ;
+{
 
-  {
-  if (login_shell == 1) {
 
 
 
@@ -20597,16 +20575,6 @@ static char *get_bash_name(void)
 
 
 
-  } else { //Added block
-  _L___0: ;
-  if ((int )*(shell_name + 0) == 47) {
-    {
-    tmp___2 = strlen((char const   *)shell_name);
-    tmp___3 = xmalloc(1UL + tmp___2);
-    tmp___4 = strcpy((char * __restrict  )tmp___3, (char const   * __restrict  )shell_name);
-    name = tmp___4;
-    }
-  } else { //Added block
 
 
 
@@ -20680,46 +20648,45 @@ static char *get_bash_name(void)
 
 
 
-  }
-  }
-  return (name);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void adjust_shell_level(int change ) 
-{ 
-  char new_level[5] ;
-  char *old_SHLVL ;
-  int old_level ;
-  SHELL_VAR *temp_var ;
-  int tmp ;
-
-  {
-  {
-  old_SHLVL = get_string_value("SHLVL");
-  }
-  if (old_SHLVL) {
-    {
-    tmp = atoi((char const   *)old_SHLVL);
-    old_level = tmp;
-    }
-  } else {
-
-  }
-  shell_level = old_level + change;
-  if (shell_level < 0) {
-
-  } else { //Added block
-  if (shell_level > 1000) {
-    {
-
-
-    }
-  }
-  }
-  if (shell_level < 10) {
-    new_level[0] = (char )(shell_level + 48);
-    new_level[1] = (char )'\000';
-  } else { //Added block
+{
 
 
 
@@ -20733,77 +20700,68 @@ void adjust_shell_level(int change )
 
 
 
-  }
-  {
-  temp_var = bind_variable((char *)"SHLVL", new_level);
-  }
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    temp_var->attributes |= 1;
-    array_needs_making = 1;
-    goto while_break;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void initialize_shell_level(void) 
-{ 
+{
 
 
-  {
-  {
-  adjust_shell_level(1);
-  }
-  return;
-}
+
+
+
+
+
+
 }
 void set_pwd(void) 
-{ 
-  SHELL_VAR *temp_var ;
-  SHELL_VAR *home_var ;
-  char *temp_string ;
-  char *home_string ;
-  int tmp ;
-  int tmp___0 ;
-
-  {
-  {
-  home_var = find_variable((char *)"HOME");
-  }
-  if (home_var) {
-    home_string = home_var->value;
-  } else {
-
-  }
-  {
-  temp_var = find_variable((char *)"PWD");
-  }
-  if (temp_var) {
-    if (temp_var->attributes & 128) {
-      temp_string = temp_var->value;
-      if (temp_string) {
-        {
-        tmp___0 = same_file(temp_string, (char *)".", (struct stat *)((void *)0),
-                            (struct stat *)((void *)0));
-        }
-        if (tmp___0) {
-          {
-          set_working_directory(temp_string);
-          }
-        } else {
-
-        }
-      } else {
-
-      }
-    } else {
-
-    }
-  } else { //Added block
-  _L___4: ;
+{
 
 
 
@@ -20856,105 +20814,147 @@ void set_pwd(void)
 
 
 
-  }
-  {
-  temp_var = bind_variable((char *)"OLDPWD", (char *)((void *)0));
-  temp_var->attributes |= 5;
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void set_ppid(void) 
-{ 
-  char namebuf[32] ;
-  char *name ;
-  SHELL_VAR *temp_var ;
-  __pid_t tmp ;
+{
 
-  {
-  {
-  tmp = getppid();
-  name = inttostr(tmp, namebuf, (int )sizeof(namebuf));
-  temp_var = find_variable((char *)"PPID");
-  }
-  if (temp_var) {
 
-  }
-  {
-  temp_var = bind_variable((char *)"PPID", name);
-  temp_var->attributes |= 66;
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void uidset(void) 
-{ 
-  char buff[32] ;
-  char *b ;
-  register SHELL_VAR *v___0 ;
+{
 
-  {
-  {
-  b = inttostr((int )current_user.uid, buff, (int )sizeof(buff));
-  v___0 = find_variable((char *)"UID");
-  }
-  if ((unsigned long )v___0 == (unsigned long )((SHELL_VAR *)0)) {
-    {
-    v___0 = bind_variable((char *)"UID", b);
-    v___0->attributes |= 66;
-    }
-  }
-  if (current_user.euid != current_user.uid) {
-    {
 
-    }
-  }
-  {
-  v___0 = find_variable((char *)"EUID");
-  }
-  if ((unsigned long )v___0 == (unsigned long )((SHELL_VAR *)0)) {
-    {
-    v___0 = bind_variable((char *)"EUID", b);
-    v___0->attributes |= 66;
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void make_vers_array(void) 
-{ 
-  SHELL_VAR *vv ;
-  ARRAY *av ;
-  char *s ;
-  char d___0[32] ;
-  char *tmp ;
+{
 
-  {
-  {
-  makunbound((char *)"BASH_VERSINFO", shell_variables);
-  vv = make_new_array_variable((char *)"BASH_VERSINFO");
-  av = (ARRAY *)vv->value;
-  strcpy((char * __restrict  )(d___0), (char const   * __restrict  )dist_version);
-  s = strchr((char const   *)(d___0), '.');
-  }
-  if (s) {
-    tmp = s;
-    s ++;
-    *tmp = (char )'\000';
-  }
-  {
-  array_add_element(av, 0, d___0);
-  array_add_element(av, 1, s);
-  s = inttostr(patch_level, d___0, (int )sizeof(d___0));
-  array_add_element(av, 2, s);
-  s = inttostr(build_version, d___0, (int )sizeof(d___0));
-  array_add_element(av, 3, s);
-  array_add_element(av, 4, release_status);
-  array_add_element(av, 5, (char *)"");
-  vv->attributes |= 2;
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void sh_set_lines_and_columns(int lines , int cols ) 
 {
@@ -20972,20 +20972,20 @@ void sh_set_lines_and_columns(int lines , int cols )
 
 }
 SHELL_VAR *set_if_not(char *name , char *value ) 
-{ 
-  SHELL_VAR *v___0 ;
+{
 
-  {
-  {
-  v___0 = find_variable(name);
-  }
-  if ((unsigned long )v___0 == (unsigned long )((SHELL_VAR *)0)) {
-    {
-    v___0 = bind_variable(name, value);
-    }
-  }
-  return (v___0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR **map_over(Function *function , HASH_TABLE *var_hash_table ) 
 {
@@ -21378,14 +21378,14 @@ static int brand(void)
 
 }
 static void sbrand(int seed ) 
-{ 
+{
 
 
-  {
-  rseed = (unsigned long )seed;
-  last_random_value = 0UL;
-  return;
-}
+
+
+
+
+
 }
 static SHELL_VAR *assign_random(SHELL_VAR *self , char *value ) 
 {
@@ -21636,129 +21636,118 @@ void make_funcname_visible(int on_or_off )
 
 }
 static void initialize_dynamic_variables(void) 
-{ 
-  SHELL_VAR *v___0 ;
+{
 
-  {
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    {
-    v___0 = bind_variable((char *)"SECONDS", (char *)((void *)0));
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_seconds);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& assign_seconds);
-    }
-    goto while_break;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  {
-  while (1) {
-    while_continue___0: ;/* CIL Label */ ;
-    {
-    v___0 = bind_variable((char *)"RANDOM", (char *)((void *)0));
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_random);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& assign_random);
-    }
-    goto while_break___0;
-  }
-  while_break___0: ;/* CIL Label */ ;
-  }
-  {
-  while (1) {
-    while_continue___1: ;/* CIL Label */ ;
-    {
-    v___0 = bind_variable((char *)"LINENO", (char *)((void *)0));
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_lineno);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& assign_lineno);
-    }
-    goto while_break___1;
-  }
-  while_break___1: ;/* CIL Label */ ;
-  }
-  {
-  while (1) {
-    while_continue___2: ;/* CIL Label */ ;
-    {
-    v___0 = bind_variable((char *)"HISTCMD", (char *)((void *)0));
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_histcmd);
-    v___0->assign_func = (DYNAMIC_FUNC *)((void *)0);
-    }
-    goto while_break___2;
-  }
-  while_break___2: ;/* CIL Label */ ;
-  }
-  {
-  while (1) {
-    while_continue___3: ;/* CIL Label */ ;
-    {
-    v___0 = make_new_array_variable((char *)"DIRSTACK");
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_dirstack);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& assign_dirstack);
-    }
-    goto while_break___3;
-  }
-  while_break___3: ;/* CIL Label */ ;
-  }
-  {
-  while (1) {
-    while_continue___4: ;/* CIL Label */ ;
-    {
-    v___0 = make_new_array_variable((char *)"GROUPS");
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_groupset);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& null_array_assign);
-    }
-    goto while_break___4;
-  }
-  while_break___4: ;/* CIL Label */ ;
-  }
-  v___0->attributes |= 2048;
-  {
-  while (1) {
-    while_continue___5: ;/* CIL Label */ ;
-    {
-    v___0 = bind_variable((char *)"FUNCNAME", (char *)((void *)0));
-    v___0->dynamic_value = (DYNAMIC_FUNC *)(& get_funcname);
-    v___0->assign_func = (DYNAMIC_FUNC *)(& null_assign);
-    }
-    goto while_break___5;
-  }
-  while_break___5: ;/* CIL Label */ ;
-  }
-  v___0->attributes |= 2052;
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *var_lookup(char *name , HASH_TABLE *hashed_vars ) 
-{ 
-  BUCKET_CONTENTS *bucket ;
-  SHELL_VAR *tmp ;
+{
 
-  {
-  {
-  bucket = find_hash_item(name, hashed_vars);
-  }
-  if (bucket) {
-    tmp = (SHELL_VAR *)bucket->data;
-  } else {
-    tmp = (SHELL_VAR *)((void *)0);
-  }
-  return (tmp);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *find_variable_internal(char *name , int search_tempenv ) 
-{ 
-  SHELL_VAR *var ;
-  struct variable *tmp ;
-  struct variable *tmp___0 ;
-
-  {
-  var = (SHELL_VAR *)((void *)0);
-  if (search_tempenv) {
-
-  } else { //Added block
-  if (subshell_environment) {
-    _L: ;
+{
 
 
 
@@ -21776,51 +21765,62 @@ SHELL_VAR *find_variable_internal(char *name , int search_tempenv )
 
 
 
-  }
-  }
-  if (! var) {
-    {
-    var = var_lookup(name, shell_variables);
-    }
-  }
-  if (! var) {
-    return ((SHELL_VAR *)((void *)0));
-  }
-  if (var->dynamic_value) {
-    {
 
 
-    }
-  } else {
-    tmp___0 = var;
-  }
-  return (tmp___0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *find_variable(char *name ) 
-{ 
-  int tmp ;
-  SHELL_VAR *tmp___0 ;
+{
 
-  {
-  if (variable_context) {
 
-  } else { //Added block
-  if (this_shell_builtin) {
 
-  } else { //Added block
-  if (builtin_env) {
 
-  } else {
-    tmp = 0;
-  }
-  }
-  }
-  {
-  tmp___0 = find_variable_internal(name, tmp);
-  }
-  return (tmp___0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *find_function(char *name ) 
 {
@@ -21834,27 +21834,27 @@ SHELL_VAR *find_function(char *name )
 
 }
 char *get_string_value(char const   *var_name ) 
-{ 
-  SHELL_VAR *var ;
-  char *tmp ;
+{
 
-  {
-  {
-  var = find_variable((char *)var_name);
-  }
-  if (! var) {
-    return ((char *)((void *)0));
-  } else { //Added block
-  if (var->attributes & 8) {
-    {
 
-    }
 
-  } else {
-    return (var->value);
-  }
-  }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *sh_get_env_value(char const   *v___0 ) 
 {
@@ -22018,150 +22018,109 @@ SHELL_VAR *make_local_array_variable(char *name )
 
 }
 static SHELL_VAR *make_new_variable(char *name ) 
-{ 
-  SHELL_VAR *entry ;
-  BUCKET_CONTENTS *elt ;
-  char *tmp ;
-  size_t tmp___0 ;
-  char *tmp___1 ;
-  char *tmp___2 ;
-  size_t tmp___3 ;
-  char *tmp___4 ;
-  char *tmp___5 ;
+{
 
-  {
-  {
-  tmp = xmalloc(sizeof(SHELL_VAR ));
-  entry = (SHELL_VAR *)tmp;
-  entry->attributes = 0;
-  tmp___0 = strlen((char const   *)name);
-  tmp___1 = xmalloc(1UL + tmp___0);
-  tmp___2 = strcpy((char * __restrict  )tmp___1, (char const   * __restrict  )name);
-  entry->name = tmp___2;
-  entry->value = (char *)((void *)0);
-  entry->exportstr = (char *)((void *)0);
-  entry->dynamic_value = (DYNAMIC_FUNC *)((void *)0);
-  entry->assign_func = (DYNAMIC_FUNC *)((void *)0);
-  entry->context = 0;
-  entry->prev_context = (SHELL_VAR *)((void *)0);
-  }
-  if ((unsigned long )shell_variables == (unsigned long )((HASH_TABLE *)0)) {
-    {
 
-    }
-  }
-  {
-  tmp___3 = strlen((char const   *)name);
-  tmp___4 = xmalloc(1UL + tmp___3);
-  tmp___5 = strcpy((char * __restrict  )tmp___4, (char const   * __restrict  )name);
-  elt = add_hash_item(tmp___5, shell_variables);
-  elt->data = (char *)entry;
-  }
-  return (entry);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *make_new_array_variable(char *name ) 
-{ 
-  SHELL_VAR *entry ;
-  ARRAY *array ;
+{
 
-  {
-  {
-  entry = make_new_variable(name);
-  array = new_array();
-  entry->value = (char *)array;
-  entry->attributes |= 8;
-  }
-  return (entry);
-}
+
+
+
+
+
+
+
+
+
+
+
 }
 char *make_variable_value(SHELL_VAR *var , char *value ) 
-{ 
-  char *retval ;
-  long lval ;
-  int expok ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-
-  {
-  if (var->attributes & 64) {
-    {
-
-    }
+{
 
 
 
 
 
-    {
 
-    }
-  } else { //Added block
-  if (value) {
-    if (*value) {
-      {
-      tmp = strlen((char const   *)value);
-      tmp___0 = xmalloc(1UL + tmp);
-      tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )value);
-      retval = tmp___1;
-      }
-    } else {
-      {
-      retval = xmalloc((size_t )1);
-      *(retval + 0) = (char )'\000';
-      }
-    }
-  } else {
-    retval = (char *)((void *)0);
-  }
-  }
-  return (retval);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *bind_variable(char *name , char *value ) 
-{ 
-  char *newval ;
-  SHELL_VAR *entry ;
-  SHELL_VAR *tempenv_entry ;
-  int found_in_tempenv ;
-  struct variable *tmp ;
-
-  {
-  entry = (SHELL_VAR *)0;
-  found_in_tempenv = 0;
-  if (temporary_env) {
-
-  } else { //Added block
-  if (builtin_env) {
-
-  } else { //Added block
-  if (function_env) {
-    _L: ;
-    {
-
-    }
-
-
-
-
-
-
-
-  }
-  }
-  }
-  {
-  entry = var_lookup(name, shell_variables);
-  }
-  if ((unsigned long )entry == (unsigned long )((SHELL_VAR *)0)) {
-    {
-    entry = make_new_variable(name);
-    entry->value = make_variable_value(entry, value);
-    }
-  } else { //Added block
-  if (entry->assign_func) {
-    {
+{
 
 
 
@@ -22175,76 +22134,117 @@ SHELL_VAR *bind_variable(char *name , char *value )
 
 
 
-    while_break: ;/* CIL Label */ ;
-    }
-    {
-
-    }
-
-  } else {
-    if (entry->attributes & 2) {
-
-    } else { //Added block
-    if (entry->attributes & 2048) {
-      _L___0: ;
 
 
 
 
 
 
-    }
-    }
-    {
-    entry->attributes &= -5;
-    newval = make_variable_value(entry, value);
-    }
-    {
-    while (1) {
-      while_continue___0: ;/* CIL Label */ ;
-      if (entry->exportstr) {
-        if ((entry->attributes & 1024) == 0) {
-          {
-          free((void *)entry->exportstr);
-          }
-        }
-        entry->exportstr = (char *)((void *)0);
-        entry->attributes &= -1025;
-      }
-      goto while_break___0;
-    }
-    while_break___0: ;/* CIL Label */ ;
-    }
-    if (entry->attributes & 8) {
-      {
 
 
-      }
-    } else {
-      {
-      while (1) {
-        while_continue___1: ;/* CIL Label */ ;
-        if (entry->value) {
-          {
-          free((void *)entry->value);
-          }
-        }
-        goto while_break___1;
-      }
-      while_break___1: ;/* CIL Label */ ;
-      }
-      entry->value = newval;
-    }
-  }
-  }
-  if (mark_modified_vars) {
 
-  }
-  if (entry->attributes & 1) {
-    array_needs_making = 1;
-  }
-  return (entry);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 SHELL_VAR *bind_variable_value(SHELL_VAR *var , char *value ) 
 {
@@ -22906,29 +22906,8 @@ int unbind_variable(char *name )
 
 }
 int makunbound(char *name , HASH_TABLE *hash_list ) 
-{ 
-  BUCKET_CONTENTS *elt ;
-  BUCKET_CONTENTS *new_elt ;
-  SHELL_VAR *old_var ;
-  SHELL_VAR *new_var ;
-  char *t ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  size_t tmp___2 ;
-  char *tmp___3 ;
-  char *tmp___4 ;
-  size_t tmp___5 ;
-  char *tmp___6 ;
-  char *tmp___7 ;
+{
 
-  {
-  {
-  elt = remove_hash_item(name, hash_list);
-  }
-  if ((unsigned long )elt == (unsigned long )((BUCKET_CONTENTS *)0)) {
-    return (-1);
-  }
 
 
 
@@ -22995,7 +22974,6 @@ int makunbound(char *name , HASH_TABLE *hash_list )
 
 
 
-  {
 
 
 
@@ -23005,9 +22983,31 @@ int makunbound(char *name , HASH_TABLE *hash_list )
 
 
 
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int variable_in_context(SHELL_VAR *var ) 
 {
@@ -24094,34 +24094,34 @@ static SHELL_VAR *bind_tempenv_variable(char *name , char *value )
 
 }
 SHELL_VAR *find_tempenv_variable(char *name ) 
-{ 
-  SHELL_VAR *var ;
-
-  {
-  var = (SHELL_VAR *)((void *)0);
-  if (temporary_env) {
-    {
-
-    }
-  }
-  if (! var) {
-    if (builtin_env) {
-      {
-
-      }
-    }
-  }
-  if (! var) {
-    if (variable_context) {
+{
 
 
 
 
 
-    }
-  }
-  return (var);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void dispose_temporary_vars(char ***arrayp ) 
 {
@@ -25732,15 +25732,7 @@ char *command_errstr(int code ) ;
 char *last_history_line(void) ;
 char *the_current_maintainer  =    (char *)"bash-maintainers@gnu.org";
 char *get_name_for_error(void) 
-{ 
-  char *name ;
-
-  {
-  name = (char *)((void *)0);
-  if (interactive_shell == 0) {
-    name = dollar_vars[0];
-  }
-  if ((unsigned long )name == (unsigned long )((char *)0)) {
+{
 
 
 
@@ -25748,26 +25740,34 @@ char *get_name_for_error(void)
 
 
 
-  }
-  if ((unsigned long )name == (unsigned long )((char *)0)) {
 
-  }
-  return (name);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void file_error(char *filename ) 
-{ 
-  int *tmp ;
-  char *tmp___0 ;
+{
 
-  {
-  {
-  tmp = __errno_location();
-  tmp___0 = strerror(*tmp);
-  report_error("%s: %s", filename, tmp___0);
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
 }
 void programming_error(char const   *format  , ...) 
 {
@@ -25804,26 +25804,26 @@ void programming_error(char const   *format  , ...)
 
 }
 void report_error(char const   *format  , ...) 
-{ 
-  va_list args ;
-  char *tmp ;
+{
 
-  {
-  {
-  tmp = get_name_for_error();
-  fprintf((FILE * __restrict  )stderr, (char const   * __restrict  )"%s: ", tmp);
-  __builtin_va_start(args, format);
-  vfprintf((FILE * __restrict  )stderr, (char const   * __restrict  )format, args);
-  fprintf((FILE * __restrict  )stderr, (char const   * __restrict  )"\n");
-  __builtin_va_end(args);
-  }
-  if (exit_immediately_on_error) {
-    {
 
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void fatal_error(char const   *format  , ...) 
 {
@@ -27802,62 +27802,29 @@ struct flags_alist shell_flags[21]  =
         {(char )'H', & history_expansion}, 
         {(char)0, (int *)((void *)0)}};
 int *find_flag(int name ) 
-{ 
-  int i ;
+{
 
-  {
-  i = 0;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! shell_flags[i].name) {
 
-    }
-    if ((int )shell_flags[i].name == name) {
-      return (shell_flags[i].value);
-    }
-    i ++;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int change_flag(int flag , int on_or_off ) 
-{ 
-  int *value ;
-  int old_value ;
-
-  {
-  if (restricted) {
-    if (flag == 114) {
-
-
-
-    }
-  }
-  {
-  value = find_flag(flag);
-  }
-  if ((unsigned long )value == (unsigned long )((int *)0)) {
-
-  } else { //Added block
-  if (on_or_off != 45) {
-    if (on_or_off != 43) {
-
-    }
-  }
-  }
-  old_value = *value;
-  if (on_or_off == 45) {
-
-  } else {
-    *value = 0;
-  }
-  {
-  if (flag == 109) {
-    goto case_109;
-  }
+{
 
 
 
@@ -27868,36 +27835,69 @@ int change_flag(int flag , int on_or_off )
 
 
 
-  case_109: ;/* CIL Label */ 
-  {
-  set_job_control(on_or_off == 45);
-  }
-  goto switch_break;
-  case_114: ;/* CIL Label */ 
 
 
 
 
 
 
-  case_72: ;/* CIL Label */ 
 
 
 
 
 
 
-  case_112: ;/* CIL Label */ 
 
 
 
 
 
 
-  switch_break: ;/* CIL Label */ ;
-  }
-  return (old_value);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *which_set_flags(void) 
 {
@@ -31273,37 +31273,13 @@ static void notify_of_job_status(void)
 
 }
 int initialize_job_control(int force ) 
-{ 
-  int tmp ;
-  SigHandler *old_ttin___0 ;
-  int tmp___0 ;
-  int tmp___1 ;
-  int tmp___2 ;
-  int tmp___3 ;
-  int tmp___4 ;
+{
 
-  {
-  {
-  shell_pgrp = getpgrp();
-  }
-  if (shell_pgrp == -1) {
-    {
 
 
-    }
-  }
-  if (interactive == 0) {
-    {
-    job_control = 0;
-    original_pgrp = -1;
-    shell_tty = fileno(stderr);
-    }
-  } else {
-    {
 
 
 
-    }
 
 
 
@@ -31311,7 +31287,6 @@ int initialize_job_control(int force )
 
 
 
-    {
 
 
 
@@ -31330,11 +31305,7 @@ int initialize_job_control(int force )
 
 
 
-    while_break: ;/* CIL Label */ ;
-    }
-    {
 
-    }
 
 
 
@@ -31377,33 +31348,62 @@ int initialize_job_control(int force )
 
 
 
-  }
-  {
-  tmp___3 = fileno(stderr);
-  }
-  if (shell_tty != tmp___3) {
-    {
-
-    }
-  }
-  {
-  set_signal_handler(17, (SigHandler *)(& sigchld_handler));
-  }
-  if (job_control) {
-
-  } else {
-    tmp___4 = '+';
-  }
-  {
-  change_flag('m', tmp___4);
-  }
-  if (interactive) {
-    {
-
-    }
-  }
-  return (job_control);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static int set_new_line_discipline(int tty ) 
 {
@@ -31476,29 +31476,29 @@ void unset_sigwinch_handler(void)
 
 }
 void initialize_job_signals(void) 
-{ 
-
-
-  {
-  if (interactive) {
-    {
+{
 
 
 
 
 
-    }
-  } else { //Added block
-  if (job_control) {
-    {
 
 
 
-    }
-  }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static void sigcont_sighandler(int sig ) 
 {
@@ -31836,14 +31836,14 @@ void unfreeze_jobs_list(void)
 
 }
 int set_job_control(int arg ) 
-{ 
-  int old ;
+{
 
-  {
-  old = job_control;
-  job_control = arg;
-  return (old);
-}
+
+
+
+
+
+
 }
 void without_job_control(void) 
 {
@@ -42553,129 +42553,109 @@ char *find_hashed_filename(char *filename )
 int hash_string(char *string , HASH_TABLE *table ) ;
 void dispose_hash_table(HASH_TABLE *table ) ;
 static void initialize_hash_table(HASH_TABLE *table ) 
-{ 
-  register int i ;
+{
 
-  {
-  i = 0;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! (i < table->nbuckets)) {
-      goto while_break;
-    }
-    *(table->bucket_array + i) = (BUCKET_CONTENTS *)((void *)0);
-    i ++;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 HASH_TABLE *make_hash_table(int buckets ) 
-{ 
-  HASH_TABLE *new_table ;
-  char *tmp ;
-  char *tmp___0 ;
+{
 
-  {
-  {
-  tmp = xmalloc(sizeof(HASH_TABLE ));
-  new_table = (HASH_TABLE *)tmp;
-  }
-  if (buckets == 0) {
-    buckets = 53;
-  }
-  {
-  tmp___0 = xmalloc((unsigned long )buckets * sizeof(BUCKET_CONTENTS *));
-  new_table->bucket_array = (BUCKET_CONTENTS **)tmp___0;
-  new_table->nbuckets = buckets;
-  new_table->nentries = 0;
-  initialize_hash_table(new_table);
-  }
-  return (new_table);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int hash_string(char *string , HASH_TABLE *table ) 
-{ 
-  register unsigned int i ;
-  char *tmp ;
+{
 
-  {
-  i = 0U;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! *string) {
-      goto while_break;
-    }
-    tmp = string;
-    string ++;
-    i = (i << 2) + (unsigned int )*tmp;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return ((int )(((unsigned long )i & ~ (0xffffffffffffffffUL << 31)) % (unsigned long )table->nbuckets));
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 BUCKET_CONTENTS *find_hash_item(char *string , HASH_TABLE *table ) 
-{ 
-  BUCKET_CONTENTS *list___0 ;
-  int which_bucket ;
-  int tmp ;
+{
 
-  {
-  if ((unsigned long )table == (unsigned long )((HASH_TABLE *)0)) {
 
-  }
-  {
-  which_bucket = hash_string(string, table);
-  list___0 = *(table->bucket_array + which_bucket);
-  }
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! list___0) {
-      goto while_break;
-    }
-    if ((int )*(list___0->key + 0) == (int )*(string + 0)) {
-      {
-      tmp = strcmp((char const   *)list___0->key, (char const   *)string);
-      }
-      if (tmp == 0) {
-        (list___0->times_found) ++;
-        return (list___0);
-      }
-    }
-    list___0 = list___0->next;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return ((BUCKET_CONTENTS *)((void *)0));
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 BUCKET_CONTENTS *remove_hash_item(char *string , HASH_TABLE *table ) 
-{ 
-  int the_bucket ;
-  BUCKET_CONTENTS *prev ;
-  BUCKET_CONTENTS *temp___0 ;
-  int tmp ;
-
-  {
-  if ((unsigned long )table == (unsigned long )((HASH_TABLE *)0)) {
-
-  }
-  {
-  the_bucket = hash_string(string, table);
-  prev = (BUCKET_CONTENTS *)((void *)0);
-  temp___0 = *(table->bucket_array + the_bucket);
-  }
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! temp___0) {
-      goto while_break;
-    }
+{
 
 
 
@@ -42692,68 +42672,88 @@ BUCKET_CONTENTS *remove_hash_item(char *string , HASH_TABLE *table )
 
 
 
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  return ((BUCKET_CONTENTS *)((void *)0));
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 BUCKET_CONTENTS *add_hash_item(char *string , HASH_TABLE *table ) 
-{ 
-  BUCKET_CONTENTS *item ;
-  int bucket ;
-  char *tmp ;
-  char *tmp___0 ;
+{
 
-  {
-  if ((unsigned long )table == (unsigned long )((HASH_TABLE *)0)) {
-    {
 
-    }
-  }
-  {
-  item = find_hash_item(string, table);
-  }
-  if ((unsigned long )item == (unsigned long )((BUCKET_CONTENTS *)0)) {
-    {
-    bucket = hash_string(string, table);
-    item = *(table->bucket_array + bucket);
-    }
-    {
-    while (1) {
-      while_continue: ;/* CIL Label */ ;
-      if (item) {
-        if (! item->next) {
-          goto while_break;
-        }
-      } else {
-        goto while_break;
-      }
-      item = item->next;
-    }
-    while_break: ;/* CIL Label */ ;
-    }
-    if (item) {
-      {
-      tmp = xmalloc(sizeof(BUCKET_CONTENTS ));
-      item->next = (BUCKET_CONTENTS *)tmp;
-      item = item->next;
-      }
-    } else {
-      {
-      tmp___0 = xmalloc(sizeof(BUCKET_CONTENTS ));
-      *(table->bucket_array + bucket) = (BUCKET_CONTENTS *)tmp___0;
-      item = *(table->bucket_array + bucket);
-      }
-    }
-    item->data = (char *)((void *)0);
-    item->next = (BUCKET_CONTENTS *)((void *)0);
-    item->key = string;
-    (table->nentries) ++;
-    item->times_found = 0;
-  }
-  return (item);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void flush_hash_table(HASH_TABLE *table , VFunction *free_data ) 
 {
@@ -43417,58 +43417,58 @@ static void restore_signal(int sig ) ;
 SigHandler *original_signals[65]  ;
 int pending_traps[65]  ;
 void initialize_traps(void) 
-{ 
-  register int i ;
-  SigHandler *tmp ;
-  SigHandler *tmp___0 ;
-  SigHandler *tmp___1 ;
-  SigHandler *tmp___2 ;
-
-  {
-  trap_list[65] = (char *)((void *)0);
-  trap_list[0] = trap_list[65];
-  sigmodes[65] = 0;
-  sigmodes[0] = sigmodes[65];
-  original_signals[0] = & initialize_traps;
-  i = 1;
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    if (! (i < 65)) {
-      goto while_break;
-    }
-    pending_traps[i] = 0;
-    trap_list[i] = (char *)((void (*)(int  ))0);
-    sigmodes[i] = 0;
-    original_signals[i] = & initialize_traps;
-    i ++;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  {
-  tmp = set_signal_handler(17, (SigHandler *)((void (*)(int  ))0));
-  original_signals[17] = tmp;
-  set_signal_handler(17, original_signals[17]);
-  sigmodes[17] |= 12;
-  tmp___0 = set_signal_handler(2, (SigHandler *)((void (*)(int  ))0));
-  original_signals[2] = tmp___0;
-  set_signal_handler(2, original_signals[2]);
-  sigmodes[2] |= 4;
-  tmp___1 = set_signal_handler(3, (SigHandler *)((void (*)(int  ))0));
-  original_signals[3] = tmp___1;
-  set_signal_handler(3, original_signals[3]);
-  sigmodes[3] |= 4;
-  }
-  if (interactive) {
-    {
+{
 
 
 
 
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *signal_name(int sig ) 
 {
@@ -44268,12 +44268,12 @@ int maybe_call_trap_handler(int sig )
 
 }
 int signal_is_trapped(int sig ) 
-{ 
+{
 
 
-  {
-  return (sigmodes[sig] & 1);
-}
+
+
+
 }
 int signal_is_special(int sig ) 
 {
@@ -45866,16 +45866,16 @@ extern int parse_and_execute_level ;
 int interrupt_immediately  =    0;
 static void initialize_shell_signals() ;
 void initialize_signals(void) 
-{ 
+{
 
 
-  {
-  {
-  initialize_shell_signals();
-  initialize_job_signals();
-  }
-  return;
-}
+
+
+
+
+
+
+
 }
 void reinitialize_signals(void) 
 {
@@ -45978,29 +45978,29 @@ void initialize_terminating_signals(void)
 
 }
 static void initialize_shell_signals(void) 
-{ 
+{
 
 
-  {
-  if (interactive) {
-    {
-
-    }
-  }
-  {
-  sigemptyset(& top_level_mask);
-  sigprocmask(0, (sigset_t const   * __restrict  )((sigset_t *)((void *)0)), (sigset_t * __restrict  )(& top_level_mask));
-  sigdelset(& top_level_mask, 17);
-  set_signal_handler(3, (SigHandler *)((void (*)(int  ))1));
-  }
-  if (interactive) {
-    {
 
 
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void reset_terminating_signals(void) 
 {
@@ -46214,20 +46214,20 @@ void sigint_sighandler(int sig )
 
 }
 SigHandler *set_signal_handler(int sig , SigHandler *handler ) 
-{ 
-  struct sigaction act ;
-  struct sigaction oact ;
+{
 
-  {
-  {
-  act.__sigaction_handler.sa_handler = (void (*)(int  ))handler;
-  act.sa_flags = 0;
-  sigemptyset(& act.sa_mask);
-  sigemptyset(& oact.sa_mask);
-  sigaction(sig, (struct sigaction  const  * __restrict  )(& act), (struct sigaction * __restrict  )(& oact));
-  }
-  return ((SigHandler *)oact.__sigaction_handler.sa_handler);
-}
+
+
+
+
+
+
+
+
+
+
+
+
 }
 #pragma merger("0","/tmp/cil-pCNded3b.i","-g")
 extern  __attribute__((__nothrow__)) int ( __attribute__((__nonnull__(1,2), __leaf__)) lstat)(char const   * __restrict  __file ,
@@ -48147,25 +48147,25 @@ char *release_status  =    (char *)"release";
 char *sccs_version  =    (char *)"@(#)Bash version 2.05.0(1) release GNU";
 static char tt[32]  = {      (char )'\000'};
 char *shell_version_string(void) 
-{ 
+{
 
 
-  {
-  if ((int )tt[0] == 0) {
-    if (release_status) {
-      {
-      sprintf((char * __restrict  )(tt), (char const   * __restrict  )"%s.%d(%d)-%s",
-              dist_version, patch_level, build_version, release_status);
-      }
-    } else {
-      {
 
 
-      }
-    }
-  }
-  return (tt);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void show_shell_version(int extended ) 
 {
@@ -48969,35 +48969,35 @@ char *array_to_string(ARRAY *a , char *sep , int quoted ) ;
 ARRAY *array_quote(ARRAY *array ) ;
 extern char *sh_double_quote(char * ) ;
 ARRAY_ELEMENT *new_array_element(arrayind_t indx , char *value ) 
-{ 
-  ARRAY_ELEMENT *r ;
-  char *tmp ;
-  size_t tmp___0 ;
-  char *tmp___1 ;
-  char *tmp___2 ;
-  struct array_element *tmp___3 ;
+{
 
-  {
-  {
-  tmp = xmalloc(sizeof(ARRAY_ELEMENT ));
-  r = (ARRAY_ELEMENT *)tmp;
-  r->ind = indx;
-  }
-  if (value) {
-    {
-    tmp___0 = strlen((char const   *)value);
-    tmp___1 = xmalloc(1UL + tmp___0);
-    tmp___2 = strcpy((char * __restrict  )tmp___1, (char const   * __restrict  )value);
-    r->value = tmp___2;
-    }
-  } else {
-    r->value = (char *)((void *)0);
-  }
-  tmp___3 = (ARRAY_ELEMENT *)((void *)0);
-  r->prev = tmp___3;
-  r->next = tmp___3;
-  return (r);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void destroy_array_element(ARRAY_ELEMENT *ae ) 
 {
@@ -49023,30 +49023,30 @@ void destroy_array_element(ARRAY_ELEMENT *ae )
 
 }
 ARRAY *new_array(void) 
-{ 
-  ARRAY *r ;
-  ARRAY_ELEMENT *head ;
-  char *tmp ;
-  arrayind_t tmp___0 ;
-  struct array_element *tmp___1 ;
+{
 
-  {
-  {
-  tmp = xmalloc(sizeof(ARRAY ));
-  r = (ARRAY *)tmp;
-  r->type = (enum atype )0;
-  tmp___0 = -1;
-  r->max_size = tmp___0;
-  r->max_index = tmp___0;
-  r->num_elements = 0;
-  head = new_array_element(-1, (char *)((void *)0));
-  tmp___1 = head;
-  head->next = tmp___1;
-  head->prev = tmp___1;
-  r->head = head;
-  }
-  return (r);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void empty_array(ARRAY *a ) 
 {
@@ -49149,38 +49149,7 @@ ARRAY *dup_array(ARRAY *a )
 
 }
 int array_add_element(ARRAY *a , arrayind_t i , char *v___0 ) 
-{ 
-  register ARRAY_ELEMENT *new ;
-  register ARRAY_ELEMENT *ae ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-
-  {
-  if (! a) {
-
-  }
-  {
-  new = new_array_element(i, v___0);
-  }
-  if (i > a->max_index) {
-    {
-    while (1) {
-      while_continue: ;/* CIL Label */ ;
-      ((a->head)->prev)->next = new;
-      new->prev = (a->head)->prev;
-      (a->head)->prev = new;
-      new->next = a->head;
-      goto while_break;
-    }
-    while_break: ;/* CIL Label */ ;
-    }
-    a->max_index = i;
-    (a->num_elements) ++;
-    return (0);
-  }
-
-  {
+{
 
 
 
@@ -49215,10 +49184,41 @@ int array_add_element(ARRAY *a , arrayind_t i , char *v___0 )
 
 
 
-  while_break___0: ;/* CIL Label */ ;
-  }
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 ARRAY_ELEMENT *array_delete_element(ARRAY *a , arrayind_t i ) 
 {
@@ -50735,16 +50735,16 @@ void bash_initialize_history(void)
 
 }
 void bash_history_reinit(int interact ) 
-{ 
+{
 
 
-  {
-  history_expansion = interact != 0;
-  history_expansion_inhibited = 1;
-  remember_on_history = interact != 0;
-  history_inhibit_expansion_function = & bash_history_inhibit_expansion;
-  return;
-}
+
+
+
+
+
+
+
 }
 void bash_history_disable(void) 
 {
@@ -55658,41 +55658,29 @@ static char *default_domain  ;
 static char *default_dir  ;
 static char *lc_all  ;
 void set_default_locale(void) 
-{ 
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
+{
 
-  {
-  {
-  default_locale = setlocale(6, "");
-  }
-  if (default_locale) {
-    {
-    tmp = strlen((char const   *)default_locale);
-    tmp___0 = xmalloc(1UL + tmp);
-    tmp___1 = strcpy((char * __restrict  )tmp___0, (char const   * __restrict  )default_locale);
-    default_locale = tmp___1;
-    }
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 void set_default_locale_vars(void) 
-{ 
-  char *val___0 ;
-  size_t tmp ;
-  char *tmp___0 ;
-  char *tmp___1 ;
-  size_t tmp___2 ;
-  char *tmp___3 ;
-  char *tmp___4 ;
+{
 
-  {
-  {
-  val___0 = get_string_value("LC_CTYPE");
-  }
-  if ((unsigned long )val___0 == (unsigned long )((char *)0)) {
 
 
 
@@ -55700,47 +55688,21 @@ void set_default_locale_vars(void)
 
 
 
-  }
-  {
-  val___0 = get_string_value("LC_COLLATE");
-  }
-  if ((unsigned long )val___0 == (unsigned long )((char *)0)) {
-    if (lc_all) {
 
 
 
 
 
-    }
-  }
-  {
-  val___0 = get_string_value("LC_MESSAGES");
-  }
-  if ((unsigned long )val___0 == (unsigned long )((char *)0)) {
-    if (lc_all) {
 
 
 
 
 
-    }
-  }
-  {
-  val___0 = get_string_value("LC_NUMERIC");
-  }
-  if ((unsigned long )val___0 == (unsigned long )((char *)0)) {
-    if (lc_all) {
 
 
 
 
 
-    }
-  }
-  {
-  val___0 = get_string_value("TEXTDOMAIN");
-  }
-  if (val___0) {
 
 
 
@@ -55762,11 +55724,6 @@ void set_default_locale_vars(void)
 
 
 
-  }
-  {
-  val___0 = get_string_value("TEXTDOMAINDIR");
-  }
-  if (val___0) {
 
 
 
@@ -55788,9 +55745,52 @@ void set_default_locale_vars(void)
 
 
 
-  }
-  return;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 int set_locale_var(char *var , char *value ) 
 {
@@ -60831,24 +60831,24 @@ static size_t findbrk(void)
 
 }
 char *xmalloc(size_t bytes ) 
-{ 
-  char *temp___0 ;
-  void *tmp ;
-
-  {
-  {
-  tmp = malloc(bytes);
-  temp___0 = (char *)tmp;
-  }
-  if ((unsigned long )temp___0 == (unsigned long )((char *)0)) {
-    {
+{
 
 
 
-    }
-  }
-  return (temp___0);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char *xrealloc(void *pointer , size_t bytes ) 
 {

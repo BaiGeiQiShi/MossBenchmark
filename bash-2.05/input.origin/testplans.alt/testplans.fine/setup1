@@ -13,7 +13,7 @@
 # general setup
 # create an env variable which will be used by all
 # tests as a temporary directory 
-TESTDIR=${HOME}/tmp
+TESTDIR=/MossBenchmark/bash-2.05/tmp/
 mkdir -p ${TESTDIR}
 CURRDIR=`pwd`
 CURRPS1=${PS1}
@@ -41,8 +41,8 @@ fred="many spaces between these                  words"
 #setup for basic#8.1.1.test
 rm -rf ${TESTDIR}/basic8 2> /dev/null
 mkdir -p ${TESTDIR}/basic8/somemorething
-echo "first" > ${TESTDIR}/basic8/first.tmp
-echo "second" > ${TESTDIR}/basic8/second.tmp
+builtin echo "first" > ${TESTDIR}/basic8/first.tmp
+builtin echo "second" > ${TESTDIR}/basic8/second.tmp
 ln -s ${TESTDIR}/basic8/first.tmp ${TESTDIR}/basic8/tmp
 
 #setup for basic#9.1.1.test
@@ -432,7 +432,7 @@ dodo ()
         echo "This hello is coming from dodo."
 }
 
-alias dodo='echo "Hello there, hope you are having a nice time with this test."'
+builtin alias dodo='echo "Hello there, hope you are having a nice time with this test."'
 echo "echo \"now dodo is becoming naughty\"" > dodo
 chmod +x dodo
 
@@ -547,10 +547,10 @@ ps1_array='hello'
 # SETUP CREATED BY KARRE
 
 # The following alias declarations are for the myalias# tests
-alias quit="exit"
-alias e="exit"
-alias p="pine"
-alias rmi="rm -i"
+builtin alias quit="exit"
+builtin alias e="exit"
+builtin alias p="pine"
+builtin alias rmi="rm -i"
 
 #KPMOD: already created
 #mkdir -p $HOME/tmp
@@ -581,9 +581,9 @@ umask 022
 mkdir -p $SK_TESTDIR/file_attrib
 
 if [ -e $SK_TESTDIR/file_attrib/sk_dodo ] ; then rm -f $SK_TESTDIR/file_attrib/sk_dodo; fi
-echo "this is a test file" > $SK_TESTDIR/file_attrib/sk_dodo
+builtin echo "this is a test file" > $SK_TESTDIR/file_attrib/sk_dodo
 if [ -e $SK_TESTDIR/file_attrib/sk_sisi ] ; then rm -f $SK_TESTDIR/file_attrib/sk_sisi; fi
-echo "second file" > $SK_TESTDIR/file_attrib/sk_sisi
+builtin echo "second file" > $SK_TESTDIR/file_attrib/sk_sisi
 
 #The ulimit settings are for ulimit# tests
 myfiles=`ulimit -n`

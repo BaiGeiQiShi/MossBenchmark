@@ -48,7 +48,7 @@ def DoTestcase(args):
     os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase))
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
-    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",OUTDIR,"3",INDIR_CP,f"{TMP}/testcase"])
+    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",f"{TMP}/{testcase}","3",INDIR_CP,f"{TMP}/{testcase}"])
     os.system(" ".join([getbin, f"{TMP}/{PROGRAM}",COV,os.getcwd()]))
     os.system(f"mv {PROGRAM}.lcov {TMP}/lcov/{testcase}.lcov")
     os.system(f"mv {PROGRAM}.real.gcov {TMP}/real.gcov/{testcase}.real.gcov")
@@ -56,11 +56,12 @@ def DoTestcase(args):
     os.chdir(TMP)
     os.chmod("%s/tmp/%s"%(CURRDIR,testcase),755)
 
-with Pool(10) as pool:
+with Pool(1) as pool:
     pool.map(DoTestcase, os.listdir(INDIR))
 
 bar.finish()
 #get cov.origin.c
+os.system(f"cp {CURRDIR}/errbingcovs/* {TMP}/bin.gcov")
 subprocess.run([merge_sh,COV,TMP])
 os.system(' '.join([f"{COV}/bin/gcovbasedcoderemover",f"{PROGRAM}.c", "line.txt","merged.bin.gcov","false",">",f"{PROGRAM}.c.cov.origin.c"]))
 shutil.copyfile(f"{PROGRAM}.c.cov.origin.c",f"{CURRDIR}/{PROGRAM}.c.cov.origin.c")
