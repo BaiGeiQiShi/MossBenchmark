@@ -7,17 +7,17 @@ INDIR=$4
 
 cp -r $INDIR/I8/archive.tar ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN xf archive.tar --no-same-permissions; } &>$OUTDIR/o675
+{ timeout -k 9 ${TIMEOUT}s $BIN xf archive.tar --no-same-permissions; } &>$OUTDIR/o67
 
-echo "$?" >>$OUTDIR/o675
+echo "$?" >>$OUTDIR/o67
 info=`ls -l | sed -n '1!p' | tr -s ' ' | cut -d' ' -f1,2,3,4`
-echo ${info} >>$OUTDIR/o675
+echo ${info} >>$OUTDIR/o67
 diff filenamenotcontainingtest $INDIR/I8/filenamenotcontainingtest >/dev/null
-echo "$?" >>$OUTDIR/o675
+echo "$?" >>$OUTDIR/o67
 diff test $INDIR/I8/test >/dev/null
-echo "$?" >>$OUTDIR/o675
+echo "$?" >>$OUTDIR/o67
 diff file2 $INDIR/I8/file2 >/dev/null
-echo "$?" >>$OUTDIR/o675
+echo "$?" >>$OUTDIR/o67
 
 
 

@@ -8,12 +8,12 @@ INDIR=$4
 cp -r $INDIR/I1/Institution.tar ./
 cp -r $INDIR/I1/College ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN -rf Institution.tar ./College/Engineering/top.ppt; } &>$OUTDIR/o120
+{ timeout -k 9 ${TIMEOUT}s $BIN -rf Institution.tar ./College/Engineering/top.ppt; } &>$OUTDIR/o12
 
-echo "$?" >>$OUTDIR/o120
+echo "$?" >>$OUTDIR/o12
 rm -fr College
 tar xf Institution.tar ./College/Engineering/top.ppt
 diff College/Engineering/top.ppt $INDIR/I1/College/Engineering/top.ppt >/dev/null
-echo "$?" >>$OUTDIR/o120
+echo "$?" >>$OUTDIR/o12
 
 #I1

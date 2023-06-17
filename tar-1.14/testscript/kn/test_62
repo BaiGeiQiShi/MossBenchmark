@@ -13,34 +13,34 @@ cp -r $INDIR/I8/test4 ./
 cp -r $INDIR/I8/filenamenotcontainingtest ./
 cp -r $INDIR/I8/testdir ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN --create -f test2.tar * --exclude='file*'; } &>$OUTDIR/o620
+{ timeout -k 9 ${TIMEOUT}s $BIN --create -f test2.tar * --exclude='file*'; } &>$OUTDIR/o62
 
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 rm -fr test test1 test2 test3 test4 filenamenotcontainingtest testdir
 tar xf test2.tar
 diff test $INDIR/I8/test >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff test1 $INDIR/I8/test1 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff test2 $INDIR/I8/test2 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff test3 $INDIR/I8/test3 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff test4 $INDIR/I8/test4 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 test -f filenamenotcontainingtest
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 
 diff testdir/test $INDIR/I8/testdir/test >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff testdir/test1 $INDIR/I8/testdir/test1 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff testdir/test2 $INDIR/I8/testdir/test2 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff testdir/test3 $INDIR/I8/testdir/test3 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 diff testdir/test4 $INDIR/I8/testdir/test4 >/dev/null
-echo "$?" >>$OUTDIR/o620
+echo "$?" >>$OUTDIR/o62
 
 
 
