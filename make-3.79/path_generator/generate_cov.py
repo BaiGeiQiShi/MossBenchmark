@@ -46,7 +46,7 @@ def DoTestcase(args):
     print(testcase)
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase))
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
-    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",OUTDIR,"1",INDIR_CP])
+    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",OUTDIR,"2",INDIR_CP])
     os.system(" ".join([getbin, f"{TMP}/{PROGRAM}",COV,os.getcwd()]))
     os.system(f"mv {PROGRAM}.lcov {TMP}/lcov/{testcase}.lcov")
     os.system(f"mv {PROGRAM}.real.gcov {TMP}/real.gcov/{testcase}.real.gcov")

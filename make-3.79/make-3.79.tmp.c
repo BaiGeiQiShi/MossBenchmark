@@ -2204,10 +2204,10 @@ void chop_commands(struct commands *cmds)
                
 
                
-              if ((int)*p == 64)
-              {
-                goto case_64;
-              }
+                                
+               
+                             
+               
               if ((int)*p == 45)
               {
                 goto case_45;
@@ -2216,9 +2216,9 @@ void chop_commands(struct commands *cmds)
                       ;/* CIL Label */
 
 
-            case_64: ;/* CIL Label */
-              flags |= 2;
-              goto switch_break;
+                      ;/* CIL Label */
+                         
+                                
             case_45: ;/* CIL Label */
               flags |= 4;
               goto switch_break;
@@ -2270,10 +2270,10 @@ void execute_file_commands(struct file *file)
       while (1)
       {
                        ;/* CIL Label */;
-        if (!((int)*p != 0))
-        {
-          goto while_break;
-        }
+                            
+         
+                           
+         
         {
           tmp = __ctype_b_loc();
         }
@@ -2291,15 +2291,15 @@ void execute_file_commands(struct file *file)
       }
     while_break: ;/* CIL Label */;
     }
-    if ((int)*p == 0)
-    {
-      {
-        set_command_state(file, 2);
-        file->update_status = (short)0;
-        notice_finished_file(file);
-      }
-      return;
-    }
+                     
+     
+       
+                                   
+                                       
+                                   
+       
+             
+     
     {
       initialize_file_variables(file, 0);
       set_file_variables(file);
@@ -2474,17 +2474,17 @@ static void delete_target(struct file *file, char *on_behalf_of)
                      
 
   {
-    if (file->precious)
-    {
+                       
+     
 
-    }
-    else
-    { // Added block
-      if (file->phony)
-      {
-        return;
-      }
-    }
+     
+        
+                    
+                      
+       
+               
+       
+     
     {
 
     }
@@ -2598,7 +2598,7 @@ static void delete_target(struct file *file, char *on_behalf_of)
 }
 void delete_child_targets(struct child *child)
 {
-  struct dep *d;
+                
 
   {
                        
@@ -2606,26 +2606,26 @@ void delete_child_targets(struct child *child)
 
      
     {
-      delete_target(child->file, (char *)0);
-      d = (child->file)->also_make;
+                                            
+                                   
     }
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        if (!((unsigned long)d != (unsigned long)((struct dep *)0)))
-        {
-          goto while_break;
-        }
-        {
+               
+       
+                                        
+                                                                    
+         
+                           
+         
+         
 
 
-        }
-      }
-    while_break: ;/* CIL Label */;
+         
+       
+                  ;/* CIL Label */;
     }
-    child->deleted = 1U;
-    return;
+                        
+           
   }
 }
 void print_commands(struct commands *cmds)
@@ -2841,7 +2841,7 @@ static struct directory *find_directory(char *name)
           }
           if ((unsigned long)dc->dirstream == (unsigned long)((DIR *)0))
           {
-            dc->files = (struct dirfile **)0;
+                                             
           }
           else
           {
@@ -2877,7 +2877,7 @@ static int dir_contents_file_exists_p(struct directory_contents *dir, char *file
   register unsigned int i;
   size_t tmp___0;
   char *tmp___1;
-  int tmp___2;
+              
 
   {
     if ((unsigned long)dir == (unsigned long)((struct directory_contents *)0))
@@ -2886,10 +2886,10 @@ static int dir_contents_file_exists_p(struct directory_contents *dir, char *file
     }
     else
     { // Added block
-      if ((unsigned long)dir->files == (unsigned long)((struct dirfile **)0))
-      {
-        return (0);
-      }
+                                                                             
+       
+                   
+       
     }
     hash = 0U;
     if ((unsigned long)filename != (unsigned long)((char *)0))
@@ -3000,36 +3000,36 @@ static int dir_contents_file_exists_p(struct directory_contents *dir, char *file
           df->name = savestring((char const *)(d->d_name), len);
           df->impossible = (char)0;
         }
-        if ((unsigned long)filename != (unsigned long)((char *)0))
-        {
-          if (newhash == hash)
-          {
-            if ((unsigned long)(d->d_name) == (unsigned long)filename)
-            {
+                                                                  
+         
+                              
+           
+                                                                      
+             
 
-            }
-            else
-            { // Added block
-              if ((int)d->d_name[0] == (int)*filename)
-              {
-                if ((int)d->d_name[0] == 0)
-                {
+             
+                
+                            
+                                                      
+               
+                                           
+                 
 
-                }
-                else
-                {
-                  {
-                    tmp___2 = strcmp((char const *)(d->d_name + 1), (char const *)(filename + 1));
-                  }
+                 
+                    
+                 
+                   
+                                                                                                  
+                   
                                
                    
 
                    
-                }
-              }
-            }
-          }
-        }
+                 
+               
+             
+           
+         
       }
     while_break___1: ;/* CIL Label */;
     }
@@ -3259,10 +3259,10 @@ int file_impossible_p(char *filename)
     }
     else
     { // Added block
-      if ((unsigned long)dir->files == (unsigned long)((struct dirfile **)0))
-      {
-        return (0);
-      }
+                                                                             
+       
+                   
+       
     }
     hash = 0U;
     {
@@ -3353,7 +3353,7 @@ void print_dir_data_base(void)
                 
                 
   char *tmp___9;
-  char *tmp___10;
+                 
   char *tmp___11;
 
   {
@@ -3528,8 +3528,8 @@ void print_dir_data_base(void)
     if (impossible == 0U)
     {
       {
-        tmp___10 = dcgettext((char const *)((void *)0), "no", 5);
-        fputs((char const *__restrict)tmp___10, (FILE *__restrict)stdout);
+                                                                 
+                                                                          
       }
     }
     else
@@ -3859,7 +3859,7 @@ __inline static char *reference_variable(char *o, char *name, unsigned int lengt
 }
 char *variable_expand_string(char *line, char *string___0, long length___0)
 {
-  register struct variable *v;
+                              
   register char *p;
   register char *o;
   register char *p1;
@@ -3879,10 +3879,10 @@ char *variable_expand_string(char *line, char *string___0, long length___0)
   int tmp___2;
                 
             
-  char *subst_beg;
-  char *subst_end;
-  char *replace_beg;
-  char *replace_end;
+                  
+                  
+                    
+                    
               
                 
                 
@@ -3939,10 +3939,10 @@ char *variable_expand_string(char *line, char *string___0, long length___0)
         }
         p = p1 + 1;
         {
-          if ((int)*p == 36)
-          {
-            goto case_36;
-          }
+                            
+           
+                         
+           
           if ((int)*p == 40)
           {
             goto case_40;
@@ -3956,11 +3956,11 @@ char *variable_expand_string(char *line, char *string___0, long length___0)
 
            
           goto switch_default;
-        case_36: ;/* CIL Label */
+                  ;/* CIL Label */
         {
-          o = variable_buffer_output(o, p, 1U);
+                                               
         }
-          goto switch_break;
+                            
         case_40:  ;/* CIL Label */
                    ;/* CIL Label */
           openparen = *p;
@@ -4047,29 +4047,29 @@ char *variable_expand_string(char *line, char *string___0, long length___0)
           {
             colon = lindex((char const *)beg, (char const *)end, ':');
           }
-          if ((unsigned long)colon != (unsigned long)((char *)0))
-          {
-            {
-              subst_beg = colon + 1;
-              subst_end = strchr((char const *)subst_beg, '=');
-            }
-            if ((unsigned long)subst_end == (unsigned long)((char *)0))
-            {
+                                                                 
+           
+             
+                                    
+                                                               
+             
+                                                                       
+             
 
-            }
-            else
-            {
-              {
-                replace_beg = subst_end + 1;
-                replace_end = end;
-                v = lookup_variable(beg, (unsigned int)(colon - beg));
-              }
-              if ((unsigned long)v == (unsigned long)((struct variable *)0))
-              {
-                {
-                  warn_undefined(beg, (unsigned int)(colon - beg));
-                }
-              }
+             
+                
+             
+               
+                                            
+                                  
+                                                                      
+               
+                                                                            
+               
+                 
+                                                                   
+                 
+               
                                                                             
                
 
@@ -4139,8 +4139,8 @@ char *variable_expand_string(char *line, char *string___0, long length___0)
 
 
                
-            }
-          }
+             
+           
           if ((unsigned long)colon == (unsigned long)((char *)0))
           {
             {
@@ -4595,7 +4595,7 @@ struct file *enter_file(char *name)
           {
             goto while_break___1;
           }
-          f = f->prev;
+                      
         }
       while_break___1: ;/* CIL Label */;
       }
@@ -5765,7 +5765,7 @@ static void print_file(struct file *f)
         }
         else
         {
-          tmp___1 = d->name;
+                            
         }
         {
           printf((char const *__restrict)" %s", tmp___1);
@@ -6150,17 +6150,17 @@ int db_level;
 char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int slen,
                    unsigned int rlen, int by_word, int suffix_only)
 {
-  register char *t;
-  register char *p;
+                   
+                   
              
                 
-  size_t tmp___1;
+                 
                                  
                                  
                                  
 
   {
-    t = text;
+             
                    
      
                    
@@ -6182,11 +6182,11 @@ char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int
        
      
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        if (by_word | suffix_only)
-        {
+               
+       
+                                        
+                                  
+         
 
 
 
@@ -6198,30 +6198,30 @@ char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int
 
 
 
-        }
-        else
-        {
-           ;
-        {
-          p = sindex((char const *)t, 0U, (char const *)subst, slen);
-        }
-          if ((unsigned long)p == (unsigned long)((char *)0))
-          {
-            {
-              tmp___1 = strlen((char const *)t);
-              o = variable_buffer_output(o, t, (unsigned int)tmp___1);
-            }
-            return (o);
-          }
-        }
-        if ((unsigned long)p > (unsigned long)t)
-        {
-          {
-            o = variable_buffer_output(o, t, (unsigned int)(p - t));
-          }
-        }
-        if (by_word)
-        {
+         
+            
+         
+            
+         
+                                                                     
+         
+                                                             
+           
+             
+                                                
+                                                                      
+             
+                       
+           
+         
+                                                
+         
+           
+                                                                    
+           
+         
+                    
+         
                                                   
            
              
@@ -6262,12 +6262,12 @@ char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int
 
 
            
-        }
-        else
-        { // Added block
-               ;
-          if (suffix_only)
-          {
+         
+            
+                        
+                
+                          
+           
 
 
 
@@ -6288,24 +6288,24 @@ char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int
 
 
 
-          }
-          else
-          { // Added block
-                 ;
-            if (rlen > 0U)
-            {
-              {
-                o = variable_buffer_output(o, replace, rlen);
-              }
-            }
-          }
-        }
-        t = p + slen;
+           
+              
+                          
+                  
+                          
+             
+               
+                                                             
+               
+             
+           
+         
+                     
                             
          
 
          
-      }
+       
                   ;/* CIL Label */;
     }
 
@@ -6314,53 +6314,53 @@ char *subst_expand(char *o, char *text, char *subst, char *replace, unsigned int
 char *patsubst_expand(char *o, char *text, char *pattern, char *replace, char *pattern_percent,
                       char *replace_percent)
 {
-  unsigned int pattern_prepercent_len;
-  unsigned int pattern_postpercent_len;
-  unsigned int replace_prepercent_len;
-  unsigned int replace_postpercent_len;
-  char *t;
-  int len;
-  int doneany;
-  size_t tmp;
+                                      
+                                       
+                                      
+                                       
+          
+          
+              
+             
                  
                  
                  
                 
-  size_t tmp___4;
-  int fail;
+                 
+           
               
-  int tmp___6;
+              
 
   {
-    replace_postpercent_len = 0U;
-    doneany = 0;
-    if ((unsigned long)replace_percent == (unsigned long)((char *)0))
-    {
-      {
-        replace_percent = find_percent(replace);
-      }
-    }
-    if ((unsigned long)replace_percent != (unsigned long)((char *)0))
-    {
-      {
-        replace_prepercent_len = (unsigned int)(replace_percent - replace);
-        tmp = strlen((char const *)(replace_percent + 1));
-        replace_postpercent_len = (unsigned int)tmp;
-      }
-    }
-    else
-    {
-      {
+                                 
+                
+                                                                     
+     
+       
+                                                
+       
+     
+                                                                     
+     
+       
+                                                                           
+                                                          
+                                                    
+       
+     
+        
+     
+       
 
 
-      }
-    }
-    if ((unsigned long)pattern_percent == (unsigned long)((char *)0))
-    {
-      {
-        pattern_percent = find_percent(pattern);
-      }
-    }
+       
+     
+                                                                     
+     
+       
+                                                
+       
+     
                                                                      
      
        
@@ -6372,22 +6372,22 @@ char *patsubst_expand(char *o, char *text, char *pattern, char *replace, char *p
 
      
     {
-      pattern_prepercent_len = (unsigned int)(pattern_percent - pattern);
-      tmp___4 = strlen((char const *)(pattern_percent + 1));
-      pattern_postpercent_len = (unsigned int)tmp___4;
+                                                                         
+                                                            
+                                                      
     }
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          t = find_next_token(&text, (unsigned int *)(&len));
-        }
-        if (!((unsigned long)t != (unsigned long)((char *)0)))
-        {
-          goto while_break;
-        }
-        fail = 0;
+               
+       
+                                        
+         
+                                                             
+         
+                                                              
+         
+                           
+         
+                 
                                                                                  
          
 
@@ -6420,91 +6420,91 @@ char *patsubst_expand(char *o, char *text, char *pattern, char *replace, char *p
 
            
          
-        if (!fail)
-        {
-          if (pattern_postpercent_len > 0U)
-          {
-            if ((int)*(t + (len - 1)) != (int)*(pattern_percent + pattern_postpercent_len))
-            {
+                  
+         
+                                           
+           
+                                                                                           
+             
 
-            }
-            else
-            { // Added block
-              if ((int)*(t + ((unsigned int)len - pattern_postpercent_len)) != (int)*(pattern_percent + 1))
-              {
+             
+                
+                            
+                                                                                                           
+               
 
-              }
-              else
-              {
-                {
-                  tmp___6 = strncmp((char const *)(t + ((unsigned int)len - pattern_postpercent_len)),
-                                    (char const *)(pattern_percent + 1), (size_t)(pattern_postpercent_len - 1U));
-                }
+               
+                  
+               
+                 
+                                                                                                      
+                                                                                                                 
+                 
                                     
                  
 
                  
-              }
-            }
-          }
-        }
-        if (fail)
-        {
-          {
+               
+             
+           
+         
+                 
+         
+           
 
-          }
-        }
-        else
-        {
-          {
-            o = variable_buffer_output(o, replace, replace_prepercent_len);
-          }
-          if ((unsigned long)replace_percent != (unsigned long)((char *)0))
-          {
-            {
-              o = variable_buffer_output(o, t + pattern_prepercent_len, (unsigned int)len - (pattern_prepercent_len + pattern_postpercent_len));
-              o = variable_buffer_output(o, replace_percent + 1, replace_postpercent_len);
-            }
-          }
-        }
-        if (fail)
-        {
-          {
-
-
-          }
-        }
-        else
-        { // Added block
-          if (replace_prepercent_len > 0U)
-          {
-            {
+           
+         
+            
+         
+           
+                                                                           
+           
+                                                                           
+           
+             
+                                                                                                                                                
+                                                                                          
+             
+           
+         
+                 
+         
+           
 
 
-            }
-          }
-          else
-          { // Added block
-            if ((unsigned long)replace_percent != (unsigned long)((char *)0))
-            {
-              if ((unsigned int)len + replace_postpercent_len > 0U)
-              {
-                {
-                  o = variable_buffer_output(o, (char *)" ", 1U);
-                  doneany = 1;
-                }
-              }
-            }
-          }
-        }
-      }
-    while_break: ;/* CIL Label */;
+           
+         
+            
+                        
+                                          
+           
+             
+
+
+             
+           
+              
+                          
+                                                                             
+             
+                                                                   
+               
+                 
+                                                                 
+                              
+                 
+               
+             
+           
+         
+       
+                  ;/* CIL Label */;
     }
-    if (doneany)
-    {
-      o--;
-    }
-    return (o);
+                
+     
+          
+     
+               
   }
 }
 static struct function_table_entry const *lookup_function(struct function_table_entry const *table,
@@ -6793,56 +6793,56 @@ static char *func_patsubst(char *o, char **argv, char const *funcname)
 
   {
     {
-      o = patsubst_expand(o, *(argv + 2), *(argv + 0), *(argv + 1), (char *)0, (char *)0);
+                                                                                          
     }
-    return (o);
+               
   }
 }
 static char *func_join(char *o, char **argv, char const *funcname)
 {
-  int doneany;
-  register char *tp;
-  register char *pp;
-  char *list1_iterator;
-  char *list2_iterator;
-  unsigned int len1;
-  unsigned int len2;
+              
+                    
+                    
+                       
+                       
+                    
+                    
 
   {
-    doneany = 0;
-    list1_iterator = *(argv + 0);
-    list2_iterator = *(argv + 1);
+                
+                                 
+                                 
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          tp = find_next_token(&list1_iterator, &len1);
-        }
-        if ((unsigned long)tp != (unsigned long)((char *)0))
-        {
-          {
-            o = variable_buffer_output(o, tp, len1);
-          }
-        }
-        {
-          pp = find_next_token(&list2_iterator, &len2);
-        }
-        if ((unsigned long)pp != (unsigned long)((char *)0))
-        {
-          {
-            o = variable_buffer_output(o, pp, len2);
-          }
-        }
-        if ((unsigned long)tp != (unsigned long)((char *)0))
-        {
-          {
-            o = variable_buffer_output(o, (char *)" ", 1U);
-            doneany = 1;
-          }
-        }
-        else
-        { // Added block
+               
+       
+                                        
+         
+                                                       
+         
+                                                            
+         
+           
+                                                    
+           
+         
+         
+                                                       
+         
+                                                            
+         
+           
+                                                    
+           
+         
+                                                            
+         
+           
+                                                           
+                        
+           
+         
+            
+                        
                                                               
            
              
@@ -6850,22 +6850,22 @@ static char *func_join(char *o, char **argv, char const *funcname)
 
              
            
-        }
-        if (!((unsigned long)tp != (unsigned long)((char *)0)))
-        {
-          if (!((unsigned long)pp != (unsigned long)((char *)0)))
-          {
-            goto while_break;
-          }
-        }
-      }
-    while_break: ;/* CIL Label */;
+         
+                                                               
+         
+                                                                 
+           
+                             
+           
+         
+       
+                  ;/* CIL Label */;
     }
-    if (doneany)
-    {
-      o--;
-    }
-    return (o);
+                
+     
+          
+     
+               
   }
 }
 static char *func_origin(char *o, char **argv, char const *funcname)
@@ -6966,29 +6966,68 @@ static char *func_origin(char *o, char **argv, char const *funcname)
 }
 static char *func_notdir_suffix(char *o, char **argv, char const *funcname)
 {
-  char *list_iterator;
-  char *p2;
-  int doneany;
-  unsigned int len;
-  int is_suffix;
+                      
+           
+              
+                   
+                
           
-  int tmp___0;
-  int is_notdir;
+              
+                
           
 
   {
-    list_iterator = *(argv + 0);
-    p2 = (char *)0;
-    doneany = 0;
-    len = 0U;
-    if ((unsigned long)funcname == (unsigned long)"suffix")
+                                
+                   
+                
+             
+                                                           
+     
+
+     
+        
+                    
+                                                           
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+          
+       
+                    
+       
+     
+                        
+                           
     {
+               
+       
+                                        
+         
+                                                     
+         
+                                                               
+         
+                           
+         
 
-    }
-    else
-    { // Added block
-      if ((int const) * funcname == (int const) * "suffix")
-      {
+         
 
 
 
@@ -7007,31 +7046,13 @@ static char *func_notdir_suffix(char *o, char **argv, char const *funcname)
 
 
 
-      }
-      else
-      {
-        tmp___0 = 0;
-      }
-    }
-    is_suffix = tmp___0;
-    is_notdir = !is_suffix;
-    {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          p2 = find_next_token(&list_iterator, &len);
-        }
-        if (!((unsigned long)p2 != (unsigned long)((char *)0)))
-        {
-          goto while_break;
-        }
 
-        {
 
 
 
 
+                                           
+         
 
 
 
@@ -7051,8 +7072,6 @@ static char *func_notdir_suffix(char *o, char **argv, char const *funcname)
 
 
 
-                          ;/* CIL Label */;
-        }
 
 
 
@@ -7077,61 +7096,81 @@ static char *func_notdir_suffix(char *o, char **argv, char const *funcname)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      }
-    while_break: ;/* CIL Label */;
+       
+                  ;/* CIL Label */;
     }
                 
      
 
      
-    return (o);
+               
   }
 }
 static char *func_basename_dir(char *o, char **argv, char const *funcname)
 {
-  char *p3;
-  char *p2;
-  int doneany;
-  unsigned int len;
-  char *p;
-  int is_basename;
+           
+           
+              
+                   
           
-  int tmp___0;
-  int is_dir;
+                  
+          
+              
+             
 
   {
-    p3 = *(argv + 0);
-    p2 = (char *)0;
-    doneany = 0;
-    len = 0U;
-    p = (char *)0;
-    if ((unsigned long)funcname == (unsigned long)"basename")
+                     
+                   
+                
+             
+                  
+                                                             
+     
+
+     
+        
+                    
+                                                             
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+          
+       
+                    
+       
+     
+                          
+                          
     {
+               
+       
+                                        
+         
+                                          
+         
+                                                               
+         
+                           
+         
 
-    }
-    else
-    { // Added block
-      if ((int const) * funcname == (int const) * "basename")
-      {
+         
 
 
 
@@ -7150,31 +7189,13 @@ static char *func_basename_dir(char *o, char **argv, char const *funcname)
 
 
 
-      }
-      else
-      {
-        tmp___0 = 0;
-      }
-    }
-    is_basename = tmp___0;
-    is_dir = !is_basename;
-    {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          p2 = find_next_token(&p3, &len);
-        }
-        if (!((unsigned long)p2 != (unsigned long)((char *)0)))
-        {
-          goto while_break;
-        }
 
-        {
 
 
 
 
+                                           
+         
 
 
 
@@ -7194,8 +7215,6 @@ static char *func_basename_dir(char *o, char **argv, char const *funcname)
 
 
 
-                          ;/* CIL Label */;
-        }
 
 
 
@@ -7224,37 +7243,18 @@ static char *func_basename_dir(char *o, char **argv, char const *funcname)
 
 
 
+         
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        {
-
-
-        }
-      }
-    while_break: ;/* CIL Label */;
+         
+       
+                  ;/* CIL Label */;
     }
                 
      
 
      
-    return (o);
+               
   }
 }
 static char *func_addsuffix_addprefix(char *o, char **argv, char const *funcname)
@@ -7353,17 +7353,17 @@ static char *func_addsuffix_addprefix(char *o, char **argv, char const *funcname
 }
 static char *func_subst(char *o, char **argv, char const *funcname)
 {
-  size_t tmp;
-  size_t tmp___0;
+             
+                 
 
   {
     {
-      tmp = strlen((char const *)*(argv + 1));
-      tmp___0 = strlen((char const *)*(argv + 0));
-      o = subst_expand(o, *(argv + 2), *(argv + 0), *(argv + 1), (unsigned int)tmp___0,
-                       (unsigned int)tmp, 0, 0);
+                                              
+                                                  
+                                                                                       
+                                                
     }
-    return (o);
+               
   }
 }
 static char *func_firstword(char *o, char **argv, char const *funcname)
@@ -7424,135 +7424,135 @@ static char *func_words(char *o, char **argv, char const *funcname)
 }
 char *strip_whitespace(char **begpp, char **endpp)
 {
-  unsigned short const **tmp;
-  unsigned short const **tmp___0;
+                             
+                                 
 
   {
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          tmp = __ctype_b_loc();
-        }
-        if ((int const) * (*tmp + (int)((unsigned char)*(*begpp))) & 8192)
-        {
+               
+       
+                                        
+         
+                                
+         
+                                                                          
+         
 
 
 
 
-        }
-        else
-        {
-          goto while_break;
-        }
+         
+            
+         
+                           
+         
 
-      }
-    while_break: ;/* CIL Label */;
+       
+                  ;/* CIL Label */;
     }
     {
-      while (1)
-      {
-                           ;/* CIL Label */;
-        {
-          tmp___0 = __ctype_b_loc();
-        }
-        if ((int const) * (*tmp___0 + (int)((unsigned char)*(*endpp))) & 8192)
-        {
+               
+       
+                                            
+         
+                                    
+         
+                                                                              
+         
 
 
 
 
-        }
-        else
-        {
-          goto while_break___0;
-        }
+         
+            
+         
+                               
+         
 
-      }
-    while_break___0: ;/* CIL Label */;
+       
+                      ;/* CIL Label */;
     }
-    return (*begpp);
+                    
   }
 }
 int is_numeric(char *p)
 {
-  char *end;
-  size_t tmp;
-  char *beg;
-  char *tmp___0;
+            
+             
+            
+                
 
   {
     {
-      tmp = strlen((char const *)p);
-      end = (p + tmp) - 1;
-      beg = p;
-      strip_whitespace(&p, &end);
+                                    
+                          
+              
+                                 
     }
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        if (!((unsigned long)p <= (unsigned long)end))
-        {
-          goto while_break;
-        }
-        tmp___0 = p;
-        p++;
-        if (!((unsigned int)*tmp___0 - 48U <= 9U))
-        {
-          return (0);
-        }
-      }
-    while_break: ;/* CIL Label */;
+               
+       
+                                        
+                                                      
+         
+                           
+         
+                    
+            
+                                                  
+         
+                     
+         
+       
+                  ;/* CIL Label */;
     }
-    return (end - beg >= 0L);
+                             
   }
 }
 void check_numeric(char *s, char *message___0)
 {
-  int tmp;
+          
 
   {
     {
-      tmp = is_numeric(s);
+                          
     }
-    if (!tmp)
-    {
-      {
-        fatal(reading_file, (char const *)message___0);
-      }
-    }
-    return;
+             
+     
+       
+                                                       
+       
+     
+           
   }
 }
 static char *func_word(char *o, char **argv, char const *funcname)
 {
-  char *end_p;
-  int i;
-  char *p;
-  char *tmp;
-  char *tmp___0;
+              
+        
+          
+            
+                
 
   {
     {
-      end_p = (char *)0;
-      i = 0;
-      p = (char *)0;
-      tmp = dcgettext((char const *)((void *)0), "non-numeric first argument to `word\' function",
-                      5);
-      check_numeric(*(argv + 0), tmp);
-      i = atoi((char const *)*(argv + 0));
+                        
+            
+                    
+                                                                                                  
+                         
+                                      
+                                          
     }
-    if (i == 0)
-    {
-      {
-        tmp___0 = dcgettext((char const *)((void *)0), "the `word\' function takes a positive index argument",
-                            5);
-        fatal(reading_file, (char const *)tmp___0);
-      }
-    }
-    end_p = *(argv + 1);
+               
+     
+       
+                                                                                                              
+                               
+                                                   
+       
+     
+                        
     {
                
        
@@ -7757,219 +7757,219 @@ static char *func_foreach(char *o, char **argv, char const *funcname)
 }
 static char *func_filter_filterout(char *o, char **argv, char const *funcname)
 {
-  struct a_word *wordhead;
-  struct a_word *wordtail;
-  int is_filter;
-  int tmp;
-  int tmp___0;
-  char *patterns;
-  char *word_iterator;
-  char *p;
-  unsigned int len;
-  struct a_word *w;
-  void *tmp___1;
-  char *pat_iterator;
-  int doneany;
-  struct a_word *wp;
-  char *percent;
-  char save;
-  int tmp___2;
-  int tmp___3;
+                          
+                          
+                
+          
               
-  int tmp___5;
-  size_t tmp___6;
-  int tmp___7;
+                 
+                      
+          
+                   
+                   
+                
+                     
+              
+                    
+                
+            
+              
+              
+              
+              
+                 
+              
 
   {
-    wordhead = (struct a_word *)0;
-    wordtail = (struct a_word *)0;
-    if ((unsigned long)funcname == (unsigned long)"filter")
+                                  
+                                  
+                                                           
+     
+
+     
+        
+                    
+                                                           
+       
+                                        
+         
+
+         
+            
+         
+           
+                                                     
+           
+                  
+           
+                        
+           
+              
+           
+
+           
+         
+       
+          
+       
+
+       
+     
+                        
+                           
+                                
     {
+               
+       
+                                        
+         
+                                                    
+         
+                                                              
+         
+                           
+         
+         
+                                                            
+                                       
+         
+                                                                           
+         
+                       
+         
+            
+         
 
-    }
-    else
-    { // Added block
-      if ((int const) * funcname == (int const) * "filter")
-      {
-        if ((int const) * funcname == 0)
-        {
-
-        }
-        else
-        {
-          {
-            tmp = strcmp(funcname + 1, "filter" + 1);
-          }
-          if (tmp)
-          {
-            tmp___0 = 0;
-          }
-          else
-          {
-
-          }
-        }
-      }
-      else
-      {
-
-      }
-    }
-    is_filter = tmp___0;
-    patterns = *(argv + 0);
-    word_iterator = *(argv + 1);
-    {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        {
-          p = find_next_token(&word_iterator, &len);
-        }
-        if (!((unsigned long)p != (unsigned long)((char *)0)))
-        {
-          goto while_break;
-        }
-        {
-          tmp___1 = __builtin_alloca(sizeof(struct a_word));
-          w = (struct a_word *)tmp___1;
-        }
-        if ((unsigned long)wordhead == (unsigned long)((struct a_word *)0))
-        {
-          wordhead = w;
-        }
-        else
-        {
-
-        }
-        wordtail = w;
+         
+                     
                                      
          
 
          
-        *(p + len) = (char)'\000';
-        w->str = p;
-        w->matched = 0;
-      }
-    while_break: ;/* CIL Label */;
+                                  
+                   
+                       
+       
+                  ;/* CIL Label */;
     }
-    if ((unsigned long)wordhead != (unsigned long)((struct a_word *)0))
-    {
-      pat_iterator = patterns;
-      doneany = 0;
-      wordtail->next = (struct a_word *)0;
-      {
-        while (1)
-        {
-                             ;/* CIL Label */;
-          {
-            p = find_next_token(&pat_iterator, &len);
-          }
-          if (!((unsigned long)p != (unsigned long)((char *)0)))
-          {
-            goto while_break___0;
-          }
-          {
-            save = *(p + len);
-            *(p + len) = (char)'\000';
-            percent = find_percent(p);
-            wp = wordhead;
-          }
-          {
-            while (1)
-            {
-                                 ;/* CIL Label */;
-              if (!((unsigned long)wp != (unsigned long)((struct a_word *)0)))
-              {
-                goto while_break___1;
-              }
-              if ((unsigned long)percent == (unsigned long)((char *)0))
-              {
-                if ((unsigned long)p == (unsigned long)wp->str)
-                {
+                                                                       
+     
+                              
+                  
+                                          
+       
+                 
+         
+                                              
+           
+                                                     
+           
+                                                                
+           
+                                 
+           
+           
+                              
+                                      
+                                      
+                          
+           
+           
+                     
+             
+                                                  
+                                                                              
+               
+                                     
+               
+                                                                       
+               
+                                                               
+                 
 
-                }
-                else
-                { // Added block
-                  if ((int)*p == (int)*(wp->str))
-                  {
-                    if ((int)*p == 0)
-                    {
+                 
+                    
+                                
+                                                 
+                   
+                                     
+                     
 
-                    }
-                    else
-                    {
-                      {
-                        tmp___2 = strcmp((char const *)(p + 1), (char const *)(wp->str + 1));
-                      }
-                      if (tmp___2)
-                      {
-                        tmp___3 = 0;
-                      }
-                      else
-                      {
+                     
+                        
+                     
+                       
+                                                                                             
+                       
+                                  
+                       
+                                    
+                       
+                          
+                       
 
-                      }
-                    }
-                  }
-                  else
-                  {
+                       
+                     
+                   
+                      
+                   
 
-                  }
-                }
-                tmp___5 = tmp___3;
-              }
-              else
-              {
-                {
+                   
+                 
+                                  
+               
+                  
+               
+                 
 
 
-                }
-              }
-              wp->matched |= tmp___5;
-              wp = wp->next;
-            }
-          while_break___1: ;/* CIL Label */;
-          }
-          *(p + len) = save;
-        }
-      while_break___0: ;/* CIL Label */;
-      }
-      wp = wordhead;
-      {
-        while (1)
-        {
-                             ;/* CIL Label */;
-          if (!((unsigned long)wp != (unsigned long)((struct a_word *)0)))
-          {
-            goto while_break___2;
-          }
-          if (is_filter)
-          {
+                 
+               
+                                     
+                            
+             
+                                             
+           
+                            
+         
+                                         
+       
+                    
+       
+                 
+         
+                                              
+                                                                          
+           
+                                 
+           
+                        
+           
 
-          }
-          else
-          {
-            tmp___7 = !wp->matched;
-          }
-          if (tmp___7)
-          {
-            {
-              tmp___6 = strlen((char const *)wp->str);
-              o = variable_buffer_output(o, wp->str, (unsigned int)tmp___6);
-              o = variable_buffer_output(o, (char *)" ", 1U);
-              doneany = 1;
-            }
-          }
-          wp = wp->next;
-        }
-      while_break___2: ;/* CIL Label */;
-      }
-      if (doneany)
-      {
-        o--;
-      }
-    }
-    return (o);
+           
+              
+           
+                                   
+           
+                      
+           
+             
+                                                      
+                                                                            
+                                                             
+                          
+             
+           
+                        
+         
+                                         
+       
+                  
+       
+            
+       
+     
+               
   }
 }
 static char *func_strip(char *o, char **argv, char const *funcname)
@@ -8034,10 +8034,10 @@ static char *func_strip(char *o, char **argv, char const *funcname)
           }
         while_break___1: ;/* CIL Label */;
         }
-        if (!i)
-        {
-          goto while_break;
-        }
+               
+         
+                           
+         
         {
           o = variable_buffer_output(o, word_start, (unsigned int)i);
           o = variable_buffer_output(o, (char *)" ", 1U);
@@ -9158,13 +9158,13 @@ static int pattern_search(struct file *file, int archive, unsigned int depth, un
         {
           lastslash = strrchr((char const *)filename, '/');
         }
-        if ((unsigned long)lastslash != (unsigned long)((char *)0))
-        {
-          if ((int)*(lastslash + 1) == 0)
-          {
-            lastslash = (char *)0;
-          }
-        }
+                                                                   
+         
+                                         
+           
+                                  
+           
+         
       }
     }
     nrules = 0U;
@@ -9627,11 +9627,11 @@ static int pattern_search(struct file *file, int archive, unsigned int depth, un
                                    
                        
                          
-
-
-
+                                                
+                                       
+                                                                               
                          
-
+                                        
                        
                     }
                   }
@@ -9863,7 +9863,7 @@ static int pattern_search(struct file *file, int archive, unsigned int depth, un
           if ((unsigned long)dep->file == (unsigned long)((struct file *)0))
           {
             {
-
+                                        
             }
           }
           else
@@ -10020,18 +10020,18 @@ static void child_error(char *target_name, int exit_code, int exit_sig, int core
   {
                 
      
+                      
+       
 
-
-
-
+       
      
     if (exit_sig == 0)
     {
       if (ignored)
       {
         {
-
-
+                                                                                   
+                        
         }
       }
       else
@@ -10133,7 +10133,7 @@ void reap_children(int block, int err)
   struct file *f;
   struct file *tmp___12;
   int tmp___13;
-  int tmp___14;
+               
   int tmp___15;
                  
   char const *tmp___17;
@@ -10144,7 +10144,7 @@ void reap_children(int block, int err)
     {
       while (1)
       {
-      while_continue: ;/* CIL Label */;
+                       ;/* CIL Label */;
         if ((unsigned long)children != (unsigned long)((struct child *)0))
         {
           goto _L___1;
@@ -10497,14 +10497,14 @@ void reap_children(int block, int err)
                 }
                 if ((unsigned long)f != (unsigned long)((struct file *)0))
                 {
-                  if (f->is_target)
-                  {
-                    tmp___13 = 1;
-                  }
-                  else
-                  {
+                                   
+                   
+                                 
+                   
+                      
+                   
 
-                  }
+                   
                 }
                 else
                 {
@@ -10512,25 +10512,25 @@ void reap_children(int block, int err)
                 }
                 delete_on_error = tmp___13;
               }
-              if (exit_sig != 0)
-              {
-                {
+                                
+               
+                 
 
-                }
-              }
-              else
-              { // Added block
-                if (delete_on_error)
-                {
-                  {
-                    delete_child_targets(c);
-                  }
-                }
-              }
+                 
+               
+                  
+                              
+                                    
+                 
+                   
+                                            
+                   
+                 
+               
             }
             else
             {
-
+                          
             }
           }
           else
@@ -10544,8 +10544,8 @@ void reap_children(int block, int err)
                            
            
              
-
-
+                                                                             
+                               
              
            
           {
@@ -10553,23 +10553,23 @@ void reap_children(int block, int err)
           }
           if (tmp___15)
           {
-            if (handling_fatal_signal)
-            {
+                                      
+             
 
-            }
-            else
-            {
-              {
-                tmp___14 = start_remote_job_p(0);
-                c->remote = (unsigned int)tmp___14;
-                start_job_command(c);
-                unblock_sigs();
-              }
-              if ((unsigned int)(c->file)->command_state == 2U)
-              {
-                goto while_continue;
-              }
-            }
+             
+                
+             
+               
+                                                 
+                                                   
+                                     
+                               
+               
+                                                               
+               
+                                    
+               
+             
 
 
 
@@ -10836,7 +10836,7 @@ static void start_job_command(struct child *child)
          
         if ((int)*p == 64)
         {
-          flags |= 2;
+                     
         }
         else
         { // Added block
@@ -10941,12 +10941,12 @@ static void start_job_command(struct child *child)
         }
         else
         {
-          tmp___2 = (char const *)((char *)0);
+                                              
         }
       }
       else
       {
-        tmp___2 = (char const *)((char *)0);
+                                            
       }
     }
     {
@@ -11924,9 +11924,9 @@ static char **construct_command_argv_internal(char *line, char **restp, char *sh
   char *new_line;
   void *tmp___19;
   char *command_ptr;
-  size_t tmp___20;
-  char *tmp___21;
-  char *tmp___22;
+                  
+                 
+                 
   char *tmp___23;
   unsigned short const **tmp___24;
   char *tmp___25;
@@ -12415,37 +12415,37 @@ static char **construct_command_argv_internal(char *line, char **restp, char *sh
         else
         { // Added block
         _L___1:;
-          if ((int)*p == 92)
-          {
-            if ((int)*(p + 1) == 10)
-            {
-              p += 2;
-              if ((int)*p == 9)
-              {
-                {
-                  tmp___20 = strlen((char const *)p);
-                  memmove((void *)p, (void const *)(p + 1), tmp___20);
-                }
-              }
-              {
-                p = next_token(p);
-                p--;
-              }
-              if (unixy_shell)
-              {
-                if (!batch_mode_shell)
-                {
-                  tmp___21 = ap;
-                  ap++;
-                  *tmp___21 = (char)'\\';
-                }
-              }
-              tmp___22 = ap;
-              ap++;
-              *tmp___22 = (char)' ';
-              goto __Cont;
-            }
-          }
+                            
+           
+                                    
+             
+                     
+                               
+               
+                 
+                                                     
+                                                                      
+                 
+               
+               
+                                  
+                    
+               
+                              
+               
+                                      
+                 
+                                
+                       
+                                         
+                 
+               
+                            
+                   
+                                    
+                          
+             
+           
         }
         if (unixy_shell)
         {
@@ -12461,17 +12461,17 @@ static char **construct_command_argv_internal(char *line, char **restp, char *sh
             { // Added block
               if ((int)*p == 39)
               {
-                tmp___23 = ap;
-                ap++;
-                *tmp___23 = (char)'\\';
+                              
+                     
+                                       
               }
               else
               { // Added block
                 if ((int)*p == 34)
                 {
-                  tmp___23 = ap;
-                  ap++;
-                  *tmp___23 = (char)'\\';
+                                
+                       
+                                         
                 }
                 else
                 {
@@ -12504,7 +12504,7 @@ static char **construct_command_argv_internal(char *line, char **restp, char *sh
         tmp___26 = ap;
         ap++;
         *tmp___26 = *p;
-      __Cont:;
+             ;
         p++;
       }
     while_break___4: ;/* CIL Label */;
@@ -12855,9 +12855,9 @@ static void debug_signal_handler(int sig)
 }
 static void decode_debug_flags(void)
 {
-  char **pp;
-  char const *p;
-  int tmp;
+            
+                
+          
                 
 
   {
@@ -12869,32 +12869,32 @@ static void decode_debug_flags(void)
     {
       return;
     }
-    pp = db_flags->list;
+                        
     {
-      while (1)
-      {
-                       ;/* CIL Label */;
-        if (!*pp)
-        {
-          goto while_break;
-        }
-        p = (char const *)*pp;
-        {
-          while (1)
-          {
-                               ;/* CIL Label */;
-            {
-              tmp = tolower((int)*(p + 0));
-            }
-            {
+               
+       
+                                        
+                 
+         
+                           
+         
+                              
+         
+                   
+           
+                                                
+             
+                                           
+             
+             
                             
                
 
                
-              if (tmp == 98)
-              {
-                goto case_98;
-              }
+                            
+               
+                             
+               
 
 
 
@@ -12912,41 +12912,41 @@ static void decode_debug_flags(void)
 
 
 
-                      ;/* CIL Label */
+                                      
 
 
-            case_98: ;/* CIL Label */
-              db_level |= 1;
-              goto switch_break;
-                       ;/* CIL Label */
+                                      
+                            
+                                
+                                       
 
 
-                       ;/* CIL Label */
+                                       
 
 
-                       ;/* CIL Label */
+                                       
 
 
-                       ;/* CIL Label */
+                                       
 
 
-                             ;/* CIL Label */
-            {
+                                             
+             
 
 
 
-            }
-            switch_break: ;/* CIL Label */;
-            }
-            {
-              while (1)
-              {
-                                   ;/* CIL Label */;
-                p++;
-                if (!((int const) * p != 0))
-                {
-                  goto while_break___1;
-                }
+             
+                                            
+             
+             
+                       
+               
+                                                    
+                    
+                                            
+                 
+                                       
+                 
                                           
                  
 
@@ -12958,45 +12958,45 @@ static void decode_debug_flags(void)
 
                    
                  
-              }
-            while_break___1: ;/* CIL Label */;
-            }
-            if ((int const) * p == 0)
-            {
-              goto while_break___0;
-            }
+               
+                                               
+             
+                                     
+             
+                                   
+             
 
-          }
-        while_break___0: ;/* CIL Label */;
-        }
-        pp++;
-      }
-    while_break: ;/* CIL Label */;
+           
+                                           
+         
+             
+       
+                  ;/* CIL Label */;
     }
-    return;
+           
   }
 }
 FILE *open_tmpfile(char **name, char const *template)
 {
-  int fd;
-  size_t tmp;
-  FILE *tmp___0;
+         
+             
+                
 
   {
     {
-      tmp = strlen(template);
-      *name = xmalloc((unsigned int)(tmp + 1UL));
-      strcpy((char *__restrict)*name, (char const *__restrict)template);
-      fd = mkstemp(*name);
+                             
+                                                 
+                                                                        
+                          
     }
                  
      
 
      
     {
-      tmp___0 = fdopen(fd, "w");
+                                
     }
-    return (tmp___0);
+                     
   }
 }
 int main(int argc, char **argv, char **envp);
@@ -13019,36 +13019,36 @@ int main(int argc, char **argv, char **envp)
   register char *ep;
   struct variable *tmp___6;
                 
-  struct command_variable *cv;
-  struct variable *v;
-  unsigned int len;
-  char *value;
-  char *p___0;
-  size_t tmp___8;
-  size_t tmp___9;
-  void *tmp___10;
+                              
+                     
+                   
+              
+              
                  
-  char *tmp___12;
-  char *tmp___13;
+                 
+                 
+                 
+                 
+                 
   char *dir;
-  char *expanded;
-  char *tmp___14;
+                 
+                 
   int tmp___15;
   struct variable *v___0;
   struct variable *tmp___16;
-  int tmp___17;
+               
   char **tmp___18;
   char *tmp___19;
   register unsigned int i___0;
-  FILE *outfile;
+                
                  
                  
-  char buf___1[2048];
-  unsigned int n;
-  size_t tmp___22;
+                     
                  
-  size_t tmp___24;
-  int tmp___25;
+                  
+                 
+                  
+               
   struct sigaction sa;
   char **tmp___26;
            
@@ -13113,7 +13113,7 @@ int main(int argc, char **argv, char **envp)
                
                  
                  
-  int tmp___68;
+               
                 
   int status;
   char *tmp___70;
@@ -13359,83 +13359,83 @@ int main(int argc, char **argv, char **envp)
       define_variable_in_set((char *)"MAKE", 4U, (char *)"$(MAKE_COMMAND)", (enum variable_origin)0,
                              1, current_variable_set_list->set, (struct floc const *)((struct floc *)0));
     }
-    if ((unsigned long)command_variables != (unsigned long)((struct command_variable *)0))
-    {
-      len = 0U;
-      cv = command_variables;
-      {
-        while (1)
-        {
-                             ;/* CIL Label */;
-          if (!((unsigned long)cv != (unsigned long)((struct command_variable *)0)))
-          {
-            goto while_break___1;
-          }
-          {
-            v = cv->variable;
-            tmp___8 = strlen((char const *)v->name);
-            len = (unsigned int)((size_t)len + 2UL * tmp___8);
-          }
+                                                                                          
+     
+               
+                             
+       
+                 
+         
+                                              
+                                                                                    
+           
+                                 
+           
+           
+                             
+                                                    
+                                                              
+           
                             
            
 
            
-          {
-            len++;
-            tmp___9 = strlen((char const *)v->value);
-            len = (unsigned int)((size_t)len + 2UL * tmp___9);
-            len++;
-            cv = cv->next;
-          }
-        }
-      while_break___1: ;/* CIL Label */;
-      }
-      {
-        tmp___10 = __builtin_alloca((unsigned long)len);
-        value = (char *)tmp___10;
-        p___0 = value;
-        cv = command_variables;
-      }
-      {
-        while (1)
-        {
-                             ;/* CIL Label */;
-          if (!((unsigned long)cv != (unsigned long)((struct command_variable *)0)))
-          {
-            goto while_break___2;
-          }
-          {
-            v = cv->variable;
-            p___0 = quote_for_env(p___0, v->name);
-          }
+           
+                  
+                                                     
+                                                              
+                  
+                          
+           
+         
+                                         
+       
+       
+                                                        
+                                 
+                      
+                               
+       
+       
+                 
+         
+                                              
+                                                                                    
+           
+                                 
+           
+           
+                             
+                                                  
+           
                             
            
 
 
 
            
-          {
-            tmp___12 = p___0;
-            p___0++;
-            *tmp___12 = (char)'=';
-            p___0 = quote_for_env(p___0, v->value);
-            tmp___13 = p___0;
-            p___0++;
-            *tmp___13 = (char)' ';
-            cv = cv->next;
-          }
-        }
-      while_break___2: ;/* CIL Label */;
-      }
-      {
-        *(p___0 + -1) = (char)'\000';
-        define_variable_in_set((char *)"-*-command-variables-*-", 23U, value, (enum variable_origin)6,
-                               0, current_variable_set_list->set, (struct floc const *)((struct floc *)0));
-        define_variable_in_set((char *)"MAKEOVERRIDES", 13U, (char *)"${-*-command-variables-*-}",
-                               (enum variable_origin)1, 1, current_variable_set_list->set,
-                               (struct floc const *)((struct floc *)0));
-      }
-    }
+           
+                             
+                    
+                                  
+                                                   
+                             
+                    
+                                  
+                          
+           
+         
+                                         
+       
+       
+                                     
+                                                                                                      
+                                                                                                           
+                                                                                                  
+                                                                                          
+                                                                        
+       
+     
     if ((unsigned long)directories___0 != (unsigned long)((struct stringlist *)0))
     {
       i = 0U;
@@ -13448,17 +13448,17 @@ int main(int argc, char **argv, char **envp)
             goto while_break___3;
           }
           dir = *(directories___0->list + i);
-          if ((int)*(dir + 0) == 126)
-          {
-            {
-              tmp___14 = tilde_expand(dir);
-              expanded = tmp___14;
-            }
+                                     
+           
+             
+                                           
+                                  
+             
                                                                       
              
 
              
-          }
+           
           {
             tmp___15 = chdir((char const *)dir);
           }
@@ -13485,24 +13485,24 @@ int main(int argc, char **argv, char **envp)
     }
     if ((unsigned long)v___0 != (unsigned long)((struct variable *)0))
     {
-      if ((int)*(v___0->value) != 0)
-      {
-        if ((int)*(v___0->value) != 45)
-        {
-          {
-            tmp___17 = atoi((char const *)v___0->value);
-            makelevel = (unsigned int)tmp___17;
-          }
-        }
-        else
-        {
+                                    
+       
+                                       
+         
+           
+                                                        
+                                               
+           
+         
+            
+         
 
-        }
-      }
-      else
-      {
+         
+       
+          
+       
 
-      }
+       
     }
     else
     {
@@ -13516,10 +13516,10 @@ int main(int argc, char **argv, char **envp)
       }
       else
       { // Added block
-        if (makelevel > 0U)
-        {
-          print_directory_flag = 1;
-        }
+                           
+         
+                                   
+         
       }
     }
     if (inhibit_print_directory_flag)
@@ -13577,10 +13577,10 @@ int main(int argc, char **argv, char **envp)
           {
             goto while_break___4;
           }
-          if ((int)*(*(makefiles->list + i___0) + 0) == 45)
-          {
-            if ((int)*(*(makefiles->list + i___0) + 1) == 0)
-            {
+                                                           
+           
+                                                            
+             
                            
                
                  
@@ -13589,9 +13589,9 @@ int main(int argc, char **argv, char **envp)
 
                  
                
-              {
-                outfile = open_tmpfile(&stdin_nm, "/tmp/GmXXXXXX");
-              }
+               
+                                                                   
+               
                                                                        
                
                  
@@ -13600,28 +13600,28 @@ int main(int argc, char **argv, char **envp)
 
                  
                
-              {
-                while (1)
-                {
-                                     ;/* CIL Label */;
-                  {
-                    tmp___25 = feof(stdin);
-                  }
-                  if (tmp___25)
-                  {
-                    goto while_break___5;
-                  }
-                  {
-                    tmp___22 = fread((void *__restrict)(buf___1), (size_t)1, sizeof(buf___1),
-                                     (FILE *__restrict)stdin);
-                    n = (unsigned int)tmp___22;
-                  }
-                  if (n > 0U)
-                  {
-                    {
-                      tmp___24 = fwrite((void const *__restrict)(buf___1), (size_t)1,
-                                        (size_t)n, (FILE *__restrict)outfile);
-                    }
+               
+                         
+                 
+                                                      
+                   
+                                           
+                   
+                               
+                   
+                                         
+                   
+                   
+                                                                                             
+                                                              
+                                               
+                   
+                             
+                   
+                     
+                                                                                     
+                                                                              
+                     
                                               
                      
                        
@@ -13630,22 +13630,22 @@ int main(int argc, char **argv, char **envp)
 
                        
                      
-                  }
-                }
-              while_break___5: ;/* CIL Label */;
-              }
-              {
-                fclose(outfile);
-                *(makefiles->list + i___0) = xstrdup((char const *)stdin_nm);
-                f = enter_file(stdin_nm);
-                f->updated = 1U;
-                f->update_status = (short)0;
-                f->command_state = (enum __anonenum_command_state_55)3;
-                f->intermediate = 0U;
-                f->dontcare = 0U;
-              }
-            }
-          }
+                   
+                 
+                                                 
+               
+               
+                                
+                                                                             
+                                         
+                                
+                                            
+                                                                       
+                                     
+                                 
+               
+             
+           
           i___0++;
         }
       while_break___4: ;/* CIL Label */;
@@ -13991,7 +13991,7 @@ int main(int argc, char **argv, char **envp)
 
                     }
                     {
-                      free((void *)((char *)d));
+                                                
                     }
                     if ((unsigned long)last == (unsigned long)((struct dep *)0))
                     {
@@ -14026,7 +14026,7 @@ int main(int argc, char **argv, char **envp)
             }
               if ((d->file)->last_mtime)
               {
-                *(makefile_mtimes + tmp___47) = (d->file)->last_mtime;
+                                                                      
               }
               else
               {
@@ -14366,11 +14366,11 @@ int main(int argc, char **argv, char **envp)
     {
       define_makeflags(1, 0);
     }
-    if (stdin_nm)
-    {
-      {
-        tmp___68 = unlink((char const *)stdin_nm);
-      }
+                 
+     
+       
+                                                  
+       
                        
        
          
@@ -14385,7 +14385,7 @@ int main(int argc, char **argv, char **envp)
 
 
        
-    }
+     
     if ((unsigned long)goals == (unsigned long)((struct dep *)0))
     {
       if ((unsigned long)default_goal_file != (unsigned long)((struct file *)0))
@@ -14618,8 +14618,8 @@ static void init_switches(void)
 static void handle_non_switch_argument(char *arg, int env)
 {
   struct variable *v;
-  struct command_variable *cv;
-  char *tmp;
+                              
+            
   struct file *f;
   struct file *tmp___0;
   char *tmp___1;
@@ -14647,11 +14647,11 @@ static void handle_non_switch_argument(char *arg, int env)
     if ((unsigned long)v != (unsigned long)((struct variable *)0))
     {
       {
-        tmp = xmalloc((unsigned int)sizeof(*cv));
-        cv = (struct command_variable *)tmp;
-        cv->variable = v;
-        cv->next = command_variables;
-        command_variables = cv;
+                                                 
+                                            
+                         
+                                     
+                               
       }
     }
     else
@@ -14737,12 +14737,12 @@ static void print_usage(int bad)
   char *tmp___12;
 
   {
-    if (print_version_flag)
-    {
-      {
-        print_version();
-      }
-    }
+                           
+     
+       
+                        
+       
+     
     if (bad)
     {
       usageto = stderr;
@@ -15050,7 +15050,7 @@ static void decode_switches(int argc, char **argv, int env)
 
                     }
                     case_5: ;/* CIL Label */
-                      goto switch_break;
+                                        
                     case_0: ;/* CIL Label */
                              ;/* CIL Label */
                       if (doit)
@@ -15063,10 +15063,10 @@ static void decode_switches(int argc, char **argv, int env)
                        
 
                        
-                      if ((unsigned long)optarg == (unsigned long)((char *)0))
-                      {
-                        optarg = (char *)cs->noarg_value;
-                      }
+                                                                              
+                       
+                                                         
+                       
                       sl = *((struct stringlist **)cs->value_ptr);
                       if ((unsigned long)sl == (unsigned long)((struct stringlist *)0))
                       {
@@ -15471,7 +15471,7 @@ static void define_makeflags(int all, int makefile)
   struct flag *new___5;
   void *tmp___15;
   size_t tmp___16;
-  size_t tmp___17;
+                  
   unsigned int tmp___18;
   void *tmp___19;
   char *tmp___20;
@@ -15881,13 +15881,13 @@ static void define_makeflags(int all, int makefile)
                               flagslen = (unsigned int)((size_t)flagslen + (4UL + 3UL * tmp___16));
                             }
                           }
-                          if (!(cs->c <= 127))
-                          {
-                            {
-                              tmp___17 = strlen((char const *)cs->long_name);
-                              flagslen = (unsigned int)((size_t)flagslen + (2UL + tmp___17));
-                            }
-                          }
+                                              
+                           
+                             
+                                                                             
+                                                                                             
+                             
+                           
                           goto while_break___7;
                         }
                       while_break___7: ;/* CIL Label */;
@@ -15960,7 +15960,7 @@ static void define_makeflags(int all, int makefile)
             p++;
             if (!((flags->cs)->c <= 127))
             {
-              *tmp___26 = (char)'=';
+                                    
             }
             else
             {
@@ -16288,7 +16288,7 @@ void log_working_directory(int entering)
     else
     {
       {
-        printf((char const *__restrict)"%s[%u]: %s ", program, makelevel, msg);
+                                                                               
       }
     }
     if ((unsigned long)starting_directory == (unsigned long)((char *)0))
@@ -16622,7 +16622,7 @@ char *concat(char *s1, char *s2, char *s3)
     }
     else
     {
-      len2 = 0U;
+                
     }
     if ((int)*s3 != 0)
     {
@@ -16733,8 +16733,8 @@ void error(struct floc const *flocp, char const *fmt, ...)
       else
       {
         {
-          fprintf((FILE *__restrict)stderr, (char const *__restrict)"%s[%u]: ",
-                  program, makelevel);
+                                                                               
+                                      
         }
       }
     }
@@ -16922,19 +16922,19 @@ char *savestring(char const *str, unsigned int length___0)
 }
 char *sindex(char const *big, unsigned int blen, char const *small, unsigned int slen)
 {
-  size_t tmp;
+             
                  
   register unsigned int b;
   int tmp___1;
 
   {
-    if (!blen)
-    {
-      {
-        tmp = strlen(big);
-        blen = (unsigned int)tmp;
-      }
-    }
+              
+     
+       
+                          
+                                 
+       
+     
               
      
        
@@ -16992,10 +16992,10 @@ char *lindex(char const *s, char const *limit, int c)
         }
         tmp = s;
         s++;
-        if ((int const) * tmp == (int const)c)
-        {
-          return ((char *)(s - 1));
-        }
+                                              
+         
+                                   
+         
       }
     while_break: ;/* CIL Label */;
     }
@@ -17153,7 +17153,7 @@ static void log_access(char *flavor)
     {
       tmp = getgid();
       tmp___0 = getegid();
-      tmp___1 = getuid();
+                         
       tmp___2 = geteuid();
       tmp___3 = dcgettext((char const *)((void *)0), "%s access: user %lu (real %lu), group %lu (real %lu)\n",
                           5);
@@ -17388,7 +17388,7 @@ struct dep *read_all_makefiles(char **makefiles___0)
   unsigned int length___0;
   int save;
                 
-  int tmp___1;
+              
   struct dep *tail;
   register struct dep *d;
   int tmp___2;
@@ -17442,8 +17442,8 @@ struct dep *read_all_makefiles(char **makefiles___0)
 
          
         {
-          name = xstrdup((char const *)name);
-          tmp___1 = read_makefile(name, (1 | (1 << 1)) | (1 << 2));
+                                             
+                                                                   
         }
                         
          
@@ -17665,16 +17665,16 @@ static int read_makefile(char *filename, int flags)
   int tmp___26;
                  
   int tmp___28;
-  char *tmp___29;
+                 
   unsigned short const **tmp___30;
   int tmp___31;
                  
                  
-  unsigned short const **tmp___34;
+                                  
                  
-  struct variable *tmp___36;
-  int tmp___37;
-  unsigned short const **tmp___38;
+                            
+               
+                                  
   int tmp___39;
                      
                        
@@ -17731,9 +17731,9 @@ static int read_makefile(char *filename, int flags)
                    
                          
                  
-  struct nameseq *target;
+                         
                  
-  char *tmp___69;
+                 
                  
   struct nameseq *tmp___71;
   struct nameseq *tmp___72;
@@ -17879,10 +17879,10 @@ static int read_makefile(char *filename, int flags)
         tmp___8 = xstrdup((char const *)filename);
         deps->file = enter_file(tmp___8);
       }
-      if (flags & (1 << 2))
-      {
-        (deps->file)->dontcare = 1U;
-      }
+                           
+       
+                                    
+       
     }
     if ((unsigned long)filename != (unsigned long)passed_filename)
     {
@@ -18100,7 +18100,7 @@ static int read_makefile(char *filename, int flags)
                 }
                 if (tmp___23 == 0)
                 {
-
+                          
                 }
                 else
                 {
@@ -18134,7 +18134,7 @@ static int read_makefile(char *filename, int flags)
                     }
                     if (tmp___25 == 0)
                     {
-
+                              
                     }
                     else
                     {
@@ -18153,22 +18153,22 @@ static int read_makefile(char *filename, int flags)
                        
                           
                        
-
-
+                                                                                         
+                                         
                        
+                                       
+                         
+                                           
+                         
+                            
+                         
+                           
 
 
 
-
-
-
-
-
-
-
-
-
-
+                           
+                         
+                                                
                        
                     }
                   }
@@ -18215,14 +18215,14 @@ static int read_makefile(char *filename, int flags)
               {
                 p2 = next_token(p + 6);
               }
-              if ((int)*p2 == 0)
-              {
-                {
-                  tmp___29 = dcgettext((char const *)((void *)0), "empty variable name",
-                                       5);
-                  fatal((struct floc const *)(&fileinfo), (char const *)tmp___29);
-                }
-              }
+                                
+               
+                 
+                                                                                        
+                                          
+                                                                                  
+                 
+               
               {
                 p = strchr((char const *)p2, '\000');
               }
@@ -18242,8 +18242,8 @@ static int read_makefile(char *filename, int flags)
               while_break___4: ;/* CIL Label */;
               }
               {
-                do_define(p2, (unsigned int)(p - p2), (enum variable_origin)2, infile,
-                          &fileinfo);
+                                                                                      
+                                     
               }
             }
             goto while_continue___0;
@@ -18254,11 +18254,11 @@ static int read_makefile(char *filename, int flags)
           {
             tmp___39 = strncmp("override", (char const *)p, (size_t)8);
           }
-          if (tmp___39 == 0)
-          {
-            {
-              p2 = next_token(p + 8);
-            }
+                            
+           
+             
+                                     
+             
                               
              
                
@@ -18267,32 +18267,32 @@ static int read_makefile(char *filename, int flags)
 
                
              
-            {
-              tmp___37 = strncmp((char const *)p2, "define", (size_t)6);
-            }
-            if (tmp___37 == 0)
-            {
-              {
-                tmp___38 = __ctype_b_loc();
-              }
-              if ((int const) * (*tmp___38 + (int)*(p2 + 6)) & 1)
-              {
-                goto _L___6;
-              }
-              else
-              { // Added block
-                if ((int)*(p2 + 6) == 0)
-                {
-                _L___6:;
-                  if (ignoring)
-                  {
+             
+                                                                        
+             
+                              
+             
+               
+                                           
+               
+                                                                 
+               
+                            
+               
+                  
+                              
+                                        
+                 
+                        
+                               
+                   
 
-                  }
-                  else
-                  {
-                    {
-                      p2 = next_token(p2 + 6);
-                    }
+                   
+                      
+                   
+                     
+                                              
+                     
                                       
                      
                        
@@ -18301,45 +18301,45 @@ static int read_makefile(char *filename, int flags)
 
                        
                      
-                    {
-                      p = strchr((char const *)p2, '\000');
-                    }
-                    {
-                      while (1)
-                      {
-                                           ;/* CIL Label */;
-                        {
-                          tmp___34 = __ctype_b_loc();
-                        }
-                        if (!((int const) * (*tmp___34 + (int)*(p + -1)) & 1))
-                        {
-                          goto while_break___5;
-                        }
+                     
+                                                           
+                     
+                     
+                               
+                       
+                                                            
+                         
+                                                     
+                         
+                                                                              
+                         
+                                               
+                         
 
-                      }
-                    while_break___5: ;/* CIL Label */;
-                    }
-                    {
-                      do_define(p2, (unsigned int)(p - p2), (enum variable_origin)5, infile,
-                                &fileinfo);
-                    }
-                  }
-                }
-                else
-                {
+                       
+                                                       
+                     
+                     
+                                                                                            
+                                           
+                     
+                   
+                 
+                    
+                 
 
-                }
-              }
-            }
-            else
-            { // Added block
-                   ;
-              if (!ignoring)
-              {
-                {
-                  tmp___36 = try_variable_definition((struct floc const *)(&fileinfo),
-                                                     p2, (enum variable_origin)5, 0);
-                }
+                 
+               
+             
+                
+                            
+                    
+                            
+               
+                 
+                                                                                      
+                                                                                     
+                 
                               
                  
                    
@@ -18348,15 +18348,15 @@ static int read_makefile(char *filename, int flags)
 
                    
                  
-              }
-            }
-            goto while_continue___0;
-          }
+               
+             
+                                    
+           
         }
                         ;
                      
          
-
+                                  
          
         if (!reading_target)
         {
@@ -18683,13 +18683,13 @@ static int read_makefile(char *filename, int flags)
                                                  
                        
                          
-
+                                                               
                          
                        
                                                   
                        
                          
-
+                                                                
                          
                        
                       conditionals = save;
@@ -19018,10 +19018,10 @@ static int read_makefile(char *filename, int flags)
                                                 ;/* CIL Label */;
                             if ((unsigned long)p != (unsigned long)((char *)0))
                             {
-                              if (!((int)*(p + -1) == 92))
-                              {
-                                goto while_break___13;
-                              }
+                                                          
+                               
+                                                      
+                               
                             }
                             else
                             {
@@ -19059,29 +19059,29 @@ static int read_makefile(char *filename, int flags)
                         if ((unsigned long)p != (unsigned long)((char *)0))
                         {
                           {
-                            target = parse_file_seq(&p2, ':', (unsigned int)sizeof(struct nameseq),
-                                                    1);
-                            p2++;
+                                                                                                   
+                                                       
+                                 
                           }
-                          if ((unsigned long)target == (unsigned long)((struct nameseq *)0))
-                          {
-                            {
+                                                                                            
+                           
+                             
 
 
 
-                            }
-                          }
-                          else
-                          { // Added block
-                            if ((unsigned long)target->next != (unsigned long)((struct nameseq *)0))
-                            {
-                              {
-                                tmp___69 = dcgettext((char const *)((void *)0), "multiple target patterns",
-                                                     5);
-                                fatal((struct floc const *)(&fileinfo), (char const *)tmp___69);
-                              }
-                            }
-                          }
+                             
+                           
+                              
+                                          
+                                                                                                    
+                             
+                               
+                                                                                                           
+                                                        
+                                                                                                
+                               
+                             
+                           
                           {
 
 
@@ -19231,9 +19231,9 @@ static void do_define(char *name, unsigned int namelen, enum variable_origin ori
   unsigned int len;
   unsigned long tmp___2;
   size_t tmp___3;
-  char *tmp___4;
-  char *tmp___5;
-  size_t tmp___6;
+                
+                
+                 
   size_t tmp___7;
   char *tmp___8;
   unsigned int tmp___9;
@@ -19280,7 +19280,7 @@ static void do_define(char *name, unsigned int namelen, enum variable_origin ori
         }
         if (len == 5U)
         {
-          goto _L___0;
+                      
         }
         else
         { // Added block
@@ -19291,41 +19291,41 @@ static void do_define(char *name, unsigned int namelen, enum variable_origin ori
             }
             if ((int const) * (*tmp___10 + (int)*(p + 5)) & 1)
             {
-            _L___0:;
+                   ;
             {
               tmp___11 = strncmp((char const *)p, "endef", (size_t)5);
             }
               if (tmp___11 == 0)
               {
                 {
-                  p += 5;
-                  remove_comments(p);
-                  tmp___5 = next_token(p);
+                         
+                                     
+                                          
                 }
-                if ((int)*tmp___5 != 0)
+                                       
+                 
+                   
+                                                                                                              
+                                           
+                                                                             
+                   
+                 
+                              
+                 
+                                                   
+                 
+                    
+                 
+                                                            
+                 
                 {
-                  {
-                    tmp___4 = dcgettext((char const *)((void *)0), "Extraneous text after `endef\' directive",
-                                        5);
-                    error((struct floc const *)flocp, (char const *)tmp___4);
-                  }
+                                                      
+                                                                                        
+                                                                                                        
+                                           
+                                          
                 }
-                if (idx == 0U)
-                {
-                  *(definition + 0) = (char)'\000';
-                }
-                else
-                {
-                  *(definition + (idx - 1U)) = (char)'\000';
-                }
-                {
-                  tmp___6 = strlen((char const *)var);
-                  define_variable_in_set(var, (unsigned int)tmp___6, definition, origin,
-                                         1, current_variable_set_list->set, (struct floc const *)flocp);
-                  free((void *)definition);
-                  free((void *)lb.buffer);
-                }
-                return;
+                       
               }
               else
               {
@@ -19342,7 +19342,7 @@ static void do_define(char *name, unsigned int namelen, enum variable_origin ori
           _L___1:;
           {
             tmp___7 = strlen((char const *)lb.buffer);
-            len = (unsigned int)tmp___7;
+                                        
           }
             if ((idx + len) + 1U > length___0)
             {
@@ -19374,30 +19374,229 @@ static void do_define(char *name, unsigned int namelen, enum variable_origin ori
 }
 static int conditional_line(char *line, struct floc const *flocp)
 {
+             
+                
+                          
+          
+              
+              
+                
+                
+                
+                
+                
+                
+                
+                     
+                   
+                
+               
+           
+           
+                   
+              
+               
+                     
+              
+                 
+                                  
+                 
+                  
+                 
+                         
+                 
+               
+               
+               
+
+  {
+                          
+     
+                                       
+                 
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+          
+       
+                                    
+         
+
+         
+            
+         
+                                   
+         
+                                       
+         
+
+         
+            
+         
+                      
+         
+                        
+       
+     
+        
+     
+                                       
+                 
+       
+                                  
+       
+          
+       
+                                 
+       
+                 
+       
+                    
+       
+          
+       
+                    
+       
+                      
+     
+    {
+                              
+    }
+                             
+     
+                          
+       
+         
+
+
+
+         
+       
+                                      
+       
+         
+
+
+         
+       
+                 
+       
+                                  
+       
+          
+                      
+                                                                      
+         
+           
 
 
 
+           
+         
+            
+         
+                                                                                                                                       
+                                                                              
+         
+       
+             
+       
+                 
+         
+                                          
+                                           
+           
+                             
+           
+                                            
+           
+                       
+           
+              
+         
+                                     
+       
+                 
+     
+                                      
+     
+       
+                                     
+                                                   
+                                         
+                                                   
+                                          
+       
+     
+                              
+                                                        
+     
+       
 
 
 
 
 
+       
+     
+                                                                        
+           
+    {
+               
+       
+                                            
+                                              
+         
+                               
+         
 
 
 
 
 
 
+       
+                      ;/* CIL Label */;
+    }
+               
+     
 
+     
+        
+     
+                   
+     
+                                          
+     
+       
 
 
 
 
+       
 
 
 
 
+       
 
+       
 
 
 
@@ -19414,12 +19613,70 @@ static int conditional_line(char *line, struct floc const *flocp)
 
 
 
+     
+        
+     
+                           
+       
+                       
+       
+          
+       
 
+       
+                              
+                            
+       
+                              
+         
 
 
 
 
+         
+       
+             
+                
+                            
+       
+                  
+         
+                   
+           
+                                                
+                                   
+             
 
+             
+                                 
+             
+                      
+             
+                
+                            
+                                   
+               
+                        
+               
+                  
+                              
+                                     
+                 
+                                 
+                   
+                                         
+                   
+                 
+               
+             
+                   
+           
+                                           
+         
+       
+          
+       
+         
 
 
 
@@ -19436,22 +19693,116 @@ static int conditional_line(char *line, struct floc const *flocp)
 
 
 
+                                           
+         
+       
+                          
+       
 
+       
+                            
+       
+                        
+               
+                         
+         
+                   
+           
+                                                
+             
+                                         
+             
+                                                                      
+             
+                                   
+             
 
+           
+                                           
+         
+                              
+       
+          
+       
 
 
 
+       
+       
+                                 
+                                            
+                                     
+                                                               
+                              
+                                                                  
+       
+                            
+       
+         
 
+         
+       
+                            
+       
+                           
+       
+          
+       
 
+       
+                            
+       
+                              
+         
 
 
 
 
+         
+       
+                            
+       
+         
+                        
+                                
+                    
+         
+         
+                   
+           
+                                                
+                                   
+             
 
+             
+                                 
+             
 
+             
+                
+                            
+                                   
+               
+                                   
+                 
+                                       
+                 
+                    
+                 
 
+                 
+               
+             
+                   
+           
+                                           
+         
+       
+          
+       
 
 
+         
 
 
 
@@ -19468,433 +19819,82 @@ static int conditional_line(char *line, struct floc const *flocp)
 
 
 
+                                           
+         
+       
+                          
+       
 
+       
+       
+                             
+               
+                                
+       
+                          
+       
+         
 
 
 
+         
+       
+       
+                                 
+       
+                                                 
+       
 
+       
+          
+                      
+                                 
+         
+                            
+           
 
+           
+              
+           
+             
+                                                                                
+             
+                         
+             
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+             
+                
+             
+                           
+             
+           
+         
+            
+         
+                       
+         
+       
+                                                                                            
+     
+           
+    {
+               
+       
+                                            
+                                         
+         
+                               
+         
+                                          
+         
+                     
+         
+            
+       
+                      ;/* CIL Label */;
+    }
+               
+  }
 }
 void uniquize_deps(struct dep *chain)
 {
@@ -20192,8 +20192,8 @@ static void record_files(struct nameseq *filenames, char *pattern, char *pattern
   char *implicit_percent;
                 
                 
-  char *tmp___2;
-  char *tmp___3;
+                
+                
                 
                 
   struct dep *tmp___6;
@@ -20294,21 +20294,21 @@ static void record_files(struct nameseq *filenames, char *pattern, char *pattern
              
            
          
-        if (implicit)
-        {
-          if ((unsigned long)targets == (unsigned long)((char **)0))
-          {
-            {
-              max_targets = 5U;
-              tmp___2 = xmalloc((unsigned int)(5UL * sizeof(char *)));
-              targets = (char **)tmp___2;
-              tmp___3 = xmalloc((unsigned int)(5UL * sizeof(char *)));
-              target_percents = (char **)tmp___3;
-              target_idx = 0U;
-            }
-          }
-          else
-          { // Added block
+                     
+         
+                                                                    
+           
+             
+                               
+                                                                      
+                                         
+                                                                      
+                                                 
+                              
+             
+           
+              
+                          
 
 
 
@@ -20319,12 +20319,12 @@ static void record_files(struct nameseq *filenames, char *pattern, char *pattern
 
 
 
-          }
-          *(targets + target_idx) = name;
-          *(target_percents + target_idx) = implicit_percent;
-          target_idx++;
-          goto __Cont;
-        }
+           
+                                         
+                                                             
+                       
+                      
+         
         if ((unsigned long)nextf != (unsigned long)((struct nameseq *)0))
         {
           {
@@ -20798,20 +20798,20 @@ static void record_files(struct nameseq *filenames, char *pattern, char *pattern
             }
           }
         }
-      __Cont:;
+             ;
         filenames = nextf;
       }
     while_break: ;/* CIL Label */;
     }
-    if (implicit)
-    {
-      {
-        *(targets + target_idx) = (char *)0;
-        *(target_percents + target_idx) = (char *)0;
-        create_pattern_rule(targets, target_percents, two_colon, deps, cmds, 1);
-        free((void *)((char *)target_percents));
-      }
-    }
+                 
+     
+       
+                                            
+                                                    
+                                                                                
+                                                
+       
+     
     return;
   }
 }
@@ -20973,10 +20973,10 @@ struct nameseq *parse_file_seq(char **stringp, int stopchar, unsigned int size,
         {
           goto while_break;
         }
-        if ((int)*p == stopchar)
-        {
-          goto while_break;
-        }
+                                
+         
+                           
+         
         {
           q = p;
           p = find_char_unquote(q, stopchars, 1);
@@ -21813,15 +21813,15 @@ void construct_include_path(char **arg_dirs)
 }
 char *tilde_expand(char *name)
 {
-  char *home_dir;
-  int is_variable;
-  int save;
-  char *logname;
-  char *tmp;
+                 
+                  
+           
+                
+            
                    
                          
-  char *new;
-  char *tmp___1;
+            
+                
   struct passwd *pwent;
   char *userend;
   char *tmp___2;
@@ -21831,41 +21831,41 @@ char *tilde_expand(char *name)
   {
     if ((int)*(name + 1) == 47)
     {
-      goto _L___0;
+                  
     }
     else
     { // Added block
       if ((int)*(name + 1) == 0)
       {
-      _L___0:;
-      {
-        save = warn_undefined_variables_flag;
-        warn_undefined_variables_flag = 0;
-        home_dir = allocated_variable_expand_for_file((char *)"$(HOME)", (struct file *)0);
-        warn_undefined_variables_flag = save;
-        is_variable = (int)*(home_dir + 0) != 0;
-      }
-        if (!is_variable)
-        {
-          {
-            free((void *)home_dir);
-            home_dir = getenv("HOME");
-          }
-        }
-        if ((unsigned long)home_dir == (unsigned long)((char *)0))
-        {
-
-        }
-        else
-        { // Added block
-          if ((int)*(home_dir + 0) == 0)
-          {
              ;
-          {
-            tmp = getlogin();
-            logname = tmp;
-            home_dir = (char *)0;
-          }
+      {
+                                             
+                                          
+                                                                                           
+                                             
+                                                
+      }
+                         
+         
+           
+                                   
+                                      
+           
+         
+                                                                  
+         
+
+         
+            
+                        
+                                        
+           
+              
+           
+                             
+                          
+                                 
+           
                                                                      
              
                
@@ -21877,22 +21877,22 @@ char *tilde_expand(char *name)
 
 
              
-          }
-        }
-        if ((unsigned long)home_dir != (unsigned long)((char *)0))
-        {
-          {
-            tmp___1 = concat(home_dir, (char *)"", name + 1);
-            new = tmp___1;
-          }
-          if (is_variable)
-          {
-            {
-              free((void *)home_dir);
-            }
-          }
-          return (new);
-        }
+           
+         
+                                                                  
+         
+           
+                                                             
+                          
+           
+                          
+           
+             
+                                     
+             
+           
+                       
+         
       }
       else
       {
@@ -21900,10 +21900,10 @@ char *tilde_expand(char *name)
           tmp___2 = strchr((char const *)(name + 1), '/');
           userend = tmp___2;
         }
-        if ((unsigned long)userend != (unsigned long)((char *)0))
-        {
-          *userend = (char)'\000';
-        }
+                                                                 
+         
+                                  
+         
         {
           pwent = getpwnam((char const *)(name + 1));
         }
@@ -21985,13 +21985,13 @@ struct nameseq *multi_glob(struct nameseq *chain, unsigned int size)
             tmp = tilde_expand(old->name);
             newname = tmp;
           }
-          if ((unsigned long)newname != (unsigned long)((char *)0))
-          {
-            {
-              free((void *)old->name);
-              old->name = newname;
-            }
-          }
+                                                                   
+           
+             
+                                      
+                                  
+             
+           
         }
         {
           tmp___0 = ar_name(old->name);
@@ -23819,7 +23819,7 @@ void notice_finished_file(struct file *file)
         {
           if ((file->cmds)->any_recurse)
           {
-            i = 0U;
+                   
             {
               while (1)
               {
@@ -23839,12 +23839,12 @@ void notice_finished_file(struct file *file)
           }
           else
           {
-            goto have_nonrecursing;
+                                   
           }
         }
         else
         { // Added block
-        have_nonrecursing:;
+                          ;
           if (file->phony)
           {
             file->update_status = (short)0;
@@ -24352,22 +24352,22 @@ static int touch_file(struct file *file)
             {
               status = fstat(fd, &statbuf);
             }
-            if (status < 0)
-            {
-              {
+                           
+             
+               
 
-              }
-
-
+               
 
 
-            }
-            else
-            {
-              goto while_break;
-            }
+
+
+             
+                
+             
+                               
+             
           }
-        while_break: ;/* CIL Label */;
+                      ;/* CIL Label */;
         }
                        
          
@@ -25704,7 +25704,7 @@ int new_pattern_rule(struct rule *rule, int override)
                   }
                   else
                   {
-                    goto while_break___2;
+                                         
                   }
                   if ((unsigned long)d->name == (unsigned long)((char *)0))
                   {
@@ -26303,7 +26303,7 @@ void print_rule_data_base(void)
   register unsigned int rules;
   register unsigned int terminal;
   register struct rule *r;
-  char *tmp;
+            
   char *tmp___0;
   char *tmp___1;
                 
@@ -26343,8 +26343,8 @@ void print_rule_data_base(void)
     if (rules == 0U)
     {
       {
-        tmp = dcgettext((char const *)((void *)0), "\n# No implicit rules.", 5);
-        puts((char const *)tmp);
+                                                                                
+                                
       }
     }
     else
@@ -27261,26 +27261,26 @@ void define_automatic_variables(void)
                                  0, current_variable_set_list->set, (struct floc const *)((struct floc *)0));
       v->v_export = (enum variable_export)0;
     }
-    if ((int)*(v->value) == 0)
-    {
-      {
+                              
+     
+       
 
 
 
-      }
-    }
-    else
-    { // Added block
-      if ((unsigned int)v->origin == 1U)
-      {
-        {
-          free((void *)v->value);
-          v->origin = (enum variable_origin)2;
-          v->value = xstrdup((char const *)(default_shell));
-        }
-      }
-      else
-      { // Added block
+       
+     
+        
+                    
+                                        
+       
+         
+                                 
+                                              
+                                                            
+         
+       
+          
+                      
                                           
          
            
@@ -27289,8 +27289,8 @@ void define_automatic_variables(void)
 
            
          
-      }
-    }
+       
+     
     {
       v = define_variable_in_set((char *)"MAKEFILES", 9U, (char *)"", (enum variable_origin)0,
                                  0, current_variable_set_list->set, (struct floc const *)((struct floc *)0));
@@ -27615,7 +27615,7 @@ char **target_environment(struct file *file)
                   {
                     goto __Cont;
                   }
-                  goto switch_break;
+                                    
                 switch_break: ;/* CIL Label */;
                 }
                 if (set->buckets != buckets)
@@ -27743,7 +27743,7 @@ char **target_environment(struct file *file)
                   {
                     tmp___8 = nvariables;
                     nvariables++;
-                    *(result___0 + tmp___8) = concat(v___0->name, (char *)"=", v___0->value);
+                                                                                             
                   }
                 }
               }
@@ -27759,9 +27759,9 @@ char **target_environment(struct file *file)
             else
             {
               {
-
-
-
+                                     
+                             
+                                                                                         
               }
             }
             b = b->next;
@@ -27870,7 +27870,7 @@ struct variable *try_variable_definition(struct floc const *flocp, char *line,
               {
                 tmp___1 = p;
                 p++;
-                end = tmp___1 - 1;
+                                  
                 flavor = (enum __anonenum_flavor_56)3;
                 goto while_break;
               }
@@ -28014,10 +28014,10 @@ struct variable *try_variable_definition(struct floc const *flocp, char *line,
       {
         goto case_2;
       }
-      if ((unsigned int)flavor == 3U)
-      {
-        goto case_3;
-      }
+                                     
+       
+                    
+       
 
              ;/* CIL Label */
     {
@@ -28045,7 +28045,7 @@ struct variable *try_variable_definition(struct floc const *flocp, char *line,
     case_2: ;/* CIL Label */
       value = p;
       goto switch_break;
-    case_3: ;/* CIL Label */
+             ;/* CIL Label */
                      
        
 
@@ -28071,8 +28071,8 @@ struct variable *try_variable_definition(struct floc const *flocp, char *line,
         else
         {
           {
-            alloc_value = allocated_variable_expand_for_file(p, (struct file *)0);
-            p = alloc_value;
+                                                                                  
+                            
           }
         }
         {
@@ -29244,7 +29244,7 @@ void print_vpath_data_base(void)
           }
           else
           {
-            tmp___5 = ':';
+                          
           }
           {
             printf((char const *__restrict)"%s%c", *(path + i___0), tmp___5);
