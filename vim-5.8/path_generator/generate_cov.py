@@ -63,7 +63,10 @@ with Pool(1) as pool:
 #get cov.origin.c
 subprocess.run([merge_sh,COV,TMP])
 os.system(' '.join([f"{COV}/bin/gcovbasedcoderemover",f"{PROGRAM}.c", "line.txt","merged.bin.gcov","false",">",f"{PROGRAM}.c.cov.origin.c"]))
-shutil.copyfile(f"{PROGRAM}.c.cov.origin.c",f"{CURRDIR}/{PROGRAM}.c.cov.origin.c")
+'''
+Don't change cov.origin.c in CURRDIR, for $cov cannot generate an acceptable coverage file. We add back some codes in vim-5.8.c.cov.origin.c about fork and don't want to override it.
+'''
+#shutil.copyfile(f"{PROGRAM}.c.cov.origin.c",f"{CURRDIR}/{PROGRAM}.c.cov.origin.c")
 
 #get cov_info.txt
 shutil.copyfile(f"{CURRDIR}/extract_info.c",f"{TMP}/extract_info.c")
