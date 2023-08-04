@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 PROGNAME=vim-5.8
-TIMEOUT=2
+TIMEOUT=4
 GDTBIN=ROPgadget
 DOMGAD=/usr/local/Moss/CovPath
 #PROG_COUNTER_BIN="/home/qxin6/progcounter/build/bin/counter"
@@ -58,10 +58,10 @@ rm -rf debdcetmp
 
 
 #Count Binary Bytes
-original_size=$((`ls -l ${ORIGIN_BIN} | cut -d' ' -f5`-`ls -l $BASE_BIN | cut -d' ' -f5`))
-reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5`-`ls -l $BASE_BIN | cut -d' ' -f5`))
-#original_size=$(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)
-#reduced_size=$(ls -l ${BIN} | cut -d' ' -f5)
+#original_size=$((`ls -l ${ORIGIN_BIN} | cut -d' ' -f5`-`ls -l $BASE_BIN | cut -d' ' -f5`))
+#reduced_size=$((`ls -l ${BIN} | cut -d' ' -f5`-`ls -l $BASE_BIN | cut -d' ' -f5`))
+original_size=$(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)
+reduced_size=$(ls -l ${BIN} | cut -d' ' -f5)
 
 #Count Gadgets
 original_gdt=`${GDTBIN} --binary ${ORIGIN_BIN} | grep 'Unique gadgets' | cut -d' ' -f4`
