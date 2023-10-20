@@ -48,8 +48,12 @@ def DoTestcase(args):
     os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase))
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
-    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",f"{TMP}/{testcase}","3",INDIR_CP,f"{TMP}/{testcase}"])
-    os.system(" ".join([getbin, f"{TMP}/{PROGRAM}",COV,os.getcwd()]))
+
+    current_env = os.environ.copy()
+    current_env["LLVM_PROFILE_FILE"]=f"{TMP}/{testcase}/{testcase}-%p%m.profraw"
+    subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",f"{TMP}/{PROGRAM}",f"{TMP}/{testcase}","5",INDIR_CP,f"{TMP}/{testcase}"], env=current_env)
+
+    os.system(" ".join([getbin, f"{TMP}/{PROGRAM}",COV,f"{TMP}/{testcase}"]))
     os.system(f"mv {PROGRAM}.lcov {TMP}/lcov/{testcase}.lcov")
     os.system(f"mv {PROGRAM}.real.gcov {TMP}/real.gcov/{testcase}.real.gcov")
     os.system(f"mv {PROGRAM}.bin.gcov {TMP}/bin.gcov/{testcase}.bin.gcov")
