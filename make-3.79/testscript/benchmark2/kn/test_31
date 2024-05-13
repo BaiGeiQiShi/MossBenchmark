@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+CURRDIR=$(pwd)
+
+cp -r -p $INDIR/n10test/sdir-tc3 ./sdir
+timeout -k 9 ${TIMEOUT}s $BIN -C sdir -C sdir > $OUTDIR/o31 2>&1
+$INDIR/util/makeoutputcleanup $OUTDIR/o31
+if [ -f default.profraw ]; then
+    mv default.profraw ${CURRDIR}/
+fi
+
+cat sdir/hello >> $OUTDIR/o31
+rm -r -f sdir

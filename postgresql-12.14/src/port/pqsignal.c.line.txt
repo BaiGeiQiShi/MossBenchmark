@@ -1,0 +1,13 @@
+function:38,61,pqsignal
+statement:40,61,fbcompound
+statement:42,42,decl
+statement:44,44,other
+statement:45,45,other
+statement:46,46,other
+statement:48,51,if
+statement:49,51,compound
+statement:50,50,other
+statement:53,56,if
+statement:54,56,compound
+statement:55,55,return
+statement:57,57,return

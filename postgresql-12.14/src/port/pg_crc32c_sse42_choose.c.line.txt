@@ -1,0 +1,13 @@
+function:33,47,pg_crc32c_sse42_available
+statement:35,47,fbcompound
+statement:36,36,decl
+statement:39,39,other
+statement:46,46,return
+function:53,66,pg_comp_crc32c_choose
+statement:55,66,fbcompound
+statement:56,63,if
+statement:57,59,compound
+statement:58,58,other
+statement:61,63,compound
+statement:62,62,other
+statement:65,65,return

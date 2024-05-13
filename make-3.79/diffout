@@ -1,0 +1,6 @@
+#!/bin/bash 
+testnum=$1
+sed -i '/ELF/d' output/kn/$testnum
+sed -i '/ELF/d' output.origin/kn/$testnum
+lines=$(($(wc -l < output/kn/$testnum) < $(wc -l < output.origin/kn/$testnum) ? $(wc -l < output.origin/kn/$testnum) : $(wc -l < output/kn/$testnum)))
+diff <(head -n "$lines" output/kn/$testnum) <(head -n "$lines" output.origin/kn/$testnum)

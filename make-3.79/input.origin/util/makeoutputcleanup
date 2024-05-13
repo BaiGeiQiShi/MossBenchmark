@@ -1,0 +1,10 @@
+#!/bin/bash
+outputfile=$1
+
+sed -i 's/Finished Make.*/ /g' $outputfile
+sed -i 's/Last modified.*/ /g' $outputfile
+sed -i 's/Make data base.*/ /g' $outputfile
+sed -i 's/Putting child.*/ /g' $outputfile
+sed -i 's/Live child.*/ /g' $outputfile
+sed -i 's/Reaping losing child.*/ /g' $outputfile
+sed -i 's/Removing child.*/ /g' $outputfile

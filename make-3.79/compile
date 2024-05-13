@@ -1,0 +1,8 @@
+#!/bin/bash
+
+SRC=$1
+BIN=$2
+flags=$3
+libglob_path=lib/libglob.a
+
+clang -w $flags -o $BIN $SRC ${libglob_path} -lutil

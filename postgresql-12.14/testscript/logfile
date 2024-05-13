@@ -1,0 +1,36 @@
+2023-10-06 18:50:09.761 CST [3621453] LOG:  starting PostgreSQL 12.14 on x86_64-pc-linux-gnu, compiled by clang version 9.0.0 (https://github.com/llvm/llvm-project.git d8b01111a0ec33a1a37f264940e3b6e99945ca8f), 64-bit
+2023-10-06 18:50:09.762 CST [3621453] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2023-10-06 18:50:09.762 CST [3621453] LOG:  could not bind IPv6 address "::1": Cannot assign requested address
+2023-10-06 18:50:09.762 CST [3621453] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2023-10-06 18:50:09.814 CST [3621453] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2023-10-06 18:50:09.833 CST [3621458] LOG:  database system was shut down at 2023-10-06 18:50:09 CST
+2023-10-06 18:50:09.846 CST [3621453] LOG:  database system is ready to accept connections
+2023-10-06 18:50:13.703 CST [3621453] LOG:  received fast shutdown request
+2023-10-06 18:50:13.704 CST [3621453] LOG:  aborting any active transactions
+2023-10-06 18:50:13.713 CST [3621453] LOG:  background worker "logical replication launcher" (PID 3621464) exited with exit code 1
+2023-10-06 18:50:13.715 CST [3621459] LOG:  shutting down
+2023-10-06 18:50:13.728 CST [3621453] LOG:  database system is shut down
+2023-10-06 18:50:43.537 CST [3621882] LOG:  starting PostgreSQL 12.14 on x86_64-pc-linux-gnu, compiled by clang version 9.0.0 (https://github.com/llvm/llvm-project.git d8b01111a0ec33a1a37f264940e3b6e99945ca8f), 64-bit
+2023-10-06 18:50:43.538 CST [3621882] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2023-10-06 18:50:43.538 CST [3621882] LOG:  could not bind IPv6 address "::1": Cannot assign requested address
+2023-10-06 18:50:43.538 CST [3621882] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2023-10-06 18:50:43.546 CST [3621882] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2023-10-06 18:50:43.575 CST [3621886] LOG:  database system was shut down at 2023-10-06 18:50:43 CST
+2023-10-06 18:50:43.580 CST [3621882] LOG:  database system is ready to accept connections
+2023-10-06 18:50:47.158 CST [3621882] LOG:  received fast shutdown request
+2023-10-06 18:50:47.160 CST [3621882] LOG:  aborting any active transactions
+2023-10-06 18:50:47.177 CST [3621882] LOG:  background worker "logical replication launcher" (PID 3621892) exited with exit code 1
+2023-10-06 18:50:47.177 CST [3621887] LOG:  shutting down
+2023-10-06 18:50:47.222 CST [3621882] LOG:  database system is shut down
+2023-10-06 18:51:13.103 CST [3622299] LOG:  starting PostgreSQL 12.14 on x86_64-pc-linux-gnu, compiled by clang version 9.0.0 (https://github.com/llvm/llvm-project.git d8b01111a0ec33a1a37f264940e3b6e99945ca8f), 64-bit
+2023-10-06 18:51:13.104 CST [3622299] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2023-10-06 18:51:13.104 CST [3622299] LOG:  could not bind IPv6 address "::1": Cannot assign requested address
+2023-10-06 18:51:13.104 CST [3622299] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2023-10-06 18:51:13.142 CST [3622299] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2023-10-06 18:51:13.190 CST [3622304] LOG:  database system was shut down at 2023-10-06 18:51:12 CST
+2023-10-06 18:51:13.205 CST [3622299] LOG:  database system is ready to accept connections
+2023-10-06 18:51:17.050 CST [3622299] LOG:  received fast shutdown request
+2023-10-06 18:51:17.059 CST [3622299] LOG:  aborting any active transactions
+2023-10-06 18:51:17.073 CST [3622299] LOG:  background worker "logical replication launcher" (PID 3622310) exited with exit code 1
+2023-10-06 18:51:17.074 CST [3622305] LOG:  shutting down
+2023-10-06 18:51:17.095 CST [3622299] LOG:  database system is shut down

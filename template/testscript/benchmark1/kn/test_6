@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+currdir=$(pwd)
+
+touch file1
+ln -s file1 sysfile1
+
+{ timeout ${TIMEOUT}s $BIN $(whoami):sudo sysfile1; }  &>$OUTDIR/o6
+ls -al sysfile1 | cut -d ' ' -f 4 &>>$OUTDIR/o6
+
+{ timeout ${TIMEOUT}s $BIN $(whoami):$(whoami) sysfile1; } &>>$OUTDIR/o6
+ls -al sysfile1 | cut -d ' ' -f 4 &>>$OUTDIR/o6

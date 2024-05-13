@@ -1,0 +1,16 @@
+function:37,48,GetFreeIndexPage
+statement:39,48,fbcompound
+statement:40,40,decl
+statement:42,45,if
+statement:43,45,compound
+statement:44,44,other
+statement:47,47,return
+function:53,57,RecordFreeIndexPage
+statement:55,57,fbcompound
+statement:56,56,other
+function:62,66,RecordUsedIndexPage
+statement:64,66,fbcompound
+statement:65,65,other
+function:71,75,IndexFreeSpaceMapVacuum
+statement:73,75,fbcompound
+statement:74,74,other

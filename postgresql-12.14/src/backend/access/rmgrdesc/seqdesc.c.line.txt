@@ -1,0 +1,17 @@
+function:19,30,seq_desc
+statement:21,30,fbcompound
+statement:22,22,decl
+statement:23,23,decl
+statement:24,24,decl
+statement:26,29,if
+statement:27,29,compound
+statement:28,28,other
+function:32,45,seq_identify
+statement:34,45,fbcompound
+statement:35,35,decl
+statement:37,42,switch
+statement:38,42,compound
+statement:39,40,switchcase
+statement:40,40,other
+statement:41,41,other
+statement:44,44,return

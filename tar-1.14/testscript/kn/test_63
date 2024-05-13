@@ -7,20 +7,20 @@ INDIR=$4
 
 cp -r $INDIR/I8/test2.tar ./
 
-{ timeout -k 9 ${TIMEOUT}s $BIN -xf test2.tar --to-command='mkdir $TAR_REALNAME'; } &>$OUTDIR/o631
+{ timeout -k 9 ${TIMEOUT}s $BIN -xf test2.tar --to-command='mkdir $TAR_REALNAME'; } &>$OUTDIR/o63
 
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d test
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d test1
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d test2
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d test3
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d test4
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 test -d filenamenotcontainingtest
-echo "$?" >>$OUTDIR/o631
+echo "$?" >>$OUTDIR/o63
 
 #I8

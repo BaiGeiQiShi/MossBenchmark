@@ -1,0 +1,13 @@
+function:33,62,init_tour
+statement:35,62,fbcompound
+statement:36,36,decl
+statement:47,50,if
+statement:48,50,compound
+statement:49,49,other
+statement:52,61,for
+statement:53,61,compound
+statement:54,54,other
+statement:56,59,if
+statement:57,59,compound
+statement:58,58,other
+statement:60,60,other

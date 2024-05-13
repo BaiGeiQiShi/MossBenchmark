@@ -1,0 +1,19 @@
+#!/bin/bash
+
+output_d1=$1
+output_d2=$2
+rslt_f=$3
+
+> ${rslt_f}
+
+for output_f1 in ${output_d1}/kn/*
+do
+    fname=$(basename ${output_f1})
+    if diff -q ${output_f1} ${output_d2}/kn/${fname} &> ./difftmp; then
+	echo "pass-kn-${fname}" >> ${rslt_f}
+    else
+	echo "fail-kn-${fname}" >> ${rslt_f}
+    fi
+done
+
+rm difftmp

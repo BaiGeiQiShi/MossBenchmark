@@ -1,0 +1,1 @@
+/postgresql-12.14/src/backend/catalog/pg_partitioned_table_d.h

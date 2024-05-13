@@ -1,0 +1,9 @@
+function:18,29,geqo_set_seed
+statement:20,29,fbcompound
+statement:21,21,decl
+statement:27,27,other
+statement:28,28,other
+function:31,37,geqo_rand
+statement:33,37,fbcompound
+statement:34,34,decl
+statement:36,36,return

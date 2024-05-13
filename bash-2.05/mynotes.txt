@@ -1,0 +1,5 @@
+The directory where test cases are actually executed is ~/debaug_expt/debaug/working/bash/testplans.alt/testplans.fine. I manually changed .test files to use $BASH_SRC_DIR/bash-2.05 (rather than the original $BASH_SRC_DIR/bash-2.05) to make sure the right binary is invoked.
+
+Use `grep bash-2.05` to see what files are changed. Change every appearance of bash-2.05 by whatever you need using `sed -i "s|bash-2.05|XXX|g" *`. For Razor, I did `sed -i "s|bash-2.05|bash.orig|g" *` in XXX/working/bash/testplans.alt/testplans.fine.
+
+On Razor's container, I installed termcap library by `apt-get install libncurses`. Otherwise, the linking phase of compilation would fail.

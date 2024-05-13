@@ -1,0 +1,19 @@
+#!/bin/bash -x
+DEBOP_HOME=/usr/local/Moss/CovBlock_Stmt
+DEBOP=$DEBOP_HOME/build/bin/reducer
+OUTPUT_DIR=$(pwd)/debop-out/
+OPTIONS=" -v -m 0 -i 0 -a 0.5 -e 0.5 -k 50 -t $OUTPUT_DIR -P $(pwd)/programlist -T TMCMCBEST  -s ./test.sh --build -- make"
+
+
+rm -rf $OUTPUT_DIR output.origin
+
+make clean > /dev/null
+
+#CC=clang CFLAGS="-O3" ./configure --prefix=$(pwd)/pgsql --enable-tap-tests
+
+# if [[ ! $OPTIONS == *"-S"* && ! $OPTIONS == *"--stat"* ]]; then
+#     gdb -ex run --args $DEBOP "--stat" $OPTIONS
+#     ./srcslistgen.py $OPTIONS
+# fi
+
+$DEBOP $OPTIONS > log/test.v0.txt

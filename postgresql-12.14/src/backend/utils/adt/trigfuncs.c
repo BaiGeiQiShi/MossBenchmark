@@ -1,0 +1,73 @@
+/*-------------------------------------------------------------------------
+ *
+ * trigfuncs.c
+ *	  Builtin functions for useful trigger support.
+ *
+ *
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * src/backend/utils/adt/trigfuncs.c
+ *
+ *-------------------------------------------------------------------------
+ */
+#include "postgres.h"
+
+#include "access/htup_details.h"
+#include "commands/trigger.h"
+#include "utils/builtins.h"
+#include "utils/rel.h"
+
+/*
+ * suppress_redundant_updates_trigger
+ *
+ * This trigger function will inhibit an update from being done
+ * if the OLD and NEW records are identical.
+ */
+Datum
+suppress_redundant_updates_trigger(PG_FUNCTION_ARGS)
+{
+  TriggerData *trigdata = (TriggerData *)fcinfo->context;
+  HeapTuple newtuple, oldtuple, rettuple;
+  HeapTupleHeader newheader, oldheader;
+
+  /* make sure it's called as a trigger */
+  if (!CALLED_AS_TRIGGER(fcinfo))
+  {
+
+  }
+
+  /* and that it's called on update */
+  if (!TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
+  {
+
+  }
+
+  /* and that it's called before update */
+  if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
+  {
+
+  }
+
+  /* and that it's called for each row */
+  if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
+  {
+
+  }
+
+  /* get tuple data, set default result */
+  rettuple = newtuple = trigdata->tg_newtuple;
+  oldtuple = trigdata->tg_trigtuple;
+
+  newheader = newtuple->t_data;
+  oldheader = oldtuple->t_data;
+
+  /* if the tuple payload is the same ... */
+  if (newtuple->t_len == oldtuple->t_len && newheader->t_hoff == oldheader->t_hoff && (HeapTupleHeaderGetNatts(newheader) == HeapTupleHeaderGetNatts(oldheader)) && ((newheader->t_infomask & ~HEAP_XACT_MASK) == (oldheader->t_infomask & ~HEAP_XACT_MASK)) && memcmp(((char *)newheader) + SizeofHeapTupleHeader, ((char *)oldheader) + SizeofHeapTupleHeader, newtuple->t_len - SizeofHeapTupleHeader) == 0)
+  {
+    /* ... then suppress the update */
+    rettuple = NULL;
+  }
+
+  return PointerGetDatum(rettuple);
+}
