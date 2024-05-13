@@ -22014,23 +22014,23 @@ static void call_func(struct ufunc *fp___0 , int argcount , VAR argvars , VAR re
 
 }
 void *save_funccal(void) 
-{ 
-  struct funccall *fc ;
+{
 
-  {
-  fc = current_funccal;
-  current_funccal = (struct funccall *)((void *)0);
-  return ((void *)fc);
-}
+
+
+
+
+
+
 }
 void restore_funccal(void *fc ) 
-{ 
+{
 
 
-  {
-  current_funccal = (struct funccall *)fc;
-  return;
-}
+
+
+
+
 }
 void do_return(EXARG *eap ) 
 {
@@ -27490,18 +27490,42 @@ void prepare_tagpreview(void)
 
 }
 void do_help(EXARG *eap ) 
-{
+{ 
+  char_u *arg ;
+  FILE *helpfd ;
+  int n ;
+  WIN *wp ;
+  int num_matches___0 ;
+  char_u **matches___0 ;
+  int need_free ;
+  char_u *tmp ;
+  int tmp___0 ;
 
+  {
+  need_free = 0;
+  if ((unsigned long )eap != (unsigned long )((void *)0)) {
+    arg = eap->arg;
+    {
+    while (1) {
+      while_continue: ;/* CIL Label */ ;
+      if (! *arg) {
+        goto while_break;
+      }
+      if ((int )*arg == 10) {
 
 
 
 
 
+      } else { //Added block
+      if ((int )*arg == 13) {
 
 
 
 
 
+      } else { //Added block
+      if ((int )*arg == 124) {
 
 
 
@@ -27509,18 +27533,61 @@ void do_help(EXARG *eap )
 
 
 
+      }
+      }
+      }
+      arg ++;
+    }
+    while_break: ;/* CIL Label */ ;
+    }
+    arg = eap->arg;
+    if (eap->skip) {
 
+    }
+  } else {
 
+  }
+  if ((int )*arg != 0) {
+    {
+    n = find_help_tags(arg, & num_matches___0, & matches___0);
+    }
+    if (num_matches___0 == 0) {
+      {
+      emsg2((char_u *)"Sorry, no help for %s", arg);
+      }
+      return;
+    } else { //Added block
 
 
 
 
 
 
+    }
+    {
 
 
 
+    }
+  }
+  if (! (curwin->w_buffer)->b_help) {
+    wp = firstwin;
+    {
+    while (1) {
+      while_continue___0: ;/* CIL Label */ ;
+      if (! ((unsigned long )wp != (unsigned long )((void *)0))) {
+        goto while_break___0;
+      }
+      if ((unsigned long )wp->w_buffer != (unsigned long )((void *)0)) {
+        if ((wp->w_buffer)->b_help) {
 
+        }
+      }
+      wp = wp->w_next;
+    }
+    while_break___0: ;/* CIL Label */ ;
+    }
+    if ((unsigned long )wp != (unsigned long )((void *)0)) {
 
 
 
@@ -27528,8 +27595,21 @@ void do_help(EXARG *eap )
 
 
 
+    } else {
+      _L: ;
+      {
+      helpfd = fopen((char const   * __restrict  )((char *)p_hf), (char const   * __restrict  )"r");
+      }
+      if ((unsigned long )helpfd == (unsigned long )((void *)0)) {
+        {
+        smsg((char_u *)"Sorry, help file \"%s\" not found", p_hf);
+        }
+        goto erret;
+      }
+      {
 
 
+      }
 
 
 
@@ -27538,6 +27618,7 @@ void do_help(EXARG *eap )
 
 
 
+      {
 
 
 
@@ -27549,7 +27630,12 @@ void do_help(EXARG *eap )
 
 
 
+      }
+    }
+  }
+  if (! p_im) {
 
+  }
 
 
 
@@ -27559,103 +27645,17 @@ void do_help(EXARG *eap )
 
 
 
+  {
 
+  }
+  erret: ;
+  if (need_free) {
+    {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    }
+  }
+  return;
+}
 }
 int help_heuristic(char_u *matched_string , int offset , int wrong_case ) 
 {
@@ -27751,8 +27751,48 @@ static char *rtable[20]  =
         (char *)"g?",      (char *)"g?g?",      (char *)"g??",      (char *)"\\[count]", 
         (char *)"\\[quotex]",      (char *)"\\[range]",      (char *)"\\[pattern]",      (char *)"\\\\bar"};
 int find_help_tags(char_u *arg , int *num_matches___0 , char_u ***matches___0 ) 
-{
+{ 
+  char_u *s ;
+  char_u *d ;
+  int i___0 ;
+  int tmp ;
+  char_u *tmp___0 ;
+  char_u *tmp___1 ;
+  char_u *tmp___2 ;
+  char_u *tmp___3 ;
+  char_u *tmp___4 ;
+  char_u *tmp___5 ;
+  char_u *tmp___6 ;
+  char_u *tmp___7 ;
+  char_u *tmp___8 ;
+  char_u *tmp___9 ;
+  char_u *tmp___10 ;
+  int tmp___11 ;
 
+  {
+  d = IObuff;
+  i___0 = (int )(sizeof(mtable) / sizeof(char *));
+  {
+  while (1) {
+    while_continue: ;/* CIL Label */ ;
+    i___0 --;
+    if (! (i___0 >= 0)) {
+      goto while_break;
+    }
+    {
+    tmp = strcmp((char const   *)((char *)arg), (char const   *)mtable[i___0]);
+    }
+    if (tmp == 0) {
+      {
+      strcpy((char * __restrict  )((char *)d), (char const   * __restrict  )rtable[i___0]);
+      }
+      goto while_break;
+    }
+  }
+  while_break: ;/* CIL Label */ ;
+  }
+  if (i___0 < 0) {
+    if ((int )*(arg + 0) == 92) {
 
 
 
@@ -27765,36 +27805,83 @@ int find_help_tags(char_u *arg , int *num_matches___0 , char_u ***matches___0 )
 
 
 
+    } else {
+      _L___3: ;
+      if ((int )*(arg + 0) == 91) {
+        if ((int )*(arg + 1) == 58) {
 
 
 
+        }
+      }
+      s = arg;
+      {
+      while (1) {
+        while_continue___0: ;/* CIL Label */ ;
+        if (! *s) {
+          goto while_break___0;
+        }
+        if (d - IObuff > 1015L) {
 
+        }
+        {
+        if ((int )*s == 124) {
 
+        }
+        if ((int )*s == 34) {
 
+        }
+        if ((int )*s == 42) {
 
+        }
+        if ((int )*s == 63) {
 
+        }
+        if ((int )*s == 36) {
 
+        }
+        if ((int )*s == 46) {
 
+        }
+        if ((int )*s == 126) {
 
+        }
+        goto switch_break;
+        case_124: ;/* CIL Label */ 
+        {
 
 
+        }
 
+        case_34: ;/* CIL Label */ 
+        {
 
 
+        }
 
+        case_42: ;/* CIL Label */ 
 
 
 
 
+        case_63: ;/* CIL Label */ 
 
 
 
 
+        case_36: ;/* CIL Label */ 
+        case_46: ;/* CIL Label */ 
+        case_126: ;/* CIL Label */ 
 
 
 
 
+        switch_break: ;/* CIL Label */ ;
+        }
+        if ((int )*s < 32) {
 
+        } else { //Added block
+        if ((int )*s == 94) {
 
 
 
@@ -27833,9 +27920,14 @@ int find_help_tags(char_u *arg , int *num_matches___0 , char_u ***matches___0 )
 
 
 
+        } else { //Added block
+        _L___1: ;
+        if ((int )*s == 94) {
 
 
 
+        } else { //Added block
+        if ((int )*(s + 0) == 92) {
 
 
 
@@ -27845,132 +27937,40 @@ int find_help_tags(char_u *arg , int *num_matches___0 , char_u ***matches___0 )
 
 
 
+        }
+        }
+        }
+        }
+        tmp___10 = d;
+        d ++;
+        *tmp___10 = *s;
+        if ((int )*s == 39) {
+          if ((unsigned long )s > (unsigned long )arg) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          }
+        }
+        __Cont: ;
+        s ++;
+      }
+      while_break___0: ;/* CIL Label */ ;
+      }
+      *d = (char_u )'\000';
+    }
+  }
+  {
+  *matches___0 = (char_u **)"";
+  *num_matches___0 = 0;
+  tmp___11 = find_tags(IObuff, num_matches___0, matches___0, 39, 2147483647);
+  }
+  if (tmp___11 == 1) {
+    {
+    qsort((void *)*matches___0, (size_t )*num_matches___0, sizeof(char_u *), & help_compare);
+    }
+  }
+  return (1);
+}
 }
 #pragma merger("0","/tmp/cil-bQYL8qc0.i","-O0")
 extern char *fgets(char * __restrict  __s , int __n , FILE * __restrict  __stream ) ;
@@ -28674,11 +28674,11 @@ int do_cmdline(char_u *cmdline , char_u *(*getline___0)(int  , void * , int  ) ,
         }
         if ((unsigned long )next_cmdline == (unsigned long )((void *)0)) {
           _L: ;
-          if (KeyTyped) {
 
-          }
-          retval = 0;
-          goto while_break;
+
+
+
+
         }
       }
     } else { //Added block
@@ -30244,7 +30244,7 @@ static char_u *do_one_cmd(char_u **cmdlinep , int sourcing , struct condstack *c
 
   }
   if ((int )ea.cmdidx == 33) {
-
+    goto case_33;
   }
   if ((int )ea.cmdidx == 36) {
 
@@ -30562,7 +30562,7 @@ static char_u *do_one_cmd(char_u **cmdlinep , int sourcing , struct condstack *c
     goto case_67;
   }
   if ((int )ea.cmdidx == 99) {
-
+    goto case_99___0;
   }
   if ((int )ea.cmdidx == 262) {
 
@@ -31178,9 +31178,9 @@ static char_u *do_one_cmd(char_u **cmdlinep , int sourcing , struct condstack *c
   case_33: ;/* CIL Label */ 
   case_36: ;/* CIL Label */ 
   {
-
+  do_cd(& ea);
   }
-
+  goto switch_break___0;
   case_186: ;/* CIL Label */ 
   {
   do_pwd();
@@ -31480,9 +31480,9 @@ static char_u *do_one_cmd(char_u **cmdlinep , int sourcing , struct condstack *c
   goto switch_break___0;
   case_99___0: ;/* CIL Label */ 
   {
-
+  do_help(& ea);
   }
-
+  goto switch_break___0;
   case_262: ;/* CIL Label */ 
   {
 
@@ -35078,6 +35078,10 @@ int do_source(char_u *fname , int check_other , int is_vimrc )
   cookie.fp = fopen((char const   * __restrict  )((char *)fname_exp), (char const   * __restrict  )"r");
   }
   if ((unsigned long )cookie.fp == (unsigned long )((void *)0)) {
+    if (check_other) {
+      {
+
+      }
 
 
 
@@ -35114,57 +35118,53 @@ int do_source(char_u *fname , int check_other , int is_vimrc )
 
 
 
-
-
-
-
-
+    }
   }
   if ((unsigned long )cookie.fp == (unsigned long )((void *)0)) {
+    if (p_verbose > 0L) {
+      {
 
-
-
-
-
-
-  }
-  if (p_verbose > 0L) {
-    {
-
+      }
     }
+    goto theend;
   }
-  if (is_vimrc) {
-    {
 
-    }
-  }
+
+
+
+
+
+
+
+
+
   {
-  cookie.nextline = (char_u *)((void *)0);
-  save_sourcing_name = sourcing_name;
-  save_sourcing_lnum = sourcing_lnum;
-  sourcing_name = fname_exp;
-  sourcing_lnum = (linenr_t )0;
-  save_funccalp = save_funccal();
-  do_cmdline((char_u *)((void *)0), & getsourceline, (void *)(& cookie), 7);
-  retval = 1;
-  fclose(cookie.fp);
-  vim_free((void *)cookie.nextline);
-  }
-  if (got_int) {
-    {
 
-    }
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
   {
-  sourcing_name = save_sourcing_name;
-  sourcing_lnum = save_sourcing_lnum;
-  restore_funccal(save_funccalp);
-  }
-  if (p_verbose > 0L) {
-    {
 
-    }
+
+
   }
+
+
+
+
+
   theend: ;
   {
   vim_free((void *)fname_exp);
@@ -35173,30 +35173,7 @@ int do_source(char_u *fname , int check_other , int is_vimrc )
 }
 }
 char_u *getsourceline(int c , void *cookie , int indent ) 
-{ 
-  struct source_cookie *sp ;
-  char_u *line ;
-  char_u *p___0 ;
-  char_u *s ;
-  size_t tmp ;
-  size_t tmp___0 ;
-  char_u *tmp___1 ;
-
-  {
-  sp = (struct source_cookie *)cookie;
-  if ((unsigned long )sp->nextline == (unsigned long )((void *)0)) {
-    {
-    line = get_one_sourceline(sp);
-    }
-  } else {
-
-
-
-  }
-  if ((unsigned long )line != (unsigned long )((void *)0)) {
-    {
-
-    }
+{
 
 
 
@@ -35233,55 +35210,35 @@ char_u *getsourceline(int c , void *cookie , int indent )
 
 
 
-  }
-  return (line);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 static char_u *get_one_sourceline(struct source_cookie *sp ) 
-{ 
-  struct growarray ga ;
-  int len___0 ;
-  int c ;
-  char_u *buf___3 ;
-  int have_read ;
-  int tmp ;
-  char *tmp___0 ;
-  size_t tmp___1 ;
-
-  {
-  {
-  have_read = 0;
-  ga_init2(& ga, 1, 200);
-  sourcing_lnum ++;
-  }
-  {
-  while (1) {
-    while_continue: ;/* CIL Label */ ;
-    {
-    tmp = ga_grow(& ga, 80);
-    }
-    if (tmp == 0) {
-
-    }
-    {
-    buf___3 = (char_u *)ga.ga_data;
-    tmp___0 = fgets((char * __restrict  )((char *)buf___3 + ga.ga_len), ga.ga_room,
-                    (FILE * __restrict  )sp->fp);
-    }
-    if ((unsigned long )tmp___0 == (unsigned long )((void *)0)) {
-      goto while_break;
-    } else { //Added block
-
-
-
-    }
-    {
-
-
-
-
-
-    }
+{
 
 
 
@@ -35311,22 +35268,65 @@ static char_u *get_one_sourceline(struct source_cookie *sp )
 
 
 
-    {
 
-    }
 
-    __Cont: ;;
-  }
-  while_break: ;/* CIL Label */ ;
-  }
-  if (have_read) {
 
-  }
-  {
-  vim_free(ga.ga_data);
-  }
-  return ((char_u *)((void *)0));
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 char_u *get_command_name(int idx ) 
 {
@@ -37928,7 +37928,19 @@ static void do_read(EXARG *eap )
 }
 static char_u *prev_dir  =    (char_u *)((void *)0);
 static void do_cd(EXARG *eap ) 
-{
+{ 
+  char_u *new_dir ;
+  char_u *tofree ;
+  int tmp ;
+  int tmp___0 ;
+  int tmp___1 ;
+
+  {
+  {
+  new_dir = eap->arg;
+  tmp = strcmp((char const   *)((char *)eap->arg), (char const   *)((char *)"-"));
+  }
+  if (tmp == 0) {
 
 
 
@@ -37936,59 +37948,47 @@ static void do_cd(EXARG *eap )
 
 
 
+  }
+  {
+  tofree = prev_dir;
+  tmp___0 = mch_dirname(NameBuff, 1024);
+  }
+  if (tmp___0 == 1) {
+    {
+    prev_dir = vim_strsave(NameBuff);
+    }
+  } else {
+
+  }
+  if ((int )*new_dir == 0) {
+    {
 
 
+    }
+  }
+  if ((unsigned long )new_dir == (unsigned long )((void *)0)) {
+    {
 
+    }
+  } else {
+    {
+    tmp___1 = chdir((char const   *)((char *)new_dir));
+    }
+    if (tmp___1) {
+      {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      }
+    } else {
+      {
+      shorten_fnames(1);
+      }
+    }
+  }
+  {
+  vim_free((void *)tofree);
+  }
+  return;
+}
 }
 static void do_pwd(void) 
 { 
@@ -47498,7 +47498,7 @@ void shorten_fnames(int force )
     }
     if ((unsigned long )buf___3->b_fname != (unsigned long )((void *)0)) {
       if (force) {
-
+        goto _L;
       } else { //Added block
       if ((unsigned long )buf___3->b_sfname == (unsigned long )((void *)0)) {
 
@@ -51973,9 +51973,9 @@ static int vgetorpeek(int advance )
                                               0);
                       }
                       if (keylen < 0) {
+                        if (typelen == typemaplen) {
 
-
-
+                        }
                       }
                     } else {
 
@@ -52008,10 +52008,10 @@ static int vgetorpeek(int advance )
                 }
                 goto while_break___0;
               }
+              if (keylen > 0) {
 
-
-
-
+              }
+              keylen = -1;
             }
           }
           if (keylen >= 0) {
@@ -52084,6 +52084,10 @@ static int vgetorpeek(int advance )
         new_wrow = curwin->w_wrow;
         if (advance) {
           if (typelen == 1) {
+            if ((int )*(typebuf + typeoff) == 27) {
+              if (! no_mapping) {
+                if (typemaplen == 0) {
+                  if (State & 16) {
 
 
 
@@ -52139,6 +52143,45 @@ static int vgetorpeek(int advance )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (c < 0) {
+
+        }
+        typelen += c;
+        if (typelen >= typemaplen + 50) {
+
+
+        }
+        i___0 = 0;
+        if (typelen > 0) {
+          if (State & 17) {
 
 
 
@@ -52171,78 +52214,35 @@ static int vgetorpeek(int advance )
 
           }
         }
-        if (c < 0) {
-
-        }
-        typelen += c;
-        if (typelen >= typemaplen + 50) {
-
-
-        }
-        i___0 = 0;
-        if (typelen > 0) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        }
         if (! advance) {
           tmp___12 = 0L;
         } else {
           if (typelen == 0) {
             tmp___11 = -1L;
           } else { //Added block
+          if (p_timeout) {
+            goto _L___8;
+          } else { //Added block
+          if (p_ttimeout) {
+            if (keylen == -1) {
+              _L___8: ;
+              if (keylen == -1) {
+                if (p_ttm >= 0L) {
 
+                } else {
+                  tmp___10 = p_tm;
+                }
+              } else {
 
+              }
+              tmp___11 = tmp___10;
+            } else {
 
+            }
+          } else {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          }
+          }
           }
           tmp___12 = tmp___11;
         }
@@ -52370,8 +52370,8 @@ int inchar(char_u *buf___3 , int maxlen , long wait_time )
   } else { //Added block
   if (wait_time > 100L) {
     {
-
-
+    cursor_on();
+    out_flush();
     }
   }
   }
@@ -55918,7 +55918,7 @@ int main(int argc , char **argv )
       }
       if (tmp___14 != 1) {
         {
-
+        emsg2((char_u *)"Cannot read from \"%s\"", use_vimrc);
         }
       }
     }
@@ -70854,38 +70854,38 @@ void expand_env(char_u *src , char_u *dst , int dstlen )
           c = dstlen - 1;
           if ((int )*tail == 123) {
             {
-
+            tmp___6 = vim_isIDc('{');
             }
+            if (tmp___6) {
 
+            } else {
+              tail ++;
+              {
+              while (1) {
+                while_continue___0: ;/* CIL Label */ ;
+                tmp___1 = c;
+                c --;
+                if (tmp___1 > 0) {
+                  if (*tail) {
+                    if (! ((int )*tail != 125)) {
+                      goto while_break___0;
+                    }
+                  } else {
 
+                  }
+                } else {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                }
+                tmp = var___0;
+                var___0 ++;
+                tmp___0 = tail;
+                tail ++;
+                *tmp = *tmp___0;
+              }
+              while_break___0: ;/* CIL Label */ ;
+              }
+              tail ++;
+            }
           } else {
             _L: ;
             {
@@ -71101,11 +71101,11 @@ static char_u *vim_getenv(char_u *name___1 , int *mustfree )
   }
   if (! vimruntime) {
     {
-
+    tmp___1 = strcmp((char const   *)((char *)name___1), (char const   *)((char *)"VIM"));
     }
-
-
-
+    if (tmp___1 != 0) {
+      return ((char_u *)((void *)0));
+    }
   }
   if (vimruntime) {
     if ((int )*default_vimruntime_dir == 0) {
@@ -94538,18 +94538,18 @@ static char_u *did_set_string_option(int opt_idx , char_u **varp , int new_value
 
   } else { //Added block
   if ((unsigned long )varp == (unsigned long )(& p_hf)) {
+    if (didset_vim) {
+      {
 
 
-
-
-
-
-
-
-
-
-
-
+      }
+    }
+    if (didset_vimruntime) {
+      {
+      vim_setenv((char_u *)"VIMRUNTIME", (char_u *)"");
+      didset_vimruntime = 0;
+      }
+    }
   } else { //Added block
   if ((unsigned long )varp == (unsigned long )(& p_hl)) {
     {
@@ -98631,7 +98631,7 @@ int mch_inchar(char_u *buf___3 , int maxlen , long wtime )
       tmp = WaitForChar(wtime);
       }
       if (! (tmp == 0)) {
-
+        goto while_break;
       }
       if (! do_resize___0) {
         once_already = 0;
@@ -98740,27 +98740,27 @@ int mch_char_avail(void)
 
 }
 void mch_delay(long msec , int ignoreinput ) 
-{
+{ 
+  int old_tmode ;
+  struct timespec ts ;
 
+  {
+  if (ignoreinput) {
+    {
+    old_tmode = curr_tmode;
+    settmode(1);
+    ts.tv_sec = msec / 1000L;
+    ts.tv_nsec = (msec % 1000L) * 1000000L;
+    nanosleep((struct timespec  const  *)(& ts), (struct timespec *)((void *)0));
+    settmode(old_tmode);
+    }
+  } else {
+    {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    }
+  }
+  return;
+}
 }
 static void sig_winch(int sigarg ) 
 {
@@ -98905,12 +98905,12 @@ void reset_signals(void)
 {
 
 
-
-
-
-
-
-
+  {
+  {
+  catch_signals((void (*)())((void (*)(int  ))0), (void (*)())((void (*)(int  ))0));
+  }
+  return;
+}
 }
 static void catch_signals(void (*func_deadly)() , void (*func_other)() ) 
 { 
@@ -98931,7 +98931,7 @@ static void catch_signals(void (*func_deadly)() , void (*func_other)() )
     } else { //Added block
     if ((unsigned long )func_other != (unsigned long )((void (*)(int  ))-1)) {
       {
-
+      sigset(signal_info[i___0].sig, (void (*)(int  ))func_other);
       }
     }
     }
@@ -99964,7 +99964,7 @@ void mch_settmode(int tmode )
     tnew.c_cc[5] = (cc_t )0;
   } else { //Added block
   if (tmode == 1) {
-
+    tnew.c_lflag &= 4294967287U;
   }
   }
   {
@@ -100313,38 +100313,38 @@ int mch_call_shell(char_u *cmd , int options___0 )
   pid = fork();
   }
   if (pid == -1) {
-    {
-
+      {
+    msg_puts((char_u *)"\nCannot fork\n");
     }
   } else { //Added block
   if (pid == 0) {
     {
-
+    reset_signals();
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (! show_shell_mess) {
+      goto _L;
+    } else { //Added block
+    if (options___0 & 2) {
+      _L:
+      {
+      fd = open("/dev/null", 2, 0);
+      fclose(stdin);
+      fclose(stdout);
+      fclose(stderr);
+      }
+      if (fd >= 0) {
+        {
+        dup(fd);
+        dup(fd);
+        dup(fd);
+        close(fd);
+        }
+      }
+    }
+    }
     {
-
-
+    execvp((char const   *)*(argv + 0), (char * const  *)argv);
+    exit(122);
     }
   } else {
     {
@@ -104214,16 +104214,63 @@ static int (*skip_class_name(char_u **pp ))(int  )
 
 }
 static char_u *skip_range(char_u *p___0 ) 
-{
+{ 
+  int cpo_lit ;
+  char_u *tmp ;
+  int tmp___0 ;
+  int (*tmp___1)(int  ) ;
+  char_u *tmp___2 ;
+  char_u *tmp___3 ;
 
+  {
+  if (! reg_syn) {
+    {
+    tmp = vim_strchr(p_cpo, 'l');
+    }
+    if ((unsigned long )tmp != (unsigned long )((void *)0)) {
+      tmp___0 = 1;
+    } else {
 
+    }
+  } else {
 
+  }
+  cpo_lit = tmp___0;
+  if ((int )*p___0 == 94) {
 
+  }
+  if ((int )*p___0 == 93) {
 
+  } else { //Added block
+  if ((int )*p___0 == 45) {
 
+  }
+  }
+  {
+  while (1) {
+    while_continue: ;/* CIL Label */ ;
+    if ((int )*p___0 != 0) {
+      if (! ((int )*p___0 != 93)) {
+        goto while_break;
+      }
+    } else {
 
+    }
+    if ((int )*p___0 == 45) {
+      p___0 ++;
+      if ((int )*p___0 != 93) {
+        if ((int )*p___0 != 0) {
+          p___0 ++;
+        }
+      }
+    } else { //Added block
+    if ((int )*p___0 == 92) {
+      {
 
+      }
+      if ((unsigned long )tmp___2 != (unsigned long )((void *)0)) {
 
+      } else { //Added block
 
 
 
@@ -104236,73 +104283,26 @@ static char_u *skip_range(char_u *p___0 )
 
 
 
+      }
+    } else { //Added block
+    _L: ;
+    if ((int )*p___0 == 91) {
+      {
 
+      }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    } else {
+      p___0 ++;
+    }
+    }
+    }
+  }
+  while_break: ;/* CIL Label */ ;
+  }
+  return (p___0);
+}
 }
 static char_u class_tab[256]  ;
 static int done  =    0;
@@ -105201,7 +105201,7 @@ static char_u *regatom(int *flagp )
 
   }
   if (tmp___1 == (91 | (92 << 8))) {
-
+    goto case_exp___47;
   }
   goto switch_default;
   case_exp: ;/* CIL Label */ 
@@ -105515,28 +105515,95 @@ static char_u *regatom(int *flagp )
 
   case_exp___47: ;/* CIL Label */ 
   {
-
+  p___1 = skip_range(regparse);
   }
+  if ((int )*p___1 == 93) {
+    if ((int )*regparse == 94) {
+      {
 
 
+      }
+    } else {
+      {
+      ret = regnode(4);
+      }
+    }
+    if ((int )*regparse == 93) {
+      {
 
 
 
+      }
+    } else { //Added block
+    if ((int )*regparse == 45) {
+      {
 
 
 
+      }
+    }
+    }
+    {
+    while (1) {
+      while_continue___0: ;/* CIL Label */ ;
+      if ((int )*regparse != 0) {
+        if (! ((int )*regparse != 93)) {
+          goto while_break___0;
+        }
+      } else {
 
+      }
+      if ((int )*regparse == 45) {
+        regparse ++;
+        if ((int )*regparse == 93) {
+          {
 
+          }
+        } else { //Added block
+        if ((int )*regparse == 0) {
+          {
 
+          }
+        } else {
+          cclass = (int )*(regparse - 2) + 1;
+          cclassend = (int )*regparse;
+          if (cclass > cclassend + 1) {
+            {
 
 
+            }
 
+          }
+          {
+          while (1) {
+            while_continue___1: ;/* CIL Label */ ;
+            if (! (cclass <= cclassend)) {
+              goto while_break___1;
+            }
+            {
+            regc(cclass);
+            cclass ++;
+            }
+          }
+          while_break___1: ;/* CIL Label */ ;
+          }
+          regparse ++;
+        }
+        }
+      } else { //Added block
+      if ((int )*regparse == 92) {
+        {
 
+        }
+        if ((unsigned long )tmp___10 != (unsigned long )((void *)0)) {
+          {
 
 
 
 
 
+          }
+        } else { //Added block
 
 
 
@@ -105555,7 +105622,13 @@ static char_u *regatom(int *flagp )
 
 
 
+        }
+      } else { //Added block
+      _L: ;
+      if ((int )*regparse == 91) {
+        {
 
+        }
 
 
 
@@ -105583,107 +105656,34 @@ static char_u *regatom(int *flagp )
 
 
 
+      } else {
+        {
+        tmp___9 = regparse;
+        regparse ++;
+        regc((int )*tmp___9);
+        }
+      }
+      }
+      }
+    }
+    while_break___0: ;/* CIL Label */ ;
+    }
+    {
+    regc('\000');
+    }
+    if ((int )*regparse != 93) {
+      {
 
 
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    }
+    {
+    skipchr();
+    *flagp |= 3;
+    }
+    goto switch_break;
+  }
   switch_default: ;/* CIL Label */ 
   {
   ungetchr();
@@ -115846,19 +115846,19 @@ void check_for_delay(int check_msg_scroll )
 
   {
   if (emsg_on_display) {
-
+    goto _L;
   } else { //Added block
   if (check_msg_scroll) {
     if (msg_scroll) {
       _L: ;
       {
-
-
+      out_flush();
+      ui_delay(1000L, 1);
+      emsg_on_display = 0;
+      }
+      if (check_msg_scroll) {
 
       }
-
-
-
     }
   }
   }
@@ -116444,7 +116444,7 @@ void halfpage(int flag , linenr_t Prenum )
       while_continue___1: ;/* CIL Label */ ;
       if (n > 0) {
         if (! (curwin->w_topline > 1L)) {
-
+          goto while_break___1;
         }
       } else {
         goto while_break___1;
@@ -116469,11 +116469,11 @@ void halfpage(int flag , linenr_t Prenum )
     while_break___1: ;/* CIL Label */ ;
     }
     if (n > 0) {
+      if (curwin->w_cursor.lnum > (linenr_t )n) {
 
-
-
-
-
+      } else {
+        curwin->w_cursor.lnum = (linenr_t )1;
+      }
     }
   }
   {
@@ -131112,17 +131112,170 @@ void do_tags(void)
 }
 int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flags___0 ,
               int mincount ) 
-{
+{ 
+  FILE *fp___0 ;
+  char_u *lbuf ;
+  char_u *tag_fname ;
+  int first_file ;
+  struct tag_pointers tagp ;
+  int did_open ;
+  int stop_searching ;
+  int retval ;
+  int is_static ;
+  int is_current ;
+  int eof ;
+  char_u *p___0 ;
+  char_u *s ;
+  int i___0 ;
+  vim_regexp *prog ;
+  struct tag_search_info search_info ;
+  off_t filesize ;
+  int tagcmp ;
+  off_t offset ;
+  enum __anonenum_state_169 state ;
+  int cmplen ;
+  int match ;
+  int match_no_ic ;
+  int match_re ;
+  int matchoff ;
+  struct growarray ga_match[16] ;
+  int match_count ;
+  char_u **matches___0 ;
+  int mtt ;
+  int len___0 ;
+  int help_save ;
+  int patlen ;
+  char_u *pathead ;
+  int patheadlen ;
+  int findall ;
+  int tmp ;
+  int sort_error ;
+  int linear ;
+  int has_re ;
+  int help_only ;
+  int name_only ;
+  int noic ;
+  int get_it_again ;
+  int verbose ;
+  size_t tmp___0 ;
+  char const   *tmp___1 ;
+  char_u *tmp___2 ;
+  int tmp___3 ;
+  int tmp___4 ;
+  int tmp___5 ;
+  int tmp___6 ;
+  int tmp___7 ;
+  int tmp___8 ;
+  int tmp___9 ;
+  int tmp___10 ;
+  int tmp___11 ;
+  int tmp___12 ;
+  __off_t tmp___13 ;
+  int tmp___14 ;
+  int tmp___15 ;
+  int tmp___16 ;
+  int tmp___17 ;
+  int tmp___18 ;
+  int cc___0 ;
+  int tmp___19 ;
+  int tmp___20 ;
+  char_u *temp_end ;
+  size_t tmp___21 ;
+  size_t tmp___22 ;
+  size_t tmp___23 ;
+  int tmp___24 ;
+  int tmp___25 ;
+  int tmp___26 ;
+  int tmp___27 ;
+  char_u *tmp___28 ;
+  int tmp___29 ;
+
+  {
+  did_open = 0;
+  stop_searching = 0;
+  retval = 0;
+  eof = 0;
+  prog = (vim_regexp *)((void *)0);
+  match_no_ic = 0;
+  matchoff = 0;
+  match_count = 0;
+  if (mincount == 2147483647) {
+    tmp = 1;
+  } else { //Added block
+
+
+
+
+
+  }
+  findall = tmp;
+  sort_error = 0;
+  has_re = flags___0 & 4;
+  help_only = flags___0 & 1;
+  name_only = flags___0 & 2;
+  noic = flags___0 & 8;
+  get_it_again = 0;
+  verbose = flags___0 & 32;
+  help_save = curbuf->b_help;
+  if (has_re) {
+    {
+    prog = vim_regcomp(pat, p_magic);
+    }
+  }
+  {
+  lbuf = alloc(512U);
+  tag_fname = alloc(513U);
+  mtt = 0;
+  }
+  {
+  while (1) {
+    while_continue: ;/* CIL Label */ ;
+    if (! (mtt < 16)) {
+      goto while_break;
+    }
+    {
+    ga_init2(& ga_match[mtt], (int )sizeof(char_u *), 100);
+    mtt ++;
+    }
+  }
+  while_break: ;/* CIL Label */ ;
+  }
+  if ((unsigned long )lbuf == (unsigned long )((void *)0)) {
 
+  } else { //Added block
+  if ((unsigned long )tag_fname == (unsigned long )((void *)0)) {
 
+  }
+  }
+  if (help_only) {
+    curbuf->b_help = 1;
+  }
+  {
+  tmp___0 = strlen((char const   *)((char *)pat));
+  patlen = (int )tmp___0;
+  }
+  if (p_tl != 0L) {
 
 
 
+  }
+  pathead = pat;
+  patheadlen = patlen;
+  if (has_re) {
+    if ((int )*(pat + 0) == 94) {
 
+    } else { //Added block
+    if ((int )*(pat + 0) == 92) {
 
 
 
+    }
+    }
+    if ((unsigned long )pathead == (unsigned long )pat) {
+      patheadlen = 0;
+    } else {
 
+      {
 
 
 
@@ -131141,10 +131294,23 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
+      while_break___0: ;/* CIL Label */ ;
+      }
+    }
+    if (p_tl != 0L) {
 
 
 
+    }
+  }
+  if (p_ic) {
 
+  } else { //Added block
+  if (! noic) {
+    _L: ;
+    if (findall) {
+      tmp___3 = 1;
+    } else { //Added block
 
 
 
@@ -131154,7 +131320,18 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
+    }
+  } else {
 
+  }
+  }
+  reg_ic = tmp___3;
+  {
+  while (1) {
+    while_continue___1: ;/* CIL Label */ ;
+    if (reg_ic) {
+      tmp___4 = 1;
+    } else { //Added block
 
 
 
@@ -131164,8 +131341,27 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
+    }
+    linear = tmp___4;
+    first_file = 1;
+    {
+    while (1) {
+      while_continue___2: ;/* CIL Label */ ;
+      {
+      tmp___27 = get_tagfname(first_file, tag_fname);
+      }
+      if (! (tmp___27 == 1)) {
+        goto while_break___2;
+      }
+      {
+      fp___0 = fopen((char const   * __restrict  )((char *)tag_fname), (char const   * __restrict  )"r");
+      }
+      if ((unsigned long )fp___0 == (unsigned long )((void *)0)) {
+        goto __Cont;
+      }
 
 
+      {
 
 
 
@@ -131719,7 +131915,11 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
+      while_break___3: ;/* CIL Label */ ;
+      }
+      {
 
+      }
 
 
 
@@ -131733,16 +131933,70 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
+      __Cont: ;
+      first_file = 0;
+    }
+    while_break___2: ;/* CIL Label */ ;
+    }
+    if (stop_searching) {
 
+    } else { //Added block
+    if (linear) {
+      goto while_break___1;
+    } else { //Added block
 
 
 
 
 
+    }
+    }
 
+  }
+  while_break___1: ;/* CIL Label */ ;
+  }
+  if (! stop_searching) {
+    if (! did_open) {
+      if (verbose) {
+        {
+        emsg((char_u *)"No tags file");
+        }
+      }
+    }
+    retval = 1;
+  }
+  findtag_end: ;
+  {
+  vim_free((void *)lbuf);
+  vim_free((void *)prog);
+  vim_free((void *)tag_fname);
+  }
+  if (retval == 0) {
 
+  }
+  if (match_count > 0) {
+    {
 
 
+    }
+  } else {
+    matches___0 = (char_u **)((void *)0);
+  }
+  match_count = 0;
+  mtt = 0;
+  {
+  while (1) {
+    while_continue___9: ;/* CIL Label */ ;
+    if (! (mtt < 16)) {
+      goto while_break___9;
+    }
+    i___0 = 0;
+    {
+    while (1) {
+      while_continue___10: ;/* CIL Label */ ;
+      if (! (i___0 < ga_match[mtt].ga_len)) {
+        goto while_break___10;
+      }
 
 
 
@@ -131754,285 +132008,75 @@ int find_tags(char_u *pat , int *num_matches___0 , char_u ***matchesp , int flag
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    }
+    while_break___10: ;/* CIL Label */ ;
+    }
+    {
+    ga_clear(& ga_match[mtt]);
+    mtt ++;
+    }
+  }
+  while_break___9: ;/* CIL Label */ ;
+  }
+  *matchesp = matches___0;
+  *num_matches___0 = match_count;
+  curbuf->b_help = help_save;
+  return (retval);
+}
 }
 static char_u *np  =    (char_u *)((void *)0);
 static struct visited *first_visited  =    (struct visited *)((void *)0);
 static int get_tagfname(int first___0 , char_u *buf___3 ) 
-{
+{ 
+  char_u *fname ;
+  size_t path_len ;
+  size_t fname_len ;
+  struct visited *vp ;
+  struct stat st ;
+  char_u *tmp ;
+  char_u *tmp___0 ;
+  int tmp___1 ;
+  int tmp___2 ;
+  char_u *tmp___3 ;
+  int tmp___4 ;
+  char_u *tmp___5 ;
 
+  {
+  if (first___0) {
+    np = p_tags;
+    {
+    while (1) {
+      while_continue: ;/* CIL Label */ ;
+      if (! ((unsigned long )first_visited != (unsigned long )((void *)0))) {
+        goto while_break;
+      }
+      {
 
 
 
+      }
+    }
+    while_break: ;/* CIL Label */ ;
+    }
+  }
+  if ((unsigned long )np == (unsigned long )((void *)0)) {
+    return (0);
+  }
+  if (curbuf->b_help) {
+    {
+    tmp = gettail(p_hf);
+    path_len = (size_t )(tmp - p_hf);
+    }
+    if (path_len + 9UL >= 512UL) {
 
+    }
+    {
+    memmove((void *)((char *)buf___3), (void const   *)((char *)p_hf), path_len);
+    strcpy((char * __restrict  )((char *)(buf___3 + path_len)), (char const   * __restrict  )((char *)"tags"));
+    np = (char_u *)((void *)0);
+    }
+  } else {
+    {
 
 
 
@@ -132122,55 +132166,11 @@ static int get_tagfname(int first___0 , char_u *buf___3 )
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    while_break___0: ;/* CIL Label */ ;
+    }
+  }
+  return (1);
+}
 }
 static int parse_tag_line(char_u *lbuf , struct tag_pointers *tagp ) 
 {
@@ -134401,7 +134401,7 @@ void out_str(char_u *s )
     if (*s) {
       if (out_pos > 2027) {
         {
-        out_flush();
+
         }
       }
       {
@@ -135630,9 +135630,9 @@ int check_termcode(int max_offset , char_u *buf___3 , int buflen )
                         (size_t )tmp___2);
       }
       if (tmp___3 == 0) {
-
-
-
+        if (len___0 < slen) {
+          return (-1);
+        }
 
 
 
@@ -136646,15 +136646,15 @@ int ui_char_avail(void)
 
 }
 void ui_delay(long msec , int ignoreinput ) 
-{
+{ 
 
 
-
-
-
-
-
-
+  {
+  {
+  mch_delay(msec, ignoreinput);
+  }
+  return;
+}
 }
 void ui_suspend(void) 
 {
