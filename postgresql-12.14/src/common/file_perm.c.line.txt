@@ -1,0 +1,11 @@
+function:33,50,SetDataDirectoryCreatePerm
+statement:35,50,fbcompound
+statement:37,49,if
+statement:38,42,compound
+statement:39,39,other
+statement:40,40,other
+statement:41,41,other
+statement:45,49,compound
+statement:46,46,other
+statement:47,47,other
+statement:48,48,other

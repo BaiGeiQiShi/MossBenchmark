@@ -1,0 +1,41 @@
+#!/bin/bash
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+# 初始化环境
+su postgres -m -c whoami
+export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"
+rm -rf ${INDIR}/pgsql/data/*
+
+# 初始化数据库和表
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS ecpg1_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE DATABASE ecpg1_regression TEMPLATE=template0 ENCODING='SQL_ASCII'\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"ALTER DATABASE ecpg1_regression SET lc_messages TO 'C';ALTER DATABASE ecpg1_regression SET lc_monetary TO 'C';ALTER DATABASE ecpg1_regression SET lc_numeric TO 'C';ALTER DATABASE ecpg1_regression SET lc_time TO 'C';ALTER DATABASE ecpg1_regression SET bytea_output TO 'hex';ALTER DATABASE ecpg1_regression SET timezone_abbreviations TO 'Default';\" ecpg1_regression >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS ecpg2_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE DATABASE ecpg2_regression TEMPLATE=template0 ENCODING='SQL_ASCII'\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"ALTER DATABASE ecpg2_regression SET lc_messages TO 'C';ALTER DATABASE ecpg2_regression SET lc_monetary TO 'C';ALTER DATABASE ecpg2_regression SET lc_numeric TO 'C';ALTER DATABASE ecpg2_regression SET lc_time TO 'C';ALTER DATABASE ecpg2_regression SET bytea_output TO 'hex';ALTER DATABASE ecpg2_regression SET timezone_abbreviations TO 'Default';\" ecpg2_regression >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE ROLE regress_ecpg_user1 WITH LOGIN\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"GRANT ALL ON DATABASE ecpg1_regression TO regress_ecpg_user1\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"GRANT ALL ON DATABASE ecpg2_regression TO regress_ecpg_user1\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE ROLE regress_ecpg_user2 WITH LOGIN\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"GRANT ALL ON DATABASE ecpg1_regression TO regress_ecpg_user2\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"GRANT ALL ON DATABASE ecpg2_regression TO regress_ecpg_user2\" postgres >/dev/null"
+
+# 测试
+su postgres -m -c "${INDIR}/src/interfaces/ecpg/preproc/ecpg --regression -I${INDIR}/src/interfaces/ecpg/include -I${INDIR}/src/interfaces/ecpg/test/sql  -o parser.c ${INDIR}/src/interfaces/ecpg/test/sql/parser.pgc"
+su postgres -m -c "clang -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -Wno-unused-command-line-argument -fprofile-instr-generate -fcoverage-mapping -pthread -D_REENTRANT -D_THREAD_SAFE -D_POSIX_PTHREAD_SEMANTICS -I${INDIR}/src/interfaces/ecpg/include -I${INDIR}/src/interfaces/libpq -I${INDIR}/src/include -D_GNU_SOURCE   -c -o parser.o parser.c"
+su postgres -m -c "clang -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -Wno-unused-command-line-argument -fprofile-instr-generate -fcoverage-mapping -pthread -D_REENTRANT -D_THREAD_SAFE -D_POSIX_PTHREAD_SEMANTICS parser.o -L${INDIR}/src/port -L${INDIR}/src/common -L${INDIR}/src/interfaces/ecpg/ecpglib -lecpg -L${INDIR}/src/interfaces/ecpg/pgtypeslib -lpgtypes -L${INDIR}/src/interfaces/libpq -lpq -L${INDIR}/src/interfaces/ecpg/compatlib -lecpg_compat   -Wl,--as-needed -Wl,-rpath,'${INDIR}/pgsql/lib',--enable-new-dtags  -lpgcommon -lpgport -lpthread -lz -lreadline -lrt -lcrypt -ldl -lm   -o parser"
+su postgres -m -c "${PWD}/parser > parser.stdout 2> parser.stderr"
+su postgres -m -c "cat parser.c parser.stdout parser.stderr > $OUTDIR/o392"
+su postgres -m -c "rm parser.c parser.stdout parser.stderr parser parser.o"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS ecpg1_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS ecpg2_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP ROLE IF EXISTS regress_ecpg_user1\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP ROLE IF EXISTS regress_ecpg_user2\" postgres >/dev/null"
+
+# 停止服务
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"

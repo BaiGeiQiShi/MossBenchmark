@@ -1,0 +1,25 @@
+#!/bin/bash
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+# init environment
+su postgres -m -c whoami
+export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"
+rm -rf ${INDIR}/pgsql/data/*
+
+# init database and table
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS pl_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE DATABASE pl_regression TEMPLATE=template0\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"ALTER DATABASE pl_regression SET lc_messages TO 'C';ALTER DATABASE pl_regression SET lc_monetary TO 'C';ALTER DATABASE pl_regression SET lc_numeric TO 'C';ALTER DATABASE pl_regression SET lc_time TO 'C';ALTER DATABASE pl_regression SET bytea_output TO 'hex';ALTER DATABASE pl_regression SET timezone_abbreviations TO 'Default';\" pl_regression >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE EXTENSION IF NOT EXISTS plperl\" pl_regression >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE EXTENSION IF NOT EXISTS plperlu\" pl_regression >/dev/null"
+
+# start to test
+su postgres -m -c "${INDIR}/pgsql/bin/psql -X -a -q -d pl_regression -v HIDE_TABLEAM=on < $INDIR/src/pl/plperl/sql/plperl_util.sql &> $OUTDIR/o198"
+
+# stop service
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"

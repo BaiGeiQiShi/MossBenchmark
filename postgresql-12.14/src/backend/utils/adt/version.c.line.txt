@@ -1,0 +1,3 @@
+function:19,23,pgsql_version
+statement:21,23,fbcompound
+statement:22,22,return

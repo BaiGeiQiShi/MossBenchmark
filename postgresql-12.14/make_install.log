@@ -1,0 +1,47 @@
+make -C ./src/backend generated-headers
+make[1]: Entering directory '/postgresql-12.14/src/backend'
+make -C catalog distprep generated-header-symlinks
+make[2]: Entering directory '/postgresql-12.14/src/backend/catalog'
+make[2]: Nothing to be done for 'distprep'.
+make[2]: Nothing to be done for 'generated-header-symlinks'.
+make[2]: Leaving directory '/postgresql-12.14/src/backend/catalog'
+make -C utils distprep generated-header-symlinks
+make[2]: Entering directory '/postgresql-12.14/src/backend/utils'
+make[2]: Nothing to be done for 'distprep'.
+make[2]: Nothing to be done for 'generated-header-symlinks'.
+make[2]: Leaving directory '/postgresql-12.14/src/backend/utils'
+make[1]: Leaving directory '/postgresql-12.14/src/backend'
+make -C src install
+make[1]: Entering directory '/postgresql-12.14/src'
+make -C common install
+make[2]: Entering directory '/postgresql-12.14/src/common'
+/bin/mkdir -p '/postgresql-12.14/pgsql/lib'
+/usr/bin/install -c -m 644  libpgcommon.a '/postgresql-12.14/pgsql/lib/libpgcommon.a'
+/usr/bin/install -c -m 644  libpgcommon_shlib.a '/postgresql-12.14/pgsql/lib/libpgcommon_shlib.a'
+make[2]: Leaving directory '/postgresql-12.14/src/common'
+make -C port install
+make[2]: Entering directory '/postgresql-12.14/src/port'
+/bin/mkdir -p '/postgresql-12.14/pgsql/lib'
+/usr/bin/install -c -m 644  libpgport.a '/postgresql-12.14/pgsql/lib/libpgport.a'
+/usr/bin/install -c -m 644  libpgport_shlib.a '/postgresql-12.14/pgsql/lib/libpgport_shlib.a'
+make[2]: Leaving directory '/postgresql-12.14/src/port'
+make -C timezone install
+make[2]: Entering directory '/postgresql-12.14/src/timezone'
+make -C ../../src/port all
+make[3]: Entering directory '/postgresql-12.14/src/port'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/postgresql-12.14/src/port'
+make -C ../../src/common all
+make[3]: Entering directory '/postgresql-12.14/src/common'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/postgresql-12.14/src/common'
+/bin/mkdir -p '/postgresql-12.14/pgsql/share'
+./zic -d '/postgresql-12.14/pgsql/share/timezone' -p 'US/Eastern' -b fat  ./data/tzdata.zi
+Makefile:58: recipe for target 'install' failed
+make[2]: *** [install] Segmentation fault (core dumped)
+make[2]: Leaving directory '/postgresql-12.14/src/timezone'
+Makefile:42: recipe for target 'install-timezone-recurse' failed
+make[1]: *** [install-timezone-recurse] Error 2
+make[1]: Leaving directory '/postgresql-12.14/src'
+GNUmakefile:11: recipe for target 'install-src-recurse' failed
+make: *** [install-src-recurse] Error 2

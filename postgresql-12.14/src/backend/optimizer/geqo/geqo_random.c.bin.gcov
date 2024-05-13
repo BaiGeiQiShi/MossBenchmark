@@ -1,0 +1,17 @@
+file:/postgresql-12.14/src/backend/optimizer/geqo/geqo_random.c
+function:1,0,placeholder
+lcount:20,1
+lcount:21,1
+lcount:22,1
+lcount:23,1
+lcount:24,1
+lcount:25,1
+lcount:26,1
+lcount:27,1
+lcount:28,1
+lcount:29,1
+lcount:33,1
+lcount:34,1
+lcount:35,1
+lcount:36,1
+lcount:37,1

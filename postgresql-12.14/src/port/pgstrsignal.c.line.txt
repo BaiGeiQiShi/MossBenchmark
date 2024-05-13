@@ -1,0 +1,8 @@
+function:40,65,pg_strsignal
+statement:42,65,fbcompound
+statement:43,43,decl
+statement:49,49,other
+statement:50,53,if
+statement:51,53,compound
+statement:52,52,other
+statement:64,64,return

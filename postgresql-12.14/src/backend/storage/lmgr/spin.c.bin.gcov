@@ -1,0 +1,9 @@
+file:/postgresql-12.14/src/backend/storage/lmgr/spin.c
+function:1,0,placeholder
+lcount:45,1
+lcount:55,1
+lcount:56,1
+lcount:57,1
+lcount:64,1
+lcount:65,1
+lcount:66,1

@@ -1,0 +1,14 @@
+function:18,30,logicalmsg_desc
+statement:20,30,fbcompound
+statement:21,21,decl
+statement:22,22,decl
+statement:24,29,if
+statement:25,29,compound
+statement:26,26,decl
+statement:28,28,other
+function:32,41,logicalmsg_identify
+statement:34,41,fbcompound
+statement:35,38,if
+statement:36,38,compound
+statement:37,37,return
+statement:40,40,return

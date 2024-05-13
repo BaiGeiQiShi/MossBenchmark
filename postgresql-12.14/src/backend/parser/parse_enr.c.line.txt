@@ -1,0 +1,6 @@
+function:19,23,name_matches_visible_ENR
+statement:21,23,fbcompound
+statement:22,22,return
+function:25,29,get_visible_ENR
+statement:27,29,fbcompound
+statement:28,28,return

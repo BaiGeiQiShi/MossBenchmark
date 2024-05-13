@@ -1,0 +1,9 @@
+function:25,50,ExceptionalCondition
+statement:27,50,fbcompound
+statement:28,35,if
+statement:29,31,compound
+statement:30,30,other
+statement:33,35,compound
+statement:34,34,other
+statement:38,38,other
+statement:49,49,other

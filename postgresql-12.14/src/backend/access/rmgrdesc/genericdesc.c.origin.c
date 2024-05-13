@@ -1,0 +1,60 @@
+/*-------------------------------------------------------------------------
+ *
+ * genericdesc.c
+ *	  rmgr descriptor routines for access/transam/generic_xlog.c
+ *
+ *
+ * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * src/backend/access/rmgrdesc/genericdesc.c
+ *
+ *-------------------------------------------------------------------------
+ */
+#include "postgres.h"
+
+#include "access/generic_xlog.h"
+#include "lib/stringinfo.h"
+#include "storage/relfilenode.h"
+
+/*
+ * Description of generic xlog record: write page regions that this record
+ * overrides.
+ */
+void
+generic_desc(StringInfo buf, XLogReaderState *record)
+{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+/*
+ * Identification of generic xlog record: we don't distinguish any subtypes
+ * inside generic xlog records.
+ */
+const char *
+generic_identify(uint8 info)
+{
+
+}

@@ -1,0 +1,7 @@
+function:49,60,geqo_copy
+statement:51,60,fbcompound
+statement:52,52,decl
+statement:54,57,for
+statement:55,57,compound
+statement:56,56,other
+statement:59,59,other

@@ -1,0 +1,23 @@
+#!/bin/bash
+BIN=$1
+OUTDIR=$2
+TIMEOUT=$3
+INDIR=$4
+
+# 初始化环境
+su postgres -m -c whoami
+export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"
+rm -rf ${INDIR}/pgsql/data/*
+
+# 初始化数据库和表
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"DROP DATABASE IF EXISTS isolation_regression\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"CREATE DATABASE isolation_regression TEMPLATE=template0\" postgres >/dev/null"
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/psql -X -c \"ALTER DATABASE isolation_regression SET lc_messages TO 'C';ALTER DATABASE isolation_regression SET lc_monetary TO 'C';ALTER DATABASE isolation_regression SET lc_numeric TO 'C';ALTER DATABASE isolation_regression SET lc_time TO 'C';ALTER DATABASE isolation_regression SET bytea_output TO 'hex';ALTER DATABASE isolation_regression SET timezone_abbreviations TO 'Default';\" isolation_regression >/dev/null"
+
+# 测试
+su postgres -m -c "$INDIR/src/test/isolation/isolationtester dbname=isolation_regression < $INDIR/src/test/isolation/specs/plpgsql-toast.spec &> $OUTDIR/o335"
+
+# 停止服务
+su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"

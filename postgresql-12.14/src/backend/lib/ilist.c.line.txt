@@ -1,0 +1,14 @@
+function:30,52,slist_delete
+statement:32,52,fbcompound
+statement:33,33,decl
+statement:34,34,decl
+statement:35,35,decl
+statement:37,48,while
+statement:38,48,compound
+statement:39,46,if
+statement:40,46,compound
+statement:41,41,other
+statement:45,45,other
+statement:47,47,other
+statement:49,49,other
+statement:51,51,other

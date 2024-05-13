@@ -1,0 +1,6 @@
+#!/bin/bash
+ps -ef | grep /postgresql-12.14/pgsql/bin/postgres | grep -v grep | awk -F' ' '{print $2}' | xargs -n 1 kill -s 9
+ps -ef | grep /postgresql-12.14/pgsql/bin/initdb | grep -v grep | awk -F' ' '{print $2}' | xargs -n 1 kill -s 9 &> /dev/null
+ps -ef | grep /postgresql-12.14/tmp/test_369/whenever | grep -v grep | awk -F' ' '{print $2}' | xargs -n 1 kill -s 9 &> /dev/null
+ps -ef | grep 'postgresql-12.14/pgsql/bin/psql -X -a -q' | grep -v grep | awk -F' ' '{print $2}' | xargs -n 1 kill -s 9 &> /dev/null
+

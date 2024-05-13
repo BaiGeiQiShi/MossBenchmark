@@ -1,0 +1,8 @@
+function:40,51,pg_char_and_wchar_strcmp
+statement:42,51,fbcompound
+statement:43,49,while
+statement:44,49,compound
+statement:45,48,if
+statement:46,48,compound
+statement:47,47,return
+statement:50,50,return

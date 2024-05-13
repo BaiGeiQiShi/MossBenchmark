@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+import os, sys
+
+test_configs = [
+    "test_core.config",
+    "test_plperl.config",
+    "test_plpgsql.config",
+    "test_plpython.config",
+    "test_tcl.config",
+]
+test_isolation = "test_isolation.config"
+test_ecpg = "test_ecpg.config"
+
+test_id = 0
+test_path = ""
+is_path_recorded = False
+database_name = ""
+
+# Additional vars for ECPG
+cc = 'clang'
+cc_params = '-Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -Wno-unused-command-line-argument -fprofile-instr-generate -fcoverage-mapping -pthread -D_REENTRANT -D_THREAD_SAFE -D_POSIX_PTHREAD_SEMANTICS'
+ecpg = f'${{INDIR}}/src/interfaces/ecpg/preproc/ecpg --regression -I${{INDIR}}/src/interfaces/ecpg/include'
+ecpg_params = '-o'
+
+# core & pl
+for config in test_configs:
+    print(f"{test_id} : {config}")
+    with open(config) as lines:
+        is_path_recorded = False
+        database_name = "regression"
+        for line in lines:
+            if line.startswith("path:"):
+                test_path = line.strip()[6:]
+                is_path_recorded = True
+            elif line.startswith("dbname:"):
+                database_name = line.strip()[8:]
+            elif line.startswith("test:") or line.startswith("d_test:"):
+                if not is_path_recorded:
+                    print(f"Require Path ! ({config})")
+                    exit(1)
+                with open(f"kn/test_{test_id}", "w") as test_case:
+                    test_sqls = line.strip().split(" ")[1:]
+                    print("#!/bin/bash", "BIN=$1", "OUTDIR=$2", "TIMEOUT=$3", "INDIR=$4", sep="\n", file=test_case)
+                    print("\n# init environment\nsu postgres -m -c whoami", file=test_case)
+                    print('export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"', file=test_case)
+                    print('rm -rf ${INDIR}/pgsql/data/*', file=test_case)
+                    print("\n# init database and table", file=test_case)
+                    print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"', file=test_case)
+                    print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"', file=test_case)
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"DROP DATABASE IF EXISTS {database_name}\\" postgres >/dev/null"', file=test_case)
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE DATABASE {database_name} TEMPLATE=template0\\" postgres >/dev/null"', file=test_case)
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"ALTER DATABASE {database_name} SET lc_messages TO \'C\';ALTER DATABASE {database_name} SET lc_monetary TO \'C\';ALTER DATABASE {database_name} SET lc_numeric TO \'C\';ALTER DATABASE {database_name} SET lc_time TO \'C\';ALTER DATABASE {database_name} SET bytea_output TO \'hex\';ALTER DATABASE {database_name} SET timezone_abbreviations TO \'Default\';\\" {database_name} >/dev/null"', file=test_case)
+                    if config == 'test_plperl.config':
+                        print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE EXTENSION IF NOT EXISTS plperl\\" {database_name} >/dev/null"', file=test_case)
+                        print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE EXTENSION IF NOT EXISTS plperlu\\" {database_name} >/dev/null"', file=test_case)
+                    elif config == 'test_tcl.config':
+                        print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE EXTENSION IF NOT EXISTS pltcl\\" {database_name} >/dev/null"', file=test_case)
+                    print("\n# start to test", file=test_case)
+                    for test_sql in test_sqls:
+                        if (test_sql == test_sqls[0]):
+                            print(f'su postgres -m -c "${{INDIR}}/pgsql/bin/psql -X -a -q -d {database_name} -v HIDE_TABLEAM=on < $INDIR/{test_path}/{test_sql}.sql &> $OUTDIR/o{test_id}"', file=test_case)
+                        else:
+                            print(f'su postgres -m -c "${{INDIR}}/pgsql/bin/psql -X -a -q -d {database_name} -v HIDE_TABLEAM=on < $INDIR/{test_path}/{test_sql}.sql &>> $OUTDIR/o{test_id}"', file=test_case)
+                    print("\n# stop service", file=test_case)
+                    print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"', file=test_case)
+                os.system(f"chmod 777 kn/test_{test_id}")
+                os.system(f"chown postgres kn/test_{test_id}")
+                test_id += 1
+
+# isolation
+print(f"{test_id} : {test_isolation}")
+with open(test_isolation) as lines:
+    is_path_recorded = False
+    database_name = "isolation_regression"
+    for line in lines:
+        if line.startswith("path:"):
+            test_path = line.strip()[6:]
+            is_path_recorded = True
+        elif line.startswith("dbname:"):
+            database_name = line.strip()[8:]
+        elif line.startswith("test:") or line.startswith("d_test:"):
+            if not is_path_recorded:
+                print(f"Require Path ! ({test_isolation})")
+                exit(1)
+            with open(f"kn/test_{test_id}", "w") as test_case:
+                test_sqls = line.strip().split(" ")[1:]
+                print("#!/bin/bash", "BIN=$1", "OUTDIR=$2", "TIMEOUT=$3", "INDIR=$4", sep="\n", file=test_case)
+                print("\n# 初始化环境\nsu postgres -m -c whoami", file=test_case)
+                print('export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"', file=test_case)
+                print('rm -rf ${INDIR}/pgsql/data/*', file=test_case)
+                print("\n# 初始化数据库和表", file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"', file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"', file=test_case)
+                print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"DROP DATABASE IF EXISTS {database_name}\\" postgres >/dev/null"', file=test_case)
+                print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE DATABASE {database_name} TEMPLATE=template0\\" postgres >/dev/null"', file=test_case)
+                print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"ALTER DATABASE {database_name} SET lc_messages TO \'C\';ALTER DATABASE {database_name} SET lc_monetary TO \'C\';ALTER DATABASE {database_name} SET lc_numeric TO \'C\';ALTER DATABASE {database_name} SET lc_time TO \'C\';ALTER DATABASE {database_name} SET bytea_output TO \'hex\';ALTER DATABASE {database_name} SET timezone_abbreviations TO \'Default\';\\" {database_name} >/dev/null"', file=test_case)
+                print("\n# 测试", file=test_case)
+                for test_sql in test_sqls:
+                    if (test_sql == test_sqls[0]):
+                        print(f'su postgres -m -c "$INDIR/src/test/isolation/isolationtester dbname={database_name} < $INDIR/{test_path}/{test_sql}.spec &> $OUTDIR/o{test_id}"', file=test_case)
+                    else:
+                        print(f'su postgres -m -c "$INDIR/src/test/isolation/isolationtester dbname={database_name} < $INDIR/{test_path}/{test_sql}.spec &>> $OUTDIR/o{test_id}"', file=test_case)
+                print("\n# 停止服务", file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"', file=test_case)
+            os.system(f"chmod 777 kn/test_{test_id}")
+            os.system(f"chown postgres kn/test_{test_id}")
+            test_id += 1  
+            
+# ecpg
+print(f"{test_id} : {test_ecpg}")
+with open(test_ecpg) as lines:
+    for line in lines:
+        if line.startswith("path:"):
+            test_path = line.strip()[6:]
+            is_path_recorded = True
+        elif line.startswith("dbname:"):
+            databases = line.strip()[8:].split(",")
+        elif line.startswith("role:"):
+            roles = line.strip()[6:].split(",")
+        elif line.startswith("encoding:"):
+            sql_encoding = line.strip()[10:]
+        elif line.startswith("test:") or line.startswith("s_test:"):
+            if not is_path_recorded:
+                print(f"Require Path ! ({test_ecpg})")
+                exit(1)
+            test_sql = line.strip().split(": ")[1]
+            if line.startswith("s_test:"):
+                ecpg_params = line.strip().split(": ")[2] + " -o"
+            else:
+                ecpg_params = " -o"
+            with open(f"kn/test_{test_id}", "w") as test_case:
+                print("#!/bin/bash", "BIN=$1", "OUTDIR=$2", "TIMEOUT=$3", "INDIR=$4", sep="\n", file=test_case)
+                print("\n# 初始化环境\nsu postgres -m -c whoami", file=test_case)
+                print('export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"', file=test_case)
+                print('rm -rf ${INDIR}/pgsql/data/*', file=test_case)
+                print("\n# 初始化数据库和表", file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/initdb -D ${INDIR}/pgsql/data --no-clean --no-sync &> $(pwd)/initdb.log"', file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile start >/dev/null || exit 1"', file=test_case)
+                for database in databases:
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"DROP DATABASE IF EXISTS {database}\\" postgres >/dev/null"', file=test_case)
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE DATABASE {database} TEMPLATE=template0 ENCODING=\'{sql_encoding}\'\\" postgres >/dev/null"', file=test_case)
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"ALTER DATABASE {database} SET lc_messages TO \'C\';ALTER DATABASE {database} SET lc_monetary TO \'C\';ALTER DATABASE {database} SET lc_numeric TO \'C\';ALTER DATABASE {database} SET lc_time TO \'C\';ALTER DATABASE {database} SET bytea_output TO \'hex\';ALTER DATABASE {database} SET timezone_abbreviations TO \'Default\';\\" {database} >/dev/null"', file=test_case)
+                for role in roles:
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"CREATE ROLE {role} WITH LOGIN\\" postgres >/dev/null"', file=test_case)
+                    for database in databases:
+                        print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"GRANT ALL ON DATABASE {database} TO {role}\\" postgres >/dev/null"', file=test_case)
+                print("\n# 测试", file=test_case)
+                sql_dist = test_sql.split("/")[0]
+                sql_name = test_sql.split("/")[1]
+                print(f'su postgres -m -c "{ecpg} -I${{INDIR}}/src/interfaces/ecpg/test/{sql_dist} {ecpg_params} {sql_name}.c ${{INDIR}}/{test_path}/{test_sql}.pgc"', file=test_case)
+                print(f'su postgres -m -c "{cc} {cc_params} -I${{INDIR}}/src/interfaces/ecpg/include -I${{INDIR}}/src/interfaces/libpq -I${{INDIR}}/src/include -D_GNU_SOURCE   -c -o {sql_name}.o {sql_name}.c"', file=test_case)
+                print(f'su postgres -m -c "{cc} {cc_params} {sql_name}.o -L${{INDIR}}/src/port -L${{INDIR}}/src/common -L${{INDIR}}/src/interfaces/ecpg/ecpglib -lecpg -L${{INDIR}}/src/interfaces/ecpg/pgtypeslib -lpgtypes -L${{INDIR}}/src/interfaces/libpq -lpq -L${{INDIR}}/src/interfaces/ecpg/compatlib -lecpg_compat   -Wl,--as-needed -Wl,-rpath,\'${{INDIR}}/pgsql/lib\',--enable-new-dtags  -lpgcommon -lpgport -lpthread -lz -lreadline -lrt -lcrypt -ldl -lm   -o {sql_name}"', file=test_case)
+                print(f'su postgres -m -c "${{PWD}}/{sql_name} > {sql_name}.stdout 2> {sql_name}.stderr"', file=test_case)
+                print(f'su postgres -m -c "cat {sql_name}.c {sql_name}.stdout {sql_name}.stderr > $OUTDIR/o{test_id}"', file=test_case)
+                print(f'su postgres -m -c "rm {sql_name}.c {sql_name}.stdout {sql_name}.stderr {sql_name} {sql_name}.o"', file=test_case)
+                for database in databases:
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"DROP DATABASE IF EXISTS {database}\\" postgres >/dev/null"', file=test_case)
+                for role in roles:
+                    print(f'su postgres -m -c "/tmp/${{INDIR}}/pgsql/bin/psql -X -c \\"DROP ROLE IF EXISTS {role}\\" postgres >/dev/null"', file=test_case)
+                print("\n# 停止服务", file=test_case)
+                print('su postgres -m -c "/tmp/${INDIR}/pgsql/bin/pg_ctl -D ${INDIR}/pgsql/data/ -l $(pwd)/logfile stop > /dev/null"', file=test_case)
+            os.system(f"chmod 777 kn/test_{test_id}")
+            os.system(f"chown postgres kn/test_{test_id}")
+            test_id += 1  

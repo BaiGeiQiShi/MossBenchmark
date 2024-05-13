@@ -1,0 +1,15 @@
+function:31,52,escape_single_quotes_ascii
+statement:33,52,fbcompound
+statement:34,34,decl
+statement:35,35,decl
+statement:37,40,if
+statement:38,40,compound
+statement:39,39,return
+statement:42,49,for
+statement:43,49,compound
+statement:44,47,if
+statement:45,47,compound
+statement:46,46,other
+statement:48,48,other
+statement:50,50,other
+statement:51,51,return
