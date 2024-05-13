@@ -1,7 +1,9 @@
 # MossBenchmark
+## chown
+
 Before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```
 
-vim: 
+## vim: 
 
     1.you need to download ncurses library and expect
 
@@ -13,19 +15,22 @@ vim:
 
     4.vim use expect script, and it launch many vim-5.8 thread without tty. Take careful to close them. I 've use `cleanup` script in vim-5.8 directory to do this
 
-bash
+    5. modify the `cleanup` path
+
+## bash
 
 you need to modify path of `lib` in `compile.sh` 
 
-make
+## make
 
 1. you need to modify path of `lib` in `compile.sh`
 2. `date-8.21` and `make-3.79` have crisis. `date-8.12` may change the system time which will be used in `make`'s testscripts. Don't run them together.
 
-mkdir
+## mkdir
 
   Moss use `rsync` to remove garbage files in `/`
+    `apt install rsync`
  
-gzip, bzip2, tar
+## gzip, bzip2, tar
 
   Moss use `chattr +/-i` to keep `/` and working dir unchanged
