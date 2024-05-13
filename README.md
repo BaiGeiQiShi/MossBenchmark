@@ -23,7 +23,9 @@ make
 2. `date-8.21` and `make-3.79` have crisis. `date-8.12` may change the system time which will be used in `make`'s testscripts. Don't run them together.
 
 mkdir
+
   Moss use `rsync` to remove garbage files in `/`
  
 gzip, bzip2, tar
+
   Moss use `chattr +/-i` to keep `/` and working dir unchanged
