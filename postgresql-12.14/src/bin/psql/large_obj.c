@@ -21,8 +21,10 @@ print_lo_result(const char *fmt, ...)
 {
   va_list ap;
 
-  if (!pset.quiet) {
-    if (pset.popt.topt.format == PRINT_HTML) {
+  if (!pset.quiet)
+  {
+    if (pset.popt.topt.format == PRINT_HTML)
+    {
       fputs("<p>", pset.queryFout);
     }
 
@@ -30,14 +32,18 @@ print_lo_result(const char *fmt, ...)
     vfprintf(pset.queryFout, fmt, ap);
     va_end(ap);
 
-    if (pset.popt.topt.format == PRINT_HTML) {
+    if (pset.popt.topt.format == PRINT_HTML)
+    {
       fputs("</p>\n", pset.queryFout);
-    } else {
+    }
+    else
+    {
       fputs("\n", pset.queryFout);
     }
   }
 
-  if (pset.logfile) {
+  if (pset.logfile)
+  {
     va_start(ap, fmt);
     vfprintf(pset.logfile, fmt, ap);
     va_end(ap);
@@ -60,17 +66,20 @@ start_lo_xact(const char *operation, bool *own_transaction)
 
   *own_transaction = false;
 
-  if (!pset.db) {
+  if (!pset.db)
+  {
     pg_log_error("%s: not connected to a database", operation);
     return false;
   }
 
   tstatus = PQtransactionStatus(pset.db);
 
-  switch (tstatus) {
+  switch (tstatus)
+  {
   case PQTRANS_IDLE:
     /* need to start our own xact */
-    if (!(res = PSQLexec("BEGIN"))) {
+    if (!(res = PSQLexec("BEGIN")))
+    {
       return false;
     }
     PQclear(res);
@@ -82,7 +91,7 @@ start_lo_xact(const char *operation, bool *own_transaction)
   case PQTRANS_INERROR:
     pg_log_error("%s: current transaction is aborted", operation);
     return false;
-  default:;
+  default:
     pg_log_error("%s: unknown transaction status", operation);
     return false;
   }
@@ -98,9 +107,11 @@ finish_lo_xact(const char *operation, bool own_transaction)
 {
   PGresult *res;
 
-  if (own_transaction && pset.autocommit) {
+  if (own_transaction && pset.autocommit)
+  {
     /* close out our own xact */
-    if (!(res = PSQLexec("COMMIT"))) {
+    if (!(res = PSQLexec("COMMIT")))
+    {
       res = PSQLexec("ROLLBACK");
       PQclear(res);
       return false;
@@ -119,7 +130,8 @@ fail_lo_xact(const char *operation, bool own_transaction)
 {
   PGresult *res;
 
-  if (own_transaction && pset.autocommit) {
+  if (own_transaction && pset.autocommit)
+  {
     /* close out our own xact */
     res = PSQLexec("ROLLBACK");
     PQclear(res);
@@ -139,7 +151,8 @@ do_lo_export(const char *loid_arg, const char *filename_arg)
   int status;
   bool own_transaction;
 
-  if (!start_lo_xact("\\lo_export", &own_transaction)) {
+  if (!start_lo_xact("\\lo_export", &own_transaction))
+  {
     return false;
   }
 
@@ -148,12 +161,14 @@ do_lo_export(const char *loid_arg, const char *filename_arg)
   ResetCancelConn();
 
   /* of course this status is documented nowhere :( */
-  if (status != 1) {
+  if (status != 1)
+  {
     pg_log_info("%s", PQerrorMessage(pset.db));
     return fail_lo_xact("\\lo_export", own_transaction);
   }
 
-  if (!finish_lo_xact("\\lo_export", own_transaction)) {
+  if (!finish_lo_xact("\\lo_export", own_transaction))
+  {
     return false;
   }
 
@@ -175,7 +190,8 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
   char oidbuf[32];
   bool own_transaction;
 
-  if (!start_lo_xact("\\lo_import", &own_transaction)) {
+  if (!start_lo_xact("\\lo_import", &own_transaction))
+  {
     return false;
   }
 
@@ -183,19 +199,22 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
   loid = lo_import(pset.db, filename_arg);
   ResetCancelConn();
 
-  if (loid == InvalidOid) {
+  if (loid == InvalidOid)
+  {
     pg_log_info("%s", PQerrorMessage(pset.db));
     return fail_lo_xact("\\lo_import", own_transaction);
   }
 
   /* insert description if given */
-  if (comment_arg) {
+  if (comment_arg)
+  {
     char *cmdbuf;
     char *bufptr;
     size_t slen = strlen(comment_arg);
 
     cmdbuf = pg_malloc_extended(slen * 2 + 256, MCXT_ALLOC_NO_OOM);
-    if (!cmdbuf) {
+    if (!cmdbuf)
+    {
       return fail_lo_xact("\\lo_import", own_transaction);
     }
     sprintf(cmdbuf, "COMMENT ON LARGE OBJECT %u IS '", loid);
@@ -203,7 +222,8 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
     bufptr += PQescapeStringConn(pset.db, bufptr, comment_arg, slen, NULL);
     strcpy(bufptr, "'");
 
-    if (!(res = PSQLexec(cmdbuf))) {
+    if (!(res = PSQLexec(cmdbuf)))
+    {
       free(cmdbuf);
       return fail_lo_xact("\\lo_import", own_transaction);
     }
@@ -212,7 +232,8 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
     free(cmdbuf);
   }
 
-  if (!finish_lo_xact("\\lo_import", own_transaction)) {
+  if (!finish_lo_xact("\\lo_import", own_transaction))
+  {
     return false;
   }
 
@@ -236,7 +257,8 @@ do_lo_unlink(const char *loid_arg)
   Oid loid = atooid(loid_arg);
   bool own_transaction;
 
-  if (!start_lo_xact("\\lo_unlink", &own_transaction)) {
+  if (!start_lo_xact("\\lo_unlink", &own_transaction))
+  {
     return false;
   }
 
@@ -244,12 +266,14 @@ do_lo_unlink(const char *loid_arg)
   status = lo_unlink(pset.db, loid);
   ResetCancelConn();
 
-  if (status == -1) {
+  if (status == -1)
+  {
     pg_log_info("%s", PQerrorMessage(pset.db));
     return fail_lo_xact("\\lo_unlink", own_transaction);
   }
 
-  if (!finish_lo_xact("\\lo_unlink", own_transaction)) {
+  if (!finish_lo_xact("\\lo_unlink", own_transaction))
+  {
     return false;
   }
 
@@ -270,14 +294,29 @@ do_lo_list(void)
   char buf[1024];
   printQueryOpt myopt = pset.popt;
 
-  if (pset.sversion >= 90000) {
-    snprintf(buf, sizeof(buf),"SELECT oid as \"%s\",\n  pg_catalog.pg_get_userbyid(lomowner) as \"%s\",\n  pg_catalog.obj_description(oid, 'pg_largeobject') as \"%s\"\n  FROM pg_catalog.pg_largeobject_metadata   ORDER BY oid",gettext_noop("ID"), gettext_noop("Owner"), gettext_noop("Description"));
-  } else {
-    snprintf(buf, sizeof(buf),"SELECT loid as \"%s\",\n  pg_catalog.obj_description(loid, 'pg_largeobject') as \"%s\"\nFROM (SELECT DISTINCT loid FROM pg_catalog.pg_largeobject) x\nORDER BY 1",gettext_noop("ID"), gettext_noop("Description"));
+  if (pset.sversion >= 90000)
+  {
+    snprintf(buf, sizeof(buf),
+        "SELECT oid as \"%s\",\n"
+        "  pg_catalog.pg_get_userbyid(lomowner) as \"%s\",\n"
+        "  pg_catalog.obj_description(oid, 'pg_largeobject') as \"%s\"\n"
+        "  FROM pg_catalog.pg_largeobject_metadata "
+        "  ORDER BY oid",
+        gettext_noop("ID"), gettext_noop("Owner"), gettext_noop("Description"));
+  }
+  else
+  {
+    snprintf(buf, sizeof(buf),
+        "SELECT loid as \"%s\",\n"
+        "  pg_catalog.obj_description(loid, 'pg_largeobject') as \"%s\"\n"
+        "FROM (SELECT DISTINCT loid FROM pg_catalog.pg_largeobject) x\n"
+        "ORDER BY 1",
+        gettext_noop("ID"), gettext_noop("Description"));
   }
 
   res = PSQLexec(buf);
-  if (!res) {
+  if (!res)
+  {
     return false;
   }
 

@@ -257,7 +257,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt, bool
     finfo->fn_stats = TRACK_FUNC_PL; /* ie, track if ALL */
     break;
 
-  default:;
+  default:
     fmgr_info_other_lang(functionId, finfo, procedureTuple);
     finfo->fn_stats = TRACK_FUNC_OFF; /* ie, track if not OFF */
     break;
@@ -349,7 +349,7 @@ fmgr_symbol(Oid functionId, char **mod, char **fn)
     *fn = pstrdup("fmgr_sql");
     break;
 
-  default:;
+  default:
     *mod = NULL;
     *fn = NULL; /* unknown, pass pointer */
     break;
@@ -423,7 +423,7 @@ fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
     /* New style: call directly */
     finfo->fn_addr = user_fn;
     break;
-  default:;
+  default:
     /* Shouldn't get here if fetch_finfo_record did its job */
     elog(ERROR, "unrecognized function API version: %d", inforec->api_version);
     break;
@@ -502,7 +502,7 @@ fetch_finfo_record(void *filehandle, const char *funcname)
   case 1:
     /* OK, no additional fields to validate */
     break;
-  default:;
+  default:
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized API version %d reported by info function \"%s\"", inforec->api_version, infofuncname)));
     break;
   }
@@ -512,8 +512,7 @@ fetch_finfo_record(void *filehandle, const char *funcname)
 }
 
 /*-------------------------------------------------------------------------
- *		Routines for caching lookup information for external C
- *functions.
+ *		Routines for caching lookup information for external C functions.
  *
  * The routines in dfmgr.c are relatively slow, so we try to avoid running
  * them more than once per external function per session.  We use a hash table
@@ -704,8 +703,8 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 
   /* GetUserIdAndSecContext is cheap enough that no harm in a wasted call */
   GetUserIdAndSecContext(&save_userid, &save_sec_context);
-  if (fcache->proconfig)
-  { /* Need a new GUC nesting level */
+  if (fcache->proconfig) /* Need a new GUC nesting level */
+  {
     save_nestlevel = NewGUCNestLevel();
   }
   else

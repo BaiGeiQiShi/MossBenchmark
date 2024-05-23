@@ -110,7 +110,8 @@ c_overpaid(HeapTupleHeader t, /* the current instance of EMP */
   int32 salary;
 
   salary = DatumGetInt32(GetAttributeByName(t, "salary", &isnull));
-  if (isnull) {
+  if (isnull)
+  {
     return false;
   }
   return salary > limit;

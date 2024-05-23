@@ -48,7 +48,8 @@
 #define FLOAT_BIAS 127
 
 /*
- * This table is generated (by the upstream) by PrintFloatLookupTable,* and modified (by us) to add UINT64CONST.
+ * This table is generated (by the upstream) by PrintFloatLookupTable,
+ * and modified (by us) to add UINT64CONST.
  */
 #define FLOAT_POW5_INV_BITCOUNT 59
 static const uint64 FLOAT_POW5_INV_SPLIT[31] = {UINT64CONST(576460752303423489), UINT64CONST(461168601842738791), UINT64CONST(368934881474191033), UINT64CONST(295147905179352826), UINT64CONST(472236648286964522), UINT64CONST(377789318629571618), UINT64CONST(302231454903657294), UINT64CONST(483570327845851670), UINT64CONST(386856262276681336), UINT64CONST(309485009821345069), UINT64CONST(495176015714152110), UINT64CONST(396140812571321688), UINT64CONST(316912650057057351), UINT64CONST(507060240091291761), UINT64CONST(405648192073033409), UINT64CONST(324518553658426727), UINT64CONST(519229685853482763), UINT64CONST(415383748682786211), UINT64CONST(332306998946228969), UINT64CONST(531691198313966350), UINT64CONST(425352958651173080), UINT64CONST(340282366920938464), UINT64CONST(544451787073501542), UINT64CONST(435561429658801234), UINT64CONST(348449143727040987), UINT64CONST(557518629963265579), UINT64CONST(446014903970612463), UINT64CONST(356811923176489971),
@@ -279,7 +280,7 @@ f2d(const uint32 ieeeMantissa, const uint32 ieeeExponent)
       }
       else if (acceptBounds)
       {
-
+        vmIsTrailingZeros = multipleOfPowerOf5(mm, q);
       }
       else
       {
@@ -320,7 +321,7 @@ f2d(const uint32 ieeeMantissa, const uint32 ieeeExponent)
          * mm = mv - 1 - mmShift, so it has 1 trailing 0 bit iff
          * mmShift == 1.
          */
-
+        vmIsTrailingZeros = mmShift == 1;
       }
       else
       {
@@ -359,15 +360,15 @@ f2d(const uint32 ieeeMantissa, const uint32 ieeeExponent)
     }
     if (vmIsTrailingZeros)
     {
-
-
-
-
-
-
-
-
-
+      while (vm % 10 == 0)
+      {
+        vrIsTrailingZeros &= lastRemovedDigit == 0;
+        lastRemovedDigit = (uint8)(vr % 10);
+        vr /= 10;
+        vp /= 10;
+        vm /= 10;
+        ++removed;
+      }
     }
 
     if (vrIsTrailingZeros && lastRemovedDigit == 5 && vr % 2 == 0)
@@ -782,8 +783,8 @@ float_to_shortest_decimal_buf(float f, char *result)
 char *
 float_to_shortest_decimal(float f)
 {
+  char *const result = (char *)palloc(FLOAT_SHORTEST_DECIMAL_LEN);
 
-
-
-
+  float_to_shortest_decimal_buf(f, result);
+  return result;
 }

@@ -45,14 +45,12 @@
  * (bottom arrows are next links, top lines are argument links)
  *
  *								  _____
- *		 _____				  ___/____
- *\				__
+ *		 _____				  ___/____ \				__
  *	  _ /_	  \ 		_____/__/____ \ \	   __    _ /_ \
  *	 / /  \    \	   /	/  /	 \ \ \ 	  /  \  / /  \ \
  * +(LR)  $ .a	$  [](* to *, * to *) 1 5 7 ?(A)  >(LR)   @ 3 .double() .type()
- * |	  |  ^	|  ^|						 ^|
- *^		   ^ |	  |__|
- *|__||________________________||___________________|		   |
+ * |	  |  ^	|  ^|						 ^|					  ^		   ^
+ * |	  |__|	|__||________________________||___________________|		   |
  * |_______________________________________________________________________|
  *
  * Copyright (c) 2019, PostgreSQL Global Development Group
@@ -113,21 +111,21 @@ jsonpath_in(PG_FUNCTION_ARGS)
 Datum
 jsonpath_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  int version = pq_getmsgint(buf, 1);
+  char *str;
+  int nbytes;
 
+  if (version == JSONPATH_VERSION)
+  {
+    str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  }
+  else
+  {
+    elog(ERROR, "unsupported jsonpath version number: %d", version);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return jsonPathFromCstring(str, nbytes);
 }
 
 /*
@@ -149,20 +147,20 @@ jsonpath_out(PG_FUNCTION_ARGS)
 Datum
 jsonpath_send(PG_FUNCTION_ARGS)
 {
+  JsonPath *in = PG_GETARG_JSONPATH_P(0);
+  StringInfoData buf;
+  StringInfoData jtext;
+  int version = JSONPATH_VERSION;
 
+  initStringInfo(&jtext);
+  (void)jsonPathToCstring(&jtext, in, VARSIZE(in));
 
+  pq_begintypsend(&buf);
+  pq_sendint8(&buf, version);
+  pq_sendtext(&buf, jtext.data, jtext.len);
+  pfree(jtext.data);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -265,33 +263,33 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
 
   switch (item->type)
   {
-  case jpiString:;
-  case jpiVariable:;
-  case jpiKey:;
+  case jpiString:
+  case jpiVariable:
+  case jpiKey:
     appendBinaryStringInfo(buf, (char *)&item->value.string.len, sizeof(item->value.string.len));
     appendBinaryStringInfo(buf, item->value.string.val, item->value.string.len);
     appendStringInfoChar(buf, '\0');
     break;
-  case jpiNumeric:;
+  case jpiNumeric:
     appendBinaryStringInfo(buf, (char *)item->value.numeric, VARSIZE(item->value.numeric));
     break;
-  case jpiBool:;
+  case jpiBool:
     appendBinaryStringInfo(buf, (char *)&item->value.boolean, sizeof(item->value.boolean));
     break;
-  case jpiAnd:;
-  case jpiOr:;
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
-  case jpiAdd:;
-  case jpiSub:;
-  case jpiMul:;
-  case jpiDiv:;
-  case jpiMod:;
-  case jpiStartsWith:;
+  case jpiAnd:
+  case jpiOr:
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
+  case jpiAdd:
+  case jpiSub:
+  case jpiMul:
+  case jpiDiv:
+  case jpiMod:
+  case jpiStartsWith:
   {
     /*
      * First, reserve place for left/right arg's positions, then
@@ -308,7 +306,7 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
     *(int32 *)(buf->data + right) = chld - pos;
   }
   break;
-  case jpiLikeRegex:;
+  case jpiLikeRegex:
   {
     int32 offs;
 
@@ -322,14 +320,14 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
     *(int32 *)(buf->data + offs) = chld - pos;
   }
   break;
-  case jpiFilter:;
+  case jpiFilter:
     argNestingLevel++;
     /* FALLTHROUGH */
-  case jpiIsUnknown:;
-  case jpiNot:;
-  case jpiPlus:;
-  case jpiMinus:;
-  case jpiExists:;
+  case jpiIsUnknown:
+  case jpiNot:
+  case jpiPlus:
+  case jpiMinus:
+  case jpiExists:
   {
     int32 arg = reserveSpaceForItemPointer(buf);
 
@@ -337,26 +335,26 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
     *(int32 *)(buf->data + arg) = chld - pos;
   }
   break;
-  case jpiNull:;
+  case jpiNull:
     break;
-  case jpiRoot:;
+  case jpiRoot:
     break;
-  case jpiAnyArray:;
-  case jpiAnyKey:;
+  case jpiAnyArray:
+  case jpiAnyKey:
     break;
-  case jpiCurrent:;
+  case jpiCurrent:
     if (nestingLevel <= 0)
     {
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("@ is not allowed in root expressions")));
     }
     break;
-  case jpiLast:;
+  case jpiLast:
     if (!insideArraySubscript)
     {
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("LAST is allowed only in array subscripts")));
     }
     break;
-  case jpiIndexArray:;
+  case jpiIndexArray:
   {
     int32 nelems = item->value.array.nelems;
     int offset;
@@ -390,20 +388,20 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
     }
   }
   break;
-  case jpiAny:;
+  case jpiAny:
     appendBinaryStringInfo(buf, (char *)&item->value.anybounds.first, sizeof(item->value.anybounds.first));
     appendBinaryStringInfo(buf, (char *)&item->value.anybounds.last, sizeof(item->value.anybounds.last));
     break;
-  case jpiType:;
-  case jpiSize:;
-  case jpiAbs:;
-  case jpiFloor:;
-  case jpiCeiling:;
-  case jpiDouble:;
-  case jpiKeyValue:;
+  case jpiType:
+  case jpiSize:
+  case jpiAbs:
+  case jpiFloor:
+  case jpiCeiling:
+  case jpiDouble:
+  case jpiKeyValue:
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized jsonpath item type: %d", item->type);
   }
 
   if (item->next)
@@ -423,16 +421,16 @@ alignStringInfoInt(StringInfo buf)
 {
   switch (INTALIGN(buf->len) - buf->len)
   {
-  case 3:;
+  case 3:
     appendStringInfoCharMacro(buf, 0);
     /* FALLTHROUGH */
-  case 2:;
+  case 2:
     appendStringInfoCharMacro(buf, 0);
     /* FALLTHROUGH */
-  case 1:;
+  case 1:
     appendStringInfoCharMacro(buf, 0);
     /* FALLTHROUGH */
-  default:;;
+  default:
     break;
   }
 }
@@ -466,27 +464,27 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
 
   switch (v->type)
   {
-  case jpiNull:;
+  case jpiNull:
     appendStringInfoString(buf, "null");
     break;
-  case jpiKey:;
+  case jpiKey:
     if (inKey)
     {
       appendStringInfoChar(buf, '.');
     }
     escape_json(buf, jspGetString(v, NULL));
     break;
-  case jpiString:;
+  case jpiString:
     escape_json(buf, jspGetString(v, NULL));
     break;
-  case jpiVariable:;
+  case jpiVariable:
     appendStringInfoChar(buf, '$');
     escape_json(buf, jspGetString(v, NULL));
     break;
-  case jpiNumeric:;
+  case jpiNumeric:
     appendStringInfoString(buf, DatumGetCString(DirectFunctionCall1(numeric_out, NumericGetDatum(jspGetNumeric(v)))));
     break;
-  case jpiBool:;
+  case jpiBool:
     if (jspGetBool(v))
     {
       appendBinaryStringInfo(buf, "true", 4);
@@ -496,20 +494,20 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
       appendBinaryStringInfo(buf, "false", 5);
     }
     break;
-  case jpiAnd:;
-  case jpiOr:;
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
-  case jpiAdd:;
-  case jpiSub:;
-  case jpiMul:;
-  case jpiDiv:;
-  case jpiMod:;
-  case jpiStartsWith:;
+  case jpiAnd:
+  case jpiOr:
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
+  case jpiAdd:
+  case jpiSub:
+  case jpiMul:
+  case jpiDiv:
+  case jpiMod:
+  case jpiStartsWith:
     if (printBracketes)
     {
       appendStringInfoChar(buf, '(');
@@ -526,10 +524,10 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
       appendStringInfoChar(buf, ')');
     }
     break;
-  case jpiLikeRegex:;
+  case jpiLikeRegex:
     if (printBracketes)
     {
-
+      appendStringInfoChar(buf, '(');
     }
 
     jspInitByBuffer(&elem, v->base, v->content.like_regex.expr);
@@ -569,11 +567,11 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
 
     if (printBracketes)
     {
-
+      appendStringInfoChar(buf, ')');
     }
     break;
-  case jpiPlus:;
-  case jpiMinus:;
+  case jpiPlus:
+  case jpiMinus:
     if (printBracketes)
     {
       appendStringInfoChar(buf, '(');
@@ -586,52 +584,52 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
       appendStringInfoChar(buf, ')');
     }
     break;
-  case jpiFilter:;
+  case jpiFilter:
     appendBinaryStringInfo(buf, "?(", 2);
     jspGetArg(v, &elem);
     printJsonPathItem(buf, &elem, false, false);
     appendStringInfoChar(buf, ')');
     break;
-  case jpiNot:;
+  case jpiNot:
     appendBinaryStringInfo(buf, "!(", 2);
     jspGetArg(v, &elem);
     printJsonPathItem(buf, &elem, false, false);
     appendStringInfoChar(buf, ')');
     break;
-  case jpiIsUnknown:;
+  case jpiIsUnknown:
     appendStringInfoChar(buf, '(');
     jspGetArg(v, &elem);
     printJsonPathItem(buf, &elem, false, false);
     appendBinaryStringInfo(buf, ") is unknown", 12);
     break;
-  case jpiExists:;
+  case jpiExists:
     appendBinaryStringInfo(buf, "exists (", 8);
     jspGetArg(v, &elem);
     printJsonPathItem(buf, &elem, false, false);
     appendStringInfoChar(buf, ')');
     break;
-  case jpiCurrent:;
+  case jpiCurrent:
     Assert(!inKey);
     appendStringInfoChar(buf, '@');
     break;
-  case jpiRoot:;
+  case jpiRoot:
     Assert(!inKey);
     appendStringInfoChar(buf, '$');
     break;
-  case jpiLast:;
+  case jpiLast:
     appendBinaryStringInfo(buf, "last", 4);
     break;
-  case jpiAnyArray:;
+  case jpiAnyArray:
     appendBinaryStringInfo(buf, "[*]", 3);
     break;
-  case jpiAnyKey:;
+  case jpiAnyKey:
     if (inKey)
     {
       appendStringInfoChar(buf, '.');
     }
     appendStringInfoChar(buf, '*');
     break;
-  case jpiIndexArray:;
+  case jpiIndexArray:
     appendStringInfoChar(buf, '[');
     for (i = 0; i < v->content.array.nelems; i++)
     {
@@ -654,7 +652,7 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
     }
     appendStringInfoChar(buf, ']');
     break;
-  case jpiAny:;
+  case jpiAny:
     if (inKey)
     {
       appendStringInfoChar(buf, '.');
@@ -688,29 +686,29 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
       appendStringInfo(buf, "**{%u to %u}", v->content.anybounds.first, v->content.anybounds.last);
     }
     break;
-  case jpiType:;
+  case jpiType:
     appendBinaryStringInfo(buf, ".type()", 7);
     break;
-  case jpiSize:;
+  case jpiSize:
     appendBinaryStringInfo(buf, ".size()", 7);
     break;
-  case jpiAbs:;
+  case jpiAbs:
     appendBinaryStringInfo(buf, ".abs()", 6);
     break;
-  case jpiFloor:;
+  case jpiFloor:
     appendBinaryStringInfo(buf, ".floor()", 8);
     break;
-  case jpiCeiling:;
+  case jpiCeiling:
     appendBinaryStringInfo(buf, ".ceiling()", 10);
     break;
-  case jpiDouble:;
+  case jpiDouble:
     appendBinaryStringInfo(buf, ".double()", 9);
     break;
-  case jpiKeyValue:;
+  case jpiKeyValue:
     appendBinaryStringInfo(buf, ".keyvalue()", 11);
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized jsonpath item type: %d", v->type);
   }
 
   if (jspGetNext(v, &elem))
@@ -724,55 +722,55 @@ jspOperationName(JsonPathItemType type)
 {
   switch (type)
   {
-  case jpiAnd:;
+  case jpiAnd:
     return "&&";
-  case jpiOr:;
+  case jpiOr:
     return "||";
-  case jpiEqual:;
+  case jpiEqual:
     return "==";
-  case jpiNotEqual:;
+  case jpiNotEqual:
     return "!=";
-  case jpiLess:;
+  case jpiLess:
     return "<";
-  case jpiGreater:;
+  case jpiGreater:
     return ">";
-  case jpiLessOrEqual:;
+  case jpiLessOrEqual:
     return "<=";
-  case jpiGreaterOrEqual:;
+  case jpiGreaterOrEqual:
     return ">=";
-  case jpiPlus:;
-  case jpiAdd:;
+  case jpiPlus:
+  case jpiAdd:
     return "+";
-  case jpiMinus:;
-  case jpiSub:;
+  case jpiMinus:
+  case jpiSub:
     return "-";
-  case jpiMul:;
+  case jpiMul:
     return "*";
-  case jpiDiv:;
+  case jpiDiv:
     return "/";
-  case jpiMod:;
+  case jpiMod:
     return "%";
-  case jpiStartsWith:;
+  case jpiStartsWith:
     return "starts with";
-  case jpiLikeRegex:;
-
-  case jpiType:;
-
-  case jpiSize:;
+  case jpiLikeRegex:
+    return "like_regex";
+  case jpiType:
+    return "type";
+  case jpiSize:
     return "size";
-  case jpiKeyValue:;
+  case jpiKeyValue:
     return "keyvalue";
-  case jpiDouble:;
+  case jpiDouble:
     return "double";
-  case jpiAbs:;
+  case jpiAbs:
     return "abs";
-  case jpiFloor:;
+  case jpiFloor:
     return "floor";
-  case jpiCeiling:;
+  case jpiCeiling:
     return "ceiling";
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized jsonpath item type: %d", type);
+    return NULL;
   }
 }
 
@@ -781,29 +779,29 @@ operationPriority(JsonPathItemType op)
 {
   switch (op)
   {
-  case jpiOr:;
+  case jpiOr:
     return 0;
-  case jpiAnd:;
+  case jpiAnd:
     return 1;
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
-  case jpiStartsWith:;
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
+  case jpiStartsWith:
     return 2;
-  case jpiAdd:;
-  case jpiSub:;
+  case jpiAdd:
+  case jpiSub:
     return 3;
-  case jpiMul:;
-  case jpiDiv:;
-  case jpiMod:;
+  case jpiMul:
+  case jpiDiv:
+  case jpiMod:
     return 4;
-  case jpiPlus:;
-  case jpiMinus:;
+  case jpiPlus:
+  case jpiMinus:
     return 5;
-  default:;;
+  default:
     return 6;
   }
 }
@@ -859,70 +857,70 @@ jspInitByBuffer(JsonPathItem *v, char *base, int32 pos)
 
   switch (v->type)
   {
-  case jpiNull:;
-  case jpiRoot:;
-  case jpiCurrent:;
-  case jpiAnyArray:;
-  case jpiAnyKey:;
-  case jpiType:;
-  case jpiSize:;
-  case jpiAbs:;
-  case jpiFloor:;
-  case jpiCeiling:;
-  case jpiDouble:;
-  case jpiKeyValue:;
-  case jpiLast:;
+  case jpiNull:
+  case jpiRoot:
+  case jpiCurrent:
+  case jpiAnyArray:
+  case jpiAnyKey:
+  case jpiType:
+  case jpiSize:
+  case jpiAbs:
+  case jpiFloor:
+  case jpiCeiling:
+  case jpiDouble:
+  case jpiKeyValue:
+  case jpiLast:
     break;
-  case jpiKey:;
-  case jpiString:;
-  case jpiVariable:;
+  case jpiKey:
+  case jpiString:
+  case jpiVariable:
     read_int32(v->content.value.datalen, base, pos);
     /* FALLTHROUGH */
-  case jpiNumeric:;
-  case jpiBool:;
+  case jpiNumeric:
+  case jpiBool:
     v->content.value.data = base + pos;
     break;
-  case jpiAnd:;
-  case jpiOr:;
-  case jpiAdd:;
-  case jpiSub:;
-  case jpiMul:;
-  case jpiDiv:;
-  case jpiMod:;
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
-  case jpiStartsWith:;
+  case jpiAnd:
+  case jpiOr:
+  case jpiAdd:
+  case jpiSub:
+  case jpiMul:
+  case jpiDiv:
+  case jpiMod:
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
+  case jpiStartsWith:
     read_int32(v->content.args.left, base, pos);
     read_int32(v->content.args.right, base, pos);
     break;
-  case jpiLikeRegex:;
+  case jpiLikeRegex:
     read_int32(v->content.like_regex.flags, base, pos);
     read_int32(v->content.like_regex.expr, base, pos);
     read_int32(v->content.like_regex.patternlen, base, pos);
     v->content.like_regex.pattern = base + pos;
     break;
-  case jpiNot:;
-  case jpiExists:;
-  case jpiIsUnknown:;
-  case jpiPlus:;
-  case jpiMinus:;
-  case jpiFilter:;
+  case jpiNot:
+  case jpiExists:
+  case jpiIsUnknown:
+  case jpiPlus:
+  case jpiMinus:
+  case jpiFilter:
     read_int32(v->content.arg, base, pos);
     break;
-  case jpiIndexArray:;
+  case jpiIndexArray:
     read_int32(v->content.array.nelems, base, pos);
     read_int32_n(v->content.array.elems, base, pos, v->content.array.nelems * 2);
     break;
-  case jpiAny:;
+  case jpiAny:
     read_int32(v->content.anybounds.first, base, pos);
     read_int32(v->content.anybounds.last, base, pos);
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized jsonpath item type: %d", v->type);
   }
 }
 

@@ -226,7 +226,7 @@ pg_b64_decode(const char *src, int len, char *dst)
     /* Leave if a whitespace is found */
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
     {
-
+      return -1;
     }
 
     if (c == '=')
@@ -248,7 +248,7 @@ pg_b64_decode(const char *src, int len, char *dst)
            * Unexpected "=" character found while decoding base64
            * sequence.
            */
-
+          return -1;
         }
       }
       b = 0;
@@ -263,7 +263,7 @@ pg_b64_decode(const char *src, int len, char *dst)
       if (b < 0)
       {
         /* invalid symbol found */
-
+        return -1;
       }
     }
     /* add it to buffer */
@@ -291,7 +291,7 @@ pg_b64_decode(const char *src, int len, char *dst)
      * base64 end sequence is invalid.  Input data is missing padding, is
      * truncated or is otherwise corrupted.
      */
-
+    return -1;
   }
 
   return p - dst;

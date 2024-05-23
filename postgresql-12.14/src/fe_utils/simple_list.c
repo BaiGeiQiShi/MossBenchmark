@@ -30,9 +30,12 @@ simple_oid_list_append(SimpleOidList *list, Oid val)
   cell->next = NULL;
   cell->val = val;
 
-  if (list->tail) {
+  if (list->tail)
+  {
     list->tail->next = cell;
-  } else {
+  }
+  else
+  {
     list->head = cell;
   }
   list->tail = cell;
@@ -46,8 +49,10 @@ simple_oid_list_member(SimpleOidList *list, Oid val)
 {
   SimpleOidListCell *cell;
 
-  for (cell = list->head; cell; cell = cell->next) {
-    if (cell->val == val) {
+  for (cell = list->head; cell; cell = cell->next)
+  {
+    if (cell->val == val)
+    {
       return true;
     }
   }
@@ -70,9 +75,12 @@ simple_string_list_append(SimpleStringList *list, const char *val)
   cell->touched = false;
   strcpy(cell->val, val);
 
-  if (list->tail) {
+  if (list->tail)
+  {
     list->tail->next = cell;
-  } else {
+  }
+  else
+  {
     list->head = cell;
   }
   list->tail = cell;
@@ -88,8 +96,10 @@ simple_string_list_member(SimpleStringList *list, const char *val)
 {
   SimpleStringListCell *cell;
 
-  for (cell = list->head; cell; cell = cell->next) {
-    if (strcmp(cell->val, val) == 0) {
+  for (cell = list->head; cell; cell = cell->next)
+  {
+    if (strcmp(cell->val, val) == 0)
+    {
       cell->touched = true;
       return true;
     }
@@ -105,8 +115,10 @@ simple_string_list_not_touched(SimpleStringList *list)
 {
   SimpleStringListCell *cell;
 
-  for (cell = list->head; cell; cell = cell->next) {
-    if (!cell->touched) {
+  for (cell = list->head; cell; cell = cell->next)
+  {
+    if (!cell->touched)
+    {
       return cell->val;
     }
   }
@@ -127,9 +139,12 @@ simple_ptr_list_append(SimplePtrList *list, void *ptr)
   cell->next = NULL;
   cell->ptr = ptr;
 
-  if (list->tail) {
+  if (list->tail)
+  {
     list->tail->next = cell;
-  } else {
+  }
+  else
+  {
     list->head = cell;
   }
   list->tail = cell;

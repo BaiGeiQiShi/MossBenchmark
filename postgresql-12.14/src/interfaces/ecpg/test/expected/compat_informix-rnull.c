@@ -84,17 +84,19 @@ main(void)
     ECPGconnect(__LINE__, 1, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 29 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 29 "rnull.pgc"
 
   {
-    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal,"create table test ( id int , c char ( 10 ) , s smallint , i int , b bool , f float , l bigint , dbl double precision , dec decimal , dat date , tmp timestamptz )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "create table test ( id int , c char ( 10 ) , s smallint , i int , b bool , f float , l bigint , dbl double precision , dec decimal , dat date , tmp timestamptz )", ECPGt_EOIT, ECPGt_EORT);
 #line 33 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -104,17 +106,19 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 34 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 34 "rnull.pgc"
 
   {
-    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal,"insert into test ( id , c , s , i , b , f , l , dbl ) values ( 1 , $1  , $2  , $3  , $4  , $5  , $6  , $7  )",ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "insert into test ( id , c , s , i , b , f , l , dbl ) values ( 1 , $1  , $2  , $3  , $4  , $5  , $6  , $7  )", ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 38 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -124,7 +128,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 39 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -142,10 +147,12 @@ main(void)
   rsetnull(CDTIMETYPE, (char *)&tmp);
 
   {
-    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal,"insert into test ( id , c , s , i , b , f , l , dbl , dec , dat , tmp ) values ( 2 , $1  , $2  , $3  , $4  , $5  , $6  , $7  , $8  , $9  , $10  )",ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "insert into test ( id , c , s , i , b , f , l , dbl , dec , dat , tmp ) values ( 2 , $1  , $2  , $3  , $4  , $5  , $6  , $7  , $8  , $9  , $10  )", ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date),
+        ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 54 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -155,7 +162,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 55 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -164,10 +172,12 @@ main(void)
   printf("first select\n");
 
   {
-    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal,"select c , s , i , b , f , l , dbl , dec , dat , tmp from test where id = 1",ECPGt_EOIT, ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "select c , s , i , b , f , l , dbl , dec , dat , tmp from test where id = 1", ECPGt_EOIT, ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp,
+        &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 61 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -187,10 +197,12 @@ main(void)
   printf("second select\n");
 
   {
-    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal,"select c , s , i , b , f , l , dbl , dec , dat , tmp from test where id = 2",ECPGt_EOIT, ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "select c , s , i , b , f , l , dbl , dec , dat , tmp from test where id = 2", ECPGt_EOIT, ECPGt_char, (c), (long)sizeof("abc"), (long)1, (sizeof("abc")) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(s), (long)1, (long)1, sizeof(short), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bool, &(b), (long)1, (long)1, sizeof(bool), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(f), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_long, &(l), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_double, &(dbl), (long)1, (long)1, sizeof(double), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_decimal, &(dec), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_date, &(dat), (long)1, (long)1, sizeof(date), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp,
+        &(tmp), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 78 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -211,7 +223,8 @@ main(void)
     ECPGdo(__LINE__, 1, 0, NULL, 0, ECPGst_normal, "drop table test", ECPGt_EOIT, ECPGt_EORT);
 #line 91 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -221,7 +234,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 92 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -231,7 +245,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 94 "rnull.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

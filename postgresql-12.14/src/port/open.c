@@ -26,7 +26,8 @@
 static int
 openFlagsToCreateFileFlags(int openFlags)
 {
-  switch (openFlags & (O_CREAT | O_TRUNC | O_EXCL)) {
+  switch (openFlags & (O_CREAT | O_TRUNC | O_EXCL))
+  {
     /* O_EXCL is meaningless without O_CREAT */
   case 0:
   case O_EXCL:
@@ -80,7 +81,8 @@ pgwin32_open(const char *fileName, int fileFlags, ...)
    * defined make sure that the default mode maps with what versions older
    * than 12 have been doing.
    */
-  if ((fileFlags & O_BINARY) == 0) {
+  if ((fileFlags & O_BINARY) == 0)
+  {
     fileFlags |= O_TEXT;
   }
 #endif
@@ -93,7 +95,8 @@ pgwin32_open(const char *fileName, int fileFlags, ...)
               /* cannot use O_RDONLY, as it == 0 */
               (fileFlags & O_RDWR) ? (GENERIC_WRITE | GENERIC_READ) : ((fileFlags & O_WRONLY) ? GENERIC_WRITE : GENERIC_READ),
               /* These flags allow concurrent rename/unlink */
-              (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), &sa, openFlagsToCreateFileFlags(fileFlags), FILE_ATTRIBUTE_NORMAL | ((fileFlags & O_RANDOM) ? FILE_FLAG_RANDOM_ACCESS : 0) | ((fileFlags & O_SEQUENTIAL) ? FILE_FLAG_SEQUENTIAL_SCAN : 0) | ((fileFlags & _O_SHORT_LIVED) ? FILE_ATTRIBUTE_TEMPORARY : 0) | ((fileFlags & O_TEMPORARY) ? FILE_FLAG_DELETE_ON_CLOSE : 0) | ((fileFlags & O_DIRECT) ? FILE_FLAG_NO_BUFFERING : 0) | ((fileFlags & O_DSYNC) ? FILE_FLAG_WRITE_THROUGH : 0), NULL)) == INVALID_HANDLE_VALUE) {
+              (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), &sa, openFlagsToCreateFileFlags(fileFlags), FILE_ATTRIBUTE_NORMAL | ((fileFlags & O_RANDOM) ? FILE_FLAG_RANDOM_ACCESS : 0) | ((fileFlags & O_SEQUENTIAL) ? FILE_FLAG_SEQUENTIAL_SCAN : 0) | ((fileFlags & _O_SHORT_LIVED) ? FILE_ATTRIBUTE_TEMPORARY : 0) | ((fileFlags & O_TEMPORARY) ? FILE_FLAG_DELETE_ON_CLOSE : 0) | ((fileFlags & O_DIRECT) ? FILE_FLAG_NO_BUFFERING : 0) | ((fileFlags & O_DSYNC) ? FILE_FLAG_WRITE_THROUGH : 0), NULL)) == INVALID_HANDLE_VALUE)
+  {
     /*
      * Sharing violation or locking error can indicate antivirus, backup
      * or similar software that's locking the file.  Wait a bit and try
@@ -101,14 +104,17 @@ pgwin32_open(const char *fileName, int fileFlags, ...)
      */
     DWORD err = GetLastError();
 
-    if (err == ERROR_SHARING_VIOLATION || err == ERROR_LOCK_VIOLATION) {
+    if (err == ERROR_SHARING_VIOLATION || err == ERROR_LOCK_VIOLATION)
+    {
 #ifndef FRONTEND
-      if (loops == 50) {
-        ereport(LOG, (errmsg("could not open file \"%s\": %s", fileName, (err == ERROR_SHARING_VIOLATION) ? _("sharing violation") : _("lock violation")), errdetail("Continuing to retry for 30 seconds."),                         errhint("You might have antivirus, backup, or similar software interfering with the database system.")));
+      if (loops == 50)
+      {
+        ereport(LOG, (errmsg("could not open file \"%s\": %s", fileName, (err == ERROR_SHARING_VIOLATION) ? _("sharing violation") : _("lock violation")), errdetail("Continuing to retry for 30 seconds."), errhint("You might have antivirus, backup, or similar software interfering with the database system.")));
       }
 #endif
 
-      if (loops < 300) {
+      if (loops < 300)
+      {
         pg_usleep(100000);
         loops++;
         continue;
@@ -131,11 +137,14 @@ pgwin32_open(const char *fileName, int fileFlags, ...)
      * with a containing directory, which we hope will never happen in any
      * performance-critical code paths.
      */
-    if (err == ERROR_ACCESS_DENIED) {
-      if (loops < 10) {
+    if (err == ERROR_ACCESS_DENIED)
+    {
+      if (loops < 10)
+      {
         struct stat st;
 
-        if (stat(fileName, &st) != 0) {
+        if (stat(fileName, &st) != 0)
+        {
           pg_usleep(100000);
           loops++;
           continue;
@@ -148,9 +157,12 @@ pgwin32_open(const char *fileName, int fileFlags, ...)
   }
 
   /* _open_osfhandle will, on error, set errno accordingly */
-  if ((fd = _open_osfhandle((intptr_t)h, fileFlags & O_APPEND)) < 0) {
+  if ((fd = _open_osfhandle((intptr_t)h, fileFlags & O_APPEND)) < 0)
+  {
     CloseHandle(h); /* will not affect errno */
-  } else if (fileFlags & (O_TEXT | O_BINARY) && _setmode(fd, fileFlags & (O_TEXT | O_BINARY)) < 0) {
+  }
+  else if (fileFlags & (O_TEXT | O_BINARY) && _setmode(fd, fileFlags & (O_TEXT | O_BINARY)) < 0)
+  {
     _close(fd);
     return -1;
   }
@@ -164,29 +176,39 @@ pgwin32_fopen(const char *fileName, const char *mode)
   int openmode = 0;
   int fd;
 
-  if (strstr(mode, "r+")) {
+  if (strstr(mode, "r+"))
+  {
     openmode |= O_RDWR;
-  } else if (strchr(mode, 'r')) {
+  }
+  else if (strchr(mode, 'r'))
+  {
     openmode |= O_RDONLY;
   }
-  if (strstr(mode, "w+")) {
+  if (strstr(mode, "w+"))
+  {
     openmode |= O_RDWR | O_CREAT | O_TRUNC;
-  } else if (strchr(mode, 'w')) {
+  }
+  else if (strchr(mode, 'w'))
+  {
     openmode |= O_WRONLY | O_CREAT | O_TRUNC;
   }
-  if (strchr(mode, 'a')) {
+  if (strchr(mode, 'a'))
+  {
     openmode |= O_WRONLY | O_CREAT | O_APPEND;
   }
 
-  if (strchr(mode, 'b')) {
+  if (strchr(mode, 'b'))
+  {
     openmode |= O_BINARY;
   }
-  if (strchr(mode, 't')) {
+  if (strchr(mode, 't'))
+  {
     openmode |= O_TEXT;
   }
 
   fd = pgwin32_open(fileName, openmode);
-  if (fd == -1) {
+  if (fd == -1)
+  {
     return NULL;
   }
   return _fdopen(fd, mode);

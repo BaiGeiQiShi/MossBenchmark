@@ -124,7 +124,7 @@ smgrshutdown(int code, Datum arg)
   {
     if (smgrsw[i].smgr_shutdown)
     {
-
+      smgrsw[i].smgr_shutdown();
     }
   }
 }
@@ -206,7 +206,7 @@ smgrsetowner(SMgrRelation *owner, SMgrRelation reln)
    */
   if (reln->smgr_owner)
   {
-
+    *(reln->smgr_owner) = NULL;
   }
   else
   {
@@ -225,20 +225,20 @@ smgrsetowner(SMgrRelation *owner, SMgrRelation reln)
 void
 smgrclearowner(SMgrRelation *owner, SMgrRelation reln)
 {
+  /* Do nothing if the SMgrRelation object is not owned by the owner */
+  if (reln->smgr_owner != owner)
+  {
+    return;
+  }
 
+  /* unset the owner's reference */
+  *owner = NULL;
 
+  /* unset our reference to the owner */
+  reln->smgr_owner = NULL;
 
-
-
-
-
-
-
-
-
-
-
-
+  /* add to list of unowned relations */
+  dlist_push_tail(&unowned_relns, &reln->node);
 }
 
 /*
@@ -273,7 +273,7 @@ smgrclose(SMgrRelation reln)
 
   if (hash_search(SMgrRelationHash, (void *)&(reln->smgr_rnode), HASH_REMOVE, NULL) == NULL)
   {
-
+    elog(ERROR, "SMgrRelation hashtable corrupted");
   }
 
   /*
@@ -354,7 +354,7 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
    */
   if (isRedo && reln->md_num_open_segs[forknum] > 0)
   {
-
+    return;
   }
 
   /*
@@ -374,73 +374,73 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 /*
  *	smgrdounlink() -- Immediately unlink all forks of a relation.
  *
- *		All forks of the relation are removed from the store.  This
- *should not be used during transactional operations, since it can't be undone.
+ *		All forks of the relation are removed from the store.  This should
+ *		not be used during transactional operations, since it can't be undone.
  *
- *		If isRedo is true, it is okay for the underlying file(s) to be
- *gone already.
+ *		If isRedo is true, it is okay for the underlying file(s) to be gone
+ *		already.
  *
- *		This is equivalent to calling smgrdounlinkfork for each fork,
- *but it's significantly quicker so should be preferred when possible.
+ *		This is equivalent to calling smgrdounlinkfork for each fork, but
+ *		it's significantly quicker so should be preferred when possible.
  */
 void
 smgrdounlink(SMgrRelation reln, bool isRedo)
 {
+  RelFileNodeBackend rnode = reln->smgr_rnode;
+  int which = reln->smgr_which;
+  ForkNumber forknum;
 
+  /* Close the forks at smgr level */
+  for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
+  {
+    smgrsw[which].smgr_close(reln, forknum);
+  }
 
+  /*
+   * Get rid of any remaining buffers for the relation.  bufmgr will just
+   * drop them without bothering to write the contents.
+   */
+  DropRelFileNodesAllBuffers(&rnode, 1);
 
+  /*
+   * It'd be nice to tell the stats collector to forget it immediately, too.
+   * But we can't because we don't know the OID (and in cases involving
+   * relfilenode swaps, it's not always clear which table OID to forget,
+   * anyway).
+   */
 
+  /*
+   * Send a shared-inval message to force other backends to close any
+   * dangling smgr references they may have for this rel.  We should do this
+   * before starting the actual unlinking, in case we fail partway through
+   * that step.  Note that the sinval message will eventually come back to
+   * this backend, too, and thereby provide a backstop that we closed our
+   * own smgr rel.
+   */
+  CacheInvalidateSmgr(rnode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Delete the physical file(s).
+   *
+   * Note: smgr_unlink must treat deletion failure as a WARNING, not an
+   * ERROR, because we've already decided to commit or abort the current
+   * xact.
+   */
+  smgrsw[which].smgr_unlink(rnode, InvalidForkNumber, isRedo);
 }
 
 /*
  *	smgrdounlinkall() -- Immediately unlink all forks of all given relations
  *
- *		All forks of all given relations are removed from the store.
- *This should not be used during transactional operations, since it can't be
+ *		All forks of all given relations are removed from the store.  This
+ *		should not be used during transactional operations, since it can't be
  *		undone.
  *
- *		If isRedo is true, it is okay for the underlying file(s) to be
- *gone already.
+ *		If isRedo is true, it is okay for the underlying file(s) to be gone
+ *		already.
  *
- *		This is equivalent to calling smgrdounlink for each relation,
- *but it's significantly quicker so should be preferred when possible.
+ *		This is equivalent to calling smgrdounlink for each relation, but it's
+ *		significantly quicker so should be preferred when possible.
  */
 void
 smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
@@ -451,7 +451,7 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
 
   if (nrels == 0)
   {
-
+    return;
   }
 
   /*
@@ -521,8 +521,8 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
 /*
  *	smgrdounlinkfork() -- Immediately unlink one fork of a relation.
  *
- *		The specified fork of the relation is removed from the store.
- *This should not be used during transactional operations, since it can't be
+ *		The specified fork of the relation is removed from the store.  This
+ *		should not be used during transactional operations, since it can't be
  *		undone.
  *
  *		If isRedo is true, it is okay for the underlying file to be gone
@@ -531,43 +531,43 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
 void
 smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 {
+  RelFileNodeBackend rnode = reln->smgr_rnode;
+  int which = reln->smgr_which;
 
+  /* Close the fork at smgr level */
+  smgrsw[which].smgr_close(reln, forknum);
 
+  /*
+   * Get rid of any remaining buffers for the fork.  bufmgr will just drop
+   * them without bothering to write the contents.
+   */
+  DropRelFileNodeBuffers(rnode, forknum, 0);
 
+  /*
+   * It'd be nice to tell the stats collector to forget it immediately, too.
+   * But we can't because we don't know the OID (and in cases involving
+   * relfilenode swaps, it's not always clear which table OID to forget,
+   * anyway).
+   */
 
+  /*
+   * Send a shared-inval message to force other backends to close any
+   * dangling smgr references they may have for this rel.  We should do this
+   * before starting the actual unlinking, in case we fail partway through
+   * that step.  Note that the sinval message will eventually come back to
+   * this backend, too, and thereby provide a backstop that we closed our
+   * own smgr rel.
+   */
+  CacheInvalidateSmgr(rnode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Delete the physical file(s).
+   *
+   * Note: smgr_unlink must treat deletion failure as a WARNING, not an
+   * ERROR, because we've already decided to commit or abort the current
+   * xact.
+   */
+  smgrsw[which].smgr_unlink(rnode, forknum, isRedo);
 }
 
 /*
@@ -586,8 +586,7 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *bu
 }
 
 /*
- *	smgrprefetch() -- Initiate asynchronous read of the specified block of a
- *relation.
+ *	smgrprefetch() -- Initiate asynchronous read of the specified block of a relation.
  */
 void
 smgrprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
@@ -600,8 +599,8 @@ smgrprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
  *				  buffer.
  *
  *		This routine is called from the buffer manager in order to
- *		instantiate pages in the shared buffer cache.  All storage
- *managers return pages in the format that POSTGRES expects.
+ *		instantiate pages in the shared buffer cache.  All storage managers
+ *		return pages in the format that POSTGRES expects.
  */
 void
 smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buffer)
@@ -612,18 +611,17 @@ smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buff
 /*
  *	smgrwrite() -- Write the supplied buffer out.
  *
- *		This is to be used only for updating already-existing blocks of
- *a relation (ie, those before the current EOF).  To extend a relation, use
- *smgrextend().
+ *		This is to be used only for updating already-existing blocks of a
+ *		relation (ie, those before the current EOF).  To extend a relation,
+ *		use smgrextend().
  *
  *		This is not a synchronous write -- the block is not necessarily
  *		on disk at return, only dumped out to the kernel.  However,
- *		provisions will be made to fsync the write before the next
- *checkpoint.
+ *		provisions will be made to fsync the write before the next checkpoint.
  *
- *		skipFsync indicates that the caller will make other provisions
- *to fsync the relation, so we needn't bother.  Temporary relations also do not
- *require fsync.
+ *		skipFsync indicates that the caller will make other provisions to
+ *		fsync the relation, so we needn't bother.  Temporary relations also
+ *		do not require fsync.
  */
 void
 smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buffer, bool skipFsync)
@@ -687,25 +685,25 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 /*
  *	smgrimmedsync() -- Force the specified relation to stable storage.
  *
- *		Synchronously force all previous writes to the specified
- *relation down to disk.
+ *		Synchronously force all previous writes to the specified relation
+ *		down to disk.
  *
  *		This is useful for building completely new relations (eg, new
  *		indexes).  Instead of incrementally WAL-logging the index build
- *		steps, we can just write completed index pages to disk with
- *smgrwrite or smgrextend, and then fsync the completed index file before
+ *		steps, we can just write completed index pages to disk with smgrwrite
+ *		or smgrextend, and then fsync the completed index file before
  *		committing the transaction.  (This is sufficient for purposes of
- *		crash recovery, since it effectively duplicates forcing a
- *checkpoint for the completed index.  But it is *not* sufficient if one wishes
- *		to use the WAL log for PITR or replication purposes: in that
- *case we have to make WAL entries as well.)
+ *		crash recovery, since it effectively duplicates forcing a checkpoint
+ *		for the completed index.  But it is *not* sufficient if one wishes
+ *		to use the WAL log for PITR or replication purposes: in that case
+ *		we have to make WAL entries as well.)
  *
  *		The preceding writes should specify skipFsync = true to avoid
  *		duplicative fsyncs.
  *
- *		Note that you need to do FlushRelationBuffers() first if there
- *is any possibility that there are dirty buffers for the relation; otherwise
- *the sync is not very meaningful.
+ *		Note that you need to do FlushRelationBuffers() first if there is
+ *		any possibility that there are dirty buffers for the relation;
+ *		otherwise the sync is not very meaningful.
  */
 void
 smgrimmedsync(SMgrRelation reln, ForkNumber forknum)

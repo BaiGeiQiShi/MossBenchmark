@@ -122,7 +122,7 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
      */
     if (strlen(lab) > (NAMEDATALEN - 1))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid enum label \"%s\"", lab), errdetail("Labels must be %d characters or less.", NAMEDATALEN - 1)));
     }
 
     values[Anum_pg_enum_oid - 1] = ObjectIdGetDatum(oids[elemno]);
@@ -247,7 +247,7 @@ AddEnumLabel(Oid enumTypeOid, const char *newVal, const char *neighbor, bool new
   pg_enum = table_open(EnumRelationId, RowExclusiveLock);
 
   /* If we have to renumber the existing members, we restart from here */
-restart:;
+restart:
 
   /* Get the list of existing members of the enum */
   list = SearchSysCacheList1(ENUMTYPOIDNAME, ObjectIdGetDatum(enumTypeOid));
@@ -276,7 +276,7 @@ restart:;
     }
     else
     {
-
+      newelemorder = 1;
     }
   }
   else
@@ -360,23 +360,23 @@ restart:;
   /* Get a new OID for the new label */
   if (IsBinaryUpgrade)
   {
-
-
-
-
+    if (!OidIsValid(binary_upgrade_next_pg_enum_oid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_enum OID value not set when in binary upgrade mode")));
+    }
 
     /*
      * Use binary-upgrade override for pg_enum.oid, if supplied. During
      * binary upgrade, all pg_enum.oid's are set this way so they are
      * guaranteed to be consistent.
      */
+    if (neighbor != NULL)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ALTER TYPE ADD BEFORE/AFTER is incompatible with binary upgrade")));
+    }
 
-
-
-
-
-
-
+    newOid = binary_upgrade_next_pg_enum_oid;
+    binary_upgrade_next_pg_enum_oid = InvalidOid;
   }
   else
   {
@@ -417,8 +417,8 @@ restart:;
           /* should sort before */
           if (exists_oid >= newOid)
           {
-
-
+            sorts_ok = false;
+            break;
           }
         }
         else
@@ -512,7 +512,7 @@ RenameEnumLabel(Oid enumTypeOid, const char *oldVal, const char *newVal)
   /* check length of new label is ok */
   if (strlen(newVal) > (NAMEDATALEN - 1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid enum label \"%s\"", newVal), errdetail("Labels must be %d characters or less.", NAMEDATALEN - 1)));
   }
 
   /*
@@ -681,7 +681,7 @@ sort_order_cmp(const void *p1, const void *p2)
   }
   else
   {
-
+    return 0;
   }
 }
 
@@ -692,7 +692,7 @@ EstimateEnumBlacklistSpace(void)
 
   if (enum_blacklist)
   {
-
+    entries = hash_get_num_entries(enum_blacklist);
   }
   else
   {
@@ -720,11 +720,11 @@ SerializeEnumBlacklist(void *space, Size size)
     HASH_SEQ_STATUS status;
     Oid *value;
 
-
-
-
-
-
+    hash_seq_init(&status, enum_blacklist);
+    while ((value = (Oid *)hash_seq_search(&status)))
+    {
+      *serialized++ = *value;
+    }
   }
 
   /* Write out the terminator. */
@@ -755,9 +755,9 @@ RestoreEnumBlacklist(void *space)
   }
 
   /* Read all the values into a new hash table. */
-
-
-
-
-
+  init_enum_blacklist();
+  do
+  {
+    hash_search(enum_blacklist, serialized++, HASH_ENTER, NULL);
+  } while (OidIsValid(*serialized));
 }

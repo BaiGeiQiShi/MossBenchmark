@@ -20,7 +20,8 @@
  *
  * Note: this is used to process postgresql.conf entries and to quote
  * string literals in pg_basebackup for writing the recovery configuration.
- * Since postgresql.conf strings are defined to treat backslashes as escapes,* we have to double backslashes here.
+ * Since postgresql.conf strings are defined to treat backslashes as escapes,
+ * we have to double backslashes here.
  *
  * Since this function is only used for parsing or creating configuration
  * files, we do not care about encoding considerations.
@@ -36,14 +37,14 @@ escape_single_quotes_ascii(const char *src)
 
   if (!result)
   {
-
+    return NULL;
   }
 
   for (i = 0, j = 0; i < len; i++)
   {
     if (SQL_STR_DOUBLE(src[i], true))
     {
-
+      result[j++] = src[i];
     }
     result[j++] = src[i];
   }

@@ -228,7 +228,8 @@ CreateTriggerFiringOn(CreateTrigStmt *stmt, const char *queryString, Oid relOid,
        * explanation.  The check here is just to protect from the fact
        * that if we allowed it here, the creation would succeed for a
        * partitioned table with no partitions, but would be blocked by
-       * the other restriction when the first partition was created,       * which is very unfriendly behavior.
+       * the other restriction when the first partition was created,
+       * which is very unfriendly behavior.
        */
       if (stmt->transitionRels != NIL)
       {
@@ -594,7 +595,7 @@ CreateTriggerFiringOn(CreateTrigStmt *stmt, const char *queryString, Oid relOid,
           ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("BEFORE trigger's WHEN condition cannot reference NEW generated columns"), errdetail("Column \"%s\" is a generated column.", NameStr(TupleDescAttr(RelationGetDescr(rel), var->varattno - 1)->attname)), parser_errposition(pstate, var->location)));
         }
         break;
-      default:;
+      default:
         /* can't happen without add_missing_from, so just elog */
         elog(ERROR, "trigger WHEN condition cannot contain references to other relations");
         break;
@@ -1138,17 +1139,17 @@ CreateTriggerFiringOn(CreateTrigStmt *stmt, const char *queryString, Oid relOid,
  * an incomplete set of triggers resulting in an only partially enforced
  * FK constraint.  (This would happen if one of the tables had been dropped
  * and re-created, but only if the DB had been affected by a 7.0 pg_dump bug
- * that caused loss of tgconstrrelid information.)	We choose to translate
- * to an FK constraint only when we've seen all three triggers of a set.  This
- * is implemented by storing unmatched items in a list in TopMemoryContext. We
- * match triggers together by comparing the trigger arguments (which include
- * constraint name, table and column names, so should be good enough).
+ * that caused loss of tgconstrrelid information.)	We choose to translate to
+ * an FK constraint only when we've seen all three triggers of a set.  This is
+ * implemented by storing unmatched items in a list in TopMemoryContext.
+ * We match triggers together by comparing the trigger arguments (which
+ * include constraint name, table and column names, so should be good enough).
  */
 typedef struct
 {
   List *args;      /* list of (T_String) Values or NIL */
   Oid funcoids[3]; /* OIDs of trigger functions */
-  /* The three function OIDs are stored in the order update, delete, child */
+                   /* The three function OIDs are stored in the order update, delete, child */
 } OldTriggerInfo;
 
 static void
@@ -1180,8 +1181,8 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
     Value *arg = (Value *)lfirst(l);
 
     i++;
-    if (i < 4)
-    { /* skip constraint and table names */
+    if (i < 4) /* skip constraint and table names */
+    {
       continue;
     }
     if (i == 4) /* handle match type */
@@ -1253,7 +1254,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
     funcnum = 1;
     break;
 
-  default:;
+  default:
     funcnum = 2;
     break;
   }
@@ -1358,7 +1359,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
     case F_RI_FKEY_SETDEFAULT_UPD:
       fkcon->fk_upd_action = FKCONSTR_ACTION_SETDEFAULT;
       break;
-    default:;
+    default:
       /* can't get here because of earlier checks */
       elog(ERROR, "confused about RI update function");
     }
@@ -1379,7 +1380,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
     case F_RI_FKEY_SETDEFAULT_DEL:
       fkcon->fk_del_action = FKCONSTR_ACTION_SETDEFAULT;
       break;
-    default:;
+    default:
       /* can't get here because of earlier checks */
       elog(ERROR, "confused about RI delete function");
     }
@@ -1554,8 +1555,7 @@ RangeVarCallbackForRenameTrigger(const RangeVar *rv, Oid relid, Oid oldrelid, vo
 }
 
 /*
- *		renametrig		- changes the name of a trigger on a
- *relation
+ *		renametrig		- changes the name of a trigger on a relation
  *
  *		trigger name is changed in trigger catalog.
  *		No record of the previous name is kept.
@@ -1669,10 +1669,10 @@ renametrig(RenameStmt *stmt)
  * rel: relation to process (caller must hold suitable lock on it)
  * tgname: trigger to process, or NULL to scan all triggers
  * fires_when: new value for tgenabled field. In addition to generic
- *			   enablement/disablement, this also defines when the
- *trigger should be fired in session replication roles. skip_system: if true,
- *skip "system" triggers (constraint triggers) recurse: if true, recurse to
- *partitions
+ *			   enablement/disablement, this also defines when the trigger
+ *			   should be fired in session replication roles.
+ * skip_system: if true, skip "system" triggers (constraint triggers)
+ * recurse: if true, recurse to partitions
  *
  * Caller should have checked permissions for the table; here we also
  * enforce that superuser privilege is required to alter the state of
@@ -3270,7 +3270,7 @@ GetTupleForTrigger(EState *estate, EPQState *epqstate, ResultRelInfo *relinfo, I
       elog(ERROR, "attempted to lock invisible tuple");
       break;
 
-    default:;
+    default:
       elog(ERROR, "unrecognized table_tuple_lock status: %u", test);
       return false; /* keep compiler quiet */
     }
@@ -4121,7 +4121,7 @@ AfterTriggerExecute(EState *estate, AfterTriggerEvent event, ResultRelInfo *relI
     }
     break;
 
-  default:;
+  default:
     if (ItemPointerIsValid(&(event->ate_ctid1)))
     {
       LocTriggerData.tg_trigslot = ExecGetTriggerOldSlot(estate, relInfo);
@@ -4318,9 +4318,9 @@ afterTriggerMarkEvents(AfterTriggerEventList *events, AfterTriggerEventList *mov
  *
  *	When delete_ok is true, it's safe to delete fully-processed events.
  *	(We are not very tense about that: we simply reset a chunk to be empty
- *	if all its events got fired.  The objective here is just to avoid
- *useless rescanning of events when a trigger queues new events during
- *transaction end, so it's not necessary to worry much about the case where only
+ *	if all its events got fired.  The objective here is just to avoid useless
+ *	rescanning of events when a trigger queues new events during transaction
+ *	end, so it's not necessary to worry much about the case where only
  *	some events are fired.)
  *
  *	Returns true if no unfired events remain in the list (this allows us
@@ -4386,8 +4386,8 @@ afterTriggerInvokeEvents(AfterTriggerEventList *events, CommandId firing_id, ESt
             slot1 = MakeSingleTupleTableSlot(rel->rd_att, &TTSOpsMinimalTuple);
             slot2 = MakeSingleTupleTableSlot(rel->rd_att, &TTSOpsMinimalTuple);
           }
-          if (trigdesc == NULL)
-          { /* should not happen */
+          if (trigdesc == NULL) /* should not happen */
+          {
             elog(ERROR, "relation %u has no triggers", evtshared->ats_relid);
           }
         }
@@ -4574,7 +4574,7 @@ MakeTransitionCaptureState(TriggerDesc *trigdesc, Oid relid, CmdType cmdType)
     need_old = trigdesc->trig_delete_old_table;
     need_new = false;
     break;
-  default:;
+  default:
     elog(ERROR, "unexpected CmdType: %d", (int)cmdType);
     need_old = need_new = false; /* keep compiler quiet */
     break;
@@ -5513,8 +5513,7 @@ AfterTriggerSetState(ConstraintsSetStmt *stmt)
 
 /* ----------
  * AfterTriggerPendingOnRel()
- *		Test to see if there are any pending after-trigger events for
- *rel.
+ *		Test to see if there are any pending after-trigger events for rel.
  *
  * This is used by TRUNCATE, CLUSTER, ALTER TABLE, etc to detect whether
  * it is unsafe to perform major surgery on a relation.  Note that only
@@ -5591,17 +5590,17 @@ AfterTriggerPendingOnRel(Oid relid)
  *	the event (even if they are disabled).  This function decides which
  *	triggers actually need to be queued.  It is also called after each row,
  *	even if there are no triggers for that event, if there are any AFTER
- *	STATEMENT triggers for the statement which use transition tables, so
- *that the transition tuplestores can be built.  Furthermore, if the transition
- *	capture is happening for UPDATEd rows being moved to another partition
- *due to the partition-key being changed, then this function is called once when
- *	the row is deleted (to capture OLD row), and once when the row is
- *inserted into another partition (to capture NEW row).  This is done separately
- *because DELETE and INSERT happen on different tables.
+ *	STATEMENT triggers for the statement which use transition tables, so that
+ *	the transition tuplestores can be built.  Furthermore, if the transition
+ *	capture is happening for UPDATEd rows being moved to another partition due
+ *	to the partition-key being changed, then this function is called once when
+ *	the row is deleted (to capture OLD row), and once when the row is inserted
+ *	into another partition (to capture NEW row).  This is done separately because
+ *	DELETE and INSERT happen on different tables.
  *
  *	Transition tuplestores are built now, rather than when events are pulled
- *	off of the queue because AFTER ROW triggers are allowed to select from
- *the transition tables for the statement.
+ *	off of the queue because AFTER ROW triggers are allowed to select from the
+ *	transition tables for the statement.
  * ----------
  */
 static void
@@ -5790,7 +5789,7 @@ AfterTriggerSaveEvent(EState *estate, ResultRelInfo *relinfo, int event, bool ro
     ItemPointerSetInvalid(&(new_event.ate_ctid1));
     ItemPointerSetInvalid(&(new_event.ate_ctid2));
     break;
-  default:;
+  default:
     elog(ERROR, "invalid after-trigger event code: %d", event);
     tgtype_event = 0; /* keep compiler quiet */
     break;

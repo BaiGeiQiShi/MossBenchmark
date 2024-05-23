@@ -253,7 +253,7 @@ window_ntile(PG_FUNCTION_ARGS)
     context->boundary = total / nbuckets;
     if (context->boundary <= 0)
     {
-
+      context->boundary = 1;
     }
     else
     {
@@ -307,7 +307,7 @@ leadlag_common(FunctionCallInfo fcinfo, bool forward, bool withoffset, bool with
     offset = DatumGetInt32(WinGetFuncArgCurrent(winobj, 1, &isnull));
     if (isnull)
     {
-
+      PG_RETURN_NULL();
     }
     const_offset = get_fn_expr_arg_stable(fcinfo->flinfo, 1);
   }
@@ -468,7 +468,7 @@ window_nth_value(PG_FUNCTION_ARGS)
   nth = DatumGetInt32(WinGetFuncArgCurrent(winobj, 1, &isnull));
   if (isnull)
   {
-
+    PG_RETURN_NULL();
   }
   const_offset = get_fn_expr_arg_stable(fcinfo->flinfo, 1);
 

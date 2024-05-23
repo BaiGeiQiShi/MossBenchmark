@@ -32,7 +32,8 @@ check_result_of_insert(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select c1 , c2 from test", ECPGt_EOIT, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 15 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -66,7 +67,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 34 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -76,7 +78,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "begin");
 #line 35 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -86,7 +89,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table test ( c1 int , c2 int )", ECPGt_EOIT, ECPGt_EORT);
 #line 36 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -96,7 +100,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit work");
 #line 37 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -106,7 +111,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "begin");
 #line 38 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -119,7 +125,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 43 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -131,7 +138,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( $1  , $2  )", ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 46 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -143,7 +151,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 49 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -155,7 +164,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_immediate, "insert into test values(1,2)", ECPGt_EOIT, ECPGt_EORT);
 #line 52 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -170,7 +180,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 58 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -182,7 +193,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "ident_name", "insert into test values(?,?)");
 #line 61 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -193,7 +205,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "ident_name", ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 63 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -205,7 +218,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 66 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -217,7 +231,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, v_normal_name, v_query);
 #line 69 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -228,7 +243,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, v_normal_name, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 71 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -240,7 +256,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 74 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -252,7 +269,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, v_include_dq_name, v_query);
 #line 77 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -263,7 +281,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, v_include_dq_name, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 79 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -275,7 +294,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 82 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -287,7 +307,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, v_include_ws_name, v_query);
 #line 85 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -298,7 +319,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, v_include_ws_name, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 87 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -310,7 +332,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 90 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -322,7 +345,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "include_ _name", v_query);
 #line 93 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -333,7 +357,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "include_ _name", ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 95 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -345,7 +370,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 98 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -357,7 +383,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "normal_name", v_query);
 #line 101 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -368,7 +395,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "normal_name", ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 103 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -383,7 +411,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "ident_name");
 #line 109 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -393,7 +422,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "normal_name");
 #line 110 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -403,7 +433,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "include_ _name");
 #line 111 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -413,7 +444,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 113 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -425,7 +457,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_prepare, "prepare $0 ( int , int ) as insert into test values ( $1 , $2 )", ECPGt_const, "ident_name", (long)10, (long)1, strlen("ident_name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 116 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -436,7 +469,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_const, "ident_name", (long)10, (long)1, strlen("ident_name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 118 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -447,7 +481,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "ident_name");
 #line 120 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -457,7 +492,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 122 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -469,7 +505,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_prepare, "prepare $0 ( int , int ) as insert into test values ( $1 , $2 )", ECPGt_const, "normal_name", (long)11, (long)1, strlen("normal_name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 125 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -480,7 +517,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_const, "normal_name", (long)11, (long)1, strlen("normal_name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 127 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -491,7 +529,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "normal_name");
 #line 129 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -501,7 +540,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 131 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -513,7 +553,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_prepare, "prepare $0 ( int , int ) as insert into test values ( $1 , $2 )", ECPGt_const, "include_ _name", (long)14, (long)1, strlen("include_ _name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 134 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -524,7 +565,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_const, "include_ _name", (long)14, (long)1, strlen("include_ _name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 136 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -535,7 +577,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "include_ _name");
 #line 138 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -545,7 +588,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 140 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -557,7 +601,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_prepare, "prepare $0 ( int , int ) as insert into test values ( $1 , $2 )", ECPGt_char, (v_normal_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 143 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -568,7 +613,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_char, (v_normal_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 145 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -579,7 +625,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "normal_name");
 #line 147 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -589,7 +636,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 149 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -601,7 +649,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_prepare, "prepare $0 ( int , int ) as insert into test values ( $1 , $2 )", ECPGt_char, (v_include_ws_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 152 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -612,7 +661,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_char, (v_include_ws_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 154 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -623,7 +673,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "include_ _name");
 #line 156 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -633,7 +684,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 158 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -645,7 +697,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, v_normal_name, v_query);
 #line 161 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -656,7 +709,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( 1 , 2 )", ECPGt_char, (v_normal_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 163 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -667,7 +721,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "normal_name");
 #line 165 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -677,7 +732,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 167 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -689,7 +745,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, v_normal_name, v_query);
 #line 170 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -700,7 +757,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( 0 + 1 , 1 + 1 )", ECPGt_char, (v_normal_name), (long)16, (long)1, (16) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 172 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -711,7 +769,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "normal_name");
 #line 174 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -721,7 +780,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 176 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -733,7 +793,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "ident_name", v_query);
 #line 179 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -744,7 +805,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_const, "ident_name", (long)10, (long)1, strlen("ident_name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 181 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -755,7 +817,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "ident_name");
 #line 183 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -765,7 +828,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 185 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -777,7 +841,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "include_ _name", v_query);
 #line 188 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -788,7 +853,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_exec_with_exprlist, "execute $0 ( $1  , $2  )", ECPGt_const, "include_ _name", (long)14, (long)1, strlen("include_ _name"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar1), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, &(ivar2), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 190 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -799,7 +865,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "include_ _name");
 #line 192 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -809,7 +876,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "drop table test", ECPGt_EOIT, ECPGt_EORT);
 #line 194 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -819,7 +887,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit work");
 #line 195 "prepareas.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

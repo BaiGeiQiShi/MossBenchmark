@@ -11,8 +11,7 @@
  *	  src/backend/catalog/pg_operator.c
  *
  * NOTES
- *	  these routines moved here from commands/define.c and somewhat cleaned
- *up.
+ *	  these routines moved here from commands/define.c and somewhat cleaned up.
  *
  *-------------------------------------------------------------------------
  */
@@ -67,20 +66,20 @@ validOperatorName(const char *name)
   /* Can't be empty or too long */
   if (len == 0 || len >= NAMEDATALEN)
   {
-
+    return false;
   }
 
   /* Can't contain any invalid characters */
   /* Test string here should match op_chars in scan.l */
   if (strspn(name, "~!@#^&|`?+-*/%<>=") != len)
   {
-
+    return false;
   }
 
   /* Can't contain slash-star or dash-dash (comment starts) */
   if (strstr(name, "/*") || strstr(name, "--"))
   {
-
+    return false;
   }
 
   /*
@@ -103,14 +102,14 @@ validOperatorName(const char *name)
     }
     if (ic < 0)
     {
-
+      return false; /* nope, not valid */
     }
   }
 
   /* != isn't valid either, because parser will convert it to <> */
   if (strcmp(name, "!=") == 0)
   {
-
+    return false;
   }
 
   return true;
@@ -135,9 +134,9 @@ OperatorGet(const char *operatorName, Oid operatorNamespace, Oid leftObjectId, O
   {
     Form_pg_operator oprform = (Form_pg_operator)GETSTRUCT(tup);
 
-
-
-
+    operatorObjectId = oprform->oid;
+    *defined = RegProcedureIsValid(oprform->oprcode);
+    ReleaseSysCache(tup);
   }
   else
   {
@@ -196,7 +195,7 @@ OperatorShellMake(const char *operatorName, Oid operatorNamespace, Oid leftTypeI
    */
   if (!validOperatorName(operatorName))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("\"%s\" is not a valid operator name", operatorName)));
   }
 
   /*
@@ -275,14 +274,13 @@ OperatorShellMake(const char *operatorName, Oid operatorNamespace, Oid leftTypeI
  *		operatorNamespace		namespace for new operator
  *		leftTypeId				X left type ID
  *		rightTypeId				X right type ID
- *		procedureId				procedure ID for
- *operator commutatorName			X commutator operator
+ *		procedureId				procedure ID for operator
+ *		commutatorName			X commutator operator
  *		negatorName				X negator operator
- *		restrictionId			X restriction selectivity
- *procedure ID joinId					X join selectivity
- *procedure ID canMerge				merge join can be used with this
- *operator canHash					hash join can be used
- *with this operator
+ *		restrictionId			X restriction selectivity procedure ID
+ *		joinId					X join selectivity procedure ID
+ *		canMerge				merge join can be used with this operator
+ *		canHash					hash join can be used with this operator
  *
  * The caller should have validated properties and permissions for the
  * objects passed as OID references.  We must handle the commutator and
@@ -326,7 +324,7 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
    */
   if (!validOperatorName(operatorName))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("\"%s\" is not a valid operator name", operatorName)));
   }
 
   if (!(OidIsValid(leftTypeId) && OidIsValid(rightTypeId)))
@@ -334,19 +332,19 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
     /* If it's not a binary op, these things mustn't be set: */
     if (commutatorName)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only binary operators can have commutators")));
     }
     if (OidIsValid(joinId))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only binary operators can have join selectivity")));
     }
     if (canMerge)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only binary operators can merge join")));
     }
     if (canHash)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only binary operators can hash")));
     }
   }
 
@@ -357,23 +355,23 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
     /* If it's not a boolean op, these things mustn't be set: */
     if (negatorName)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can have negators")));
     }
     if (OidIsValid(restrictionId))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can have restriction selectivity")));
     }
     if (OidIsValid(joinId))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can have join selectivity")));
     }
     if (canMerge)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can merge join")));
     }
     if (canHash)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can hash")));
     }
   }
 
@@ -381,7 +379,7 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
 
   if (operatorAlreadyDefined)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_FUNCTION), errmsg("operator %s already exists", operatorName)));
   }
 
   /*
@@ -391,7 +389,7 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
    */
   if (OidIsValid(operatorObjectId) && !pg_oper_ownercheck(operatorObjectId, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_OPERATOR, operatorName);
   }
 
   /*
@@ -407,7 +405,7 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
     /* Permission check: must own other operator */
     if (OidIsValid(commutatorId) && !pg_oper_ownercheck(commutatorId, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_OPERATOR, NameListToString(commutatorName));
     }
 
     /*
@@ -432,7 +430,7 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
     /* Permission check: must own other operator */
     if (OidIsValid(negatorId) && !pg_oper_ownercheck(negatorId, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_OPERATOR, NameListToString(negatorName));
     }
   }
   else
@@ -474,18 +472,18 @@ OperatorCreate(const char *operatorName, Oid operatorNamespace, Oid leftTypeId, 
    */
   if (operatorObjectId)
   {
+    isUpdate = true;
 
+    tup = SearchSysCacheCopy1(OPEROID, ObjectIdGetDatum(operatorObjectId));
+    if (!HeapTupleIsValid(tup))
+    {
+      elog(ERROR, "cache lookup failed for operator %u", operatorObjectId);
+    }
 
+    replaces[Anum_pg_operator_oid - 1] = false;
+    tup = heap_modify_tuple(tup, RelationGetDescr(pg_operator_desc), values, nulls, replaces);
 
-
-
-
-
-
-
-
-
-
+    CatalogTupleUpdate(pg_operator_desc, &tup->t_self, tup);
   }
   else
   {
@@ -566,7 +564,7 @@ get_other_operator(List *otherOp, Oid otherLeftTypeId, Oid otherRightTypeId, con
      */
     if (!isCommutator)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("operator cannot be its own negator or sort operator")));
     }
     return InvalidOid;
   }
@@ -576,7 +574,7 @@ get_other_operator(List *otherOp, Oid otherLeftTypeId, Oid otherRightTypeId, con
   aclresult = pg_namespace_aclcheck(otherNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(otherNamespace));
   }
 
   other_oid = OperatorShellMake(otherName, otherNamespace, otherLeftTypeId, otherRightTypeId);
@@ -623,7 +621,7 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId, bool isDelete)
   }
   else
   {
-
+    tup = NULL;
   }
 
   /* Update the commutator's tuple if need be. */

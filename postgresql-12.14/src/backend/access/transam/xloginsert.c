@@ -122,12 +122,12 @@ XLogBeginInsert(void)
   /* cross-check on whether we should be here or not */
   if (!XLogInsertAllowed())
   {
-
+    elog(ERROR, "cannot make new WAL entries during recovery");
   }
 
   if (begininsert_called)
   {
-
+    elog(ERROR, "XLogBeginInsert was already called");
   }
 
   begininsert_called = true;
@@ -167,7 +167,7 @@ XLogEnsureRecordSpace(int max_block_id, int ndatas)
 
   if (max_block_id > XLR_MAX_BLOCK_ID)
   {
-
+    elog(ERROR, "maximum number of WAL record block references exceeded");
   }
   nbuffers = max_block_id + 1;
 
@@ -228,7 +228,7 @@ XLogRegisterBuffer(uint8 block_id, Buffer buffer, uint8 flags)
   {
     if (block_id >= max_registered_buffers)
     {
-
+      elog(ERROR, "too many registered buffers");
     }
     max_registered_block_id = block_id + 1;
   }
@@ -286,7 +286,7 @@ XLogRegisterBlock(uint8 block_id, RelFileNode *rnode, ForkNumber forknum, BlockN
 
   if (block_id >= max_registered_buffers)
   {
-
+    elog(ERROR, "too many registered buffers");
   }
 
   regbuf = &registered_buffers[block_id];
@@ -339,7 +339,7 @@ XLogRegisterData(char *data, int len)
 
   if (num_rdatas >= max_rdatas)
   {
-
+    elog(ERROR, "too much WAL data");
   }
   rdata = &rdatas[num_rdatas++];
 
@@ -382,12 +382,12 @@ XLogRegisterBufData(uint8 block_id, char *data, int len)
   regbuf = &registered_buffers[block_id];
   if (!regbuf->in_use)
   {
-
+    elog(ERROR, "no block with id %d registered with WAL insertion", block_id);
   }
 
   if (num_rdatas >= max_rdatas)
   {
-
+    elog(ERROR, "too much WAL data");
   }
   rdata = &rdatas[num_rdatas++];
 
@@ -435,7 +435,7 @@ XLogInsert(RmgrId rmid, uint8 info)
   /* XLogBeginInsert() must have been called. */
   if (!begininsert_called)
   {
-
+    elog(ERROR, "XLogBeginInsert was not called");
   }
 
   /*
@@ -444,7 +444,7 @@ XLogInsert(RmgrId rmid, uint8 info)
    */
   if ((info & ~(XLR_RMGR_INFO_MASK | XLR_SPECIAL_REL_UPDATE | XLR_CHECK_CONSISTENCY)) != 0)
   {
-
+    elog(PANIC, "invalid xlog info mask %02X", info);
   }
 
   TRACE_POSTGRESQL_WAL_INSERT(rmid, info);
@@ -529,7 +529,7 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
    */
   if (wal_consistency_checking[rmid])
   {
-
+    info |= XLR_CHECK_CONSISTENCY;
   }
 
   /*
@@ -566,7 +566,7 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
     }
     else if (!doPageWrites)
     {
-
+      needs_backup = false;
     }
     else
     {
@@ -594,7 +594,7 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
     }
     else if ((regbuf->flags & REGBUF_KEEP_DATA) != 0)
     {
-
+      needs_data = true;
     }
     else
     {
@@ -655,7 +655,7 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
        */
       if (wal_compression)
       {
-
+        is_compressed = XLogCompressBackupBlock(page, bimg.hole_offset, cbimg.hole_length, regbuf->compressed_page, &compressed_len);
       }
 
       /*
@@ -685,11 +685,11 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
 
       if (is_compressed)
       {
+        bimg.length = compressed_len;
+        bimg.bimg_info |= BKPIMAGE_IS_COMPRESSED;
 
-
-
-
-
+        rdt_datas_last->data = regbuf->compressed_page;
+        rdt_datas_last->len = compressed_len;
       }
       else
       {
@@ -751,8 +751,8 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
       scratch += SizeOfXLogRecordBlockImageHeader;
       if (cbimg.hole_length != 0 && is_compressed)
       {
-
-
+        memcpy(scratch, &cbimg, SizeOfXLogRecordBlockCompressHeader);
+        scratch += SizeOfXLogRecordBlockCompressHeader;
       }
     }
     if (!samerel)
@@ -767,9 +767,9 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
   /* followed by the record's origin, if any */
   if ((curinsert_flags & XLOG_INCLUDE_ORIGIN) && replorigin_session_origin != InvalidRepOriginId)
   {
-
-
-
+    *(scratch++) = (char)XLR_BLOCK_ID_ORIGIN;
+    memcpy(scratch, &replorigin_session_origin, sizeof(replorigin_session_origin));
+    scratch += sizeof(replorigin_session_origin);
   }
 
   /* followed by main data, if any */
@@ -835,42 +835,42 @@ XLogRecordAssemble(RmgrId rmid, uint8 info, XLogRecPtr RedoRecPtr, bool doPageWr
 static bool
 XLogCompressBackupBlock(char *page, uint16 hole_offset, uint16 hole_length, char *dest, uint16 *dlen)
 {
+  int32 orig_len = BLCKSZ - hole_length;
+  int32 len;
+  int32 extra_bytes = 0;
+  char *source;
+  PGAlignedBlock tmp;
 
+  if (hole_length != 0)
+  {
+    /* must skip the hole */
+    source = tmp.data;
+    memcpy(source, page, hole_offset);
+    memcpy(source + hole_offset, page + (hole_offset + hole_length), BLCKSZ - (hole_length + hole_offset));
 
+    /*
+     * Extra data needs to be stored in WAL record for the compressed
+     * version of block image if the hole exists.
+     */
+    extra_bytes = SizeOfXLogRecordBlockCompressHeader;
+  }
+  else
+  {
+    source = page;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We recheck the actual size even if pglz_compress() reports success and
+   * see if the number of bytes saved by compression is larger than the
+   * length of extra data needed for the compressed version of block image.
+   */
+  len = pglz_compress(source, orig_len, dest, PGLZ_strategy_default);
+  if (len >= 0 && len + extra_bytes < orig_len)
+  {
+    *dlen = (uint16)len; /* successful compression */
+    return true;
+  }
+  return false;
 }
 
 /*
@@ -923,72 +923,72 @@ XLogCheckBufferNeedsBackup(Buffer buffer)
 XLogRecPtr
 XLogSaveBufferForHint(Buffer buffer, bool buffer_std)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  XLogRecPtr recptr = InvalidXLogRecPtr;
+  XLogRecPtr lsn;
+  XLogRecPtr RedoRecPtr;
+
+  /*
+   * Ensure no checkpoint can change our view of RedoRecPtr.
+   */
+  Assert(MyPgXact->delayChkpt);
+
+  /*
+   * Update RedoRecPtr so that we can make the right decision
+   */
+  RedoRecPtr = GetRedoRecPtr();
+
+  /*
+   * We assume page LSN is first data on *every* page that can be passed to
+   * XLogInsert, whether it has the standard page layout or not. Since we're
+   * only holding a share-lock on the page, we must take the buffer header
+   * lock when we look at the LSN.
+   */
+  lsn = BufferGetLSNAtomic(buffer);
+
+  if (lsn <= RedoRecPtr)
+  {
+    int flags;
+    PGAlignedBlock copied_buffer;
+    char *origdata = (char *)BufferGetBlock(buffer);
+    RelFileNode rnode;
+    ForkNumber forkno;
+    BlockNumber blkno;
+
+    /*
+     * Copy buffer so we don't have to worry about concurrent hint bit or
+     * lsn updates. We assume pd_lower/upper cannot be changed without an
+     * exclusive lock, so the contents bkp are not racy.
+     */
+    if (buffer_std)
+    {
+      /* Assume we can omit data between pd_lower and pd_upper */
+      Page page = BufferGetPage(buffer);
+      uint16 lower = ((PageHeader)page)->pd_lower;
+      uint16 upper = ((PageHeader)page)->pd_upper;
+
+      memcpy(copied_buffer.data, origdata, lower);
+      memcpy(copied_buffer.data + upper, origdata + upper, BLCKSZ - upper);
+    }
+    else
+    {
+      memcpy(copied_buffer.data, origdata, BLCKSZ);
+    }
+
+    XLogBeginInsert();
+
+    flags = REGBUF_FORCE_IMAGE;
+    if (buffer_std)
+    {
+      flags |= REGBUF_STANDARD;
+    }
+
+    BufferGetTag(buffer, &rnode, &forkno, &blkno);
+    XLogRegisterBlock(0, &rnode, forkno, blkno, copied_buffer.data, flags);
+
+    recptr = XLogInsert(RM_XLOG_ID, XLOG_FPI_FOR_HINT);
+  }
+
+  return recptr;
 }
 
 /*
@@ -1044,17 +1044,17 @@ log_newpage(RelFileNode *rnode, ForkNumber forkNum, BlockNumber blkno, Page page
 XLogRecPtr
 log_newpage_buffer(Buffer buffer, bool page_std)
 {
+  Page page = BufferGetPage(buffer);
+  RelFileNode rnode;
+  ForkNumber forkNum;
+  BlockNumber blkno;
 
+  /* Shared buffers should be modified in a critical section. */
+  Assert(CritSectionCount > 0);
 
+  BufferGetTag(buffer, &rnode, &forkNum, &blkno);
 
-
-
-
-
-
-
-
-
+  return log_newpage(&rnode, forkNum, blkno, page, page_std);
 }
 
 /*
@@ -1122,7 +1122,7 @@ log_newpage_range(Relation rel, ForkNumber forkNum, BlockNumber startblk, BlockN
       }
       else
       {
-
+        UnlockReleaseBuffer(buf);
       }
       blkno++;
     }

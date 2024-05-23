@@ -55,7 +55,7 @@ comparison_shim(Datum x, Datum y, SortSupport ssup)
   /* Check for null result, since caller is clearly not expecting one */
   if (extra->fcinfo.isnull)
   {
-
+    elog(ERROR, "function %u returned NULL", extra->flinfo.fn_oid);
   }
 
   return result;
@@ -113,7 +113,7 @@ FinishSortSupportFunction(Oid opfamily, Oid opcintype, SortSupport ssup)
 
     if (!OidIsValid(sortFunction))
     {
-
+      elog(ERROR, "missing support function %d(%u,%u) in opfamily %u", BTORDER_PROC, opcintype, opcintype, opfamily);
     }
 
     /* We'll use a shim to call the old-style btree comparator */
@@ -140,7 +140,7 @@ PrepareSortSupportFromOrderingOp(Oid orderingOp, SortSupport ssup)
   /* Find the operator in pg_amop */
   if (!get_ordering_op_properties(orderingOp, &opfamily, &opcintype, &strategy))
   {
-
+    elog(ERROR, "operator %u is not a valid ordering operator", orderingOp);
   }
   ssup->ssup_reverse = (strategy == BTGreaterStrategyNumber);
 
@@ -165,11 +165,11 @@ PrepareSortSupportFromIndexRel(Relation indexRel, int16 strategy, SortSupport ss
 
   if (indexRel->rd_rel->relam != BTREE_AM_OID)
   {
-
+    elog(ERROR, "unexpected non-btree AM: %u", indexRel->rd_rel->relam);
   }
   if (strategy != BTGreaterStrategyNumber && strategy != BTLessStrategyNumber)
   {
-
+    elog(ERROR, "unexpected sort support strategy: %d", strategy);
   }
   ssup->ssup_reverse = (strategy == BTGreaterStrategyNumber);
 

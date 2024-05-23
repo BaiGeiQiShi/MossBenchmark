@@ -75,26 +75,26 @@ process_duplicate_ors(List *orlist);
 Node *
 negate_clause(Node *node)
 {
-  if (node == NULL)
-  { /* should not happen */
-
+  if (node == NULL) /* should not happen */
+  {
+    elog(ERROR, "can't negate an empty subexpression");
   }
   switch (nodeTag(node))
   {
-  case T_Const:;
+  case T_Const:
   {
     Const *c = (Const *)node;
 
     /* NOT NULL is still NULL */
     if (c->constisnull)
     {
-
+      return makeBoolConst(false, true);
     }
     /* otherwise pretty easy */
     return makeBoolConst(!DatumGetBool(c->constvalue), false);
   }
   break;
-  case T_OpExpr:;
+  case T_OpExpr:
   {
     /*
      * Negate operator if possible: (NOT (< A B)) => (>= A B)
@@ -118,7 +118,7 @@ negate_clause(Node *node)
     }
   }
   break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     /*
      * Negate a ScalarArrayOpExpr if its operator has a negator;
@@ -140,8 +140,8 @@ negate_clause(Node *node)
       return (Node *)newopexpr;
     }
   }
-
-  case T_BoolExpr:;
+  break;
+  case T_BoolExpr:
   {
     BoolExpr *expr = (BoolExpr *)node;
 
@@ -162,7 +162,7 @@ negate_clause(Node *node)
        * building a new OR clause.  Similarly for the OR case.
        *--------------------
        */
-    case AND_EXPR:;
+    case AND_EXPR:
     {
       List *nargs = NIL;
       ListCell *lc;
@@ -174,7 +174,7 @@ negate_clause(Node *node)
       return (Node *)make_orclause(nargs);
     }
     break;
-    case OR_EXPR:;
+    case OR_EXPR:
     {
       List *nargs = NIL;
       ListCell *lc;
@@ -186,20 +186,20 @@ negate_clause(Node *node)
       return (Node *)make_andclause(nargs);
     }
     break;
-    case NOT_EXPR:;
+    case NOT_EXPR:
 
       /*
        * NOT underneath NOT: they cancel.  We assume the
        * input is already simplified, so no need to recurse.
        */
       return (Node *)linitial(expr->args);
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized boolop: %d", (int)expr->boolop);
+      break;
     }
   }
-
-  case T_NullTest:;
+  break;
+  case T_NullTest:
   {
     NullTest *expr = (NullTest *)node;
 
@@ -219,42 +219,42 @@ negate_clause(Node *node)
       return (Node *)newexpr;
     }
   }
-
-  case T_BooleanTest:;
+  break;
+  case T_BooleanTest:
   {
     BooleanTest *expr = (BooleanTest *)node;
     BooleanTest *newexpr = makeNode(BooleanTest);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    newexpr->arg = expr->arg;
+    switch (expr->booltesttype)
+    {
+    case IS_TRUE:
+      newexpr->booltesttype = IS_NOT_TRUE;
+      break;
+    case IS_NOT_TRUE:
+      newexpr->booltesttype = IS_TRUE;
+      break;
+    case IS_FALSE:
+      newexpr->booltesttype = IS_NOT_FALSE;
+      break;
+    case IS_NOT_FALSE:
+      newexpr->booltesttype = IS_FALSE;
+      break;
+    case IS_UNKNOWN:
+      newexpr->booltesttype = IS_NOT_UNKNOWN;
+      break;
+    case IS_NOT_UNKNOWN:
+      newexpr->booltesttype = IS_UNKNOWN;
+      break;
+    default:
+      elog(ERROR, "unrecognized booltesttype: %d", (int)expr->booltesttype);
+      break;
+    }
+    newexpr->location = expr->location;
+    return (Node *)newexpr;
   }
-
-  default:;;
+  break;
+  default:
     /* else fall through */
     break;
   }
@@ -296,7 +296,7 @@ canonicalize_qual(Expr *qual, bool is_check)
   /* Quick exit for empty qual */
   if (qual == NULL)
   {
-
+    return NULL;
   }
 
   /* This should not be invoked on quals in implicit-AND format */
@@ -337,7 +337,7 @@ pull_ands(List *andlist)
      */
     if (is_andclause(subexpr))
     {
-
+      out_list = list_concat(out_list, pull_ands(((BoolExpr *)subexpr)->args));
     }
     else
     {
@@ -372,7 +372,7 @@ pull_ors(List *orlist)
      */
     if (is_orclause(subexpr))
     {
-
+      out_list = list_concat(out_list, pull_ors(((BoolExpr *)subexpr)->args));
     }
     else
     {
@@ -444,7 +444,7 @@ find_duplicate_ors(Expr *qual, bool is_check)
           /* Within OR in CHECK, drop constant FALSE */
           if (!carg->constisnull && !DatumGetBool(carg->constvalue))
           {
-
+            continue;
           }
           /* Constant TRUE or NULL, so OR reduces to TRUE */
           return (Expr *)makeBoolConst(true, false);
@@ -457,7 +457,7 @@ find_duplicate_ors(Expr *qual, bool is_check)
             continue;
           }
           /* Constant TRUE, so OR reduces to TRUE */
-
+          return arg;
         }
       }
 
@@ -487,26 +487,26 @@ find_duplicate_ors(Expr *qual, bool is_check)
       {
         Const *carg = (Const *)arg;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if (is_check)
+        {
+          /* Within AND in CHECK, drop constant TRUE or NULL */
+          if (carg->constisnull || DatumGetBool(carg->constvalue))
+          {
+            continue;
+          }
+          /* Constant FALSE, so AND reduces to FALSE */
+          return arg;
+        }
+        else
+        {
+          /* Within AND in WHERE, drop constant TRUE */
+          if (!carg->constisnull && DatumGetBool(carg->constvalue))
+          {
+            continue;
+          }
+          /* Constant FALSE or NULL, so AND reduces to FALSE */
+          return (Expr *)makeBoolConst(false, false);
+        }
       }
 
       andlist = lappend(andlist, arg);
@@ -518,13 +518,13 @@ find_duplicate_ors(Expr *qual, bool is_check)
     /* AND of no inputs reduces to TRUE */
     if (andlist == NIL)
     {
-
+      return (Expr *)makeBoolConst(true, false);
     }
 
     /* Single-expression AND just reduces to that expression */
     if (list_length(andlist) == 1)
     {
-
+      return (Expr *)linitial(andlist);
     }
 
     /* Else we still need an AND node */
@@ -556,7 +556,7 @@ process_duplicate_ors(List *orlist)
   /* OR of no inputs reduces to FALSE */
   if (orlist == NIL)
   {
-
+    return (Expr *)makeBoolConst(false, false);
   }
 
   /* Single-expression OR just reduces to that expression */
@@ -633,7 +633,7 @@ process_duplicate_ors(List *orlist)
 
     if (win)
     {
-
+      winners = lappend(winners, refclause);
     }
   }
 
@@ -655,46 +655,46 @@ process_duplicate_ors(List *orlist)
    * Note that because we use list_difference, any multiple occurrences of a
    * winning clause in an AND sub-clause will be removed automatically.
    */
+  neworlist = NIL;
+  foreach (temp, orlist)
+  {
+    Expr *clause = (Expr *)lfirst(temp);
 
+    if (is_andclause(clause))
+    {
+      List *subclauses = ((BoolExpr *)clause)->args;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      subclauses = list_difference(subclauses, winners);
+      if (subclauses != NIL)
+      {
+        if (list_length(subclauses) == 1)
+        {
+          neworlist = lappend(neworlist, linitial(subclauses));
+        }
+        else
+        {
+          neworlist = lappend(neworlist, make_andclause(subclauses));
+        }
+      }
+      else
+      {
+        neworlist = NIL; /* degenerate case, see above */
+        break;
+      }
+    }
+    else
+    {
+      if (!list_member(winners, clause))
+      {
+        neworlist = lappend(neworlist, clause);
+      }
+      else
+      {
+        neworlist = NIL; /* degenerate case, see above */
+        break;
+      }
+    }
+  }
 
   /*
    * Append reduced OR to the winners list, if it's not degenerate, handling
@@ -702,28 +702,28 @@ process_duplicate_ors(List *orlist)
    * Also be careful to maintain AND/OR flatness in case we pulled up a
    * sub-sub-OR-clause.
    */
-
-
-
-
-
-
-
-
-
-
-
+  if (neworlist != NIL)
+  {
+    if (list_length(neworlist) == 1)
+    {
+      winners = lappend(winners, linitial(neworlist));
+    }
+    else
+    {
+      winners = lappend(winners, make_orclause(pull_ors(neworlist)));
+    }
+  }
 
   /*
    * And return the constructed AND clause, again being wary of a single
    * element and AND/OR flatness.
    */
-
-
-
-
-
-
-
-
+  if (list_length(winners) == 1)
+  {
+    return (Expr *)linitial(winners);
+  }
+  else
+  {
+    return make_andclause(pull_ands(winners));
+  }
 }

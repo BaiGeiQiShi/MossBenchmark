@@ -32,15 +32,21 @@ date_test_strdate(const char *input)
 
   r = rstrdate(input, &d);
   printf("r: %d ", r);
-  if (r == 0) {
+  if (r == 0)
+  {
     q = rdatestr(d, dbuf);
     printf("q: %d ", q);
-    if (q == 0) {
+    if (q == 0)
+    {
       printf("date %d: %s\n", i++, dbuf);
-    } else {
+    }
+    else
+    {
       printf("\n");
     }
-  } else {
+  }
+  else
+  {
     check_return(r);
   }
 }
@@ -55,15 +61,21 @@ date_test_defmt(const char *fmt, const char *input)
 
   r = rdefmtdate(&d, fmt, input);
   printf("r: %d ", r);
-  if (r == 0) {
+  if (r == 0)
+  {
     q = rdatestr(d, dbuf);
     printf("q: %d ", q);
-    if (q == 0) {
+    if (q == 0)
+    {
       printf("date %d: %s\n", i++, dbuf);
-    } else {
+    }
+    else
+    {
       printf("\n");
     }
-  } else {
+  }
+  else
+  {
     check_return(r);
   }
 }
@@ -77,9 +89,12 @@ date_test_fmt(date d, const char *fmt)
 
   r = rfmtdate(d, fmt, buf);
   printf("r: %d ", r);
-  if (r != 0) {
+  if (r != 0)
+  {
     check_return(r);
-  } else {
+  }
+  else
+  {
     printf("date: %d: %s\n", i++, buf);
   }
 }
@@ -96,7 +111,8 @@ main(void)
 
   r = rmdyjul(mdy, &d);
   printf("create: r: %d\n", r);
-  if (r == 0) {
+  if (r == 0)
+  {
     rdatestr(d, dbuf);
     printf("date: %s\n", dbuf);
   }
@@ -158,7 +174,8 @@ main(void)
 static void
 check_return(int ret)
 {
-  switch (ret) {
+  switch (ret)
+  {
   case ECPG_INFORMIX_ENOTDMY:
     printf("(ECPG_INFORMIX_ENOTDMY)");
     break;
@@ -171,7 +188,7 @@ check_return(int ret)
   case ECPG_INFORMIX_BAD_MONTH:
     printf("(ECPG_INFORMIX_BAD_MONTH)");
     break;
-  default:;
+  default:
     printf("(unknown ret: %d)", ret);
     break;
   }

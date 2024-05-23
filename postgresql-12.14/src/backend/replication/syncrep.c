@@ -153,16 +153,20 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
   int mode;
 
   /* Cap the level for anything other than commit to remote flush only. */
-  if (commit) {
+  if (commit)
+  {
     mode = SyncRepWaitMode;
-  } else {
+  }
+  else
+  {
     mode = Min(SyncRepWaitMode, SYNC_REP_WAIT_FLUSH);
   }
 
   /*
    * Fast exit if user has not requested sync replication.
    */
-  if (!SyncRepRequested()) {
+  if (!SyncRepRequested())
+  {
     return;
   }
 
@@ -180,7 +184,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
    * condition but we'll be fetching that cache line anyway so it's likely
    * to be a low cost check.
    */
-  if (!WalSndCtl->sync_standbys_defined || lsn <= WalSndCtl->lsn[mode]) {
+  if (!WalSndCtl->sync_standbys_defined || lsn <= WalSndCtl->lsn[mode])
+  {
     LWLockRelease(SyncRepLock);
     return;
   }
@@ -196,7 +201,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
   LWLockRelease(SyncRepLock);
 
   /* Alter ps display to show waiting for sync rep. */
-  if (update_process_title) {
+  if (update_process_title)
+  {
     int len;
 
     old_status = get_ps_display(&len);
@@ -213,7 +219,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
    * Each proc has its own wait latch, so we perform a normal latch
    * check/wait loop here.
    */
-  for (;;) {
+  for (;;)
+  {
     int rc;
 
     /* Must reset the latch before testing state. */
@@ -226,7 +233,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
      * it will never update it again, so we can't be seeing a stale value
      * in that case.
      */
-    if (MyProc->syncRepState == SYNC_REP_WAIT_COMPLETE) {
+    if (MyProc->syncRepState == SYNC_REP_WAIT_COMPLETE)
+    {
       break;
     }
 
@@ -242,8 +250,9 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
      * We do NOT reset ProcDiePending, so that the process will die after
      * the commit is cleaned up.
      */
-    if (ProcDiePending) {
-      ereport(WARNING, (errcode(ERRCODE_ADMIN_SHUTDOWN),   errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command"),   errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
+    if (ProcDiePending)
+    {
+      ereport(WARNING, (errcode(ERRCODE_ADMIN_SHUTDOWN), errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command"), errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
       whereToSendOutput = DestNone;
       SyncRepCancelWait();
       break;
@@ -255,9 +264,10 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
      * altogether is not helpful, so we just terminate the wait with a
      * suitable warning.
      */
-    if (QueryCancelPending) {
+    if (QueryCancelPending)
+    {
       QueryCancelPending = false;
-      ereport(WARNING, (errmsg("canceling wait for synchronous replication due to user request"),  errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
+      ereport(WARNING, (errmsg("canceling wait for synchronous replication due to user request"), errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
       SyncRepCancelWait();
       break;
     }
@@ -272,7 +282,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
      * If the postmaster dies, we'll probably never get an acknowledgment,
      * because all the wal sender processes will exit. So just bail out.
      */
-    if (rc & WL_POSTMASTER_DEATH) {
+    if (rc & WL_POSTMASTER_DEATH)
+    {
       ProcDiePending = true;
       whereToSendOutput = DestNone;
       SyncRepCancelWait();
@@ -293,7 +304,8 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
   MyProc->syncRepState = SYNC_REP_NOT_WAITING;
   MyProc->waitLSN = 0;
 
-  if (new_status) {
+  if (new_status)
+  {
     /* Reset ps display */
     set_ps_display(new_status, false);
     pfree(new_status);
@@ -314,21 +326,26 @@ SyncRepQueueInsert(int mode)
   Assert(mode >= 0 && mode < NUM_SYNC_REP_WAIT_MODE);
   proc = (PGPROC *)SHMQueuePrev(&(WalSndCtl->SyncRepQueue[mode]), &(WalSndCtl->SyncRepQueue[mode]), offsetof(PGPROC, syncRepLinks));
 
-  while (proc) {
+  while (proc)
+  {
     /*
      * Stop at the queue element that we should after to ensure the queue
      * is ordered by LSN.
      */
-    if (proc->waitLSN < MyProc->waitLSN) {
+    if (proc->waitLSN < MyProc->waitLSN)
+    {
       break;
     }
 
     proc = (PGPROC *)SHMQueuePrev(&(WalSndCtl->SyncRepQueue[mode]), &(proc->syncRepLinks), offsetof(PGPROC, syncRepLinks));
   }
 
-  if (proc) {
+  if (proc)
+  {
     SHMQueueInsertAfter(&(proc->syncRepLinks), &(MyProc->syncRepLinks));
-  } else {
+  }
+  else
+  {
     SHMQueueInsertAfter(&(WalSndCtl->SyncRepQueue[mode]), &(MyProc->syncRepLinks));
   }
 }
@@ -340,7 +357,8 @@ static void
 SyncRepCancelWait(void)
 {
   LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-  if (!SHMQueueIsDetached(&(MyProc->syncRepLinks))) {
+  if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+  {
     SHMQueueDelete(&(MyProc->syncRepLinks));
   }
   MyProc->syncRepState = SYNC_REP_NOT_WAITING;
@@ -354,11 +372,13 @@ SyncRepCleanupAtProcExit(void)
    * First check if we are removed from the queue without the lock to not
    * slow down backend exit.
    */
-  if (!SHMQueueIsDetached(&(MyProc->syncRepLinks))) {
+  if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+  {
     LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
 
     /* maybe we have just been removed, so recheck */
-    if (!SHMQueueIsDetached(&(MyProc->syncRepLinks))) {
+    if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+    {
       SHMQueueDelete(&(MyProc->syncRepLinks));
     }
 
@@ -386,7 +406,8 @@ SyncRepInitConfig(void)
    * for handling replies from standby.
    */
   priority = SyncRepGetStandbyPriority();
-  if (MyWalSnd->sync_standby_priority != priority) {
+  if (MyWalSnd->sync_standby_priority != priority)
+  {
     SpinLockAcquire(&MyWalSnd->mutex);
     MyWalSnd->sync_standby_priority = priority;
     SpinLockRelease(&MyWalSnd->mutex);
@@ -422,7 +443,8 @@ SyncRepReleaseWaiters(void)
    * still invalid, then leave quickly also.  Streaming or stopping WAL
    * senders are allowed to release waiters.
    */
-  if (MyWalSnd->sync_standby_priority == 0 || (MyWalSnd->state != WALSNDSTATE_STREAMING && MyWalSnd->state != WALSNDSTATE_STOPPING) || XLogRecPtrIsInvalid(MyWalSnd->flush)) {
+  if (MyWalSnd->sync_standby_priority == 0 || (MyWalSnd->state != WALSNDSTATE_STREAMING && MyWalSnd->state != WALSNDSTATE_STOPPING) || XLogRecPtrIsInvalid(MyWalSnd->flush))
+  {
     announce_next_takeover = true;
     return;
   }
@@ -447,13 +469,17 @@ SyncRepReleaseWaiters(void)
    * If we are managing a sync standby, though we weren't prior to this,
    * then announce we are now a sync standby.
    */
-  if (announce_next_takeover && am_sync) {
+  if (announce_next_takeover && am_sync)
+  {
     announce_next_takeover = false;
 
-    if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY) {
+    if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY)
+    {
       ereport(LOG, (errmsg("standby \"%s\" is now a synchronous standby with priority %u", application_name, MyWalSnd->sync_standby_priority)));
-    } else {
-      ereport(LOG, (errmsg("standby \"%s\" is now a candidate for quorum synchronous standby",  application_name)));
+    }
+    else
+    {
+      ereport(LOG, (errmsg("standby \"%s\" is now a candidate for quorum synchronous standby", application_name)));
     }
   }
 
@@ -461,7 +487,8 @@ SyncRepReleaseWaiters(void)
    * If the number of sync standbys is less than requested or we aren't
    * managing a sync standby then just leave.
    */
-  if (!got_recptr || !am_sync) {
+  if (!got_recptr || !am_sync)
+  {
     LWLockRelease(SyncRepLock);
     announce_next_takeover = !am_sync;
     return;
@@ -471,22 +498,25 @@ SyncRepReleaseWaiters(void)
    * Set the lsn first so that when we wake backends they will release up to
    * this location.
    */
-  if (walsndctl->lsn[SYNC_REP_WAIT_WRITE] < writePtr) {
+  if (walsndctl->lsn[SYNC_REP_WAIT_WRITE] < writePtr)
+  {
     walsndctl->lsn[SYNC_REP_WAIT_WRITE] = writePtr;
     numwrite = SyncRepWakeQueue(false, SYNC_REP_WAIT_WRITE);
   }
-  if (walsndctl->lsn[SYNC_REP_WAIT_FLUSH] < flushPtr) {
+  if (walsndctl->lsn[SYNC_REP_WAIT_FLUSH] < flushPtr)
+  {
     walsndctl->lsn[SYNC_REP_WAIT_FLUSH] = flushPtr;
     numflush = SyncRepWakeQueue(false, SYNC_REP_WAIT_FLUSH);
   }
-  if (walsndctl->lsn[SYNC_REP_WAIT_APPLY] < applyPtr) {
+  if (walsndctl->lsn[SYNC_REP_WAIT_APPLY] < applyPtr)
+  {
     walsndctl->lsn[SYNC_REP_WAIT_APPLY] = applyPtr;
     numapply = SyncRepWakeQueue(false, SYNC_REP_WAIT_APPLY);
   }
 
   LWLockRelease(SyncRepLock);
 
-  elog(DEBUG3, "released %d procs up to write %X/%X, %d procs up to flush %X/%X, %d procs up to apply %X/%X",  numwrite, (uint32)(writePtr >> 32), (uint32)writePtr, numflush, (uint32)(flushPtr >> 32), (uint32)flushPtr, numapply, (uint32)(applyPtr >> 32), (uint32)applyPtr);
+  elog(DEBUG3, "released %d procs up to write %X/%X, %d procs up to flush %X/%X, %d procs up to apply %X/%X", numwrite, (uint32)(writePtr >> 32), (uint32)writePtr, numflush, (uint32)(flushPtr >> 32), (uint32)flushPtr, numapply, (uint32)(applyPtr >> 32), (uint32)applyPtr);
 }
 
 /*
@@ -513,7 +543,8 @@ SyncRepGetSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRecPtr *app
   *am_sync = false;
 
   /* Quick out if not even configured to be synchronous */
-  if (SyncRepConfig == NULL) {
+  if (SyncRepConfig == NULL)
+  {
     return false;
   }
 
@@ -521,8 +552,10 @@ SyncRepGetSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRecPtr *app
   num_standbys = SyncRepGetCandidateStandbys(&sync_standbys);
 
   /* Am I among the candidate sync standbys? */
-  for (i = 0; i < num_standbys; i++) {
-    if (sync_standbys[i].is_me) {
+  for (i = 0; i < num_standbys; i++)
+  {
+    if (sync_standbys[i].is_me)
+    {
       *am_sync = true;
       break;
     }
@@ -532,7 +565,8 @@ SyncRepGetSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRecPtr *app
    * Nothing more to do if we are not managing a sync standby or there are
    * not enough synchronous standbys.
    */
-  if (!(*am_sync) || num_standbys < SyncRepConfig->num_sync) {
+  if (!(*am_sync) || num_standbys < SyncRepConfig->num_sync)
+  {
     pfree(sync_standbys);
     return false;
   }
@@ -550,9 +584,12 @@ SyncRepGetSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRecPtr *app
    * we can use SyncRepGetOldestSyncRecPtr() to calculate the synced
    * positions even in a quorum-based sync replication.
    */
-  if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY) {
+  if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY)
+  {
     SyncRepGetOldestSyncRecPtr(writePtr, flushPtr, applyPtr, sync_standbys, num_standbys);
-  } else {
+  }
+  else
+  {
     SyncRepGetNthLatestSyncRecPtr(writePtr, flushPtr, applyPtr, sync_standbys, num_standbys, SyncRepConfig->num_sync);
   }
 
@@ -573,18 +610,22 @@ SyncRepGetOldestSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRecPt
    * and Apply positions.  We assume *writePtr et al were initialized to
    * InvalidXLogRecPtr.
    */
-  for (i = 0; i < num_standbys; i++) {
+  for (i = 0; i < num_standbys; i++)
+  {
     XLogRecPtr write = sync_standbys[i].write;
     XLogRecPtr flush = sync_standbys[i].flush;
     XLogRecPtr apply = sync_standbys[i].apply;
 
-    if (XLogRecPtrIsInvalid(*writePtr) || *writePtr > write) {
+    if (XLogRecPtrIsInvalid(*writePtr) || *writePtr > write)
+    {
       *writePtr = write;
     }
-    if (XLogRecPtrIsInvalid(*flushPtr) || *flushPtr > flush) {
+    if (XLogRecPtrIsInvalid(*flushPtr) || *flushPtr > flush)
+    {
       *flushPtr = flush;
     }
-    if (XLogRecPtrIsInvalid(*applyPtr) || *applyPtr > apply) {
+    if (XLogRecPtrIsInvalid(*applyPtr) || *applyPtr > apply)
+    {
       *applyPtr = apply;
     }
   }
@@ -609,7 +650,8 @@ SyncRepGetNthLatestSyncRecPtr(XLogRecPtr *writePtr, XLogRecPtr *flushPtr, XLogRe
   flush_array = (XLogRecPtr *)palloc(sizeof(XLogRecPtr) * num_standbys);
   apply_array = (XLogRecPtr *)palloc(sizeof(XLogRecPtr) * num_standbys);
 
-  for (i = 0; i < num_standbys; i++) {
+  for (i = 0; i < num_standbys; i++)
+  {
     write_array[i] = sync_standbys[i].write;
     flush_array[i] = sync_standbys[i].flush;
     apply_array[i] = sync_standbys[i].apply;
@@ -639,11 +681,16 @@ cmp_lsn(const void *a, const void *b)
   XLogRecPtr lsn1 = *((const XLogRecPtr *)a);
   XLogRecPtr lsn2 = *((const XLogRecPtr *)b);
 
-  if (lsn1 > lsn2) {
+  if (lsn1 > lsn2)
+  {
     return -1;
-  } else if (lsn1 == lsn2) {
+  }
+  else if (lsn1 == lsn2)
+  {
     return 0;
-  } else {
+  }
+  else
+  {
     return 1;
   }
 }
@@ -665,13 +712,15 @@ SyncRepGetCandidateStandbys(SyncRepStandbyData **standbys)
   *standbys = (SyncRepStandbyData *)palloc(max_wal_senders * sizeof(SyncRepStandbyData));
 
   /* Quick exit if sync replication is not requested */
-  if (SyncRepConfig == NULL) {
+  if (SyncRepConfig == NULL)
+  {
     return 0;
   }
 
   /* Collect raw data from shared memory */
   n = 0;
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     volatile WalSnd *walsnd; /* Use volatile pointer to prevent code
                               * rearrangement */
     SyncRepStandbyData *stby;
@@ -690,22 +739,26 @@ SyncRepGetCandidateStandbys(SyncRepStandbyData **standbys)
     SpinLockRelease(&walsnd->mutex);
 
     /* Must be active */
-    if (stby->pid == 0) {
+    if (stby->pid == 0)
+    {
       continue;
     }
 
     /* Must be streaming or stopping */
-    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING) {
+    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING)
+    {
       continue;
     }
 
     /* Must be synchronous */
-    if (stby->sync_standby_priority == 0) {
+    if (stby->sync_standby_priority == 0)
+    {
       continue;
     }
 
     /* Must have a valid flush position */
-    if (XLogRecPtrIsInvalid(stby->flush)) {
+    if (XLogRecPtrIsInvalid(stby->flush))
+    {
       continue;
     }
 
@@ -720,7 +773,8 @@ SyncRepGetCandidateStandbys(SyncRepStandbyData **standbys)
    * have too many candidates then return only the num_sync ones of highest
    * priority.
    */
-  if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY && n > SyncRepConfig->num_sync) {
+  if (SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY && n > SyncRepConfig->num_sync)
+  {
     /* Sort by priority ... */
     qsort(*standbys, n, sizeof(SyncRepStandbyData), standby_priority_comparator);
     /* ... then report just the first num_sync ones */
@@ -740,7 +794,8 @@ standby_priority_comparator(const void *a, const void *b)
   const SyncRepStandbyData *sb = (const SyncRepStandbyData *)b;
 
   /* First, sort by increasing priority value */
-  if (sa->sync_standby_priority != sb->sync_standby_priority) {
+  if (sa->sync_standby_priority != sb->sync_standby_priority)
+  {
     return sa->sync_standby_priority - sb->sync_standby_priority;
   }
 
@@ -768,12 +823,14 @@ List *
 SyncRepGetSyncStandbys(bool *am_sync)
 {
   /* Set default result */
-  if (am_sync != NULL) {
+  if (am_sync != NULL)
+  {
     *am_sync = false;
   }
 
   /* Quick exit if sync replication is not requested */
-  if (SyncRepConfig == NULL) {
+  if (SyncRepConfig == NULL)
+  {
     return NIL;
   }
 
@@ -800,7 +857,8 @@ SyncRepGetSyncStandbysQuorum(bool *am_sync)
 
   Assert(SyncRepConfig->syncrep_method == SYNC_REP_QUORUM);
 
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     XLogRecPtr flush;
     WalSndState state;
     int pid;
@@ -814,22 +872,26 @@ SyncRepGetSyncStandbysQuorum(bool *am_sync)
     SpinLockRelease(&walsnd->mutex);
 
     /* Must be active */
-    if (pid == 0) {
+    if (pid == 0)
+    {
       continue;
     }
 
     /* Must be streaming or stopping */
-    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING) {
+    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING)
+    {
       continue;
     }
 
     /* Must be synchronous */
-    if (walsnd->sync_standby_priority == 0) {
+    if (walsnd->sync_standby_priority == 0)
+    {
       continue;
     }
 
     /* Must have a valid flush position */
-    if (XLogRecPtrIsInvalid(flush)) {
+    if (XLogRecPtrIsInvalid(flush))
+    {
       continue;
     }
 
@@ -838,7 +900,8 @@ SyncRepGetSyncStandbysQuorum(bool *am_sync)
      * append it to the result.
      */
     result = lappend_int(result, i);
-    if (am_sync != NULL && walsnd == MyWalSnd) {
+    if (am_sync != NULL && walsnd == MyWalSnd)
+    {
       *am_sync = true;
     }
   }
@@ -883,7 +946,8 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
    * store all the other potential sync standbys into the pending list, in
    * order to scan it later and find other sync standbys from it quickly.
    */
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     XLogRecPtr flush;
     WalSndState state;
     int pid;
@@ -897,23 +961,27 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
     SpinLockRelease(&walsnd->mutex);
 
     /* Must be active */
-    if (pid == 0) {
+    if (pid == 0)
+    {
       continue;
     }
 
     /* Must be streaming or stopping */
-    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING) {
+    if (state != WALSNDSTATE_STREAMING && state != WALSNDSTATE_STOPPING)
+    {
       continue;
     }
 
     /* Must be synchronous */
     this_priority = walsnd->sync_standby_priority;
-    if (this_priority == 0) {
+    if (this_priority == 0)
+    {
       continue;
     }
 
     /* Must have a valid flush position */
-    if (XLogRecPtrIsInvalid(flush)) {
+    if (XLogRecPtrIsInvalid(flush))
+    {
       continue;
     }
 
@@ -922,18 +990,24 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
      * append it to the result. Otherwise append this standby to the
      * pending list to check if it's actually sync or not later.
      */
-    if (this_priority == 1) {
+    if (this_priority == 1)
+    {
       result = lappend_int(result, i);
-      if (am_sync != NULL && walsnd == MyWalSnd) {
+      if (am_sync != NULL && walsnd == MyWalSnd)
+      {
         *am_sync = true;
       }
-      if (list_length(result) == SyncRepConfig->num_sync) {
+      if (list_length(result) == SyncRepConfig->num_sync)
+      {
         list_free(pending);
         return result; /* Exit if got enough sync standbys */
       }
-    } else {
+    }
+    else
+    {
       pending = lappend_int(pending, i);
-      if (am_sync != NULL && walsnd == MyWalSnd) {
+      if (am_sync != NULL && walsnd == MyWalSnd)
+      {
         am_in_pending = true;
       }
 
@@ -944,7 +1018,8 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
        * standbys from the pending list later because we can skip
        * unnecessary scans for the unused priorities.
        */
-      if (this_priority < next_highest_priority) {
+      if (this_priority < next_highest_priority)
+      {
         next_highest_priority = this_priority;
       }
     }
@@ -954,19 +1029,22 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
    * Consider all pending standbys as sync if the number of them plus
    * already-found sync ones is lower than the configuration requests.
    */
-  if (list_length(result) + list_length(pending) <= SyncRepConfig->num_sync) {
+  if (list_length(result) + list_length(pending) <= SyncRepConfig->num_sync)
+  {
     bool needfree = (result != NIL && pending != NIL);
 
     /*
      * Set *am_sync to true if this walsender is in the pending list
      * because all pending standbys are considered as sync.
      */
-    if (am_sync != NULL && !(*am_sync)) {
+    if (am_sync != NULL && !(*am_sync))
+    {
       *am_sync = am_in_pending;
     }
 
     result = list_concat(result, pending);
-    if (needfree) {
+    if (needfree)
+    {
       pfree(pending);
     }
     return result;
@@ -976,23 +1054,27 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
    * Find the sync standbys from the pending list.
    */
   priority = next_highest_priority;
-  while (priority <= lowest_priority) {
+  while (priority <= lowest_priority)
+  {
     ListCell *cell;
     ListCell *prev = NULL;
     ListCell *next;
 
     next_highest_priority = lowest_priority + 1;
 
-    for (cell = list_head(pending); cell != NULL; cell = next) {
+    for (cell = list_head(pending); cell != NULL; cell = next)
+    {
       i = lfirst_int(cell);
       walsnd = &WalSndCtl->walsnds[i];
 
       next = lnext(cell);
 
       this_priority = walsnd->sync_standby_priority;
-      if (this_priority == priority) {
+      if (this_priority == priority)
+      {
         result = lappend_int(result, i);
-        if (am_sync != NULL && walsnd == MyWalSnd) {
+        if (am_sync != NULL && walsnd == MyWalSnd)
+        {
           *am_sync = true;
         }
 
@@ -1001,7 +1083,8 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
          * starts because we know that the list has enough elements to
          * reach SyncRepConfig->num_sync.
          */
-        if (list_length(result) == SyncRepConfig->num_sync) {
+        if (list_length(result) == SyncRepConfig->num_sync)
+        {
           list_free(pending);
           return result; /* Exit if got enough sync standbys */
         }
@@ -1015,7 +1098,8 @@ SyncRepGetSyncStandbysPriority(bool *am_sync)
         continue;
       }
 
-      if (this_priority < next_highest_priority) {
+      if (this_priority < next_highest_priority)
+      {
         next_highest_priority = this_priority;
       }
 
@@ -1056,24 +1140,29 @@ SyncRepGetStandbyPriority(void)
    * Since synchronous cascade replication is not allowed, we always set the
    * priority of cascading walsender to zero.
    */
-  if (am_cascading_walsender) {
+  if (am_cascading_walsender)
+  {
     return 0;
   }
 
-  if (!SyncStandbysDefined() || SyncRepConfig == NULL) {
+  if (!SyncStandbysDefined() || SyncRepConfig == NULL)
+  {
     return 0;
   }
 
   standby_name = SyncRepConfig->member_names;
-  for (priority = 1; priority <= SyncRepConfig->nmembers; priority++) {
-    if (pg_strcasecmp(standby_name, application_name) == 0 || strcmp(standby_name, "*") == 0) {
+  for (priority = 1; priority <= SyncRepConfig->nmembers; priority++)
+  {
+    if (pg_strcasecmp(standby_name, application_name) == 0 || strcmp(standby_name, "*") == 0)
+    {
       found = true;
       break;
     }
     standby_name += strlen(standby_name) + 1;
   }
 
-  if (!found) {
+  if (!found)
+  {
     return 0;
   }
 
@@ -1105,11 +1194,13 @@ SyncRepWakeQueue(bool all, int mode)
 
   proc = (PGPROC *)SHMQueueNext(&(WalSndCtl->SyncRepQueue[mode]), &(WalSndCtl->SyncRepQueue[mode]), offsetof(PGPROC, syncRepLinks));
 
-  while (proc) {
+  while (proc)
+  {
     /*
      * Assume the queue is ordered by LSN
      */
-    if (!all && walsndctl->lsn[mode] < proc->waitLSN) {
+    if (!all && walsndctl->lsn[mode] < proc->waitLSN)
+    {
       return numprocs;
     }
 
@@ -1161,7 +1252,8 @@ SyncRepUpdateSyncStandbysDefined(void)
 {
   bool sync_standbys_defined = SyncStandbysDefined();
 
-  if (sync_standbys_defined != WalSndCtl->sync_standbys_defined) {
+  if (sync_standbys_defined != WalSndCtl->sync_standbys_defined)
+  {
     LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
 
     /*
@@ -1169,10 +1261,12 @@ SyncRepUpdateSyncStandbysDefined(void)
      * for backends to continue to waiting.  Since the user no longer
      * wants synchronous replication, we'd better wake them up.
      */
-    if (!sync_standbys_defined) {
+    if (!sync_standbys_defined)
+    {
       int i;
 
-      for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; i++) {
+      for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; i++)
+      {
         SyncRepWakeQueue(true, i);
       }
     }
@@ -1203,12 +1297,14 @@ SyncRepQueueIsOrderedByLSN(int mode)
 
   proc = (PGPROC *)SHMQueueNext(&(WalSndCtl->SyncRepQueue[mode]), &(WalSndCtl->SyncRepQueue[mode]), offsetof(PGPROC, syncRepLinks));
 
-  while (proc) {
+  while (proc)
+  {
     /*
      * Check the queue is ordered by LSN and that multiple procs don't
      * have matching LSNs
      */
-    if (proc->waitLSN <= lastLSN) {
+    if (proc->waitLSN <= lastLSN)
+    {
       return false;
     }
 
@@ -1230,7 +1326,8 @@ SyncRepQueueIsOrderedByLSN(int mode)
 bool
 check_synchronous_standby_names(char **newval, void **extra, GucSource source)
 {
-  if (*newval != NULL && (*newval)[0] != '\0') {
+  if (*newval != NULL && (*newval)[0] != '\0')
+  {
     int parse_rc;
     SyncRepConfigData *pconf;
 
@@ -1243,24 +1340,30 @@ check_synchronous_standby_names(char **newval, void **extra, GucSource source)
     parse_rc = syncrep_yyparse();
     syncrep_scanner_finish();
 
-    if (parse_rc != 0 || syncrep_parse_result == NULL) {
+    if (parse_rc != 0 || syncrep_parse_result == NULL)
+    {
       GUC_check_errcode(ERRCODE_SYNTAX_ERROR);
-      if (syncrep_parse_error_msg) {
+      if (syncrep_parse_error_msg)
+      {
         GUC_check_errdetail("%s", syncrep_parse_error_msg);
-      } else {
+      }
+      else
+      {
         GUC_check_errdetail("synchronous_standby_names parser failed");
       }
       return false;
     }
 
-    if (syncrep_parse_result->num_sync <= 0) {
+    if (syncrep_parse_result->num_sync <= 0)
+    {
       GUC_check_errmsg("number of synchronous standbys (%d) must be greater than zero", syncrep_parse_result->num_sync);
       return false;
     }
 
     /* GUC extra value must be malloc'd, not palloc'd */
     pconf = (SyncRepConfigData *)malloc(syncrep_parse_result->config_size);
-    if (pconf == NULL) {
+    if (pconf == NULL)
+    {
       return false;
     }
     memcpy(pconf, syncrep_parse_result, syncrep_parse_result->config_size);
@@ -1274,7 +1377,9 @@ check_synchronous_standby_names(char **newval, void **extra, GucSource source)
      * a short-lived context used for config file processing, so that will
      * not be very long.)
      */
-  } else {
+  }
+  else
+  {
     *extra = NULL;
   }
 
@@ -1290,7 +1395,8 @@ assign_synchronous_standby_names(const char *newval, void *extra)
 void
 assign_synchronous_commit(int newval, void *extra)
 {
-  switch (newval) {
+  switch (newval)
+  {
   case SYNCHRONOUS_COMMIT_REMOTE_WRITE:
     SyncRepWaitMode = SYNC_REP_WAIT_WRITE;
     break;
@@ -1300,7 +1406,7 @@ assign_synchronous_commit(int newval, void *extra)
   case SYNCHRONOUS_COMMIT_REMOTE_APPLY:
     SyncRepWaitMode = SYNC_REP_WAIT_APPLY;
     break;
-  default:;
+  default:
     SyncRepWaitMode = SYNC_REP_NO_WAIT;
     break;
   }

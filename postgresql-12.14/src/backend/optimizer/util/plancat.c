@@ -86,11 +86,12 @@ set_baserel_partition_key_exprs(Relation relation, RelOptInfo *rel);
  *	min_attr	lowest valid AttrNumber
  *	max_attr	highest valid AttrNumber
  *	indexlist	list of IndexOptInfos for relation's indexes
- *	statlist	list of StatisticExtInfo for relation's statistic
- *objects serverid	if it's a foreign table, the server OID fdwroutine
- *if it's a foreign table, the FDW function pointers pages		number
- *of pages tuples		number of tuples rel_parallel_workers
- *user-defined number of parallel workers
+ *	statlist	list of StatisticExtInfo for relation's statistic objects
+ *	serverid	if it's a foreign table, the server OID
+ *	fdwroutine	if it's a foreign table, the FDW function pointers
+ *	pages		number of pages
+ *	tuples		number of tuples
+ *	rel_parallel_workers user-defined number of parallel workers
  *
  * Also, add information about the relation's foreign keys to root->fkey_list.
  *
@@ -128,14 +129,14 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent, RelOp
   {
     if (!(relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE || relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot open relation \"%s\"", RelationGetRelationName(relation))));
     }
   }
 
   /* Temporary and unlogged relations are inaccessible during recovery. */
   if (!RelationNeedsWAL(relation) && RecoveryInProgress())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot access temporary or unlogged relations during recovery")));
   }
 
   rel->min_attr = FirstLowInvalidHeapAttributeNumber + 1;
@@ -236,9 +237,9 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent, RelOp
        */
       if (index->indcheckxmin && !TransactionIdPrecedes(HeapTupleHeaderGetXmin(indexRelation->rd_indextuple->t_data), TransactionXmin))
       {
-
-
-
+        root->glob->transientPlan = true;
+        index_close(indexRelation, NoLock);
+        continue;
       }
 
       info = makeNode(IndexOptInfo);
@@ -322,36 +323,36 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent, RelOp
          * of current or foreseeable amcanorder index types, it's not
          * worth expending more effort on now.
          */
+        info->sortopfamily = (Oid *)palloc(sizeof(Oid) * nkeycolumns);
+        info->reverse_sort = (bool *)palloc(sizeof(bool) * nkeycolumns);
+        info->nulls_first = (bool *)palloc(sizeof(bool) * nkeycolumns);
 
+        for (i = 0; i < nkeycolumns; i++)
+        {
+          int16 opt = indexRelation->rd_indoption[i];
+          Oid ltopr;
+          Oid btopfamily;
+          Oid btopcintype;
+          int16 btstrategy;
 
+          info->reverse_sort[i] = (opt & INDOPTION_DESC) != 0;
+          info->nulls_first[i] = (opt & INDOPTION_NULLS_FIRST) != 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          ltopr = get_opfamily_member(info->opfamily[i], info->opcintype[i], info->opcintype[i], BTLessStrategyNumber);
+          if (OidIsValid(ltopr) && get_ordering_op_properties(ltopr, &btopfamily, &btopcintype, &btstrategy) && btopcintype == info->opcintype[i] && btstrategy == BTLessStrategyNumber)
+          {
+            /* Successful mapping */
+            info->sortopfamily[i] = btopfamily;
+          }
+          else
+          {
+            /* Fail ... quietly treat index as unordered */
+            info->sortopfamily = NULL;
+            info->reverse_sort = NULL;
+            info->nulls_first = NULL;
+            break;
+          }
+        }
       }
       else
       {
@@ -405,7 +406,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent, RelOp
         estimate_rel_size(indexRelation, NULL, &info->pages, &info->tuples, &allvisfrac);
         if (info->tuples > rel->tuples)
         {
-
+          info->tuples = rel->tuples;
         }
       }
 
@@ -465,7 +466,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent, RelOp
    */
   if (get_relation_info_hook)
   {
-
+    (*get_relation_info_hook)(root, relationObjectId, inhparent, rel);
   }
 }
 
@@ -661,7 +662,7 @@ infer_arbiter_indexes(PlannerInfo *root)
 
     if (attno == 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("whole row unique index inference specifications are not supported")));
     }
 
     inferAttrs = bms_add_member(inferAttrs, attno - FirstLowInvalidHeapAttributeNumber);
@@ -677,7 +678,7 @@ infer_arbiter_indexes(PlannerInfo *root)
 
     if (indexOidFromConstraint == InvalidOid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("constraint in ON CONFLICT clause has no associated index")));
     }
   }
 
@@ -751,7 +752,7 @@ infer_arbiter_indexes(PlannerInfo *root)
      */
     if (!idxForm->indisunique)
     {
-
+      goto next;
     }
 
     /* Build BMS representation of plain (non expression) index attrs */
@@ -838,7 +839,7 @@ infer_arbiter_indexes(PlannerInfo *root)
     }
 
     results = lappend_oid(results, idxForm->indexrelid);
-  next:;
+  next:
     index_close(idxRel, NoLock);
   }
 
@@ -978,13 +979,13 @@ estimate_rel_size(Relation rel, int32 *attr_widths, BlockNumber *pages, double *
 
   switch (rel->rd_rel->relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_MATVIEW:;
-  case RELKIND_TOASTVALUE:;
+  case RELKIND_RELATION:
+  case RELKIND_MATVIEW:
+  case RELKIND_TOASTVALUE:
     table_relation_estimate_size(rel, attr_widths, pages, tuples, allvisfrac);
     break;
 
-  case RELKIND_INDEX:;
+  case RELKIND_INDEX:
 
     /*
      * XXX: It'd probably be good to move this into a callback,
@@ -1004,9 +1005,9 @@ estimate_rel_size(Relation rel, int32 *attr_widths, BlockNumber *pages, double *
     /* quick exit if rel is clearly empty */
     if (curpages == 0)
     {
-
-
-
+      *tuples = 0;
+      *allvisfrac = 0;
+      break;
     }
     /* coerce values in pg_class to more desirable types */
     relpages = (BlockNumber)rel->rd_rel->relpages;
@@ -1069,29 +1070,29 @@ estimate_rel_size(Relation rel, int32 *attr_widths, BlockNumber *pages, double *
     {
       *allvisfrac = 0;
     }
-
-
-
-
-
-
-
-
+    else if ((double)relallvisible >= curpages)
+    {
+      *allvisfrac = 1;
+    }
+    else
+    {
+      *allvisfrac = (double)relallvisible / curpages;
+    }
     break;
 
-  case RELKIND_SEQUENCE:;
+  case RELKIND_SEQUENCE:
     /* Sequences always have a known size */
     *pages = 1;
     *tuples = 1;
     *allvisfrac = 0;
     break;
-  case RELKIND_FOREIGN_TABLE:;
+  case RELKIND_FOREIGN_TABLE:
     /* Just use whatever's in pg_class */
     *pages = rel->rd_rel->relpages;
     *tuples = rel->rd_rel->reltuples;
     *allvisfrac = 0;
     break;
-  default:;;
+  default:
     /* else it has no disk storage; probably shouldn't get here? */
     *pages = 0;
     *tuples = 0;
@@ -1232,7 +1233,7 @@ get_relation_constraints(PlannerInfo *root, Oid relationObjectId, RelOptInfo *re
       }
       if (constr->check[i].ccnoinherit && !include_noinherit)
       {
-
+        continue;
       }
 
       cexpr = stringToNode(constr->check[i].ccbin);
@@ -1314,7 +1315,7 @@ get_relation_constraints(PlannerInfo *root, Oid relationObjectId, RelOptInfo *re
       /* Fix Vars to have the desired varno */
       if (varno != 1)
       {
-
+        ChangeVarNodes((Node *)pcqual, 1, varno, 0);
       }
 
       result = list_concat(result, pcqual);
@@ -1355,14 +1356,14 @@ get_relation_statistics(RelOptInfo *rel, Relation relation)
     htup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statOid));
     if (!HeapTupleIsValid(htup))
     {
-
+      elog(ERROR, "cache lookup failed for statistics object %u", statOid);
     }
     staForm = (Form_pg_statistic_ext)GETSTRUCT(htup);
 
     dtup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(statOid));
     if (!HeapTupleIsValid(dtup))
     {
-
+      elog(ERROR, "cache lookup failed for statistics object %u", statOid);
     }
 
     /*
@@ -1481,11 +1482,11 @@ relation_excluded_by_constraints(PlannerInfo *root, RelOptInfo *rel, RangeTblEnt
    */
   switch (constraint_exclusion)
   {
-  case CONSTRAINT_EXCLUSION_OFF:;
+  case CONSTRAINT_EXCLUSION_OFF:
     /* In 'off' mode, never make any further tests */
     return false;
 
-  case CONSTRAINT_EXCLUSION_PARTITION:;
+  case CONSTRAINT_EXCLUSION_PARTITION:
 
     /*
      * When constraint_exclusion is set to 'partition' we only handle
@@ -1504,7 +1505,7 @@ relation_excluded_by_constraints(PlannerInfo *root, RelOptInfo *rel, RangeTblEnt
     }
     return false;
 
-  case CONSTRAINT_EXCLUSION_ON:;
+  case CONSTRAINT_EXCLUSION_ON:
 
     /*
      * In 'on' mode, always apply constraint exclusion.  If we are
@@ -1651,7 +1652,7 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 
   switch (rte->rtekind)
   {
-  case RTE_RELATION:;
+  case RTE_RELATION:
     /* Assume we already have adequate lock */
     relation = table_open(rte->relid, NoLock);
 
@@ -1675,7 +1676,7 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
     table_close(relation, NoLock);
     break;
 
-  case RTE_SUBQUERY:;
+  case RTE_SUBQUERY:
     subquery = rte->subquery;
     foreach (l, subquery->targetList)
     {
@@ -1691,12 +1692,12 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
     }
     break;
 
-  case RTE_FUNCTION:;
-  case RTE_TABLEFUNC:;
-  case RTE_VALUES:;
-  case RTE_CTE:;
-  case RTE_NAMEDTUPLESTORE:;
-  case RTE_RESULT:;
+  case RTE_FUNCTION:
+  case RTE_TABLEFUNC:
+  case RTE_VALUES:
+  case RTE_CTE:
+  case RTE_NAMEDTUPLESTORE:
+  case RTE_RESULT:
     /* Not all of these can have dropped cols, but share code anyway */
     expandRTE(rte, varno, 0, -1, true /* include dropped */, NULL, &colvars);
     foreach (l, colvars)
@@ -1709,18 +1710,18 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
        */
       if (!IsA(var, Var))
       {
-
-
+        tlist = NIL;
+        break;
       }
 
       tlist = lappend(tlist, makeTargetEntry((Expr *)var, var->varattno, NULL, false));
     }
     break;
 
-  default:;;
+  default:
     /* caller error */
-
-
+    elog(ERROR, "unsupported RTE kind %d in build_physical_tlist", (int)rte->rtekind);
+    break;
   }
 
   return tlist;
@@ -1757,7 +1758,7 @@ build_index_tlist(PlannerInfo *root, IndexOptInfo *index, Relation heapRelation)
 
       if (indexkey < 0)
       {
-
+        att_tup = SystemAttributeDefinition(indexkey);
       }
       else
       {
@@ -1771,7 +1772,7 @@ build_index_tlist(PlannerInfo *root, IndexOptInfo *index, Relation heapRelation)
       /* expression column */
       if (indexpr_item == NULL)
       {
-
+        elog(ERROR, "wrong number of index expressions");
       }
       indexvar = (Expr *)lfirst(indexpr_item);
       indexpr_item = lnext(indexpr_item);
@@ -1781,7 +1782,7 @@ build_index_tlist(PlannerInfo *root, IndexOptInfo *index, Relation heapRelation)
   }
   if (indexpr_item != NULL)
   {
-
+    elog(ERROR, "wrong number of index expressions");
   }
 
   return tlist;
@@ -1815,7 +1816,7 @@ restriction_selectivity(PlannerInfo *root, Oid operatorid, List *args, Oid input
 
   if (result < 0.0 || result > 1.0)
   {
-
+    elog(ERROR, "invalid restriction selectivity: %f", result);
   }
 
   return (Selectivity)result;
@@ -1849,7 +1850,7 @@ join_selectivity(PlannerInfo *root, Oid operatorid, List *args, Oid inputcollid,
 
   if (result < 0.0 || result > 1.0)
   {
-
+    elog(ERROR, "invalid join selectivity: %f", result);
   }
 
   return (Selectivity)result;
@@ -1899,12 +1900,12 @@ function_selectivity(PlannerInfo *root, Oid funcid, List *args, Oid inputcollid,
   /* If support function fails, use default */
   if (sresult != &req)
   {
-
+    return (Selectivity)0.3333333;
   }
 
   if (req.selectivity < 0.0 || req.selectivity > 1.0)
   {
-
+    elog(ERROR, "invalid function selectivity: %f", req.selectivity);
   }
 
   return (Selectivity)req.selectivity;
@@ -1932,7 +1933,7 @@ add_function_cost(PlannerInfo *root, Oid funcid, Node *node, QualCost *cost)
   proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
   if (!HeapTupleIsValid(proctup))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcid);
   }
   procform = (Form_pg_proc)GETSTRUCT(proctup);
 
@@ -1993,7 +1994,7 @@ get_function_rows(PlannerInfo *root, Oid funcid, Node *node)
   proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
   if (!HeapTupleIsValid(proctup))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcid);
   }
   procform = (Form_pg_proc)GETSTRUCT(proctup);
 
@@ -2074,61 +2075,61 @@ has_unique_index(RelOptInfo *rel, AttrNumber attno)
 bool
 has_row_triggers(PlannerInfo *root, Index rti, CmdType event)
 {
+  RangeTblEntry *rte = planner_rt_fetch(rti, root);
+  Relation relation;
+  TriggerDesc *trigDesc;
+  bool result = false;
 
+  /* Assume we already have adequate lock */
+  relation = table_open(rte->relid, NoLock);
 
+  trigDesc = relation->trigdesc;
+  switch (event)
+  {
+  case CMD_INSERT:
+    if (trigDesc && (trigDesc->trig_insert_after_row || trigDesc->trig_insert_before_row))
+    {
+      result = true;
+    }
+    break;
+  case CMD_UPDATE:
+    if (trigDesc && (trigDesc->trig_update_after_row || trigDesc->trig_update_before_row))
+    {
+      result = true;
+    }
+    break;
+  case CMD_DELETE:
+    if (trigDesc && (trigDesc->trig_delete_after_row || trigDesc->trig_delete_before_row))
+    {
+      result = true;
+    }
+    break;
+  default:
+    elog(ERROR, "unrecognized CmdType: %d", (int)event);
+    break;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  table_close(relation, NoLock);
+  return result;
 }
 
 bool
 has_stored_generated_columns(PlannerInfo *root, Index rti)
 {
+  RangeTblEntry *rte = planner_rt_fetch(rti, root);
+  Relation relation;
+  TupleDesc tupdesc;
+  bool result = false;
 
+  /* Assume we already have adequate lock */
+  relation = heap_open(rte->relid, NoLock);
 
+  tupdesc = RelationGetDescr(relation);
+  result = tupdesc->constr && tupdesc->constr->has_generated_stored;
 
+  heap_close(relation, NoLock);
 
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -2295,7 +2296,7 @@ set_baserel_partition_key_exprs(Relation relation, RelOptInfo *rel)
     {
       if (lc == NULL)
       {
-
+        elog(ERROR, "wrong number of partition key expressions");
       }
 
       /* Re-stamp the expression with given varno. */

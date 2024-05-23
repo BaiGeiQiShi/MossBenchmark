@@ -32,7 +32,8 @@ populate_with_dummy_strings(bloom_filter *filter, int64 nelements)
   char element[MAX_ELEMENT_BYTES];
   int64 i;
 
-  for (i = 0; i < nelements; i++) {
+  for (i = 0; i < nelements; i++)
+  {
     CHECK_FOR_INTERRUPTS();
 
     snprintf(element, sizeof(element), "i" INT64_FORMAT, i);
@@ -52,11 +53,13 @@ nfalsepos_for_missing_strings(bloom_filter *filter, int64 nelements)
   int64 nfalsepos = 0;
   int64 i;
 
-  for (i = 0; i < nelements; i++) {
+  for (i = 0; i < nelements; i++)
+  {
     CHECK_FOR_INTERRUPTS();
 
     snprintf(element, sizeof(element), "M" INT64_FORMAT, i);
-    if (!bloom_lacks_element(filter, (unsigned char *)element, strlen(element))) {
+    if (!bloom_lacks_element(filter, (unsigned char *)element, strlen(element)))
+    {
       nfalsepos++;
     }
   }
@@ -112,19 +115,23 @@ test_bloomfilter(PG_FUNCTION_ARGS)
   int tests = PG_GETARG_INT32(3);
   int i;
 
-  if (power < 23 || power > 32) {
+  if (power < 23 || power > 32)
+  {
     elog(ERROR, "power argument must be between 23 and 32 inclusive");
   }
 
-  if (tests <= 0) {
+  if (tests <= 0)
+  {
     elog(ERROR, "invalid number of tests: %d", tests);
   }
 
-  if (nelements < 0) {
+  if (nelements < 0)
+  {
     elog(ERROR, "invalid number of elements: %d", tests);
   }
 
-  for (i = 0; i < tests; i++) {
+  for (i = 0; i < tests; i++)
+  {
     elog(DEBUG1, "beginning test #%d...", i + 1);
 
     create_and_test_bloom(power, nelements, seed);

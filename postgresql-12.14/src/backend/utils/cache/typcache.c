@@ -768,8 +768,8 @@ load_typcache_tupdesc(TypeCacheEntry *typentry)
 {
   Relation rel;
 
-  if (!OidIsValid(typentry->typrelid))
-  { /* should not happen */
+  if (!OidIsValid(typentry->typrelid)) /* should not happen */
+  {
     elog(ERROR, "invalid typrelid for composite type %u", typentry->type_id);
   }
   rel = relation_open(typentry->typrelid, AccessShareLock);

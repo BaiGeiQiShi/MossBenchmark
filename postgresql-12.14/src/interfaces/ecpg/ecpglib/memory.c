@@ -20,7 +20,8 @@ ecpg_alloc(long size, int lineno)
 {
   char *new = (char *)calloc(1L, size);
 
-  if (!new) {
+  if (!new)
+  {
     ecpg_raise(lineno, ECPG_OUT_OF_MEMORY, ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
     return NULL;
   }
@@ -33,7 +34,8 @@ ecpg_realloc(void *ptr, long size, int lineno)
 {
   char *new = (char *)realloc(ptr, size);
 
-  if (!new) {
+  if (!new)
+  {
     ecpg_raise(lineno, ECPG_OUT_OF_MEMORY, ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
     return NULL;
   }
@@ -46,12 +48,14 @@ ecpg_strdup(const char *string, int lineno)
 {
   char *new;
 
-  if (string == NULL) {
+  if (string == NULL)
+  {
     return NULL;
   }
 
   new = strdup(string);
-  if (!new) {
+  if (!new)
+  {
     ecpg_raise(lineno, ECPG_OUT_OF_MEMORY, ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
     return NULL;
   }
@@ -60,7 +64,8 @@ ecpg_strdup(const char *string, int lineno)
 }
 
 /* keep a list of memory we allocated for the user */
-struct auto_mem {
+struct auto_mem
+{
   void *pointer;
   struct auto_mem *next;
 };
@@ -99,7 +104,8 @@ static struct auto_mem *auto_allocs = NULL;
 
 #define get_auto_allocs() (auto_allocs)
 #define set_auto_allocs(am)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     auto_allocs = (am);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
   } while (0)
 #endif
@@ -109,11 +115,13 @@ ecpg_auto_alloc(long size, int lineno)
 {
   void *ptr = (void *)ecpg_alloc(size, lineno);
 
-  if (!ptr) {
+  if (!ptr)
+  {
     return NULL;
   }
 
-  if (!ecpg_add_mem(ptr, lineno)) {
+  if (!ecpg_add_mem(ptr, lineno))
+  {
     ecpg_free(ptr);
     return NULL;
   }
@@ -125,7 +133,8 @@ ecpg_add_mem(void *ptr, int lineno)
 {
   struct auto_mem *am = (struct auto_mem *)ecpg_alloc(sizeof(struct auto_mem), lineno);
 
-  if (!am) {
+  if (!am)
+  {
     return false;
   }
 
@@ -141,8 +150,10 @@ ECPGfree_auto_mem(void)
   struct auto_mem *am = get_auto_allocs();
 
   /* free all memory we have allocated for the user */
-  if (am) {
-    do {
+  if (am)
+  {
+    do
+    {
       struct auto_mem *act = am;
 
       am = am->next;
@@ -159,8 +170,10 @@ ecpg_clear_auto_mem(void)
   struct auto_mem *am = get_auto_allocs();
 
   /* only free our own structure */
-  if (am) {
-    do {
+  if (am)
+  {
+    do
+    {
       struct auto_mem *act = am;
 
       am = am->next;

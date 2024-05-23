@@ -52,7 +52,8 @@
 
 /* ASCII character-name table */
 
-static const struct cname {
+static const struct cname
+{
   const char *name;
   const char code;
 } cnames[] =
@@ -65,7 +66,22 @@ static const struct cname {
  */
 static const char *const classNames[NUM_CCLASSES + 1] = {"alnum", "alpha", "ascii", "blank", "cntrl", "digit", "graph", "lower", "print", "punct", "space", "upper", "xdigit", NULL};
 
-enum classes { CC_ALNUM, CC_ALPHA, CC_ASCII, CC_BLANK, CC_CNTRL, CC_DIGIT, CC_GRAPH, CC_LOWER, CC_PRINT, CC_PUNCT, CC_SPACE, CC_UPPER, CC_XDIGIT };
+enum classes
+{
+  CC_ALNUM,
+  CC_ALPHA,
+  CC_ASCII,
+  CC_BLANK,
+  CC_CNTRL,
+  CC_DIGIT,
+  CC_GRAPH,
+  CC_LOWER,
+  CC_PRINT,
+  CC_PUNCT,
+  CC_SPACE,
+  CC_UPPER,
+  CC_XDIGIT
+};
 
 /*
  * We do not use the hard-wired Unicode classification tables that Tcl does.
@@ -90,19 +106,23 @@ element(struct vars *v, /* context */
   /* generic:  one-chr names stand for themselves */
   assert(startp < endp);
   len = endp - startp;
-  if (len == 1) {
+  if (len == 1)
+  {
     return *startp;
   }
 
   NOTE(REG_ULOCALE);
 
   /* search table */
-  for (cn = cnames; cn->name != NULL; cn++) {
-    if (strlen(cn->name) == len && pg_char_and_wchar_strncmp(cn->name, startp, len) == 0) {
+  for (cn = cnames; cn->name != NULL; cn++)
+  {
+    if (strlen(cn->name) == len && pg_char_and_wchar_strncmp(cn->name, startp, len) == 0)
+    {
       break; /* NOTE BREAK OUT */
     }
   }
-  if (cn->name != NULL) {
+  if (cn->name != NULL)
+  {
     return CHR(cn->code);
   }
 
@@ -124,12 +144,14 @@ range(struct vars *v, /* context */
   struct cvec *cv;
   chr c, cc;
 
-  if (a != b && !before(a, b)) {
+  if (a != b && !before(a, b))
+  {
     ERR(REG_ERANGE);
     return NULL;
   }
 
-  if (!cases) { /* easy version */
+  if (!cases)
+  { /* easy version */
     cv = getcvec(v, 0, 1);
     NOERRN();
     addrange(cv, a, b);
@@ -147,7 +169,8 @@ range(struct vars *v, /* context */
    * inside the loop below.
    */
   nchrs = b - a + 1;
-  if (nchrs <= 0 || nchrs > 100000) {
+  if (nchrs <= 0 || nchrs > 100000)
+  {
     nchrs = 100000;
   }
 
@@ -155,24 +178,30 @@ range(struct vars *v, /* context */
   NOERRN();
   addrange(cv, a, b);
 
-  for (c = a; c <= b; c++) {
+  for (c = a; c <= b; c++)
+  {
     cc = pg_wc_tolower(c);
-    if (cc != c && (before(cc, a) || before(b, cc))) {
-      if (cv->nchrs >= cv->chrspace) {
+    if (cc != c && (before(cc, a) || before(b, cc)))
+    {
+      if (cv->nchrs >= cv->chrspace)
+      {
         ERR(REG_ETOOBIG);
         return NULL;
       }
       addchr(cv, cc);
     }
     cc = pg_wc_toupper(c);
-    if (cc != c && (before(cc, a) || before(b, cc))) {
-      if (cv->nchrs >= cv->chrspace) {
+    if (cc != c && (before(cc, a) || before(b, cc)))
+    {
+      if (cv->nchrs >= cv->chrspace)
+      {
         ERR(REG_ETOOBIG);
         return NULL;
       }
       addchr(cv, cc);
     }
-    if (CANCEL_REQUESTED(v->re)) {
+    if (CANCEL_REQUESTED(v->re))
+    {
       ERR(REG_CANCEL);
       return NULL;
     }
@@ -187,7 +216,8 @@ range(struct vars *v, /* context */
 static int /* predicate */
 before(chr x, chr y)
 {
-  if (x < y) {
+  if (x < y)
+  {
     return 1;
   }
   return 0;
@@ -206,11 +236,13 @@ eclass(struct vars *v, /* context */
   struct cvec *cv;
 
   /* crude fake equivalence class for testing */
-  if ((v->cflags & REG_FAKE) && c == 'x') {
+  if ((v->cflags & REG_FAKE) && c == 'x')
+  {
     cv = getcvec(v, 4, 0);
     addchr(cv, CHR('x'));
     addchr(cv, CHR('y'));
-    if (cases) {
+    if (cases)
+    {
       addchr(cv, CHR('X'));
       addchr(cv, CHR('Y'));
     }
@@ -218,7 +250,8 @@ eclass(struct vars *v, /* context */
   }
 
   /* otherwise, none */
-  if (cases) {
+  if (cases)
+  {
     return allcases(v, c);
   }
   cv = getcvec(v, 1, 0);
@@ -252,13 +285,16 @@ cclass(struct vars *v, /* context */
    */
   len = endp - startp;
   index = -1;
-  for (namePtr = classNames, i = 0; *namePtr != NULL; namePtr++, i++) {
-    if (strlen(*namePtr) == len && pg_char_and_wchar_strncmp(*namePtr, startp, len) == 0) {
+  for (namePtr = classNames, i = 0; *namePtr != NULL; namePtr++, i++)
+  {
+    if (strlen(*namePtr) == len && pg_char_and_wchar_strncmp(*namePtr, startp, len) == 0)
+    {
       index = i;
       break;
     }
   }
-  if (index == -1) {
+  if (index == -1)
+  {
     ERR(REG_ECTYPE);
     return NULL;
   }
@@ -267,7 +303,8 @@ cclass(struct vars *v, /* context */
    * Remap lower and upper to alpha if the match is case insensitive.
    */
 
-  if (cases && ((enum classes)index == CC_LOWER || (enum classes)index == CC_UPPER)) {
+  if (cases && ((enum classes)index == CC_LOWER || (enum classes)index == CC_UPPER))
+  {
     index = (int)CC_ALPHA;
   }
 
@@ -281,7 +318,8 @@ cclass(struct vars *v, /* context */
    * NB: keep this code in sync with cclass_column_index(), below.
    */
 
-  switch ((enum classes)index) {
+  switch ((enum classes)index)
+  {
   case CC_PRINT:
     cv = pg_ctype_get_cache(pg_wc_isprint, index);
     break;
@@ -294,7 +332,8 @@ cclass(struct vars *v, /* context */
   case CC_ASCII:
     /* hard-wired meaning */
     cv = getcvec(v, 0, 1);
-    if (cv) {
+    if (cv)
+    {
       addrange(cv, 0, 0x7f);
     }
     break;
@@ -324,7 +363,8 @@ cclass(struct vars *v, /* context */
      * just hard-wire the meaning.
      */
     cv = getcvec(v, 0, 3);
-    if (cv) {
+    if (cv)
+    {
       addrange(cv, '0', '9');
       addrange(cv, 'a', 'f');
       addrange(cv, 'A', 'F');
@@ -345,7 +385,8 @@ cclass(struct vars *v, /* context */
   }
 
   /* If cv is NULL now, the reason must be "out of memory" */
-  if (cv == NULL) {
+  if (cv == NULL)
+  {
     ERR(REG_ESPACE);
   }
   return cv;
@@ -366,35 +407,44 @@ cclass_column_index(struct colormap *cm, chr c)
    * Note: we should not see requests to consider cclasses that are not
    * treated as locale-specific by cclass(), above.
    */
-  if (cm->classbits[CC_PRINT] && pg_wc_isprint(c)) {
+  if (cm->classbits[CC_PRINT] && pg_wc_isprint(c))
+  {
     colnum |= cm->classbits[CC_PRINT];
   }
-  if (cm->classbits[CC_ALNUM] && pg_wc_isalnum(c)) {
+  if (cm->classbits[CC_ALNUM] && pg_wc_isalnum(c))
+  {
     colnum |= cm->classbits[CC_ALNUM];
   }
-  if (cm->classbits[CC_ALPHA] && pg_wc_isalpha(c)) {
+  if (cm->classbits[CC_ALPHA] && pg_wc_isalpha(c))
+  {
     colnum |= cm->classbits[CC_ALPHA];
   }
   assert(cm->classbits[CC_ASCII] == 0);
   assert(cm->classbits[CC_BLANK] == 0);
   assert(cm->classbits[CC_CNTRL] == 0);
-  if (cm->classbits[CC_DIGIT] && pg_wc_isdigit(c)) {
+  if (cm->classbits[CC_DIGIT] && pg_wc_isdigit(c))
+  {
     colnum |= cm->classbits[CC_DIGIT];
   }
-  if (cm->classbits[CC_PUNCT] && pg_wc_ispunct(c)) {
+  if (cm->classbits[CC_PUNCT] && pg_wc_ispunct(c))
+  {
     colnum |= cm->classbits[CC_PUNCT];
   }
   assert(cm->classbits[CC_XDIGIT] == 0);
-  if (cm->classbits[CC_SPACE] && pg_wc_isspace(c)) {
+  if (cm->classbits[CC_SPACE] && pg_wc_isspace(c))
+  {
     colnum |= cm->classbits[CC_SPACE];
   }
-  if (cm->classbits[CC_LOWER] && pg_wc_islower(c)) {
+  if (cm->classbits[CC_LOWER] && pg_wc_islower(c))
+  {
     colnum |= cm->classbits[CC_LOWER];
   }
-  if (cm->classbits[CC_UPPER] && pg_wc_isupper(c)) {
+  if (cm->classbits[CC_UPPER] && pg_wc_isupper(c))
+  {
     colnum |= cm->classbits[CC_UPPER];
   }
-  if (cm->classbits[CC_GRAPH] && pg_wc_isgraph(c)) {
+  if (cm->classbits[CC_GRAPH] && pg_wc_isgraph(c))
+  {
     colnum |= cm->classbits[CC_GRAPH];
   }
 
@@ -419,7 +469,8 @@ allcases(struct vars *v, /* context */
 
   cv = getcvec(v, 2, 0);
   addchr(cv, lc);
-  if (lc != uc) {
+  if (lc != uc)
+  {
     addchr(cv, uc);
   }
   return cv;
@@ -452,8 +503,10 @@ static int                          /* 0 for equal, nonzero for unequal */
 casecmp(const chr *x, const chr *y, /* strings to compare */
     size_t len)                     /* exact length of comparison */
 {
-  for (; len > 0; len--, x++, y++) {
-    if ((*x != *y) && (pg_wc_tolower(*x) != pg_wc_tolower(*y))) {
+  for (; len > 0; len--, x++, y++)
+  {
+    if ((*x != *y) && (pg_wc_tolower(*x) != pg_wc_tolower(*y)))
+    {
       return 1;
     }
   }

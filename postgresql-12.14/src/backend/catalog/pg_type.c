@@ -42,10 +42,9 @@ Oid binary_upgrade_next_pg_type_oid = InvalidOid;
 /* ----------------------------------------------------------------
  *		TypeShellMake
  *
- *		This procedure inserts a "shell" tuple into the pg_type
- *relation. The type tuple inserted has valid but dummy values, and its
- *		"typisdefined" field is false indicating it's not really
- *defined.
+ *		This procedure inserts a "shell" tuple into the pg_type relation.
+ *		The type tuple inserted has valid but dummy values, and its
+ *		"typisdefined" field is false indicating it's not really defined.
  *
  *		This is used so that a tuple exists in the catalogs.  The I/O
  *		functions for the type will link to this tuple.  When the full
@@ -77,7 +76,8 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
   /*
    * initialize our *nulls and *values arrays
    */
-  for (i = 0; i < Natts_pg_type; ++i) {
+  for (i = 0; i < Natts_pg_type; ++i)
+  {
     nulls[i] = false;
     values[i] = (Datum)NULL; /* redundant, but safe */
   }
@@ -123,14 +123,18 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
   nulls[Anum_pg_type_typacl - 1] = true;
 
   /* Use binary-upgrade override for pg_type.oid? */
-  if (IsBinaryUpgrade) {
-    if (!OidIsValid(binary_upgrade_next_pg_type_oid)) {
+  if (IsBinaryUpgrade)
+  {
+    if (!OidIsValid(binary_upgrade_next_pg_type_oid))
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_type OID value not set when in binary upgrade mode")));
     }
 
     typoid = binary_upgrade_next_pg_type_oid;
     binary_upgrade_next_pg_type_oid = InvalidOid;
-  } else {
+  }
+  else
+  {
     typoid = GetNewOidWithIndex(pg_type_desc, TypeOidIndexId, Anum_pg_type_oid);
   }
 
@@ -149,7 +153,8 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
   /*
    * Create dependencies.  We can/must skip this in bootstrap mode.
    */
-  if (!IsBootstrapProcessingMode()) {
+  if (!IsBootstrapProcessingMode())
+  {
     GenerateTypeDependencies(typoid, (Form_pg_type)GETSTRUCT(tup), NULL, NULL, 0, false, false, false);
   }
 
@@ -205,53 +210,71 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
    * Validate size specifications: either positive (fixed-length) or -1
    * (varlena) or -2 (cstring).
    */
-  if (!(internalSize > 0 || internalSize == -1 || internalSize == -2)) {
+  if (!(internalSize > 0 || internalSize == -1 || internalSize == -2))
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid type internal size %d", internalSize)));
   }
 
-  if (passedByValue) {
+  if (passedByValue)
+  {
     /*
      * Pass-by-value types must have a fixed length that is one of the
      * values supported by fetch_att() and store_att_byval(); and the
      * alignment had better agree, too.  All this code must match
      * access/tupmacs.h!
      */
-    if (internalSize == (int16)sizeof(char)) {
-      if (alignment != 'c') {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",                                                                        alignment, internalSize)));
+    if (internalSize == (int16)sizeof(char))
+    {
+      if (alignment != 'c')
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d", alignment, internalSize)));
       }
-    } else if (internalSize == (int16)sizeof(int16)) {
-      if (alignment != 's') {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",                                                                        alignment, internalSize)));
+    }
+    else if (internalSize == (int16)sizeof(int16))
+    {
+      if (alignment != 's')
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d", alignment, internalSize)));
       }
-    } else if (internalSize == (int16)sizeof(int32)) {
-      if (alignment != 'i') {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",                                                                        alignment, internalSize)));
+    }
+    else if (internalSize == (int16)sizeof(int32))
+    {
+      if (alignment != 'i')
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d", alignment, internalSize)));
       }
     }
 #if SIZEOF_DATUM == 8
-    else if (internalSize == (int16)sizeof(Datum)) {
-      if (alignment != 'd') {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",                                                                        alignment, internalSize)));
+    else if (internalSize == (int16)sizeof(Datum))
+    {
+      if (alignment != 'd')
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d", alignment, internalSize)));
       }
     }
 #endif
-    else{
+    else
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("internal size %d is invalid for passed-by-value type", internalSize)));
     }
-  } else {
+  }
+  else
+  {
     /* varlena types must have int align or better */
-    if (internalSize == -1 && !(alignment == 'i' || alignment == 'd')) {
+    if (internalSize == -1 && !(alignment == 'i' || alignment == 'd'))
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for variable-length type", alignment)));
     }
     /* cstring must have char alignment */
-    if (internalSize == -2 && !(alignment == 'c')) {
+    if (internalSize == -2 && !(alignment == 'c'))
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("alignment \"%c\" is invalid for variable-length type", alignment)));
     }
   }
 
   /* Only varlena types can be toasted */
-  if (storage != 'p' && internalSize != -1) {
+  if (storage != 'p' && internalSize != -1)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("fixed-size types must have storage PLAIN")));
   }
 
@@ -268,7 +291,8 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
   /*
    * initialize arrays needed for heap_form_tuple or heap_modify_tuple
    */
-  for (i = 0; i < Natts_pg_type; ++i) {
+  for (i = 0; i < Natts_pg_type; ++i)
+  {
     nulls[i] = false;
     replaces[i] = true;
     values[i] = (Datum)0;
@@ -310,32 +334,44 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
    * initialize the default binary value for this type.  Check for nulls of
    * course.
    */
-  if (defaultTypeBin) {
+  if (defaultTypeBin)
+  {
     values[Anum_pg_type_typdefaultbin - 1] = CStringGetTextDatum(defaultTypeBin);
-  } else {
+  }
+  else
+  {
     nulls[Anum_pg_type_typdefaultbin - 1] = true;
   }
 
   /*
    * initialize the default value for this type.
    */
-  if (defaultTypeValue) {
+  if (defaultTypeValue)
+  {
     values[Anum_pg_type_typdefault - 1] = CStringGetTextDatum(defaultTypeValue);
-  } else {
+  }
+  else
+  {
     nulls[Anum_pg_type_typdefault - 1] = true;
   }
 
   /*
    * Initialize the type's ACL, too.  But dependent types don't get one.
    */
-  if (isDependentType) {
+  if (isDependentType)
+  {
     typacl = NULL;
-  } else {
+  }
+  else
+  {
     typacl = get_user_default_acl(OBJECT_TYPE, ownerId, typeNamespace);
   }
-  if (typacl != NULL) {
+  if (typacl != NULL)
+  {
     values[Anum_pg_type_typacl - 1] = PointerGetDatum(typacl);
-  } else {
+  }
+  else
+  {
     nulls[Anum_pg_type_typacl - 1] = true;
   }
 
@@ -348,26 +384,30 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
   pg_type_desc = table_open(TypeRelationId, RowExclusiveLock);
 
   tup = SearchSysCacheCopy2(TYPENAMENSP, CStringGetDatum(typeName), ObjectIdGetDatum(typeNamespace));
-  if (HeapTupleIsValid(tup)) {
+  if (HeapTupleIsValid(tup))
+  {
     Form_pg_type typform = (Form_pg_type)GETSTRUCT(tup);
 
     /*
      * check that the type is not already defined.  It may exist as a
      * shell type, however.
      */
-    if (typform->typisdefined) {
+    if (typform->typisdefined)
+    {
       ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", typeName)));
     }
 
     /*
      * shell type must have been created by same owner
      */
-    if (typform->typowner != ownerId) {
+    if (typform->typowner != ownerId)
+    {
       aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TYPE, typeName);
     }
 
     /* trouble if caller wanted to force the OID */
-    if (OidIsValid(newTypeOid)) {
+    if (OidIsValid(newTypeOid))
+    {
       elog(ERROR, "cannot assign new OID to existing shell type");
     }
 
@@ -383,20 +423,27 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
     typeObjectId = typform->oid;
 
     rebuildDeps = true; /* get rid of shell type's dependencies */
-  } else {
+  }
+  else
+  {
     /* Force the OID if requested by caller */
-    if (OidIsValid(newTypeOid)) {
+    if (OidIsValid(newTypeOid))
+    {
       typeObjectId = newTypeOid;
     }
     /* Use binary-upgrade override for pg_type.oid, if supplied. */
-    else if (IsBinaryUpgrade) {
-      if (!OidIsValid(binary_upgrade_next_pg_type_oid)) {
+    else if (IsBinaryUpgrade)
+    {
+      if (!OidIsValid(binary_upgrade_next_pg_type_oid))
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_type OID value not set when in binary upgrade mode")));
       }
 
       typeObjectId = binary_upgrade_next_pg_type_oid;
       binary_upgrade_next_pg_type_oid = InvalidOid;
-    } else {
+    }
+    else
+    {
       typeObjectId = GetNewOidWithIndex(pg_type_desc, TypeOidIndexId, Anum_pg_type_oid);
     }
 
@@ -410,7 +457,8 @@ TypeCreate(Oid newTypeOid, const char *typeName, Oid typeNamespace, Oid relation
   /*
    * Create dependencies.  We can/must skip this in bootstrap mode.
    */
-  if (!IsBootstrapProcessingMode()) {
+  if (!IsBootstrapProcessingMode())
+  {
     GenerateTypeDependencies(typeObjectId, (Form_pg_type)GETSTRUCT(tup), (defaultTypeBin ? stringToNode(defaultTypeBin) : NULL), typacl, relationKind, isImplicitArray, isDependentType, rebuildDeps);
   }
 
@@ -455,7 +503,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
   ObjectAddress myself, referenced;
 
   /* If rebuild, first flush old dependencies, except extension deps */
-  if (rebuild) {
+  if (rebuild)
+  {
     deleteDependencyRecordsFor(TypeRelationId, typeObjectId, true);
     deleteSharedDependencyRecordsFor(TypeRelationId, typeObjectId, 0);
   }
@@ -470,7 +519,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
    * Skip these for a dependent type, since it will have such dependencies
    * indirectly through its depended-on type or relation.
    */
-  if (!isDependentType) {
+  if (!isDependentType)
+  {
     referenced.classId = NamespaceRelationId;
     referenced.objectId = typeForm->typnamespace;
     referenced.objectSubId = 0;
@@ -484,49 +534,56 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
   }
 
   /* Normal dependencies on the I/O functions */
-  if (OidIsValid(typeForm->typinput)) {
+  if (OidIsValid(typeForm->typinput))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typinput;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typoutput)) {
+  if (OidIsValid(typeForm->typoutput))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typoutput;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typreceive)) {
+  if (OidIsValid(typeForm->typreceive))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typreceive;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typsend)) {
+  if (OidIsValid(typeForm->typsend))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typsend;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typmodin)) {
+  if (OidIsValid(typeForm->typmodin))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typmodin;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typmodout)) {
+  if (OidIsValid(typeForm->typmodout))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typmodout;
     referenced.objectSubId = 0;
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  if (OidIsValid(typeForm->typanalyze)) {
+  if (OidIsValid(typeForm->typanalyze))
+  {
     referenced.classId = ProcedureRelationId;
     referenced.objectId = typeForm->typanalyze;
     referenced.objectSubId = 0;
@@ -542,14 +599,18 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
    * relation is, and not otherwise. And in the latter, of course we get the
    * opposite effect.
    */
-  if (OidIsValid(typeForm->typrelid)) {
+  if (OidIsValid(typeForm->typrelid))
+  {
     referenced.classId = RelationRelationId;
     referenced.objectId = typeForm->typrelid;
     referenced.objectSubId = 0;
 
-    if (relationKind != RELKIND_COMPOSITE_TYPE) {
+    if (relationKind != RELKIND_COMPOSITE_TYPE)
+    {
       recordDependencyOn(&myself, &referenced, DEPENDENCY_INTERNAL);
-    } else {
+    }
+    else
+    {
       recordDependencyOn(&referenced, &myself, DEPENDENCY_INTERNAL);
     }
   }
@@ -559,7 +620,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
    * dependent on the element type.  Otherwise, if it has an element type,
    * the dependency is a normal one.
    */
-  if (OidIsValid(typeForm->typelem)) {
+  if (OidIsValid(typeForm->typelem))
+  {
     referenced.classId = TypeRelationId;
     referenced.objectId = typeForm->typelem;
     referenced.objectSubId = 0;
@@ -567,7 +629,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
   }
 
   /* Normal dependency from a domain to its base type. */
-  if (OidIsValid(typeForm->typbasetype)) {
+  if (OidIsValid(typeForm->typbasetype))
+  {
     referenced.classId = TypeRelationId;
     referenced.objectId = typeForm->typbasetype;
     referenced.objectSubId = 0;
@@ -576,7 +639,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
 
   /* Normal dependency from a domain to its collation. */
   /* We know the default collation is pinned, so don't bother recording it */
-  if (OidIsValid(typeForm->typcollation) && typeForm->typcollation != DEFAULT_COLLATION_OID) {
+  if (OidIsValid(typeForm->typcollation) && typeForm->typcollation != DEFAULT_COLLATION_OID)
+  {
     referenced.classId = CollationRelationId;
     referenced.objectId = typeForm->typcollation;
     referenced.objectSubId = 0;
@@ -584,7 +648,8 @@ GenerateTypeDependencies(Oid typeObjectId, Form_pg_type typeForm, Node *defaultE
   }
 
   /* Normal dependency on the default expression. */
-  if (defaultExpr) {
+  if (defaultExpr)
+  {
     recordDependencyOnExpr(&myself, defaultExpr, NIL, DEPENDENCY_NORMAL);
   }
 }
@@ -610,7 +675,8 @@ RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
   pg_type_desc = table_open(TypeRelationId, RowExclusiveLock);
 
   tuple = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
-  if (!HeapTupleIsValid(tuple)) {
+  if (!HeapTupleIsValid(tuple))
+  {
     elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
   typ = (Form_pg_type)GETSTRUCT(tuple);
@@ -630,10 +696,12 @@ RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
    * Otherwise, we can at least give a more friendly error than unique-index
    * violation.
    */
-  if (OidIsValid(oldTypeOid)) {
+  if (OidIsValid(oldTypeOid))
+  {
     if (get_typisdefined(oldTypeOid) && moveArrayTypeName(oldTypeOid, newTypeName, typeNamespace))
       /* successfully dodged the problem */;
-    else {
+    else
+    {
       ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", newTypeName)));
     }
   }
@@ -653,7 +721,8 @@ RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
    * need to do anything more if we already renamed that array type above
    * (which would happen when, eg, renaming "foo" to "_foo").
    */
-  if (OidIsValid(arrayOid) && arrayOid != oldTypeOid) {
+  if (OidIsValid(arrayOid) && arrayOid != oldTypeOid)
+  {
     char *arrname = makeArrayTypeName(newTypeName, typeNamespace);
 
     RenameTypeInternal(arrayOid, arrname, typeNamespace);
@@ -681,22 +750,28 @@ makeArrayTypeName(const char *typeName, Oid typeNamespace)
    */
   pg_type_desc = table_open(TypeRelationId, AccessShareLock);
 
-  for (i = 1; i < NAMEDATALEN - 1; i++) {
+  for (i = 1; i < NAMEDATALEN - 1; i++)
+  {
     arr[i - 1] = '_';
-    if (i + namelen < NAMEDATALEN) {
+    if (i + namelen < NAMEDATALEN)
+    {
       strcpy(arr + i, typeName);
-    } else {
+    }
+    else
+    {
       memcpy(arr + i, typeName, NAMEDATALEN - i);
       truncate_identifier(arr, NAMEDATALEN, false);
     }
-    if (!SearchSysCacheExists2(TYPENAMENSP, CStringGetDatum(arr), ObjectIdGetDatum(typeNamespace))) {
+    if (!SearchSysCacheExists2(TYPENAMENSP, CStringGetDatum(arr), ObjectIdGetDatum(typeNamespace)))
+    {
       break;
     }
   }
 
   table_close(pg_type_desc, AccessShareLock);
 
-  if (i >= NAMEDATALEN - 1) {
+  if (i >= NAMEDATALEN - 1)
+  {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("could not form array type name for type \"%s\"", typeName)));
   }
 
@@ -734,13 +809,15 @@ moveArrayTypeName(Oid typeOid, const char *typeName, Oid typeNamespace)
   char *newname;
 
   /* We need do nothing if it's a shell type. */
-  if (!get_typisdefined(typeOid)) {
+  if (!get_typisdefined(typeOid))
+  {
     return true;
   }
 
   /* Can't change it if it's not an autogenerated array type. */
   elemOid = get_element_type(typeOid);
-  if (!OidIsValid(elemOid) || get_array_type(elemOid) != typeOid) {
+  if (!OidIsValid(elemOid) || get_array_type(elemOid) != typeOid)
+  {
     return false;
   }
 

@@ -99,8 +99,8 @@ pg_mkdir_p(char *path, int omode)
   numask = oumask & ~(S_IWUSR | S_IXUSR);
   (void)umask(numask);
 
-  if (p[0] == '/')
-  { /* Skip leading '/'. */
+  if (p[0] == '/') /* Skip leading '/'. */
+  {
     ++p;
   }
   for (last = 0; !last; ++p)
@@ -116,7 +116,7 @@ pg_mkdir_p(char *path, int omode)
     *p = '\0';
     if (!last && p[1] == '\0')
     {
-
+      last = 1;
     }
 
     if (last)
@@ -129,22 +129,22 @@ pg_mkdir_p(char *path, int omode)
     {
       if (!S_ISDIR(sb.st_mode))
       {
-
-
-
-
-
-
-
-
-
-
+        if (last)
+        {
+          errno = EEXIST;
+        }
+        else
+        {
+          errno = ENOTDIR;
+        }
+        retval = -1;
+        break;
       }
     }
     else if (mkdir(path, last ? omode : S_IRWXU | S_IRWXG | S_IRWXO) < 0)
     {
-
-
+      retval = -1;
+      break;
     }
     if (!last)
     {

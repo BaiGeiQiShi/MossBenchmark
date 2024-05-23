@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * nbtsort.c
- *		Build a btree from sorted input by loading leaf pages
- *sequentially.
+ *		Build a btree from sorted input by loading leaf pages sequentially.
  *
  * NOTES
  *
@@ -341,7 +340,7 @@ btbuild(Relation heap, Relation index, IndexInfo *indexInfo)
    */
   if (RelationGetNumberOfBlocks(index) != 0)
   {
-
+    elog(ERROR, "index \"%s\" already contains data", RelationGetRelationName(index));
   }
 
   reltuples = _bt_spools_heapscan(heap, index, &buildstate, indexInfo);
@@ -355,7 +354,7 @@ btbuild(Relation heap, Relation index, IndexInfo *indexInfo)
   _bt_spooldestroy(buildstate.spool);
   if (buildstate.spool2)
   {
-
+    _bt_spooldestroy(buildstate.spool2);
   }
   if (buildstate.btleader)
   {
@@ -563,8 +562,8 @@ _bt_leafbuild(BTSpool *btspool, BTSpool *btspool2)
   tuplesort_performsort(btspool->sortstate);
   if (btspool2)
   {
-
-
+    pgstat_progress_update_param(PROGRESS_CREATEIDX_SUBPHASE, PROGRESS_BTREE_PHASE_PERFORMSORT_2);
+    tuplesort_performsort(btspool2->sortstate);
   }
 
   wstate.heap = btspool->heap;
@@ -605,8 +604,8 @@ _bt_build_callback(Relation index, HeapTuple htup, Datum *values, bool *isnull, 
   else
   {
     /* dead tuples are put into spool2 */
-
-
+    buildstate->havedead = true;
+    _bt_spool(buildstate->spool2, &htup->t_self, values, isnull);
   }
 
   buildstate->indtuples += 1;
@@ -783,7 +782,7 @@ _bt_sortaddtup(Page page, Size itemsize, IndexTuple itup, OffsetNumber itup_off)
 
   if (PageAddItem(page, (Item)itup, itemsize, itup_off, false, false) == InvalidOffsetNumber)
   {
-
+    elog(ERROR, "failed to add item to the index page");
   }
 }
 
@@ -800,11 +799,10 @@ _bt_sortaddtup(Page page, Size itemsize, IndexTuple itup, OffsetNumber itup_off)
  * +----------------+---------------------------------+
  * | PageHeaderData | linp0 linp1 linp2 ...           |
  * +-----------+----+---------------------------------+
- * | ... linpN |
- *|
+ * | ... linpN |									  |
  * +-----------+--------------------------------------+
- * |	 ^ last | |
- *|
+ * |	 ^ last										  |
+ * |												  |
  * +-------------+------------------------------------+
  * |			 | itemN ...                          |
  * +-------------+------------------+-----------------+
@@ -1143,110 +1141,110 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
      */
 
     /* the preparation of merge */
-
-
+    itup = tuplesort_getindextuple(btspool->sortstate, true);
+    itup2 = tuplesort_getindextuple(btspool2->sortstate, true);
 
     /* Prepare SortSupport data for each column */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    sortKeys = (SortSupport)palloc0(keysz * sizeof(SortSupportData));
+
+    for (i = 0; i < keysz; i++)
+    {
+      SortSupport sortKey = sortKeys + i;
+      ScanKey scanKey = wstate->inskey->scankeys + i;
+      int16 strategy;
+
+      sortKey->ssup_cxt = CurrentMemoryContext;
+      sortKey->ssup_collation = scanKey->sk_collation;
+      sortKey->ssup_nulls_first = (scanKey->sk_flags & SK_BT_NULLS_FIRST) != 0;
+      sortKey->ssup_attno = scanKey->sk_attno;
+      /* Abbreviation is not supported here */
+      sortKey->abbreviate = false;
+
+      AssertState(sortKey->ssup_attno != 0);
+
+      strategy = (scanKey->sk_flags & SK_BT_DESC) != 0 ? BTGreaterStrategyNumber : BTLessStrategyNumber;
+
+      PrepareSortSupportFromIndexRel(wstate->index, strategy, sortKey);
+    }
+
+    for (;;)
+    {
+      load1 = true; /* load BTSpool next ? */
+      if (itup2 == NULL)
+      {
+        if (itup == NULL)
+        {
+          break;
+        }
+      }
+      else if (itup != NULL)
+      {
+        int32 compare = 0;
+
+        for (i = 1; i <= keysz; i++)
+        {
+          SortSupport entry;
+          Datum attrDatum1, attrDatum2;
+          bool isNull1, isNull2;
+
+          entry = sortKeys + i - 1;
+          attrDatum1 = index_getattr(itup, i, tupdes, &isNull1);
+          attrDatum2 = index_getattr(itup2, i, tupdes, &isNull2);
+
+          compare = ApplySortComparator(attrDatum1, isNull1, attrDatum2, isNull2, entry);
+          if (compare > 0)
+          {
+            load1 = false;
+            break;
+          }
+          else if (compare < 0)
+          {
+            break;
+          }
+        }
+
+        /*
+         * If key values are equal, we sort on ItemPointer.  This is
+         * required for btree indexes, since heap TID is treated as an
+         * implicit last key attribute in order to ensure that all
+         * keys in the index are physically unique.
+         */
+        if (compare == 0)
+        {
+          compare = ItemPointerCompare(&itup->t_tid, &itup2->t_tid);
+          Assert(compare != 0);
+          if (compare > 0)
+          {
+            load1 = false;
+          }
+        }
+      }
+      else
+      {
+        load1 = false;
+      }
+
+      /* When we see first tuple, create first index page */
+      if (state == NULL)
+      {
+        state = _bt_pagestate(wstate, 0);
+      }
+
+      if (load1)
+      {
+        _bt_buildadd(wstate, state, itup);
+        itup = tuplesort_getindextuple(btspool->sortstate, true);
+      }
+      else
+      {
+        _bt_buildadd(wstate, state, itup2);
+        itup2 = tuplesort_getindextuple(btspool2->sortstate, true);
+      }
+
+      /* Report progress */
+      pgstat_progress_update_param(PROGRESS_CREATEIDX_TUPLES_DONE, ++tuples_done);
+    }
+    pfree(sortKeys);
   }
   else
   {
@@ -1350,7 +1348,7 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
   }
   else
   {
-
+    snapshot = RegisterSnapshot(GetTransactionSnapshot());
   }
 
   /*
@@ -1395,7 +1393,7 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
   }
   else
   {
-
+    querylen = 0; /* keep compiler quiet */
   }
 
   /* Everyone's had a chance to ask for space, so now create the DSM */
@@ -1404,13 +1402,13 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
   /* If no DSM segment was available, back out (do serial build) */
   if (pcxt->seg == NULL)
   {
-
-
-
-
-
-
-
+    if (IsMVCCSnapshot(snapshot))
+    {
+      UnregisterSnapshot(snapshot);
+    }
+    DestroyParallelContext(pcxt);
+    ExitParallelMode();
+    return;
   }
 
   /* Store shared build state, for which we reserved space */
@@ -1490,8 +1488,8 @@ _bt_begin_parallel(BTBuildState *buildstate, bool isconcurrent, int request)
   /* If no workers were successfully launched, back out (do serial build) */
   if (pcxt->nworkers_launched == 0)
   {
-
-
+    _bt_end_parallel(btleader);
+    return;
   }
 
   /* Save leader state now that it's clear build will be parallel */
@@ -1533,7 +1531,7 @@ _bt_end_parallel(BTLeader *btleader)
   /* Free last reference to MVCC snapshot, if one was used */
   if (IsMVCCSnapshot(btleader->snapshot))
   {
-
+    UnregisterSnapshot(btleader->snapshot);
   }
   DestroyParallelContext(btleader->pcxt);
   ExitParallelMode();
@@ -1688,8 +1686,8 @@ _bt_parallel_build_main(dsm_segment *seg, shm_toc *toc)
   }
   else
   {
-
-
+    heapLockmode = ShareUpdateExclusiveLock;
+    indexLockmode = RowExclusiveLock;
   }
 
   /* Open relations within worker */
@@ -1837,12 +1835,12 @@ _bt_parallel_scan_and_sort(BTSpool *btspool, BTSpool *btspool2, BTShared *btshar
   btshared->reltuples += reltuples;
   if (buildstate.havedead)
   {
-
+    btshared->havedead = true;
   }
   btshared->indtuples += buildstate.indtuples;
   if (indexInfo->ii_BrokenHotChain)
   {
-
+    btshared->brokenhotchain = true;
   }
   SpinLockRelease(&btshared->mutex);
 

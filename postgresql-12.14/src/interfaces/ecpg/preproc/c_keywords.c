@@ -16,7 +16,7 @@
 #include "c_kwlist_d.h"
 
 /* Token codes for C keywords */
-#define PG_KEYWORD(kwname, value) value, 
+#define PG_KEYWORD(kwname, value) value,
 
 static const uint16 ScanCKeywordTokens[] = {
 #include "c_kwlist.h"
@@ -44,7 +44,8 @@ ScanCKeywordLookup(const char *str)
    * hashing work on long strings.
    */
   len = strlen(str);
-  if (len > ScanCKeywords.max_kw_len) {
+  if (len > ScanCKeywords.max_kw_len)
+  {
     return -1;
   }
 
@@ -55,13 +56,15 @@ ScanCKeywordLookup(const char *str)
   h = ScanCKeywords_hash_func(str, len);
 
   /* An out-of-range result implies no match */
-  if (h < 0 || h >= ScanCKeywords.num_keywords) {
+  if (h < 0 || h >= ScanCKeywords.num_keywords)
+  {
     return -1;
   }
 
   kw = GetScanKeyword(h, &ScanCKeywords);
 
-  if (strcmp(kw, str) == 0) {
+  if (strcmp(kw, str) == 0)
+  {
     return ScanCKeywordTokens[h];
   }
 

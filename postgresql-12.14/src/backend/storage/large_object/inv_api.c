@@ -183,7 +183,7 @@ getdatafield(Form_pg_largeobject tuple, bytea **pdatafield, int *plen, bool *pfr
   len = VARSIZE(datafield) - VARHDRSZ;
   if (len < 0 || len > LOBLKSIZE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("pg_largeobject entry for OID %u, page %d has invalid data field size %d", tuple->loid, tuple->pageno, len)));
   }
   *pdatafield = datafield;
   *plen = len;
@@ -267,7 +267,7 @@ inv_open(Oid lobjId, int flags, MemoryContext mcxt)
 
   if (descflags == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid flags for opening a large object: %d", flags)));
   }
 
   /* Get snapshot.  If write is requested, use an instantaneous snapshot. */
@@ -395,9 +395,9 @@ inv_getsize(LargeObjectDesc *obj_desc)
     int len;
     bool pfreeit;
 
-    if (HeapTupleHasNulls(tuple))
-    { /* paranoia */
-
+    if (HeapTupleHasNulls(tuple)) /* paranoia */
+    {
+      elog(ERROR, "null field found in pg_largeobject");
     }
     data = (Form_pg_largeobject)GETSTRUCT(tuple);
     getdatafield(data, &datafield, &len, &pfreeit);
@@ -431,19 +431,19 @@ inv_seek(LargeObjectDesc *obj_desc, int64 offset, int whence)
    */
   switch (whence)
   {
-  case SEEK_SET:;
+  case SEEK_SET:
     newoffset = offset;
     break;
-  case SEEK_CUR:;
+  case SEEK_CUR:
     newoffset = obj_desc->offset + offset;
     break;
-  case SEEK_END:;
+  case SEEK_END:
     newoffset = inv_getsize(obj_desc) + offset;
     break;
-  default:;;
-
-
-
+  default:
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid whence setting: %d", whence)));
+    newoffset = 0; /* keep compiler quiet */
+    break;
   }
 
   /*
@@ -452,7 +452,7 @@ inv_seek(LargeObjectDesc *obj_desc, int64 offset, int whence)
    */
   if (newoffset < 0 || newoffset > MAX_LARGE_OBJECT_SIZE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg_internal("invalid large object seek target: " INT64_FORMAT, newoffset)));
   }
 
   obj_desc->offset = newoffset;
@@ -490,12 +490,12 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 
   if ((obj_desc->flags & IFS_RDLOCK) == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for large object %u", obj_desc->id)));
   }
 
   if (nbytes <= 0)
   {
-
+    return 0;
   }
 
   open_lo_relation();
@@ -512,9 +512,9 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
     bytea *datafield;
     bool pfreeit;
 
-    if (HeapTupleHasNulls(tuple))
-    { /* paranoia */
-
+    if (HeapTupleHasNulls(tuple)) /* paranoia */
+    {
+      elog(ERROR, "null field found in pg_largeobject");
     }
     data = (Form_pg_largeobject)GETSTRUCT(tuple);
 
@@ -601,18 +601,18 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
   /* enforce writability because snapshot is probably wrong otherwise */
   if ((obj_desc->flags & IFS_WRLOCK) == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for large object %u", obj_desc->id)));
   }
 
   if (nbytes <= 0)
   {
-
+    return 0;
   }
 
   /* this addition can't overflow because nbytes is only int32 */
   if ((nbytes + obj_desc->offset) > MAX_LARGE_OBJECT_SIZE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid large object write request size: %d", nbytes)));
   }
 
   open_lo_relation();
@@ -639,9 +639,9 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
     {
       if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
       {
-        if (HeapTupleHasNulls(oldtuple))
-        { /* paranoia */
-
+        if (HeapTupleHasNulls(oldtuple)) /* paranoia */
+        {
+          elog(ERROR, "null field found in pg_largeobject");
         }
         olddata = (Form_pg_largeobject)GETSTRUCT(oldtuple);
         Assert(olddata->pageno >= pageno);
@@ -673,7 +673,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
       off = (int)(obj_desc->offset % LOBLKSIZE);
       if (off > len)
       {
-
+        MemSet(workb + len, 0, off - len);
       }
 
       /*
@@ -718,7 +718,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
       off = (int)(obj_desc->offset % LOBLKSIZE);
       if (off > 0)
       {
-
+        MemSet(workb, 0, off);
       }
 
       /*
@@ -790,7 +790,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
   /* enforce writability because snapshot is probably wrong otherwise */
   if ((obj_desc->flags & IFS_WRLOCK) == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for large object %u", obj_desc->id)));
   }
 
   /*
@@ -799,7 +799,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
    */
   if (len < 0 || len > MAX_LARGE_OBJECT_SIZE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg_internal("invalid large object truncation target: " INT64_FORMAT, len)));
   }
 
   open_lo_relation();
@@ -822,9 +822,9 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
   olddata = NULL;
   if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
   {
-    if (HeapTupleHasNulls(oldtuple))
-    { /* paranoia */
-
+    if (HeapTupleHasNulls(oldtuple)) /* paranoia */
+    {
+      elog(ERROR, "null field found in pg_largeobject");
     }
     olddata = (Form_pg_largeobject)GETSTRUCT(oldtuple);
     Assert(olddata->pageno >= pageno);

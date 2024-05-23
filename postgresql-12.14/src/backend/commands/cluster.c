@@ -116,7 +116,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
      */
     if (RELATION_IS_OTHER_TEMP(rel))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster temporary tables of other sessions")));
     }
 
     /*
@@ -141,7 +141,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
         idxtuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexOid));
         if (!HeapTupleIsValid(idxtuple))
         {
-
+          elog(ERROR, "cache lookup failed for index %u", indexOid);
         }
         indexForm = (Form_pg_index)GETSTRUCT(idxtuple);
         if (indexForm->indisclustered)
@@ -167,7 +167,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
       indexOid = get_relname_relid(stmt->indexname, rel->rd_rel->relnamespace);
       if (!OidIsValid(indexOid))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("index \"%s\" for table \"%s\" does not exist", stmt->indexname, stmt->relation->relname)));
       }
     }
 
@@ -285,8 +285,8 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
   /* If the table has gone away, we can skip processing it */
   if (!OldHeap)
   {
-
-
+    pgstat_progress_end_command();
+    return;
   }
 
   /*
@@ -314,8 +314,8 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
     /* Check that the user still owns the relation */
     if (!pg_class_ownercheck(tableOid, save_userid))
     {
-
-
+      relation_close(OldHeap, AccessExclusiveLock);
+      goto out;
     }
 
     /*
@@ -328,8 +328,8 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
      */
     if (RELATION_IS_OTHER_TEMP(OldHeap))
     {
-
-
+      relation_close(OldHeap, AccessExclusiveLock);
+      goto out;
     }
 
     if (OidIsValid(indexOid))
@@ -339,8 +339,8 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
        */
       if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(indexOid)))
       {
-
-
+        relation_close(OldHeap, AccessExclusiveLock);
+        goto out;
       }
 
       /*
@@ -349,15 +349,15 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
       tuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexOid));
       if (!HeapTupleIsValid(tuple)) /* probably can't happen */
       {
-
-
+        relation_close(OldHeap, AccessExclusiveLock);
+        goto out;
       }
       indexForm = (Form_pg_index)GETSTRUCT(tuple);
       if (!indexForm->indisclustered)
       {
-
-
-
+        ReleaseSysCache(tuple);
+        relation_close(OldHeap, AccessExclusiveLock);
+        goto out;
       }
       ReleaseSysCache(tuple);
     }
@@ -371,7 +371,7 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
    */
   if (OidIsValid(indexOid) && OldHeap->rd_rel->relisshared)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster a shared catalog")));
   }
 
   /*
@@ -380,14 +380,14 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
    */
   if (RELATION_IS_OTHER_TEMP(OldHeap))
   {
-
-
-
-
-
-
-
-
+    if (OidIsValid(indexOid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster temporary tables of other sessions")));
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot vacuum temporary tables of other sessions")));
+    }
   }
 
   /*
@@ -411,8 +411,8 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
    */
   if (OldHeap->rd_rel->relkind == RELKIND_MATVIEW && !RelationIsPopulated(OldHeap))
   {
-
-
+    relation_close(OldHeap, AccessExclusiveLock);
+    goto out;
   }
 
   /*
@@ -428,7 +428,7 @@ cluster_rel(Oid tableOid, Oid indexOid, int options)
 
   /* NB: rebuild_relation does table_close() on OldHeap */
 
-out:;
+out:
   /* Roll back any GUC changes executed by index functions */
   AtEOXact_GUC(false, save_nestlevel);
 
@@ -458,13 +458,13 @@ check_index_is_clusterable(Relation OldHeap, Oid indexOid, bool recheck, LOCKMOD
    */
   if (OldIndex->rd_index == NULL || OldIndex->rd_index->indrelid != RelationGetRelid(OldHeap))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not an index for table \"%s\"", RelationGetRelationName(OldIndex), RelationGetRelationName(OldHeap))));
   }
 
   /* Index AM must allow clustering */
   if (!OldIndex->rd_indam->amclusterable)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster on index \"%s\" because access method does not support clustering", RelationGetRelationName(OldIndex))));
   }
 
   /*
@@ -475,7 +475,7 @@ check_index_is_clusterable(Relation OldHeap, Oid indexOid, bool recheck, LOCKMOD
    */
   if (!heap_attisnull(OldIndex->rd_indextuple, Anum_pg_index_indpred, NULL))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster on partial index \"%s\"", RelationGetRelationName(OldIndex))));
   }
 
   /*
@@ -488,7 +488,7 @@ check_index_is_clusterable(Relation OldHeap, Oid indexOid, bool recheck, LOCKMOD
    */
   if (!OldIndex->rd_index->indisvalid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot cluster on invalid index \"%s\"", RelationGetRelationName(OldIndex))));
   }
 
   /* Drop relcache refcnt on OldIndex, but keep lock */
@@ -522,7 +522,7 @@ mark_index_clustered(Relation rel, Oid indexOid, bool is_internal)
     indexTuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexOid));
     if (!HeapTupleIsValid(indexTuple))
     {
-
+      elog(ERROR, "cache lookup failed for index %u", indexOid);
     }
     indexForm = (Form_pg_index)GETSTRUCT(indexTuple);
 
@@ -547,7 +547,7 @@ mark_index_clustered(Relation rel, Oid indexOid, bool is_internal)
     indexTuple = SearchSysCacheCopy1(INDEXRELID, ObjectIdGetDatum(thisIndexOid));
     if (!HeapTupleIsValid(indexTuple))
     {
-
+      elog(ERROR, "cache lookup failed for index %u", thisIndexOid);
     }
     indexForm = (Form_pg_index)GETSTRUCT(indexTuple);
 
@@ -565,7 +565,7 @@ mark_index_clustered(Relation rel, Oid indexOid, bool is_internal)
       /* this was checked earlier, but let's be real sure */
       if (!indexForm->indisvalid)
       {
-
+        elog(ERROR, "cannot cluster on invalid index %u", indexOid);
       }
       indexForm->indisclustered = true;
       CatalogTupleUpdate(pg_index, &indexTuple->t_self, indexTuple);
@@ -664,7 +664,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence, LOCKMODE l
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(OIDOldHeap));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
   }
   reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions, &isNull);
   if (isNull)
@@ -724,7 +724,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence, LOCKMODE l
     tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(toastid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for relation %u", toastid);
     }
     reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions, &isNull);
     if (isNull)
@@ -859,7 +859,7 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose, b
    */
   if (TransactionIdIsValid(OldHeap->rd_rel->relfrozenxid) && TransactionIdPrecedes(FreezeXid, OldHeap->rd_rel->relfrozenxid))
   {
-
+    FreezeXid = OldHeap->rd_rel->relfrozenxid;
   }
 
   /*
@@ -867,7 +867,7 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose, b
    */
   if (MultiXactIdIsValid(OldHeap->rd_rel->relminmxid) && MultiXactIdPrecedes(MultiXactCutoff, OldHeap->rd_rel->relminmxid))
   {
-
+    MultiXactCutoff = OldHeap->rd_rel->relminmxid;
   }
 
   /*
@@ -918,7 +918,9 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose, b
   num_pages = RelationGetNumberOfBlocks(NewHeap);
 
   /* Log what we did */
-  ereport(elevel, (errmsg("\"%s\": found %.0f removable, %.0f nonremovable row versions in %u pages", RelationGetRelationName(OldHeap), tups_vacuumed, num_tuples, RelationGetNumberOfBlocks(OldHeap)), errdetail("%.0f dead row versions cannot be removed yet.\n%s.", tups_recently_dead, pg_rusage_show(&ru0))));
+  ereport(elevel, (errmsg("\"%s\": found %.0f removable, %.0f nonremovable row versions in %u pages", RelationGetRelationName(OldHeap), tups_vacuumed, num_tuples, RelationGetNumberOfBlocks(OldHeap)), errdetail("%.0f dead row versions cannot be removed yet.\n"
+                                                                                                                                                                                                                  "%s.",
+                                                                                                                                                                                                            tups_recently_dead, pg_rusage_show(&ru0))));
 
   if (OldIndex != NULL)
   {
@@ -933,7 +935,7 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose, b
   reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(OIDNewHeap));
   if (!HeapTupleIsValid(reltup))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", OIDNewHeap);
   }
   relform = (Form_pg_class)GETSTRUCT(reltup);
 
@@ -1000,14 +1002,14 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
   reltup1 = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(r1));
   if (!HeapTupleIsValid(reltup1))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", r1);
   }
   relform1 = (Form_pg_class)GETSTRUCT(reltup1);
 
   reltup2 = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(r2));
   if (!HeapTupleIsValid(reltup2))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", r2);
   }
   relform2 = (Form_pg_class)GETSTRUCT(reltup2);
 
@@ -1050,7 +1052,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
      */
     if (OidIsValid(relfilenode1) || OidIsValid(relfilenode2))
     {
-
+      elog(ERROR, "cannot swap mapped relation \"%s\" with non-mapped relation", NameStr(relform1->relname));
     }
 
     /*
@@ -1062,15 +1064,15 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
      */
     if (relform1->reltablespace != relform2->reltablespace)
     {
-
+      elog(ERROR, "cannot change tablespace of mapped relation \"%s\"", NameStr(relform1->relname));
     }
     if (relform1->relpersistence != relform2->relpersistence)
     {
-
+      elog(ERROR, "cannot change persistence of mapped relation \"%s\"", NameStr(relform1->relname));
     }
     if (!swap_toast_by_content && (relform1->reltoastrelid || relform2->reltoastrelid))
     {
-
+      elog(ERROR, "cannot swap toast by links for mapped relation \"%s\"", NameStr(relform1->relname));
     }
 
     /*
@@ -1079,12 +1081,12 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
     relfilenode1 = RelationMapOidToFilenode(r1, relform1->relisshared);
     if (!OidIsValid(relfilenode1))
     {
-
+      elog(ERROR, "could not find relation mapping for relation \"%s\", OID %u", NameStr(relform1->relname), r1);
     }
     relfilenode2 = RelationMapOidToFilenode(r2, relform2->relisshared);
     if (!OidIsValid(relfilenode2))
     {
-
+      elog(ERROR, "could not find relation mapping for relation \"%s\", OID %u", NameStr(relform2->relname), r2);
     }
 
     /*
@@ -1181,7 +1183,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
       else
       {
         /* caller messed up */
-
+        elog(ERROR, "cannot swap toast files by content when there's only one");
       }
     }
     else
@@ -1208,7 +1210,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
        */
       if (IsSystemClass(r1, relform1))
       {
-
+        elog(ERROR, "cannot swap toast files by links for system catalogs");
       }
 
       /* Delete old dependencies */
@@ -1217,7 +1219,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
         count = deleteDependencyRecordsFor(RelationRelationId, relform1->reltoastrelid, false);
         if (count != 1)
         {
-
+          elog(ERROR, "expected one dependency record for TOAST table, found %ld", count);
         }
       }
       if (relform2->reltoastrelid)
@@ -1225,7 +1227,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class, bool swap_toast_by_
         count = deleteDependencyRecordsFor(RelationRelationId, relform2->reltoastrelid, false);
         if (count != 1)
         {
-
+          elog(ERROR, "expected one dependency record for TOAST table, found %ld", count);
         }
       }
 
@@ -1391,7 +1393,7 @@ finish_heap_swap(Oid OIDOldHeap, Oid OIDNewHeap, bool is_system_catalog, bool sw
     reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(OIDOldHeap));
     if (!HeapTupleIsValid(reltup))
     {
-
+      elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
     }
     relform = (Form_pg_class)GETSTRUCT(reltup);
 

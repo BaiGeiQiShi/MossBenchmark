@@ -71,8 +71,7 @@ generate_setop_grouplist(SetOperationStmt *op, List *targetlist);
 /*
  * plan_set_operations
  *
- *	  Plans the queries for a tree of set operations
- *(UNION/INTERSECT/EXCEPT)
+ *	  Plans the queries for a tree of set operations (UNION/INTERSECT/EXCEPT)
  *
  * This routine only deals with the setOperations tree of the given query.
  * Any top-level ORDER BY requested in root->parse->sortClause will be handled
@@ -214,7 +213,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root, List *colTypes, List *col
      */
     if (root->plan_params)
     {
-
+      elog(ERROR, "unexpected outer reference in set operation subquery");
     }
 
     /* Figure out the appropriate target list for this subquery. */
@@ -267,9 +266,9 @@ recurse_set_operations(Node *setOp, PlannerInfo *root, List *colTypes, List *col
       Path *partial_subpath;
       Path *partial_path;
 
-
-
-
+      partial_subpath = linitial(final_rel->partial_pathlist);
+      partial_path = (Path *)create_subqueryscan_path(root, rel, partial_subpath, NIL, NULL);
+      add_partial_path(rel, partial_path);
     }
 
     /*
@@ -359,18 +358,18 @@ recurse_set_operations(Node *setOp, PlannerInfo *root, List *colTypes, List *col
         Path *subpath = (Path *)lfirst(lc);
         Path *path;
 
-
+        Assert(subpath->param_info == NULL);
 
         /* avoid apply_projection_to_path, in case of multiple refs */
-
-
+        path = (Path *)create_projection_path(root, subpath->parent, subpath, target);
+        lfirst(lc) = path;
       }
     }
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(setOp));
+    *pTargetList = NIL;
   }
 
   postprocess_setop_rel(root, rel);
@@ -398,7 +397,7 @@ generate_recursion_path(SetOperationStmt *setOp, PlannerInfo *root, List *refnam
   /* Parser should have rejected other cases */
   if (setOp->op != SETOP_UNION)
   {
-
+    elog(ERROR, "only UNION queries can be recursive");
   }
   /* Worktable ID should be assigned */
   Assert(root->wt_param_id >= 0);
@@ -442,7 +441,7 @@ generate_recursion_path(SetOperationStmt *setOp, PlannerInfo *root, List *refnam
     /* We only support hashing here */
     if (!grouping_is_hashable(groupList))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not implement recursive UNION"), errdetail("All column datatypes must be hashable.")));
     }
 
     /*
@@ -536,7 +535,7 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root, List *refnames_tli
       }
       else
       {
-
+        partial_pathlist = lappend(partial_pathlist, linitial(rel->partial_pathlist));
       }
     }
 
@@ -582,13 +581,13 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root, List *refnames_tli
     int parallel_workers = 0;
 
     /* Find the highest number of workers requested for any subpath. */
+    foreach (lc, partial_pathlist)
+    {
+      Path *path = lfirst(lc);
 
-
-
-
-
-
-
+      parallel_workers = Max(parallel_workers, path->parallel_workers);
+    }
+    Assert(parallel_workers > 0);
 
     /*
      * If the use of parallel append is permitted, always request at least
@@ -597,20 +596,20 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root, List *refnames_tli
      * the children.  The precise formula is just a guess; see
      * add_paths_to_append_rel.
      */
+    if (enable_parallel_append)
+    {
+      parallel_workers = Max(parallel_workers, fls(list_length(partial_pathlist)));
+      parallel_workers = Min(parallel_workers, max_parallel_workers_per_gather);
+    }
+    Assert(parallel_workers > 0);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ppath = (Path *)create_append_path(root, result_rel, NIL, partial_pathlist, NIL, NULL, parallel_workers, enable_parallel_append, NIL, -1);
+    ppath = (Path *)create_gather_path(root, result_rel, ppath, result_rel->reltarget, NULL, NULL);
+    if (!op->all)
+    {
+      ppath = make_union_unique(op, ppath, tlist, root);
+    }
+    add_path(result_rel, ppath);
   }
 
   /* Undo effects of possibly forcing tuple_fraction to 0 */
@@ -727,16 +726,16 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root, List *refnames_
    */
   switch (op->op)
   {
-  case SETOP_INTERSECT:;
+  case SETOP_INTERSECT:
     cmd = op->all ? SETOPCMD_INTERSECT_ALL : SETOPCMD_INTERSECT;
     break;
-  case SETOP_EXCEPT:;
+  case SETOP_EXCEPT:
     cmd = op->all ? SETOPCMD_EXCEPT_ALL : SETOPCMD_EXCEPT;
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized set op: %d", (int)op->op);
+    cmd = SETOPCMD_INTERSECT; /* keep compiler quiet */
+    break;
   }
   path = (Path *)create_setop_path(root, result_rel, path, cmd, use_hash ? SETOP_HASHED : SETOP_SORTED, groupList, list_length(op->colTypes) + 1, use_hash ? firstFlag : -1, dNumGroups, dNumOutputRows);
 
@@ -857,7 +856,7 @@ postprocess_setop_rel(PlannerInfo *root, RelOptInfo *rel)
    */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_SETOP, NULL, rel, NULL);
   }
 
   /* Select cheapest path */
@@ -895,7 +894,9 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses, Path *input_path, dou
   }
   else
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /* translator: %s is UNION, INTERSECT, or EXCEPT */
+                       errmsg("could not implement %s", construct), errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
   }
 
   /* Prefer sorting when enable_hashagg is off */
@@ -912,7 +913,7 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses, Path *input_path, dou
 
   if (hashentrysize * dNumGroups > work_mem * 1024L)
   {
-
+    return false;
   }
 
   /*
@@ -945,7 +946,7 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses, Path *input_path, dou
   tuple_fraction = root->tuple_fraction;
   if (tuple_fraction >= 1.0)
   {
-
+    tuple_fraction /= dNumOutputRows;
   }
 
   if (compare_fractional_path_costs(&hashed_p, &sorted_p, tuple_fraction) < 0)
@@ -1136,7 +1137,7 @@ generate_append_tlist(List *colTypes, List *colCollations, bool flag, List *inpu
       else
       {
         /* types disagree, so force typmod to -1 */
-
+        colTypmods[colindex] = -1;
       }
       curColType = lnext(curColType);
       colindex++;
@@ -1186,8 +1187,8 @@ generate_append_tlist(List *colTypes, List *colCollations, bool flag, List *inpu
 
 /*
  * generate_setop_grouplist
- *		Build a SortGroupClause list defining the sort/grouping
- *properties of the setop's output columns.
+ *		Build a SortGroupClause list defining the sort/grouping properties
+ *		of the setop's output columns.
  *
  * Parse analysis already determined the properties and built a suitable
  * list, except that the entries do not have sortgrouprefs set because

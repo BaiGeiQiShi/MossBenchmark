@@ -69,16 +69,16 @@ static int spins_per_delay = DEFAULT_SPINS_PER_DELAY;
 static void
 s_lock_stuck(const char *file, int line, const char *func)
 {
-
-
-
-
-
-
-
-
-
-
+  if (!func)
+  {
+    func = "(unknown)";
+  }
+#if defined(S_LOCK_TEST)
+  fprintf(stderr, "\nStuck spinlock detected at %s, %s:%d.\n", func, file, line);
+  exit(1);
+#else
+  elog(PANIC, "stuck spinlock detected at %s, %s:%d", func, file, line);
+#endif
 }
 
 /*
@@ -128,11 +128,11 @@ perform_spin_delay(SpinDelayStatus *status)
   {
     if (++(status->delays) > NUM_DELAYS)
     {
-
+      s_lock_stuck(status->file, status->line, status->func);
     }
 
-    if (status->cur_delay == 0)
-    { /* first time to delay? */
+    if (status->cur_delay == 0) /* first time to delay? */
+    {
       status->cur_delay = MIN_DELAY_USEC;
     }
 
@@ -148,7 +148,7 @@ perform_spin_delay(SpinDelayStatus *status)
     /* wrap back to minimum delay when max is exceeded */
     if (status->cur_delay > MAX_DELAY_USEC)
     {
-
+      status->cur_delay = MIN_DELAY_USEC;
     }
 
     status->spins = 0;

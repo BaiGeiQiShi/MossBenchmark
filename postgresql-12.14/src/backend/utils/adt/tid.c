@@ -72,20 +72,20 @@ tidin(PG_FUNCTION_ARGS)
 
   if (i < NTIDARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "tid", str)));
   }
 
   errno = 0;
   blockNumber = strtoul(coord[0], &badp, 10);
   if (errno || *badp != DELIM)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "tid", str)));
   }
 
   hold_offset = strtol(coord[1], &badp, 10);
   if (errno || *badp != RDELIM || hold_offset > USHRT_MAX || hold_offset < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "tid", str)));
   }
 
   offsetNumber = hold_offset;
@@ -124,19 +124,19 @@ tidout(PG_FUNCTION_ARGS)
 Datum
 tidrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  ItemPointer result;
+  BlockNumber blockNumber;
+  OffsetNumber offsetNumber;
 
+  blockNumber = pq_getmsgint(buf, sizeof(blockNumber));
+  offsetNumber = pq_getmsgint(buf, sizeof(offsetNumber));
 
+  result = (ItemPointer)palloc(sizeof(ItemPointerData));
 
+  ItemPointerSet(result, blockNumber, offsetNumber);
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_ITEMPOINTER(result);
 }
 
 /*
@@ -145,18 +145,17 @@ tidrecv(PG_FUNCTION_ARGS)
 Datum
 tidsend(PG_FUNCTION_ARGS)
 {
+  ItemPointer itemPtr = PG_GETARG_ITEMPOINTER(0);
+  StringInfoData buf;
 
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, ItemPointerGetBlockNumberNoCheck(itemPtr));
+  pq_sendint16(&buf, ItemPointerGetOffsetNumberNoCheck(itemPtr));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*****************************************************************************
- *	 PUBLIC ROUTINES
- **
+ *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
 
 Datum
@@ -257,11 +256,11 @@ hashtid(PG_FUNCTION_ARGS)
 Datum
 hashtidextended(PG_FUNCTION_ARGS)
 {
+  ItemPointer key = PG_GETARG_ITEMPOINTER(0);
+  uint64 seed = PG_GETARG_INT64(1);
 
-
-
-
-
+  /* As above */
+  return hash_any_extended((unsigned char *)key, sizeof(BlockIdData) + sizeof(OffsetNumber), seed);
 }
 
 /*
@@ -312,7 +311,7 @@ currtid_for_view(Relation viewrel, ItemPointer tid)
   rulelock = viewrel->rd_rules;
   if (!rulelock)
   {
-
+    elog(ERROR, "the view has no rules");
   }
   for (i = 0; i < rulelock->numLocks; i++)
   {
@@ -324,7 +323,7 @@ currtid_for_view(Relation viewrel, ItemPointer tid)
 
       if (list_length(rewrite->actions) != 1)
       {
-
+        elog(ERROR, "only one select rule is allowed in views");
       }
       query = (Query *)linitial(rewrite->actions);
       tle = get_tle_by_resno(query->targetList, tididx + 1);
@@ -346,7 +345,7 @@ currtid_for_view(Relation viewrel, ItemPointer tid)
           }
         }
       }
-
+      break;
     }
   }
   elog(ERROR, "currtid cannot handle this view");
@@ -367,8 +366,8 @@ currtid_byreloid(PG_FUNCTION_ARGS)
   result = (ItemPointer)palloc(sizeof(ItemPointerData));
   if (!reloid)
   {
-
-
+    *result = Current_last_tid;
+    PG_RETURN_ITEMPOINTER(result);
   }
 
   rel = table_open(reloid, AccessShareLock);
@@ -376,7 +375,7 @@ currtid_byreloid(PG_FUNCTION_ARGS)
   aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(), ACL_SELECT);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, get_relkind_objtype(rel->rd_rel->relkind), RelationGetRelationName(rel));
   }
 
   if (rel->rd_rel->relkind == RELKIND_VIEW)
@@ -420,7 +419,7 @@ currtid_byrelname(PG_FUNCTION_ARGS)
   aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(), ACL_SELECT);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, get_relkind_objtype(rel->rd_rel->relkind), RelationGetRelationName(rel));
   }
 
   if (rel->rd_rel->relkind == RELKIND_VIEW)

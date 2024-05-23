@@ -44,7 +44,8 @@ typedef char *c;
 
 /* exec sql begin declare section */
 
-struct TBempl {
+struct TBempl
+{
 #line 19 "type.pgc"
   mmInteger idnum;
 
@@ -71,7 +72,8 @@ main(void)
   c ptr = NULL;
 
 #line 36 "type.pgc"
-  struct varchar {
+  struct varchar
+  {
 #line 34 "type.pgc"
     int len;
 
@@ -92,37 +94,41 @@ main(void)
   }
 #line 43 "type.pgc"
 
-  if (sqlca.sqlcode) {
+  if (sqlca.sqlcode)
+  {
     printf("connect error = %ld\n", sqlca.sqlcode);
     exit(sqlca.sqlcode);
   }
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"create table empl ( idnum integer , name char ( 20 ) , accs smallint , string1 char ( 10 ) , string2 char ( 10 ) , string3 char ( 10 ) )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table empl ( idnum integer , name char ( 20 ) , accs smallint , string1 char ( 10 ) , string2 char ( 10 ) , string3 char ( 10 ) )", ECPGt_EOIT, ECPGt_EORT);
   }
 #line 51 "type.pgc"
 
-  if (sqlca.sqlcode) {
+  if (sqlca.sqlcode)
+  {
     printf("create error = %ld\n", sqlca.sqlcode);
     exit(sqlca.sqlcode);
   }
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"insert into empl values ( 1 , 'user name' , 320 , 'first str' , 'second str' , 'third str' )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into empl values ( 1 , 'user name' , 320 , 'first str' , 'second str' , 'third str' )", ECPGt_EOIT, ECPGt_EORT);
   }
 #line 58 "type.pgc"
 
-  if (sqlca.sqlcode) {
+  if (sqlca.sqlcode)
+  {
     printf("insert error = %ld\n", sqlca.sqlcode);
     exit(sqlca.sqlcode);
   }
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"select idnum , name , accs , string1 , string2 , string3 from empl where idnum = $1 ",ECPGt_long, &(empl.idnum), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_long, &(empl.idnum), (long)1, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, &(empl.name), (long)21, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(empl.accs), (long)1, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (str), (long)11, (long)1, (11) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, &(ptr), (long)0, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_varchar, &(vc), (long)10, (long)1, sizeof(struct varchar), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select idnum , name , accs , string1 , string2 , string3 from empl where idnum = $1 ", ECPGt_long, &(empl.idnum), (long)1, (long)1, sizeof(long), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_long, &(empl.idnum), (long)1, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, &(empl.name), (long)21, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_short, &(empl.accs), (long)1, (long)1, sizeof(struct TBempl), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (str), (long)11, (long)1, (11) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, &(ptr), (long)0, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_varchar, &(vc), (long)10, (long)1, sizeof(struct varchar), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
   }
 #line 68 "type.pgc"
 
-  if (sqlca.sqlcode) {
+  if (sqlca.sqlcode)
+  {
     printf("select error = %ld\n", sqlca.sqlcode);
     exit(sqlca.sqlcode);
   }

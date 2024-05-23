@@ -43,7 +43,8 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
    */
   prevend = InvalidXLogRecPtr;
   bufptr = buffer;
-  while (!lastline) {
+  while (!lastline)
+  {
     char *ptr;
     TimeLineID tli;
     uint32 switchpoint_hi;
@@ -51,39 +52,49 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
     int nfields;
 
     fline = bufptr;
-    while (*bufptr && *bufptr != '\n') {
+    while (*bufptr && *bufptr != '\n')
+    {
       bufptr++;
     }
-    if (!(*bufptr)) {
+    if (!(*bufptr))
+    {
       lastline = true;
-    } else {
+    }
+    else
+    {
       *bufptr++ = '\0';
     }
 
     /* skip leading whitespace and check for # comment */
-    for (ptr = fline; *ptr; ptr++) {
-      if (!isspace((unsigned char)*ptr)) {
+    for (ptr = fline; *ptr; ptr++)
+    {
+      if (!isspace((unsigned char)*ptr))
+      {
         break;
       }
     }
-    if (*ptr == '\0' || *ptr == '#') {
+    if (*ptr == '\0' || *ptr == '#')
+    {
       continue;
     }
 
     nfields = sscanf(fline, "%u\t%X/%X", &tli, &switchpoint_hi, &switchpoint_lo);
 
-    if (nfields < 1) {
+    if (nfields < 1)
+    {
       /* expect a numeric timeline ID as first field of line */
       pg_log_error("syntax error in history file: %s", fline);
       pg_log_error("Expected a numeric timeline ID.");
       exit(1);
     }
-    if (nfields != 3) {
+    if (nfields != 3)
+    {
       pg_log_error("syntax error in history file: %s", fline);
       pg_log_error("Expected a write-ahead log switchpoint location.");
       exit(1);
     }
-    if (entries && tli <= lasttli) {
+    if (entries && tli <= lasttli)
+    {
       pg_log_error("invalid data in history file: %s", fline);
       pg_log_error("Timeline IDs must be in increasing sequence.");
       exit(1);
@@ -103,7 +114,8 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
     /* we ignore the remainder of each line */
   }
 
-  if (entries && targetTLI <= lasttli) {
+  if (entries && targetTLI <= lasttli)
+  {
     pg_log_error("invalid data in history file");
     pg_log_error("Timeline IDs must be less than child timeline's ID.");
     exit(1);
@@ -114,9 +126,12 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
    * in the history file.
    */
   nlines++;
-  if (entries) {
+  if (entries)
+  {
     entries = pg_realloc(entries, nlines * sizeof(TimeLineHistoryEntry));
-  } else {
+  }
+  else
+  {
     entries = pg_malloc(1 * sizeof(TimeLineHistoryEntry));
   }
 

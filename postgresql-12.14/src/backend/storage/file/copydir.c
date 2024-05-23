@@ -43,7 +43,7 @@ copydir(char *fromdir, char *todir, bool recurse)
 
   if (MakePGDirectory(todir) != 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not create directory \"%s\": %m", todir)));
   }
 
   xldir = AllocateDir(fromdir);
@@ -65,16 +65,16 @@ copydir(char *fromdir, char *todir, bool recurse)
 
     if (lstat(fromfile, &fst) < 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", fromfile)));
     }
 
     if (S_ISDIR(fst.st_mode))
     {
       /* recurse to handle subdirectories */
-
-
-
-
+      if (recurse)
+      {
+        copydir(fromfile, tofile, true);
+      }
     }
     else if (S_ISREG(fst.st_mode))
     {
@@ -111,7 +111,7 @@ copydir(char *fromdir, char *todir, bool recurse)
      */
     if (lstat(tofile, &fst) < 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", tofile)));
     }
 
     if (S_ISREG(fst.st_mode))
@@ -167,13 +167,13 @@ copy_file(char *fromfile, char *tofile)
   srcfd = OpenTransientFile(fromfile, O_RDONLY | PG_BINARY);
   if (srcfd < 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", fromfile)));
   }
 
   dstfd = OpenTransientFile(tofile, O_RDWR | O_CREAT | O_EXCL | PG_BINARY);
   if (dstfd < 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not create file \"%s\": %m", tofile)));
   }
 
   /*
@@ -192,8 +192,8 @@ copy_file(char *fromfile, char *tofile)
      */
     if (offset - flush_offset >= FLUSH_DISTANCE)
     {
-
-
+      pg_flush_data(dstfd, flush_offset, offset - flush_offset);
+      flush_offset = offset;
     }
 
     pgstat_report_wait_start(WAIT_EVENT_COPY_FILE_READ);
@@ -201,7 +201,7 @@ copy_file(char *fromfile, char *tofile)
     pgstat_report_wait_end();
     if (nbytes < 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not read file \"%s\": %m", fromfile)));
     }
     if (nbytes == 0)
     {
@@ -212,11 +212,11 @@ copy_file(char *fromfile, char *tofile)
     if ((int)write(dstfd, buffer, nbytes) != nbytes)
     {
       /* if write didn't set errno, assume problem is no disk space */
-
-
-
-
-
+      if (errno == 0)
+      {
+        errno = ENOSPC;
+      }
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not write to file \"%s\": %m", tofile)));
     }
     pgstat_report_wait_end();
   }
@@ -228,12 +228,12 @@ copy_file(char *fromfile, char *tofile)
 
   if (CloseTransientFile(dstfd))
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", tofile)));
   }
 
   if (CloseTransientFile(srcfd))
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", fromfile)));
   }
 
   pfree(buffer);

@@ -61,10 +61,10 @@ check_datestyle(char **newval, void **extra, GucSource source)
   if (!SplitIdentifierString(rawstring, ',', &elemlist))
   {
     /* syntax error in list */
-
-
-
-
+    GUC_check_errdetail("List syntax is invalid.");
+    pfree(rawstring);
+    list_free(elemlist);
+    return false;
   }
 
   foreach (l, elemlist)
@@ -77,7 +77,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_style && newDateStyle != USE_ISO_DATES)
       {
-
+        ok = false; /* conflicting styles */
       }
       newDateStyle = USE_ISO_DATES;
       have_style = true;
@@ -86,7 +86,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_style && newDateStyle != USE_SQL_DATES)
       {
-
+        ok = false; /* conflicting styles */
       }
       newDateStyle = USE_SQL_DATES;
       have_style = true;
@@ -95,7 +95,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_style && newDateStyle != USE_POSTGRES_DATES)
       {
-
+        ok = false; /* conflicting styles */
       }
       newDateStyle = USE_POSTGRES_DATES;
       have_style = true;
@@ -104,7 +104,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_style && newDateStyle != USE_GERMAN_DATES)
       {
-
+        ok = false; /* conflicting styles */
       }
       newDateStyle = USE_GERMAN_DATES;
       have_style = true;
@@ -118,7 +118,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_order && newDateOrder != DATEORDER_YMD)
       {
-
+        ok = false; /* conflicting orders */
       }
       newDateOrder = DATEORDER_YMD;
       have_order = true;
@@ -127,7 +127,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_order && newDateOrder != DATEORDER_DMY)
       {
-
+        ok = false; /* conflicting orders */
       }
       newDateOrder = DATEORDER_DMY;
       have_order = true;
@@ -136,54 +136,54 @@ check_datestyle(char **newval, void **extra, GucSource source)
     {
       if (have_order && newDateOrder != DATEORDER_MDY)
       {
-
+        ok = false; /* conflicting orders */
       }
       newDateOrder = DATEORDER_MDY;
       have_order = true;
     }
+    else if (pg_strcasecmp(tok, "DEFAULT") == 0)
+    {
+      /*
+       * Easiest way to get the current DEFAULT state is to fetch the
+       * DEFAULT string from guc.c and recursively parse it.
+       *
+       * We can't simply "return check_datestyle(...)" because we need
+       * to handle constructs like "DEFAULT, ISO".
+       */
+      char *subval;
+      void *subextra = NULL;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      subval = strdup(GetConfigOptionResetString("datestyle"));
+      if (!subval)
+      {
+        ok = false;
+        break;
+      }
+      if (!check_datestyle(&subval, &subextra, source))
+      {
+        free(subval);
+        ok = false;
+        break;
+      }
+      myextra = (int *)subextra;
+      if (!have_style)
+      {
+        newDateStyle = myextra[0];
+      }
+      if (!have_order)
+      {
+        newDateOrder = myextra[1];
+      }
+      free(subval);
+      free(subextra);
+    }
+    else
+    {
+      GUC_check_errdetail("Unrecognized key word: \"%s\".", tok);
+      pfree(rawstring);
+      list_free(elemlist);
+      return false;
+    }
   }
 
   pfree(rawstring);
@@ -191,8 +191,8 @@ check_datestyle(char **newval, void **extra, GucSource source)
 
   if (!ok)
   {
-
-
+    GUC_check_errdetail("Conflicting \"datestyle\" specifications.");
+    return false;
   }
 
   /*
@@ -201,33 +201,33 @@ check_datestyle(char **newval, void **extra, GucSource source)
   result = (char *)malloc(32);
   if (!result)
   {
-
+    return false;
   }
 
   switch (newDateStyle)
   {
-  case USE_ISO_DATES:;
+  case USE_ISO_DATES:
     strcpy(result, "ISO");
     break;
-  case USE_SQL_DATES:;
+  case USE_SQL_DATES:
     strcpy(result, "SQL");
     break;
-  case USE_GERMAN_DATES:;
+  case USE_GERMAN_DATES:
     strcpy(result, "German");
     break;
-  default:;;
+  default:
     strcpy(result, "Postgres");
     break;
   }
   switch (newDateOrder)
   {
-  case DATEORDER_YMD:;
+  case DATEORDER_YMD:
     strcat(result, ", YMD");
     break;
-  case DATEORDER_DMY:;
+  case DATEORDER_DMY:
     strcat(result, ", DMY");
     break;
-  default:;;
+  default:
     strcat(result, ", MDY");
     break;
   }
@@ -241,7 +241,7 @@ check_datestyle(char **newval, void **extra, GucSource source)
   myextra = (int *)malloc(2 * sizeof(int));
   if (!myextra)
   {
-
+    return false;
   }
   myextra[0] = newDateStyle;
   myextra[1] = newDateOrder;
@@ -287,24 +287,24 @@ check_timezone(char **newval, void **extra, GucSource source)
     char *val;
     Interval *interval;
 
-
-
-
-
-
-
-
-
-
-
+    valueptr += 8;
+    while (isspace((unsigned char)*valueptr))
+    {
+      valueptr++;
+    }
+    if (*valueptr++ != '\'')
+    {
+      return false;
+    }
+    val = pstrdup(valueptr);
     /* Check and remove trailing quote */
-
-
-
-
-
-
-
+    endptr = strchr(val, '\'');
+    if (!endptr || endptr[1] != '\0')
+    {
+      pfree(val);
+      return false;
+    }
+    *endptr = '\0';
 
     /*
      * Try to parse it.  XXX an invalid interval format will result in
@@ -312,27 +312,27 @@ check_timezone(char **newval, void **extra, GucSource source)
      * could to guard against this in flatten_set_variable_args, but a
      * string coming in from postgresql.conf might contain anything.
      */
+    interval = DatumGetIntervalP(DirectFunctionCall3(interval_in, CStringGetDatum(val), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1)));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    pfree(val);
+    if (interval->month != 0)
+    {
+      GUC_check_errdetail("Cannot specify months in time zone interval.");
+      pfree(interval);
+      return false;
+    }
+    if (interval->day != 0)
+    {
+      GUC_check_errdetail("Cannot specify days in time zone interval.");
+      pfree(interval);
+      return false;
+    }
 
     /* Here we change from SQL to Unix sign convention */
+    gmtoffset = -(interval->time / USECS_PER_SEC);
+    new_tz = pg_tzset_offset(gmtoffset);
 
-
-
-
+    pfree(interval);
   }
   else
   {
@@ -356,14 +356,14 @@ check_timezone(char **newval, void **extra, GucSource source)
       if (!new_tz)
       {
         /* Doesn't seem to be any great value in errdetail here */
-
+        return false;
       }
 
       if (!pg_tz_acceptable(new_tz))
       {
-
-
-
+        GUC_check_errmsg("time zone \"%s\" appears to use leap seconds", *newval);
+        GUC_check_errdetail("PostgreSQL does not support leap seconds.");
+        return false;
       }
     }
   }
@@ -371,8 +371,8 @@ check_timezone(char **newval, void **extra, GucSource source)
   /* Test for failure in pg_tzset_offset, which we assume is out-of-range */
   if (!new_tz)
   {
-
-
+    GUC_check_errdetail("UTC timezone offset is out of range.");
+    return false;
   }
 
   /*
@@ -381,7 +381,7 @@ check_timezone(char **newval, void **extra, GucSource source)
   *extra = malloc(sizeof(pg_tz *));
   if (!*extra)
   {
-
+    return false;
   }
   *((pg_tz **)*extra) = new_tz;
 
@@ -413,7 +413,7 @@ show_timezone(void)
     return tzn;
   }
 
-
+  return "unknown";
 }
 
 /*
@@ -440,14 +440,14 @@ check_log_timezone(char **newval, void **extra, GucSource source)
   if (!new_tz)
   {
     /* Doesn't seem to be any great value in errdetail here */
-
+    return false;
   }
 
   if (!pg_tz_acceptable(new_tz))
   {
-
-
-
+    GUC_check_errmsg("time zone \"%s\" appears to use leap seconds", *newval);
+    GUC_check_errdetail("PostgreSQL does not support leap seconds.");
+    return false;
   }
 
   /*
@@ -456,7 +456,7 @@ check_log_timezone(char **newval, void **extra, GucSource source)
   *extra = malloc(sizeof(pg_tz *));
   if (!*extra)
   {
-
+    return false;
   }
   *((pg_tz **)*extra) = new_tz;
 
@@ -488,7 +488,7 @@ show_log_timezone(void)
     return tzn;
   }
 
-
+  return "unknown";
 }
 
 /*
@@ -529,9 +529,9 @@ check_transaction_read_only(bool *newval, void **extra, GucSource source)
     /* Can't go to r/w mode while recovery is still active */
     if (RecoveryInProgress())
     {
-
-
-
+      GUC_check_errcode(ERRCODE_FEATURE_NOT_SUPPORTED);
+      GUC_check_errmsg("cannot set transaction read-write mode during recovery");
+      return false;
     }
   }
 
@@ -562,17 +562,17 @@ check_XactIsoLevel(int *newval, void **extra, GucSource source)
     /* We ignore a subtransaction setting it to the existing value. */
     if (IsSubTransaction())
     {
-
-
-
+      GUC_check_errcode(ERRCODE_ACTIVE_SQL_TRANSACTION);
+      GUC_check_errmsg("SET TRANSACTION ISOLATION LEVEL must not be called in a subtransaction");
+      return false;
     }
     /* Can't go to serializable mode while recovery is still active */
     if (newXactIsoLevel == XACT_SERIALIZABLE && RecoveryInProgress())
     {
-
-
-
-
+      GUC_check_errcode(ERRCODE_FEATURE_NOT_SUPPORTED);
+      GUC_check_errmsg("cannot use serializable mode in a hot standby");
+      GUC_check_errhint("You can use REPEATABLE READ instead.");
+      return false;
     }
   }
 
@@ -588,15 +588,15 @@ check_transaction_deferrable(bool *newval, void **extra, GucSource source)
 {
   if (IsSubTransaction())
   {
-
-
-
+    GUC_check_errcode(ERRCODE_ACTIVE_SQL_TRANSACTION);
+    GUC_check_errmsg("SET TRANSACTION [NOT] DEFERRABLE cannot be called within a subtransaction");
+    return false;
   }
   if (FirstSnapshotSet)
   {
-
-
-
+    GUC_check_errcode(ERRCODE_ACTIVE_SQL_TRANSACTION);
+    GUC_check_errmsg("SET TRANSACTION [NOT] DEFERRABLE must be called before any query");
+    return false;
   }
 
   return true;
@@ -617,7 +617,7 @@ check_random_seed(double *newval, void **extra, GucSource source)
   *extra = malloc(sizeof(int));
   if (!*extra)
   {
-
+    return false;
   }
   /* Arm the assign only if source of value is an interactive SET */
   *((int *)*extra) = (source >= PGC_S_INTERACTIVE);
@@ -631,7 +631,7 @@ assign_random_seed(double newval, void *extra)
   /* We'll do this at most once for any setting of the GUC variable */
   if (*((int *)extra))
   {
-
+    DirectFunctionCall1(setseed, Float8GetDatum(newval));
   }
   *((int *)extra) = 0;
 }
@@ -656,7 +656,7 @@ check_client_encoding(char **newval, void **extra, GucSource source)
   encoding = pg_valid_client_encoding(*newval);
   if (encoding < 0)
   {
-
+    return false;
   }
 
   /* Get the canonical name (no aliases, uniform case) */
@@ -678,18 +678,18 @@ check_client_encoding(char **newval, void **extra, GucSource source)
    */
   if (PrepareClientEncoding(encoding) < 0)
   {
-
-
-
-
-
-
-
-
-
-
-
-
+    if (IsTransactionState())
+    {
+      /* Must be a genuine no-such-conversion problem */
+      GUC_check_errcode(ERRCODE_FEATURE_NOT_SUPPORTED);
+      GUC_check_errdetail("Conversion between %s and %s is not supported.", canonical_name, GetDatabaseEncodingName());
+    }
+    else
+    {
+      /* Provide a useful complaint */
+      GUC_check_errdetail("Cannot change \"client_encoding\" now.");
+    }
+    return false;
   }
 
   /*
@@ -708,7 +708,7 @@ check_client_encoding(char **newval, void **extra, GucSource source)
     *newval = strdup(canonical_name);
     if (!*newval)
     {
-
+      return false;
     }
   }
 
@@ -718,7 +718,7 @@ check_client_encoding(char **newval, void **extra, GucSource source)
   *extra = malloc(sizeof(int));
   if (!*extra)
   {
-
+    return false;
   }
   *((int *)*extra) = encoding;
 
@@ -751,13 +751,13 @@ assign_client_encoding(const char *newval, void *extra)
      * attached to a function definition, should be rejected, as there is
      * nothing we can do inside the worker to make it take effect.
      */
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE), errmsg("cannot change client_encoding during a parallel operation")));
   }
 
   /* We do not expect an error if PrepareClientEncoding succeeded */
   if (SetClientEncoding(encoding) < 0)
   {
-
+    elog(LOG, "SetClientEncoding(%d) failed", encoding);
   }
 }
 
@@ -794,7 +794,7 @@ check_session_authorization(char **newval, void **extra, GucSource source)
      * session_authorization cannot be set in postgresql.conf, which seems
      * like a good thing anyway, so we don't work hard to avoid it.
      */
-
+    return false;
   }
 
   /* Look up the username */
@@ -805,13 +805,13 @@ check_session_authorization(char **newval, void **extra, GucSource source)
      * When source == PGC_S_TEST, we don't throw a hard error for a
      * nonexistent user name, only a NOTICE.  See comments in guc.h.
      */
-
-
-
-
-
-
-
+    if (source == PGC_S_TEST)
+    {
+      ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", *newval)));
+      return true;
+    }
+    GUC_check_errmsg("role \"%s\" does not exist", *newval);
+    return false;
   }
 
   roleform = (Form_pg_authid)GETSTRUCT(roleTup);
@@ -824,7 +824,7 @@ check_session_authorization(char **newval, void **extra, GucSource source)
   myextra = (role_auth_extra *)malloc(sizeof(role_auth_extra));
   if (!myextra)
   {
-
+    return false;
   }
   myextra->roleid = roleid;
   myextra->is_superuser = is_superuser;
@@ -880,7 +880,7 @@ check_role(char **newval, void **extra, GucSource source)
        * role cannot be set in postgresql.conf, which seems like a good
        * thing anyway, so we don't work hard to avoid it.
        */
-
+      return false;
     }
 
     /*
@@ -893,13 +893,13 @@ check_role(char **newval, void **extra, GucSource source)
     roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(*newval));
     if (!HeapTupleIsValid(roleTup))
     {
-
-
-
-
-
-
-
+      if (source == PGC_S_TEST)
+      {
+        ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", *newval)));
+        return true;
+      }
+      GUC_check_errmsg("role \"%s\" does not exist", *newval);
+      return false;
     }
 
     roleform = (Form_pg_authid)GETSTRUCT(roleTup);
@@ -915,14 +915,14 @@ check_role(char **newval, void **extra, GucSource source)
      */
     if (!InitializingParallelWorker && !is_member_of_role(GetSessionUserId(), roleid))
     {
-
-
-
-
-
-
-
-
+      if (source == PGC_S_TEST)
+      {
+        ereport(NOTICE, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission will be denied to set role \"%s\"", *newval)));
+        return true;
+      }
+      GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
+      GUC_check_errmsg("permission denied to set role \"%s\"", *newval);
+      return false;
     }
   }
 
@@ -930,7 +930,7 @@ check_role(char **newval, void **extra, GucSource source)
   myextra = (role_auth_extra *)malloc(sizeof(role_auth_extra));
   if (!myextra)
   {
-
+    return false;
   }
   myextra->roleid = roleid;
   myextra->is_superuser = is_superuser;
@@ -963,5 +963,5 @@ show_role(void)
   }
 
   /* Otherwise we can just use the GUC string */
-
+  return role_string ? role_string : "none";
 }

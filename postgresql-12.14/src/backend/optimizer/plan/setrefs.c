@@ -413,7 +413,7 @@ add_rte_to_flat_rtable(PlannerGlobal *glob, RangeTblEntry *rte)
    */
   if (IS_SPECIAL_VARNO(list_length(glob->finalrtable)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many range table entries")));
   }
 
   /*
@@ -454,7 +454,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
    */
   switch (nodeTag(plan))
   {
-  case T_SeqScan:;
+  case T_SeqScan:
   {
     SeqScan *splan = (SeqScan *)plan;
 
@@ -463,7 +463,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->plan.qual = fix_scan_list(root, splan->plan.qual, rtoffset);
   }
   break;
-  case T_SampleScan:;
+  case T_SampleScan:
   {
     SampleScan *splan = (SampleScan *)plan;
 
@@ -473,7 +473,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->tablesample = (TableSampleClause *)fix_scan_expr(root, (Node *)splan->tablesample, rtoffset);
   }
   break;
-  case T_IndexScan:;
+  case T_IndexScan:
   {
     IndexScan *splan = (IndexScan *)plan;
 
@@ -486,14 +486,14 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->indexorderbyorig = fix_scan_list(root, splan->indexorderbyorig, rtoffset);
   }
   break;
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
   {
     IndexOnlyScan *splan = (IndexOnlyScan *)plan;
 
     return set_indexonlyscan_references(root, splan, rtoffset);
   }
   break;
-  case T_BitmapIndexScan:;
+  case T_BitmapIndexScan:
   {
     BitmapIndexScan *splan = (BitmapIndexScan *)plan;
 
@@ -505,7 +505,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->indexqualorig = fix_scan_list(root, splan->indexqualorig, rtoffset);
   }
   break;
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
   {
     BitmapHeapScan *splan = (BitmapHeapScan *)plan;
 
@@ -515,7 +515,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->bitmapqualorig = fix_scan_list(root, splan->bitmapqualorig, rtoffset);
   }
   break;
-  case T_TidScan:;
+  case T_TidScan:
   {
     TidScan *splan = (TidScan *)plan;
 
@@ -525,10 +525,10 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->tidquals = fix_scan_list(root, splan->tidquals, rtoffset);
   }
   break;
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
     /* Needs special treatment, see comments below */
     return set_subqueryscan_references(root, (SubqueryScan *)plan, rtoffset);
-  case T_FunctionScan:;
+  case T_FunctionScan:
   {
     FunctionScan *splan = (FunctionScan *)plan;
 
@@ -538,7 +538,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->functions = fix_scan_list(root, splan->functions, rtoffset);
   }
   break;
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
   {
     TableFuncScan *splan = (TableFuncScan *)plan;
 
@@ -548,7 +548,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->tablefunc = (TableFunc *)fix_scan_expr(root, (Node *)splan->tablefunc, rtoffset);
   }
   break;
-  case T_ValuesScan:;
+  case T_ValuesScan:
   {
     ValuesScan *splan = (ValuesScan *)plan;
 
@@ -558,7 +558,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->values_lists = fix_scan_list(root, splan->values_lists, rtoffset);
   }
   break;
-  case T_CteScan:;
+  case T_CteScan:
   {
     CteScan *splan = (CteScan *)plan;
 
@@ -567,7 +567,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->scan.plan.qual = fix_scan_list(root, splan->scan.plan.qual, rtoffset);
   }
   break;
-  case T_NamedTuplestoreScan:;
+  case T_NamedTuplestoreScan:
   {
     NamedTuplestoreScan *splan = (NamedTuplestoreScan *)plan;
 
@@ -576,7 +576,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->scan.plan.qual = fix_scan_list(root, splan->scan.plan.qual, rtoffset);
   }
   break;
-  case T_WorkTableScan:;
+  case T_WorkTableScan:
   {
     WorkTableScan *splan = (WorkTableScan *)plan;
 
@@ -585,35 +585,35 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->scan.plan.qual = fix_scan_list(root, splan->scan.plan.qual, rtoffset);
   }
   break;
-  case T_ForeignScan:;
+  case T_ForeignScan:
+    set_foreignscan_references(root, (ForeignScan *)plan, rtoffset);
+    break;
+  case T_CustomScan:
+    set_customscan_references(root, (CustomScan *)plan, rtoffset);
+    break;
 
-
-  case T_CustomScan:;
-
-
-
-  case T_NestLoop:;
-  case T_MergeJoin:;
-  case T_HashJoin:;
+  case T_NestLoop:
+  case T_MergeJoin:
+  case T_HashJoin:
     set_join_references(root, (Join *)plan, rtoffset);
     break;
 
-  case T_Gather:;
-  case T_GatherMerge:;
+  case T_Gather:
+  case T_GatherMerge:
   {
     set_upper_references(root, plan, rtoffset);
     set_param_references(root, plan);
   }
   break;
 
-  case T_Hash:;
+  case T_Hash:
     set_hash_references(root, plan, rtoffset);
     break;
 
-  case T_Material:;
-  case T_Sort:;
-  case T_Unique:;
-  case T_SetOp:;
+  case T_Material:
+  case T_Sort:
+  case T_Unique:
+  case T_SetOp:
 
     /*
      * These plan types don't actually bother to evaluate their
@@ -630,7 +630,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
      */
     Assert(plan->qual == NIL);
     break;
-  case T_LockRows:;
+  case T_LockRows:
   {
     LockRows *splan = (LockRows *)plan;
 
@@ -651,7 +651,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     }
   }
   break;
-  case T_Limit:;
+  case T_Limit:
   {
     Limit *splan = (Limit *)plan;
 
@@ -668,7 +668,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->limitCount = fix_scan_expr(root, splan->limitCount, rtoffset);
   }
   break;
-  case T_Agg:;
+  case T_Agg:
   {
     Agg *agg = (Agg *)plan;
 
@@ -687,10 +687,10 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     set_upper_references(root, plan, rtoffset);
   }
   break;
-  case T_Group:;
+  case T_Group:
     set_upper_references(root, plan, rtoffset);
     break;
-  case T_WindowAgg:;
+  case T_WindowAgg:
   {
     WindowAgg *wplan = (WindowAgg *)plan;
 
@@ -705,7 +705,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     wplan->endOffset = fix_scan_expr(root, wplan->endOffset, rtoffset);
   }
   break;
-  case T_Result:;
+  case T_Result:
   {
     Result *splan = (Result *)plan;
 
@@ -726,10 +726,10 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     splan->resconstantqual = fix_scan_expr(root, splan->resconstantqual, rtoffset);
   }
   break;
-  case T_ProjectSet:;
+  case T_ProjectSet:
     set_upper_references(root, plan, rtoffset);
     break;
-  case T_ModifyTable:;
+  case T_ModifyTable:
   {
     ModifyTable *splan = (ModifyTable *)plan;
 
@@ -838,18 +838,18 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     }
   }
   break;
-  case T_Append:;
+  case T_Append:
     /* Needs special treatment, see comments below */
     return set_append_references(root, (Append *)plan, rtoffset);
-  case T_MergeAppend:;
+  case T_MergeAppend:
     /* Needs special treatment, see comments below */
     return set_mergeappend_references(root, (MergeAppend *)plan, rtoffset);
-  case T_RecursiveUnion:;
+  case T_RecursiveUnion:
     /* This doesn't evaluate targetlist or check quals either */
     set_dummy_tlist_references(plan, rtoffset);
     Assert(plan->qual == NIL);
     break;
-  case T_BitmapAnd:;
+  case T_BitmapAnd:
   {
     BitmapAnd *splan = (BitmapAnd *)plan;
 
@@ -862,7 +862,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     }
   }
   break;
-  case T_BitmapOr:;
+  case T_BitmapOr:
   {
     BitmapOr *splan = (BitmapOr *)plan;
 
@@ -875,9 +875,9 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     }
   }
   break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(plan));
+    break;
   }
 
   /*
@@ -1061,8 +1061,7 @@ trivial_subqueryscan(SubqueryScan *plan)
 
 /*
  * clean_up_removed_plan_level
- *		Do necessary cleanup when we strip out a SubqueryScan, Append,
- *etc
+ *		Do necessary cleanup when we strip out a SubqueryScan, Append, etc
  *
  * We are dropping the "parent" plan in favor of returning just its "child".
  * A few small tweaks are needed.
@@ -1090,52 +1089,52 @@ clean_up_removed_plan_level(Plan *parent, Plan *child)
 static void
 set_foreignscan_references(PlannerInfo *root, ForeignScan *fscan, int rtoffset)
 {
+  /* Adjust scanrelid if it's valid */
+  if (fscan->scan.scanrelid > 0)
+  {
+    fscan->scan.scanrelid += rtoffset;
+  }
 
+  if (fscan->fdw_scan_tlist != NIL || fscan->scan.scanrelid == 0)
+  {
+    /*
+     * Adjust tlist, qual, fdw_exprs, fdw_recheck_quals to reference
+     * foreign scan tuple
+     */
+    indexed_tlist *itlist = build_tlist_index(fscan->fdw_scan_tlist);
 
+    fscan->scan.plan.targetlist = (List *)fix_upper_expr(root, (Node *)fscan->scan.plan.targetlist, itlist, INDEX_VAR, rtoffset);
+    fscan->scan.plan.qual = (List *)fix_upper_expr(root, (Node *)fscan->scan.plan.qual, itlist, INDEX_VAR, rtoffset);
+    fscan->fdw_exprs = (List *)fix_upper_expr(root, (Node *)fscan->fdw_exprs, itlist, INDEX_VAR, rtoffset);
+    fscan->fdw_recheck_quals = (List *)fix_upper_expr(root, (Node *)fscan->fdw_recheck_quals, itlist, INDEX_VAR, rtoffset);
+    pfree(itlist);
+    /* fdw_scan_tlist itself just needs fix_scan_list() adjustments */
+    fscan->fdw_scan_tlist = fix_scan_list(root, fscan->fdw_scan_tlist, rtoffset);
+  }
+  else
+  {
+    /*
+     * Adjust tlist, qual, fdw_exprs, fdw_recheck_quals in the standard
+     * way
+     */
+    fscan->scan.plan.targetlist = fix_scan_list(root, fscan->scan.plan.targetlist, rtoffset);
+    fscan->scan.plan.qual = fix_scan_list(root, fscan->scan.plan.qual, rtoffset);
+    fscan->fdw_exprs = fix_scan_list(root, fscan->fdw_exprs, rtoffset);
+    fscan->fdw_recheck_quals = fix_scan_list(root, fscan->fdw_recheck_quals, rtoffset);
+  }
 
+  /* Adjust fs_relids if needed */
+  if (rtoffset > 0)
+  {
+    Bitmapset *tempset = NULL;
+    int x = -1;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    while ((x = bms_next_member(fscan->fs_relids, x)) >= 0)
+    {
+      tempset = bms_add_member(tempset, x + rtoffset);
+    }
+    fscan->fs_relids = tempset;
+  }
 }
 
 /*
@@ -1145,52 +1144,52 @@ set_foreignscan_references(PlannerInfo *root, ForeignScan *fscan, int rtoffset)
 static void
 set_customscan_references(PlannerInfo *root, CustomScan *cscan, int rtoffset)
 {
+  ListCell *lc;
 
+  /* Adjust scanrelid if it's valid */
+  if (cscan->scan.scanrelid > 0)
+  {
+    cscan->scan.scanrelid += rtoffset;
+  }
 
+  if (cscan->custom_scan_tlist != NIL || cscan->scan.scanrelid == 0)
+  {
+    /* Adjust tlist, qual, custom_exprs to reference custom scan tuple */
+    indexed_tlist *itlist = build_tlist_index(cscan->custom_scan_tlist);
 
+    cscan->scan.plan.targetlist = (List *)fix_upper_expr(root, (Node *)cscan->scan.plan.targetlist, itlist, INDEX_VAR, rtoffset);
+    cscan->scan.plan.qual = (List *)fix_upper_expr(root, (Node *)cscan->scan.plan.qual, itlist, INDEX_VAR, rtoffset);
+    cscan->custom_exprs = (List *)fix_upper_expr(root, (Node *)cscan->custom_exprs, itlist, INDEX_VAR, rtoffset);
+    pfree(itlist);
+    /* custom_scan_tlist itself just needs fix_scan_list() adjustments */
+    cscan->custom_scan_tlist = fix_scan_list(root, cscan->custom_scan_tlist, rtoffset);
+  }
+  else
+  {
+    /* Adjust tlist, qual, custom_exprs in the standard way */
+    cscan->scan.plan.targetlist = fix_scan_list(root, cscan->scan.plan.targetlist, rtoffset);
+    cscan->scan.plan.qual = fix_scan_list(root, cscan->scan.plan.qual, rtoffset);
+    cscan->custom_exprs = fix_scan_list(root, cscan->custom_exprs, rtoffset);
+  }
 
+  /* Adjust child plan-nodes recursively, if needed */
+  foreach (lc, cscan->custom_plans)
+  {
+    lfirst(lc) = set_plan_refs(root, (Plan *)lfirst(lc), rtoffset);
+  }
 
+  /* Adjust custom_relids if needed */
+  if (rtoffset > 0)
+  {
+    Bitmapset *tempset = NULL;
+    int x = -1;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    while ((x = bms_next_member(cscan->custom_relids, x)) >= 0)
+    {
+      tempset = bms_add_member(tempset, x + rtoffset);
+    }
+    cscan->custom_relids = tempset;
+  }
 }
 
 /*
@@ -1478,12 +1477,12 @@ fix_param_node(PlannerInfo *root, Param *p)
 
     if (subqueryid <= 0 || subqueryid > list_length(root->multiexpr_params))
     {
-
+      elog(ERROR, "unexpected PARAM_MULTIEXPR ID: %d", p->paramid);
     }
     params = (List *)list_nth(root->multiexpr_params, subqueryid - 1);
     if (colno <= 0 || colno > list_length(params))
     {
-
+      elog(ERROR, "unexpected PARAM_MULTIEXPR ID: %d", p->paramid);
     }
     return copyObject(list_nth(params, colno - 1));
   }
@@ -1588,13 +1587,13 @@ fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context)
   {
     CurrentOfExpr *cexpr = (CurrentOfExpr *)copyObject(node);
 
-
-
-
-
-
-
-
+    Assert(cexpr->cvarno != INNER_VAR);
+    Assert(cexpr->cvarno != OUTER_VAR);
+    if (!IS_SPECIAL_VARNO(cexpr->cvarno))
+    {
+      cexpr->cvarno += context->rtoffset;
+    }
+    return (Node *)cexpr;
   }
   if (IsA(node, PlaceHolderVar))
   {
@@ -1661,7 +1660,7 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
       /* Check we replaced any PlaceHolderVar with simple Var */
       if (!(IsA(nlp->paramval, Var) && nlp->paramval->varno == OUTER_VAR))
       {
-
+        elog(ERROR, "NestLoopParam was not reduced to a simple Var");
       }
     }
   }
@@ -1698,19 +1697,19 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
    */
   switch (join->jointype)
   {
-  case JOIN_LEFT:;
-  case JOIN_SEMI:;
-  case JOIN_ANTI:;
+  case JOIN_LEFT:
+  case JOIN_SEMI:
+  case JOIN_ANTI:
     inner_itlist->has_non_vars = false;
     break;
-  case JOIN_RIGHT:;
+  case JOIN_RIGHT:
     outer_itlist->has_non_vars = false;
     break;
-  case JOIN_FULL:;
+  case JOIN_FULL:
     outer_itlist->has_non_vars = false;
     inner_itlist->has_non_vars = false;
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -1783,8 +1782,8 @@ set_upper_references(PlannerInfo *root, Plan *plan, int rtoffset)
  * set_param_references
  *	  Initialize the initParam list in Gather or Gather merge node such that
  *	  it contains reference of all the params that needs to be evaluated
- *	  before execution of the node.  It contains the initplan params that
- *are being passed to the plan nodes below it.
+ *	  before execution of the node.  It contains the initplan params that are
+ *	  being passed to the plan nodes below it.
  */
 static void
 set_param_references(PlannerInfo *root, Plan *plan)
@@ -2058,7 +2057,7 @@ build_tlist_index_other_vars(List *tlist, Index ignore_rel)
     }
     else if (tle->expr && IsA(tle->expr, PlaceHolderVar))
     {
-
+      itlist->has_ph_vars = true;
     }
   }
 
@@ -2192,16 +2191,18 @@ search_indexed_tlist_for_sortgroupref(Expr *node, Index sortgroupref, indexed_tl
  * This is used in three different scenarios:
  * 1) a normal join clause, where all the Vars in the clause *must* be
  *	  replaced by OUTER_VAR or INNER_VAR references.  In this case
- *	  acceptable_rel should be zero so that any failure to match a Var will
- *be reported as an error. 2) RETURNING clauses, which may contain both Vars of
- *the target relation and Vars of other relations. In this case we want to
- *replace the other-relation Vars by OUTER_VAR references, while leaving target
- *Vars alone. Thus inner_itlist = NULL and acceptable_rel = the ID of the target
- *relation should be passed. 3) ON CONFLICT UPDATE SET/WHERE clauses.  Here
- *references to EXCLUDED are to be replaced with INNER_VAR references, while
- *leaving target Vars (the to-be-updated relation) alone. Correspondingly
- *inner_itlist is to be EXCLUDED elements, outer_itlist = NULL and
- *acceptable_rel the target relation.
+ *	  acceptable_rel should be zero so that any failure to match a Var will be
+ *	  reported as an error.
+ * 2) RETURNING clauses, which may contain both Vars of the target relation
+ *	  and Vars of other relations. In this case we want to replace the
+ *	  other-relation Vars by OUTER_VAR references, while leaving target Vars
+ *	  alone. Thus inner_itlist = NULL and acceptable_rel = the ID of the
+ *	  target relation should be passed.
+ * 3) ON CONFLICT UPDATE SET/WHERE clauses.  Here references to EXCLUDED are
+ *	  to be replaced with INNER_VAR references, while leaving target Vars (the
+ *	  to-be-updated relation) alone. Correspondingly inner_itlist is to be
+ *	  EXCLUDED elements, outer_itlist = NULL and acceptable_rel the target
+ *	  relation.
  *
  * 'clauses' is the targetlist or list of join clauses
  * 'outer_itlist' is the indexed target list of the outer join relation,
@@ -2274,7 +2275,7 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
     }
 
     /* No referent found for Var */
-
+    elog(ERROR, "variable not found in subplan target lists");
   }
   if (IsA(node, PlaceHolderVar))
   {
@@ -2329,10 +2330,10 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 
 /*
  * fix_upper_expr
- *		Modifies an expression tree so that all Var nodes reference
- *outputs of a subplan.  Also looks for Aggref nodes that should be replaced by
- *initplan output Params.  Also performs opcode lookup, and adds regclass OIDs
- *to root->glob->relationOids.
+ *		Modifies an expression tree so that all Var nodes reference outputs
+ *		of a subplan.  Also looks for Aggref nodes that should be replaced
+ *		by initplan output Params.  Also performs opcode lookup, and adds
+ *		regclass OIDs to root->glob->relationOids.
  *
  * This is used to fix up target and qual expressions of non-join upper-level
  * plan nodes, as well as index-only scan nodes.
@@ -2385,7 +2386,7 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
     newvar = search_indexed_tlist_for_var(var, context->subplan_itlist, context->newvarno, context->rtoffset);
     if (!newvar)
     {
-
+      elog(ERROR, "variable not found in subplan target list");
     }
     return (Node *)newvar;
   }
@@ -2429,15 +2430,15 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
       TargetEntry *curTarget = (TargetEntry *)linitial(aggref->args);
       ListCell *lc;
 
+      foreach (lc, context->root->minmax_aggs)
+      {
+        MinMaxAggInfo *mminfo = (MinMaxAggInfo *)lfirst(lc);
 
-
-
-
-
-
-
-
-
+        if (mminfo->aggfnoid == aggref->aggfnoid && equal(mminfo->target, curTarget->expr))
+        {
+          return (Node *)copyObject(mminfo->param);
+        }
+      }
     }
     /* If no match, just fall through to process it normally */
   }

@@ -433,8 +433,7 @@ typedef void *yyscan_t;
 #endif /* __ia64__ */
 #endif
 
-/* The state buf must be large enough to hold one state per character in the
- * main buffer.
+/* The state buf must be large enough to hold one state per character in the main buffer.
  */
 #define YY_STATE_BUF_SIZE ((YY_BUF_SIZE + 2) * sizeof(yy_state_type))
 
@@ -38218,7 +38217,7 @@ static const struct yy_trans_info *yy_start_state_list[27] = {
 static void
 fprintf_to_ereport(const char *fmt, const char *msg)
 {
-
+  ereport(ERROR, (errmsg_internal("%s", msg)));
 }
 
 /*
@@ -38503,8 +38502,7 @@ struct yyguts_t
   /* User-defined. Not touched by flex. */
   YY_EXTRA_TYPE yyextra_r;
 
-  /* The rest are the same as the globals declared in the non-reentrant scanner.
-   */
+  /* The rest are the same as the globals declared in the non-reentrant scanner. */
   FILE *yyin_r, *yyout_r;
   size_t yy_buffer_stack_top;       /**< index of top of stack. */
   size_t yy_buffer_stack_max;       /**< capacity of stack. */
@@ -39067,7 +39065,7 @@ YY_DECL
           SET_YYLLOC();
           if (!yyextra->standard_conforming_strings)
           {
-            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("unsafe use of string constant with Unicode escapes"), errdetail("String constants with Unicode escapes cannot be used when standard_conforming_strings is of"), lexer_errposition()));
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("unsafe use of string constant with Unicode escapes"), errdetail("String constants with Unicode escapes cannot be used when standard_conforming_strings is off."), lexer_errposition()));
           }
           BEGIN(xus);
           startlit();
@@ -39979,7 +39977,7 @@ YY_DECL
         break;
       }
 
-      default:;
+      default:
         YY_FATAL_ERROR("fatal flex scanner internal error--no action found");
       } /* end of action switch */
     } /* end of scanning one token */
@@ -40004,7 +40002,7 @@ yy_get_next_buffer(yyscan_t yyscanner)
 
   if (yyg->yy_c_buf_p > &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars + 1])
   {
-
+    YY_FATAL_ERROR("fatal flex scanner internal error--end of buffer missed");
   }
 
   if (YY_CURRENT_BUFFER_LVALUE->yy_fill_buffer == 0)
@@ -40029,117 +40027,117 @@ yy_get_next_buffer(yyscan_t yyscanner)
   /* Try to read more data. */
 
   /* First move last chars to start of buffer. */
+  number_to_move = (int)(yyg->yy_c_buf_p - yyg->yytext_ptr - 1);
+
+  for (i = 0; i < number_to_move; ++i)
+  {
+    *(dest++) = *(source++);
+  }
+
+  if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status == YY_BUFFER_EOF_PENDING)
+  {
+    /* don't do the read, it's not guaranteed to return an EOF,
+     * just force an EOF
+     */
+    YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars = 0;
+  }
+
+  else
+  {
+    int num_to_read = YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
+
+    while (num_to_read <= 0)
+    { /* Not enough room in the buffer - grow it. */
+
+      /* just a shorter name for the current buffer */
+      YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
+
+      int yy_c_buf_p_offset = (int)(yyg->yy_c_buf_p - b->yy_ch_buf);
+
+      if (b->yy_is_our_buffer)
+      {
+        int new_size = b->yy_buf_size * 2;
+
+        if (new_size <= 0)
+        {
+          b->yy_buf_size += b->yy_buf_size / 8;
+        }
+        else
+        {
+          b->yy_buf_size *= 2;
+        }
+
+        b->yy_ch_buf = (char *)
+            /* Include room in for 2 EOB chars. */
+            yyrealloc((void *)b->yy_ch_buf, (yy_size_t)(b->yy_buf_size + 2), yyscanner);
+      }
+      else
+      {
+        /* Can't grow it, we don't own it. */
+        b->yy_ch_buf = NULL;
+      }
+
+      if (!b->yy_ch_buf)
+      {
+        YY_FATAL_ERROR("fatal error - scanner input buffer overflow");
+      }
+
+      yyg->yy_c_buf_p = &b->yy_ch_buf[yy_c_buf_p_offset];
+
+      num_to_read = YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
+    }
+
+    if (num_to_read > YY_READ_BUF_SIZE)
+    {
+      num_to_read = YY_READ_BUF_SIZE;
+    }
+
+    /* Read in more data. */
+    YY_INPUT((&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]), yyg->yy_n_chars, num_to_read);
+
+    YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
+  }
+
+  if (yyg->yy_n_chars == 0)
+  {
+    if (number_to_move == YY_MORE_ADJ)
+    {
+      ret_val = EOB_ACT_END_OF_FILE;
+      yyrestart(yyin, yyscanner);
+    }
+
+    else
+    {
+      ret_val = EOB_ACT_LAST_MATCH;
+      YY_CURRENT_BUFFER_LVALUE->yy_buffer_status = YY_BUFFER_EOF_PENDING;
+    }
+  }
+
+  else
+  {
+    ret_val = EOB_ACT_CONTINUE_SCAN;
+  }
+
+  if ((yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size)
+  {
+    /* Extend the array by 50%, plus the number we really need. */
+    int new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
+    YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *)yyrealloc((void *)YY_CURRENT_BUFFER_LVALUE->yy_ch_buf, (yy_size_t)new_size, yyscanner);
+    if (!YY_CURRENT_BUFFER_LVALUE->yy_ch_buf)
+    {
+      YY_FATAL_ERROR("out of dynamic memory in yy_get_next_buffer()");
+    }
+    /* "- 2" to take care of EOB's */
+    YY_CURRENT_BUFFER_LVALUE->yy_buf_size = (int)(new_size - 2);
+  }
 
+  yyg->yy_n_chars += number_to_move;
+  YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars] = YY_END_OF_BUFFER_CHAR;
+  YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars + 1] = YY_END_OF_BUFFER_CHAR;
 
+  yyg->yytext_ptr = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[0];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return ret_val;
 }
 
 /* yy_get_previous_state - get the state just before the EOB char was reached */
@@ -40169,18 +40167,18 @@ yy_get_previous_state(yyscan_t yyscanner)
 static yy_state_type
 yy_try_NUL_trans(yy_state_type yy_current_state, yyscan_t yyscanner)
 {
+  int yy_is_jam;
+  struct yyguts_t *yyg = (struct yyguts_t *)yyscanner; /* This var may be unused depending upon options. */
 
+  int yy_c = 256;
+  const struct yy_trans_info *yy_trans_info;
 
+  yy_trans_info = &yy_current_state[(unsigned int)yy_c];
+  yy_current_state += yy_trans_info->yy_nxt;
+  yy_is_jam = (yy_trans_info->yy_verify != yy_c);
 
-
-
-
-
-
-
-
-
-
+  (void)yyg;
+  return yy_is_jam ? 0 : yy_current_state;
 }
 
 #ifndef YY_NO_UNPUT
@@ -40341,8 +40339,7 @@ yy_load_buffer_state(yyscan_t yyscanner)
 
 /** Allocate and initialize an input buffer state.
  * @param file A readable stream.
- * @param size The character buffer size in bytes. When in doubt, use @c
- * YY_BUF_SIZE.
+ * @param size The character buffer size in bytes. When in doubt, use @c YY_BUF_SIZE.
  * @param yyscanner The scanner object.
  * @return the allocated buffer state.
  */
@@ -40389,8 +40386,8 @@ yy_delete_buffer(YY_BUFFER_STATE b, yyscan_t yyscanner)
     return;
   }
 
-  if (b == YY_CURRENT_BUFFER)
-  { /* Not sure if we should pop here. */
+  if (b == YY_CURRENT_BUFFER) /* Not sure if we should pop here. */
+  {
     YY_CURRENT_BUFFER_LVALUE = (YY_BUFFER_STATE)0;
   }
 
@@ -40580,8 +40577,7 @@ yyensure_buffer_stack(yyscan_t yyscanner)
   }
 }
 
-/** Setup the input buffer state to scan directly from a user-specified
- * character buffer.
+/** Setup the input buffer state to scan directly from a user-specified character buffer.
  * @param base the character buffer
  * @param size the size in bytes of the character buffer
  * @param yyscanner The scanner object.
@@ -40630,8 +40626,8 @@ yy_scan_buffer(char *base, yy_size_t size, yyscan_t yyscanner)
 YY_BUFFER_STATE
 yy_scan_string(const char *yystr, yyscan_t yyscanner) { return yy_scan_bytes(yystr, (int)strlen(yystr), yyscanner); }
 
-/** Setup the input buffer state to scan the given bytes. The next call to
- * yylex() will scan from a @e copy of @a bytes.
+/** Setup the input buffer state to scan the given bytes. The next call to yylex() will
+ * scan from a @e copy of @a bytes.
  * @param yybytes the byte buffer to scan
  * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
@@ -40681,10 +40677,10 @@ yy_scan_bytes(const char *yybytes, int _yybytes_len, yyscan_t yyscanner)
 static void yynoreturn
 yy_fatal_error(const char *msg, yyscan_t yyscanner)
 {
-
-
-
-
+  struct yyguts_t *yyg = (struct yyguts_t *)yyscanner;
+  (void)yyg;
+  fprintf(stderr, "%s\n", msg);
+  exit(YY_EXIT_FAILURE);
 }
 
 /* Redefine yyless() so it works in section 3 code. */
@@ -40902,9 +40898,8 @@ yyset_lloc(YYLTYPE *yylloc_param, yyscan_t yyscanner)
 /* User-visible API */
 
 /* yylex_init is special because it creates the scanner itself, so it is
- * the ONLY reentrant function that doesn't take the scanner as the last
- * argument. That's why we explicitly handle the declaration, instead of using
- * our macros.
+ * the ONLY reentrant function that doesn't take the scanner as the last argument.
+ * That's why we explicitly handle the declaration, instead of using our macros.
  */
 int
 yylex_init(yyscan_t *ptr_yy_globals)
@@ -40923,8 +40918,7 @@ yylex_init(yyscan_t *ptr_yy_globals)
     return 1;
   }
 
-  /* By setting to 0xAA, we expose bugs in yy_init_globals. Leave at 0x00 for
-   * releases. */
+  /* By setting to 0xAA, we expose bugs in yy_init_globals. Leave at 0x00 for releases. */
   memset(*ptr_yy_globals, 0x00, sizeof(struct yyguts_t));
 
   return yy_init_globals(*ptr_yy_globals);
@@ -41023,8 +41017,8 @@ yylex_destroy(yyscan_t yyscanner)
   yyfree(yyg->yy_start_stack, yyscanner);
   yyg->yy_start_stack = NULL;
 
-  /* Reset the globals. This is important in a non-reentrant scanner so the next
-   * time yylex() is called, initialization will occur. */
+  /* Reset the globals. This is important in a non-reentrant scanner so the next time
+   * yylex() is called, initialization will occur. */
   yy_init_globals(yyscanner);
 
   /* Destroy the main struct (reentrant only). */
@@ -41103,7 +41097,7 @@ scanner_errposition(int location, core_yyscan_t yyscanner)
 
   if (location < 0)
   {
-
+    return 0; /* no-op if location is unknown */
   }
 
   /* Convert byte offset to character number */
@@ -41131,11 +41125,15 @@ scanner_yyerror(const char *message, core_yyscan_t yyscanner)
 
   if (*loc == YY_END_OF_BUFFER_CHAR)
   {
-    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("%s at end of input", _(message)), lexer_errposition()));
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                       /* translator: %s is typically the translation of "syntax error" */
+                       errmsg("%s at end of input", _(message)), lexer_errposition()));
   }
   else
   {
-    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("%s at or near \"%s\"", _(message), loc), lexer_errposition()));
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                       /* translator: first %s is typically the translation of "syntax error" */
+                       errmsg("%s at or near \"%s\"", _(message), loc), lexer_errposition()));
   }
 }
 
@@ -41150,7 +41148,7 @@ scanner_init(const char *str, core_yy_extra_type *yyext, const ScanKeywordList *
 
   if (yylex_init(&scanner) != 0)
   {
-
+    elog(ERROR, "yylex_init() failed: %m");
   }
 
   core_yyset_extra(yyext, scanner);
@@ -41201,7 +41199,7 @@ scanner_finish(core_yyscan_t yyscanner)
   }
   if (yyextra->literalalloc >= 8192)
   {
-
+    pfree(yyextra->literalbuf);
   }
 }
 
@@ -41228,8 +41226,8 @@ addlitchar(unsigned char ychar, core_yyscan_t yyscanner)
   /* enlarge buffer if needed */
   if ((yyextra->literallen + 1) >= yyextra->literalalloc)
   {
-
-
+    yyextra->literalalloc *= 2;
+    yyextra->literalbuf = (char *)repalloc(yyextra->literalbuf, yyextra->literalalloc);
   }
   /* append new data */
   yyextra->literalbuf[yyextra->literallen] = ychar;
@@ -41280,16 +41278,16 @@ hexval(unsigned char c)
   {
     return c - '0';
   }
-
-
-
-
-
-
-
-
-
-
+  if (c >= 'a' && c <= 'f')
+  {
+    return c - 'a' + 0xA;
+  }
+  if (c >= 'A' && c <= 'F')
+  {
+    return c - 'A' + 0xA;
+  }
+  elog(ERROR, "invalid hexadecimal digit");
+  return 0; /* not reached */
 }
 
 static void
@@ -41302,8 +41300,8 @@ check_unicode_value(pg_wchar c, char *loc, core_yyscan_t yyscanner)
 
   if (c > 0x7F)
   {
-
-
+    ADVANCE_YYLLOC(loc - yyextra->literalbuf + 3); /* 3 for U&" */
+    yyerror("Unicode escape values cannot be used for code point values above 007F when the server encoding is not UTF8");
   }
 }
 
@@ -41322,28 +41320,28 @@ is_utf16_surrogate_second(pg_wchar c)
 static pg_wchar
 surrogate_pair_to_codepoint(pg_wchar first, pg_wchar second)
 {
-
+  return ((first & 0x3FF) << 10) + 0x10000 + (second & 0x3FF);
 }
 
 static void
 addunicode(pg_wchar c, core_yyscan_t yyscanner)
 {
+  char buf[8];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (c == 0 || c > 0x10FFFF)
+  {
+    yyerror("invalid Unicode escape value");
+  }
+  if (c > 0x7F)
+  {
+    if (GetDatabaseEncoding() != PG_UTF8)
+    {
+      yyerror("Unicode escape values cannot be used for code point values above 007F when the server encoding is not UTF8");
+    }
+    yyextra->saw_non_ascii = true;
+  }
+  unicode_to_utf8(c, (unsigned char *)buf);
+  addlit(buf, pg_mblen(buf), yyscanner);
 }
 
 /* is 'escape' acceptable as Unicode escape character (UESCAPE syntax) ? */
@@ -41386,13 +41384,13 @@ litbuf_udeescape(unsigned char escape, core_yyscan_t yyscanner)
     {
       if (in[1] == escape)
       {
-
-
-
-
-
-
-
+        if (pair_first)
+        {
+          ADVANCE_YYLLOC(in - litbuf + 3); /* 3 for U&" */
+          yyerror("invalid Unicode surrogate pair");
+        }
+        *out++ = escape;
+        in += 2;
       }
       else if (isxdigit((unsigned char)in[1]) && isxdigit((unsigned char)in[2]) && isxdigit((unsigned char)in[3]) && isxdigit((unsigned char)in[4]))
       {
@@ -41402,25 +41400,25 @@ litbuf_udeescape(unsigned char escape, core_yyscan_t yyscanner)
         check_unicode_value(unicode, in, yyscanner);
         if (pair_first)
         {
-
-
-
-
-
-
-
-
-
-
+          if (is_utf16_surrogate_second(unicode))
+          {
+            unicode = surrogate_pair_to_codepoint(pair_first, unicode);
+            pair_first = 0;
+          }
+          else
+          {
+            ADVANCE_YYLLOC(in - litbuf + 3); /* 3 for U&" */
+            yyerror("invalid Unicode surrogate pair");
+          }
         }
         else if (is_utf16_surrogate_second(unicode))
         {
-
+          yyerror("invalid Unicode surrogate pair");
         }
 
         if (is_utf16_surrogate_first(unicode))
         {
-
+          pair_first = unicode;
         }
         else
         {
@@ -41437,25 +41435,25 @@ litbuf_udeescape(unsigned char escape, core_yyscan_t yyscanner)
         check_unicode_value(unicode, in, yyscanner);
         if (pair_first)
         {
-
-
-
-
-
-
-
-
-
-
+          if (is_utf16_surrogate_second(unicode))
+          {
+            unicode = surrogate_pair_to_codepoint(pair_first, unicode);
+            pair_first = 0;
+          }
+          else
+          {
+            ADVANCE_YYLLOC(in - litbuf + 3); /* 3 for U&" */
+            yyerror("invalid Unicode surrogate pair");
+          }
         }
         else if (is_utf16_surrogate_second(unicode))
         {
-
+          yyerror("invalid Unicode surrogate pair");
         }
 
         if (is_utf16_surrogate_first(unicode))
         {
-
+          pair_first = unicode;
         }
         else
         {
@@ -41474,8 +41472,8 @@ litbuf_udeescape(unsigned char escape, core_yyscan_t yyscanner)
     {
       if (pair_first)
       {
-
-
+        ADVANCE_YYLLOC(in - litbuf + 3); /* 3 for U&" */
+        yyerror("invalid Unicode surrogate pair");
       }
       *out++ = *in++;
     }
@@ -41484,8 +41482,8 @@ litbuf_udeescape(unsigned char escape, core_yyscan_t yyscanner)
   /* unfinished surrogate pair? */
   if (pair_first)
   {
-
-
+    ADVANCE_YYLLOC(in - litbuf + 3); /* 3 for U&" */
+    yyerror("invalid Unicode surrogate pair");
   }
 
   *out = '\0';
@@ -41504,21 +41502,21 @@ unescape_single_char(unsigned char c, core_yyscan_t yyscanner)
 {
   switch (c)
   {
-  case 'b':;
+  case 'b':
     return '\b';
-  case 'f':;
-
-  case 'n':;
+  case 'f':
+    return '\f';
+  case 'n':
     return '\n';
-  case 'r':;
+  case 'r':
     return '\r';
-  case 't':;
+  case 't':
     return '\t';
-  default:;;
+  default:
     /* check for backslash followed by non-7-bit-ASCII */
     if (c == '\0' || IS_HIGHBIT_SET(c))
     {
-
+      yyextra->saw_non_ascii = true;
     }
 
     return c;
@@ -41532,7 +41530,7 @@ check_string_escape_warning(unsigned char ychar, core_yyscan_t yyscanner)
   {
     if (yyextra->warn_on_first_escape && yyextra->escape_string_warning)
     {
-
+      ereport(WARNING, (errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER), errmsg("nonstandard use of \\' in a string literal"), errhint("Use '' to write quotes in strings, or use the escape string syntax (E'...')."), lexer_errposition()));
     }
     yyextra->warn_on_first_escape = false; /* warn only once per string */
   }
@@ -41555,7 +41553,7 @@ check_escape_warning(core_yyscan_t yyscanner)
 {
   if (yyextra->warn_on_first_escape && yyextra->escape_string_warning)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER), errmsg("nonstandard use of escape in a string literal"), errhint("Use the escape string syntax for escapes, e.g., E'\\r\\n'."), lexer_errposition()));
   }
   yyextra->warn_on_first_escape = false; /* warn only once per string */
 }
@@ -41574,21 +41572,21 @@ core_yyalloc(yy_size_t bytes, core_yyscan_t yyscanner)
 void *
 core_yyrealloc(void *ptr, yy_size_t bytes, core_yyscan_t yyscanner)
 {
-
-
-
-
-
-
-
-
+  if (ptr)
+  {
+    return repalloc(ptr, bytes);
+  }
+  else
+  {
+    return palloc(bytes);
+  }
 }
 
 void
 core_yyfree(void *ptr, core_yyscan_t yyscanner)
 {
-
-
-
-
+  if (ptr)
+  {
+    pfree(ptr);
+  }
 }

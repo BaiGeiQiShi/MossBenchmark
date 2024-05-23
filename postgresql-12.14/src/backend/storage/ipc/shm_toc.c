@@ -67,7 +67,7 @@ shm_toc_attach(uint64 magic, void *address)
 
   if (toc->toc_magic != magic)
   {
-
+    return NULL;
   }
 
   Assert(toc->toc_total_bytes >= toc->toc_allocated_bytes);
@@ -113,8 +113,8 @@ shm_toc_allocate(shm_toc *toc, Size nbytes)
   /* Check for memory exhaustion and overflow. */
   if (toc_bytes + nbytes > total_bytes || toc_bytes + nbytes < toc_bytes)
   {
-
-
+    SpinLockRelease(&toc->toc_mutex);
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory")));
   }
   vtoc->toc_allocated_bytes += nbytes;
 
@@ -129,21 +129,21 @@ shm_toc_allocate(shm_toc *toc, Size nbytes)
 Size
 shm_toc_freespace(shm_toc *toc)
 {
+  volatile shm_toc *vtoc = toc;
+  Size total_bytes;
+  Size allocated_bytes;
+  Size nentry;
+  Size toc_bytes;
 
+  SpinLockAcquire(&toc->toc_mutex);
+  total_bytes = vtoc->toc_total_bytes;
+  allocated_bytes = vtoc->toc_allocated_bytes;
+  nentry = vtoc->toc_nentry;
+  SpinLockRelease(&toc->toc_mutex);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  toc_bytes = offsetof(shm_toc, toc_entry) + nentry * sizeof(shm_toc_entry);
+  Assert(allocated_bytes + BUFFERALIGN(toc_bytes) <= total_bytes);
+  return total_bytes - (allocated_bytes + BUFFERALIGN(toc_bytes));
 }
 
 /*
@@ -190,8 +190,8 @@ shm_toc_insert(shm_toc *toc, uint64 key, void *address)
   /* Check for memory exhaustion and overflow. */
   if (toc_bytes + sizeof(shm_toc_entry) > total_bytes || toc_bytes + sizeof(shm_toc_entry) < toc_bytes || nentry >= PG_UINT32_MAX)
   {
-
-
+    SpinLockRelease(&toc->toc_mutex);
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory")));
   }
 
   Assert(offset < total_bytes);
@@ -247,7 +247,7 @@ shm_toc_lookup(shm_toc *toc, uint64 key, bool noError)
   /* No matching entry was found. */
   if (!noError)
   {
-
+    elog(ERROR, "could not find key " UINT64_FORMAT " in shm TOC at %p", key, toc);
   }
   return NULL;
 }

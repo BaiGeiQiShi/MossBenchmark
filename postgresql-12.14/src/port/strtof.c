@@ -19,7 +19,8 @@
 #ifndef HAVE_STRTOF
 /*
  * strtof() is part of C99; this version is only for the benefit of obsolete
- * platforms. As such, it is known to return incorrect values for edge cases,* which have to be allowed for in variant files for regression test results
+ * platforms. As such, it is known to return incorrect values for edge cases,
+ * which have to be allowed for in variant files for regression test results
  * for any such platform.
  */
 
@@ -34,17 +35,22 @@ strtof(const char *nptr, char **endptr)
   dresult = strtod(nptr, endptr);
   fresult = (float)dresult;
 
-  if (errno == 0) {
+  if (errno == 0)
+  {
     /*
      * Value might be in-range for double but not float.
      */
-    if (dresult != 0 && fresult == 0) {
+    if (dresult != 0 && fresult == 0)
+    {
       caller_errno = ERANGE; /* underflow */
     }
-    if (!isinf(dresult) && isinf(fresult)) {
+    if (!isinf(dresult) && isinf(fresult))
+    {
       caller_errno = ERANGE; /* overflow */
     }
-  } else {
+  }
+  else
+  {
     caller_errno = errno;
   }
 
@@ -79,10 +85,13 @@ pg_strtof(const char *nptr, char **endptr)
 
   errno = 0;
   fresult = (strtof)(nptr, endptr);
-  if (errno) {
+  if (errno)
+  {
     /* On error, just return the error to the caller. */
     return fresult;
-  } else if ((*endptr == nptr) || isnan(fresult) || ((fresult >= FLT_MIN || fresult <= -FLT_MIN) && !isinf(fresult))) {
+  }
+  else if ((*endptr == nptr) || isnan(fresult) || ((fresult >= FLT_MIN || fresult <= -FLT_MIN) && !isinf(fresult)))
+  {
     /*
      * If we got nothing parseable, or if we got a non-0 non-subnormal
      * finite value (or NaN) without error, then return that to the caller
@@ -90,24 +99,33 @@ pg_strtof(const char *nptr, char **endptr)
      */
     errno = caller_errno;
     return fresult;
-  } else {
+  }
+  else
+  {
     /*
      * Try again. errno is already 0 here.
      */
     double dresult = strtod(nptr, NULL);
 
-    if (errno) {
+    if (errno)
+    {
       /* On error, just return the error */
       return fresult;
-    } else if ((dresult == 0.0 && fresult == 0.0) || (isinf(dresult) && isinf(fresult) && (fresult == dresult))) {
+    }
+    else if ((dresult == 0.0 && fresult == 0.0) || (isinf(dresult) && isinf(fresult) && (fresult == dresult)))
+    {
       /* both values are 0 or infinities of the same sign */
       errno = caller_errno;
       return fresult;
-    } else if ((dresult > 0 && dresult <= FLT_MIN && (float)dresult != 0.0) || (dresult < 0 && dresult >= -FLT_MIN && (float)dresult != 0.0)) {
+    }
+    else if ((dresult > 0 && dresult <= FLT_MIN && (float)dresult != 0.0) || (dresult < 0 && dresult >= -FLT_MIN && (float)dresult != 0.0))
+    {
       /* subnormal but nonzero value */
       errno = caller_errno;
       return (float)dresult;
-    } else {
+    }
+    else
+    {
       errno = ERANGE;
       return fresult;
     }

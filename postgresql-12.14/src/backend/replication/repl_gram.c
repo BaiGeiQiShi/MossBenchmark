@@ -145,7 +145,8 @@ extern int replication_yydebug;
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
 #define YYTOKENTYPE
-enum yytokentype {
+enum yytokentype
+{
   YYEMPTY = -2,
   YYEOF = 0,                       /* "end of file"  */
   YYerror = 256,                   /* error  */
@@ -185,7 +186,8 @@ typedef enum yytokentype yytoken_kind_t;
 
 /* Value type.  */
 #if !defined YYSTYPE && !defined YYSTYPE_IS_DECLARED
-union YYSTYPE {
+union YYSTYPE
+{
 #line 45 "repl_gram.y"
 
   char *str;
@@ -210,7 +212,8 @@ int
 replication_yyparse(void);
 
 /* Symbol kind.  */
-enum yysymbol_kind_t {
+enum yysymbol_kind_t
+{
   YYSYMBOL_YYEMPTY = -2,
   YYSYMBOL_YYEOF = 0,                      /* "end of file"  */
   YYSYMBOL_YYerror = 1,                    /* error  */
@@ -477,7 +480,8 @@ typedef int yy_state_fast_t;
 #ifdef YYSTACK_ALLOC
 /* Pacify GCC's 'empty if-body' warning.  */
 #define YYSTACK_FREE(Ptr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-  do { /* empty */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  { /* empty */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
     ;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 #ifndef YYSTACK_ALLOC_MAXIMUM
@@ -518,7 +522,8 @@ free(void *); /* INFRINGES ON USER NAME SPACE */
 #if (!defined yyoverflow && (!defined __cplusplus || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
 
 /* A type that is properly aligned for any stack member.  */
-union yyalloc {
+union yyalloc
+{
   yy_state_t yyss_alloc;
   YYSTYPE yyvs_alloc;
 };
@@ -538,7 +543,8 @@ union yyalloc {
    stack.  Advance YYPTR to a properly aligned location for the next
    stack.  */
 #define YYSTACK_RELOCATE(Stack_alloc, Stack)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     YYPTRDIFF_T yynewbytes;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
     YYCOPY(&yyptr->Stack_alloc, Stack, yysize);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
     Stack = &yyptr->Stack_alloc;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
@@ -556,7 +562,8 @@ union yyalloc {
 #define YYCOPY(Dst, Src, Count) __builtin_memcpy(Dst, Src, YY_CAST(YYSIZE_T, (Count)) * sizeof(*(Src)))
 #else
 #define YYCOPY(Dst, Src, Count)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     YYPTRDIFF_T yyi;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
     for (yyi = 0; yyi < (Count); yyi++)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       (Dst)[yyi] = (Src)[yyi];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
@@ -662,7 +669,10 @@ static const yytype_int8 yyr1[] = {0, 37, 38, 39, 39, 40, 40, 40, 40, 40, 40, 40
 /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] = {0, 2, 2, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 3, 2, 2, 0, 2, 1, 1, 1, 1, 2, 1, 1, 5, 6, 2, 0, 1, 1, 1, 1, 2, 3, 5, 6, 2, 1, 0, 1, 0, 2, 0, 2, 0, 3, 0, 1, 3, 2, 1, 0};
 
-enum { YYENOMEM = -2 };
+enum
+{
+  YYENOMEM = -2
+};
 
 #define yyerrok (yyerrstatus = 0)
 #define yyclearin (yychar = YYEMPTY)
@@ -675,13 +685,16 @@ enum { YYENOMEM = -2 };
 
 #define YYBACKUP(Token, Value)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-    if (yychar == YYEMPTY) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+    if (yychar == YYEMPTY)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       yychar = (Token);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       yylval = (Value);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       YYPOPSTACK(yylen);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
       yystate = *yyssp;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       goto yybackup;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-    } else {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+    else                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       yyerror(YY_("syntax error: cannot back up"));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
       YYERROR;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
@@ -700,7 +713,8 @@ enum { YYENOMEM = -2 };
 #endif
 
 #define YYDPRINTF(Args)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (yydebug)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       YYFPRINTF Args;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
@@ -711,8 +725,10 @@ enum { YYENOMEM = -2 };
 #endif
 
 #define YY_SYMBOL_PRINT(Title, Kind, Value, Location)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if (yydebug) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if (yydebug)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       YYFPRINTF(stderr, "%s ", Title);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
       yy_symbol_print(stderr, Kind, Value);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
       YYFPRINTF(stderr, "\n");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
@@ -728,11 +744,13 @@ yy_symbol_value_print(FILE *yyo, yysymbol_kind_t yykind, YYSTYPE const *const yy
 {
   FILE *yyoutput = yyo;
   YY_USE(yyoutput);
-  if (!yyvaluep) {
+  if (!yyvaluep)
+  {
     return;
   }
 #ifdef YYPRINT
-  if (yykind < YYNTOKENS) {
+  if (yykind < YYNTOKENS)
+  {
     YYPRINT(yyo, yytoknum[yykind], *yyvaluep);
   }
 #endif
@@ -763,7 +781,8 @@ static void
 yy_stack_print(yy_state_t *yybottom, yy_state_t *yytop)
 {
   YYFPRINTF(stderr, "Stack now");
-  for (; yybottom <= yytop; yybottom++) {
+  for (; yybottom <= yytop; yybottom++)
+  {
     int yybot = *yybottom;
     YYFPRINTF(stderr, " %d", yybot);
   }
@@ -771,7 +790,8 @@ yy_stack_print(yy_state_t *yybottom, yy_state_t *yytop)
 }
 
 #define YY_STACK_PRINT(Bottom, Top)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (yydebug)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       yy_stack_print((Bottom), (Top));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   } while (0)
@@ -788,7 +808,8 @@ yy_reduce_print(yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule)
   int yyi;
   YYFPRINTF(stderr, "Reducing stack by rule %d (line %d):\n", yyrule - 1, yylno);
   /* The symbols being reduced.  */
-  for (yyi = 0; yyi < yynrhs; yyi++) {
+  for (yyi = 0; yyi < yynrhs; yyi++)
+  {
     YYFPRINTF(stderr, "   $%d = ", yyi + 1);
     yy_symbol_print(stderr, YY_ACCESSING_SYMBOL(+yyssp[yyi + 1 - yynrhs]), &yyvsp[(yyi + 1) - (yynrhs)]);
     YYFPRINTF(stderr, "\n");
@@ -796,7 +817,8 @@ yy_reduce_print(yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule)
 }
 
 #define YY_REDUCE_PRINT(Rule)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (yydebug)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       yy_reduce_print(yyssp, yyvsp, Rule);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   } while (0)
@@ -835,7 +857,8 @@ static void
 yydestruct(const char *yymsg, yysymbol_kind_t yykind, YYSTYPE *yyvaluep)
 {
   YY_USE(yyvaluep);
-  if (!yymsg) {
+  if (!yymsg)
+  {
     yymsg = "Deleting";
   }
   YY_SYMBOL_PRINT(yymsg, yykind, yyvaluep, yylocationp);
@@ -945,24 +968,28 @@ yysetstate:
     }
 #else /* defined YYSTACK_RELOCATE */
     /* Extend the stack our own way.  */
-    if (YYMAXDEPTH <= yystacksize) {
+    if (YYMAXDEPTH <= yystacksize)
+    {
       goto yyexhaustedlab;
     }
     yystacksize *= 2;
-    if (YYMAXDEPTH < yystacksize) {
+    if (YYMAXDEPTH < yystacksize)
+    {
       yystacksize = YYMAXDEPTH;
     }
 
     {
       yy_state_t *yyss1 = yyss;
       union yyalloc *yyptr = YY_CAST(union yyalloc *, YYSTACK_ALLOC(YY_CAST(YYSIZE_T, YYSTACK_BYTES(yystacksize))));
-      if (!yyptr) {
+      if (!yyptr)
+      {
         goto yyexhaustedlab;
       }
       YYSTACK_RELOCATE(yyss_alloc, yyss);
       YYSTACK_RELOCATE(yyvs_alloc, yyvs);
 #undef YYSTACK_RELOCATE
-      if (yyss1 != yyssa) {
+      if (yyss1 != yyssa)
+      {
         YYSTACK_FREE(yyss1);
       }
     }
@@ -975,13 +1002,15 @@ yysetstate:
     YYDPRINTF((stderr, "Stack size increased to %ld\n", YY_CAST(long, yystacksize)));
     YY_IGNORE_USELESS_CAST_END
 
-    if (yyss + yystacksize - 1 <= yyssp) {
+    if (yyss + yystacksize - 1 <= yyssp)
+    {
       YYABORT;
     }
   }
 #endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
 
-  if (yystate == YYFINAL) {
+  if (yystate == YYFINAL)
+  {
     YYACCEPT;
   }
 
@@ -996,23 +1025,28 @@ yybackup:
 
   /* First try to decide what to do without reference to lookahead token.  */
   yyn = yypact[yystate];
-  if (yypact_value_is_default(yyn)) {
+  if (yypact_value_is_default(yyn))
+  {
     goto yydefault;
   }
 
   /* Not known => get a lookahead token if don't already have one.  */
 
   /* YYCHAR is either empty, or end-of-input, or a valid lookahead.  */
-  if (yychar == YYEMPTY) {
+  if (yychar == YYEMPTY)
+  {
     YYDPRINTF((stderr, "Reading a token\n"));
     yychar = yylex();
   }
 
-  if (yychar <= YYEOF) {
+  if (yychar <= YYEOF)
+  {
     yychar = YYEOF;
     yytoken = YYSYMBOL_YYEOF;
     YYDPRINTF((stderr, "Now at end of input.\n"));
-  } else if (yychar == YYerror) {
+  }
+  else if (yychar == YYerror)
+  {
     /* The scanner already issued an error message, process directly
        to error recovery.  But do not keep the error token as
        lookahead, it is too special and may lead us to an endless
@@ -1020,7 +1054,9 @@ yybackup:
     yychar = YYUNDEF;
     yytoken = YYSYMBOL_YYerror;
     goto yyerrlab1;
-  } else {
+  }
+  else
+  {
     yytoken = YYTRANSLATE(yychar);
     YY_SYMBOL_PRINT("Next token is", yytoken, &yylval, &yylloc);
   }
@@ -1028,12 +1064,15 @@ yybackup:
   /* If the proper action on seeing token YYTOKEN is to reduce or to
      detect an error, take that action.  */
   yyn += yytoken;
-  if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken) {
+  if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken)
+  {
     goto yydefault;
   }
   yyn = yytable[yyn];
-  if (yyn <= 0) {
-    if (yytable_value_is_error(yyn)) {
+  if (yyn <= 0)
+  {
+    if (yytable_value_is_error(yyn))
+    {
       goto yyerrlab;
     }
     yyn = -yyn;
@@ -1042,7 +1081,8 @@ yybackup:
 
   /* Count tokens shifted since error; after three, turn off error
      status.  */
-  if (yyerrstatus) {
+  if (yyerrstatus)
+  {
     yyerrstatus--;
   }
 
@@ -1062,7 +1102,8 @@ yybackup:
 `-----------------------------------------------------------*/
 yydefault:
   yyn = yydefact[yystate];
-  if (yyn == 0) {
+  if (yyn == 0)
+  {
     goto yyerrlab;
   }
   goto yyreduce;
@@ -1085,7 +1126,8 @@ yyreduce:
   yyval = yyvsp[1 - yylen];
 
   YY_REDUCE_PRINT(yyn);
-  switch (yyn) {
+  switch (yyn)
+  {
   case 2: /* firstcmd: command opt_semicolon  */
 #line 106 "repl_gram.y"
   {
@@ -1218,8 +1260,7 @@ yyreduce:
 #line 1432 "repl_gram.c"
   break;
 
-  case 28: /* create_replication_slot: K_CREATE_REPLICATION_SLOT IDENT
-              opt_temporary K_PHYSICAL create_slot_opt_list  */
+  case 28: /* create_replication_slot: K_CREATE_REPLICATION_SLOT IDENT opt_temporary K_PHYSICAL create_slot_opt_list  */
 #line 218 "repl_gram.y"
   {
     CreateReplicationSlotCmd *cmd;
@@ -1233,8 +1274,7 @@ yyreduce:
 #line 1446 "repl_gram.c"
   break;
 
-  case 29: /* create_replication_slot: K_CREATE_REPLICATION_SLOT IDENT
-              opt_temporary K_LOGICAL IDENT create_slot_opt_list  */
+  case 29: /* create_replication_slot: K_CREATE_REPLICATION_SLOT IDENT opt_temporary K_LOGICAL IDENT create_slot_opt_list  */
 #line 229 "repl_gram.y"
   {
     CreateReplicationSlotCmd *cmd;
@@ -1321,8 +1361,7 @@ yyreduce:
 #line 1533 "repl_gram.c"
   break;
 
-  case 38: /* start_replication: K_START_REPLICATION opt_slot opt_physical
-              RECPTR opt_timeline  */
+  case 38: /* start_replication: K_START_REPLICATION opt_slot opt_physical RECPTR opt_timeline  */
 #line 296 "repl_gram.y"
   {
     StartReplicationCmd *cmd;
@@ -1337,8 +1376,7 @@ yyreduce:
 #line 1548 "repl_gram.c"
   break;
 
-  case 39: /* start_logical_replication: K_START_REPLICATION K_SLOT IDENT
-              K_LOGICAL RECPTR plugin_options  */
+  case 39: /* start_logical_replication: K_START_REPLICATION K_SLOT IDENT K_LOGICAL RECPTR plugin_options  */
 #line 311 "repl_gram.y"
   {
     StartReplicationCmd *cmd;
@@ -1357,7 +1395,8 @@ yyreduce:
   {
     TimeLineHistoryCmd *cmd;
 
-    if ((yyvsp[0].uintval) <= 0) {
+    if ((yyvsp[0].uintval) <= 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), (errmsg("invalid timeline %u", (yyvsp[0].uintval)))));
     }
 
@@ -1404,7 +1443,8 @@ yyreduce:
   case 47: /* opt_timeline: K_TIMELINE UCONST  */
 #line 360 "repl_gram.y"
   {
-    if ((yyvsp[0].uintval) <= 0) {
+    if ((yyvsp[0].uintval) <= 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), (errmsg("invalid timeline %u", (yyvsp[0].uintval)))));
     }
     (yyval.uintval) = (yyvsp[0].uintval);
@@ -1478,7 +1518,7 @@ yyreduce:
 
 #line 1674 "repl_gram.c"
 
-  default:;
+  default:
     break;
   }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1518,21 +1558,27 @@ yyerrlab:
      user semantic actions for why this is necessary.  */
   yytoken = yychar == YYEMPTY ? YYSYMBOL_YYEMPTY : YYTRANSLATE(yychar);
   /* If not already recovering from an error, report this error.  */
-  if (!yyerrstatus) {
+  if (!yyerrstatus)
+  {
     ++yynerrs;
     yyerror(YY_("syntax error"));
   }
 
-  if (yyerrstatus == 3) {
+  if (yyerrstatus == 3)
+  {
     /* If just tried and failed to reuse lookahead token after an
        error, discard it.  */
 
-    if (yychar <= YYEOF) {
+    if (yychar <= YYEOF)
+    {
       /* Return failure if at end of input.  */
-      if (yychar == YYEOF) {
+      if (yychar == YYEOF)
+      {
         YYABORT;
       }
-    } else {
+    }
+    else
+    {
       yydestruct("Error: discarding", yytoken, &yylval);
       yychar = YYEMPTY;
     }
@@ -1548,7 +1594,8 @@ yyerrlab:
 yyerrorlab:
   /* Pacify compilers when the user code never invokes YYERROR and the
      label yyerrorlab therefore never appears in user code.  */
-  if (0) {
+  if (0)
+  {
     YYERROR;
   }
 
@@ -1567,20 +1614,25 @@ yyerrlab1:
   yyerrstatus = 3; /* Each real token shifted decrements this.  */
 
   /* Pop stack until we find a state that shifts the error token.  */
-  for (;;) {
+  for (;;)
+  {
     yyn = yypact[yystate];
-    if (!yypact_value_is_default(yyn)) {
+    if (!yypact_value_is_default(yyn))
+    {
       yyn += YYSYMBOL_YYerror;
-      if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYSYMBOL_YYerror) {
+      if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYSYMBOL_YYerror)
+      {
         yyn = yytable[yyn];
-        if (0 < yyn) {
+        if (0 < yyn)
+        {
           break;
         }
       }
     }
 
     /* Pop the current state because it cannot handle the error token.  */
-    if (yyssp == yyss) {
+    if (yyssp == yyss)
+    {
       YYABORT;
     }
 
@@ -1628,7 +1680,8 @@ yyexhaustedlab:
 | yyreturn -- parsing is finished, clean up and return.  |
 `-------------------------------------------------------*/
 yyreturn:
-  if (yychar != YYEMPTY) {
+  if (yychar != YYEMPTY)
+  {
     /* Make sure we have latest lookahead translation.  See comments at
        user semantic actions for why this is necessary.  */
     yytoken = YYTRANSLATE(yychar);
@@ -1638,12 +1691,14 @@ yyreturn:
      this YYABORT or YYACCEPT.  */
   YYPOPSTACK(yylen);
   YY_STACK_PRINT(yyss, yyssp);
-  while (yyssp != yyss) {
+  while (yyssp != yyss)
+  {
     yydestruct("Cleanup: popping", YY_ACCESSING_SYMBOL(+*yyssp), yyvsp);
     YYPOPSTACK(1);
   }
 #ifndef yyoverflow
-  if (yyss != yyssa) {
+  if (yyss != yyssa)
+  {
     YYSTACK_FREE(yyss);
   }
 #endif

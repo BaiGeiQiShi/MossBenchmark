@@ -19,7 +19,8 @@
 
 /* callback functions for our flex lexer */
 const PsqlScanCallbacks psqlscan_callbacks = {
-    psql_get_variable,};
+    psql_get_variable,
+};
 
 /*
  * Main processing loop for reading lines of input
@@ -35,7 +36,8 @@ MainLoop(FILE *source)
   ConditionalStack cond_stack;       /* \if status stack */
   volatile PQExpBuffer query_buf;    /* buffer for query being accumulated */
   volatile PQExpBuffer previous_buf; /* if there isn't anything in the new
-                                      * buffer yet, use this one for \e,* etc. */
+                                      * buffer yet, use this one for \e,
+                                      * etc. */
   PQExpBuffer history_buf;           /* earlier lines of a multi-line command, not
                                       * yet saved to readline history */
   char *line;                        /* current line of input */
@@ -71,18 +73,22 @@ MainLoop(FILE *source)
   query_buf = createPQExpBuffer();
   previous_buf = createPQExpBuffer();
   history_buf = createPQExpBuffer();
-  if (PQExpBufferBroken(query_buf) || PQExpBufferBroken(previous_buf) || PQExpBufferBroken(history_buf)) {
+  if (PQExpBufferBroken(query_buf) || PQExpBufferBroken(previous_buf) || PQExpBufferBroken(history_buf))
+  {
     pg_log_error("out of memory");
     exit(EXIT_FAILURE);
   }
 
   /* main loop to get queries and execute them */
-  while (successResult == EXIT_SUCCESS) {
+  while (successResult == EXIT_SUCCESS)
+  {
     /*
      * Clean up after a previous Control-C
      */
-    if (cancel_pressed) {
-      if (!pset.cur_cmd_interactive) {
+    if (cancel_pressed)
+    {
+      if (!pset.cur_cmd_interactive)
+      {
         /*
          * You get here if you stopped a script with Ctrl-C.
          */
@@ -98,7 +104,8 @@ MainLoop(FILE *source)
      * must re-do this each time through the loop for safety, since the
      * jmpbuf might get changed during command execution.
      */
-    if (sigsetjmp(sigint_interrupt_jmp, 1) != 0) {
+    if (sigsetjmp(sigint_interrupt_jmp, 1) != 0)
+    {
       /* got here with longjmp */
 
       /* reset parsing state */
@@ -112,18 +119,22 @@ MainLoop(FILE *source)
       pset.stmt_lineno = 1;
       cancel_pressed = false;
 
-      if (pset.cur_cmd_interactive) {
+      if (pset.cur_cmd_interactive)
+      {
         putc('\n', stdout);
 
         /*
          * if interactive user is in an \if block, then Ctrl-C will
          * exit from the innermost \if.
          */
-        if (!conditional_stack_empty(cond_stack)) {
+        if (!conditional_stack_empty(cond_stack))
+        {
           pg_log_error("\\if: escaped");
           conditional_stack_pop(cond_stack);
         }
-      } else {
+      }
+      else
+      {
         successResult = EXIT_USER;
         break;
       }
@@ -134,15 +145,20 @@ MainLoop(FILE *source)
     /*
      * get another line
      */
-    if (pset.cur_cmd_interactive) {
+    if (pset.cur_cmd_interactive)
+    {
       /* May need to reset prompt, eg after \r command */
-      if (query_buf->len == 0) {
+      if (query_buf->len == 0)
+      {
         prompt_status = PROMPT_READY;
       }
       line = gets_interactive(get_prompt(prompt_status, cond_stack), query_buf);
-    } else {
+    }
+    else
+    {
       line = gets_fromFile(source);
-      if (!line && ferror(source)) {
+      if (!line && ferror(source))
+      {
         successResult = EXIT_FAILURE;
       }
     }
@@ -153,13 +169,17 @@ MainLoop(FILE *source)
      */
 
     /* No more input.  Time to quit, or \i done */
-    if (line == NULL) {
-      if (pset.cur_cmd_interactive) {
+    if (line == NULL)
+    {
+      if (pset.cur_cmd_interactive)
+      {
         /* This tries to mimic bash's IGNOREEOF feature. */
         count_eof++;
 
-        if (count_eof < pset.ignoreeof) {
-          if (!pset.quiet) {
+        if (count_eof < pset.ignoreeof)
+        {
+          if (!pset.quiet)
+          {
             printf(_("Use \"\\q\" to leave %s.\n"), pset.progname);
           }
           continue;
@@ -175,27 +195,32 @@ MainLoop(FILE *source)
     pset.lineno++;
 
     /* ignore UTF-8 Unicode byte-order mark */
-    if (pset.lineno == 1 && pset.encoding == PG_UTF8 && strncmp(line, "\xef\xbb\xbf", 3) == 0) {
+    if (pset.lineno == 1 && pset.encoding == PG_UTF8 && strncmp(line, "\xef\xbb\xbf", 3) == 0)
+    {
       memmove(line, line + 3, strlen(line + 3) + 1);
     }
 
     /* Detect attempts to run custom-format dumps as SQL scripts */
-    if (pset.lineno == 1 && !pset.cur_cmd_interactive && strncmp(line, "PGDMP", 5) == 0) {
+    if (pset.lineno == 1 && !pset.cur_cmd_interactive && strncmp(line, "PGDMP", 5) == 0)
+    {
       free(line);
-      puts(_("The input is a PostgreSQL custom-format dump.\nUse the pg_restore command-line client to restore this dump to a database.\n"));
+      puts(_("The input is a PostgreSQL custom-format dump.\n"
+             "Use the pg_restore command-line client to restore this dump to a database.\n"));
       fflush(stdout);
       successResult = EXIT_FAILURE;
       break;
     }
 
     /* no further processing of empty lines, unless within a literal */
-    if (line[0] == '\0' && !psql_scan_in_quote(scan_state)) {
+    if (line[0] == '\0' && !psql_scan_in_quote(scan_state))
+    {
       free(line);
       continue;
     }
 
     /* Recognize "help", "quit", "exit" only in interactive mode */
-    if (pset.cur_cmd_interactive) {
+    if (pset.cur_cmd_interactive)
+    {
       char *first_word = line;
       char *rest_of_line = NULL;
       bool found_help = false;
@@ -203,39 +228,49 @@ MainLoop(FILE *source)
       bool found_q = false;
 
       /* Search for the words we recognize;  must be first word */
-      if (pg_strncasecmp(first_word, "help", 4) == 0) {
+      if (pg_strncasecmp(first_word, "help", 4) == 0)
+      {
         rest_of_line = first_word + 4;
         found_help = true;
-      } else if (pg_strncasecmp(first_word, "exit", 4) == 0 || pg_strncasecmp(first_word, "quit", 4) == 0) {
+      }
+      else if (pg_strncasecmp(first_word, "exit", 4) == 0 || pg_strncasecmp(first_word, "quit", 4) == 0)
+      {
         rest_of_line = first_word + 4;
         found_exit_or_quit = true;
       }
 
-      else if (strncmp(first_word, "\\q", 2) == 0) {
+      else if (strncmp(first_word, "\\q", 2) == 0)
+      {
         rest_of_line = first_word + 2;
         found_q = true;
       }
 
       /*
        * If we found a command word, check whether the rest of the line
-       * contains only whitespace plus maybe one semicolon.  If not,* ignore the command word after all.  These commands are only for
+       * contains only whitespace plus maybe one semicolon.  If not,
+       * ignore the command word after all.  These commands are only for
        * compatibility with other SQL clients and are not documented.
        */
-      if (rest_of_line != NULL) {
+      if (rest_of_line != NULL)
+      {
         /*
          * Ignore unless rest of line is whitespace, plus maybe one
          * semicolon
          */
-        while (isspace((unsigned char)*rest_of_line)) {
+        while (isspace((unsigned char)*rest_of_line))
+        {
           ++rest_of_line;
         }
-        if (*rest_of_line == ';') {
+        if (*rest_of_line == ';')
+        {
           ++rest_of_line;
         }
-        while (isspace((unsigned char)*rest_of_line)) {
+        while (isspace((unsigned char)*rest_of_line))
+        {
           ++rest_of_line;
         }
-        if (*rest_of_line != '\0') {
+        if (*rest_of_line != '\0')
+        {
           found_help = false;
           found_exit_or_quit = false;
         }
@@ -247,16 +282,22 @@ MainLoop(FILE *source)
        * users.  The text is still added to the query buffer in that
        * case.
        */
-      if (found_help) {
+      if (found_help)
+      {
         if (query_buf->len != 0)
 #ifndef WIN32
           puts(_("Use \\? for help or press control-C to clear the input buffer."));
 #else
           puts(_("Use \\? for help."));
 #endif
-        else {
+        else
+        {
           puts(_("You are using psql, the command-line interface to PostgreSQL."));
-          printf(_("Type:  \\copyright for distribution terms\n       \\h for help with SQL commands\n       \\? for help with psql commands\n       \\g or terminate with semicolon to execute query\n       \\q to quit\n"));
+          printf(_("Type:  \\copyright for distribution terms\n"
+                   "       \\h for help with SQL commands\n"
+                   "       \\? for help with psql commands\n"
+                   "       \\g or terminate with semicolon to execute query\n"
+                   "       \\q to quit\n"));
           free(line);
           fflush(stdout);
           continue;
@@ -269,17 +310,23 @@ MainLoop(FILE *source)
        * help confused users.  The text is still added to the query
        * buffer in that case.
        */
-      if (found_exit_or_quit) {
-        if (query_buf->len != 0) {
-          if (prompt_status == PROMPT_READY || prompt_status == PROMPT_CONTINUE || prompt_status == PROMPT_PAREN) {
+      if (found_exit_or_quit)
+      {
+        if (query_buf->len != 0)
+        {
+          if (prompt_status == PROMPT_READY || prompt_status == PROMPT_CONTINUE || prompt_status == PROMPT_PAREN)
+          {
             puts(_("Use \\q to quit."));
-          } else
+          }
+          else
 #ifndef WIN32
             puts(_("Use control-D to quit."));
 #else
             puts(_("Use control-C to quit."));
 #endif
-        } else {
+        }
+        else
+        {
           /* exit app */
           free(line);
           fflush(stdout);
@@ -301,16 +348,20 @@ MainLoop(FILE *source)
     }
 
     /* echo back if flag is set, unless interactive */
-    if (pset.echo == PSQL_ECHO_ALL && !pset.cur_cmd_interactive) {
+    if (pset.echo == PSQL_ECHO_ALL && !pset.cur_cmd_interactive)
+    {
       puts(line);
       fflush(stdout);
     }
 
     /* insert newlines into query buffer between source lines */
-    if (query_buf->len > 0) {
+    if (query_buf->len > 0)
+    {
       appendPQExpBufferChar(query_buf, '\n');
       added_nl_pos = query_buf->len;
-    } else {
+    }
+    else
+    {
       added_nl_pos = -1; /* flag we didn't add one */
     }
 
@@ -324,7 +375,8 @@ MainLoop(FILE *source)
     success = true;
     line_saved_in_history = false;
 
-    while (success || !die_on_error) {
+    while (success || !die_on_error)
+    {
       PsqlScanResult scan_result;
       promptStatus_t prompt_tmp = prompt_status;
       size_t pos_in_query;
@@ -334,7 +386,8 @@ MainLoop(FILE *source)
       scan_result = psql_scan(scan_state, query_buf, &prompt_tmp);
       prompt_status = prompt_tmp;
 
-      if (PQExpBufferBroken(query_buf)) {
+      if (PQExpBufferBroken(query_buf))
+      {
         pg_log_error("out of memory");
         exit(EXIT_FAILURE);
       }
@@ -346,13 +399,16 @@ MainLoop(FILE *source)
        * readline's history containing newlines.
        */
       tmp_line = query_buf->data + pos_in_query;
-      while (*tmp_line != '\0') {
-        if (*(tmp_line++) == '\n') {
+      while (*tmp_line != '\0')
+      {
+        if (*(tmp_line++) == '\n')
+        {
           pset.stmt_lineno++;
         }
       }
 
-      if (scan_result == PSCAN_EOL) {
+      if (scan_result == PSCAN_EOL)
+      {
         pset.stmt_lineno++;
       }
 
@@ -360,21 +416,24 @@ MainLoop(FILE *source)
        * Send command if semicolon found, or if end of line and we're in
        * single-line mode.
        */
-      if (scan_result == PSCAN_SEMICOLON || (scan_result == PSCAN_EOL && pset.singleline)) {
+      if (scan_result == PSCAN_SEMICOLON || (scan_result == PSCAN_EOL && pset.singleline))
+      {
         /*
          * Save line in history.  We use history_buf to accumulate
          * multi-line queries into a single history entry.  Note that
          * history accumulation works on input lines, so it doesn't
          * matter whether the query will be ignored due to \if.
          */
-        if (pset.cur_cmd_interactive && !line_saved_in_history) {
+        if (pset.cur_cmd_interactive && !line_saved_in_history)
+        {
           pg_append_history(line, history_buf);
           pg_send_history(history_buf);
           line_saved_in_history = true;
         }
 
         /* execute query unless we're in an inactive \if branch */
-        if (conditional_active(cond_stack)) {
+        if (conditional_active(cond_stack))
+        {
           success = SendQuery(query_buf->data);
           slashCmdStatus = success ? PSQL_CMD_SEND : PSQL_CMD_ERROR;
           pset.stmt_lineno = 1;
@@ -390,9 +449,12 @@ MainLoop(FILE *source)
 
           added_nl_pos = -1;
           /* we need not do psql_scan_reset() here */
-        } else {
+        }
+        else
+        {
           /* if interactive, warn about non-executed query */
-          if (pset.cur_cmd_interactive) {
+          if (pset.cur_cmd_interactive)
+          {
             pg_log_error("query ignored; use \\endif or Ctrl-C to exit current \\if block");
           }
           /* fake an OK result for purposes of loop checks */
@@ -401,7 +463,9 @@ MainLoop(FILE *source)
           pset.stmt_lineno = 1;
           /* note that query_buf doesn't change state */
         }
-      } else if (scan_result == PSCAN_BACKSLASH) {
+      }
+      else if (scan_result == PSCAN_BACKSLASH)
+      {
         /* handle backslash command */
 
         /*
@@ -413,14 +477,16 @@ MainLoop(FILE *source)
          * history entry; we don't want SQL and backslash commands
          * intermixed in history if at all possible.
          */
-        if (query_buf->len == added_nl_pos) {
+        if (query_buf->len == added_nl_pos)
+        {
           query_buf->data[--query_buf->len] = '\0';
           pg_send_history(history_buf);
         }
         added_nl_pos = -1;
 
         /* save backslash command in history */
-        if (pset.cur_cmd_interactive && !line_saved_in_history) {
+        if (pset.cur_cmd_interactive && !line_saved_in_history)
+        {
           pg_append_history(line, history_buf);
           pg_send_history(history_buf);
           line_saved_in_history = true;
@@ -438,7 +504,8 @@ MainLoop(FILE *source)
          */
         pset.stmt_lineno = 1;
 
-        if (slashCmdStatus == PSQL_CMD_SEND) {
+        if (slashCmdStatus == PSQL_CMD_SEND)
+        {
           /* should not see this in inactive branch */
           Assert(conditional_active(cond_stack));
 
@@ -455,7 +522,9 @@ MainLoop(FILE *source)
 
           /* flush any paren nesting info after forced send */
           psql_scan_reset(scan_state);
-        } else if (slashCmdStatus == PSQL_CMD_NEWEDIT) {
+        }
+        else if (slashCmdStatus == PSQL_CMD_NEWEDIT)
+        {
           /* should not see this in inactive branch */
           Assert(conditional_active(cond_stack));
           /* rescan query_buf as new input */
@@ -468,36 +537,44 @@ MainLoop(FILE *source)
           psql_scan_setup(scan_state, line, strlen(line), pset.encoding, standard_strings());
           line_saved_in_history = false;
           prompt_status = PROMPT_READY;
-        } else if (slashCmdStatus == PSQL_CMD_TERMINATE) {
+        }
+        else if (slashCmdStatus == PSQL_CMD_TERMINATE)
+        {
           break;
         }
       }
 
       /* fall out of loop if lexer reached EOL */
-      if (scan_result == PSCAN_INCOMPLETE || scan_result == PSCAN_EOL) {
+      if (scan_result == PSCAN_INCOMPLETE || scan_result == PSCAN_EOL)
+      {
         break;
       }
     }
 
     /* Add line to pending history if we didn't execute anything yet */
-    if (pset.cur_cmd_interactive && !line_saved_in_history) {
+    if (pset.cur_cmd_interactive && !line_saved_in_history)
+    {
       pg_append_history(line, history_buf);
     }
 
     psql_scan_finish(scan_state);
     free(line);
 
-    if (slashCmdStatus == PSQL_CMD_TERMINATE) {
+    if (slashCmdStatus == PSQL_CMD_TERMINATE)
+    {
       successResult = EXIT_SUCCESS;
       break;
     }
 
-    if (!pset.cur_cmd_interactive) {
-      if (!success && die_on_error) {
+    if (!pset.cur_cmd_interactive)
+    {
+      if (!success && die_on_error)
+      {
         successResult = EXIT_USER;
       }
       /* Have we lost the db connection? */
-      else if (!pset.db) {
+      else if (!pset.db)
+      {
         successResult = EXIT_BADCONN;
       }
     }
@@ -508,28 +585,37 @@ MainLoop(FILE *source)
    * process it unless the input source is interactive --- in that case it
    * seems better to go ahead and quit.  Also skip if this is an error exit.
    */
-  if (query_buf->len > 0 && !pset.cur_cmd_interactive && successResult == EXIT_SUCCESS) {
+  if (query_buf->len > 0 && !pset.cur_cmd_interactive && successResult == EXIT_SUCCESS)
+  {
     /* save query in history */
     /* currently unneeded since we don't use this block if interactive */
 #ifdef NOT_USED
-    if (pset.cur_cmd_interactive) {
+    if (pset.cur_cmd_interactive)
+    {
       pg_send_history(history_buf);
     }
 #endif
 
     /* execute query unless we're in an inactive \if branch */
-    if (conditional_active(cond_stack)) {
+    if (conditional_active(cond_stack))
+    {
       success = SendQuery(query_buf->data);
-    } else {
-      if (pset.cur_cmd_interactive) {
+    }
+    else
+    {
+      if (pset.cur_cmd_interactive)
+      {
         pg_log_error("query ignored; use \\endif or Ctrl-C to exit current \\if block");
       }
       success = true;
     }
 
-    if (!success && die_on_error) {
+    if (!success && die_on_error)
+    {
       successResult = EXIT_USER;
-    } else if (pset.db == NULL) {
+    }
+    else if (pset.db == NULL)
+    {
       successResult = EXIT_BADCONN;
     }
   }
@@ -538,9 +624,11 @@ MainLoop(FILE *source)
    * Check for unbalanced \if-\endifs unless user explicitly quit, or the
    * script is erroring out
    */
-  if (slashCmdStatus != PSQL_CMD_TERMINATE && successResult != EXIT_USER && !conditional_stack_empty(cond_stack)) {
+  if (slashCmdStatus != PSQL_CMD_TERMINATE && successResult != EXIT_USER && !conditional_stack_empty(cond_stack))
+  {
     pg_log_error("reached EOF without finding closing \\endif(s)");
-    if (die_on_error && !pset.cur_cmd_interactive) {
+    if (die_on_error && !pset.cur_cmd_interactive)
+    {
       successResult = EXIT_USER;
     }
   }

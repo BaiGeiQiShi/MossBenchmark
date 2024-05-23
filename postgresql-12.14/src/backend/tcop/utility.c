@@ -115,7 +115,7 @@ CommandIsReadOnly(PlannedStmt *pstmt)
   case CMD_UTILITY:
     /* For now, treat all utility commands as read/write */
     return false;
-  default:;
+  default:
     elog(WARNING, "unrecognized commandType: %d", (int)pstmt->commandType);
     break;
   }
@@ -223,7 +223,7 @@ check_xact_readonly(Node *parsetree)
     PreventCommandIfReadOnly(CreateCommandTag(parsetree));
     PreventCommandIfParallelMode(CreateCommandTag(parsetree));
     break;
-  default:;
+  default:
     /* do nothing */
     break;
   }
@@ -240,7 +240,9 @@ PreventCommandIfReadOnly(const char *cmdname)
 {
   if (XactReadOnly)
   {
-    ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION), errmsg("cannot execute %s in a read-only transaction", cmdname)));
+    ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+                       /* translator: %s is name of a SQL command, eg CREATE */
+                       errmsg("cannot execute %s in a read-only transaction", cmdname)));
   }
 }
 
@@ -256,7 +258,9 @@ PreventCommandIfParallelMode(const char *cmdname)
 {
   if (IsInParallelMode())
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE), errmsg("cannot execute %s during a parallel operation", cmdname)));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE),
+                       /* translator: %s is name of a SQL command, eg CREATE */
+                       errmsg("cannot execute %s during a parallel operation", cmdname)));
   }
 }
 
@@ -273,7 +277,9 @@ PreventCommandDuringRecovery(const char *cmdname)
 {
   if (RecoveryInProgress())
   {
-    ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION), errmsg("cannot execute %s during recovery", cmdname)));
+    ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+                       /* translator: %s is name of a SQL command, eg CREATE */
+                       errmsg("cannot execute %s during recovery", cmdname)));
   }
 }
 
@@ -289,7 +295,9 @@ CheckRestrictedOperation(const char *cmdname)
 {
   if (InSecurityRestrictedOperation())
   {
-    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("cannot execute %s within security-restricted operation", cmdname)));
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+                       /* translator: %s is name of a SQL command, eg PREPARE */
+                       errmsg("cannot execute %s within security-restricted operation", cmdname)));
   }
 }
 
@@ -300,12 +308,13 @@ CheckRestrictedOperation(const char *cmdname)
  *	pstmt: PlannedStmt wrapper for the utility statement
  *	queryString: original source text of command
  *	context: identifies source of statement (toplevel client command,
- *		non-toplevel client command, subcommand of a larger utility
- *command) params: parameters to use during execution queryEnv: environment for
- *parse through execution (e.g., ephemeral named tables like trigger transition
- *tables).  May be NULL. dest: where to send results completionTag: points to a
- *buffer of size COMPLETION_TAG_BUFSIZE in which to store a command completion
- *status string.
+ *		non-toplevel client command, subcommand of a larger utility command)
+ *	params: parameters to use during execution
+ *	queryEnv: environment for parse through execution (e.g., ephemeral named
+ *		tables like trigger transition tables).  May be NULL.
+ *	dest: where to send results
+ *	completionTag: points to a buffer of size COMPLETION_TAG_BUFSIZE
+ *		in which to store a command completion status string.
  *
  * Caller MUST supply a queryString; it is not allowed (anymore) to pass NULL.
  * If you really don't have source text, you can pass a constant string,
@@ -782,7 +791,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
       PreventInTransactionBlock(isTopLevel, (stmt->kind == REINDEX_OBJECT_SCHEMA) ? "REINDEX SCHEMA" : (stmt->kind == REINDEX_OBJECT_SYSTEM) ? "REINDEX SYSTEM" : "REINDEX DATABASE");
       ReindexMultipleTables(stmt->name, stmt->kind, stmt->options, stmt->concurrent);
       break;
-    default:;
+    default:
       elog(ERROR, "unrecognized object type: %d", (int)stmt->kind);
       break;
     }
@@ -914,7 +923,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     break;
   }
 
-  default:;
+  default:
     /* All other statement types have event trigger support */
     ProcessUtilitySlow(pstate, pstmt, queryString, context, params, queryEnv, dest, completionTag);
     break;
@@ -1195,7 +1204,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       case 'V': /* VALIDATE CONSTRAINT */
         address = AlterDomainValidateConstraint(stmt->typeName, stmt->name);
         break;
-      default:; /* oops */
+      default: /* oops */
         elog(ERROR, "unrecognized alter domain type: %d", (int)stmt->subtype);
         break;
       }
@@ -1242,7 +1251,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
         Assert(stmt->args == NIL);
         address = DefineCollation(pstate, stmt->defnames, stmt->definition, stmt->if_not_exists);
         break;
-      default:;
+      default:
         elog(ERROR, "unrecognized define stmt type: %d", (int)stmt->kind);
         break;
       }
@@ -1631,7 +1640,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       address = AlterCollation((AlterCollationStmt *)parsetree);
       break;
 
-    default:;
+    default:
       elog(ERROR, "unrecognized node type: %d", (int)nodeTag(parsetree));
       break;
     }
@@ -1689,7 +1698,7 @@ ExecDropStmt(DropStmt *stmt, bool isTopLevel)
   case OBJECT_FOREIGN_TABLE:
     RemoveRelations(stmt);
     break;
-  default:;
+  default:
     RemoveObjects(stmt);
     break;
   }
@@ -1754,7 +1763,7 @@ UtilityReturnsTuples(Node *parsetree)
   case T_VariableShowStmt:
     return true;
 
-  default:;
+  default:
     return false;
   }
 }
@@ -1815,7 +1824,7 @@ UtilityTupleDescriptor(Node *parsetree)
     return GetPGVariableResultDesc(n->name);
   }
 
-  default:;
+  default:
     return NULL;
   }
 }
@@ -1898,7 +1907,7 @@ UtilityContainsQuery(Node *parsetree)
     }
     return qry;
 
-  default:;
+  default:
     return NULL;
   }
 }
@@ -2038,7 +2047,7 @@ AlterObjectTypeCommandTag(ObjectType objtype)
   case OBJECT_STATISTIC_EXT:
     tag = "ALTER STATISTICS";
     break;
-  default:;
+  default:
     tag = "???";
     break;
   }
@@ -2131,7 +2140,7 @@ CreateCommandTag(Node *parsetree)
       tag = "ROLLBACK PREPARED";
       break;
 
-    default:;
+    default:
       tag = "???";
       break;
     }
@@ -2345,7 +2354,7 @@ CreateCommandTag(Node *parsetree)
     case OBJECT_STATISTIC_EXT:
       tag = "DROP STATISTICS";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2406,7 +2415,7 @@ CreateCommandTag(Node *parsetree)
     case OBJECT_ROUTINE:
       tag = "ALTER ROUTINE";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2461,7 +2470,7 @@ CreateCommandTag(Node *parsetree)
     case OBJECT_ACCESS_METHOD:
       tag = "CREATE ACCESS METHOD";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2588,7 +2597,7 @@ CreateCommandTag(Node *parsetree)
     case OBJECT_MATVIEW:
       tag = "CREATE MATERIALIZED VIEW";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2614,7 +2623,7 @@ CreateCommandTag(Node *parsetree)
     case VAR_RESET_ALL:
       tag = "RESET";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2638,7 +2647,7 @@ CreateCommandTag(Node *parsetree)
     case DISCARD_SEQUENCES:
       tag = "DISCARD SEQUENCES";
       break;
-    default:;
+    default:
       tag = "???";
     }
     break;
@@ -2829,7 +2838,7 @@ CreateCommandTag(Node *parsetree)
         case LCS_FORUPDATE:
           tag = "SELECT FOR UPDATE";
           break;
-        default:;
+        default:
           tag = "SELECT";
           break;
         }
@@ -2851,7 +2860,7 @@ CreateCommandTag(Node *parsetree)
     case CMD_UTILITY:
       tag = CreateCommandTag(stmt->utilityStmt);
       break;
-    default:;
+    default:
       elog(WARNING, "unrecognized commandType: %d", (int)stmt->commandType);
       tag = "???";
       break;
@@ -2890,7 +2899,7 @@ CreateCommandTag(Node *parsetree)
         case LCS_FORUPDATE:
           tag = "SELECT FOR UPDATE";
           break;
-        default:;
+        default:
           tag = "???";
           break;
         }
@@ -2912,7 +2921,7 @@ CreateCommandTag(Node *parsetree)
     case CMD_UTILITY:
       tag = CreateCommandTag(stmt->utilityStmt);
       break;
-    default:;
+    default:
       elog(WARNING, "unrecognized commandType: %d", (int)stmt->commandType);
       tag = "???";
       break;
@@ -2920,7 +2929,7 @@ CreateCommandTag(Node *parsetree)
   }
   break;
 
-  default:;
+  default:
     elog(WARNING, "unrecognized node type: %d", (int)nodeTag(parsetree));
     tag = "???";
     break;
@@ -3416,7 +3425,7 @@ GetCommandLogLevel(Node *parsetree)
       lev = GetCommandLogLevel(stmt->utilityStmt);
       break;
 
-    default:;
+    default:
       elog(WARNING, "unrecognized commandType: %d", (int)stmt->commandType);
       lev = LOGSTMT_ALL;
       break;
@@ -3445,7 +3454,7 @@ GetCommandLogLevel(Node *parsetree)
       lev = GetCommandLogLevel(stmt->utilityStmt);
       break;
 
-    default:;
+    default:
       elog(WARNING, "unrecognized commandType: %d", (int)stmt->commandType);
       lev = LOGSTMT_ALL;
       break;
@@ -3453,7 +3462,7 @@ GetCommandLogLevel(Node *parsetree)
   }
   break;
 
-  default:;
+  default:
     elog(WARNING, "unrecognized node type: %d", (int)nodeTag(parsetree));
     lev = LOGSTMT_ALL;
     break;

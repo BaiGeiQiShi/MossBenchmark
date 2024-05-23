@@ -85,8 +85,8 @@ static const pg_encname pg_encname_tbl[] = {
     {"mskanji", PG_SJIS},                                      /* alias for Shift_JIS */
     {"muleinternal", PG_MULE_INTERNAL}, {"shiftjis", PG_SJIS}, /* Shift_JIS; JIS X 0202-1991 */
 
-    {"shiftjis2004", PG_SHIFT_JIS_2004},              /* SHIFT-JIS-2004; Shift JIS for
-                                                       * Japanese, standard JIS X 0213 */
+    {"shiftjis2004", PG_SHIFT_JIS_2004},              /* SHIFT-JIS-2004; Shift JIS for Japanese,
+                                                       * standard JIS X 0213 */
     {"sjis", PG_SJIS},                                /* alias for Shift_JIS */
     {"sqlascii", PG_SQL_ASCII}, {"tcvn", PG_WIN1258}, /* alias for WIN1258 */
     {"tcvn5712", PG_WIN1258},                         /* alias for WIN1258 */
@@ -125,7 +125,7 @@ static const pg_encname pg_encname_tbl[] = {
     {"windows932", PG_SJIS},                          /* alias for Shift_JIS */
     {"windows936", PG_GBK},                           /* alias for GBK */
     {"windows949", PG_UHC},                           /* alias for UHC */
-    {"windows950", PG_BIG5}                           /* alias for BIG5 */
+    {"windows950", PG_BIG5} /* alias for BIG5 */
 };
 
 /* ----------
@@ -206,24 +206,24 @@ static const char *const pg_enc2icu_tbl[] = {
 bool
 is_encoding_supported_by_icu(int encoding)
 {
-
+  return (pg_enc2icu_tbl[encoding] != NULL);
 }
 
 const char *
 get_encoding_name_for_icu(int encoding)
 {
+  const char *icu_encoding_name;
 
+  StaticAssertStmt(lengthof(pg_enc2icu_tbl) == PG_ENCODING_BE_LAST + 1, "pg_enc2icu_tbl incomplete");
 
+  icu_encoding_name = pg_enc2icu_tbl[encoding];
 
+  if (!icu_encoding_name)
+  {
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("encoding \"%s\" not supported by ICU", pg_encoding_to_char(encoding))));
+  }
 
-
-
-
-
-
-
-
-
+  return icu_encoding_name;
 }
 
 #endif /* not FRONTEND */
@@ -239,12 +239,12 @@ pg_valid_client_encoding(const char *name)
 
   if ((enc = pg_char_to_encoding(name)) < 0)
   {
-
+    return -1;
   }
 
   if (!PG_VALID_FE_ENCODING(enc))
   {
-
+    return -1;
   }
 
   return enc;
@@ -257,12 +257,12 @@ pg_valid_server_encoding(const char *name)
 
   if ((enc = pg_char_to_encoding(name)) < 0)
   {
-
+    return -1;
   }
 
   if (!PG_VALID_BE_ENCODING(enc))
   {
-
+    return -1;
   }
 
   return enc;
@@ -318,7 +318,7 @@ pg_char_to_encoding(const char *name)
 
   if (name == NULL || *name == '\0')
   {
-
+    return -1;
   }
 
   if (strlen(name) >= NAMEDATALEN)
@@ -327,7 +327,7 @@ pg_char_to_encoding(const char *name)
     fprintf(stderr, "encoding name too long\n");
     return -1;
 #else
-
+    ereport(ERROR, (errcode(ERRCODE_NAME_TOO_LONG), errmsg("encoding name too long")));
 #endif
   }
   key = clean_encoding_name(name, buff);
@@ -361,9 +361,9 @@ pg_char_to_encoding(const char *name)
 Datum
 PG_char_to_encoding(PG_FUNCTION_ARGS)
 {
+  Name s = PG_GETARG_NAME(0);
 
-
-
+  PG_RETURN_INT32(pg_char_to_encoding(NameStr(*s)));
 }
 #endif
 
@@ -377,7 +377,7 @@ pg_encoding_to_char(int encoding)
     Assert(encoding == p->encoding);
     return p->name;
   }
-
+  return "";
 }
 
 #ifndef FRONTEND

@@ -36,7 +36,7 @@ add_to_tsvector(void *_state, char *elem_value, int elem_len);
 Datum
 get_current_ts_config(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_OID(getTSCurrentConfig(true));
 }
 
 /*
@@ -175,7 +175,7 @@ make_tsvector(ParsedText *prs)
 
   if (lenstr > MAXSTRPOS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("string is too long for tsvector (%d bytes, max %d bytes)", lenstr, MAXSTRPOS)));
   }
 
   totallen = CALCDATASIZE(prs->curwords, lenstr);
@@ -200,7 +200,7 @@ make_tsvector(ParsedText *prs)
 
       if (k > 0xFFFF)
       {
-
+        elog(ERROR, "positions array too long");
       }
 
       ptr->haspos = 1;
@@ -217,7 +217,7 @@ make_tsvector(ParsedText *prs)
     }
     else
     {
-
+      ptr->haspos = 0;
     }
     ptr++;
   }
@@ -630,11 +630,11 @@ phraseto_tsquery_byid(PG_FUNCTION_ARGS)
 Datum
 phraseto_tsquery(PG_FUNCTION_ARGS)
 {
+  text *in = PG_GETARG_TEXT_PP(0);
+  Oid cfgId;
 
-
-
-
-
+  cfgId = getTSCurrentConfig(true);
+  PG_RETURN_DATUM(DirectFunctionCall2(phraseto_tsquery_byid, ObjectIdGetDatum(cfgId), PointerGetDatum(in)));
 }
 
 Datum

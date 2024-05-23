@@ -46,7 +46,7 @@ strlcat(char *dst, const char *src, size_t siz)
 
   if (n == 0)
   {
-
+    return (dlen + strlen(s));
   }
   while (*s != '\0')
   {

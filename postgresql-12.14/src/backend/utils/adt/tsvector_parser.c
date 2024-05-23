@@ -126,7 +126,7 @@ close_tsvector_parser(TSVectorParseState state)
 static void
 prssyntaxerror(TSVectorParseState state)
 {
-
+  ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), state->is_tsquery ? errmsg("syntax error in tsquery: \"%s\"", state->bufstart) : errmsg("syntax error in tsvector: \"%s\"", state->bufstart)));
 }
 
 /*
@@ -137,10 +137,11 @@ prssyntaxerror(TSVectorParseState state)
  * *strval		pointer to token
  * *lenval		length of *strval
  * *pos_ptr		pointer to a palloc'd array of positions and weights
- *				associated with the token. If the caller is not
- *interested in the information, NULL can be supplied. Otherwise the caller is
- *responsible for pfreeing the array. *poslen		number of elements in
- **pos_ptr *endptr		scan resumption point
+ *				associated with the token. If the caller is not interested
+ *				in the information, NULL can be supplied. Otherwise
+ *				the caller is responsible for pfreeing the array.
+ * *poslen		number of elements in *pos_ptr
+ * *endptr		scan resumption point
  *
  * Pass NULL for unwanted output parameters.
  */
@@ -178,7 +179,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       }
       else if ((state->oprisdelim && ISOPERATOR(state->prsbuf)) || (state->is_web && t_iseq(state->prsbuf, '"')))
       {
-
+        PRSSYNTAXERROR;
       }
       else if (!t_isspace(state->prsbuf))
       {
@@ -191,7 +192,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
     {
       if (*(state->prsbuf) == '\0')
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("there is no escaped character: \"%s\"", state->bufstart)));
       }
       else
       {
@@ -214,7 +215,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
         RESIZEPRSBUF;
         if (curpos == state->word)
         {
-
+          PRSSYNTAXERROR;
         }
         *(curpos) = '\0';
         RETURN_TOKEN;
@@ -223,7 +224,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       {
         if (curpos == state->word)
         {
-
+          PRSSYNTAXERROR;
         }
         *(curpos) = '\0';
         if (state->oprisdelim)
@@ -255,7 +256,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       }
       else if (*(state->prsbuf) == '\0')
       {
-
+        PRSSYNTAXERROR;
       }
       else
       {
@@ -268,10 +269,10 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
     {
       if (!state->is_web && t_iseq(state->prsbuf, '\''))
       {
-
-
-
-
+        RESIZEPRSBUF;
+        COPYCHAR(curpos, state->prsbuf);
+        curpos += pg_mblen(state->prsbuf);
+        statecode = WAITENDCMPLX;
       }
       else
       {
@@ -279,7 +280,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
         *(curpos) = '\0';
         if (curpos == state->word)
         {
-
+          PRSSYNTAXERROR;
         }
         if (state->oprisdelim)
         {
@@ -297,7 +298,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
     {
       if (t_iseq(state->prsbuf, ':'))
       {
-
+        statecode = INPOSINFO;
       }
       else
       {
@@ -324,14 +325,14 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
         /* we cannot get here in tsquery, so no need for 2 errmsgs */
         if (WEP_GETPOS(pos[npos - 1]) == 0)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("wrong position info in tsvector: \"%s\"", state->bufstart)));
         }
         WEP_SETWEIGHT(pos[npos - 1], 0);
         statecode = WAITPOSDELIM;
       }
       else
       {
-
+        PRSSYNTAXERROR;
       }
     }
     else if (statecode == WAITPOSDELIM)
@@ -344,7 +345,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       {
         if (WEP_GETWEIGHT(pos[npos - 1]))
         {
-
+          PRSSYNTAXERROR;
         }
         WEP_SETWEIGHT(pos[npos - 1], 3);
       }
@@ -352,7 +353,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       {
         if (WEP_GETWEIGHT(pos[npos - 1]))
         {
-
+          PRSSYNTAXERROR;
         }
         WEP_SETWEIGHT(pos[npos - 1], 2);
       }
@@ -360,7 +361,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       {
         if (WEP_GETWEIGHT(pos[npos - 1]))
         {
-
+          PRSSYNTAXERROR;
         }
         WEP_SETWEIGHT(pos[npos - 1], 1);
       }
@@ -368,7 +369,7 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       {
         if (WEP_GETWEIGHT(pos[npos - 1]))
         {
-
+          PRSSYNTAXERROR;
         }
         WEP_SETWEIGHT(pos[npos - 1], 0);
       }
@@ -378,12 +379,12 @@ gettoken_tsvector(TSVectorParseState state, char **strval, int *lenval, WordEntr
       }
       else if (!t_isdigit(state->prsbuf))
       {
-
+        PRSSYNTAXERROR;
       }
     }
-    else
-    { /* internal error */
-
+    else /* internal error */
+    {
+      elog(ERROR, "unrecognized state in gettoken_tsvector: %d", statecode);
     }
 
     /* get next char */

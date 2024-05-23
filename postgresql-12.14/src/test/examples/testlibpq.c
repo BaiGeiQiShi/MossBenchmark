@@ -31,9 +31,12 @@ main(int argc, char **argv)
    * conninfo string; otherwise default to setting dbname=postgres and using
    * environment variables or defaults for all other connection parameters.
    */
-  if (argc > 1) {
+  if (argc > 1)
+  {
     conninfo = argv[1];
-  } else {
+  }
+  else
+  {
     conninfo = "dbname = postgres";
   }
 
@@ -41,14 +44,16 @@ main(int argc, char **argv)
   conn = PQconnectdb(conninfo);
 
   /* Check to see that the backend connection was successfully made */
-  if (PQstatus(conn) != CONNECTION_OK) {
+  if (PQstatus(conn) != CONNECTION_OK)
+  {
     fprintf(stderr, "Connection to database failed: %s", PQerrorMessage(conn));
     exit_nicely(conn);
   }
 
   /* Set always-secure search path, so malicious users can't take control. */
   res = PQexec(conn, "SELECT pg_catalog.set_config('search_path', '', false)");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -69,7 +74,8 @@ main(int argc, char **argv)
 
   /* Start a transaction block */
   res = PQexec(conn, "BEGIN");
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     fprintf(stderr, "BEGIN command failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -80,7 +86,8 @@ main(int argc, char **argv)
    * Fetch rows from pg_database, the system catalog of databases
    */
   res = PQexec(conn, "DECLARE myportal CURSOR FOR select * from pg_database");
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     fprintf(stderr, "DECLARE CURSOR failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -88,7 +95,8 @@ main(int argc, char **argv)
   PQclear(res);
 
   res = PQexec(conn, "FETCH ALL in myportal");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "FETCH ALL failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -96,14 +104,17 @@ main(int argc, char **argv)
 
   /* first, print out the attribute names */
   nFields = PQnfields(res);
-  for (i = 0; i < nFields; i++) {
+  for (i = 0; i < nFields; i++)
+  {
     printf("%-15s", PQfname(res, i));
   }
   printf("\n\n");
 
   /* next, print out the rows */
-  for (i = 0; i < PQntuples(res); i++) {
-    for (j = 0; j < nFields; j++) {
+  for (i = 0; i < PQntuples(res); i++)
+  {
+    for (j = 0; j < nFields; j++)
+    {
       printf("%-15s", PQgetvalue(res, i, j));
     }
     printf("\n");

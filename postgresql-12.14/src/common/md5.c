@@ -51,7 +51,7 @@ createPaddedCopyWithLength(const uint8 *b, uint32 *l)
   *l = newLen448 + 8;
   if ((ret = (uint8 *)malloc(sizeof(uint8) * *l)) == NULL)
   {
-
+    return NULL;
   }
 
   if (b != NULL)
@@ -203,7 +203,7 @@ calculateDigestFromBuffer(const uint8 *b, uint32 len, uint8 sum[16])
 
   if ((input = createPaddedCopyWithLength(b, &l)) == NULL)
   {
-
+    return 0;
   }
 
   for (i = 0;;)
@@ -269,20 +269,20 @@ bytesToHex(uint8 b[16], char *s)
  *	Calculates the MD5 sum of the bytes in a buffer.
  *
  *	SYNOPSIS	  #include "md5.h"
- *				  int pg_md5_hash(const void *buff, size_t len,*char *hexsum)
+ *				  int pg_md5_hash(const void *buff, size_t len, char *hexsum)
  *
  *	INPUT		  buff	  the buffer containing the bytes that you want
  *						  the MD5 sum of.
  *				  len	  number of bytes in the buffer.
  *
  *	OUTPUT		  hexsum  the MD5 sum as a '\0'-terminated string of
- *						  hexadecimal digits.  an MD5
- *sum is 16 bytes long. each byte is represented by two heaxadecimal characters.
- *you thus need to provide an array of 33 characters, including the trailing
- *'\0'.
+ *						  hexadecimal digits.  an MD5 sum is 16 bytes long.
+ *						  each byte is represented by two heaxadecimal
+ *						  characters.  you thus need to provide an array
+ *						  of 33 characters, including the trailing '\0'.
  *
- *	RETURNS		  false on failure (out of memory for internal buffers)
- *or true on success.
+ *	RETURNS		  false on failure (out of memory for internal buffers) or
+ *				  true on success.
  *
  *	STANDARDS	  MD5 is described in RFC 1321.
  *
@@ -296,7 +296,7 @@ pg_md5_hash(const void *buff, size_t len, char *hexsum)
 
   if (!calculateDigestFromBuffer(buff, len, sum))
   {
-
+    return false;
   }
 
   bytesToHex(sum, hexsum);
@@ -306,11 +306,11 @@ pg_md5_hash(const void *buff, size_t len, char *hexsum)
 bool
 pg_md5_binary(const void *buff, size_t len, void *outbuf)
 {
-
-
-
-
-
+  if (!calculateDigestFromBuffer(buff, len, outbuf))
+  {
+    return false;
+  }
+  return true;
 }
 
 /*
@@ -333,7 +333,7 @@ pg_md5_encrypt(const char *passwd, const char *salt, size_t salt_len, char *buf)
 
   if (!crypt_buf)
   {
-
+    return false;
   }
 
   /*

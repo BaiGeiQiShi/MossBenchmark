@@ -43,7 +43,8 @@ importFile(PGconn *conn, char *filename)
    * open the file to be read in
    */
   fd = open(filename, O_RDONLY, 0666);
-  if (fd < 0) { /* error */
+  if (fd < 0)
+  { /* error */
     fprintf(stderr, "cannot open unix file\"%s\"\n", filename);
   }
 
@@ -51,7 +52,8 @@ importFile(PGconn *conn, char *filename)
    * create the large object
    */
   lobjId = lo_creat(conn, INV_READ | INV_WRITE);
-  if (lobjId == 0) {
+  if (lobjId == 0)
+  {
     fprintf(stderr, "cannot create large object");
   }
 
@@ -60,9 +62,11 @@ importFile(PGconn *conn, char *filename)
   /*
    * read in from the Unix file and write to the inversion file
    */
-  while ((nbytes = read(fd, buf, BUFSIZE)) > 0) {
+  while ((nbytes = read(fd, buf, BUFSIZE)) > 0)
+  {
     tmp = lo_write(conn, lobj_fd, buf, nbytes);
-    if (tmp < nbytes) {
+    if (tmp < nbytes)
+    {
       fprintf(stderr, "error while reading \"%s\"", filename);
     }
   }
@@ -82,27 +86,32 @@ pickout(PGconn *conn, Oid lobjId, pg_int64 start, int len)
   int nread;
 
   lobj_fd = lo_open(conn, lobjId, INV_READ);
-  if (lobj_fd < 0) {
+  if (lobj_fd < 0)
+  {
     fprintf(stderr, "cannot open large object %u", lobjId);
   }
 
-  if (lo_lseek64(conn, lobj_fd, start, SEEK_SET) < 0) {
+  if (lo_lseek64(conn, lobj_fd, start, SEEK_SET) < 0)
+  {
     fprintf(stderr, "error in lo_lseek64: %s", PQerrorMessage(conn));
   }
 
-  if (lo_tell64(conn, lobj_fd) != start) {
+  if (lo_tell64(conn, lobj_fd) != start)
+  {
     fprintf(stderr, "error in lo_tell64: %s", PQerrorMessage(conn));
   }
 
   buf = malloc(len + 1);
 
   nread = 0;
-  while (len - nread > 0) {
+  while (len - nread > 0)
+  {
     nbytes = lo_read(conn, lobj_fd, buf, len - nread);
     buf[nbytes] = '\0';
     fprintf(stderr, ">>> %s", buf);
     nread += nbytes;
-    if (nbytes <= 0) {
+    if (nbytes <= 0)
+    {
       break; /* no more data? */
     }
   }
@@ -121,26 +130,31 @@ overwrite(PGconn *conn, Oid lobjId, pg_int64 start, int len)
   int i;
 
   lobj_fd = lo_open(conn, lobjId, INV_WRITE);
-  if (lobj_fd < 0) {
+  if (lobj_fd < 0)
+  {
     fprintf(stderr, "cannot open large object %u", lobjId);
   }
 
-  if (lo_lseek64(conn, lobj_fd, start, SEEK_SET) < 0) {
+  if (lo_lseek64(conn, lobj_fd, start, SEEK_SET) < 0)
+  {
     fprintf(stderr, "error in lo_lseek64: %s", PQerrorMessage(conn));
   }
 
   buf = malloc(len + 1);
 
-  for (i = 0; i < len; i++) {
+  for (i = 0; i < len; i++)
+  {
     buf[i] = 'X';
   }
   buf[i] = '\0';
 
   nwritten = 0;
-  while (len - nwritten > 0) {
+  while (len - nwritten > 0)
+  {
     nbytes = lo_write(conn, lobj_fd, buf + nwritten, len - nwritten);
     nwritten += nbytes;
-    if (nbytes <= 0) {
+    if (nbytes <= 0)
+    {
       fprintf(stderr, "\nWRITE FAILED!\n");
       break;
     }
@@ -156,11 +170,13 @@ my_truncate(PGconn *conn, Oid lobjId, pg_int64 len)
   int lobj_fd;
 
   lobj_fd = lo_open(conn, lobjId, INV_READ | INV_WRITE);
-  if (lobj_fd < 0) {
+  if (lobj_fd < 0)
+  {
     fprintf(stderr, "cannot open large object %u", lobjId);
   }
 
-  if (lo_truncate64(conn, lobj_fd, len) < 0) {
+  if (lo_truncate64(conn, lobj_fd, len) < 0)
+  {
     fprintf(stderr, "error in lo_truncate64: %s", PQerrorMessage(conn));
   }
 
@@ -184,7 +200,8 @@ exportFile(PGconn *conn, Oid lobjId, char *filename)
    * open the large object
    */
   lobj_fd = lo_open(conn, lobjId, INV_READ);
-  if (lobj_fd < 0) {
+  if (lobj_fd < 0)
+  {
     fprintf(stderr, "cannot open large object %u", lobjId);
   }
 
@@ -192,16 +209,19 @@ exportFile(PGconn *conn, Oid lobjId, char *filename)
    * open the file to be written to
    */
   fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0666);
-  if (fd < 0) { /* error */
+  if (fd < 0)
+  { /* error */
     fprintf(stderr, "cannot open unix file\"%s\"", filename);
   }
 
   /*
    * read in from the inversion file and write to the Unix file
    */
-  while ((nbytes = lo_read(conn, lobj_fd, buf, BUFSIZE)) > 0) {
+  while ((nbytes = lo_read(conn, lobj_fd, buf, BUFSIZE)) > 0)
+  {
     tmp = write(fd, buf, nbytes);
-    if (tmp < nbytes) {
+    if (tmp < nbytes)
+    {
       fprintf(stderr, "error while writing \"%s\"", filename);
     }
   }
@@ -228,7 +248,8 @@ main(int argc, char **argv)
   PGconn *conn;
   PGresult *res;
 
-  if (argc != 5) {
+  if (argc != 5)
+  {
     fprintf(stderr, "Usage: %s database_name in_filename out_filename out_filename2\n", argv[0]);
     exit(1);
   }
@@ -244,14 +265,16 @@ main(int argc, char **argv)
   conn = PQsetdb(NULL, NULL, NULL, NULL, database);
 
   /* check to see that the backend connection was successfully made */
-  if (PQstatus(conn) != CONNECTION_OK) {
+  if (PQstatus(conn) != CONNECTION_OK)
+  {
     fprintf(stderr, "Connection to database failed: %s", PQerrorMessage(conn));
     exit_nicely(conn);
   }
 
   /* Set always-secure search path, so malicious users can't take control. */
   res = PQexec(conn, "SELECT pg_catalog.set_config('search_path', '', false)");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -263,9 +286,12 @@ main(int argc, char **argv)
   printf("importing file \"%s\" ...\n", in_filename);
   /*	lobjOid = importFile(conn, in_filename); */
   lobjOid = lo_import(conn, in_filename);
-  if (lobjOid == 0) {
+  if (lobjOid == 0)
+  {
     fprintf(stderr, "%s\n", PQerrorMessage(conn));
-  } else {
+  }
+  else
+  {
     printf("\tas large object %u.\n", lobjOid);
 
     printf("picking out bytes 4294967000-4294968000 of the large object\n");
@@ -276,7 +302,8 @@ main(int argc, char **argv)
 
     printf("exporting large object to file \"%s\" ...\n", out_filename);
     /*		exportFile(conn, lobjOid, out_filename); */
-    if (lo_export(conn, lobjOid, out_filename) < 0) {
+    if (lo_export(conn, lobjOid, out_filename) < 0)
+    {
       fprintf(stderr, "%s\n", PQerrorMessage(conn));
     }
 
@@ -284,7 +311,8 @@ main(int argc, char **argv)
     my_truncate(conn, lobjOid, 3294968000U);
 
     printf("exporting truncated large object to file \"%s\" ...\n", out_filename2);
-    if (lo_export(conn, lobjOid, out_filename2) < 0) {
+    if (lo_export(conn, lobjOid, out_filename2) < 0)
+    {
       fprintf(stderr, "%s\n", PQerrorMessage(conn));
     }
   }

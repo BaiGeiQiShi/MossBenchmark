@@ -263,7 +263,7 @@ ConditionalLockRelation(Relation relation, LOCKMODE lockmode)
 
   if (res == LOCKACQUIRE_NOT_AVAIL)
   {
-
+    return false;
   }
 
   /*
@@ -306,33 +306,33 @@ UnlockRelation(Relation relation, LOCKMODE lockmode)
 bool
 CheckRelationLockedByMe(Relation relation, LOCKMODE lockmode, bool orstronger)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_RELATION(tag, relation->rd_lockInfo.lockRelId.dbId, relation->rd_lockInfo.lockRelId.relId);
 
+  if (LockHeldByMe(&tag, lockmode))
+  {
+    return true;
+  }
 
+  if (orstronger)
+  {
+    LOCKMODE slockmode;
 
+    for (slockmode = lockmode + 1; slockmode <= MaxLockMode; slockmode++)
+    {
+      if (LockHeldByMe(&tag, slockmode))
+      {
+#ifdef NOT_USED
+        /* Sometimes this might be useful for debugging purposes */
+        elog(WARNING, "lock mode %s substituted for %s on relation %s", GetLockmodeName(tag.locktag_lockmethodid, slockmode), GetLockmodeName(tag.locktag_lockmethodid, lockmode), RelationGetRelationName(relation));
+#endif
+        return true;
+      }
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -344,11 +344,11 @@ CheckRelationLockedByMe(Relation relation, LOCKMODE lockmode, bool orstronger)
 bool
 LockHasWaitersRelation(Relation relation, LOCKMODE lockmode)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_RELATION(tag, relation->rd_lockInfo.lockRelId.dbId, relation->rd_lockInfo.lockRelId.relId);
 
-
-
-
+  return LockHasWaiters(&tag, lockmode, false);
 }
 
 /*
@@ -490,11 +490,11 @@ LockPage(Relation relation, BlockNumber blkno, LOCKMODE lockmode)
 bool
 ConditionalLockPage(Relation relation, BlockNumber blkno, LOCKMODE lockmode)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_PAGE(tag, relation->rd_lockInfo.lockRelId.dbId, relation->rd_lockInfo.lockRelId.relId, blkno);
 
-
-
-
+  return (LockAcquire(&tag, lockmode, false, true) != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -664,7 +664,7 @@ XactLockTableWait(TransactionId xid, Relation rel, ItemPointer ctid, XLTW_Oper o
      */
     if (!first)
     {
-
+      pg_usleep(1000L);
     }
     first = false;
     xid = SubTransGetTopmostTransaction(xid);
@@ -700,20 +700,20 @@ ConditionalXactLockTableWait(TransactionId xid)
       return false;
     }
 
+    LockRelease(&tag, ShareLock, false);
 
-
-
-
-
-
+    if (!TransactionIdIsInProgress(xid))
+    {
+      break;
+    }
 
     /* See XactLockTableWait about this case */
-
-
-
-
-
-
+    if (!first)
+    {
+      pg_usleep(1000L);
+    }
+    first = false;
+    xid = SubTransGetTopmostTransaction(xid);
   }
 
   return true;
@@ -742,7 +742,7 @@ SpeculativeInsertionLockAcquire(TransactionId xid)
    */
   if (speculativeInsertionToken == 0)
   {
-
+    speculativeInsertionToken = 1;
   }
 
   SET_LOCKTAG_SPECULATIVE_INSERTION(tag, xid, speculativeInsertionToken);
@@ -777,15 +777,15 @@ SpeculativeInsertionLockRelease(TransactionId xid)
 void
 SpeculativeInsertionWait(TransactionId xid, uint32 token)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_SPECULATIVE_INSERTION(tag, xid, token);
 
+  Assert(TransactionIdIsValid(xid));
+  Assert(token != 0);
 
-
-
-
-
-
-
+  (void)LockAcquire(&tag, ShareLock, false, false);
+  LockRelease(&tag, ShareLock, false);
 }
 
 /*
@@ -807,33 +807,33 @@ XactLockTableWaitErrorCb(void *arg)
 
     switch (info->oper)
     {
-    case XLTW_Update:;
-
-
-    case XLTW_Delete:;
+    case XLTW_Update:
+      cxt = gettext_noop("while updating tuple (%u,%u) in relation \"%s\"");
+      break;
+    case XLTW_Delete:
       cxt = gettext_noop("while deleting tuple (%u,%u) in relation \"%s\"");
       break;
-    case XLTW_Lock:;
+    case XLTW_Lock:
+      cxt = gettext_noop("while locking tuple (%u,%u) in relation \"%s\"");
+      break;
+    case XLTW_LockUpdated:
+      cxt = gettext_noop("while locking updated version (%u,%u) of tuple in relation \"%s\"");
+      break;
+    case XLTW_InsertIndex:
+      cxt = gettext_noop("while inserting index tuple (%u,%u) in relation \"%s\"");
+      break;
+    case XLTW_InsertIndexUnique:
+      cxt = gettext_noop("while checking uniqueness of tuple (%u,%u) in relation \"%s\"");
+      break;
+    case XLTW_FetchUpdated:
+      cxt = gettext_noop("while rechecking updated tuple (%u,%u) in relation \"%s\"");
+      break;
+    case XLTW_RecheckExclusionConstr:
+      cxt = gettext_noop("while checking exclusion constraint on tuple (%u,%u) in relation \"%s\"");
+      break;
 
-
-    case XLTW_LockUpdated:;
-
-
-    case XLTW_InsertIndex:;
-
-
-    case XLTW_InsertIndexUnique:;
-
-
-    case XLTW_FetchUpdated:;
-
-
-    case XLTW_RecheckExclusionConstr:;
-
-
-
-    default:;;
-
+    default:
+      return;
     }
 
     errcontext(cxt, ItemPointerGetBlockNumber(info->ctid), ItemPointerGetOffsetNumber(info->ctid), RelationGetRelationName(info->rel));
@@ -842,8 +842,8 @@ XactLockTableWaitErrorCb(void *arg)
 
 /*
  * WaitForLockersMultiple
- *		Wait until no transaction holds locks that conflict with the
- *given locktags at the given lockmode.
+ *		Wait until no transaction holds locks that conflict with the given
+ *		locktags at the given lockmode.
  *
  * To do this, obtain the current list of lockers, and wait on their VXIDs
  * until they are finished.
@@ -864,7 +864,7 @@ WaitForLockersMultiple(List *locktags, LOCKMODE lockmode, bool progress)
   /* Done if no locks to wait for */
   if (list_length(locktags) == 0)
   {
-
+    return;
   }
 
   /* Collect the transactions we need to wait on */
@@ -1016,11 +1016,11 @@ UnlockSharedObject(Oid classid, Oid objid, uint16 objsubid, LOCKMODE lockmode)
 void
 LockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid, LOCKMODE lockmode)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_OBJECT(tag, InvalidOid, classid, objid, objsubid);
 
-
-
-
+  (void)LockAcquire(&tag, lockmode, true, false);
 }
 
 /*
@@ -1029,11 +1029,11 @@ LockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid, LOCKMODE loc
 void
 UnlockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid, LOCKMODE lockmode)
 {
+  LOCKTAG tag;
 
+  SET_LOCKTAG_OBJECT(tag, InvalidOid, classid, objid, objsubid);
 
-
-
-
+  LockRelease(&tag, lockmode, true);
 }
 
 /*
@@ -1048,43 +1048,43 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 {
   switch ((LockTagType)tag->locktag_type)
   {
-  case LOCKTAG_RELATION:;
+  case LOCKTAG_RELATION:
     appendStringInfo(buf, _("relation %u of database %u"), tag->locktag_field2, tag->locktag_field1);
     break;
-  case LOCKTAG_RELATION_EXTEND:;
-
-
-  case LOCKTAG_DATABASE_FROZEN_IDS:;
-
-
-  case LOCKTAG_PAGE:;
-
-
-  case LOCKTAG_TUPLE:;
-
-
-  case LOCKTAG_TRANSACTION:;
-
-
-  case LOCKTAG_VIRTUALTRANSACTION:;
-
-
-  case LOCKTAG_SPECULATIVE_TOKEN:;
-
-
-  case LOCKTAG_OBJECT:;
-
-
-  case LOCKTAG_USERLOCK:;
+  case LOCKTAG_RELATION_EXTEND:
+    appendStringInfo(buf, _("extension of relation %u of database %u"), tag->locktag_field2, tag->locktag_field1);
+    break;
+  case LOCKTAG_DATABASE_FROZEN_IDS:
+    appendStringInfo(buf, _("pg_database.datfrozenxid of database %u"), tag->locktag_field1);
+    break;
+  case LOCKTAG_PAGE:
+    appendStringInfo(buf, _("page %u of relation %u of database %u"), tag->locktag_field3, tag->locktag_field2, tag->locktag_field1);
+    break;
+  case LOCKTAG_TUPLE:
+    appendStringInfo(buf, _("tuple (%u,%u) of relation %u of database %u"), tag->locktag_field3, tag->locktag_field4, tag->locktag_field2, tag->locktag_field1);
+    break;
+  case LOCKTAG_TRANSACTION:
+    appendStringInfo(buf, _("transaction %u"), tag->locktag_field1);
+    break;
+  case LOCKTAG_VIRTUALTRANSACTION:
+    appendStringInfo(buf, _("virtual transaction %d/%u"), tag->locktag_field1, tag->locktag_field2);
+    break;
+  case LOCKTAG_SPECULATIVE_TOKEN:
+    appendStringInfo(buf, _("speculative token %u of transaction %u"), tag->locktag_field2, tag->locktag_field1);
+    break;
+  case LOCKTAG_OBJECT:
+    appendStringInfo(buf, _("object %u of class %u of database %u"), tag->locktag_field3, tag->locktag_field2, tag->locktag_field1);
+    break;
+  case LOCKTAG_USERLOCK:
     /* reserved for old contrib code, now on pgfoundry */
-
-
-  case LOCKTAG_ADVISORY:;
-
-
-  default:;;
-
-
+    appendStringInfo(buf, _("user lock [%u,%u,%u]"), tag->locktag_field1, tag->locktag_field2, tag->locktag_field3);
+    break;
+  case LOCKTAG_ADVISORY:
+    appendStringInfo(buf, _("advisory lock [%u,%u,%u,%u]"), tag->locktag_field1, tag->locktag_field2, tag->locktag_field3, tag->locktag_field4);
+    break;
+  default:
+    appendStringInfo(buf, _("unrecognized locktag type %d"), (int)tag->locktag_type);
+    break;
   }
 }
 
@@ -1098,7 +1098,7 @@ GetLockNameFromTagType(uint16 locktag_type)
 {
   if (locktag_type > LOCKTAG_LAST_TYPE)
   {
-
+    return "???";
   }
   return LockTagTypeNames[locktag_type];
 }

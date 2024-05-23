@@ -21,7 +21,8 @@ const char *progname = NULL;
 
 #define MAX_ON_EXIT_NICELY 20
 
-static struct {
+static struct
+{
   on_exit_nicely_callback function;
   void *arg;
 } on_exit_nicely_list[MAX_ON_EXIT_NICELY];
@@ -39,17 +40,25 @@ void
 set_dump_section(const char *arg, int *dumpSections)
 {
   /* if this is the first call, clear all the bits */
-  if (*dumpSections == DUMP_UNSECTIONED) {
+  if (*dumpSections == DUMP_UNSECTIONED)
+  {
     *dumpSections = 0;
   }
 
-  if (strcmp(arg, "pre-data") == 0) {
+  if (strcmp(arg, "pre-data") == 0)
+  {
     *dumpSections |= DUMP_PRE_DATA;
-  } else if (strcmp(arg, "data") == 0) {
+  }
+  else if (strcmp(arg, "data") == 0)
+  {
     *dumpSections |= DUMP_DATA;
-  } else if (strcmp(arg, "post-data") == 0) {
+  }
+  else if (strcmp(arg, "post-data") == 0)
+  {
     *dumpSections |= DUMP_POST_DATA;
-  } else {
+  }
+  else
+  {
     pg_log_error("unrecognized section name: \"%s\"", arg);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit_nicely(1);
@@ -60,7 +69,8 @@ set_dump_section(const char *arg, int *dumpSections)
 void
 on_exit_nicely(on_exit_nicely_callback function, void *arg)
 {
-  if (on_exit_nicely_index >= MAX_ON_EXIT_NICELY) {
+  if (on_exit_nicely_index >= MAX_ON_EXIT_NICELY)
+  {
     pg_log_fatal("out of on_exit_nicely slots");
     exit_nicely(1);
   }
@@ -73,7 +83,8 @@ on_exit_nicely(on_exit_nicely_callback function, void *arg)
  * Run accumulated on_exit_nicely callbacks in reverse order and then exit
  * without printing any message.
  *
- * If running in a parallel worker thread on Windows, we only exit the thread,* not the whole process.
+ * If running in a parallel worker thread on Windows, we only exit the thread,
+ * not the whole process.
  *
  * Note that in parallel operation on Windows, the callback(s) will be run
  * by each thread since the list state is necessarily shared by all threads;
@@ -90,12 +101,14 @@ exit_nicely(int code)
 {
   int i;
 
-  for (i = on_exit_nicely_index - 1; i >= 0; i--) {
+  for (i = on_exit_nicely_index - 1; i >= 0; i--)
+  {
     on_exit_nicely_list[i].function(code, on_exit_nicely_list[i].arg);
   }
 
 #ifdef WIN32
-  if (parallel_init_done && GetCurrentThreadId() != mainThreadId) {
+  if (parallel_init_done && GetCurrentThreadId() != mainThreadId)
+  {
     _endthreadex(code);
   }
 #endif

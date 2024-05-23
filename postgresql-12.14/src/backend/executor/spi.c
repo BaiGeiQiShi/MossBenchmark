@@ -1505,7 +1505,9 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan, ParamListInfo paramL
       ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_DEFINITION), errmsg("cannot open multi-query plan as cursor")));
     }
     plansource = (CachedPlanSource *)linitial(plan->plancache_list);
-    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_DEFINITION), errmsg("cannot open %s query as cursor", plansource->commandTag)));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_DEFINITION),
+                       /* translator: %s is name of a SQL command, eg INSERT */
+                       errmsg("cannot open %s query as cursor", plansource->commandTag)));
   }
 
   Assert(list_length(plan->plancache_list) == 1);
@@ -1631,7 +1633,9 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan, ParamListInfo paramL
       {
         if (read_only)
         {
-          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s is not allowed in a non-volatile function", CreateCommandTag((Node *)pstmt))));
+          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                             /* translator: %s is a SQL statement name */
+                             errmsg("%s is not allowed in a non-volatile function", CreateCommandTag((Node *)pstmt))));
         }
         else
         {
@@ -2235,8 +2239,8 @@ _SPI_prepare_oneshot_plan(const char *src, SPIPlanPtr plan)
  * crosscheck_snapshot: for RI use, all others pass InvalidSnapshot
  * read_only: true for read-only execution (no CommandCounterIncrement)
  * fire_triggers: true to fire AFTER triggers at end of query (normal case);
- *		false means any AFTER triggers are postponed to end of outer
- *query tcount: execution tuple-count limit, or 0 for none
+ *		false means any AFTER triggers are postponed to end of outer query
+ * tcount: execution tuple-count limit, or 0 for none
  */
 static int
 _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI, Snapshot snapshot, Snapshot crosscheck_snapshot, bool read_only, bool fire_triggers, uint64 tcount)
@@ -2408,7 +2412,9 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI, Snapshot snapshot, Sna
 
       if (read_only && !CommandIsReadOnly(stmt))
       {
-        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s is not allowed in a non-volatile function", CreateCommandTag((Node *)stmt))));
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                           /* translator: %s is a SQL statement name */
+                           errmsg("%s is not allowed in a non-volatile function", CreateCommandTag((Node *)stmt))));
       }
 
       if (IsInParallelMode() && !CommandIsReadOnly(stmt))
@@ -2672,7 +2678,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
       res = SPI_OK_UPDATE;
     }
     break;
-  default:;
+  default:
     return SPI_ERROR_OPUNKNOWN;
   }
 
@@ -2732,8 +2738,8 @@ _SPI_error_callback(void *arg)
   const char *query = (const char *)arg;
   int syntaxerrposition;
 
-  if (query == NULL)
-  { /* in case arg wasn't set yet */
+  if (query == NULL) /* in case arg wasn't set yet */
+  {
     return;
   }
 
@@ -2879,8 +2885,8 @@ _SPI_checktuples(void)
   SPITupleTable *tuptable = _SPI_current->tuptable;
   bool failed = false;
 
-  if (tuptable == NULL)
-  { /* spi_dest_startup was not called */
+  if (tuptable == NULL) /* spi_dest_startup was not called */
+  {
     failed = true;
   }
   else if (processed != (tuptable->alloced - tuptable->free))

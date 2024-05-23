@@ -70,7 +70,8 @@ provider_init(void)
   JitProviderInit init;
 
   /* don't even try to load if not enabled */
-  if (!jit_enabled) {
+  if (!jit_enabled)
+  {
     return false;
   }
 
@@ -78,10 +79,12 @@ provider_init(void)
    * Don't retry loading after failing - attempting to load JIT provider
    * isn't cheap.
    */
-  if (provider_failed_loading) {
+  if (provider_failed_loading)
+  {
     return false;
   }
-  if (provider_successfully_loaded) {
+  if (provider_successfully_loaded)
+  {
     return true;
   }
 
@@ -92,7 +95,8 @@ provider_init(void)
    */
   snprintf(path, MAXPGPATH, "%s/%s%s", pkglib_path, jit_provider, DLSUFFIX);
   elog(DEBUG1, "probing availability of JIT provider at %s", path);
-  if (!file_exists(path)) {
+  if (!file_exists(path))
+  {
     elog(DEBUG1, "provider not available, disabling JIT for current session");
     provider_failed_loading = true;
     return false;
@@ -126,7 +130,8 @@ provider_init(void)
 void
 jit_reset_after_error(void)
 {
-  if (provider_successfully_loaded) {
+  if (provider_successfully_loaded)
+  {
     provider.reset_after_error();
   }
 }
@@ -137,7 +142,8 @@ jit_reset_after_error(void)
 void
 jit_release_context(JitContext *context)
 {
-  if (provider_successfully_loaded) {
+  if (provider_successfully_loaded)
+  {
     provider.release_context(context);
   }
 
@@ -162,22 +168,26 @@ jit_compile_expr(struct ExprState *state)
    * usage, and worse, trigger some quadratic behaviour in gdb. Therefore,
    * at least for now, don't create a JITed function in those circumstances.
    */
-  if (!state->parent) {
+  if (!state->parent)
+  {
     return false;
   }
 
   /* if no jitting should be performed at all */
-  if (!(state->parent->state->es_jit_flags & PGJIT_PERFORM)) {
+  if (!(state->parent->state->es_jit_flags & PGJIT_PERFORM))
+  {
     return false;
   }
 
   /* or if expressions aren't JITed */
-  if (!(state->parent->state->es_jit_flags & PGJIT_EXPR)) {
+  if (!(state->parent->state->es_jit_flags & PGJIT_EXPR))
+  {
     return false;
   }
 
   /* this also takes !jit_enabled into account */
-  if (provider_init()) {
+  if (provider_init())
+  {
     return provider.compile_expr(state);
   }
 
@@ -202,9 +212,12 @@ file_exists(const char *name)
 
   AssertArg(name != NULL);
 
-  if (stat(name, &st) == 0) {
+  if (stat(name, &st) == 0)
+  {
     return S_ISDIR(st.st_mode) ? false : true;
-  } else if (!(errno == ENOENT || errno == ENOTDIR)) {
+  }
+  else if (!(errno == ENOENT || errno == ENOTDIR))
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not access file \"%s\": %m", name)));
   }
 

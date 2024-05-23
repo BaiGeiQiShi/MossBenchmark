@@ -28,12 +28,14 @@ PLyUnicode_Bytes(PyObject *unicode)
 
   /* First encode the Python unicode object with UTF-8. */
   bytes = PyUnicode_AsUTF8String(unicode);
-  if (bytes == NULL) {
+  if (bytes == NULL)
+  {
     PLy_elog(ERROR, "could not convert Python Unicode object to bytes");
   }
 
   utf8string = PyBytes_AsString(bytes);
-  if (utf8string == NULL) {
+  if (utf8string == NULL)
+  {
     Py_DECREF(bytes);
     PLy_elog(ERROR, "could not extract bytes from encoded string");
   }
@@ -46,7 +48,8 @@ PLyUnicode_Bytes(PyObject *unicode)
    * that PostgreSQL does (EUC_TW and MULE_INTERNAL). UTF-8 is used as an
    * intermediary in PLyUnicode_FromString as well.
    */
-  if (GetDatabaseEncoding() != PG_UTF8) {
+  if (GetDatabaseEncoding() != PG_UTF8)
+  {
     PG_TRY();
     {
       encoded = pg_any_to_server(utf8string, strlen(utf8string), PG_UTF8);
@@ -57,7 +60,9 @@ PLyUnicode_Bytes(PyObject *unicode)
       PG_RE_THROW();
     }
     PG_END_TRY();
-  } else {
+  }
+  else
+  {
     encoded = utf8string;
   }
 
@@ -65,7 +70,8 @@ PLyUnicode_Bytes(PyObject *unicode)
   rv = PyBytes_FromStringAndSize(encoded, strlen(encoded));
 
   /* if pg_any_to_server allocated memory, free it now */
-  if (utf8string != encoded) {
+  if (utf8string != encoded)
+  {
     pfree(encoded);
   }
 
@@ -107,9 +113,12 @@ PLyUnicode_FromStringAndSize(const char *s, Py_ssize_t size)
 
   utf8string = pg_server_to_any(s, size, PG_UTF8);
 
-  if (utf8string == s) {
+  if (utf8string == s)
+  {
     o = PyUnicode_FromStringAndSize(s, size);
-  } else {
+  }
+  else
+  {
     o = PyUnicode_FromString(utf8string);
     pfree(utf8string);
   }

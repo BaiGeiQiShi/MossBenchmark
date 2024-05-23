@@ -192,8 +192,8 @@ expand_inherited_rtentry(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte,
        */
       if (childOID != parentOID && RELATION_IS_OTHER_TEMP(newrelation))
       {
-
-
+        table_close(newrelation, lockmode);
+        continue;
       }
 
       /* Create RTE and AppendRelInfo, plus PlanRowMark if needed. */
@@ -229,21 +229,21 @@ expand_inherited_rtentry(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte,
     if (new_allMarkTypes & ~(1 << ROW_MARK_COPY) && !(old_allMarkTypes & ~(1 << ROW_MARK_COPY)))
     {
       /* Need to fetch TID */
-
-
-
-
-
+      var = makeVar(oldrc->rti, SelfItemPointerAttributeNumber, TIDOID, -1, InvalidOid, 0);
+      snprintf(resname, sizeof(resname), "ctid%u", oldrc->rowmarkId);
+      tle = makeTargetEntry((Expr *)var, list_length(root->processed_tlist) + 1, pstrdup(resname), true);
+      root->processed_tlist = lappend(root->processed_tlist, tle);
+      newvars = lappend(newvars, var);
     }
 
     /* Add whole-row junk Var if needed, unless we had it already */
     if ((new_allMarkTypes & (1 << ROW_MARK_COPY)) && !(old_allMarkTypes & (1 << ROW_MARK_COPY)))
     {
-
-
-
-
-
+      var = makeWholeRowVar(planner_rt_fetch(oldrc->rti, root), oldrc->rti, 0, false);
+      snprintf(resname, sizeof(resname), "wholerow%u", oldrc->rowmarkId);
+      tle = makeTargetEntry((Expr *)var, list_length(root->processed_tlist) + 1, pstrdup(resname), true);
+      root->processed_tlist = lappend(root->processed_tlist, tle);
+      newvars = lappend(newvars, var);
     }
 
     /* Add tableoid junk Var, unless we had it already */
@@ -357,7 +357,7 @@ expand_partitioned_rtentry(PlannerInfo *root, RelOptInfo *relinfo, RangeTblEntry
      */
     if (RELATION_IS_OTHER_TEMP(childrel))
     {
-
+      elog(ERROR, "temporary relation from another session found as partition");
     }
 
     /* Create RTE and AppendRelInfo, plus PlanRowMark if needed. */
@@ -380,8 +380,7 @@ expand_partitioned_rtentry(PlannerInfo *root, RelOptInfo *relinfo, RangeTblEntry
 
 /*
  * expand_single_inheritance_child
- *		Build a RangeTblEntry and an AppendRelInfo, plus maybe a
- *PlanRowMark.
+ *		Build a RangeTblEntry and an AppendRelInfo, plus maybe a PlanRowMark.
  *
  * We now expand the partition hierarchy level by level, creating a
  * corresponding hierarchy of AppendRelInfos and RelOptInfos, where each
@@ -542,8 +541,8 @@ translate_col_privs(const Bitmapset *parent_privs, List *translated_vars)
     Var *var = lfirst_node(Var, lc);
 
     attno++;
-    if (var == NULL)
-    { /* ignore dropped columns */
+    if (var == NULL) /* ignore dropped columns */
+    {
       continue;
     }
     if (whole_row || bms_is_member(attno - FirstLowInvalidHeapAttributeNumber, parent_privs))
@@ -557,8 +556,7 @@ translate_col_privs(const Bitmapset *parent_privs, List *translated_vars)
 
 /*
  * expand_appendrel_subquery
- *		Add "other rel" RelOptInfos for the children of an appendrel
- *baserel
+ *		Add "other rel" RelOptInfos for the children of an appendrel baserel
  *
  * "rel" is a subquery relation that has the rte->inh flag set, meaning it
  * is a UNION ALL subquery that's been flattened into an appendrel, with
@@ -601,8 +599,8 @@ expand_appendrel_subquery(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
 
 /*
  * apply_child_basequals
- *		Populate childrel's base restriction quals from parent rel's
- *quals, translating them using appinfo.
+ *		Populate childrel's base restriction quals from parent rel's quals,
+ *		translating them using appinfo.
  *
  * If any of the resulting clauses evaluate to constant false or NULL, we
  * return false and don't apply any quals.  Caller should mark the relation as

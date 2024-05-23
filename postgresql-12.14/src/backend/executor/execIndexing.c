@@ -234,7 +234,7 @@ ExecCloseIndices(ResultRelInfo *resultRelInfo)
   {
     if (indexDescs[i] == NULL)
     {
-
+      continue; /* shouldn't happen? */
     }
 
     /* Drop lock acquired by ExecOpenIndices */
@@ -320,7 +320,7 @@ ExecInsertIndexTuples(TupleTableSlot *slot, EState *estate, bool noDupErr, bool 
 
     if (indexRelation == NULL)
     {
-
+      continue;
     }
 
     indexInfo = indexInfoArray[i];
@@ -328,7 +328,7 @@ ExecInsertIndexTuples(TupleTableSlot *slot, EState *estate, bool noDupErr, bool 
     /* If the index is marked as read-only, ignore it */
     if (!indexInfo->ii_ReadyForInserts)
     {
-
+      continue;
     }
 
     /* Check for partial index */
@@ -422,8 +422,8 @@ ExecInsertIndexTuples(TupleTableSlot *slot, EState *estate, bool noDupErr, bool 
 
       if (applyNoDupErr)
       {
-
-
+        violationOK = true;
+        waitMode = CEOUC_LIVELOCK_PREVENTING_WAIT;
       }
       else if (!indexRelation->rd_index->indimmediate)
       {
@@ -450,7 +450,7 @@ ExecInsertIndexTuples(TupleTableSlot *slot, EState *estate, bool noDupErr, bool 
       result = lappend_oid(result, RelationGetRelid(indexRelation));
       if (indexRelation->rd_index->indimmediate && specConflict)
       {
-
+        *specConflict = true;
       }
     }
   }
@@ -523,20 +523,20 @@ ExecCheckIndexConstraints(TupleTableSlot *slot, EState *estate, ItemPointer conf
 
     if (indexRelation == NULL)
     {
-
+      continue;
     }
 
     indexInfo = indexInfoArray[i];
 
     if (!indexInfo->ii_Unique && !indexInfo->ii_ExclusionOps)
     {
-
+      continue;
     }
 
     /* If the index is marked as read-only, ignore it */
     if (!indexInfo->ii_ReadyForInserts)
     {
-
+      continue;
     }
 
     /* When specific arbiter indexes requested, only examine them */
@@ -571,7 +571,7 @@ ExecCheckIndexConstraints(TupleTableSlot *slot, EState *estate, ItemPointer conf
       /* Skip this index-update if the predicate isn't satisfied */
       if (!ExecQual(predicate, econtext))
       {
-
+        continue;
       }
     }
 
@@ -590,7 +590,7 @@ ExecCheckIndexConstraints(TupleTableSlot *slot, EState *estate, ItemPointer conf
 
   if (arbiterIndexes != NIL && !checkedIndex)
   {
-
+    elog(ERROR, "unexpected failure to find arbiter index");
   }
 
   return true;
@@ -674,7 +674,7 @@ check_exclusion_or_unique_constraint(Relation heap, Relation index, IndexInfo *i
   {
     if (isnull[i])
     {
-
+      return true;
     }
   }
 
@@ -706,7 +706,7 @@ check_exclusion_or_unique_constraint(Relation heap, Relation index, IndexInfo *i
    * May have to restart scan from this point if a potential conflict is
    * found.
    */
-retry:;
+retry:
   conflict = false;
   found_self = false;
   index_scan = index_beginscan(heap, index, &DirtySnapshot, indnkeyatts, 0);
@@ -726,9 +726,9 @@ retry:;
      */
     if (ItemPointerIsValid(tupleid) && ItemPointerEquals(tupleid, &existing_slot->tts_tid))
     {
-      if (found_self)
-      { /* should not happen */
-
+      if (found_self) /* should not happen */
+      {
+        elog(ERROR, "found self tuple multiple times in index \"%s\"", RelationGetRelationName(index));
       }
       found_self = true;
       continue;
@@ -768,7 +768,7 @@ retry:;
       index_endscan(index_scan);
       if (DirtySnapshot.speculativeToken)
       {
-
+        SpeculativeInsertionWait(DirtySnapshot.xmin, DirtySnapshot.speculativeToken);
       }
       else
       {
@@ -847,7 +847,7 @@ index_recheck_constraint(Relation index, Oid *constr_procs, Datum *existing_valu
     /* Assume the exclusion operators are strict */
     if (existing_isnull[i])
     {
-
+      return false;
     }
 
     if (!DatumGetBool(OidFunctionCall2Coll(constr_procs[i], index->rd_indcollation[i], existing_values[i], new_values[i])))

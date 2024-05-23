@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * nodeTableFuncscan.c
- *	  Support routines for scanning RangeTableFunc (XMLTABLE like
- *functions).
+ *	  Support routines for scanning RangeTableFunc (XMLTABLE like functions).
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -16,10 +15,10 @@
 /*
  * INTERFACE ROUTINES
  *		ExecTableFuncscan		scans a function.
- *		ExecFunctionNext		retrieve next tuple in
- *sequential order. ExecInitTableFuncscan	creates and initializes a
- *TableFuncscan node. ExecEndTableFuncscan		releases any storage
- *allocated. ExecReScanTableFuncscan rescans the function
+ *		ExecFunctionNext		retrieve next tuple in sequential order.
+ *		ExecInitTableFuncscan	creates and initializes a TableFuncscan node.
+ *		ExecEndTableFuncscan		releases any storage allocated.
+ *		ExecReScanTableFuncscan rescans the function
  */
 #include "postgres.h"
 

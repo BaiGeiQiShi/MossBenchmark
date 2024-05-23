@@ -14,38 +14,38 @@
  */
 /*
  * INTERFACE ROUTINES
- *		ExecMergeJoin			mergejoin outer and inner
- *relations. ExecInitMergeJoin		creates and initializes run time states
+ *		ExecMergeJoin			mergejoin outer and inner relations.
+ *		ExecInitMergeJoin		creates and initializes run time states
  *		ExecEndMergeJoin		cleans up the node.
  *
  * NOTES
  *
- *		Merge-join is done by joining the inner and outer tuples
- *satisfying join clauses of the form ((= outerKey innerKey) ...). The join
- *clause list is provided by the query planner and may contain more than one (=
- *outerKey innerKey) clause (for composite sort key).
+ *		Merge-join is done by joining the inner and outer tuples satisfying
+ *		join clauses of the form ((= outerKey innerKey) ...).
+ *		The join clause list is provided by the query planner and may contain
+ *		more than one (= outerKey innerKey) clause (for composite sort key).
  *
  *		However, the query executor needs to know whether an outer
  *		tuple is "greater/smaller" than an inner tuple so that it can
- *		"synchronize" the two relations. For example, consider the
- *following relations:
+ *		"synchronize" the two relations. For example, consider the following
+ *		relations:
  *
  *				outer: (0 ^1 1 2 5 5 5 6 6 7)	current tuple: 1
- *				inner: (1 ^3 5 5 5 5 6)			current
- *tuple: 3
+ *				inner: (1 ^3 5 5 5 5 6)			current tuple: 3
  *
- *		To continue the merge-join, the executor needs to scan both
- *inner and outer relations till the matching tuples 5. It needs to know that
- *currently inner tuple 3 is "greater" than outer tuple 1 and therefore it
- *should scan the outer relation first to find a matching tuple and so on.
+ *		To continue the merge-join, the executor needs to scan both inner
+ *		and outer relations till the matching tuples 5. It needs to know
+ *		that currently inner tuple 3 is "greater" than outer tuple 1 and
+ *		therefore it should scan the outer relation first to find a
+ *		matching tuple and so on.
  *
- *		Therefore, rather than directly executing the merge join
- *clauses, we evaluate the left and right key expressions separately and then
+ *		Therefore, rather than directly executing the merge join clauses,
+ *		we evaluate the left and right key expressions separately and then
  *		compare the columns one at a time (see MJCompare).  The planner
- *		passes us enough information about the sort ordering of the
- *inputs to allow us to determine how to make the comparison.  We may use the
- *		appropriate btree comparison function, since Postgres' only
- *notion of ordering is specified by btree opfamilies.
+ *		passes us enough information about the sort ordering of the inputs
+ *		to allow us to determine how to make the comparison.  We may use the
+ *		appropriate btree comparison function, since Postgres' only notion
+ *		of ordering is specified by btree opfamilies.
  *
  *
  *		Consider the above relations and suppose that the executor has
@@ -53,27 +53,33 @@
  *		next step is of course to join the second outer "5" with all
  *		the inner "5's". This requires repositioning the inner "cursor"
  *		to point at the first inner "5". This is done by "marking" the
- *		first inner 5 so we can restore the "cursor" to it before
- *joining with the second outer 5. The access method interface provides routines
- *to mark and restore to a tuple.
+ *		first inner 5 so we can restore the "cursor" to it before joining
+ *		with the second outer 5. The access method interface provides
+ *		routines to mark and restore to a tuple.
  *
  *
  *		Essential operation of the merge join algorithm is as follows:
  *
  *		Join {
- *			get initial outer and inner tuples
- *INITIALIZE do forever { while (outer != inner) {
- *SKIP_TEST if (outer < inner) advance outer
- *SKIPOUTER_ADVANCE else advance inner
- *SKIPINNER_ADVANCE
+ *			get initial outer and inner tuples				INITIALIZE
+ *			do forever {
+ *				while (outer != inner) {					SKIP_TEST
+ *					if (outer < inner)
+ *						advance outer						SKIPOUTER_ADVANCE
+ *					else
+ *						advance inner						SKIPINNER_ADVANCE
  *				}
- *				mark inner position
- *SKIP_TEST do forever { while (outer == inner) { join tuples
- *JOINTUPLES advance inner position				NEXTINNER
+ *				mark inner position							SKIP_TEST
+ *				do forever {
+ *					while (outer == inner) {
+ *						join tuples							JOINTUPLES
+ *						advance inner position				NEXTINNER
  *					}
- *					advance outer position
- *NEXTOUTER if (outer == mark) TESTOUTER restore inner position to mark
- *TESTOUTER else break	// return to top of outer loop
+ *					advance outer position					NEXTOUTER
+ *					if (outer == mark)						TESTOUTER
+ *						restore inner position to mark		TESTOUTER
+ *					else
+ *						break	// return to top of outer loop
  *				}
  *			}
  *		}
@@ -188,7 +194,7 @@ MJExamineQuals(List *mergeclauses, Oid *mergefamilies, Oid *mergecollations, int
 
     if (!IsA(qual, OpExpr))
     {
-
+      elog(ERROR, "mergejoin clause is not an OpExpr");
     }
 
     /*
@@ -208,17 +214,17 @@ MJExamineQuals(List *mergeclauses, Oid *mergefamilies, Oid *mergecollations, int
     {
       clause->ssup.ssup_reverse = true;
     }
-    else
-    { /* planner screwed up */
-
+    else /* planner screwed up */
+    {
+      elog(ERROR, "unsupported mergejoin strategy %d", opstrategy);
     }
     clause->ssup.ssup_nulls_first = nulls_first;
 
     /* Extract the operator's declared left/right datatypes */
     get_op_opfamily_properties(qual->opno, opfamily, false, &op_strategy, &op_lefttype, &op_righttype);
-    if (op_strategy != BTEqualStrategyNumber)
-    { /* should not happen */
-
+    if (op_strategy != BTEqualStrategyNumber) /* should not happen */
+    {
+      elog(ERROR, "cannot merge using non-equality operator %u", qual->opno);
     }
 
     /*
@@ -241,9 +247,9 @@ MJExamineQuals(List *mergeclauses, Oid *mergefamilies, Oid *mergecollations, int
     {
       /* support not available, get comparison func */
       sortfunc = get_opfamily_proc(opfamily, op_lefttype, op_righttype, BTORDER_PROC);
-      if (!OidIsValid(sortfunc))
-      { /* should not happen */
-
+      if (!OidIsValid(sortfunc)) /* should not happen */
+      {
+        elog(ERROR, "missing support function %d(%u,%u) in opfamily %u", BTORDER_PROC, op_lefttype, op_righttype, opfamily);
       }
       /* We'll use a shim to call the old-style btree comparator */
       PrepareSortSupportComparisonShim(sortfunc, &clause->ssup);
@@ -307,7 +313,7 @@ MJEvalOuterValues(MergeJoinState *mergestate)
       /* match is impossible; can we end the join early? */
       if (i == 0 && !clause->ssup.ssup_nulls_first && !mergestate->mj_FillOuter)
       {
-
+        result = MJEVAL_ENDOFJOIN;
       }
       else if (result == MJEVAL_MATCHABLE)
       {
@@ -408,8 +414,8 @@ MJCompare(MergeJoinState *mergestate)
      */
     if (clause->lisnull && clause->risnull)
     {
-
-
+      nulleqnull = true; /* NULL "=" NULL */
+      continue;
     }
 
     result = ApplySortComparator(clause->ldatum, clause->lisnull, clause->rdatum, clause->risnull, &clause->ssup);
@@ -524,7 +530,7 @@ check_constant_qual(List *qual, bool *is_const_false)
 
     if (!con || !IsA(con, Const))
     {
-
+      return false;
     }
     if (con->constisnull || !DatumGetBool(con->constvalue))
     {
@@ -662,7 +668,7 @@ ExecMergeJoin(PlanState *pstate)
        * do the outer side in INITIALIZE_OUTER state, then advance
        * to INITIALIZE_INNER state for the inner subplan.
        */
-    case EXEC_MJ_INITIALIZE_OUTER:;
+    case EXEC_MJ_INITIALIZE_OUTER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_INITIALIZE_OUTER\n");
 
       outerTupleSlot = ExecProcNode(outerPlan);
@@ -671,11 +677,11 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalOuterValues(node))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
         /* OK to go get the first inner tuple */
         node->mj_JoinState = EXEC_MJ_INITIALIZE_INNER;
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
         /* Stay in same state to fetch next outer tuple */
         if (doFillOuter)
         {
@@ -692,8 +698,8 @@ ExecMergeJoin(PlanState *pstate)
             return result;
           }
         }
-
-      case MJEVAL_ENDOFJOIN:;
+        break;
+      case MJEVAL_ENDOFJOIN:
         /* No more outer tuples */
         MJ_printf("ExecMergeJoin: nothing in outer subplan\n");
         if (doFillInner)
@@ -703,16 +709,16 @@ ExecMergeJoin(PlanState *pstate)
            * inner tuples. We set MatchedInner = true to
            * force the ENDOUTER state to advance inner.
            */
-
-
-
+          node->mj_JoinState = EXEC_MJ_ENDOUTER;
+          node->mj_MatchedInner = true;
+          break;
         }
         /* Otherwise we're done. */
         return NULL;
       }
       break;
 
-    case EXEC_MJ_INITIALIZE_INNER:;
+    case EXEC_MJ_INITIALIZE_INNER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_INITIALIZE_INNER\n");
 
       innerTupleSlot = ExecProcNode(innerPlan);
@@ -721,7 +727,7 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalInnerValues(node, innerTupleSlot))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
 
         /*
          * OK, we have the initial tuples.  Begin by skipping
@@ -729,11 +735,11 @@ ExecMergeJoin(PlanState *pstate)
          */
         node->mj_JoinState = EXEC_MJ_SKIP_TEST;
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
         /* Mark before advancing, if wanted */
         if (node->mj_ExtraMarks)
         {
-
+          ExecMarkPos(innerPlan);
         }
         /* Stay in same state to fetch next inner tuple */
         if (doFillInner)
@@ -751,8 +757,8 @@ ExecMergeJoin(PlanState *pstate)
             return result;
           }
         }
-
-      case MJEVAL_ENDOFJOIN:;
+        break;
+      case MJEVAL_ENDOFJOIN:
         /* No more inner tuples */
         MJ_printf("ExecMergeJoin: nothing in inner subplan\n");
         if (doFillOuter)
@@ -778,7 +784,7 @@ ExecMergeJoin(PlanState *pstate)
        * the merge clause so we join them and then proceed to get
        * the next inner tuple (EXEC_MJ_NEXTINNER).
        */
-    case EXEC_MJ_JOINTUPLES:;
+    case EXEC_MJ_JOINTUPLES:
       MJ_printf("ExecMergeJoin: EXEC_MJ_JOINTUPLES\n");
 
       /*
@@ -864,7 +870,7 @@ ExecMergeJoin(PlanState *pstate)
        * Before advancing, we check to see if we must emit an
        * outer-join fill tuple for this inner tuple.
        */
-    case EXEC_MJ_NEXTINNER:;
+    case EXEC_MJ_NEXTINNER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_NEXTINNER\n");
 
       if (doFillInner && !node->mj_MatchedInner)
@@ -875,13 +881,13 @@ ExecMergeJoin(PlanState *pstate)
          */
         TupleTableSlot *result;
 
+        node->mj_MatchedInner = true; /* do it only once */
 
-
-
-
-
-
-
+        result = MJFillInner(node);
+        if (result)
+        {
+          return result;
+        }
       }
 
       /*
@@ -900,7 +906,7 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalInnerValues(node, innerTupleSlot))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
 
         /*
          * Test the new inner tuple to see if it matches
@@ -923,12 +929,12 @@ ExecMergeJoin(PlanState *pstate)
         {
           node->mj_JoinState = EXEC_MJ_NEXTOUTER;
         }
-        else
-        { /* compareResult > 0 should not happen */
-
+        else /* compareResult > 0 should not happen */
+        {
+          elog(ERROR, "mergejoin input data is out of order");
         }
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
 
         /*
          * It contains a NULL and hence can't match any outer
@@ -937,7 +943,7 @@ ExecMergeJoin(PlanState *pstate)
          */
         node->mj_JoinState = EXEC_MJ_NEXTOUTER;
         break;
-      case MJEVAL_ENDOFJOIN:;
+      case MJEVAL_ENDOFJOIN:
 
         /*
          * No more inner tuples.  However, this might be only
@@ -973,7 +979,7 @@ ExecMergeJoin(PlanState *pstate)
        * outer-join fill tuple for this outer tuple.
        *------------------------------------------------
        */
-    case EXEC_MJ_NEXTOUTER:;
+    case EXEC_MJ_NEXTOUTER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_NEXTOUTER\n");
 
       if (doFillOuter && !node->mj_MatchedOuter)
@@ -1004,15 +1010,15 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalOuterValues(node))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
         /* Go test the new tuple against the marked tuple */
         node->mj_JoinState = EXEC_MJ_TESTOUTER;
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
         /* Can't match, so fetch next outer tuple */
         node->mj_JoinState = EXEC_MJ_NEXTOUTER;
         break;
-      case MJEVAL_ENDOFJOIN:;
+      case MJEVAL_ENDOFJOIN:
         /* No more outer tuples */
         MJ_printf("ExecMergeJoin: end of outer subplan\n");
         innerTupleSlot = node->mj_InnerTupleSlot;
@@ -1039,9 +1045,11 @@ ExecMergeJoin(PlanState *pstate)
        *
        * This is the case when
        *						  outer inner
-       *							4	  5  -
-       *marked tuple outer tuple -	5	  5 new outer tuple -	5
-       *5 6	  8  - inner tuple 7	 12
+       *							4	  5  - marked tuple
+       *			 outer tuple -	5	  5
+       *		 new outer tuple -	5	  5
+       *							6	  8  - inner tuple
+       *							7	 12
        *
        *				new outer tuple == marked tuple
        *
@@ -1054,15 +1062,16 @@ ExecMergeJoin(PlanState *pstate)
        *		This is the case when
        *
        *						  outer inner
-       *							5	  5  -
-       *marked tuple outer tuple -	5	  5 new outer tuple -	6
-       *8  - inner tuple 7	 12
+       *							5	  5  - marked tuple
+       *			 outer tuple -	5	  5
+       *		 new outer tuple -	6	  8  - inner tuple
+       *							7	 12
        *
        *				new outer tuple > marked tuple
        *
        *---------------------------------------------------------
        */
-    case EXEC_MJ_TESTOUTER:;
+    case EXEC_MJ_TESTOUTER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_TESTOUTER\n");
 
       /*
@@ -1139,11 +1148,11 @@ ExecMergeJoin(PlanState *pstate)
         /* reload comparison data for current inner */
         switch (MJEvalInnerValues(node, innerTupleSlot))
         {
-        case MJEVAL_MATCHABLE:;
+        case MJEVAL_MATCHABLE:
           /* proceed to compare it to the current outer */
           node->mj_JoinState = EXEC_MJ_SKIP_TEST;
           break;
-        case MJEVAL_NONMATCHABLE:;
+        case MJEVAL_NONMATCHABLE:
 
           /*
            * current inner can't possibly match any outer;
@@ -1152,7 +1161,7 @@ ExecMergeJoin(PlanState *pstate)
            */
           node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
           break;
-        case MJEVAL_ENDOFJOIN:;
+        case MJEVAL_ENDOFJOIN:
           /* No more inner tuples */
           if (doFillOuter)
           {
@@ -1167,9 +1176,9 @@ ExecMergeJoin(PlanState *pstate)
           return NULL;
         }
       }
-      else
-      { /* compareResult < 0 should not happen */
-
+      else /* compareResult < 0 should not happen */
+      {
+        elog(ERROR, "mergejoin input data is out of order");
       }
       break;
 
@@ -1202,7 +1211,7 @@ ExecMergeJoin(PlanState *pstate)
        * until we find the inner 12.
        *----------------------------------------------------------
        */
-    case EXEC_MJ_SKIP_TEST:;
+    case EXEC_MJ_SKIP_TEST:
       MJ_printf("ExecMergeJoin: EXEC_MJ_SKIP_TEST\n");
 
       /*
@@ -1242,7 +1251,7 @@ ExecMergeJoin(PlanState *pstate)
        * Before advancing, we check to see if we must emit an
        * outer-join fill tuple for this outer tuple.
        */
-    case EXEC_MJ_SKIPOUTER_ADVANCE:;
+    case EXEC_MJ_SKIPOUTER_ADVANCE:
       MJ_printf("ExecMergeJoin: EXEC_MJ_SKIPOUTER_ADVANCE\n");
 
       if (doFillOuter && !node->mj_MatchedOuter)
@@ -1273,15 +1282,15 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalOuterValues(node))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
         /* Go test the new tuple against the current inner */
         node->mj_JoinState = EXEC_MJ_SKIP_TEST;
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
         /* Can't match, so fetch next outer tuple */
         node->mj_JoinState = EXEC_MJ_SKIPOUTER_ADVANCE;
         break;
-      case MJEVAL_ENDOFJOIN:;
+      case MJEVAL_ENDOFJOIN:
         /* No more outer tuples */
         MJ_printf("ExecMergeJoin: end of outer subplan\n");
         innerTupleSlot = node->mj_InnerTupleSlot;
@@ -1306,7 +1315,7 @@ ExecMergeJoin(PlanState *pstate)
        * Before advancing, we check to see if we must emit an
        * outer-join fill tuple for this inner tuple.
        */
-    case EXEC_MJ_SKIPINNER_ADVANCE:;
+    case EXEC_MJ_SKIPINNER_ADVANCE:
       MJ_printf("ExecMergeJoin: EXEC_MJ_SKIPINNER_ADVANCE\n");
 
       if (doFillInner && !node->mj_MatchedInner)
@@ -1343,11 +1352,11 @@ ExecMergeJoin(PlanState *pstate)
       /* Compute join values and check for unmatchability */
       switch (MJEvalInnerValues(node, innerTupleSlot))
       {
-      case MJEVAL_MATCHABLE:;
+      case MJEVAL_MATCHABLE:
         /* proceed to compare it to the current outer */
         node->mj_JoinState = EXEC_MJ_SKIP_TEST;
         break;
-      case MJEVAL_NONMATCHABLE:;
+      case MJEVAL_NONMATCHABLE:
 
         /*
          * current inner can't possibly match any outer;
@@ -1355,7 +1364,7 @@ ExecMergeJoin(PlanState *pstate)
          */
         node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
         break;
-      case MJEVAL_ENDOFJOIN:;
+      case MJEVAL_ENDOFJOIN:
         /* No more inner tuples */
         MJ_printf("ExecMergeJoin: end of inner subplan\n");
         outerTupleSlot = node->mj_OuterTupleSlot;
@@ -1378,7 +1387,7 @@ ExecMergeJoin(PlanState *pstate)
        * are doing a right/full join and therefore must null-fill
        * any remaining unmatched inner tuples.
        */
-    case EXEC_MJ_ENDOUTER:;
+    case EXEC_MJ_ENDOUTER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_ENDOUTER\n");
 
       Assert(doFillInner);
@@ -1428,7 +1437,7 @@ ExecMergeJoin(PlanState *pstate)
        * are doing a left/full join and therefore must null- fill
        * any remaining unmatched outer tuples.
        */
-    case EXEC_MJ_ENDINNER:;
+    case EXEC_MJ_ENDINNER:
       MJ_printf("ExecMergeJoin: EXEC_MJ_ENDINNER\n");
 
       Assert(doFillOuter);
@@ -1470,8 +1479,8 @@ ExecMergeJoin(PlanState *pstate)
       /*
        * broken state value?
        */
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized mergejoin state: %d", (int)node->mj_JoinState);
     }
   }
 }
@@ -1582,18 +1591,18 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
   /* set up null tuples for outer joins, if needed */
   switch (node->join.jointype)
   {
-  case JOIN_INNER:;
-  case JOIN_SEMI:;
+  case JOIN_INNER:
+  case JOIN_SEMI:
     mergestate->mj_FillOuter = false;
     mergestate->mj_FillInner = false;
     break;
-  case JOIN_LEFT:;
-  case JOIN_ANTI:;
+  case JOIN_LEFT:
+  case JOIN_ANTI:
     mergestate->mj_FillOuter = true;
     mergestate->mj_FillInner = false;
     mergestate->mj_NullInnerTupleSlot = ExecInitNullTupleSlot(estate, innerDesc, &TTSOpsVirtual);
     break;
-  case JOIN_RIGHT:;
+  case JOIN_RIGHT:
     mergestate->mj_FillOuter = false;
     mergestate->mj_FillInner = true;
     mergestate->mj_NullOuterTupleSlot = ExecInitNullTupleSlot(estate, outerDesc, &TTSOpsVirtual);
@@ -1604,10 +1613,10 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
      */
     if (!check_constant_qual(node->join.joinqual, &mergestate->mj_ConstFalseJoin))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("RIGHT JOIN is only supported with merge-joinable join conditions")));
     }
     break;
-  case JOIN_FULL:;
+  case JOIN_FULL:
     mergestate->mj_FillOuter = true;
     mergestate->mj_FillInner = true;
     mergestate->mj_NullOuterTupleSlot = ExecInitNullTupleSlot(estate, outerDesc, &TTSOpsVirtual);
@@ -1619,11 +1628,11 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
      */
     if (!check_constant_qual(node->join.joinqual, &mergestate->mj_ConstFalseJoin))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("FULL JOIN is only supported with merge-joinable join conditions")));
     }
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized join type: %d", (int)node->join.jointype);
   }
 
   /*
@@ -1702,6 +1711,6 @@ ExecReScanMergeJoin(MergeJoinState *node)
   }
   if (node->js.ps.righttree->chgParam == NULL)
   {
-
+    ExecReScan(node->js.ps.righttree);
   }
 }

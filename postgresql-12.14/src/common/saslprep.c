@@ -5,7 +5,8 @@
  * The SASLprep algorithm is used to process a user-supplied password into
  * canonical form.  For more details, see:
  *
- * [RFC3454] Preparation of Internationalized Strings ("stringprep"),*	  http://www.ietf.org/rfc/rfc3454.txt
+ * [RFC3454] Preparation of Internationalized Strings ("stringprep"),
+ *	  http://www.ietf.org/rfc/rfc3454.txt
  *
  * [RFC4013] SASLprep: Stringprep Profile for User Names and Passwords
  *	  http://www.ietf.org/rfc/rfc4013.txt
@@ -68,7 +69,9 @@ pg_is_ascii_string(const char *p);
  * Stringprep Mapping Tables.
  *
  * The stringprep specification includes a number of tables of Unicode
- * codepoints, used in different parts of the algorithm.  They are below,* as arrays of codepoint ranges.  Each range is a pair of codepoints,* for the first and last codepoint included the range (inclusive!).
+ * codepoints, used in different parts of the algorithm.  They are below,
+ * as arrays of codepoint ranges.  Each range is a pair of codepoints,
+ * for the first and last codepoint included the range (inclusive!).
  */
 
 /*
@@ -175,39 +178,39 @@ static const pg_wchar LCat_codepoint_ranges[] = {0x0041, 0x005A, 0x0061, 0x007A,
 static int
 codepoint_range_cmp(const void *a, const void *b)
 {
+  const pg_wchar *key = (const pg_wchar *)a;
+  const pg_wchar *range = (const pg_wchar *)b;
 
+  if (*key < range[0])
+  {
+    return -1; /* less than lower bound */
+  }
+  if (*key > range[1])
+  {
+    return 1; /* greater than upper bound */
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  return 0; /* within range */
 }
 
 static bool
 is_code_in_table(pg_wchar code, const pg_wchar *map, int mapsize)
 {
+  Assert(mapsize % 2 == 0);
 
+  if (code < map[0] || code > map[mapsize - 1])
+  {
+    return false;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (bsearch(&code, map, mapsize / 2, sizeof(pg_wchar) * 2, codepoint_range_cmp))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 /*
@@ -218,24 +221,24 @@ is_code_in_table(pg_wchar code, const pg_wchar *map, int mapsize)
 static int
 pg_utf8_string_len(const char *source)
 {
+  const unsigned char *p = (const unsigned char *)source;
+  int l;
+  int num_chars = 0;
 
+  while (*p)
+  {
+    l = pg_utf_mblen(p);
 
+    if (!pg_utf8_islegal(p, l))
+    {
+      return -1;
+    }
 
+    p += l;
+    num_chars++;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return num_chars;
 }
 
 /*
@@ -248,7 +251,7 @@ pg_is_ascii_string(const char *p)
   {
     if (IS_HIGHBIT_SET(*p))
     {
-
+      return false;
     }
     p++;
   }
@@ -264,14 +267,16 @@ pg_is_ascii_string(const char *p)
  * SASLPREP_INVALID_UTF8 if not.
  *
  * If the string contains prohibited characters (or more precisely, if the
- * output string would contain prohibited characters after normalization),* returns SASLPREP_PROHIBITED.
+ * output string would contain prohibited characters after normalization),
+ * returns SASLPREP_PROHIBITED.
  *
  * On success, returns SASLPREP_SUCCESS, and the normalized string in
  * *output.
  *
  * In frontend, the normalized string is malloc'd, and the caller is
  * responsible for freeing it.  If an allocation fails, returns
- * SASLPREP_OOM.  In backend, the normalized string is palloc'd instead,* and a failed allocation leads to ereport(ERROR).
+ * SASLPREP_OOM.  In backend, the normalized string is palloc'd instead,
+ * and a failed allocation leads to ereport(ERROR).
  */
 pg_saslprep_rc
 pg_saslprep(const char *input, char **output)
@@ -294,7 +299,7 @@ pg_saslprep(const char *input, char **output)
   if (strlen(input) > MAX_PASSWORD_LENGTH)
   {
 #ifndef FRONTEND
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("password too long")));
 #else
     return SASLPREP_OOM;
 #endif
@@ -309,7 +314,7 @@ pg_saslprep(const char *input, char **output)
     *output = STRDUP(input);
     if (!(*output))
     {
-
+      goto oom;
     }
     return SASLPREP_SUCCESS;
   }
@@ -319,25 +324,25 @@ pg_saslprep(const char *input, char **output)
    *
    * This also checks that the input is a legal UTF-8 string.
    */
+  input_size = pg_utf8_string_len(input);
+  if (input_size < 0)
+  {
+    return SASLPREP_INVALID_UTF8;
+  }
 
+  input_chars = ALLOC((input_size + 1) * sizeof(pg_wchar));
+  if (!input_chars)
+  {
+    goto oom;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  p = (unsigned char *)input;
+  for (i = 0; i < input_size; i++)
+  {
+    input_chars[i] = utf8_to_unicode(p);
+    p += pg_utf_mblen(p);
+  }
+  input_chars[i] = (pg_wchar)'\0';
 
   /*
    * The steps below correspond to the steps listed in [RFC3454], Section
@@ -348,59 +353,59 @@ pg_saslprep(const char *input, char **output)
    * 1) Map -- For each character in the input, check if it has a mapping
    * and, if so, replace it with its mapping.
    */
+  count = 0;
+  for (i = 0; i < input_size; i++)
+  {
+    pg_wchar code = input_chars[i];
 
+    if (IS_CODE_IN_TABLE(code, non_ascii_space_ranges))
+    {
+      input_chars[count++] = 0x0020;
+    }
+    else if (IS_CODE_IN_TABLE(code, commonly_mapped_to_nothing_ranges))
+    {
+      /* map to nothing */
+    }
+    else
+    {
+      input_chars[count++] = code;
+    }
+  }
+  input_chars[count] = (pg_wchar)'\0';
+  input_size = count;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (input_size == 0)
+  {
+    goto prohibited; /* don't allow empty password */
+  }
 
   /*
    * 2) Normalize -- Normalize the result of step 1 using Unicode
    * normalization.
    */
-
-
-
-
-
+  output_chars = unicode_normalize_kc(input_chars);
+  if (!output_chars)
+  {
+    goto oom;
+  }
 
   /*
    * 3) Prohibit -- Check for any characters that are not allowed in the
    * output.  If any are found, return an error.
    */
+  for (i = 0; i < input_size; i++)
+  {
+    pg_wchar code = input_chars[i];
 
-
-
-
-
-
-
-
-
-
-
-
-
+    if (IS_CODE_IN_TABLE(code, prohibited_output_ranges))
+    {
+      goto prohibited;
+    }
+    if (IS_CODE_IN_TABLE(code, unassigned_codepoint_ranges))
+    {
+      goto prohibited;
+    }
+  }
 
   /*
    * 4) Check bidi -- Possibly check for right-to-left characters, and if
@@ -423,97 +428,97 @@ pg_saslprep(const char *input, char **output)
    * MUST be the first character of the string, and a RandALCat character
    * MUST be the last character of the string."
    */
+  contains_RandALCat = false;
+  for (i = 0; i < input_size; i++)
+  {
+    pg_wchar code = input_chars[i];
 
+    if (IS_CODE_IN_TABLE(code, RandALCat_codepoint_ranges))
+    {
+      contains_RandALCat = true;
+      break;
+    }
+  }
 
+  if (contains_RandALCat)
+  {
+    pg_wchar first = input_chars[0];
+    pg_wchar last = input_chars[input_size - 1];
 
+    for (i = 0; i < input_size; i++)
+    {
+      pg_wchar code = input_chars[i];
 
+      if (IS_CODE_IN_TABLE(code, LCat_codepoint_ranges))
+      {
+        goto prohibited;
+      }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (!IS_CODE_IN_TABLE(first, RandALCat_codepoint_ranges) || !IS_CODE_IN_TABLE(last, RandALCat_codepoint_ranges))
+    {
+      goto prohibited;
+    }
+  }
 
   /*
    * Finally, convert the result back to UTF-8.
    */
+  result_size = 0;
+  for (wp = output_chars; *wp; wp++)
+  {
+    unsigned char buf[4];
 
+    unicode_to_utf8(*wp, buf);
+    result_size += pg_utf_mblen(buf);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
+  result = ALLOC(result_size + 1);
+  if (!result)
+  {
+    goto oom;
+  }
 
   /*
    * There are no error exits below here, so the error exit paths don't need
    * to worry about possibly freeing "result".
    */
+  p = (unsigned char *)result;
+  for (wp = output_chars; *wp; wp++)
+  {
+    unicode_to_utf8(*wp, p);
+    p += pg_utf_mblen(p);
+  }
+  Assert((char *)p == result + result_size);
+  *p = '\0';
 
+  FREE(input_chars);
+  FREE(output_chars);
 
+  *output = result;
+  return SASLPREP_SUCCESS;
 
+prohibited:
+  if (input_chars)
+  {
+    FREE(input_chars);
+  }
+  if (output_chars)
+  {
+    FREE(output_chars);
+  }
 
+  return SASLPREP_PROHIBITED;
 
+oom:
+  if (input_chars)
+  {
+    FREE(input_chars);
+  }
+  if (output_chars)
+  {
+    FREE(output_chars);
+  }
 
-
-
-
-
-
-
-
-
-
-prohibited:;
-
-
-
-
-
-
-
-
-
-
-
-oom:;
-
-
-
-
-
-
-
-
-
-
+  return SASLPREP_OOM;
 }

@@ -151,7 +151,8 @@ bool data_sync_retry = false;
 
 #ifdef FDDEBUG
 #define DO_DB(A)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     int _do_db_save_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     A;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
     errno = _do_db_save_errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
@@ -171,7 +172,8 @@ bool data_sync_retry = false;
 #define FD_CLOSE_AT_EOXACT (1 << 1) /* T = close at eoXact */
 #define FD_TEMP_FILE_LIMIT (1 << 2) /* T = respect temp_file_limit */
 
-typedef struct vfd {
+typedef struct vfd
+{
   int fd;                 /* current FD, or VFD_CLOSED if none */
   unsigned short fdstate; /* bitflags for VFD's state */
   ResourceOwner resowner; /* owner, for automatic cleanup */
@@ -216,12 +218,20 @@ static uint64 temporary_files_size = 0;
  * List of OS handles opened with AllocateFile, AllocateDir and
  * OpenTransientFile.
  */
-typedef enum { AllocateDescFile, AllocateDescPipe, AllocateDescDir, AllocateDescRawFD } AllocateDescKind;
+typedef enum
+{
+  AllocateDescFile,
+  AllocateDescPipe,
+  AllocateDescDir,
+  AllocateDescRawFD
+} AllocateDescKind;
 
-typedef struct {
+typedef struct
+{
   AllocateDescKind kind;
   SubTransactionId create_subid;
-  union {
+  union
+  {
     FILE *file;
     DIR *dir;
     int fd;
@@ -274,8 +284,7 @@ static int nextTempTableSpace = 0;
  *	   /--less----\				   /---------\
  *	   v		   \			  v			  \
  *	 #0 --more---> LeastRecentlyUsed --more-\ \
- *	  ^\									|
- *|
+ *	  ^\									| |
  *	   \\less--> MostRecentlyUsedFile	<---/ |
  *		\more---/					 \--less--/
  *
@@ -342,9 +351,11 @@ pg_fsync(int fd)
 {
   /* #if is to skip the sync_method test if there's no need for it */
 #if defined(HAVE_FSYNC_WRITETHROUGH) && !defined(FSYNC_WRITETHROUGH_IS_FSYNC)
-  if (sync_method == SYNC_METHOD_FSYNC_WRITETHROUGH) {
+  if (sync_method == SYNC_METHOD_FSYNC_WRITETHROUGH)
+  {
     return pg_fsync_writethrough(fd);
-  } else
+  }
+  else
 #endif
     return pg_fsync_no_writethrough(fd);
 }
@@ -356,9 +367,12 @@ pg_fsync(int fd)
 int
 pg_fsync_no_writethrough(int fd)
 {
-  if (enableFsync) {
+  if (enableFsync)
+  {
     return fsync(fd);
-  } else {
+  }
+  else
+  {
     return 0;
   }
 }
@@ -369,7 +383,8 @@ pg_fsync_no_writethrough(int fd)
 int
 pg_fsync_writethrough(int fd)
 {
-  if (enableFsync) {
+  if (enableFsync)
+  {
 #ifdef WIN32
     return _commit(fd);
 #elif defined(F_FULLFSYNC)
@@ -378,7 +393,9 @@ pg_fsync_writethrough(int fd)
     errno = ENOSYS;
     return -1;
 #endif
-  } else {
+  }
+  else
+  {
     return 0;
   }
 }
@@ -391,13 +408,16 @@ pg_fsync_writethrough(int fd)
 int
 pg_fdatasync(int fd)
 {
-  if (enableFsync) {
+  if (enableFsync)
+  {
 #ifdef HAVE_FDATASYNC
     return fdatasync(fd);
 #else
     return fsync(fd);
 #endif
-  } else {
+  }
+  else
+  {
     return 0;
   }
 }
@@ -416,7 +436,8 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
    * if fsyncs are disabled - that's a decision we might want to make
    * configurable at some point.
    */
-  if (!enableFsync) {
+  if (!enableFsync)
+  {
     return;
   }
 
@@ -429,7 +450,8 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
     int rc;
     static bool not_implemented_by_kernel = false;
 
-    if (not_implemented_by_kernel) {
+    if (not_implemented_by_kernel)
+    {
       return;
     }
 
@@ -443,7 +465,8 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
      * clean data (like FADV_DONTNEED).
      */
     rc = sync_file_range(fd, offset, nbytes, SYNC_FILE_RANGE_WRITE);
-    if (rc != 0) {
+    if (rc != 0)
+    {
       int elevel;
 
       /*
@@ -451,10 +474,13 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
        * sync_file_range() such as Windows WSL, generate only one
        * warning and then suppress all further attempts by this process.
        */
-      if (errno == ENOSYS) {
+      if (errno == ENOSYS)
+      {
         elevel = WARNING;
         not_implemented_by_kernel = true;
-      } else {
+      }
+      else
+      {
         elevel = data_sync_elevel(WARNING);
       }
 
@@ -481,9 +507,11 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
      */
 
     /* mmap() needs actual length if we want to map whole file */
-    if (offset == 0 && nbytes == 0) {
+    if (offset == 0 && nbytes == 0)
+    {
       nbytes = lseek(fd, 0, SEEK_END);
-      if (nbytes < 0) {
+      if (nbytes < 0)
+      {
         ereport(WARNING, (errcode_for_file_access(), errmsg("could not determine dirty data size: %m")));
         return;
       }
@@ -496,17 +524,20 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
      */
 
     /* fetch pagesize only once */
-    if (pagesize == 0) {
+    if (pagesize == 0)
+    {
       pagesize = sysconf(_SC_PAGESIZE);
     }
 
     /* align length to pagesize, dropping any fractional page */
-    if (pagesize > 0) {
+    if (pagesize > 0)
+    {
       nbytes = (nbytes / pagesize) * pagesize;
     }
 
     /* fractional-page request is a no-op */
-    if (nbytes <= 0) {
+    if (nbytes <= 0)
+    {
       return;
     }
 
@@ -515,23 +546,29 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
      * may simply not be enough address space.  If so, silently fall
      * through to the next implementation.
      */
-    if (nbytes <= (off_t)SSIZE_MAX) {
+    if (nbytes <= (off_t)SSIZE_MAX)
+    {
       p = mmap(NULL, nbytes, PROT_READ, MAP_SHARED, fd, offset);
-    } else {
+    }
+    else
+    {
       p = MAP_FAILED;
     }
 
-    if (p != MAP_FAILED) {
+    if (p != MAP_FAILED)
+    {
       int rc;
 
       rc = msync(p, (size_t)nbytes, MS_ASYNC);
-      if (rc != 0) {
+      if (rc != 0)
+      {
         ereport(data_sync_elevel(WARNING), (errcode_for_file_access(), errmsg("could not flush dirty data: %m")));
         /* NB: need to fall through to munmap()! */
       }
 
       rc = munmap(p, (size_t)nbytes);
-      if (rc != 0) {
+      if (rc != 0)
+      {
         /* FATAL error because mapping would remain */
         ereport(FATAL, (errcode_for_file_access(), errmsg("could not munmap() while flushing data: %m")));
       }
@@ -554,7 +591,8 @@ pg_flush_data(int fd, off_t offset, off_t nbytes)
 
     rc = posix_fadvise(fd, offset, nbytes, POSIX_FADV_DONTNEED);
 
-    if (rc != 0) {
+    if (rc != 0)
+    {
       /* don't error out, this is just a performance optimization */
       ereport(WARNING, (errcode_for_file_access(), errmsg("could not flush dirty data: %m")));
     }
@@ -608,18 +646,24 @@ durable_rename(const char *oldfile, const char *newfile, int elevel)
    * because it's then guaranteed that either source or target file exists
    * after a crash.
    */
-  if (fsync_fname_ext(oldfile, false, false, elevel) != 0) {
+  if (fsync_fname_ext(oldfile, false, false, elevel) != 0)
+  {
     return -1;
   }
 
   fd = OpenTransientFile(newfile, PG_BINARY | O_RDWR);
-  if (fd < 0) {
-    if (errno != ENOENT) {
+  if (fd < 0)
+  {
+    if (errno != ENOENT)
+    {
       ereport(elevel, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", newfile)));
       return -1;
     }
-  } else {
-    if (pg_fsync(fd) != 0) {
+  }
+  else
+  {
+    if (pg_fsync(fd) != 0)
+    {
       int save_errno;
 
       /* close file upon error, might not be in transaction context */
@@ -631,14 +675,16 @@ durable_rename(const char *oldfile, const char *newfile, int elevel)
       return -1;
     }
 
-    if (CloseTransientFile(fd)) {
+    if (CloseTransientFile(fd))
+    {
       ereport(elevel, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", newfile)));
       return -1;
     }
   }
 
   /* Time to do the real deal... */
-  if (rename(oldfile, newfile) < 0) {
+  if (rename(oldfile, newfile) < 0)
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not rename file \"%s\" to \"%s\": %m", oldfile, newfile)));
     return -1;
   }
@@ -647,11 +693,13 @@ durable_rename(const char *oldfile, const char *newfile, int elevel)
    * To guarantee renaming the file is persistent, fsync the file with its
    * new name, and its containing directory.
    */
-  if (fsync_fname_ext(newfile, false, false, elevel) != 0) {
+  if (fsync_fname_ext(newfile, false, false, elevel) != 0)
+  {
     return -1;
   }
 
-  if (fsync_parent_path(newfile, elevel) != 0) {
+  if (fsync_parent_path(newfile, elevel) != 0)
+  {
     return -1;
   }
 
@@ -676,7 +724,8 @@ durable_rename(const char *oldfile, const char *newfile, int elevel)
 int
 durable_unlink(const char *fname, int elevel)
 {
-  if (unlink(fname) < 0) {
+  if (unlink(fname) < 0)
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not remove file \"%s\": %m", fname)));
     return -1;
   }
@@ -685,7 +734,8 @@ durable_unlink(const char *fname, int elevel)
    * To guarantee that the removal of the file is persistent, fsync its
    * parent directory.
    */
-  if (fsync_parent_path(fname, elevel) != 0) {
+  if (fsync_parent_path(fname, elevel) != 0)
+  {
     return -1;
   }
 
@@ -713,20 +763,23 @@ durable_link_or_rename(const char *oldfile, const char *newfile, int elevel)
    * Ensure that, if we crash directly after the rename/link, a file with
    * valid contents is moved into place.
    */
-  if (fsync_fname_ext(oldfile, false, false, elevel) != 0) {
+  if (fsync_fname_ext(oldfile, false, false, elevel) != 0)
+  {
     return -1;
   }
 
 #if HAVE_WORKING_LINK
-  if (link(oldfile, newfile) < 0) {
-    ereport(elevel, (errcode_for_file_access(), errmsg("could not link file \"%s\" to \"%s\": %m", oldfile, newfile),   (AmCheckpointerProcess() ? errhint("This is known to fail occasionally during archive recovery, where it is harmless.")   : 0)));
+  if (link(oldfile, newfile) < 0)
+  {
+    ereport(elevel, (errcode_for_file_access(), errmsg("could not link file \"%s\" to \"%s\": %m", oldfile, newfile), (AmCheckpointerProcess() ? errhint("This is known to fail occasionally during archive recovery, where it is harmless.") : 0)));
     return -1;
   }
   unlink(oldfile);
 #else
   /* XXX: Add racy file existence check? */
-  if (rename(oldfile, newfile) < 0) {
-    ereport(elevel, (errcode_for_file_access(), errmsg("could not rename file \"%s\" to \"%s\": %m", oldfile, newfile),  (AmCheckpointerProcess() ? errhint("This is known to fail occasionally during archive recovery, where it is harmless.")  : 0)));
+  if (rename(oldfile, newfile) < 0)
+  {
+    ereport(elevel, (errcode_for_file_access(), errmsg("could not rename file \"%s\" to \"%s\": %m", oldfile, newfile), (AmCheckpointerProcess() ? errhint("This is known to fail occasionally during archive recovery, where it is harmless.") : 0)));
     return -1;
   }
 #endif
@@ -735,12 +788,14 @@ durable_link_or_rename(const char *oldfile, const char *newfile, int elevel)
    * Make change persistent in case of an OS crash, both the new entry and
    * its parent directory need to be flushed.
    */
-  if (fsync_fname_ext(newfile, false, false, elevel) != 0) {
+  if (fsync_fname_ext(newfile, false, false, elevel) != 0)
+  {
     return -1;
   }
 
   /* Same for parent directory */
-  if (fsync_parent_path(newfile, elevel) != 0) {
+  if (fsync_parent_path(newfile, elevel) != 0)
+  {
     return -1;
   }
 
@@ -760,7 +815,8 @@ InitFileAccess(void)
 
   /* initialize cache header entry */
   VfdCache = (Vfd *)malloc(sizeof(Vfd));
-  if (VfdCache == NULL) {
+  if (VfdCache == NULL)
+  {
     ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
@@ -808,13 +864,15 @@ count_usable_fds(int max_to_probe, int *usable_fds, int *already_open)
 #else  /* but BSD doesn't ... */
   getrlimit_status = getrlimit(RLIMIT_OFILE, &rlim);
 #endif /* RLIMIT_NOFILE */
-  if (getrlimit_status != 0) {
+  if (getrlimit_status != 0)
+  {
     ereport(WARNING, (errmsg("getrlimit failed: %m")));
   }
 #endif /* HAVE_GETRLIMIT */
 
   /* dup until failure or probe limit reached */
-  for (;;) {
+  for (;;)
+  {
     int thisfd;
 
 #ifdef HAVE_GETRLIMIT
@@ -823,37 +881,44 @@ count_usable_fds(int max_to_probe, int *usable_fds, int *already_open)
      * don't go beyond RLIMIT_NOFILE; causes irritating kernel logs on
      * some platforms
      */
-    if (getrlimit_status == 0 && highestfd >= rlim.rlim_cur - 1) {
+    if (getrlimit_status == 0 && highestfd >= rlim.rlim_cur - 1)
+    {
       break;
     }
 #endif
 
     thisfd = dup(0);
-    if (thisfd < 0) {
+    if (thisfd < 0)
+    {
       /* Expect EMFILE or ENFILE, else it's fishy */
-      if (errno != EMFILE && errno != ENFILE) {
+      if (errno != EMFILE && errno != ENFILE)
+      {
         elog(WARNING, "dup(0) failed after %d successes: %m", used);
       }
       break;
     }
 
-    if (used >= size) {
+    if (used >= size)
+    {
       size *= 2;
       fd = (int *)repalloc(fd, size * sizeof(int));
     }
     fd[used++] = thisfd;
 
-    if (highestfd < thisfd) {
+    if (highestfd < thisfd)
+    {
       highestfd = thisfd;
     }
 
-    if (used >= max_to_probe) {
+    if (used >= max_to_probe)
+    {
       break;
     }
   }
 
   /* release the files we opened */
-  for (j = 0; j < used; j++) {
+  for (j = 0; j < used; j++)
+  {
     close(fd[j]);
   }
 
@@ -898,7 +963,8 @@ set_max_safe_fds(void)
   /*
    * Make sure we still have enough to get by.
    */
-  if (max_safe_fds < FD_MINFREE) {
+  if (max_safe_fds < FD_MINFREE)
+  {
     ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("insufficient file descriptors available to start server process"), errdetail("System allows %d, we need at least %d.", max_safe_fds + NUM_RESERVED_FDS, FD_MINFREE + NUM_RESERVED_FDS)));
   }
 
@@ -939,16 +1005,19 @@ BasicOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 tryAgain:
   fd = open(fileName, fileFlags, fileMode);
 
-  if (fd >= 0) {
+  if (fd >= 0)
+  {
     return fd; /* success! */
   }
 
-  if (errno == EMFILE || errno == ENFILE) {
+  if (errno == EMFILE || errno == ENFILE)
+  {
     int save_errno = errno;
 
     ereport(LOG, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("out of file descriptors: %m; release and retry")));
     errno = 0;
-    if (ReleaseLruFile()) {
+    if (ReleaseLruFile())
+    {
       goto tryAgain;
     }
     errno = save_errno;
@@ -967,7 +1036,8 @@ _dump_lru(void)
   char buf[2048];
 
   snprintf(buf, sizeof(buf), "LRU: MOST %d ", mru);
-  while (mru != 0) {
+  while (mru != 0)
+  {
     mru = vfdP->lruLessRecently;
     vfdP = &VfdCache[mru];
     snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%d ", mru);
@@ -1010,7 +1080,8 @@ LruDelete(File file)
    * Close the file.  We aren't expecting this to fail; if it does, better
    * to leak the FD than to mess up our internal state.
    */
-  if (close(vfdP->fd)) {
+  if (close(vfdP->fd))
+  {
     elog(vfdP->fdstate & FD_TEMP_FILE_LIMIT ? LOG : data_sync_elevel(LOG), "could not close file \"%s\": %m", vfdP->fileName);
   }
   vfdP->fd = VFD_CLOSED;
@@ -1052,7 +1123,8 @@ LruInsert(File file)
 
   vfdP = &VfdCache[file];
 
-  if (FileIsNotOpen(file)) {
+  if (FileIsNotOpen(file))
+  {
     /* Close excess kernel FDs. */
     ReleaseLruFiles();
 
@@ -1062,10 +1134,13 @@ LruInsert(File file)
      * another FD if necessary...
      */
     vfdP->fd = BasicOpenFilePerm(vfdP->fileName, vfdP->fileFlags, vfdP->fileMode);
-    if (vfdP->fd < 0) {
+    if (vfdP->fd < 0)
+    {
       DO_DB(elog(LOG, "re-open failed: %m"));
       return -1;
-    } else {
+    }
+    else
+    {
       ++nfile;
     }
   }
@@ -1087,7 +1162,8 @@ ReleaseLruFile(void)
 {
   DO_DB(elog(LOG, "ReleaseLruFile. Opened %d", nfile));
 
-  if (nfile > 0) {
+  if (nfile > 0)
+  {
     /*
      * There are opened files and so there should be at least one used vfd
      * in the ring.
@@ -1106,8 +1182,10 @@ ReleaseLruFile(void)
 static void
 ReleaseLruFiles(void)
 {
-  while (nfile + numAllocatedDescs >= max_safe_fds) {
-    if (!ReleaseLruFile()) {
+  while (nfile + numAllocatedDescs >= max_safe_fds)
+  {
+    if (!ReleaseLruFile())
+    {
       break;
     }
   }
@@ -1123,7 +1201,8 @@ AllocateVfd(void)
 
   Assert(SizeVfdCache > 0); /* InitFileAccess not called? */
 
-  if (VfdCache[0].nextFree == 0) {
+  if (VfdCache[0].nextFree == 0)
+  {
     /*
      * The free list is empty so it is time to increase the size of the
      * array.  We choose to double it each time this happens. However,
@@ -1132,7 +1211,8 @@ AllocateVfd(void)
     Size newCacheSize = SizeVfdCache * 2;
     Vfd *newVfdCache;
 
-    if (newCacheSize < 32) {
+    if (newCacheSize < 32)
+    {
       newCacheSize = 32;
     }
 
@@ -1140,7 +1220,8 @@ AllocateVfd(void)
      * Be careful not to clobber VfdCache ptr if realloc fails.
      */
     newVfdCache = (Vfd *)realloc(VfdCache, sizeof(Vfd) * newCacheSize);
-    if (newVfdCache == NULL) {
+    if (newVfdCache == NULL)
+    {
       ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
     }
     VfdCache = newVfdCache;
@@ -1148,7 +1229,8 @@ AllocateVfd(void)
     /*
      * Initialize the new entries and link them into the free list.
      */
-    for (i = SizeVfdCache; i < newCacheSize; i++) {
+    for (i = SizeVfdCache; i < newCacheSize; i++)
+    {
       MemSet((char *)&(VfdCache[i]), 0, sizeof(Vfd));
       VfdCache[i].nextFree = i + 1;
       VfdCache[i].fd = VFD_CLOSED;
@@ -1176,7 +1258,8 @@ FreeVfd(File file)
 
   DO_DB(elog(LOG, "FreeVfd: %d (%s)", file, vfdP->fileName ? vfdP->fileName : ""));
 
-  if (vfdP->fileName != NULL) {
+  if (vfdP->fileName != NULL)
+  {
     free(vfdP->fileName);
     vfdP->fileName = NULL;
   }
@@ -1199,12 +1282,16 @@ FileAccess(File file)
    * ring (possibly closing the least recently used file to get an FD).
    */
 
-  if (FileIsNotOpen(file)) {
+  if (FileIsNotOpen(file))
+  {
     returnValue = LruInsert(file);
-    if (returnValue != 0) {
+    if (returnValue != 0)
+    {
       return returnValue;
     }
-  } else if (VfdCache[0].lruLessRecently != file) {
+  }
+  else if (VfdCache[0].lruLessRecently != file)
+  {
     /*
      * We now know that the file is open and that it is not the last one
      * accessed, so we need to move it to the head of the Lru ring.
@@ -1225,8 +1312,10 @@ ReportTemporaryFileUsage(const char *path, off_t size)
 {
   pgstat_report_tempfile(size);
 
-  if (log_temp_files >= 0) {
-    if ((size / 1024) >= log_temp_files) {
+  if (log_temp_files >= 0)
+  {
+    if ((size / 1024) >= log_temp_files)
+    {
       ereport(LOG, (errmsg("temporary file: path \"%s\", size %lu", path, (unsigned long)size)));
     }
   }
@@ -1256,7 +1345,8 @@ void
 FileInvalidate(File file)
 {
   Assert(FileIsValid(file));
-  if (!FileIsNotOpen(file)) {
+  if (!FileIsNotOpen(file))
+  {
     LruDelete(file);
   }
 }
@@ -1292,7 +1382,8 @@ PathNameOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
    * We need a malloc'd copy of the file name; fail cleanly if no room.
    */
   fnamecopy = strdup(fileName);
-  if (fnamecopy == NULL) {
+  if (fnamecopy == NULL)
+  {
     ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
@@ -1304,7 +1395,8 @@ PathNameOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 
   vfdP->fd = BasicOpenFilePerm(fileName, fileFlags, fileMode);
 
-  if (vfdP->fd < 0) {
+  if (vfdP->fd < 0)
+  {
     int save_errno = errno;
 
     FreeVfd(file);
@@ -1342,8 +1434,10 @@ PathNameOpenFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 void
 PathNameCreateTemporaryDir(const char *basedir, const char *directory)
 {
-  if (MakePGDirectory(directory) < 0) {
-    if (errno == EEXIST) {
+  if (MakePGDirectory(directory) < 0)
+  {
+    if (errno == EEXIST)
+    {
       return;
     }
 
@@ -1352,12 +1446,14 @@ PathNameCreateTemporaryDir(const char *basedir, const char *directory)
      * EEXIST to close a race against another process following the same
      * algorithm.
      */
-    if (MakePGDirectory(basedir) < 0 && errno != EEXIST) {
+    if (MakePGDirectory(basedir) < 0 && errno != EEXIST)
+    {
       ereport(ERROR, (errcode_for_file_access(), errmsg("cannot create temporary directory \"%s\": %m", basedir)));
     }
 
     /* Try again. */
-    if (MakePGDirectory(directory) < 0 && errno != EEXIST) {
+    if (MakePGDirectory(directory) < 0 && errno != EEXIST)
+    {
       ereport(ERROR, (errcode_for_file_access(), errmsg("cannot create temporary subdirectory \"%s\": %m", directory)));
     }
   }
@@ -1372,7 +1468,8 @@ PathNameDeleteTemporaryDir(const char *dirname)
   struct stat statbuf;
 
   /* Silently ignore missing directory. */
-  if (stat(dirname, &statbuf) != 0 && errno == ENOENT) {
+  if (stat(dirname, &statbuf) != 0 && errno == ENOENT)
+  {
     return;
   }
 
@@ -1409,7 +1506,8 @@ OpenTemporaryFile(bool interXact)
    * Make sure the current resource owner has space for this File before we
    * open it, if we'll be registering it below.
    */
-  if (!interXact) {
+  if (!interXact)
+  {
     ResourceOwnerEnlargeFiles(CurrentResourceOwner);
   }
 
@@ -1422,10 +1520,12 @@ OpenTemporaryFile(bool interXact)
    * force it into the database's default tablespace, so that it will not
    * pose a threat to possible tablespace drop attempts.
    */
-  if (numTempTableSpaces > 0 && !interXact) {
+  if (numTempTableSpaces > 0 && !interXact)
+  {
     Oid tblspcOid = GetNextTempTableSpace();
 
-    if (OidIsValid(tblspcOid)) {
+    if (OidIsValid(tblspcOid))
+    {
       file = OpenTemporaryFileInTablespace(tblspcOid, false);
     }
   }
@@ -1435,7 +1535,8 @@ OpenTemporaryFile(bool interXact)
    * tablespace.  MyDatabaseTableSpace should normally be set before we get
    * here, but just in case it isn't, fall back to pg_default tablespace.
    */
-  if (file <= 0) {
+  if (file <= 0)
+  {
     file = OpenTemporaryFileInTablespace(MyDatabaseTableSpace ? MyDatabaseTableSpace : DEFAULTTABLESPACE_OID, true);
   }
 
@@ -1443,7 +1544,8 @@ OpenTemporaryFile(bool interXact)
   VfdCache[file].fdstate |= FD_DELETE_AT_CLOSE | FD_TEMP_FILE_LIMIT;
 
   /* Register it with the current resource owner */
-  if (!interXact) {
+  if (!interXact)
+  {
     RegisterTemporaryFile(file);
   }
 
@@ -1461,9 +1563,12 @@ TempTablespacePath(char *path, Oid tablespace)
    *
    * If someone tries to specify pg_global, use pg_default instead.
    */
-  if (tablespace == InvalidOid || tablespace == DEFAULTTABLESPACE_OID || tablespace == GLOBALTABLESPACE_OID) {
+  if (tablespace == InvalidOid || tablespace == DEFAULTTABLESPACE_OID || tablespace == GLOBALTABLESPACE_OID)
+  {
     snprintf(path, MAXPGPATH, "base/%s", PG_TEMP_FILES_DIR);
-  } else {
+  }
+  else
+  {
     /* All other tablespaces are accessed via symlinks */
     snprintf(path, MAXPGPATH, "pg_tblspc/%u/%s/%s", tablespace, TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
   }
@@ -1493,7 +1598,8 @@ OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError)
    * temp file that can be reused.
    */
   file = PathNameOpenFile(tempfilepath, O_RDWR | O_CREAT | O_TRUNC | PG_BINARY);
-  if (file <= 0) {
+  if (file <= 0)
+  {
     /*
      * We might need to create the tablespace's tempfile directory, if no
      * one has yet done so.
@@ -1505,7 +1611,8 @@ OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError)
     (void)MakePGDirectory(tempdirpath);
 
     file = PathNameOpenFile(tempfilepath, O_RDWR | O_CREAT | O_TRUNC | PG_BINARY);
-    if (file <= 0 && rejectError) {
+    if (file <= 0 && rejectError)
+    {
       elog(ERROR, "could not create temporary file \"%s\": %m", tempfilepath);
     }
   }
@@ -1537,10 +1644,14 @@ PathNameCreateTemporaryFile(const char *path, bool error_on_failure)
    * temp file that can be reused.
    */
   file = PathNameOpenFile(path, O_RDWR | O_CREAT | O_TRUNC | PG_BINARY);
-  if (file <= 0) {
-    if (error_on_failure) {
+  if (file <= 0)
+  {
+    if (error_on_failure)
+    {
       ereport(ERROR, (errcode_for_file_access(), errmsg("could not create temporary file \"%s\": %m", path)));
-    } else {
+    }
+    else
+    {
       return file;
     }
   }
@@ -1571,11 +1682,13 @@ PathNameOpenTemporaryFile(const char *path)
   file = PathNameOpenFile(path, O_RDONLY | PG_BINARY);
 
   /* If no such file, then we don't raise an error. */
-  if (file <= 0 && errno != ENOENT) {
+  if (file <= 0 && errno != ENOENT)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not open temporary file \"%s\": %m", path)));
   }
 
-  if (file > 0) {
+  if (file > 0)
+  {
     /* Register it for automatic close. */
     RegisterTemporaryFile(file);
   }
@@ -1594,9 +1707,12 @@ PathNameDeleteTemporaryFile(const char *path, bool error_on_failure)
   int stat_errno;
 
   /* Get the final size for pgstat reporting. */
-  if (stat(path, &filestats) != 0) {
+  if (stat(path, &filestats) != 0)
+  {
     stat_errno = errno;
-  } else {
+  }
+  else
+  {
     stat_errno = 0;
   }
 
@@ -1605,20 +1721,26 @@ PathNameDeleteTemporaryFile(const char *path, bool error_on_failure)
    * non-existence to support BufFileDeleteShared which doesn't know how
    * many segments it has to delete until it runs out.
    */
-  if (stat_errno == ENOENT) {
+  if (stat_errno == ENOENT)
+  {
     return false;
   }
 
-  if (unlink(path) < 0) {
-    if (errno != ENOENT) {
+  if (unlink(path) < 0)
+  {
+    if (errno != ENOENT)
+    {
       ereport(error_on_failure ? ERROR : LOG, (errcode_for_file_access(), errmsg("could not unlink temporary file \"%s\": %m", path)));
     }
     return false;
   }
 
-  if (stat_errno == 0) {
+  if (stat_errno == 0)
+  {
     ReportTemporaryFileUsage(path, filestats.st_size);
-  } else {
+  }
+  else
+  {
     errno = stat_errno;
     ereport(LOG, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", path)));
   }
@@ -1640,9 +1762,11 @@ FileClose(File file)
 
   vfdP = &VfdCache[file];
 
-  if (!FileIsNotOpen(file)) {
+  if (!FileIsNotOpen(file))
+  {
     /* close the file */
-    if (close(vfdP->fd)) {
+    if (close(vfdP->fd))
+    {
       /*
        * We may need to panic on failure to close non-temporary files;
        * see LruDelete.
@@ -1657,7 +1781,8 @@ FileClose(File file)
     Delete(file);
   }
 
-  if (vfdP->fdstate & FD_TEMP_FILE_LIMIT) {
+  if (vfdP->fdstate & FD_TEMP_FILE_LIMIT)
+  {
     /* Subtract its size from current usage (do first in case of error) */
     temporary_files_size -= vfdP->fileSize;
     vfdP->fileSize = 0;
@@ -1666,7 +1791,8 @@ FileClose(File file)
   /*
    * Delete the file if it was temporary, and make a log entry if wanted
    */
-  if (vfdP->fdstate & FD_DELETE_AT_CLOSE) {
+  if (vfdP->fdstate & FD_DELETE_AT_CLOSE)
+  {
     struct stat filestats;
     int stat_errno;
 
@@ -1680,28 +1806,36 @@ FileClose(File file)
     vfdP->fdstate &= ~FD_DELETE_AT_CLOSE;
 
     /* first try the stat() */
-    if (stat(vfdP->fileName, &filestats)) {
+    if (stat(vfdP->fileName, &filestats))
+    {
       stat_errno = errno;
-    } else {
+    }
+    else
+    {
       stat_errno = 0;
     }
 
     /* in any case do the unlink */
-    if (unlink(vfdP->fileName)) {
+    if (unlink(vfdP->fileName))
+    {
       elog(LOG, "could not unlink file \"%s\": %m", vfdP->fileName);
     }
 
     /* and last report the stat results */
-    if (stat_errno == 0) {
+    if (stat_errno == 0)
+    {
       ReportTemporaryFileUsage(vfdP->fileName, filestats.st_size);
-    } else {
+    }
+    else
+    {
       errno = stat_errno;
       elog(LOG, "could not stat file \"%s\": %m", vfdP->fileName);
     }
   }
 
   /* Unregister it from the resource owner */
-  if (vfdP->resowner) {
+  if (vfdP->resowner)
+  {
     ResourceOwnerForgetFile(vfdP->resowner, file);
   }
 
@@ -1731,7 +1865,8 @@ FilePrefetch(File file, off_t offset, int amount, uint32 wait_event_info)
   DO_DB(elog(LOG, "FilePrefetch: %d (%s) " INT64_FORMAT " %d", file, VfdCache[file].fileName, (int64)offset, amount));
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return returnCode;
   }
 
@@ -1755,12 +1890,14 @@ FileWriteback(File file, off_t offset, off_t nbytes, uint32 wait_event_info)
 
   DO_DB(elog(LOG, "FileWriteback: %d (%s) " INT64_FORMAT " " INT64_FORMAT, file, VfdCache[file].fileName, (int64)offset, (int64)nbytes));
 
-  if (nbytes <= 0) {
+  if (nbytes <= 0)
+  {
     return;
   }
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return;
   }
 
@@ -1780,7 +1917,8 @@ FileRead(File file, char *buffer, int amount, off_t offset, uint32 wait_event_in
   DO_DB(elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p", file, VfdCache[file].fileName, (int64)offset, amount, buffer));
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return returnCode;
   }
 
@@ -1791,7 +1929,8 @@ retry:
   returnCode = pg_pread(vfdP->fd, buffer, amount, offset);
   pgstat_report_wait_end();
 
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     /*
      * Windows may run out of kernel buffers and return "Insufficient
      * system resources" error.  Wait a bit and retry to solve it.
@@ -1802,18 +1941,20 @@ retry:
 #ifdef WIN32
     DWORD error = GetLastError();
 
-    switch (error) {
+    switch (error)
+    {
     case ERROR_NO_SYSTEM_RESOURCES:
       pg_usleep(1000L);
       errno = EINTR;
       break;
-    default:;
+    default:
       _dosmaperr(error);
       break;
     }
 #endif
     /* OK to retry if interrupted */
-    if (errno == EINTR) {
+    if (errno == EINTR)
+    {
       goto retry;
     }
   }
@@ -1832,7 +1973,8 @@ FileWrite(File file, char *buffer, int amount, off_t offset, uint32 wait_event_i
   DO_DB(elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p", file, VfdCache[file].fileName, (int64)offset, amount, buffer));
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return returnCode;
   }
 
@@ -1846,14 +1988,17 @@ FileWrite(File file, char *buffer, int amount, off_t offset, uint32 wait_event_i
    * message if we do that.  All current callers would just throw error
    * immediately anyway, so this is safe at present.
    */
-  if (temp_file_limit >= 0 && (vfdP->fdstate & FD_TEMP_FILE_LIMIT)) {
+  if (temp_file_limit >= 0 && (vfdP->fdstate & FD_TEMP_FILE_LIMIT))
+  {
     off_t past_write = offset + amount;
 
-    if (past_write > vfdP->fileSize) {
+    if (past_write > vfdP->fileSize)
+    {
       uint64 newTotal = temporary_files_size;
 
       newTotal += past_write - vfdP->fileSize;
-      if (newTotal > (uint64)temp_file_limit * (uint64)1024) {
+      if (newTotal > (uint64)temp_file_limit * (uint64)1024)
+      {
         ereport(ERROR, (errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED), errmsg("temporary file size exceeds temp_file_limit (%dkB)", temp_file_limit)));
       }
     }
@@ -1866,11 +2011,13 @@ retry:
   pgstat_report_wait_end();
 
   /* if write didn't set errno, assume problem is no disk space */
-  if (returnCode != amount && errno == 0) {
+  if (returnCode != amount && errno == 0)
+  {
     errno = ENOSPC;
   }
 
-  if (returnCode >= 0) {
+  if (returnCode >= 0)
+  {
     /*
      * Maintain fileSize and temporary_files_size if it's a temp file.
      *
@@ -1878,33 +2025,39 @@ retry:
      * get here in that state if we're not enforcing temporary_files_size,
      * so we don't care.
      */
-    if (vfdP->fdstate & FD_TEMP_FILE_LIMIT) {
+    if (vfdP->fdstate & FD_TEMP_FILE_LIMIT)
+    {
       off_t past_write = offset + amount;
 
-      if (past_write > vfdP->fileSize) {
+      if (past_write > vfdP->fileSize)
+      {
         temporary_files_size += past_write - vfdP->fileSize;
         vfdP->fileSize = past_write;
       }
     }
-  } else {
+  }
+  else
+  {
     /*
      * See comments in FileRead()
      */
 #ifdef WIN32
     DWORD error = GetLastError();
 
-    switch (error) {
+    switch (error)
+    {
     case ERROR_NO_SYSTEM_RESOURCES:
       pg_usleep(1000L);
       errno = EINTR;
       break;
-    default:;
+    default:
       _dosmaperr(error);
       break;
     }
 #endif
     /* OK to retry if interrupted */
-    if (errno == EINTR) {
+    if (errno == EINTR)
+    {
       goto retry;
     }
   }
@@ -1922,7 +2075,8 @@ FileSync(File file, uint32 wait_event_info)
   DO_DB(elog(LOG, "FileSync: %d (%s)", file, VfdCache[file].fileName));
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return returnCode;
   }
 
@@ -1940,8 +2094,10 @@ FileSize(File file)
 
   DO_DB(elog(LOG, "FileSize %d (%s)", file, VfdCache[file].fileName));
 
-  if (FileIsNotOpen(file)) {
-    if (FileAccess(file) < 0) {
+  if (FileIsNotOpen(file))
+  {
+    if (FileAccess(file) < 0)
+    {
       return (off_t)-1;
     }
   }
@@ -1959,7 +2115,8 @@ FileTruncate(File file, off_t offset, uint32 wait_event_info)
   DO_DB(elog(LOG, "FileTruncate %d (%s)", file, VfdCache[file].fileName));
 
   returnCode = FileAccess(file);
-  if (returnCode < 0) {
+  if (returnCode < 0)
+  {
     return returnCode;
   }
 
@@ -1967,7 +2124,8 @@ FileTruncate(File file, off_t offset, uint32 wait_event_info)
   returnCode = ftruncate(VfdCache[file].fd, offset);
   pgstat_report_wait_end();
 
-  if (returnCode == 0 && VfdCache[file].fileSize > offset) {
+  if (returnCode == 0 && VfdCache[file].fileSize > offset)
+  {
     /* adjust our state for truncation of a temp file */
     Assert(VfdCache[file].fdstate & FD_TEMP_FILE_LIMIT);
     temporary_files_size -= VfdCache[file].fileSize - offset;
@@ -2037,7 +2195,8 @@ reserveAllocatedDesc(void)
   int newMax;
 
   /* Quick out if array already has a free slot. */
-  if (numAllocatedDescs < maxAllocatedDescs) {
+  if (numAllocatedDescs < maxAllocatedDescs)
+  {
     return true;
   }
 
@@ -2047,11 +2206,13 @@ reserveAllocatedDesc(void)
    * we will ever need, anyway.  We don't want to look at max_safe_fds
    * immediately because set_max_safe_fds() may not have run yet.
    */
-  if (allocatedDescs == NULL) {
+  if (allocatedDescs == NULL)
+  {
     newMax = FD_MINFREE / 2;
     newDescs = (AllocateDesc *)malloc(newMax * sizeof(AllocateDesc));
     /* Out of memory already?  Treat as fatal error. */
-    if (newDescs == NULL) {
+    if (newDescs == NULL)
+    {
       ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
     }
     allocatedDescs = newDescs;
@@ -2069,10 +2230,12 @@ reserveAllocatedDesc(void)
    * least as large as the initial size, FD_MINFREE / 2.)
    */
   newMax = max_safe_fds / 2;
-  if (newMax > maxAllocatedDescs) {
+  if (newMax > maxAllocatedDescs)
+  {
     newDescs = (AllocateDesc *)realloc(allocatedDescs, newMax * sizeof(AllocateDesc));
     /* Treat out-of-memory as a non-fatal error. */
-    if (newDescs == NULL) {
+    if (newDescs == NULL)
+    {
       return false;
     }
     allocatedDescs = newDescs;
@@ -2109,7 +2272,8 @@ AllocateFile(const char *name, const char *mode)
   DO_DB(elog(LOG, "AllocateFile: Allocated %d (%s)", numAllocatedDescs, name));
 
   /* Can we allocate another non-virtual FD? */
-  if (!reserveAllocatedDesc()) {
+  if (!reserveAllocatedDesc())
+  {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to open file \"%s\"", maxAllocatedDescs, name)));
   }
 
@@ -2117,7 +2281,8 @@ AllocateFile(const char *name, const char *mode)
   ReleaseLruFiles();
 
 TryAgain:
-  if ((file = fopen(name, mode)) != NULL) {
+  if ((file = fopen(name, mode)) != NULL)
+  {
     AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
 
     desc->kind = AllocateDescFile;
@@ -2127,12 +2292,14 @@ TryAgain:
     return desc->desc.file;
   }
 
-  if (errno == EMFILE || errno == ENFILE) {
+  if (errno == EMFILE || errno == ENFILE)
+  {
     int save_errno = errno;
 
     ereport(LOG, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("out of file descriptors: %m; release and retry")));
     errno = 0;
-    if (ReleaseLruFile()) {
+    if (ReleaseLruFile())
+    {
       goto TryAgain;
     }
     errno = save_errno;
@@ -2162,7 +2329,8 @@ OpenTransientFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
   DO_DB(elog(LOG, "OpenTransientFile: Allocated %d (%s)", numAllocatedDescs, fileName));
 
   /* Can we allocate another non-virtual FD? */
-  if (!reserveAllocatedDesc()) {
+  if (!reserveAllocatedDesc())
+  {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to open file \"%s\"", maxAllocatedDescs, fileName)));
   }
 
@@ -2171,7 +2339,8 @@ OpenTransientFilePerm(const char *fileName, int fileFlags, mode_t fileMode)
 
   fd = BasicOpenFilePerm(fileName, fileFlags, fileMode);
 
-  if (fd >= 0) {
+  if (fd >= 0)
+  {
     AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
 
     desc->kind = AllocateDescRawFD;
@@ -2203,8 +2372,9 @@ OpenPipeStream(const char *command, const char *mode)
   DO_DB(elog(LOG, "OpenPipeStream: Allocated %d (%s)", numAllocatedDescs, command));
 
   /* Can we allocate another non-virtual FD? */
-  if (!reserveAllocatedDesc()) {
-    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to execute command \"%s\"",     maxAllocatedDescs, command)));
+  if (!reserveAllocatedDesc())
+  {
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to execute command \"%s\"", maxAllocatedDescs, command)));
   }
 
   /* Close excess kernel FDs. */
@@ -2219,7 +2389,8 @@ TryAgain:
   save_errno = errno;
   pqsignal(SIGPIPE, SIG_IGN);
   errno = save_errno;
-  if (file != NULL) {
+  if (file != NULL)
+  {
     AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
 
     desc->kind = AllocateDescPipe;
@@ -2229,9 +2400,11 @@ TryAgain:
     return desc->desc.file;
   }
 
-  if (errno == EMFILE || errno == ENFILE) {
+  if (errno == EMFILE || errno == ENFILE)
+  {
     ereport(LOG, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("out of file descriptors: %m; release and retry")));
-    if (ReleaseLruFile()) {
+    if (ReleaseLruFile())
+    {
       goto TryAgain;
     }
     errno = save_errno;
@@ -2251,7 +2424,8 @@ FreeDesc(AllocateDesc *desc)
   int result;
 
   /* Close the underlying object */
-  switch (desc->kind) {
+  switch (desc->kind)
+  {
   case AllocateDescFile:
     result = fclose(desc->desc.file);
     break;
@@ -2264,7 +2438,7 @@ FreeDesc(AllocateDesc *desc)
   case AllocateDescRawFD:
     result = close(desc->desc.fd);
     break;
-  default:;
+  default:
     elog(ERROR, "AllocateDesc kind not recognized");
     result = 0; /* keep compiler quiet */
     break;
@@ -2291,10 +2465,12 @@ FreeFile(FILE *file)
   DO_DB(elog(LOG, "FreeFile: Allocated %d", numAllocatedDescs));
 
   /* Remove file from list of allocated files, if it's present */
-  for (i = numAllocatedDescs; --i >= 0;) {
+  for (i = numAllocatedDescs; --i >= 0;)
+  {
     AllocateDesc *desc = &allocatedDescs[i];
 
-    if (desc->kind == AllocateDescFile && desc->desc.file == file) {
+    if (desc->kind == AllocateDescFile && desc->desc.file == file)
+    {
       return FreeDesc(desc);
     }
   }
@@ -2319,10 +2495,12 @@ CloseTransientFile(int fd)
   DO_DB(elog(LOG, "CloseTransientFile: Allocated %d", numAllocatedDescs));
 
   /* Remove fd from list of allocated files, if it's present */
-  for (i = numAllocatedDescs; --i >= 0;) {
+  for (i = numAllocatedDescs; --i >= 0;)
+  {
     AllocateDesc *desc = &allocatedDescs[i];
 
-    if (desc->kind == AllocateDescRawFD && desc->desc.fd == fd) {
+    if (desc->kind == AllocateDescRawFD && desc->desc.fd == fd)
+    {
       return FreeDesc(desc);
     }
   }
@@ -2353,15 +2531,17 @@ AllocateDir(const char *dirname)
   DO_DB(elog(LOG, "AllocateDir: Allocated %d (%s)", numAllocatedDescs, dirname));
 
   /* Can we allocate another non-virtual FD? */
-  if (!reserveAllocatedDesc()) {
-    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to open directory \"%s\"",          maxAllocatedDescs, dirname)));
+  if (!reserveAllocatedDesc())
+  {
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("exceeded maxAllocatedDescs (%d) while trying to open directory \"%s\"", maxAllocatedDescs, dirname)));
   }
 
   /* Close excess kernel FDs. */
   ReleaseLruFiles();
 
 TryAgain:
-  if ((dir = opendir(dirname)) != NULL) {
+  if ((dir = opendir(dirname)) != NULL)
+  {
     AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
 
     desc->kind = AllocateDescDir;
@@ -2371,12 +2551,14 @@ TryAgain:
     return desc->desc.dir;
   }
 
-  if (errno == EMFILE || errno == ENFILE) {
+  if (errno == EMFILE || errno == ENFILE)
+  {
     int save_errno = errno;
 
     ereport(LOG, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("out of file descriptors: %m; release and retry")));
     errno = 0;
-    if (ReleaseLruFile()) {
+    if (ReleaseLruFile())
+    {
       goto TryAgain;
     }
     errno = save_errno;
@@ -2426,17 +2608,20 @@ ReadDirExtended(DIR *dir, const char *dirname, int elevel)
   struct dirent *dent;
 
   /* Give a generic message for AllocateDir failure, if caller didn't */
-  if (dir == NULL) {
+  if (dir == NULL)
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not open directory \"%s\": %m", dirname)));
     return NULL;
   }
 
   errno = 0;
-  if ((dent = readdir(dir)) != NULL) {
+  if ((dent = readdir(dir)) != NULL)
+  {
     return dent;
   }
 
-  if (errno) {
+  if (errno)
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not read directory \"%s\": %m", dirname)));
   }
   return NULL;
@@ -2458,17 +2643,20 @@ FreeDir(DIR *dir)
   int i;
 
   /* Nothing to do if AllocateDir failed */
-  if (dir == NULL) {
+  if (dir == NULL)
+  {
     return 0;
   }
 
   DO_DB(elog(LOG, "FreeDir: Allocated %d", numAllocatedDescs));
 
   /* Remove dir from list of allocated dirs, if it's present */
-  for (i = numAllocatedDescs; --i >= 0;) {
+  for (i = numAllocatedDescs; --i >= 0;)
+  {
     AllocateDesc *desc = &allocatedDescs[i];
 
-    if (desc->kind == AllocateDescDir && desc->desc.dir == dir) {
+    if (desc->kind == AllocateDescDir && desc->desc.dir == dir)
+    {
       return FreeDesc(desc);
     }
   }
@@ -2490,10 +2678,12 @@ ClosePipeStream(FILE *file)
   DO_DB(elog(LOG, "ClosePipeStream: Allocated %d", numAllocatedDescs));
 
   /* Remove file from list of allocated files, if it's present */
-  for (i = numAllocatedDescs; --i >= 0;) {
+  for (i = numAllocatedDescs; --i >= 0;)
+  {
     AllocateDesc *desc = &allocatedDescs[i];
 
-    if (desc->kind == AllocateDescPipe && desc->desc.file == file) {
+    if (desc->kind == AllocateDescPipe && desc->desc.file == file)
+    {
       return FreeDesc(desc);
     }
   }
@@ -2516,10 +2706,13 @@ closeAllVfds(void)
 {
   Index i;
 
-  if (SizeVfdCache > 0) {
+  if (SizeVfdCache > 0)
+  {
     Assert(FileIsNotOpen(0)); /* Make sure ring not corrupted */
-    for (i = 1; i < SizeVfdCache; i++) {
-      if (!FileIsNotOpen(i)) {
+    for (i = 1; i < SizeVfdCache; i++)
+    {
+      if (!FileIsNotOpen(i))
+      {
         LruDelete(i);
       }
     }
@@ -2553,9 +2746,12 @@ SetTempTablespaces(Oid *tableSpaces, int numSpaces)
    * ensures that large temporary sort files are nicely spread across all
    * available tablespaces.
    */
-  if (numSpaces > 1) {
+  if (numSpaces > 1)
+  {
     nextTempTableSpace = random() % numSpaces;
-  } else {
+  }
+  else
+  {
     nextTempTableSpace = 0;
   }
 }
@@ -2588,7 +2784,8 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
   int i;
 
   Assert(TempTablespacesAreSet());
-  for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i) {
+  for (i = 0; i < numTempTableSpaces && i < numSpaces; ++i)
+  {
     tableSpaces[i] = tempTableSpaces[i];
   }
 
@@ -2604,9 +2801,11 @@ GetTempTablespaces(Oid *tableSpaces, int numSpaces)
 Oid
 GetNextTempTableSpace(void)
 {
-  if (numTempTableSpaces > 0) {
+  if (numTempTableSpaces > 0)
+  {
     /* Advance nextTempTableSpace counter with wraparound */
-    if (++nextTempTableSpace >= numTempTableSpaces) {
+    if (++nextTempTableSpace >= numTempTableSpaces)
+    {
       nextTempTableSpace = 0;
     }
     return tempTableSpaces[nextTempTableSpace];
@@ -2626,11 +2825,16 @@ AtEOSubXact_Files(bool isCommit, SubTransactionId mySubid, SubTransactionId pare
 {
   Index i;
 
-  for (i = 0; i < numAllocatedDescs; i++) {
-    if (allocatedDescs[i].create_subid == mySubid) {
-      if (isCommit) {
+  for (i = 0; i < numAllocatedDescs; i++)
+  {
+    if (allocatedDescs[i].create_subid == mySubid)
+    {
+      if (isCommit)
+      {
         allocatedDescs[i].create_subid = parentSubid;
-      } else {
+      }
+      else
+      {
         /* have to recheck the item after FreeDesc (ugly) */
         FreeDesc(&allocatedDescs[i--]);
       }
@@ -2691,12 +2895,15 @@ CleanupTempFiles(bool isCommit, bool isProcExit)
    * Careful here: at proc_exit we need extra cleanup, not just
    * xact_temporary files.
    */
-  if (isProcExit || have_xact_temporary_files) {
+  if (isProcExit || have_xact_temporary_files)
+  {
     Assert(FileIsNotOpen(0)); /* Make sure ring not corrupted */
-    for (i = 1; i < SizeVfdCache; i++) {
+    for (i = 1; i < SizeVfdCache; i++)
+    {
       unsigned short fdstate = VfdCache[i].fdstate;
 
-      if (((fdstate & FD_DELETE_AT_CLOSE) || (fdstate & FD_CLOSE_AT_EOXACT)) && VfdCache[i].fileName != NULL) {
+      if (((fdstate & FD_DELETE_AT_CLOSE) || (fdstate & FD_CLOSE_AT_EOXACT)) && VfdCache[i].fileName != NULL)
+      {
         /*
          * If we're in the process of exiting a backend process, close
          * all temporary files. Otherwise, only close temporary files
@@ -2704,9 +2911,12 @@ CleanupTempFiles(bool isCommit, bool isProcExit)
          * the ResourceOwner mechanism already, so this is just a
          * debugging cross-check.
          */
-        if (isProcExit) {
+        if (isProcExit)
+        {
           FileClose(i);
-        } else if (fdstate & FD_CLOSE_AT_EOXACT) {
+        }
+        else if (fdstate & FD_CLOSE_AT_EOXACT)
+        {
           elog(WARNING, "temporary file %s not closed at end-of-transaction", VfdCache[i].fileName);
           FileClose(i);
         }
@@ -2717,12 +2927,14 @@ CleanupTempFiles(bool isCommit, bool isProcExit)
   }
 
   /* Complain if any allocated files remain open at commit. */
-  if (isCommit && numAllocatedDescs > 0) {
+  if (isCommit && numAllocatedDescs > 0)
+  {
     elog(WARNING, "%d temporary files and directories not closed at end-of-transaction", numAllocatedDescs);
   }
 
   /* Clean up "allocated" stdio files, dirs and fds. */
-  while (numAllocatedDescs > 0) {
+  while (numAllocatedDescs > 0)
+  {
     FreeDesc(&allocatedDescs[0]);
   }
 }
@@ -2764,8 +2976,10 @@ RemovePgTempFiles(void)
    */
   spc_dir = AllocateDir("pg_tblspc");
 
-  while ((spc_de = ReadDirExtended(spc_dir, "pg_tblspc", LOG)) != NULL) {
-    if (strcmp(spc_de->d_name, ".") == 0 || strcmp(spc_de->d_name, "..") == 0) {
+  while ((spc_de = ReadDirExtended(spc_dir, "pg_tblspc", LOG)) != NULL)
+  {
+    if (strcmp(spc_de->d_name, ".") == 0 || strcmp(spc_de->d_name, "..") == 0)
+    {
       continue;
     }
 
@@ -2811,38 +3025,50 @@ RemovePgTempFilesInDir(const char *tmpdirname, bool missing_ok, bool unlink_all)
 
   temp_dir = AllocateDir(tmpdirname);
 
-  if (temp_dir == NULL && errno == ENOENT && missing_ok) {
+  if (temp_dir == NULL && errno == ENOENT && missing_ok)
+  {
     return;
   }
 
-  while ((temp_de = ReadDirExtended(temp_dir, tmpdirname, LOG)) != NULL) {
-    if (strcmp(temp_de->d_name, ".") == 0 || strcmp(temp_de->d_name, "..") == 0) {
+  while ((temp_de = ReadDirExtended(temp_dir, tmpdirname, LOG)) != NULL)
+  {
+    if (strcmp(temp_de->d_name, ".") == 0 || strcmp(temp_de->d_name, "..") == 0)
+    {
       continue;
     }
 
     snprintf(rm_path, sizeof(rm_path), "%s/%s", tmpdirname, temp_de->d_name);
 
-    if (unlink_all || strncmp(temp_de->d_name, PG_TEMP_FILE_PREFIX, strlen(PG_TEMP_FILE_PREFIX)) == 0) {
+    if (unlink_all || strncmp(temp_de->d_name, PG_TEMP_FILE_PREFIX, strlen(PG_TEMP_FILE_PREFIX)) == 0)
+    {
       struct stat statbuf;
 
-      if (lstat(rm_path, &statbuf) < 0) {
+      if (lstat(rm_path, &statbuf) < 0)
+      {
         ereport(LOG, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", rm_path)));
         continue;
       }
 
-      if (S_ISDIR(statbuf.st_mode)) {
+      if (S_ISDIR(statbuf.st_mode))
+      {
         /* recursively remove contents, then directory itself */
         RemovePgTempFilesInDir(rm_path, false, true);
 
-        if (rmdir(rm_path) < 0) {
+        if (rmdir(rm_path) < 0)
+        {
           ereport(LOG, (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", rm_path)));
         }
-      } else {
-        if (unlink(rm_path) < 0) {
+      }
+      else
+      {
+        if (unlink(rm_path) < 0)
+        {
           ereport(LOG, (errcode_for_file_access(), errmsg("could not remove file \"%s\": %m", rm_path)));
         }
       }
-    } else {
+    }
+    else
+    {
       ereport(LOG, (errmsg("unexpected file found in temporary-files directory: \"%s\"", rm_path)));
     }
   }
@@ -2860,13 +3086,15 @@ RemovePgTempRelationFiles(const char *tsdirname)
 
   ts_dir = AllocateDir(tsdirname);
 
-  while ((de = ReadDirExtended(ts_dir, tsdirname, LOG)) != NULL) {
+  while ((de = ReadDirExtended(ts_dir, tsdirname, LOG)) != NULL)
+  {
     /*
      * We're only interested in the per-database directories, which have
      * numeric names.  Note that this code will also (properly) ignore "."
      * and "..".
      */
-    if (strspn(de->d_name, "0123456789") != strlen(de->d_name)) {
+    if (strspn(de->d_name, "0123456789") != strlen(de->d_name))
+    {
       continue;
     }
 
@@ -2887,14 +3115,17 @@ RemovePgTempRelationFilesInDbspace(const char *dbspacedirname)
 
   dbspace_dir = AllocateDir(dbspacedirname);
 
-  while ((de = ReadDirExtended(dbspace_dir, dbspacedirname, LOG)) != NULL) {
-    if (!looks_like_temp_rel_name(de->d_name)) {
+  while ((de = ReadDirExtended(dbspace_dir, dbspacedirname, LOG)) != NULL)
+  {
+    if (!looks_like_temp_rel_name(de->d_name))
+    {
       continue;
     }
 
     snprintf(rm_path, sizeof(rm_path), "%s/%s", dbspacedirname, de->d_name);
 
-    if (unlink(rm_path) < 0) {
+    if (unlink(rm_path) < 0)
+    {
       ereport(LOG, (errcode_for_file_access(), errmsg("could not remove file \"%s\": %m", rm_path)));
     }
   }
@@ -2910,46 +3141,54 @@ looks_like_temp_rel_name(const char *name)
   int savepos;
 
   /* Must start with "t". */
-  if (name[0] != 't') {
+  if (name[0] != 't')
+  {
     return false;
   }
 
   /* Followed by a non-empty string of digits and then an underscore. */
   for (pos = 1; isdigit((unsigned char)name[pos]); ++pos)
     ;
-  if (pos == 1 || name[pos] != '_') {
+  if (pos == 1 || name[pos] != '_')
+  {
     return false;
   }
 
   /* Followed by another nonempty string of digits. */
   for (savepos = ++pos; isdigit((unsigned char)name[pos]); ++pos)
     ;
-  if (savepos == pos) {
+  if (savepos == pos)
+  {
     return false;
   }
 
   /* We might have _forkname or .segment or both. */
-  if (name[pos] == '_') {
+  if (name[pos] == '_')
+  {
     int forkchar = forkname_chars(&name[pos + 1], NULL);
 
-    if (forkchar <= 0) {
+    if (forkchar <= 0)
+    {
       return false;
     }
     pos += forkchar + 1;
   }
-  if (name[pos] == '.') {
+  if (name[pos] == '.')
+  {
     int segchar;
 
     for (segchar = 1; isdigit((unsigned char)name[pos + segchar]); ++segchar)
       ;
-    if (segchar <= 1) {
+    if (segchar <= 1)
+    {
       return false;
     }
     pos += segchar;
   }
 
   /* Now we should be at the end. */
-  if (name[pos] != '\0') {
+  if (name[pos] != '\0')
+  {
     return false;
   }
   return true;
@@ -2982,7 +3221,8 @@ SyncDataDirectory(void)
   bool xlog_is_symlink;
 
   /* We can skip this whole thing if fsync is disabled. */
-  if (!enableFsync) {
+  if (!enableFsync)
+  {
     return;
   }
 
@@ -2996,14 +3236,18 @@ SyncDataDirectory(void)
   {
     struct stat st;
 
-    if (lstat("pg_wal", &st) < 0) {
+    if (lstat("pg_wal", &st) < 0)
+    {
       ereport(LOG, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", "pg_wal")));
-    } else if (S_ISLNK(st.st_mode)) {
+    }
+    else if (S_ISLNK(st.st_mode))
+    {
       xlog_is_symlink = true;
     }
   }
 #else
-  if (pgwin32_is_junction("pg_wal")) {
+  if (pgwin32_is_junction("pg_wal"))
+  {
     xlog_is_symlink = true;
   }
 #endif
@@ -3015,7 +3259,8 @@ SyncDataDirectory(void)
    */
 #ifdef PG_FLUSH_DATA_WORKS
   walkdir(".", pre_sync_fname, false, DEBUG1);
-  if (xlog_is_symlink) {
+  if (xlog_is_symlink)
+  {
     walkdir("pg_wal", pre_sync_fname, false, DEBUG1);
   }
   walkdir("pg_tblspc", pre_sync_fname, true, DEBUG1);
@@ -3031,7 +3276,8 @@ SyncDataDirectory(void)
    * so we don't worry about optimizing it.
    */
   walkdir(".", datadir_fsync_fname, false, LOG);
-  if (xlog_is_symlink) {
+  if (xlog_is_symlink)
+  {
     walkdir("pg_wal", datadir_fsync_fname, false, LOG);
   }
   walkdir("pg_tblspc", datadir_fsync_fname, true, LOG);
@@ -3059,33 +3305,42 @@ walkdir(const char *path, void (*action)(const char *fname, bool isdir, int elev
 
   dir = AllocateDir(path);
 
-  while ((de = ReadDirExtended(dir, path, elevel)) != NULL) {
+  while ((de = ReadDirExtended(dir, path, elevel)) != NULL)
+  {
     char subpath[MAXPGPATH * 2];
     struct stat fst;
     int sret;
 
     CHECK_FOR_INTERRUPTS();
 
-    if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
+    if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+    {
       continue;
     }
 
     snprintf(subpath, sizeof(subpath), "%s/%s", path, de->d_name);
 
-    if (process_symlinks) {
+    if (process_symlinks)
+    {
       sret = stat(subpath, &fst);
-    } else {
+    }
+    else
+    {
       sret = lstat(subpath, &fst);
     }
 
-    if (sret < 0) {
+    if (sret < 0)
+    {
       ereport(elevel, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", subpath)));
       continue;
     }
 
-    if (S_ISREG(fst.st_mode)) {
+    if (S_ISREG(fst.st_mode))
+    {
       (*action)(subpath, false, elevel);
-    } else if (S_ISDIR(fst.st_mode)) {
+    }
+    else if (S_ISDIR(fst.st_mode))
+    {
       walkdir(subpath, action, false, elevel);
     }
   }
@@ -3098,7 +3353,8 @@ walkdir(const char *path, void (*action)(const char *fname, bool isdir, int elev
    * synced.  However, skip this if AllocateDir failed; the action function
    * might not be robust against that.
    */
-  if (dir) {
+  if (dir)
+  {
     (*action)(path, true, elevel);
   }
 }
@@ -3117,14 +3373,17 @@ pre_sync_fname(const char *fname, bool isdir, int elevel)
   int fd;
 
   /* Don't try to flush directories, it'll likely just fail */
-  if (isdir) {
+  if (isdir)
+  {
     return;
   }
 
   fd = OpenTransientFile(fname, O_RDONLY | PG_BINARY);
 
-  if (fd < 0) {
-    if (errno == EACCES) {
+  if (fd < 0)
+  {
+    if (errno == EACCES)
+    {
       return;
     }
     ereport(elevel, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", fname)));
@@ -3137,7 +3396,8 @@ pre_sync_fname(const char *fname, bool isdir, int elevel)
    */
   pg_flush_data(fd, 0, 0);
 
-  if (CloseTransientFile(fd)) {
+  if (CloseTransientFile(fd))
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", fname)));
   }
 }
@@ -3157,11 +3417,15 @@ datadir_fsync_fname(const char *fname, bool isdir, int elevel)
 static void
 unlink_if_exists_fname(const char *fname, bool isdir, int elevel)
 {
-  if (isdir) {
-    if (rmdir(fname) != 0 && errno != ENOENT) {
+  if (isdir)
+  {
+    if (rmdir(fname) != 0 && errno != ENOENT)
+    {
       ereport(elevel, (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", fname)));
     }
-  } else {
+  }
+  else
+  {
     /* Use PathNameDeleteTemporaryFile to report filesize */
     PathNameDeleteTemporaryFile(fname, false);
   }
@@ -3189,9 +3453,12 @@ fsync_fname_ext(const char *fname, bool isdir, bool ignore_perm, int elevel)
    * not writable by our userid, but we assume that's OK.
    */
   flags = PG_BINARY;
-  if (!isdir) {
+  if (!isdir)
+  {
     flags |= O_RDWR;
-  } else {
+  }
+  else
+  {
     flags |= O_RDONLY;
   }
 
@@ -3202,11 +3469,16 @@ fsync_fname_ext(const char *fname, bool isdir, bool ignore_perm, int elevel)
    * EACCES), just ignore the error in that case.  If desired also silently
    * ignoring errors about unreadable files. Log others.
    */
-  if (fd < 0 && isdir && (errno == EISDIR || errno == EACCES)) {
+  if (fd < 0 && isdir && (errno == EISDIR || errno == EACCES))
+  {
     return 0;
-  } else if (fd < 0 && ignore_perm && errno == EACCES) {
+  }
+  else if (fd < 0 && ignore_perm && errno == EACCES)
+  {
     return 0;
-  } else if (fd < 0) {
+  }
+  else if (fd < 0)
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", fname)));
     return -1;
   }
@@ -3217,7 +3489,8 @@ fsync_fname_ext(const char *fname, bool isdir, bool ignore_perm, int elevel)
    * Some OSes don't allow us to fsync directories at all, so we can ignore
    * those errors. Anything else needs to be logged.
    */
-  if (returncode != 0 && !(isdir && (errno == EBADF || errno == EINVAL))) {
+  if (returncode != 0 && !(isdir && (errno == EBADF || errno == EINVAL)))
+  {
     int save_errno;
 
     /* close file upon error, might not be in transaction context */
@@ -3229,7 +3502,8 @@ fsync_fname_ext(const char *fname, bool isdir, bool ignore_perm, int elevel)
     return -1;
   }
 
-  if (CloseTransientFile(fd)) {
+  if (CloseTransientFile(fd))
+  {
     ereport(elevel, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", fname)));
     return -1;
   }
@@ -3256,11 +3530,13 @@ fsync_parent_path(const char *fname, int elevel)
    * just a file name (see comments in path.c), so handle that as being the
    * current directory.
    */
-  if (strlen(parentpath) == 0) {
+  if (strlen(parentpath) == 0)
+  {
     strlcpy(parentpath, ".", MAXPGPATH);
   }
 
-  if (fsync_fname_ext(parentpath, true, false, elevel) != 0) {
+  if (fsync_fname_ext(parentpath, true, false, elevel) != 0)
+  {
     return -1;
   }
 

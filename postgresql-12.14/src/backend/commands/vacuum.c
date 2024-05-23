@@ -885,8 +885,8 @@ get_all_vacuum_rels(int options)
  * - freezeLimit is the Xid below which all Xids are replaced by
  *	 FrozenTransactionId during vacuum.
  * - xidFullScanLimit (computed from table_freeze_age parameter)
- *	 represents a minimum Xid value; a table whose relfrozenxid is older
- *than this will have a full-table vacuum applied to it, to freeze tuples across
+ *	 represents a minimum Xid value; a table whose relfrozenxid is older than
+ *	 this will have a full-table vacuum applied to it, to freeze tuples across
  *	 the whole table.  Vacuuming a table younger than this value can use a
  *	 partial scan.
  * - multiXactCutoff is the value below which all MultiXactIds are removed from
@@ -958,7 +958,8 @@ vacuum_set_xid_limits(Relation rel, int freeze_min_age, int freeze_table_age, in
 
   if (TransactionIdPrecedes(limit, safeLimit))
   {
-    ereport(WARNING, (errmsg("oldest xmin is far in the past"), errhint("Close open transactions soon to avoid wraparound problems.\nYou might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+    ereport(WARNING, (errmsg("oldest xmin is far in the past"), errhint("Close open transactions soon to avoid wraparound problems.\n"
+                                                                        "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
     limit = *oldestXmin;
   }
 
@@ -1085,12 +1086,12 @@ vacuum_set_xid_limits(Relation rel, int freeze_min_age, int freeze_table_age, in
 /*
  * vac_estimate_reltuples() -- estimate the new value for pg_class.reltuples
  *
- *		If we scanned the whole relation then we should just use the
- *count of live tuples seen; but if we did not, we should not blindly
- *extrapolate from that number, since VACUUM may have scanned a quite nonrandom
- *		subset of the table.  When we have only partial information, we
- *take the old value of pg_class.reltuples as a measurement of the tuple density
- *in the unscanned pages.
+ *		If we scanned the whole relation then we should just use the count of
+ *		live tuples seen; but if we did not, we should not blindly extrapolate
+ *		from that number, since VACUUM may have scanned a quite nonrandom
+ *		subset of the table.  When we have only partial information, we take
+ *		the old value of pg_class.reltuples as a measurement of the
+ *		tuple density in the unscanned pages.
  *
  *		Note: scanned_tuples should count only *live* tuples, since
  *		pg_class.reltuples is defined that way.
@@ -1145,36 +1146,37 @@ vac_estimate_reltuples(Relation relation, BlockNumber total_pages, BlockNumber s
 /*
  *	vac_update_relstats() -- update statistics for one relation
  *
- *		Update the whole-relation statistics that are kept in its
- *pg_class row.  There are additional stats that will be updated if we are doing
- *ANALYZE, but we always update these stats.  This routine works for both index
- *and heap relation entries in pg_class.
+ *		Update the whole-relation statistics that are kept in its pg_class
+ *		row.  There are additional stats that will be updated if we are
+ *		doing ANALYZE, but we always update these stats.  This routine works
+ *		for both index and heap relation entries in pg_class.
  *
  *		We violate transaction semantics here by overwriting the rel's
  *		existing pg_class tuple with the new values.  This is reasonably
- *		safe as long as we're sure that the new values are correct
- *whether or not this transaction commits.  The reason for doing this is that if
- *		we updated these tuples in the usual way, vacuuming pg_class
- *itself wouldn't work very well --- by the time we got done with a vacuum
- *		cycle, most of the tuples in pg_class would've been obsoleted.
- *Of course, this only works for fixed-size not-null columns, but these are.
+ *		safe as long as we're sure that the new values are correct whether or
+ *		not this transaction commits.  The reason for doing this is that if
+ *		we updated these tuples in the usual way, vacuuming pg_class itself
+ *		wouldn't work very well --- by the time we got done with a vacuum
+ *		cycle, most of the tuples in pg_class would've been obsoleted.  Of
+ *		course, this only works for fixed-size not-null columns, but these are.
  *
- *		Another reason for doing it this way is that when we are in a
- *lazy VACUUM and have PROC_IN_VACUUM set, we mustn't do any regular updates.
- *		Somebody vacuuming pg_class might think they could delete a
- *tuple marked with xmin = our xid.
+ *		Another reason for doing it this way is that when we are in a lazy
+ *		VACUUM and have PROC_IN_VACUUM set, we mustn't do any regular updates.
+ *		Somebody vacuuming pg_class might think they could delete a tuple
+ *		marked with xmin = our xid.
  *
  *		In addition to fundamentally nontransactional statistics such as
- *		relpages and relallvisible, we try to maintain certain
- *lazily-updated DDL flags such as relhasindex, by clearing them if no longer
- *correct. It's safe to do this in VACUUM, which can't run in parallel with
- *		CREATE INDEX/RULE/TRIGGER and can't be part of a transaction
- *block. However, it's *not* safe to do it in an ANALYZE that's within an outer
- *transaction, because for example the current transaction might have dropped
- *the last index; then we'd think relhasindex should be cleared, but if the
- *transaction later rolls back this would be wrong. So we refrain from updating
- *the DDL flags if we're inside an outer transaction.  This is OK since
- *postponing the flag maintenance is always allowable.
+ *		relpages and relallvisible, we try to maintain certain lazily-updated
+ *		DDL flags such as relhasindex, by clearing them if no longer correct.
+ *		It's safe to do this in VACUUM, which can't run in parallel with
+ *		CREATE INDEX/RULE/TRIGGER and can't be part of a transaction block.
+ *		However, it's *not* safe to do it in an ANALYZE that's within an
+ *		outer transaction, because for example the current transaction might
+ *		have dropped the last index; then we'd think relhasindex should be
+ *		cleared, but if the transaction later rolls back this would be wrong.
+ *		So we refrain from updating the DDL flags if we're inside an outer
+ *		transaction.  This is OK since postponing the flag maintenance is
+ *		always allowable.
  *
  *		Note: num_tuples should count only *live* tuples, since
  *		pg_class.reltuples is defined that way.
@@ -1283,8 +1285,8 @@ vac_update_relstats(Relation relation, BlockNumber num_pages, double num_tuples,
 /*
  *	vac_update_datfrozenxid() -- update pg_database.datfrozenxid for our DB
  *
- *		Update pg_database's datfrozenxid entry for our database to be
- *the minimum of the pg_class.relfrozenxid values.
+ *		Update pg_database's datfrozenxid entry for our database to be the
+ *		minimum of the pg_class.relfrozenxid values.
  *
  *		Similarly, update our datminmxid to be the minimum of the
  *		pg_class.relminmxid values.
@@ -1292,11 +1294,11 @@ vac_update_relstats(Relation relation, BlockNumber num_pages, double num_tuples,
  *		If we are able to advance either pg_database value, also try to
  *		truncate pg_xact and pg_multixact.
  *
- *		We violate transaction semantics here by overwriting the
- *database's existing pg_database tuple with the new values.  This is reasonably
- *		safe since the new values are correct whether or not this
- *transaction commits.  As with vac_update_relstats, this avoids leaving dead
- *tuples behind after a VACUUM.
+ *		We violate transaction semantics here by overwriting the database's
+ *		existing pg_database tuple with the new values.  This is reasonably
+ *		safe since the new values are correct whether or not this transaction
+ *		commits.  As with vac_update_relstats, this avoids leaving dead tuples
+ *		behind after a VACUUM.
  */
 void
 vac_update_datfrozenxid(void)
@@ -1500,15 +1502,15 @@ vac_update_datfrozenxid(void)
 /*
  *	vac_truncate_clog() -- attempt to truncate the commit log
  *
- *		Scan pg_database to determine the system-wide oldest
- *datfrozenxid, and use it to truncate the transaction commit log (pg_xact).
+ *		Scan pg_database to determine the system-wide oldest datfrozenxid,
+ *		and use it to truncate the transaction commit log (pg_xact).
  *		Also update the XID wrap limit info maintained by varsup.c.
  *		Likewise for datminmxid.
  *
- *		The passed frozenXID and minMulti are the updated values for my
- *own pg_database entry. They're used to initialize the "min" calculations. The
- *caller also passes the "last sane" XID and MXID, since it has those at hand
- *already.
+ *		The passed frozenXID and minMulti are the updated values for my own
+ *		pg_database entry. They're used to initialize the "min" calculations.
+ *		The caller also passes the "last sane" XID and MXID, since it has
+ *		those at hand already.
  *
  *		This routine is only invoked when we've managed to change our
  *		DB's datfrozenxid/datminmxid values, or we found that the shared
@@ -1648,10 +1650,10 @@ vac_truncate_clog(TransactionId frozenXID, MultiXactId minMulti, TransactionId l
 /*
  *	vacuum_rel() -- vacuum one heap relation
  *
- *		relid identifies the relation to vacuum.  If relation is
- *supplied, use the name therein for reporting any failure to open/lock the rel;
- *		do not use it once we've successfully opened the rel, since it
- *might be stale.
+ *		relid identifies the relation to vacuum.  If relation is supplied,
+ *		use the name therein for reporting any failure to open/lock the rel;
+ *		do not use it once we've successfully opened the rel, since it might
+ *		be stale.
  *
  *		Returns true if it's okay to proceed with a requested ANALYZE
  *		operation on this table.
@@ -1659,8 +1661,8 @@ vac_truncate_clog(TransactionId frozenXID, MultiXactId minMulti, TransactionId l
  *		Doing one heap at a time incurs extra overhead, since we need to
  *		check that the heap exists again just before we vacuum it.  The
  *		reason that we do this is so that vacuuming can be spread across
- *		many small transactions.  Otherwise, two-phase locking would
- *require us to lock the entire database during one pass of the vacuum cleaner.
+ *		many small transactions.  Otherwise, two-phase locking would require
+ *		us to lock the entire database during one pass of the vacuum cleaner.
  *
  *		At entry and exit, we are not inside a transaction.
  */

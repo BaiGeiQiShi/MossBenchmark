@@ -9,8 +9,9 @@
  *		inline_set_returning_functions
  *		pull_up_subqueries
  *		flatten_simple_union_all
- *		do expression preprocessing (including flattening JOIN alias
- *vars) reduce_outer_joins remove_useless_result_rtes
+ *		do expression preprocessing (including flattening JOIN alias vars)
+ *		reduce_outer_joins
+ *		remove_useless_result_rtes
  *
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
@@ -122,8 +123,8 @@ find_jointree_node_for_rel(Node *jtnode, int relid);
 
 /*
  * replace_empty_jointree
- *		If the Query's jointree is empty, replace it with a dummy
- *RTE_RESULT relation.
+ *		If the Query's jointree is empty, replace it with a dummy RTE_RESULT
+ *		relation.
  *
  * By doing this, we can avoid a bunch of corner cases that formerly existed
  * for SELECTs with omitted FROM clauses.  An example is that a subquery
@@ -233,7 +234,7 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode, Relids *relid
 
   if (jtnode == NULL)
   {
-
+    *relids = NULL;
   }
   else if (IsA(jtnode, RangeTblRef))
   {
@@ -313,21 +314,21 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode, Relids *relid
      */
     switch (j->jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &jtlink, bms_union(leftrelids, rightrelids), NULL, NULL);
       break;
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
       j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &j->rarg, rightrelids, NULL, NULL);
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       /* can't do anything with full-join quals */
-
-    case JOIN_RIGHT:;
-
-
-    default:;;
-
-
+      break;
+    case JOIN_RIGHT:
+      j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &j->larg, leftrelids, NULL, NULL);
+      break;
+    default:
+      elog(ERROR, "unrecognized join type: %d", (int)j->jointype);
+      break;
     }
 
     /*
@@ -347,7 +348,7 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode, Relids *relid
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return jtnode;
 }
@@ -403,19 +404,19 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node, Node **jtlink1, Rel
       if (available_rels2 != NULL && (j = convert_ANY_sublink_to_join(root, sublink, available_rels2)) != NULL)
       {
         /* Yes; insert the new join node into the join tree */
-
-
+        j->larg = *jtlink2;
+        *jtlink2 = (Node *)j;
         /* Recursively process pulled-up jointree nodes */
-
+        j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg, &child_rels);
 
         /*
          * Now recursively process the pulled-up quals.  Any inserted
          * joins can get stacked onto either j->larg or j->rarg,
          * depending on which rels they reference.
          */
-
+        j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &j->larg, available_rels2, &j->rarg, child_rels);
         /* Return NULL representing constant TRUE */
-
+        return NULL;
       }
     }
     else if (sublink->subLinkType == EXISTS_SUBLINK)
@@ -440,19 +441,19 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node, Node **jtlink1, Rel
       if (available_rels2 != NULL && (j = convert_EXISTS_sublink_to_join(root, sublink, false, available_rels2)) != NULL)
       {
         /* Yes; insert the new join node into the join tree */
-
-
+        j->larg = *jtlink2;
+        *jtlink2 = (Node *)j;
         /* Recursively process pulled-up jointree nodes */
-
+        j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg, &child_rels);
 
         /*
          * Now recursively process the pulled-up quals.  Any inserted
          * joins can get stacked onto either j->larg or j->rarg,
          * depending on which rels they reference.
          */
-
+        j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &j->larg, available_rels2, &j->rarg, child_rels);
         /* Return NULL representing constant TRUE */
-
+        return NULL;
       }
     }
     /* Else return it unmodified */
@@ -490,10 +491,10 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node, Node **jtlink1, Rel
         if (available_rels2 != NULL && (j = convert_EXISTS_sublink_to_join(root, sublink, true, available_rels2)) != NULL)
         {
           /* Yes; insert the new join node into the join tree */
-
-
+          j->larg = *jtlink2;
+          *jtlink2 = (Node *)j;
           /* Recursively process pulled-up jointree nodes */
-
+          j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg, &child_rels);
 
           /*
            * Now recursively process the pulled-up quals.  Because
@@ -501,9 +502,9 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node, Node **jtlink1, Rel
            * reference the left-hand stuff, but it's still okay to
            * pull up sublinks referencing j->rarg.
            */
-
+          j->quals = pull_up_sublinks_qual_recurse(root, j->quals, &j->rarg, child_rels, NULL, NULL);
           /* Return NULL representing constant TRUE */
-
+          return NULL;
         }
       }
     }
@@ -596,8 +597,8 @@ inline_set_returning_functions(PlannerInfo *root)
  * pull_up_subqueries
  *		Look for subqueries in the rangetable that can be pulled up into
  *		the parent query.  If the subquery has no special features like
- *		grouping/aggregation then we can merge it into the parent's
- *jointree. Also, subqueries that are simple UNION ALL structures can be
+ *		grouping/aggregation then we can merge it into the parent's jointree.
+ *		Also, subqueries that are simple UNION ALL structures can be
  *		converted into "append relations".
  */
 void
@@ -721,32 +722,32 @@ pull_up_subqueries_recurse(PlannerInfo *root, Node *jtnode, JoinExpr *lowest_out
     /* Recurse, being careful to tell myself when inside outer join */
     switch (j->jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       j->larg = pull_up_subqueries_recurse(root, j->larg, lowest_outer_join, lowest_nulling_outer_join, NULL);
       j->rarg = pull_up_subqueries_recurse(root, j->rarg, lowest_outer_join, lowest_nulling_outer_join, NULL);
       break;
-    case JOIN_LEFT:;
-    case JOIN_SEMI:;
-    case JOIN_ANTI:;
+    case JOIN_LEFT:
+    case JOIN_SEMI:
+    case JOIN_ANTI:
       j->larg = pull_up_subqueries_recurse(root, j->larg, j, lowest_nulling_outer_join, NULL);
       j->rarg = pull_up_subqueries_recurse(root, j->rarg, j, j, NULL);
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       j->larg = pull_up_subqueries_recurse(root, j->larg, j, j, NULL);
       j->rarg = pull_up_subqueries_recurse(root, j->rarg, j, j, NULL);
       break;
-    case JOIN_RIGHT:;
+    case JOIN_RIGHT:
       j->larg = pull_up_subqueries_recurse(root, j->larg, j, j, NULL);
       j->rarg = pull_up_subqueries_recurse(root, j->rarg, j, lowest_nulling_outer_join, NULL);
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized join type: %d", (int)j->jointype);
+      break;
     }
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return jtnode;
 }
@@ -913,8 +914,8 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte, Joi
   {
     rvcontext.relids = get_relids_in_jointree((Node *)subquery->jointree, true);
   }
-  else
-  { /* won't need relids */
+  else /* won't need relids */
+  {
     rvcontext.relids = NULL;
   }
   rvcontext.outer_hasSubLinks = &parse->hasSubLinks;
@@ -1041,22 +1042,22 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte, Joi
 
       switch (child_rte->rtekind)
       {
-      case RTE_RELATION:;
+      case RTE_RELATION:
         if (child_rte->tablesample)
         {
           child_rte->lateral = true;
         }
         break;
-      case RTE_SUBQUERY:;
-      case RTE_FUNCTION:;
-      case RTE_VALUES:;
-      case RTE_TABLEFUNC:;
+      case RTE_SUBQUERY:
+      case RTE_FUNCTION:
+      case RTE_VALUES:
+      case RTE_TABLEFUNC:
         child_rte->lateral = true;
         break;
-      case RTE_JOIN:;
-      case RTE_CTE:;
-      case RTE_NAMEDTUPLESTORE:;
-      case RTE_RESULT:;
+      case RTE_JOIN:
+      case RTE_CTE:
+      case RTE_NAMEDTUPLESTORE:
+      case RTE_RESULT:
         /* these can't contain any lateral references */
         break;
       }
@@ -1283,7 +1284,7 @@ pull_up_union_leaf_queries(Node *setOp, PlannerInfo *root, int parentRTindex, Qu
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(setOp));
   }
 }
 
@@ -1306,7 +1307,7 @@ make_setop_translation_list(Query *query, Index newvarno, List **translated_vars
 
     if (tle->resjunk)
     {
-
+      continue;
     }
 
     vars = lappend(vars, makeVarFromTargetEntry(newvarno, tle));
@@ -1333,7 +1334,7 @@ is_simple_subquery(PlannerInfo *root, Query *subquery, RangeTblEntry *rte, JoinE
    */
   if (!IsA(subquery, Query) || subquery->commandType != CMD_SELECT)
   {
-
+    elog(ERROR, "subquery is bogus");
   }
 
   /*
@@ -1518,8 +1519,8 @@ pull_up_simple_values(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte)
   parse->returningList = (List *)pullup_replace_vars((Node *)parse->returningList, &rvcontext);
   if (parse->onConflict)
   {
-
-
+    parse->onConflict->onConflictSet = (List *)pullup_replace_vars((Node *)parse->onConflict->onConflictSet, &rvcontext);
+    parse->onConflict->onConflictWhere = pullup_replace_vars(parse->onConflict->onConflictWhere, &rvcontext);
 
     /*
      * We assume ON CONFLICT's arbiterElems, arbiterWhere, exclRelTlist
@@ -1594,7 +1595,7 @@ is_simple_values(PlannerInfo *root, RangeTblEntry *rte)
    */
   if (expression_returns_set((Node *)rte->values_lists) || contain_volatile_functions((Node *)rte->values_lists))
   {
-
+    return false;
   }
 
   /*
@@ -1605,7 +1606,7 @@ is_simple_values(PlannerInfo *root, RangeTblEntry *rte)
    */
   if (list_length(root->parse->rtable) != 1 || rte != (RangeTblEntry *)linitial(root->parse->rtable))
   {
-
+    return false;
   }
 
   return true;
@@ -1627,7 +1628,7 @@ is_simple_union_all(Query *subquery)
   /* Let's just make sure it's a valid subselect ... */
   if (!IsA(subquery, Query) || subquery->commandType != CMD_SELECT)
   {
-
+    elog(ERROR, "subquery is bogus");
   }
 
   /* Is it a set-operation query at all? */
@@ -1680,15 +1681,15 @@ is_simple_union_all_recurse(Node *setOp, Query *setOpQuery, List *colTypes)
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(setOp));
+    return false; /* keep compiler quiet */
   }
 }
 
 /*
  * is_safe_append_member
- *	  Check a subquery that is a leaf of a UNION ALL appendrel to see if
- *it's safe to pull up.
+ *	  Check a subquery that is a leaf of a UNION ALL appendrel to see if it's
+ *	  safe to pull up.
  */
 static bool
 is_safe_append_member(Query *subquery)
@@ -1724,13 +1725,13 @@ is_safe_append_member(Query *subquery)
     }
     if (list_length(jtnode->fromlist) != 1)
     {
-
+      return false;
     }
     jtnode = linitial(jtnode->fromlist);
   }
   if (!IsA(jtnode, RangeTblRef))
   {
-
+    return false;
   }
 
   return true;
@@ -1751,7 +1752,7 @@ jointree_contains_lateral_outer_refs(PlannerInfo *root, Node *jtnode, bool restr
 {
   if (jtnode == NULL)
   {
-
+    return false;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -1774,7 +1775,7 @@ jointree_contains_lateral_outer_refs(PlannerInfo *root, Node *jtnode, bool restr
     /* Then check the top-level quals */
     if (restricted && !bms_is_subset(pull_varnos_of_level(root, f->quals, 1), safe_upper_varnos))
     {
-
+      return true;
     }
   }
   else if (IsA(jtnode, JoinExpr))
@@ -1794,11 +1795,11 @@ jointree_contains_lateral_outer_refs(PlannerInfo *root, Node *jtnode, bool restr
     /* Check the child joins */
     if (jointree_contains_lateral_outer_refs(root, j->larg, restricted, safe_upper_varnos))
     {
-
+      return true;
     }
     if (jointree_contains_lateral_outer_refs(root, j->rarg, restricted, safe_upper_varnos))
     {
-
+      return true;
     }
 
     /* Check the JOIN's qual clauses */
@@ -1809,7 +1810,7 @@ jointree_contains_lateral_outer_refs(PlannerInfo *root, Node *jtnode, bool restr
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return false;
 }
@@ -1827,7 +1828,7 @@ replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context, Joi
 {
   if (jtnode == NULL)
   {
-
+    return;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -1851,30 +1852,30 @@ replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context, Joi
       {
         switch (rte->rtekind)
         {
-        case RTE_RELATION:;
+        case RTE_RELATION:
           /* shouldn't be marked LATERAL unless tablesample */
-
-
-
-        case RTE_SUBQUERY:;
+          Assert(rte->tablesample);
+          rte->tablesample = (TableSampleClause *)pullup_replace_vars((Node *)rte->tablesample, context);
+          break;
+        case RTE_SUBQUERY:
           rte->subquery = pullup_replace_vars_subquery(rte->subquery, context);
           break;
-        case RTE_FUNCTION:;
+        case RTE_FUNCTION:
           rte->functions = (List *)pullup_replace_vars((Node *)rte->functions, context);
           break;
-        case RTE_TABLEFUNC:;
+        case RTE_TABLEFUNC:
           rte->tablefunc = (TableFunc *)pullup_replace_vars((Node *)rte->tablefunc, context);
           break;
-        case RTE_VALUES:;
-
-
-        case RTE_JOIN:;
-        case RTE_CTE:;
-        case RTE_NAMEDTUPLESTORE:;
-        case RTE_RESULT:;
+        case RTE_VALUES:
+          rte->values_lists = (List *)pullup_replace_vars((Node *)rte->values_lists, context);
+          break;
+        case RTE_JOIN:
+        case RTE_CTE:
+        case RTE_NAMEDTUPLESTORE:
+        case RTE_RESULT:
           /* these shouldn't be marked LATERAL */
-
-
+          Assert(false);
+          break;
         }
       }
     }
@@ -1927,7 +1928,7 @@ replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context, Joi
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
 }
 
@@ -2019,9 +2020,9 @@ pullup_replace_vars_callback(Var *var, replace_rte_variables_context *context)
     /* Normal case referencing one targetlist element */
     TargetEntry *tle = get_tle_by_resno(rcon->targetlist, varattno);
 
-    if (tle == NULL)
-    { /* shouldn't happen */
-
+    if (tle == NULL) /* shouldn't happen */
+    {
+      elog(ERROR, "could not find attribute %d in subquery targetlist", varattno);
     }
 
     /* Make a copy of the tlist item to return */
@@ -2083,7 +2084,7 @@ pullup_replace_vars_callback(Var *var, replace_rte_variables_context *context)
         if ((rcon->target_rte->lateral ? bms_overlap(pull_varnos(rcon->root, (Node *)newnode), rcon->relids) : contain_vars_of_level((Node *)newnode, 0)) && !contain_nonstrict_functions((Node *)newnode))
         {
           /* No wrap needed */
-
+          wrap = false;
         }
         else
         {
@@ -2289,7 +2290,7 @@ reduce_outer_joins(PlannerInfo *root)
   /* planner.c shouldn't have called me if no outer joins */
   if (state == NULL || !state->contains_outer)
   {
-
+    elog(ERROR, "so where are the outer joins?");
   }
 
   reduce_outer_joins_pass2((Node *)root->parse->jointree, state, root, NULL, NIL, NIL);
@@ -2312,7 +2313,7 @@ reduce_outer_joins_pass1(Node *jtnode)
 
   if (jtnode == NULL)
   {
-
+    return result;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -2358,7 +2359,7 @@ reduce_outer_joins_pass1(Node *jtnode)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return result;
 }
@@ -2382,11 +2383,11 @@ reduce_outer_joins_pass2(Node *jtnode, reduce_outer_joins_state *state, PlannerI
    */
   if (jtnode == NULL)
   {
-
+    elog(ERROR, "reached empty jointree");
   }
   if (IsA(jtnode, RangeTblRef))
   {
-
+    elog(ERROR, "reached base rel");
   }
   else if (IsA(jtnode, FromExpr))
   {
@@ -2432,31 +2433,31 @@ reduce_outer_joins_pass2(Node *jtnode, reduce_outer_joins_state *state, PlannerI
     /* Can we simplify this join? */
     switch (jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       break;
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
       if (bms_overlap(nonnullable_rels, right_state->relids))
       {
         jointype = JOIN_INNER;
       }
       break;
-    case JOIN_RIGHT:;
+    case JOIN_RIGHT:
       if (bms_overlap(nonnullable_rels, left_state->relids))
       {
         jointype = JOIN_INNER;
       }
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       if (bms_overlap(nonnullable_rels, left_state->relids))
       {
-
-
-
-
-
-
-
-
+        if (bms_overlap(nonnullable_rels, right_state->relids))
+        {
+          jointype = JOIN_INNER;
+        }
+        else
+        {
+          jointype = JOIN_LEFT;
+        }
       }
       else
       {
@@ -2466,8 +2467,8 @@ reduce_outer_joins_pass2(Node *jtnode, reduce_outer_joins_state *state, PlannerI
         }
       }
       break;
-    case JOIN_SEMI:;
-    case JOIN_ANTI:;
+    case JOIN_SEMI:
+    case JOIN_ANTI:
 
       /*
        * These could only have been introduced by pull_up_sublinks,
@@ -2475,9 +2476,9 @@ reduce_outer_joins_pass2(Node *jtnode, reduce_outer_joins_state *state, PlannerI
        * righthand sides, and no point in checking.
        */
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized join type: %d", (int)jointype);
+      break;
     }
 
     /*
@@ -2641,7 +2642,7 @@ reduce_outer_joins_pass2(Node *jtnode, reduce_outer_joins_state *state, PlannerI
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
 }
 
@@ -2719,7 +2720,7 @@ remove_useless_result_rtes(PlannerInfo *root)
     }
     else
     {
-
+      prev = cell;
     }
   }
 }
@@ -2822,7 +2823,7 @@ remove_useless_results_recurse(PlannerInfo *root, Node *jtnode)
     /* Apply join-type-specific optimization rules */
     switch (j->jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
 
       /*
        * An inner join is equivalent to a FromExpr, so if either
@@ -2865,7 +2866,7 @@ remove_useless_results_recurse(PlannerInfo *root, Node *jtnode)
         }
       }
       break;
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
 
       /*
        * We can simplify this case if the RHS is an RTE_RESULT, with
@@ -2891,7 +2892,7 @@ remove_useless_results_recurse(PlannerInfo *root, Node *jtnode)
         jtnode = j->larg;
       }
       break;
-    case JOIN_SEMI:;
+    case JOIN_SEMI:
 
       /*
        * We may simplify this case if the RHS is an RTE_RESULT; the
@@ -2917,31 +2918,31 @@ remove_useless_results_recurse(PlannerInfo *root, Node *jtnode)
         }
         else
         {
-
+          jtnode = j->larg;
         }
       }
       break;
-    case JOIN_FULL:;
-    case JOIN_ANTI:;
+    case JOIN_FULL:
+    case JOIN_ANTI:
       /* We have no special smarts for these cases */
       break;
-    default:;;
+    default:
       /* Note: JOIN_RIGHT should be gone at this point */
-
-
+      elog(ERROR, "unrecognized join type: %d", (int)j->jointype);
+      break;
     }
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return jtnode;
 }
 
 /*
  * get_result_relid
- *		If jtnode is a RangeTblRef for an RTE_RESULT RTE, return its
- *relid; otherwise return 0.
+ *		If jtnode is a RangeTblRef for an RTE_RESULT RTE, return its relid;
+ *		otherwise return 0.
  */
 static int
 get_result_relid(PlannerInfo *root, Node *jtnode)
@@ -3059,7 +3060,7 @@ find_dependent_phvs(PlannerInfo *root, int varno)
   /* If there are no PHVs anywhere, we needn't work hard */
   if (root->glob->lastPHId == 0)
   {
-
+    return false;
   }
 
   context.relids = bms_make_singleton(varno);
@@ -3089,7 +3090,7 @@ find_dependent_phvs_in_jointree(PlannerInfo *root, Node *node, int varno)
    */
   if (find_dependent_phvs_walker(node, &context))
   {
-
+    return true;
   }
 
   /*
@@ -3244,7 +3245,7 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
 
   if (jtnode == NULL)
   {
-
+    return result;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -3275,7 +3276,7 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
   return result;
 }
@@ -3286,14 +3287,14 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
 Relids
 get_relids_for_join(Query *query, int joinrelid)
 {
+  Node *jtnode;
 
-
-
-
-
-
-
-
+  jtnode = find_jointree_node_for_rel((Node *)query->jointree, joinrelid);
+  if (!jtnode)
+  {
+    elog(ERROR, "could not find join node %d", joinrelid);
+  }
+  return get_relids_in_jointree(jtnode, false);
 }
 
 /*
@@ -3304,55 +3305,55 @@ get_relids_for_join(Query *query, int joinrelid)
 static Node *
 find_jointree_node_for_rel(Node *jtnode, int relid)
 {
+  if (jtnode == NULL)
+  {
+    return NULL;
+  }
+  if (IsA(jtnode, RangeTblRef))
+  {
+    int varno = ((RangeTblRef *)jtnode)->rtindex;
 
+    if (relid == varno)
+    {
+      return jtnode;
+    }
+  }
+  else if (IsA(jtnode, FromExpr))
+  {
+    FromExpr *f = (FromExpr *)jtnode;
+    ListCell *l;
 
+    foreach (l, f->fromlist)
+    {
+      jtnode = find_jointree_node_for_rel(lfirst(l), relid);
+      if (jtnode)
+      {
+        return jtnode;
+      }
+    }
+  }
+  else if (IsA(jtnode, JoinExpr))
+  {
+    JoinExpr *j = (JoinExpr *)jtnode;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (relid == j->rtindex)
+    {
+      return jtnode;
+    }
+    jtnode = find_jointree_node_for_rel(j->larg, relid);
+    if (jtnode)
+    {
+      return jtnode;
+    }
+    jtnode = find_jointree_node_for_rel(j->rarg, relid);
+    if (jtnode)
+    {
+      return jtnode;
+    }
+  }
+  else
+  {
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
+  }
+  return NULL;
 }

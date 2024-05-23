@@ -27,7 +27,8 @@ print_wchar_str(const pg_wchar *s)
   int i;
 
   i = 0;
-  while (*s && i < BUF_DIGITS) {
+  while (*s && i < BUF_DIGITS)
+  {
     snprintf(&buf[i * 2], 3, "%04X", *s);
     i++;
     s++;
@@ -39,14 +40,18 @@ print_wchar_str(const pg_wchar *s)
 static int
 pg_wcscmp(const pg_wchar *s1, const pg_wchar *s2)
 {
-  for (;;) {
-    if (*s1 < *s2) {
+  for (;;)
+  {
+    if (*s1 < *s2)
+    {
       return -1;
     }
-    if (*s1 > *s2) {
+    if (*s1 > *s2)
+    {
       return 1;
     }
-    if (*s1 == 0) {
+    if (*s1 == 0)
+    {
       return 0;
     }
     s1++;
@@ -59,12 +64,14 @@ main(int argc, char **argv)
 {
   const pg_unicode_test *test;
 
-  for (test = UnicodeNormalizationTests; test->input[0] != 0; test++) {
+  for (test = UnicodeNormalizationTests; test->input[0] != 0; test++)
+  {
     pg_wchar *result;
 
     result = unicode_normalize_kc(test->input);
 
-    if (pg_wcscmp(test->output, result) != 0) {
+    if (pg_wcscmp(test->output, result) != 0)
+    {
       printf("FAILURE (Normalizationdata.txt line %d):\n", test->linenum);
       printf("input:\t%s\n", print_wchar_str(test->input));
       printf("expected:\t%s\n", print_wchar_str(test->output));

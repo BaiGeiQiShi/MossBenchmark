@@ -101,8 +101,8 @@ CreateTupleDesc(int natts, Form_pg_attribute *attrs)
 
 /*
  * CreateTupleDescCopy
- *		This function creates a new TupleDesc by copying from an
- *existing TupleDesc.
+ *		This function creates a new TupleDesc by copying from an existing
+ *		TupleDesc.
  *
  * !!! Constraints and defaults are not copied !!!
  */
@@ -141,8 +141,8 @@ CreateTupleDescCopy(TupleDesc tupdesc)
 
 /*
  * CreateTupleDescCopyConstr
- *		This function creates a new TupleDesc by copying from an
- *existing TupleDesc (including its constraints and defaults).
+ *		This function creates a new TupleDesc by copying from an existing
+ *		TupleDesc (including its constraints and defaults).
  */
 TupleDesc
 CreateTupleDescCopyConstr(TupleDesc tupdesc)
@@ -460,11 +460,11 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (attr1->attlen != attr2->attlen)
     {
-
+      return false;
     }
     if (attr1->attndims != attr2->attndims)
     {
-
+      return false;
     }
     if (attr1->atttypmod != attr2->atttypmod)
     {
@@ -472,7 +472,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (attr1->attbyval != attr2->attbyval)
     {
-
+      return false;
     }
     if (attr1->attstorage != attr2->attstorage)
     {
@@ -480,7 +480,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (attr1->attalign != attr2->attalign)
     {
-
+      return false;
     }
     if (attr1->attnotnull != attr2->attnotnull)
     {
@@ -496,11 +496,11 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (attr1->attgenerated != attr2->attgenerated)
     {
-
+      return false;
     }
     if (attr1->attisdropped != attr2->attisdropped)
     {
-
+      return false;
     }
     if (attr1->attislocal != attr2->attislocal)
     {
@@ -512,7 +512,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (attr1->attcollation != attr2->attcollation)
     {
-
+      return false;
     }
     /* attacl, attoptions and attfdwoptions are not even present... */
   }
@@ -528,7 +528,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     }
     if (constr1->has_not_null != constr2->has_not_null)
     {
-
+      return false;
     }
     if (constr1->has_generated_stored != constr2->has_generated_stored)
     {
@@ -537,7 +537,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
     n = constr1->num_defval;
     if (n != (int)constr2->num_defval)
     {
-
+      return false;
     }
     for (i = 0; i < n; i++)
     {
@@ -558,11 +558,11 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
       }
       if (j >= n)
       {
-
+        return false;
       }
       if (strcmp(defval1->adbin, defval2->adbin) != 0)
       {
-
+        return false;
       }
     }
     if (constr1->missing)
@@ -578,7 +578,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
 
         if (missval1->am_present != missval2->am_present)
         {
-
+          return false;
         }
         if (missval1->am_present)
         {
@@ -586,14 +586,14 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2)
 
           if (!datumIsEqual(missval1->am_value, missval2->am_value, missatt1->attbyval, missatt1->attlen))
           {
-
+            return false;
           }
         }
       }
     }
     else if (constr2->missing)
     {
-
+      return false;
     }
     n = constr1->num_check;
     if (n != (int)constr2->num_check)
@@ -726,7 +726,7 @@ TupleDescInitEntry(TupleDesc desc, AttrNumber attributeNumber, const char *attri
   tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(oidtypeid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", oidtypeid);
   }
   typeForm = (Form_pg_type)GETSTRUCT(tuple);
 
@@ -789,8 +789,8 @@ TupleDescInitBuiltinEntry(TupleDesc desc, AttrNumber attributeNumber, const char
    */
   switch (oidtypeid)
   {
-  case TEXTOID:;
-  case TEXTARRAYOID:;
+  case TEXTOID:
+  case TEXTARRAYOID:
     att->attlen = -1;
     att->attbyval = false;
     att->attalign = 'i';
@@ -798,32 +798,32 @@ TupleDescInitBuiltinEntry(TupleDesc desc, AttrNumber attributeNumber, const char
     att->attcollation = DEFAULT_COLLATION_OID;
     break;
 
-  case BOOLOID:;
+  case BOOLOID:
+    att->attlen = 1;
+    att->attbyval = true;
+    att->attalign = 'c';
+    att->attstorage = 'p';
+    att->attcollation = InvalidOid;
+    break;
 
+  case INT4OID:
+    att->attlen = 4;
+    att->attbyval = true;
+    att->attalign = 'i';
+    att->attstorage = 'p';
+    att->attcollation = InvalidOid;
+    break;
 
+  case INT8OID:
+    att->attlen = 8;
+    att->attbyval = FLOAT8PASSBYVAL;
+    att->attalign = 'd';
+    att->attstorage = 'p';
+    att->attcollation = InvalidOid;
+    break;
 
-
-
-
-
-  case INT4OID:;
-
-
-
-
-
-
-
-  case INT8OID:;
-
-
-
-
-
-
-
-  default:;;
-
+  default:
+    elog(ERROR, "unsupported type %u", oidtypeid);
   }
 }
 
@@ -905,7 +905,7 @@ BuildDescForRelation(List *schema)
 
     if (entry->typeName->setof)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION), errmsg("column \"%s\" cannot be declared SETOF", attname)));
     }
 
     TupleDescInitEntry(desc, attnum, attname, atttypid, atttypmod, attdim);

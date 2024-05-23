@@ -70,11 +70,11 @@ tqueueReceiveSlot(TupleTableSlot *slot, DestReceiver *self)
   /* Check for failure. */
   if (result == SHM_MQ_DETACHED)
   {
-
+    return false;
   }
   else if (result != SHM_MQ_SUCCESS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not send tuple to shared-memory queue")));
   }
 
   return true;
@@ -115,7 +115,7 @@ tqueueDestroyReceiver(DestReceiver *self)
   /* We probably already detached from queue, but let's be sure */
   if (tqueue->queue != NULL)
   {
-
+    shm_mq_detach(tqueue->queue);
   }
   pfree(self);
 }

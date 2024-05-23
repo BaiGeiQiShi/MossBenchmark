@@ -145,7 +145,7 @@ is_safe_restriction_clause_for(RestrictInfo *rinfo, RelOptInfo *rel)
    */
   if (rinfo->pseudoconstant)
   {
-
+    return false;
   }
   if (!bms_equal(rinfo->clause_relids, rel->relids))
   {
@@ -155,7 +155,7 @@ is_safe_restriction_clause_for(RestrictInfo *rinfo, RelOptInfo *rel)
   /* We don't want extra evaluations of any volatile functions */
   if (contain_volatile_functions((Node *)rinfo->clause))
   {
-
+    return false;
   }
 
   return true;
@@ -274,7 +274,7 @@ extract_or_clause(RestrictInfo *or_rinfo, RelOptInfo *rel)
   {
     return make_orclause(clauselist);
   }
-
+  return NULL;
 }
 
 /*
@@ -310,7 +310,7 @@ consider_new_or_clause(PlannerInfo *root, RelOptInfo *rel, Expr *orclause, Restr
    */
   if (or_selec > 0.9)
   {
-
+    return; /* forget it */
   }
 
   /*
@@ -369,7 +369,7 @@ consider_new_or_clause(PlannerInfo *root, RelOptInfo *rel, Expr *orclause, Restr
     /* ensure result stays in sane range, in particular not "redundant" */
     if (join_or_rinfo->norm_selec > 1)
     {
-
+      join_or_rinfo->norm_selec = 1;
     }
     /* as explained above, we don't touch outer_selec */
   }

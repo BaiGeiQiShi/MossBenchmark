@@ -95,7 +95,7 @@ CreateStatistics(CreateStatsStmt *stmt)
    */
   if (list_length(stmt->relations) != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("only a single relation is allowed in CREATE STATISTICS")));
   }
 
   foreach (cell, stmt->relations)
@@ -104,7 +104,7 @@ CreateStatistics(CreateStatsStmt *stmt)
 
     if (!IsA(rln, RangeVar))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("only a single relation is allowed in CREATE STATISTICS")));
     }
 
     /*
@@ -125,13 +125,13 @@ CreateStatistics(CreateStatsStmt *stmt)
     /* You must own the relation to create stats on it */
     if (!pg_class_ownercheck(RelationGetRelid(rel), stxowner))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(rel->rd_rel->relkind), RelationGetRelationName(rel));
     }
 
     /* Creating statistics on system catalogs is not allowed */
     if (!allowSystemTableMods && IsSystemRelation(rel))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied: \"%s\" is a system catalog", RelationGetRelationName(rel))));
     }
   }
 
@@ -172,7 +172,7 @@ CreateStatistics(CreateStatsStmt *stmt)
       return InvalidObjectAddress;
     }
 
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("statistics object \"%s\" already exists", namestr)));
   }
 
   /*
@@ -199,7 +199,7 @@ CreateStatistics(CreateStatsStmt *stmt)
 
     if (list_length(cref->fields) != 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("only simple column references are allowed in CREATE STATISTICS")));
     }
     attname = strVal((Value *)linitial(cref->fields));
 
@@ -213,20 +213,20 @@ CreateStatistics(CreateStatsStmt *stmt)
     /* Disallow use of system attributes in extended stats */
     if (attForm->attnum <= 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("statistics creation on system columns is not supported")));
     }
 
     /* Disallow data types without a less-than operator */
     type = lookup_type_cache(attForm->atttypid, TYPECACHE_LT_OPR);
     if (type->lt_opr == InvalidOid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("column \"%s\" cannot be used in statistics because its type %s has no default btree operator class", attname, format_type_be(attForm->atttypid))));
     }
 
     /* Make sure no more than STATS_MAX_DIMENSIONS columns are used */
     if (numcols >= STATS_MAX_DIMENSIONS)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("cannot have more than %d columns in statistics", STATS_MAX_DIMENSIONS)));
     }
 
     attnums[numcols] = attForm->attnum;
@@ -240,7 +240,7 @@ CreateStatistics(CreateStatsStmt *stmt)
    */
   if (numcols < 2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("extended statistics require at least 2 columns")));
   }
 
   /*
@@ -431,9 +431,9 @@ RemoveStatisticsById(Oid statsOid)
 
   tup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(statsOid));
 
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for statistics data %u", statsOid);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -450,9 +450,9 @@ RemoveStatisticsById(Oid statsOid)
 
   tup = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(statsOid));
 
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for statistics object %u", statsOid);
   }
 
   statext = (Form_pg_statistic_ext)GETSTRUCT(tup);
@@ -506,7 +506,7 @@ UpdateStatisticsForTypeChange(Oid statsOid, Oid relationOid, int attnum, Oid old
   oldtup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(statsOid));
   if (!HeapTupleIsValid(oldtup))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", statsOid);
   }
 
   /*
@@ -583,8 +583,8 @@ ChooseExtendedStatisticName(const char *name1, const char *name2, const char *la
     }
 
     /* found a conflict, so try a new name component */
-
-
+    pfree(stxname);
+    snprintf(modlabel, sizeof(modlabel), "%s%d", label, ++pass);
   }
 
   return stxname;
@@ -617,7 +617,7 @@ ChooseExtendedStatisticNameAddition(List *exprs)
     /* It should be one of these, but just skip if it happens not to be */
     if (!IsA(cref, ColumnRef))
     {
-
+      continue;
     }
 
     name = strVal((Value *)linitial(cref->fields));
@@ -635,7 +635,7 @@ ChooseExtendedStatisticNameAddition(List *exprs)
     buflen += strlen(buf + buflen);
     if (buflen >= NAMEDATALEN)
     {
-
+      break;
     }
   }
   return pstrdup(buf);

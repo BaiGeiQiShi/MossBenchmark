@@ -50,8 +50,10 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "dropdb", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:wWei", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWei", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -79,13 +81,14 @@ main(int argc, char *argv[])
     case 2:
       maintenance_db = pg_strdup(optarg);
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  switch (argc - optind) {
+  switch (argc - optind)
+  {
   case 0:
     pg_log_error("missing required argument database name");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -93,15 +96,17 @@ main(int argc, char *argv[])
   case 1:
     dbname = argv[optind];
     break;
-  default:;
+  default:
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind + 1]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (interactive) {
+  if (interactive)
+  {
     printf(_("Database \"%s\" will be permanently removed.\n"), dbname);
-    if (!yesno_prompt("Are you sure?")) {
+    if (!yesno_prompt("Are you sure?"))
+    {
       exit(0);
     }
   }
@@ -111,7 +116,8 @@ main(int argc, char *argv[])
   appendPQExpBuffer(&sql, "DROP DATABASE %s%s;", (if_exists ? "IF EXISTS " : ""), fmtId(dbname));
 
   /* Avoid trying to drop postgres db while we are connected to it. */
-  if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0) {
+  if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0)
+  {
     maintenance_db = "template1";
   }
 
@@ -124,11 +130,13 @@ main(int argc, char *argv[])
 
   conn = connectMaintenanceDatabase(&cparams, progname, echo);
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", sql.data);
   }
   result = PQexec(conn, sql.data);
-  if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(result) != PGRES_COMMAND_OK)
+  {
     pg_log_error("database removal failed: %s", PQerrorMessage(conn));
     PQfinish(conn);
     exit(1);

@@ -495,15 +495,15 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
 
   if (re == NULL || string == NULL)
   {
-
+    return REG_INVARG;
   }
   if ((flags & REG_QUOTE) && (flags & (REG_ADVANCED | REG_EXPANDED | REG_NEWLINE)))
   {
-
+    return REG_INVARG;
   }
   if (!(flags & REG_EXTENDED) && (flags & REG_ADVF))
   {
-
+    return REG_INVARG;
   }
 
   /* Initialize locale-dependent support */
@@ -546,7 +546,7 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   re->re_guts = VS(MALLOC(sizeof(struct guts)));
   if (re->re_guts == NULL)
   {
-
+    return freev(v, REG_ESPACE);
   }
   g = (struct guts *)re->re_guts;
   g->tree = NULL;
@@ -561,7 +561,7 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   v->cv = newcvec(100, 20);
   if (v->cv == NULL)
   {
-
+    return freev(v, REG_ESPACE);
   }
 
   /* parsing */
@@ -672,36 +672,36 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
 static void
 moresubs(struct vars *v, int wanted) /* want enough room for this one */
 {
+  struct subre **p;
+  size_t n;
 
+  assert(wanted > 0 && (size_t)wanted >= v->nsubs);
+  n = (size_t)wanted * 3 / 2 + 1;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (v->subs == v->sub10)
+  {
+    p = (struct subre **)MALLOC(n * sizeof(struct subre *));
+    if (p != NULL)
+    {
+      memcpy(VS(p), VS(v->subs), v->nsubs * sizeof(struct subre *));
+    }
+  }
+  else
+  {
+    p = (struct subre **)REALLOC(v->subs, n * sizeof(struct subre *));
+  }
+  if (p == NULL)
+  {
+    ERR(REG_ESPACE);
+    return;
+  }
+  v->subs = p;
+  for (p = &v->subs[v->nsubs]; v->nsubs < n; p++, v->nsubs++)
+  {
+    *p = NULL;
+  }
+  assert(v->nsubs == n);
+  assert((size_t)wanted < v->nsubs);
 }
 
 /*
@@ -719,7 +719,7 @@ freev(struct vars *v, int err)
   }
   if (v->subs != v->sub10)
   {
-
+    FREE(v->subs);
   }
   if (v->nfa != NULL)
   {
@@ -739,11 +739,11 @@ freev(struct vars *v, int err)
   }
   if (v->cv2 != NULL)
   {
-
+    freecvec(v->cv2);
   }
   if (v->lacons != NULL)
   {
-
+    freelacons(v->lacons, v->nlacons);
   }
   ERR(err); /* nop if err==0 */
 
@@ -884,8 +884,8 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
     branch->left = parsebranch(v, stopper, type, left, right, 0);
     NOERRN();
     branch->flags |= UP(branch->flags | branch->left->flags);
-    if ((branch->flags & ~branches->flags) != 0)
-    { /* new flags */
+    if ((branch->flags & ~branches->flags) != 0) /* new flags */
+    {
       for (t = branches; t != branch; t = t->right)
       {
         t->flags |= branch->flags;
@@ -1011,7 +1011,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
   switch (atomtype)
   {
     /* first, constraints, which end by returning */
-  case '^':;
+  case '^':
     ARCV('^', 1);
     if (v->cflags & REG_NLANCH)
     {
@@ -1020,7 +1020,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     NEXT();
     return;
     break;
-  case '$':;
+  case '$':
     ARCV('$', 1);
     if (v->cflags & REG_NLANCH)
     {
@@ -1029,19 +1029,19 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     NEXT();
     return;
     break;
-  case SBEGIN:;
-
-
-
-
+  case SBEGIN:
+    ARCV('^', 1); /* BOL */
+    ARCV('^', 0); /* or BOS */
+    NEXT();
+    return;
     break;
-  case SEND:;
-
-
-
-
+  case SEND:
+    ARCV('$', 1); /* EOL */
+    ARCV('$', 0); /* or EOS */
+    NEXT();
+    return;
     break;
-  case '<':;
+  case '<':
     wordchrs(v); /* does NEXT() */
     s = newstate(v->nfa);
     NOERR();
@@ -1049,7 +1049,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     word(v, AHEAD, s, rp);
     return;
     break;
-  case '>':;
+  case '>':
     wordchrs(v); /* does NEXT() */
     s = newstate(v->nfa);
     NOERR();
@@ -1057,19 +1057,19 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     nonword(v, AHEAD, s, rp);
     return;
     break;
-  case WBDRY:;
-
-
+  case WBDRY:
+    wordchrs(v); /* does NEXT() */
+    s = newstate(v->nfa);
     NOERR();
-
-
-
+    nonword(v, BEHIND, lp, s);
+    word(v, AHEAD, s, rp);
+    s = newstate(v->nfa);
     NOERR();
-
-
-
-
-  case NWBDRY:;
+    word(v, BEHIND, lp, s);
+    nonword(v, AHEAD, s, rp);
+    return;
+    break;
+  case NWBDRY:
     wordchrs(v); /* does NEXT() */
     s = newstate(v->nfa);
     NOERR();
@@ -1081,7 +1081,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     nonword(v, AHEAD, s, rp);
     return;
     break;
-  case LACON: ;/* lookaround constraint */
+  case LACON: /* lookaround constraint */
     latype = v->nextvalue;
     NEXT();
     s = newstate(v->nfa);
@@ -1096,35 +1096,35 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
     break;
     /* then errors, to get them out of the way */
-  case '*':;
-  case '+':;
-  case '?':;
-  case '{':;
-
-
-
-  default:;;
-
-
-
+  case '*':
+  case '+':
+  case '?':
+  case '{':
+    ERR(REG_BADRPT);
+    return;
+    break;
+  default:
+    ERR(REG_ASSERT);
+    return;
+    break;
     /* then plain characters, and minor variants on that theme */
-  case ')': ;/* unbalanced paren */
-
-
-
-
-
+  case ')': /* unbalanced paren */
+    if ((v->cflags & REG_ADVANCED) != REG_EXTENDED)
+    {
+      ERR(REG_EPAREN);
+      return;
+    }
     /* legal in EREs due to specification botch */
-
+    NOTE(REG_UPBOTCH);
     /* fall through into case PLAIN */
     /* FALLTHROUGH */
-  case PLAIN:;
+  case PLAIN:
     onechr(v, v->nextvalue, lp, rp);
     okcolors(v->nfa, v->cm);
     NOERR();
     NEXT();
     break;
-  case '[':;
+  case '[':
     if (v->nextvalue == 1)
     {
       bracket(v, lp, rp);
@@ -1136,12 +1136,12 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     assert(SEE(']') || ISERR());
     NEXT();
     break;
-  case '.':;
+  case '.':
     rainbow(v->nfa, v->cm, PLAIN, (v->cflags & REG_NLSTOP) ? v->nlcolor : COLORLESS, lp, rp);
     NEXT();
     break;
     /* and finally the ugly stuff */
-  case '(': ;/* value flags as capturing or non */
+  case '(': /* value flags as capturing or non */
     cap = (type == LACON) ? 0 : v->nextvalue;
     if (cap)
     {
@@ -1149,7 +1149,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
       subno = v->nsubexp;
       if ((size_t)subno >= v->nsubs)
       {
-
+        moresubs(v, subno);
       }
       assert((size_t)subno < v->nsubs);
     }
@@ -1180,7 +1180,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     }
     /* postpone everything else pending possible {0} */
     break;
-  case BACKREF: ;/* the Feature From The Black Lagoon */
+  case BACKREF: /* the Feature From The Black Lagoon */
     INSIST(type != LACON, REG_ESUBREG);
     INSIST(v->nextvalue < v->nsubs, REG_ESUBREG);
     INSIST(v->subs[v->nextvalue] != NULL, REG_ESUBREG);
@@ -1198,25 +1198,25 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
   /* ...and an atom may be followed by a quantifier */
   switch (v->nexttype)
   {
-  case '*':;
+  case '*':
     m = 0;
     n = DUPINF;
     qprefer = (v->nextvalue) ? LONGER : SHORTER;
     NEXT();
     break;
-  case '+':;
+  case '+':
     m = 1;
     n = DUPINF;
     qprefer = (v->nextvalue) ? LONGER : SHORTER;
     NEXT();
     break;
-  case '?':;
+  case '?':
     m = 0;
     n = 1;
     qprefer = (v->nextvalue) ? LONGER : SHORTER;
     NEXT();
     break;
-  case '{':;
+  case '{':
     NEXT();
     m = scannum(v);
     if (EAT(','))
@@ -1245,12 +1245,12 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     }
     if (!SEE('}'))
     { /* catches errors too */
-
-
+      ERR(REG_BADBR);
+      return;
     }
     NEXT();
     break;
-  default:; ;/* no quantifier */
+  default: /* no quantifier */
     m = n = 1;
     qprefer = 0;
     break;
@@ -1272,11 +1272,11 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     else
     {
       /* Otherwise, we can clean up any subre infrastructure we made */
-
-
-
-
-
+      if (atom != NULL)
+      {
+        freesubre(v, atom);
+      }
+      delsub(v->nfa, lp, rp);
     }
     EMPTYARC(lp, rp);
     return;
@@ -1309,7 +1309,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
   /* now we'll need a subre for the contents even if they're boring */
   if (atom == NULL)
   {
-
+    atom = subre(v, '=', 0, lp, rp);
     NOERR();
   }
 
@@ -1498,8 +1498,8 @@ scannum(struct vars *v)
   }
   if (SEE(DIGIT) || n > DUPMAX)
   {
-
-
+    ERR(REG_BADBR);
+    return 0;
   }
   return n;
 }
@@ -1531,19 +1531,19 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
 
   switch (PAIR(rm, rn))
   {
-  case PAIR(0, 0): ;/* empty string */
+  case PAIR(0, 0): /* empty string */
     delsub(v->nfa, lp, rp);
     EMPTYARC(lp, rp);
     break;
-  case PAIR(0, 1): ;/* do as x| */
+  case PAIR(0, 1): /* do as x| */
     EMPTYARC(lp, rp);
     break;
-  case PAIR(0, SOME): ;/* do as x{1,n}| */
-
+  case PAIR(0, SOME): /* do as x{1,n}| */
+    repeat(v, lp, rp, 1, n);
     NOERR();
-
-
-  case PAIR(0, INF): ;/* loop x around */
+    EMPTYARC(lp, rp);
+    break;
+  case PAIR(0, INF): /* loop x around */
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1551,19 +1551,19 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     EMPTYARC(lp, s);
     EMPTYARC(s, rp);
     break;
-  case PAIR(1, 1): ;/* no action required */
+  case PAIR(1, 1): /* no action required */
     break;
-  case PAIR(1, SOME): ;/* do as x{0,n-1}x = (x{1,n-1}|)x */
-
+  case PAIR(1, SOME): /* do as x{0,n-1}x = (x{1,n-1}|)x */
+    s = newstate(v->nfa);
     NOERR();
-
-
+    moveouts(v->nfa, lp, s);
+    dupnfa(v->nfa, s, rp, lp, s);
     NOERR();
-
+    repeat(v, lp, s, 1, n - 1);
     NOERR();
-
-
-  case PAIR(1, INF): ;/* add loopback arc */
+    EMPTYARC(lp, s);
+    break;
+  case PAIR(1, INF): /* add loopback arc */
     s = newstate(v->nfa);
     s2 = newstate(v->nfa);
     NOERR();
@@ -1573,7 +1573,7 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     EMPTYARC(s2, rp);
     EMPTYARC(s2, s);
     break;
-  case PAIR(SOME, SOME): ;/* do as x{m-1,n-1}x */
+  case PAIR(SOME, SOME): /* do as x{m-1,n-1}x */
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1581,7 +1581,7 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     NOERR();
     repeat(v, lp, s, m - 1, n - 1);
     break;
-  case PAIR(SOME, INF): ;/* do as x{m-1,}x */
+  case PAIR(SOME, INF): /* do as x{m-1,}x */
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1589,9 +1589,9 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     NOERR();
     repeat(v, lp, s, m - 1, n);
     break;
-  default:;;
-
-
+  default:
+    ERR(REG_ASSERT);
+    break;
   }
 }
 
@@ -1628,7 +1628,7 @@ cbracket(struct vars *v, struct state *lp, struct state *rp)
   bracket(v, left, right);
   if (v->cflags & REG_NLSTOP)
   {
-
+    newarc(v->nfa, PLAIN, v->nlcolor, left, right);
   }
   NOERR();
 
@@ -1661,11 +1661,11 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
   /* parse something, get rid of special cases, take shortcuts */
   switch (v->nexttype)
   {
-  case RANGE: ;/* a-b-c or other botch */
-
-
+  case RANGE: /* a-b-c or other botch */
+    ERR(REG_ERANGE);
+    return;
     break;
-  case PLAIN:;
+  case PLAIN:
     c[0] = v->nextvalue;
     NEXT();
     /* shortcut for ordinary chr (not range) */
@@ -1677,27 +1677,27 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
     startc = element(v, c, c + 1);
     NOERR();
     break;
-  case COLLEL:;
-
-
-
+  case COLLEL:
+    startp = v->now;
+    endp = scanplain(v);
+    INSIST(startp < endp, REG_ECOLLATE);
     NOERR();
-
+    startc = element(v, startp, endp);
     NOERR();
-
-  case ECLASS:;
-
-
-
+    break;
+  case ECLASS:
+    startp = v->now;
+    endp = scanplain(v);
+    INSIST(startp < endp, REG_ECOLLATE);
     NOERR();
-
+    startc = element(v, startp, endp);
     NOERR();
-
+    cv = eclass(v, startc, (v->cflags & REG_ICASE));
     NOERR();
-
-
-
-  case CCLASS:;
+    subcolorcvec(v, cv, lp, rp);
+    return;
+    break;
+  case CCLASS:
     startp = v->now;
     endp = scanplain(v);
     INSIST(startp < endp, REG_ECTYPE);
@@ -1707,9 +1707,9 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
     subcolorcvec(v, cv, lp, rp);
     return;
     break;
-  default:;;
-
-
+  default:
+    ERR(REG_ASSERT);
+    return;
     break;
   }
 
@@ -1718,30 +1718,30 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
     NEXT();
     switch (v->nexttype)
     {
-    case PLAIN:;
-    case RANGE:;
+    case PLAIN:
+    case RANGE:
       c[0] = v->nextvalue;
       NEXT();
       endc = element(v, c, c + 1);
       NOERR();
       break;
-    case COLLEL:;
-
-
-
+    case COLLEL:
+      startp = v->now;
+      endp = scanplain(v);
+      INSIST(startp < endp, REG_ECOLLATE);
       NOERR();
-
+      endc = element(v, startp, endp);
       NOERR();
-
-    default:;;
-
-
-
+      break;
+    default:
+      ERR(REG_ERANGE);
+      return;
+      break;
     }
   }
   else
   {
-
+    endc = startc;
   }
 
   /*
@@ -1860,7 +1860,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
   s1 = single_color_transition(begin, end);
   switch (latype)
   {
-  case LATYPE_AHEAD_POS:;
+  case LATYPE_AHEAD_POS:
     /* If lookahead RE is just colorset C, convert to AHEAD(C) */
     if (s1 != NULL)
     {
@@ -1868,7 +1868,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
       return;
     }
     break;
-  case LATYPE_AHEAD_NEG:;
+  case LATYPE_AHEAD_NEG:
     /* If lookahead RE is just colorset C, convert to AHEAD(^C)|$ */
     if (s1 != NULL)
     {
@@ -1878,7 +1878,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
       return;
     }
     break;
-  case LATYPE_BEHIND_POS:;
+  case LATYPE_BEHIND_POS:
     /* If lookbehind RE is just colorset C, convert to BEHIND(C) */
     if (s1 != NULL)
     {
@@ -1886,7 +1886,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
       return;
     }
     break;
-  case LATYPE_BEHIND_NEG:;
+  case LATYPE_BEHIND_NEG:
     /* If lookbehind RE is just colorset C, convert to BEHIND(^C)|^ */
     if (s1 != NULL)
     {
@@ -1895,9 +1895,9 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
       newarc(v->nfa, '^', 0, lp, rp);
       return;
     }
-
-  default:;;
-
+    break;
+  default:
+    assert(NOTREACHED);
   }
 
   /* General case: we need a LACON subre and arc */
@@ -1919,8 +1919,8 @@ subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
    */
   if (STACK_TOO_DEEP(v->re))
   {
-
-
+    ERR(REG_ETOOBIG);
+    return NULL;
   }
 
   if (ret != NULL)
@@ -1932,8 +1932,8 @@ subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
     ret = (struct subre *)MALLOC(sizeof(struct subre));
     if (ret == NULL)
     {
-
-
+      ERR(REG_ESPACE);
+      return NULL;
     }
     ret->chain = v->treechain;
     v->treechain = ret;
@@ -1988,7 +1988,7 @@ freesrnode(struct vars *v, /* might be NULL */
 {
   if (sr == NULL)
   {
-
+    return;
   }
 
   if (!NULLCNFA(sr->cnfa))
@@ -2188,8 +2188,8 @@ newlacon(struct vars *v, struct state *begin, struct state *end, int latype)
   }
   if (newlacons == NULL)
   {
-
-
+    ERR(REG_ESPACE);
+    return 0;
   }
   v->lacons = newlacons;
   v->nlacons = n + 1;
@@ -2211,8 +2211,8 @@ freelacons(struct subre *subs, int n)
   int i;
 
   assert(n > 0);
-  for (sub = subs + 1, i = n - 1; i > 0; sub++, i--)
-  { /* no 0th */
+  for (sub = subs + 1, i = n - 1; i > 0; sub++, i--) /* no 0th */
+  {
     if (!NULLCNFA(sub->cnfa))
     {
       freecnfa(&sub->cnfa);
@@ -2231,7 +2231,7 @@ rfree(regex_t *re)
 
   if (re == NULL || re->re_magic != REMAGIC)
   {
-
+    return;
   }
 
   re->re_magic = 0; /* invalidate RE */
@@ -2344,7 +2344,7 @@ dump(regex_t *re, FILE *f)
     case LATYPE_BEHIND_NEG:
       latype = "negative lookbehind";
       break;
-    default:;
+    default:
       latype = "???";
       break;
     }

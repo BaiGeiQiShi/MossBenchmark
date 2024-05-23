@@ -105,13 +105,13 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
   /* The defaults can vary depending on the original statement type */
   switch (stmt->stmt_type)
   {
-  case ROLESTMT_ROLE:;
+  case ROLESTMT_ROLE:
     break;
-  case ROLESTMT_USER:;
+  case ROLESTMT_USER:
     canlogin = true;
     /* may eventually want inherit to default to false here */
     break;
-  case ROLESTMT_GROUP:;
+  case ROLESTMT_GROUP:
     break;
   }
 
@@ -124,19 +124,19 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (dpassword)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dpassword = defel;
     }
     else if (strcmp(defel->defname, "sysid") == 0)
     {
-
+      ereport(NOTICE, (errmsg("SYSID can no longer be specified")));
     }
     else if (strcmp(defel->defname, "superuser") == 0)
     {
       if (dissuper)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dissuper = defel;
     }
@@ -144,7 +144,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (dinherit)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dinherit = defel;
     }
@@ -152,7 +152,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (dcreaterole)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dcreaterole = defel;
     }
@@ -160,7 +160,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (dcreatedb)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dcreatedb = defel;
     }
@@ -168,7 +168,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (dcanlogin)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dcanlogin = defel;
     }
@@ -176,23 +176,23 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (disreplication)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       disreplication = defel;
     }
     else if (strcmp(defel->defname, "connectionlimit") == 0)
     {
-
-
-
-
-
+      if (dconnlimit)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
+      }
+      dconnlimit = defel;
     }
     else if (strcmp(defel->defname, "addroleto") == 0)
     {
       if (daddroleto)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       daddroleto = defel;
     }
@@ -200,37 +200,37 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
     {
       if (drolemembers)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       drolemembers = defel;
     }
     else if (strcmp(defel->defname, "adminmembers") == 0)
     {
-
-
-
-
-
+      if (dadminmembers)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
+      }
+      dadminmembers = defel;
     }
     else if (strcmp(defel->defname, "validUntil") == 0)
     {
-
-
-
-
-
+      if (dvalidUntil)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
+      }
+      dvalidUntil = defel;
     }
     else if (strcmp(defel->defname, "bypassrls") == 0)
     {
       if (dbypassRLS)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dbypassRLS = defel;
     }
     else
     {
-
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
     }
   }
 
@@ -264,11 +264,11 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
   }
   if (dconnlimit)
   {
-
-
-
-
-
+    connlimit = intVal(dconnlimit->arg);
+    if (connlimit < -1)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid connection limit: %d", connlimit)));
+    }
   }
   if (daddroleto)
   {
@@ -280,11 +280,11 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
   }
   if (dadminmembers)
   {
-
+    adminmembers = (List *)dadminmembers->arg;
   }
   if (dvalidUntil)
   {
-
+    validUntil = strVal(dvalidUntil->arg);
   }
   if (dbypassRLS)
   {
@@ -296,28 +296,28 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create superusers")));
     }
   }
   else if (isreplication)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create replication users")));
     }
   }
   else if (bypassrls)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to change bypassrls attribute")));
     }
   }
   else
   {
     if (!have_createrole_privilege())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to create role")));
     }
   }
 
@@ -327,7 +327,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
    */
   if (IsReservedName(stmt->role))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("role name \"%s\" is reserved", stmt->role), errdetail("Role names starting with \"pg_\" are reserved.")));
   }
 
   /*
@@ -356,8 +356,8 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
   /* Convert validuntil to internal form */
   if (validUntil)
   {
-
-
+    validUntil_datum = DirectFunctionCall3(timestamptz_in, CStringGetDatum(validUntil), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+    validUntil_null = false;
   }
   else
   {
@@ -370,7 +370,7 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
    */
   if (check_password_hook && password)
   {
-
+    (*check_password_hook)(stmt->role, password, get_password_type(password), validUntil_datum, validUntil_null);
   }
 
   /*
@@ -434,13 +434,13 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
    */
   if (IsBinaryUpgrade)
   {
+    if (!OidIsValid(binary_upgrade_next_pg_authid_oid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_authid OID value not set when in binary upgrade mode")));
+    }
 
-
-
-
-
-
-
+    roleid = binary_upgrade_next_pg_authid_oid;
+    binary_upgrade_next_pg_authid_oid = InvalidOid;
   }
   else
   {
@@ -566,7 +566,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dpassword)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dpassword = defel;
     }
@@ -574,7 +574,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dissuper)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dissuper = defel;
     }
@@ -582,7 +582,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dinherit)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dinherit = defel;
     }
@@ -590,7 +590,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dcreaterole)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dcreaterole = defel;
     }
@@ -598,7 +598,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dcreatedb)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dcreatedb = defel;
     }
@@ -606,7 +606,7 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (dcanlogin)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dcanlogin = defel;
     }
@@ -614,45 +614,45 @@ AlterRole(AlterRoleStmt *stmt)
     {
       if (disreplication)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       disreplication = defel;
     }
     else if (strcmp(defel->defname, "connectionlimit") == 0)
     {
-
-
-
-
-
+      if (dconnlimit)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
+      }
+      dconnlimit = defel;
     }
     else if (strcmp(defel->defname, "rolemembers") == 0 && stmt->action != 0)
     {
       if (drolemembers)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       drolemembers = defel;
     }
     else if (strcmp(defel->defname, "validUntil") == 0)
     {
-
-
-
-
-
+      if (dvalidUntil)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
+      }
+      dvalidUntil = defel;
     }
     else if (strcmp(defel->defname, "bypassrls") == 0)
     {
       if (dbypassRLS)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       dbypassRLS = defel;
     }
     else
     {
-
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
     }
   }
 
@@ -686,11 +686,11 @@ AlterRole(AlterRoleStmt *stmt)
   }
   if (dconnlimit)
   {
-
-
-
-
-
+    connlimit = intVal(dconnlimit->arg);
+    if (connlimit < -1)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid connection limit: %d", connlimit)));
+    }
   }
   if (drolemembers)
   {
@@ -698,7 +698,7 @@ AlterRole(AlterRoleStmt *stmt)
   }
   if (dvalidUntil)
   {
-
+    validUntil = strVal(dvalidUntil->arg);
   }
   if (dbypassRLS)
   {
@@ -726,37 +726,37 @@ AlterRole(AlterRoleStmt *stmt)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter superusers")));
     }
   }
   else if (authform->rolreplication || isreplication >= 0)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter replication users")));
     }
   }
   else if (bypassrls >= 0)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to change bypassrls attribute")));
     }
   }
   else if (!have_createrole_privilege())
   {
     /* We already checked issuper, isreplication, and bypassrls */
-
-
-
-
+    if (!(inherit < 0 && createrole < 0 && createdb < 0 && canlogin < 0 && !dconnlimit && !rolemembers && !validUntil && dpassword && roleid == GetUserId()))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied")));
+    }
   }
 
   /* Convert validuntil to internal form */
   if (validUntil)
   {
-
-
+    validUntil_datum = DirectFunctionCall3(timestamptz_in, CStringGetDatum(validUntil), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+    validUntil_null = false;
   }
   else
   {
@@ -769,7 +769,7 @@ AlterRole(AlterRoleStmt *stmt)
    */
   if (check_password_hook && password)
   {
-
+    (*check_password_hook)(rolename, password, get_password_type(password), validUntil_datum, validUntil_null);
   }
 
   /*
@@ -820,8 +820,8 @@ AlterRole(AlterRoleStmt *stmt)
 
   if (dconnlimit)
   {
-
-
+    new_record[Anum_pg_authid_rolconnlimit - 1] = Int32GetDatum(connlimit);
+    new_record_repl[Anum_pg_authid_rolconnlimit - 1] = true;
   }
 
   /* password */
@@ -848,8 +848,8 @@ AlterRole(AlterRoleStmt *stmt)
   /* unset password */
   if (dpassword && dpassword->arg == NULL)
   {
-
-
+    new_record_repl[Anum_pg_authid_rolpassword - 1] = true;
+    new_record_nulls[Anum_pg_authid_rolpassword - 1] = true;
   }
 
   /* valid until */
@@ -880,12 +880,12 @@ AlterRole(AlterRoleStmt *stmt)
     CommandCounterIncrement();
   }
 
-  if (stmt->action == +1)
-  { /* add members to role */
+  if (stmt->action == +1) /* add members to role */
+  {
     AddRoleMems(rolename, roleid, rolemembers, roleSpecsToIds(rolemembers), GetUserId(), false);
   }
-  else if (stmt->action == -1)
-  { /* drop members from role */
+  else if (stmt->action == -1) /* drop members from role */
+  {
     DelRoleMems(rolename, roleid, rolemembers, roleSpecsToIds(rolemembers), false);
   }
 
@@ -928,16 +928,16 @@ AlterRoleSet(AlterRoleSetStmt *stmt)
      */
     if (roleform->rolsuper)
     {
-
-
-
-
+      if (!superuser())
+      {
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter superusers")));
+      }
     }
     else
     {
       if (!have_createrole_privilege() && roleid != GetUserId())
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied")));
       }
     }
 
@@ -947,29 +947,29 @@ AlterRoleSet(AlterRoleSetStmt *stmt)
   /* look up and lock the database, if specified */
   if (stmt->database != NULL)
   {
+    databaseid = get_database_oid(stmt->database, false);
+    shdepLockAndCheckObject(DatabaseRelationId, databaseid);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (!stmt->role)
+    {
+      /*
+       * If no role is specified, then this is effectively the same as
+       * ALTER DATABASE ... SET, so use the same permission check.
+       */
+      if (!pg_database_ownercheck(databaseid, GetUserId()))
+      {
+        aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_DATABASE, stmt->database);
+      }
+    }
   }
 
   if (!stmt->role && !stmt->database)
   {
     /* Must be superuser to alter settings globally. */
-
-
-
-
+    if (!superuser())
+    {
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter settings globally")));
+    }
   }
 
   AlterSetting(databaseid, roleid, stmt->setstmt);
@@ -988,7 +988,7 @@ DropRole(DropRoleStmt *stmt)
 
   if (!have_createrole_privilege())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to drop role")));
   }
 
   /*
@@ -1012,7 +1012,7 @@ DropRole(DropRoleStmt *stmt)
 
     if (rolspec->roletype != ROLESPEC_CSTRING)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot use special role specifier in DROP ROLE")));
     }
     role = rolspec->rolename;
 
@@ -1036,15 +1036,15 @@ DropRole(DropRoleStmt *stmt)
 
     if (roleid == GetUserId())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_IN_USE), errmsg("current user cannot be dropped")));
     }
     if (roleid == GetOuterUserId())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_IN_USE), errmsg("current user cannot be dropped")));
     }
     if (roleid == GetSessionUserId())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_IN_USE), errmsg("session user cannot be dropped")));
     }
 
     /*
@@ -1054,7 +1054,7 @@ DropRole(DropRoleStmt *stmt)
      */
     if (roleform->rolsuper && !superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to drop superusers")));
     }
 
     /* DROP hook for the role being removed */
@@ -1162,7 +1162,7 @@ RenameRole(const char *oldname, const char *newname)
   oldtuple = SearchSysCache1(AUTHNAME, CStringGetDatum(oldname));
   if (!HeapTupleIsValid(oldtuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", oldname)));
   }
 
   /*
@@ -1178,11 +1178,11 @@ RenameRole(const char *oldname, const char *newname)
 
   if (roleid == GetSessionUserId())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("session user cannot be renamed")));
   }
   if (roleid == GetOuterUserId())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("current user cannot be renamed")));
   }
 
   /*
@@ -1191,12 +1191,12 @@ RenameRole(const char *oldname, const char *newname)
    */
   if (IsReservedName(NameStr(authform->rolname)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("role name \"%s\" is reserved", NameStr(authform->rolname)), errdetail("Role names starting with \"pg_\" are reserved.")));
   }
 
   if (IsReservedName(newname))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("role name \"%s\" is reserved", newname), errdetail("Role names starting with \"pg_\" are reserved.")));
   }
 
   /*
@@ -1213,7 +1213,7 @@ RenameRole(const char *oldname, const char *newname)
   /* make sure the new name doesn't exist */
   if (SearchSysCacheExists1(AUTHNAME, CStringGetDatum(newname)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("role \"%s\" already exists", newname)));
   }
 
   /*
@@ -1223,14 +1223,14 @@ RenameRole(const char *oldname, const char *newname)
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to rename superusers")));
     }
   }
   else
   {
     if (!have_createrole_privilege())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to rename role")));
     }
   }
 
@@ -1287,7 +1287,7 @@ GrantRole(GrantRoleStmt *stmt)
 
   if (stmt->grantor)
   {
-
+    grantor = get_rolespec_oid(stmt->grantor, false);
   }
   else
   {
@@ -1315,7 +1315,7 @@ GrantRole(GrantRoleStmt *stmt)
     /* Must reject priv(columns) and ALL PRIVILEGES(columns) */
     if (rolename == NULL || priv->cols != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("column names cannot be included in GRANT/REVOKE ROLE")));
     }
 
     roleid = get_role_oid(rolename, false);
@@ -1456,7 +1456,7 @@ AddRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
   {
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter superusers")));
     }
   }
   else
@@ -1479,7 +1479,7 @@ AddRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
    */
   if (grantorId != GetUserId() && !superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to set grantor")));
   }
 
   pg_authmem_rel = table_open(AuthMemRelationId, RowExclusiveLock);
@@ -1504,7 +1504,7 @@ AddRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
      */
     if (is_member_of_role_nosuper(roleid, memberid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), (errmsg("role \"%s\" is a member of role \"%s\"", rolename, get_rolespec_name(memberRole)))));
     }
 
     /*
@@ -1531,11 +1531,11 @@ AddRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
 
     if (HeapTupleIsValid(authmem_tuple))
     {
-
-
-
-
-
+      new_record_repl[Anum_pg_auth_members_grantor - 1] = true;
+      new_record_repl[Anum_pg_auth_members_admin_option - 1] = true;
+      tuple = heap_modify_tuple(authmem_tuple, pg_authmem_dsc, new_record, new_record_nulls, new_record_repl);
+      CatalogTupleUpdate(pg_authmem_rel, &tuple->t_self, tuple);
+      ReleaseSysCache(authmem_tuple);
     }
     else
     {
@@ -1577,7 +1577,7 @@ DelRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
   /* Skip permission check if nothing to do */
   if (!memberIds)
   {
-
+    return;
   }
 
   /*
@@ -1586,16 +1586,16 @@ DelRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
    */
   if (superuser_arg(roleid))
   {
-
-
-
-
+    if (!superuser())
+    {
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter superusers")));
+    }
   }
   else
   {
     if (!have_createrole_privilege() && !is_admin_of_role(GetUserId(), roleid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must have admin option on role \"%s\"", rolename)));
     }
   }
 
@@ -1614,8 +1614,8 @@ DelRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
     authmem_tuple = SearchSysCache2(AUTHMEMROLEMEM, ObjectIdGetDatum(roleid), ObjectIdGetDatum(memberid));
     if (!HeapTupleIsValid(authmem_tuple))
     {
-
-
+      ereport(WARNING, (errmsg("role \"%s\" is not a member of role \"%s\"", get_rolespec_name(memberRole), rolename)));
+      continue;
     }
 
     if (!admin_opt)
@@ -1632,15 +1632,15 @@ DelRoleMems(const char *rolename, Oid roleid, List *memberSpecs, List *memberIds
       bool new_record_repl[Natts_pg_auth_members];
 
       /* Build a tuple to update with */
+      MemSet(new_record, 0, sizeof(new_record));
+      MemSet(new_record_nulls, false, sizeof(new_record_nulls));
+      MemSet(new_record_repl, false, sizeof(new_record_repl));
 
+      new_record[Anum_pg_auth_members_admin_option - 1] = BoolGetDatum(false);
+      new_record_repl[Anum_pg_auth_members_admin_option - 1] = true;
 
-
-
-
-
-
-
-
+      tuple = heap_modify_tuple(authmem_tuple, pg_authmem_dsc, new_record, new_record_nulls, new_record_repl);
+      CatalogTupleUpdate(pg_authmem_rel, &tuple->t_self, tuple);
     }
 
     ReleaseSysCache(authmem_tuple);

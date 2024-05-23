@@ -163,8 +163,8 @@ QTNodeCompare(QTNode *an, QTNode *bn)
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized QueryItem type: %d", an->valnode->type);
+    return 0; /* keep compiler quiet */
   }
 }
 
@@ -414,7 +414,7 @@ QTN2QT(QTNode *in)
 
   if (TSQUERY_TOO_BIG(nnode, sumlen))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("tsquery is too large")));
   }
   len = COMPUTESIZE(nnode, sumlen);
 

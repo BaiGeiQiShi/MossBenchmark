@@ -54,7 +54,7 @@ spgistBuildCallback(Relation index, HeapTuple htup, Datum *values, bool *isnull,
    */
   while (!spgdoinsert(index, &buildstate->spgstate, &htup->t_self, *values, *isnull))
   {
-
+    MemoryContextReset(buildstate->tmpCtx);
   }
 
   /* Update total tuple count */
@@ -77,7 +77,7 @@ spgbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 
   if (RelationGetNumberOfBlocks(index) != 0)
   {
-
+    elog(ERROR, "index \"%s\" already contains data", RelationGetRelationName(index));
   }
 
   /*
@@ -143,43 +143,43 @@ spgbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 void
 spgbuildempty(Relation index)
 {
+  Page page;
 
+  /* Construct metapage. */
+  page = (Page)palloc(BLCKSZ);
+  SpGistInitMetapage(page);
 
+  /*
+   * Write the page and log it unconditionally.  This is important
+   * particularly for indexes created on tablespaces and databases whose
+   * creation happened after the last redo pointer as recovery removes any
+   * of their existing content when the corresponding create records are
+   * replayed.
+   */
+  PageSetChecksumInplace(page, SPGIST_METAPAGE_BLKNO);
+  smgrwrite(RelationGetSmgr(index), INIT_FORKNUM, SPGIST_METAPAGE_BLKNO, (char *)page, true);
+  log_newpage(&(RelationGetSmgr(index))->smgr_rnode.node, INIT_FORKNUM, SPGIST_METAPAGE_BLKNO, page, true);
 
+  /* Likewise for the root page. */
+  SpGistInitPage(page, SPGIST_LEAF);
 
+  PageSetChecksumInplace(page, SPGIST_ROOT_BLKNO);
+  smgrwrite(RelationGetSmgr(index), INIT_FORKNUM, SPGIST_ROOT_BLKNO, (char *)page, true);
+  log_newpage(&(RelationGetSmgr(index))->smgr_rnode.node, INIT_FORKNUM, SPGIST_ROOT_BLKNO, page, true);
 
+  /* Likewise for the null-tuples root page. */
+  SpGistInitPage(page, SPGIST_LEAF | SPGIST_NULLS);
 
+  PageSetChecksumInplace(page, SPGIST_NULL_BLKNO);
+  smgrwrite(RelationGetSmgr(index), INIT_FORKNUM, SPGIST_NULL_BLKNO, (char *)page, true);
+  log_newpage(&(RelationGetSmgr(index))->smgr_rnode.node, INIT_FORKNUM, SPGIST_NULL_BLKNO, page, true);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * An immediate sync is required even if we xlog'd the pages, because the
+   * writes did not go through shared buffers and therefore a concurrent
+   * checkpoint may have moved the redo pointer past our xlog record.
+   */
+  smgrimmedsync(RelationGetSmgr(index), INIT_FORKNUM);
 }
 
 /*
@@ -205,8 +205,8 @@ spginsert(Relation index, Datum *values, bool *isnull, ItemPointer ht_ctid, Rela
    */
   while (!spgdoinsert(index, &spgstate, ht_ctid, *values, *isnull))
   {
-
-
+    MemoryContextReset(insertCtx);
+    initSpGistState(&spgstate, index);
   }
 
   SpGistUpdateMetaPage(index);

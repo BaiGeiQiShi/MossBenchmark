@@ -51,14 +51,18 @@ random_from_file(const char *filename, void *buf, size_t len)
   ssize_t res;
 
   f = open(filename, O_RDONLY, 0);
-  if (f == -1) {
+  if (f == -1)
+  {
     return false;
   }
 
-  while (len) {
+  while (len)
+  {
     res = read(f, p, len);
-    if (res <= 0) {
-      if (errno == EINTR) {
+    if (res <= 0)
+    {
+      if (errno == EINTR)
+      {
         continue; /* interrupted by signal, just retry */
       }
 
@@ -112,13 +116,16 @@ pg_strong_random(void *buf, size_t len)
    */
 #define NUM_RAND_POLL_RETRIES 8
 
-  for (i = 0; i < NUM_RAND_POLL_RETRIES; i++) {
-    if (RAND_status() == 1) {
+  for (i = 0; i < NUM_RAND_POLL_RETRIES; i++)
+  {
+    if (RAND_status() == 1)
+    {
       /* The CSPRNG is sufficiently seeded */
       break;
     }
 
-    if (RAND_poll() == 0) {
+    if (RAND_poll() == 0)
+    {
       /*
        * RAND_poll() failed to generate any seed data, which means that
        * RAND_bytes() will probably fail.  For now, just fall through
@@ -129,7 +136,8 @@ pg_strong_random(void *buf, size_t len)
     }
   }
 
-  if (RAND_bytes(buf, len) == 1) {
+  if (RAND_bytes(buf, len) == 1)
+  {
     return true;
   }
   return false;
@@ -138,8 +146,10 @@ pg_strong_random(void *buf, size_t len)
    * Windows has CryptoAPI for strong cryptographic numbers.
    */
 #elif defined(USE_WIN32_RANDOM)
-  if (hProvider == 0) {
-    if (!CryptAcquireContext(&hProvider, NULL, MS_DEF_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+  if (hProvider == 0)
+  {
+    if (!CryptAcquireContext(&hProvider, NULL, MS_DEF_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
+    {
       /*
        * On failure, set back to 0 in case the value was for some reason
        * modified.
@@ -148,8 +158,10 @@ pg_strong_random(void *buf, size_t len)
     }
   }
   /* Re-check in case we just retrieved the provider */
-  if (hProvider != 0) {
-    if (CryptGenRandom(hProvider, len, buf)) {
+  if (hProvider != 0)
+  {
+    if (CryptGenRandom(hProvider, len, buf))
+    {
       return true;
     }
   }
@@ -159,7 +171,8 @@ pg_strong_random(void *buf, size_t len)
    * Read /dev/urandom ourselves.
    */
 #elif defined(USE_DEV_URANDOM)
-  if (random_from_file("/dev/urandom", buf, len)) {
+  if (random_from_file("/dev/urandom", buf, len))
+  {
     return true;
   }
   return false;

@@ -28,7 +28,8 @@
  * Certain compilers make that harder than it ought to be.
  */
 #define write_stderr(str)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     const char *str_ = (str);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
     int rc_;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
     rc_ = write(fileno(stderr), str_, strlen(str_));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
@@ -51,12 +52,15 @@ static CRITICAL_SECTION cancelConnLock;
 void
 handle_help_version_opts(int argc, char *argv[], const char *fixed_progname, help_handler hlp)
 {
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       hlp(get_progname(argv[0]));
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       printf("%s (PostgreSQL) " PG_VERSION "\n", fixed_progname);
       exit(0);
     }
@@ -85,11 +89,13 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
   /* Callers must supply at least dbname; other params can be NULL */
   Assert(cparams->dbname);
 
-  if (!allow_password_reuse) {
+  if (!allow_password_reuse)
+  {
     have_password = false;
   }
 
-  if (cparams->prompt_password == TRI_YES && !have_password) {
+  if (cparams->prompt_password == TRI_YES && !have_password)
+  {
     simple_prompt("Password: ", password, sizeof(password), false);
     have_password = true;
   }
@@ -98,7 +104,8 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
    * Start the connection.  Loop until we have a password if requested by
    * backend.
    */
-  do {
+  do
+  {
     const char *keywords[8];
     const char *values[8];
     int i = 0;
@@ -118,7 +125,8 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     values[i++] = have_password ? password : NULL;
     keywords[i] = "dbname";
     values[i++] = cparams->dbname;
-    if (cparams->override_dbname) {
+    if (cparams->override_dbname)
+    {
       keywords[i] = "dbname";
       values[i++] = cparams->override_dbname;
     }
@@ -131,7 +139,8 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     new_pass = false;
     conn = PQconnectdbParams(keywords, values, true);
 
-    if (!conn) {
+    if (!conn)
+    {
       pg_log_error("could not connect to database %s: out of memory", cparams->dbname);
       exit(1);
     }
@@ -139,7 +148,8 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     /*
      * No luck?  Trying asking (again) for a password.
      */
-    if (PQstatus(conn) == CONNECTION_BAD && PQconnectionNeedsPassword(conn) && cparams->prompt_password != TRI_NO) {
+    if (PQstatus(conn) == CONNECTION_BAD && PQconnectionNeedsPassword(conn) && cparams->prompt_password != TRI_NO)
+    {
       PQfinish(conn);
       simple_prompt("Password: ", password, sizeof(password), false);
       have_password = true;
@@ -148,8 +158,10 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
   } while (new_pass);
 
   /* check to see that the backend connection was successfully made */
-  if (PQstatus(conn) == CONNECTION_BAD) {
-    if (fail_ok) {
+  if (PQstatus(conn) == CONNECTION_BAD)
+  {
+    if (fail_ok)
+    {
       PQfinish(conn);
       return NULL;
     }
@@ -177,14 +189,16 @@ connectMaintenanceDatabase(ConnParams *cparams, const char *progname, bool echo)
   PGconn *conn;
 
   /* If a maintenance database name was specified, just connect to it. */
-  if (cparams->dbname) {
+  if (cparams->dbname)
+  {
     return connectDatabase(cparams, progname, echo, false, false);
   }
 
   /* Otherwise, try postgres first and then template1. */
   cparams->dbname = "postgres";
   conn = connectDatabase(cparams, progname, echo, true, false);
-  if (!conn) {
+  if (!conn)
+  {
     cparams->dbname = "template1";
     conn = connectDatabase(cparams, progname, echo, false, false);
   }
@@ -199,12 +213,14 @@ executeQuery(PGconn *conn, const char *query, const char *progname, bool echo)
 {
   PGresult *res;
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", query);
   }
 
   res = PQexec(conn, query);
-  if (!res || PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (!res || PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("query failed: %s", PQerrorMessage(conn));
     pg_log_info("query was: %s", query);
     PQfinish(conn);
@@ -222,12 +238,14 @@ executeCommand(PGconn *conn, const char *query, const char *progname, bool echo)
 {
   PGresult *res;
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", query);
   }
 
   res = PQexec(conn, query);
-  if (!res || PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (!res || PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     pg_log_error("query failed: %s", PQerrorMessage(conn));
     pg_log_info("query was: %s", query);
     PQfinish(conn);
@@ -248,7 +266,8 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
   PGresult *res;
   bool r;
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", query);
   }
 
@@ -258,7 +277,8 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
 
   r = (res && PQresultStatus(res) == PGRES_COMMAND_OK);
 
-  if (res) {
+  if (res)
+  {
     PQclear(res);
   }
 
@@ -267,7 +287,8 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
 
 /*
  * Split TABLE[(COLUMNS)] into TABLE and [(COLUMNS)] portions.  When you
- * finish using them, pg_free(*table).  *columns is a pointer into "spec",* possibly to its NUL terminator.
+ * finish using them, pg_free(*table).  *columns is a pointer into "spec",
+ * possibly to its NUL terminator.
  */
 void
 splitTableColumnsSpec(const char *spec, int encoding, char **table, const char **columns)
@@ -279,15 +300,22 @@ splitTableColumnsSpec(const char *spec, int encoding, char **table, const char *
    * Find the first '(' not identifier-quoted.  Based on
    * dequote_downcase_identifier().
    */
-  while (*cp && (*cp != '(' || inquotes)) {
-    if (*cp == '"') {
-      if (inquotes && cp[1] == '"') {
+  while (*cp && (*cp != '(' || inquotes))
+  {
+    if (*cp == '"')
+    {
+      if (inquotes && cp[1] == '"')
+      {
         cp++; /* pair does not affect quoting */
-      } else {
+      }
+      else
+      {
         inquotes = !inquotes;
       }
       cp++;
-    } else {
+    }
+    else
+    {
       cp += PQmblenBounded(cp, encoding);
     }
   }
@@ -300,7 +328,8 @@ splitTableColumnsSpec(const char *spec, int encoding, char **table, const char *
  * Break apart TABLE[(COLUMNS)] of "spec".  With the reset_val of search_path
  * in effect, have regclassin() interpret the TABLE portion.  Append to "buf"
  * the qualified name of TABLE, followed by any (COLUMNS).  Exit on failure.
- * We use this to interpret --table=foo under the search path psql would get,* in advance of "ANALYZE public.foo" under the always-secure search path.
+ * We use this to interpret --table=foo under the search path psql would get,
+ * in advance of "ANALYZE public.foo" under the always-secure search path.
  */
 void
 appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const char *progname, bool echo)
@@ -319,7 +348,11 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const c
    * argument.
    */
   initPQExpBuffer(&sql);
-  appendPQExpBufferStr(&sql, "SELECT c.relname, ns.nspname\n FROM pg_catalog.pg_class c, pg_catalog.pg_namespace ns\n WHERE c.relnamespace OPERATOR(pg_catalog.=) ns.oid\n  AND c.oid OPERATOR(pg_catalog.=) ");
+  appendPQExpBufferStr(&sql, "SELECT c.relname, ns.nspname\n"
+                             " FROM pg_catalog.pg_class c,"
+                             " pg_catalog.pg_namespace ns\n"
+                             " WHERE c.relnamespace OPERATOR(pg_catalog.=) ns.oid\n"
+                             "  AND c.oid OPERATOR(pg_catalog.=) ");
   appendStringLiteralConn(&sql, table, conn);
   appendPQExpBufferStr(&sql, "::pg_catalog.regclass;");
 
@@ -333,7 +366,8 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const c
    */
   res = executeQuery(conn, sql.data, progname, echo);
   ntups = PQntuples(res);
-  if (ntups != 1) {
+  if (ntups != 1)
+  {
     pg_log_error(ngettext("query returned %d row instead of one: %s", "query returned %d rows instead of one: %s", ntups), ntups, sql.data);
     PQfinish(conn);
     exit(1);
@@ -366,15 +400,18 @@ yesno_prompt(const char *question)
      "yes" and "no". */
   snprintf(prompt, sizeof(prompt), _("%s (%s/%s) "), _(question), _(PG_YESLETTER), _(PG_NOLETTER));
 
-  for (;;) {
+  for (;;)
+  {
     char resp[10];
 
     simple_prompt(prompt, resp, sizeof(resp), true);
 
-    if (strcmp(resp, _(PG_YESLETTER)) == 0) {
+    if (strcmp(resp, _(PG_YESLETTER)) == 0)
+    {
       return true;
     }
-    if (strcmp(resp, _(PG_NOLETTER)) == 0) {
+    if (strcmp(resp, _(PG_NOLETTER)) == 0)
+    {
       return false;
     }
 
@@ -402,7 +439,8 @@ SetCancelConn(PGconn *conn)
   /* be sure handle_sigint doesn't use pointer while freeing */
   cancelConn = NULL;
 
-  if (oldCancelConn != NULL) {
+  if (oldCancelConn != NULL)
+  {
     PQfreeCancel(oldCancelConn);
   }
 
@@ -432,7 +470,8 @@ ResetCancelConn(void)
   /* be sure handle_sigint doesn't use pointer while freeing */
   cancelConn = NULL;
 
-  if (oldCancelConn != NULL) {
+  if (oldCancelConn != NULL)
+  {
     PQfreeCancel(oldCancelConn);
   }
 
@@ -453,15 +492,21 @@ handle_sigint(SIGNAL_ARGS)
   char errbuf[256];
 
   /* Send QueryCancel if we are processing a database query */
-  if (cancelConn != NULL) {
-    if (PQcancel(cancelConn, errbuf, sizeof(errbuf))) {
+  if (cancelConn != NULL)
+  {
+    if (PQcancel(cancelConn, errbuf, sizeof(errbuf)))
+    {
       CancelRequested = true;
       write_stderr("Cancel request sent\n");
-    } else {
+    }
+    else
+    {
       write_stderr("Could not send cancel request: ");
       write_stderr(errbuf);
     }
-  } else {
+  }
+  else
+  {
     CancelRequested = true;
   }
 
@@ -485,25 +530,34 @@ consoleHandler(DWORD dwCtrlType)
 {
   char errbuf[256];
 
-  if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT) {
+  if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT)
+  {
     /* Send QueryCancel if we are processing a database query */
     EnterCriticalSection(&cancelConnLock);
-    if (cancelConn != NULL) {
-      if (PQcancel(cancelConn, errbuf, sizeof(errbuf))) {
+    if (cancelConn != NULL)
+    {
+      if (PQcancel(cancelConn, errbuf, sizeof(errbuf)))
+      {
         CancelRequested = true;
         write_stderr("Cancel request sent\n");
-      } else {
+      }
+      else
+      {
         write_stderr("Could not send cancel request: ");
         write_stderr(errbuf);
       }
-    } else {
+    }
+    else
+    {
       CancelRequested = true;
     }
 
     LeaveCriticalSection(&cancelConnLock);
 
     return TRUE;
-  } else {
+  }
+  else
+  {
     /* Return FALSE for any signals not being handled */
     return FALSE;
   }

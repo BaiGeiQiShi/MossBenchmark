@@ -152,27 +152,27 @@ decode_varbyte(unsigned char **ptr)
       if (c & 0x80)
       {
         /* 4th byte */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        c = *(p++);
+        val |= (c & 0x7F) << 21;
+        if (c & 0x80)
+        {
+          /* 5th byte */
+          c = *(p++);
+          val |= (c & 0x7F) << 28;
+          if (c & 0x80)
+          {
+            /* 6th byte */
+            c = *(p++);
+            val |= (c & 0x7F) << 35;
+            if (c & 0x80)
+            {
+              /* 7th byte, should not have continuation bit */
+              c = *(p++);
+              val |= c << 42;
+              Assert((c & 0x80) == 0);
+            }
+          }
+        }
       }
     }
   }
@@ -325,8 +325,8 @@ ginPostingListDecodeAllSegments(GinPostingList *segment, int len, int *ndecoded_
     /* enlarge output array if needed */
     if (ndecoded >= nallocated)
     {
-
-
+      nallocated *= 2;
+      result = repalloc(result, nallocated * sizeof(ItemPointerData));
     }
 
     /* copy the first item */
@@ -368,14 +368,14 @@ ginPostingListDecodeAllSegments(GinPostingList *segment, int len, int *ndecoded_
 int
 ginPostingListDecodeAllSegmentsToTbm(GinPostingList *ptr, int len, TIDBitmap *tbm)
 {
+  int ndecoded;
+  ItemPointer items;
 
+  items = ginPostingListDecodeAllSegments(ptr, len, &ndecoded);
+  tbm_add_tuples(tbm, items, ndecoded, false);
+  pfree(items);
 
-
-
-
-
-
-
+  return ndecoded;
 }
 
 /*
@@ -424,8 +424,8 @@ ginMergeItemPointers(ItemPointerData *a, uint32 na, ItemPointerData *b, uint32 n
       else if (cmp == 0)
       {
         /* only keep one copy of the identical items */
-
-
+        *dptr++ = *bptr++;
+        aptr++;
       }
       else
       {

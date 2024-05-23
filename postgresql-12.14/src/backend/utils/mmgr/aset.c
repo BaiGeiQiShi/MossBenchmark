@@ -142,13 +142,13 @@ typedef AllocSetContext *AllocSet;
  * AllocBlock
  *		An AllocBlock is the unit of memory that is obtained by aset.c
  *		from malloc().  It contains one or more AllocChunks, which are
- *		the units requested by palloc() and freed by pfree().
- *AllocChunks cannot be returned to malloc() individually, instead they are put
- *		on freelists by pfree() and re-used by the next palloc() that
- *has a matching request size.
+ *		the units requested by palloc() and freed by pfree().  AllocChunks
+ *		cannot be returned to malloc() individually, instead they are put
+ *		on freelists by pfree() and re-used by the next palloc() that has
+ *		a matching request size.
  *
- *		AllocBlockData is the header data for a block --- the usable
- *space within the block begins at the next alignment boundary.
+ *		AllocBlockData is the header data for a block --- the usable space
+ *		within the block begins at the next alignment boundary.
  */
 typedef struct AllocBlockData
 {
@@ -447,11 +447,11 @@ AllocSetContextCreateInternal(MemoryContext parent, const char *name, Size minCo
   set = (AllocSet)malloc(firstBlockSize);
   if (set == NULL)
   {
-
-
-
-
-
+    if (TopMemoryContext)
+    {
+      MemoryContextStats(TopMemoryContext);
+    }
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory"), errdetail("Failed while creating memory context \"%s\".", name)));
   }
 
   /*
@@ -645,24 +645,24 @@ AllocSetDelete(MemoryContext context)
   }
 
   /* Free all blocks, except the keeper which is part of context header */
+  while (block != NULL)
+  {
+    AllocBlock next = block->next;
 
+#ifdef CLOBBER_FREED_MEMORY
+    wipe_mem(block, block->freeptr - ((char *)block));
+#endif
 
+    if (block != set->keeper)
+    {
+      free(block);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
+    block = next;
+  }
 
   /* Finally, free the context header, including the keeper block */
-
+  free(set);
 }
 
 /*
@@ -701,7 +701,7 @@ AllocSetAlloc(MemoryContext context, Size size)
     block = (AllocBlock)malloc(blksize);
     if (block == NULL)
     {
-
+      return NULL;
     }
     block->aset = set;
     block->freeptr = block->endptr = ((char *)block) + blksize;
@@ -738,9 +738,9 @@ AllocSetAlloc(MemoryContext context, Size size)
     }
     else
     {
-
-
-
+      block->prev = NULL;
+      block->next = NULL;
+      set->blocks = block;
     }
 
     AllocAllocInfo(set, chunk);
@@ -897,17 +897,17 @@ AllocSetAlloc(MemoryContext context, Size size)
      */
     while (block == NULL && blksize > 1024 * 1024)
     {
-
-
-
-
-
-
+      blksize >>= 1;
+      if (blksize < required_size)
+      {
+        break;
+      }
+      block = (AllocBlock)malloc(blksize);
     }
 
     if (block == NULL)
     {
-
+      return NULL;
     }
 
     block->aset = set;
@@ -1004,7 +1004,7 @@ AllocSetFree(MemoryContext context, void *pointer)
      */
     if (block->aset != set || block->freeptr != block->endptr || block->freeptr != ((char *)block) + (chunk->size + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ))
     {
-
+      elog(ERROR, "could not find block containing chunk %p", chunk);
     }
 
     /* OK, remove block from aset's list and free it */
@@ -1014,7 +1014,7 @@ AllocSetFree(MemoryContext context, void *pointer)
     }
     else
     {
-
+      set->blocks = block->next;
     }
     if (block->next)
     {
@@ -1048,8 +1048,8 @@ AllocSetFree(MemoryContext context, void *pointer)
  * AllocSetRealloc
  *		Returns new pointer to allocated memory of given size or NULL if
  *		request could not be completed; this memory is added to the set.
- *		Memory associated with given pointer is copied into the new
- *memory, and the old memory is freed.
+ *		Memory associated with given pointer is copied into the new memory,
+ *		and the old memory is freed.
  *
  * Without MEMORY_CONTEXT_CHECKING, we don't know the old request size.  This
  * makes our Valgrind client requests less-precise, hazarding false negatives.
@@ -1097,7 +1097,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
      */
     if (block->aset != set || block->freeptr != block->endptr || block->freeptr != ((char *)block) + (oldsize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ))
     {
-
+      elog(ERROR, "could not find block containing chunk %p", chunk);
     }
 
     /*
@@ -1115,8 +1115,8 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
     if (block == NULL)
     {
       /* Disallow external access to private part of chunk header. */
-
-
+      VALGRIND_MAKE_MEM_NOACCESS(chunk, ALLOCCHUNK_PRIVATE_LEN);
+      return NULL;
     }
     block->freeptr = block->endptr = ((char *)block) + blksize;
 
@@ -1129,7 +1129,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
     }
     else
     {
-
+      set->blocks = block;
     }
     if (block->next)
     {
@@ -1260,8 +1260,8 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
     if (newPointer == NULL)
     {
       /* Disallow external access to private part of chunk header. */
-
-
+      VALGRIND_MAKE_MEM_NOACCESS(chunk, ALLOCCHUNK_PRIVATE_LEN);
+      return NULL;
     }
 
     /*
@@ -1337,49 +1337,49 @@ AllocSetIsEmpty(MemoryContext context)
 static void
 AllocSetStats(MemoryContext context, MemoryStatsPrintFunc printfunc, void *passthru, MemoryContextCounters *totals)
 {
+  AllocSet set = (AllocSet)context;
+  Size nblocks = 0;
+  Size freechunks = 0;
+  Size totalspace;
+  Size freespace = 0;
+  AllocBlock block;
+  int fidx;
 
+  /* Include context header in totalspace */
+  totalspace = MAXALIGN(sizeof(AllocSetContext));
 
+  for (block = set->blocks; block != NULL; block = block->next)
+  {
+    nblocks++;
+    totalspace += block->endptr - ((char *)block);
+    freespace += block->endptr - block->freeptr;
+  }
+  for (fidx = 0; fidx < ALLOCSET_NUM_FREELISTS; fidx++)
+  {
+    AllocChunk chunk;
 
+    for (chunk = set->freelist[fidx]; chunk != NULL; chunk = (AllocChunk)chunk->aset)
+    {
+      freechunks++;
+      freespace += chunk->size + ALLOC_CHUNKHDRSZ;
+    }
+  }
 
+  if (printfunc)
+  {
+    char stats_string[200];
 
+    snprintf(stats_string, sizeof(stats_string), "%zu total in %zd blocks; %zu free (%zd chunks); %zu used", totalspace, nblocks, freespace, freechunks, totalspace - freespace);
+    printfunc(context, passthru, stats_string);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (totals)
+  {
+    totals->nblocks += nblocks;
+    totals->freechunks += freechunks;
+    totals->totalspace += totalspace;
+    totals->freespace += freespace;
+  }
 }
 
 #ifdef MEMORY_CONTEXT_CHECKING

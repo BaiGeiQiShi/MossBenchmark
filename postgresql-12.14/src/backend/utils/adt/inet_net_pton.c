@@ -65,13 +65,13 @@ inet_net_pton(int af, const char *src, void *dst, size_t size)
 {
   switch (af)
   {
-  case PGSQL_AF_INET:;
+  case PGSQL_AF_INET:
     return size == -1 ? inet_net_pton_ipv4(src, dst) : inet_cidr_pton_ipv4(src, dst, size);
-  case PGSQL_AF_INET6:;
+  case PGSQL_AF_INET6:
     return size == -1 ? inet_net_pton_ipv6(src, dst) : inet_cidr_pton_ipv6(src, dst, size);
-  default:;;
-
-
+  default:
+    errno = EAFNOSUPPORT;
+    return -1;
   }
 }
 
@@ -103,46 +103,46 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
   if (ch == '0' && (src[0] == 'x' || src[0] == 'X') && isxdigit((unsigned char)src[1]))
   {
     /* Hexadecimal: Eat nybble string. */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (size <= 0U)
+    {
+      goto emsgsize;
+    }
+    dirty = 0;
+    src++; /* skip x or X. */
+    while ((ch = *src++) != '\0' && isxdigit((unsigned char)ch))
+    {
+      if (isupper((unsigned char)ch))
+      {
+        ch = tolower((unsigned char)ch);
+      }
+      n = strchr(xdigits, ch) - xdigits;
+      assert(n >= 0 && n <= 15);
+      if (dirty == 0)
+      {
+        tmp = n;
+      }
+      else
+      {
+        tmp = (tmp << 4) | n;
+      }
+      if (++dirty == 2)
+      {
+        if (size-- <= 0U)
+        {
+          goto emsgsize;
+        }
+        *dst++ = (u_char)tmp;
+        dirty = 0;
+      }
+    }
+    if (dirty)
+    { /* Odd trailing nybble? */
+      if (size-- <= 0U)
+      {
+        goto emsgsize;
+      }
+      *dst++ = (u_char)(tmp << 4);
+    }
   }
   else if (isdigit((unsigned char)ch))
   {
@@ -158,12 +158,12 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
         tmp += n;
         if (tmp > 255)
         {
-
+          goto enoent;
         }
       } while ((ch = *src++) != '\0' && isdigit((unsigned char)ch));
       if (size-- <= 0U)
       {
-
+        goto emsgsize;
       }
       *dst++ = (u_char)tmp;
       if (ch == '\0' || ch == '/')
@@ -172,18 +172,18 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
       }
       if (ch != '.')
       {
-
+        goto enoent;
       }
       ch = *src++;
       if (!isdigit((unsigned char)ch))
       {
-
+        goto enoent;
       }
     }
   }
   else
   {
-
+    goto enoent;
   }
 
   bits = -1;
@@ -201,43 +201,43 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
     } while ((ch = *src++) != '\0' && isdigit((unsigned char)ch));
     if (ch != '\0')
     {
-
+      goto enoent;
     }
     if (bits > 32)
     {
-
+      goto emsgsize;
     }
   }
 
   /* Fiery death and destruction unless we prefetched EOS. */
   if (ch != '\0')
   {
-
+    goto enoent;
   }
 
   /* If nothing was written to the destination, we found no address. */
   if (dst == odst)
   {
-
+    goto enoent;
   }
   /* If no CIDR spec was given, infer width from net class. */
   if (bits == -1)
   {
-    if (*odst >= 240)
-    { /* Class E */
+    if (*odst >= 240) /* Class E */
+    {
       bits = 32;
     }
-    else if (*odst >= 224)
-    { /* Class D */
-
+    else if (*odst >= 224) /* Class D */
+    {
+      bits = 8;
     }
-    else if (*odst >= 192)
-    { /* Class C */
+    else if (*odst >= 192) /* Class C */
+    {
       bits = 24;
     }
-    else if (*odst >= 128)
-    { /* Class B */
-
+    else if (*odst >= 128) /* Class B */
+    {
+      bits = 16;
     }
     else
     {
@@ -256,7 +256,7 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
      */
     if (bits == 8 && *odst == 224)
     {
-
+      bits = 4;
     }
   }
   /* Extend network to cover the actual mask. */
@@ -264,19 +264,19 @@ inet_cidr_pton_ipv4(const char *src, u_char *dst, size_t size)
   {
     if (size-- <= 0U)
     {
-
+      goto emsgsize;
     }
     *dst++ = '\0';
   }
   return bits;
 
-enoent:;
+enoent:
+  errno = ENOENT;
+  return -1;
 
-
-
-emsgsize:;
-
-
+emsgsize:
+  errno = EMSGSIZE;
+  return -1;
 }
 
 /*
@@ -316,12 +316,12 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
       tmp += n;
       if (tmp > 255)
       {
-
+        goto enoent;
       }
     } while ((ch = *src++) != '\0' && isdigit((unsigned char)ch));
     if (size-- == 0)
     {
-
+      goto emsgsize;
     }
     *dst++ = (u_char)tmp;
     if (ch == '\0' || ch == '/')
@@ -330,7 +330,7 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
     }
     if (ch != '.')
     {
-
+      goto enoent;
     }
   }
 
@@ -350,18 +350,18 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
     } while ((ch = *src++) != '\0' && isdigit((unsigned char)ch));
     if (ch != '\0')
     {
-
+      goto enoent;
     }
     if (bits > 32)
     {
-
+      goto emsgsize;
     }
   }
 
   /* Fiery death and destruction unless we prefetched EOS. */
   if (ch != '\0')
   {
-
+    goto enoent;
   }
 
   /* Prefix length can default to /32 only if all four octets spec'd. */
@@ -373,20 +373,20 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
     }
     else
     {
-
+      goto enoent;
     }
   }
 
   /* If nothing was written to the destination, we found no address. */
   if (dst == odst)
   {
-
+    goto enoent;
   }
 
   /* If prefix length overspecifies mantissa, life is bad. */
   if ((bits / 8) > (dst - odst))
   {
-
+    goto enoent;
   }
 
   /* Extend address to four octets. */
@@ -397,13 +397,13 @@ inet_net_pton_ipv4(const char *src, u_char *dst)
 
   return bits;
 
-enoent:;
+enoent:
+  errno = ENOENT;
+  return -1;
 
-
-
-emsgsize:;
-
-
+emsgsize:
+  errno = EMSGSIZE;
+  return -1;
 }
 
 static int
@@ -423,23 +423,23 @@ getbits(const char *src, int *bitsp)
     pch = strchr(digits, ch);
     if (pch != NULL)
     {
-      if (n++ != 0 && val == 0)
-      { /* no leading zeros */
-
+      if (n++ != 0 && val == 0) /* no leading zeros */
+      {
+        return 0;
       }
       val *= 10;
       val += (pch - digits);
-      if (val > 128)
-      { /* range */
-
+      if (val > 128) /* range */
+      {
+        return 0;
       }
       continue;
     }
-
+    return 0;
   }
   if (n == 0)
   {
-
+    return 0;
   }
   *bitsp = val;
   return 1;
@@ -463,23 +463,23 @@ getv4(const char *src, u_char *dst, int *bitsp)
     pch = strchr(digits, ch);
     if (pch != NULL)
     {
-      if (n++ != 0 && val == 0)
-      { /* no leading zeros */
-
+      if (n++ != 0 && val == 0) /* no leading zeros */
+      {
+        return 0;
       }
       val *= 10;
       val += (pch - digits);
-      if (val > 255)
-      { /* range */
-
+      if (val > 255) /* range */
+      {
+        return 0;
       }
       continue;
     }
     if (ch == '.' || ch == '/')
     {
-      if (dst - odst > 3)
-      { /* too many octets? */
-
+      if (dst - odst > 3) /* too many octets? */
+      {
+        return 0;
       }
       *dst++ = val;
       if (ch == '/')
@@ -490,15 +490,15 @@ getv4(const char *src, u_char *dst, int *bitsp)
       n = 0;
       continue;
     }
-
+    return 0;
   }
   if (n == 0)
   {
-
+    return 0;
   }
-  if (dst - odst > 3)
-  { /* too many octets? */
-
+  if (dst - odst > 3) /* too many octets? */
+  {
+    return 0;
   }
   *dst++ = val;
   return 1;
@@ -527,7 +527,7 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
 
   if (size < NS_IN6ADDRSZ)
   {
-
+    goto emsgsize;
   }
 
   memset((tp = tmp), '\0', NS_IN6ADDRSZ);
@@ -538,7 +538,7 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
   {
     if (*++src != ':')
     {
-
+      goto enoent;
     }
   }
   curtok = src;
@@ -560,7 +560,7 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
       val |= (pch - xdigits);
       if (++digits > 4)
       {
-
+        goto enoent;
       }
       saw_xdigit = 1;
       continue;
@@ -579,11 +579,11 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
       }
       else if (*src == '\0')
       {
-
+        goto enoent;
       }
       if (tp + NS_INT16SZ > endp)
       {
-
+        goto enoent;
       }
       *tp++ = (u_char)(val >> 8) & 0xff;
       *tp++ = (u_char)val & 0xff;
@@ -602,13 +602,13 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
     {
       break;
     }
-
+    goto enoent;
   }
   if (saw_xdigit)
   {
     if (tp + NS_INT16SZ > endp)
     {
-
+      goto enoent;
     }
     *tp++ = (u_char)(val >> 8) & 0xff;
     *tp++ = (u_char)val & 0xff;
@@ -631,7 +631,7 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
 
     if (tp == endp)
     {
-
+      goto enoent;
     }
     for (i = 1; i <= n; i++)
     {
@@ -642,7 +642,7 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
   }
   if (tp != endp)
   {
-
+    goto enoent;
   }
 
   /*
@@ -652,11 +652,11 @@ inet_cidr_pton_ipv6(const char *src, u_char *dst, size_t size)
 
   return bits;
 
-enoent:;
+enoent:
   errno = ENOENT;
   return -1;
 
-emsgsize:;
-
-
+emsgsize:
+  errno = EMSGSIZE;
+  return -1;
 }

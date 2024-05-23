@@ -63,7 +63,7 @@ InvalidateAttoptCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
     }
     if (hash_search(AttoptCacheHash, (void *)&attopt->key, HASH_REMOVE, NULL) == NULL)
     {
-
+      elog(ERROR, "hash table corrupted");
     }
   }
 }
@@ -86,7 +86,7 @@ InitializeAttoptCache(void)
   /* Make sure we've initialized CacheMemoryContext. */
   if (!CacheMemoryContext)
   {
-
+    CreateCacheMemoryContext();
   }
 
   /* Watch for invalidation events. */
@@ -129,7 +129,7 @@ get_attribute_options(Oid attrelid, int attnum)
      */
     if (!HeapTupleIsValid(tp))
     {
-
+      opts = NULL;
     }
     else
     {

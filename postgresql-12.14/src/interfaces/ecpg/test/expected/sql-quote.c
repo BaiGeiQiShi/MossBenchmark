@@ -49,12 +49,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table \"My_Table\" ( Item1 int , Item2 text )", ECPGt_EOIT, ECPGt_EORT);
 #line 20 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 20 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -64,12 +66,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "set standard_conforming_strings to off", ECPGt_EOIT, ECPGt_EORT);
 #line 22 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 22 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -79,12 +83,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "show standard_conforming_strings", ECPGt_EOIT, ECPGt_char, (var), (long)25, (long)1, (25) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 24 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 24 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -97,12 +103,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 1 , 'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 28 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 28 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -113,12 +121,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 1 , E'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 30 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -128,12 +138,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "set standard_conforming_strings to on", ECPGt_EOIT, ECPGt_EORT);
 #line 32 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 32 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -143,12 +155,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "show standard_conforming_strings", ECPGt_EOIT, ECPGt_char, (var), (long)25, (long)1, (25) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 34 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 34 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -161,12 +175,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 2 , 'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 38 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 38 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -177,12 +193,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 2 , E'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 40 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 40 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -192,12 +210,14 @@ main()
     ECPGtrans(__LINE__, NULL, "begin");
 #line 42 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 42 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -210,12 +230,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare C cursor for select * from \"My_Table\"", ECPGt_EOIT, ECPGt_EORT);
 #line 45 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 45 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -224,22 +246,26 @@ main()
   /* exec sql whenever not found  break ; */
 #line 47 "quote.pgc"
 
-  for (loopcount = 0; loopcount < 100; loopcount++) {
+  for (loopcount = 0; loopcount < 100; loopcount++)
+  {
     {
       ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch C", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (var), (long)25, (long)1, (25) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 51 "quote.pgc"
 
-      if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+      if (sqlca.sqlcode == ECPG_NOT_FOUND)
+      {
         break;
       }
 #line 51 "quote.pgc"
 
-      if (sqlca.sqlwarn[0] == 'W') {
+      if (sqlca.sqlwarn[0] == 'W')
+      {
         sqlprint();
       }
 #line 51 "quote.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
@@ -252,12 +278,14 @@ main()
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 55 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 55 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -267,12 +295,14 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "drop table \"My_Table\"", ECPGt_EOIT, ECPGt_EORT);
 #line 56 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 56 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -282,12 +312,14 @@ main()
     ECPGdisconnect(__LINE__, "ALL");
 #line 58 "quote.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       sqlprint();
     }
 #line 58 "quote.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }

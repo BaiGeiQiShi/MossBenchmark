@@ -11,18 +11,19 @@
  *	  src/backend/utils/adt/regexp.c
  *
  *		Alistair Crooks added the code for the regex caching
- *		agc - cached the regular expressions used - there's a good
- *chance that we'll get a hit, so this saves a compile step for every attempted
- *match. I haven't actually measured the speed improvement, but it `looks' a lot
- *quicker visually when watching regression test output.
+ *		agc - cached the regular expressions used - there's a good chance
+ *		that we'll get a hit, so this saves a compile step for every
+ *		attempted match. I haven't actually measured the speed improvement,
+ *		but it `looks' a lot quicker visually when watching regression
+ *		test output.
  *
  *		agc - incorporated Keith Bostic's Berkeley regex code into
- *		the tree for all ports. To distinguish this regex code from any
- *that is existent on a platform, I've prepended the string "pg_" to the
- *functions regcomp, regerror, regexec and regfree. Fixed a bug that was
- *originally a typo by me, where `i' was used instead of `oldest' when compiling
- *regular expressions - benign results mostly, although occasionally it bit
- *you...
+ *		the tree for all ports. To distinguish this regex code from any that
+ *		is existent on a platform, I've prepended the string "pg_" to
+ *		the functions regcomp, regerror, regexec and regfree.
+ *		Fixed a bug that was originally a typo by me, where `i' was used
+ *		instead of `oldest' when compiling regular expressions - benign
+ *		results mostly, although occasionally it bit you...
  *
  *-------------------------------------------------------------------------
  */
@@ -199,8 +200,8 @@ RE_compile_and_cache(text *text_re, int cflags, Oid collation)
   re_temp.cre_pat = malloc(Max(text_re_len, 1));
   if (re_temp.cre_pat == NULL)
   {
-
-
+    pg_regfree(&re_temp.cre_re);
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
   memcpy(re_temp.cre_pat, text_re_val, text_re_len);
   re_temp.cre_pat_len = text_re_len;
@@ -257,9 +258,9 @@ RE_wchar_execute(regex_t *re, pg_wchar *data, int data_len, int start_search, in
   if (regexec_result != REG_OKAY && regexec_result != REG_NOMATCH)
   {
     /* re failed??? */
-
-
-
+    CHECK_FOR_INTERRUPTS();
+    pg_regerror(regexec_result, re, errMsg, sizeof(errMsg));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression failed: %s", errMsg)));
   }
 
   return (regexec_result == REG_OKAY);
@@ -348,48 +349,48 @@ parse_re_flags(pg_re_flags *flags, text *opts)
     {
       switch (opt_p[i])
       {
-      case 'g':;
+      case 'g':
         flags->glob = true;
         break;
-      case 'b': ;/* BREs (but why???) */
-
-
-      case 'c': ;/* case sensitive */
-
-
-      case 'e': ;/* plain EREs */
-
-
-
-      case 'i': ;/* case insensitive */
+      case 'b': /* BREs (but why???) */
+        flags->cflags &= ~(REG_ADVANCED | REG_EXTENDED | REG_QUOTE);
+        break;
+      case 'c': /* case sensitive */
+        flags->cflags &= ~REG_ICASE;
+        break;
+      case 'e': /* plain EREs */
+        flags->cflags |= REG_EXTENDED;
+        flags->cflags &= ~(REG_ADVANCED | REG_QUOTE);
+        break;
+      case 'i': /* case insensitive */
         flags->cflags |= REG_ICASE;
         break;
-      case 'm': ;/* Perloid synonym for n */
-      case 'n': ;/* \n affects ^ $ . [^ */
+      case 'm': /* Perloid synonym for n */
+      case 'n': /* \n affects ^ $ . [^ */
         flags->cflags |= REG_NEWLINE;
         break;
-      case 'p': ;/* ~Perl, \n affects . [^ */
-
-
-
-      case 'q': ;/* literal string */
-
-
-
-      case 's': ;/* single line, \n ordinary */
-
-
-      case 't': ;/* tight syntax */
-
-
-      case 'w': ;/* weird, \n affects ^ $ only */
-
-
-
-      case 'x': ;/* expanded syntax */
-
-
-      default:;;
+      case 'p': /* ~Perl, \n affects . [^ */
+        flags->cflags |= REG_NLSTOP;
+        flags->cflags &= ~REG_NLANCH;
+        break;
+      case 'q': /* literal string */
+        flags->cflags |= REG_QUOTE;
+        flags->cflags &= ~(REG_ADVANCED | REG_EXTENDED);
+        break;
+      case 's': /* single line, \n ordinary */
+        flags->cflags &= ~REG_NEWLINE;
+        break;
+      case 't': /* tight syntax */
+        flags->cflags &= ~REG_EXPANDED;
+        break;
+      case 'w': /* weird, \n affects ^ $ only */
+        flags->cflags &= ~REG_NLSTOP;
+        flags->cflags |= REG_NLANCH;
+        break;
+      case 'x': /* expanded syntax */
+        flags->cflags |= REG_EXPANDED;
+        break;
+      default:
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid regular expression option: \"%c\"", opt_p[i])));
         break;
       }
@@ -445,10 +446,10 @@ textregexne(PG_FUNCTION_ARGS)
 Datum
 nameicregexeq(PG_FUNCTION_ARGS)
 {
+  Name n = PG_GETARG_NAME(0);
+  text *p = PG_GETARG_TEXT_PP(1);
 
-
-
-
+  PG_RETURN_BOOL(RE_compile_and_execute(p, NameStr(*n), strlen(NameStr(*n)), REG_ADVANCED | REG_ICASE, PG_GET_COLLATION(), 0, NULL));
 }
 
 Datum
@@ -463,19 +464,19 @@ nameicregexne(PG_FUNCTION_ARGS)
 Datum
 texticregexeq(PG_FUNCTION_ARGS)
 {
+  text *s = PG_GETARG_TEXT_PP(0);
+  text *p = PG_GETARG_TEXT_PP(1);
 
-
-
-
+  PG_RETURN_BOOL(RE_compile_and_execute(p, VARDATA_ANY(s), VARSIZE_ANY_EXHDR(s), REG_ADVANCED | REG_ICASE, PG_GET_COLLATION(), 0, NULL));
 }
 
 Datum
 texticregexne(PG_FUNCTION_ARGS)
 {
+  text *s = PG_GETARG_TEXT_PP(0);
+  text *p = PG_GETARG_TEXT_PP(1);
 
-
-
-
+  PG_RETURN_BOOL(!RE_compile_and_execute(p, VARDATA_ANY(s), VARSIZE_ANY_EXHDR(s), REG_ADVANCED | REG_ICASE, PG_GET_COLLATION(), 0, NULL));
 }
 
 /*
@@ -526,7 +527,7 @@ textregexsubstr(PG_FUNCTION_ARGS)
    */
   if (so < 0 || eo < 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   return DirectFunctionCall3(text_substr, PointerGetDatum(s), Int32GetDatum(so + 1), Int32GetDatum(eo - so));
@@ -534,8 +535,7 @@ textregexsubstr(PG_FUNCTION_ARGS)
 
 /*
  * textregexreplace_noopt()
- *		Return a string matched by a regular expression, with
- *replacement.
+ *		Return a string matched by a regular expression, with replacement.
  *
  * This version doesn't have an option argument: we default to case
  * sensitive match, replace the first instance only.
@@ -555,8 +555,7 @@ textregexreplace_noopt(PG_FUNCTION_ARGS)
 
 /*
  * textregexreplace()
- *		Return a string matched by a regular expression, with
- *replacement.
+ *		Return a string matched by a regular expression, with replacement.
  */
 Datum
 textregexreplace(PG_FUNCTION_ARGS)
@@ -595,7 +594,7 @@ similar_escape(PG_FUNCTION_ARGS)
   /* This function is not strict, so must test explicitly */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
   pat_text = PG_GETARG_TEXT_PP(0);
   p = VARDATA_ANY(pat_text);
@@ -603,8 +602,8 @@ similar_escape(PG_FUNCTION_ARGS)
   if (PG_ARGISNULL(1))
   {
     /* No ESCAPE clause provided; default to backslash as escape */
-
-
+    e = "\\";
+    elen = 1;
   }
   else
   {
@@ -613,7 +612,7 @@ similar_escape(PG_FUNCTION_ARGS)
     elen = VARSIZE_ANY_EXHDR(esc_text);
     if (elen == 0)
     {
-
+      e = NULL; /* no escape character */
     }
     else
     {
@@ -621,7 +620,7 @@ similar_escape(PG_FUNCTION_ARGS)
 
       if (escape_mblen > 1)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_ESCAPE_SEQUENCE), errmsg("invalid escape string"), errhint("Escape string must be empty or one character.")));
       }
     }
   }
@@ -692,37 +691,37 @@ similar_escape(PG_FUNCTION_ARGS)
     {
       int mblen = pg_mblen(p);
 
+      if (mblen > 1)
+      {
+        /* slow, multi-byte path */
+        if (afterescape)
+        {
+          *r++ = '\\';
+          memcpy(r, p, mblen);
+          r += mblen;
+          afterescape = false;
+        }
+        else if (e && elen == mblen && memcmp(e, p, mblen) == 0)
+        {
+          /* SQL escape character; do not send to output */
+          afterescape = true;
+        }
+        else
+        {
+          /*
+           * We know it's a multi-byte character, so we don't need
+           * to do all the comparisons to single-byte characters
+           * that we do below.
+           */
+          memcpy(r, p, mblen);
+          r += mblen;
+        }
 
+        p += mblen;
+        plen -= mblen;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        continue;
+      }
     }
 
     /* fast path */
@@ -767,8 +766,8 @@ similar_escape(PG_FUNCTION_ARGS)
          * allows access to POSIX character-class escapes such as
          * "\d".  The SQL spec is considerably more restrictive.
          */
-
-
+        *r++ = '\\';
+        *r++ = pchar;
       }
       afterescape = false;
     }
@@ -779,20 +778,20 @@ similar_escape(PG_FUNCTION_ARGS)
     }
     else if (incharclass)
     {
-
-
-
-
-
-
-
-
-
+      if (pchar == '\\')
+      {
+        *r++ = '\\';
+      }
+      *r++ = pchar;
+      if (pchar == ']')
+      {
+        incharclass = false;
+      }
     }
     else if (pchar == '[')
     {
-
-
+      *r++ = pchar;
+      incharclass = true;
     }
     else if (pchar == '%')
     {
@@ -812,8 +811,8 @@ similar_escape(PG_FUNCTION_ARGS)
     }
     else if (pchar == '\\' || pchar == '.' || pchar == '^' || pchar == '$')
     {
-
-
+      *r++ = '\\';
+      *r++ = pchar;
     }
     else
     {
@@ -832,8 +831,7 @@ similar_escape(PG_FUNCTION_ARGS)
 
 /*
  * regexp_match()
- *		Return the first substring(s) matching a pattern within a
- *string.
+ *		Return the first substring(s) matching a pattern within a string.
  */
 Datum
 regexp_match(PG_FUNCTION_ARGS)
@@ -849,7 +847,9 @@ regexp_match(PG_FUNCTION_ARGS)
   /* User mustn't specify 'g' */
   if (re_flags.glob)
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("%s does not support the \"global\" option", "regexp_match()"), errhint("Use the regexp_matches function instead.")));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                       /* translator: %s is a SQL function name */
+                       errmsg("%s does not support the \"global\" option", "regexp_match()"), errhint("Use the regexp_matches function instead.")));
   }
 
   matchctx = setup_regexp_matches(orig_str, pattern, &re_flags, PG_GET_COLLATION(), true, false, false);
@@ -1019,12 +1019,12 @@ setup_regexp_matches(text *orig_str, text *pattern, pg_re_flags *re_flags, Oid c
       /* enlarge output space if needed */
       while (array_idx + matchctx->npatterns * 2 + 1 > array_len)
       {
-
-
-
-
-
-
+        array_len += array_len + 1; /* 2^n-1 => 2^(n+1)-1 */
+        if (array_len > MaxAllocSize / sizeof(int))
+        {
+          ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many regular expression matches")));
+        }
+        matchctx->match_locs = (int *)repalloc(matchctx->match_locs, sizeof(int) * array_len);
       }
 
       /* save this match's locations */
@@ -1190,8 +1190,8 @@ build_regexp_match_result(regexp_matches_ctx *matchctx)
     }
     else
     {
-
-
+      elems[i] = DirectFunctionCall3(text_substr, PointerGetDatum(matchctx->orig_str), Int32GetDatum(so + 1), Int32GetDatum(eo - so));
+      nulls[i] = false;
     }
   }
 
@@ -1228,7 +1228,9 @@ regexp_split_to_table(PG_FUNCTION_ARGS)
     /* User mustn't specify 'g' */
     if (re_flags.glob)
     {
-      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("%s does not support the \"global\" option", "regexp_split_to_table()")));
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                         /* translator: %s is a SQL function name */
+                         errmsg("%s does not support the \"global\" option", "regexp_split_to_table()")));
     }
     /* But we find all the matches anyway */
     re_flags.glob = true;
@@ -1278,7 +1280,9 @@ regexp_split_to_array(PG_FUNCTION_ARGS)
   /* User mustn't specify 'g' */
   if (re_flags.glob)
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("%s does not support the \"global\" option", "regexp_split_to_array()")));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                       /* translator: %s is a SQL function name */
+                       errmsg("%s does not support the \"global\" option", "regexp_split_to_array()")));
   }
   /* But we find all the matches anyway */
   re_flags.glob = true;
@@ -1324,7 +1328,7 @@ build_regexp_split_result(regexp_matches_ctx *splitctx)
   }
   if (startpos < 0)
   {
-
+    elog(ERROR, "invalid match ending position");
   }
 
   if (buf)
@@ -1335,7 +1339,7 @@ build_regexp_split_result(regexp_matches_ctx *splitctx)
     endpos = splitctx->match_locs[splitctx->next_match * 2];
     if (endpos < startpos)
     {
-
+      elog(ERROR, "invalid match starting position");
     }
     len = pg_wchar2mb_with_len(splitctx->wide_str + startpos, buf, endpos - startpos);
     Assert(len < bufsiz);
@@ -1343,12 +1347,12 @@ build_regexp_split_result(regexp_matches_ctx *splitctx)
   }
   else
   {
-
-
-
-
-
-
+    endpos = splitctx->match_locs[splitctx->next_match * 2];
+    if (endpos < startpos)
+    {
+      elog(ERROR, "invalid match starting position");
+    }
+    return DirectFunctionCall3(text_substr, PointerGetDatum(splitctx->orig_str), Int32GetDatum(startpos + 1), Int32GetDatum(endpos - startpos));
   }
 }
 
@@ -1376,7 +1380,7 @@ regexp_fixed_prefix(text *text_re, bool case_insensitive, Oid collation, bool *e
   cflags = REG_ADVANCED;
   if (case_insensitive)
   {
-
+    cflags |= REG_ICASE;
   }
 
   re = RE_compile_and_cache(text_re, cflags, collation);
@@ -1386,24 +1390,24 @@ regexp_fixed_prefix(text *text_re, bool case_insensitive, Oid collation, bool *e
 
   switch (re_result)
   {
-  case REG_NOMATCH:;
+  case REG_NOMATCH:
     return NULL;
 
-  case REG_PREFIX:;
+  case REG_PREFIX:
     /* continue with wchar conversion */
     break;
 
-  case REG_EXACT:;
+  case REG_EXACT:
     *exact = true;
     /* continue with wchar conversion */
     break;
 
-  default:;;
+  default:
     /* re failed??? */
-
-
-
-
+    CHECK_FOR_INTERRUPTS();
+    pg_regerror(re_result, re, errMsg, sizeof(errMsg));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression failed: %s", errMsg)));
+    break;
   }
 
   /* Convert pg_wchar result back to database encoding */

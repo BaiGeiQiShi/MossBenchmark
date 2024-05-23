@@ -84,70 +84,70 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column);
 static int
 silly_cmp_tsvector(const TSVector a, const TSVector b)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (VARSIZE(a) < VARSIZE(b))
+  {
+    return -1;
+  }
+  else if (VARSIZE(a) > VARSIZE(b))
+  {
+    return 1;
+  }
+  else if (a->size < b->size)
+  {
+    return -1;
+  }
+  else if (a->size > b->size)
+  {
+    return 1;
+  }
+  else
+  {
+    WordEntry *aptr = ARRPTR(a);
+    WordEntry *bptr = ARRPTR(b);
+    int i = 0;
+    int res;
+
+    for (i = 0; i < a->size; i++)
+    {
+      if (aptr->haspos != bptr->haspos)
+      {
+        return (aptr->haspos > bptr->haspos) ? -1 : 1;
+      }
+      else if ((res = tsCompareString(STRPTR(a) + aptr->pos, aptr->len, STRPTR(b) + bptr->pos, bptr->len, false)) != 0)
+      {
+        return res;
+      }
+      else if (aptr->haspos)
+      {
+        WordEntryPos *ap = POSDATAPTR(a, aptr);
+        WordEntryPos *bp = POSDATAPTR(b, bptr);
+        int j;
+
+        if (POSDATALEN(a, aptr) != POSDATALEN(b, bptr))
+        {
+          return (POSDATALEN(a, aptr) > POSDATALEN(b, bptr)) ? -1 : 1;
+        }
+
+        for (j = 0; j < POSDATALEN(a, aptr); j++)
+        {
+          if (WEP_GETPOS(*ap) != WEP_GETPOS(*bp))
+          {
+            return (WEP_GETPOS(*ap) > WEP_GETPOS(*bp)) ? -1 : 1;
+          }
+          else if (WEP_GETWEIGHT(*ap) != WEP_GETWEIGHT(*bp))
+          {
+            return (WEP_GETWEIGHT(*ap) > WEP_GETWEIGHT(*bp)) ? -1 : 1;
+          }
+          ap++, bp++;
+        }
+      }
+
+      aptr++;
+      bptr++;
+    }
+  }
+
+  return 0;
 }
 
 #define TSVECTORCMPFUNC(type, action, ret)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
@@ -227,25 +227,25 @@ tsvector_setweight(PG_FUNCTION_ARGS)
 
   switch (cw)
   {
-  case 'A':;
-  case 'a':;
-
-
-  case 'B':;
-  case 'b':;
-
-
-  case 'C':;
-  case 'c':;
+  case 'A':
+  case 'a':
+    w = 3;
+    break;
+  case 'B':
+  case 'b':
+    w = 2;
+    break;
+  case 'C':
+  case 'c':
     w = 1;
     break;
-  case 'D':;
-  case 'd':;
-
-
-  default:;;
+  case 'D':
+  case 'd':
+    w = 0;
+    break;
+  default:
     /* internal error */
-
+    elog(ERROR, "unrecognized weight: %d", cw);
   }
 
   out = (TSVector)palloc(VARSIZE(in));
@@ -290,25 +290,25 @@ tsvector_setweight_by_filter(PG_FUNCTION_ARGS)
 
   switch (char_weight)
   {
-  case 'A':;
-  case 'a':;
-
-
-  case 'B':;
-  case 'b':;
-
-
-  case 'C':;
-  case 'c':;
+  case 'A':
+  case 'a':
+    weight = 3;
+    break;
+  case 'B':
+  case 'b':
+    weight = 2;
+    break;
+  case 'C':
+  case 'c':
     weight = 1;
     break;
-  case 'D':;
-  case 'd':;
-
-
-  default:;;
+  case 'D':
+  case 'd':
+    weight = 0;
+    break;
+  default:
     /* internal error */
-
+    elog(ERROR, "unrecognized weight: %c", char_weight);
   }
 
   tsout = (TSVector)palloc(VARSIZE(tsin));
@@ -370,7 +370,7 @@ add_pos(TSVector src, WordEntry *srcptr, TSVector dest, WordEntry *destptr, int3
 
   if (!destptr->haspos)
   {
-
+    *clen = 0;
   }
 
   startlen = *clen;
@@ -413,8 +413,8 @@ tsvector_bsearch(const TSVector tsv, char *lexeme, int lexeme_len)
     {
       StopLow = StopMiddle + 1;
     }
-    else
-    { /* found it */
+    else /* found it */
+    {
       return StopMiddle;
     }
   }
@@ -836,24 +836,24 @@ tsvector_filter(PG_FUNCTION_ARGS)
     char_weight = DatumGetChar(dweights[i]);
     switch (char_weight)
     {
-    case 'A':;
-    case 'a':;
+    case 'A':
+    case 'a':
       mask = mask | 8;
       break;
-    case 'B':;
-    case 'b':;
+    case 'B':
+    case 'b':
       mask = mask | 4;
       break;
-    case 'C':;
-    case 'c':;
-
-
-    case 'D':;
-    case 'd':;
-
-
-    default:;;
-
+    case 'C':
+    case 'c':
+      mask = mask | 2;
+      break;
+    case 'D':
+    case 'd':
+      mask = mask | 1;
+      break;
+    default:
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized weight: \"%c\"", char_weight)));
     }
   }
 
@@ -1004,15 +1004,15 @@ tsvector_concat(PG_FUNCTION_ARGS)
       {
         int addlen = add_pos(in2, ptr2, out, ptr, maxpos);
 
-
-
-
-
-
-
-
-
-
+        if (addlen == 0)
+        {
+          ptr->haspos = 0;
+        }
+        else
+        {
+          dataoff = SHORTALIGN(dataoff);
+          dataoff += addlen * sizeof(WordEntryPos) + sizeof(uint16);
+        }
       }
 
       ptr++;
@@ -1042,15 +1042,15 @@ tsvector_concat(PG_FUNCTION_ARGS)
         {
           int addlen = add_pos(in2, ptr2, out, ptr, maxpos);
 
-
-
-
-
-
-
-
-
-
+          if (addlen == 0)
+          {
+            ptr->haspos = 0;
+          }
+          else
+          {
+            dataoff = SHORTALIGN(dataoff);
+            dataoff += addlen * sizeof(WordEntryPos) + sizeof(uint16);
+          }
         }
       }
 
@@ -1094,7 +1094,7 @@ tsvector_concat(PG_FUNCTION_ARGS)
 
       if (addlen == 0)
       {
-
+        ptr->haspos = 0;
       }
       else
       {
@@ -1114,7 +1114,7 @@ tsvector_concat(PG_FUNCTION_ARGS)
    */
   if (dataoff > MAXSTRPOS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("string is too long for tsvector (%d bytes, max %d bytes)", dataoff, MAXSTRPOS)));
   }
 
   /*
@@ -1149,18 +1149,18 @@ tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
 
   if (lena == 0)
   {
-
-
-
-
-
-
-
-
+    if (prefix)
+    {
+      cmp = 0; /* empty string is prefix of anything */
+    }
+    else
+    {
+      cmp = (lenb > 0) ? -1 : 0;
+    }
   }
   else if (lenb == 0)
   {
-
+    cmp = (lena > 0) ? 1 : 0;
   }
   else
   {
@@ -1170,7 +1170,7 @@ tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
     {
       if (cmp == 0 && lena > lenb)
       {
-
+        cmp = 1; /* a is longer, so not a prefix of b */
       }
     }
     else if (cmp == 0 && lena != lenb)
@@ -1367,8 +1367,8 @@ checkcondition_str(void *checkval, QueryOperand *val, ExecPhraseData *data)
             }
             else
             {
-
-
+              totalpos *= 2;
+              allpos = repalloc(allpos, sizeof(WordEntryPos) * totalpos);
             }
           }
 
@@ -1603,7 +1603,7 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
 
   switch (curitem->qoperator.oper)
   {
-  case OP_NOT:;
+  case OP_NOT:
 
     /*
      * We need not touch data->width, since a NOT operation does not
@@ -1618,12 +1618,12 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
     }
     switch (TS_phrase_execute(curitem + 1, arg, flags, chkcond, data))
     {
-    case TS_NO:;
+    case TS_NO:
       /* change "match nowhere" to "match everywhere" */
       Assert(data->npos == 0 && !data->negate);
       data->negate = true;
       return TS_YES;
-    case TS_YES:;
+    case TS_YES:
       if (data->npos > 0)
       {
         /* we have some positions, invert negate flag */
@@ -1637,16 +1637,16 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
         return TS_NO;
       }
       /* Should not get here if result was TS_YES */
-
-
-    case TS_MAYBE:;
+      Assert(false);
+      break;
+    case TS_MAYBE:
       /* match positions are, and remain, uncertain */
       return TS_MAYBE;
     }
+    break;
 
-
-  case OP_PHRASE:;
-  case OP_AND:;
+  case OP_PHRASE:
+  case OP_AND:
     memset(&Ldata, 0, sizeof(Ldata));
     memset(&Rdata, 0, sizeof(Rdata));
 
@@ -1705,7 +1705,7 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
       (void)TS_phrase_output(data, &Ldata, &Rdata, TSPO_BOTH | TSPO_L_ONLY | TSPO_R_ONLY, Loffset, Roffset, Ldata.npos + Rdata.npos);
       if (data)
       {
-
+        data->negate = true;
       }
       return TS_YES;
     }
@@ -1725,7 +1725,7 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
       return TS_phrase_output(data, &Ldata, &Rdata, TSPO_BOTH, Loffset, Roffset, Min(Ldata.npos, Rdata.npos));
     }
 
-  case OP_OR:;
+  case OP_OR:
     memset(&Ldata, 0, sizeof(Ldata));
     memset(&Rdata, 0, sizeof(Rdata));
 
@@ -1743,7 +1743,7 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
      */
     if (lmatch == TS_MAYBE || rmatch == TS_MAYBE)
     {
-
+      return TS_MAYBE;
     }
 
     /*
@@ -1798,8 +1798,8 @@ TS_phrase_execute(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallback
       return TS_phrase_output(data, &Ldata, &Rdata, TSPO_BOTH | TSPO_L_ONLY | TSPO_R_ONLY, Loffset, Roffset, Ldata.npos + Rdata.npos);
     }
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
   }
 
   /* not reachable, but keep compiler quiet */
@@ -1848,23 +1848,23 @@ TS_execute_recurse(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallbac
 
   switch (curitem->qoperator.oper)
   {
-  case OP_NOT:;
+  case OP_NOT:
     if (!(flags & TS_EXEC_CALC_NOT))
     {
       return TS_YES;
     }
     switch (TS_execute_recurse(curitem + 1, arg, flags, chkcond))
     {
-    case TS_NO:;
+    case TS_NO:
       return TS_YES;
-    case TS_YES:;
+    case TS_YES:
       return TS_NO;
-    case TS_MAYBE:;
+    case TS_MAYBE:
       return TS_MAYBE;
     }
+    break;
 
-
-  case OP_AND:;
+  case OP_AND:
     lmatch = TS_execute_recurse(curitem + curitem->qoperator.left, arg, flags, chkcond);
     if (lmatch == TS_NO)
     {
@@ -1872,16 +1872,16 @@ TS_execute_recurse(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallbac
     }
     switch (TS_execute_recurse(curitem + 1, arg, flags, chkcond))
     {
-    case TS_NO:;
+    case TS_NO:
       return TS_NO;
-    case TS_YES:;
+    case TS_YES:
       return lmatch;
-    case TS_MAYBE:;
-
+    case TS_MAYBE:
+      return TS_MAYBE;
     }
+    break;
 
-
-  case OP_OR:;
+  case OP_OR:
     lmatch = TS_execute_recurse(curitem + curitem->qoperator.left, arg, flags, chkcond);
     if (lmatch == TS_YES)
     {
@@ -1889,16 +1889,16 @@ TS_execute_recurse(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallbac
     }
     switch (TS_execute_recurse(curitem + 1, arg, flags, chkcond))
     {
-    case TS_NO:;
+    case TS_NO:
       return lmatch;
-    case TS_YES:;
+    case TS_YES:
       return TS_YES;
-    case TS_MAYBE:;
-
+    case TS_MAYBE:
+      return TS_MAYBE;
     }
+    break;
 
-
-  case OP_PHRASE:;
+  case OP_PHRASE:
 
     /*
      * If we get a MAYBE result, and the caller doesn't want that,
@@ -1911,17 +1911,17 @@ TS_execute_recurse(QueryItem *curitem, void *arg, uint32 flags, TSExecuteCallbac
      */
     switch (TS_phrase_execute(curitem, arg, flags, chkcond, NULL))
     {
-    case TS_NO:;
+    case TS_NO:
       return TS_NO;
-    case TS_YES:;
+    case TS_YES:
       return TS_YES;
-    case TS_MAYBE:;
+    case TS_MAYBE:
       return (flags & TS_EXEC_PHRASE_NO_POS) ? TS_MAYBE : TS_NO;
     }
+    break;
 
-
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
   }
 
   /* not reachable, but keep compiler quiet */
@@ -1949,7 +1949,7 @@ tsquery_requires_match(QueryItem *curitem)
 
   switch (curitem->qoperator.oper)
   {
-  case OP_NOT:;
+  case OP_NOT:
 
     /*
      * Assume there are no required matches underneath a NOT.  For
@@ -1958,12 +1958,12 @@ tsquery_requires_match(QueryItem *curitem)
      */
     return false;
 
-  case OP_PHRASE:;
+  case OP_PHRASE:
 
     /*
      * Treat OP_PHRASE as OP_AND here
      */
-  case OP_AND:;
+  case OP_AND:
     /* If either side requires a match, we're good */
     if (tsquery_requires_match(curitem + curitem->qoperator.left))
     {
@@ -1974,7 +1974,7 @@ tsquery_requires_match(QueryItem *curitem)
       return tsquery_requires_match(curitem + 1);
     }
 
-  case OP_OR:;
+  case OP_OR:
     /* Both sides must require a match */
     if (tsquery_requires_match(curitem + curitem->qoperator.left))
     {
@@ -1982,11 +1982,11 @@ tsquery_requires_match(QueryItem *curitem)
     }
     else
     {
-
+      return false;
     }
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
   }
 
   /* not reachable, but keep compiler quiet */
@@ -2013,9 +2013,9 @@ ts_match_vq(PG_FUNCTION_ARGS)
   /* empty query matches nothing */
   if (!query->size)
   {
-
-
-
+    PG_FREE_IF_COPY(val, 0);
+    PG_FREE_IF_COPY(query, 1);
+    PG_RETURN_BOOL(false);
   }
 
   chkval.arrb = ARRPTR(val);
@@ -2032,36 +2032,36 @@ ts_match_vq(PG_FUNCTION_ARGS)
 Datum
 ts_match_tt(PG_FUNCTION_ARGS)
 {
+  TSVector vector;
+  TSQuery query;
+  bool res;
 
+  vector = DatumGetTSVector(DirectFunctionCall1(to_tsvector, PG_GETARG_DATUM(0)));
+  query = DatumGetTSQuery(DirectFunctionCall1(plainto_tsquery, PG_GETARG_DATUM(1)));
 
+  res = DatumGetBool(DirectFunctionCall2(ts_match_vq, TSVectorGetDatum(vector), TSQueryGetDatum(query)));
 
+  pfree(vector);
+  pfree(query);
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res);
 }
 
 Datum
 ts_match_tq(PG_FUNCTION_ARGS)
 {
+  TSVector vector;
+  TSQuery query = PG_GETARG_TSQUERY(1);
+  bool res;
 
+  vector = DatumGetTSVector(DirectFunctionCall1(to_tsvector, PG_GETARG_DATUM(0)));
 
+  res = DatumGetBool(DirectFunctionCall2(ts_match_vq, TSVectorGetDatum(vector), TSQueryGetDatum(query)));
 
+  pfree(vector);
+  PG_FREE_IF_COPY(query, 1);
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res);
 }
 
 /*
@@ -2214,8 +2214,8 @@ ts_accum(MemoryContext persistentContext, TSVectorStat *stat, Datum data)
 
   if (stat == NULL)
   { /* Init in first */
-
-
+    stat = MemoryContextAllocZero(persistentContext, sizeof(TSVectorStat));
+    stat->maxdepth = 1;
   }
 
   /* simple check of correctness */
@@ -2261,7 +2261,7 @@ ts_setup_firstcall(FunctionCallInfo fcinfo, FuncCallContext *funcctx, TSVectorSt
   /* find leftmost value */
   if (node == NULL)
   {
-
+    stat->stack[stat->stackpos] = NULL;
   }
   else
   {
@@ -2298,7 +2298,7 @@ walkStatEntryTree(TSVectorStat *stat)
 
   if (node == NULL)
   {
-
+    return NULL;
   }
 
   if (node->ndoc != 0)
@@ -2395,20 +2395,20 @@ ts_stat_sql(MemoryContext persistentContext, text *txt, text *ws)
   if ((plan = SPI_prepare(query, 0, NULL)) == NULL)
   {
     /* internal error */
-
+    elog(ERROR, "SPI_prepare(\"%s\") failed", query);
   }
 
   if ((portal = SPI_cursor_open(NULL, plan, NULL, NULL, true)) == NULL)
   {
     /* internal error */
-
+    elog(ERROR, "SPI_cursor_open(\"%s\") failed", query);
   }
 
   SPI_cursor_fetch(portal, true, 100);
 
   if (SPI_tuptable == NULL || SPI_tuptable->tupdesc->natts != 1 || !IsBinaryCoercible(SPI_gettypeid(SPI_tuptable->tupdesc, 1), TSVECTOROID))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ts_stat query must return one tsvector column")));
   }
 
   stat = MemoryContextAllocZero(persistentContext, sizeof(TSVectorStat));
@@ -2425,24 +2425,24 @@ ts_stat_sql(MemoryContext persistentContext, text *txt, text *ws)
       {
         switch (*buf)
         {
-        case 'A':;
-        case 'a':;
+        case 'A':
+        case 'a':
           stat->weight |= 1 << 3;
           break;
-        case 'B':;
-        case 'b':;
+        case 'B':
+        case 'b':
           stat->weight |= 1 << 2;
           break;
-        case 'C':;
-        case 'c':;
-
-
-        case 'D':;
-        case 'd':;
-
-
-        default:;;
-
+        case 'C':
+        case 'c':
+          stat->weight |= 1 << 1;
+          break;
+        case 'D':
+        case 'd':
+          stat->weight |= 1;
+          break;
+        default:
+          stat->weight |= 0;
         }
       }
       buf += pg_mblen(buf);
@@ -2535,11 +2535,11 @@ ts_stat2(PG_FUNCTION_ARGS)
  * Triggers for automatic update of a tsvector column from text column(s)
  *
  * Trigger arguments are either
- *		name of tsvector col, name of tsconfig to use, name(s) of text
- *col(s) name of tsvector col, name of regconfig col, name(s) of text col(s) ie,
- *tsconfig can either be specified by name, or indirectly as the contents of a
- *regconfig field in the row.  If the name is used, it must be explicitly
- *schema-qualified.
+ *		name of tsvector col, name of tsconfig to use, name(s) of text col(s)
+ *		name of tsvector col, name of regconfig col, name(s) of text col(s)
+ * ie, tsconfig can either be specified by name, or indirectly as the
+ * contents of a regconfig field in the row.  If the name is used, it must
+ * be explicitly schema-qualified.
  */
 Datum
 tsvector_update_trigger_byid(PG_FUNCTION_ARGS)
@@ -2550,7 +2550,7 @@ tsvector_update_trigger_byid(PG_FUNCTION_ARGS)
 Datum
 tsvector_update_trigger_bycolumn(PG_FUNCTION_ARGS)
 {
-
+  return tsvector_update_trigger(fcinfo, true);
 }
 
 static Datum
@@ -2568,19 +2568,19 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
   Oid cfgId;
 
   /* Check call context */
-  if (!CALLED_AS_TRIGGER(fcinfo))
-  { /* internal error */
-
+  if (!CALLED_AS_TRIGGER(fcinfo)) /* internal error */
+  {
+    elog(ERROR, "tsvector_update_trigger: not fired by trigger manager");
   }
 
   trigdata = (TriggerData *)fcinfo->context;
   if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
   {
-
+    elog(ERROR, "tsvector_update_trigger: must be fired for row");
   }
   if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
   {
-
+    elog(ERROR, "tsvector_update_trigger: must be fired BEFORE event");
   }
 
   if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
@@ -2593,7 +2593,7 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
   }
   else
   {
-
+    elog(ERROR, "tsvector_update_trigger: must be fired for INSERT or UPDATE");
   }
 
   trigger = trigdata->tg_trigger;
@@ -2601,19 +2601,19 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
 
   if (trigger->tgnargs < 3)
   {
-
+    elog(ERROR, "tsvector_update_trigger: arguments must be tsvector_field, ts_config, text_field1, ...)");
   }
 
   /* Find the target tsvector column */
   tsvector_attr_num = SPI_fnumber(rel->rd_att, trigger->tgargs[0]);
   if (tsvector_attr_num == SPI_ERROR_NOATTRIBUTE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("tsvector column \"%s\" does not exist", trigger->tgargs[0])));
   }
   /* This will effectively reject system columns, so no separate test: */
   if (!IsBinaryCoercible(SPI_gettypeid(rel->rd_att, tsvector_attr_num), TSVECTOROID))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("column \"%s\" is not of tsvector type", trigger->tgargs[0])));
   }
 
   /* Find the configuration to use */
@@ -2621,22 +2621,22 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
   {
     int config_attr_num;
 
+    config_attr_num = SPI_fnumber(rel->rd_att, trigger->tgargs[1]);
+    if (config_attr_num == SPI_ERROR_NOATTRIBUTE)
+    {
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("configuration column \"%s\" does not exist", trigger->tgargs[1])));
+    }
+    if (!IsBinaryCoercible(SPI_gettypeid(rel->rd_att, config_attr_num), REGCONFIGOID))
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("column \"%s\" is not of regconfig type", trigger->tgargs[1])));
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    datum = SPI_getbinval(rettuple, rel->rd_att, config_attr_num, &isnull);
+    if (isnull)
+    {
+      ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("configuration column \"%s\" must not be null", trigger->tgargs[1])));
+    }
+    cfgId = DatumGetObjectId(datum);
   }
   else
   {
@@ -2646,7 +2646,7 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
     /* require a schema so that results are not search path dependent */
     if (list_length(names) < 2)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("text search configuration name \"%s\" must be schema-qualified", trigger->tgargs[1])));
     }
     cfgId = get_ts_config_oid(names, false);
   }
@@ -2665,11 +2665,11 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
     numattr = SPI_fnumber(rel->rd_att, trigger->tgargs[i]);
     if (numattr == SPI_ERROR_NOATTRIBUTE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column \"%s\" does not exist", trigger->tgargs[i])));
     }
     if (!IsBinaryCoercible(SPI_gettypeid(rel->rd_att, numattr), TEXTOID))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("column \"%s\" is not of a character type", trigger->tgargs[i])));
     }
 
     datum = SPI_getbinval(rettuple, rel->rd_att, numattr, &isnull);
@@ -2684,7 +2684,7 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
 
     if (txt != (text *)DatumGetPointer(datum))
     {
-
+      pfree(txt);
     }
   }
 

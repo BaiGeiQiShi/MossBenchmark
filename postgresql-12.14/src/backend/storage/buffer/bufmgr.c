@@ -22,8 +22,7 @@
  * ReleaseBuffer() -- unpin a buffer
  *
  * MarkBufferDirty() -- mark a pinned buffer's contents as "dirty".
- *		The disk write is delayed until buffer replacement or
- *checkpoint.
+ *		The disk write is delayed until buffer replacement or checkpoint.
  *
  * See also these files:
  *		freelist.c -- chooses victim for buffer replacement
@@ -373,7 +372,7 @@ GetPrivateRefCount(Buffer buffer)
 
   if (ref == NULL)
   {
-
+    return 0;
   }
   return ref->refcount;
 }
@@ -412,8 +411,7 @@ ForgetPrivateRefCountEntry(PrivateRefCountEntry *ref)
 
 /*
  * BufferIsPinned
- *		True iff the buffer is pinned (also checks for valid buffer
- *number).
+ *		True iff the buffer is pinned (also checks for valid buffer number).
  *
  *		NOTE: what we check here is that *this* backend holds a pin on
  *		the buffer.  We do not care whether some other backend does.
@@ -541,7 +539,7 @@ PrefetchBuffer(Relation reln, ForkNumber forkNum, BlockNumber blockNum)
     /* see comments in ReadBufferExtended */
     if (RELATION_IS_OTHER_TEMP(reln))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot access temporary tables of other sessions")));
     }
 
     /* pass it off to localbuf.c */
@@ -651,7 +649,7 @@ ReadBufferExtended(Relation reln, ForkNumber forkNum, BlockNumber blockNum, Read
    */
   if (RELATION_IS_OTHER_TEMP(reln))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot access temporary tables of other sessions")));
   }
 
   /*
@@ -679,13 +677,13 @@ ReadBufferExtended(Relation reln, ForkNumber forkNum, BlockNumber blockNum, Read
 Buffer
 ReadBufferWithoutRelcache(RelFileNode rnode, ForkNumber forkNum, BlockNumber blockNum, ReadBufferMode mode, BufferAccessStrategy strategy)
 {
+  bool hit;
 
+  SMgrRelation smgr = smgropen(rnode, InvalidBackendId);
 
+  Assert(InRecovery);
 
-
-
-
-
+  return ReadBuffer_common(smgr, RELPERSISTENCE_PERMANENT, forkNum, blockNum, mode, strategy, &hit);
 }
 
 /*
@@ -718,7 +716,7 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, Bl
     /* Fail if relation is already at maximum possible length */
     if (blockNum == P_NEW)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("cannot extend relation %s beyond %u blocks", relpath(smgr->smgr_rnode, forkNum), P_NEW)));
     }
   }
 
@@ -789,7 +787,7 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, Bl
         }
         else if (mode == RBM_ZERO_AND_CLEANUP_LOCK)
         {
-
+          LockBufferForCleanup(BufferDescriptorGetBuffer(bufHdr));
         }
       }
 
@@ -809,11 +807,11 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, Bl
      * that we don't want to overwrite.  Since the legitimate case should
      * always have left a zero-filled buffer, complain if not PageIsNew.
      */
-
-
-
-
-
+    bufBlock = isLocalBuf ? LocalBufHdrGetBlock(bufHdr) : BufHdrGetBlock(bufHdr);
+    if (!PageIsNew((Page)bufBlock))
+    {
+      ereport(ERROR, (errmsg("unexpected data beyond EOF in block %u of relation %s", blockNum, relpath(smgr->smgr_rnode, forkNum)), errhint("This has been seen to occur with buggy kernels; consider updating your system.")));
+    }
 
     /*
      * We *must* do smgrextend before succeeding, else the page will not
@@ -821,31 +819,31 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, Bl
      * return the same page.  Clear the BM_VALID bit, do the StartBufferIO
      * call that BufferAlloc didn't, and proceed.
      */
+    if (isLocalBuf)
+    {
+      /* Only need to adjust flags */
+      uint32 buf_state = pg_atomic_read_u32(&bufHdr->state);
 
+      Assert(buf_state & BM_VALID);
+      buf_state &= ~BM_VALID;
+      pg_atomic_unlocked_write_u32(&bufHdr->state, buf_state);
+    }
+    else
+    {
+      /*
+       * Loop to handle the very small possibility that someone re-sets
+       * BM_VALID between our clearing it and StartBufferIO inspecting
+       * it.
+       */
+      do
+      {
+        uint32 buf_state = LockBufHdr(bufHdr);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        Assert(buf_state & BM_VALID);
+        buf_state &= ~BM_VALID;
+        UnlockBufHdr(bufHdr, buf_state);
+      } while (!StartBufferIO(bufHdr, true));
+    }
   }
 
   /*
@@ -894,31 +892,31 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, Bl
 
       if (track_io_timing)
       {
-
+        INSTR_TIME_SET_CURRENT(io_start);
       }
 
       smgrread(smgr, forkNum, blockNum, (char *)bufBlock);
 
       if (track_io_timing)
       {
-
-
-
-
+        INSTR_TIME_SET_CURRENT(io_time);
+        INSTR_TIME_SUBTRACT(io_time, io_start);
+        pgstat_count_buffer_read_time(INSTR_TIME_GET_MICROSEC(io_time));
+        INSTR_TIME_ADD(pgBufferUsage.blk_read_time, io_time);
       }
 
       /* check for garbage data */
       if (!PageIsVerifiedExtended((Page)bufBlock, blockNum, PIV_LOG_WARNING | PIV_REPORT_STAT))
       {
-
-
-
-
-
-
-
-
-
+        if (mode == RBM_ZERO_ON_ERROR || zero_damaged_pages)
+        {
+          ereport(WARNING, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("invalid page in block %u of relation %s; zeroing out page", blockNum, relpath(smgr->smgr_rnode, forkNum))));
+          MemSet((char *)bufBlock, 0, BLCKSZ);
+        }
+        else
+        {
+          ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("invalid page in block %u of relation %s", blockNum, relpath(smgr->smgr_rnode, forkNum))));
+        }
       }
     }
   }
@@ -1038,7 +1036,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
          * If we get here, previous attempts to read the buffer must
          * have failed ... but we shall bravely try again.
          */
-
+        *foundPtr = false;
       }
     }
 
@@ -1119,9 +1117,9 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
           if (XLogNeedsFlush(lsn) && StrategyRejectBuffer(strategy, buf))
           {
             /* Drop lock/pin and loop around for another buffer */
-
-
-
+            LWLockRelease(BufferDescriptorGetContentLock(buf));
+            UnpinBuffer(buf, true);
+            continue;
           }
         }
 
@@ -1141,8 +1139,8 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
          * Someone else has locked the buffer, so give it up and loop
          * back to get another one.
          */
-
-
+        UnpinBuffer(buf, true);
+        continue;
       }
     }
 
@@ -1213,7 +1211,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
       /* Can give up that buffer's mapping partition lock now */
       if (oldPartitionLock != NULL && oldPartitionLock != newPartitionLock)
       {
-
+        LWLockRelease(oldPartitionLock);
       }
 
       /* remaining code should match code at top of routine */
@@ -1242,7 +1240,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
            * If we get here, previous attempts to read the buffer
            * must have failed ... but we shall bravely try again.
            */
-
+          *foundPtr = false;
         }
       }
 
@@ -1266,14 +1264,14 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
       break;
     }
 
-
-
-
-
-
-
-
-
+    UnlockBufHdr(buf, buf_state);
+    BufTableDelete(&newTag, newHash);
+    if (oldPartitionLock != NULL && oldPartitionLock != newPartitionLock)
+    {
+      LWLockRelease(oldPartitionLock);
+    }
+    LWLockRelease(newPartitionLock);
+    UnpinBuffer(buf, true);
   }
 
   /*
@@ -1324,7 +1322,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum, BlockNum
   }
   else
   {
-
+    *foundPtr = true;
   }
 
   return buf;
@@ -1371,7 +1369,7 @@ InvalidateBuffer(BufferDesc *buf)
   oldHash = BufTableHashCode(&oldTag);
   oldPartitionLock = BufMappingPartitionLock(oldHash);
 
-retry:;
+retry:
 
   /*
    * Acquire exclusive mapping lock in preparation for changing the buffer's
@@ -1385,9 +1383,9 @@ retry:;
   /* If it's changed while we were waiting for lock, do nothing */
   if (!BUFFERTAGS_EQUAL(buf->tag, oldTag))
   {
-
-
-
+    UnlockBufHdr(buf, buf_state);
+    LWLockRelease(oldPartitionLock);
+    return;
   }
 
   /*
@@ -1401,15 +1399,15 @@ retry:;
    */
   if (BUF_STATE_GET_REFCOUNT(buf_state) != 0)
   {
-
-
+    UnlockBufHdr(buf, buf_state);
+    LWLockRelease(oldPartitionLock);
     /* safety check: should definitely not be our *own* pin */
-
-
-
-
-
-
+    if (GetPrivateRefCount(BufferDescriptorGetBuffer(buf)) > 0)
+    {
+      elog(ERROR, "buffer is pinned in InvalidateBuffer");
+    }
+    WaitIO(buf);
+    goto retry;
   }
 
   /*
@@ -1458,7 +1456,7 @@ MarkBufferDirty(Buffer buffer)
 
   if (!BufferIsValid(buffer))
   {
-
+    elog(ERROR, "bad buffer ID: %d", buffer);
   }
 
   if (BufferIsLocal(buffer))
@@ -1477,7 +1475,7 @@ MarkBufferDirty(Buffer buffer)
   {
     if (old_buf_state & BM_LOCKED)
     {
-
+      old_buf_state = WaitBufHdrUnlocked(bufHdr);
     }
 
     buf_state = old_buf_state;
@@ -1596,7 +1594,7 @@ PinBuffer(BufferDesc *buf, BufferAccessStrategy strategy)
     {
       if (old_buf_state & BM_LOCKED)
       {
-
+        old_buf_state = WaitBufHdrUnlocked(buf);
       }
 
       buf_state = old_buf_state;
@@ -1620,7 +1618,7 @@ PinBuffer(BufferDesc *buf, BufferAccessStrategy strategy)
          */
         if (BUF_STATE_GET_USAGECOUNT(buf_state) == 0)
         {
-
+          buf_state += BUF_USAGECOUNT_ONE;
         }
       }
 
@@ -1762,21 +1760,21 @@ UnpinBuffer(BufferDesc *buf, bool fixOwner)
        * replaced after we unpinned it above, as it's pinned by the
        * waiter.
        */
+      buf_state = LockBufHdr(buf);
 
+      if ((buf_state & BM_PIN_COUNT_WAITER) && BUF_STATE_GET_REFCOUNT(buf_state) == 1)
+      {
+        /* we just released the last pin other than the waiter's */
+        int wait_backend_pid = buf->wait_backend_pid;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        buf_state &= ~BM_PIN_COUNT_WAITER;
+        UnlockBufHdr(buf, buf_state);
+        ProcSendSignal(wait_backend_pid);
+      }
+      else
+      {
+        UnlockBufHdr(buf, buf_state);
+      }
     }
     ForgetPrivateRefCountEntry(ref);
   }
@@ -2122,8 +2120,8 @@ BgBufferSync(WritebackContext *wb_context)
    */
   if (bgwriter_lru_maxpages <= 0)
   {
-
-
+    saved_info_valid = false;
+    return true;
   }
 
   /*
@@ -2146,7 +2144,7 @@ BgBufferSync(WritebackContext *wb_context)
     if ((int32)(next_passes - strategy_passes) > 0)
     {
       /* we're one pass ahead of the strategy point */
-
+      bufs_to_lap = strategy_buf_id - next_to_clean;
 #ifdef BGW_DEBUG
       elog(DEBUG2, "bgwriter ahead: bgw %u-%u strategy %u-%u delta=%ld lap=%d", next_passes, next_to_clean, strategy_passes, strategy_buf_id, strategy_delta, bufs_to_lap);
 #endif
@@ -2169,8 +2167,8 @@ BgBufferSync(WritebackContext *wb_context)
       elog(DEBUG2, "bgwriter behind: bgw %u-%u strategy %u-%u delta=%ld", next_passes, next_to_clean, strategy_passes, strategy_buf_id, strategy_delta);
 #endif
       next_to_clean = strategy_buf_id;
-
-
+      next_passes = strategy_passes;
+      bufs_to_lap = NBuffers;
     }
   }
   else
@@ -2201,8 +2199,8 @@ BgBufferSync(WritebackContext *wb_context)
    */
   if (strategy_delta > 0 && recent_alloc > 0)
   {
-
-
+    scans_per_alloc = (float)strategy_delta / (float)recent_alloc;
+    smoothed_density += (scans_per_alloc - smoothed_density) / smoothing_samples;
   }
 
   /*
@@ -2284,19 +2282,19 @@ BgBufferSync(WritebackContext *wb_context)
 
     if (++next_to_clean >= NBuffers)
     {
-
-
+      next_to_clean = 0;
+      next_passes++;
     }
     num_to_scan--;
 
     if (sync_state & BUF_WRITTEN)
     {
-
-
-
-
-
-
+      reusable_buffers++;
+      if (++num_written >= bgwriter_lru_maxpages)
+      {
+        BgWriterStats.m_maxwritten_clean++;
+        break;
+      }
     }
     else if (sync_state & BUF_REUSABLE)
     {
@@ -2533,31 +2531,34 @@ CheckForBufferLeaks(void)
 void
 PrintBufferLeakWarning(Buffer buffer)
 {
+  BufferDesc *buf;
+  int32 loccount;
+  char *path;
+  BackendId backend;
+  uint32 buf_state;
 
+  Assert(BufferIsValid(buffer));
+  if (BufferIsLocal(buffer))
+  {
+    buf = GetLocalBufferDescriptor(-buffer - 1);
+    loccount = LocalRefCount[-buffer - 1];
+    backend = MyBackendId;
+  }
+  else
+  {
+    buf = GetBufferDescriptor(buffer - 1);
+    loccount = GetPrivateRefCount(buffer);
+    backend = InvalidBackendId;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* theoretically we should lock the bufhdr here */
+  path = relpathbackend(buf->tag.rnode, backend, buf->tag.forkNum);
+  buf_state = pg_atomic_read_u32(&buf->state);
+  elog(WARNING,
+      "buffer refcount leak: [%03d] "
+      "(rel=%s, blockNum=%u, flags=0x%x, refcount=%u %d)",
+      buffer, path, buf->tag.blockNum, buf_state & BUF_FLAG_MASK, BUF_STATE_GET_REFCOUNT(buf_state), loccount);
+  pfree(path);
 }
 
 /*
@@ -2586,7 +2587,8 @@ CheckPointBuffers(int flags)
  */
 void
 BufmgrCommit(void)
-{ /* Nothing to do in bufmgr anymore... */
+{
+  /* Nothing to do in bufmgr anymore... */
 }
 
 /*
@@ -2619,8 +2621,8 @@ BufferGetBlockNumber(Buffer buffer)
 
 /*
  * BufferGetTag
- *		Returns the relfilenode, fork number and block number associated
- *with a buffer.
+ *		Returns the relfilenode, fork number and block number associated with
+ *		a buffer.
  */
 void
 BufferGetTag(Buffer buffer, RelFileNode *rnode, ForkNumber *forknum, BlockNumber *blknum)
@@ -2632,7 +2634,7 @@ BufferGetTag(Buffer buffer, RelFileNode *rnode, ForkNumber *forknum, BlockNumber
 
   if (BufferIsLocal(buffer))
   {
-
+    bufHdr = GetLocalBufferDescriptor(-buffer - 1);
   }
   else
   {
@@ -2681,7 +2683,7 @@ FlushBuffer(BufferDesc *buf, SMgrRelation reln)
    */
   if (!StartBufferIO(buf, false))
   {
-
+    return;
   }
 
   /* Setup error traceback support for ereport() */
@@ -2748,7 +2750,7 @@ FlushBuffer(BufferDesc *buf, SMgrRelation reln)
 
   if (track_io_timing)
   {
-
+    INSTR_TIME_SET_CURRENT(io_start);
   }
 
   /*
@@ -2758,10 +2760,10 @@ FlushBuffer(BufferDesc *buf, SMgrRelation reln)
 
   if (track_io_timing)
   {
-
-
-
-
+    INSTR_TIME_SET_CURRENT(io_time);
+    INSTR_TIME_SUBTRACT(io_time, io_start);
+    pgstat_count_buffer_write_time(INSTR_TIME_GET_MICROSEC(io_time));
+    INSTR_TIME_ADD(pgBufferUsage.blk_write_time, io_time);
   }
 
   pgBufferUsage.shared_blks_written++;
@@ -2780,8 +2782,7 @@ FlushBuffer(BufferDesc *buf, SMgrRelation reln)
 
 /*
  * RelationGetNumberOfBlocksInFork
- *		Determines the current number of pages in the specified relation
- *fork.
+ *		Determines the current number of pages in the specified relation fork.
  *
  * Note that the accuracy of the result will depend on the details of the
  * relation's storage. For builtin AMs it'll be accurate, but for external AMs
@@ -2792,14 +2793,14 @@ RelationGetNumberOfBlocksInFork(Relation relation, ForkNumber forkNum)
 {
   switch (relation->rd_rel->relkind)
   {
-  case RELKIND_SEQUENCE:;
-  case RELKIND_INDEX:;
-  case RELKIND_PARTITIONED_INDEX:;
+  case RELKIND_SEQUENCE:
+  case RELKIND_INDEX:
+  case RELKIND_PARTITIONED_INDEX:
     return smgrnblocks(RelationGetSmgr(relation), forkNum);
 
-  case RELKIND_RELATION:;
-  case RELKIND_TOASTVALUE:;
-  case RELKIND_MATVIEW:;
+  case RELKIND_RELATION:
+  case RELKIND_TOASTVALUE:
+  case RELKIND_MATVIEW:
   {
     /*
      * Not every table AM uses BLCKSZ wide fixed size blocks.
@@ -2813,22 +2814,22 @@ RelationGetNumberOfBlocksInFork(Relation relation, ForkNumber forkNum)
 
     return (szbytes + (BLCKSZ - 1)) / BLCKSZ;
   }
-  case RELKIND_VIEW:;
-  case RELKIND_COMPOSITE_TYPE:;
-  case RELKIND_FOREIGN_TABLE:;
-  case RELKIND_PARTITIONED_TABLE:;
-  default:;;
-
-
+  case RELKIND_VIEW:
+  case RELKIND_COMPOSITE_TYPE:
+  case RELKIND_FOREIGN_TABLE:
+  case RELKIND_PARTITIONED_TABLE:
+  default:
+    Assert(false);
+    break;
   }
 
-
+  return 0; /* keep compiler quiet */
 }
 
 /*
  * BufferIsPermanent
- *		Determines whether a buffer will potentially still be around
- *after a crash.  Caller must hold a buffer pin.
+ *		Determines whether a buffer will potentially still be around after
+ *		a crash.  Caller must hold a buffer pin.
  */
 bool
 BufferIsPermanent(Buffer buffer)
@@ -2858,9 +2859,9 @@ BufferIsPermanent(Buffer buffer)
 
 /*
  * BufferGetLSNAtomic
- *		Retrieves the LSN of the buffer atomically using a buffer header
- *lock. This is necessary for some callers who may not have an exclusive lock on
- *the buffer.
+ *		Retrieves the LSN of the buffer atomically using a buffer header lock.
+ *		This is necessary for some callers who may not have an exclusive lock
+ *		on the buffer.
  */
 XLogRecPtr
 BufferGetLSNAtomic(Buffer buffer)
@@ -2879,39 +2880,40 @@ BufferGetLSNAtomic(Buffer buffer)
   }
 
   /* Make sure we've got a real buffer, and that we hold a pin on it. */
+  Assert(BufferIsValid(buffer));
+  Assert(BufferIsPinned(buffer));
 
+  buf_state = LockBufHdr(bufHdr);
+  lsn = PageGetLSN(page);
+  UnlockBufHdr(bufHdr, buf_state);
 
-
-
-
-
-
-
+  return lsn;
 }
 
 /* ---------------------------------------------------------------------
  *		DropRelFileNodeBuffers
  *
  *		This function removes from the buffer pool all the pages of the
- *		specified relation fork that have block numbers >=
- *firstDelBlock. (In particular, with firstDelBlock = 0, all pages are removed.)
+ *		specified relation fork that have block numbers >= firstDelBlock.
+ *		(In particular, with firstDelBlock = 0, all pages are removed.)
  *		Dirty pages are simply dropped, without bothering to write them
- *		out first.  Therefore, this is NOT rollback-able, and so should
- *be used only with extreme caution!
+ *		out first.  Therefore, this is NOT rollback-able, and so should be
+ *		used only with extreme caution!
  *
- *		Currently, this is called only from smgr.c when the underlying
- *file is about to be deleted or truncated (firstDelBlock is needed for the
- *truncation case).  The data in the affected pages would therefore be deleted
- *momentarily anyway, and there is no point in writing it. It is the
- *responsibility of higher-level code to ensure that the deletion or truncation
- *does not lose any data that could be needed later.  It is also the
- *responsibility of higher-level code to ensure that no other process could be
- *trying to load more pages of the relation into buffers.
+ *		Currently, this is called only from smgr.c when the underlying file
+ *		is about to be deleted or truncated (firstDelBlock is needed for
+ *		the truncation case).  The data in the affected pages would therefore
+ *		be deleted momentarily anyway, and there is no point in writing it.
+ *		It is the responsibility of higher-level code to ensure that the
+ *		deletion or truncation does not lose any data that could be needed
+ *		later.  It is also the responsibility of higher-level code to ensure
+ *		that no other process could be trying to load more pages of the
+ *		relation into buffers.
  *
- *		XXX currently it sequentially searches the buffer pool, should
- *be changed to more clever ways of searching.  However, this routine is used
- *only in code paths that aren't very performance-critical, and we shouldn't
- *slow down the hot paths to make it faster ...
+ *		XXX currently it sequentially searches the buffer pool, should be
+ *		changed to more clever ways of searching.  However, this routine
+ *		is used only in code paths that aren't very performance-critical,
+ *		and we shouldn't slow down the hot paths to make it faster ...
  * --------------------------------------------------------------------
  */
 void
@@ -2985,7 +2987,7 @@ DropRelFileNodesAllBuffers(RelFileNodeBackend *rnodes, int nnodes)
 
   if (nnodes == 0)
   {
-
+    return;
   }
 
   nodes = palloc(sizeof(RelFileNode) * nnodes); /* non-local relations */
@@ -3072,7 +3074,7 @@ DropRelFileNodesAllBuffers(RelFileNodeBackend *rnodes, int nnodes)
     }
     else
     {
-
+      UnlockBufHdr(bufHdr, buf_state);
     }
   }
 
@@ -3084,10 +3086,10 @@ DropRelFileNodesAllBuffers(RelFileNodeBackend *rnodes, int nnodes)
  *
  *		This function removes all the buffers in the buffer cache for a
  *		particular database.  Dirty pages are simply dropped, without
- *		bothering to write them out first.  This is used when we destroy
- *a database, to avoid trying to flush data to disk when the directory tree no
- *longer exists.  Implementation is pretty similar to DropRelFileNodeBuffers()
- *which is for destroying just one relation.
+ *		bothering to write them out first.  This is used when we destroy a
+ *		database, to avoid trying to flush data to disk when the directory
+ *		tree no longer exists.  Implementation is pretty similar to
+ *		DropRelFileNodeBuffers() which is for destroying just one relation.
  * --------------------------------------------------------------------
  */
 void
@@ -3121,7 +3123,7 @@ DropDatabaseBuffers(Oid dbid)
     }
     else
     {
-
+      UnlockBufHdr(bufHdr, buf_state);
     }
   }
 }
@@ -3145,7 +3147,10 @@ PrintBufferDescs(void)
     Buffer b = BufferDescriptorGetBuffer(buf);
 
     /* theoretically we should lock the bufhdr here */
-    elog(LOG, "[%02d] (freeNext=%d, rel=%s, blockNum=%u, flags=0x%x, refcount=%u %d)", i, buf->freeNext, relpathbackend(buf->tag.rnode, InvalidBackendId, buf->tag.forkNum), buf->tag.blockNum, buf->flags, buf->refcount, GetPrivateRefCount(b));
+    elog(LOG,
+        "[%02d] (freeNext=%d, rel=%s, "
+        "blockNum=%u, flags=0x%x, refcount=%u %d)",
+        i, buf->freeNext, relpathbackend(buf->tag.rnode, InvalidBackendId, buf->tag.forkNum), buf->tag.blockNum, buf->flags, buf->refcount, GetPrivateRefCount(b));
   }
 }
 #endif
@@ -3164,7 +3169,10 @@ PrintPinnedBufs(void)
     if (GetPrivateRefCount(b) > 0)
     {
       /* theoretically we should lock the bufhdr here */
-      elog(LOG, "[%02d] (freeNext=%d, rel=%s, blockNum=%u, flags=0x%x, refcount=%u %d)", i, buf->freeNext, relpathperm(buf->tag.rnode, buf->tag.forkNum), buf->tag.blockNum, buf->flags, buf->refcount, GetPrivateRefCount(b));
+      elog(LOG,
+          "[%02d] (freeNext=%d, rel=%s, "
+          "blockNum=%u, flags=0x%x, refcount=%u %d)",
+          i, buf->freeNext, relpathperm(buf->tag.rnode, buf->tag.forkNum), buf->tag.blockNum, buf->flags, buf->refcount, GetPrivateRefCount(b));
     }
   }
 }
@@ -3174,18 +3182,19 @@ PrintPinnedBufs(void)
  *		FlushRelationBuffers
  *
  *		This function writes all dirty pages of a relation out to disk
- *		(or more accurately, out to kernel disk buffers), ensuring that
- *the kernel has an up-to-date view of the relation.
+ *		(or more accurately, out to kernel disk buffers), ensuring that the
+ *		kernel has an up-to-date view of the relation.
  *
- *		Generally, the caller should be holding AccessExclusiveLock on
- *the target relation to ensure that no other backend is busy dirtying more
- *blocks of the relation; the effects can't be expected to last after the lock
- *is released.
+ *		Generally, the caller should be holding AccessExclusiveLock on the
+ *		target relation to ensure that no other backend is busy dirtying
+ *		more blocks of the relation; the effects can't be expected to last
+ *		after the lock is released.
  *
- *		XXX currently it sequentially searches the buffer pool, should
- *be changed to more clever ways of searching.  This routine is not used in any
- *performance-critical code paths, so it's not worth adding additional overhead
- *to normal paths to make it go faster; but see also DropRelFileNodeBuffers.
+ *		XXX currently it sequentially searches the buffer pool, should be
+ *		changed to more clever ways of searching.  This routine is not
+ *		used in any performance-critical code paths, so it's not worth
+ *		adding additional overhead to normal paths to make it go faster;
+ *		but see also DropRelFileNodeBuffers.
  * --------------------------------------------------------------------
  */
 void
@@ -3196,37 +3205,37 @@ FlushRelationBuffers(Relation rel)
 
   if (RelationUsesLocalBuffers(rel))
   {
+    for (i = 0; i < NLocBuffer; i++)
+    {
+      uint32 buf_state;
 
+      bufHdr = GetLocalBufferDescriptor(i);
+      if (RelFileNodeEquals(bufHdr->tag.rnode, rel->rd_node) && ((buf_state = pg_atomic_read_u32(&bufHdr->state)) & (BM_VALID | BM_DIRTY)) == (BM_VALID | BM_DIRTY))
+      {
+        ErrorContextCallback errcallback;
+        Page localpage;
 
+        localpage = (char *)LocalBufHdrGetBlock(bufHdr);
 
+        /* Setup error traceback support for ereport() */
+        errcallback.callback = local_buffer_write_error_callback;
+        errcallback.arg = (void *)bufHdr;
+        errcallback.previous = error_context_stack;
+        error_context_stack = &errcallback;
 
+        PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 
+        smgrwrite(RelationGetSmgr(rel), bufHdr->tag.forkNum, bufHdr->tag.blockNum, localpage, false);
 
+        buf_state &= ~(BM_DIRTY | BM_JUST_DIRTIED);
+        pg_atomic_unlocked_write_u32(&bufHdr->state, buf_state);
 
+        /* Pop the error context stack */
+        error_context_stack = errcallback.previous;
+      }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return;
   }
 
   /* Make sure we can handle the pin inside the loop */
@@ -3269,57 +3278,57 @@ FlushRelationBuffers(Relation rel)
  *		FlushDatabaseBuffers
  *
  *		This function writes all dirty pages of a database out to disk
- *		(or more accurately, out to kernel disk buffers), ensuring that
- *the kernel has an up-to-date view of the database.
+ *		(or more accurately, out to kernel disk buffers), ensuring that the
+ *		kernel has an up-to-date view of the database.
  *
- *		Generally, the caller should be holding an appropriate lock to
- *ensure no other backend is active in the target database; otherwise more pages
- *could get dirtied.
+ *		Generally, the caller should be holding an appropriate lock to ensure
+ *		no other backend is active in the target database; otherwise more
+ *		pages could get dirtied.
  *
- *		Note we don't worry about flushing any pages of temporary
- *relations. It's assumed these wouldn't be interesting.
+ *		Note we don't worry about flushing any pages of temporary relations.
+ *		It's assumed these wouldn't be interesting.
  * --------------------------------------------------------------------
  */
 void
 FlushDatabaseBuffers(Oid dbid)
 {
+  int i;
+  BufferDesc *bufHdr;
 
+  /* Make sure we can handle the pin inside the loop */
+  ResourceOwnerEnlargeBuffers(CurrentResourceOwner);
 
+  for (i = 0; i < NBuffers; i++)
+  {
+    uint32 buf_state;
 
+    bufHdr = GetBufferDescriptor(i);
 
+    /*
+     * As in DropRelFileNodeBuffers, an unlocked precheck should be safe
+     * and saves some cycles.
+     */
+    if (bufHdr->tag.rnode.dbNode != dbid)
+    {
+      continue;
+    }
 
+    ReservePrivateRefCountEntry();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    buf_state = LockBufHdr(bufHdr);
+    if (bufHdr->tag.rnode.dbNode == dbid && (buf_state & (BM_VALID | BM_DIRTY)) == (BM_VALID | BM_DIRTY))
+    {
+      PinBuffer_Locked(bufHdr);
+      LWLockAcquire(BufferDescriptorGetContentLock(bufHdr), LW_SHARED);
+      FlushBuffer(bufHdr, NULL);
+      LWLockRelease(BufferDescriptorGetContentLock(bufHdr));
+      UnpinBuffer(bufHdr, true);
+    }
+    else
+    {
+      UnlockBufHdr(bufHdr, buf_state);
+    }
+  }
 }
 
 /*
@@ -3329,18 +3338,18 @@ FlushDatabaseBuffers(Oid dbid)
 void
 FlushOneBuffer(Buffer buffer)
 {
+  BufferDesc *bufHdr;
 
+  /* currently not needed, but no fundamental reason not to support */
+  Assert(!BufferIsLocal(buffer));
 
+  Assert(BufferIsPinned(buffer));
 
+  bufHdr = GetBufferDescriptor(buffer - 1);
 
+  Assert(LWLockHeldByMe(BufferDescriptorGetContentLock(bufHdr)));
 
-
-
-
-
-
-
-
+  FlushBuffer(bufHdr, NULL);
 }
 
 /*
@@ -3351,7 +3360,7 @@ ReleaseBuffer(Buffer buffer)
 {
   if (!BufferIsValid(buffer))
   {
-
+    elog(ERROR, "bad buffer ID: %d", buffer);
   }
 
   if (BufferIsLocal(buffer))
@@ -3380,8 +3389,8 @@ UnlockReleaseBuffer(Buffer buffer)
 
 /*
  * IncrBufferRefCount
- *		Increment the pin count on a buffer that we have *already*
- *pinned at least once.
+ *		Increment the pin count on a buffer that we have *already* pinned
+ *		at least once.
  *
  *		This function cannot be used on a buffer we do not have pinned,
  *		because it doesn't change the shared buffer state.
@@ -3428,7 +3437,7 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
 
   if (!BufferIsValid(buffer))
   {
-
+    elog(ERROR, "bad buffer ID: %d", buffer);
   }
 
   if (BufferIsLocal(buffer))
@@ -3479,10 +3488,10 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
        *
        * See src/backend/storage/page/README for longer discussion.
        */
-
-
-
-
+      if (RecoveryInProgress())
+      {
+        return;
+      }
 
       /*
        * If the block is already dirty because we either made a change
@@ -3507,10 +3516,10 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
        * essential that CreateCheckpoint waits for virtual transactions
        * rather than full transactionids.
        */
-
-
-
-
+      Assert(!MyPgXact->delayChkpt);
+      MyPgXact->delayChkpt = true;
+      delayChkpt = true;
+      lsn = XLogSaveBufferForHint(buffer, buffer_std);
     }
 
     buf_state = LockBufHdr(bufHdr);
@@ -3536,7 +3545,7 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
        */
       if (!XLogRecPtrIsInvalid(lsn))
       {
-
+        PageSetLSN(page, lsn);
       }
     }
 
@@ -3545,7 +3554,7 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
 
     if (delayChkpt)
     {
-
+      MyPgXact->delayChkpt = false;
     }
 
     if (dirtied)
@@ -3578,20 +3587,20 @@ UnlockBuffers(void)
   {
     uint32 buf_state;
 
-
+    buf_state = LockBufHdr(buf);
 
     /*
      * Don't complain if flag bit not set; it could have been reset but we
      * got a cancel/die interrupt before getting the signal.
      */
+    if ((buf_state & BM_PIN_COUNT_WAITER) != 0 && buf->wait_backend_pid == MyProcPid)
+    {
+      buf_state &= ~BM_PIN_COUNT_WAITER;
+    }
 
+    UnlockBufHdr(buf, buf_state);
 
-
-
-
-
-
-
+    PinCountWaitBuf = NULL;
   }
 }
 
@@ -3625,7 +3634,7 @@ LockBuffer(Buffer buffer, int mode)
   }
   else
   {
-
+    elog(ERROR, "unrecognized buffer lock mode: %d", mode);
   }
 }
 
@@ -3677,18 +3686,18 @@ LockBufferForCleanup(Buffer buffer)
   if (BufferIsLocal(buffer))
   {
     /* There should be exactly one pin */
-
-
-
-
+    if (LocalRefCount[-buffer - 1] != 1)
+    {
+      elog(ERROR, "incorrect local pin count: %d", LocalRefCount[-buffer - 1]);
+    }
     /* Nobody else to wait for */
-
+    return;
   }
 
   /* There should be exactly one local pin */
   if (GetPrivateRefCount(buffer) != 1)
   {
-
+    elog(ERROR, "incorrect local pin count: %d", GetPrivateRefCount(buffer));
   }
 
   bufHdr = GetBufferDescriptor(buffer - 1);
@@ -3709,32 +3718,32 @@ LockBufferForCleanup(Buffer buffer)
       return;
     }
     /* Failed, so mark myself as waiting for pincount 1 */
-
-
-
-
-
-
-
-
-
-
-
+    if (buf_state & BM_PIN_COUNT_WAITER)
+    {
+      UnlockBufHdr(bufHdr, buf_state);
+      LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
+      elog(ERROR, "multiple backends attempting to wait for pincount 1");
+    }
+    bufHdr->wait_backend_pid = MyProcPid;
+    PinCountWaitBuf = bufHdr;
+    buf_state |= BM_PIN_COUNT_WAITER;
+    UnlockBufHdr(bufHdr, buf_state);
+    LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 
     /* Wait to be signaled by UnpinBuffer() */
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (InHotStandby)
+    {
+      /* Publish the bufid that Startup process waits on */
+      SetStartupBufferPinWaitBufId(buffer - 1);
+      /* Set alarm and then wait to be signaled by UnpinBuffer() */
+      ResolveRecoveryConflictWithBufferPin();
+      /* Reset the published bufid */
+      SetStartupBufferPinWaitBufId(-1);
+    }
+    else
+    {
+      ProcWaitForSignal(PG_WAIT_BUFFER_PIN);
+    }
 
     /*
      * Remove flag marking us as waiter. Normally this will not be set
@@ -3744,14 +3753,14 @@ LockBufferForCleanup(Buffer buffer)
      * impossible with the current usages due to table level locking, but
      * better be safe.
      */
+    buf_state = LockBufHdr(bufHdr);
+    if ((buf_state & BM_PIN_COUNT_WAITER) != 0 && bufHdr->wait_backend_pid == MyProcPid)
+    {
+      buf_state &= ~BM_PIN_COUNT_WAITER;
+    }
+    UnlockBufHdr(bufHdr, buf_state);
 
-
-
-
-
-
-
-
+    PinCountWaitBuf = NULL;
     /* Loop back and try again */
   }
 }
@@ -3763,25 +3772,25 @@ LockBufferForCleanup(Buffer buffer)
 bool
 HoldingBufferPinThatDelaysRecovery(void)
 {
+  int bufid = GetStartupBufferPinWaitBufId();
 
+  /*
+   * If we get woken slowly then it's possible that the Startup process was
+   * already woken by other backends before we got here. Also possible that
+   * we get here by multiple interrupts or interrupts at inappropriate
+   * times, so make sure we do nothing if the bufid is not set.
+   */
+  if (bufid < 0)
+  {
+    return false;
+  }
 
+  if (GetPrivateRefCount(bufid + 1) > 0)
+  {
+    return true;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -3862,18 +3871,18 @@ IsBufferCleanupOK(Buffer buffer)
   if (BufferIsLocal(buffer))
   {
     /* There should be exactly one pin */
-
-
-
-
+    if (LocalRefCount[-buffer - 1] != 1)
+    {
+      return false;
+    }
     /* Nobody else to wait for */
-
+    return true;
   }
 
   /* There should be exactly one local pin */
   if (GetPrivateRefCount(buffer) != 1)
   {
-
+    return false;
   }
 
   bufHdr = GetBufferDescriptor(buffer - 1);
@@ -3891,8 +3900,8 @@ IsBufferCleanupOK(Buffer buffer)
     return true;
   }
 
-
-
+  UnlockBufHdr(bufHdr, buf_state);
+  return false;
 }
 
 /*
@@ -3910,32 +3919,32 @@ IsBufferCleanupOK(Buffer buffer)
 static void
 WaitIO(BufferDesc *buf)
 {
+  /*
+   * Changed to wait until there's no IO - Inoue 01/13/2000
+   *
+   * Note this is *necessary* because an error abort in the process doing
+   * I/O could release the io_in_progress_lock prematurely. See
+   * AbortBufferIO.
+   */
+  for (;;)
+  {
+    uint32 buf_state;
 
+    /*
+     * It may not be necessary to acquire the spinlock to check the flag
+     * here, but since this test is essential for correctness, we'd better
+     * play it safe.
+     */
+    buf_state = LockBufHdr(buf);
+    UnlockBufHdr(buf, buf_state);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (!(buf_state & BM_IO_IN_PROGRESS))
+    {
+      break;
+    }
+    LWLockAcquire(BufferDescriptorGetIOLock(buf), LW_SHARED);
+    LWLockRelease(BufferDescriptorGetIOLock(buf));
+  }
 }
 
 /*
@@ -3984,9 +3993,9 @@ StartBufferIO(BufferDesc *buf, bool forInput)
      * an error (see AbortBufferIO).  If that's the case, we must wait for
      * him to get unwedged.
      */
-
-
-
+    UnlockBufHdr(buf, buf_state);
+    LWLockRelease(BufferDescriptorGetIOLock(buf));
+    WaitIO(buf);
   }
 
   /* Once we get here, there is definitely no I/O active on this buffer */
@@ -4074,34 +4083,34 @@ AbortBufferIO(void)
      * we can use TerminateBufferIO. Anyone who's executing WaitIO on the
      * buffer will be in a busy spin until we succeed in doing this.
      */
+    LWLockAcquire(BufferDescriptorGetIOLock(buf), LW_EXCLUSIVE);
 
+    buf_state = LockBufHdr(buf);
+    Assert(buf_state & BM_IO_IN_PROGRESS);
+    if (IsForInput)
+    {
+      Assert(!(buf_state & BM_DIRTY));
 
+      /* We'd better not think buffer is valid yet */
+      Assert(!(buf_state & BM_VALID));
+      UnlockBufHdr(buf, buf_state);
+    }
+    else
+    {
+      Assert(buf_state & BM_DIRTY);
+      UnlockBufHdr(buf, buf_state);
+      /* Issue notice if this is not the first failure... */
+      if (buf_state & BM_IO_ERROR)
+      {
+        /* Buffer is pinned, so we can read tag without spinlock */
+        char *path;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        path = relpathperm(buf->tag.rnode, buf->tag.forkNum);
+        ereport(WARNING, (errcode(ERRCODE_IO_ERROR), errmsg("could not write block %u of %s", buf->tag.blockNum, path), errdetail("Multiple failures --- write error might be permanent.")));
+        pfree(path);
+      }
+    }
+    TerminateBufferIO(buf, false, BM_IO_ERROR);
   }
 }
 
@@ -4111,16 +4120,16 @@ AbortBufferIO(void)
 static void
 shared_buffer_write_error_callback(void *arg)
 {
+  BufferDesc *bufHdr = (BufferDesc *)arg;
 
+  /* Buffer is pinned, so we can read the tag without locking the spinlock */
+  if (bufHdr != NULL)
+  {
+    char *path = relpathperm(bufHdr->tag.rnode, bufHdr->tag.forkNum);
 
-
-
-
-
-
-
-
-
+    errcontext("writing block %u of relation %s", bufHdr->tag.blockNum, path);
+    pfree(path);
+  }
 }
 
 /*
@@ -4129,15 +4138,15 @@ shared_buffer_write_error_callback(void *arg)
 static void
 local_buffer_write_error_callback(void *arg)
 {
+  BufferDesc *bufHdr = (BufferDesc *)arg;
 
+  if (bufHdr != NULL)
+  {
+    char *path = relpathbackend(bufHdr->tag.rnode, MyBackendId, bufHdr->tag.forkNum);
 
-
-
-
-
-
-
-
+    errcontext("writing block %u of relation %s", bufHdr->tag.blockNum, path);
+    pfree(path);
+  }
 }
 
 /*
@@ -4169,11 +4178,11 @@ rnode_comparator(const void *p1, const void *p2)
 
   if (n1.spcNode < n2.spcNode)
   {
-
+    return -1;
   }
   else if (n1.spcNode > n2.spcNode)
   {
-
+    return 1;
   }
   else
   {
@@ -4201,7 +4210,7 @@ LockBufHdr(BufferDesc *desc)
     {
       break;
     }
-
+    perform_spin_delay(&delayStatus);
   }
   finish_spin_delay(&delayStatus);
   return old_buf_state | BM_LOCKED;
@@ -4226,8 +4235,8 @@ WaitBufHdrUnlocked(BufferDesc *buf)
 
   while (buf_state & BM_LOCKED)
   {
-
-
+    perform_spin_delay(&delayStatus);
+    buf_state = pg_atomic_read_u32(&buf->state);
   }
 
   finish_spin_delay(&delayStatus);
@@ -4270,7 +4279,7 @@ buffertag_comparator(const void *a, const void *b)
     return 1;
   }
 
-
+  return 0;
 }
 
 /*
@@ -4456,7 +4465,7 @@ IssuePendingWritebacks(WritebackContext *context)
       /* ok, block queued twice, skip */
       if (cur->tag.blockNum == next->tag.blockNum)
       {
-
+        continue;
       }
 
       /* only merge consecutive writes */
@@ -4488,8 +4497,8 @@ IssuePendingWritebacks(WritebackContext *context)
 void
 TestForOldSnapshot_impl(Snapshot snapshot, Relation relation)
 {
-
-
-
-
+  if (RelationAllowsEarlyPruning(relation) && (snapshot)->whenTaken < GetOldSnapshotThresholdTimestamp())
+  {
+    ereport(ERROR, (errcode(ERRCODE_SNAPSHOT_TOO_OLD), errmsg("snapshot too old")));
+  }
 }

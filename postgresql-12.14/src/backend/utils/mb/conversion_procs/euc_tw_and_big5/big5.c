@@ -15,7 +15,8 @@
 
 #include "mb/pg_wchar.h"
 
-typedef struct {
+typedef struct
+{
   unsigned short code, peer;
 } codes_t;
 
@@ -49,12 +50,16 @@ BinarySearchRange(const codes_t *array, int high, unsigned short code)
   low = 0;
   mid = high >> 1;
 
-  for (; low <= high; mid = (low + high) >> 1) {
-    if ((array[mid].code <= code) && (array[mid + 1].code > code)) {
-      if (0 == array[mid].peer) {
+  for (; low <= high; mid = (low + high) >> 1)
+  {
+    if ((array[mid].code <= code) && (array[mid + 1].code > code))
+    {
+      if (0 == array[mid].peer)
+      {
         return 0;
       }
-      if (code >= 0xa140U) {
+      if (code >= 0xa140U)
+      {
         /* big5 to cns */
         tmp = ((code & 0xff00) - (array[mid].code & 0xff00)) >> 8;
         high = code & 0x00ff;
@@ -82,7 +87,9 @@ BinarySearchRange(const codes_t *array, int high, unsigned short code)
         tmp = (array[mid].peer & 0x00ff) + distance - 0x21;
         tmp = (array[mid].peer & 0xff00) + ((tmp / 0x5e) << 8) + 0x21 + tmp % 0x5e;
         return tmp;
-      } else {
+      }
+      else
+      {
         /* cns to big5 */
         tmp = ((code & 0xff00) - (array[mid].code & 0xff00)) >> 8;
 
@@ -102,9 +109,13 @@ BinarySearchRange(const codes_t *array, int high, unsigned short code)
         tmp = (array[mid].peer & 0xff00) + ((tmp / 0x9d) << 8) + (low > 0x3e ? 0x62 : 0x40) + low;
         return tmp;
       }
-    } else if (array[mid].code > code) {
+    }
+    else if (array[mid].code > code)
+    {
       high = mid - 1;
-    } else {
+    }
+    else
+    {
       low = mid + 1;
     }
   }
@@ -118,38 +129,50 @@ BIG5toCNS(unsigned short big5, unsigned char *lc)
   unsigned short cns = 0;
   int i;
 
-  if (big5 < 0xc940U) {
+  if (big5 < 0xc940U)
+  {
     /* level 1 */
 
-    for (i = 0; i < sizeof(b1c4) / (sizeof(unsigned short) * 2); i++) {
-      if (b1c4[i][0] == big5) {
+    for (i = 0; i < sizeof(b1c4) / (sizeof(unsigned short) * 2); i++)
+    {
+      if (b1c4[i][0] == big5)
+      {
         *lc = LC_CNS11643_4;
         return (b1c4[i][1] | 0x8080U);
       }
     }
 
-    if (0 < (cns = BinarySearchRange(big5Level1ToCnsPlane1, 23, big5))) {
+    if (0 < (cns = BinarySearchRange(big5Level1ToCnsPlane1, 23, big5)))
+    {
       *lc = LC_CNS11643_1;
     }
-  } else if (big5 == 0xc94aU) {
+  }
+  else if (big5 == 0xc94aU)
+  {
     /* level 2 */
     *lc = LC_CNS11643_1;
     cns = 0x4442;
-  } else {
+  }
+  else
+  {
     /* level 2 */
-    for (i = 0; i < sizeof(b2c3) / (sizeof(unsigned short) * 2); i++) {
-      if (b2c3[i][0] == big5) {
+    for (i = 0; i < sizeof(b2c3) / (sizeof(unsigned short) * 2); i++)
+    {
+      if (b2c3[i][0] == big5)
+      {
         *lc = LC_CNS11643_3;
         return (b2c3[i][1] | 0x8080U);
       }
     }
 
-    if (0 < (cns = BinarySearchRange(big5Level2ToCnsPlane2, 46, big5))) {
+    if (0 < (cns = BinarySearchRange(big5Level2ToCnsPlane2, 46, big5)))
+    {
       *lc = LC_CNS11643_2;
     }
   }
 
-  if (0 == cns) { /* no mapping Big5 to CNS 11643-1992 */
+  if (0 == cns)
+  { /* no mapping Big5 to CNS 11643-1992 */
     *lc = 0;
     return (unsigned short)'?';
   }
@@ -165,7 +188,8 @@ CNStoBIG5(unsigned short cns, unsigned char lc)
 
   cns &= 0x7f7f;
 
-  switch (lc) {
+  switch (lc)
+  {
   case LC_CNS11643_1:
     big5 = BinarySearchRange(cnsPlane1ToBig5Level1, 24, cns);
     break;
@@ -173,19 +197,23 @@ CNStoBIG5(unsigned short cns, unsigned char lc)
     big5 = BinarySearchRange(cnsPlane2ToBig5Level2, 47, cns);
     break;
   case LC_CNS11643_3:
-    for (i = 0; i < sizeof(b2c3) / (sizeof(unsigned short) * 2); i++) {
-      if (b2c3[i][1] == cns) {
+    for (i = 0; i < sizeof(b2c3) / (sizeof(unsigned short) * 2); i++)
+    {
+      if (b2c3[i][1] == cns)
+      {
         return b2c3[i][0];
       }
     }
     break;
   case LC_CNS11643_4:
-    for (i = 0; i < sizeof(b1c4) / (sizeof(unsigned short) * 2); i++) {
-      if (b1c4[i][1] == cns) {
+    for (i = 0; i < sizeof(b1c4) / (sizeof(unsigned short) * 2); i++)
+    {
+      if (b1c4[i][1] == cns)
+      {
         return b1c4[i][0];
       }
     }
-  default:;
+  default:
     break;
   }
   return big5;

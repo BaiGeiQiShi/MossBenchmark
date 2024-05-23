@@ -42,13 +42,15 @@
 #include "utils/memutils.h"
 
 #define EXPECT_TRUE(expr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!(expr))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       elog(ERROR, "%s was unexpectedly false in file \"%s\" line %u", #expr, __FILE__, __LINE__);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define EXPECT_EQ_U32(result_expr, expected_expr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     uint32 result = (result_expr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     uint32 expected = (expected_expr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
     if (result != expected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
@@ -56,7 +58,8 @@
   } while (0)
 
 #define EXPECT_EQ_U64(result_expr, expected_expr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     uint64 result = (result_expr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     uint64 expected = (expected_expr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
     if (result != expected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
@@ -86,17 +89,21 @@ interpt_pp(PG_FUNCTION_ARGS)
 
   found = false; /* Haven't found it yet */
 
-  for (i = 0; i < p1->npts - 1 && !found; i++) {
+  for (i = 0; i < p1->npts - 1 && !found; i++)
+  {
     regress_lseg_construct(&seg1, &p1->p[i], &p1->p[i + 1]);
-    for (j = 0; j < p2->npts - 1 && !found; j++) {
+    for (j = 0; j < p2->npts - 1 && !found; j++)
+    {
       regress_lseg_construct(&seg2, &p2->p[j], &p2->p[j + 1]);
-      if (DatumGetBool(DirectFunctionCall2(lseg_intersect, LsegPGetDatum(&seg1), LsegPGetDatum(&seg2)))) {
+      if (DatumGetBool(DirectFunctionCall2(lseg_intersect, LsegPGetDatum(&seg1), LsegPGetDatum(&seg2))))
+      {
         found = true;
       }
     }
   }
 
-  if (!found) {
+  if (!found)
+  {
     PG_RETURN_NULL();
   }
 
@@ -128,7 +135,8 @@ overpaid(PG_FUNCTION_ARGS)
   int32 salary;
 
   salary = DatumGetInt32(GetAttributeByName(tuple, "salary", &isnull));
-  if (isnull) {
+  if (isnull)
+  {
     PG_RETURN_NULL();
   }
   PG_RETURN_BOOL(salary > 699);
@@ -139,7 +147,8 @@ overpaid(PG_FUNCTION_ARGS)
  *	so needed to make sure the names do not collide. - tgl 97/04/21
  */
 
-typedef struct {
+typedef struct
+{
   Point center;
   double radius;
 } WIDGET;
@@ -157,13 +166,16 @@ widget_in(PG_FUNCTION_ARGS)
   int i;
   WIDGET *result;
 
-  for (i = 0, p = str; *p && i < NARGS && *p != RDELIM; p++) {
-    if (*p == DELIM || (*p == LDELIM && i == 0)) {
+  for (i = 0, p = str; *p && i < NARGS && *p != RDELIM; p++)
+  {
+    if (*p == DELIM || (*p == LDELIM && i == 0))
+    {
       coord[i++] = p + 1;
     }
   }
 
-  if (i < NARGS) {
+  if (i < NARGS)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "widget", str)));
   }
 
@@ -211,11 +223,13 @@ reverse_name(PG_FUNCTION_ARGS)
   new_string = palloc0(NAMEDATALEN);
   for (i = 0; i < NAMEDATALEN && string[i]; ++i)
     ;
-  if (i == NAMEDATALEN || !string[i]) {
+  if (i == NAMEDATALEN || !string[i])
+  {
     --i;
   }
   len = i;
-  for (; i >= 0; --i) {
+  for (; i >= 0; --i)
+  {
     new_string[len - i] = string[i];
   }
   PG_RETURN_CSTRING(new_string);
@@ -229,7 +243,8 @@ trigger_return_old(PG_FUNCTION_ARGS)
   TriggerData *trigdata = (TriggerData *)fcinfo->context;
   HeapTuple tuple;
 
-  if (!CALLED_AS_TRIGGER(fcinfo)) {
+  if (!CALLED_AS_TRIGGER(fcinfo))
+  {
     elog(ERROR, "trigger_return_old: not fired by trigger manager");
   }
 
@@ -267,19 +282,24 @@ ttdummy(PG_FUNCTION_ARGS)
   int ret;
   int i;
 
-  if (!CALLED_AS_TRIGGER(fcinfo)) {
+  if (!CALLED_AS_TRIGGER(fcinfo))
+  {
     elog(ERROR, "ttdummy: not fired by trigger manager");
   }
-  if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event)) {
+  if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
+  {
     elog(ERROR, "ttdummy: must be fired for row");
   }
-  if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event)) {
+  if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
+  {
     elog(ERROR, "ttdummy: must be fired before event");
   }
-  if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event)) {
+  if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
+  {
     elog(ERROR, "ttdummy: cannot process INSERT event");
   }
-  if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event)) {
+  if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
+  {
     newtuple = trigdata->tg_newtuple;
   }
 
@@ -297,7 +317,8 @@ ttdummy(PG_FUNCTION_ARGS)
 
   trigger = trigdata->tg_trigger;
 
-  if (trigger->tgnargs != 2) {
+  if (trigger->tgnargs != 2)
+  {
     elog(ERROR, "ttdummy (%s): invalid (!= 2) number of arguments %d", relname, trigger->tgnargs);
   }
 
@@ -305,46 +326,56 @@ ttdummy(PG_FUNCTION_ARGS)
   tupdesc = rel->rd_att;
   natts = tupdesc->natts;
 
-  for (i = 0; i < 2; i++) {
+  for (i = 0; i < 2; i++)
+  {
     attnum[i] = SPI_fnumber(tupdesc, args[i]);
-    if (attnum[i] <= 0) {
+    if (attnum[i] <= 0)
+    {
       elog(ERROR, "ttdummy (%s): there is no attribute %s", relname, args[i]);
     }
-    if (SPI_gettypeid(tupdesc, attnum[i]) != INT4OID) {
+    if (SPI_gettypeid(tupdesc, attnum[i]) != INT4OID)
+    {
       elog(ERROR, "ttdummy (%s): attribute %s must be of integer type", relname, args[i]);
     }
   }
 
   oldon = SPI_getbinval(trigtuple, tupdesc, attnum[0], &isnull);
-  if (isnull) {
+  if (isnull)
+  {
     elog(ERROR, "ttdummy (%s): %s must be NOT NULL", relname, args[0]);
   }
 
   oldoff = SPI_getbinval(trigtuple, tupdesc, attnum[1], &isnull);
-  if (isnull) {
+  if (isnull)
+  {
     elog(ERROR, "ttdummy (%s): %s must be NOT NULL", relname, args[1]);
   }
 
   if (newtuple != NULL) /* UPDATE */
   {
     newon = SPI_getbinval(newtuple, tupdesc, attnum[0], &isnull);
-    if (isnull) {
+    if (isnull)
+    {
       elog(ERROR, "ttdummy (%s): %s must be NOT NULL", relname, args[0]);
     }
     newoff = SPI_getbinval(newtuple, tupdesc, attnum[1], &isnull);
-    if (isnull) {
+    if (isnull)
+    {
       elog(ERROR, "ttdummy (%s): %s must be NOT NULL", relname, args[1]);
     }
 
-    if (oldon != newon || oldoff != newoff) {
-      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("ttdummy (%s): you cannot change %s and/or %s columns (use set_ttdummy)",              relname, args[0], args[1])));
+    if (oldon != newon || oldoff != newoff)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("ttdummy (%s): you cannot change %s and/or %s columns (use set_ttdummy)", relname, args[0], args[1])));
     }
 
-    if (newoff != TTDUMMY_INFINITY) {
+    if (newoff != TTDUMMY_INFINITY)
+    {
       pfree(relname); /* allocated in upper executor context */
       return PointerGetDatum(NULL);
     }
-  } else if (oldoff != TTDUMMY_INFINITY) /* DELETE */
+  }
+  else if (oldoff != TTDUMMY_INFINITY) /* DELETE */
   {
     pfree(relname);
     return PointerGetDatum(NULL);
@@ -355,14 +386,16 @@ ttdummy(PG_FUNCTION_ARGS)
   newoff = Int32GetDatum((int32)DatumGetInt64(newoff));
 
   /* Connect to SPI manager */
-  if ((ret = SPI_connect()) < 0) {
+  if ((ret = SPI_connect()) < 0)
+  {
     elog(ERROR, "ttdummy (%s): SPI_connect returned %d", relname, ret);
   }
 
   /* Fetch tuple values and nulls */
   cvals = (Datum *)palloc(natts * sizeof(Datum));
   cnulls = (char *)palloc(natts * sizeof(char));
-  for (i = 0; i < natts; i++) {
+  for (i = 0; i < natts; i++)
+  {
     cvals[i] = SPI_getbinval((newtuple != NULL) ? newtuple : trigtuple, tupdesc, i + 1, &isnull);
     cnulls[i] = (isnull) ? 'n' : ' ';
   }
@@ -374,7 +407,8 @@ ttdummy(PG_FUNCTION_ARGS)
     cnulls[attnum[0] - 1] = ' ';
     cvals[attnum[1] - 1] = TTDUMMY_INFINITY; /* stop_date eq INFINITY */
     cnulls[attnum[1] - 1] = ' ';
-  } else
+  }
+  else
   /* DELETE */
   {
     cvals[attnum[1] - 1] = newoff; /* stop_date eq current date */
@@ -382,7 +416,8 @@ ttdummy(PG_FUNCTION_ARGS)
   }
 
   /* if there is no plan ... */
-  if (splan == NULL) {
+  if (splan == NULL)
+  {
     SPIPlanPtr pplan;
     Oid *ctypes;
     char *query;
@@ -395,18 +430,21 @@ ttdummy(PG_FUNCTION_ARGS)
      * Construct query: INSERT INTO _relation_ VALUES ($1, ...)
      */
     sprintf(query, "INSERT INTO %s VALUES (", relname);
-    for (i = 1; i <= natts; i++) {
+    for (i = 1; i <= natts; i++)
+    {
       sprintf(query + strlen(query), "$%d%s", i, (i < natts) ? ", " : ")");
       ctypes[i - 1] = SPI_gettypeid(tupdesc, i);
     }
 
     /* Prepare plan for query */
     pplan = SPI_prepare(query, natts, ctypes);
-    if (pplan == NULL) {
+    if (pplan == NULL)
+    {
       elog(ERROR, "ttdummy (%s): SPI_prepare returned %s", relname, SPI_result_code_string(SPI_result));
     }
 
-    if (SPI_keepplan(pplan)) {
+    if (SPI_keepplan(pplan))
+    {
       elog(ERROR, "ttdummy (%s): SPI_keepplan failed", relname);
     }
 
@@ -415,14 +453,18 @@ ttdummy(PG_FUNCTION_ARGS)
 
   ret = SPI_execp(splan, cvals, cnulls, 0);
 
-  if (ret < 0) {
+  if (ret < 0)
+  {
     elog(ERROR, "ttdummy (%s): SPI_execp returned %d", relname, ret);
   }
 
   /* Tuple to return to upper Executor ... */
-  if (newtuple) { /* UPDATE */
+  if (newtuple) /* UPDATE */
+  {
     rettuple = SPI_modifytuple(rel, trigtuple, 1, &(attnum[1]), &newoff, NULL);
-  } else { /* DELETE */
+  }
+  else /* DELETE */
+  {
     rettuple = trigtuple;
   }
 
@@ -442,7 +484,8 @@ set_ttdummy(PG_FUNCTION_ARGS)
 
   if (ttoff) /* OFF currently */
   {
-    if (on == 0) {
+    if (on == 0)
+    {
       PG_RETURN_INT32(0);
     }
 
@@ -452,7 +495,8 @@ set_ttdummy(PG_FUNCTION_ARGS)
   }
 
   /* ON currently */
-  if (on != 0) {
+  if (on != 0)
+  {
     PG_RETURN_INT32(1);
   }
 
@@ -468,8 +512,7 @@ set_ttdummy(PG_FUNCTION_ARGS)
  */
 
 /*
- *		int44in			- converts "num, num, ..." to internal
- *form
+ *		int44in			- converts "num, num, ..." to internal form
  *
  *		Note: Fills any missing positions with zeroes.
  */
@@ -483,7 +526,8 @@ int44in(PG_FUNCTION_ARGS)
   int i;
 
   i = sscanf(input_string, "%d, %d, %d, %d", &result[0], &result[1], &result[2], &result[3]);
-  while (i < 4) {
+  while (i < 4)
+  {
     result[i++] = 0;
   }
 
@@ -491,8 +535,7 @@ int44in(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int44out		- converts internal form to "num, num,
- *..."
+ *		int44out		- converts internal form to "num, num, ..."
  */
 PG_FUNCTION_INFO_V1(int44out);
 
@@ -546,27 +589,33 @@ make_tuple_indirect(PG_FUNCTION_ARGS)
 
   old_context = MemoryContextSwitchTo(TopTransactionContext);
 
-  for (i = 0; i < ncolumns; i++) {
+  for (i = 0; i < ncolumns; i++)
+  {
     struct varlena *attr;
     struct varlena *new_attr;
     struct varatt_indirect redirect_pointer;
 
     /* only work on existing, not-null varlenas */
-    if (TupleDescAttr(tupdesc, i)->attisdropped || nulls[i] || TupleDescAttr(tupdesc, i)->attlen != -1) {
+    if (TupleDescAttr(tupdesc, i)->attisdropped || nulls[i] || TupleDescAttr(tupdesc, i)->attlen != -1)
+    {
       continue;
     }
 
     attr = (struct varlena *)DatumGetPointer(values[i]);
 
     /* don't recursively indirect */
-    if (VARATT_IS_EXTERNAL_INDIRECT(attr)) {
+    if (VARATT_IS_EXTERNAL_INDIRECT(attr))
+    {
       continue;
     }
 
     /* copy datum, so it still lives later */
-    if (VARATT_IS_EXTERNAL_ONDISK(attr)) {
+    if (VARATT_IS_EXTERNAL_ONDISK(attr))
+    {
       attr = heap_tuple_fetch_attr(attr);
-    } else {
+    }
+    else
+    {
       struct varlena *oldattr = attr;
 
       attr = palloc0(VARSIZE_ANY(oldattr));
@@ -609,7 +658,8 @@ regress_putenv(PG_FUNCTION_ARGS)
   MemoryContext oldcontext;
   char *envbuf;
 
-  if (!superuser()) {
+  if (!superuser())
+  {
     elog(ERROR, "must be superuser to change environment variables");
   }
 
@@ -617,7 +667,8 @@ regress_putenv(PG_FUNCTION_ARGS)
   envbuf = text_to_cstring((text *)PG_GETARG_POINTER(0));
   MemoryContextSwitchTo(oldcontext);
 
-  if (putenv(envbuf) != 0) {
+  if (putenv(envbuf) != 0)
+  {
     elog(ERROR, "could not set environment variable: %m");
   }
 
@@ -632,16 +683,19 @@ wait_pid(PG_FUNCTION_ARGS)
 {
   int pid = PG_GETARG_INT32(0);
 
-  if (!superuser()) {
+  if (!superuser())
+  {
     elog(ERROR, "must be superuser to check PID liveness");
   }
 
-  while (kill(pid, 0) == 0) {
+  while (kill(pid, 0) == 0)
+  {
     CHECK_FOR_INTERRUPTS();
     pg_usleep(50000);
   }
 
-  if (errno != ESRCH) {
+  if (errno != ESRCH)
+  {
     elog(ERROR, "could not check PID %d liveness: %m", pid);
   }
 
@@ -702,13 +756,16 @@ test_atomic_uint32(void)
   EXPECT_TRUE(!pg_atomic_compare_exchange_u32(&var, &expected, 1));
 
   /* CAS is allowed to fail due to interrupts, try a couple of times */
-  for (i = 0; i < 1000; i++) {
+  for (i = 0; i < 1000; i++)
+  {
     expected = 0;
-    if (!pg_atomic_compare_exchange_u32(&var, &expected, 1)) {
+    if (!pg_atomic_compare_exchange_u32(&var, &expected, 1))
+    {
       break;
     }
   }
-  if (i == 1000) {
+  if (i == 1000)
+  {
     elog(ERROR, "atomic_compare_exchange_u32() never succeeded");
   }
   EXPECT_EQ_U32(pg_atomic_read_u32(&var), 1);
@@ -748,13 +805,16 @@ test_atomic_uint64(void)
   EXPECT_TRUE(!pg_atomic_compare_exchange_u64(&var, &expected, 1));
 
   /* CAS is allowed to fail due to interrupts, try a couple of times */
-  for (i = 0; i < 100; i++) {
+  for (i = 0; i < 100; i++)
+  {
     expected = 0;
-    if (!pg_atomic_compare_exchange_u64(&var, &expected, 1)) {
+    if (!pg_atomic_compare_exchange_u64(&var, &expected, 1))
+    {
       break;
     }
   }
-  if (i == 100) {
+  if (i == 100)
+  {
     elog(ERROR, "atomic_compare_exchange_u64() never succeeded");
   }
   EXPECT_EQ_U64(pg_atomic_read_u64(&var), 1);
@@ -788,7 +848,8 @@ test_spinlock(void)
    * spinlock operations don't perform too wide writes.
    */
   {
-    struct test_lock_struct {
+    struct test_lock_struct
+    {
       char data_before[4];
       slock_t lock;
       char data_after[4];
@@ -818,12 +879,14 @@ test_spinlock(void)
 #ifdef TAS
     S_LOCK(&struct_w_lock.lock);
 
-    if (!TAS(&struct_w_lock.lock)) {
+    if (!TAS(&struct_w_lock.lock))
+    {
       elog(ERROR, "acquired already held spinlock");
     }
 
 #ifdef TAS_SPIN
-    if (!TAS_SPIN(&struct_w_lock.lock)) {
+    if (!TAS_SPIN(&struct_w_lock.lock))
+    {
       elog(ERROR, "acquired already held spinlock");
     }
 #endif /* defined(TAS_SPIN) */
@@ -835,10 +898,12 @@ test_spinlock(void)
      * Verify that after all of this the non-lock contents are still
      * correct.
      */
-    if (memcmp(struct_w_lock.data_before, "abcd", 4) != 0) {
+    if (memcmp(struct_w_lock.data_before, "abcd", 4) != 0)
+    {
       elog(ERROR, "padding before spinlock modified");
     }
-    if (memcmp(struct_w_lock.data_after, "ef12", 4) != 0) {
+    if (memcmp(struct_w_lock.data_after, "ef12", 4) != 0)
+    {
       elog(ERROR, "padding after spinlock modified");
     }
   }
@@ -856,13 +921,15 @@ test_spinlock(void)
      * as those may be syscalls when the spinlock emulation is used (and
      * even just atomic TAS would be expensive).
      */
-    for (uint32 i = 0; i < INT32_MAX - 100000; i++) {
+    for (uint32 i = 0; i < INT32_MAX - 100000; i++)
+    {
       slock_t lock;
 
       SpinLockInit(&lock);
     }
 
-    for (uint32 i = 0; i < 200000; i++) {
+    for (uint32 i = 0; i < 200000; i++)
+    {
       slock_t lock;
 
       SpinLockInit(&lock);
@@ -900,20 +967,23 @@ test_atomic_spin_nest(void)
 
   SpinLockInit(&lock);
 
-  for (int i = 0; i < NUM_TEST_ATOMICS; i++) {
+  for (int i = 0; i < NUM_TEST_ATOMICS; i++)
+  {
     pg_atomic_init_u32(&atomics32[i], 0);
     pg_atomic_init_u64(&atomics64[i], 0);
   }
 
   /* just so it's not all zeroes */
-  for (int i = 0; i < NUM_TEST_ATOMICS; i++) {
+  for (int i = 0; i < NUM_TEST_ATOMICS; i++)
+  {
     EXPECT_EQ_U32(pg_atomic_fetch_add_u32(&atomics32[i], i), 0);
     EXPECT_EQ_U64(pg_atomic_fetch_add_u64(&atomics64[i], i), 0);
   }
 
   /* test whether we can do atomic op with lock held */
   SpinLockAcquire(&lock);
-  for (int i = 0; i < NUM_TEST_ATOMICS; i++) {
+  for (int i = 0; i < NUM_TEST_ATOMICS; i++)
+  {
     EXPECT_EQ_U32(pg_atomic_fetch_sub_u32(&atomics32[i], i), i);
     EXPECT_EQ_U32(pg_atomic_read_u32(&atomics32[i]), 0);
     EXPECT_EQ_U64(pg_atomic_fetch_sub_u64(&atomics64[i], i), i);
@@ -959,7 +1029,8 @@ test_support_func(PG_FUNCTION_ARGS)
   Node *rawreq = (Node *)PG_GETARG_POINTER(0);
   Node *ret = NULL;
 
-  if (IsA(rawreq, SupportRequestSelectivity)) {
+  if (IsA(rawreq, SupportRequestSelectivity))
+  {
     /*
      * Assume that the target is int4eq; that's safe as long as we don't
      * attach this to any other boolean-returning function.
@@ -967,9 +1038,12 @@ test_support_func(PG_FUNCTION_ARGS)
     SupportRequestSelectivity *req = (SupportRequestSelectivity *)rawreq;
     Selectivity s1;
 
-    if (req->is_join) {
+    if (req->is_join)
+    {
       s1 = join_selectivity(req->root, Int4EqualOperator, req->args, req->inputcollid, req->jointype, req->sjinfo);
-    } else {
+    }
+    else
+    {
       s1 = restriction_selectivity(req->root, Int4EqualOperator, req->args, req->inputcollid, req->varRelid);
     }
 
@@ -977,7 +1051,8 @@ test_support_func(PG_FUNCTION_ARGS)
     ret = (Node *)req;
   }
 
-  if (IsA(rawreq, SupportRequestCost)) {
+  if (IsA(rawreq, SupportRequestCost))
+  {
     /* Provide some generic estimate */
     SupportRequestCost *req = (SupportRequestCost *)rawreq;
 
@@ -986,7 +1061,8 @@ test_support_func(PG_FUNCTION_ARGS)
     ret = (Node *)req;
   }
 
-  if (IsA(rawreq, SupportRequestRows)) {
+  if (IsA(rawreq, SupportRequestRows))
+  {
     /*
      * Assume that the target is generate_series_int4; that's safe as long
      * as we don't attach this to any other set-returning function.
@@ -999,7 +1075,8 @@ test_support_func(PG_FUNCTION_ARGS)
       Node *arg1 = linitial(args);
       Node *arg2 = lsecond(args);
 
-      if (IsA(arg1, Const) && !((Const *)arg1)->constisnull && IsA(arg2, Const) && !((Const *)arg2)->constisnull) {
+      if (IsA(arg1, Const) && !((Const *)arg1)->constisnull && IsA(arg2, Const) && !((Const *)arg2)->constisnull)
+      {
         int32 val1 = DatumGetInt32(((Const *)arg1)->constvalue);
         int32 val2 = DatumGetInt32(((Const *)arg2)->constvalue);
 

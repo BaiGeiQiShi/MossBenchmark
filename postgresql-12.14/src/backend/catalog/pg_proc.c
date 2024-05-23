@@ -58,9 +58,9 @@ match_prosrc_to_literal(const char *prosrc, const char *literal, int cursorpos, 
 /* ----------------------------------------------------------------
  *		ProcedureCreate
  *
- * Note: allParameterTypes, parameterModes, parameterNames, trftypes, and
- *proconfig are either arrays of the proper types or NULL.  We declare them
- *Datum, not "ArrayType *", to avoid importing array.h into pg_proc.h.
+ * Note: allParameterTypes, parameterModes, parameterNames, trftypes, and proconfig
+ * are either arrays of the proper types or NULL.  We declare them Datum,
+ * not "ArrayType *", to avoid importing array.h into pg_proc.h.
  * ----------------------------------------------------------------
  */
 ObjectAddress
@@ -100,7 +100,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
   parameterCount = parameterTypes->dim1;
   if (parameterCount < 0 || parameterCount > FUNC_MAX_ARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg_plural("functions cannot have more than %d argument", "functions cannot have more than %d arguments", FUNC_MAX_ARGS, FUNC_MAX_ARGS)));
   }
   /* note: the above is correct, we do NOT count output arguments */
 
@@ -117,7 +117,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
     allParamCount = ARR_DIMS(allParamArray)[0];
     if (ARR_NDIM(allParamArray) != 1 || allParamCount <= 0 || ARR_HASNULL(allParamArray) || ARR_ELEMTYPE(allParamArray) != OIDOID)
     {
-
+      elog(ERROR, "allParameterTypes is not a 1-D Oid array");
     }
     allParams = (Oid *)ARR_DATA_PTR(allParamArray);
     Assert(allParamCount >= parameterCount);
@@ -140,7 +140,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
 
     if (ARR_NDIM(modesArray) != 1 || ARR_DIMS(modesArray)[0] != allParamCount || ARR_HASNULL(modesArray) || ARR_ELEMTYPE(modesArray) != CHAROID)
     {
-
+      elog(ERROR, "parameterModes is not a 1-D char array");
     }
     paramModes = (char *)ARR_DATA_PTR(modesArray);
   }
@@ -153,17 +153,17 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
   {
     switch (parameterTypes->values[i])
     {
-    case ANYARRAYOID:;
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYARRAYOID:
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       genericInParam = true;
       break;
-    case ANYRANGEOID:;
+    case ANYRANGEOID:
       genericInParam = true;
       anyrangeInParam = true;
       break;
-    case INTERNALOID:;
+    case INTERNALOID:
       internalInParam = true;
       break;
     }
@@ -180,19 +180,19 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
 
       switch (allParams[i])
       {
-      case ANYARRAYOID:;
-      case ANYELEMENTOID:;
-      case ANYNONARRAYOID:;
-      case ANYENUMOID:;
+      case ANYARRAYOID:
+      case ANYELEMENTOID:
+      case ANYNONARRAYOID:
+      case ANYENUMOID:
         genericOutParam = true;
         break;
-      case ANYRANGEOID:;
+      case ANYRANGEOID:
         genericOutParam = true;
         anyrangeOutParam = true;
         break;
-      case INTERNALOID:;
-
-
+      case INTERNALOID:
+        internalOutParam = true;
+        break;
       }
     }
   }
@@ -216,7 +216,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
 
   if ((returnType == INTERNALOID || internalOutParam) && !internalInParam)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("unsafe use of pseudo-type \"internal\""), errdetail("A function returning \"internal\" must have at least one \"internal\" argument.")));
   }
 
   if (paramModes != NULL)
@@ -230,42 +230,42 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
     {
       switch (paramModes[i])
       {
-      case PROARGMODE_IN:;
-      case PROARGMODE_INOUT:;
+      case PROARGMODE_IN:
+      case PROARGMODE_INOUT:
         if (OidIsValid(variadicType))
         {
-
+          elog(ERROR, "variadic parameter must be last");
         }
         break;
-      case PROARGMODE_OUT:;
-      case PROARGMODE_TABLE:;
+      case PROARGMODE_OUT:
+      case PROARGMODE_TABLE:
         /* okay */
         break;
-      case PROARGMODE_VARIADIC:;
+      case PROARGMODE_VARIADIC:
         if (OidIsValid(variadicType))
         {
-
+          elog(ERROR, "variadic parameter must be last");
         }
         switch (allParams[i])
         {
-        case ANYOID:;
+        case ANYOID:
           variadicType = ANYOID;
           break;
-        case ANYARRAYOID:;
+        case ANYARRAYOID:
           variadicType = ANYELEMENTOID;
           break;
-        default:;;
+        default:
           variadicType = get_element_type(allParams[i]);
           if (!OidIsValid(variadicType))
           {
-
+            elog(ERROR, "variadic parameter is not an array");
           }
           break;
         }
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "invalid parameter mode '%c'", paramModes[i]);
+        break;
       }
     }
   }
@@ -335,7 +335,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
   }
   if (trftypes != PointerGetDatum(NULL))
   {
-
+    values[Anum_pg_proc_protrftypes - 1] = trftypes;
   }
   else
   {
@@ -376,11 +376,11 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
 
     if (!replace)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_FUNCTION), errmsg("function \"%s\" already exists with same argument types", procedureName)));
     }
     if (!pg_proc_ownercheck(oldproc->oid, proowner))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_FUNCTION, procedureName);
     }
 
     /* Not okay to change routine kind */
@@ -401,7 +401,13 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
      */
     if (returnType != oldproc->prorettype || returnsSet != oldproc->proretset)
     {
-      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), prokind == PROKIND_PROCEDURE ? errmsg("cannot change whether a procedure has output parameters") : errmsg("cannot change return type of existing function"), errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), prokind == PROKIND_PROCEDURE ? errmsg("cannot change whether a procedure has output parameters") : errmsg("cannot change return type of existing function"),
+
+                         /*
+                          * translator: first %s is DROP FUNCTION, DROP PROCEDURE, or DROP
+                          * AGGREGATE
+                          */
+                         errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
     }
 
     /*
@@ -419,7 +425,9 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
         /* ok, both are runtime-defined RECORDs */;
       else if (olddesc == NULL || newdesc == NULL || !equalTupleDescs(olddesc, newdesc))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot change return type of existing function"), errdetail("Row type defined by OUT parameters is different."),
+                           /* translator: first %s is DROP FUNCTION or DROP PROCEDURE */
+                           errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
       }
     }
 
@@ -454,7 +462,9 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
         }
         if (j >= n_new_arg_names || new_arg_names[j] == NULL || strcmp(old_arg_names[j], new_arg_names[j]) != 0)
         {
-          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot change name of input parameter \"%s\"", old_arg_names[j]), errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot change name of input parameter \"%s\"", old_arg_names[j]),
+                             /* translator: first %s is DROP FUNCTION or DROP PROCEDURE */
+                             errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
         }
       }
     }
@@ -476,7 +486,9 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
 
       if (list_length(parameterDefaults) < oldproc->pronargdefaults)
       {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot remove parameter defaults from existing function"), errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot remove parameter defaults from existing function"),
+                           /* translator: first %s is DROP FUNCTION or DROP PROCEDURE */
+                           errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
       }
 
       proargdefaults = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup, Anum_pg_proc_proargdefaults, &isnull);
@@ -488,7 +500,7 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
       newlc = list_head(parameterDefaults);
       for (i = list_length(parameterDefaults) - oldproc->pronargdefaults; i > 0; i--)
       {
-
+        newlc = lnext(newlc);
       }
 
       foreach (oldlc, oldDefaults)
@@ -496,11 +508,13 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
         Node *oldDef = (Node *)lfirst(oldlc);
         Node *newDef = (Node *)lfirst(newlc);
 
-
-
-
-
-
+        if (exprType(oldDef) != exprType(newDef))
+        {
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("cannot change data type of existing parameter default value"),
+                             /* translator: first %s is DROP FUNCTION or DROP PROCEDURE */
+                             errhint("Use %s %s first.", dropcmd, format_procedure(oldproc->oid))));
+        }
+        newlc = lnext(newlc);
       }
     }
 
@@ -580,10 +594,10 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
   /* dependency on transform used by return type, if any */
   if ((trfid = get_transform_oid(returnType, languageObjectId, true)))
   {
-
-
-
-
+    referenced.classId = TransformRelationId;
+    referenced.objectId = trfid;
+    referenced.objectSubId = 0;
+    recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
   /* dependency on parameter types */
@@ -597,10 +611,10 @@ ProcedureCreate(const char *procedureName, Oid procNamespace, bool replace, bool
     /* dependency on transform used by parameter type, if any */
     if ((trfid = get_transform_oid(allParams[i], languageObjectId, true)))
     {
-
-
-
-
+      referenced.classId = TransformRelationId;
+      referenced.objectId = trfid;
+      referenced.objectSubId = 0;
+      recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
     }
   }
 
@@ -698,7 +712,7 @@ fmgr_internal_validator(PG_FUNCTION_ARGS)
 
   if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
   {
-
+    PG_RETURN_VOID();
   }
 
   /*
@@ -709,13 +723,13 @@ fmgr_internal_validator(PG_FUNCTION_ARGS)
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcoid);
   }
 
   tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "null prosrc");
   }
   prosrc = TextDatumGetCString(tmp);
 
@@ -749,7 +763,7 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
 
   if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
   {
-
+    PG_RETURN_VOID();
   }
 
   /*
@@ -761,20 +775,20 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcoid);
   }
 
   tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "null prosrc for C function %u", funcoid);
   }
   prosrc = TextDatumGetCString(tmp);
 
   tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_probin, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "null probin for C function %u", funcoid);
   }
   probin = TextDatumGetCString(tmp);
 
@@ -810,13 +824,13 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 
   if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
   {
-
+    PG_RETURN_VOID();
   }
 
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcoid);
   }
   proc = (Form_pg_proc)GETSTRUCT(tuple);
 
@@ -840,7 +854,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
       }
       else
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("SQL functions cannot have arguments of type %s", format_type_be(proc->proargtypes.values[i]))));
       }
     }
   }
@@ -851,7 +865,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
     tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
     if (isnull)
     {
-
+      elog(ERROR, "null prosrc");
     }
 
     prosrc = TextDatumGetCString(tmp);
@@ -975,7 +989,7 @@ function_parse_error_transpose(const char *prosrc)
      * Quietly give up if no ActivePortal.  This is an unusual situation
      * but it can happen in, e.g., logical replication workers.
      */
-
+    newerrposition = -1;
   }
 
   if (newerrposition > 0)
@@ -992,9 +1006,9 @@ function_parse_error_transpose(const char *prosrc)
      * If unsuccessful, convert the position to an internal position
      * marker and give the function text as the internal query.
      */
-
-
-
+    errposition(0);
+    internalerrposition(origerrposition);
+    internalerrquery(prosrc);
   }
 
   return true;
@@ -1032,7 +1046,7 @@ match_prosrc_to_query(const char *prosrc, const char *queryText, int cursorpos)
        */
       if (matchpos)
       {
-
+        return 0; /* multiple matches, fail */
       }
       matchpos = pg_mbstrlen_with_len(queryText, curpos + 1) + cursorpos;
     }
@@ -1044,7 +1058,7 @@ match_prosrc_to_query(const char *prosrc, const char *queryText, int cursorpos)
        */
       if (matchpos)
       {
-
+        return 0; /* multiple matches, fail */
       }
       matchpos = pg_mbstrlen_with_len(queryText, curpos + 1) + newcursorpos;
     }
@@ -1085,28 +1099,28 @@ match_prosrc_to_literal(const char *prosrc, const char *literal, int cursorpos, 
      */
     if (*literal == '\\')
     {
-
-
-
-
-
+      literal++;
+      if (cursorpos > 0)
+      {
+        newcp++;
+      }
     }
     else if (*literal == '\'')
     {
-
-
-
-
-
-
-
-
-
+      if (literal[1] != '\'')
+      {
+        goto fail;
+      }
+      literal++;
+      if (cursorpos > 0)
+      {
+        newcp++;
+      }
     }
     chlen = pg_mblen(prosrc);
     if (strncmp(prosrc, literal, chlen) != 0)
     {
-
+      goto fail;
     }
     prosrc += chlen;
     literal += chlen;
@@ -1119,25 +1133,25 @@ match_prosrc_to_literal(const char *prosrc, const char *literal, int cursorpos, 
     return true;
   }
 
-fail:;
+fail:
   /* Must set *newcursorpos to suppress compiler warning */
-
-
+  *newcursorpos = newcp;
+  return false;
 }
 
 List *
 oid_array_to_list(Datum datum)
 {
+  ArrayType *array = DatumGetArrayTypeP(datum);
+  Datum *values;
+  int nelems;
+  int i;
+  List *result = NIL;
 
-
-
-
-
-
-
-
-
-
-
-
+  deconstruct_array(array, OIDOID, sizeof(Oid), true, 'i', &values, NULL, &nelems);
+  for (i = 0; i < nelems; i++)
+  {
+    result = lappend_oid(result, values[i]);
+  }
+  return result;
 }

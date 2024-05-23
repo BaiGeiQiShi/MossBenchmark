@@ -13,10 +13,9 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
@@ -113,7 +112,7 @@ geqo_eval(PlannerInfo *root, Gene *tour, int num_gene)
   }
   else
   {
-
+    fitness = DBL_MAX;
   }
 
   /*
@@ -202,20 +201,20 @@ gimme_tree(PlannerInfo *root, Gene *tour, int num_gene)
     List *fclumps;
     ListCell *lc;
 
+    fclumps = NIL;
+    foreach (lc, clumps)
+    {
+      Clump *clump = (Clump *)lfirst(lc);
 
-
-
-
-
-
-
-
+      fclumps = merge_clump(root, fclumps, clump, num_gene, true);
+    }
+    clumps = fclumps;
   }
 
   /* Did we succeed in forming a single join relation? */
   if (list_length(clumps) != 1)
   {
-
+    return NULL;
   }
 
   return ((Clump *)linitial(clumps))->joinrel;
@@ -322,7 +321,7 @@ merge_clump(PlannerInfo *root, List *clumps, Clump *new_clump, int num_gene, boo
     {
       break; /* it belongs after 'lc', before 'nxt' */
     }
-
+    lc = nxt;
   }
   lappend_cell(clumps, lc, new_clump);
 

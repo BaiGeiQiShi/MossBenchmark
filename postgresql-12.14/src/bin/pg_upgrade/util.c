@@ -52,8 +52,8 @@ end_progress_output(void)
  * prep_status
  *
  *	Displays a message that describes an operation we are about to begin.
- *	We pad the message out to MESSAGE_WIDTH characters so that all of the
- *"ok" and "failed" indicators line up nicely.
+ *	We pad the message out to MESSAGE_WIDTH characters so that all of the "ok" and
+ *	"failed" indicators line up nicely.
  *
  *	A typical sequence would look like this:
  *		prep_status("about to flarb the next %d files", fileCount );
@@ -73,9 +73,12 @@ prep_status(const char *fmt, ...)
   vsnprintf(message, sizeof(message), fmt, args);
   va_end(args);
 
-  if (strlen(message) > 0 && message[strlen(message) - 1] == '\n') {
+  if (strlen(message) > 0 && message[strlen(message) - 1] == '\n')
+  {
     pg_log(PG_REPORT, "%s", message);
-  } else {
+  }
+  else
+  {
     /* trim strings that don't end in a newline */
     pg_log(PG_REPORT, "%-*s", MESSAGE_WIDTH, message);
   }
@@ -90,31 +93,42 @@ pg_log_v(eLogType type, const char *fmt, va_list ap)
 
   /* PG_VERBOSE and PG_STATUS are only output in verbose mode */
   /* fopen() on log_opts.internal might have failed, so check it */
-  if (((type != PG_VERBOSE && type != PG_STATUS) || log_opts.verbose) && log_opts.internal != NULL) {
-    if (type == PG_STATUS) {
+  if (((type != PG_VERBOSE && type != PG_STATUS) || log_opts.verbose) && log_opts.internal != NULL)
+  {
+    if (type == PG_STATUS)
+    {
       /* status messages need two leading spaces and a newline */
       fprintf(log_opts.internal, "  %s\n", message);
-    } else {
+    }
+    else
+    {
       fprintf(log_opts.internal, "%s", message);
     }
     fflush(log_opts.internal);
   }
 
-  switch (type) {
+  switch (type)
+  {
   case PG_VERBOSE:
-    if (log_opts.verbose) {
+    if (log_opts.verbose)
+    {
       printf("%s", message);
     }
     break;
 
   case PG_STATUS:
     /* for output to a display, do leading truncation and append \r */
-    if (isatty(fileno(stdout))) {
+    if (isatty(fileno(stdout)))
+    {
       /* -2 because we use a 2-space indent */
-      printf("  %s%-*.*s\r",/* prefix with "..." if we do leading truncation */
-          strlen(message) <= MESSAGE_WIDTH - 2 ? "" : "...", MESSAGE_WIDTH - 2, MESSAGE_WIDTH - 2,/* optional leading truncation */
+      printf("  %s%-*.*s\r",
+          /* prefix with "..." if we do leading truncation */
+          strlen(message) <= MESSAGE_WIDTH - 2 ? "" : "...", MESSAGE_WIDTH - 2, MESSAGE_WIDTH - 2,
+          /* optional leading truncation */
           strlen(message) <= MESSAGE_WIDTH - 2 ? message : message + strlen(message) - MESSAGE_WIDTH + 3 + 2);
-    } else {
+    }
+    else
+    {
       printf("  %s\n", message);
     }
     break;
@@ -130,7 +144,7 @@ pg_log_v(eLogType type, const char *fmt, va_list ap)
     exit(1);
     break;
 
-  default:;
+  default:
     break;
   }
   fflush(stdout);
@@ -180,8 +194,10 @@ quote_identifier(const char *s)
   char *r = result;
 
   *r++ = '"';
-  while (*s) {
-    if (*s == '"') {
+  while (*s)
+  {
+    if (*s == '"')
+    {
       *r++ = *s;
     }
     *r++ = *s;
@@ -210,7 +226,8 @@ get_user_info(char **user_name_p)
 #endif
 
   user_name = get_user_name(&errstr);
-  if (!user_name) {
+  if (!user_name)
+  {
     pg_fatal("%s\n", errstr);
   }
 
@@ -240,7 +257,8 @@ str2uint(const char *str)
 void
 pg_putenv(const char *var, const char *val)
 {
-  if (val) {
+  if (val)
+  {
 #ifndef WIN32
     char *envstr;
 
@@ -254,7 +272,9 @@ pg_putenv(const char *var, const char *val)
 #else
     SetEnvironmentVariableA(var, val);
 #endif
-  } else {
+  }
+  else
+  {
 #ifndef WIN32
     unsetenv(var);
 #else

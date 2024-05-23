@@ -103,9 +103,9 @@ ExecReScan(PlanState *node)
       SubPlanState *sstate = (SubPlanState *)lfirst(l);
       PlanState *splan = sstate->planstate;
 
-      if (splan->plan->extParam != NULL)
-      { /* don't care about child
-         * local Params */
+      if (splan->plan->extParam != NULL) /* don't care about child
+                                          * local Params */
+      {
         UpdateChangedParamSet(splan, node->chgParam);
       }
       if (splan->chgParam != NULL)
@@ -143,165 +143,165 @@ ExecReScan(PlanState *node)
   /* And do node-type-specific processing */
   switch (nodeTag(node))
   {
-  case T_ResultState:;
+  case T_ResultState:
     ExecReScanResult((ResultState *)node);
     break;
 
-  case T_ProjectSetState:;
+  case T_ProjectSetState:
     ExecReScanProjectSet((ProjectSetState *)node);
     break;
 
-  case T_ModifyTableState:;
+  case T_ModifyTableState:
+    ExecReScanModifyTable((ModifyTableState *)node);
+    break;
 
-
-
-  case T_AppendState:;
+  case T_AppendState:
     ExecReScanAppend((AppendState *)node);
     break;
 
-  case T_MergeAppendState:;
+  case T_MergeAppendState:
     ExecReScanMergeAppend((MergeAppendState *)node);
     break;
 
-  case T_RecursiveUnionState:;
+  case T_RecursiveUnionState:
+    ExecReScanRecursiveUnion((RecursiveUnionState *)node);
+    break;
 
-
-
-  case T_BitmapAndState:;
+  case T_BitmapAndState:
     ExecReScanBitmapAnd((BitmapAndState *)node);
     break;
 
-  case T_BitmapOrState:;
+  case T_BitmapOrState:
     ExecReScanBitmapOr((BitmapOrState *)node);
     break;
 
-  case T_SeqScanState:;
+  case T_SeqScanState:
     ExecReScanSeqScan((SeqScanState *)node);
     break;
 
-  case T_SampleScanState:;
+  case T_SampleScanState:
     ExecReScanSampleScan((SampleScanState *)node);
     break;
 
-  case T_GatherState:;
+  case T_GatherState:
     ExecReScanGather((GatherState *)node);
     break;
 
-  case T_GatherMergeState:;
+  case T_GatherMergeState:
     ExecReScanGatherMerge((GatherMergeState *)node);
     break;
 
-  case T_IndexScanState:;
+  case T_IndexScanState:
     ExecReScanIndexScan((IndexScanState *)node);
     break;
 
-  case T_IndexOnlyScanState:;
+  case T_IndexOnlyScanState:
     ExecReScanIndexOnlyScan((IndexOnlyScanState *)node);
     break;
 
-  case T_BitmapIndexScanState:;
+  case T_BitmapIndexScanState:
     ExecReScanBitmapIndexScan((BitmapIndexScanState *)node);
     break;
 
-  case T_BitmapHeapScanState:;
+  case T_BitmapHeapScanState:
     ExecReScanBitmapHeapScan((BitmapHeapScanState *)node);
     break;
 
-  case T_TidScanState:;
+  case T_TidScanState:
     ExecReScanTidScan((TidScanState *)node);
     break;
 
-  case T_SubqueryScanState:;
+  case T_SubqueryScanState:
     ExecReScanSubqueryScan((SubqueryScanState *)node);
     break;
 
-  case T_FunctionScanState:;
+  case T_FunctionScanState:
     ExecReScanFunctionScan((FunctionScanState *)node);
     break;
 
-  case T_TableFuncScanState:;
+  case T_TableFuncScanState:
+    ExecReScanTableFuncScan((TableFuncScanState *)node);
+    break;
 
-
-
-  case T_ValuesScanState:;
+  case T_ValuesScanState:
     ExecReScanValuesScan((ValuesScanState *)node);
     break;
 
-  case T_CteScanState:;
+  case T_CteScanState:
     ExecReScanCteScan((CteScanState *)node);
     break;
 
-  case T_NamedTuplestoreScanState:;
+  case T_NamedTuplestoreScanState:
+    ExecReScanNamedTuplestoreScan((NamedTuplestoreScanState *)node);
+    break;
 
-
-
-  case T_WorkTableScanState:;
+  case T_WorkTableScanState:
     ExecReScanWorkTableScan((WorkTableScanState *)node);
     break;
 
-  case T_ForeignScanState:;
+  case T_ForeignScanState:
+    ExecReScanForeignScan((ForeignScanState *)node);
+    break;
 
+  case T_CustomScanState:
+    ExecReScanCustomScan((CustomScanState *)node);
+    break;
 
-
-  case T_CustomScanState:;
-
-
-
-  case T_NestLoopState:;
+  case T_NestLoopState:
     ExecReScanNestLoop((NestLoopState *)node);
     break;
 
-  case T_MergeJoinState:;
+  case T_MergeJoinState:
     ExecReScanMergeJoin((MergeJoinState *)node);
     break;
 
-  case T_HashJoinState:;
+  case T_HashJoinState:
     ExecReScanHashJoin((HashJoinState *)node);
     break;
 
-  case T_MaterialState:;
+  case T_MaterialState:
     ExecReScanMaterial((MaterialState *)node);
     break;
 
-  case T_SortState:;
+  case T_SortState:
     ExecReScanSort((SortState *)node);
     break;
 
-  case T_GroupState:;
+  case T_GroupState:
     ExecReScanGroup((GroupState *)node);
     break;
 
-  case T_AggState:;
+  case T_AggState:
     ExecReScanAgg((AggState *)node);
     break;
 
-  case T_WindowAggState:;
+  case T_WindowAggState:
     ExecReScanWindowAgg((WindowAggState *)node);
     break;
 
-  case T_UniqueState:;
+  case T_UniqueState:
+    ExecReScanUnique((UniqueState *)node);
+    break;
 
-
-
-  case T_HashState:;
+  case T_HashState:
     ExecReScanHash((HashState *)node);
     break;
 
-  case T_SetOpState:;
+  case T_SetOpState:
+    ExecReScanSetOp((SetOpState *)node);
+    break;
 
+  case T_LockRowsState:
+    ExecReScanLockRows((LockRowsState *)node);
+    break;
 
-
-  case T_LockRowsState:;
-
-
-
-  case T_LimitState:;
+  case T_LimitState:
     ExecReScanLimit((LimitState *)node);
     break;
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
 
   if (node->chgParam != NULL)
@@ -329,34 +329,34 @@ ExecMarkPos(PlanState *node)
 {
   switch (nodeTag(node))
   {
-  case T_IndexScanState:;
+  case T_IndexScanState:
     ExecIndexMarkPos((IndexScanState *)node);
     break;
 
-  case T_IndexOnlyScanState:;
+  case T_IndexOnlyScanState:
     ExecIndexOnlyMarkPos((IndexOnlyScanState *)node);
     break;
 
-  case T_CustomScanState:;
+  case T_CustomScanState:
+    ExecCustomMarkPos((CustomScanState *)node);
+    break;
 
-
-
-  case T_MaterialState:;
+  case T_MaterialState:
     ExecMaterialMarkPos((MaterialState *)node);
     break;
 
-  case T_SortState:;
+  case T_SortState:
     ExecSortMarkPos((SortState *)node);
     break;
 
-  case T_ResultState:;
+  case T_ResultState:
+    ExecResultMarkPos((ResultState *)node);
+    break;
 
-
-
-  default:;;
+  default:
     /* don't make hard error unless caller asks to restore... */
-
-
+    elog(DEBUG2, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
 }
 
@@ -378,33 +378,33 @@ ExecRestrPos(PlanState *node)
 {
   switch (nodeTag(node))
   {
-  case T_IndexScanState:;
+  case T_IndexScanState:
     ExecIndexRestrPos((IndexScanState *)node);
     break;
 
-  case T_IndexOnlyScanState:;
+  case T_IndexOnlyScanState:
+    ExecIndexOnlyRestrPos((IndexOnlyScanState *)node);
+    break;
 
+  case T_CustomScanState:
+    ExecCustomRestrPos((CustomScanState *)node);
+    break;
 
-
-  case T_CustomScanState:;
-
-
-
-  case T_MaterialState:;
+  case T_MaterialState:
     ExecMaterialRestrPos((MaterialState *)node);
     break;
 
-  case T_SortState:;
+  case T_SortState:
     ExecSortRestrPos((SortState *)node);
     break;
 
-  case T_ResultState:;
+  case T_ResultState:
+    ExecResultRestrPos((ResultState *)node);
+    break;
 
-
-
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
 }
 
@@ -425,28 +425,28 @@ ExecSupportsMarkRestore(Path *pathnode)
    */
   switch (pathnode->pathtype)
   {
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
+  case T_IndexScan:
+  case T_IndexOnlyScan:
     /*
      * Not all index types support mark/restore.
      */
     return castNode(IndexPath, pathnode)->indexinfo->amcanmarkpos;
 
-  case T_Material:;
-  case T_Sort:;
+  case T_Material:
+  case T_Sort:
+    return true;
 
-
-  case T_CustomScan:;
+  case T_CustomScan:
   {
     CustomPath *customPath = castNode(CustomPath, pathnode);
 
-
-
-
-
-
+    if (customPath->flags & CUSTOMPATH_SUPPORT_MARK_RESTORE)
+    {
+      return true;
+    }
+    return false;
   }
-  case T_Result:;
+  case T_Result:
 
     /*
      * Result supports mark/restore iff it has a child plan that does.
@@ -454,26 +454,26 @@ ExecSupportsMarkRestore(Path *pathnode)
      * We have to be careful here because there is more than one Path
      * type that can produce a Result plan node.
      */
+    if (IsA(pathnode, ProjectionPath))
+    {
+      return ExecSupportsMarkRestore(((ProjectionPath *)pathnode)->subpath);
+    }
+    else if (IsA(pathnode, MinMaxAggPath))
+    {
+      return false; /* childless Result */
+    }
+    else if (IsA(pathnode, GroupResultPath))
+    {
+      return false; /* childless Result */
+    }
+    else
+    {
+      /* Simple RTE_RESULT base relation */
+      Assert(IsA(pathnode, Path));
+      return false; /* childless Result */
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  case T_Append:;
+  case T_Append:
   {
     AppendPath *appendPath = castNode(AppendPath, pathnode);
 
@@ -482,15 +482,15 @@ ExecSupportsMarkRestore(Path *pathnode)
      * in the final plan, so we can handle mark/restore if the
      * child plan node can.
      */
-
-
-
-
+    if (list_length(appendPath->subpaths) == 1)
+    {
+      return ExecSupportsMarkRestore((Path *)linitial(appendPath->subpaths));
+    }
     /* Otherwise, Append can't handle it */
-
+    return false;
   }
 
-  case T_MergeAppend:;
+  case T_MergeAppend:
   {
     MergeAppendPath *mapath = castNode(MergeAppendPath, pathnode);
 
@@ -501,13 +501,13 @@ ExecSupportsMarkRestore(Path *pathnode)
      */
     if (list_length(mapath->subpaths) == 1)
     {
-
+      return ExecSupportsMarkRestore((Path *)linitial(mapath->subpaths));
     }
     /* Otherwise, MergeAppend can't handle it */
     return false;
   }
 
-  default:;;
+  default:
     break;
   }
 
@@ -527,7 +527,7 @@ ExecSupportsBackwardScan(Plan *node)
 {
   if (node == NULL)
   {
-
+    return false;
   }
 
   /*
@@ -537,22 +537,22 @@ ExecSupportsBackwardScan(Plan *node)
    */
   if (node->parallel_aware)
   {
-
+    return false;
   }
 
   switch (nodeTag(node))
   {
-  case T_Result:;
+  case T_Result:
     if (outerPlan(node) != NULL)
     {
-
+      return ExecSupportsBackwardScan(outerPlan(node));
     }
     else
     {
       return false;
     }
 
-  case T_Append:;
+  case T_Append:
   {
     ListCell *l;
 
@@ -560,54 +560,54 @@ ExecSupportsBackwardScan(Plan *node)
     {
       if (!ExecSupportsBackwardScan((Plan *)lfirst(l)))
       {
-
+        return false;
       }
     }
     /* need not check tlist because Append doesn't evaluate it */
     return true;
   }
 
-  case T_SampleScan:;
+  case T_SampleScan:
     /* Simplify life for tablesample methods by disallowing this */
     return false;
 
-  case T_Gather:;
+  case T_Gather:
+    return false;
 
-
-  case T_IndexScan:;
+  case T_IndexScan:
     return IndexSupportsBackwardScan(((IndexScan *)node)->indexid);
 
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
     return IndexSupportsBackwardScan(((IndexOnlyScan *)node)->indexid);
 
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
+    return ExecSupportsBackwardScan(((SubqueryScan *)node)->subplan);
 
-
-  case T_CustomScan:;
+  case T_CustomScan:
   {
     uint32 flags = ((CustomScan *)node)->flags;
 
-
-
-
-
+    if (flags & CUSTOMPATH_SUPPORT_BACKWARD_SCAN)
+    {
+      return true;
+    }
   }
+    return false;
 
-
-  case T_SeqScan:;
-  case T_TidScan:;
-  case T_FunctionScan:;
-  case T_ValuesScan:;
-  case T_CteScan:;
-  case T_Material:;
-  case T_Sort:;
+  case T_SeqScan:
+  case T_TidScan:
+  case T_FunctionScan:
+  case T_ValuesScan:
+  case T_CteScan:
+  case T_Material:
+  case T_Sort:
     return true;
 
-  case T_LockRows:;
-  case T_Limit:;
+  case T_LockRows:
+  case T_Limit:
     return ExecSupportsBackwardScan(outerPlan(node));
 
-  default:;;
+  default:
     return false;
   }
 }
@@ -628,7 +628,7 @@ IndexSupportsBackwardScan(Oid indexid)
   ht_idxrel = SearchSysCache1(RELOID, ObjectIdGetDatum(indexid));
   if (!HeapTupleIsValid(ht_idxrel))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", indexid);
   }
   idxrelrec = (Form_pg_class)GETSTRUCT(ht_idxrel);
 
@@ -656,16 +656,16 @@ ExecMaterializesOutput(NodeTag plantype)
 {
   switch (plantype)
   {
-  case T_Material:;
-  case T_FunctionScan:;
-  case T_TableFuncScan:;
-  case T_CteScan:;
-  case T_NamedTuplestoreScan:;
-  case T_WorkTableScan:;
-  case T_Sort:;
+  case T_Material:
+  case T_FunctionScan:
+  case T_TableFuncScan:
+  case T_CteScan:
+  case T_NamedTuplestoreScan:
+  case T_WorkTableScan:
+  case T_Sort:
     return true;
 
-  default:;;
+  default:
     break;
   }
 

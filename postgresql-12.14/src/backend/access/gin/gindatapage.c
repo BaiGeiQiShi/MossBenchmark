@@ -80,8 +80,8 @@ typedef struct
    *				ignored
    * INSERT		this is a completely new segment
    * REPLACE		this replaces an existing segment with new content
-   * ADDITEMS		like REPLACE, but no items have been removed, and we
-   *track in detail what items have been added to this segment, in
+   * ADDITEMS		like REPLACE, but no items have been removed, and we track
+   *				in detail what items have been added to this segment, in
    *				'modifieditems'
    *-------------
    */
@@ -171,8 +171,8 @@ GinDataLeafPageGetItems(Page page, int *nitems, ItemPointerData advancePast)
   {
     ItemPointer tmp = dataLeafPageGetUncompressed(page, nitems);
 
-
-
+    result = palloc((*nitems) * sizeof(ItemPointerData));
+    memcpy(result, tmp, (*nitems) * sizeof(ItemPointerData));
   }
 
   return result;
@@ -184,27 +184,27 @@ GinDataLeafPageGetItems(Page page, int *nitems, ItemPointerData advancePast)
 int
 GinDataLeafPageGetItemsToTbm(Page page, TIDBitmap *tbm)
 {
+  ItemPointer uncompressed;
+  int nitems;
 
+  if (GinPageIsCompressed(page))
+  {
+    GinPostingList *segment = GinDataLeafPageGetPostingList(page);
+    Size len = GinDataLeafPageGetPostingListSize(page);
 
+    nitems = ginPostingListDecodeAllSegmentsToTbm(segment, len, tbm);
+  }
+  else
+  {
+    uncompressed = dataLeafPageGetUncompressed(page, &nitems);
 
+    if (nitems > 0)
+    {
+      tbm_add_tuples(tbm, uncompressed, nitems, false);
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return nitems;
 }
 
 /*
@@ -215,18 +215,18 @@ GinDataLeafPageGetItemsToTbm(Page page, TIDBitmap *tbm)
 static ItemPointer
 dataLeafPageGetUncompressed(Page page, int *nitems)
 {
+  ItemPointer items;
 
+  Assert(!GinPageIsCompressed(page));
 
+  /*
+   * In the old pre-9.4 page format, the whole page content is used for
+   * uncompressed items, and the number of items is stored in 'maxoff'
+   */
+  items = (ItemPointer)GinDataPageGetData(page);
+  *nitems = GinPageGetOpaque(page)->maxoff;
 
-
-
-
-
-
-
-
-
-
+  return items;
 }
 
 /*
@@ -247,7 +247,7 @@ dataIsMoveRight(GinBtree btree, Page page)
 
   if (GinPageIsDeleted(page))
   {
-
+    return true;
   }
 
   return (ginCompareItemPointers(&btree->itemptr, iptr) > 0) ? true : false;
@@ -303,8 +303,8 @@ dataLocateItem(GinBtree btree, GinBtreeStack *stack)
 
     if (result == 0)
     {
-
-
+      stack->off = mid;
+      return PostingItemGetBlockNumber(pitem);
     }
     else if (result > 0)
     {
@@ -348,29 +348,29 @@ dataFindChildPtr(GinBtree btree, Page page, BlockNumber blkno, OffsetNumber stor
      * we hope, that needed pointer goes to right. It's true if there
      * wasn't a deletion
      */
+    for (i = storedOff + 1; i <= maxoff; i++)
+    {
+      pitem = GinDataPageGetPostingItem(page, i);
+      if (PostingItemGetBlockNumber(pitem) == blkno)
+      {
+        return i;
+      }
+    }
 
-
-
-
-
-
-
-
-
-
+    maxoff = storedOff - 1;
   }
 
   /* last chance */
   for (i = FirstOffsetNumber; i <= maxoff; i++)
   {
-
-
-
-
-
+    pitem = GinDataPageGetPostingItem(page, i);
+    if (PostingItemGetBlockNumber(pitem) == blkno)
+    {
+      return i;
+    }
   }
 
-
+  return InvalidOffsetNumber;
 }
 
 /*
@@ -495,8 +495,8 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
          * caller should've chosen the insert location so that at
          * least the first item goes here.)
          */
-
-
+        Assert(i > 0);
+        break;
       }
     }
     maxitems = i;
@@ -545,7 +545,7 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
   }
   else
   {
-
+    freespace = 0;
   }
   if (append)
   {
@@ -579,9 +579,9 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
   if (!addItemsToLeaf(leaf, newItems, maxitems))
   {
     /* all items were duplicates, we have nothing to do */
+    items->curitem += maxitems;
 
-
-
+    return GPTP_NO_WORK;
   }
 
   /*
@@ -599,7 +599,7 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
   {
     if (!append || ItemPointerCompare(&maxOldItem, &remaining) >= 0)
     {
-
+      elog(ERROR, "could not split GIN page; all old items didn't fit");
     }
 
     /* Count how many of the new items did fit. */
@@ -612,7 +612,7 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
     }
     if (i == 0)
     {
-
+      elog(ERROR, "could not split GIN page; no new items fit");
     }
     maxitems = i;
   }
@@ -688,7 +688,7 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
           {
             if ((leaf->lsize - segsize) < (BLCKSZ * 3) / 4)
             {
-
+              break;
             }
           }
 
@@ -728,7 +728,7 @@ dataBeginPlaceToPageLeaf(GinBtree btree, Buffer buf, GinBtreeStack *stack, void 
     }
     else
     {
-
+      elog(DEBUG2, "inserted %d items to block %u; split %d/%d (%d to go)", maxitems, BufferGetBlockNumber(buf), (int)leaf->lsize, (int)leaf->rsize, items->nitem - items->curitem - maxitems);
     }
   }
 
@@ -789,7 +789,7 @@ ginVacuumPostingTreeLeaf(Relation indexrel, Buffer buffer, GinVacuumState *gvs)
     }
     else
     {
-
+      oldsegsize = GinDataPageMaxDataSize;
     }
 
     cleaned = ginVacuumItemPointers(gvs, seginfo->items, seginfo->nitems, &ncleaned);
@@ -806,7 +806,7 @@ ginVacuumPostingTreeLeaf(Relation indexrel, Buffer buffer, GinVacuumState *gvs)
         /* Removing an item never increases the size of the segment */
         if (npacked != ncleaned)
         {
-
+          elog(ERROR, "could not fit vacuumed posting list");
         }
         seginfo->action = GIN_SEGMENT_REPLACE;
       }
@@ -956,7 +956,7 @@ computeLeafRecompressWALData(disassembledLeaf *leaf)
      */
     if (action == GIN_SEGMENT_ADDITEMS && seginfo->nmodifieditems * sizeof(ItemPointerData) > segsize)
     {
-
+      action = GIN_SEGMENT_REPLACE;
     }
 
     *((uint8 *)(walbufend++)) = segno;
@@ -964,25 +964,25 @@ computeLeafRecompressWALData(disassembledLeaf *leaf)
 
     switch (action)
     {
-    case GIN_SEGMENT_DELETE:;
+    case GIN_SEGMENT_DELETE:
       datalen = 0;
       break;
 
-    case GIN_SEGMENT_ADDITEMS:;
+    case GIN_SEGMENT_ADDITEMS:
       datalen = seginfo->nmodifieditems * sizeof(ItemPointerData);
       memcpy(walbufend, &seginfo->nmodifieditems, sizeof(uint16));
       memcpy(walbufend + sizeof(uint16), seginfo->modifieditems, datalen);
       datalen += sizeof(uint16);
       break;
 
-    case GIN_SEGMENT_INSERT:;
-    case GIN_SEGMENT_REPLACE:;
+    case GIN_SEGMENT_INSERT:
+    case GIN_SEGMENT_REPLACE:
       datalen = SHORTALIGN(segsize);
       memcpy(walbufend, seginfo->seg, segsize);
       break;
 
-    default:;;
-
+    default:
+      elog(ERROR, "unexpected GIN leaf action %d", action);
     }
     walbufend += datalen;
 
@@ -1023,10 +1023,10 @@ dataPlaceToPageLeafRecompress(Buffer buf, disassembledLeaf *leaf)
    */
   if (!GinPageIsCompressed(page))
   {
-
-
-
-
+    Assert(leaf->oldformat);
+    GinPageSetCompressed(page);
+    GinPageGetOpaque(page)->maxoff = InvalidOffsetNumber;
+    modified = true;
   }
 
   ptr = (char *)GinDataLeafPageGetPostingList(page);
@@ -1155,8 +1155,8 @@ dataBeginPlaceToPageInternal(GinBtree btree, Buffer buf, GinBtreeStack *stack, v
   /* If it doesn't fit, deal with split case */
   if (GinNonLeafDataPageGetFreeSpace(page) < sizeof(PostingItem))
   {
-
-
+    dataSplitPageInternal(btree, buf, stack, insertdata, updateblkno, newlpage, newrpage);
+    return GPTP_SPLIT;
   }
 
   /* Else, we're ready to proceed with insertion */
@@ -1269,74 +1269,74 @@ dataExecPlaceToPage(GinBtree btree, Buffer buf, GinBtreeStack *stack, void *inse
 static void
 dataSplitPageInternal(GinBtree btree, Buffer origbuf, GinBtreeStack *stack, void *insertdata, BlockNumber updateblkno, Page *newlpage, Page *newrpage)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Page oldpage = BufferGetPage(origbuf);
+  OffsetNumber off = stack->off;
+  int nitems = GinPageGetOpaque(oldpage)->maxoff;
+  int nleftitems;
+  int nrightitems;
+  Size pageSize = PageGetPageSize(oldpage);
+  ItemPointerData oldbound = *GinDataPageGetRightBound(oldpage);
+  ItemPointer bound;
+  Page lpage;
+  Page rpage;
+  OffsetNumber separator;
+  PostingItem allitems[(BLCKSZ / sizeof(PostingItem)) + 1];
+
+  lpage = PageGetTempPage(oldpage);
+  rpage = PageGetTempPage(oldpage);
+  GinInitPage(lpage, GinPageGetOpaque(oldpage)->flags, pageSize);
+  GinInitPage(rpage, GinPageGetOpaque(oldpage)->flags, pageSize);
+
+  /*
+   * First construct a new list of PostingItems, which includes all the old
+   * items, and the new item.
+   */
+  memcpy(allitems, GinDataPageGetPostingItem(oldpage, FirstOffsetNumber), (off - 1) * sizeof(PostingItem));
+
+  allitems[off - 1] = *((PostingItem *)insertdata);
+  memcpy(&allitems[off], GinDataPageGetPostingItem(oldpage, off), (nitems - (off - 1)) * sizeof(PostingItem));
+  nitems++;
+
+  /* Update existing downlink to point to next page */
+  PostingItemSetBlockNumber(&allitems[off], updateblkno);
+
+  /*
+   * When creating a new index, fit as many tuples as possible on the left
+   * page, on the assumption that the table is scanned from beginning to
+   * end. This packs the index as tight as possible.
+   */
+  if (btree->isBuild && GinPageRightMost(oldpage))
+  {
+    separator = GinNonLeafDataPageGetFreeSpace(rpage) / sizeof(PostingItem);
+  }
+  else
+  {
+    separator = nitems / 2;
+  }
+  nleftitems = separator;
+  nrightitems = nitems - separator;
+
+  memcpy(GinDataPageGetPostingItem(lpage, FirstOffsetNumber), allitems, nleftitems * sizeof(PostingItem));
+  GinPageGetOpaque(lpage)->maxoff = nleftitems;
+  memcpy(GinDataPageGetPostingItem(rpage, FirstOffsetNumber), &allitems[separator], nrightitems * sizeof(PostingItem));
+  GinPageGetOpaque(rpage)->maxoff = nrightitems;
+
+  /*
+   * Also set pd_lower for both pages, like GinDataPageAddPostingItem does.
+   */
+  GinDataPageSetDataSize(lpage, nleftitems * sizeof(PostingItem));
+  GinDataPageSetDataSize(rpage, nrightitems * sizeof(PostingItem));
+
+  /* set up right bound for left page */
+  bound = GinDataPageGetRightBound(lpage);
+  *bound = GinDataPageGetPostingItem(lpage, nleftitems)->key;
+
+  /* set up right bound for right page */
+  *GinDataPageGetRightBound(rpage) = oldbound;
+
+  /* return temp pages to caller */
+  *newlpage = lpage;
+  *newrpage = rpage;
 }
 
 /*
@@ -1421,22 +1421,22 @@ disassembleLeaf(Page page)
     int nuncompressed;
     leafSegmentInfo *seginfo;
 
+    uncompressed = dataLeafPageGetUncompressed(page, &nuncompressed);
 
+    if (nuncompressed > 0)
+    {
+      seginfo = palloc(sizeof(leafSegmentInfo));
 
+      seginfo->action = GIN_SEGMENT_REPLACE;
+      seginfo->seg = NULL;
+      seginfo->items = palloc(nuncompressed * sizeof(ItemPointerData));
+      memcpy(seginfo->items, uncompressed, nuncompressed * sizeof(ItemPointerData));
+      seginfo->nitems = nuncompressed;
 
+      dlist_push_tail(&leaf->segments, &seginfo->node);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
+    leaf->oldformat = true;
   }
 
   return leaf;
@@ -1556,7 +1556,7 @@ addItemsToLeaf(disassembledLeaf *leaf, ItemPointer newItems, int nNewItems)
       }
       else
       {
-
+        cur->action = GIN_SEGMENT_REPLACE;
       }
 
       cur->items = tmpitems;
@@ -1665,35 +1665,35 @@ leafRepackItems(disassembledLeaf *leaf, ItemPointer remaining)
       {
         int nmerged;
 
+        nextseg = dlist_container(leafSegmentInfo, node, next_node);
 
+        if (seginfo->items == NULL)
+        {
+          seginfo->items = ginPostingListDecode(seginfo->seg, &seginfo->nitems);
+        }
+        if (nextseg->items == NULL)
+        {
+          nextseg->items = ginPostingListDecode(nextseg->seg, &nextseg->nitems);
+        }
+        nextseg->items = ginMergeItemPointers(seginfo->items, seginfo->nitems, nextseg->items, nextseg->nitems, &nmerged);
+        Assert(nmerged == seginfo->nitems + nextseg->nitems);
+        nextseg->nitems = nmerged;
+        nextseg->seg = NULL;
 
+        nextseg->action = GIN_SEGMENT_REPLACE;
+        nextseg->modifieditems = NULL;
+        nextseg->nmodifieditems = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if (seginfo->action == GIN_SEGMENT_INSERT)
+        {
+          dlist_delete(cur_node);
+          continue;
+        }
+        else
+        {
+          seginfo->action = GIN_SEGMENT_DELETE;
+          seginfo->seg = NULL;
+        }
       }
 
       seginfo->items = NULL;
@@ -1702,7 +1702,7 @@ leafRepackItems(disassembledLeaf *leaf, ItemPointer remaining)
 
     if (seginfo->action == GIN_SEGMENT_DELETE)
     {
-
+      continue;
     }
 
     /*

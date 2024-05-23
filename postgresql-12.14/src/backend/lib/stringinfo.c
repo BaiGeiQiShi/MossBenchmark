@@ -282,13 +282,13 @@ enlargeStringInfo(StringInfo str, int needed)
    * Guard against out-of-range "needed" values.  Without this, we can get
    * an overflow or infinite loop in the following.
    */
-  if (needed < 0)
-  { /* should not happen */
-
+  if (needed < 0) /* should not happen */
+  {
+    elog(ERROR, "invalid string enlargement request size: %d", needed);
   }
   if (((Size)needed) >= (MaxAllocSize - (Size)str->len))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory"), errdetail("Cannot enlarge string buffer containing %d bytes by %d more bytes.", str->len, needed)));
   }
 
   needed += str->len + 1; /* total space required now */
@@ -318,7 +318,7 @@ enlargeStringInfo(StringInfo str, int needed)
    */
   if (newlen > (int)MaxAllocSize)
   {
-
+    newlen = (int)MaxAllocSize;
   }
 
   str->data = (char *)repalloc(str->data, newlen);

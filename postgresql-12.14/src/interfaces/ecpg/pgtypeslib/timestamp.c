@@ -43,7 +43,8 @@ tm2timestamp(struct tm *tm, fsec_t fsec, int *tzp, timestamp *result)
   int64 time;
 
   /* Prevent overflow in Julian-day routines */
-  if (!IS_VALID_JULIAN(tm->tm_year, tm->tm_mon, tm->tm_mday)) {
+  if (!IS_VALID_JULIAN(tm->tm_year, tm->tm_mon, tm->tm_mday))
+  {
     return -1;
   }
 
@@ -51,20 +52,24 @@ tm2timestamp(struct tm *tm, fsec_t fsec, int *tzp, timestamp *result)
   time = time2t(tm->tm_hour, tm->tm_min, tm->tm_sec, fsec);
   *result = (dDate * USECS_PER_DAY) + time;
   /* check for major overflow */
-  if ((*result - time) / USECS_PER_DAY != dDate) {
+  if ((*result - time) / USECS_PER_DAY != dDate)
+  {
     return -1;
   }
   /* check for just-barely overflow (okay except time-of-day wraps) */
   /* caution: we want to allow 1999-12-31 24:00:00 */
-  if ((*result < 0 && dDate > 0) || (*result > 0 && dDate < -1)) {
+  if ((*result < 0 && dDate > 0) || (*result > 0 && dDate < -1))
+  {
     return -1;
   }
-  if (tzp != NULL) {
+  if (tzp != NULL)
+  {
     *result = dt2local(*result, -(*tzp));
   }
 
   /* final range check catches just-out-of-range timestamps */
-  if (!IS_VALID_TIMESTAMP(*result)) {
+  if (!IS_VALID_TIMESTAMP(*result))
+  {
     return -1;
   }
 
@@ -78,7 +83,8 @@ SetEpochTimestamp(void)
   timestamp dt;
   struct tm tt, *tm = &tt;
 
-  if (GetEpochTime(tm) < 0) {
+  if (GetEpochTime(tm) < 0)
+  {
     return noresult;
   }
 
@@ -112,7 +118,8 @@ timestamp2tm(timestamp dt, int *tzp, struct tm *tm, fsec_t *fsec, const char **t
   time = dt;
   TMODULO(time, dDate, USECS_PER_DAY);
 
-  if (time < INT64CONST(0)) {
+  if (time < INT64CONST(0))
+  {
     time += USECS_PER_DAY;
     dDate -= 1;
   }
@@ -121,19 +128,22 @@ timestamp2tm(timestamp dt, int *tzp, struct tm *tm, fsec_t *fsec, const char **t
   dDate += date0;
 
   /* Julian day routine does not work for negative Julian days */
-  if (dDate < 0 || dDate > (timestamp)INT_MAX) {
+  if (dDate < 0 || dDate > (timestamp)INT_MAX)
+  {
     return -1;
   }
 
   j2date((int)dDate, &tm->tm_year, &tm->tm_mon, &tm->tm_mday);
   dt2time(time, &tm->tm_hour, &tm->tm_min, &tm->tm_sec, fsec);
 
-  if (tzp != NULL) {
+  if (tzp != NULL)
+  {
     /*
      * Does this fall within the capabilities of the localtime()
      * interface? Then use this to rotate to the local time zone.
      */
-    if (IS_VALID_UTIME(tm->tm_year, tm->tm_mon, tm->tm_mday)) {
+    if (IS_VALID_UTIME(tm->tm_year, tm->tm_mon, tm->tm_mday))
+    {
 #if defined(HAVE_TM_ZONE) || defined(HAVE_INT_TIMEZONE)
 
       utime = dt / USECS_PER_SEC + ((date0 - date2j(1970, 1, 1)) * INT64CONST(86400));
@@ -151,12 +161,14 @@ timestamp2tm(timestamp dt, int *tzp, struct tm *tm, fsec_t *fsec, const char **t
       tm->tm_zone = tx->tm_zone;
 
       *tzp = -tm->tm_gmtoff; /* tm_gmtoff is Sun/DEC-ism */
-      if (tzn != NULL) {
+      if (tzn != NULL)
+      {
         *tzn = tm->tm_zone;
       }
 #elif defined(HAVE_INT_TIMEZONE)
       *tzp = (tm->tm_isdst > 0) ? TIMEZONE_GLOBAL - SECS_PER_HOUR : TIMEZONE_GLOBAL;
-      if (tzn != NULL) {
+      if (tzn != NULL)
+      {
         *tzn = TZNAME_GLOBAL[(tm->tm_isdst > 0)];
       }
 #endif
@@ -164,21 +176,28 @@ timestamp2tm(timestamp dt, int *tzp, struct tm *tm, fsec_t *fsec, const char **t
       *tzp = 0;
       /* Mark this as *no* time zone available */
       tm->tm_isdst = -1;
-      if (tzn != NULL) {
+      if (tzn != NULL)
+      {
         *tzn = NULL;
       }
 #endif
-    } else {
+    }
+    else
+    {
       *tzp = 0;
       /* Mark this as *no* time zone available */
       tm->tm_isdst = -1;
-      if (tzn != NULL) {
+      if (tzn != NULL)
+      {
         *tzn = NULL;
       }
     }
-  } else {
+  }
+  else
+  {
     tm->tm_isdst = -1;
-    if (tzn != NULL) {
+    if (tzn != NULL)
+    {
       *tzn = NULL;
     }
   }
@@ -194,11 +213,16 @@ timestamp2tm(timestamp dt, int *tzp, struct tm *tm, fsec_t *fsec, const char **t
 static void
 EncodeSpecialTimestamp(timestamp dt, char *str)
 {
-  if (TIMESTAMP_IS_NOBEGIN(dt)) {
+  if (TIMESTAMP_IS_NOBEGIN(dt))
+  {
     strcpy(str, EARLY);
-  } else if (TIMESTAMP_IS_NOEND(dt)) {
+  }
+  else if (TIMESTAMP_IS_NOEND(dt))
+  {
     strcpy(str, LATE);
-  } else {
+  }
+  else
+  {
     abort(); /* shouldn't happen */
   }
 }
@@ -218,19 +242,23 @@ PGTYPEStimestamp_from_asc(char *str, char **endptr)
   char *realptr;
   char **ptr = (endptr != NULL) ? endptr : &realptr;
 
-  if (strlen(str) > MAXDATELEN) {
+  if (strlen(str) > MAXDATELEN)
+  {
     errno = PGTYPES_TS_BAD_TIMESTAMP;
     return noresult;
   }
 
-  if (ParseDateTime(str, lowstr, field, ftype, &nf, ptr) != 0 || DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, 0) != 0) {
+  if (ParseDateTime(str, lowstr, field, ftype, &nf, ptr) != 0 || DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, 0) != 0)
+  {
     errno = PGTYPES_TS_BAD_TIMESTAMP;
     return noresult;
   }
 
-  switch (dtype) {
+  switch (dtype)
+  {
   case DTK_DATE:
-    if (tm2timestamp(tm, fsec, NULL, &result) != 0) {
+    if (tm2timestamp(tm, fsec, NULL, &result) != 0)
+    {
       errno = PGTYPES_TS_BAD_TIMESTAMP;
       return noresult;
     }
@@ -248,7 +276,7 @@ PGTYPEStimestamp_from_asc(char *str, char **endptr)
     TIMESTAMP_NOBEGIN(result);
     break;
 
-  default:;
+  default:
     errno = PGTYPES_TS_BAD_TIMESTAMP;
     return noresult;
   }
@@ -272,11 +300,16 @@ PGTYPEStimestamp_to_asc(timestamp tstamp)
   int DateStyle = 1; /* this defaults to ISO_DATES, shall we make
                       * it an option? */
 
-  if (TIMESTAMP_NOT_FINITE(tstamp)) {
+  if (TIMESTAMP_NOT_FINITE(tstamp))
+  {
     EncodeSpecialTimestamp(tstamp, buf);
-  } else if (timestamp2tm(tstamp, NULL, tm, &fsec, NULL) == 0) {
+  }
+  else if (timestamp2tm(tstamp, NULL, tm, &fsec, NULL) == 0)
+  {
     EncodeDateTime(tm, fsec, false, 0, NULL, DateStyle, buf, 0);
-  } else {
+  }
+  else
+  {
     errno = PGTYPES_TS_BAD_TIMESTAMP;
     return NULL;
   }
@@ -289,7 +322,8 @@ PGTYPEStimestamp_current(timestamp *ts)
   struct tm tm;
 
   GetCurrentDateTime(&tm);
-  if (errno == 0) {
+  if (errno == 0)
+  {
     tm2timestamp(&tm, 0, NULL, ts);
   }
   return;
@@ -304,12 +338,15 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
   const char *p = fmtstr;
   char *q = output;
 
-  while (*p) {
-    if (*p == '%') {
+  while (*p)
+  {
+    if (*p == '%')
+    {
       p++;
       /* fix compiler warning */
       replace_type = PGTYPES_TYPE_NOTHING;
-      switch (*p) {
+      switch (*p)
+      {
         /* the abbreviated name of the day in the week */
         /* XXX should be locale aware */
       case 'a':
@@ -361,10 +398,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          *
          * q is the start of the current output buffer
          *
-         * pstr_len is a pointer to the remaining size of output,* i.e. the size of q
+         * pstr_len is a pointer to the remaining size of output,
+         * i.e. the size of q
          */
         i = dttofmtasc_replace(ts, dDate, dow, tm, q, pstr_len, "%m/%d/%y");
-        if (i) {
+        if (i)
+        {
           return i;
         }
         break;
@@ -377,11 +416,13 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
         /*
          * alternative format modifier
          */
-      case 'E': {
+      case 'E':
+      {
         char tmp[4] = "%Ex";
 
         p++;
-        if (*p == '\0') {
+        if (*p == '\0')
+        {
           return -1;
         }
         tmp[2] = *p;
@@ -391,10 +432,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          */
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, tmp, tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -407,43 +450,51 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          * The ISO 8601 year with century as a decimal number. The
          * 4-digit year corresponding to the ISO week number.
          */
-      case 'G': {
+      case 'G':
+      {
         /* Keep compiler quiet - Don't use a literal format */
         const char *fmt = "%G";
 
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, fmt, tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
         tm->tm_mon += 1;
         replace_type = PGTYPES_TYPE_NOTHING;
-      } break;
+      }
+      break;
 
         /*
          * Like %G, but without century, i.e., with a 2-digit year
          * (00-99).
          */
-      case 'g': {
+      case 'g':
+      {
         const char *fmt = "%g"; /* Keep compiler quiet about
                                  * 2-digit year */
 
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, fmt, tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
         tm->tm_mon += 1;
         replace_type = PGTYPES_TYPE_NOTHING;
-      } break;
+      }
+      break;
         /* hour (24 hour clock) with leading zeroes */
       case 'H':
         replace_val.uint_val = tm->tm_hour;
@@ -499,9 +550,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
         /* the AM/PM specifier (uppercase) */
         /* XXX should be locale aware */
       case 'p':
-        if (tm->tm_hour < 12) {
+        if (tm->tm_hour < 12)
+        {
           replace_val.str_val = "AM";
-        } else {
+        }
+        else
+        {
           replace_val.str_val = "PM";
         }
         replace_type = PGTYPES_TYPE_STRING_CONSTANT;
@@ -509,9 +563,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
         /* the AM/PM specifier (lowercase) */
         /* XXX should be locale aware */
       case 'P':
-        if (tm->tm_hour < 12) {
+        if (tm->tm_hour < 12)
+        {
           replace_val.str_val = "am";
-        } else {
+        }
+        else
+        {
           replace_val.str_val = "pm";
         }
         replace_type = PGTYPES_TYPE_STRING_CONSTANT;
@@ -520,14 +577,16 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
         /* XXX should be locale aware */
       case 'r':
         i = dttofmtasc_replace(ts, dDate, dow, tm, q, pstr_len, "%I:%M:%S %p");
-        if (i) {
+        if (i)
+        {
           return i;
         }
         break;
         /* The time in 24 hour notation (%H:%M) */
       case 'R':
         i = dttofmtasc_replace(ts, dDate, dow, tm, q, pstr_len, "%H:%M");
-        if (i) {
+        if (i)
+        {
           return i;
         }
         break;
@@ -549,7 +608,8 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
         /* The time in 24 hour notation (%H:%M:%S) */
       case 'T':
         i = dttofmtasc_replace(ts, dDate, dow, tm, q, pstr_len, "%H:%M:%S");
-        if (i) {
+        if (i)
+        {
           return i;
         }
         break;
@@ -560,7 +620,8 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          */
       case 'u':
         replace_val.uint_val = dow;
-        if (replace_val.uint_val == 0) {
+        if (replace_val.uint_val == 0)
+        {
           replace_val.uint_val = 7;
         }
         replace_type = PGTYPES_TYPE_UINT;
@@ -569,10 +630,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
       case 'U':
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, "%U", tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -584,20 +647,24 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          * The ISO 8601:1988 week number of the current year as a
          * decimal number.
          */
-      case 'V': {
+      case 'V':
+      {
         /* Keep compiler quiet - Don't use a literal format */
         const char *fmt = "%V";
 
         i = strftime(q, *pstr_len, fmt, tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
         replace_type = PGTYPES_TYPE_NOTHING;
-      } break;
+      }
+      break;
 
         /*
          * The day of the week as a decimal, Sunday being 0 and
@@ -611,10 +678,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
       case 'W':
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, "%U", tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -626,22 +695,26 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          * The preferred date representation for the current
          * locale without the time.
          */
-      case 'x': {
+      case 'x':
+      {
         const char *fmt = "%x"; /* Keep compiler quiet about
                                  * 2-digit year */
 
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, fmt, tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
         tm->tm_mon += 1;
         replace_type = PGTYPES_TYPE_NOTHING;
-      } break;
+      }
+      break;
 
         /*
          * The preferred time representation for the current
@@ -650,10 +723,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
       case 'X':
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, "%X", tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -674,10 +749,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
       case 'z':
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, "%z", tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -688,10 +765,12 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
       case 'Z':
         tm->tm_mon -= 1;
         i = strftime(q, *pstr_len, "%Z", tm);
-        if (i == 0) {
+        if (i == 0)
+        {
           return -1;
         }
-        while (*q) {
+        while (*q)
+        {
           q++;
           (*pstr_len)--;
         }
@@ -710,40 +789,52 @@ dttofmtasc_replace(timestamp *ts, date dDate, int dow, struct tm *tm, char *outp
          * this is not compliant to the specification
          */
         return -1;
-      default:;
+      default:
 
         /*
          * if we don't know the pattern, we just copy it
          */
-        if (*pstr_len > 1) {
+        if (*pstr_len > 1)
+        {
           *q = '%';
           q++;
           (*pstr_len)--;
-          if (*pstr_len > 1) {
+          if (*pstr_len > 1)
+          {
             *q = *p;
             q++;
             (*pstr_len)--;
-          } else {
+          }
+          else
+          {
             *q = '\0';
             return -1;
           }
           *q = '\0';
-        } else {
+        }
+        else
+        {
           return -1;
         }
         break;
       }
       i = pgtypes_fmt_replace(replace_val, replace_type, &q, pstr_len);
-      if (i) {
+      if (i)
+      {
         return i;
       }
-    } else {
-      if (*pstr_len > 1) {
+    }
+    else
+    {
+      if (*pstr_len > 1)
+      {
         *q = *p;
         (*pstr_len)--;
         q++;
         *q = '\0';
-      } else {
+      }
+      else
+      {
         return -1;
       }
     }
@@ -770,9 +861,12 @@ PGTYPEStimestamp_fmt_asc(timestamp *ts, char *output, int str_len, const char *f
 int
 PGTYPEStimestamp_sub(timestamp *ts1, timestamp *ts2, interval *iv)
 {
-  if (TIMESTAMP_NOT_FINITE(*ts1) || TIMESTAMP_NOT_FINITE(*ts2)) {
+  if (TIMESTAMP_NOT_FINITE(*ts1) || TIMESTAMP_NOT_FINITE(*ts2))
+  {
     return PGTYPES_TS_ERR_EINFTIME;
-  } else {
+  }
+  else
+  {
     iv->time = (*ts1 - *ts2);
   }
 
@@ -792,10 +886,12 @@ PGTYPEStimestamp_defmt_asc(const char *str, const char *fmt, timestamp *d)
   char *mstr;
   char *mfmt;
 
-  if (!fmt) {
+  if (!fmt)
+  {
     fmt = "%Y-%m-%d %H:%M:%S";
   }
-  if (!fmt[0]) {
+  if (!fmt[0])
+  {
     return 1;
   }
 
@@ -834,33 +930,42 @@ PGTYPEStimestamp_defmt_asc(const char *str, const char *fmt, timestamp *d)
 int
 PGTYPEStimestamp_add_interval(timestamp *tin, interval *span, timestamp *tout)
 {
-  if (TIMESTAMP_NOT_FINITE(*tin)) {
+  if (TIMESTAMP_NOT_FINITE(*tin))
+  {
     *tout = *tin;
   }
 
-  else {
-    if (span->month != 0) {
+  else
+  {
+    if (span->month != 0)
+    {
       struct tm tt, *tm = &tt;
       fsec_t fsec;
 
-      if (timestamp2tm(*tin, NULL, tm, &fsec, NULL) != 0) {
+      if (timestamp2tm(*tin, NULL, tm, &fsec, NULL) != 0)
+      {
         return -1;
       }
       tm->tm_mon += span->month;
-      if (tm->tm_mon > MONTHS_PER_YEAR) {
+      if (tm->tm_mon > MONTHS_PER_YEAR)
+      {
         tm->tm_year += (tm->tm_mon - 1) / MONTHS_PER_YEAR;
         tm->tm_mon = (tm->tm_mon - 1) % MONTHS_PER_YEAR + 1;
-      } else if (tm->tm_mon < 1) {
+      }
+      else if (tm->tm_mon < 1)
+      {
         tm->tm_year += tm->tm_mon / MONTHS_PER_YEAR - 1;
         tm->tm_mon = tm->tm_mon % MONTHS_PER_YEAR + MONTHS_PER_YEAR;
       }
 
       /* adjust for end of month boundary problems... */
-      if (tm->tm_mday > day_tab[isleap(tm->tm_year)][tm->tm_mon - 1]) {
+      if (tm->tm_mday > day_tab[isleap(tm->tm_year)][tm->tm_mon - 1])
+      {
         tm->tm_mday = (day_tab[isleap(tm->tm_year)][tm->tm_mon - 1]);
       }
 
-      if (tm2timestamp(tm, fsec, NULL, tin) != 0) {
+      if (tm2timestamp(tm, fsec, NULL, tin) != 0)
+      {
         return -1;
       }
     }

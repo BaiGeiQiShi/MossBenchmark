@@ -22,9 +22,9 @@
  *	  This is because nodes coming from a stored rule should not be thought
  *	  to have a known location in the current query's text.
  *	  However, if restore_location_fields is true, we do restore location
- *	  fields from the string.  This is currently intended only for use by
- *the WRITE_READ_PARSE_PLAN_TREES test code, which doesn't want to cause any
- *change in the node contents.
+ *	  fields from the string.  This is currently intended only for use by the
+ *	  WRITE_READ_PARSE_PLAN_TREES test code, which doesn't want to cause
+ *	  any change in the node contents.
  *
  *-------------------------------------------------------------------------
  */
@@ -1435,7 +1435,7 @@ _readRangeTblEntry(void)
   case RTE_RESULT:
     /* no extra fields */
     break;
-  default:;
+  default:
     elog(ERROR, "unrecognized RTE kind: %d", (int)local_node->rtekind);
     break;
   }

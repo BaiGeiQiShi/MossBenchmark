@@ -522,7 +522,7 @@ advance_windowaggregate_base(WindowAggState *winstate, WindowStatePerFunc perfun
     {
       MemoryContextSwitchTo(peraggstate->aggcontext);
       if (DatumIsReadWriteExpandedObject(newVal, false, peraggstate->transtypeLen) && MemoryContextGetParent(DatumGetEOHP(newVal)->eoh_context) == CurrentMemoryContext)
-      {  /* do nothing */; }
+        /* do nothing */;
       else
       {
         newVal = datumCopy(newVal, peraggstate->transtypeByVal, peraggstate->transtypeLen);
@@ -2413,8 +2413,8 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
     AclResult aclresult;
     int i;
 
-    if (wfunc->winref != node->winref)
-    { /* planner screwed up? */
+    if (wfunc->winref != node->winref) /* planner screwed up? */
+    {
       elog(ERROR, "WindowFunc with winref %u assigned to WindowAgg with winref %u", wfunc->winref, node->winref);
     }
 
@@ -3047,8 +3047,8 @@ WinGetPartitionLocalMemory(WindowObject winobj, Size sz)
 
 /*
  * WinGetCurrentPosition
- *		Return the current row's position (counting from 0) within the
- *current partition.
+ *		Return the current row's position (counting from 0) within the current
+ *		partition.
  */
 int64
 WinGetCurrentPosition(WindowObject winobj)
@@ -3075,9 +3075,9 @@ WinGetPartitionRowCount(WindowObject winobj)
 
 /*
  * WinSetMarkPosition
- *		Set the "mark" position for the window object, which is the
- *oldest row number (counting from 0) it is allowed to fetch during all
- *subsequent operations within the current partition.
+ *		Set the "mark" position for the window object, which is the oldest row
+ *		number (counting from 0) it is allowed to fetch during all subsequent
+ *		operations within the current partition.
  *
  * Window functions do not have to call this, but are encouraged to move the
  * mark forward when possible to keep the tuplestore size down and prevent
@@ -3111,8 +3111,8 @@ WinSetMarkPosition(WindowObject winobj, int64 markpos)
 
 /*
  * WinRowsArePeers
- *		Compare two rows (specified by absolute position in partition)
- *to see if they are equal according to the ORDER BY clause.
+ *		Compare two rows (specified by absolute position in partition) to see
+ *		if they are equal according to the ORDER BY clause.
  *
  * NB: this does not consider the window frame mode.
  */
@@ -3172,8 +3172,7 @@ WinRowsArePeers(WindowObject winobj, int64 pos1, int64 pos2)
  *		the row as a side-effect.
  * isnull: output argument, receives isnull status of result
  * isout: output argument, set to indicate whether target row position
- *		is out of partition (can pass NULL if caller doesn't care about
- *this)
+ *		is out of partition (can pass NULL if caller doesn't care about this)
  *
  * Specifying a nonexistent row is not an error, it just causes a null result
  * (plus setting *isout true, if isout isn't NULL).
@@ -3204,7 +3203,7 @@ WinGetFuncArgInPartition(WindowObject winobj, int argno, int relpos, int seektyp
     spool_tuples(winstate, -1);
     abs_pos = winstate->spooled_rows - 1 + relpos;
     break;
-  default:;
+  default:
     elog(ERROR, "unrecognized window seek type: %d", seektype);
     abs_pos = 0; /* keep compiler quiet */
     break;
@@ -3239,10 +3238,10 @@ WinGetFuncArgInPartition(WindowObject winobj, int argno, int relpos, int seektyp
 /*
  * WinGetFuncArgInFrame
  *		Evaluate a window function's argument expression on a specified
- *		row of the window frame.  The row is identified in lseek(2)
- *style, i.e. relative to the first or last row of the frame.  (We do not
- *		support WINDOW_SEEK_CURRENT here, because it's not very clear
- *what that should mean if the current row isn't part of the frame.)
+ *		row of the window frame.  The row is identified in lseek(2) style,
+ *		i.e. relative to the first or last row of the frame.  (We do not
+ *		support WINDOW_SEEK_CURRENT here, because it's not very clear what
+ *		that should mean if the current row isn't part of the frame.)
  *
  * argno: argument number to evaluate (counted from 0)
  * relpos: signed rowcount offset from the seek position
@@ -3251,8 +3250,7 @@ WinGetFuncArgInPartition(WindowObject winobj, int argno, int relpos, int seektyp
  *		moved to the row as a side-effect.
  * isnull: output argument, receives isnull status of result
  * isout: output argument, set to indicate whether target row position
- *		is out of frame (can pass NULL if caller doesn't care about
- *this)
+ *		is out of frame (can pass NULL if caller doesn't care about this)
  *
  * Specifying a nonexistent or not-in-frame row is not an error, it just
  * causes a null result (plus setting *isout true, if isout isn't NULL).
@@ -3348,7 +3346,7 @@ WinGetFuncArgInFrame(WindowObject winobj, int argno, int relpos, int seektype, b
         }
       }
       break;
-    default:;
+    default:
       elog(ERROR, "unrecognized frame option state: 0x%x", winstate->frameOptions);
       break;
     }
@@ -3426,13 +3424,13 @@ WinGetFuncArgInFrame(WindowObject winobj, int argno, int relpos, int seektype, b
       }
       mark_pos = winstate->frameheadpos;
       break;
-    default:;
+    default:
       elog(ERROR, "unrecognized frame option state: 0x%x", winstate->frameOptions);
       mark_pos = 0; /* keep compiler quiet */
       break;
     }
     break;
-  default:;
+  default:
     elog(ERROR, "unrecognized window seek type: %d", seektype);
     abs_pos = mark_pos = 0; /* keep compiler quiet */
     break;
@@ -3471,8 +3469,7 @@ out_of_frame:
 
 /*
  * WinGetFuncArgCurrent
- *		Evaluate a window function's argument expression on the current
- *row.
+ *		Evaluate a window function's argument expression on the current row.
  *
  * argno: argument number to evaluate (counted from 0)
  * isnull: output argument, receives isnull status of result

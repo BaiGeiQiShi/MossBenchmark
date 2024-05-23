@@ -101,13 +101,13 @@ BootstrapToastTable(char *relName, Oid toastOid, Oid toastIndexOid)
 
   if (rel->rd_rel->relkind != RELKIND_RELATION && rel->rd_rel->relkind != RELKIND_MATVIEW)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table or materialized view", relName)));
   }
 
   /* create_toast_table does all the work */
   if (!create_toast_table(rel, toastOid, toastIndexOid, (Datum)0, AccessExclusiveLock, false, InvalidOid))
   {
-
+    elog(ERROR, "\"%s\" does not require a toast table", relName);
   }
 
   table_close(rel, NoLock);
@@ -180,10 +180,10 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
      * problem that it might take up an OID that will conflict with some
      * old-cluster table we haven't seen yet.
      */
-
-
-
-
+    if (!OidIsValid(binary_upgrade_next_toast_pg_class_oid) || !OidIsValid(binary_upgrade_next_toast_pg_type_oid))
+    {
+      return false;
+    }
   }
 
   /*
@@ -192,7 +192,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
    */
   if (check && lockmode != AccessExclusiveLock)
   {
-
+    elog(ERROR, "AccessExclusiveLock required to add toast table.");
   }
 
   /*
@@ -236,8 +236,8 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
    */
   if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_toast_pg_type_oid))
   {
-
-
+    toast_typid = binary_upgrade_next_toast_pg_type_oid;
+    binary_upgrade_next_toast_pg_type_oid = InvalidOid;
   }
 
   /* Toast table is shared if and only if its parent is. */
@@ -309,7 +309,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid, Datum reloptio
   reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(relOid));
   if (!HeapTupleIsValid(reltup))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", relOid);
   }
 
   ((Form_pg_class)GETSTRUCT(reltup))->reltoastrelid = toast_relid;
@@ -374,7 +374,7 @@ needs_toast_table(Relation rel)
    */
   if (rel->rd_rel->relisshared && !IsBootstrapProcessingMode())
   {
-
+    return false;
   }
 
   /*
@@ -385,7 +385,7 @@ needs_toast_table(Relation rel)
    */
   if (IsCatalogRelation(rel) && !IsBootstrapProcessingMode())
   {
-
+    return false;
   }
 
   /* Otherwise, let the AM decide. */

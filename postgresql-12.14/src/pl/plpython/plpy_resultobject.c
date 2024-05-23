@@ -37,20 +37,35 @@ PLy_result_ass_subscript(PyObject *self, PyObject *item, PyObject *value);
 static char PLy_result_doc[] = {"Results of a PostgreSQL query"};
 
 static PySequenceMethods PLy_result_as_sequence = {
-    .sq_length = PLy_result_length,.sq_item = PLy_result_item,};
+    .sq_length = PLy_result_length,
+    .sq_item = PLy_result_item,
+};
 
 static PyMappingMethods PLy_result_as_mapping = {
-    .mp_length = PLy_result_length,.mp_subscript = PLy_result_subscript,.mp_ass_subscript = PLy_result_ass_subscript,};
+    .mp_length = PLy_result_length,
+    .mp_subscript = PLy_result_subscript,
+    .mp_ass_subscript = PLy_result_ass_subscript,
+};
 
 static PyMethodDef PLy_result_methods[] = {{"colnames", PLy_result_colnames, METH_NOARGS, NULL}, {"coltypes", PLy_result_coltypes, METH_NOARGS, NULL}, {"coltypmods", PLy_result_coltypmods, METH_NOARGS, NULL}, {"nrows", PLy_result_nrows, METH_VARARGS, NULL}, {"status", PLy_result_status, METH_VARARGS, NULL}, {NULL, NULL, 0, NULL}};
 
 static PyTypeObject PLy_ResultType = {
-    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLyResult",.tp_basicsize = sizeof(PLyResultObject),.tp_dealloc = PLy_result_dealloc,.tp_as_sequence = &PLy_result_as_sequence,.tp_as_mapping = &PLy_result_as_mapping,.tp_str = &PLy_result_str,.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,.tp_doc = PLy_result_doc,.tp_methods = PLy_result_methods,};
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLyResult",
+    .tp_basicsize = sizeof(PLyResultObject),
+    .tp_dealloc = PLy_result_dealloc,
+    .tp_as_sequence = &PLy_result_as_sequence,
+    .tp_as_mapping = &PLy_result_as_mapping,
+    .tp_str = &PLy_result_str,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_doc = PLy_result_doc,
+    .tp_methods = PLy_result_methods,
+};
 
 void
 PLy_result_init_type(void)
 {
-  if (PyType_Ready(&PLy_ResultType) < 0) {
+  if (PyType_Ready(&PLy_ResultType) < 0)
+  {
     elog(ERROR, "could not initialize PLy_ResultType");
   }
 }
@@ -60,7 +75,8 @@ PLy_result_new(void)
 {
   PLyResultObject *ob;
 
-  if ((ob = PyObject_New(PLyResultObject, &PLy_ResultType)) == NULL) {
+  if ((ob = PyObject_New(PLyResultObject, &PLy_ResultType)) == NULL)
+  {
     return NULL;
   }
 
@@ -71,7 +87,8 @@ PLy_result_new(void)
   ob->nrows = PyInt_FromLong(-1);
   ob->rows = PyList_New(0);
   ob->tupdesc = NULL;
-  if (!ob->rows) {
+  if (!ob->rows)
+  {
     Py_DECREF(ob);
     return NULL;
   }
@@ -87,7 +104,8 @@ PLy_result_dealloc(PyObject *arg)
   Py_XDECREF(ob->nrows);
   Py_XDECREF(ob->rows);
   Py_XDECREF(ob->status);
-  if (ob->tupdesc) {
+  if (ob->tupdesc)
+  {
     FreeTupleDesc(ob->tupdesc);
     ob->tupdesc = NULL;
   }
@@ -102,16 +120,19 @@ PLy_result_colnames(PyObject *self, PyObject *unused)
   PyObject *list;
   int i;
 
-  if (!ob->tupdesc) {
+  if (!ob->tupdesc)
+  {
     PLy_exception_set(PLy_exc_error, "command did not produce a result set");
     return NULL;
   }
 
   list = PyList_New(ob->tupdesc->natts);
-  if (!list) {
+  if (!list)
+  {
     return NULL;
   }
-  for (i = 0; i < ob->tupdesc->natts; i++) {
+  for (i = 0; i < ob->tupdesc->natts; i++)
+  {
     Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
 
     PyList_SET_ITEM(list, i, PyString_FromString(NameStr(attr->attname)));
@@ -127,16 +148,19 @@ PLy_result_coltypes(PyObject *self, PyObject *unused)
   PyObject *list;
   int i;
 
-  if (!ob->tupdesc) {
+  if (!ob->tupdesc)
+  {
     PLy_exception_set(PLy_exc_error, "command did not produce a result set");
     return NULL;
   }
 
   list = PyList_New(ob->tupdesc->natts);
-  if (!list) {
+  if (!list)
+  {
     return NULL;
   }
-  for (i = 0; i < ob->tupdesc->natts; i++) {
+  for (i = 0; i < ob->tupdesc->natts; i++)
+  {
     Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
 
     PyList_SET_ITEM(list, i, PyInt_FromLong(attr->atttypid));
@@ -152,16 +176,19 @@ PLy_result_coltypmods(PyObject *self, PyObject *unused)
   PyObject *list;
   int i;
 
-  if (!ob->tupdesc) {
+  if (!ob->tupdesc)
+  {
     PLy_exception_set(PLy_exc_error, "command did not produce a result set");
     return NULL;
   }
 
   list = PyList_New(ob->tupdesc->natts);
-  if (!list) {
+  if (!list)
+  {
     return NULL;
   }
-  for (i = 0; i < ob->tupdesc->natts; i++) {
+  for (i = 0; i < ob->tupdesc->natts; i++)
+  {
     Form_pg_attribute attr = TupleDescAttr(ob->tupdesc, i);
 
     PyList_SET_ITEM(list, i, PyInt_FromLong(attr->atttypmod));
@@ -203,7 +230,8 @@ PLy_result_item(PyObject *arg, Py_ssize_t idx)
   PLyResultObject *ob = (PLyResultObject *)arg;
 
   rv = PyList_GetItem(ob->rows, idx);
-  if (rv != NULL) {
+  if (rv != NULL)
+  {
     Py_INCREF(rv);
   }
   return rv;

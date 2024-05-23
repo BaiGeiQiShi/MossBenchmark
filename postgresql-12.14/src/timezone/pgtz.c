@@ -83,7 +83,7 @@ pg_open_tzfile(const char *name, char *canonname)
 
   if (fullnamelen + 1 + strlen(name) >= MAXPGPATH)
   {
-
+    return -1; /* not gonna fit */
   }
 
   /*
@@ -106,11 +106,12 @@ pg_open_tzfile(const char *name, char *canonname)
       return result;
     }
     /* If that didn't work, fall through to do it the hard way */
-
+    fullname[fullnamelen] = '\0';
   }
 
   /*
-   * Loop to split the given name into directory levels; for each level,* search using scan_directory_ci().
+   * Loop to split the given name into directory levels; for each level,
+   * search using scan_directory_ci().
    */
   fname = name;
   for (;;)
@@ -153,7 +154,8 @@ pg_open_tzfile(const char *name, char *canonname)
 
 /*
  * Scan specified directory for a case-insensitive match to fname
- * (of length fnamelen --- fname may not be null terminated!).  If found,* copy the actual filename into canonname and return true.
+ * (of length fnamelen --- fname may not be null terminated!).  If found,
+ * copy the actual filename into canonname and return true.
  */
 static bool
 scan_directory_ci(const char *dirname, const char *fname, int fnamelen, char *canonname, int canonnamelen)
@@ -192,7 +194,8 @@ scan_directory_ci(const char *dirname, const char *fname, int fnamelen, char *ca
 /*
  * We keep loaded timezones in a hashtable so we don't have to
  * load and parse the TZ definition file every time one is selected.
- * Because we want timezone names to be found case-insensitively,* the hash key is the uppercased name of the zone.
+ * Because we want timezone names to be found case-insensitively,
+ * the hash key is the uppercased name of the zone.
  */
 typedef struct
 {
@@ -216,7 +219,7 @@ init_timezone_hashtable(void)
   timezone_cache = hash_create("Timezones", 4, &hash_ctl, HASH_ELEM);
   if (!timezone_cache)
   {
-
+    return false;
   }
 
   return true;
@@ -247,14 +250,14 @@ pg_tzset(const char *name)
 
   if (strlen(name) > TZ_STRLEN_MAX)
   {
-
+    return NULL; /* not going to fit */
   }
 
   if (!timezone_cache)
   {
     if (!init_timezone_hashtable())
     {
-
+      return NULL;
     }
   }
 
@@ -286,7 +289,7 @@ pg_tzset(const char *name)
     if (!tzparse(uppername, &tzstate, true))
     {
       /* This really, really should not happen ... */
-
+      elog(ERROR, "could not initialize GMT time zone");
     }
     /* Use uppercase name as canonical */
     strcpy(canonname, uppername);
@@ -339,7 +342,7 @@ pg_tzset_offset(long gmtoffset)
     absoffset %= SECS_PER_MINUTE;
     if (absoffset != 0)
     {
-
+      snprintf(offsetstr + strlen(offsetstr), sizeof(offsetstr) - strlen(offsetstr), ":%02ld", absoffset);
     }
   }
   if (gmtoffset > 0)
@@ -410,7 +413,7 @@ pg_tzenumerate_start(void)
   ret->dirdesc[0] = AllocateDir(startdir);
   if (!ret->dirdesc[0])
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not open directory \"%s\": %m", startdir)));
   }
   return ret;
 }
@@ -420,9 +423,9 @@ pg_tzenumerate_end(pg_tzenum *dir)
 {
   while (dir->depth >= 0)
   {
-
-
-
+    FreeDir(dir->dirdesc[dir->depth]);
+    pfree(dir->dirname[dir->depth]);
+    dir->depth--;
   }
   pfree(dir);
 }
@@ -455,7 +458,7 @@ pg_tzenumerate_next(pg_tzenum *dir)
     snprintf(fullname, sizeof(fullname), "%s/%s", dir->dirname[dir->depth], direntry->d_name);
     if (stat(fullname, &statbuf) != 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat \"%s\": %m", fullname)));
     }
 
     if (S_ISDIR(statbuf.st_mode))
@@ -463,14 +466,14 @@ pg_tzenumerate_next(pg_tzenum *dir)
       /* Step into the subdirectory */
       if (dir->depth >= MAX_TZDIR_DEPTH - 1)
       {
-
+        ereport(ERROR, (errmsg_internal("timezone directory stack overflow")));
       }
       dir->depth++;
       dir->dirname[dir->depth] = pstrdup(fullname);
       dir->dirdesc[dir->depth] = AllocateDir(fullname);
       if (!dir->dirdesc[dir->depth])
       {
-
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not open directory \"%s\": %m", fullname)));
       }
 
       /* Start over reading in the new directory */
@@ -492,7 +495,7 @@ pg_tzenumerate_next(pg_tzenum *dir)
     if (!pg_tz_acceptable(&dir->tz))
     {
       /* Ignore leap-second zones */
-
+      continue;
     }
 
     /* OK, return the canonical zone name spelling. */

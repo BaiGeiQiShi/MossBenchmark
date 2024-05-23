@@ -4,10 +4,11 @@
 #include "header.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-extern int
-danish_UTF_8_stem(struct SN_env *z);
+  extern int
+  danish_UTF_8_stem(struct SN_env *z);
 #ifdef __cplusplus
 }
 #endif
@@ -22,13 +23,14 @@ r_main_suffix(struct SN_env *z);
 static int
 r_mark_regions(struct SN_env *z);
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-extern struct SN_env *
-danish_UTF_8_create_env(void);
-extern void
-danish_UTF_8_close_env(struct SN_env *z);
+  extern struct SN_env *
+  danish_UTF_8_create_env(void);
+  extern void
+  danish_UTF_8_close_env(struct SN_env *z);
 
 #ifdef __cplusplus
 }
@@ -140,7 +142,8 @@ r_mark_regions(struct SN_env *z)
     int c_test1 = z->c; /* test, line 33 */
     {
       int ret = skip_utf8(z->p, z->c, 0, z->l, +3); /* hop, line 33 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return 0;
       }
       z->c = ret;
@@ -148,19 +151,22 @@ r_mark_regions(struct SN_env *z)
     z->I[1] = z->c; /* setmark x, line 33 */
     z->c = c_test1;
   }
-  if (out_grouping_U(z, g_v, 97, 248, 1) < 0) {
+  if (out_grouping_U(z, g_v, 97, 248, 1) < 0)
+  {
     return 0; /* goto */ /* grouping v, line 34 */
   }
   { /* gopast */ /* non v, line 34 */
     int ret = in_grouping_U(z, g_v, 97, 248, 1);
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return 0;
     }
     z->c += ret;
   }
   z->I[0] = z->c; /* setmark p1, line 34 */
   /* try, line 35 */
-  if (!(z->I[0] < z->I[1])) {
+  if (!(z->I[0] < z->I[1]))
+  {
     goto lab0; /* $(<integer expression> < <integer expression>), line 35 */
   }
   z->I[0] = z->I[1]; /* $p1 = <integer expression>, line 35 */
@@ -175,38 +181,47 @@ r_main_suffix(struct SN_env *z)
 
   {
     int mlimit1; /* setlimit, line 41 */
-    if (z->c < z->I[0]) {
+    if (z->c < z->I[0])
+    {
       return 0;
     }
     mlimit1 = z->lb;
     z->lb = z->I[0];
     z->ket = z->c; /* [, line 41 */
-    if (z->c <= z->lb || z->p[z->c - 1] >> 5 != 3 || !((1851440 >> (z->p[z->c - 1] & 0x1f)) & 1)) {
+    if (z->c <= z->lb || z->p[z->c - 1] >> 5 != 3 || !((1851440 >> (z->p[z->c - 1] & 0x1f)) & 1))
+    {
       z->lb = mlimit1;
       return 0;
     } /* substring, line 41 */
     among_var = find_among_b(z, a_0, 32);
-    if (!(among_var)) {
+    if (!(among_var))
+    {
       z->lb = mlimit1;
       return 0;
     }
     z->bra = z->c; /* ], line 41 */
     z->lb = mlimit1;
   }
-  switch (among_var) { /* among, line 42 */
-  case 1: {
+  switch (among_var)
+  { /* among, line 42 */
+  case 1:
+  {
     int ret = slice_del(z); /* delete, line 48 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
-  } break;
+  }
+  break;
   case 2:
-    if (in_grouping_b_U(z, g_s_ending, 97, 229, 0)) {
+    if (in_grouping_b_U(z, g_s_ending, 97, 229, 0))
+    {
       return 0; /* grouping s_ending, line 50 */
     }
     {
       int ret = slice_del(z); /* delete, line 50 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -223,17 +238,20 @@ r_consonant_pair(struct SN_env *z)
 
     {
       int mlimit2; /* setlimit, line 56 */
-      if (z->c < z->I[0]) {
+      if (z->c < z->I[0])
+      {
         return 0;
       }
       mlimit2 = z->lb;
       z->lb = z->I[0];
       z->ket = z->c; /* [, line 56 */
-      if (z->c - 1 <= z->lb || (z->p[z->c - 1] != 100 && z->p[z->c - 1] != 116)) {
+      if (z->c - 1 <= z->lb || (z->p[z->c - 1] != 100 && z->p[z->c - 1] != 116))
+      {
         z->lb = mlimit2;
         return 0;
       } /* substring, line 56 */
-      if (!(find_among_b(z, a_1, 4))) {
+      if (!(find_among_b(z, a_1, 4)))
+      {
         z->lb = mlimit2;
         return 0;
       }
@@ -244,7 +262,8 @@ r_consonant_pair(struct SN_env *z)
   }
   {
     int ret = skip_utf8(z->p, z->c, z->lb, 0, -1);
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return 0;
     }
     z->c = ret; /* next, line 62 */
@@ -252,7 +271,8 @@ r_consonant_pair(struct SN_env *z)
   z->bra = z->c; /* ], line 62 */
   {
     int ret = slice_del(z); /* delete, line 62 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -267,16 +287,19 @@ r_other_suffix(struct SN_env *z)
     int m1 = z->l - z->c;
     (void)m1;      /* do, line 66 */
     z->ket = z->c; /* [, line 66 */
-    if (!(eq_s_b(z, 2, s_0))) {
+    if (!(eq_s_b(z, 2, s_0)))
+    {
       goto lab0; /* literal, line 66 */
     }
     z->bra = z->c; /* ], line 66 */
-    if (!(eq_s_b(z, 2, s_1))) {
+    if (!(eq_s_b(z, 2, s_1)))
+    {
       goto lab0; /* literal, line 66 */
     }
     {
       int ret = slice_del(z); /* delete, line 66 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -286,28 +309,34 @@ r_other_suffix(struct SN_env *z)
 
   {
     int mlimit2; /* setlimit, line 67 */
-    if (z->c < z->I[0]) {
+    if (z->c < z->I[0])
+    {
       return 0;
     }
     mlimit2 = z->lb;
     z->lb = z->I[0];
     z->ket = z->c; /* [, line 67 */
-    if (z->c - 1 <= z->lb || z->p[z->c - 1] >> 5 != 3 || !((1572992 >> (z->p[z->c - 1] & 0x1f)) & 1)) {
+    if (z->c - 1 <= z->lb || z->p[z->c - 1] >> 5 != 3 || !((1572992 >> (z->p[z->c - 1] & 0x1f)) & 1))
+    {
       z->lb = mlimit2;
       return 0;
     } /* substring, line 67 */
     among_var = find_among_b(z, a_2, 5);
-    if (!(among_var)) {
+    if (!(among_var))
+    {
       z->lb = mlimit2;
       return 0;
     }
     z->bra = z->c; /* ], line 67 */
     z->lb = mlimit2;
   }
-  switch (among_var) { /* among, line 68 */
-  case 1: {
+  switch (among_var)
+  { /* among, line 68 */
+  case 1:
+  {
     int ret = slice_del(z); /* delete, line 70 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -316,10 +345,12 @@ r_other_suffix(struct SN_env *z)
       (void)m3; /* do, line 70 */
       {
         int ret = r_consonant_pair(z); /* call consonant_pair, line 70 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab1;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -327,12 +358,15 @@ r_other_suffix(struct SN_env *z)
       z->c = z->l - m3;
     }
     break;
-  case 2: {
+  case 2:
+  {
     int ret = slice_from_s(z, 4, s_2); /* <-, line 72 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
-  } break;
+  }
+  break;
   }
   return 1;
 }
@@ -343,29 +377,34 @@ r_undouble(struct SN_env *z)
 
   {
     int mlimit1; /* setlimit, line 76 */
-    if (z->c < z->I[0]) {
+    if (z->c < z->I[0])
+    {
       return 0;
     }
     mlimit1 = z->lb;
     z->lb = z->I[0];
     z->ket = z->c; /* [, line 76 */
-    if (out_grouping_b_U(z, g_v, 97, 248, 0)) {
+    if (out_grouping_b_U(z, g_v, 97, 248, 0))
+    {
       z->lb = mlimit1;
       return 0;
-    } /* non v, line 76 */
+    }                               /* non v, line 76 */
     z->bra = z->c;                  /* ], line 76 */
     z->S[0] = slice_to(z, z->S[0]); /* -> ch, line 76 */
-    if (z->S[0] == 0) {
+    if (z->S[0] == 0)
+    {
       return -1; /* -> ch, line 76 */
     }
     z->lb = mlimit1;
   }
-  if (!(eq_v_b(z, z->S[0]))) {
+  if (!(eq_v_b(z, z->S[0])))
+  {
     return 0; /* name ch, line 77 */
   }
   {
     int ret = slice_del(z); /* delete, line 78 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -379,10 +418,12 @@ danish_UTF_8_stem(struct SN_env *z)
     int c1 = z->c; /* do, line 84 */
     {
       int ret = r_mark_regions(z); /* call mark_regions, line 84 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab0;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -397,10 +438,12 @@ danish_UTF_8_stem(struct SN_env *z)
     (void)m2; /* do, line 86 */
     {
       int ret = r_main_suffix(z); /* call main_suffix, line 86 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab1;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -412,10 +455,12 @@ danish_UTF_8_stem(struct SN_env *z)
     (void)m3; /* do, line 87 */
     {
       int ret = r_consonant_pair(z); /* call consonant_pair, line 87 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab2;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -427,10 +472,12 @@ danish_UTF_8_stem(struct SN_env *z)
     (void)m4; /* do, line 88 */
     {
       int ret = r_other_suffix(z); /* call other_suffix, line 88 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab3;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -442,10 +489,12 @@ danish_UTF_8_stem(struct SN_env *z)
     (void)m5; /* do, line 89 */
     {
       int ret = r_undouble(z); /* call undouble, line 89 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab4;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }

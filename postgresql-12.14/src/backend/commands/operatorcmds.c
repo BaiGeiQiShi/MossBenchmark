@@ -318,14 +318,14 @@ ValidateRestrictionEstimator(List *restrictionName)
   /* estimators must return float8 */
   if (get_func_rettype(restrictionOid) != FLOAT8OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("restriction estimator function %s must return type %s", NameListToString(restrictionName), "float8")));
   }
 
   /* Require EXECUTE rights for the estimator */
   aclresult = pg_proc_aclcheck(restrictionOid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, NameListToString(restrictionName));
   }
 
   return restrictionOid;
@@ -361,7 +361,7 @@ ValidateJoinEstimator(List *joinName)
   {
     if (OidIsValid(joinOid2))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("join estimator function %s has multiple matches", NameListToString(joinName))));
     }
   }
   else
@@ -377,14 +377,14 @@ ValidateJoinEstimator(List *joinName)
   /* estimators must return float8 */
   if (get_func_rettype(joinOid) != FLOAT8OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("join estimator function %s must return type %s", NameListToString(joinName), "float8")));
   }
 
   /* Require EXECUTE rights for the estimator */
   aclresult = pg_proc_aclcheck(joinOid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, NameListToString(joinName));
   }
 
   return joinOid;
@@ -403,9 +403,9 @@ RemoveOperatorById(Oid operOid)
   relation = table_open(OperatorRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for operator %u", operOid);
   }
   op = (Form_pg_operator)GETSTRUCT(tup);
 
@@ -422,9 +422,9 @@ RemoveOperatorById(Oid operOid)
     {
       ReleaseSysCache(tup);
       tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
-      if (!HeapTupleIsValid(tup))
-      { /* should not happen */
-
+      if (!HeapTupleIsValid(tup)) /* should not happen */
+      {
+        elog(ERROR, "cache lookup failed for operator %u", operOid);
       }
     }
   }
@@ -438,8 +438,7 @@ RemoveOperatorById(Oid operOid)
 
 /*
  * AlterOperator
- *		routine implementing ALTER OPERATOR <operator> SET (option =
- *...).
+ *		routine implementing ALTER OPERATOR <operator> SET (option = ...).
  *
  * Currently, only RESTRICT and JOIN estimator functions can be changed.
  */
@@ -469,7 +468,7 @@ AlterOperator(AlterOperatorStmt *stmt)
   tup = SearchSysCacheCopy1(OPEROID, ObjectIdGetDatum(oprId));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for operator %u", oprId);
   }
   oprForm = (Form_pg_operator)GETSTRUCT(tup);
 
@@ -543,22 +542,22 @@ AlterOperator(AlterOperatorStmt *stmt)
   if (!(OidIsValid(oprForm->oprleft) && OidIsValid(oprForm->oprright)))
   {
     /* If it's not a binary op, these things mustn't be set: */
-
-
-
-
+    if (OidIsValid(joinOid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only binary operators can have join selectivity")));
+    }
   }
 
   if (oprForm->oprresult != BOOLOID)
   {
-
-
-
-
-
-
-
-
+    if (OidIsValid(restrictionOid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can have restriction selectivity")));
+    }
+    if (OidIsValid(joinOid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only boolean operators can have join selectivity")));
+    }
   }
 
   /* Update the tuple */

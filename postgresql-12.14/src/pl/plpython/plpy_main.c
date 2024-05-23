@@ -92,7 +92,8 @@ _PG_init(void)
    * anything much with the language.
    */
   bitmask_ptr = (int **)find_rendezvous_variable("plpython_version_bitmask");
-  if (!(*bitmask_ptr)) { /* am I the first? */
+  if (!(*bitmask_ptr)) /* am I the first? */
+  {
     *bitmask_ptr = &plpython_version_bitmask;
   }
   /* Retain pointer to the agreed-on shared variable ... */
@@ -125,12 +126,14 @@ PLy_initialize(void)
    * It is attractive to weaken this error from FATAL to ERROR, but there
    * would be corner cases, so it seems best to be conservative.
    */
-  if (*plpython_version_bitmask_ptr != (1 << PY_MAJOR_VERSION)) {
+  if (*plpython_version_bitmask_ptr != (1 << PY_MAJOR_VERSION))
+  {
     ereport(FATAL, (errmsg("multiple Python libraries are present in session"), errdetail("Only one Python major version can be used in one session.")));
   }
 
   /* The rest should only be done once per session */
-  if (inited) {
+  if (inited)
+  {
     return;
   }
 
@@ -143,7 +146,8 @@ PLy_initialize(void)
 #endif
   PLy_init_interp();
   PLy_init_plpy();
-  if (PyErr_Occurred()) {
+  if (PyErr_Occurred())
+  {
     PLy_elog(FATAL, "untrapped error in initialization");
   }
 
@@ -167,18 +171,21 @@ PLy_init_interp(void)
   PyObject *mainmod;
 
   mainmod = PyImport_AddModule("__main__");
-  if (mainmod == NULL || PyErr_Occurred()) {
+  if (mainmod == NULL || PyErr_Occurred())
+  {
     PLy_elog(ERROR, "could not import \"__main__\" module");
   }
   Py_INCREF(mainmod);
   PLy_interp_globals = PyModule_GetDict(mainmod);
   PLy_interp_safe_globals = PyDict_New();
-  if (PLy_interp_safe_globals == NULL) {
+  if (PLy_interp_safe_globals == NULL)
+  {
     PLy_elog(ERROR, NULL);
   }
   PyDict_SetItemString(PLy_interp_globals, "GD", PLy_interp_safe_globals);
   Py_DECREF(mainmod);
-  if (PLy_interp_globals == NULL || PyErr_Occurred()) {
+  if (PLy_interp_globals == NULL || PyErr_Occurred())
+  {
     PLy_elog(ERROR, "could not initialize globals");
   }
 }
@@ -191,11 +198,13 @@ plpython_validator(PG_FUNCTION_ARGS)
   Form_pg_proc procStruct;
   bool is_trigger;
 
-  if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid)) {
+  if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
+  {
     PG_RETURN_VOID();
   }
 
-  if (!check_function_bodies) {
+  if (!check_function_bodies)
+  {
     PG_RETURN_VOID();
   }
 
@@ -204,7 +213,8 @@ plpython_validator(PG_FUNCTION_ARGS)
 
   /* Get the new function's pg_proc entry */
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
-  if (!HeapTupleIsValid(tuple)) {
+  if (!HeapTupleIsValid(tuple))
+  {
     elog(ERROR, "cache lookup failed for function %u", funcoid);
   }
   procStruct = (Form_pg_proc)GETSTRUCT(tuple);
@@ -241,7 +251,8 @@ plpython_call_handler(PG_FUNCTION_ARGS)
   nonatomic = fcinfo->context && IsA(fcinfo->context, CallContext) && !castNode(CallContext, fcinfo->context)->atomic;
 
   /* Note: SPI_finish() happens in plpy_exec.c, which is dubious design */
-  if (SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0) != SPI_OK_CONNECT) {
+  if (SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0) != SPI_OK_CONNECT)
+  {
     elog(ERROR, "SPI_connect failed");
   }
 
@@ -268,7 +279,8 @@ plpython_call_handler(PG_FUNCTION_ARGS)
     plerrcontext.previous = error_context_stack;
     error_context_stack = &plerrcontext;
 
-    if (CALLED_AS_TRIGGER(fcinfo)) {
+    if (CALLED_AS_TRIGGER(fcinfo))
+    {
       Relation tgrel = ((TriggerData *)fcinfo->context)->tg_relation;
       HeapTuple trv;
 
@@ -276,7 +288,9 @@ plpython_call_handler(PG_FUNCTION_ARGS)
       exec_ctx->curr_proc = proc;
       trv = PLy_exec_trigger(fcinfo, proc);
       retval = PointerGetDatum(trv);
-    } else {
+    }
+    else
+    {
       proc = PLy_procedure_get(funcoid, InvalidOid, false);
       exec_ctx->curr_proc = proc;
       retval = PLy_exec_function(fcinfo, proc);
@@ -317,7 +331,8 @@ plpython_inline_handler(PG_FUNCTION_ARGS)
   PLy_initialize();
 
   /* Note: SPI_finish() happens in plpy_exec.c, which is dubious design */
-  if (SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC) != SPI_OK_CONNECT) {
+  if (SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC) != SPI_OK_CONNECT)
+  {
     elog(ERROR, "SPI_connect failed");
   }
 
@@ -398,10 +413,14 @@ plpython_error_callback(void *arg)
 {
   PLyExecutionContext *exec_ctx = (PLyExecutionContext *)arg;
 
-  if (exec_ctx->curr_proc) {
-    if (exec_ctx->curr_proc->is_procedure) {
+  if (exec_ctx->curr_proc)
+  {
+    if (exec_ctx->curr_proc->is_procedure)
+    {
       errcontext("PL/Python procedure \"%s\"", PLy_procedure_name(exec_ctx->curr_proc));
-    } else {
+    }
+    else
+    {
       errcontext("PL/Python function \"%s\"", PLy_procedure_name(exec_ctx->curr_proc));
     }
   }
@@ -416,7 +435,8 @@ plpython_inline_error_callback(void *arg)
 PLyExecutionContext *
 PLy_current_execution_context(void)
 {
-  if (PLy_execution_contexts == NULL) {
+  if (PLy_execution_contexts == NULL)
+  {
     elog(ERROR, "no Python function is currently executing");
   }
 
@@ -427,9 +447,11 @@ MemoryContext
 PLy_get_scratch_context(PLyExecutionContext *context)
 {
   /*
-   * A scratch context might never be needed in a given plpython procedure,* so allocate it on first request.
+   * A scratch context might never be needed in a given plpython procedure,
+   * so allocate it on first request.
    */
-  if (context->scratch_ctx == NULL) {
+  if (context->scratch_ctx == NULL)
+  {
     context->scratch_ctx = AllocSetContextCreate(TopTransactionContext, "PL/Python scratch context", ALLOCSET_DEFAULT_SIZES);
   }
   return context->scratch_ctx;
@@ -454,13 +476,15 @@ PLy_pop_execution_context(void)
 {
   PLyExecutionContext *context = PLy_execution_contexts;
 
-  if (context == NULL) {
+  if (context == NULL)
+  {
     elog(ERROR, "no Python function is currently executing");
   }
 
   PLy_execution_contexts = context->next;
 
-  if (context->scratch_ctx) {
+  if (context->scratch_ctx)
+  {
     MemoryContextDelete(context->scratch_ctx);
   }
   pfree(context);

@@ -156,8 +156,7 @@ BuildRelationExtStatistics(Relation onerel, double totalrows, int numrows, HeapT
 
 /*
  * statext_is_kind_built
- *		Is this stat kind built in the given pg_statistic_ext_data
- *tuple?
+ *		Is this stat kind built in the given pg_statistic_ext_data tuple?
  */
 bool
 statext_is_kind_built(HeapTuple htup, char type)
@@ -166,20 +165,20 @@ statext_is_kind_built(HeapTuple htup, char type)
 
   switch (type)
   {
-  case STATS_EXT_NDISTINCT:;
+  case STATS_EXT_NDISTINCT:
     attnum = Anum_pg_statistic_ext_data_stxdndistinct;
     break;
 
-  case STATS_EXT_DEPENDENCIES:;
+  case STATS_EXT_DEPENDENCIES:
     attnum = Anum_pg_statistic_ext_data_stxddependencies;
     break;
 
-  case STATS_EXT_MCV:;
+  case STATS_EXT_MCV:
     attnum = Anum_pg_statistic_ext_data_stxdmcv;
     break;
 
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected statistics type requested: %d", type);
   }
 
   return !heap_attisnull(htup, attnum, NULL);
@@ -230,7 +229,7 @@ fetch_statentries_for_relation(Relation pg_statext, Oid relid)
     arr = DatumGetArrayTypeP(datum);
     if (ARR_NDIM(arr) != 1 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
-
+      elog(ERROR, "stxkind is not a 1-D char array");
     }
     enabled = (char *)ARR_DATA_PTR(arr);
     for (i = 0; i < ARR_DIMS(arr)[0]; i++)
@@ -251,8 +250,8 @@ fetch_statentries_for_relation(Relation pg_statext, Oid relid)
  * Using 'vacatts' of size 'nvacatts' as input data, return a newly built
  * VacAttrStats array which includes only the items corresponding to
  * attributes indicated by 'stxkeys'. If we don't have all of the per column
- * stats available to compute the extended stats, then we return NULL to
- * indicate to the caller that the stats should not be built.
+ * stats available to compute the extended stats, then we return NULL to indicate
+ * to the caller that the stats should not be built.
  */
 static VacAttrStats **
 lookup_var_attr_stats(Relation rel, Bitmapset *attrs, int nvacatts, VacAttrStats **vacatts)
@@ -357,7 +356,7 @@ statext_store(Oid statOid, MVNDistinct *ndistinct, MVDependencies *dependencies,
   oldtup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(statOid));
   if (!HeapTupleIsValid(oldtup))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", statOid);
   }
 
   /* replace it */
@@ -608,8 +607,8 @@ build_sorted_items(int numrows, int *nitems, HeapTuple *rows, TupleDesc tdesc, M
       {
         if (toast_raw_datum_size(value) > WIDTH_THRESHOLD)
         {
-
-
+          toowide = true;
+          break;
         }
 
         value = PointerGetDatum(PG_DETOAST_DATUM(value));
@@ -621,7 +620,7 @@ build_sorted_items(int numrows, int *nitems, HeapTuple *rows, TupleDesc tdesc, M
 
     if (toowide)
     {
-
+      continue;
     }
 
     idx++;
@@ -634,8 +633,8 @@ build_sorted_items(int numrows, int *nitems, HeapTuple *rows, TupleDesc tdesc, M
   if (idx == 0)
   {
     /* everything is allocated as a single chunk */
-
-
+    pfree(items);
+    return NULL;
   }
 
   /* do the sort, using the multi-sort */
@@ -668,8 +667,8 @@ has_stats_of_kind(List *stats, char requiredkind)
 
 /*
  * choose_best_statistics
- *		Look for and return statistics with the specified 'requiredkind'
- *which have keys that match at least two of the given attnums.  Return NULL if
+ *		Look for and return statistics with the specified 'requiredkind' which
+ *		have keys that match at least two of the given attnums.  Return NULL if
  *		there's no match.
  *
  * The current selection criteria is very simple - we choose the statistics
@@ -767,7 +766,7 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
   /* Look inside any binary-compatible relabeling (as in examine_variable) */
   if (IsA(clause, RelabelType))
   {
-
+    clause = (Node *)((RelabelType *)clause)->arg;
   }
 
   /* plain Var references (boolean Vars or recursive checks) */
@@ -778,19 +777,19 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
     /* Ensure var is from the correct relation */
     if (var->varno != relid)
     {
-
+      return false;
     }
 
     /* we also better ensure the Var is from the current level */
     if (var->varlevelsup > 0)
     {
-
+      return false;
     }
 
     /* Also skip system attributes (we don't allow stats on those). */
     if (!AttrNumberIsForUserDefinedAttr(var->varattno))
     {
-
+      return false;
     }
 
     *attnums = bms_add_member(*attnums, var->varattno);
@@ -808,13 +807,13 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
     /* Only expressions with two arguments are considered compatible. */
     if (list_length(expr->args) != 2)
     {
-
+      return false;
     }
 
     /* Check if the expression the right shape (one Var, one Const) */
     if (!examine_opclause_expression(expr, &var, NULL, NULL))
     {
-
+      return false;
     }
 
     /*
@@ -826,18 +825,18 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
      */
     switch (get_oprrest(expr->opno))
     {
-    case F_EQSEL:;
-    case F_NEQSEL:;
-    case F_SCALARLTSEL:;
-    case F_SCALARLESEL:;
-    case F_SCALARGTSEL:;
-    case F_SCALARGESEL:;
+    case F_EQSEL:
+    case F_NEQSEL:
+    case F_SCALARLTSEL:
+    case F_SCALARLESEL:
+    case F_SCALARGTSEL:
+    case F_SCALARGESEL:
       /* supported, will continue with inspection of the Var */
       break;
 
-    default:;;
+    default:
       /* other estimators are considered unknown/unsupported */
-
+      return false;
     }
 
     /*
@@ -886,7 +885,7 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
        */
       if (!statext_is_compatible_clause_internal(root, (Node *)lfirst(lc), relid, attnums))
       {
-
+        return false;
       }
     }
 
@@ -904,13 +903,13 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause, Index rel
      */
     if (!IsA(nt->arg, Var))
     {
-
+      return false;
     }
 
     return statext_is_compatible_clause_internal(root, (Node *)(nt->arg), relid, attnums);
   }
 
-
+  return false;
 }
 
 /*
@@ -938,13 +937,13 @@ statext_is_compatible_clause(PlannerInfo *root, Node *clause, Index relid, Bitma
 
   if (!IsA(rinfo, RestrictInfo))
   {
-
+    return false;
   }
 
   /* Pseudoconstants are not really interesting here. */
   if (rinfo->pseudoconstant)
   {
-
+    return false;
   }
 
   /* clauses referencing multiple varnos are incompatible */
@@ -971,10 +970,10 @@ statext_is_compatible_clause(PlannerInfo *root, Node *clause, Index relid, Bitma
     if (bms_is_member(InvalidAttrNumber, *attnums))
     {
       /* Have a whole-row reference, must have access to all columns */
-
-
-
-
+      if (pg_attribute_aclcheck_all(rte->relid, userid, ACL_SELECT, ACLMASK_ALL) != ACLCHECK_OK)
+      {
+        return false;
+      }
     }
     else
     {
@@ -1071,7 +1070,7 @@ statext_mcv_clauselist_selectivity(PlannerInfo *root, List *clauses, int varReli
    */
   if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    return 1.0;
   }
 
   /* check if there's any stats that might be useful for us. */
@@ -1237,7 +1236,7 @@ examine_opclause_expression(OpExpr *expr, Var **varp, Const **cstp, bool *varonl
 
   if (IsA(rightop, RelabelType))
   {
-
+    rightop = (Node *)((RelabelType *)rightop)->arg;
   }
 
   if (IsA(leftop, Var) && IsA(rightop, Const))
@@ -1246,16 +1245,16 @@ examine_opclause_expression(OpExpr *expr, Var **varp, Const **cstp, bool *varonl
     cst = (Const *)rightop;
     varonleft = true;
   }
-
-
-
-
-
-
-
-
-
-
+  else if (IsA(leftop, Const) && IsA(rightop, Var))
+  {
+    var = (Var *)rightop;
+    cst = (Const *)leftop;
+    varonleft = false;
+  }
+  else
+  {
+    return false;
+  }
 
   /* return pointers to the extracted parts if requested */
   if (varp)

@@ -148,13 +148,13 @@ lpad(PG_FUNCTION_ARGS)
   s1len = VARSIZE_ANY_EXHDR(string1);
   if (s1len < 0)
   {
-
+    s1len = 0; /* shouldn't happen */
   }
 
   s2len = VARSIZE_ANY_EXHDR(string2);
   if (s2len < 0)
   {
-
+    s2len = 0; /* shouldn't happen */
   }
 
   s1len = pg_mbstrlen_with_len(VARDATA_ANY(string1), s1len);
@@ -174,7 +174,7 @@ lpad(PG_FUNCTION_ARGS)
   /* check for integer overflow */
   if (len != 0 && bytelen / pg_database_encoding_max_length() != len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
   }
 
   ret = (text *)palloc(VARHDRSZ + bytelen);
@@ -192,8 +192,8 @@ lpad(PG_FUNCTION_ARGS)
     memcpy(ptr_ret, ptr2, mlen);
     ptr_ret += mlen;
     ptr2 += mlen;
-    if (ptr2 == ptr2end)
-    { /* wrap around at end of s2 */
+    if (ptr2 == ptr2end) /* wrap around at end of s2 */
+    {
       ptr2 = ptr2start;
     }
   }
@@ -251,13 +251,13 @@ rpad(PG_FUNCTION_ARGS)
   s1len = VARSIZE_ANY_EXHDR(string1);
   if (s1len < 0)
   {
-
+    s1len = 0; /* shouldn't happen */
   }
 
   s2len = VARSIZE_ANY_EXHDR(string2);
   if (s2len < 0)
   {
-
+    s2len = 0; /* shouldn't happen */
   }
 
   s1len = pg_mbstrlen_with_len(VARDATA_ANY(string1), s1len);
@@ -277,7 +277,7 @@ rpad(PG_FUNCTION_ARGS)
   /* Check for integer overflow */
   if (len != 0 && bytelen / pg_database_encoding_max_length() != len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
   }
 
   ret = (text *)palloc(VARHDRSZ + bytelen);
@@ -305,8 +305,8 @@ rpad(PG_FUNCTION_ARGS)
     memcpy(ptr_ret, ptr2, mlen);
     ptr_ret += mlen;
     ptr2 += mlen;
-    if (ptr2 == ptr2end)
-    { /* wrap around at end of s2 */
+    if (ptr2 == ptr2end) /* wrap around at end of s2 */
+    {
       ptr2 = ptr2start;
     }
   }
@@ -479,48 +479,48 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
       /*
        * In the single-byte-encoding case, we don't need such overhead.
        */
+      if (doltrim)
+      {
+        while (stringlen > 0)
+        {
+          char str_ch = *string;
 
+          for (i = 0; i < setlen; i++)
+          {
+            if (str_ch == set[i])
+            {
+              break;
+            }
+          }
+          if (i >= setlen)
+          {
+            break; /* no match here */
+          }
+          string++;
+          stringlen--;
+        }
+      }
 
+      if (dortrim)
+      {
+        while (stringlen > 0)
+        {
+          char str_ch = string[stringlen - 1];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          for (i = 0; i < setlen; i++)
+          {
+            if (str_ch == set[i])
+            {
+              break;
+            }
+          }
+          if (i >= setlen)
+          {
+            break; /* no match here */
+          }
+          stringlen--;
+        }
+      }
     }
   }
 
@@ -753,7 +753,7 @@ translate(PG_FUNCTION_ARGS)
   /* check for integer overflow */
   if (worst_len / pg_database_encoding_max_length() != m)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
   }
 
   result = (text *)palloc(worst_len + VARHDRSZ);
@@ -785,7 +785,7 @@ translate(PG_FUNCTION_ARGS)
         p += pg_mblen(p);
         if (p >= (to_ptr + tolen))
         {
-
+          break;
         }
       }
       if (p < (to_ptr + tolen))
@@ -861,38 +861,38 @@ ascii(PG_FUNCTION_ARGS)
 
     int result = 0, tbytes = 0, i;
 
+    if (*data >= 0xF0)
+    {
+      result = *data & 0x07;
+      tbytes = 3;
+    }
+    else if (*data >= 0xE0)
+    {
+      result = *data & 0x0F;
+      tbytes = 2;
+    }
+    else
+    {
+      Assert(*data > 0xC0);
+      result = *data & 0x1f;
+      tbytes = 1;
+    }
 
+    Assert(tbytes > 0);
 
+    for (i = 1; i <= tbytes; i++)
+    {
+      Assert((data[i] & 0xC0) == 0x80);
+      result = (result << 6) + (data[i] & 0x3f);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    PG_RETURN_INT32(result);
   }
   else
   {
     if (pg_encoding_max_length(encoding) > 1 && *data > 127)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character too large")));
     }
 
     PG_RETURN_INT32((int32)*data);
@@ -939,56 +939,56 @@ chr(PG_FUNCTION_ARGS)
      * U+10FFFF, even though 4-byte UTF8 sequences can hold values up to
      * U+1FFFFF.
      */
+    if (cvalue > 0x0010ffff)
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character too large for encoding: %d", cvalue)));
+    }
 
+    if (cvalue > 0xffff)
+    {
+      bytes = 4;
+    }
+    else if (cvalue > 0x07ff)
+    {
+      bytes = 3;
+    }
+    else
+    {
+      bytes = 2;
+    }
 
+    result = (text *)palloc(VARHDRSZ + bytes);
+    SET_VARSIZE(result, VARHDRSZ + bytes);
+    wch = (unsigned char *)VARDATA(result);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (bytes == 2)
+    {
+      wch[0] = 0xC0 | ((cvalue >> 6) & 0x1F);
+      wch[1] = 0x80 | (cvalue & 0x3F);
+    }
+    else if (bytes == 3)
+    {
+      wch[0] = 0xE0 | ((cvalue >> 12) & 0x0F);
+      wch[1] = 0x80 | ((cvalue >> 6) & 0x3F);
+      wch[2] = 0x80 | (cvalue & 0x3F);
+    }
+    else
+    {
+      wch[0] = 0xF0 | ((cvalue >> 18) & 0x07);
+      wch[1] = 0x80 | ((cvalue >> 12) & 0x3F);
+      wch[2] = 0x80 | ((cvalue >> 6) & 0x3F);
+      wch[3] = 0x80 | (cvalue & 0x3F);
+    }
 
     /*
      * The preceding range check isn't sufficient, because UTF8 excludes
      * Unicode "surrogate pair" codes.  Make sure what we created is valid
      * UTF8.
      */
-
-
-
-
+    if (!pg_utf8_islegal(wch, bytes))
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character not valid for encoding: %d", cvalue)));
+    }
   }
   else
   {
@@ -1007,7 +1007,7 @@ chr(PG_FUNCTION_ARGS)
 
     if ((is_mb && (cvalue > 127)) || (!is_mb && (cvalue > 255)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character too large for encoding: %d", cvalue)));
     }
 
     result = (text *)palloc(VARHDRSZ + 1);
@@ -1051,7 +1051,7 @@ repeat(PG_FUNCTION_ARGS)
 
   if (unlikely(pg_mul_s32_overflow(count, slen, &tlen)) || unlikely(pg_add_s32_overflow(tlen, VARHDRSZ, &tlen)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
   }
 
   result = (text *)palloc(tlen);

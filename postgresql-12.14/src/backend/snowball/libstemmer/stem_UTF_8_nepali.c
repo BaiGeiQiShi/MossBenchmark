@@ -4,10 +4,11 @@
 #include "header.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-extern int
-nepali_UTF_8_stem(struct SN_env *z);
+  extern int
+  nepali_UTF_8_stem(struct SN_env *z);
 #ifdef __cplusplus
 }
 #endif
@@ -20,13 +21,14 @@ r_check_category_2(struct SN_env *z);
 static int
 r_remove_category_1(struct SN_env *z);
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-extern struct SN_env *
-nepali_UTF_8_create_env(void);
-extern void
-nepali_UTF_8_close_env(struct SN_env *z);
+  extern struct SN_env *
+  nepali_UTF_8_create_env(void);
+  extern void
+  nepali_UTF_8_close_env(struct SN_env *z);
 
 #ifdef __cplusplus
 }
@@ -285,30 +287,38 @@ r_remove_category_1(struct SN_env *z)
   int among_var;
   z->ket = z->c;                        /* [, line 54 */
   among_var = find_among_b(z, a_0, 17); /* substring, line 54 */
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 54 */
-  switch (among_var) { /* among, line 54 */
-  case 1: {
+  z->bra = z->c; /* ], line 54 */
+  switch (among_var)
+  { /* among, line 54 */
+  case 1:
+  {
     int ret = slice_del(z); /* delete, line 58 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
-  } break;
-  case 2: {
+  }
+  break;
+  case 2:
+  {
     int m1 = z->l - z->c;
     (void)m1; /* or, line 59 */
     {
       int m2 = z->l - z->c;
       (void)m2; /* or, line 59 */
-      if (!(eq_s_b(z, 3, s_0))) {
+      if (!(eq_s_b(z, 3, s_0)))
+      {
         goto lab3; /* literal, line 59 */
       }
       goto lab2;
     lab3:
       z->c = z->l - m2;
-      if (!(eq_s_b(z, 3, s_1))) {
+      if (!(eq_s_b(z, 3, s_1)))
+      {
         goto lab1; /* literal, line 59 */
       }
     }
@@ -318,7 +328,8 @@ r_remove_category_1(struct SN_env *z)
     z->c = z->l - m1;
     {
       int ret = slice_del(z); /* delete, line 59 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -333,10 +344,12 @@ static int
 r_check_category_2(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 64 */
-  if (z->c - 2 <= z->lb || z->p[z->c - 1] >> 5 != 4 || !((262 >> (z->p[z->c - 1] & 0x1f)) & 1)) {
+  if (z->c - 2 <= z->lb || z->p[z->c - 1] >> 5 != 4 || !((262 >> (z->p[z->c - 1] & 0x1f)) & 1))
+  {
     return 0; /* substring, line 64 */
   }
-  if (!(find_among_b(z, a_1, 3))) {
+  if (!(find_among_b(z, a_1, 3)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 64 */
@@ -348,53 +361,66 @@ r_remove_category_2(struct SN_env *z)
 { /* backwardmode */
   int among_var;
   z->ket = z->c; /* [, line 70 */
-  if (z->c - 2 <= z->lb || z->p[z->c - 1] >> 5 != 4 || !((262 >> (z->p[z->c - 1] & 0x1f)) & 1)) {
+  if (z->c - 2 <= z->lb || z->p[z->c - 1] >> 5 != 4 || !((262 >> (z->p[z->c - 1] & 0x1f)) & 1))
+  {
     return 0; /* substring, line 70 */
   }
   among_var = find_among_b(z, a_2, 3);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 70 */
-  switch (among_var) { /* among, line 70 */
-  case 1: {
+  z->bra = z->c; /* ], line 70 */
+  switch (among_var)
+  { /* among, line 70 */
+  case 1:
+  {
     int m1 = z->l - z->c;
     (void)m1; /* or, line 71 */
-    if (!(eq_s_b(z, 6, s_2))) {
+    if (!(eq_s_b(z, 6, s_2)))
+    {
       goto lab1; /* literal, line 71 */
     }
     goto lab0;
   lab1:
     z->c = z->l - m1;
-    if (!(eq_s_b(z, 6, s_3))) {
+    if (!(eq_s_b(z, 6, s_3)))
+    {
       goto lab2; /* literal, line 71 */
     }
     goto lab0;
   lab2:
     z->c = z->l - m1;
-    if (!(eq_s_b(z, 6, s_4))) {
+    if (!(eq_s_b(z, 6, s_4)))
+    {
       goto lab3; /* literal, line 71 */
     }
     goto lab0;
   lab3:
     z->c = z->l - m1;
-    if (!(eq_s_b(z, 6, s_5))) {
+    if (!(eq_s_b(z, 6, s_5)))
+    {
       return 0; /* literal, line 71 */
     }
   }
-  lab0: {
+  lab0:
+  {
     int ret = slice_del(z); /* delete, line 71 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
-  } break;
+  }
+  break;
   case 2:
-    if (!(eq_s_b(z, 9, s_6))) {
+    if (!(eq_s_b(z, 9, s_6)))
+    {
       return 0; /* literal, line 72 */
     }
     {
       int ret = slice_del(z); /* delete, line 72 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -407,13 +433,15 @@ static int
 r_remove_category_3(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 77 */
-  if (!(find_among_b(z, a_3, 91))) {
+  if (!(find_among_b(z, a_3, 91)))
+  {
     return 0; /* substring, line 77 */
   }
   z->bra = z->c; /* ], line 77 */
   {
     int ret = slice_del(z); /* delete, line 79 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -431,10 +459,12 @@ nepali_UTF_8_stem(struct SN_env *z)
     (void)m1; /* do, line 87 */
     {
       int ret = r_remove_category_1(z); /* call remove_category_1, line 87 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab0;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -443,8 +473,9 @@ nepali_UTF_8_stem(struct SN_env *z)
   }
   {
     int m2 = z->l - z->c;
-    (void)m2;   /* do, line 88 */
-    while (1) { /* repeat, line 89 */
+    (void)m2; /* do, line 88 */
+    while (1)
+    { /* repeat, line 89 */
       int m3 = z->l - z->c;
       (void)m3;
       {
@@ -455,20 +486,24 @@ nepali_UTF_8_stem(struct SN_env *z)
           (void)m5; /* and, line 89 */
           {
             int ret = r_check_category_2(z); /* call check_category_2, line 89 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab3;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
           z->c = z->l - m5;
           {
             int ret = r_remove_category_2(z); /* call remove_category_2, line 89 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab3;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -478,10 +513,12 @@ nepali_UTF_8_stem(struct SN_env *z)
       }
       {
         int ret = r_remove_category_3(z); /* call remove_category_3, line 89 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab2;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }

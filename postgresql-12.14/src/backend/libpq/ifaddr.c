@@ -49,33 +49,33 @@ range_sockaddr_AF_INET6(const struct sockaddr_in6 *addr, const struct sockaddr_i
 int
 pg_range_sockaddr(const struct sockaddr_storage *addr, const struct sockaddr_storage *netaddr, const struct sockaddr_storage *netmask)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (addr->ss_family == AF_INET)
+  {
+    return range_sockaddr_AF_INET((const struct sockaddr_in *)addr, (const struct sockaddr_in *)netaddr, (const struct sockaddr_in *)netmask);
+  }
+#ifdef HAVE_IPV6
+  else if (addr->ss_family == AF_INET6)
+  {
+    return range_sockaddr_AF_INET6((const struct sockaddr_in6 *)addr, (const struct sockaddr_in6 *)netaddr, (const struct sockaddr_in6 *)netmask);
+  }
+#endif
+  else
+  {
+    return 0;
+  }
 }
 
 static int
 range_sockaddr_AF_INET(const struct sockaddr_in *addr, const struct sockaddr_in *netaddr, const struct sockaddr_in *netmask)
 {
-
-
-
-
-
-
-
-
+  if (((addr->sin_addr.s_addr ^ netaddr->sin_addr.s_addr) & netmask->sin_addr.s_addr) == 0)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
 }
 
 #ifdef HAVE_IPV6
@@ -83,17 +83,17 @@ range_sockaddr_AF_INET(const struct sockaddr_in *addr, const struct sockaddr_in 
 static int
 range_sockaddr_AF_INET6(const struct sockaddr_in6 *addr, const struct sockaddr_in6 *netaddr, const struct sockaddr_in6 *netmask)
 {
+  int i;
 
+  for (i = 0; i < 16; i++)
+  {
+    if (((addr->sin6_addr.s6_addr[i] ^ netaddr->sin6_addr.s6_addr[i]) & netmask->sin6_addr.s6_addr[i]) != 0)
+    {
+      return 0;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
+  return 1;
 }
 #endif /* HAVE_IPV6 */
 
@@ -115,27 +115,27 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
 
   if (numbits == NULL)
   {
-
+    bits = (family == AF_INET) ? 32 : 128;
   }
   else
   {
     bits = strtol(numbits, &endptr, 10);
     if (*numbits == '\0' || *endptr != '\0')
     {
-
+      return -1;
     }
   }
 
   switch (family)
   {
-  case AF_INET:;
+  case AF_INET:
   {
     struct sockaddr_in mask4;
     long maskl;
 
     if (bits < 0 || bits > 32)
     {
-
+      return -1;
     }
     memset(&mask4, 0, sizeof(mask4));
     /* avoid "x << 32", which is not portable */
@@ -145,7 +145,7 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
     }
     else
     {
-
+      maskl = 0;
     }
     mask4.sin_addr.s_addr = pg_hton32(maskl);
     memcpy(mask, &mask4, sizeof(mask4));
@@ -153,21 +153,21 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
   }
 
 #ifdef HAVE_IPV6
-  case AF_INET6:;
+  case AF_INET6:
   {
     struct sockaddr_in6 mask6;
     int i;
 
     if (bits < 0 || bits > 128)
     {
-
+      return -1;
     }
     memset(&mask6, 0, sizeof(mask6));
     for (i = 0; i < 16; i++)
     {
       if (bits <= 0)
       {
-
+        mask6.sin6_addr.s6_addr[i] = 0;
       }
       else if (bits >= 8)
       {
@@ -175,7 +175,7 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
       }
       else
       {
-
+        mask6.sin6_addr.s6_addr[i] = (0xff << (8 - (int)bits)) & 0xff;
       }
       bits -= 8;
     }
@@ -183,8 +183,8 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
     break;
   }
 #endif
-  default:;;
-
+  default:
+    return -1;
   }
 
   mask->ss_family = family;
@@ -198,46 +198,46 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
 static void
 run_ifaddr_callback(PgIfAddrCallback callback, void *cb_data, struct sockaddr *addr, struct sockaddr *mask)
 {
+  struct sockaddr_storage fullmask;
 
+  if (!addr)
+  {
+    return;
+  }
 
+  /* Check that the mask is valid */
+  if (mask)
+  {
+    if (mask->sa_family != addr->sa_family)
+    {
+      mask = NULL;
+    }
+    else if (mask->sa_family == AF_INET)
+    {
+      if (((struct sockaddr_in *)mask)->sin_addr.s_addr == INADDR_ANY)
+      {
+        mask = NULL;
+      }
+    }
+#ifdef HAVE_IPV6
+    else if (mask->sa_family == AF_INET6)
+    {
+      if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)mask)->sin6_addr))
+      {
+        mask = NULL;
+      }
+    }
+#endif
+  }
 
+  /* If mask is invalid, generate our own fully-set mask */
+  if (!mask)
+  {
+    pg_sockaddr_cidr_mask(&fullmask, NULL, addr->sa_family);
+    mask = (struct sockaddr *)&fullmask;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  (*callback)(addr, mask, cb_data);
 }
 
 #ifdef WIN32
@@ -319,20 +319,20 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
+  struct ifaddrs *ifa, *l;
 
+  if (getifaddrs(&ifa) < 0)
+  {
+    return -1;
+  }
 
+  for (l = ifa; l; l = l->ifa_next)
+  {
+    run_ifaddr_callback(callback, cb_data, l->ifa_addr, l->ifa_netmask);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  freeifaddrs(ifa);
+  return 0;
 }
 #else /* !HAVE_GETIFADDRS && !WIN32 */
 

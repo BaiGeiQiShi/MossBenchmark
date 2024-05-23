@@ -124,7 +124,7 @@ OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
     amtup = SearchSysCache1(AMOID, ObjectIdGetDatum(amID));
     if (!HeapTupleIsValid(amtup))
     {
-
+      elog(ERROR, "cache lookup failed for access method %u", amID);
     }
     ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("operator family \"%s\" does not exist for access method \"%s\"", NameListToString(opfamilyname), NameStr(((Form_pg_am)GETSTRUCT(amtup))->amname))));
   }
@@ -210,7 +210,7 @@ OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
     amtup = SearchSysCache1(AMOID, ObjectIdGetDatum(amID));
     if (!HeapTupleIsValid(amtup))
     {
-
+      elog(ERROR, "cache lookup failed for access method %u", amID);
     }
     ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("operator class \"%s\" does not exist for access method \"%s\"", NameListToString(opclassname), NameStr(((Form_pg_am)GETSTRUCT(amtup))->amname))));
   }
@@ -245,8 +245,7 @@ get_opclass_oid(Oid amID, List *opclassname, bool missing_ok)
 
 /*
  * CreateOpFamily
- *		Internal routine to make the catalog entry for a new operator
- *family.
+ *		Internal routine to make the catalog entry for a new operator family.
  *
  * Caller must have done permissions checks etc. already.
  */
@@ -269,7 +268,7 @@ CreateOpFamily(CreateOpFamilyStmt *stmt, const char *opfname, Oid namespaceoid, 
    */
   if (SearchSysCacheExists3(OPFAMILYAMNAMENSP, ObjectIdGetDatum(amoid), CStringGetDatum(opfname), ObjectIdGetDatum(namespaceoid)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator family \"%s\" for access method \"%s\" already exists", opfname, stmt->amname)));
   }
 
   /*
@@ -365,14 +364,14 @@ DefineOpClass(CreateOpClassStmt *stmt)
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
   /* Get necessary info about access method */
   tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("access method \"%s\" does not exist", stmt->amname)));
   }
 
   amform = (Form_pg_am)GETSTRUCT(tup);
@@ -413,7 +412,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
    */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create an operator class")));
   }
 
   /* Look up the datatype */
@@ -434,7 +433,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
    */
   if (stmt->opfamilyname)
   {
-
+    opfamilyoid = get_opfamily_oid(amoid, stmt->opfamilyname, false);
   }
   else
   {
@@ -486,10 +485,12 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
     switch (item->itemtype)
     {
-    case OPCLASS_ITEM_OPERATOR:;
+    case OPCLASS_ITEM_OPERATOR:
       if (item->number <= 0 || item->number > maxOpNumber)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid operator number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxOpNumber)));
       }
       if (item->name->objargs != NIL)
       {
@@ -503,7 +504,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
       if (item->order_family)
       {
-
+        sortfamilyOid = get_opfamily_oid(BTREE_AM_OID, item->order_family, false);
       }
       else
       {
@@ -532,10 +533,12 @@ DefineOpClass(CreateOpClassStmt *stmt)
       assignOperTypes(member, amoid, typeoid);
       addFamilyMember(&operators, member, false);
       break;
-    case OPCLASS_ITEM_FUNCTION:;
+    case OPCLASS_ITEM_FUNCTION:
       if (item->number <= 0 || item->number > maxProcNumber)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid function number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxProcNumber)));
       }
       funcOid = LookupFuncWithArgs(OBJECT_FUNCTION, item->name, false);
 #ifdef NOT_USED
@@ -555,16 +558,16 @@ DefineOpClass(CreateOpClassStmt *stmt)
       /* allow overriding of the function's actual arg types */
       if (item->class_args)
       {
-
+        processTypesSpec(item->class_args, &member->lefttype, &member->righttype);
       }
 
       assignProcTypes(member, amoid, typeoid);
       addFamilyMember(&procedures, member, true);
       break;
-    case OPCLASS_ITEM_STORAGETYPE:;
+    case OPCLASS_ITEM_STORAGETYPE:
       if (OidIsValid(storageoid))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("storage type specified more than once")));
       }
       storageoid = typenameTypeId(NULL, item->storedtype);
 
@@ -577,9 +580,9 @@ DefineOpClass(CreateOpClassStmt *stmt)
       }
 #endif
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized item type: %d", item->itemtype);
+      break;
     }
   }
 
@@ -593,10 +596,10 @@ DefineOpClass(CreateOpClassStmt *stmt)
     {
       storageoid = InvalidOid;
     }
-
-
-
-
+    else if (!amstorage)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("storage type cannot be different from data type for access method \"%s\"", stmt->amname)));
+    }
   }
 
   rel = table_open(OperatorClassRelationId, RowExclusiveLock);
@@ -607,7 +610,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
    */
   if (SearchSysCacheExists3(CLAAMNAMENSP, ObjectIdGetDatum(amoid), CStringGetDatum(opcname), ObjectIdGetDatum(namespaceoid)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator class \"%s\" for access method \"%s\" already exists", opcname, stmt->amname)));
   }
 
   /*
@@ -630,7 +633,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
       if (opclass->opcintype == typeoid && opclass->opcdefault)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("could not make operator class \"%s\" be default for type %s", opcname, TypeNameToString(stmt->datatype)), errdetail("Operator class \"%s\" already is the default.", NameStr(opclass->opcname))));
       }
     }
 
@@ -700,10 +703,10 @@ DefineOpClass(CreateOpClassStmt *stmt)
   /* dependency on storage datatype */
   if (OidIsValid(storageoid))
   {
-
-
-
-
+    referenced.classId = TypeRelationId;
+    referenced.objectId = storageoid;
+    referenced.objectSubId = 0;
+    recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
   /* dependency on owner */
@@ -739,7 +742,7 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
   /* Get access method OID, throwing an error if it doesn't exist. */
@@ -753,7 +756,7 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
    */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create an operator family")));
   }
 
   /* Insert pg_opfamily catalog entry */
@@ -762,8 +765,7 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
 
 /*
  * AlterOpFamily
- *		Add or remove operators/procedures within an existing operator
- *family.
+ *		Add or remove operators/procedures within an existing operator family.
  *
  * Note: this implements only ALTER OPERATOR FAMILY ... ADD/DROP.  Some
  * other commands called ALTER OPERATOR FAMILY exist, but go through
@@ -856,10 +858,12 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
 
     switch (item->itemtype)
     {
-    case OPCLASS_ITEM_OPERATOR:;
+    case OPCLASS_ITEM_OPERATOR:
       if (item->number <= 0 || item->number > maxOpNumber)
       {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid operator number %d, must be between 1 and %d", item->number, maxOpNumber)));
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid operator number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxOpNumber)));
       }
       if (item->name->objargs != NIL)
       {
@@ -902,10 +906,12 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       assignOperTypes(member, amoid, InvalidOid);
       addFamilyMember(&operators, member, false);
       break;
-    case OPCLASS_ITEM_FUNCTION:;
+    case OPCLASS_ITEM_FUNCTION:
       if (item->number <= 0 || item->number > maxProcNumber)
       {
-        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid function number %d, must be between 1 and %d", item->number, maxProcNumber)));
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid function number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxProcNumber)));
       }
       funcOid = LookupFuncWithArgs(OBJECT_FUNCTION, item->name, false);
 #ifdef NOT_USED
@@ -925,18 +931,18 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       /* allow overriding of the function's actual arg types */
       if (item->class_args)
       {
-
+        processTypesSpec(item->class_args, &member->lefttype, &member->righttype);
       }
 
       assignProcTypes(member, amoid, InvalidOid);
       addFamilyMember(&procedures, member, true);
       break;
-    case OPCLASS_ITEM_STORAGETYPE:;
+    case OPCLASS_ITEM_STORAGETYPE:
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("STORAGE cannot be specified in ALTER OPERATOR FAMILY")));
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized item type: %d", item->itemtype);
+      break;
     }
   }
 
@@ -975,10 +981,12 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
 
     switch (item->itemtype)
     {
-    case OPCLASS_ITEM_OPERATOR:;
+    case OPCLASS_ITEM_OPERATOR:
       if (item->number <= 0 || item->number > maxOpNumber)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid operator number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxOpNumber)));
       }
       processTypesSpec(item->class_args, &lefttype, &righttype);
       /* Save the info */
@@ -988,10 +996,12 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
       member->righttype = righttype;
       addFamilyMember(&operators, member, false);
       break;
-    case OPCLASS_ITEM_FUNCTION:;
+    case OPCLASS_ITEM_FUNCTION:
       if (item->number <= 0 || item->number > maxProcNumber)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("invalid function number %d,"
+                                                                           " must be between 1 and %d",
+                                                                        item->number, maxProcNumber)));
       }
       processTypesSpec(item->class_args, &lefttype, &righttype);
       /* Save the info */
@@ -1001,11 +1011,11 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
       member->righttype = righttype;
       addFamilyMember(&procedures, member, true);
       break;
-    case OPCLASS_ITEM_STORAGETYPE:;
+    case OPCLASS_ITEM_STORAGETYPE:
       /* grammar prevents this from appearing */
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized item type: %d", item->itemtype);
+      break;
     }
   }
 
@@ -1039,7 +1049,7 @@ processTypesSpec(List *args, Oid *lefttype, Oid *righttype)
   }
   else
   {
-
+    *righttype = *lefttype;
   }
 
   if (list_length(args) > 2)
@@ -1062,7 +1072,7 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   optup = SearchSysCache1(OPEROID, ObjectIdGetDatum(member->object));
   if (!HeapTupleIsValid(optup))
   {
-
+    elog(ERROR, "cache lookup failed for operator %u", member->object);
   }
   opform = (Form_pg_operator)GETSTRUCT(optup);
 
@@ -1071,7 +1081,7 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
    */
   if (opform->oprkind != 'b')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("index operators must be binary")));
   }
 
   if (OidIsValid(member->sortfamily))
@@ -1100,7 +1110,7 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
      */
     if (opform->oprresult != BOOLOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("index search operators must return boolean")));
     }
   }
 
@@ -1133,7 +1143,7 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(member->object));
   if (!HeapTupleIsValid(proctup))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", member->object);
   }
   procform = (Form_pg_proc)GETSTRUCT(proctup);
 
@@ -1170,45 +1180,45 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
         member->righttype = procform->proargtypes.values[1];
       }
     }
+    else if (member->number == BTSORTSUPPORT_PROC)
+    {
+      if (procform->pronargs != 1 || procform->proargtypes.values[0] != INTERNALOID)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree sort support functions must accept type \"internal\"")));
+      }
+      if (procform->prorettype != VOIDOID)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree sort support functions must return void")));
+      }
 
+      /*
+       * Can't infer lefttype/righttype from proc, so use default rule
+       */
+    }
+    else if (member->number == BTINRANGE_PROC)
+    {
+      if (procform->pronargs != 5)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree in_range functions must have five arguments")));
+      }
+      if (procform->prorettype != BOOLOID)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree in_range functions must return boolean")));
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * If lefttype/righttype isn't specified, use the proc's input
+       * types (we look at the test-value and offset arguments)
+       */
+      if (!OidIsValid(member->lefttype))
+      {
+        member->lefttype = procform->proargtypes.values[0];
+      }
+      if (!OidIsValid(member->righttype))
+      {
+        member->righttype = procform->proargtypes.values[2];
+      }
+    }
   }
   else if (amoid == HASH_AM_OID)
   {
@@ -1227,11 +1237,11 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
     {
       if (procform->pronargs != 2)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("hash function 2 must have two arguments")));
       }
       if (procform->prorettype != INT8OID)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("hash function 2 must return bigint")));
       }
     }
 
@@ -1432,7 +1442,7 @@ storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, 
      */
     if (isAdd && SearchSysCacheExists4(AMPROCNUM, ObjectIdGetDatum(opfamilyoid), ObjectIdGetDatum(proc->lefttype), ObjectIdGetDatum(proc->righttype), Int16GetDatum(proc->number)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("function %d(%s,%s) already exists in operator family \"%s\"", proc->number, format_type_be(proc->lefttype), format_type_be(proc->righttype), NameListToString(opfamilyname))));
     }
 
     /* Create the pg_amproc entry */
@@ -1565,9 +1575,9 @@ RemoveOpFamilyById(Oid opfamilyOid)
   rel = table_open(OperatorFamilyRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for opfamily %u", opfamilyOid);
   }
 
   CatalogTupleDelete(rel, &tup->t_self);
@@ -1586,9 +1596,9 @@ RemoveOpClassById(Oid opclassOid)
   rel = table_open(OperatorClassRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for opclass %u", opclassOid);
   }
 
   CatalogTupleDelete(rel, &tup->t_self);
@@ -1616,7 +1626,7 @@ RemoveAmOpEntryById(Oid entryOid)
   tup = systable_getnext(scan);
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "could not find tuple for amop entry %u", entryOid);
   }
 
   CatalogTupleDelete(rel, &tup->t_self);
@@ -1643,7 +1653,7 @@ RemoveAmProcEntryById(Oid entryOid)
   tup = systable_getnext(scan);
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "could not find tuple for amproc entry %u", entryOid);
   }
 
   CatalogTupleDelete(rel, &tup->t_self);

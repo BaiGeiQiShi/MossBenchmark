@@ -236,15 +236,15 @@ clauselist_selectivity_simple(PlannerInfo *root, List *clauses, int varRelid, Jo
          */
         switch (get_oprrest(expr->opno))
         {
-        case F_SCALARLTSEL:;
-        case F_SCALARLESEL:;
+        case F_SCALARLTSEL:
+        case F_SCALARLESEL:
           addRangeClause(&rqlist, clause, varonleft, true, s2);
           break;
-        case F_SCALARGTSEL:;
-        case F_SCALARGESEL:;
+        case F_SCALARGTSEL:
+        case F_SCALARGESEL:
           addRangeClause(&rqlist, clause, varonleft, false, s2);
           break;
-        default:;;
+        default:
           /* Just merge the selectivity in generically */
           s1 = s1 * s2;
           break;
@@ -301,7 +301,7 @@ clauselist_selectivity_simple(PlannerInfo *root, List *clauses, int varRelid, Jo
              * No data available --- use a default estimate that
              * is small, but not real small.
              */
-
+            s2 = DEFAULT_RANGE_INEQ_SEL;
           }
           else
           {
@@ -389,7 +389,7 @@ addRangeClause(RangeQueryClause **rqlist, Node *clause, bool varonleft, bool isL
          */
         if (rqelem->lobound > s2)
         {
-
+          rqelem->lobound = s2;
         }
       }
     }
@@ -505,15 +505,15 @@ bms_is_subset_singleton(const Bitmapset *s, int x)
 {
   switch (bms_membership(s))
   {
-  case BMS_EMPTY_SET:;
-
-  case BMS_SINGLETON:;
+  case BMS_EMPTY_SET:
+    return true;
+  case BMS_SINGLETON:
     return bms_is_member(x, s);
-  case BMS_MULTIPLE:;
+  case BMS_MULTIPLE:
     return false;
   }
   /* can't get here... */
-
+  return false;
 }
 
 /*
@@ -608,9 +608,9 @@ clause_selectivity(PlannerInfo *root, Node *clause, int varRelid, JoinType joint
   RestrictInfo *rinfo = NULL;
   bool cacheable = false;
 
-  if (clause == NULL)
-  { /* can this still happen? */
-
+  if (clause == NULL) /* can this still happen? */
+  {
+    return s1;
   }
 
   if (IsA(clause, RestrictInfo))
@@ -718,7 +718,7 @@ clause_selectivity(PlannerInfo *root, Node *clause, int varRelid, JoinType joint
       /* bool constant is pretty easy... */
       Const *con = (Const *)subst;
 
-
+      s1 = con->constisnull ? 0.0 : DatumGetBool(con->constvalue) ? 1.0 : 0.0;
     }
     else
     {
@@ -821,12 +821,12 @@ clause_selectivity(PlannerInfo *root, Node *clause, int varRelid, JoinType joint
   else if (IsA(clause, RelabelType))
   {
     /* Not sure this case is needed, but it can't hurt */
-
+    s1 = clause_selectivity(root, (Node *)((RelabelType *)clause)->arg, varRelid, jointype, sjinfo);
   }
   else if (IsA(clause, CoerceToDomain))
   {
     /* Not sure this case is needed, but it can't hurt */
-
+    s1 = clause_selectivity(root, (Node *)((CoerceToDomain *)clause)->arg, varRelid, jointype, sjinfo);
   }
   else
   {

@@ -53,16 +53,16 @@ NamedTuplestoreScanNext(NamedTuplestoreScanState *node)
 static bool
 NamedTuplestoreScanRecheck(NamedTuplestoreScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------
  *		ExecNamedTuplestoreScan(node)
  *
- *		Scans the CTE sequentially and returns the next qualifying
- *tuple. We call the ExecScan() routine and pass it the appropriate access
- *method functions.
+ *		Scans the CTE sequentially and returns the next qualifying tuple.
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
  * ----------------------------------------------------------------
  */
 static TupleTableSlot *
@@ -103,7 +103,7 @@ ExecInitNamedTuplestoreScan(NamedTuplestoreScan *node, EState *estate, int eflag
   enr = get_ENR(estate->es_queryEnv, node->enrname);
   if (!enr)
   {
-
+    elog(ERROR, "executor could not find named tuplestore \"%s\"", node->enrname);
   }
 
   Assert(enr->reldata);
@@ -184,18 +184,18 @@ ExecEndNamedTuplestoreScan(NamedTuplestoreScanState *node)
 void
 ExecReScanNamedTuplestoreScan(NamedTuplestoreScanState *node)
 {
+  Tuplestorestate *tuplestorestate = node->relation;
 
+  if (node->ss.ps.ps_ResultTupleSlot)
+  {
+    ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+  }
 
+  ExecScanReScan(&node->ss);
 
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Rewind my own pointer.
+   */
+  tuplestore_select_read_pointer(tuplestorestate, node->readptr);
+  tuplestore_rescan(tuplestorestate);
 }

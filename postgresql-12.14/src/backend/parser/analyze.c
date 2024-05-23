@@ -124,7 +124,7 @@ parse_analyze(RawStmt *parseTree, const char *sourceText, Oid *paramTypes, int n
 
   if (post_parse_analyze_hook)
   {
-
+    (*post_parse_analyze_hook)(pstate, query);
   }
 
   free_parsestate(pstate);
@@ -158,7 +158,7 @@ parse_analyze_varparams(RawStmt *parseTree, const char *sourceText, Oid **paramT
 
   if (post_parse_analyze_hook)
   {
-
+    (*post_parse_analyze_hook)(pstate, query);
   }
 
   free_parsestate(pstate);
@@ -278,7 +278,7 @@ transformStmt(ParseState *pstate, Node *parseTree)
   case T_DeleteStmt:
     (void)test_raw_expression_coverage(parseTree, NULL);
     break;
-  default:;
+  default:
     break;
   }
 #endif /* RAW_EXPRESSION_COVERAGE_TEST */
@@ -288,19 +288,19 @@ transformStmt(ParseState *pstate, Node *parseTree)
     /*
      * Optimizable statements
      */
-  case T_InsertStmt:;
+  case T_InsertStmt:
     result = transformInsertStmt(pstate, (InsertStmt *)parseTree);
     break;
 
-  case T_DeleteStmt:;
+  case T_DeleteStmt:
     result = transformDeleteStmt(pstate, (DeleteStmt *)parseTree);
     break;
 
-  case T_UpdateStmt:;
+  case T_UpdateStmt:
     result = transformUpdateStmt(pstate, (UpdateStmt *)parseTree);
     break;
 
-  case T_SelectStmt:;
+  case T_SelectStmt:
   {
     SelectStmt *n = (SelectStmt *)parseTree;
 
@@ -322,23 +322,23 @@ transformStmt(ParseState *pstate, Node *parseTree)
     /*
      * Special cases
      */
-  case T_DeclareCursorStmt:;
+  case T_DeclareCursorStmt:
     result = transformDeclareCursorStmt(pstate, (DeclareCursorStmt *)parseTree);
     break;
 
-  case T_ExplainStmt:;
+  case T_ExplainStmt:
     result = transformExplainStmt(pstate, (ExplainStmt *)parseTree);
     break;
 
-  case T_CreateTableAsStmt:;
+  case T_CreateTableAsStmt:
     result = transformCreateTableAsStmt(pstate, (CreateTableAsStmt *)parseTree);
     break;
 
-  case T_CallStmt:;
+  case T_CallStmt:
     result = transformCallStmt(pstate, (CallStmt *)parseTree);
     break;
 
-  default:;;
+  default:
 
     /*
      * other statements don't require any transformation; just return
@@ -359,8 +359,8 @@ transformStmt(ParseState *pstate, Node *parseTree)
 
 /*
  * analyze_requires_snapshot
- *		Returns true if a snapshot must be set before doing parse
- *analysis on the given raw parse tree.
+ *		Returns true if a snapshot must be set before doing parse analysis
+ *		on the given raw parse tree.
  *
  * Classification here should match transformStmt().
  */
@@ -374,24 +374,24 @@ analyze_requires_snapshot(RawStmt *parseTree)
     /*
      * Optimizable statements
      */
-  case T_InsertStmt:;
-  case T_DeleteStmt:;
-  case T_UpdateStmt:;
-  case T_SelectStmt:;
+  case T_InsertStmt:
+  case T_DeleteStmt:
+  case T_UpdateStmt:
+  case T_SelectStmt:
     result = true;
     break;
 
     /*
      * Special cases
      */
-  case T_DeclareCursorStmt:;
-  case T_ExplainStmt:;
-  case T_CreateTableAsStmt:;
+  case T_DeclareCursorStmt:
+  case T_ExplainStmt:
+  case T_CreateTableAsStmt:
     /* yes, because we must analyze the contained statement */
     result = true;
     break;
 
-  default:;;
+  default:
     /* other utility statements don't have any real parse analysis */
     result = false;
     break;
@@ -464,7 +464,7 @@ transformDeleteStmt(ParseState *pstate, DeleteStmt *stmt)
   /* this must be done after collations, for reliable comparison of exprs */
   if (pstate->p_hasAggs)
   {
-
+    parseCheckAggregates(pstate, qry);
   }
 
   return qry;
@@ -611,7 +611,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
     /* The grammar should have produced a SELECT */
     if (!IsA(selectQuery, Query) || selectQuery->commandType != CMD_SELECT)
     {
-
+      elog(ERROR, "unexpected non-SELECT command in INSERT ... SELECT");
     }
 
     /*
@@ -705,7 +705,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
       }
       else if (sublist_length != list_length(sublist))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("VALUES lists must all be the same length"), parser_errposition(pstate, exprLocation((Node *)sublist))));
       }
 
       /*
@@ -929,7 +929,7 @@ transformInsertRow(ParseState *pstate, List *exprlist, List *stmtcols, List *ico
 
           if (sbsref->refassgnexpr == NULL)
           {
-
+            break;
           }
 
           expr = sbsref->refassgnexpr;
@@ -1026,8 +1026,8 @@ transformOnConflictClause(ParseState *pstate, OnConflictClause *onConflictClause
 
 /*
  * BuildOnConflictExcludedTargetlist
- *		Create target list for the EXCLUDED pseudo-relation of ON
- *CONFLICT, representing the columns of targetrel with varno exclRelIndex.
+ *		Create target list for the EXCLUDED pseudo-relation of ON CONFLICT,
+ *		representing the columns of targetrel with varno exclRelIndex.
  *
  * Note: Exported for use in the rewriter.
  */
@@ -1094,42 +1094,42 @@ BuildOnConflictExcludedTargetlist(Relation targetrel, Index exclRelIndex)
 static int
 count_rowexpr_columns(ParseState *pstate, Node *expr)
 {
+  if (expr == NULL)
+  {
+    return -1;
+  }
+  if (IsA(expr, RowExpr))
+  {
+    return list_length(((RowExpr *)expr)->args);
+  }
+  if (IsA(expr, Var))
+  {
+    Var *var = (Var *)expr;
+    AttrNumber attnum = var->varattno;
 
+    if (attnum > 0 && var->vartype == RECORDOID)
+    {
+      RangeTblEntry *rte;
 
+      rte = GetRTEByRangeTablePosn(pstate, var->varno, var->varlevelsup);
+      if (rte->rtekind == RTE_SUBQUERY)
+      {
+        /* Subselect-in-FROM: examine sub-select's output expr */
+        TargetEntry *ste = get_tle_by_resno(rte->subquery->targetList, attnum);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if (ste == NULL || ste->resjunk)
+        {
+          return -1;
+        }
+        expr = (Node *)ste->expr;
+        if (IsA(expr, RowExpr))
+        {
+          return list_length(((RowExpr *)expr)->args);
+        }
+      }
+    }
+  }
+  return -1;
 }
 
 /*
@@ -1324,7 +1324,7 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
     }
     else if (sublist_length != list_length(sublist))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("VALUES lists must all be the same length"), parser_errposition(pstate, exprLocation((Node *)sublist))));
     }
 
     /* Build per-column expression lists */
@@ -1449,7 +1449,10 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 
   if (stmt->lockingClause)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s cannot be applied to VALUES", LCS_asString(((LockingClause *)linitial(stmt->lockingClause))->strength))));
   }
 
   qry->rtable = pstate->p_rtable;
@@ -1510,7 +1513,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
   Assert(leftmostSelect && IsA(leftmostSelect, SelectStmt) && leftmostSelect->larg == NULL);
   if (leftmostSelect->intoClause)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("SELECT ... INTO is not allowed here"), parser_errposition(pstate, exprLocation((Node *)leftmostSelect->intoClause))));
   }
 
   /*
@@ -1533,7 +1536,10 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
   /* We don't support FOR UPDATE/SHARE with set ops at the moment. */
   if (lockingClause)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s is not allowed with UNION/INTERSECT/EXCEPT", LCS_asString(((LockingClause *)linitial(lockingClause))->strength))));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with UNION/INTERSECT/EXCEPT", LCS_asString(((LockingClause *)linitial(lockingClause))->strength))));
   }
 
   /* Process the WITH clause independently of all else */
@@ -1635,7 +1641,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 
   if (tllen != list_length(qry->targetList))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("invalid UNION/INTERSECT/EXCEPT ORDER BY clause"), errdetail("Only result column names can be used, not expressions or functions."), errhint("Add the expression/function to every SELECT, or move the UNION into a FROM clause."), parser_errposition(pstate, exprLocation(list_nth(qry->targetList, tllen)))));
   }
 
   qry->limitOffset = transformLimitClause(pstate, limitOffset, EXPR_KIND_OFFSET, "OFFSET");
@@ -1651,7 +1657,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 
   foreach (l, lockingClause)
   {
-
+    transformLockingClause(pstate, qry, (LockingClause *)lfirst(l), false);
   }
 
   assign_query_collations(pstate, qry);
@@ -1659,7 +1665,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
   /* this must be done after collations, for reliable comparison of exprs */
   if (pstate->p_hasAggs || qry->groupClause || qry->groupingSets || qry->havingQual)
   {
-
+    parseCheckAggregates(pstate, qry);
   }
 
   return qry;
@@ -1694,17 +1700,21 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt, bool isTopLevel,
    */
   if (stmt->intoClause)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("INTO is only allowed on first SELECT of UNION/INTERSECT/EXCEPT"), parser_errposition(pstate, exprLocation((Node *)stmt->intoClause))));
   }
 
   /* We don't support FOR UPDATE/SHARE with set ops at the moment. */
   if (stmt->lockingClause)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with UNION/INTERSECT/EXCEPT", LCS_asString(((LockingClause *)linitial(stmt->lockingClause))->strength))));
   }
 
   /*
-   * If an internal node of a set-op tree has ORDER BY, LIMIT, FOR UPDATE,   * or WITH clauses attached, we need to treat it like a leaf node to
+   * If an internal node of a set-op tree has ORDER BY, LIMIT, FOR UPDATE,
+   * or WITH clauses attached, we need to treat it like a leaf node to
    * generate an independent sub-Query tree.  Otherwise, it can be
    * represented by a SetOperationStmt node underneath the parent Query.
    */
@@ -1759,10 +1769,10 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt, bool isTopLevel,
      */
     if (pstate->p_namespace)
     {
-
-
-
-
+      if (contain_vars_of_level((Node *)selectQuery, 1))
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_COLUMN_REFERENCE), errmsg("UNION/INTERSECT/EXCEPT member statement cannot refer to other relations of same query level"), parser_errposition(pstate, locate_var_of_level((Node *)selectQuery, 1))));
+      }
     }
 
     /*
@@ -1839,7 +1849,7 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt, bool isTopLevel,
      */
     if (list_length(ltargetlist) != list_length(rtargetlist))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("each %s query must have the same number of columns", context), parser_errposition(pstate, exprLocation((Node *)rtargetlist))));
     }
 
     if (targetlist)
@@ -1895,7 +1905,8 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt, bool isTopLevel,
        * depended on the type of this output column, it'd have already
        * coerced the UNKNOWN to something else.  We want to do this
        * because (a) we want to verify that a Const is valid for the
-       * target type, or resolve the actual type of an UNKNOWN Param,       * and (b) we want to avoid unnecessary discrepancies between the
+       * target type, or resolve the actual type of an UNKNOWN Param,
+       * and (b) we want to avoid unnecessary discrepancies between the
        * output type of the child query and the resolved target type.
        * Such a discrepancy would disable optimization in the planner.
        *
@@ -2016,7 +2027,7 @@ determineRecursiveColTypes(ParseState *pstate, Node *larg, List *nrtargetlist)
   node = larg;
   while (node && IsA(node, SetOperationStmt))
   {
-
+    node = ((SetOperationStmt *)node)->larg;
   }
   Assert(node && IsA(node, RangeTblRef));
   leftmostRTI = ((RangeTblRef *)node)->rtindex;
@@ -2153,7 +2164,7 @@ transformUpdateTargetList(ParseState *pstate, List *origTlist)
     }
     if (orig_tl == NULL)
     {
-
+      elog(ERROR, "UPDATE target count mismatch --- internal error");
     }
     origTarget = lfirst_node(ResTarget, orig_tl);
 
@@ -2172,7 +2183,7 @@ transformUpdateTargetList(ParseState *pstate, List *origTlist)
   }
   if (orig_tl != NULL)
   {
-
+    elog(ERROR, "UPDATE target count mismatch --- internal error");
   }
 
   return tlist;
@@ -2207,11 +2218,12 @@ transformReturningList(ParseState *pstate, List *returningList)
   /*
    * Complain if the nonempty tlist expanded to nothing (which is possible
    * if it contains only a star-expansion of a zero-column table).  If we
-   * allow this, the parsed Query will look like it didn't have RETURNING,   * with results that would probably surprise the user.
+   * allow this, the parsed Query will look like it didn't have RETURNING,
+   * with results that would probably surprise the user.
    */
   if (rlist == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("RETURNING must have at least one column"), parser_errposition(pstate, exprLocation(linitial(returningList)))));
   }
 
   /* mark column origins */
@@ -2250,7 +2262,7 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
    */
   if ((stmt->options & CURSOR_OPT_SCROLL) && (stmt->options & CURSOR_OPT_NO_SCROLL))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_DEFINITION), errmsg("cannot specify both SCROLL and NO SCROLL")));
   }
 
   /* Transform contained query, not allowing SELECT INTO */
@@ -2260,7 +2272,7 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
   /* Grammar should not have allowed anything but SELECT */
   if (!IsA(query, Query) || query->commandType != CMD_SELECT)
   {
-
+    elog(ERROR, "unexpected non-SELECT command in DECLARE CURSOR");
   }
 
   /*
@@ -2270,25 +2282,34 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
    */
   if (query->hasModifyingCTE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("DECLARE CURSOR must not contain data-modifying statements in WITH")));
   }
 
   /* FOR UPDATE and WITH HOLD are not compatible */
   if (query->rowMarks != NIL && (stmt->options & CURSOR_OPT_HOLD))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("DECLARE CURSOR WITH HOLD ... %s is not supported", LCS_asString(((RowMarkClause *)linitial(query->rowMarks))->strength)), errdetail("Holdable cursors must be READ ONLY.")));
   }
 
   /* FOR UPDATE and SCROLL are not compatible */
   if (query->rowMarks != NIL && (stmt->options & CURSOR_OPT_SCROLL))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("DECLARE SCROLL CURSOR ... %s is not supported", LCS_asString(((RowMarkClause *)linitial(query->rowMarks))->strength)), errdetail("Scrollable cursors must be READ ONLY.")));
   }
 
   /* FOR UPDATE and INSENSITIVE are not compatible */
   if (query->rowMarks != NIL && (stmt->options & CURSOR_OPT_INSENSITIVE))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("DECLARE INSENSITIVE CURSOR ... %s is not supported", LCS_asString(((RowMarkClause *)linitial(query->rowMarks))->strength)), errdetail("Insensitive cursors must be READ ONLY.")));
   }
 
   /* represent the command as a utility Query */
@@ -2327,8 +2348,8 @@ transformExplainStmt(ParseState *pstate, ExplainStmt *stmt)
 
 /*
  * transformCreateTableAsStmt -
- *	transform a CREATE TABLE AS, SELECT ... INTO, or CREATE MATERIALIZED
- *VIEW Statement
+ *	transform a CREATE TABLE AS, SELECT ... INTO, or CREATE MATERIALIZED VIEW
+ *	Statement
  *
  * As with DECLARE CURSOR and EXPLAIN, transform the contained statement now.
  */
@@ -2352,7 +2373,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
      */
     if (query->hasModifyingCTE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialized views must not use data-modifying statements in WITH")));
     }
 
     /*
@@ -2362,7 +2383,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
      */
     if (isQueryUsingTempRelation(query))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialized views must not use temporary tables or views")));
     }
 
     /*
@@ -2372,7 +2393,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
      */
     if (query_contains_extern_params(query))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialized views may not be defined using bound parameters")));
     }
 
     /*
@@ -2384,7 +2405,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
      */
     if (stmt->into->rel->relpersistence == RELPERSISTENCE_UNLOGGED)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialized views cannot be unlogged")));
     }
 
     /*
@@ -2445,19 +2466,19 @@ LCS_asString(LockClauseStrength strength)
 {
   switch (strength)
   {
-  case LCS_NONE:;
-
-
-  case LCS_FORKEYSHARE:;
-
-  case LCS_FORSHARE:;
-
-  case LCS_FORNOKEYUPDATE:;
+  case LCS_NONE:
+    Assert(false);
+    break;
+  case LCS_FORKEYSHARE:
+    return "FOR KEY SHARE";
+  case LCS_FORSHARE:
+    return "FOR SHARE";
+  case LCS_FORNOKEYUPDATE:
     return "FOR NO KEY UPDATE";
-  case LCS_FORUPDATE:;
+  case LCS_FORUPDATE:
     return "FOR UPDATE";
   }
-
+  return "FOR some"; /* shouldn't happen */
 }
 
 /*
@@ -2472,31 +2493,52 @@ CheckSelectLocking(Query *qry, LockClauseStrength strength)
 
   if (qry->setOperations)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with UNION/INTERSECT/EXCEPT", LCS_asString(strength))));
   }
   if (qry->distinctClause != NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with DISTINCT clause", LCS_asString(strength))));
   }
   if (qry->groupClause != NIL || qry->groupingSets != NIL)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s is not allowed with GROUP BY clause", LCS_asString(strength))));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with GROUP BY clause", LCS_asString(strength))));
   }
   if (qry->havingQual != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with HAVING clause", LCS_asString(strength))));
   }
   if (qry->hasAggs)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("%s is not allowed with aggregate functions", LCS_asString(strength))));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with aggregate functions", LCS_asString(strength))));
   }
   if (qry->hasWindowFuncs)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with window functions", LCS_asString(strength))));
   }
   if (qry->hasTargetSRFs)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /*------
+                         translator: %s is a SQL row locking clause such as FOR UPDATE */
+                       errmsg("%s is not allowed with set-returning functions in the target list", LCS_asString(strength))));
   }
 }
 
@@ -2547,12 +2589,12 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc, bool p
       }
       switch (rte->rtekind)
       {
-      case RTE_RELATION:;
+      case RTE_RELATION:
         applyLockingClause(qry, i, lc->strength, lc->waitPolicy, pushedDown);
         rte->requiredPerms |= ACL_SELECT_FOR_UPDATE;
         break;
-      case RTE_SUBQUERY:;
-
+      case RTE_SUBQUERY:
+        applyLockingClause(qry, i, lc->strength, lc->waitPolicy, pushedDown);
 
         /*
          * FOR UPDATE/SHARE of subquery is propagated to all of
@@ -2561,9 +2603,9 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc, bool p
          * to have local knowledge in each query level about which
          * rels need to be opened with RowShareLock.
          */
-
-
-      default:;;
+        transformLockingClause(pstate, rte->subquery, allrels, true);
+        break;
+      default:
         /* ignore JOIN, SPECIAL, FUNCTION, VALUES, CTE RTEs */
         break;
       }
@@ -2583,7 +2625,10 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc, bool p
       /* For simplicity we insist on unqualified alias names here */
       if (thisrel->catalogname || thisrel->schemaname)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                           /*------
+                             translator: %s is a SQL row locking clause such as FOR UPDATE */
+                           errmsg("%s must specify unqualified relation names", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
       }
 
       i = 0;
@@ -2611,46 +2656,67 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc, bool p
         {
           switch (rte->rtekind)
           {
-          case RTE_RELATION:;
+          case RTE_RELATION:
             applyLockingClause(qry, i, lc->strength, lc->waitPolicy, pushedDown);
             rte->requiredPerms |= ACL_SELECT_FOR_UPDATE;
             break;
-          case RTE_SUBQUERY:;
-
+          case RTE_SUBQUERY:
+            applyLockingClause(qry, i, lc->strength, lc->waitPolicy, pushedDown);
             /* see comment above */
-
-
-          case RTE_JOIN:;
-
-
-          case RTE_FUNCTION:;
-
-
-          case RTE_TABLEFUNC:;
-
-
-          case RTE_VALUES:;
-
-
-          case RTE_CTE:;
-
-
-          case RTE_NAMEDTUPLESTORE:;
-
-
+            transformLockingClause(pstate, rte->subquery, allrels, true);
+            break;
+          case RTE_JOIN:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to a join", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
+          case RTE_FUNCTION:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to a function", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
+          case RTE_TABLEFUNC:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to a table function", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
+          case RTE_VALUES:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to VALUES", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
+          case RTE_CTE:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to a WITH query", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
+          case RTE_NAMEDTUPLESTORE:
+            ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                               /*------
+                                 translator: %s is a SQL row locking clause such as FOR UPDATE */
+                               errmsg("%s cannot be applied to a named tuplestore", LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+            break;
 
             /* Shouldn't be possible to see RTE_RESULT here */
 
-          default:;;
-
-
+          default:
+            elog(ERROR, "unrecognized RTE type: %d", (int)rte->rtekind);
+            break;
           }
           break; /* out of foreach loop */
         }
       }
       if (rt == NULL)
       {
-        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE), errmsg("relation \"%s\" in %s clause not found in FROM clause", thisrel->relname, LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE),
+                           /*------
+                             translator: %s is a SQL row locking clause such as FOR UPDATE */
+                           errmsg("relation \"%s\" in %s clause not found in FROM clause", thisrel->relname, LCS_asString(lc->strength)), parser_errposition(pstate, thisrel->location)));
       }
     }
   }
@@ -2694,10 +2760,10 @@ applyLockingClause(Query *qry, Index rtindex, LockClauseStrength strength, LockW
      *
      * And of course pushedDown becomes false if any clause is explicit.
      */
-
-
-
-
+    rc->strength = Max(rc->strength, strength);
+    rc->waitPolicy = Max(rc->waitPolicy, waitPolicy);
+    rc->pushedDown &= pushedDown;
+    return;
   }
 
   /* Make a new RowMarkClause */

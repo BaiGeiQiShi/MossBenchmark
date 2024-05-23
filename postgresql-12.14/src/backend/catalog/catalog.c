@@ -52,14 +52,15 @@
 
 /*
  * IsSystemRelation
- *		True iff the relation is either a system catalog or a toast
- *table. See IsCatalogRelation for the exact definition of a system catalog.
+ *		True iff the relation is either a system catalog or a toast table.
+ *		See IsCatalogRelation for the exact definition of a system catalog.
  *
- *		We treat toast tables of user relations as "system relations"
- *for protection purposes, e.g. you can't change their schemas without special
- *permissions.  Therefore, most uses of this function are checking whether
- *allow_system_table_mods restrictions apply. For other purposes, consider
- *whether you shouldn't be using IsCatalogRelation instead.
+ *		We treat toast tables of user relations as "system relations" for
+ *		protection purposes, e.g. you can't change their schemas without
+ *		special permissions.  Therefore, most uses of this function are
+ *		checking whether allow_system_table_mods restrictions apply.
+ *		For other purposes, consider whether you shouldn't be using
+ *		IsCatalogRelation instead.
  *
  *		This function does not perform any catalog accesses.
  *		Some callers rely on that!
@@ -87,8 +88,8 @@ IsSystemClass(Oid relid, Form_pg_class reltuple)
  * IsCatalogRelation
  *		True iff the relation is a system catalog.
  *
- *		By a system catalog, we mean one that is created during the
- *bootstrap phase of initdb.  That includes not just the catalogs per se, but
+ *		By a system catalog, we mean one that is created during the bootstrap
+ *		phase of initdb.  That includes not just the catalogs per se, but
  *		also their indexes, and TOAST tables and indexes if any.
  *
  *		This function does not perform any catalog accesses.
@@ -102,11 +103,10 @@ IsCatalogRelation(Relation relation)
 
 /*
  * IsCatalogRelationOid
- *		True iff the relation identified by this OID is a system
- *catalog.
+ *		True iff the relation identified by this OID is a system catalog.
  *
- *		By a system catalog, we mean one that is created during the
- *bootstrap phase of initdb.  That includes not just the catalogs per se, but
+ *		By a system catalog, we mean one that is created during the bootstrap
+ *		phase of initdb.  That includes not just the catalogs per se, but
  *		also their indexes, and TOAST tables and indexes if any.
  *
  *		This function does not perform any catalog accesses.
@@ -182,8 +182,7 @@ IsCatalogNamespace(Oid namespaceId)
 
 /*
  * IsToastNamespace
- *		True iff namespace is pg_toast or my temporary-toast-table
- *namespace.
+ *		True iff namespace is pg_toast or my temporary-toast-table namespace.
  *
  *		Does not perform any catalog accesses.
  *
@@ -217,8 +216,8 @@ IsReservedName(const char *name)
 
 /*
  * IsSharedRelation
- *		Given the OID of a relation, determine whether it's supposed to
- *be shared across an entire database cluster.
+ *		Given the OID of a relation, determine whether it's supposed to be
+ *		shared across an entire database cluster.
  *
  * In older releases, this had to be hard-wired so that we could compute the
  * locktag for a relation and lock it before examining its catalog entry.
@@ -360,16 +359,16 @@ GetNewRelFileNode(Oid reltablespace, Relation pg_class, char relpersistence)
 
   switch (relpersistence)
   {
-  case RELPERSISTENCE_TEMP:;
+  case RELPERSISTENCE_TEMP:
     backend = BackendIdForTempRelations();
     break;
-  case RELPERSISTENCE_UNLOGGED:;
-  case RELPERSISTENCE_PERMANENT:;
+  case RELPERSISTENCE_UNLOGGED:
+  case RELPERSISTENCE_PERMANENT:
     backend = InvalidBackendId;
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid relpersistence: %c", relpersistence);
+    return InvalidOid; /* placate compiler */
   }
 
   /* This logic should match RelationInitPhysicalAddr */
@@ -403,7 +402,7 @@ GetNewRelFileNode(Oid reltablespace, Relation pg_class, char relpersistence)
     if (access(rpath, F_OK) == 0)
     {
       /* definite collision */
-
+      collides = true;
     }
     else
     {
@@ -451,7 +450,7 @@ pg_nextoid(PG_FUNCTION_ARGS)
    */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to call pg_nextoid()")));
   }
 
   rel = table_open(reloid, RowExclusiveLock);
@@ -459,18 +458,18 @@ pg_nextoid(PG_FUNCTION_ARGS)
 
   if (!IsSystemRelation(rel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_nextoid() can only be used on system catalogs")));
   }
 
   if (idx->rd_index->indrelid != RelationGetRelid(rel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("index \"%s\" does not belong to table \"%s\"", RelationGetRelationName(idx), RelationGetRelationName(rel))));
   }
 
   atttuple = SearchSysCacheAttName(reloid, NameStr(*attname));
   if (!HeapTupleIsValid(atttuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column \"%s\" of relation \"%s\" does not exist", NameStr(*attname), RelationGetRelationName(rel))));
   }
 
   attform = ((Form_pg_attribute)GETSTRUCT(atttuple));
@@ -478,12 +477,12 @@ pg_nextoid(PG_FUNCTION_ARGS)
 
   if (attform->atttypid != OIDOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("column \"%s\" is not of type oid", NameStr(*attname))));
   }
 
   if (IndexRelationGetNumberOfKeyAttributes(idx) != 1 || idx->rd_index->indkey.values[0] != attno)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("index \"%s\" is not the index for column \"%s\"", RelationGetRelationName(idx), NameStr(*attname))));
   }
 
   newoid = GetNewOidWithIndex(rel, idxoid, attno);

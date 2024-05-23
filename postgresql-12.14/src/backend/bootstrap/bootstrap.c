@@ -87,8 +87,8 @@ int numattr;                          /* number of attributes for cur. rel */
  * in the core "bootstrapped" catalogs.
  *
  *		XXX several of these input/output functions do catalog scans
- *			(e.g., F_REGPROCIN scans pg_proc).  this obviously
- *creates some order dependencies in the catalog creation process.
+ *			(e.g., F_REGPROCIN scans pg_proc).  this obviously creates some
+ *			order dependencies in the catalog creation process.
  */
 struct typinfo
 {
@@ -144,8 +144,7 @@ static IndexList *ILHead = NULL;
  *	 AuxiliaryProcessMain
  *
  *	 The main entry point for auxiliary processes, such as the bgwriter,
- *	 walwriter, walreceiver, bootstrapper and the shared memory checker
- *code.
+ *	 walwriter, walreceiver, bootstrapper and the shared memory checker code.
  *
  *	 This code is here just because of historical reasons.
  */
@@ -189,62 +188,62 @@ AuxiliaryProcessMain(int argc, char *argv[])
   {
     switch (flag)
     {
-    case 'B':;
-
-
-    case 'D':;
-
-
-    case 'd':;
+    case 'B':
+      SetConfigOption("shared_buffers", optarg, PGC_POSTMASTER, PGC_S_ARGV);
+      break;
+    case 'D':
+      userDoption = pstrdup(optarg);
+      break;
+    case 'd':
     {
       /* Turn on debugging for the bootstrap process. */
       char *debugstr;
 
-
-
-
-
+      debugstr = psprintf("debug%s", optarg);
+      SetConfigOption("log_min_messages", debugstr, PGC_POSTMASTER, PGC_S_ARGV);
+      SetConfigOption("client_min_messages", debugstr, PGC_POSTMASTER, PGC_S_ARGV);
+      pfree(debugstr);
     }
-
-    case 'F':;
+    break;
+    case 'F':
       SetConfigOption("fsync", "false", PGC_POSTMASTER, PGC_S_ARGV);
       break;
-    case 'k':;
-
-
-    case 'r':;
-
-
-    case 'x':;
+    case 'k':
+      bootstrap_data_checksum_version = PG_DATA_CHECKSUM_VERSION;
+      break;
+    case 'r':
+      strlcpy(OutputFileName, optarg, MAXPGPATH);
+      break;
+    case 'x':
       MyAuxProcType = atoi(optarg);
       break;
-    case 'X':;
+    case 'X':
     {
       int WalSegSz = strtoul(optarg, NULL, 0);
 
       if (!IsValidWalSegSize(WalSegSz))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("-X requires a power of two value between 1 MB and 1 GB")));
       }
       SetConfigOption("wal_segment_size", optarg, PGC_INTERNAL, PGC_S_OVERRIDE);
     }
     break;
-    case 'c':;
-    case '-':;
+    case 'c':
+    case '-':
     {
       char *name, *value;
 
       ParseLongOption(optarg, &name, &value);
       if (!value)
       {
-
-
-
-
-
-
-
-
+        if (flag == '-')
+        {
+          ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("--%s requires a value", optarg)));
+        }
+        else
+        {
+          ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("-c %s requires a value", optarg)));
+        }
       }
 
       SetConfigOption(name, value, PGC_POSTMASTER, PGC_S_ARGV);
@@ -255,17 +254,17 @@ AuxiliaryProcessMain(int argc, char *argv[])
       }
       break;
     }
-    default:;;
-
-
+    default:
+      write_stderr("Try \"%s --help\" for more information.\n", progname);
+      proc_exit(1);
       break;
     }
   }
 
   if (argc != optind)
   {
-
-
+    write_stderr("%s: invalid command-line arguments\n", progname);
+    proc_exit(1);
   }
 
   /*
@@ -277,24 +276,24 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
     switch (MyAuxProcType)
     {
-    case StartupProcess:;
+    case StartupProcess:
       statmsg = pgstat_get_backend_desc(B_STARTUP);
       break;
-    case BgWriterProcess:;
+    case BgWriterProcess:
       statmsg = pgstat_get_backend_desc(B_BG_WRITER);
       break;
-    case CheckpointerProcess:;
+    case CheckpointerProcess:
       statmsg = pgstat_get_backend_desc(B_CHECKPOINTER);
       break;
-    case WalWriterProcess:;
+    case WalWriterProcess:
       statmsg = pgstat_get_backend_desc(B_WAL_WRITER);
       break;
-    case WalReceiverProcess:;
-
-
-    default:;;
-
-
+    case WalReceiverProcess:
+      statmsg = pgstat_get_backend_desc(B_WAL_RECEIVER);
+      break;
+    default:
+      statmsg = "??? process";
+      break;
     }
     init_ps_display(statmsg, "", "", "");
   }
@@ -304,7 +303,7 @@ AuxiliaryProcessMain(int argc, char *argv[])
   {
     if (!SelectConfigFiles(userDoption, progname))
     {
-
+      proc_exit(1);
     }
   }
 
@@ -388,12 +387,12 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
   switch (MyAuxProcType)
   {
-  case CheckerProcess:;
+  case CheckerProcess:
     /* don't set signals, they're useless here */
     CheckerModeMain();
     proc_exit(1); /* should never return */
 
-  case BootstrapProcess:;
+  case BootstrapProcess:
 
     /*
      * There was a brief instant during which mode was Normal; this is
@@ -406,35 +405,35 @@ AuxiliaryProcessMain(int argc, char *argv[])
     BootstrapModeMain();
     proc_exit(1); /* should never return */
 
-  case StartupProcess:;
+  case StartupProcess:
     /* don't set signals, startup process has its own agenda */
     StartupProcessMain();
     proc_exit(1); /* should never return */
 
-  case BgWriterProcess:;
+  case BgWriterProcess:
     /* don't set signals, bgwriter has its own agenda */
     BackgroundWriterMain();
     proc_exit(1); /* should never return */
 
-  case CheckpointerProcess:;
+  case CheckpointerProcess:
     /* don't set signals, checkpointer has its own agenda */
     CheckpointerMain();
     proc_exit(1); /* should never return */
 
-  case WalWriterProcess:;
+  case WalWriterProcess:
     /* don't set signals, walwriter has its own agenda */
     InitXLOGAccess();
     WalWriterMain();
     proc_exit(1); /* should never return */
 
-  case WalReceiverProcess:;
+  case WalReceiverProcess:
     /* don't set signals, walreceiver has its own agenda */
-
+    WalReceiverMain();
     proc_exit(1); /* should never return */
 
-  default:;;
-
-
+  default:
+    elog(PANIC, "unrecognized process type: %d", (int)MyAuxProcType);
+    proc_exit(1);
   }
 }
 
@@ -471,7 +470,7 @@ BootstrapModeMain(void)
    */
   if (pg_link_canary_is_frontend())
   {
-
+    elog(ERROR, "backend is incorrectly linked to frontend functions");
   }
 
   /*
@@ -565,41 +564,41 @@ boot_openrel(char *relname)
 
   if (strlen(relname) >= NAMEDATALEN)
   {
-
+    relname[NAMEDATALEN - 1] = '\0';
   }
 
   if (Typ == NULL)
   {
     /* We can now load the pg_type data */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    rel = table_open(TypeRelationId, NoLock);
+    scan = table_beginscan_catalog(rel, 0, NULL);
+    i = 0;
+    while ((tup = heap_getnext(scan, ForwardScanDirection)) != NULL)
+    {
+      ++i;
+    }
+    table_endscan(scan);
+    app = Typ = ALLOC(struct typmap *, i + 1);
+    while (i-- > 0)
+    {
+      *app++ = ALLOC(struct typmap, 1);
+    }
+    *app = NULL;
+    scan = table_beginscan_catalog(rel, 0, NULL);
+    app = Typ;
+    while ((tup = heap_getnext(scan, ForwardScanDirection)) != NULL)
+    {
+      (*app)->am_oid = ((Form_pg_type)GETSTRUCT(tup))->oid;
+      memcpy((char *)&(*app)->am_typ, (char *)GETSTRUCT(tup), sizeof((*app)->am_typ));
+      app++;
+    }
+    table_endscan(scan);
+    table_close(rel, NoLock);
   }
 
   if (boot_reldesc != NULL)
   {
-
+    closerel(NULL);
   }
 
   elog(DEBUG4, "open relation %s, attrsize %d", relname, (int)ATTRIBUTE_FIXED_PART_SIZE);
@@ -610,7 +609,7 @@ boot_openrel(char *relname)
   {
     if (attrtypes[i] == NULL)
     {
-
+      attrtypes[i] = AllocateAttribute();
     }
     memmove((char *)attrtypes[i], (char *)TupleDescAttr(boot_reldesc->rd_att, i), ATTRIBUTE_FIXED_PART_SIZE);
 
@@ -635,18 +634,18 @@ closerel(char *name)
     {
       if (strcmp(RelationGetRelationName(boot_reldesc), name) != 0)
       {
-
+        elog(ERROR, "close of %s when %s was expected", name, RelationGetRelationName(boot_reldesc));
       }
     }
     else
     {
-
+      elog(ERROR, "close of %s before any relation was opened", name);
     }
   }
 
   if (boot_reldesc == NULL)
   {
-
+    elog(ERROR, "no open relation to close");
   }
   else
   {
@@ -671,8 +670,8 @@ DefineAttr(char *name, char *type, int attnum, int nullness)
 
   if (boot_reldesc != NULL)
   {
-
-
+    elog(WARNING, "no open relations allowed with CREATE command");
+    closerel(NULL);
   }
 
   if (attrtypes[attnum] == NULL)
@@ -746,7 +745,7 @@ DefineAttr(char *name, char *type, int attnum, int nullness)
   }
   else if (nullness == BOOTCOL_NULL_FORCE_NULL)
   {
-
+    attrtypes[attnum]->attnotnull = false;
   }
   else
   {
@@ -859,7 +858,7 @@ InsertOneNull(int i)
   Assert(i >= 0 && i < MAXATTR);
   if (TupleDescAttr(boot_reldesc->rd_att, i)->attnotnull)
   {
-
+    elog(ERROR, "NULL value specified for not-null column \"%s\" of relation \"%s\"", NameStr(TupleDescAttr(boot_reldesc->rd_att, i)->attname), RelationGetRelationName(boot_reldesc));
   }
   values[i] = PointerGetDatum(NULL);
   Nulls[i] = true;
@@ -874,7 +873,7 @@ cleanup(void)
 {
   if (boot_reldesc != NULL)
   {
-
+    closerel(NULL);
   }
 }
 
@@ -944,9 +943,9 @@ gettype(char *type)
     table_close(rel, NoLock);
     return gettype(type);
   }
-
+  elog(ERROR, "unrecognized type \"%s\"", type);
   /* not reached, here to make compiler happy */
-
+  return 0;
 }
 
 /* ----------------
@@ -976,7 +975,7 @@ boot_get_type_io_data(Oid typid, int16 *typlen, bool *typbyval, char *typalign, 
     ap = *app;
     if (ap == NULL)
     {
-
+      elog(ERROR, "type OID %u not found in Typ list", typid);
     }
 
     *typlen = ap->am_typ.typlen;
@@ -1011,7 +1010,7 @@ boot_get_type_io_data(Oid typid, int16 *typlen, bool *typbyval, char *typalign, 
     }
     if (typeindex >= n_types)
     {
-
+      elog(ERROR, "type OID %u not found in TypInfo", typid);
     }
 
     *typlen = TypInfo[typeindex].len;
@@ -1052,12 +1051,12 @@ AllocateAttribute(void)
  *	index_register() -- record an index that has been set up for building
  *						later.
  *
- *		At bootstrap time, we define a bunch of indexes on system
- *catalogs. We postpone actually building the indexes until just before we're
- *		finished with initialization, however.  This is because the
- *indexes themselves have catalog entries, and those have to be included in the
- *		indexes on those catalogs.  Doing it in two phases is the
- *simplest way of making sure the indexes have the right contents at the end.
+ *		At bootstrap time, we define a bunch of indexes on system catalogs.
+ *		We postpone actually building the indexes until just before we're
+ *		finished with initialization, however.  This is because the indexes
+ *		themselves have catalog entries, and those have to be included in the
+ *		indexes on those catalogs.  Doing it in two phases is the simplest
+ *		way of making sure the indexes have the right contents at the end.
  */
 void
 index_register(Oid heap, Oid ind, IndexInfo *indexInfo)

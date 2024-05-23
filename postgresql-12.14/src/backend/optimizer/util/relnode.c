@@ -113,7 +113,7 @@ setup_append_rel_array(PlannerInfo *root)
 
     if (root->append_rel_array[child_relid])
     {
-
+      elog(ERROR, "child relation already exists");
     }
 
     root->append_rel_array[child_relid] = appinfo;
@@ -167,7 +167,7 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptInfo *parent)
   Assert(relid > 0 && relid < root->simple_rel_array_size);
   if (root->simple_rel_array[relid] != NULL)
   {
-
+    elog(ERROR, "rel %d already exists", relid);
   }
 
   /* Fetch RTE for relation */
@@ -272,16 +272,16 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptInfo *parent)
   /* Check type of rtable entry */
   switch (rte->rtekind)
   {
-  case RTE_RELATION:;
+  case RTE_RELATION:
     /* Table --- retrieve statistics from the system catalogs */
     get_relation_info(root, rte->relid, rte->inh, rel);
     break;
-  case RTE_SUBQUERY:;
-  case RTE_FUNCTION:;
-  case RTE_TABLEFUNC:;
-  case RTE_VALUES:;
-  case RTE_CTE:;
-  case RTE_NAMEDTUPLESTORE:;
+  case RTE_SUBQUERY:
+  case RTE_FUNCTION:
+  case RTE_TABLEFUNC:
+  case RTE_VALUES:
+  case RTE_CTE:
+  case RTE_NAMEDTUPLESTORE:
 
     /*
      * Subquery, function, tablefunc, values list, CTE, or ENR --- set
@@ -294,16 +294,16 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptInfo *parent)
     rel->attr_needed = (Relids *)palloc0((rel->max_attr - rel->min_attr + 1) * sizeof(Relids));
     rel->attr_widths = (int32 *)palloc0((rel->max_attr - rel->min_attr + 1) * sizeof(int32));
     break;
-  case RTE_RESULT:;
+  case RTE_RESULT:
     /* RTE_RESULT has no columns, nor could it have whole-row Var */
     rel->min_attr = 0;
     rel->max_attr = -1;
     rel->attr_needed = NULL;
     rel->attr_widths = NULL;
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized RTE kind: %d", (int)rte->rtekind);
+    break;
   }
 
   /*
@@ -353,9 +353,9 @@ find_base_rel(PlannerInfo *root, int relid)
     }
   }
 
+  elog(ERROR, "no relation entry for relid %d", relid);
 
-
-
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -395,8 +395,8 @@ build_join_rel_hash(PlannerInfo *root)
 
 /*
  * find_join_rel
- *	  Returns relation entry corresponding to 'relids' (a set of RT
- *indexes), or NULL if none exists.  This is for join relations.
+ *	  Returns relation entry corresponding to 'relids' (a set of RT indexes),
+ *	  or NULL if none exists.  This is for join relations.
  */
 RelOptInfo *
 find_join_rel(PlannerInfo *root, Relids relids)
@@ -449,9 +449,9 @@ find_join_rel(PlannerInfo *root, Relids relids)
 
 /*
  * set_foreign_rel_properties
- *		Set up foreign-join fields if outer and inner relation are
- *foreign tables (or joins) belonging to the same server and assigned to the
- *same user to check access permissions as.
+ *		Set up foreign-join fields if outer and inner relation are foreign
+ *		tables (or joins) belonging to the same server and assigned to the same
+ *		user to check access permissions as.
  *
  * In addition to an exact match of userid, we allow the case where one side
  * has zero userid (implying current user) and the other side has explicit
@@ -469,34 +469,34 @@ set_foreign_rel_properties(RelOptInfo *joinrel, RelOptInfo *outer_rel, RelOptInf
 {
   if (OidIsValid(outer_rel->serverid) && inner_rel->serverid == outer_rel->serverid)
   {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (inner_rel->userid == outer_rel->userid)
+    {
+      joinrel->serverid = outer_rel->serverid;
+      joinrel->userid = outer_rel->userid;
+      joinrel->useridiscurrent = outer_rel->useridiscurrent || inner_rel->useridiscurrent;
+      joinrel->fdwroutine = outer_rel->fdwroutine;
+    }
+    else if (!OidIsValid(inner_rel->userid) && outer_rel->userid == GetUserId())
+    {
+      joinrel->serverid = outer_rel->serverid;
+      joinrel->userid = outer_rel->userid;
+      joinrel->useridiscurrent = true;
+      joinrel->fdwroutine = outer_rel->fdwroutine;
+    }
+    else if (!OidIsValid(outer_rel->userid) && inner_rel->userid == GetUserId())
+    {
+      joinrel->serverid = outer_rel->serverid;
+      joinrel->userid = inner_rel->userid;
+      joinrel->useridiscurrent = true;
+      joinrel->fdwroutine = outer_rel->fdwroutine;
+    }
   }
 }
 
 /*
  * add_join_rel
- *		Add given join relation to the list of join relations in the
- *given PlannerInfo. Also add it to the auxiliary hashtable if there is one.
+ *		Add given join relation to the list of join relations in the given
+ *		PlannerInfo. Also add it to the auxiliary hashtable if there is one.
  */
 static void
 add_join_rel(PlannerInfo *root, RelOptInfo *joinrel)
@@ -931,7 +931,7 @@ build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *input_re
      */
     if (!IsA(var, Var))
     {
-
+      elog(ERROR, "unexpected node type in rel targetlist: %d", (int)nodeTag(var));
     }
 
     /* Get the Var's original base rel */
@@ -965,12 +965,12 @@ build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *input_re
  *	  sub-relations are considered.
  *
  *	  If a join clause from an input relation refers to base rels still not
- *	  present in the joinrel, then it is still a join clause for the
- *joinrel; we put it into the joininfo list for the joinrel.  Otherwise, the
- *clause is now a restrict clause for the joined relation, and we return it to
- *the caller of build_joinrel_restrictlist() to be stored in join paths made
- *from this pair of sub-relations.  (It will not need to be considered further
- *up the join tree.)
+ *	  present in the joinrel, then it is still a join clause for the joinrel;
+ *	  we put it into the joininfo list for the joinrel.  Otherwise,
+ *	  the clause is now a restrict clause for the joined relation, and we
+ *	  return it to the caller of build_joinrel_restrictlist() to be stored in
+ *	  join paths made from this pair of sub-relations.  (It will not need to
+ *	  be considered further up the join tree.)
  *
  *	  In many cases we will find the same RestrictInfos in both input
  *	  relations' joinlists, so be careful to eliminate duplicates.
@@ -1100,8 +1100,8 @@ subbuild_joinrel_joinlist(RelOptInfo *joinrel, List *joininfo_list, List *new_jo
 
 /*
  * fetch_upper_rel
- *		Build a RelOptInfo describing some post-scan/join query
- *processing, or return a pre-existing one if somebody already built it.
+ *		Build a RelOptInfo describing some post-scan/join query processing,
+ *		or return a pre-existing one if somebody already built it.
  *
  * An "upper" relation is identified by an UpperRelationKind and a Relids set.
  * The meaning of the Relids set is not specified here, and very likely will
@@ -1189,8 +1189,8 @@ find_childrel_parents(PlannerInfo *root, RelOptInfo *rel)
 
 /*
  * get_baserel_parampathinfo
- *		Get the ParamPathInfo for a parameterized path for a base
- *relation, constructing one if we don't have one already.
+ *		Get the ParamPathInfo for a parameterized path for a base relation,
+ *		constructing one if we don't have one already.
  *
  * This centralizes estimating the rowcounts for parameterized paths.
  * We need to cache those to be sure we use the same rowcount for all paths
@@ -1261,8 +1261,8 @@ get_baserel_parampathinfo(PlannerInfo *root, RelOptInfo *baserel, Relids require
 
 /*
  * get_joinrel_parampathinfo
- *		Get the ParamPathInfo for a parameterized path for a join
- *relation, constructing one if we don't have one already.
+ *		Get the ParamPathInfo for a parameterized path for a join relation,
+ *		constructing one if we don't have one already.
  *
  * This centralizes estimating the rowcounts for parameterized paths.
  * We need to cache those to be sure we use the same rowcount for all paths
@@ -1466,8 +1466,7 @@ get_joinrel_parampathinfo(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_pa
 
 /*
  * get_appendrel_parampathinfo
- *		Get the ParamPathInfo for a parameterized path for an append
- *relation.
+ *		Get the ParamPathInfo for a parameterized path for an append relation.
  *
  * For an append relation, the rowcount estimate will just be the sum of
  * the estimates for its children.  However, we still need a ParamPathInfo
@@ -1531,10 +1530,10 @@ find_param_path_info(RelOptInfo *rel, Relids required_outer)
 
 /*
  * build_joinrel_partition_info
- *		If the two relations have same partitioning scheme, their join
- *may be partitioned and will follow the same partitioning scheme as the joining
- *		relations. Set the partition scheme and partition key
- *expressions in the join relation.
+ *		If the two relations have same partitioning scheme, their join may be
+ *		partitioned and will follow the same partitioning scheme as the joining
+ *		relations. Set the partition scheme and partition key expressions in
+ *		the join relation.
  */
 static void
 build_joinrel_partition_info(RelOptInfo *joinrel, RelOptInfo *outer_rel, RelOptInfo *inner_rel, List *restrictlist, JoinType jointype)
@@ -1650,31 +1649,31 @@ build_joinrel_partition_info(RelOptInfo *joinrel, RelOptInfo *outer_rel, RelOptI
 
     switch (jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       partexpr = list_concat(outer_expr, inner_expr);
       nullable_partexpr = list_concat(outer_null_expr, inner_null_expr);
       break;
 
-    case JOIN_SEMI:;
-    case JOIN_ANTI:;
+    case JOIN_SEMI:
+    case JOIN_ANTI:
       partexpr = outer_expr;
       nullable_partexpr = outer_null_expr;
       break;
 
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
       partexpr = outer_expr;
       nullable_partexpr = list_concat(inner_expr, outer_null_expr);
       nullable_partexpr = list_concat(nullable_partexpr, inner_null_expr);
       break;
 
-    case JOIN_FULL:;
+    case JOIN_FULL:
       nullable_partexpr = list_concat(outer_expr, inner_expr);
       nullable_partexpr = list_concat(nullable_partexpr, outer_null_expr);
       nullable_partexpr = list_concat(nullable_partexpr, inner_null_expr);
       break;
 
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized join type: %d", (int)jointype);
     }
 
     joinrel->partexprs[cnt] = partexpr;

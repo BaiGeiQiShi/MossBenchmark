@@ -61,12 +61,16 @@ trim_trailing_separator(char *path);
 static char *
 skip_drive(const char *path)
 {
-  if (IS_DIR_SEP(path[0]) && IS_DIR_SEP(path[1])) {
+  if (IS_DIR_SEP(path[0]) && IS_DIR_SEP(path[1]))
+  {
     path += 2;
-    while (*path && !IS_DIR_SEP(*path)) {
+    while (*path && !IS_DIR_SEP(*path))
+    {
       path++;
     }
-  } else if (isalpha((unsigned char)path[0]) && path[1] == ':') {
+  }
+  else if (isalpha((unsigned char)path[0]) && path[1] == ':')
+  {
     path += 2;
   }
   return (char *)path;
@@ -102,8 +106,10 @@ first_dir_separator(const char *filename)
 {
   const char *p;
 
-  for (p = skip_drive(filename); *p; p++) {
-    if (IS_DIR_SEP(*p)) {
+  for (p = skip_drive(filename); *p; p++)
+  {
+    if (IS_DIR_SEP(*p))
+    {
       return unconstify(char *, p);
     }
   }
@@ -122,8 +128,10 @@ first_path_var_separator(const char *pathlist)
   const char *p;
 
   /* skip_drive is not needed */
-  for (p = pathlist; *p; p++) {
-    if (IS_PATH_VAR_SEP(*p)) {
+  for (p = pathlist; *p; p++)
+  {
+    if (IS_PATH_VAR_SEP(*p))
+    {
       return unconstify(char *, p);
     }
   }
@@ -141,8 +149,10 @@ last_dir_separator(const char *filename)
 {
   const char *p, *ret = NULL;
 
-  for (p = skip_drive(filename); *p; p++) {
-    if (IS_DIR_SEP(*p)) {
+  for (p = skip_drive(filename); *p; p++)
+  {
+    if (IS_DIR_SEP(*p))
+    {
       ret = p;
     }
   }
@@ -170,8 +180,10 @@ make_native_path(char *filename)
 #ifdef WIN32
   char *p;
 
-  for (p = filename; *p; p++) {
-    if (*p == '/') {
+  for (p = filename; *p; p++)
+  {
+    if (*p == '/')
+    {
       *p = '\\';
     }
   }
@@ -199,8 +211,10 @@ cleanup_path(char *path)
   GetShortPathName(path, path, MAXPGPATH - 1);
 
   /* Replace '\' with '/' */
-  for (ptr = path; *ptr; ptr++) {
-    if (*ptr == '\\') {
+  for (ptr = path; *ptr; ptr++)
+  {
+    if (*ptr == '\\')
+    {
       *ptr = '/';
     }
   }
@@ -219,7 +233,8 @@ cleanup_path(char *path)
 void
 join_path_components(char *ret_path, const char *head, const char *tail)
 {
-  if (ret_path != head) {
+  if (ret_path != head)
+  {
     strlcpy(ret_path, head, MAXPGPATH);
   }
 
@@ -229,11 +244,13 @@ join_path_components(char *ret_path, const char *head, const char *tail)
    * Note: we used to try to remove ".." as well, but that's tricky to get
    * right; now we just leave it to be done by canonicalize_path() later.
    */
-  while (tail[0] == '.' && IS_DIR_SEP(tail[1])) {
+  while (tail[0] == '.' && IS_DIR_SEP(tail[1]))
+  {
     tail += 2;
   }
 
-  if (*tail) {
+  if (*tail)
+  {
     /* only separate with slash if head wasn't empty */
     snprintf(ret_path + strlen(ret_path), MAXPGPATH - strlen(ret_path), "%s%s", (*(skip_drive(head)) != '\0') ? "/" : "", tail);
   }
@@ -262,8 +279,10 @@ canonicalize_path(char *path)
    * The Windows command processor will accept suitably quoted paths with
    * forward slashes, but barfs badly with mixed forward and back slashes.
    */
-  for (p = path; *p; p++) {
-    if (*p == '\\') {
+  for (p = path; *p; p++)
+  {
+    if (*p == '\\')
+    {
       *p = '/';
     }
   }
@@ -272,7 +291,8 @@ canonicalize_path(char *path)
    * In Win32, if you do: prog.exe "a b" "\c\d\" the system will pass \c\d"
    * as argv[2], so trim off trailing quote.
    */
-  if (p > path && *(p - 1) == '"') {
+  if (p > path && *(p - 1) == '"')
+  {
     *(p - 1) = '/';
   }
 #endif
@@ -290,17 +310,21 @@ canonicalize_path(char *path)
   p = path;
 #ifdef WIN32
   /* Don't remove leading double-slash on Win32 */
-  if (*p) {
+  if (*p)
+  {
     p++;
   }
 #endif
   to_p = p;
-  for (; *p; p++, to_p++) {
+  for (; *p; p++, to_p++)
+  {
     /* Handle many adjacent slashes, like "/a///b" */
-    while (*p == '/' && was_sep) {
+    while (*p == '/' && was_sep)
+    {
       p++;
     }
-    if (to_p != p) {
+    if (to_p != p)
+    {
       *to_p = *p;
     }
     was_sep = (*p == '/');
@@ -319,40 +343,54 @@ canonicalize_path(char *path)
    */
   spath = skip_drive(path);
   pending_strips = 0;
-  for (;;) {
+  for (;;)
+  {
     int len = strlen(spath);
 
-    if (len >= 2 && strcmp(spath + len - 2, "/.") == 0) {
+    if (len >= 2 && strcmp(spath + len - 2, "/.") == 0)
+    {
       trim_directory(path);
-    } else if (strcmp(spath, ".") == 0) {
+    }
+    else if (strcmp(spath, ".") == 0)
+    {
       /* Want to leave "." alone, but "./.." has to become ".." */
-      if (pending_strips > 0) {
+      if (pending_strips > 0)
+      {
         *spath = '\0';
       }
       break;
-    } else if ((len >= 3 && strcmp(spath + len - 3, "/..") == 0) || strcmp(spath, "..") == 0) {
+    }
+    else if ((len >= 3 && strcmp(spath + len - 3, "/..") == 0) || strcmp(spath, "..") == 0)
+    {
       trim_directory(path);
       pending_strips++;
-    } else if (pending_strips > 0 && *spath != '\0') {
+    }
+    else if (pending_strips > 0 && *spath != '\0')
+    {
       /* trim a regular directory name canceled by ".." */
       trim_directory(path);
       pending_strips--;
       /* foo/.. should become ".", not empty */
-      if (*spath == '\0') {
+      if (*spath == '\0')
+      {
         strcpy(spath, ".");
       }
-    } else {
+    }
+    else
+    {
       break;
     }
   }
 
-  if (pending_strips > 0) {
+  if (pending_strips > 0)
+  {
     /*
      * We could only get here if path is now totally empty (other than a
      * possible drive specifier on Windows). We have to put back one or
      * more ".."'s that we took off.
      */
-    while (--pending_strips > 0) {
+    while (--pending_strips > 0)
+    {
       strcat(path, "../");
     }
     strcat(path, "..");
@@ -380,7 +418,8 @@ path_contains_parent_reference(const char *path)
    * ".." could be the whole path; otherwise, if it's present it must be at
    * the beginning, in the middle, or at the end.
    */
-  if (strcmp(path, "..") == 0 || strncmp(path, "../", 3) == 0 || strstr(path, "/../") != NULL || (path_len >= 3 && strcmp(path + path_len - 3, "/..") == 0)) {
+  if (strcmp(path, "..") == 0 || strncmp(path, "../", 3) == 0 || strstr(path, "/../") != NULL || (path_len >= 3 && strcmp(path + path_len - 3, "/..") == 0))
+  {
     return true;
   }
 
@@ -397,11 +436,13 @@ path_contains_parent_reference(const char *path)
 bool
 path_is_relative_and_below_cwd(const char *path)
 {
-  if (is_absolute_path(path)) {
+  if (is_absolute_path(path))
+  {
     return false;
   }
   /* don't allow anything above the cwd */
-  else if (path_contains_parent_reference(path)) {
+  else if (path_contains_parent_reference(path))
+  {
     return false;
   }
 #ifdef WIN32
@@ -415,11 +456,13 @@ path_is_relative_and_below_cwd(const char *path)
    * could change if the current directory for the drive changes underneath
    * us, so we just disallow it.
    */
-  else if (isalpha((unsigned char)path[0]) && path[1] == ':' && !IS_DIR_SEP(path[2])) {
+  else if (isalpha((unsigned char)path[0]) && path[1] == ':' && !IS_DIR_SEP(path[2]))
+  {
     return false;
   }
 #endif
-  else {
+  else
+  {
     return true;
   }
 }
@@ -435,7 +478,8 @@ path_is_prefix_of_path(const char *path1, const char *path2)
 {
   int path1_len = strlen(path1);
 
-  if (strncmp(path1, path2, path1_len) == 0 && (IS_DIR_SEP(path2[path1_len]) || path2[path1_len] == '\0')) {
+  if (strncmp(path1, path2, path1_len) == 0 && (IS_DIR_SEP(path2[path1_len]) || path2[path1_len] == '\0'))
+  {
     return true;
   }
   return false;
@@ -452,9 +496,12 @@ get_progname(const char *argv0)
   char *progname;
 
   nodir_name = last_dir_separator(argv0);
-  if (nodir_name) {
+  if (nodir_name)
+  {
     nodir_name++;
-  } else {
+  }
+  else
+  {
     nodir_name = skip_drive(argv0);
   }
 
@@ -463,14 +510,16 @@ get_progname(const char *argv0)
    * called only once.
    */
   progname = strdup(nodir_name);
-  if (progname == NULL) {
+  if (progname == NULL)
+  {
     fprintf(stderr, "%s: out of memory\n", nodir_name);
     abort(); /* This could exit the postmaster */
   }
 
 #if defined(__CYGWIN__) || defined(WIN32)
   /* strip ".exe" suffix, regardless of case */
-  if (strlen(progname) > sizeof(EXE) - 1 && pg_strcasecmp(progname + strlen(progname) - (sizeof(EXE) - 1), EXE) == 0) {
+  if (strlen(progname) > sizeof(EXE) - 1 && pg_strcasecmp(progname + strlen(progname) - (sizeof(EXE) - 1), EXE) == 0)
+  {
     progname[strlen(progname) - (sizeof(EXE) - 1)] = '\0';
   }
 #endif
@@ -485,7 +534,8 @@ get_progname(const char *argv0)
 static int
 dir_strcmp(const char *s1, const char *s2)
 {
-  while (*s1 && *s2) {
+  while (*s1 && *s2)
+  {
     if (
 #ifndef WIN32
         *s1 != *s2
@@ -497,10 +547,12 @@ dir_strcmp(const char *s1, const char *s2)
       return (int)*s1 - (int)*s2;
     s1++, s2++;
   }
-  if (*s1) {
+  if (*s1)
+  {
     return 1; /* s1 longer */
   }
-  if (*s2) {
+  if (*s2)
+  {
     return -1; /* s2 longer */
   }
   return 0;
@@ -543,14 +595,19 @@ make_relative_path(char *ret_path, const char *target_path, const char *bin_path
    * directory separator, consider eg '/usr/lib' and '/usr/libexec'.
    */
   prefix_len = 0;
-  for (i = 0; target_path[i] && bin_path[i]; i++) {
-    if (IS_DIR_SEP(target_path[i]) && IS_DIR_SEP(bin_path[i])) {
+  for (i = 0; target_path[i] && bin_path[i]; i++)
+  {
+    if (IS_DIR_SEP(target_path[i]) && IS_DIR_SEP(bin_path[i]))
+    {
       prefix_len = i + 1;
-    } else if (target_path[i] != bin_path[i]) {
+    }
+    else if (target_path[i] != bin_path[i])
+    {
       break;
     }
   }
-  if (prefix_len == 0) {
+  if (prefix_len == 0)
+  {
     goto no_match; /* no common prefix? */
   }
   tail_len = strlen(bin_path) - prefix_len;
@@ -567,7 +624,8 @@ make_relative_path(char *ret_path, const char *target_path, const char *bin_path
    * Tail match?
    */
   tail_start = (int)strlen(ret_path) - tail_len;
-  if (tail_start > 0 && IS_DIR_SEP(ret_path[tail_start - 1]) && dir_strcmp(ret_path + tail_start, bin_path + prefix_len) == 0) {
+  if (tail_start > 0 && IS_DIR_SEP(ret_path[tail_start - 1]) && dir_strcmp(ret_path + tail_start, bin_path + prefix_len) == 0)
+  {
     ret_path[tail_start] = '\0';
     trim_trailing_separator(ret_path);
     join_path_components(ret_path, ret_path, target_path + prefix_len);
@@ -601,18 +659,22 @@ make_absolute_path(const char *path)
   char *new;
 
   /* Returning null for null input is convenient for some callers */
-  if (path == NULL) {
+  if (path == NULL)
+  {
     return NULL;
   }
 
-  if (!is_absolute_path(path)) {
+  if (!is_absolute_path(path))
+  {
     char *buf;
     size_t buflen;
 
     buflen = MAXPGPATH;
-    for (;;) {
+    for (;;)
+    {
       buf = malloc(buflen);
-      if (!buf) {
+      if (!buf)
+      {
 #ifndef FRONTEND
         ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
 #else
@@ -621,13 +683,18 @@ make_absolute_path(const char *path)
 #endif
       }
 
-      if (getcwd(buf, buflen)) {
+      if (getcwd(buf, buflen))
+      {
         break;
-      } else if (errno == ERANGE) {
+      }
+      else if (errno == ERANGE)
+      {
         free(buf);
         buflen *= 2;
         continue;
-      } else {
+      }
+      else
+      {
         int save_errno = errno;
 
         free(buf);
@@ -642,7 +709,8 @@ make_absolute_path(const char *path)
     }
 
     new = malloc(strlen(buf) + strlen(path) + 2);
-    if (!new) {
+    if (!new)
+    {
       free(buf);
 #ifndef FRONTEND
       ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
@@ -653,9 +721,12 @@ make_absolute_path(const char *path)
     }
     sprintf(new, "%s/%s", buf, path);
     free(buf);
-  } else {
+  }
+  else
+  {
     new = strdup(path);
-    if (!new) {
+    if (!new)
+    {
 #ifndef FRONTEND
       ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
 #else
@@ -785,7 +856,8 @@ get_home_path(char *ret_path)
   struct passwd *pwd = NULL;
 
   (void)pqGetpwuid(geteuid(), &pwdstr, pwdbuf, sizeof(pwdbuf), &pwd);
-  if (pwd == NULL) {
+  if (pwd == NULL)
+  {
     return false;
   }
   strlcpy(ret_path, pwd->pw_dir, MAXPGPATH);
@@ -801,7 +873,8 @@ get_home_path(char *ret_path)
    * would keep it out of the backend, freeing it from this concern.
    */
   tmppath = getenv("APPDATA");
-  if (!tmppath) {
+  if (!tmppath)
+  {
     return false;
   }
   snprintf(ret_path, MAXPGPATH, "%s/postgresql", tmppath);
@@ -834,8 +907,8 @@ get_parent_directory(char *path)
  *	trim_directory
  *
  *	Trim trailing directory from path, that is, remove any trailing slashes,
- *	the last pathname component, and the slash just ahead of it --- but
- *never remove a leading slash.
+ *	the last pathname component, and the slash just ahead of it --- but never
+ *	remove a leading slash.
  */
 static void
 trim_directory(char *path)
@@ -844,7 +917,8 @@ trim_directory(char *path)
 
   path = skip_drive(path);
 
-  if (path[0] == '\0') {
+  if (path[0] == '\0')
+  {
     return;
   }
 
@@ -858,7 +932,8 @@ trim_directory(char *path)
   for (; p > path && IS_DIR_SEP(*(p - 1)); p--)
     ;
   /* don't erase a leading slash */
-  if (p == path && IS_DIR_SEP(*p)) {
+  if (p == path && IS_DIR_SEP(*p))
+  {
     p++;
   }
   *p = '\0';
@@ -876,8 +951,10 @@ trim_trailing_separator(char *path)
 
   path = skip_drive(path);
   p = path + strlen(path);
-  if (p > path) {
-    for (p--; p > path && IS_DIR_SEP(*p); p--) {
+  if (p > path)
+  {
+    for (p--; p > path && IS_DIR_SEP(*p); p--)
+    {
       *p = '\0';
     }
   }

@@ -46,13 +46,16 @@ describe_char(int c)
 {
   unsigned char cp = c, up = toupper(c), lo = tolower(c);
 
-  if (!isprint(cp)) {
+  if (!isprint(cp))
+  {
     cp = ' ';
   }
-  if (!isprint(up)) {
+  if (!isprint(up))
+  {
     up = ' ';
   }
-  if (!isprint(lo)) {
+  if (!isprint(lo))
+  {
     lo = ' ';
   }
 
@@ -66,15 +69,19 @@ main()
   char *cur_locale;
 
   cur_locale = setlocale(LC_ALL, "");
-  if (cur_locale) {
+  if (cur_locale)
+  {
     fprintf(stderr, "Successfully set locale to \"%s\"\n", cur_locale);
-  } else {
+  }
+  else
+  {
     fprintf(stderr, "Cannot setup locale. Either your libc does not provide\nlocale support, or your locale data is corrupt, or you have not set\nLANG or LC_CTYPE environment variable to proper value. Program aborted.\n");
     return 1;
   }
 
   printf("char#  char alnum alpha cntrl digit lower graph print punct space upper xdigit lo up\n");
-  for (c = 0; c <= 255; c++) {
+  for (c = 0; c <= 255; c++)
+  {
     describe_char(c);
   }
 

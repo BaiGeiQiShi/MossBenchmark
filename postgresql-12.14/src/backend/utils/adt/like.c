@@ -69,7 +69,7 @@ wchareq(const char *p1, const char *p2)
   p1_len = pg_mblen(p1);
   if (pg_mblen(p2) != p1_len)
   {
-
+    return 0;
   }
 
   /* They are the same length */
@@ -77,7 +77,7 @@ wchareq(const char *p1, const char *p2)
   {
     if (*p1++ != *p2++)
     {
-
+      return 0;
     }
   }
   return 1;
@@ -100,20 +100,20 @@ wchareq(const char *p1, const char *p2)
 static char
 SB_lower_char(unsigned char c, pg_locale_t locale, bool locale_is_c)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (locale_is_c)
+  {
+    return pg_ascii_tolower(c);
+  }
+#ifdef HAVE_LOCALE_T
+  else if (locale)
+  {
+    return tolower_l(c, locale->info.lt);
+  }
+#endif
+  else
+  {
+    return pg_tolower(c);
+  }
 }
 
 #define NextByte(p, plen) ((p)++, (plen)--)
@@ -178,15 +178,15 @@ GenericMatchText(const char *s, int slen, const char *p, int plen, Oid collation
   {
     pg_locale_t locale = pg_newlocale_from_collation(collation);
 
-
-
-
-
+    if (locale && !locale->deterministic)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("nondeterministic collations are not supported for LIKE")));
+    }
   }
 
   if (pg_database_encoding_max_length() == 1)
   {
-
+    return SB_MatchText(s, slen, p, plen, 0, true);
   }
   else if (GetDatabaseEncoding() == PG_UTF8)
   {
@@ -194,7 +194,7 @@ GenericMatchText(const char *s, int slen, const char *p, int plen, Oid collation
   }
   else
   {
-
+    return MB_MatchText(s, slen, p, plen, 0, true);
   }
 }
 
@@ -212,20 +212,20 @@ Generic_Text_IC_like(text *str, text *pat, Oid collation)
   }
   else if (collation != DEFAULT_COLLATION_OID)
   {
+    if (!OidIsValid(collation))
+    {
+      /*
+       * This typically means that the parser could not resolve a
+       * conflict of implicit collations, so report it that way.
+       */
+      ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for ILIKE"), errhint("Use the COLLATE clause to set the collation explicitly.")));
+    }
+    locale = pg_newlocale_from_collation(collation);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (locale && !locale->deterministic)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("nondeterministic collations are not supported for ILIKE")));
+    }
   }
 
   /*
@@ -250,16 +250,16 @@ Generic_Text_IC_like(text *str, text *pat, Oid collation)
     }
     else
     {
-
+      return MB_MatchText(s, slen, p, plen, 0, true);
     }
   }
   else
   {
-
-
-
-
-
+    p = VARDATA_ANY(pat);
+    plen = VARSIZE_ANY_EXHDR(pat);
+    s = VARDATA_ANY(str);
+    slen = VARSIZE_ANY_EXHDR(str);
+    return SB_IMatchText(s, slen, p, plen, locale, locale_is_c);
   }
 }
 
@@ -346,39 +346,39 @@ textnlike(PG_FUNCTION_ARGS)
 Datum
 bytealike(PG_FUNCTION_ARGS)
 {
+  bytea *str = PG_GETARG_BYTEA_PP(0);
+  bytea *pat = PG_GETARG_BYTEA_PP(1);
+  bool result;
+  char *s, *p;
+  int slen, plen;
 
+  s = VARDATA_ANY(str);
+  slen = VARSIZE_ANY_EXHDR(str);
+  p = VARDATA_ANY(pat);
+  plen = VARSIZE_ANY_EXHDR(pat);
 
+  result = (SB_MatchText(s, slen, p, plen, 0, true) == LIKE_TRUE);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result);
 }
 
 Datum
 byteanlike(PG_FUNCTION_ARGS)
 {
+  bytea *str = PG_GETARG_BYTEA_PP(0);
+  bytea *pat = PG_GETARG_BYTEA_PP(1);
+  bool result;
+  char *s, *p;
+  int slen, plen;
 
+  s = VARDATA_ANY(str);
+  slen = VARSIZE_ANY_EXHDR(str);
+  p = VARDATA_ANY(pat);
+  plen = VARSIZE_ANY_EXHDR(pat);
 
+  result = (SB_MatchText(s, slen, p, plen, 0, true) != LIKE_TRUE);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result);
 }
 
 /*
@@ -402,15 +402,15 @@ nameiclike(PG_FUNCTION_ARGS)
 Datum
 nameicnlike(PG_FUNCTION_ARGS)
 {
+  Name str = PG_GETARG_NAME(0);
+  text *pat = PG_GETARG_TEXT_PP(1);
+  bool result;
+  text *strtext;
 
+  strtext = DatumGetTextPP(DirectFunctionCall1(name_text, NameGetDatum(str)));
+  result = (Generic_Text_IC_like(strtext, pat, PG_GET_COLLATION()) != LIKE_TRUE);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result);
 }
 
 Datum
@@ -450,7 +450,7 @@ like_escape(PG_FUNCTION_ARGS)
 
   if (pg_database_encoding_max_length() == 1)
   {
-
+    result = SB_do_like_escape(pat, esc);
   }
   else
   {
@@ -467,9 +467,9 @@ like_escape(PG_FUNCTION_ARGS)
 Datum
 like_escape_bytea(PG_FUNCTION_ARGS)
 {
+  bytea *pat = PG_GETARG_BYTEA_PP(0);
+  bytea *esc = PG_GETARG_BYTEA_PP(1);
+  bytea *result = SB_do_like_escape((text *)pat, (text *)esc);
 
-
-
-
-
+  PG_RETURN_BYTEA_P((bytea *)result);
 }

@@ -245,7 +245,7 @@ pg_perm_setlocale(int category, const char *locale)
     envvar = "LC_TIME";
     envbuf = lc_time_envbuf;
     break;
-  default:;
+  default:
     elog(FATAL, "unrecognized LC category: %d", category);
     envvar = NULL; /* keep compiler quiet */
     envbuf = NULL;
@@ -1775,7 +1775,14 @@ pg_newlocale_from_collation(Oid collid)
 
       if (strcmp(actual_versionstr, collversionstr) != 0)
       {
-        ereport(WARNING, (errmsg("collation \"%s\" has version mismatch", NameStr(collform->collname)), errdetail("The collation in the database was created using version %s, but the operating system provides version %s.", collversionstr, actual_versionstr), errhint("Rebuild all objects affected by this collation and run ALTER COLLATION %s REFRESH VERSION, or build PostgreSQL with the right library version.", quote_qualified_identifier(get_namespace_name(collform->collnamespace), NameStr(collform->collname)))));
+        ereport(WARNING, (errmsg("collation \"%s\" has version mismatch", NameStr(collform->collname)),
+                             errdetail("The collation in the database was created using version %s, "
+                                       "but the operating system provides version %s.",
+                                 collversionstr, actual_versionstr),
+                             errhint("Rebuild all objects affected by this collation and run "
+                                     "ALTER COLLATION %s REFRESH VERSION, "
+                                     "or build PostgreSQL with the right library version.",
+                                 quote_qualified_identifier(get_namespace_name(collform->collnamespace), NameStr(collform->collname)))));
       }
     }
 

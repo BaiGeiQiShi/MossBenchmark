@@ -90,7 +90,7 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace, List *optio
       {
         if (!OidIsValid(def->collOid))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for view column \"%s\"", def->colname), errhint("Use the COLLATE clause to set the collation explicitly.")));
         }
       }
       else
@@ -125,7 +125,7 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace, List *optio
     /* Make sure it *is* a view. */
     if (rel->rd_rel->relkind != RELKIND_VIEW)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a view", RelationGetRelationName(rel))));
     }
 
     /* Also check it's not in use already */
@@ -290,7 +290,7 @@ checkViewTupleDesc(TupleDesc newdesc, TupleDesc olddesc)
     /* XXX msg not right, but we don't support DROP COL on view anyway */
     if (newattr->attisdropped != oldattr->attisdropped)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION), errmsg("cannot drop columns from view")));
     }
 
     if (strcmp(NameStr(newattr->attname), NameStr(oldattr->attname)) != 0)
@@ -425,7 +425,7 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
    */
   if (!IsA(viewParse, Query))
   {
-
+    elog(ERROR, "unexpected parse analysis result");
   }
   if (viewParse->utilityStmt != NULL && IsA(viewParse->utilityStmt, CreateTableAsStmt))
   {
@@ -433,7 +433,7 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
   }
   if (viewParse->commandType != CMD_SELECT)
   {
-
+    elog(ERROR, "unexpected parse analysis result");
   }
 
   /*
@@ -443,7 +443,7 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
    */
   if (viewParse->hasModifyingCTE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("views must not contain data-modifying statements in WITH")));
   }
 
   /*
@@ -485,7 +485,7 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
 
     if (view_updatable_error)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("WITH CHECK OPTION is supported only on automatically updatable views"), errhint("%s", _(view_updatable_error))));
     }
   }
 
@@ -505,7 +505,7 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
       /* junk columns don't get aliases */
       if (te->resjunk)
       {
-
+        continue;
       }
       te->resname = pstrdup(strVal(lfirst(alist_item)));
       alist_item = lnext(alist_item);
@@ -517,14 +517,15 @@ DefineView(ViewStmt *stmt, const char *queryString, int stmt_location, int stmt_
 
     if (alist_item != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("CREATE VIEW specifies more column "
+                                                            "names than columns")));
     }
   }
 
   /* Unlogged views are not sensible. */
   if (stmt->view->relpersistence == RELPERSISTENCE_UNLOGGED)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("views cannot be unlogged because they do not have storage")));
   }
 
   /*

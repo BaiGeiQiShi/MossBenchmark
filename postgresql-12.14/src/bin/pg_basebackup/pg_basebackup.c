@@ -43,13 +43,15 @@
 
 #define ERRCODE_DATA_CORRUPTED "XX001"
 
-typedef struct TablespaceListCell {
+typedef struct TablespaceListCell
+{
   struct TablespaceListCell *next;
   char old_dir[MAXPGPATH];
   char new_dir[MAXPGPATH];
 } TablespaceListCell;
 
-typedef struct TablespaceList {
+typedef struct TablespaceList
+{
   TablespaceListCell *head;
   TablespaceListCell *tail;
 } TablespaceList;
@@ -73,7 +75,12 @@ typedef struct TablespaceList {
 /*
  * Different ways to include WAL
  */
-typedef enum { NO_WAL, FETCH_WAL, STREAM_WAL } IncludeWal;
+typedef enum
+{
+  NO_WAL,
+  FETCH_WAL,
+  STREAM_WAL
+} IncludeWal;
 
 /* Global options */
 static char *basedir = NULL;
@@ -163,45 +170,62 @@ tablespace_list_append(const char *arg);
 static void
 cleanup_directories_atexit(void)
 {
-  if (success || in_log_streamer) {
+  if (success || in_log_streamer)
+  {
     return;
   }
 
-  if (!noclean && !checksum_failure) {
-    if (made_new_pgdata) {
+  if (!noclean && !checksum_failure)
+  {
+    if (made_new_pgdata)
+    {
       pg_log_info("removing data directory \"%s\"", basedir);
-      if (!rmtree(basedir, true)) {
+      if (!rmtree(basedir, true))
+      {
         pg_log_error("failed to remove data directory");
       }
-    } else if (found_existing_pgdata) {
+    }
+    else if (found_existing_pgdata)
+    {
       pg_log_info("removing contents of data directory \"%s\"", basedir);
-      if (!rmtree(basedir, false)) {
+      if (!rmtree(basedir, false))
+      {
         pg_log_error("failed to remove contents of data directory");
       }
     }
 
-    if (made_new_xlogdir) {
+    if (made_new_xlogdir)
+    {
       pg_log_info("removing WAL directory \"%s\"", xlog_dir);
-      if (!rmtree(xlog_dir, true)) {
+      if (!rmtree(xlog_dir, true))
+      {
         pg_log_error("failed to remove WAL directory");
       }
-    } else if (found_existing_xlogdir) {
+    }
+    else if (found_existing_xlogdir)
+    {
       pg_log_info("removing contents of WAL directory \"%s\"", xlog_dir);
-      if (!rmtree(xlog_dir, false)) {
+      if (!rmtree(xlog_dir, false))
+      {
         pg_log_error("failed to remove contents of WAL directory");
       }
     }
-  } else {
-    if ((made_new_pgdata || found_existing_pgdata) && !checksum_failure) {
+  }
+  else
+  {
+    if ((made_new_pgdata || found_existing_pgdata) && !checksum_failure)
+    {
       pg_log_info("data directory \"%s\" not removed at user's request", basedir);
     }
 
-    if (made_new_xlogdir || found_existing_xlogdir) {
+    if (made_new_xlogdir || found_existing_xlogdir)
+    {
       pg_log_info("WAL directory \"%s\" not removed at user's request", xlog_dir);
     }
   }
 
-  if ((made_tablespace_dirs || found_tablespace_dirs) && !checksum_failure) {
+  if ((made_tablespace_dirs || found_tablespace_dirs) && !checksum_failure)
+  {
     pg_log_info("changes to tablespace directories will not be undone");
   }
 }
@@ -209,7 +233,8 @@ cleanup_directories_atexit(void)
 static void
 disconnect_atexit(void)
 {
-  if (conn != NULL) {
+  if (conn != NULL)
+  {
     PQfinish(conn);
   }
 }
@@ -223,7 +248,8 @@ disconnect_atexit(void)
 static void
 kill_bgchild_atexit(void)
 {
-  if (bgchild > 0) {
+  if (bgchild > 0)
+  {
     kill(bgchild, SIGTERM);
   }
 }
@@ -242,27 +268,36 @@ tablespace_list_append(const char *arg)
   const char *arg_ptr;
 
   dst_ptr = dst = cell->old_dir;
-  for (arg_ptr = arg; *arg_ptr; arg_ptr++) {
-    if (dst_ptr - dst >= MAXPGPATH) {
+  for (arg_ptr = arg; *arg_ptr; arg_ptr++)
+  {
+    if (dst_ptr - dst >= MAXPGPATH)
+    {
       pg_log_error("directory name too long");
       exit(1);
     }
 
     if (*arg_ptr == '\\' && *(arg_ptr + 1) == '=')
       ; /* skip backslash escaping = */
-    else if (*arg_ptr == '=' && (arg_ptr == arg || *(arg_ptr - 1) != '\\')) {
-      if (*cell->new_dir) {
+    else if (*arg_ptr == '=' && (arg_ptr == arg || *(arg_ptr - 1) != '\\'))
+    {
+      if (*cell->new_dir)
+      {
         pg_log_error("multiple \"=\" signs in tablespace mapping");
         exit(1);
-      } else {
+      }
+      else
+      {
         dst = dst_ptr = cell->new_dir;
       }
-    } else {
+    }
+    else
+    {
       *dst_ptr++ = *arg_ptr;
     }
   }
 
-  if (!*cell->old_dir || !*cell->new_dir) {
+  if (!*cell->old_dir || !*cell->new_dir)
+  {
     pg_log_error("invalid tablespace mapping format \"%s\", must be \"OLDDIR=NEWDIR\"", arg);
     exit(1);
   }
@@ -282,12 +317,14 @@ tablespace_list_append(const char *arg)
    * of their mistake, and the -T option will just not get applied, same
    * as if they'd specified -T for a nonexistent tablespace.)
    */
-  if (!is_nonwindows_absolute_path(cell->old_dir) && !is_windows_absolute_path(cell->old_dir)) {
+  if (!is_nonwindows_absolute_path(cell->old_dir) && !is_windows_absolute_path(cell->old_dir))
+  {
     pg_log_error("old directory is not an absolute path in tablespace mapping: %s", cell->old_dir);
     exit(1);
   }
 
-  if (!is_absolute_path(cell->new_dir)) {
+  if (!is_absolute_path(cell->new_dir))
+  {
     pg_log_error("new directory is not an absolute path in tablespace mapping: %s", cell->new_dir);
     exit(1);
   }
@@ -300,9 +337,12 @@ tablespace_list_append(const char *arg)
   canonicalize_path(cell->old_dir);
   canonicalize_path(cell->new_dir);
 
-  if (tablespace_dirs.tail) {
+  if (tablespace_dirs.tail)
+  {
     tablespace_dirs.tail->next = cell;
-  } else {
+  }
+  else
+  {
     tablespace_dirs.head = cell;
   }
   tablespace_dirs.tail = cell;
@@ -316,9 +356,12 @@ get_gz_error(gzFile gzf)
   const char *errmsg;
 
   errmsg = gzerror(gzf, &errnum);
-  if (errnum == Z_ERRNO) {
+  if (errnum == Z_ERRNO)
+  {
     return strerror(errno);
-  } else {
+  }
+  else
+  {
     return errmsg;
   }
 }
@@ -333,15 +376,20 @@ usage(void)
   printf(_("\nOptions controlling the output:\n"));
   printf(_("  -D, --pgdata=DIRECTORY receive base backup into directory\n"));
   printf(_("  -F, --format=p|t       output format (plain (default), tar)\n"));
-  printf(_("  -r, --max-rate=RATE    maximum transfer rate to transfer data directory\n                         (in kB/s, or use suffix \"k\" or \"M\")\n"));
-  printf(_("  -R, --write-recovery-conf\n                         write configuration for replication\n"));
-  printf(_("  -T, --tablespace-mapping=OLDDIR=NEWDIR\n                         relocate tablespace in OLDDIR to NEWDIR\n"));
+  printf(_("  -r, --max-rate=RATE    maximum transfer rate to transfer data directory\n"
+           "                         (in kB/s, or use suffix \"k\" or \"M\")\n"));
+  printf(_("  -R, --write-recovery-conf\n"
+           "                         write configuration for replication\n"));
+  printf(_("  -T, --tablespace-mapping=OLDDIR=NEWDIR\n"
+           "                         relocate tablespace in OLDDIR to NEWDIR\n"));
   printf(_("      --waldir=WALDIR    location for the write-ahead log directory\n"));
-  printf(_("  -X, --wal-method=none|fetch|stream\n                         include required WAL files with specified method\n"));
+  printf(_("  -X, --wal-method=none|fetch|stream\n"
+           "                         include required WAL files with specified method\n"));
   printf(_("  -z, --gzip             compress tar output\n"));
   printf(_("  -Z, --compress=0-9     compress tar output with given compression level\n"));
   printf(_("\nGeneral options:\n"));
-  printf(_("  -c, --checkpoint=fast|spread\n                         set fast or spread checkpointing\n"));
+  printf(_("  -c, --checkpoint=fast|spread\n"
+           "                         set fast or spread checkpointing\n"));
   printf(_("  -C, --create-slot      create replication slot\n"));
   printf(_("  -l, --label=LABEL      set backup label\n"));
   printf(_("  -n, --no-clean         do not clean up after errors\n"));
@@ -351,13 +399,15 @@ usage(void)
   printf(_("  -v, --verbose          output verbose messages\n"));
   printf(_("  -V, --version          output version information, then exit\n"));
   printf(_("      --no-slot          prevent creation of temporary replication slot\n"));
-  printf(_("      --no-verify-checksums\n                         do not verify checksums\n"));
+  printf(_("      --no-verify-checksums\n"
+           "                         do not verify checksums\n"));
   printf(_("  -?, --help             show this help, then exit\n"));
   printf(_("\nConnection options:\n"));
   printf(_("  -d, --dbname=CONNSTR   connection string\n"));
   printf(_("  -h, --host=HOSTNAME    database server host or socket directory\n"));
   printf(_("  -p, --port=PORT        database server port number\n"));
-  printf(_("  -s, --status-interval=INTERVAL\n                         time between status packets sent to server (in seconds)\n"));
+  printf(_("  -s, --status-interval=INTERVAL\n"
+           "                         time between status packets sent to server (in seconds)\n"));
   printf(_("  -U, --username=NAME    connect as specified database user\n"));
   printf(_("  -w, --no-password      never prompt for password\n"));
   printf(_("  -W, --password         force password prompt (should happen automatically)\n"));
@@ -375,7 +425,8 @@ usage(void)
 static bool
 reached_end_position(XLogRecPtr segendpos, uint32 timeline, bool segment_finished)
 {
-  if (!has_xlogendptr) {
+  if (!has_xlogendptr)
+  {
 #ifndef WIN32
     fd_set fds;
     struct timeval tv;
@@ -391,18 +442,21 @@ reached_end_position(XLogRecPtr segendpos, uint32 timeline, bool segment_finishe
     MemSet(&tv, 0, sizeof(tv));
 
     r = select(bgpipe[0] + 1, &fds, NULL, NULL, &tv);
-    if (r == 1) {
+    if (r == 1)
+    {
       char xlogend[64];
       uint32 hi, lo;
 
       MemSet(xlogend, 0, sizeof(xlogend));
       r = read(bgpipe[0], xlogend, sizeof(xlogend) - 1);
-      if (r < 0) {
+      if (r < 0)
+      {
         pg_log_error("could not read from ready pipe: %m");
         exit(1);
       }
 
-      if (sscanf(xlogend, "%X/%X", &hi, &lo) != 2) {
+      if (sscanf(xlogend, "%X/%X", &hi, &lo) != 2)
+      {
         pg_log_error("could not parse write-ahead log location \"%s\"", xlogend);
         exit(1);
       }
@@ -413,7 +467,9 @@ reached_end_position(XLogRecPtr segendpos, uint32 timeline, bool segment_finishe
        * Fall through to check if we've reached the point further
        * already.
        */
-    } else {
+    }
+    else
+    {
       /*
        * No data received on the pipe means we don't know the end
        * position yet - so just say it's not time to stop yet.
@@ -434,7 +490,8 @@ reached_end_position(XLogRecPtr segendpos, uint32 timeline, bool segment_finishe
    * At this point we have an end pointer, so compare it to the current
    * position to figure out if it's time to stop.
    */
-  if (segendpos >= xlogendptr) {
+  if (segendpos >= xlogendptr)
+  {
     return true;
   }
 
@@ -445,7 +502,8 @@ reached_end_position(XLogRecPtr segendpos, uint32 timeline, bool segment_finishe
   return false;
 }
 
-typedef struct {
+typedef struct
+{
   PGconn *bgconn;
   XLogRecPtr startptr;
   char xlog[MAXPGPATH]; /* directory or tarfile depending on mode */
@@ -478,31 +536,40 @@ LogStreamerMain(logstreamer_param *param)
   stream.partial_suffix = NULL;
   stream.replication_slot = replication_slot;
 
-  if (format == 'p') {
+  if (format == 'p')
+  {
     stream.walmethod = CreateWalDirectoryMethod(param->xlog, 0, stream.do_sync);
-  } else {
+  }
+  else
+  {
     stream.walmethod = CreateWalTarMethod(param->xlog, compresslevel, stream.do_sync);
   }
 
-  if (!ReceiveXlogStream(param->bgconn, &stream)) {
+  if (!ReceiveXlogStream(param->bgconn, &stream))
+  {
 
     /*
-     * Any errors will already have been reported in the function process,* but we need to tell the parent that we didn't shutdown in a nice
+     * Any errors will already have been reported in the function process,
+     * but we need to tell the parent that we didn't shutdown in a nice
      * way.
      */
     return 1;
   }
 
-  if (!stream.walmethod->finish()) {
+  if (!stream.walmethod->finish())
+  {
     pg_log_error("could not finish writing WAL files: %m");
     return 1;
   }
 
   PQfinish(param->bgconn);
 
-  if (format == 'p') {
+  if (format == 'p')
+  {
     FreeWalDirectoryMethod();
-  } else {
+  }
+  else
+  {
     FreeWalTarMethod();
   }
   pg_free(stream.walmethod);
@@ -527,7 +594,8 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
   param->sysidentifier = sysidentifier;
 
   /* Convert the starting position */
-  if (sscanf(startpos, "%X/%X", &hi, &lo) != 2) {
+  if (sscanf(startpos, "%X/%X", &hi, &lo) != 2)
+  {
     pg_log_error("could not parse write-ahead log location \"%s\"", startpos);
     exit(1);
   }
@@ -537,7 +605,8 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 
 #ifndef WIN32
   /* Create our background pipe */
-  if (pipe(bgpipe) < 0) {
+  if (pipe(bgpipe) < 0)
+  {
     pg_log_error("could not create pipe for background process: %m");
     exit(1);
   }
@@ -545,7 +614,8 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 
   /* Get a second connection */
   param->bgconn = GetConnection();
-  if (!param->bgconn) {
+  if (!param->bgconn)
+  {
     /* Error message already written in GetConnection() */
     exit(1);
   }
@@ -554,31 +624,40 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
   snprintf(param->xlog, sizeof(param->xlog), "%s/%s", basedir, PQserverVersion(conn) < MINIMUM_VERSION_FOR_PG_WAL ? "pg_xlog" : "pg_wal");
 
   /* Temporary replication slots are only supported in 10 and newer */
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_TEMP_SLOTS) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_TEMP_SLOTS)
+  {
     temp_replication_slot = false;
   }
 
   /*
    * Create replication slot if requested
    */
-  if (temp_replication_slot && !replication_slot) {
+  if (temp_replication_slot && !replication_slot)
+  {
     replication_slot = psprintf("pg_basebackup_%d", (int)PQbackendPID(param->bgconn));
   }
-  if (temp_replication_slot || create_slot) {
-    if (!CreateReplicationSlot(param->bgconn, replication_slot, NULL, temp_replication_slot, true, true, false)) {
+  if (temp_replication_slot || create_slot)
+  {
+    if (!CreateReplicationSlot(param->bgconn, replication_slot, NULL, temp_replication_slot, true, true, false))
+    {
       exit(1);
     }
 
-    if (verbose) {
-      if (temp_replication_slot) {
+    if (verbose)
+    {
+      if (temp_replication_slot)
+      {
         pg_log_info("created temporary replication slot \"%s\"", replication_slot);
-      } else {
+      }
+      else
+      {
         pg_log_info("created replication slot \"%s\"", replication_slot);
       }
     }
   }
 
-  if (format == 'p') {
+  if (format == 'p')
+  {
     /*
      * Create pg_wal/archive_status or pg_xlog/archive_status (and thus
      * pg_wal or pg_xlog) depending on the target server so we can write
@@ -587,7 +666,8 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
      */
     snprintf(statusdir, sizeof(statusdir), "%s/%s/archive_status", basedir, PQserverVersion(conn) < MINIMUM_VERSION_FOR_PG_WAL ? "pg_xlog" : "pg_wal");
 
-    if (pg_mkdir_p(statusdir, pg_dir_create_mode) != 0 && errno != EEXIST) {
+    if (pg_mkdir_p(statusdir, pg_dir_create_mode) != 0 && errno != EEXIST)
+    {
       pg_log_error("could not create directory \"%s\": %m", statusdir);
       exit(1);
     }
@@ -599,10 +679,13 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
    */
 #ifndef WIN32
   bgchild = fork();
-  if (bgchild == 0) {
+  if (bgchild == 0)
+  {
     /* in child process */
     exit(LogStreamerMain(param));
-  } else if (bgchild < 0) {
+  }
+  else if (bgchild < 0)
+  {
     pg_log_error("could not create background process: %m");
     exit(1);
   }
@@ -613,7 +696,8 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
   atexit(kill_bgchild_atexit);
 #else /* WIN32 */
   bgchild = _beginthreadex(NULL, 0, (void *)LogStreamerMain, param, 0, NULL);
-  if (bgchild == 0) {
+  if (bgchild == 0)
+  {
     pg_log_error("could not create background thread: %m");
     exit(1);
   }
@@ -628,17 +712,20 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 static void
 verify_dir_is_empty_or_create(char *dirname, bool *created, bool *found)
 {
-  switch (pg_check_dir(dirname)) {
+  switch (pg_check_dir(dirname))
+  {
   case 0:
 
     /*
      * Does not exist, so create
      */
-    if (pg_mkdir_p(dirname, pg_dir_create_mode) == -1) {
+    if (pg_mkdir_p(dirname, pg_dir_create_mode) == -1)
+    {
       pg_log_error("could not create directory \"%s\": %m", dirname);
       exit(1);
     }
-    if (created) {
+    if (created)
+    {
       *created = true;
     }
     return;
@@ -647,7 +734,8 @@ verify_dir_is_empty_or_create(char *dirname, bool *created, bool *found)
     /*
      * Exists, empty
      */
-    if (found) {
+    if (found)
+    {
       *found = true;
     }
     return;
@@ -688,12 +776,14 @@ progress_report(int tablespacenum, const char *filename, bool force, bool finish
   char totalsize_str[32];
   pg_time_t now;
 
-  if (!showprogress) {
+  if (!showprogress)
+  {
     return;
   }
 
   now = time(NULL);
-  if (now == last_progress_report && !force && !finished) {
+  if (now == last_progress_report && !force && !finished)
+  {
     return; /* Max once per second */
   }
 
@@ -706,10 +796,12 @@ progress_report(int tablespacenum, const char *filename, bool force, bool finish
    * will always be wrong if WAL is included), but that's better than having
    * the done column be bigger than the total.
    */
-  if (percent > 100) {
+  if (percent > 100)
+  {
     percent = 100;
   }
-  if (totaldone / 1024 > totalsize) {
+  if (totaldone / 1024 > totalsize)
+  {
     totalsize = totaldone / 1024;
   }
 
@@ -722,22 +814,30 @@ progress_report(int tablespacenum, const char *filename, bool force, bool finish
   snprintf(totalsize_str, sizeof(totalsize_str), INT64_FORMAT, totalsize);
 
 #define VERBOSE_FILENAME_LENGTH 35
-  if (verbose) {
-    if (!filename) {
+  if (verbose)
+  {
+    if (!filename)
+    {
 
       /*
        * No filename given, so clear the status line (used for last
        * call)
        */
       fprintf(stderr, ngettext("%*s/%s kB (100%%), %d/%d tablespace %*s", "%*s/%s kB (100%%), %d/%d tablespaces %*s", tablespacecount), (int)strlen(totalsize_str), totaldone_str, totalsize_str, tablespacenum, tablespacecount, VERBOSE_FILENAME_LENGTH + 5, "");
-    } else {
+    }
+    else
+    {
       bool truncate = (strlen(filename) > VERBOSE_FILENAME_LENGTH);
 
-      fprintf(stderr, ngettext("%*s/%s kB (%d%%), %d/%d tablespace (%s%-*.*s)", "%*s/%s kB (%d%%), %d/%d tablespaces (%s%-*.*s)", tablespacecount), (int)strlen(totalsize_str), totaldone_str, totalsize_str, percent, tablespacenum, tablespacecount,/* Prefix with "..." if we do leading truncation */
-          truncate ? "..." : "", truncate ? VERBOSE_FILENAME_LENGTH - 3 : VERBOSE_FILENAME_LENGTH, truncate ? VERBOSE_FILENAME_LENGTH - 3 : VERBOSE_FILENAME_LENGTH,/* Truncate filename at beginning if it's too long */
+      fprintf(stderr, ngettext("%*s/%s kB (%d%%), %d/%d tablespace (%s%-*.*s)", "%*s/%s kB (%d%%), %d/%d tablespaces (%s%-*.*s)", tablespacecount), (int)strlen(totalsize_str), totaldone_str, totalsize_str, percent, tablespacenum, tablespacecount,
+          /* Prefix with "..." if we do leading truncation */
+          truncate ? "..." : "", truncate ? VERBOSE_FILENAME_LENGTH - 3 : VERBOSE_FILENAME_LENGTH, truncate ? VERBOSE_FILENAME_LENGTH - 3 : VERBOSE_FILENAME_LENGTH,
+          /* Truncate filename at beginning if it's too long */
           truncate ? filename + strlen(filename) - VERBOSE_FILENAME_LENGTH + 3 : filename);
     }
-  } else {
+  }
+  else
+  {
     fprintf(stderr, ngettext("%*s/%s kB (%d%%), %d/%d tablespace", "%*s/%s kB (%d%%), %d/%d tablespaces", tablespacecount), (int)strlen(totalsize_str), totaldone_str, totalsize_str, percent, tablespacenum, tablespacecount);
   }
 
@@ -757,16 +857,19 @@ parse_max_rate(char *src)
 
   errno = 0;
   result = strtod(src, &after_num);
-  if (src == after_num) {
+  if (src == after_num)
+  {
     pg_log_error("transfer rate \"%s\" is not a valid value", src);
     exit(1);
   }
-  if (errno != 0) {
+  if (errno != 0)
+  {
     pg_log_error("invalid transfer rate \"%s\": %m", src);
     exit(1);
   }
 
-  if (result <= 0) {
+  if (result <= 0)
+  {
     /*
      * Reject obviously wrong values here.
      */
@@ -778,33 +881,41 @@ parse_max_rate(char *src)
    * Evaluate suffix, after skipping over possible whitespace. Lack of
    * suffix means kilobytes.
    */
-  while (*after_num != '\0' && isspace((unsigned char)*after_num)) {
+  while (*after_num != '\0' && isspace((unsigned char)*after_num))
+  {
     after_num++;
   }
 
-  if (*after_num != '\0') {
+  if (*after_num != '\0')
+  {
     suffix = after_num;
-    if (*after_num == 'k') {
+    if (*after_num == 'k')
+    {
       /* kilobyte is the expected unit. */
       after_num++;
-    } else if (*after_num == 'M') {
+    }
+    else if (*after_num == 'M')
+    {
       after_num++;
       result *= 1024.0;
     }
   }
 
   /* The rest can only consist of white space. */
-  while (*after_num != '\0' && isspace((unsigned char)*after_num)) {
+  while (*after_num != '\0' && isspace((unsigned char)*after_num))
+  {
     after_num++;
   }
 
-  if (*after_num != '\0') {
+  if (*after_num != '\0')
+  {
     pg_log_error("invalid --max-rate unit: \"%s\"", suffix);
     exit(1);
   }
 
   /* Valid integer? */
-  if ((uint64)result != (uint64)((uint32)result)) {
+  if ((uint64)result != (uint64)((uint32)result))
+  {
     pg_log_error("transfer rate \"%s\" exceeds integer range", src);
     exit(1);
   }
@@ -813,7 +924,8 @@ parse_max_rate(char *src)
    * The range is checked on the server side too, but avoid the server
    * connection if a nonsensical value was passed.
    */
-  if (result < MAX_RATE_LOWER || result > MAX_RATE_UPPER) {
+  if (result < MAX_RATE_LOWER || result > MAX_RATE_UPPER)
+  {
     pg_log_error("transfer rate \"%s\" is out of range", src);
     exit(1);
   }
@@ -832,23 +944,29 @@ writeTarData(
     FILE *tarfile, char *buf, int r, char *current_file)
 {
 #ifdef HAVE_LIBZ
-  if (ztarfile != NULL) {
+  if (ztarfile != NULL)
+  {
     errno = 0;
-    if (gzwrite(ztarfile, buf, r) != r) {
+    if (gzwrite(ztarfile, buf, r) != r)
+    {
       /* if write didn't set errno, assume problem is no disk space */
-      if (errno == 0) {
+      if (errno == 0)
+      {
         errno = ENOSPC;
       }
       pg_log_error("could not write to compressed file \"%s\": %s", current_file, get_gz_error(ztarfile));
       exit(1);
     }
-  } else
+  }
+  else
 #endif
   {
     errno = 0;
-    if (fwrite(buf, r, 1, tarfile) != 1) {
+    if (fwrite(buf, r, 1, tarfile) != 1)
+    {
       /* if write didn't set errno, assume problem is no disk space */
-      if (errno == 0) {
+      if (errno == 0)
+      {
         errno = ENOSPC;
       }
       pg_log_error("could not write to file \"%s\": %m", current_file);
@@ -895,59 +1013,75 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 #endif
 
   /* recovery.conf is integrated into postgresql.conf in 12 and newer */
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC)
+  {
     is_recovery_guc_supported = false;
   }
 
-  if (basetablespace) {
+  if (basetablespace)
+  {
     /*
      * Base tablespaces
      */
-    if (strcmp(basedir, "-") == 0) {
+    if (strcmp(basedir, "-") == 0)
+    {
 #ifdef WIN32
       _setmode(fileno(stdout), _O_BINARY);
 #endif
 
 #ifdef HAVE_LIBZ
-      if (compresslevel != 0) {
+      if (compresslevel != 0)
+      {
         ztarfile = gzdopen(dup(fileno(stdout)), "wb");
-        if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK) {
+        if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK)
+        {
           pg_log_error("could not set compression level %d: %s", compresslevel, get_gz_error(ztarfile));
           exit(1);
         }
-      } else
+      }
+      else
 #endif
         tarfile = stdout;
       strcpy(filename, "-");
-    } else {
+    }
+    else
+    {
 #ifdef HAVE_LIBZ
-      if (compresslevel != 0) {
+      if (compresslevel != 0)
+      {
         snprintf(filename, sizeof(filename), "%s/base.tar.gz", basedir);
         ztarfile = gzopen(filename, "wb");
-        if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK) {
+        if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK)
+        {
           pg_log_error("could not set compression level %d: %s", compresslevel, get_gz_error(ztarfile));
           exit(1);
         }
-      } else
+      }
+      else
 #endif
       {
         snprintf(filename, sizeof(filename), "%s/base.tar", basedir);
         tarfile = fopen(filename, "wb");
       }
     }
-  } else {
+  }
+  else
+  {
     /*
      * Specific tablespace
      */
 #ifdef HAVE_LIBZ
-    if (compresslevel != 0) {
+    if (compresslevel != 0)
+    {
       snprintf(filename, sizeof(filename), "%s/%s.tar.gz", basedir, PQgetvalue(res, rownum, 0));
       ztarfile = gzopen(filename, "wb");
-      if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK) {
+      if (gzsetparams(ztarfile, compresslevel, Z_DEFAULT_STRATEGY) != Z_OK)
+      {
         pg_log_error("could not set compression level %d: %s", compresslevel, get_gz_error(ztarfile));
         exit(1);
       }
-    } else
+    }
+    else
 #endif
     {
       snprintf(filename, sizeof(filename), "%s/%s.tar", basedir, PQgetvalue(res, rownum, 0));
@@ -956,17 +1090,21 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
   }
 
 #ifdef HAVE_LIBZ
-  if (compresslevel != 0) {
-    if (!ztarfile) {
+  if (compresslevel != 0)
+  {
+    if (!ztarfile)
+    {
       /* Compression is in use */
       pg_log_error("could not create compressed file \"%s\": %s", filename, get_gz_error(ztarfile));
       exit(1);
     }
-  } else
+  }
+  else
 #endif
   {
     /* Either no zlib support, or zlib support but compresslevel = 0 */
-    if (!tarfile) {
+    if (!tarfile)
+    {
       pg_log_error("could not create file \"%s\": %m", filename);
       exit(1);
     }
@@ -976,23 +1114,28 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
    * Get the COPY data stream
    */
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_COPY_OUT) {
+  if (PQresultStatus(res) != PGRES_COPY_OUT)
+  {
     pg_log_error("could not get COPY data stream: %s", PQerrorMessage(conn));
     exit(1);
   }
 
-  while (1) {
+  while (1)
+  {
     int r;
 
-    if (copybuf != NULL) {
+    if (copybuf != NULL)
+    {
       PQfreemem(copybuf);
       copybuf = NULL;
     }
 
     r = PQgetCopyData(conn, &copybuf, 0);
-    if (r == -1) {
+    if (r == -1)
+    {
       /*
-       * End of chunk. If requested, and this is the base tablespace,* write configuration file into the tarfile. When done, close the
+       * End of chunk. If requested, and this is the base tablespace,
+       * write configuration file into the tarfile. When done, close the
        * file (but not stdout).
        *
        * Also, write two completely empty blocks at the end of the tar
@@ -1002,7 +1145,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 
       MemSet(zerobuf, 0, sizeof(zerobuf));
 
-      if (basetablespace && writerecoveryconf) {
+      if (basetablespace && writerecoveryconf)
+      {
         char header[512];
 
         /*
@@ -1012,7 +1156,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
          * is older than 12, create recovery.conf with this data
          * otherwise.
          */
-        if (!found_postgresql_auto_conf || !is_recovery_guc_supported) {
+        if (!found_postgresql_auto_conf || !is_recovery_guc_supported)
+        {
           int padding;
 
           tarCreateHeader(header, is_recovery_guc_supported ? "postgresql.auto.conf" : "recovery.conf", NULL, recoveryconfcontents->len, pg_file_create_mode, 04000, 02000, time(NULL));
@@ -1021,7 +1166,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 
           WRITE_TAR_DATA(header, sizeof(header));
           WRITE_TAR_DATA(recoveryconfcontents->data, recoveryconfcontents->len);
-          if (padding) {
+          if (padding)
+          {
             WRITE_TAR_DATA(zerobuf, padding);
           }
         }
@@ -1030,7 +1176,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
          * standby.signal is supported only if recovery parameters are
          * GUCs.
          */
-        if (is_recovery_guc_supported) {
+        if (is_recovery_guc_supported)
+        {
           tarCreateHeader(header, "standby.signal", NULL, 0, /* zero-length file */
               pg_file_create_mode, 04000, 02000, time(NULL));
 
@@ -1048,17 +1195,22 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
       WRITE_TAR_DATA(zerobuf, sizeof(zerobuf));
 
 #ifdef HAVE_LIBZ
-      if (ztarfile != NULL) {
+      if (ztarfile != NULL)
+      {
         errno = 0; /* in case gzclose() doesn't set it */
-        if (gzclose(ztarfile) != 0) {
+        if (gzclose(ztarfile) != 0)
+        {
           pg_log_error("could not close compressed file \"%s\": %m", filename);
           exit(1);
         }
-      } else
+      }
+      else
 #endif
       {
-        if (strcmp(basedir, "-") != 0) {
-          if (fclose(tarfile) != 0) {
+        if (strcmp(basedir, "-") != 0)
+        {
+          if (fclose(tarfile) != 0)
+          {
             pg_log_error("could not close file \"%s\": %m", filename);
             exit(1);
           }
@@ -1066,19 +1218,24 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
       }
 
       break;
-    } else if (r == -2) {
+    }
+    else if (r == -2)
+    {
       pg_log_error("could not read COPY data: %s", PQerrorMessage(conn));
       exit(1);
     }
 
-    if (!writerecoveryconf || !basetablespace) {
+    if (!writerecoveryconf || !basetablespace)
+    {
       /*
        * When not writing config file, or when not working on the base
        * tablespace, we never have to look for an existing configuration
        * file in the stream.
        */
       WRITE_TAR_DATA(copybuf, r);
-    } else {
+    }
+    else
+    {
       /*
        * Look for a config file in the existing tar stream. If it's
        * there, we must skip it so we can later overwrite it with our
@@ -1093,13 +1250,16 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
       int rr = r;
       int pos = 0;
 
-      while (rr > 0) {
-        if (in_tarhdr) {
+      while (rr > 0)
+      {
+        if (in_tarhdr)
+        {
           /*
            * We're currently reading a header structure inside the
            * TAR stream, i.e. the file metadata.
            */
-          if (tarhdrsz < 512) {
+          if (tarhdrsz < 512)
+          {
             /*
              * Copy the header structure into tarhdr in case the
              * header is not aligned to 512 bytes or it's not
@@ -1116,36 +1276,46 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
             rr -= bytes2copy;
             pos += bytes2copy;
             tarhdrsz += bytes2copy;
-          } else {
+          }
+          else
+          {
             /*
-             * We have the complete header structure in tarhdr,* look at the file metadata: we may want append
+             * We have the complete header structure in tarhdr,
+             * look at the file metadata: we may want append
              * recovery info into postgresql.auto.conf and skip
              * standby.signal file if recovery parameters are
              * integrated as GUCs, and recovery.conf otherwise. In
              * both cases we must calculate tar padding.
              */
-            if (is_recovery_guc_supported) {
+            if (is_recovery_guc_supported)
+            {
               skip_file = (strcmp(&tarhdr[0], "standby.signal") == 0);
               is_postgresql_auto_conf = (strcmp(&tarhdr[0], "postgresql.auto.conf") == 0);
-            } else {
+            }
+            else
+            {
               skip_file = (strcmp(&tarhdr[0], "recovery.conf") == 0);
             }
 
             filesz = read_tar_number(&tarhdr[124], 12);
             file_padding_len = ((filesz + 511) & ~511) - filesz;
 
-            if (is_recovery_guc_supported && is_postgresql_auto_conf && writerecoveryconf) {
+            if (is_recovery_guc_supported && is_postgresql_auto_conf && writerecoveryconf)
+            {
               /* replace tar header */
               char header[512];
 
               tarCreateHeader(header, "postgresql.auto.conf", NULL, filesz + recoveryconfcontents->len, pg_file_create_mode, 04000, 02000, time(NULL));
 
               WRITE_TAR_DATA(header, sizeof(header));
-            } else {
+            }
+            else
+            {
               /* copy stream with padding */
               filesz += file_padding_len;
 
-              if (!skip_file) {
+              if (!skip_file)
+              {
                 /*
                  * If we're not skipping the file, write the
                  * tar header unmodified.
@@ -1157,11 +1327,14 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
             /* Next part is the file, not the header */
             in_tarhdr = false;
           }
-        } else {
+        }
+        else
+        {
           /*
            * We're processing a file's contents.
            */
-          if (filesz > 0) {
+          if (filesz > 0)
+          {
             /*
              * We still have data to read (and possibly write).
              */
@@ -1169,14 +1342,17 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 
             bytes2write = (filesz > rr ? rr : filesz);
 
-            if (!skip_file) {
+            if (!skip_file)
+            {
               WRITE_TAR_DATA(copybuf + pos, bytes2write);
             }
 
             rr -= bytes2write;
             pos += bytes2write;
             filesz -= bytes2write;
-          } else if (is_recovery_guc_supported && is_postgresql_auto_conf && writerecoveryconf) {
+          }
+          else if (is_recovery_guc_supported && is_postgresql_auto_conf && writerecoveryconf)
+          {
             /* append recovery config to postgresql.auto.conf */
             int padding;
             int tailsize;
@@ -1186,7 +1362,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 
             WRITE_TAR_DATA(recoveryconfcontents->data, recoveryconfcontents->len);
 
-            if (padding) {
+            if (padding)
+            {
               char zerobuf[512];
 
               MemSet(zerobuf, 0, sizeof(zerobuf));
@@ -1199,7 +1376,9 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
             filesz += file_padding_len;
 
             found_postgresql_auto_conf = true;
-          } else {
+          }
+          else
+          {
             /*
              * No more data in the current file, the next piece of
              * data (if any) will be a new file header structure.
@@ -1218,7 +1397,8 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
   } /* while (1) */
   progress_report(rownum, filename, true, false);
 
-  if (copybuf != NULL) {
+  if (copybuf != NULL)
+  {
     PQfreemem(copybuf);
   }
 
@@ -1242,8 +1422,10 @@ get_tablespace_mapping(const char *dir)
   strlcpy(canon_dir, dir, sizeof(canon_dir));
   canonicalize_path(canon_dir);
 
-  for (cell = tablespace_dirs.head; cell; cell = cell->next) {
-    if (strcmp(canon_dir, cell->old_dir) == 0) {
+  for (cell = tablespace_dirs.head; cell; cell = cell->next)
+  {
+    if (strcmp(canon_dir, cell->old_dir) == 0)
+    {
       return cell->new_dir;
     }
   }
@@ -1273,9 +1455,12 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
   FILE *file = NULL;
 
   basetablespace = PQgetisnull(res, rownum, 0);
-  if (basetablespace) {
+  if (basetablespace)
+  {
     strlcpy(current_path, basedir, sizeof(current_path));
-  } else {
+  }
+  else
+  {
     strlcpy(current_path, get_tablespace_mapping(PQgetvalue(res, rownum, 1)), sizeof(current_path));
   }
 
@@ -1283,42 +1468,51 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
    * Get the COPY data
    */
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_COPY_OUT) {
+  if (PQresultStatus(res) != PGRES_COPY_OUT)
+  {
     pg_log_error("could not get COPY data stream: %s", PQerrorMessage(conn));
     exit(1);
   }
 
-  while (1) {
+  while (1)
+  {
     int r;
 
-    if (copybuf != NULL) {
+    if (copybuf != NULL)
+    {
       PQfreemem(copybuf);
       copybuf = NULL;
     }
 
     r = PQgetCopyData(conn, &copybuf, 0);
 
-    if (r == -1) {
+    if (r == -1)
+    {
       /*
        * End of chunk
        */
-      if (file) {
+      if (file)
+      {
         fclose(file);
       }
 
       break;
-    } else if (r == -2) {
+    }
+    else if (r == -2)
+    {
       pg_log_error("could not read COPY data: %s", PQerrorMessage(conn));
       exit(1);
     }
 
-    if (file == NULL) {
+    if (file == NULL)
+    {
       int filemode;
 
       /*
        * No current file, so this must be the header for a new file
        */
-      if (r != 512) {
+      if (r != 512)
+      {
         pg_log_error("invalid tar block header size: %d", r);
         exit(1);
       }
@@ -1338,16 +1532,19 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
        * First part of header is zero terminated filename
        */
       snprintf(filename, sizeof(filename), "%s/%s", current_path, copybuf);
-      if (filename[strlen(filename) - 1] == '/') {
+      if (filename[strlen(filename) - 1] == '/')
+      {
         /*
          * Ends in a slash means directory or symlink to directory
          */
-        if (copybuf[156] == '5') {
+        if (copybuf[156] == '5')
+        {
           /*
            * Directory
            */
           filename[strlen(filename) - 1] = '\0'; /* Remove trailing slash */
-          if (mkdir(filename, pg_dir_create_mode) != 0) {
+          if (mkdir(filename, pg_dir_create_mode) != 0)
+          {
             /*
              * When streaming WAL, pg_wal (or pg_xlog for pre-9.6
              * clusters) will have been created by the wal
@@ -1357,17 +1554,21 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
              * starting the actual backup. So just ignore creation
              * failures on related directories.
              */
-            if (!((pg_str_endswith(filename, "/pg_wal") || pg_str_endswith(filename, "/pg_xlog") || pg_str_endswith(filename, "/archive_status")) && errno == EEXIST)) {
+            if (!((pg_str_endswith(filename, "/pg_wal") || pg_str_endswith(filename, "/pg_xlog") || pg_str_endswith(filename, "/archive_status")) && errno == EEXIST))
+            {
               pg_log_error("could not create directory \"%s\": %m", filename);
               exit(1);
             }
           }
 #ifndef WIN32
-          if (chmod(filename, (mode_t)filemode)) {
+          if (chmod(filename, (mode_t)filemode))
+          {
             pg_log_error("could not set permissions on directory \"%s\": %m", filename);
           }
 #endif
-        } else if (copybuf[156] == '2') {
+        }
+        else if (copybuf[156] == '2')
+        {
           /*
            * Symbolic link
            *
@@ -1383,11 +1584,14 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
           filename[strlen(filename) - 1] = '\0'; /* Remove trailing slash */
 
           mapped_tblspc_path = get_tablespace_mapping(&copybuf[157]);
-          if (symlink(mapped_tblspc_path, filename) != 0) {
+          if (symlink(mapped_tblspc_path, filename) != 0)
+          {
             pg_log_error("could not create symbolic link from \"%s\" to \"%s\": %m", filename, mapped_tblspc_path);
             exit(1);
           }
-        } else {
+        }
+        else
+        {
           pg_log_error("unrecognized link indicator \"%c\"", copybuf[156]);
           exit(1);
         }
@@ -1398,18 +1602,21 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
        * regular file
        */
       file = fopen(filename, "wb");
-      if (!file) {
+      if (!file)
+      {
         pg_log_error("could not create file \"%s\": %m", filename);
         exit(1);
       }
 
 #ifndef WIN32
-      if (chmod(filename, (mode_t)filemode)) {
+      if (chmod(filename, (mode_t)filemode))
+      {
         pg_log_error("could not set permissions on file \"%s\": %m", filename);
       }
 #endif
 
-      if (current_len_left == 0) {
+      if (current_len_left == 0)
+      {
         /*
          * Done with this file, next one will be a new tar header
          */
@@ -1418,11 +1625,13 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
         continue;
       }
     } /* new file */
-    else {
+    else
+    {
       /*
        * Continuing blocks in existing file
        */
-      if (current_len_left == 0 && r == current_padding) {
+      if (current_len_left == 0 && r == current_padding)
+      {
         /*
          * Received the padding block for this file, ignore it and
          * close the file, then move on to the next tar header.
@@ -1434,9 +1643,11 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
       }
 
       errno = 0;
-      if (fwrite(copybuf, r, 1, file) != 1) {
+      if (fwrite(copybuf, r, 1, file) != 1)
+      {
         /* if write didn't set errno, assume problem is no disk space */
-        if (errno == 0) {
+        if (errno == 0)
+        {
           errno = ENOSPC;
         }
         pg_log_error("could not write to file \"%s\": %m", filename);
@@ -1446,7 +1657,8 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
       progress_report(rownum, filename, false, false);
 
       current_len_left -= r;
-      if (current_len_left == 0 && current_padding == 0) {
+      if (current_len_left == 0 && current_padding == 0)
+      {
         /*
          * Received the last block, and there is no padding to be
          * expected. Close the file and move on to the next tar
@@ -1460,16 +1672,19 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
   } /* loop over all data blocks */
   progress_report(rownum, filename, true, false);
 
-  if (file != NULL) {
+  if (file != NULL)
+  {
     pg_log_error("COPY stream ended before last file was finished");
     exit(1);
   }
 
-  if (copybuf != NULL) {
+  if (copybuf != NULL)
+  {
     PQfreemem(copybuf);
   }
 
-  if (basetablespace && writerecoveryconf) {
+  if (basetablespace && writerecoveryconf)
+  {
     WriteRecoveryConf();
   }
 
@@ -1488,7 +1703,8 @@ escape_quotes(const char *src)
 {
   char *result = escape_single_quotes_ascii(src);
 
-  if (!result) {
+  if (!result)
+  {
     pg_log_error("out of memory");
     exit(1);
   }
@@ -1507,7 +1723,8 @@ GenerateRecoveryConf(PGconn *conn)
   char *escaped;
 
   recoveryconfcontents = createPQExpBuffer();
-  if (!recoveryconfcontents) {
+  if (!recoveryconfcontents)
+  {
     pg_log_error("out of memory");
     exit(1);
   }
@@ -1516,25 +1733,30 @@ GenerateRecoveryConf(PGconn *conn)
    * In PostgreSQL 12 and newer versions, standby_mode is gone, replaced by
    * standby.signal to trigger a standby state at recovery.
    */
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC)
+  {
     appendPQExpBufferStr(recoveryconfcontents, "standby_mode = 'on'\n");
   }
 
   connOptions = PQconninfo(conn);
-  if (connOptions == NULL) {
+  if (connOptions == NULL)
+  {
     pg_log_error("out of memory");
     exit(1);
   }
 
   initPQExpBuffer(&conninfo_buf);
-  for (option = connOptions; option && option->keyword; option++) {
+  for (option = connOptions; option && option->keyword; option++)
+  {
     /* Omit empty settings and those libpqwalreceiver overrides. */
-    if (strcmp(option->keyword, "replication") == 0 || strcmp(option->keyword, "dbname") == 0 || strcmp(option->keyword, "fallback_application_name") == 0 || (option->val == NULL) || (option->val != NULL && option->val[0] == '\0')) {
+    if (strcmp(option->keyword, "replication") == 0 || strcmp(option->keyword, "dbname") == 0 || strcmp(option->keyword, "fallback_application_name") == 0 || (option->val == NULL) || (option->val != NULL && option->val[0] == '\0'))
+    {
       continue;
     }
 
     /* Separate key-value pairs with spaces */
-    if (conninfo_buf.len != 0) {
+    if (conninfo_buf.len != 0)
+    {
       appendPQExpBufferChar(&conninfo_buf, ' ');
     }
 
@@ -1555,12 +1777,14 @@ GenerateRecoveryConf(PGconn *conn)
   appendPQExpBuffer(recoveryconfcontents, "primary_conninfo = '%s'\n", escaped);
   free(escaped);
 
-  if (replication_slot) {
+  if (replication_slot)
+  {
     /* unescaped: ReplicationSlotValidateName allows [a-z0-9_] only */
     appendPQExpBuffer(recoveryconfcontents, "primary_slot_name = '%s'\n", replication_slot);
   }
 
-  if (PQExpBufferBroken(recoveryconfcontents) || PQExpBufferDataBroken(conninfo_buf)) {
+  if (PQExpBufferBroken(recoveryconfcontents) || PQExpBufferDataBroken(conninfo_buf))
+  {
     pg_log_error("out of memory");
     exit(1);
   }
@@ -1571,7 +1795,8 @@ GenerateRecoveryConf(PGconn *conn)
 }
 
 /*
- * Write the configuration file into the directory specified in basedir,* with the contents already collected in memory appended.  Then write
+ * Write the configuration file into the directory specified in basedir,
+ * with the contents already collected in memory appended.  Then write
  * the signal file into the basedir.  If the server does not support
  * recovery parameters as GUCs, the signal file is not necessary, and
  * configuration is written to recovery.conf.
@@ -1583,29 +1808,34 @@ WriteRecoveryConf(void)
   FILE *cf;
   bool is_recovery_guc_supported = true;
 
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_RECOVERY_GUC)
+  {
     is_recovery_guc_supported = false;
   }
 
   snprintf(filename, MAXPGPATH, "%s/%s", basedir, is_recovery_guc_supported ? "postgresql.auto.conf" : "recovery.conf");
 
   cf = fopen(filename, is_recovery_guc_supported ? "a" : "w");
-  if (cf == NULL) {
+  if (cf == NULL)
+  {
     pg_log_error("could not open file \"%s\": %m", filename);
     exit(1);
   }
 
-  if (fwrite(recoveryconfcontents->data, recoveryconfcontents->len, 1, cf) != 1) {
+  if (fwrite(recoveryconfcontents->data, recoveryconfcontents->len, 1, cf) != 1)
+  {
     pg_log_error("could not write to file \"%s\": %m", filename);
     exit(1);
   }
 
   fclose(cf);
 
-  if (is_recovery_guc_supported) {
+  if (is_recovery_guc_supported)
+  {
     snprintf(filename, MAXPGPATH, "%s/%s", basedir, "standby.signal");
     cf = fopen(filename, "w");
-    if (cf == NULL) {
+    if (cf == NULL)
+    {
       pg_log_error("could not create file \"%s\": %m", filename);
       exit(1);
     }
@@ -1640,7 +1870,8 @@ BaseBackup(void)
   maxServerMajor = PG_VERSION_NUM / 100;
   serverVersion = PQserverVersion(conn);
   serverMajor = serverVersion / 100;
-  if (serverMajor < minServerMajor || serverMajor > maxServerMajor) {
+  if (serverMajor < minServerMajor || serverMajor > maxServerMajor)
+  {
     const char *serverver = PQparameterStatus(conn, "server_version");
 
     pg_log_error("incompatible server version %s", serverver ? serverver : "'unknown'");
@@ -1651,9 +1882,11 @@ BaseBackup(void)
    * If WAL streaming was requested, also check that the server is new
    * enough for that.
    */
-  if (includewal == STREAM_WAL && !CheckServerVersionForStreaming(conn)) {
+  if (includewal == STREAM_WAL && !CheckServerVersionForStreaming(conn))
+  {
     /*
-     * Error message already written in CheckServerVersionForStreaming(),* but add a hint about using -X none.
+     * Error message already written in CheckServerVersionForStreaming(),
+     * but add a hint about using -X none.
      */
     pg_log_info("HINT: use -X none or -X fetch to disable log streaming");
     exit(1);
@@ -1662,14 +1895,16 @@ BaseBackup(void)
   /*
    * Build contents of configuration file if requested
    */
-  if (writerecoveryconf) {
+  if (writerecoveryconf)
+  {
     GenerateRecoveryConf(conn);
   }
 
   /*
    * Run IDENTIFY_SYSTEM so we can get the timeline
    */
-  if (!RunIdentifySystem(conn, &sysidentifier, &latesttli, NULL, NULL)) {
+  if (!RunIdentifySystem(conn, &sysidentifier, &latesttli, NULL, NULL))
+  {
     exit(1);
   }
 
@@ -1678,26 +1913,33 @@ BaseBackup(void)
    */
   PQescapeStringConn(conn, escaped_label, label, sizeof(escaped_label), &i);
 
-  if (maxrate > 0) {
+  if (maxrate > 0)
+  {
     maxrate_clause = psprintf("MAX_RATE %u", maxrate);
   }
 
-  if (verbose) {
+  if (verbose)
+  {
     pg_log_info("initiating base backup, waiting for checkpoint to complete");
   }
 
-  if (showprogress && !verbose) {
+  if (showprogress && !verbose)
+  {
     fprintf(stderr, "waiting for checkpoint");
-    if (isatty(fileno(stderr))) {
+    if (isatty(fileno(stderr)))
+    {
       fprintf(stderr, "\r");
-    } else {
+    }
+    else
+    {
       fprintf(stderr, "\n");
     }
   }
 
   basebkp = psprintf("BASE_BACKUP LABEL '%s' %s %s %s %s %s %s %s", escaped_label, showprogress ? "PROGRESS" : "", includewal == FETCH_WAL ? "WAL" : "", fastcheckpoint ? "FAST" : "", includewal == NO_WAL ? "" : "NOWAIT", maxrate_clause ? maxrate_clause : "", format == 't' ? "TABLESPACE_MAP" : "", verify_checksums ? "" : "NOVERIFY_CHECKSUMS");
 
-  if (PQsendQuery(conn, basebkp) == 0) {
+  if (PQsendQuery(conn, basebkp) == 0)
+  {
     pg_log_error("could not send replication command \"%s\": %s", "BASE_BACKUP", PQerrorMessage(conn));
     exit(1);
   }
@@ -1706,34 +1948,42 @@ BaseBackup(void)
    * Get the starting WAL location
    */
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not initiate base backup: %s", PQerrorMessage(conn));
     exit(1);
   }
-  if (PQntuples(res) != 1) {
-    pg_log_error("server returned unexpected response to BASE_BACKUP command; got %d rows and %d fields, expected %d rows and %d fields",PQntuples(res), PQnfields(res), 1, 2);
+  if (PQntuples(res) != 1)
+  {
+    pg_log_error("server returned unexpected response to BASE_BACKUP command; got %d rows and %d fields, expected %d rows and %d fields", PQntuples(res), PQnfields(res), 1, 2);
     exit(1);
   }
 
   strlcpy(xlogstart, PQgetvalue(res, 0, 0), sizeof(xlogstart));
 
-  if (verbose) {
+  if (verbose)
+  {
     pg_log_info("checkpoint completed");
   }
 
   /*
-   * 9.3 and later sends the TLI of the starting point. With older servers,* assume it's the same as the latest timeline reported by
+   * 9.3 and later sends the TLI of the starting point. With older servers,
+   * assume it's the same as the latest timeline reported by
    * IDENTIFY_SYSTEM.
    */
-  if (PQnfields(res) >= 2) {
+  if (PQnfields(res) >= 2)
+  {
     starttli = atoi(PQgetvalue(res, 0, 1));
-  } else {
+  }
+  else
+  {
     starttli = latesttli;
   }
   PQclear(res);
   MemSet(xlogend, 0, sizeof(xlogend));
 
-  if (verbose && includewal != NO_WAL) {
+  if (verbose && includewal != NO_WAL)
+  {
     pg_log_info("write-ahead log start point: %s on timeline %u", xlogstart, starttli);
   }
 
@@ -1741,11 +1991,13 @@ BaseBackup(void)
    * Get the header
    */
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not get backup header: %s", PQerrorMessage(conn));
     exit(1);
   }
-  if (PQntuples(res) < 1) {
+  if (PQntuples(res) < 1)
+  {
     pg_log_error("no data returned from server");
     exit(1);
   }
@@ -1755,7 +2007,8 @@ BaseBackup(void)
    */
   totalsize = totaldone = 0;
   tablespacecount = PQntuples(res);
-  for (i = 0; i < PQntuples(res); i++) {
+  for (i = 0; i < PQntuples(res); i++)
+  {
     totalsize += atol(PQgetvalue(res, i, 2));
 
     /*
@@ -1763,7 +2016,8 @@ BaseBackup(void)
      * first once since it can be relocated, and it will be checked before
      * we do anything anyway.
      */
-    if (format == 'p' && !PQgetisnull(res, i, 1)) {
+    if (format == 'p' && !PQgetisnull(res, i, 1))
+    {
       char *path = unconstify(char *, get_tablespace_mapping(PQgetvalue(res, i, 1)));
 
       verify_dir_is_empty_or_create(path, &made_tablespace_dirs, &found_tablespace_dirs);
@@ -1773,7 +2027,8 @@ BaseBackup(void)
   /*
    * When writing to stdout, require a single tablespace
    */
-  if (format == 't' && strcmp(basedir, "-") == 0 && PQntuples(res) > 1) {
+  if (format == 't' && strcmp(basedir, "-") == 0 && PQntuples(res) > 1)
+  {
     pg_log_error("can only write single tablespace to stdout, database has %d", PQntuples(res));
     exit(1);
   }
@@ -1782,8 +2037,10 @@ BaseBackup(void)
    * If we're streaming WAL, start the streaming session before we start
    * receiving the actual data chunks.
    */
-  if (includewal == STREAM_WAL) {
-    if (verbose) {
+  if (includewal == STREAM_WAL)
+  {
+    if (verbose)
+    {
       pg_log_info("starting background WAL receiver");
     }
     StartLogStreamer(xlogstart, starttli, sysidentifier);
@@ -1792,15 +2049,20 @@ BaseBackup(void)
   /*
    * Start receiving chunks
    */
-  for (i = 0; i < PQntuples(res); i++) {
-    if (format == 't') {
+  for (i = 0; i < PQntuples(res); i++)
+  {
+    if (format == 't')
+    {
       ReceiveTarFile(conn, res, i);
-    } else {
+    }
+    else
+    {
       ReceiveAndUnpackTarFile(conn, res, i);
     }
   } /* Loop over all tablespaces */
 
-  if (showprogress) {
+  if (showprogress)
+  {
     progress_report(PQntuples(res), NULL, true, true);
   }
 
@@ -1810,34 +2072,42 @@ BaseBackup(void)
    * Get the stop position
    */
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not get write-ahead log end position from server: %s", PQerrorMessage(conn));
     exit(1);
   }
-  if (PQntuples(res) != 1) {
+  if (PQntuples(res) != 1)
+  {
     pg_log_error("no write-ahead log end position returned from server");
     exit(1);
   }
   strlcpy(xlogend, PQgetvalue(res, 0, 0), sizeof(xlogend));
-  if (verbose && includewal != NO_WAL) {
+  if (verbose && includewal != NO_WAL)
+  {
     pg_log_info("write-ahead log end point: %s", xlogend);
   }
   PQclear(res);
 
   res = PQgetResult(conn);
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     const char *sqlstate = PQresultErrorField(res, PG_DIAG_SQLSTATE);
 
-    if (sqlstate && strcmp(sqlstate, ERRCODE_DATA_CORRUPTED) == 0) {
+    if (sqlstate && strcmp(sqlstate, ERRCODE_DATA_CORRUPTED) == 0)
+    {
       pg_log_error("checksum error occurred");
       checksum_failure = true;
-    } else {
+    }
+    else
+    {
       pg_log_error("final receive failed: %s", PQerrorMessage(conn));
     }
     exit(1);
   }
 
-  if (bgchild > 0) {
+  if (bgchild > 0)
+  {
 #ifndef WIN32
     int status;
     pid_t r;
@@ -1852,27 +2122,32 @@ BaseBackup(void)
     uint32 hi, lo;
 #endif
 
-    if (verbose) {
+    if (verbose)
+    {
       pg_log_info("waiting for background process to finish streaming ...");
     }
 
 #ifndef WIN32
-    if (write(bgpipe[1], xlogend, strlen(xlogend)) != strlen(xlogend)) {
+    if (write(bgpipe[1], xlogend, strlen(xlogend)) != strlen(xlogend))
+    {
       pg_log_info("could not send command to background pipe: %m");
       exit(1);
     }
 
     /* Just wait for the background process to exit */
     r = waitpid(bgchild, &status, 0);
-    if (r == (pid_t)-1) {
+    if (r == (pid_t)-1)
+    {
       pg_log_error("could not wait for child process: %m");
       exit(1);
     }
-    if (r != bgchild) {
+    if (r != bgchild)
+    {
       pg_log_error("child %d died, expected %d", (int)r, (int)bgchild);
       exit(1);
     }
-    if (status != 0) {
+    if (status != 0)
+    {
       pg_log_error("%s", wait_result_to_str(status));
       exit(1);
     }
@@ -1884,7 +2159,8 @@ BaseBackup(void)
      * value directly in the variable, and then set the flag that says
      * it's there.
      */
-    if (sscanf(xlogend, "%X/%X", &hi, &lo) != 2) {
+    if (sscanf(xlogend, "%X/%X", &hi, &lo) != 2)
+    {
       pg_log_error("could not parse write-ahead log location \"%s\"", xlogend);
       exit(1);
     }
@@ -1892,17 +2168,20 @@ BaseBackup(void)
     InterlockedIncrement(&has_xlogendptr);
 
     /* First wait for the thread to exit */
-    if (WaitForSingleObjectEx((HANDLE)bgchild_handle, INFINITE, FALSE) != WAIT_OBJECT_0) {
+    if (WaitForSingleObjectEx((HANDLE)bgchild_handle, INFINITE, FALSE) != WAIT_OBJECT_0)
+    {
       _dosmaperr(GetLastError());
       pg_log_error("could not wait for child thread: %m");
       exit(1);
     }
-    if (GetExitCodeThread((HANDLE)bgchild_handle, &status) == 0) {
+    if (GetExitCodeThread((HANDLE)bgchild_handle, &status) == 0)
+    {
       _dosmaperr(GetLastError());
       pg_log_error("could not get child thread exit status: %m");
       exit(1);
     }
-    if (status != 0) {
+    if (status != 0)
+    {
       pg_log_error("child thread exited with error %u", (unsigned int)status);
       exit(1);
     }
@@ -1927,20 +2206,27 @@ BaseBackup(void)
    * base directory is synced, taking into account all the tablespaces.
    * Errors are not considered fatal.
    */
-  if (do_sync) {
-    if (verbose) {
+  if (do_sync)
+  {
+    if (verbose)
+    {
       pg_log_info("syncing data to disk ...");
     }
-    if (format == 't') {
-      if (strcmp(basedir, "-") != 0) {
+    if (format == 't')
+    {
+      if (strcmp(basedir, "-") != 0)
+      {
         (void)fsync_dir_recurse(basedir);
       }
-    } else {
+    }
+    else
+    {
       (void)fsync_pgdata(basedir, serverVersion);
     }
   }
 
-  if (verbose) {
+  if (verbose)
+  {
     pg_log_info("base backup completed");
   }
 }
@@ -1948,7 +2234,8 @@ BaseBackup(void)
 int
 main(int argc, char **argv)
 {
-  static struct option long_options[] = {{"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"pgdata", required_argument, NULL, 'D'}, {"format", required_argument, NULL, 'F'}, {"checkpoint", required_argument, NULL, 'c'}, {"create-slot", no_argument, NULL, 'C'}, {"max-rate", required_argument, NULL, 'r'}, {"write-recovery-conf", no_argument, NULL, 'R'}, {"slot", required_argument, NULL, 'S'}, {"tablespace-mapping", required_argument, NULL, 'T'}, {"wal-method", required_argument, NULL, 'X'}, {"gzip", no_argument, NULL, 'z'}, {"compress", required_argument, NULL, 'Z'}, {"label", required_argument, NULL, 'l'}, {"no-clean", no_argument, NULL, 'n'}, {"no-sync", no_argument, NULL, 'N'}, {"dbname", required_argument, NULL, 'd'}, {"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'},{"status-interval", required_argument, NULL, 's'}, {"verbose", no_argument, NULL, 'v'}, {"progress", no_argument, NULL, 'P'}, {"waldir", required_argument, NULL, 1}, {"no-slot", no_argument, NULL, 2}, {"no-verify-checksums", no_argument, NULL, 3}, {NULL, 0, NULL, 0}};
+  static struct option long_options[] = {{"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"pgdata", required_argument, NULL, 'D'}, {"format", required_argument, NULL, 'F'}, {"checkpoint", required_argument, NULL, 'c'}, {"create-slot", no_argument, NULL, 'C'}, {"max-rate", required_argument, NULL, 'r'}, {"write-recovery-conf", no_argument, NULL, 'R'}, {"slot", required_argument, NULL, 'S'}, {"tablespace-mapping", required_argument, NULL, 'T'}, {"wal-method", required_argument, NULL, 'X'}, {"gzip", no_argument, NULL, 'z'}, {"compress", required_argument, NULL, 'Z'}, {"label", required_argument, NULL, 'l'}, {"no-clean", no_argument, NULL, 'n'}, {"no-sync", no_argument, NULL, 'N'}, {"dbname", required_argument, NULL, 'd'}, {"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'},
+      {"status-interval", required_argument, NULL, 's'}, {"verbose", no_argument, NULL, 'v'}, {"progress", no_argument, NULL, 'P'}, {"waldir", required_argument, NULL, 1}, {"no-slot", no_argument, NULL, 2}, {"no-verify-checksums", no_argument, NULL, 3}, {NULL, 0, NULL, 0}};
   int c;
 
   int option_index;
@@ -1957,11 +2244,15 @@ main(int argc, char **argv)
   progname = get_progname(argv[0]);
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_basebackup"));
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage();
       exit(0);
-    } else if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0) {
+    }
+    else if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0)
+    {
       puts("pg_basebackup (PostgreSQL) " PG_VERSION);
       exit(0);
     }
@@ -1969,8 +2260,10 @@ main(int argc, char **argv)
 
   atexit(cleanup_directories_atexit);
 
-  while ((c = getopt_long(argc, argv, "CD:F:r:RS:T:X:l:nNzZ:d:c:h:p:U:s:wWkvP", long_options, &option_index)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "CD:F:r:RS:T:X:l:nNzZ:d:c:h:p:U:s:wWkvP", long_options, &option_index)) != -1)
+  {
+    switch (c)
+    {
     case 'C':
       create_slot = true;
       break;
@@ -1978,11 +2271,16 @@ main(int argc, char **argv)
       basedir = pg_strdup(optarg);
       break;
     case 'F':
-      if (strcmp(optarg, "p") == 0 || strcmp(optarg, "plain") == 0) {
+      if (strcmp(optarg, "p") == 0 || strcmp(optarg, "plain") == 0)
+      {
         format = 'p';
-      } else if (strcmp(optarg, "t") == 0 || strcmp(optarg, "tar") == 0) {
+      }
+      else if (strcmp(optarg, "t") == 0 || strcmp(optarg, "tar") == 0)
+      {
         format = 't';
-      } else {
+      }
+      else
+      {
         pg_log_error("invalid output format \"%s\", must be \"plain\" or \"tar\"", optarg);
         exit(1);
       }
@@ -2009,14 +2307,21 @@ main(int argc, char **argv)
       tablespace_list_append(optarg);
       break;
     case 'X':
-      if (strcmp(optarg, "n") == 0 || strcmp(optarg, "none") == 0) {
+      if (strcmp(optarg, "n") == 0 || strcmp(optarg, "none") == 0)
+      {
         includewal = NO_WAL;
-      } else if (strcmp(optarg, "f") == 0 || strcmp(optarg, "fetch") == 0) {
+      }
+      else if (strcmp(optarg, "f") == 0 || strcmp(optarg, "fetch") == 0)
+      {
         includewal = FETCH_WAL;
-      } else if (strcmp(optarg, "s") == 0 || strcmp(optarg, "stream") == 0) {
+      }
+      else if (strcmp(optarg, "s") == 0 || strcmp(optarg, "stream") == 0)
+      {
         includewal = STREAM_WAL;
-      } else {
-        pg_log_error("invalid wal-method option \"%s\", must be \"fetch\", \"stream\", or \"none\"",optarg);
+      }
+      else
+      {
+        pg_log_error("invalid wal-method option \"%s\", must be \"fetch\", \"stream\", or \"none\"", optarg);
         exit(1);
       }
       break;
@@ -2041,18 +2346,24 @@ main(int argc, char **argv)
       break;
     case 'Z':
       compresslevel = atoi(optarg);
-      if (compresslevel < 0 || compresslevel > 9) {
+      if (compresslevel < 0 || compresslevel > 9)
+      {
         pg_log_error("invalid compression level \"%s\"", optarg);
         exit(1);
       }
       break;
     case 'c':
-      if (pg_strcasecmp(optarg, "fast") == 0) {
+      if (pg_strcasecmp(optarg, "fast") == 0)
+      {
         fastcheckpoint = true;
-      } else if (pg_strcasecmp(optarg, "spread") == 0) {
+      }
+      else if (pg_strcasecmp(optarg, "spread") == 0)
+      {
         fastcheckpoint = false;
-      } else {
-        pg_log_error("invalid checkpoint argument \"%s\", must be \"fast\" or \"spread\"",optarg);
+      }
+      else
+      {
+        pg_log_error("invalid checkpoint argument \"%s\", must be \"fast\" or \"spread\"", optarg);
         exit(1);
       }
       break;
@@ -2076,7 +2387,8 @@ main(int argc, char **argv)
       break;
     case 's':
       standby_message_timeout = atoi(optarg) * 1000;
-      if (standby_message_timeout < 0) {
+      if (standby_message_timeout < 0)
+      {
         pg_log_error("invalid status interval \"%s\"", optarg);
         exit(1);
       }
@@ -2090,7 +2402,7 @@ main(int argc, char **argv)
     case 3:
       verify_checksums = false;
       break;
-    default:;
+    default:
 
       /*
        * getopt_long already emitted a complaint
@@ -2103,7 +2415,8 @@ main(int argc, char **argv)
   /*
    * Any non-option arguments?
    */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -2112,7 +2425,8 @@ main(int argc, char **argv)
   /*
    * Required arguments
    */
-  if (basedir == NULL) {
+  if (basedir == NULL)
+  {
     pg_log_error("no target directory specified");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -2121,26 +2435,31 @@ main(int argc, char **argv)
   /*
    * Mutually exclusive arguments
    */
-  if (format == 'p' && compresslevel != 0) {
+  if (format == 'p' && compresslevel != 0)
+  {
     pg_log_error("only tar mode backups can be compressed");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (format == 't' && includewal == STREAM_WAL && strcmp(basedir, "-") == 0) {
+  if (format == 't' && includewal == STREAM_WAL && strcmp(basedir, "-") == 0)
+  {
     pg_log_error("cannot stream write-ahead logs in tar mode to stdout");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (replication_slot && includewal != STREAM_WAL) {
+  if (replication_slot && includewal != STREAM_WAL)
+  {
     pg_log_error("replication slots can only be used with WAL streaming");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (no_slot) {
-    if (replication_slot) {
+  if (no_slot)
+  {
+    if (replication_slot)
+    {
       pg_log_error("--no-slot cannot be used with slot name");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
@@ -2148,22 +2467,27 @@ main(int argc, char **argv)
     temp_replication_slot = false;
   }
 
-  if (create_slot) {
-    if (!replication_slot) {
+  if (create_slot)
+  {
+    if (!replication_slot)
+    {
       pg_log_error("%s needs a slot to be specified using --slot", "--create-slot");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
 
-    if (no_slot) {
+    if (no_slot)
+    {
       pg_log_error("--create-slot and --no-slot are incompatible options");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  if (xlog_dir) {
-    if (format != 'p') {
+  if (xlog_dir)
+  {
+    if (format != 'p')
+    {
       pg_log_error("WAL directory location can only be specified in plain mode");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
@@ -2171,7 +2495,8 @@ main(int argc, char **argv)
 
     /* clean up xlog directory name, check it's absolute */
     canonicalize_path(xlog_dir);
-    if (!is_absolute_path(xlog_dir)) {
+    if (!is_absolute_path(xlog_dir))
+    {
       pg_log_error("WAL directory location must be an absolute path");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
@@ -2179,7 +2504,8 @@ main(int argc, char **argv)
   }
 
 #ifndef HAVE_LIBZ
-  if (compresslevel != 0) {
+  if (compresslevel != 0)
+  {
     pg_log_error("this build does not support compression");
     exit(1);
   }
@@ -2187,7 +2513,8 @@ main(int argc, char **argv)
 
   /* connection in replication mode to server */
   conn = GetConnection();
-  if (!conn) {
+  if (!conn)
+  {
     /* Error message already written in GetConnection() */
     exit(1);
   }
@@ -2208,17 +2535,20 @@ main(int argc, char **argv)
    * backups, always require the directory. For tar backups, require it
    * unless we are writing to stdout.
    */
-  if (format == 'p' || strcmp(basedir, "-") != 0) {
+  if (format == 'p' || strcmp(basedir, "-") != 0)
+  {
     verify_dir_is_empty_or_create(basedir, &made_new_pgdata, &found_existing_pgdata);
   }
 
   /* determine remote server's xlog segment size */
-  if (!RetrieveWalSegSize(conn)) {
+  if (!RetrieveWalSegSize(conn))
+  {
     exit(1);
   }
 
   /* Create pg_wal symlink, if required */
-  if (xlog_dir) {
+  if (xlog_dir)
+  {
     char *linkloc;
 
     verify_dir_is_empty_or_create(xlog_dir, &made_new_xlogdir, &found_existing_xlogdir);
@@ -2230,7 +2560,8 @@ main(int argc, char **argv)
     linkloc = psprintf("%s/%s", basedir, PQserverVersion(conn) < MINIMUM_VERSION_FOR_PG_WAL ? "pg_xlog" : "pg_wal");
 
 #ifdef HAVE_SYMLINK
-    if (symlink(xlog_dir, linkloc) != 0) {
+    if (symlink(xlog_dir, linkloc) != 0)
+    {
       pg_log_error("could not create symbolic link \"%s\": %m", linkloc);
       exit(1);
     }

@@ -128,7 +128,7 @@ initGinState(GinState *state, Relation index)
       typentry = lookup_type_cache(attr->atttypid, TYPECACHE_CMP_PROC_FINFO);
       if (!OidIsValid(typentry->cmp_proc_finfo.fn_oid))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify a comparison function for type %s", format_type_be(attr->atttypid))));
       }
       fmgr_info_copy(&(state->compareFn[i]), &(typentry->cmp_proc_finfo), CurrentMemoryContext);
     }
@@ -153,7 +153,7 @@ initGinState(GinState *state, Relation index)
 
     if (state->consistentFn[i].fn_oid == InvalidOid && state->triConsistentFn[i].fn_oid == InvalidOid)
     {
-
+      elog(ERROR, "missing GIN support function (%d or %d) for attribute %d of index \"%s\"", GIN_CONSISTENT_PROC, GIN_TRICONSISTENT_PROC, i + 1, RelationGetRelationName(index));
     }
 
     /*
@@ -297,7 +297,7 @@ GinNewBuffer(Relation index)
         return buffer; /* OK to use */
       }
 
-
+      LockBuffer(buffer, GIN_UNLOCK);
     }
 
     /* Can't use it, so release buffer and try again */
@@ -436,18 +436,18 @@ cmpEntries(const void *a, const void *b, void *arg)
 
   if (aa->isnull)
   {
-
-
-
-
-
-
-
-
+    if (bb->isnull)
+    {
+      res = 0; /* NULL "=" NULL */
+    }
+    else
+    {
+      res = 1; /* NULL ">" not-NULL */
+    }
   }
   else if (bb->isnull)
   {
-
+    res = -1; /* not-NULL "<" NULL */
   }
   else
   {
@@ -601,7 +601,7 @@ ginoptions(Datum reloptions, bool validate)
   /* if none set, we're done */
   if (numoptions == 0)
   {
-
+    return NULL;
   }
 
   rdopts = allocateReloptStruct(sizeof(GinOptions), options, numoptions);

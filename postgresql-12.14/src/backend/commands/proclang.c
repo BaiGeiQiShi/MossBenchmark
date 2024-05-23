@@ -79,7 +79,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
      */
     if (stmt->plhandler)
     {
-
+      ereport(NOTICE, (errmsg("using pg_pltemplate information instead of CREATE LANGUAGE parameters")));
     }
 
     /*
@@ -87,14 +87,14 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
      */
     if (!superuser())
     {
-
-
-
-
-
-
-
-
+      if (!pltemplate->tmpldbacreate)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create procedural language \"%s\"", stmt->plname)));
+      }
+      if (!pg_database_ownercheck(MyDatabaseId, GetUserId()))
+      {
+        aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_DATABASE, get_database_name(MyDatabaseId));
+      }
     }
 
     /*
@@ -106,11 +106,11 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
     handlerOid = LookupFuncName(funcname, 0, funcargtypes, true);
     if (OidIsValid(handlerOid))
     {
-
-
-
-
-
+      funcrettype = get_func_rettype(handlerOid);
+      if (funcrettype != LANGUAGE_HANDLEROID)
+      {
+        ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("function %s must return type %s", NameListToString(funcname), "language_handler")));
+      }
     }
     else
     {
@@ -185,7 +185,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
      */
     if (!stmt->plhandler)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("unsupported language \"%s\"", stmt->plname), errhint("The supported languages are listed in the pg_pltemplate system catalog.")));
     }
 
     /*
@@ -193,7 +193,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
      */
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create custom procedural language")));
     }
 
     /*
@@ -209,22 +209,22 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
        * see a handler function declared OPAQUE, change it to
        * LANGUAGE_HANDLER.  (This is probably obsolete and removable?)
        */
-
-
-
-
-
-
-
-
-
+      if (funcrettype == OPAQUEOID)
+      {
+        ereport(WARNING, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("changing return type of function %s from %s to %s", NameListToString(stmt->plhandler), "opaque", "language_handler")));
+        SetFunctionReturnType(handlerOid, LANGUAGE_HANDLEROID);
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("function %s must return type %s", NameListToString(stmt->plhandler), "language_handler")));
+      }
     }
 
     /* validate the inline function */
     if (stmt->plinline)
     {
-
-
+      funcargtypes[0] = INTERNALOID;
+      inlineOid = LookupFuncName(stmt->plinline, 1, funcargtypes, false);
       /* return value is ignored, so we don't check the type */
     }
     else
@@ -235,8 +235,8 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
     /* validate the validator function */
     if (stmt->plvalidator)
     {
-
-
+      funcargtypes[0] = OIDOID;
+      valOid = LookupFuncName(stmt->plvalidator, 1, funcargtypes, false);
       /* return value is ignored, so we don't check the type */
     }
     else
@@ -293,30 +293,30 @@ create_proc_lang(const char *languageName, bool replace, Oid languageOwner, Oid 
     Form_pg_language oldform = (Form_pg_language)GETSTRUCT(oldtup);
 
     /* There is one; okay to replace it? */
-
-
-
-
-
-
-
-
+    if (!replace)
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("language \"%s\" already exists", languageName)));
+    }
+    if (!pg_language_ownercheck(oldform->oid, languageOwner))
+    {
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_LANGUAGE, languageName);
+    }
 
     /*
      * Do not change existing oid, ownership or permissions.  Note
      * dependency-update code below has to agree with this decision.
      */
-
-
-
+    replaces[Anum_pg_language_oid - 1] = false;
+    replaces[Anum_pg_language_lanowner - 1] = false;
+    replaces[Anum_pg_language_lanacl - 1] = false;
 
     /* Okay, do it... */
+    tup = heap_modify_tuple(oldtup, tupDesc, values, nulls, replaces);
+    CatalogTupleUpdate(rel, &tup->t_self, tup);
 
-
-
-
-
-
+    langoid = oldform->oid;
+    ReleaseSysCache(oldtup);
+    is_update = true;
   }
   else
   {
@@ -340,7 +340,7 @@ create_proc_lang(const char *languageName, bool replace, Oid languageOwner, Oid 
 
   if (is_update)
   {
-
+    deleteDependencyRecordsFor(myself.classId, myself.objectId, true);
   }
 
   /* dependency on owner of language */
@@ -440,7 +440,7 @@ find_language_template(const char *languageName)
     /* Ignore template if handler or library info is missing */
     if (!result->tmplhandler || !result->tmpllibrary)
     {
-
+      result = NULL;
     }
   }
   else
@@ -476,9 +476,9 @@ DropProceduralLanguageById(Oid langOid)
   rel = table_open(LanguageRelationId, RowExclusiveLock);
 
   langTup = SearchSysCache1(LANGOID, ObjectIdGetDatum(langOid));
-  if (!HeapTupleIsValid(langTup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(langTup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for language %u", langOid);
   }
 
   CatalogTupleDelete(rel, &langTup->t_self);

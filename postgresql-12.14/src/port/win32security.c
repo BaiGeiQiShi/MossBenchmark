@@ -35,7 +35,8 @@ static pg_attribute_printf(1, 2) void log_error(const char *fmt, ...)
 }
 
 /*
- * Returns nonzero if the current user has administrative privileges,* or zero if not.
+ * Returns nonzero if the current user has administrative privileges,
+ * or zero if not.
  *
  * Note: this cannot use ereport() because it's called too early during
  * startup.
@@ -49,17 +50,20 @@ pgwin32_is_admin(void)
   BOOL IsAdministrators;
   BOOL IsPowerUsers;
 
-  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsSid)) {
+  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsSid))
+  {
     log_error(_("could not get SID for Administrators group: error code %lu\n"), GetLastError());
     exit(1);
   }
 
-  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &PowerUsersSid)) {
+  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &PowerUsersSid))
+  {
     log_error(_("could not get SID for PowerUsers group: error code %lu\n"), GetLastError());
     exit(1);
   }
 
-  if (!CheckTokenMembership(NULL, AdministratorsSid, &IsAdministrators) || !CheckTokenMembership(NULL, PowerUsersSid, &IsPowerUsers)) {
+  if (!CheckTokenMembership(NULL, AdministratorsSid, &IsAdministrators) || !CheckTokenMembership(NULL, PowerUsersSid, &IsPowerUsers))
+  {
     log_error(_("could not check access token membership: error code %lu\n"), GetLastError());
     exit(1);
   }
@@ -67,9 +71,12 @@ pgwin32_is_admin(void)
   FreeSid(AdministratorsSid);
   FreeSid(PowerUsersSid);
 
-  if (IsAdministrators || IsPowerUsers) {
+  if (IsAdministrators || IsPowerUsers)
+  {
     return 1;
-  } else {
+  }
+  else
+  {
     return 0;
   }
 }
@@ -106,44 +113,53 @@ pgwin32_is_service(void)
   SID_IDENTIFIER_AUTHORITY NtAuthority = {SECURITY_NT_AUTHORITY};
 
   /* Only check the first time */
-  if (_is_service != -1) {
+  if (_is_service != -1)
+  {
     return _is_service;
   }
 
   /* First check for LocalSystem */
-  if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0, &LocalSystemSid)) {
+  if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0, &LocalSystemSid))
+  {
     fprintf(stderr, "could not get SID for local system account\n");
     return -1;
   }
 
-  if (!CheckTokenMembership(NULL, LocalSystemSid, &IsMember)) {
+  if (!CheckTokenMembership(NULL, LocalSystemSid, &IsMember))
+  {
     fprintf(stderr, "could not check access token membership: error code %lu\n", GetLastError());
     FreeSid(LocalSystemSid);
     return -1;
   }
   FreeSid(LocalSystemSid);
 
-  if (IsMember) {
+  if (IsMember)
+  {
     _is_service = 1;
     return _is_service;
   }
 
   /* Check for service group membership */
-  if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_SERVICE_RID, 0, 0, 0, 0, 0, 0, 0, &ServiceSid)) {
+  if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_SERVICE_RID, 0, 0, 0, 0, 0, 0, 0, &ServiceSid))
+  {
     fprintf(stderr, "could not get SID for service group: error code %lu\n", GetLastError());
     return -1;
   }
 
-  if (!CheckTokenMembership(NULL, ServiceSid, &IsMember)) {
+  if (!CheckTokenMembership(NULL, ServiceSid, &IsMember))
+  {
     fprintf(stderr, "could not check access token membership: error code %lu\n", GetLastError());
     FreeSid(ServiceSid);
     return -1;
   }
   FreeSid(ServiceSid);
 
-  if (IsMember) {
+  if (IsMember)
+  {
     _is_service = 1;
-  } else {
+  }
+  else
+  {
     _is_service = 0;
   }
 

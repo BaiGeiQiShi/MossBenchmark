@@ -288,17 +288,16 @@ predicate_refuted_by(List *predicate_list, List *clause_list, bool weak)
  *	  predicate clauses.
  *
  * The logic followed here is ("=>" means "implies"):
- *	atom A => atom B iff:
- *predicate_implied_by_simple_clause says so atom A => AND-expr B iff:
- *A => each of B's components atom A => OR-expr B iff:		A => any of B's
- *components AND-expr A => atom B iff:		any of A's components => B
+ *	atom A => atom B iff:			predicate_implied_by_simple_clause says so
+ *	atom A => AND-expr B iff:		A => each of B's components
+ *	atom A => OR-expr B iff:		A => any of B's components
+ *	AND-expr A => atom B iff:		any of A's components => B
  *	AND-expr A => AND-expr B iff:	A => each of B's components
  *	AND-expr A => OR-expr B iff:	A => any of B's components,
- *									*or* any
- *of A's components => B OR-expr A => atom B iff:		each of A's
- *components => B OR-expr A => AND-expr B iff:	A => each of B's components
- *	OR-expr A => OR-expr B iff:		each of A's components => any of
- *B's
+ *									*or* any of A's components => B
+ *	OR-expr A => atom B iff:		each of A's components => B
+ *	OR-expr A => AND-expr B iff:	A => each of B's components
+ *	OR-expr A => OR-expr B iff:		each of A's components => any of B's
  *
  * An "atom" is anything other than an AND or OR node.  Notice that we don't
  * have any special logic to handle NOT nodes; these should have been pushed
@@ -528,13 +527,14 @@ predicate_implied_by_recurse(Node *clause, Node *predicate, bool weak)
  *	  predicate clauses.
  *
  * The logic followed here is ("R=>" means "refutes"):
- *	atom A R=> atom B iff:
- *predicate_refuted_by_simple_clause says so atom A R=> AND-expr B iff:
- *A R=> any of B's components atom A R=> OR-expr B iff:		A R=> each of
- *B's components AND-expr A R=> atom B iff:		any of A's components
- *R=> B AND-expr A R=> AND-expr B iff:	A R=> any of B's components, *or* any of
- *A's components R=> B AND-expr A R=> OR-expr B iff:	A R=> each of B's
- *components OR-expr A R=> atom B iff:		each of A's components R=> B
+ *	atom A R=> atom B iff:			predicate_refuted_by_simple_clause says so
+ *	atom A R=> AND-expr B iff:		A R=> any of B's components
+ *	atom A R=> OR-expr B iff:		A R=> each of B's components
+ *	AND-expr A R=> atom B iff:		any of A's components R=> B
+ *	AND-expr A R=> AND-expr B iff:	A R=> any of B's components,
+ *									*or* any of A's components R=> B
+ *	AND-expr A R=> OR-expr B iff:	A R=> each of B's components
+ *	OR-expr A R=> atom B iff:		each of A's components R=> B
  *	OR-expr A R=> AND-expr B iff:	each of A's components R=> any of B's
  *	OR-expr A R=> OR-expr B iff:	A R=> each of B's components
  *
@@ -825,8 +825,7 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate, bool weak)
 
 /*
  * predicate_classify
- *	  Classify an expression node as AND-type, OR-type, or neither (an
- *atom).
+ *	  Classify an expression node as AND-type, OR-type, or neither (an atom).
  *
  * If the expression is classified as AND- or OR-type, then *info is filled
  * in with the functions needed to iterate over its components.
@@ -940,7 +939,8 @@ list_next_fn(PredIterInfo info)
 
 static void
 list_cleanup_fn(PredIterInfo info)
-{ /* Nothing to clean up */
+{
+  /* Nothing to clean up */
 }
 
 /*
@@ -1541,10 +1541,10 @@ clause_is_strict_for(Node *clause, Node *subexpr, bool allow_false)
  * where test_op, clause_op and pred_op are strategy numbers (from 1 to 6)
  * of btree operators, is as follows:
  *
- *	 If you know, for some EXPR, that "EXPR clause_op CONST1" is true, and
- *you want to determine whether "EXPR pred_op CONST2" must also be true, then
- *	 you can use "CONST2 test_op CONST1" as a test.  If this test returns
- *true, then the predicate expression must be true; if the test returns false,
+ *	 If you know, for some EXPR, that "EXPR clause_op CONST1" is true, and you
+ *	 want to determine whether "EXPR pred_op CONST2" must also be true, then
+ *	 you can use "CONST2 test_op CONST1" as a test.  If this test returns true,
+ *	 then the predicate expression must be true; if the test returns false,
  *	 then the predicate expression may be false.
  *
  * For example, if clause is "Quantity > 10" and pred is "Quantity > 5"
@@ -1552,11 +1552,11 @@ clause_is_strict_for(Node *clause, Node *subexpr, bool allow_false)
  *
  * Similarly, the interpretation of a BT_refute_table entry is:
  *
- *	 If you know, for some EXPR, that "EXPR clause_op CONST1" is true, and
- *you want to determine whether "EXPR pred_op CONST2" must be false, then you
- *can use "CONST2 test_op CONST1" as a test.  If this test returns true, then
- *the predicate expression must be false; if the test returns false, then the
- *predicate expression may be true.
+ *	 If you know, for some EXPR, that "EXPR clause_op CONST1" is true, and you
+ *	 want to determine whether "EXPR pred_op CONST2" must be false, then
+ *	 you can use "CONST2 test_op CONST1" as a test.  If this test returns true,
+ *	 then the predicate expression must be false; if the test returns false,
+ *	 then the predicate expression may be true.
  *
  * For example, if clause is "Quantity > 10" and pred is "Quantity < 5"
  * then we test "5 <= 10" which evals to true, so clause refutes pred.
@@ -1628,8 +1628,8 @@ static const StrategyNumber BT_refute_table[6][6] = {
 
 /*
  * operator_predicate_proof
- *	  Does the predicate implication or refutation test for a "simple
- *clause" predicate and a "simple clause" restriction, when both are operator
+ *	  Does the predicate implication or refutation test for a "simple clause"
+ *	  predicate and a "simple clause" restriction, when both are operator
  *	  clauses using related operators and identical input expressions.
  *
  * When refute_it == false, we want to prove the predicate true;
@@ -1658,11 +1658,10 @@ static const StrategyNumber BT_refute_table[6][6] = {
  * represent subexpressions that are identical according to equal()):
  *	"foo op1 bar" refutes "foo op2 bar" if op1 is op2's negator
  *	"foo op1 bar" implies "bar op2 foo" if op1 is op2's commutator
- *	"foo op1 bar" refutes "bar op2 foo" if op1 is negator of op2's
- *commutator "foo op1 bar" can imply/refute "foo op2 bar" based on btree
- *semantics "foo op1 bar" can imply/refute "bar op2 foo" based on btree
- *semantics "foo op1 const1" can imply/refute "foo op2 const2" based on btree
- *semantics
+ *	"foo op1 bar" refutes "bar op2 foo" if op1 is negator of op2's commutator
+ *	"foo op1 bar" can imply/refute "foo op2 bar" based on btree semantics
+ *	"foo op1 bar" can imply/refute "bar op2 foo" based on btree semantics
+ *	"foo op1 const1" can imply/refute "foo op2 const2" based on btree semantics
  *
  * For the last three cases, op1 and op2 have to be members of the same btree
  * operator family.  When both subexpressions are identical, the idea is that,
@@ -2099,8 +2098,8 @@ lookup_proof_cache(Oid pred_op, Oid clause_op, bool refute_it)
   {
     pred_op_infos = get_op_btree_interpretation(pred_op);
   }
-  else
-  { /* no point in looking */
+  else /* no point in looking */
+  {
     pred_op_infos = NIL;
   }
 

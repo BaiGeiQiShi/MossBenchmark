@@ -61,9 +61,12 @@ main(int argc, char **argv)
    * conninfo string; otherwise default to setting dbname=postgres and using
    * environment variables or defaults for all other connection parameters.
    */
-  if (argc > 1) {
+  if (argc > 1)
+  {
     conninfo = argv[1];
-  } else {
+  }
+  else
+  {
     conninfo = "dbname = postgres";
   }
 
@@ -71,14 +74,16 @@ main(int argc, char **argv)
   conn = PQconnectdb(conninfo);
 
   /* Check to see that the backend connection was successfully made */
-  if (PQstatus(conn) != CONNECTION_OK) {
+  if (PQstatus(conn) != CONNECTION_OK)
+  {
     fprintf(stderr, "Connection to database failed: %s", PQerrorMessage(conn));
     exit_nicely(conn);
   }
 
   /* Set always-secure search path, so malicious users can't take control. */
   res = PQexec(conn, "SELECT pg_catalog.set_config('search_path', '', false)");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -94,7 +99,8 @@ main(int argc, char **argv)
    * Issue LISTEN command to enable notifications from the rule's NOTIFY.
    */
   res = PQexec(conn, "LISTEN TBL2");
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     fprintf(stderr, "LISTEN command failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -103,7 +109,8 @@ main(int argc, char **argv)
 
   /* Quit after four notifies are received. */
   nnotifies = 0;
-  while (nnotifies < 4) {
+  while (nnotifies < 4)
+  {
     /*
      * Sleep until something happens on the connection.  We use select(2)
      * to wait for input, but you could also use poll() or similar
@@ -114,21 +121,24 @@ main(int argc, char **argv)
 
     sock = PQsocket(conn);
 
-    if (sock < 0) {
+    if (sock < 0)
+    {
       break; /* shouldn't happen */
     }
 
     FD_ZERO(&input_mask);
     FD_SET(sock, &input_mask);
 
-    if (select(sock + 1, &input_mask, NULL, NULL, NULL) < 0) {
+    if (select(sock + 1, &input_mask, NULL, NULL, NULL) < 0)
+    {
       fprintf(stderr, "select() failed: %s\n", strerror(errno));
       exit_nicely(conn);
     }
 
     /* Now check for input */
     PQconsumeInput(conn);
-    while ((notify = PQnotifies(conn)) != NULL) {
+    while ((notify = PQnotifies(conn)) != NULL)
+    {
       fprintf(stderr, "ASYNC NOTIFY of '%s' received from backend PID %d\n", notify->relname, notify->be_pid);
       PQfreemem(notify);
       nnotifies++;

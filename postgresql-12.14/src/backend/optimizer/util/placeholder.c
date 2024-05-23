@@ -91,7 +91,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv, bool create_new_ph
   /* Not found, so create it */
   if (!create_new_ph)
   {
-
+    elog(ERROR, "too late to create a new PlaceHolderInfo");
   }
 
   phinfo = makeNode(PlaceHolderInfo);
@@ -137,8 +137,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv, bool create_new_ph
 
 /*
  * find_placeholders_in_jointree
- *		Search the jointree for PlaceHolderVars, and build
- *PlaceHolderInfos
+ *		Search the jointree for PlaceHolderVars, and build PlaceHolderInfos
  *
  * We don't need to look at the targetlist because build_base_rel_tlists()
  * will already have made entries for any PHVs in the tlist.
@@ -172,7 +171,7 @@ find_placeholders_recurse(PlannerInfo *root, Node *jtnode)
 {
   if (jtnode == NULL)
   {
-
+    return;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -211,7 +210,7 @@ find_placeholders_recurse(PlannerInfo *root, Node *jtnode)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
 }
 
@@ -312,7 +311,7 @@ update_placeholder_eval_levels(PlannerInfo *root, SpecialJoinInfo *new_sjinfo)
         /* disregard joins not within the PHV's sub-select */
         if (!bms_is_subset(sjinfo->syn_lefthand, syn_level) || !bms_is_subset(sjinfo->syn_righthand, syn_level))
         {
-
+          continue;
         }
 
         /* do we reference any nullable rels of this OJ? */
@@ -403,8 +402,8 @@ add_placeholders_to_base_rels(PlannerInfo *root)
 /*
  * add_placeholders_to_joinrel
  *		Add any required PlaceHolderVars to a join rel's targetlist;
- *		and if they contain lateral references, add those references to
- *the joinrel's direct_lateral_relids.
+ *		and if they contain lateral references, add those references to the
+ *		joinrel's direct_lateral_relids.
  *
  * A join rel should emit a PlaceHolderVar if (a) the PHV can be computed
  * at or below this join level and (b) the PHV is needed above this level.

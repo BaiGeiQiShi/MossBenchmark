@@ -36,7 +36,8 @@ print_double(double x)
   sprintf(convert, "%g", x);
   vallen = strlen(convert);
 
-  if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0') {
+  if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0')
+  {
     convert[vallen - 3] = convert[vallen - 2];
     convert[vallen - 2] = convert[vallen - 1];
     convert[vallen - 1] = '\0';
@@ -80,10 +81,12 @@ main(void)
 
   ECPGdebug(1, stderr);
 
-  for (i = 0; decs[i]; i++) {
+  for (i = 0; decs[i]; i++)
+  {
     dec = PGTYPESdecimal_new();
     r = deccvasc(decs[i], strlen(decs[i]), dec);
-    if (r) {
+    if (r)
+    {
       check_errno();
       printf("dec[%d,0]: r: %d\n", i, r);
       PGTYPESdecimal_free(dec);
@@ -93,42 +96,50 @@ main(void)
     decarr[count++] = dec;
 
     r = dectoasc(dec, buf, BUFSIZE - 1, -1);
-    if (r < 0) {
+    if (r < 0)
+    {
       check_errno();
     }
     printf("dec[%d,1]: r: %d, %s\n", i, r, buf);
 
     r = dectoasc(dec, buf, BUFSIZE - 1, 0);
-    if (r < 0) {
+    if (r < 0)
+    {
       check_errno();
     }
     printf("dec[%d,2]: r: %d, %s\n", i, r, buf);
     r = dectoasc(dec, buf, BUFSIZE - 1, 1);
-    if (r < 0) {
+    if (r < 0)
+    {
       check_errno();
     }
     printf("dec[%d,3]: r: %d, %s\n", i, r, buf);
     r = dectoasc(dec, buf, BUFSIZE - 1, 2);
-    if (r < 0) {
+    if (r < 0)
+    {
       check_errno();
     }
     printf("dec[%d,4]: r: %d, %s\n", i, r, buf);
 
     din = PGTYPESdecimal_new();
     r = dectoasc(din, buf, BUFSIZE - 1, 2);
-    if (r < 0) {
+    if (r < 0)
+    {
       check_errno();
     }
     printf("dec[%d,5]: r: %d, %s\n", i, r, buf);
 
     r = dectolong(dec, &l);
-    if (r) {
+    if (r)
+    {
       check_errno();
     }
     printf("dec[%d,6]: %ld (r: %d)\n", i, r ? 0L : l, r);
-    if (r == 0) {
+    if (r == 0)
+    {
       r = deccvlong(l, din);
-      if (r) {
+      if (r)
+      {
         check_errno();
       }
       dectoasc(din, buf, BUFSIZE - 1, 2);
@@ -137,13 +148,16 @@ main(void)
     }
 
     r = dectoint(dec, &k);
-    if (r) {
+    if (r)
+    {
       check_errno();
     }
     printf("dec[%d,8]: %d (r: %d)\n", i, r ? 0 : k, r);
-    if (r == 0) {
+    if (r == 0)
+    {
       r = deccvint(k, din);
-      if (r) {
+      if (r)
+      {
         check_errno();
       }
       dectoasc(din, buf, BUFSIZE - 1, 2);
@@ -151,12 +165,13 @@ main(void)
       printf("dec[%d,9]: %s (r: %d - cmp: %d)\n", i, buf, r, q);
     }
 
-    if (i != 6) {
-      /* underflow does not work reliable on several archs, so not testing it
-       * here */
+    if (i != 6)
+    {
+      /* underflow does not work reliable on several archs, so not testing it here */
       /* this is a libc problem since we only call strtod() */
       r = dectodbl(dec, &dbl);
-      if (r) {
+      if (r)
+      {
         check_errno();
       }
       printf("dec[%d,10]: ", i);
@@ -184,52 +199,67 @@ main(void)
   check_errno();
   printf("dectoasc with len == 0: r: %d\n", r);
 
-  for (i = 0; i < count; i++) {
-    for (j = 0; j < count; j++) {
+  for (i = 0; i < count; i++)
+  {
+    for (j = 0; j < count; j++)
+    {
       decimal a, s, m, d;
       int c;
       c = deccmp(decarr[i], decarr[j]);
       printf("dec[c,%d,%d]: %d\n", i, j, c);
 
       r = decadd(decarr[i], decarr[j], &a);
-      if (r) {
+      if (r)
+      {
         check_errno();
         printf("r: %d\n", r);
-      } else {
+      }
+      else
+      {
         dectoasc(&a, buf, BUFSIZE - 1, -1);
         printf("dec[a,%d,%d]: %s\n", i, j, buf);
       }
 
       r = decsub(decarr[i], decarr[j], &s);
-      if (r) {
+      if (r)
+      {
         check_errno();
         printf("r: %d\n", r);
-      } else {
+      }
+      else
+      {
         dectoasc(&s, buf, BUFSIZE - 1, -1);
         printf("dec[s,%d,%d]: %s\n", i, j, buf);
       }
 
       r = decmul(decarr[i], decarr[j], &m);
-      if (r) {
+      if (r)
+      {
         check_errno();
         printf("r: %d\n", r);
-      } else {
+      }
+      else
+      {
         dectoasc(&m, buf, BUFSIZE - 1, -1);
         printf("dec[m,%d,%d]: %s\n", i, j, buf);
       }
 
       r = decdiv(decarr[i], decarr[j], &d);
-      if (r) {
+      if (r)
+      {
         check_errno();
         printf("r: %d\n", r);
-      } else {
+      }
+      else
+      {
         dectoasc(&d, buf, BUFSIZE - 1, -1);
         printf("dec[d,%d,%d]: %s\n", i, j, buf);
       }
     }
   }
 
-  for (i = 0; i < count; i++) {
+  for (i = 0; i < count; i++)
+  {
     dectoasc(decarr[i], buf, BUFSIZE - 1, -1);
     printf("%d: %s\n", i, buf);
 
@@ -243,7 +273,8 @@ main(void)
 static void
 check_errno(void)
 {
-  switch (errno) {
+  switch (errno)
+  {
   case 0:
     printf("(no errno set) - ");
     break;
@@ -265,7 +296,7 @@ check_errno(void)
   case PGTYPES_NUM_DIVIDE_ZERO:
     printf("(errno == PGTYPES_NUM_DIVIDE_ZERO) - ");
     break;
-  default:;
+  default:
     printf("(unknown errno (%d))\n", errno);
     printf("(libc: (%s)) ", strerror(errno));
     break;

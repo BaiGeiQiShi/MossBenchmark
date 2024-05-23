@@ -22,7 +22,8 @@ help(const char *progname);
 int
 main(int argc, char *argv[])
 {
-  static struct option long_options[] = {{"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"role", required_argument, NULL, 'g'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"echo", no_argument, NULL, 'e'}, {"createdb", no_argument, NULL, 'd'}, {"no-createdb", no_argument, NULL, 'D'}, {"superuser", no_argument, NULL, 's'}, {"no-superuser", no_argument, NULL, 'S'}, {"createrole", no_argument, NULL, 'r'}, {"no-createrole", no_argument, NULL, 'R'}, {"inherit", no_argument, NULL, 'i'}, {"no-inherit", no_argument, NULL, 'I'}, {"login", no_argument, NULL, 'l'}, {"no-login", no_argument, NULL, 'L'}, {"replication", no_argument, NULL, 1}, {"no-replication", no_argument, NULL, 2}, {"interactive", no_argument, NULL, 3},/* adduser is obsolete, undocumented spelling of superuser */
+  static struct option long_options[] = {{"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"role", required_argument, NULL, 'g'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"echo", no_argument, NULL, 'e'}, {"createdb", no_argument, NULL, 'd'}, {"no-createdb", no_argument, NULL, 'D'}, {"superuser", no_argument, NULL, 's'}, {"no-superuser", no_argument, NULL, 'S'}, {"createrole", no_argument, NULL, 'r'}, {"no-createrole", no_argument, NULL, 'R'}, {"inherit", no_argument, NULL, 'i'}, {"no-inherit", no_argument, NULL, 'I'}, {"login", no_argument, NULL, 'l'}, {"no-login", no_argument, NULL, 'L'}, {"replication", no_argument, NULL, 1}, {"no-replication", no_argument, NULL, 2}, {"interactive", no_argument, NULL, 3},
+      /* adduser is obsolete, undocumented spelling of superuser */
       {"adduser", no_argument, NULL, 'a'}, {"no-adduser", no_argument, NULL, 'A'}, {"connection-limit", required_argument, NULL, 'c'}, {"pwprompt", no_argument, NULL, 'P'}, {"encrypted", no_argument, NULL, 'E'}, {NULL, 0, NULL, 0}};
 
   const char *progname;
@@ -57,10 +58,12 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "createuser", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:g:wWedDsSaArRiIlLc:PE", long_options, &optindex)) != -1) {
+  while ((c = getopt_long(argc, argv, "h:p:U:g:wWedDsSaArRiIlLc:PE", long_options, &optindex)) != -1)
+  {
     char *endptr;
 
-    switch (c) {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -137,84 +140,109 @@ main(int argc, char *argv[])
     case 3:
       interactive = true;
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  switch (argc - optind) {
+  switch (argc - optind)
+  {
   case 0:
     break;
   case 1:
     newuser = argv[optind];
     break;
-  default:;
+  default:
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind + 1]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (newuser == NULL) {
-    if (interactive) {
+  if (newuser == NULL)
+  {
+    if (interactive)
+    {
       simple_prompt("Enter name of role to add: ", newuser_buf, sizeof(newuser_buf), true);
       newuser = newuser_buf;
-    } else {
-      if (getenv("PGUSER")) {
+    }
+    else
+    {
+      if (getenv("PGUSER"))
+      {
         newuser = getenv("PGUSER");
-      } else {
+      }
+      else
+      {
         newuser = get_user_name_or_exit(progname);
       }
     }
   }
 
-  if (pwprompt) {
+  if (pwprompt)
+  {
     char pw2[100];
 
     simple_prompt("Enter password for new role: ", newpassword_buf, sizeof(newpassword_buf), false);
     simple_prompt("Enter it again: ", pw2, sizeof(pw2), false);
-    if (strcmp(newpassword_buf, pw2) != 0) {
+    if (strcmp(newpassword_buf, pw2) != 0)
+    {
       fprintf(stderr, _("Passwords didn't match.\n"));
       exit(1);
     }
     newpassword = newpassword_buf;
   }
 
-  if (superuser == 0) {
-    if (interactive && yesno_prompt("Shall the new role be a superuser?")) {
+  if (superuser == 0)
+  {
+    if (interactive && yesno_prompt("Shall the new role be a superuser?"))
+    {
       superuser = TRI_YES;
-    } else {
+    }
+    else
+    {
       superuser = TRI_NO;
     }
   }
 
-  if (superuser == TRI_YES) {
+  if (superuser == TRI_YES)
+  {
     /* Not much point in trying to restrict a superuser */
     createdb = TRI_YES;
     createrole = TRI_YES;
   }
 
-  if (createdb == 0) {
-    if (interactive && yesno_prompt("Shall the new role be allowed to create databases?")) {
+  if (createdb == 0)
+  {
+    if (interactive && yesno_prompt("Shall the new role be allowed to create databases?"))
+    {
       createdb = TRI_YES;
-    } else {
+    }
+    else
+    {
       createdb = TRI_NO;
     }
   }
 
-  if (createrole == 0) {
-    if (interactive && yesno_prompt("Shall the new role be allowed to create more new roles?")) {
+  if (createrole == 0)
+  {
+    if (interactive && yesno_prompt("Shall the new role be allowed to create more new roles?"))
+    {
       createrole = TRI_YES;
-    } else {
+    }
+    else
+    {
       createrole = TRI_NO;
     }
   }
 
-  if (inherit == 0) {
+  if (inherit == 0)
+  {
     inherit = TRI_YES;
   }
 
-  if (login == 0) {
+  if (login == 0)
+  {
     login = TRI_YES;
   }
 
@@ -230,79 +258,101 @@ main(int argc, char *argv[])
   initPQExpBuffer(&sql);
 
   printfPQExpBuffer(&sql, "CREATE ROLE %s", fmtId(newuser));
-  if (newpassword) {
+  if (newpassword)
+  {
     char *encrypted_password;
 
     appendPQExpBufferStr(&sql, " PASSWORD ");
 
     encrypted_password = PQencryptPasswordConn(conn, newpassword, newuser, NULL);
-    if (!encrypted_password) {
+    if (!encrypted_password)
+    {
       pg_log_error("password encryption failed: %s", PQerrorMessage(conn));
       exit(1);
     }
     appendStringLiteralConn(&sql, encrypted_password, conn);
     PQfreemem(encrypted_password);
   }
-  if (superuser == TRI_YES) {
+  if (superuser == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " SUPERUSER");
   }
-  if (superuser == TRI_NO) {
+  if (superuser == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOSUPERUSER");
   }
-  if (createdb == TRI_YES) {
+  if (createdb == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " CREATEDB");
   }
-  if (createdb == TRI_NO) {
+  if (createdb == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOCREATEDB");
   }
-  if (createrole == TRI_YES) {
+  if (createrole == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " CREATEROLE");
   }
-  if (createrole == TRI_NO) {
+  if (createrole == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOCREATEROLE");
   }
-  if (inherit == TRI_YES) {
+  if (inherit == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " INHERIT");
   }
-  if (inherit == TRI_NO) {
+  if (inherit == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOINHERIT");
   }
-  if (login == TRI_YES) {
+  if (login == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " LOGIN");
   }
-  if (login == TRI_NO) {
+  if (login == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOLOGIN");
   }
-  if (replication == TRI_YES) {
+  if (replication == TRI_YES)
+  {
     appendPQExpBufferStr(&sql, " REPLICATION");
   }
-  if (replication == TRI_NO) {
+  if (replication == TRI_NO)
+  {
     appendPQExpBufferStr(&sql, " NOREPLICATION");
   }
-  if (conn_limit >= -1) {
+  if (conn_limit >= -1)
+  {
     appendPQExpBuffer(&sql, " CONNECTION LIMIT %d", conn_limit);
   }
-  if (roles.head != NULL) {
+  if (roles.head != NULL)
+  {
     SimpleStringListCell *cell;
 
     appendPQExpBufferStr(&sql, " IN ROLE ");
 
-    for (cell = roles.head; cell; cell = cell->next) {
-      if (cell->next) {
+    for (cell = roles.head; cell; cell = cell->next)
+    {
+      if (cell->next)
+      {
         appendPQExpBuffer(&sql, "%s,", fmtId(cell->val));
-      } else {
+      }
+      else
+      {
         appendPQExpBufferStr(&sql, fmtId(cell->val));
       }
     }
   }
   appendPQExpBufferChar(&sql, ';');
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", sql.data);
   }
   result = PQexec(conn, sql.data);
 
-  if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(result) != PGRES_COMMAND_OK)
+  {
     pg_log_error("creation of new role failed: %s", PQerrorMessage(conn));
     PQfinish(conn);
     exit(1);
@@ -320,12 +370,13 @@ help(const char *progname)
   printf(_("Usage:\n"));
   printf(_("  %s [OPTION]... [ROLENAME]\n"), progname);
   printf(_("\nOptions:\n"));
-  printf(_("  -c, --connection-limit=N  connection limit for role (default:; no limit)\n"));
+  printf(_("  -c, --connection-limit=N  connection limit for role (default: no limit)\n"));
   printf(_("  -d, --createdb            role can create new databases\n"));
   printf(_("  -D, --no-createdb         role cannot create databases (default)\n"));
   printf(_("  -e, --echo                show the commands being sent to the server\n"));
   printf(_("  -g, --role=ROLE           new role will be a member of this role\n"));
-  printf(_("  -i, --inherit             role inherits privileges of roles it is a\n                            member of (default)\n"));
+  printf(_("  -i, --inherit             role inherits privileges of roles it is a\n"
+           "                            member of (default)\n"));
   printf(_("  -I, --no-inherit          role does not inherit privileges\n"));
   printf(_("  -l, --login               role can login (default)\n"));
   printf(_("  -L, --no-login            role cannot login\n"));
@@ -335,7 +386,8 @@ help(const char *progname)
   printf(_("  -s, --superuser           role will be superuser\n"));
   printf(_("  -S, --no-superuser        role will not be superuser (default)\n"));
   printf(_("  -V, --version             output version information, then exit\n"));
-  printf(_("  --interactive             prompt for missing role name and attributes rather\n                            than using defaults\n"));
+  printf(_("  --interactive             prompt for missing role name and attributes rather\n"
+           "                            than using defaults\n"));
   printf(_("  --replication             role can initiate replication\n"));
   printf(_("  --no-replication          role cannot initiate replication\n"));
   printf(_("  -?, --help                show this help, then exit\n"));

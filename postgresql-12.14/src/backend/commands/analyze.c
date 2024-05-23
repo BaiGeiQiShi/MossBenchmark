@@ -118,7 +118,7 @@ analyze_rel(Oid relid, RangeVar *relation, VacuumParams *params, List *va_cols, 
   /* Select logging level */
   if (params->options & VACOPT_VERBOSE)
   {
-
+    elevel = INFO;
   }
   else
   {
@@ -172,8 +172,8 @@ analyze_rel(Oid relid, RangeVar *relation, VacuumParams *params, List *va_cols, 
    */
   if (RELATION_IS_OTHER_TEMP(onerel))
   {
-
-
+    relation_close(onerel, ShareUpdateExclusiveLock);
+    return;
   }
 
   /*
@@ -204,19 +204,19 @@ analyze_rel(Oid relid, RangeVar *relation, VacuumParams *params, List *va_cols, 
     FdwRoutine *fdwroutine;
     bool ok = false;
 
+    fdwroutine = GetFdwRoutineForRelation(onerel, false);
 
+    if (fdwroutine->AnalyzeForeignTable != NULL)
+    {
+      ok = fdwroutine->AnalyzeForeignTable(onerel, &acquirefunc, &relpages);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
+    if (!ok)
+    {
+      ereport(WARNING, (errmsg("skipping \"%s\" --- cannot analyze this foreign table", RelationGetRelationName(onerel))));
+      relation_close(onerel, ShareUpdateExclusiveLock);
+      return;
+    }
   }
   else if (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
   {
@@ -227,12 +227,12 @@ analyze_rel(Oid relid, RangeVar *relation, VacuumParams *params, List *va_cols, 
   else
   {
     /* No need for a WARNING if we already complained during VACUUM */
-
-
-
-
-
-
+    if (!(params->options & VACOPT_VACUUM))
+    {
+      ereport(WARNING, (errmsg("skipping \"%s\" --- cannot analyze non-tables or special system tables", RelationGetRelationName(onerel))));
+    }
+    relation_close(onerel, ShareUpdateExclusiveLock);
+    return;
   }
 
   /*
@@ -330,11 +330,11 @@ do_analyze_rel(Relation onerel, VacuumParams *params, List *va_cols, AcquireSamp
   /* measure elapsed time iff autovacuum logging requires it */
   if (IsAutoVacuumWorkerProcess() && params->log_min_duration >= 0)
   {
-
-
-
-
-
+    pg_rusage_init(&ru0);
+    if (params->log_min_duration > 0)
+    {
+      starttime = GetCurrentTimestamp();
+    }
   }
 
   /*
@@ -434,9 +434,9 @@ do_analyze_rel(Relation onerel, VacuumParams *params, List *va_cols, AcquireSamp
             /* Found an index expression */
             Node *indexkey;
 
-            if (indexpr_item == NULL)
-            { /* shouldn't happen */
-
+            if (indexpr_item == NULL) /* shouldn't happen */
+            {
+              elog(ERROR, "too few entries in indexprs list");
             }
             indexkey = (Node *)lfirst(indexpr_item);
             indexpr_item = lnext(indexpr_item);
@@ -474,7 +474,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params, List *va_cols, AcquireSamp
     {
       if (targrows < thisdata->vacattrstats[i]->minrows)
       {
-
+        targrows = thisdata->vacattrstats[i]->minrows;
       }
     }
   }
@@ -644,7 +644,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params, List *va_cols, AcquireSamp
 
       if (stats)
       {
-
+        pfree(stats);
       }
     }
   }
@@ -655,10 +655,10 @@ do_analyze_rel(Relation onerel, VacuumParams *params, List *va_cols, AcquireSamp
   /* Log the action if appropriate */
   if (IsAutoVacuumWorkerProcess() && params->log_min_duration >= 0)
   {
-
-
-
-
+    if (params->log_min_duration == 0 || TimestampDifferenceExceeds(starttime, GetCurrentTimestamp(), params->log_min_duration))
+    {
+      ereport(LOG, (errmsg("automatic analyze of table \"%s.%s.%s\" system usage: %s", get_database_name(MyDatabaseId), get_namespace_name(RelationGetNamespace(onerel)), RelationGetRelationName(onerel), pg_rusage_show(&ru0))));
+    }
   }
 
   /* Roll back any GUC changes executed by index functions */
@@ -772,8 +772,8 @@ compute_index_stats(Relation onerel, double totalrows, AnlIndexData *indexdata, 
 
           if (isnull[attnum - 1])
           {
-
-
+            exprvals[tcnt] = (Datum)0;
+            exprnulls[tcnt] = true;
           }
           else
           {
@@ -815,7 +815,7 @@ compute_index_stats(Relation onerel, double totalrows, AnlIndexData *indexdata, 
          */
         if (aopt != NULL && aopt->n_distinct != 0.0)
         {
-
+          stats->stadistinct = aopt->n_distinct;
         }
 
         MemoryContextResetAndDeleteChildren(col_context);
@@ -855,7 +855,7 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
   /* Never analyze dropped columns */
   if (attr->attisdropped)
   {
-
+    return NULL;
   }
 
   /* Don't analyze column if user has specified not to */
@@ -910,7 +910,7 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
   typtuple = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(stats->attrtypid));
   if (!HeapTupleIsValid(typtuple))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", stats->attrtypid);
   }
   stats->attrtype = (Form_pg_type)GETSTRUCT(typtuple);
   stats->anl_context = anl_context;
@@ -944,10 +944,10 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
 
   if (!ok || stats->compute_stats == NULL || stats->minrows <= 0)
   {
-
-
-
-
+    heap_freetuple(typtuple);
+    pfree(stats->attr);
+    pfree(stats);
+    return NULL;
   }
 
   return stats;
@@ -1025,7 +1025,7 @@ acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int targrows, 
 
     if (!table_scan_analyze_next_block(scan, targblock, vac_strategy))
     {
-
+      continue;
     }
 
     while (table_scan_analyze_next_tuple(scan, OldestXmin, &liverows, &deadrows, slot))
@@ -1115,7 +1115,10 @@ acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int targrows, 
   /*
    * Emit some interesting relation info
    */
-  ereport(elevel, (errmsg("\"%s\": scanned %d of %u pages, containing %.0f live rows and %.0f dead rows; %d rows in sample, %.0f estimated total rows", RelationGetRelationName(onerel), bs.m, totalblocks, liverows, deadrows, numrows, *totalrows)));
+  ereport(elevel, (errmsg("\"%s\": scanned %d of %u pages, "
+                          "containing %.0f live rows and %.0f dead rows; "
+                          "%d rows in sample, %.0f estimated total rows",
+                      RelationGetRelationName(onerel), bs.m, totalblocks, liverows, deadrows, numrows, *totalrows)));
 
   return numrows;
 }
@@ -1149,7 +1152,7 @@ compare_rows(const void *a, const void *b)
   {
     return 1;
   }
-
+  return 0;
 }
 
 /*
@@ -1188,10 +1191,10 @@ acquire_inherited_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int 
   if (list_length(tableOIDs) < 2)
   {
     /* CCI because we already updated the pg_class row in this command */
-
-
-
-
+    CommandCounterIncrement();
+    SetRelationHasSubclass(RelationGetRelid(onerel), false);
+    ereport(elevel, (errmsg("skipping analyze of \"%s.%s\" inheritance tree --- this inheritance tree contains no child tables", get_namespace_name(RelationGetNamespace(onerel)), RelationGetRelationName(onerel))));
+    return 0;
   }
 
   /*
@@ -1218,9 +1221,9 @@ acquire_inherited_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int 
     if (RELATION_IS_OTHER_TEMP(childrel))
     {
       /* ... but release the lock on it */
-
-
-
+      Assert(childrel != onerel);
+      table_close(childrel, AccessShareLock);
+      continue;
     }
 
     /* Check table type (MATVIEW can't happen, but might as well allow) */
@@ -1239,20 +1242,20 @@ acquire_inherited_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int 
       FdwRoutine *fdwroutine;
       bool ok = false;
 
+      fdwroutine = GetFdwRoutineForRelation(childrel, false);
 
+      if (fdwroutine->AnalyzeForeignTable != NULL)
+      {
+        ok = fdwroutine->AnalyzeForeignTable(childrel, &acquirefunc, &relpages);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
+      if (!ok)
+      {
+        /* ignore, but release the lock on it */
+        Assert(childrel != onerel);
+        table_close(childrel, AccessShareLock);
+        continue;
+      }
     }
     else
     {
@@ -1287,8 +1290,8 @@ acquire_inherited_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int 
    */
   if (!has_child)
   {
-
-
+    ereport(elevel, (errmsg("skipping analyze of \"%s.%s\" inheritance tree --- this inheritance tree contains no analyzable child tables", get_namespace_name(RelationGetNamespace(onerel)), RelationGetRelationName(onerel))));
+    return 0;
   }
 
   /*
@@ -1363,25 +1366,24 @@ acquire_inherited_sample_rows(Relation onerel, int elevel, HeapTuple *rows, int 
 /*
  *	update_attstats() -- update attribute statistics for one relation
  *
- *		Statistics are stored in several places: the pg_class row for
- *the relation has stats about the whole relation, and there is a pg_statistic
- *row for each (non-system) attribute that has ever been analyzed.  The pg_class
- *values are updated by VACUUM, not here.
+ *		Statistics are stored in several places: the pg_class row for the
+ *		relation has stats about the whole relation, and there is a
+ *		pg_statistic row for each (non-system) attribute that has ever
+ *		been analyzed.  The pg_class values are updated by VACUUM, not here.
  *
- *		pg_statistic rows are just added or updated normally.  This
- *means that pg_statistic will probably contain some deleted rows at the
- *		completion of a vacuum cycle, unless it happens to get vacuumed
- *last.
+ *		pg_statistic rows are just added or updated normally.  This means
+ *		that pg_statistic will probably contain some deleted rows at the
+ *		completion of a vacuum cycle, unless it happens to get vacuumed last.
  *
  *		To keep things simple, we punt for pg_statistic, and don't try
- *		to compute or store rows for pg_statistic itself in
- *pg_statistic. This could possibly be made to work, but it's not worth the
- *trouble. Note analyze_rel() has seen to it that we won't come here when
+ *		to compute or store rows for pg_statistic itself in pg_statistic.
+ *		This could possibly be made to work, but it's not worth the trouble.
+ *		Note analyze_rel() has seen to it that we won't come here when
  *		vacuuming pg_statistic itself.
  *
  *		Note: there would be a race condition here if two backends could
- *		ANALYZE the same table concurrently.  Presently, we lock that
- *out by taking a self-exclusive lock on the relation in analyze_rel().
+ *		ANALYZE the same table concurrently.  Presently, we lock that out
+ *		by taking a self-exclusive lock on the relation in analyze_rel().
  */
 static void
 update_attstats(Oid relid, bool inh, int natts, VacAttrStats **vacattrstats)
@@ -1724,7 +1726,7 @@ compute_trivial_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int s
     else if (is_varwidth)
     {
       /* must be cstring */
-
+      total_width += strlen(DatumGetCString(value)) + 1;
     }
   }
 
@@ -1755,15 +1757,14 @@ compute_trivial_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int s
     }
     else
     {
-
+      stats->stawidth = stats->attrtype->typlen;
     }
     stats->stadistinct = 0.0; /* "unknown" */
   }
 }
 
 /*
- *	compute_distinct_stats() -- compute column statistics including
- *ndistinct
+ *	compute_distinct_stats() -- compute column statistics including ndistinct
  *
  *	We use this when we can find only an "=" operator for the datatype.
  *
@@ -1804,7 +1805,7 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
   track_max = 2 * num_mcv;
   if (track_max < 10)
   {
-
+    track_max = 10;
   }
   track = (TrackItem *)palloc(track_max * sizeof(TrackItem));
   track_cnt = 0;
@@ -1849,15 +1850,15 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
        */
       if (toast_raw_datum_size(value) > WIDTH_THRESHOLD)
       {
-
-
+        toowide_cnt++;
+        continue;
       }
       value = PointerGetDatum(PG_DETOAST_DATUM(value));
     }
     else if (is_varwidth)
     {
       /* must be cstring */
-
+      total_width += strlen(DatumGetCString(value)) + 1;
     }
 
     /*
@@ -1998,7 +1999,7 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
       }
       else
       {
-
+        stadistinct = 0;
       }
 
       /* Clamp to sane range in case of roundoff error */
@@ -2008,7 +2009,7 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
       }
       if (stadistinct > N)
       {
-
+        stadistinct = N;
       }
       /* And round to integer */
       stats->stadistinct = floor(stadistinct + 0.5);
@@ -2111,7 +2112,7 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
     }
     else
     {
-
+      stats->stawidth = stats->attrtype->typlen;
     }
     stats->stadistinct = 0.0; /* "unknown" */
   }
@@ -2126,8 +2127,7 @@ compute_distinct_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int 
  *
  *	We determine the fraction of non-null rows, the average width, the
  *	most common values, the (estimated) number of distinct values, the
- *	distribution histogram, and the correlation of physical to logical
- *order.
+ *	distribution histogram, and the correlation of physical to logical order.
  *
  *	The desired stats can be determined fairly easily after sorting the
  *	data values into order.
@@ -2216,7 +2216,7 @@ compute_scalar_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int sa
     else if (is_varwidth)
     {
       /* must be cstring */
-
+      total_width += strlen(DatumGetCString(value)) + 1;
     }
 
     /* Add it to the list to be sorted */
@@ -2374,7 +2374,7 @@ compute_scalar_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int sa
       }
       else
       {
-
+        stadistinct = 0;
       }
 
       /* Clamp to sane range in case of roundoff error */
@@ -2384,7 +2384,7 @@ compute_scalar_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int sa
       }
       if (stadistinct > N)
       {
-
+        stadistinct = N;
       }
       /* And round to integer */
       stats->stadistinct = floor(stadistinct + 0.5);
@@ -2637,7 +2637,7 @@ compute_scalar_stats(VacAttrStatsP stats, AnalyzeAttrFetchFunc fetchfunc, int sa
     }
     else
     {
-
+      stats->stawidth = stats->attrtype->typlen;
     }
     /* Assume all too-wide values are distinct, so it's a unique column */
     stats->stadistinct = -1.0 * (1.0 - stats->stanullfrac);
@@ -2742,11 +2742,11 @@ analyze_mcv_list(int *mcv_counts, int num_mcv, double stadistinct, double stanul
   }
 
   /* Re-extract the estimated number of distinct nonnull values in table */
-
-
-
-
-
+  ndistinct_table = stadistinct;
+  if (ndistinct_table < 0)
+  {
+    ndistinct_table = -ndistinct_table * totalrows;
+  }
 
   /*
    * Exclude the least common values from the MCV list, if they are not
@@ -2767,76 +2767,76 @@ analyze_mcv_list(int *mcv_counts, int num_mcv, double stadistinct, double stanul
    * roughly the same as that of the common values.  This would lead to any
    * uncommon values being significantly overestimated.
    */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  sumcount = 0.0;
+  for (i = 0; i < num_mcv - 1; i++)
+  {
+    sumcount += mcv_counts[i];
+  }
+
+  while (num_mcv > 0)
+  {
+    double selec, otherdistinct, N, n, K, variance, stddev;
+
+    /*
+     * Estimated selectivity the least common value would have if it
+     * wasn't in the MCV list (c.f. eqsel()).
+     */
+    selec = 1.0 - sumcount / samplerows - stanullfrac;
+    if (selec < 0.0)
+    {
+      selec = 0.0;
+    }
+    if (selec > 1.0)
+    {
+      selec = 1.0;
+    }
+    otherdistinct = ndistinct_table - (num_mcv - 1);
+    if (otherdistinct > 1)
+    {
+      selec /= otherdistinct;
+    }
+
+    /*
+     * If the value is kept in the MCV list, its population frequency is
+     * assumed to equal its sample frequency.  We use the lower end of a
+     * textbook continuity-corrected Wald-type confidence interval to
+     * determine if that is significantly more common than the non-MCV
+     * frequency --- specifically we assume the population frequency is
+     * highly likely to be within around 2 standard errors of the sample
+     * frequency, which equates to an interval of 2 standard deviations
+     * either side of the sample count, plus an additional 0.5 for the
+     * continuity correction.  Since we are sampling without replacement,
+     * this is a hypergeometric distribution.
+     *
+     * XXX: Empirically, this approach seems to work quite well, but it
+     * may be worth considering more advanced techniques for estimating
+     * the confidence interval of the hypergeometric distribution.
+     */
+    N = totalrows;
+    n = samplerows;
+    K = N * mcv_counts[num_mcv - 1] / n;
+    variance = n * K * (N - K) * (N - n) / (N * N * (N - 1));
+    stddev = sqrt(variance);
+
+    if (mcv_counts[num_mcv - 1] > selec * samplerows + 2 * stddev + 0.5)
+    {
+      /*
+       * The value is significantly more common than the non-MCV
+       * selectivity would suggest.  Keep it, and all the other more
+       * common values in the list.
+       */
+      break;
+    }
+    else
+    {
+      /* Discard this value and consider the next least common value */
+      num_mcv--;
+      if (num_mcv == 0)
+      {
+        break;
+      }
+      sumcount -= mcv_counts[num_mcv - 1];
+    }
+  }
+  return num_mcv;
 }

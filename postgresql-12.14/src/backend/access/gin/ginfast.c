@@ -80,7 +80,7 @@ writeListPage(Relation index, Buffer buffer, IndexTuple *tuples, int32 ntuples, 
 
     if (l == InvalidOffsetNumber)
     {
-
+      elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(index));
     }
 
     off++;
@@ -102,7 +102,7 @@ writeListPage(Relation index, Buffer buffer, IndexTuple *tuples, int32 ntuples, 
   }
   else
   {
-
+    GinPageGetOpaque(page)->maxoff = 0;
   }
 
   MarkBufferDirty(buffer);
@@ -156,8 +156,8 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples, GinMetaPageData *
 
       if (prevBuffer != InvalidBuffer)
       {
-
-
+        res->nPendingPages++;
+        writeListPage(index, prevBuffer, tuples + startTuple, i - startTuple, BufferGetBlockNumber(curBuffer));
       }
       else
       {
@@ -174,8 +174,8 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples, GinMetaPageData *
     if (size + tupsize > GinListPageSize)
     {
       /* won't fit, force a new page and reprocess */
-
-
+      i--;
+      curBuffer = InvalidBuffer;
     }
     else
     {
@@ -217,7 +217,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 
   if (collector->ntuples == 0)
   {
-
+    return;
   }
 
   needWal = RelationNeedsWAL(index);
@@ -241,7 +241,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
     /*
      * Total size is greater than one page => make sublist
      */
-
+    separateList = true;
   }
   else
   {
@@ -370,7 +370,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 
       if (l == InvalidOffsetNumber)
       {
-
+        elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(index));
       }
 
       memcpy(ptr, collector->tuples[i], tupsize);
@@ -441,7 +441,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
   cleanupSize = GinGetPendingListCleanupSize(index);
   if (metadata->nPendingPages * GIN_PAGE_FREESIZE > cleanupSize * 1024L)
   {
-
+    needCleanup = true;
   }
 
   UnlockReleaseBuffer(metabuffer);
@@ -454,7 +454,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
    */
   if (needCleanup)
   {
-
+    ginInsertCleanup(ginstate, false, true, false, NULL);
   }
 }
 
@@ -483,7 +483,7 @@ ginHeapTupleFastCollect(GinState *ginstate, GinTupleCollector *collector, Offset
    */
   if (nentries < 0 || collector->ntuples + nentries > MaxAllocSize / sizeof(IndexTuple))
   {
-
+    elog(ERROR, "too many entries for GIN index");
   }
 
   /*
@@ -499,25 +499,25 @@ ginHeapTupleFastCollect(GinState *ginstate, GinTupleCollector *collector, Offset
     collector->lentuples = 16;
     while (collector->lentuples < nentries)
     {
-
+      collector->lentuples *= 2;
     }
 
     collector->tuples = (IndexTuple *)palloc(sizeof(IndexTuple) * collector->lentuples);
   }
+  else if (collector->lentuples < collector->ntuples + nentries)
+  {
+    /*
+     * Advance lentuples to the next suitable power of 2.  This won't
+     * overflow, though we could get to a value that exceeds
+     * MaxAllocSize/sizeof(IndexTuple), causing an error in repalloc.
+     */
+    do
+    {
+      collector->lentuples *= 2;
+    } while (collector->lentuples < collector->ntuples + nentries);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    collector->tuples = (IndexTuple *)repalloc(collector->tuples, sizeof(IndexTuple) * collector->lentuples);
+  }
 
   /*
    * Build an index tuple for each key value, and add to array.  In pending
@@ -682,9 +682,9 @@ addDatum(KeyArray *keys, Datum datum, GinNullCategory category)
 {
   if (keys->nvalues >= keys->maxvalues)
   {
-
-
-
+    keys->maxvalues *= 2;
+    keys->keys = (Datum *)repalloc(keys->keys, sizeof(Datum) * keys->maxvalues);
+    keys->categories = (GinNullCategory *)repalloc(keys->categories, sizeof(GinNullCategory) * keys->maxvalues);
   }
 
   keys->keys[keys->nvalues] = datum;
@@ -805,11 +805,11 @@ ginInsertCleanup(GinState *ginstate, bool full_clean, bool fill_fsm, bool forceC
      * just exit in hope that concurrent process will clean up pending
      * list.
      */
-
-
-
-
-
+    if (!ConditionalLockPage(index, GIN_METAPAGE_BLKNO, ExclusiveLock))
+    {
+      return;
+    }
+    workMemory = work_mem;
   }
 
   metabuffer = ReadBuffer(index, GIN_METAPAGE_BLKNO);
@@ -869,7 +869,7 @@ ginInsertCleanup(GinState *ginstate, bool full_clean, bool fill_fsm, bool forceC
      */
     if (blkno == blknoFinish && full_clean == false)
     {
-
+      cleanupFinish = true;
     }
 
     /*
@@ -930,14 +930,14 @@ ginInsertCleanup(GinState *ginstate, bool full_clean, bool fill_fsm, bool forceC
        */
       if (PageGetMaxOffsetNumber(page) != maxoff)
       {
+        ginInitBA(&accum);
+        processPendingPage(&accum, &datums, page, maxoff + 1);
 
-
-
-
-
-
-
-
+        ginBeginBAScan(&accum);
+        while ((list = ginGetBAEntry(&accum, &attnum, &key, &category, &nlist)) != NULL)
+        {
+          ginEntryInsert(ginstate, attnum, key, category, list, nlist, NULL);
+        }
       }
 
       /*
@@ -971,9 +971,9 @@ ginInsertCleanup(GinState *ginstate, bool full_clean, bool fill_fsm, bool forceC
       /*
        * release memory used so far and reinit state
        */
-
-
-
+      MemoryContextReset(opCtx);
+      initKeyArray(&datums, datums.maxvalues);
+      ginInitBA(&accum);
     }
     else
     {
@@ -1021,13 +1021,13 @@ gin_clean_pending_list(PG_FUNCTION_ARGS)
 
   if (RecoveryInProgress())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("recovery is in progress"), errhint("GIN pending list cannot be cleaned up during recovery.")));
   }
 
   /* Must be a GIN index */
   if (indexRel->rd_rel->relkind != RELKIND_INDEX || indexRel->rd_rel->relam != GIN_AM_OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a GIN index", RelationGetRelationName(indexRel))));
   }
 
   /*
@@ -1037,13 +1037,13 @@ gin_clean_pending_list(PG_FUNCTION_ARGS)
    */
   if (RELATION_IS_OTHER_TEMP(indexRel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot access temporary indexes of other sessions")));
   }
 
   /* User must own the index (comparable to privileges needed for VACUUM) */
   if (!pg_class_ownercheck(indexoid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_INDEX, RelationGetRelationName(indexRel));
   }
 
   memset(&stats, 0, sizeof(stats));

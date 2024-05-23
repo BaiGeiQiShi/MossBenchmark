@@ -51,8 +51,8 @@ num_word(Cash value)
   /* is it an even multiple of 100? */
   if (!tu)
   {
-
-
+    sprintf(buf, "%s hundred", small[value / 100]);
+    return buf;
   }
 
   /* more than 99? */
@@ -61,11 +61,11 @@ num_word(Cash value)
     /* is it an even multiple of 10 other than 10? */
     if (value % 10 == 0 && tu > 10)
     {
-
+      sprintf(buf, "%s hundred %s", small[value / 100], big[tu / 10]);
     }
     else if (tu < 20)
     {
-
+      sprintf(buf, "%s hundred and %s", small[value / 100], small[tu]);
     }
     else
     {
@@ -81,7 +81,7 @@ num_word(Cash value)
     }
     else if (tu < 20)
     {
-
+      sprintf(buf, "%s", small[tu]);
     }
     else
     {
@@ -132,7 +132,7 @@ cash_in(PG_FUNCTION_ARGS)
   /* we restrict dsymbol to be a single byte, but not the other symbols */
   if (*lconvert->mon_decimal_point != '\0' && lconvert->mon_decimal_point[1] == '\0')
   {
-
+    dsymbol = *lconvert->mon_decimal_point;
   }
   else
   {
@@ -140,10 +140,10 @@ cash_in(PG_FUNCTION_ARGS)
   }
   if (*lconvert->mon_thousands_sep != '\0')
   {
-
+    ssymbol = lconvert->mon_thousands_sep;
   }
-  else
-  { /* ssymbol should not equal dsymbol */
+  else /* ssymbol should not equal dsymbol */
+  {
     ssymbol = (dsymbol != ',') ? "," : ".";
   }
   csymbol = (*lconvert->currency_symbol != '\0') ? lconvert->currency_symbol : "$";
@@ -166,7 +166,7 @@ cash_in(PG_FUNCTION_ARGS)
   }
   while (isspace((unsigned char)*s))
   {
-
+    s++;
   }
 
 #ifdef CASHDEBUG
@@ -188,7 +188,7 @@ cash_in(PG_FUNCTION_ARGS)
   }
   else if (strncmp(s, psymbol, strlen(psymbol)) == 0)
   {
-
+    s += strlen(psymbol);
   }
 
 #ifdef CASHDEBUG
@@ -198,7 +198,7 @@ cash_in(PG_FUNCTION_ARGS)
   /* allow whitespace and currency symbol after the sign, too */
   while (isspace((unsigned char)*s))
   {
-
+    s++;
   }
   if (strncmp(s, csymbol, strlen(csymbol)) == 0)
   {
@@ -206,7 +206,7 @@ cash_in(PG_FUNCTION_ARGS)
   }
   while (isspace((unsigned char)*s))
   {
-
+    s++;
   }
 
 #ifdef CASHDEBUG
@@ -292,23 +292,23 @@ cash_in(PG_FUNCTION_ARGS)
     {
       s++;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (strncmp(s, nsymbol, strlen(nsymbol)) == 0)
+    {
+      sgn = -1;
+      s += strlen(nsymbol);
+    }
+    else if (strncmp(s, psymbol, strlen(psymbol)) == 0)
+    {
+      s += strlen(psymbol);
+    }
+    else if (strncmp(s, csymbol, strlen(csymbol)) == 0)
+    {
+      s += strlen(csymbol);
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "money", str)));
+    }
   }
 
   /*
@@ -373,7 +373,7 @@ cash_out(PG_FUNCTION_ARGS)
   /* we restrict dsymbol to be a single byte, but not the other symbols */
   if (*lconvert->mon_decimal_point != '\0' && lconvert->mon_decimal_point[1] == '\0')
   {
-
+    dsymbol = *lconvert->mon_decimal_point;
   }
   else
   {
@@ -381,10 +381,10 @@ cash_out(PG_FUNCTION_ARGS)
   }
   if (*lconvert->mon_thousands_sep != '\0')
   {
-
+    ssymbol = lconvert->mon_thousands_sep;
   }
-  else
-  { /* ssymbol should not equal dsymbol */
+  else /* ssymbol should not equal dsymbol */
+  {
     ssymbol = (dsymbol != ',') ? "," : ".";
   }
   csymbol = (*lconvert->currency_symbol != '\0') ? lconvert->currency_symbol : "$";
@@ -463,72 +463,71 @@ cash_out(PG_FUNCTION_ARGS)
    */
   switch (sign_posn)
   {
-  case 0:;
-
-
-
-
-
-
-
-
-
-  case 1:;
-  default:;;
+  case 0:
+    if (cs_precedes)
+    {
+      result = psprintf("(%s%s%s)", csymbol, (sep_by_space == 1) ? " " : "", bufptr);
+    }
+    else
+    {
+      result = psprintf("(%s%s%s)", bufptr, (sep_by_space == 1) ? " " : "", csymbol);
+    }
+    break;
+  case 1:
+  default:
     if (cs_precedes)
     {
       result = psprintf("%s%s%s%s%s", signsymbol, (sep_by_space == 2) ? " " : "", csymbol, (sep_by_space == 1) ? " " : "", bufptr);
     }
     else
     {
-
+      result = psprintf("%s%s%s%s%s", signsymbol, (sep_by_space == 2) ? " " : "", bufptr, (sep_by_space == 1) ? " " : "", csymbol);
     }
     break;
-  case 2:;
-
-
-
-
-
-
-
-
-
-  case 3:;
-
-
-
-
-
-
-
-
-
-  case 4:;
-
-
-
-
-
-
-
-
-
+  case 2:
+    if (cs_precedes)
+    {
+      result = psprintf("%s%s%s%s%s", csymbol, (sep_by_space == 1) ? " " : "", bufptr, (sep_by_space == 2) ? " " : "", signsymbol);
+    }
+    else
+    {
+      result = psprintf("%s%s%s%s%s", bufptr, (sep_by_space == 1) ? " " : "", csymbol, (sep_by_space == 2) ? " " : "", signsymbol);
+    }
+    break;
+  case 3:
+    if (cs_precedes)
+    {
+      result = psprintf("%s%s%s%s%s", signsymbol, (sep_by_space == 2) ? " " : "", csymbol, (sep_by_space == 1) ? " " : "", bufptr);
+    }
+    else
+    {
+      result = psprintf("%s%s%s%s%s", bufptr, (sep_by_space == 1) ? " " : "", signsymbol, (sep_by_space == 2) ? " " : "", csymbol);
+    }
+    break;
+  case 4:
+    if (cs_precedes)
+    {
+      result = psprintf("%s%s%s%s%s", csymbol, (sep_by_space == 2) ? " " : "", signsymbol, (sep_by_space == 1) ? " " : "", bufptr);
+    }
+    else
+    {
+      result = psprintf("%s%s%s%s%s", bufptr, (sep_by_space == 1) ? " " : "", csymbol, (sep_by_space == 2) ? " " : "", signsymbol);
+    }
+    break;
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		cash_recv			- converts external binary
- *format to cash
+ *		cash_recv			- converts external binary format to cash
  */
 Datum
 cash_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_CASH((Cash)pq_getmsgint64(buf));
 }
 
 /*
@@ -537,12 +536,12 @@ cash_recv(PG_FUNCTION_ARGS)
 Datum
 cash_send(PG_FUNCTION_ARGS)
 {
+  Cash arg1 = PG_GETARG_CASH(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint64(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -615,7 +614,7 @@ cash_cmp(PG_FUNCTION_ARGS)
   }
   else if (c1 == c2)
   {
-
+    PG_RETURN_INT32(0);
   }
   else
   {
@@ -665,7 +664,7 @@ cash_div_cash(PG_FUNCTION_ARGS)
 
   if (divisor == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   quotient = (float8)dividend / (float8)divisor;
@@ -712,7 +711,7 @@ cash_div_flt8(PG_FUNCTION_ARGS)
 
   if (f == 0.0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   result = rint(c / f);
@@ -760,7 +759,7 @@ cash_div_flt4(PG_FUNCTION_ARGS)
 
   if (f == 0.0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   result = rint(c / (float8)f);
@@ -807,7 +806,7 @@ cash_div_int8(PG_FUNCTION_ARGS)
 
   if (i == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   result = c / i;
@@ -856,7 +855,7 @@ cash_div_int4(PG_FUNCTION_ARGS)
 
   if (i == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   result = c / i;
@@ -905,7 +904,7 @@ cash_div_int2(PG_FUNCTION_ARGS)
 
   if (s == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
   }
 
   result = c / s;
@@ -964,9 +963,9 @@ cash_words(PG_FUNCTION_ARGS)
   /* work with positive numbers */
   if (value < 0)
   {
-
-
-
+    value = -value;
+    strcpy(buf, "minus ");
+    p += 6;
   }
   else
   {
@@ -986,32 +985,32 @@ cash_words(PG_FUNCTION_ARGS)
 
   if (m6)
   {
-
-
+    strcat(buf, num_word(m6));
+    strcat(buf, " quadrillion ");
   }
 
   if (m5)
   {
-
-
+    strcat(buf, num_word(m5));
+    strcat(buf, " trillion ");
   }
 
   if (m4)
   {
-
-
+    strcat(buf, num_word(m4));
+    strcat(buf, " billion ");
   }
 
   if (m3)
   {
-
-
+    strcat(buf, num_word(m3));
+    strcat(buf, " million ");
   }
 
   if (m2)
   {
-
-
+    strcat(buf, num_word(m2));
+    strcat(buf, " thousand ");
   }
 
   if (m1)

@@ -172,8 +172,7 @@ static void
 text_format_append_string(StringInfo buf, const char *str, int flags, int width);
 
 /*****************************************************************************
- *	 CONVERSION ROUTINES EXPORTED FOR USE BY C CODE
- **
+ *	 CONVERSION ROUTINES EXPORTED FOR USE BY C CODE							 *
  *****************************************************************************/
 
 /*
@@ -263,9 +262,9 @@ text_to_cstring_buffer(const text *src, char *dst, size_t dst_len)
     {
       dst_len = src_len;
     }
-    else
-    { /* ensure truncation is encoding-safe */
-
+    else /* ensure truncation is encoding-safe */
+    {
+      dst_len = pg_mbcliplen(VARDATA_ANY(srcunpacked), src_len, dst_len);
     }
     memcpy(dst, VARDATA_ANY(srcunpacked), dst_len);
     dst[dst_len] = '\0';
@@ -273,25 +272,23 @@ text_to_cstring_buffer(const text *src, char *dst, size_t dst_len)
 
   if (srcunpacked != src)
   {
-
+    pfree(srcunpacked);
   }
 }
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 #define VAL(CH) ((CH) - '0')
 #define DIG(VAL) ((VAL) + '0')
 
 /*
- *		byteain			- converts from printable representation
- *of byte array
+ *		byteain			- converts from printable representation of byte array
  *
- *		Non-printable characters must be passed as '\nnn' (octal) and
- *are converted to internal form.  '\' must be passed as '\\'. ereport(ERROR,
- *...) if bad form.
+ *		Non-printable characters must be passed as '\nnn' (octal) and are
+ *		converted to internal form.  '\' must be passed as '\\'.
+ *		ereport(ERROR, ...) if bad form.
  *
  *		BUGS:
  *				The input is scanned twice.
@@ -332,7 +329,7 @@ byteain(PG_FUNCTION_ARGS)
     }
     else if ((tp[0] == '\\') && (tp[1] == '\\'))
     {
-
+      tp += 2;
     }
     else
     {
@@ -366,26 +363,25 @@ byteain(PG_FUNCTION_ARGS)
 
       tp += 4;
     }
-
-
-
-
-
-
-
-
-
-
-
-
+    else if ((tp[0] == '\\') && (tp[1] == '\\'))
+    {
+      *rp++ = '\\';
+      tp += 2;
+    }
+    else
+    {
+      /*
+       * We should never get here. The first pass should not allow it.
+       */
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "bytea")));
+    }
   }
 
   PG_RETURN_BYTEA_P(result);
 }
 
 /*
- *		byteaout		- converts to printable representation
- *of byte array
+ *		byteaout		- converts to printable representation of byte array
  *
  *		In the traditional escaped format, non-printable characters are
  *		printed as '\nnn' (octal) and '\' as '\\'.
@@ -418,7 +414,7 @@ byteaout(PG_FUNCTION_ARGS)
     {
       if (*vp == '\\')
       {
-
+        len += 2;
       }
       else if ((unsigned char)*vp < 0x20 || (unsigned char)*vp > 0x7e)
       {
@@ -435,8 +431,8 @@ byteaout(PG_FUNCTION_ARGS)
     {
       if (*vp == '\\')
       {
-
-
+        *rp++ = '\\';
+        *rp++ = '\\';
       }
       else if ((unsigned char)*vp < 0x20 || (unsigned char)*vp > 0x7e)
       {
@@ -459,16 +455,15 @@ byteaout(PG_FUNCTION_ARGS)
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized bytea_output setting: %d", bytea_output);
+    rp = result = NULL; /* keep compiler quiet */
   }
   *rp = '\0';
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		bytearecv			- converts external binary
- *format to bytea
+ *		bytearecv			- converts external binary format to bytea
  */
 Datum
 bytearecv(PG_FUNCTION_ARGS)
@@ -485,8 +480,7 @@ bytearecv(PG_FUNCTION_ARGS)
 }
 
 /*
- *		byteasend			- converts bytea to binary
- *format
+ *		byteasend			- converts bytea to binary format
  *
  * This is a special case: just copy the input...
  */
@@ -558,8 +552,7 @@ bytea_string_agg_finalfn(PG_FUNCTION_ARGS)
 }
 
 /*
- *		textin			- converts "..." to internal
- *representation
+ *		textin			- converts "..." to internal representation
  */
 Datum
 textin(PG_FUNCTION_ARGS)
@@ -570,8 +563,7 @@ textin(PG_FUNCTION_ARGS)
 }
 
 /*
- *		textout			- converts internal representation to
- *"..."
+ *		textout			- converts internal representation to "..."
  */
 Datum
 textout(PG_FUNCTION_ARGS)
@@ -582,22 +574,21 @@ textout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		textrecv			- converts external binary
- *format to text
+ *		textrecv			- converts external binary format to text
  */
 Datum
 textrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  text *result;
+  char *str;
+  int nbytes;
 
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
 
-
-
-
-
-
-
-
-
+  result = cstring_to_text_with_len(str, nbytes);
+  pfree(str);
+  PG_RETURN_TEXT_P(result);
 }
 
 /*
@@ -615,21 +606,19 @@ textsend(PG_FUNCTION_ARGS)
 }
 
 /*
- *		unknownin			- converts "..." to internal
- *representation
+ *		unknownin			- converts "..." to internal representation
  */
 Datum
 unknownin(PG_FUNCTION_ARGS)
 {
+  char *str = PG_GETARG_CSTRING(0);
 
-
-
-
+  /* representation is same as cstring */
+  PG_RETURN_CSTRING(pstrdup(str));
 }
 
 /*
- *		unknownout			- converts internal
- *representation to "..."
+ *		unknownout			- converts internal representation to "..."
  */
 Datum
 unknownout(PG_FUNCTION_ARGS)
@@ -641,35 +630,33 @@ unknownout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		unknownrecv			- converts external binary
- *format to unknown
+ *		unknownrecv			- converts external binary format to unknown
  */
 Datum
 unknownrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  char *str;
+  int nbytes;
 
-
-
-
-
-
-
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  /* representation is same as cstring */
+  PG_RETURN_CSTRING(str);
 }
 
 /*
- *		unknownsend			- converts unknown to binary
- *format
+ *		unknownsend			- converts unknown to binary format
  */
 Datum
 unknownsend(PG_FUNCTION_ARGS)
 {
+  /* representation is same as cstring */
+  char *str = PG_GETARG_CSTRING(0);
+  StringInfoData buf;
 
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendtext(&buf, str, strlen(str));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /* ========== PUBLIC ROUTINES ========== */
@@ -692,10 +679,10 @@ textlen(PG_FUNCTION_ARGS)
  * text_length -
  *	Does the real work for textlen()
  *
- *	This is broken out so it can be called directly by other string
- *processing functions.  Note that the argument is passed as a Datum, to
- *indicate that it may still be in compressed form.  We can avoid decompressing
- *it at all in some cases.
+ *	This is broken out so it can be called directly by other string processing
+ *	functions.  Note that the argument is passed as a Datum, to indicate that
+ *	it may still be in compressed form.  We can avoid decompressing it at all
+ *	in some cases.
  */
 static int32
 text_length(Datum str)
@@ -703,7 +690,7 @@ text_length(Datum str)
   /* fastpath when max encoding length is one */
   if (pg_database_encoding_max_length() == 1)
   {
-
+    PG_RETURN_INT32(toast_raw_datum_size(str) - VARHDRSZ);
   }
   else
   {
@@ -765,11 +752,11 @@ text_catenate(text *t1, text *t2)
   /* paranoia ... probably should throw error instead? */
   if (len1 < 0)
   {
-
+    len1 = 0;
   }
   if (len2 < 0)
   {
-
+    len2 = 0;
   }
 
   len = len1 + len2 + VARHDRSZ;
@@ -805,7 +792,7 @@ charlen_to_bytelen(const char *p, int n)
   if (pg_database_encoding_max_length() == 1)
   {
     /* Optimization for single-byte encodings */
-
+    return n;
   }
   else
   {
@@ -830,14 +817,14 @@ charlen_to_bytelen(const char *p, int n)
  *	- starting position (is one-based)
  *	- string length
  *
- * If the starting position is zero or less, then return from the start of the
- *string adjusting the length to be consistent with the "negative start" per
- *SQL. If the length is less than zero, return the remaining string.
+ * If the starting position is zero or less, then return from the start of the string
+ *	adjusting the length to be consistent with the "negative start" per SQL.
+ * If the length is less than zero, return the remaining string.
  *
  * Added multibyte support.
  * - Tatsuo Ishii 1998-4-21
- * Changed behavior if starting position is less than one to conform to SQL
- *behavior. Formerly returned the entire string; now returns a portion.
+ * Changed behavior if starting position is less than one to conform to SQL behavior.
+ * Formerly returned the entire string; now returns a portion.
  * - Thomas Lockhart 1998-12-10
  * Now uses faster TOAST-slicing interface
  * - John Gray 2002-02-22
@@ -868,10 +855,10 @@ text_substr_no_len(PG_FUNCTION_ARGS)
  * text_substring -
  *	Does the real work for text_substr() and text_substr_no_len()
  *
- *	This is broken out so it can be called directly by other string
- *processing functions.  Note that the argument is passed as a Datum, to
- *indicate that it may still be in compressed/toasted form.  We can avoid
- *detoasting all of it in some cases.
+ *	This is broken out so it can be called directly by other string processing
+ *	functions.  Note that the argument is passed as a Datum, to indicate that
+ *	it may still be in compressed/toasted form.  We can avoid detoasting all
+ *	of it in some cases.
  *
  *	The result is always a freshly palloc'd datum.
  */
@@ -893,46 +880,46 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
   /* life is easy if the encoding max length is 1 */
   if (eml == 1)
   {
+    if (length_not_specified) /* special case - get length to end of
+                               * string */
+    {
+      L1 = -1;
+    }
+    else if (length < 0)
+    {
+      /* SQL99 says to throw an error for E < S, i.e., negative length */
+      ereport(ERROR, (errcode(ERRCODE_SUBSTRING_ERROR), errmsg("negative substring length not allowed")));
+      L1 = -1; /* silence stupider compilers */
+    }
+    else if (pg_add_s32_overflow(S, length, &E))
+    {
+      /*
+       * L could be large enough for S + L to overflow, in which case
+       * the substring must run to end of string.
+       */
+      L1 = -1;
+    }
+    else
+    {
+      /*
+       * A zero or negative value for the end position can happen if the
+       * start was negative or one. SQL99 says to return a zero-length
+       * string.
+       */
+      if (E < 1)
+      {
+        return cstring_to_text("");
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      L1 = E - S1;
+    }
 
     /*
      * If the start position is past the end of the string, SQL99 says to
      * return a zero-length string -- DatumGetTextPSlice() will do that
      * for us.  We need only convert S1 to zero-based starting position.
      */
-
+    return DatumGetTextPSlice(str, S1 - 1, L1);
   }
   else if (eml > 1)
   {
@@ -958,9 +945,9 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
      */
     slice_start = 0;
 
-    if (length_not_specified)
-    { /* special case - get length to end of
-       * string */
+    if (length_not_specified) /* special case - get length to end of
+                               * string */
+    {
       slice_size = L1 = -1;
     }
     else if (length < 0)
@@ -986,7 +973,7 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
        */
       if (E < 1)
       {
-
+        return cstring_to_text("");
       }
 
       /*
@@ -1022,11 +1009,11 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
     /* see if we got back an empty string */
     if (VARSIZE_ANY_EXHDR(slice) == 0)
     {
-
-
-
-
-
+      if (slice != (text *)DatumGetPointer(str))
+      {
+        pfree(slice);
+      }
+      return cstring_to_text("");
     }
 
     /* Now we can get the actual length of the slice in MB characters */
@@ -1040,7 +1027,7 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
     {
       if (slice != (text *)DatumGetPointer(str))
       {
-
+        pfree(slice);
       }
       return cstring_to_text("");
     }
@@ -1092,7 +1079,7 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
   }
   else
   {
-
+    elog(ERROR, "invalid backend encoding: encoding max length < 1");
   }
 
   /* not reached: suppress compiler warning */
@@ -1144,11 +1131,11 @@ text_overlay(text *t1, text *t2, int sp, int sl)
    */
   if (sp <= 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SUBSTRING_ERROR), errmsg("negative substring length not allowed")));
   }
   if (pg_add_s32_overflow(sp, sl, &sp_pl_sl))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
   }
 
   s1 = text_substring(PointerGetDatum(t1), 1, sp - 1, false);
@@ -1186,8 +1173,8 @@ textpos(PG_FUNCTION_ARGS)
  *		Character index of the first matched char, starting from 1,
  *		or 0 if no match.
  *
- *	This is broken out so it can be called directly by other string
- *processing functions.
+ *	This is broken out so it can be called directly by other string processing
+ *	functions.
  */
 static int
 text_position(text *t1, text *t2, Oid collid)
@@ -1247,12 +1234,12 @@ text_position_setup(text *t1, text *t2, Oid collid, TextPositionState *state)
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (mylocale && !mylocale->deterministic)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("nondeterministic collations are not supported for substring searches")));
   }
 
   Assert(len1 > 0);
@@ -1269,8 +1256,8 @@ text_position_setup(text *t1, text *t2, Oid collid, TextPositionState *state)
    */
   if (pg_database_encoding_max_length() == 1)
   {
-
-
+    state->is_multibyte = false;
+    state->is_multibyte_char_in_char = false;
   }
   else if (GetDatabaseEncoding() == PG_UTF8)
   {
@@ -1279,8 +1266,8 @@ text_position_setup(text *t1, text *t2, Oid collid, TextPositionState *state)
   }
   else
   {
-
-
+    state->is_multibyte = true;
+    state->is_multibyte_char_in_char = true;
   }
 
   state->str1 = VARDATA_ANY(t1);
@@ -1327,28 +1314,28 @@ text_position_setup(text *t1, text *t2, Oid collid, TextPositionState *state)
     }
     else if (searchlength < 64)
     {
-
+      skiptablemask = 7;
     }
     else if (searchlength < 128)
     {
-
+      skiptablemask = 15;
     }
     else if (searchlength < 512)
     {
       skiptablemask = 31;
     }
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (searchlength < 2048)
+    {
+      skiptablemask = 63;
+    }
+    else if (searchlength < 4096)
+    {
+      skiptablemask = 127;
+    }
+    else
+    {
+      skiptablemask = 255;
+    }
     state->skiptablemask = skiptablemask;
 
     /*
@@ -1394,7 +1381,7 @@ text_position_next(TextPositionState *state)
 
   if (needle_len <= 0)
   {
-
+    return false; /* result for empty pattern */
   }
 
   /* Start from the point right after the previous match. */
@@ -1407,7 +1394,7 @@ text_position_next(TextPositionState *state)
     start_ptr = state->str1;
   }
 
-retry:;
+retry:
   matchptr = text_position_next_internal(start_ptr, state);
 
   if (!matchptr)
@@ -1426,26 +1413,26 @@ retry:;
     /* Walk one character at a time, until we reach the match. */
 
     /* the search should never move backwards. */
+    Assert(state->refpoint <= matchptr);
 
+    while (state->refpoint < matchptr)
+    {
+      /* step to next character. */
+      state->refpoint += pg_mblen(state->refpoint);
+      state->refpos++;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * If we stepped over the match's start position, then it was a
+       * false positive, where the byte sequence appeared in the middle
+       * of a multi-byte character.  Skip it, and continue the search at
+       * the next character boundary.
+       */
+      if (state->refpoint > matchptr)
+      {
+        start_ptr = state->refpoint;
+        goto retry;
+      }
+    }
   }
 
   state->last_match = matchptr;
@@ -1546,7 +1533,7 @@ text_position_get_match_pos(TextPositionState *state)
 {
   if (!state->is_multibyte)
   {
-
+    return state->last_match - state->str1 + 1;
   }
   else
   {
@@ -1623,7 +1610,7 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
 
     if (collid != DEFAULT_COLLATION_OID)
     {
-
+      mylocale = pg_newlocale_from_collation(collid);
     }
 
     /*
@@ -1637,7 +1624,7 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
      */
     if (len1 == len2 && memcmp(arg1, arg2, len1) == 0)
     {
-
+      return 0;
     }
 
 #ifdef WIN32
@@ -1707,9 +1694,9 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
       else
 #endif
         result = wcscoll((LPWSTR)a1p, (LPWSTR)a2p);
-      if (result == 2147483647)
-      { /* _NLSCMPERROR; missing from mingw
-         * headers */
+      if (result == 2147483647) /* _NLSCMPERROR; missing from mingw
+                                 * headers */
+      {
         ereport(ERROR, (errmsg("could not compare Unicode strings: %m")));
       }
 
@@ -1738,7 +1725,7 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
 
     if (len1 >= TEXTBUFLEN)
     {
-
+      a1p = (char *)palloc(len1 + 1);
     }
     else
     {
@@ -1746,7 +1733,7 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
     }
     if (len2 >= TEXTBUFLEN)
     {
-
+      a2p = (char *)palloc(len2 + 1);
     }
     else
     {
@@ -1760,49 +1747,49 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
 
     if (mylocale)
     {
+      if (mylocale->provider == COLLPROVIDER_ICU)
+      {
+#ifdef USE_ICU
+#ifdef HAVE_UCOL_STRCOLLUTF8
+        if (GetDatabaseEncoding() == PG_UTF8)
+        {
+          UErrorCode status;
 
+          status = U_ZERO_ERROR;
+          result = ucol_strcollUTF8(mylocale->info.icu.ucol, arg1, len1, arg2, len2, &status);
+          if (U_FAILURE(status))
+          {
+            ereport(ERROR, (errmsg("collation failed: %s", u_errorName(status))));
+          }
+        }
+        else
+#endif
+        {
+          int32_t ulen1, ulen2;
+          UChar *uchar1, *uchar2;
 
+          ulen1 = icu_to_uchar(&uchar1, arg1, len1);
+          ulen2 = icu_to_uchar(&uchar2, arg2, len2);
 
+          result = ucol_strcoll(mylocale->info.icu.ucol, uchar1, ulen1, uchar2, ulen2);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          pfree(uchar1);
+          pfree(uchar2);
+        }
+#else  /* not USE_ICU */
+        /* shouldn't happen */
+        elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
+#endif /* not USE_ICU */
+      }
+      else
+      {
+#ifdef HAVE_LOCALE_T
+        result = strcoll_l(a1p, a2p, mylocale->info.lt);
+#else
+        /* shouldn't happen */
+        elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
+#endif
+      }
     }
     else
     {
@@ -1812,16 +1799,16 @@ varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
     /* Break tie if necessary. */
     if (result == 0 && (!mylocale || mylocale->deterministic))
     {
-
+      result = strcmp(a1p, a2p);
     }
 
     if (a1p != a1buf)
     {
-
+      pfree(a1p);
     }
     if (a2p != a2buf)
     {
-
+      pfree(a2p);
     }
   }
 
@@ -1898,10 +1885,10 @@ texteq(PG_FUNCTION_ARGS)
     text *arg1 = PG_GETARG_TEXT_PP(0);
     text *arg2 = PG_GETARG_TEXT_PP(1);
 
+    result = (text_cmp(arg1, arg2, collid) == 0);
 
-
-
-
+    PG_FREE_IF_COPY(arg1, 0);
+    PG_FREE_IF_COPY(arg2, 1);
   }
 
   PG_RETURN_BOOL(result);
@@ -1944,10 +1931,10 @@ textne(PG_FUNCTION_ARGS)
     text *arg1 = PG_GETARG_TEXT_PP(0);
     text *arg2 = PG_GETARG_TEXT_PP(1);
 
+    result = (text_cmp(arg1, arg2, collid) != 0);
 
-
-
-
+    PG_FREE_IF_COPY(arg1, 0);
+    PG_FREE_IF_COPY(arg2, 1);
   }
 
   PG_RETURN_BOOL(result);
@@ -2027,19 +2014,19 @@ text_starts_with(PG_FUNCTION_ARGS)
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (mylocale && !mylocale->deterministic)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("nondeterministic collations are not supported for substring searches")));
   }
 
   len1 = toast_raw_datum_size(arg1);
   len2 = toast_raw_datum_size(arg2);
   if (len2 > len1)
   {
-
+    result = false;
   }
   else
   {
@@ -2148,7 +2135,7 @@ varstr_sortsupport(SortSupport ssup, Oid typid, Oid collid)
      */
     if (collid != DEFAULT_COLLATION_OID)
     {
-
+      locale = pg_newlocale_from_collation(collid);
     }
 
     /*
@@ -2171,9 +2158,9 @@ varstr_sortsupport(SortSupport ssup, Oid typid, Oid collid)
      */
     if (typid == NAMEOID)
     {
-
+      ssup->comparator = namefastcmp_locale;
       /* Not supporting abbreviation with type NAME, for now */
-
+      abbreviate = false;
     }
     else
     {
@@ -2205,7 +2192,7 @@ varstr_sortsupport(SortSupport ssup, Oid typid, Oid collid)
 #ifndef TRUST_STRXFRM
   if (!collate_c && !(locale && locale->provider == COLLPROVIDER_ICU))
   {
-
+    abbreviate = false;
   }
 #endif
 
@@ -2293,11 +2280,11 @@ varstrfastcmp_c(Datum x, Datum y, SortSupport ssup)
   /* We can't afford to leak memory here. */
   if (PointerGetDatum(arg1) != x)
   {
-
+    pfree(arg1);
   }
   if (PointerGetDatum(arg2) != y)
   {
-
+    pfree(arg2);
   }
 
   return result;
@@ -2327,17 +2314,17 @@ bpcharfastcmp_c(Datum x, Datum y, SortSupport ssup)
   result = memcmp(a1p, a2p, Min(len1, len2));
   if ((result == 0) && (len1 != len2))
   {
-
+    result = (len1 < len2) ? -1 : 1;
   }
 
   /* We can't afford to leak memory here. */
   if (PointerGetDatum(arg1) != x)
   {
-
+    pfree(arg1);
   }
   if (PointerGetDatum(arg2) != y)
   {
-
+    pfree(arg2);
   }
 
   return result;
@@ -2361,30 +2348,30 @@ namefastcmp_c(Datum x, Datum y, SortSupport ssup)
 static int
 varlenafastcmp_locale(Datum x, Datum y, SortSupport ssup)
 {
+  VarString *arg1 = DatumGetVarStringPP(x);
+  VarString *arg2 = DatumGetVarStringPP(y);
+  char *a1p, *a2p;
+  int len1, len2, result;
 
+  a1p = VARDATA_ANY(arg1);
+  a2p = VARDATA_ANY(arg2);
 
+  len1 = VARSIZE_ANY_EXHDR(arg1);
+  len2 = VARSIZE_ANY_EXHDR(arg2);
 
+  result = varstrfastcmp_locale(a1p, len1, a2p, len2, ssup);
 
+  /* We can't afford to leak memory here. */
+  if (PointerGetDatum(arg1) != x)
+  {
+    pfree(arg1);
+  }
+  if (PointerGetDatum(arg2) != y)
+  {
+    pfree(arg2);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -2393,10 +2380,10 @@ varlenafastcmp_locale(Datum x, Datum y, SortSupport ssup)
 static int
 namefastcmp_locale(Datum x, Datum y, SortSupport ssup)
 {
+  Name arg1 = DatumGetName(x);
+  Name arg2 = DatumGetName(y);
 
-
-
-
+  return varstrfastcmp_locale(NameStr(*arg1), strlen(NameStr(*arg1)), NameStr(*arg2), strlen(NameStr(*arg2)), ssup);
 }
 
 /*
@@ -2405,145 +2392,145 @@ namefastcmp_locale(Datum x, Datum y, SortSupport ssup)
 static int
 varstrfastcmp_locale(char *a1p, int len1, char *a2p, int len2, SortSupport ssup)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  VarStringSortSupport *sss = (VarStringSortSupport *)ssup->ssup_extra;
+  int result;
+  bool arg1_match;
+
+  /* Fast pre-check for equality, as discussed in varstr_cmp() */
+  if (len1 == len2 && memcmp(a1p, a2p, len1) == 0)
+  {
+    /*
+     * No change in buf1 or buf2 contents, so avoid changing last_len1 or
+     * last_len2.  Existing contents of buffers might still be used by
+     * next call.
+     *
+     * It's fine to allow the comparison of BpChar padding bytes here,
+     * even though that implies that the memcmp() will usually be
+     * performed for BpChar callers (though multibyte characters could
+     * still prevent that from occurring).  The memcmp() is still very
+     * cheap, and BpChar's funny semantics have us remove trailing spaces
+     * (not limited to padding), so we need make no distinction between
+     * padding space characters and "real" space characters.
+     */
+    return 0;
+  }
+
+  if (sss->typid == BPCHAROID)
+  {
+    /* Get true number of bytes, ignoring trailing spaces */
+    len1 = bpchartruelen(a1p, len1);
+    len2 = bpchartruelen(a2p, len2);
+  }
+
+  if (len1 >= sss->buflen1)
+  {
+    sss->buflen1 = Max(len1 + 1, Min(sss->buflen1 * 2, MaxAllocSize));
+    sss->buf1 = repalloc(sss->buf1, sss->buflen1);
+  }
+  if (len2 >= sss->buflen2)
+  {
+    sss->buflen2 = Max(len2 + 1, Min(sss->buflen2 * 2, MaxAllocSize));
+    sss->buf2 = repalloc(sss->buf2, sss->buflen2);
+  }
+
+  /*
+   * We're likely to be asked to compare the same strings repeatedly, and
+   * memcmp() is so much cheaper than strcoll() that it pays to try to cache
+   * comparisons, even though in general there is no reason to think that
+   * that will work out (every string datum may be unique).  Caching does
+   * not slow things down measurably when it doesn't work out, and can speed
+   * things up by rather a lot when it does.  In part, this is because the
+   * memcmp() compares data from cachelines that are needed in L1 cache even
+   * when the last comparison's result cannot be reused.
+   */
+  arg1_match = true;
+  if (len1 != sss->last_len1 || memcmp(sss->buf1, a1p, len1) != 0)
+  {
+    arg1_match = false;
+    memcpy(sss->buf1, a1p, len1);
+    sss->buf1[len1] = '\0';
+    sss->last_len1 = len1;
+  }
+
+  /*
+   * If we're comparing the same two strings as last time, we can return the
+   * same answer without calling strcoll() again.  This is more likely than
+   * it seems (at least with moderate to low cardinality sets), because
+   * quicksort compares the same pivot against many values.
+   */
+  if (len2 != sss->last_len2 || memcmp(sss->buf2, a2p, len2) != 0)
+  {
+    memcpy(sss->buf2, a2p, len2);
+    sss->buf2[len2] = '\0';
+    sss->last_len2 = len2;
+  }
+  else if (arg1_match && !sss->cache_blob)
+  {
+    /* Use result cached following last actual strcoll() call */
+    return sss->last_returned;
+  }
+
+  if (sss->locale)
+  {
+    if (sss->locale->provider == COLLPROVIDER_ICU)
+    {
+#ifdef USE_ICU
+#ifdef HAVE_UCOL_STRCOLLUTF8
+      if (GetDatabaseEncoding() == PG_UTF8)
+      {
+        UErrorCode status;
+
+        status = U_ZERO_ERROR;
+        result = ucol_strcollUTF8(sss->locale->info.icu.ucol, a1p, len1, a2p, len2, &status);
+        if (U_FAILURE(status))
+        {
+          ereport(ERROR, (errmsg("collation failed: %s", u_errorName(status))));
+        }
+      }
+      else
+#endif
+      {
+        int32_t ulen1, ulen2;
+        UChar *uchar1, *uchar2;
+
+        ulen1 = icu_to_uchar(&uchar1, a1p, len1);
+        ulen2 = icu_to_uchar(&uchar2, a2p, len2);
+
+        result = ucol_strcoll(sss->locale->info.icu.ucol, uchar1, ulen1, uchar2, ulen2);
+
+        pfree(uchar1);
+        pfree(uchar2);
+      }
+#else  /* not USE_ICU */
+      /* shouldn't happen */
+      elog(ERROR, "unsupported collprovider: %c", sss->locale->provider);
+#endif /* not USE_ICU */
+    }
+    else
+    {
+#ifdef HAVE_LOCALE_T
+      result = strcoll_l(sss->buf1, sss->buf2, sss->locale->info.lt);
+#else
+      /* shouldn't happen */
+      elog(ERROR, "unsupported collprovider: %c", sss->locale->provider);
+#endif
+    }
+  }
+  else
+  {
+    result = strcoll(sss->buf1, sss->buf2);
+  }
+
+  /* Break tie if necessary. */
+  if (result == 0 && (!sss->locale || sss->locale->deterministic))
+  {
+    result = strcmp(sss->buf1, sss->buf2);
+  }
+
+  /* Cache result, perhaps saving an expensive strcoll() call next time */
+  sss->cache_blob = false;
+  sss->last_returned = result;
+  return result;
 }
 
 /*
@@ -2649,28 +2636,28 @@ varstr_abbrev_convert(Datum original, SortSupport ssup)
      */
 
     /* By convention, we use buffer 1 to store and NUL-terminate */
-
-
-
-
-
+    if (len >= sss->buflen1)
+    {
+      sss->buflen1 = Max(len + 1, Min(sss->buflen1 * 2, MaxAllocSize));
+      sss->buf1 = repalloc(sss->buf1, sss->buflen1);
+    }
 
     /* Might be able to reuse strxfrm() blob from last call */
+    if (sss->last_len1 == len && sss->cache_blob && memcmp(sss->buf1, authoritative_data, len) == 0)
+    {
+      memcpy(pres, sss->buf2, Min(sizeof(Datum), sss->last_len2));
+      /* No change affecting cardinality, so no hashing required */
+      goto done;
+    }
 
-
-
-
-
-
-
-
+    memcpy(sss->buf1, authoritative_data, len);
 
     /*
      * Just like strcoll(), strxfrm() expects a NUL-terminated string. Not
      * necessary for ICU, but doesn't hurt.
      */
-
-
+    sss->buf1[len] = '\0';
+    sss->last_len1 = len;
 
 #ifdef USE_ICU
     /* When using ICU and not UTF8, convert string to UChar. */
@@ -2688,56 +2675,56 @@ varstr_abbrev_convert(Datum original, SortSupport ssup)
      * in the end.  When using ucol_nextSortKeyPart(), however, we only
      * ask for as many bytes as we actually need.
      */
+    for (;;)
+    {
+#ifdef USE_ICU
+      if (sss->locale && sss->locale->provider == COLLPROVIDER_ICU)
+      {
+        /*
+         * When using UTF8, use the iteration interface so we only
+         * need to produce as many bytes as we actually need.
+         */
+        if (GetDatabaseEncoding() == PG_UTF8)
+        {
+          UCharIterator iter;
+          uint32_t state[2];
+          UErrorCode status;
 
+          uiter_setUTF8(&iter, sss->buf1, len);
+          state[0] = state[1] = 0; /* won't need that again */
+          status = U_ZERO_ERROR;
+          bsize = ucol_nextSortKeyPart(sss->locale->info.icu.ucol, &iter, state, (uint8_t *)sss->buf2, Min(sizeof(Datum), sss->buflen2), &status);
+          if (U_FAILURE(status))
+          {
+            ereport(ERROR, (errmsg("sort key generation failed: %s", u_errorName(status))));
+          }
+        }
+        else
+        {
+          bsize = ucol_getSortKey(sss->locale->info.icu.ucol, uchar, ulen, (uint8_t *)sss->buf2, sss->buflen2);
+        }
+      }
+      else
+#endif
+#ifdef HAVE_LOCALE_T
+          if (sss->locale && sss->locale->provider == COLLPROVIDER_LIBC)
+        bsize = strxfrm_l(sss->buf2, sss->buf1, sss->buflen2, sss->locale->info.lt);
+      else
+#endif
+        bsize = strxfrm(sss->buf2, sss->buf1, sss->buflen2);
 
+      sss->last_len2 = bsize;
+      if (bsize < sss->buflen2)
+      {
+        break;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * Grow buffer and retry.
+       */
+      sss->buflen2 = Max(bsize + 1, Min(sss->buflen2 * 2, MaxAllocSize));
+      sss->buf2 = repalloc(sss->buf2, sss->buflen2);
+    }
 
     /*
      * Every Datum byte is always compared.  This is safe because the
@@ -2748,7 +2735,7 @@ varstr_abbrev_convert(Datum original, SortSupport ssup)
      * (Actually, even if there were NUL bytes in the blob it would be
      * okay.  See remarks on bytea case above.)
      */
-
+    memcpy(pres, sss->buf2, Min(sizeof(Datum), bsize));
 
 #ifdef USE_ICU
     if (uchar)
@@ -2795,7 +2782,7 @@ varstr_abbrev_convert(Datum original, SortSupport ssup)
 
   /* Cache result, perhaps saving an expensive strxfrm() call next time */
   sss->cache_blob = true;
-done:;
+done:
 
   /*
    * Byteswap on little-endian machines.
@@ -2810,7 +2797,7 @@ done:;
   /* Don't leak memory here */
   if (PointerGetDatum(authoritative) != original)
   {
-
+    pfree(authoritative);
   }
 
   return res;
@@ -2845,12 +2832,12 @@ varstr_abbrev_abort(int memtupcount, SortSupport ssup)
    */
   if (abbrev_distinct <= 1.0)
   {
-
+    abbrev_distinct = 1.0;
   }
 
   if (key_distinct <= 1.0)
   {
-
+    key_distinct = 1.0;
   }
 
   /*
@@ -2863,7 +2850,10 @@ varstr_abbrev_abort(int memtupcount, SortSupport ssup)
   {
     double norm_abbrev_card = abbrev_distinct / (double)memtupcount;
 
-
+    elog(LOG,
+        "varstr_abbrev: abbrev_distinct after %d: %f "
+        "(key_distinct: %f, norm_abbrev_card: %f, prop_card: %f)",
+        memtupcount, abbrev_distinct, key_distinct, norm_abbrev_card, sss->prop_card);
   }
 #endif
 
@@ -2912,7 +2902,7 @@ varstr_abbrev_abort(int memtupcount, SortSupport ssup)
      */
     if (memtupcount > 10000)
     {
-
+      sss->prop_card *= 0.65;
     }
 
     return false;
@@ -2930,13 +2920,16 @@ varstr_abbrev_abort(int memtupcount, SortSupport ssup)
    * lose but much to gain, which our strategy reflects.
    */
 #ifdef TRACE_SORT
-
-
-
-
+  if (trace_sort)
+  {
+    elog(LOG,
+        "varstr_abbrev: aborted abbreviation at %d "
+        "(abbrev_distinct: %f, key_distinct: %f, prop_card: %f)",
+        memtupcount, abbrev_distinct, key_distinct, sss->prop_card);
+  }
 #endif
 
-
+  return true;
 }
 
 Datum
@@ -2985,7 +2978,7 @@ nameeqtext(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result = (varstr_cmp(NameStr(*arg1), len1, VARDATA_ANY(arg2), len2, collid) == 0);
   }
 
   PG_FREE_IF_COPY(arg2, 1);
@@ -3011,7 +3004,7 @@ texteqname(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result = (varstr_cmp(VARDATA_ANY(arg1), len1, NameStr(*arg2), len2, collid) == 0);
   }
 
   PG_FREE_IF_COPY(arg1, 0);
@@ -3022,53 +3015,53 @@ texteqname(PG_FUNCTION_ARGS)
 Datum
 namenetext(PG_FUNCTION_ARGS)
 {
+  Name arg1 = PG_GETARG_NAME(0);
+  text *arg2 = PG_GETARG_TEXT_PP(1);
+  size_t len1 = strlen(NameStr(*arg1));
+  size_t len2 = VARSIZE_ANY_EXHDR(arg2);
+  Oid collid = PG_GET_COLLATION();
+  bool result;
 
+  check_collation_set(collid);
 
+  if (collid == C_COLLATION_OID)
+  {
+    result = !(len1 == len2 && memcmp(NameStr(*arg1), VARDATA_ANY(arg2), len1) == 0);
+  }
+  else
+  {
+    result = !(varstr_cmp(NameStr(*arg1), len1, VARDATA_ANY(arg2), len2, collid) == 0);
+  }
 
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result);
 }
 
 Datum
 textnename(PG_FUNCTION_ARGS)
 {
+  text *arg1 = PG_GETARG_TEXT_PP(0);
+  Name arg2 = PG_GETARG_NAME(1);
+  size_t len1 = VARSIZE_ANY_EXHDR(arg1);
+  size_t len2 = strlen(NameStr(*arg2));
+  Oid collid = PG_GET_COLLATION();
+  bool result;
 
+  check_collation_set(collid);
 
+  if (collid == C_COLLATION_OID)
+  {
+    result = !(len1 == len2 && memcmp(VARDATA_ANY(arg1), NameStr(*arg2), len1) == 0);
+  }
+  else
+  {
+    result = !(varstr_cmp(VARDATA_ANY(arg1), len1, NameStr(*arg2), len2, collid) == 0);
+  }
 
+  PG_FREE_IF_COPY(arg1, 0);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result);
 }
 
 Datum
@@ -3088,15 +3081,15 @@ btnametextcmp(PG_FUNCTION_ARGS)
 Datum
 bttextnamecmp(PG_FUNCTION_ARGS)
 {
+  text *arg1 = PG_GETARG_TEXT_PP(0);
+  Name arg2 = PG_GETARG_NAME(1);
+  int32 result;
 
+  result = varstr_cmp(VARDATA_ANY(arg1), VARSIZE_ANY_EXHDR(arg1), NameStr(*arg2), strlen(NameStr(*arg2)), PG_GET_COLLATION());
 
+  PG_FREE_IF_COPY(arg1, 0);
 
-
-
-
-
-
-
+  PG_RETURN_INT32(result);
 }
 
 #define CmpCall(cmpfunc) DatumGetInt32(DirectFunctionCall2Coll(cmpfunc, PG_GET_COLLATION(), PG_GETARG_DATUM(0), PG_GETARG_DATUM(1)))
@@ -3110,13 +3103,13 @@ namelttext(PG_FUNCTION_ARGS)
 Datum
 nameletext(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(btnametextcmp) <= 0);
 }
 
 Datum
 namegttext(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(btnametextcmp) > 0);
 }
 
 Datum
@@ -3128,25 +3121,25 @@ namegetext(PG_FUNCTION_ARGS)
 Datum
 textltname(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(bttextnamecmp) < 0);
 }
 
 Datum
 textlename(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(bttextnamecmp) <= 0);
 }
 
 Datum
 textgtname(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(bttextnamecmp) > 0);
 }
 
 Datum
 textgename(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_BOOL(CmpCall(bttextnamecmp) >= 0);
 }
 
 #undef CmpCall
@@ -3175,7 +3168,7 @@ internal_text_pattern_compare(text *arg1, text *arg2)
   }
   else if (len1 < len2)
   {
-
+    return -1;
   }
   else if (len1 > len2)
   {
@@ -3287,10 +3280,10 @@ bttext_pattern_sortsupport(PG_FUNCTION_ARGS)
 Datum
 byteaoctetlen(PG_FUNCTION_ARGS)
 {
+  Datum str = PG_GETARG_DATUM(0);
 
-
-
-
+  /* We need not detoast the input at all */
+  PG_RETURN_INT32(toast_raw_datum_size(str) - VARHDRSZ);
 }
 
 /*
@@ -3303,10 +3296,10 @@ byteaoctetlen(PG_FUNCTION_ARGS)
 Datum
 byteacat(PG_FUNCTION_ARGS)
 {
+  bytea *t1 = PG_GETARG_BYTEA_PP(0);
+  bytea *t2 = PG_GETARG_BYTEA_PP(1);
 
-
-
-
+  PG_RETURN_BYTEA_P(bytea_catenate(t1, t2));
 }
 
 /*
@@ -3328,11 +3321,11 @@ bytea_catenate(bytea *t1, bytea *t2)
   /* paranoia ... probably should throw error instead? */
   if (len1 < 0)
   {
-
+    len1 = 0;
   }
   if (len2 < 0)
   {
-
+    len2 = 0;
   }
 
   len = len1 + len2 + VARHDRSZ;
@@ -3367,9 +3360,9 @@ bytea_catenate(bytea *t1, bytea *t2)
  *	- starting position (is one-based)
  *	- string length (optional)
  *
- * If the starting position is zero or less, then return from the start of the
- *string adjusting the length to be consistent with the "negative start" per
- *SQL. If the length is less than zero, an ERROR is thrown. If no third argument
+ * If the starting position is zero or less, then return from the start of the string
+ * adjusting the length to be consistent with the "negative start" per SQL.
+ * If the length is less than zero, an ERROR is thrown. If no third argument
  * (length) is provided, the length to the end of the string is assumed.
  */
 Datum
@@ -3432,7 +3425,7 @@ bytea_substring(Datum str, int S, int L, bool length_not_specified)
      */
     if (E < 1)
     {
-
+      return PG_STR_GET_BYTEA("");
     }
 
     L1 = E - S1;
@@ -3491,11 +3484,11 @@ bytea_overlay(bytea *t1, bytea *t2, int sp, int sl)
    */
   if (sp <= 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SUBSTRING_ERROR), errmsg("negative substring length not allowed")));
   }
   if (pg_add_s32_overflow(sp, sl, &sp_pl_sl))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
   }
 
   s1 = bytea_substring(PointerGetDatum(t1), 1, sp - 1, false);
@@ -3515,37 +3508,37 @@ bytea_overlay(bytea *t1, bytea *t2, int sp, int sl)
 Datum
 byteapos(PG_FUNCTION_ARGS)
 {
+  bytea *t1 = PG_GETARG_BYTEA_PP(0);
+  bytea *t2 = PG_GETARG_BYTEA_PP(1);
+  int pos;
+  int px, p;
+  int len1, len2;
+  char *p1, *p2;
 
+  len1 = VARSIZE_ANY_EXHDR(t1);
+  len2 = VARSIZE_ANY_EXHDR(t2);
 
+  if (len2 <= 0)
+  {
+    PG_RETURN_INT32(1); /* result for empty pattern */
+  }
 
+  p1 = VARDATA_ANY(t1);
+  p2 = VARDATA_ANY(t2);
 
+  pos = 0;
+  px = (len1 - len2);
+  for (p = 0; p <= px; p++)
+  {
+    if ((*p2 == *p1) && (memcmp(p1, p2, len2) == 0))
+    {
+      pos = p + 1;
+      break;
+    };
+    p1++;
+  };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT32(pos);
 }
 
 /*-------------------------------------------------------------
@@ -3680,7 +3673,7 @@ byteaSetBit(PG_FUNCTION_ARGS)
    */
   if (newBit != 0 && newBit != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("new bit must be 0 or 1")));
   }
 
   /*
@@ -3760,12 +3753,12 @@ textToQualifiedNameList(text *textval)
 
   if (!SplitIdentifierString(rawname, '.', &namelist))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid name syntax")));
   }
 
   if (namelist == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid name syntax")));
   }
 
   foreach (l, namelist)
@@ -3793,10 +3786,11 @@ textToQualifiedNameList(text *textval)
  *	rawstring: the input string; must be overwritable!	On return, it's
  *			   been modified to contain the separated identifiers.
  *	separator: the separator punctuation expected between identifiers
- *			   (typically '.' or ',').  Whitespace may also appear
- *around identifiers. Outputs: namelist: filled with a palloc'd list of pointers
- *to identifiers within rawstring.  Caller should list_free() this even on error
- *return.
+ *			   (typically '.' or ',').  Whitespace may also appear around
+ *			   identifiers.
+ * Outputs:
+ *	namelist: filled with a palloc'd list of pointers to identifiers within
+ *			  rawstring.  Caller should list_free() this even on error return.
  *
  * Returns true if okay, false if there is a syntax error in the string.
  *
@@ -3813,7 +3807,7 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
 
   while (scanner_isspace(*nextp))
   {
-
+    nextp++; /* skip leading whitespace */
   }
 
   if (*nextp == '\0')
@@ -3836,15 +3830,15 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
         endp = strchr(nextp + 1, '"');
         if (endp == NULL)
         {
-
+          return false; /* mismatched quotes */
         }
         if (endp[1] != '"')
         {
           break; /* found end of quoted name */
         }
         /* Collapse adjacent quotes into one quote, and look again */
-
-
+        memmove(endp, endp + 1, strlen(endp));
+        nextp = endp;
       }
       /* endp now points at the terminating quote */
       nextp = endp + 1;
@@ -3863,7 +3857,7 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
       endp = nextp;
       if (curname == nextp)
       {
-
+        return false; /* empty unquoted name not allowed */
       }
 
       /*
@@ -3884,7 +3878,7 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
 
     while (scanner_isspace(*nextp))
     {
-
+      nextp++; /* skip trailing whitespace */
     }
 
     if (*nextp == separator)
@@ -3902,7 +3896,7 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
     }
     else
     {
-
+      return false; /* invalid syntax */
     }
 
     /* Now safe to overwrite separator with a null */
@@ -3937,9 +3931,11 @@ SplitIdentifierString(char *rawstring, char separator, List **namelist)
  * Inputs:
  *	rawstring: the input string; must be modifiable!
  *	separator: the separator punctuation expected between directories
- *			   (typically ',' or ';').  Whitespace may also appear
- *around directories. Outputs: namelist: filled with a palloc'd list of
- *directory names. Caller should list_free_deep() this even on error return.
+ *			   (typically ',' or ';').  Whitespace may also appear around
+ *			   directories.
+ * Outputs:
+ *	namelist: filled with a palloc'd list of directory names.
+ *			  Caller should list_free_deep() this even on error return.
  *
  * Returns true if okay, false if there is a syntax error in the string.
  *
@@ -3955,12 +3951,12 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
 
   while (scanner_isspace(*nextp))
   {
-
+    nextp++; /* skip leading whitespace */
   }
 
   if (*nextp == '\0')
   {
-
+    return true; /* allow empty string */
   }
 
   /* At the top of the loop, we are at start of a new directory. */
@@ -3972,24 +3968,24 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
     if (*nextp == '"')
     {
       /* Quoted name --- collapse quote-quote pairs */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      curname = nextp + 1;
+      for (;;)
+      {
+        endp = strchr(nextp + 1, '"');
+        if (endp == NULL)
+        {
+          return false; /* mismatched quotes */
+        }
+        if (endp[1] != '"')
+        {
+          break; /* found end of quoted name */
+        }
+        /* Collapse adjacent quotes into one quote, and look again */
+        memmove(endp, endp + 1, strlen(endp));
+        nextp = endp;
+      }
       /* endp now points at the terminating quote */
-
+      nextp = endp + 1;
     }
     else
     {
@@ -4006,22 +4002,22 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
       }
       if (curname == endp)
       {
-
+        return false; /* empty unquoted name not allowed */
       }
     }
 
     while (scanner_isspace(*nextp))
     {
-
+      nextp++; /* skip trailing whitespace */
     }
 
     if (*nextp == separator)
     {
-
-
-
-
-
+      nextp++;
+      while (scanner_isspace(*nextp))
+      {
+        nextp++; /* skip leading whitespace for next */
+      }
       /* we expect another name, so done remains false */
     }
     else if (*nextp == '\0')
@@ -4030,7 +4026,7 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
     }
     else
     {
-
+      return false; /* invalid syntax */
     }
 
     /* Now safe to overwrite separator with a null */
@@ -4039,7 +4035,7 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
     /* Truncate path if it's overlength */
     if (strlen(curname) >= MAXPGPATH)
     {
-
+      curname[MAXPGPATH - 1] = '\0';
     }
 
     /*
@@ -4078,10 +4074,11 @@ SplitDirectoriesString(char *rawstring, char separator, List **namelist)
  *	rawstring: the input string; must be overwritable!	On return, it's
  *			   been modified to contain the separated identifiers.
  *	separator: the separator punctuation expected between identifiers
- *			   (typically '.' or ',').  Whitespace may also appear
- *around identifiers. Outputs: namelist: filled with a palloc'd list of pointers
- *to identifiers within rawstring.  Caller should list_free() this even on error
- *return.
+ *			   (typically '.' or ',').  Whitespace may also appear around
+ *			   identifiers.
+ * Outputs:
+ *	namelist: filled with a palloc'd list of pointers to identifiers within
+ *			  rawstring.  Caller should list_free() this even on error return.
  *
  * Returns true if okay, false if there is a syntax error in the string.
  */
@@ -4095,12 +4092,12 @@ SplitGUCList(char *rawstring, char separator, List **namelist)
 
   while (scanner_isspace(*nextp))
   {
-
+    nextp++; /* skip leading whitespace */
   }
 
   if (*nextp == '\0')
   {
-
+    return true; /* allow empty string */
   }
 
   /* At the top of the loop, we are at start of a new identifier. */
@@ -4118,7 +4115,7 @@ SplitGUCList(char *rawstring, char separator, List **namelist)
         endp = strchr(nextp + 1, '"');
         if (endp == NULL)
         {
-
+          return false; /* mismatched quotes */
         }
         if (endp[1] != '"')
         {
@@ -4142,13 +4139,13 @@ SplitGUCList(char *rawstring, char separator, List **namelist)
       endp = nextp;
       if (curname == nextp)
       {
-
+        return false; /* empty unquoted name not allowed */
       }
     }
 
     while (scanner_isspace(*nextp))
     {
-
+      nextp++; /* skip trailing whitespace */
     }
 
     if (*nextp == separator)
@@ -4166,7 +4163,7 @@ SplitGUCList(char *rawstring, char separator, List **namelist)
     }
     else
     {
-
+      return false; /* invalid syntax */
     }
 
     /* Now safe to overwrite separator with a null */
@@ -4207,7 +4204,7 @@ byteaeq(PG_FUNCTION_ARGS)
   len2 = toast_raw_datum_size(arg2);
   if (len1 != len2)
   {
-
+    result = false;
   }
   else
   {
@@ -4239,7 +4236,7 @@ byteane(PG_FUNCTION_ARGS)
   len2 = toast_raw_datum_size(arg2);
   if (len1 != len2)
   {
-
+    result = true;
   }
   else
   {
@@ -4334,24 +4331,24 @@ byteage(PG_FUNCTION_ARGS)
 Datum
 byteacmp(PG_FUNCTION_ARGS)
 {
+  bytea *arg1 = PG_GETARG_BYTEA_PP(0);
+  bytea *arg2 = PG_GETARG_BYTEA_PP(1);
+  int len1, len2;
+  int cmp;
 
+  len1 = VARSIZE_ANY_EXHDR(arg1);
+  len2 = VARSIZE_ANY_EXHDR(arg2);
 
+  cmp = memcmp(VARDATA_ANY(arg1), VARDATA_ANY(arg2), Min(len1, len2));
+  if ((cmp == 0) && (len1 != len2))
+  {
+    cmp = (len1 < len2) ? -1 : 1;
+  }
 
+  PG_FREE_IF_COPY(arg1, 0);
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT32(cmp);
 }
 
 Datum
@@ -4412,7 +4409,7 @@ replace_text(PG_FUNCTION_ARGS)
   /* Return unmodified source string if empty source or pattern */
   if (src_text_len < 1 || from_sub_text_len < 1)
   {
-
+    PG_RETURN_TEXT_P(src_text);
   }
 
   text_position_setup(src_text, from_sub_text, PG_GET_COLLATION(), &state);
@@ -4474,13 +4471,13 @@ check_replace_text_has_escape_char(const text *replace_text)
 
   if (pg_database_encoding_max_length() == 1)
   {
-
-
-
-
-
-
-
+    for (; p < p_end; p++)
+    {
+      if (*p == '\\')
+      {
+        return true;
+      }
+    }
   }
   else
   {
@@ -4519,8 +4516,8 @@ appendStringInfoRegexpSubstr(StringInfo str, text *replace_text, regmatch_t *pma
     /* Find next escape char. */
     if (eml == 1)
     {
-
-
+      for (; p < p_end && *p != '\\'; p++)
+        /* nothing */;
     }
     else
     {
@@ -4544,8 +4541,8 @@ appendStringInfoRegexpSubstr(StringInfo str, text *replace_text, regmatch_t *pma
     if (p >= p_end)
     {
       /* Escape at very end of input.  Treat same as unexpected char */
-
-
+      appendStringInfoChar(str, '\\');
+      break;
     }
 
     if (*p >= '1' && *p <= '9')
@@ -4557,30 +4554,30 @@ appendStringInfoRegexpSubstr(StringInfo str, text *replace_text, regmatch_t *pma
       eo = pmatch[idx].rm_eo;
       p++;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (*p == '&')
+    {
+      /* Use the entire matched string. */
+      so = pmatch[0].rm_so;
+      eo = pmatch[0].rm_eo;
+      p++;
+    }
+    else if (*p == '\\')
+    {
+      /* \\ means transfer one \ to output. */
+      appendStringInfoChar(str, '\\');
+      p++;
+      continue;
+    }
+    else
+    {
+      /*
+       * If escape char is not followed by any expected char, just treat
+       * it as ordinary data to copy.  (XXX would it be better to throw
+       * an error?)
+       */
+      appendStringInfoChar(str, '\\');
+      continue;
+    }
 
     if (so != -1 && eo != -1)
     {
@@ -4657,9 +4654,9 @@ replace_text_regexp(text *src_text, void *regexp, text *replace_text, bool glob)
     {
       char errMsg[100];
 
-
-
-
+      CHECK_FOR_INTERRUPTS();
+      pg_regerror(regexec_result, re, errMsg, sizeof(errMsg));
+      ereport(ERROR, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression failed: %s", errMsg)));
     }
 
     /*
@@ -4769,22 +4766,22 @@ split_text(PG_FUNCTION_ARGS)
   /* return empty string for empty input string */
   if (inputstring_len < 1)
   {
-
+    PG_RETURN_TEXT_P(cstring_to_text(""));
   }
 
   /* empty field separator */
   if (fldsep_len < 1)
   {
-
+    text_position_cleanup(&state);
     /* if first field, return input string, else empty string */
-
-
-
-
-
-
-
-
+    if (fldnum == 1)
+    {
+      PG_RETURN_TEXT_P(inputstring);
+    }
+    else
+    {
+      PG_RETURN_TEXT_P(cstring_to_text(""));
+    }
   }
 
   text_position_setup(inputstring, fldsep, PG_GET_COLLATION(), &state);
@@ -4796,16 +4793,16 @@ split_text(PG_FUNCTION_ARGS)
   /* special case if fldsep not found at all */
   if (!found)
   {
-
+    text_position_cleanup(&state);
     /* if field 1 requested, return input string, else empty string */
-
-
-
-
-
-
-
-
+    if (fldnum == 1)
+    {
+      PG_RETURN_TEXT_P(inputstring);
+    }
+    else
+    {
+      PG_RETURN_TEXT_P(cstring_to_text(""));
+    }
   }
   end_ptr = text_position_get_match_ptr(&state);
 
@@ -5022,7 +5019,7 @@ text_to_array_internal(PG_FUNCTION_ARGS)
     /* return empty array for empty input string */
     if (inputstring_len < 1)
     {
-
+      PG_RETURN_ARRAYTYPE_P(construct_empty_array(TEXTOID));
     }
 
     start_ptr = VARDATA_ANY(inputstring);
@@ -5081,7 +5078,7 @@ array_to_text_null(PG_FUNCTION_ARGS)
   /* returns NULL when first or second parameter is NULL */
   if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
   {
-
+    PG_RETURN_NULL();
   }
 
   v = PG_GETARG_ARRAYTYPE_P(0);
@@ -5180,7 +5177,7 @@ array_to_text_internal(FunctionCallInfo fcinfo, ArrayType *v, const char *fldsep
         }
         else
         {
-
+          appendStringInfoString(&buf, null_string);
         }
         printed = true;
       }
@@ -5211,8 +5208,8 @@ array_to_text_internal(FunctionCallInfo fcinfo, ArrayType *v, const char *fldsep
       bitmask <<= 1;
       if (bitmask == 0x100)
       {
-
-
+        bitmap++;
+        bitmask = 1;
       }
     }
   }
@@ -5291,9 +5288,9 @@ pg_column_size(PG_FUNCTION_ARGS)
     Oid argtypeid = get_fn_expr_argtype(fcinfo->flinfo, 0);
 
     typlen = get_typlen(argtypeid);
-    if (typlen == 0)
-    { /* should not happen */
-
+    if (typlen == 0) /* should not happen */
+    {
+      elog(ERROR, "cache lookup failed for type %u", argtypeid);
     }
 
     fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt, sizeof(int));
@@ -5301,7 +5298,7 @@ pg_column_size(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    typlen = *((int *)fcinfo->flinfo->fn_extra);
   }
 
   if (typlen == -1)
@@ -5309,16 +5306,16 @@ pg_column_size(PG_FUNCTION_ARGS)
     /* varlena type, possibly toasted */
     result = toast_datum_size(value);
   }
-
-
-
-
-
-
-
-
-
-
+  else if (typlen == -2)
+  {
+    /* cstring */
+    result = strlen(DatumGetCString(value)) + 1;
+  }
+  else
+  {
+    /* ordinary fixed-width type */
+    result = typlen;
+  }
 
   PG_RETURN_INT32(result);
 }
@@ -5344,7 +5341,7 @@ makeStringAggState(FunctionCallInfo fcinfo)
   if (!AggCheckCallContext(fcinfo, &aggcontext))
   {
     /* cannot be called directly because of internal-type argument */
-
+    elog(ERROR, "string_agg_transfn called in non-aggregate context");
   }
 
   /*
@@ -5432,7 +5429,7 @@ build_concat_foutcache(FunctionCallInfo fcinfo, int argidx)
     valtype = get_fn_expr_argtype(fcinfo->flinfo, i);
     if (!OidIsValid(valtype))
     {
-
+      elog(ERROR, "could not determine data type of concat() input");
     }
 
     getTypeOutputInfo(valtype, &typOutput, &typIsVarlena);
@@ -5662,10 +5659,10 @@ text_reverse(PG_FUNCTION_ARGS)
   else
   {
     /* single byte version */
-
-
-
-
+    while (p < endp)
+    {
+      *(--dst) = *p++;
+    }
   }
 
   PG_RETURN_TEXT_P(result);
@@ -5824,7 +5821,7 @@ text_format(PG_FUNCTION_ARGS)
       }
       if (arg >= nargs)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("too few arguments for format()")));
       }
 
       /* Get the value and type of the selected argument */
@@ -5836,13 +5833,13 @@ text_format(PG_FUNCTION_ARGS)
       }
       else
       {
-
-
-
+        value = elements[arg - 1];
+        isNull = nulls[arg - 1];
+        typid = element_type;
       }
       if (!OidIsValid(typid))
       {
-
+        elog(ERROR, "could not determine data type of format() input");
       }
 
       arg++;
@@ -5856,32 +5853,32 @@ text_format(PG_FUNCTION_ARGS)
       {
         width = DatumGetInt32(value);
       }
+      else if (typid == INT2OID)
+      {
+        width = DatumGetInt16(value);
+      }
+      else
+      {
+        /* For less-usual datatypes, convert to text then to int */
+        char *str;
 
+        if (typid != prev_width_type)
+        {
+          Oid typoutputfunc;
+          bool typIsVarlena;
 
+          getTypeOutputInfo(typid, &typoutputfunc, &typIsVarlena);
+          fmgr_info(typoutputfunc, &typoutputinfo_width);
+          prev_width_type = typid;
+        }
 
+        str = OutputFunctionCall(&typoutputinfo_width, value);
 
+        /* pg_strtoint32 will complain about bad data or overflow */
+        width = pg_strtoint32(str);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        pfree(str);
+      }
     }
 
     /* Collect the specified or next argument position */
@@ -5909,7 +5906,7 @@ text_format(PG_FUNCTION_ARGS)
     }
     if (!OidIsValid(typid))
     {
-
+      elog(ERROR, "could not determine data type of format() input");
     }
 
     arg++;
@@ -5934,15 +5931,15 @@ text_format(PG_FUNCTION_ARGS)
      */
     switch (*cp)
     {
-    case 's':;
-    case 'I':;
-    case 'L':;
+    case 's':
+    case 'I':
+    case 'L':
       text_format_string_conversion(&str, *cp, &typoutputfinfo, value, isNull, flags, width);
       break;
-    default:;;
+    default:
       /* should not get here, because of previous check */
-
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized format() type specifier \"%c\"", *cp), errhint("For a single \"%%\" use \"%%%%\".")));
+      break;
     }
   }
 
@@ -5986,7 +5983,7 @@ text_format_parse_digits(const char **ptr, const char *end_ptr, int *value)
 
     if (unlikely(pg_mul_s32_overflow(val, 10, &val)) || unlikely(pg_add_s32_overflow(val, digit, &val)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("number is out of range")));
     }
     ADVANCE_PARSE_POINTER(cp, end_ptr);
     found = true;
@@ -6006,14 +6003,14 @@ text_format_parse_digits(const char **ptr, const char *end_ptr, int *value)
  *
  * Inputs are start_ptr (the position after '%') and end_ptr (string end + 1).
  * Output parameters:
- *	argpos: argument position for value to be printed.  -1 means
- *unspecified. widthpos: argument position for width.  Zero means the argument
- *position was unspecified (ie, take the next arg) and -1 means no width
+ *	argpos: argument position for value to be printed.  -1 means unspecified.
+ *	widthpos: argument position for width.  Zero means the argument position
+ *			was unspecified (ie, take the next arg) and -1 means no width
  *			argument (width was omitted or specified as a constant).
  *	flags: bitmask of flags.
  *	width: directly-specified width value.  Zero means the width was omitted
- *			(note it's not necessary to distinguish this case from
- *an explicit zero width value).
+ *			(note it's not necessary to distinguish this case from an explicit
+ *			zero width value).
  *
  * The function result is the next character position to be parsed, ie, the
  * location where the type character is/should be.
@@ -6068,7 +6065,7 @@ text_format_parse_format(const char *start_ptr, const char *end_ptr, int *argpos
       /* number in this position must be closed by $ */
       if (*cp != '$')
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("width argument position must be ended by \"$\"")));
       }
       /* The number was width argument position */
       *widthpos = n;
@@ -6172,7 +6169,7 @@ text_format_append_string(StringInfo buf, const char *str, int flags, int width)
     /* -INT_MIN is undefined */
     if (width <= INT_MIN)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("number is out of range")));
     }
     width = -width;
   }
@@ -6222,15 +6219,15 @@ text_format_nv(PG_FUNCTION_ARGS)
 static inline bool
 rest_of_char_same(const char *s1, const char *s2, int len)
 {
-
-
-
-
-
-
-
-
-
+  while (len > 0)
+  {
+    len--;
+    if (s1[len] != s2[len])
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 /* Expand each Levenshtein distance variant */

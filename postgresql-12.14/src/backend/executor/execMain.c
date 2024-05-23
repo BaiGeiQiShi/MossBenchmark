@@ -101,8 +101,8 @@ EvalPlanQualStart(EPQState *epqstate, Plan *planTree);
 /* ----------------------------------------------------------------
  *		ExecutorStart
  *
- *		This routine must be called at the beginning of any execution of
- *any query plan
+ *		This routine must be called at the beginning of any execution of any
+ *		query plan
  *
  * Takes a QueryDesc previously created by CreateQueryDesc (which is separate
  * only because some places use QueryDescs for utility commands).  The tupDesc
@@ -125,7 +125,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
   if (ExecutorStart_hook)
   {
-
+    (*ExecutorStart_hook)(queryDesc, eflags);
   }
   else
   {
@@ -197,7 +197,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
    */
   switch (queryDesc->operation)
   {
-  case CMD_SELECT:;
+  case CMD_SELECT:
 
     /*
      * SELECT FOR [KEY] UPDATE/SHARE and modifying CTEs need to mark
@@ -220,15 +220,15 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
     }
     break;
 
-  case CMD_INSERT:;
-  case CMD_DELETE:;
-  case CMD_UPDATE:;
+  case CMD_INSERT:
+  case CMD_DELETE:
+  case CMD_UPDATE:
     estate->es_output_cid = GetCurrentCommandId(true);
     break;
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized operation code: %d", (int)queryDesc->operation);
+    break;
   }
 
   /*
@@ -272,12 +272,12 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
  *
  *		Note: count = 0 is interpreted as no portal limit, i.e., run to
  *		completion.  Also note that the count limit is only applied to
- *		retrieved tuples, not for instance to those
- *inserted/updated/deleted by a ModifyTable plan node.
+ *		retrieved tuples, not for instance to those inserted/updated/deleted
+ *		by a ModifyTable plan node.
  *
  *		There is no return value, but output tuples (if any) are sent to
- *		the destination receiver specified in the QueryDesc; and the
- *number of tuples processed at the top level can be found in
+ *		the destination receiver specified in the QueryDesc; and the number
+ *		of tuples processed at the top level can be found in
  *		estate->es_processed.
  *
  *		We provide a function hook variable that lets loadable plugins
@@ -291,7 +291,7 @@ ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool ex
 {
   if (ExecutorRun_hook)
   {
-
+    (*ExecutorRun_hook)(queryDesc, direction, count, execute_once);
   }
   else
   {
@@ -324,7 +324,7 @@ standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count
   /* Allow instrumentation of Executor overall runtime */
   if (queryDesc->totaltime)
   {
-
+    InstrStartNode(queryDesc->totaltime);
   }
 
   /*
@@ -352,7 +352,7 @@ standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count
   {
     if (execute_once && queryDesc->already_executed)
     {
-
+      elog(ERROR, "can't re-execute query flagged for single execution");
     }
     queryDesc->already_executed = true;
 
@@ -369,7 +369,7 @@ standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count
 
   if (queryDesc->totaltime)
   {
-
+    InstrStopNode(queryDesc->totaltime, estate->es_processed);
   }
 
   MemoryContextSwitchTo(oldcontext);
@@ -394,7 +394,7 @@ ExecutorFinish(QueryDesc *queryDesc)
 {
   if (ExecutorFinish_hook)
   {
-
+    (*ExecutorFinish_hook)(queryDesc);
   }
   else
   {
@@ -425,7 +425,7 @@ standard_ExecutorFinish(QueryDesc *queryDesc)
   /* Allow instrumentation of Executor overall runtime */
   if (queryDesc->totaltime)
   {
-
+    InstrStartNode(queryDesc->totaltime);
   }
 
   /* Run ModifyTable nodes to completion */
@@ -439,7 +439,7 @@ standard_ExecutorFinish(QueryDesc *queryDesc)
 
   if (queryDesc->totaltime)
   {
-
+    InstrStopNode(queryDesc->totaltime, 0);
   }
 
   MemoryContextSwitchTo(oldcontext);
@@ -464,7 +464,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 {
   if (ExecutorEnd_hook)
   {
-
+    (*ExecutorEnd_hook)(queryDesc);
   }
   else
   {
@@ -559,8 +559,7 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 /*
  * ExecCheckRTPerms
- *		Check access permissions for all relations listed in a range
- *table.
+ *		Check access permissions for all relations listed in a range table.
  *
  * Returns true if permissions are adequate.  Otherwise, throws an appropriate
  * error if ereport_on_violation is true, or simply returns false otherwise.
@@ -595,7 +594,7 @@ ExecCheckRTPerms(List *rangeTable, bool ereport_on_violation)
 
   if (ExecutorCheckPerms_hook)
   {
-
+    result = (*ExecutorCheckPerms_hook)(rangeTable, ereport_on_violation);
   }
   return result;
 }
@@ -728,8 +727,8 @@ ExecCheckRTEPerms(RangeTblEntry *rte)
 
 /*
  * ExecCheckRTEPermsModified
- *		Check INSERT or UPDATE access permissions for a single RTE
- *(these are processed uniformly).
+ *		Check INSERT or UPDATE access permissions for a single RTE (these
+ *		are processed uniformly).
  */
 static bool
 ExecCheckRTEPermsModified(Oid relOid, Oid userid, Bitmapset *modifiedCols, AclMode requiredPerms)
@@ -757,7 +756,7 @@ ExecCheckRTEPermsModified(Oid relOid, Oid userid, Bitmapset *modifiedCols, AclMo
     if (attno == InvalidAttrNumber)
     {
       /* whole-row reference can't happen here */
-
+      elog(ERROR, "whole-row update is not implemented");
     }
     else
     {
@@ -942,21 +941,21 @@ InitPlan(QueryDesc *queryDesc, int eflags)
       /* open relation, if we need to access it for this mark type */
       switch (rc->markType)
       {
-      case ROW_MARK_EXCLUSIVE:;
-      case ROW_MARK_NOKEYEXCLUSIVE:;
-      case ROW_MARK_SHARE:;
-      case ROW_MARK_KEYSHARE:;
-      case ROW_MARK_REFERENCE:;
+      case ROW_MARK_EXCLUSIVE:
+      case ROW_MARK_NOKEYEXCLUSIVE:
+      case ROW_MARK_SHARE:
+      case ROW_MARK_KEYSHARE:
+      case ROW_MARK_REFERENCE:
         relation = ExecGetRangeTableRelation(estate, rc->rti);
         break;
-      case ROW_MARK_COPY:;
+      case ROW_MARK_COPY:
         /* no physical table access is required */
         relation = NULL;
         break;
-      default:;;
-
-
-
+      default:
+        elog(ERROR, "unrecognized markType: %d", rc->markType);
+        relation = NULL; /* keep compiler quiet */
+        break;
       }
 
       /* Check that relation is a legal target for marking */
@@ -1091,17 +1090,17 @@ CheckValidResultRel(ResultRelInfo *resultRelInfo, CmdType operation)
 
   switch (resultRel->rd_rel->relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_PARTITIONED_TABLE:;
+  case RELKIND_RELATION:
+  case RELKIND_PARTITIONED_TABLE:
     CheckCmdReplicaIdentity(resultRel, operation);
     break;
-  case RELKIND_SEQUENCE:;
-
-
-  case RELKIND_TOASTVALUE:;
-
-
-  case RELKIND_VIEW:;
+  case RELKIND_SEQUENCE:
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot change sequence \"%s\"", RelationGetRelationName(resultRel))));
+    break;
+  case RELKIND_TOASTVALUE:
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot change TOAST relation \"%s\"", RelationGetRelationName(resultRel))));
+    break;
+  case RELKIND_VIEW:
 
     /*
      * Okay only if there's a suitable INSTEAD OF trigger.  Messages
@@ -1112,78 +1111,78 @@ CheckValidResultRel(ResultRelInfo *resultRelInfo, CmdType operation)
      */
     switch (operation)
     {
-    case CMD_INSERT:;
+    case CMD_INSERT:
       if (!trigDesc || !trigDesc->trig_insert_instead_row)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot insert into view \"%s\"", RelationGetRelationName(resultRel)), errhint("To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.")));
       }
       break;
-    case CMD_UPDATE:;
+    case CMD_UPDATE:
       if (!trigDesc || !trigDesc->trig_update_instead_row)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot update view \"%s\"", RelationGetRelationName(resultRel)), errhint("To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.")));
       }
       break;
-    case CMD_DELETE:;
+    case CMD_DELETE:
       if (!trigDesc || !trigDesc->trig_delete_instead_row)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot delete from view \"%s\"", RelationGetRelationName(resultRel)), errhint("To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.")));
       }
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized CmdType: %d", (int)operation);
+      break;
     }
     break;
-  case RELKIND_MATVIEW:;
+  case RELKIND_MATVIEW:
     if (!MatViewIncrementalMaintenanceIsEnabled())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot change materialized view \"%s\"", RelationGetRelationName(resultRel))));
     }
     break;
-  case RELKIND_FOREIGN_TABLE:;
+  case RELKIND_FOREIGN_TABLE:
     /* Okay only if the FDW supports it */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  default:;;
-
-
+    fdwroutine = resultRelInfo->ri_FdwRoutine;
+    switch (operation)
+    {
+    case CMD_INSERT:
+      if (fdwroutine->ExecForeignInsert == NULL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot insert into foreign table \"%s\"", RelationGetRelationName(resultRel))));
+      }
+      if (fdwroutine->IsForeignRelUpdatable != NULL && (fdwroutine->IsForeignRelUpdatable(resultRel) & (1 << CMD_INSERT)) == 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("foreign table \"%s\" does not allow inserts", RelationGetRelationName(resultRel))));
+      }
+      break;
+    case CMD_UPDATE:
+      if (fdwroutine->ExecForeignUpdate == NULL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot update foreign table \"%s\"", RelationGetRelationName(resultRel))));
+      }
+      if (fdwroutine->IsForeignRelUpdatable != NULL && (fdwroutine->IsForeignRelUpdatable(resultRel) & (1 << CMD_UPDATE)) == 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("foreign table \"%s\" does not allow updates", RelationGetRelationName(resultRel))));
+      }
+      break;
+    case CMD_DELETE:
+      if (fdwroutine->ExecForeignDelete == NULL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot delete from foreign table \"%s\"", RelationGetRelationName(resultRel))));
+      }
+      if (fdwroutine->IsForeignRelUpdatable != NULL && (fdwroutine->IsForeignRelUpdatable(resultRel) & (1 << CMD_DELETE)) == 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("foreign table \"%s\" does not allow deletes", RelationGetRelationName(resultRel))));
+      }
+      break;
+    default:
+      elog(ERROR, "unrecognized CmdType: %d", (int)operation);
+      break;
+    }
+    break;
+  default:
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot change relation \"%s\"", RelationGetRelationName(resultRel))));
+    break;
   }
 }
 
@@ -1200,40 +1199,40 @@ CheckValidRowMarkRel(Relation rel, RowMarkType markType)
 
   switch (rel->rd_rel->relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_PARTITIONED_TABLE:;
+  case RELKIND_RELATION:
+  case RELKIND_PARTITIONED_TABLE:
     /* OK */
     break;
-  case RELKIND_SEQUENCE:;
+  case RELKIND_SEQUENCE:
     /* Must disallow this because we don't vacuum sequences */
-
-
-  case RELKIND_TOASTVALUE:;
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot lock rows in sequence \"%s\"", RelationGetRelationName(rel))));
+    break;
+  case RELKIND_TOASTVALUE:
     /* We could allow this, but there seems no good reason to */
-
-
-  case RELKIND_VIEW:;
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot lock rows in TOAST relation \"%s\"", RelationGetRelationName(rel))));
+    break;
+  case RELKIND_VIEW:
     /* Should not get here; planner should have expanded the view */
-
-
-  case RELKIND_MATVIEW:;
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot lock rows in view \"%s\"", RelationGetRelationName(rel))));
+    break;
+  case RELKIND_MATVIEW:
     /* Allow referencing a matview, but not actual locking clauses */
     if (markType != ROW_MARK_REFERENCE)
     {
       ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot lock rows in materialized view \"%s\"", RelationGetRelationName(rel))));
     }
     break;
-  case RELKIND_FOREIGN_TABLE:;
+  case RELKIND_FOREIGN_TABLE:
     /* Okay only if the FDW supports it */
-
-
-
-
-
-
-  default:;;
-
-
+    fdwroutine = GetFdwRoutineForRelation(rel, false);
+    if (fdwroutine->RefetchForeignRow == NULL)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot lock rows in foreign table \"%s\"", RelationGetRelationName(rel))));
+    }
+    break;
+  default:
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot lock rows in relation \"%s\"", RelationGetRelationName(rel))));
+    break;
   }
 }
 
@@ -1266,7 +1265,7 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo, Relation resultRelationDesc, Ind
     resultRelInfo->ri_TrigWhenExprs = (ExprState **)palloc0(n * sizeof(ExprState *));
     if (instrument_options)
     {
-
+      resultRelInfo->ri_TrigInstrument = InstrAlloc(n, instrument_options);
     }
   }
   else
@@ -1277,7 +1276,7 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo, Relation resultRelationDesc, Ind
   }
   if (resultRelationDesc->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
   {
-
+    resultRelInfo->ri_FdwRoutine = GetFdwRoutineForRelation(resultRelationDesc, true);
   }
   else
   {
@@ -1388,11 +1387,11 @@ ExecGetTriggerResultRel(EState *estate, Oid relid)
   /* Nope, but maybe we already made an extra ResultRelInfo for it */
   foreach (l, estate->es_trig_target_relations)
   {
-
-
-
-
-
+    rInfo = (ResultRelInfo *)lfirst(l);
+    if (RelationGetRelid(rInfo->ri_RelationDesc) == relid)
+    {
+      return rInfo;
+    }
   }
   /* Nope, so we need a new one */
 
@@ -1567,8 +1566,8 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 /* ----------------------------------------------------------------
  *		ExecutePlan
  *
- *		Processes the query plan until we have retrieved 'numberTuples'
- *tuples, moving in the specified direction.
+ *		Processes the query plan until we have retrieved 'numberTuples' tuples,
+ *		moving in the specified direction.
  *
  *		Runs to completion if numberTuples is 0
  *
@@ -1655,7 +1654,7 @@ ExecutePlan(EState *estate, PlanState *planstate, bool use_parallel_mode, CmdTyp
        */
       if (!dest->receiveSlot(slot, dest))
       {
-
+        break;
       }
     }
 
@@ -2039,7 +2038,7 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo, TupleTableSlot 
          * should be able to view the tuple as that depends on the
          * USING policy.
          */
-      case WCO_VIEW_CHECK:;
+      case WCO_VIEW_CHECK:
         /* See the comment in ExecConstraints(). */
         if (resultRelInfo->ri_RootResultRelInfo)
         {
@@ -2071,8 +2070,8 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo, TupleTableSlot 
 
         ereport(ERROR, (errcode(ERRCODE_WITH_CHECK_OPTION_VIOLATION), errmsg("new row violates check option for view \"%s\"", wco->relname), val_desc ? errdetail("Failing row contains %s.", val_desc) : 0));
         break;
-      case WCO_RLS_INSERT_CHECK:;
-      case WCO_RLS_UPDATE_CHECK:;
+      case WCO_RLS_INSERT_CHECK:
+      case WCO_RLS_UPDATE_CHECK:
         if (wco->polname != NULL)
         {
           ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("new row violates row-level security policy \"%s\" for table \"%s\"", wco->polname, wco->relname)));
@@ -2082,19 +2081,19 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo, TupleTableSlot 
           ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("new row violates row-level security policy for table \"%s\"", wco->relname)));
         }
         break;
-      case WCO_RLS_CONFLICT_CHECK:;
+      case WCO_RLS_CONFLICT_CHECK:
         if (wco->polname != NULL)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("new row violates row-level security policy \"%s\" (USING expression) for table \"%s\"", wco->polname, wco->relname)));
         }
         else
         {
           ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("new row violates row-level security policy (USING expression) for table \"%s\"", wco->relname)));
         }
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized WCO kind: %u", wco->kind);
+        break;
       }
     }
   }
@@ -2138,7 +2137,7 @@ ExecBuildSlotValueDescription(Oid reloid, TupleTableSlot *slot, TupleDesc tupdes
    */
   if (check_enable_rls(reloid, InvalidOid, true) == RLS_ENABLED)
   {
-
+    return NULL;
   }
 
   initStringInfo(&buf);
@@ -2238,9 +2237,9 @@ ExecBuildSlotValueDescription(Oid reloid, TupleTableSlot *slot, TupleDesc tupdes
       }
       else
       {
-
-
-
+        vallen = pg_mbcliplen(val, vallen, maxfieldlen);
+        appendBinaryStringInfo(&buf, val, vallen);
+        appendStringInfoString(&buf, "...");
       }
     }
   }
@@ -2248,7 +2247,7 @@ ExecBuildSlotValueDescription(Oid reloid, TupleTableSlot *slot, TupleDesc tupdes
   /* If we end up with zero columns being returned, then return NULL. */
   if (!any_perm)
   {
-
+    return NULL;
   }
 
   appendStringInfoChar(&buf, ')');
@@ -2307,11 +2306,11 @@ ExecFindRowMark(EState *estate, Index rti, bool missing_ok)
       return erm;
     }
   }
-
-
-
-
-
+  if (!missing_ok)
+  {
+    elog(ERROR, "failed to find ExecRowMark for rangetable index %u", rti);
+  }
+  return NULL;
 }
 
 /*
@@ -2337,7 +2336,7 @@ ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist)
     aerm->ctidAttNo = ExecFindJunkAttributeInTlist(targetlist, resname);
     if (!AttributeNumberIsValid(aerm->ctidAttNo))
     {
-
+      elog(ERROR, "could not find junk %s column", resname);
     }
   }
   else
@@ -2347,7 +2346,7 @@ ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist)
     aerm->wholeAttNo = ExecFindJunkAttributeInTlist(targetlist, resname);
     if (!AttributeNumberIsValid(aerm->wholeAttNo))
     {
-
+      elog(ERROR, "could not find junk %s column", resname);
     }
   }
 
@@ -2358,7 +2357,7 @@ ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist)
     aerm->toidAttNo = ExecFindJunkAttributeInTlist(targetlist, resname);
     if (!AttributeNumberIsValid(aerm->toidAttNo))
     {
-
+      elog(ERROR, "could not find junk %s column", resname);
     }
   }
 
@@ -2532,104 +2531,104 @@ EvalPlanQualSlot(EPQState *epqstate, Relation relation, Index rti)
 bool
 EvalPlanQualFetchRowMark(EPQState *epqstate, Index rti, TupleTableSlot *slot)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ExecAuxRowMark *earm = epqstate->relsubs_rowmark[rti - 1];
+  ExecRowMark *erm = earm->rowmark;
+  Datum datum;
+  bool isNull;
+
+  Assert(earm != NULL);
+  Assert(epqstate->origslot != NULL);
+
+  if (RowMarkRequiresRowShareLock(erm->markType))
+  {
+    elog(ERROR, "EvalPlanQual doesn't support locking rowmarks");
+  }
+
+  /* if child rel, must check whether it produced this row */
+  if (erm->rti != erm->prti)
+  {
+    Oid tableoid;
+
+    datum = ExecGetJunkAttribute(epqstate->origslot, earm->toidAttNo, &isNull);
+    /* non-locked rels could be on the inside of outer joins */
+    if (isNull)
+    {
+      return false;
+    }
+
+    tableoid = DatumGetObjectId(datum);
+
+    Assert(OidIsValid(erm->relid));
+    if (tableoid != erm->relid)
+    {
+      /* this child is inactive right now */
+      return false;
+    }
+  }
+
+  if (erm->markType == ROW_MARK_REFERENCE)
+  {
+    Assert(erm->relation != NULL);
+
+    /* fetch the tuple's ctid */
+    datum = ExecGetJunkAttribute(epqstate->origslot, earm->ctidAttNo, &isNull);
+    /* non-locked rels could be on the inside of outer joins */
+    if (isNull)
+    {
+      return false;
+    }
+
+    /* fetch requests on foreign tables must be passed to their FDW */
+    if (erm->relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+    {
+      FdwRoutine *fdwroutine;
+      bool updated = false;
+
+      fdwroutine = GetFdwRoutineForRelation(erm->relation, false);
+      /* this should have been checked already, but let's be safe */
+      if (fdwroutine->RefetchForeignRow == NULL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot lock rows in foreign table \"%s\"", RelationGetRelationName(erm->relation))));
+      }
+
+      fdwroutine->RefetchForeignRow(epqstate->recheckestate, erm, datum, slot, &updated);
+      if (TupIsNull(slot))
+      {
+        elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
+      }
+
+      /*
+       * Ideally we'd insist on updated == false here, but that assumes
+       * that FDWs can track that exactly, which they might not be able
+       * to.  So just ignore the flag.
+       */
+      return true;
+    }
+    else
+    {
+      /* ordinary table, fetch the tuple */
+      if (!table_tuple_fetch_row_version(erm->relation, (ItemPointer)DatumGetPointer(datum), SnapshotAny, slot))
+      {
+        elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
+      }
+      return true;
+    }
+  }
+  else
+  {
+    Assert(erm->markType == ROW_MARK_COPY);
+
+    /* fetch the whole-row Var for the relation */
+    datum = ExecGetJunkAttribute(epqstate->origslot, earm->wholeAttNo, &isNull);
+    /* non-locked rels could be on the inside of outer joins */
+    if (isNull)
+    {
+      return false;
+    }
+
+    ExecStoreHeapTupleDatum(datum, slot);
+    return true;
+  }
 }
 
 /*
@@ -2835,8 +2834,8 @@ EvalPlanQualStart(EPQState *epqstate, Plan *planTree)
     Plan *subplan = (Plan *)lfirst(l);
     PlanState *subplanstate;
 
-
-
+    subplanstate = ExecInitNode(subplan, rcestate, 0);
+    rcestate->es_subplanstates = lappend(rcestate->es_subplanstates, subplanstate);
   }
 
   /*
@@ -2849,7 +2848,7 @@ EvalPlanQualStart(EPQState *epqstate, Plan *planTree)
   {
     ExecAuxRowMark *earm = (ExecAuxRowMark *)lfirst(l);
 
-
+    epqstate->relsubs_rowmark[earm->rowmark->rti - 1] = earm;
   }
 
   /*
@@ -2912,7 +2911,7 @@ EvalPlanQualEnd(EPQState *epqstate)
   {
     PlanState *subplanstate = (PlanState *)lfirst(l);
 
-
+    ExecEndNode(subplanstate);
   }
 
   /* throw away the per-estate tuple table, some node may have used it */

@@ -13,10 +13,9 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
@@ -118,11 +117,11 @@ random_init_pool(PlannerInfo *root, Pool *pool)
     }
     else
     {
-
-
-
-
-
+      bad++;
+      if (i == 0 && bad >= 10000)
+      {
+        elog(ERROR, "geqo failed to make a valid plan");
+      }
     }
   }
 
@@ -160,14 +159,14 @@ compare(const void *arg1, const void *arg2)
   {
     return 0;
   }
-
-
-
-
-
-
-
-
+  else if (chromo1->worth > chromo2->worth)
+  {
+    return 1;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /* alloc_chromo
@@ -208,7 +207,7 @@ spread_chromo(PlannerInfo *root, Chromosome *chromo, Pool *pool)
   /* new chromo is so bad we can't use it */
   if (chromo->worth > pool->data[pool->size - 1].worth)
   {
-
+    return;
   }
 
   /* do a binary search to find the index of the new chromo */
@@ -226,34 +225,34 @@ spread_chromo(PlannerInfo *root, Chromosome *chromo, Pool *pool)
     {
       index = top;
     }
+    else if (chromo->worth == pool->data[mid].worth)
+    {
+      index = mid;
+    }
+    else if (chromo->worth == pool->data[bot].worth)
+    {
+      index = bot;
+    }
+    else if (bot - top <= 1)
+    {
+      index = bot;
+    }
 
+    /*
+     * these 2 cases move the search indices since a new location has not
+     * yet been found.
+     */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (chromo->worth < pool->data[mid].worth)
+    {
+      bot = mid;
+      mid = top + ((bot - top) / 2);
+    }
+    else
+    { /* (chromo->worth > pool->data[mid].worth) */
+      top = mid;
+      mid = top + ((bot - top) / 2);
+    }
   } /* ... while */
 
   /* now we have index for chromo */

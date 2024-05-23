@@ -31,13 +31,15 @@
 #define ERRCODE_UNDEFINED_TABLE "42P01"
 
 /* Parallel vacuuming stuff */
-typedef struct ParallelSlot {
+typedef struct ParallelSlot
+{
   PGconn *connection; /* One connection */
   bool isFree;        /* Is it known to be idle? */
 } ParallelSlot;
 
 /* vacuum options controlled by user flags */
-typedef struct vacuumingOptions {
+typedef struct vacuumingOptions
+{
   bool analyze_only;
   bool verbose;
   bool and_analyze;
@@ -119,8 +121,10 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "vacuumdb", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:zZFat:fvj:", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:zZFat:fvj:", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -157,7 +161,8 @@ main(int argc, char *argv[])
     case 'a':
       alldb = true;
       break;
-    case 't': {
+    case 't':
+    {
       simple_string_list_append(&tables, optarg);
       tbl_count++;
       break;
@@ -170,7 +175,8 @@ main(int argc, char *argv[])
       break;
     case 'j':
       concurrentCons = atoi(optarg);
-      if (concurrentCons <= 0) {
+      if (concurrentCons <= 0)
+      {
         pg_log_error("number of parallel jobs must be at least 1");
         exit(1);
       }
@@ -189,19 +195,21 @@ main(int argc, char *argv[])
       break;
     case 6:
       vacopts.min_xid_age = atoi(optarg);
-      if (vacopts.min_xid_age <= 0) {
+      if (vacopts.min_xid_age <= 0)
+      {
         pg_log_error("minimum transaction ID age must be at least 1");
         exit(1);
       }
       break;
     case 7:
       vacopts.min_mxid_age = atoi(optarg);
-      if (vacopts.min_mxid_age <= 0) {
+      if (vacopts.min_mxid_age <= 0)
+      {
         pg_log_error("minimum multixact ID age must be at least 1");
         exit(1);
       }
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
@@ -211,27 +219,33 @@ main(int argc, char *argv[])
    * Non-option argument specifies database name as long as it wasn't
    * already specified with -d / --dbname
    */
-  if (optind < argc && dbname == NULL) {
+  if (optind < argc && dbname == NULL)
+  {
     dbname = argv[optind];
     optind++;
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (vacopts.analyze_only) {
-    if (vacopts.full) {
+  if (vacopts.analyze_only)
+  {
+    if (vacopts.full)
+    {
       pg_log_error("cannot use the \"%s\" option when performing only analyze", "full");
       exit(1);
     }
-    if (vacopts.freeze) {
+    if (vacopts.freeze)
+    {
       pg_log_error("cannot use the \"%s\" option when performing only analyze", "freeze");
       exit(1);
     }
-    if (vacopts.disable_page_skipping) {
+    if (vacopts.disable_page_skipping)
+    {
       pg_log_error("cannot use the \"%s\" option when performing only analyze", "disable-page-skipping");
       exit(1);
     }
@@ -248,16 +262,20 @@ main(int argc, char *argv[])
   setup_cancel_handler();
 
   /* Avoid opening extra connections. */
-  if (tbl_count && (concurrentCons > tbl_count)) {
+  if (tbl_count && (concurrentCons > tbl_count))
+  {
     concurrentCons = tbl_count;
   }
 
-  if (alldb) {
-    if (dbname) {
+  if (alldb)
+  {
+    if (dbname)
+    {
       pg_log_error("cannot vacuum all databases and a specific one at the same time");
       exit(1);
     }
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       pg_log_error("cannot vacuum specific table(s) in all databases");
       exit(1);
     }
@@ -265,26 +283,38 @@ main(int argc, char *argv[])
     cparams.dbname = maintenance_db;
 
     vacuum_all_databases(&cparams, &vacopts, analyze_in_stages, concurrentCons, progname, echo, quiet);
-  } else {
-    if (dbname == NULL) {
-      if (getenv("PGDATABASE")) {
+  }
+  else
+  {
+    if (dbname == NULL)
+    {
+      if (getenv("PGDATABASE"))
+      {
         dbname = getenv("PGDATABASE");
-      } else if (getenv("PGUSER")) {
+      }
+      else if (getenv("PGUSER"))
+      {
         dbname = getenv("PGUSER");
-      } else {
+      }
+      else
+      {
         dbname = get_user_name_or_exit(progname);
       }
     }
 
     cparams.dbname = dbname;
 
-    if (analyze_in_stages) {
+    if (analyze_in_stages)
+    {
       int stage;
 
-      for (stage = 0; stage < ANALYZE_NUM_STAGES; stage++) {
+      for (stage = 0; stage < ANALYZE_NUM_STAGES; stage++)
+      {
         vacuum_one_database(&cparams, &vacopts, stage, &tables, concurrentCons, progname, echo, quiet);
       }
-    } else {
+    }
+    else
+    {
       vacuum_one_database(&cparams, &vacopts, ANALYZE_NO_STAGE, &tables, concurrentCons, progname, echo, quiet);
     }
   }
@@ -295,7 +325,8 @@ main(int argc, char *argv[])
 /*
  * vacuum_one_database
  *
- * Process tables in the given database.  If the 'tables' list is empty,* process all tables in the database.
+ * Process tables in the given database.  If the 'tables' list is empty,
+ * process all tables in the database.
  *
  * Note that this function is only concerned with running exactly one stage
  * when in analyze-in-stages mode; caller must iterate on us if necessary.
@@ -328,32 +359,40 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
 
   conn = connectDatabase(cparams, progname, echo, false, true);
 
-  if (vacopts->disable_page_skipping && PQserverVersion(conn) < 90600) {
+  if (vacopts->disable_page_skipping && PQserverVersion(conn) < 90600)
+  {
     PQfinish(conn);
-    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s","disable-page-skipping", "9.6");
+    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s", "disable-page-skipping", "9.6");
     exit(1);
   }
 
-  if (vacopts->skip_locked && PQserverVersion(conn) < 120000) {
+  if (vacopts->skip_locked && PQserverVersion(conn) < 120000)
+  {
     PQfinish(conn);
-    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s","skip-locked", "12");
+    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s", "skip-locked", "12");
     exit(1);
   }
 
-  if (vacopts->min_xid_age != 0 && PQserverVersion(conn) < 90600) {
-    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s","--min-xid-age", "9.6");
+  if (vacopts->min_xid_age != 0 && PQserverVersion(conn) < 90600)
+  {
+    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s", "--min-xid-age", "9.6");
     exit(1);
   }
 
-  if (vacopts->min_mxid_age != 0 && PQserverVersion(conn) < 90600) {
-    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s","--min-mxid-age", "9.6");
+  if (vacopts->min_mxid_age != 0 && PQserverVersion(conn) < 90600)
+  {
+    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s", "--min-mxid-age", "9.6");
     exit(1);
   }
 
-  if (!quiet) {
-    if (stage != ANALYZE_NO_STAGE) {
+  if (!quiet)
+  {
+    if (stage != ANALYZE_NO_STAGE)
+    {
       printf(_("%s: processing database \"%s\": %s\n"), progname, PQdb(conn), _(stage_messages[stage]));
-    } else {
+    }
+    else
+    {
       printf(_("%s: vacuuming database \"%s\"\n"), progname, PQdb(conn));
     }
     fflush(stdout);
@@ -374,7 +413,8 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * catalog query will fail.
    */
   initPQExpBuffer(&catalog_query);
-  for (cell = tables ? tables->head : NULL; cell; cell = cell->next) {
+  for (cell = tables ? tables->head : NULL; cell; cell = cell->next)
+  {
     char *just_table;
     const char *just_columns;
 
@@ -385,19 +425,26 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
      */
     splitTableColumnsSpec(cell->val, PQclientEncoding(conn), &just_table, &just_columns);
 
-    if (!tables_listed) {
-      appendPQExpBuffer(&catalog_query, "WITH listed_tables (table_oid, column_list) AS (\n  VALUES (");
+    if (!tables_listed)
+    {
+      appendPQExpBuffer(&catalog_query, "WITH listed_tables (table_oid, column_list) "
+                                        "AS (\n  VALUES (");
       tables_listed = true;
-    } else {
+    }
+    else
+    {
       appendPQExpBuffer(&catalog_query, ",\n  (");
     }
 
     appendStringLiteralConn(&catalog_query, just_table, conn);
     appendPQExpBuffer(&catalog_query, "::pg_catalog.regclass, ");
 
-    if (just_columns && just_columns[0] != '\0') {
+    if (just_columns && just_columns[0] != '\0')
+    {
       appendStringLiteralConn(&catalog_query, just_columns, conn);
-    } else {
+    }
+    else
+    {
       appendPQExpBufferStr(&catalog_query, "NULL");
     }
 
@@ -407,21 +454,29 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
   }
 
   /* Finish formatting the CTE */
-  if (tables_listed) {
+  if (tables_listed)
+  {
     appendPQExpBuffer(&catalog_query, "\n)\n");
   }
 
   appendPQExpBuffer(&catalog_query, "SELECT c.relname, ns.nspname");
 
-  if (tables_listed) {
+  if (tables_listed)
+  {
     appendPQExpBuffer(&catalog_query, ", listed_tables.column_list");
   }
 
-  appendPQExpBuffer(&catalog_query, " FROM pg_catalog.pg_class c\n JOIN pg_catalog.pg_namespace ns ON c.relnamespace OPERATOR(pg_catalog.=) ns.oid\n LEFT JOIN pg_catalog.pg_class t ON c.reltoastrelid OPERATOR(pg_catalog.=) t.oid\n");
+  appendPQExpBuffer(&catalog_query, " FROM pg_catalog.pg_class c\n"
+                                    " JOIN pg_catalog.pg_namespace ns"
+                                    " ON c.relnamespace OPERATOR(pg_catalog.=) ns.oid\n"
+                                    " LEFT JOIN pg_catalog.pg_class t"
+                                    " ON c.reltoastrelid OPERATOR(pg_catalog.=) t.oid\n");
 
   /* Used to match the tables listed by the user */
-  if (tables_listed) {
-    appendPQExpBuffer(&catalog_query, " JOIN listed_tables ON listed_tables.table_oid OPERATOR(pg_catalog.=) c.oid\n");
+  if (tables_listed)
+  {
+    appendPQExpBuffer(&catalog_query, " JOIN listed_tables"
+                                      " ON listed_tables.table_oid OPERATOR(pg_catalog.=) c.oid\n");
   }
 
   /*
@@ -430,7 +485,8 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * Instead, let the server decide whether a given relation can be
    * processed in which case the user will know about it.
    */
-  if (!tables_listed) {
+  if (!tables_listed)
+  {
     appendPQExpBuffer(&catalog_query, " WHERE c.relkind OPERATOR(pg_catalog.=) ANY (array[" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_MATVIEW) "])\n");
     has_where = true;
   }
@@ -442,13 +498,27 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * table for the relation if necessary, so it does not need to be
    * considered separately.
    */
-  if (vacopts->min_xid_age != 0) {
-    appendPQExpBuffer(&catalog_query," %s GREATEST(pg_catalog.age(c.relfrozenxid), pg_catalog.age(t.relfrozenxid))  OPERATOR(pg_catalog.>=) '%d'::pg_catalog.int4\n AND c.relfrozenxid OPERATOR(pg_catalog.!=) '0'::pg_catalog.xid\n",has_where ? "AND" : "WHERE", vacopts->min_xid_age);
+  if (vacopts->min_xid_age != 0)
+  {
+    appendPQExpBuffer(&catalog_query,
+        " %s GREATEST(pg_catalog.age(c.relfrozenxid),"
+        " pg_catalog.age(t.relfrozenxid)) "
+        " OPERATOR(pg_catalog.>=) '%d'::pg_catalog.int4\n"
+        " AND c.relfrozenxid OPERATOR(pg_catalog.!=)"
+        " '0'::pg_catalog.xid\n",
+        has_where ? "AND" : "WHERE", vacopts->min_xid_age);
     has_where = true;
   }
 
-  if (vacopts->min_mxid_age != 0) {
-    appendPQExpBuffer(&catalog_query," %s GREATEST(pg_catalog.mxid_age(c.relminmxid), pg_catalog.mxid_age(t.relminmxid)) OPERATOR(pg_catalog.>=) '%d'::pg_catalog.int4\n AND c.relminmxid OPERATOR(pg_catalog.!=) '0'::pg_catalog.xid\n",has_where ? "AND" : "WHERE", vacopts->min_mxid_age);
+  if (vacopts->min_mxid_age != 0)
+  {
+    appendPQExpBuffer(&catalog_query,
+        " %s GREATEST(pg_catalog.mxid_age(c.relminmxid),"
+        " pg_catalog.mxid_age(t.relminmxid)) OPERATOR(pg_catalog.>=)"
+        " '%d'::pg_catalog.int4\n"
+        " AND c.relminmxid OPERATOR(pg_catalog.!=)"
+        " '0'::pg_catalog.xid\n",
+        has_where ? "AND" : "WHERE", vacopts->min_mxid_age);
     has_where = true;
   }
 
@@ -466,7 +536,8 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * If no rows are returned, there are no matching tables, so we are done.
    */
   ntups = PQntuples(res);
-  if (ntups == 0) {
+  if (ntups == 0)
+  {
     PQclear(res);
     PQfinish(conn);
     return;
@@ -477,10 +548,12 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * if given.
    */
   initPQExpBuffer(&buf);
-  for (i = 0; i < ntups; i++) {
+  for (i = 0; i < ntups; i++)
+  {
     appendPQExpBufferStr(&buf, fmtQualifiedId(PQgetvalue(res, i, 1), PQgetvalue(res, i, 0)));
 
-    if (tables_listed && !PQgetisnull(res, i, 2)) {
+    if (tables_listed && !PQgetisnull(res, i, 2))
+    {
       appendPQExpBufferStr(&buf, PQgetvalue(res, i, 2));
     }
 
@@ -494,11 +567,14 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * If there are more connections than vacuumable relations, we don't need
    * to use them all.
    */
-  if (parallel) {
-    if (concurrentCons > ntups) {
+  if (parallel)
+  {
+    if (concurrentCons > ntups)
+    {
       concurrentCons = ntups;
     }
-    if (concurrentCons <= 1) {
+    if (concurrentCons <= 1)
+    {
       parallel = false;
     }
   }
@@ -508,13 +584,16 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * for the first slot.  If not in parallel mode, the first slot in the
    * array contains the connection.
    */
-  if (concurrentCons <= 0) {
+  if (concurrentCons <= 0)
+  {
     concurrentCons = 1;
   }
   slots = (ParallelSlot *)pg_malloc(sizeof(ParallelSlot) * concurrentCons);
   init_slot(slots, conn);
-  if (parallel) {
-    for (i = 1; i < concurrentCons; i++) {
+  if (parallel)
+  {
+    for (i = 1; i < concurrentCons; i++)
+    {
       conn = connectDatabase(cparams, progname, echo, false, true);
 
       /*
@@ -522,7 +601,8 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
        * unsupported range.  POSIX requires open(2) to use the lowest
        * unused file descriptor and the hint given relies on that.
        */
-      if (PQsocket(conn) >= FD_SETSIZE) {
+      if (PQsocket(conn) >= FD_SETSIZE)
+      {
         pg_log_fatal("too many jobs for this platform -- try %d", i);
         exit(1);
       }
@@ -535,12 +615,14 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
    * Prepare all the connections to run the appropriate analyze stage, if
    * caller requested that mode.
    */
-  if (stage != ANALYZE_NO_STAGE) {
+  if (stage != ANALYZE_NO_STAGE)
+  {
     int j;
 
     /* We already emitted the message above */
 
-    for (j = 0; j < concurrentCons; j++) {
+    for (j = 0; j < concurrentCons; j++)
+    {
       executeCommand((slots + j)->connection, stage_commands[stage], progname, echo);
     }
   }
@@ -548,11 +630,13 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
   initPQExpBuffer(&sql);
 
   cell = dbtables.head;
-  do {
+  do
+  {
     const char *tabname = cell->val;
     ParallelSlot *free_slot;
 
-    if (CancelRequested) {
+    if (CancelRequested)
+    {
       failed = true;
       goto finish;
     }
@@ -563,19 +647,23 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
      * non-parallel mode we simply use the only slot we have, which we
      * know to be free.
      */
-    if (parallel) {
+    if (parallel)
+    {
       /*
        * Get a free slot, waiting until one becomes free if none
        * currently is.
        */
       free_slot = GetIdleSlot(slots, concurrentCons, progname);
-      if (!free_slot) {
+      if (!free_slot)
+      {
         failed = true;
         goto finish;
       }
 
       free_slot->isFree = false;
-    } else {
+    }
+    else
+    {
       free_slot = slots;
     }
 
@@ -591,12 +679,15 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
     cell = cell->next;
   } while (cell != NULL);
 
-  if (parallel) {
+  if (parallel)
+  {
     int j;
 
     /* wait for all connections to finish */
-    for (j = 0; j < concurrentCons; j++) {
-      if (!GetQueryResult((slots + j)->connection, progname)) {
+    for (j = 0; j < concurrentCons; j++)
+    {
+      if (!GetQueryResult((slots + j)->connection, progname))
+      {
         failed = true;
         goto finish;
       }
@@ -604,14 +695,16 @@ vacuum_one_database(const ConnParams *cparams, vacuumingOptions *vacopts, int st
   }
 
 finish:
-  for (i = 0; i < concurrentCons; i++) {
+  for (i = 0; i < concurrentCons; i++)
+  {
     DisconnectDatabase(slots + i);
   }
   pfree(slots);
 
   termPQExpBuffer(&sql);
 
-  if (failed) {
+  if (failed)
+  {
     exit(1);
   }
 }
@@ -635,7 +728,8 @@ vacuum_all_databases(ConnParams *cparams, vacuumingOptions *vacopts, bool analyz
   result = executeQuery(conn, "SELECT datname FROM pg_database WHERE datallowconn ORDER BY 1;", progname, echo);
   PQfinish(conn);
 
-  if (analyze_in_stages) {
+  if (analyze_in_stages)
+  {
     /*
      * When analyzing all databases in stages, we analyze them all in the
      * fastest stage first, so that initial statistics become available
@@ -644,15 +738,20 @@ vacuum_all_databases(ConnParams *cparams, vacuumingOptions *vacopts, bool analyz
      * This means we establish several times as many connections, but
      * that's a secondary consideration.
      */
-    for (stage = 0; stage < ANALYZE_NUM_STAGES; stage++) {
-      for (i = 0; i < PQntuples(result); i++) {
+    for (stage = 0; stage < ANALYZE_NUM_STAGES; stage++)
+    {
+      for (i = 0; i < PQntuples(result); i++)
+      {
         cparams->override_dbname = PQgetvalue(result, i, 0);
 
         vacuum_one_database(cparams, vacopts, stage, NULL, concurrentCons, progname, echo, quiet);
       }
     }
-  } else {
-    for (i = 0; i < PQntuples(result); i++) {
+  }
+  else
+  {
+    for (i = 0; i < PQntuples(result); i++)
+    {
       cparams->override_dbname = PQgetvalue(result, i, 0);
 
       vacuum_one_database(cparams, vacopts, ANALYZE_NO_STAGE, NULL, concurrentCons, progname, echo, quiet);
@@ -678,76 +777,100 @@ prepare_vacuum_command(PQExpBuffer sql, int serverVersion, vacuumingOptions *vac
 
   resetPQExpBuffer(sql);
 
-  if (vacopts->analyze_only) {
+  if (vacopts->analyze_only)
+  {
     appendPQExpBufferStr(sql, "ANALYZE");
 
     /* parenthesized grammar of ANALYZE is supported since v11 */
-    if (serverVersion >= 110000) {
-      if (vacopts->skip_locked) {
+    if (serverVersion >= 110000)
+    {
+      if (vacopts->skip_locked)
+      {
         /* SKIP_LOCKED is supported since v12 */
         Assert(serverVersion >= 120000);
         appendPQExpBuffer(sql, "%sSKIP_LOCKED", sep);
         sep = comma;
       }
-      if (vacopts->verbose) {
+      if (vacopts->verbose)
+      {
         appendPQExpBuffer(sql, "%sVERBOSE", sep);
         sep = comma;
       }
-      if (sep != paren) {
+      if (sep != paren)
+      {
         appendPQExpBufferChar(sql, ')');
       }
-    } else {
-      if (vacopts->verbose) {
+    }
+    else
+    {
+      if (vacopts->verbose)
+      {
         appendPQExpBufferStr(sql, " VERBOSE");
       }
     }
-  } else {
+  }
+  else
+  {
     appendPQExpBufferStr(sql, "VACUUM");
 
     /* parenthesized grammar of VACUUM is supported since v9.0 */
-    if (serverVersion >= 90000) {
-      if (vacopts->disable_page_skipping) {
+    if (serverVersion >= 90000)
+    {
+      if (vacopts->disable_page_skipping)
+      {
         /* DISABLE_PAGE_SKIPPING is supported since v9.6 */
         Assert(serverVersion >= 90600);
         appendPQExpBuffer(sql, "%sDISABLE_PAGE_SKIPPING", sep);
         sep = comma;
       }
-      if (vacopts->skip_locked) {
+      if (vacopts->skip_locked)
+      {
         /* SKIP_LOCKED is supported since v12 */
         Assert(serverVersion >= 120000);
         appendPQExpBuffer(sql, "%sSKIP_LOCKED", sep);
         sep = comma;
       }
-      if (vacopts->full) {
+      if (vacopts->full)
+      {
         appendPQExpBuffer(sql, "%sFULL", sep);
         sep = comma;
       }
-      if (vacopts->freeze) {
+      if (vacopts->freeze)
+      {
         appendPQExpBuffer(sql, "%sFREEZE", sep);
         sep = comma;
       }
-      if (vacopts->verbose) {
+      if (vacopts->verbose)
+      {
         appendPQExpBuffer(sql, "%sVERBOSE", sep);
         sep = comma;
       }
-      if (vacopts->and_analyze) {
+      if (vacopts->and_analyze)
+      {
         appendPQExpBuffer(sql, "%sANALYZE", sep);
         sep = comma;
       }
-      if (sep != paren) {
+      if (sep != paren)
+      {
         appendPQExpBufferChar(sql, ')');
       }
-    } else {
-      if (vacopts->full) {
+    }
+    else
+    {
+      if (vacopts->full)
+      {
         appendPQExpBufferStr(sql, " FULL");
       }
-      if (vacopts->freeze) {
+      if (vacopts->freeze)
+      {
         appendPQExpBufferStr(sql, " FREEZE");
       }
-      if (vacopts->verbose) {
+      if (vacopts->verbose)
+      {
         appendPQExpBufferStr(sql, " VERBOSE");
       }
-      if (vacopts->and_analyze) {
+      if (vacopts->and_analyze)
+      {
         appendPQExpBufferStr(sql, " ANALYZE");
       }
     }
@@ -768,24 +891,33 @@ run_vacuum_command(PGconn *conn, const char *sql, bool echo, const char *table, 
 {
   bool status;
 
-  if (async) {
-    if (echo) {
+  if (async)
+  {
+    if (echo)
+    {
       printf("%s\n", sql);
     }
 
     status = PQsendQuery(conn, sql) == 1;
-  } else {
+  }
+  else
+  {
     status = executeMaintenanceCommand(conn, sql, echo);
   }
 
-  if (!status) {
-    if (table) {
+  if (!status)
+  {
+    if (table)
+    {
       pg_log_error("vacuuming of table \"%s\" in database \"%s\" failed: %s", table, PQdb(conn), PQerrorMessage(conn));
-    } else {
+    }
+    else
+    {
       pg_log_error("vacuuming of database \"%s\" failed: %s", PQdb(conn), PQerrorMessage(conn));
     }
 
-    if (!async) {
+    if (!async)
+    {
       PQfinish(conn);
       exit(1);
     }
@@ -810,8 +942,10 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
   int firstFree = -1;
 
   /* Any connection already known free? */
-  for (i = 0; i < numslots; i++) {
-    if (slots[i].isFree) {
+  for (i = 0; i < numslots; i++)
+  {
+    if (slots[i].isFree)
+    {
       return slots + i;
     }
   }
@@ -820,7 +954,8 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
    * No free slot found, so wait until one of the connections has finished
    * its task and return the available slot.
    */
-  while (firstFree < 0) {
+  while (firstFree < 0)
+  {
     fd_set slotset;
     int maxFd = 0;
     bool aborting;
@@ -828,19 +963,22 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
     /* We must reconstruct the fd_set for each call to select_loop */
     FD_ZERO(&slotset);
 
-    for (i = 0; i < numslots; i++) {
+    for (i = 0; i < numslots; i++)
+    {
       int sock = PQsocket(slots[i].connection);
 
       /*
        * We don't really expect any connections to lose their sockets
        * after startup, but just in case, cope by ignoring them.
        */
-      if (sock < 0) {
+      if (sock < 0)
+      {
         continue;
       }
 
       FD_SET(sock, &slotset);
-      if (sock > maxFd) {
+      if (sock > maxFd)
+      {
         maxFd = sock;
       }
     }
@@ -849,7 +987,8 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
     i = select_loop(maxFd, &slotset, &aborting);
     ResetCancelConn();
 
-    if (aborting) {
+    if (aborting)
+    {
       /*
        * We set the cancel-receiving connection to the one in the zeroth
        * slot above, so fetch the error from there.
@@ -859,27 +998,35 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
     }
     Assert(i != 0);
 
-    for (i = 0; i < numslots; i++) {
+    for (i = 0; i < numslots; i++)
+    {
       int sock = PQsocket(slots[i].connection);
 
-      if (sock >= 0 && FD_ISSET(sock, &slotset)) {
+      if (sock >= 0 && FD_ISSET(sock, &slotset))
+      {
         /* select() says input is available, so consume it */
         PQconsumeInput(slots[i].connection);
       }
 
       /* Collect result(s) as long as any are available */
-      while (!PQisBusy(slots[i].connection)) {
+      while (!PQisBusy(slots[i].connection))
+      {
         PGresult *result = PQgetResult(slots[i].connection);
 
-        if (result != NULL) {
+        if (result != NULL)
+        {
           /* Check and discard the command result */
-          if (!ProcessQueryResult(slots[i].connection, result, progname)) {
+          if (!ProcessQueryResult(slots[i].connection, result, progname))
+          {
             return NULL;
           }
-        } else {
+        }
+        else
+        {
           /* This connection has become idle */
           slots[i].isFree = true;
-          if (firstFree < 0) {
+          if (firstFree < 0)
+          {
             firstFree = i;
           }
           break;
@@ -894,7 +1041,8 @@ GetIdleSlot(ParallelSlot slots[], int numslots, const char *progname)
 /*
  * ProcessQueryResult
  *
- * Process (and delete) a query result.  Returns true if there's no error,* false otherwise -- but errors about trying to vacuum a missing relation
+ * Process (and delete) a query result.  Returns true if there's no error,
+ * false otherwise -- but errors about trying to vacuum a missing relation
  * are reported and subsequently ignored.
  */
 static bool
@@ -904,12 +1052,14 @@ ProcessQueryResult(PGconn *conn, PGresult *result, const char *progname)
    * If it's an error, report it.  Errors about a missing table are harmless
    * so we continue processing; but die for other errors.
    */
-  if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(result) != PGRES_COMMAND_OK)
+  {
     char *sqlState = PQresultErrorField(result, PG_DIAG_SQLSTATE);
 
     pg_log_error("vacuuming of database \"%s\" failed: %s", PQdb(conn), PQerrorMessage(conn));
 
-    if (sqlState && strcmp(sqlState, ERRCODE_UNDEFINED_TABLE) != 0) {
+    if (sqlState && strcmp(sqlState, ERRCODE_UNDEFINED_TABLE) != 0)
+    {
       PQclear(result);
       return false;
     }
@@ -932,8 +1082,10 @@ GetQueryResult(PGconn *conn, const char *progname)
   PGresult *result;
 
   SetCancelConn(conn);
-  while ((result = PQgetResult(conn)) != NULL) {
-    if (!ProcessQueryResult(conn, result, progname)) {
+  while ((result = PQgetResult(conn)) != NULL)
+  {
+    if (!ProcessQueryResult(conn, result, progname))
+    {
       ok = false;
     }
   }
@@ -950,14 +1102,17 @@ DisconnectDatabase(ParallelSlot *slot)
 {
   char errbuf[256];
 
-  if (!slot->connection) {
+  if (!slot->connection)
+  {
     return;
   }
 
-  if (PQtransactionStatus(slot->connection) == PQTRANS_ACTIVE) {
+  if (PQtransactionStatus(slot->connection) == PQTRANS_ACTIVE)
+  {
     PGcancel *cancel;
 
-    if ((cancel = PQgetCancel(slot->connection))) {
+    if ((cancel = PQgetCancel(slot->connection)))
+    {
       (void)PQcancel(cancel, errbuf, sizeof(errbuf));
       PQfreeCancel(cancel);
     }
@@ -980,14 +1135,18 @@ select_loop(int maxFd, fd_set *workerset, bool *aborting)
   int i;
   fd_set saveSet = *workerset;
 
-  if (CancelRequested) {
+  if (CancelRequested)
+  {
     *aborting = true;
     return -1;
-  } else {
+  }
+  else
+  {
     *aborting = false;
   }
 
-  for (;;) {
+  for (;;)
+  {
     /*
      * On Windows, we need to check once in a while for cancel requests;
      * on other platforms we rely on select() returning when interrupted.
@@ -1005,22 +1164,27 @@ select_loop(int maxFd, fd_set *workerset, bool *aborting)
     i = select(maxFd + 1, workerset, NULL, NULL, tvp);
 
 #ifdef WIN32
-    if (i == SOCKET_ERROR) {
+    if (i == SOCKET_ERROR)
+    {
       i = -1;
 
-      if (WSAGetLastError() == WSAEINTR) {
+      if (WSAGetLastError() == WSAEINTR)
+      {
         errno = EINTR;
       }
     }
 #endif
 
-    if (i < 0 && errno == EINTR) {
+    if (i < 0 && errno == EINTR)
+    {
       continue; /* ignore this */
     }
-    if (i < 0 || CancelRequested) {
+    if (i < 0 || CancelRequested)
+    {
       *aborting = true; /* but not this */
     }
-    if (i == 0) {
+    if (i == 0)
+    {
       continue; /* timeout (Win32 only) */
     }
     break;
@@ -1060,7 +1224,8 @@ help(const char *progname)
   printf(_("  -V, --version                   output version information, then exit\n"));
   printf(_("  -z, --analyze                   update optimizer statistics\n"));
   printf(_("  -Z, --analyze-only              only update optimizer statistics; no vacuum\n"));
-  printf(_("      --analyze-in-stages         only update optimizer statistics, in multiple\n                                  stages for faster results; no vacuum\n"));
+  printf(_("      --analyze-in-stages         only update optimizer statistics, in multiple\n"
+           "                                  stages for faster results; no vacuum\n"));
   printf(_("  -?, --help                      show this help, then exit\n"));
   printf(_("\nConnection options:\n"));
   printf(_("  -h, --host=HOSTNAME       database server host or socket directory\n"));

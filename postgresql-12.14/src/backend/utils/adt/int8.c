@@ -124,14 +124,14 @@ scanint8(const char *str, bool errorOK, int64 *result)
   *result = tmp;
   return true;
 
-out_of_range:;
+out_of_range:
   if (!errorOK)
   {
     ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", str, "bigint")));
   }
   return false;
 
-invalid_syntax:;
+invalid_syntax:
   if (!errorOK)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "bigint", str)));
@@ -166,15 +166,14 @@ int8out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int8recv			- converts external binary
- *format to int8
+ *		int8recv			- converts external binary format to int8
  */
 Datum
 int8recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_INT64(pq_getmsgint64(buf));
 }
 
 /*
@@ -183,12 +182,12 @@ int8recv(PG_FUNCTION_ARGS)
 Datum
 int8send(PG_FUNCTION_ARGS)
 {
+  int64 arg1 = PG_GETARG_INT64(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint64(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*----------------------------------------------------------
@@ -498,7 +497,7 @@ in_range_int8_int8(PG_FUNCTION_ARGS)
 
   if (offset < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PRECEDING_OR_FOLLOWING_SIZE), errmsg("invalid preceding or following size in window function")));
   }
 
   if (sub)
@@ -710,7 +709,7 @@ int8inc(PG_FUNCTION_ARGS)
 
     if (unlikely(pg_add_s64_overflow(arg, 1, &result)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("bigint out of range")));
     }
 
     PG_RETURN_INT64(result);
@@ -747,7 +746,7 @@ int8dec(PG_FUNCTION_ARGS)
 
     if (unlikely(pg_sub_s64_overflow(arg, 1, &result)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("bigint out of range")));
     }
 
     PG_RETURN_INT64(result);
@@ -1355,7 +1354,7 @@ generate_series_step_int8(PG_FUNCTION_ARGS)
      */
     if (pg_add_s64_overflow(fctx->current, fctx->step, &fctx->current))
     {
-
+      fctx->step = 0;
     }
 
     /* do when there is more left to send */
@@ -1407,8 +1406,8 @@ generate_series_int8_support(PG_FUNCTION_ARGS)
        */
       if ((IsA(arg1, Const) && ((Const *)arg1)->constisnull) || (IsA(arg2, Const) && ((Const *)arg2)->constisnull) || (arg3 != NULL && IsA(arg3, Const) && ((Const *)arg3)->constisnull))
       {
-
-
+        req->rows = 0;
+        ret = (Node *)req;
       }
       else if (IsA(arg1, Const) && IsA(arg2, Const) && (arg3 == NULL || IsA(arg3, Const)))
       {

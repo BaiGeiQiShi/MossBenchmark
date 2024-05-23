@@ -33,7 +33,8 @@ extern int _CRT_glob = 0; /* 0 turns off globbing; 1 turns it on */
 /*
  * Hacky solution to allow expressing both frontend and backend error reports
  * in one macro call.  First argument of log_error is an errcode() call of
- * some sort (ignored if FRONTEND); the rest are errmsg_internal() arguments,* i.e. message string and any parameters for it.
+ * some sort (ignored if FRONTEND); the rest are errmsg_internal() arguments,
+ * i.e. message string and any parameters for it.
  *
  * Caller must provide the gettext wrapper around the message string, if
  * appropriate, so that it gets translated in the FRONTEND case; this
@@ -67,8 +68,8 @@ GetTokenUser(HANDLE hToken, PTOKEN_USER *ppTokenUser);
  * validate_exec -- validate "path" as an executable file
  *
  * returns 0 if the file is found and no error is encountered.
- *		  -1 if the regular file "path" does not exist or cannot be
- *executed. -2 if the file is otherwise valid but cannot be read.
+ *		  -1 if the regular file "path" does not exist or cannot be executed.
+ *		  -2 if the file is otherwise valid but cannot be read.
  */
 static int
 validate_exec(const char *path)
@@ -97,12 +98,12 @@ validate_exec(const char *path)
    */
   if (stat(path, &buf) < 0)
   {
-
+    return -1;
   }
 
   if (!S_ISREG(buf.st_mode))
   {
-
+    return -1;
   }
 
   /*
@@ -141,8 +142,8 @@ find_my_exec(const char *argv0, char *retpath)
 
   if (!getcwd(cwd, MAXPGPATH))
   {
-
-
+    log_error(errcode_for_file_access(), _("could not identify current directory: %m"));
+    return -1;
   }
 
   /*
@@ -156,7 +157,7 @@ find_my_exec(const char *argv0, char *retpath)
     }
     else
     {
-
+      join_path_components(retpath, cwd, argv0);
     }
     canonicalize_path(retpath);
 
@@ -165,8 +166,8 @@ find_my_exec(const char *argv0, char *retpath)
       return resolve_symlinks(retpath);
     }
 
-
-
+    log_error(errcode(ERRCODE_WRONG_OBJECT_TYPE), _("invalid binary \"%s\""), retpath);
+    return -1;
   }
 
 #ifdef WIN32
@@ -182,55 +183,55 @@ find_my_exec(const char *argv0, char *retpath)
    * Since no explicit path was supplied, the user must have been relying on
    * PATH.  We'll search the same PATH.
    */
+  if ((path = getenv("PATH")) && *path)
+  {
+    char *startp = NULL, *endp = NULL;
 
+    do
+    {
+      if (!startp)
+      {
+        startp = path;
+      }
+      else
+      {
+        startp = endp + 1;
+      }
 
+      endp = first_path_var_separator(startp);
+      if (!endp)
+      {
+        endp = startp + strlen(startp); /* point to end */
+      }
 
+      StrNCpy(test_path, startp, Min(endp - startp + 1, MAXPGPATH));
 
+      if (is_absolute_path(test_path))
+      {
+        join_path_components(retpath, test_path, argv0);
+      }
+      else
+      {
+        join_path_components(retpath, cwd, test_path);
+        join_path_components(retpath, retpath, argv0);
+      }
+      canonicalize_path(retpath);
 
+      switch (validate_exec(retpath))
+      {
+      case 0: /* found ok */
+        return resolve_symlinks(retpath);
+      case -1: /* wasn't even a candidate, keep looking */
+        break;
+      case -2: /* found but disqualified */
+        log_error(errcode(ERRCODE_WRONG_OBJECT_TYPE), _("could not read binary \"%s\""), retpath);
+        break;
+      }
+    } while (*endp);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  log_error(errcode(ERRCODE_UNDEFINED_FILE), _("could not find a \"%s\" to execute"), argv0);
+  return -1;
 }
 
 /*
@@ -266,8 +267,8 @@ resolve_symlinks(char *path)
    */
   if (!getcwd(orig_wd, MAXPGPATH))
   {
-
-
+    log_error(errcode_for_file_access(), _("could not identify current directory: %m"));
+    return -1;
   }
 
   for (;;)
@@ -281,14 +282,14 @@ resolve_symlinks(char *path)
       *lsep = '\0';
       if (chdir(path) == -1)
       {
-
-
+        log_error(errcode_for_file_access(), _("could not change directory to \"%s\": %m"), path);
+        return -1;
       }
       fname = lsep + 1;
     }
     else
     {
-
+      fname = path;
     }
 
     if (lstat(fname, &buf) < 0 || !S_ISLNK(buf.st_mode))
@@ -296,15 +297,15 @@ resolve_symlinks(char *path)
       break;
     }
 
-
-
-
-
-
-
-
-
-
+    errno = 0;
+    rllen = readlink(fname, link_buf, sizeof(link_buf));
+    if (rllen < 0 || rllen >= sizeof(link_buf))
+    {
+      log_error(errcode_for_file_access(), _("could not read symbolic link \"%s\": %m"), fname);
+      return -1;
+    }
+    link_buf[rllen] = '\0';
+    strcpy(path, link_buf);
   }
 
   /* must copy final component out of 'path' temporarily */
@@ -312,16 +313,16 @@ resolve_symlinks(char *path)
 
   if (!getcwd(path, MAXPGPATH))
   {
-
-
+    log_error(errcode_for_file_access(), _("could not identify current directory: %m"));
+    return -1;
   }
   join_path_components(path, path, link_buf);
   canonicalize_path(path);
 
   if (chdir(orig_wd) == -1)
   {
-
-
+    log_error(errcode_for_file_access(), _("could not change directory to \"%s\": %m"), orig_wd);
+    return -1;
   }
 #endif /* HAVE_READLINK */
 
@@ -329,7 +330,8 @@ resolve_symlinks(char *path)
 }
 
 /*
- * Find another program in our binary's directory,* then make sure it is the proper version.
+ * Find another program in our binary's directory,
+ * then make sure it is the proper version.
  */
 int
 find_other_exec(const char *argv0, const char *target, const char *versionstr, char *retpath)
@@ -339,7 +341,7 @@ find_other_exec(const char *argv0, const char *target, const char *versionstr, c
 
   if (find_my_exec(argv0, retpath) < 0)
   {
-
+    return -1;
   }
 
   /* Trim off program name and keep just directory */
@@ -351,19 +353,19 @@ find_other_exec(const char *argv0, const char *target, const char *versionstr, c
 
   if (validate_exec(retpath) != 0)
   {
-
+    return -1;
   }
 
   snprintf(cmd, sizeof(cmd), "\"%s\" -V", retpath);
 
   if (!pipe_read_line(cmd, line, sizeof(line)))
   {
-
+    return -1;
   }
 
   if (strcmp(line, versionstr) != 0)
   {
-
+    return -2;
   }
 
   return 0;
@@ -390,28 +392,28 @@ pipe_read_line(char *cmd, char *line, int maxsize)
   errno = 0;
   if ((pgver = popen(cmd, "r")) == NULL)
   {
-
-
+    perror("popen failure");
+    return NULL;
   }
 
   errno = 0;
   if (fgets(line, maxsize, pgver) == NULL)
   {
-
-
-
-
-
-
-
-
-
-
+    if (feof(pgver))
+    {
+      fprintf(stderr, "no data was returned by command \"%s\"\n", cmd);
+    }
+    else
+    {
+      perror("fgets failure");
+    }
+    pclose(pgver); /* no error checking */
+    return NULL;
   }
 
   if (pclose_check(pgver))
   {
-
+    return NULL;
   }
 
   return line;
@@ -543,28 +545,28 @@ pipe_read_line(char *cmd, char *line, int maxsize)
 int
 pclose_check(FILE *stream)
 {
+  int exitstatus;
+  char *reason;
 
+  exitstatus = pclose(stream);
 
+  if (exitstatus == 0)
+  {
+    return 0; /* all is well */
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (exitstatus == -1)
+  {
+    /* pclose() itself failed, and hopefully set errno */
+    log_error(errcode(ERRCODE_SYSTEM_ERROR), _("pclose failed: %m"));
+  }
+  else
+  {
+    reason = wait_result_to_str(exitstatus);
+    log_error(errcode(ERRCODE_SYSTEM_ERROR), "%s", reason);
+    pfree(reason);
+  }
+  return exitstatus;
 }
 
 /*
@@ -594,16 +596,18 @@ set_pglocale_pgservice(const char *argv0, const char *app)
 
     /*
      * One could make a case for reproducing here PostmasterMain()'s test
-     * for whether the process is multithreaded.  Unlike the postmaster,* no frontend program calls sigprocmask() or otherwise provides for
+     * for whether the process is multithreaded.  Unlike the postmaster,
+     * no frontend program calls sigprocmask() or otherwise provides for
      * mutual exclusion between signal handlers.  While frontends using
      * fork(), if multithreaded, are formally exposed to undefined
-     * behavior, we have not witnessed a concrete bug.  Therefore,* complaining about multithreading here may be mere pedantry.
+     * behavior, we have not witnessed a concrete bug.  Therefore,
+     * complaining about multithreading here may be mere pedantry.
      */
   }
 
   if (find_my_exec(argv0, my_exec_path) < 0)
   {
-
+    return;
   }
 
 #ifdef ENABLE_NLS

@@ -90,8 +90,8 @@ find_inheritance_children(Oid parentrelId, LOCKMODE lockmode)
     inhrelid = ((Form_pg_inherits)GETSTRUCT(inheritsTuple))->inhrelid;
     if (numoids >= maxoids)
     {
-
-
+      maxoids *= 2;
+      oidarr = (Oid *)repalloc(oidarr, maxoids * sizeof(Oid));
     }
     oidarr[numoids++] = inhrelid;
   }
@@ -262,7 +262,7 @@ has_subclass(Oid relationId)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relationId));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", relationId);
   }
 
   result = ((Form_pg_class)GETSTRUCT(tuple))->relhassubclass;
@@ -361,7 +361,7 @@ typeInheritsFrom(Oid subclassTypeId, Oid superclassTypeId)
      */
     if (list_member_oid(visited, this_relid))
     {
-
+      continue;
     }
 
     /*

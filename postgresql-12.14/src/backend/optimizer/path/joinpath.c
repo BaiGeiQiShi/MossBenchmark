@@ -54,11 +54,11 @@ generate_mergejoin_paths(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *inn
 
 /*
  * add_paths_to_joinrel
- *	  Given a join relation and two component rels from which it can be
- *made, consider all possible paths that use the two component rels as outer and
- *inner rel respectively.  Add these paths to the join rel's pathlist if they
- *survive comparison with other paths (and remove any existing paths that are
- *dominated by these paths).
+ *	  Given a join relation and two component rels from which it can be made,
+ *	  consider all possible paths that use the two component rels as outer
+ *	  and inner rel respectively.  Add these paths to the join rel's pathlist
+ *	  if they survive comparison with other paths (and remove any existing
+ *	  paths that are dominated by these paths).
  *
  * Modifies the pathlist field of the joinrel node to contain the best
  * paths found so far.
@@ -121,17 +121,17 @@ add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *outerre
    */
   switch (jointype)
   {
-  case JOIN_SEMI:;
-  case JOIN_ANTI:;
+  case JOIN_SEMI:
+  case JOIN_ANTI:
     extra.inner_unique = false; /* well, unproven */
     break;
-  case JOIN_UNIQUE_INNER:;
+  case JOIN_UNIQUE_INNER:
     extra.inner_unique = bms_is_subset(sjinfo->min_lefthand, outerrel->relids);
     break;
-  case JOIN_UNIQUE_OUTER:;
+  case JOIN_UNIQUE_OUTER:
     extra.inner_unique = innerrel_is_unique(root, joinrel->relids, outerrel->relids, innerrel, JOIN_INNER, restrictlist, false);
     break;
-  default:;;
+  default:
     extra.inner_unique = innerrel_is_unique(root, joinrel->relids, outerrel->relids, innerrel, jointype, restrictlist, false);
     break;
   }
@@ -257,7 +257,7 @@ add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *outerre
    */
   if (joinrel->fdwroutine && joinrel->fdwroutine->GetForeignJoinPaths)
   {
-
+    joinrel->fdwroutine->GetForeignJoinPaths(root, joinrel, outerrel, innerrel, jointype, &extra);
   }
 
   /*
@@ -265,7 +265,7 @@ add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *outerre
    */
   if (set_join_pathlist_hook)
   {
-
+    set_join_pathlist_hook(root, joinrel, outerrel, innerrel, jointype, &extra);
   }
 }
 
@@ -376,8 +376,8 @@ try_nestloop_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_path, Path
        */
       if (!inner_path)
       {
-
-
+        bms_free(required_outer);
+        return;
       }
     }
 
@@ -392,8 +392,8 @@ try_nestloop_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_path, Path
 
 /*
  * try_partial_nestloop_path
- *	  Consider a partial nestloop join path; if it appears useful, push it
- *into the joinrel's partial_pathlist via add_partial_path().
+ *	  Consider a partial nestloop join path; if it appears useful, push it into
+ *	  the joinrel's partial_pathlist via add_partial_path().
  */
 static void
 try_partial_nestloop_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_path, Path *inner_path, List *pathkeys, JoinType jointype, JoinPathExtraData *extra)
@@ -456,7 +456,7 @@ try_partial_nestloop_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_pa
      */
     if (!inner_path)
     {
-
+      return;
     }
   }
 
@@ -540,10 +540,10 @@ try_partial_mergejoin_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_p
   {
     Relids inner_paramrels = inner_path->param_info->ppi_req_outer;
 
-
-
-
-
+    if (!bms_is_empty(inner_paramrels))
+    {
+      return;
+    }
   }
 
   /*
@@ -616,12 +616,12 @@ try_hashjoin_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_path, Path
 
 /*
  * try_partial_hashjoin_path
- *	  Consider a partial hashjoin join path; if it appears useful, push it
- *into the joinrel's partial_pathlist via add_partial_path(). The outer side is
- *partial.  If parallel_hash is true, then the inner path must be partial and
- *will be run in parallel to create one or more shared hash tables; otherwise
- *the inner path must be complete and a copy of it is run in every process to
- *create separate identical private hash tables.
+ *	  Consider a partial hashjoin join path; if it appears useful, push it into
+ *	  the joinrel's partial_pathlist via add_partial_path().
+ *	  The outer side is partial.  If parallel_hash is true, then the inner path
+ *	  must be partial and will be run in parallel to create one or more shared
+ *	  hash tables; otherwise the inner path must be complete and a copy of it
+ *	  is run in every process to create separate identical private hash tables.
  */
 static void
 try_partial_hashjoin_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_path, Path *inner_path, List *hashclauses, JoinType jointype, JoinPathExtraData *extra, bool parallel_hash)
@@ -639,10 +639,10 @@ try_partial_hashjoin_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_pa
   {
     Relids inner_paramrels = inner_path->param_info->ppi_req_outer;
 
-
-
-
-
+    if (!bms_is_empty(inner_paramrels))
+    {
+      return;
+    }
   }
 
   /*
@@ -661,8 +661,7 @@ try_partial_hashjoin_path(PlannerInfo *root, RelOptInfo *joinrel, Path *outer_pa
 
 /*
  * clause_sides_match_join
- *	  Determine whether a join clause is of the right form to use in this
- *join.
+ *	  Determine whether a join clause is of the right form to use in this join.
  *
  * We already know that the clause is a binary opclause referencing only the
  * rels in the current join.  The point here is to check whether it has the
@@ -902,9 +901,7 @@ generate_mergejoin_paths(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *inn
   if (mergeclauses == NIL)
   {
     if (jointype == JOIN_FULL)
-    {
       /* okay to try for mergejoin */;
-    }
     else
     {
       return;
@@ -1024,15 +1021,15 @@ generate_mergejoin_paths(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *inn
          */
         if (newclauses == NIL)
         {
-
-
-
-
-
-
-
-
-
+          if (sortkeycnt < num_sortkeys)
+          {
+            newclauses = trim_mergeclauses_for_inner_pathkeys(root, mergeclauses, trialsortkeys);
+            Assert(newclauses != NIL);
+          }
+          else
+          {
+            newclauses = mergeclauses;
+          }
         }
         try_mergejoin_path(root, joinrel, outerpath, innerpath, merge_pathkeys, newclauses, NIL, NIL, jointype, extra, is_partial);
       }
@@ -1091,29 +1088,29 @@ match_unsorted_outer(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *outerre
    */
   switch (jointype)
   {
-  case JOIN_INNER:;
-  case JOIN_LEFT:;
-  case JOIN_SEMI:;
-  case JOIN_ANTI:;
+  case JOIN_INNER:
+  case JOIN_LEFT:
+  case JOIN_SEMI:
+  case JOIN_ANTI:
     nestjoinOK = true;
     useallclauses = false;
     break;
-  case JOIN_RIGHT:;
-  case JOIN_FULL:;
+  case JOIN_RIGHT:
+  case JOIN_FULL:
     nestjoinOK = false;
     useallclauses = true;
     break;
-  case JOIN_UNIQUE_OUTER:;
-  case JOIN_UNIQUE_INNER:;
+  case JOIN_UNIQUE_OUTER:
+  case JOIN_UNIQUE_INNER:
     jointype = JOIN_INNER;
     nestjoinOK = true;
     useallclauses = false;
     break;
-  default:;;
-
-
-
-
+  default:
+    elog(ERROR, "unrecognized join type: %d", (int)jointype);
+    nestjoinOK = false; /* keep compiler quiet */
+    useallclauses = false;
+    break;
   }
 
   /*
@@ -1135,7 +1132,7 @@ match_unsorted_outer(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *outerre
     /* No way to do this with an inner path parameterized by outer rel */
     if (inner_cheapest_total == NULL)
     {
-
+      return;
     }
     inner_cheapest_total = (Path *)create_unique_path(root, innerrel, inner_cheapest_total, extra->sjinfo);
     Assert(inner_cheapest_total);
@@ -1308,8 +1305,8 @@ consider_parallel_mergejoin(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *
 
 /*
  * consider_parallel_nestloop
- *	  Try to build partial paths for a joinrel by joining a partial path for
- *the outer relation to a complete path for the inner relation.
+ *	  Try to build partial paths for a joinrel by joining a partial path for the
+ *	  outer relation to a complete path for the inner relation.
  *
  * 'joinrel' is the join relation
  * 'outerrel' is the outer join relation
@@ -1688,11 +1685,11 @@ select_mergejoin_clauses(PlannerInfo *root, RelOptInfo *joinrel, RelOptInfo *out
    */
   switch (jointype)
   {
-  case JOIN_RIGHT:;
-  case JOIN_FULL:;
+  case JOIN_RIGHT:
+  case JOIN_FULL:
     *mergejoin_allowed = !have_nonmergeable_joinclause;
     break;
-  default:;;
+  default:
     *mergejoin_allowed = true;
     break;
   }

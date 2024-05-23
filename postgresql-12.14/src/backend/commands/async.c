@@ -20,48 +20,47 @@
  *	  parts of the code.)
  *
  * 2. There is one central queue in disk-based storage (directory pg_notify/),
- *	  with actively-used pages mapped into shared memory by the slru.c
- *module. All notification messages are placed in the queue and later read out
+ *	  with actively-used pages mapped into shared memory by the slru.c module.
+ *	  All notification messages are placed in the queue and later read out
  *	  by listening backends.
  *
- *	  There is no central knowledge of which backend listens on which
- *channel; every backend has its own list of interesting channels.
+ *	  There is no central knowledge of which backend listens on which channel;
+ *	  every backend has its own list of interesting channels.
  *
  *	  Although there is only one queue, notifications are treated as being
  *	  database-local; this is done by including the sender's database OID
  *	  in each notification message.  Listening backends ignore messages
  *	  that don't match their database OID.  This is important because it
- *	  ensures senders and receivers have the same database encoding and
- *won't misinterpret non-ASCII text in the channel name or payload string.
+ *	  ensures senders and receivers have the same database encoding and won't
+ *	  misinterpret non-ASCII text in the channel name or payload string.
  *
  *	  Since notifications are not expected to survive database crashes,
  *	  we can simply clean out the pg_notify data at any reboot, and there
  *	  is no need for WAL support or fsync'ing.
  *
  * 3. Every backend that is listening on at least one channel registers by
- *	  entering its PID into the array in AsyncQueueControl. It then scans
- *all incoming notifications in the central queue and first compares the
+ *	  entering its PID into the array in AsyncQueueControl. It then scans all
+ *	  incoming notifications in the central queue and first compares the
  *	  database OID of the notification with its own database OID and then
- *	  compares the notified channel with the list of channels that it
- *listens to. In case there is a match it delivers the notification event to its
+ *	  compares the notified channel with the list of channels that it listens
+ *	  to. In case there is a match it delivers the notification event to its
  *	  frontend.  Non-matching events are simply skipped.
  *
  * 4. The NOTIFY statement (routine Async_Notify) stores the notification in
- *	  a backend-local list which will not be processed until transaction
- *end.
+ *	  a backend-local list which will not be processed until transaction end.
  *
  *	  Duplicate notifications from the same transaction are sent out as one
- *	  notification only. This is done to save work when for example a
- *trigger on a 2 million row table fires a notification for each row that has
- *been changed. If the application needs to receive every single notification
- *	  that has been sent, it can easily add some unique string into the
- *extra payload parameter.
+ *	  notification only. This is done to save work when for example a trigger
+ *	  on a 2 million row table fires a notification for each row that has been
+ *	  changed. If the application needs to receive every single notification
+ *	  that has been sent, it can easily add some unique string into the extra
+ *	  payload parameter.
  *
  *	  When the transaction is ready to commit, PreCommit_Notify() adds the
- *	  pending notifications to the head of the queue. The head pointer of
- *the queue always points to the next free position and a position is just a
- *	  page number and the offset in that page. This is done before marking
- *the transaction as committed in clog. If we run into problems writing the
+ *	  pending notifications to the head of the queue. The head pointer of the
+ *	  queue always points to the next free position and a position is just a
+ *	  page number and the offset in that page. This is done before marking the
+ *	  transaction as committed in clog. If we run into problems writing the
  *	  notifications, we can still call elog(ERROR, ...) and the transaction
  *	  will roll back.
  *
@@ -69,35 +68,34 @@
  *	  CommitTransaction() which will then do the actual transaction commit.
  *
  *	  After commit we are called another time (AtCommit_Notify()). Here we
- *	  make the actual updates to the effective listen state
- *(listenChannels).
+ *	  make the actual updates to the effective listen state (listenChannels).
  *
  *	  Finally, after we are out of the transaction altogether, we check if
  *	  we need to signal listening backends.  In SignalBackends() we scan the
  *	  list of listening backends and send a PROCSIG_NOTIFY_INTERRUPT signal
- *	  to every listening backend (we don't know which backend is listening
- *on which channel so we must signal them all). We can exclude backends that are
- *already up to date, though.  We don't bother with a self-signal either, but
- *just process the queue directly.
+ *	  to every listening backend (we don't know which backend is listening on
+ *	  which channel so we must signal them all). We can exclude backends that
+ *	  are already up to date, though.  We don't bother with a self-signal
+ *	  either, but just process the queue directly.
  *
  * 5. Upon receipt of a PROCSIG_NOTIFY_INTERRUPT signal, the signal handler
  *	  sets the process's latch, which triggers the event to be processed
- *	  immediately if this backend is idle (i.e., it is waiting for a
- *frontend command and is not within a transaction block. C.f.
+ *	  immediately if this backend is idle (i.e., it is waiting for a frontend
+ *	  command and is not within a transaction block. C.f.
  *	  ProcessClientReadInterrupt()).  Otherwise the handler may only set a
  *	  flag, which will cause the processing to occur just before we next go
  *	  idle.
  *
  *	  Inbound-notify processing consists of reading all of the notifications
  *	  that have arrived since scanning last time. We read every notification
- *	  until we reach either a notification from an uncommitted transaction
- *or the head pointer's position. Then we check if we were the laziest backend:
- *if our pointer is set to the same position as the global tail pointer is set,
- *then we move the global tail pointer ahead to where the second-laziest backend
- *is (in general, we take the MIN of the current head position and all active
- *backends' new tail pointers). Whenever we move the global tail pointer we also
- *truncate now-unused pages (i.e., delete files in pg_notify/ that are no longer
- *used).
+ *	  until we reach either a notification from an uncommitted transaction or
+ *	  the head pointer's position. Then we check if we were the laziest
+ *	  backend: if our pointer is set to the same position as the global tail
+ *	  pointer is set, then we move the global tail pointer ahead to where the
+ *	  second-laziest backend is (in general, we take the MIN of the current
+ *	  head position and all active backends' new tail pointers). Whenever we
+ *	  move the global tail pointer we also truncate now-unused pages (i.e.,
+ *	  delete files in pg_notify/ that are no longer used).
  *
  * An application that listens on the same channel it notifies will get
  * NOTIFY messages for its own NOTIFYs.  These can be ignored, if not useful,
@@ -642,8 +640,8 @@ Async_Notify(const char *channel, const char *payload)
  *		Common code for listen, unlisten, unlisten all commands.
  *
  *		Adds the request to the list of pending actions.
- *		Actual update of the listenChannels list happens during
- *transaction commit.
+ *		Actual update of the listenChannels list happens during transaction
+ *		commit.
  */
 static void
 queue_listen(ListenActionKind action, const char *channel)
@@ -809,16 +807,17 @@ AtPrepare_Notify(void)
 /*
  * PreCommit_Notify
  *
- *		This is called at transaction commit, before actually committing
- *to clog.
+ *		This is called at transaction commit, before actually committing to
+ *		clog.
  *
- *		If there are pending LISTEN actions, make sure we are listed in
- *the shared-memory listener array.  This must happen before commit to ensure we
- *don't miss any notifies from transactions that commit just after ours.
+ *		If there are pending LISTEN actions, make sure we are listed in the
+ *		shared-memory listener array.  This must happen before commit to
+ *		ensure we don't miss any notifies from transactions that commit
+ *		just after ours.
  *
- *		If there are outbound notify requests in the pendingNotifies
- *list, add them to the global queue.  We do that before commit so that we can
- *still throw error if we run out of queue space.
+ *		If there are outbound notify requests in the pendingNotifies list,
+ *		add them to the global queue.  We do that before commit so that
+ *		we can still throw error if we run out of queue space.
  */
 void
 PreCommit_Notify(void)
@@ -1269,8 +1268,8 @@ asyncQueueUnregister(void)
 
   Assert(listenChannels == NIL); /* else caller error */
 
-  if (!amRegisteredListener)
-  { /* nothing to do */
+  if (!amRegisteredListener) /* nothing to do */
+  {
     return;
   }
 
@@ -1786,10 +1785,10 @@ AtSubAbort_Notify(void)
 /*
  * HandleNotifyInterrupt
  *
- *		Signal handler portion of interrupt handling. Let the backend
- *know that there's a pending notify interrupt. If we're currently reading from
- *the client, this will interrupt the read and ProcessClientReadInterrupt() will
- *call ProcessNotifyInterrupt().
+ *		Signal handler portion of interrupt handling. Let the backend know
+ *		that there's a pending notify interrupt. If we're currently reading
+ *		from the client, this will interrupt the read and
+ *		ProcessClientReadInterrupt() will call ProcessNotifyInterrupt().
  */
 void
 HandleNotifyInterrupt(void)
@@ -1880,8 +1879,11 @@ asyncQueueReadAllNotifications(void)
    * transaction starts
    * NOTIFY foo;
    * commit starts
-   *								 transaction
-   *starts LISTEN foo; commit starts commit to clog commit to clog
+   *								 transaction starts
+   *								 LISTEN foo;
+   *								 commit starts
+   * commit to clog
+   *								 commit to clog
    *
    * It could happen that backend 2 sees the notification from backend 1 in
    * the queue.  Even though the notifying transaction committed before
@@ -2169,15 +2171,14 @@ asyncQueueAdvanceTail(void)
 /*
  * ProcessIncomingNotify
  *
- *		Deal with arriving NOTIFYs from other backends as soon as it's
- *safe to do so. This used to be called from the PROCSIG_NOTIFY_INTERRUPT signal
- *handler, but isn't anymore.
+ *		Deal with arriving NOTIFYs from other backends as soon as it's safe to
+ *		do so. This used to be called from the PROCSIG_NOTIFY_INTERRUPT
+ *		signal handler, but isn't anymore.
  *
- *		Scan the queue for arriving notifications and report them to my
- *front end.
+ *		Scan the queue for arriving notifications and report them to my front
+ *		end.
  *
- *		NOTE: since we are outside any transaction, we must create our
- *own.
+ *		NOTE: since we are outside any transaction, we must create our own.
  */
 static void
 ProcessIncomingNotify(void)

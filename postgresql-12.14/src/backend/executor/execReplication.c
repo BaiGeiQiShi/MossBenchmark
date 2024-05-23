@@ -48,57 +48,57 @@
 static bool
 build_replindex_scan_key(ScanKey skey, Relation rel, Relation idxrel, TupleTableSlot *searchslot)
 {
+  int attoff;
+  bool isnull;
+  Datum indclassDatum;
+  oidvector *opclass;
+  int2vector *indkey = &idxrel->rd_index->indkey;
+  bool hasnulls = false;
 
+  Assert(RelationGetReplicaIndex(rel) == RelationGetRelid(idxrel) || RelationGetPrimaryKeyIndex(rel) == RelationGetRelid(idxrel));
 
+  indclassDatum = SysCacheGetAttr(INDEXRELID, idxrel->rd_indextuple, Anum_pg_index_indclass, &isnull);
+  Assert(!isnull);
+  opclass = (oidvector *)DatumGetPointer(indclassDatum);
 
+  /* Build scankey for every attribute in the index. */
+  for (attoff = 0; attoff < IndexRelationGetNumberOfKeyAttributes(idxrel); attoff++)
+  {
+    Oid operator;
+    Oid opfamily;
+    RegProcedure regop;
+    int pkattno = attoff + 1;
+    int mainattno = indkey->values[attoff];
+    Oid optype = get_opclass_input_type(opclass->values[attoff]);
 
+    /*
+     * Load the operator info.  We need this to get the equality operator
+     * function for the scan key.
+     */
+    opfamily = get_opclass_family(opclass->values[attoff]);
 
+    operator= get_opfamily_member(opfamily, optype, optype, BTEqualStrategyNumber);
+    if (!OidIsValid(operator))
+    {
+      elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", BTEqualStrategyNumber, optype, optype, opfamily);
+    }
 
+    regop = get_opcode(operator);
 
+    /* Initialize the scankey. */
+    ScanKeyInit(&skey[attoff], pkattno, BTEqualStrategyNumber, regop, searchslot->tts_values[mainattno - 1]);
 
+    skey[attoff].sk_collation = idxrel->rd_indcollation[attoff];
 
+    /* Check for null value. */
+    if (searchslot->tts_isnull[mainattno - 1])
+    {
+      hasnulls = true;
+      skey[attoff].sk_flags |= SK_ISNULL;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return hasnulls;
 }
 
 /*
@@ -110,93 +110,93 @@ build_replindex_scan_key(ScanKey skey, Relation rel, Relation idxrel, TupleTable
 bool
 RelationFindReplTupleByIndex(Relation rel, Oid idxoid, LockTupleMode lockmode, TupleTableSlot *searchslot, TupleTableSlot *outslot)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ScanKeyData skey[INDEX_MAX_KEYS];
+  IndexScanDesc scan;
+  SnapshotData snap;
+  TransactionId xwait;
+  Relation idxrel;
+  bool found;
+
+  /* Open the index. */
+  idxrel = index_open(idxoid, RowExclusiveLock);
+
+  /* Start an index scan. */
+  InitDirtySnapshot(snap);
+  scan = index_beginscan(rel, idxrel, &snap, IndexRelationGetNumberOfKeyAttributes(idxrel), 0);
+
+  /* Build scan key. */
+  build_replindex_scan_key(skey, rel, idxrel, searchslot);
+
+retry:
+  found = false;
+
+  index_rescan(scan, skey, IndexRelationGetNumberOfKeyAttributes(idxrel), NULL, 0);
+
+  /* Try to find the tuple */
+  if (index_getnext_slot(scan, ForwardScanDirection, outslot))
+  {
+    found = true;
+    ExecMaterializeSlot(outslot);
+
+    xwait = TransactionIdIsValid(snap.xmin) ? snap.xmin : snap.xmax;
+
+    /*
+     * If the tuple is locked, wait for locking transaction to finish and
+     * retry.
+     */
+    if (TransactionIdIsValid(xwait))
+    {
+      XactLockTableWait(xwait, NULL, NULL, XLTW_None);
+      goto retry;
+    }
+  }
+
+  /* Found tuple, try to lock it in the lockmode. */
+  if (found)
+  {
+    TM_FailureData tmfd;
+    TM_Result res;
+
+    PushActiveSnapshot(GetLatestSnapshot());
+
+    res = table_tuple_lock(rel, &(outslot->tts_tid), GetLatestSnapshot(), outslot, GetCurrentCommandId(false), lockmode, LockWaitBlock, 0 /* don't follow updates */, &tmfd);
+
+    PopActiveSnapshot();
+
+    switch (res)
+    {
+    case TM_Ok:
+      break;
+    case TM_Updated:
+      /* XXX: Improve handling here */
+      if (ItemPointerIndicatesMovedPartitions(&tmfd.ctid))
+      {
+        ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("tuple to be locked was already moved to another partition due to concurrent update, retrying")));
+      }
+      else
+      {
+        ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("concurrent update, retrying")));
+      }
+      goto retry;
+    case TM_Deleted:
+      /* XXX: Improve handling here */
+      ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("concurrent delete, retrying")));
+      goto retry;
+    case TM_Invisible:
+      elog(ERROR, "attempted to lock invisible tuple");
+      break;
+    default:
+      elog(ERROR, "unexpected table_tuple_lock status: %u", res);
+      break;
+    }
+  }
+
+  index_endscan(scan);
+
+  /* Don't release lock until commit. */
+  index_close(idxrel, NoLock);
+
+  return found;
 }
 
 /*
@@ -205,51 +205,51 @@ RelationFindReplTupleByIndex(Relation rel, Oid idxoid, LockTupleMode lockmode, T
 static bool
 tuples_equal(TupleTableSlot *slot1, TupleTableSlot *slot2)
 {
+  int attrnum;
 
+  Assert(slot1->tts_tupleDescriptor->natts == slot2->tts_tupleDescriptor->natts);
 
+  slot_getallattrs(slot1);
+  slot_getallattrs(slot2);
 
+  /* Check equality of the attributes. */
+  for (attrnum = 0; attrnum < slot1->tts_tupleDescriptor->natts; attrnum++)
+  {
+    Form_pg_attribute att;
+    TypeCacheEntry *typentry;
 
+    /*
+     * If one value is NULL and other is not, then they are certainly not
+     * equal
+     */
+    if (slot1->tts_isnull[attrnum] != slot2->tts_isnull[attrnum])
+    {
+      return false;
+    }
 
+    /*
+     * If both are NULL, they can be considered equal.
+     */
+    if (slot1->tts_isnull[attrnum] || slot2->tts_isnull[attrnum])
+    {
+      continue;
+    }
 
+    att = TupleDescAttr(slot1->tts_tupleDescriptor, attrnum);
 
+    typentry = lookup_type_cache(att->atttypid, TYPECACHE_EQ_OPR_FINFO);
+    if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify an equality operator for type %s", format_type_be(att->atttypid))));
+    }
 
+    if (!DatumGetBool(FunctionCall2Coll(&typentry->eq_opr_finfo, att->attcollation, slot1->tts_values[attrnum], slot2->tts_values[attrnum])))
+    {
+      return false;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return true;
 }
 
 /*
@@ -265,96 +265,96 @@ tuples_equal(TupleTableSlot *slot1, TupleTableSlot *slot2)
 bool
 RelationFindReplTupleSeq(Relation rel, LockTupleMode lockmode, TupleTableSlot *searchslot, TupleTableSlot *outslot)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  TupleTableSlot *scanslot;
+  TableScanDesc scan;
+  SnapshotData snap;
+  TransactionId xwait;
+  bool found;
+  TupleDesc desc PG_USED_FOR_ASSERTS_ONLY = RelationGetDescr(rel);
+
+  Assert(equalTupleDescs(desc, outslot->tts_tupleDescriptor));
+
+  /* Start a heap scan. */
+  InitDirtySnapshot(snap);
+  scan = table_beginscan(rel, &snap, 0, NULL);
+  scanslot = table_slot_create(rel, NULL);
+
+retry:
+  found = false;
+
+  table_rescan(scan, NULL);
+
+  /* Try to find the tuple */
+  while (table_scan_getnextslot(scan, ForwardScanDirection, scanslot))
+  {
+    if (!tuples_equal(scanslot, searchslot))
+    {
+      continue;
+    }
+
+    found = true;
+    ExecCopySlot(outslot, scanslot);
+
+    xwait = TransactionIdIsValid(snap.xmin) ? snap.xmin : snap.xmax;
+
+    /*
+     * If the tuple is locked, wait for locking transaction to finish and
+     * retry.
+     */
+    if (TransactionIdIsValid(xwait))
+    {
+      XactLockTableWait(xwait, NULL, NULL, XLTW_None);
+      goto retry;
+    }
+
+    /* Found our tuple and it's not locked */
+    break;
+  }
+
+  /* Found tuple, try to lock it in the lockmode. */
+  if (found)
+  {
+    TM_FailureData tmfd;
+    TM_Result res;
+
+    PushActiveSnapshot(GetLatestSnapshot());
+
+    res = table_tuple_lock(rel, &(outslot->tts_tid), GetLatestSnapshot(), outslot, GetCurrentCommandId(false), lockmode, LockWaitBlock, 0 /* don't follow updates */, &tmfd);
+
+    PopActiveSnapshot();
+
+    switch (res)
+    {
+    case TM_Ok:
+      break;
+    case TM_Updated:
+      /* XXX: Improve handling here */
+      if (ItemPointerIndicatesMovedPartitions(&tmfd.ctid))
+      {
+        ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("tuple to be locked was already moved to another partition due to concurrent update, retrying")));
+      }
+      else
+      {
+        ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("concurrent update, retrying")));
+      }
+      goto retry;
+    case TM_Deleted:
+      /* XXX: Improve handling here */
+      ereport(LOG, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("concurrent delete, retrying")));
+      goto retry;
+    case TM_Invisible:
+      elog(ERROR, "attempted to lock invisible tuple");
+      break;
+    default:
+      elog(ERROR, "unexpected table_tuple_lock status: %u", res);
+      break;
+    }
+  }
+
+  table_endscan(scan);
+  ExecDropSingleTupleTableSlot(scanslot);
+
+  return found;
 }
 
 /*
@@ -366,63 +366,63 @@ RelationFindReplTupleSeq(Relation rel, LockTupleMode lockmode, TupleTableSlot *s
 void
 ExecSimpleRelationInsert(EState *estate, TupleTableSlot *slot)
 {
+  bool skip_tuple = false;
+  ResultRelInfo *resultRelInfo = estate->es_result_relation_info;
+  Relation rel = resultRelInfo->ri_RelationDesc;
 
+  /* For now we support only tables. */
+  Assert(rel->rd_rel->relkind == RELKIND_RELATION);
 
+  CheckCmdReplicaIdentity(rel, CMD_INSERT);
 
+  /* BEFORE ROW INSERT Triggers */
+  if (resultRelInfo->ri_TrigDesc && resultRelInfo->ri_TrigDesc->trig_insert_before_row)
+  {
+    if (!ExecBRInsertTriggers(estate, resultRelInfo, slot))
+    {
+      skip_tuple = true; /* "do nothing" */
+    }
+  }
 
+  if (!skip_tuple)
+  {
+    List *recheckIndexes = NIL;
 
+    /* Compute stored generated columns */
+    if (rel->rd_att->constr && rel->rd_att->constr->has_generated_stored)
+    {
+      ExecComputeStoredGenerated(estate, slot);
+    }
 
+    /* Check the constraints of the tuple */
+    if (rel->rd_att->constr)
+    {
+      ExecConstraints(resultRelInfo, slot, estate);
+    }
+    if (resultRelInfo->ri_PartitionCheck)
+    {
+      ExecPartitionCheck(resultRelInfo, slot, estate, true);
+    }
 
+    /* OK, store the tuple and create index entries for it */
+    simple_table_tuple_insert(resultRelInfo->ri_RelationDesc, slot);
 
+    if (resultRelInfo->ri_NumIndices > 0)
+    {
+      recheckIndexes = ExecInsertIndexTuples(slot, estate, false, NULL, NIL);
+    }
 
+    /* AFTER ROW INSERT Triggers */
+    ExecARInsertTriggers(estate, resultRelInfo, slot, recheckIndexes, NULL);
 
+    /*
+     * XXX we should in theory pass a TransitionCaptureState object to the
+     * above to capture transition tuples, but after statement triggers
+     * don't actually get fired by replication yet anyway
+     */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    list_free(recheckIndexes);
+  }
 }
 
 /*
@@ -434,58 +434,58 @@ ExecSimpleRelationInsert(EState *estate, TupleTableSlot *slot)
 void
 ExecSimpleRelationUpdate(EState *estate, EPQState *epqstate, TupleTableSlot *searchslot, TupleTableSlot *slot)
 {
+  bool skip_tuple = false;
+  ResultRelInfo *resultRelInfo = estate->es_result_relation_info;
+  Relation rel = resultRelInfo->ri_RelationDesc;
+  ItemPointer tid = &(searchslot->tts_tid);
 
+  /* For now we support only tables. */
+  Assert(rel->rd_rel->relkind == RELKIND_RELATION);
 
+  CheckCmdReplicaIdentity(rel, CMD_UPDATE);
 
+  /* BEFORE ROW UPDATE Triggers */
+  if (resultRelInfo->ri_TrigDesc && resultRelInfo->ri_TrigDesc->trig_update_before_row)
+  {
+    if (!ExecBRUpdateTriggers(estate, epqstate, resultRelInfo, tid, NULL, slot))
+    {
+      skip_tuple = true; /* "do nothing" */
+    }
+  }
 
+  if (!skip_tuple)
+  {
+    List *recheckIndexes = NIL;
+    bool update_indexes;
 
+    /* Compute stored generated columns */
+    if (rel->rd_att->constr && rel->rd_att->constr->has_generated_stored)
+    {
+      ExecComputeStoredGenerated(estate, slot);
+    }
 
+    /* Check the constraints of the tuple */
+    if (rel->rd_att->constr)
+    {
+      ExecConstraints(resultRelInfo, slot, estate);
+    }
+    if (resultRelInfo->ri_PartitionCheck)
+    {
+      ExecPartitionCheck(resultRelInfo, slot, estate, true);
+    }
 
+    simple_table_tuple_update(rel, tid, slot, estate->es_snapshot, &update_indexes);
 
+    if (resultRelInfo->ri_NumIndices > 0 && update_indexes)
+    {
+      recheckIndexes = ExecInsertIndexTuples(slot, estate, false, NULL, NIL);
+    }
 
+    /* AFTER ROW UPDATE Triggers */
+    ExecARUpdateTriggers(estate, resultRelInfo, tid, NULL, slot, recheckIndexes, NULL);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    list_free(recheckIndexes);
+  }
 }
 
 /*
@@ -497,27 +497,27 @@ ExecSimpleRelationUpdate(EState *estate, EPQState *epqstate, TupleTableSlot *sea
 void
 ExecSimpleRelationDelete(EState *estate, EPQState *epqstate, TupleTableSlot *searchslot)
 {
+  bool skip_tuple = false;
+  ResultRelInfo *resultRelInfo = estate->es_result_relation_info;
+  Relation rel = resultRelInfo->ri_RelationDesc;
+  ItemPointer tid = &searchslot->tts_tid;
 
+  CheckCmdReplicaIdentity(rel, CMD_DELETE);
 
+  /* BEFORE ROW DELETE Triggers */
+  if (resultRelInfo->ri_TrigDesc && resultRelInfo->ri_TrigDesc->trig_delete_before_row)
+  {
+    skip_tuple = !ExecBRDeleteTriggers(estate, epqstate, resultRelInfo, tid, NULL, NULL);
+  }
 
+  if (!skip_tuple)
+  {
+    /* OK, delete the tuple */
+    simple_table_tuple_delete(rel, tid, estate->es_snapshot);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /* AFTER ROW DELETE Triggers */
+    ExecARDeleteTriggers(estate, resultRelInfo, tid, NULL, NULL);
+  }
 }
 
 /*
@@ -552,7 +552,7 @@ CheckCmdReplicaIdentity(Relation rel, CmdType cmd)
   }
   else if (cmd == CMD_DELETE && pubactions->pubdelete)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot delete from table \"%s\" because it does not have a replica identity and publishes deletes", RelationGetRelationName(rel)), errhint("To enable deleting from the table, set REPLICA IDENTITY using ALTER TABLE.")));
   }
 }
 
@@ -564,21 +564,21 @@ CheckCmdReplicaIdentity(Relation rel, CmdType cmd)
 void
 CheckSubscriptionRelkind(char relkind, const char *nspname, const char *relname)
 {
+  /*
+   * We currently only support writing to regular tables.  However, give a
+   * more specific error for partitioned and foreign tables.
+   */
+  if (relkind == RELKIND_PARTITIONED_TABLE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot use relation \"%s.%s\" as logical replication target", nspname, relname), errdetail("\"%s.%s\" is a partitioned table.", nspname, relname)));
+  }
+  else if (relkind == RELKIND_FOREIGN_TABLE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot use relation \"%s.%s\" as logical replication target", nspname, relname), errdetail("\"%s.%s\" is a foreign table.", nspname, relname)));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (relkind != RELKIND_RELATION)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot use relation \"%s.%s\" as logical replication target", nspname, relname), errdetail("\"%s.%s\" is not a table.", nspname, relname)));
+  }
 }

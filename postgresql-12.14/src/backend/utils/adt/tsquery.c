@@ -113,26 +113,26 @@ get_modifiers(char *buf, int16 *weight, bool *prefix)
   {
     switch (*buf)
     {
-    case 'a':;
-    case 'A':;
+    case 'a':
+    case 'A':
       *weight |= 1 << 3;
       break;
-    case 'b':;
-    case 'B':;
+    case 'b':
+    case 'B':
       *weight |= 1 << 2;
       break;
-    case 'c':;
-    case 'C':;
+    case 'c':
+    case 'C':
       *weight |= 1 << 1;
       break;
-    case 'd':;
-    case 'D':;
+    case 'd':
+    case 'D':
       *weight |= 1;
       break;
-    case '*':;
+    case '*':
       *prefix = true;
       break;
-    default:;;
+    default:
       return buf;
     }
     buf++;
@@ -168,7 +168,7 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
   {
     switch (state)
     {
-    case PHRASE_OPEN:;
+    case PHRASE_OPEN:
       if (t_iseq(ptr, '<'))
       {
         state = PHRASE_DIST;
@@ -180,7 +180,7 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
       }
       break;
 
-    case PHRASE_DIST:;
+    case PHRASE_DIST:
       if (t_iseq(ptr, '-'))
       {
         state = PHRASE_CLOSE;
@@ -190,18 +190,18 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
 
       if (!t_isdigit(ptr))
       {
-
+        return false;
       }
 
       errno = 0;
       l = strtol(ptr, &endptr, 10);
       if (ptr == endptr)
       {
-
+        return false;
       }
       else if (errno == ERANGE || l < 0 || l > MAXENTRYPOS)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("distance in phrase operator must be an integer value between zero and %d inclusive", MAXENTRYPOS)));
       }
       else
       {
@@ -210,7 +210,7 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
       }
       break;
 
-    case PHRASE_CLOSE:;
+    case PHRASE_CLOSE:
       if (t_iseq(ptr, '>'))
       {
         state = PHRASE_FINISH;
@@ -218,11 +218,11 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
       }
       else
       {
-
+        return false;
       }
       break;
 
-    case PHRASE_FINISH:;
+    case PHRASE_FINISH:
       *distance = (int16)l;
       pstate->buf = ptr;
       return true;
@@ -258,8 +258,8 @@ parse_or_operator(TSQueryParserState pstate)
    * it shouldn't be a part of any word but somewhere later it should be
    * some operand
    */
-  if (*ptr == '\0')
-  { /* no operand */
+  if (*ptr == '\0') /* no operand */
+  {
     return false;
   }
 
@@ -273,8 +273,8 @@ parse_or_operator(TSQueryParserState pstate)
   {
     ptr += pg_mblen(ptr);
 
-    if (*ptr == '\0')
-    { /* got end of string without operand */
+    if (*ptr == '\0') /* got end of string without operand */
+    {
       return false;
     }
 
@@ -303,8 +303,8 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
   {
     switch (state->state)
     {
-    case WAITFIRSTOPERAND:;
-    case WAITOPERAND:;
+    case WAITFIRSTOPERAND:
+    case WAITOPERAND:
       if (t_iseq(state->buf, '!'))
       {
         state->buf++;
@@ -321,7 +321,7 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
       }
       else if (t_iseq(state->buf, ':'))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("syntax error in tsquery: \"%s\"", state->buffer)));
       }
       else if (!t_isspace(state->buf))
       {
@@ -342,12 +342,12 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
         }
         else
         {
-
+          ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("no operand in tsquery: \"%s\"", state->buffer)));
         }
       }
       break;
 
-    case WAITOPERATOR:;
+    case WAITOPERATOR:
       if (t_iseq(state->buf, '&'))
       {
         state->buf++;
@@ -381,7 +381,7 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
       }
       else if (!t_isspace(state->buf))
       {
-
+        return PT_ERR;
       }
       break;
     }
@@ -400,8 +400,8 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
   {
     switch (state->state)
     {
-    case WAITFIRSTOPERAND:;
-    case WAITOPERAND:;
+    case WAITFIRSTOPERAND:
+    case WAITOPERAND:
       if (t_iseq(state->buf, '-'))
       {
         state->buf++;
@@ -463,7 +463,7 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
         }
         else if (state->state == WAITFIRSTOPERAND)
         {
-
+          return PT_END;
         }
         else
         {
@@ -474,7 +474,7 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
       }
       break;
 
-    case WAITOPERATOR:;
+    case WAITOPERATOR:
       if (t_iseq(state->buf, '"'))
       {
         if (!state->in_quotes)
@@ -574,11 +574,11 @@ pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int 
 
   if (distance >= MAXSTRPOS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("value is too big in tsquery: \"%s\"", state->buffer)));
   }
   if (lenval >= MAXSTRLEN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("operand is too long in tsquery: \"%s\"", state->buffer)));
   }
 
   tmp = (QueryOperand *)palloc0(sizeof(QueryOperand));
@@ -605,7 +605,7 @@ pushValue(TSQueryParserState state, char *strval, int lenval, int16 weight, bool
 
   if (lenval >= MAXSTRLEN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("word is too long in tsquery: \"%s\"", state->buffer)));
   }
 
   INIT_LEGACY_CRC32(valcrc);
@@ -618,9 +618,9 @@ pushValue(TSQueryParserState state, char *strval, int lenval, int16 weight, bool
   {
     int used = state->curop - state->op;
 
-
-
-
+    state->lenop *= 2;
+    state->op = (char *)repalloc((void *)state->op, state->lenop);
+    state->curop = state->op + used;
   }
   memcpy((void *)state->curop, (void *)strval, lenval);
   state->curop += lenval;
@@ -654,9 +654,9 @@ typedef struct OperatorElement
 static void
 pushOpStack(OperatorElement *stack, int *lenstack, int8 op, int16 distance)
 {
-  if (*lenstack == STACKDEPTH)
-  { /* internal error */
-
+  if (*lenstack == STACKDEPTH) /* internal error */
+  {
+    elog(ERROR, "tsquery stack too small");
   }
 
   stack[*lenstack].op = op;
@@ -707,22 +707,22 @@ makepol(TSQueryParserState state, PushFunction pushval, Datum opaque)
   {
     switch (type)
     {
-    case PT_VAL:;
+    case PT_VAL:
       pushval(opaque, state, strval, lenval, weight, prefix);
       break;
-    case PT_OPR:;
+    case PT_OPR:
       cleanOpStack(state, opstack, &lenstack, operator);
       pushOpStack(opstack, &lenstack, operator, weight);
       break;
-    case PT_OPEN:;
+    case PT_OPEN:
       makepol(state, pushval, opaque);
       break;
-    case PT_CLOSE:;
+    case PT_CLOSE:
       cleanOpStack(state, opstack, &lenstack, OP_OR /* lowest */);
       return;
-    case PT_ERR:;
-    default:;;
-
+    case PT_ERR:
+    default:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("syntax error in tsquery: \"%s\"", state->buffer)));
     }
   }
 
@@ -737,7 +737,7 @@ findoprnd_recurse(QueryItem *ptr, uint32 *pos, int nnodes, bool *needcleanup)
 
   if (*pos >= nnodes)
   {
-
+    elog(ERROR, "malformed tsquery: operand not found");
   }
 
   if (ptr[*pos].type == QI_VAL)
@@ -797,7 +797,7 @@ findoprnd(QueryItem *ptr, int size, bool *needcleanup)
 
   if (pos != size)
   {
-
+    elog(ERROR, "malformed tsquery: extra nodes");
   }
 }
 
@@ -875,7 +875,7 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
 
   if (TSQUERY_TOO_BIG(list_length(state.polstr), state.sumlen))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("tsquery is too large")));
   }
   commonlen = COMPUTESIZE(list_length(state.polstr), state.sumlen);
 
@@ -893,17 +893,17 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
 
     switch (item->type)
     {
-    case QI_VAL:;
+    case QI_VAL:
       memcpy(&ptr[i], item, sizeof(QueryOperand));
       break;
-    case QI_VALSTOP:;
+    case QI_VALSTOP:
       ptr[i].type = QI_VALSTOP;
       break;
-    case QI_OPR:;
+    case QI_OPR:
       memcpy(&ptr[i], item, sizeof(QueryOperator));
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized QueryItem type: %d", item->type);
     }
     i++;
   }
@@ -1046,9 +1046,9 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
 
     if (priority < parentPriority)
     {
-
-
-
+      RESIZEBUF(in, 2);
+      sprintf(in->cur, "( ");
+      in->cur = strchr(in->cur, '\0');
     }
     RESIZEBUF(in, 1);
     *(in->cur) = '!';
@@ -1059,9 +1059,9 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
     infix(in, priority, false);
     if (priority < parentPriority)
     {
-
-
-
+      RESIZEBUF(in, 2);
+      sprintf(in->cur, " )");
+      in->cur = strchr(in->cur, '\0');
     }
   }
   else
@@ -1099,13 +1099,13 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
     RESIZEBUF(in, 3 + (2 + 10 /* distance */) + (nrm.cur - nrm.buf));
     switch (op)
     {
-    case OP_OR:;
+    case OP_OR:
       sprintf(in->cur, " | %s", nrm.buf);
       break;
-    case OP_AND:;
+    case OP_AND:
       sprintf(in->cur, " & %s", nrm.buf);
       break;
-    case OP_PHRASE:;
+    case OP_PHRASE:
       if (distance != 1)
       {
         sprintf(in->cur, " <%d> %s", distance, nrm.buf);
@@ -1115,9 +1115,9 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
         sprintf(in->cur, " <-> %s", nrm.buf);
       }
       break;
-    default:;;
+    default:
       /* OP_NOT is handled in above if-branch */
-
+      elog(ERROR, "unrecognized operator type: %d", op);
     }
     in->cur = strchr(in->cur, '\0');
     pfree(nrm.buf);
@@ -1176,187 +1176,187 @@ tsqueryout(PG_FUNCTION_ARGS)
 Datum
 tsquerysend(PG_FUNCTION_ARGS)
 {
+  TSQuery query = PG_GETARG_TSQUERY(0);
+  StringInfoData buf;
+  int i;
+  QueryItem *item = GETQUERY(query);
 
+  pq_begintypsend(&buf);
 
+  pq_sendint32(&buf, query->size);
+  for (i = 0; i < query->size; i++)
+  {
+    pq_sendint8(&buf, item->type);
 
+    switch (item->type)
+    {
+    case QI_VAL:
+      pq_sendint8(&buf, item->qoperand.weight);
+      pq_sendint8(&buf, item->qoperand.prefix);
+      pq_sendstring(&buf, GETOPERAND(query) + item->qoperand.distance);
+      break;
+    case QI_OPR:
+      pq_sendint8(&buf, item->qoperator.oper);
+      if (item->qoperator.oper == OP_PHRASE)
+      {
+        pq_sendint16(&buf, item->qoperator.distance);
+      }
+      break;
+    default:
+      elog(ERROR, "unrecognized tsquery node type: %d", item->type);
+    }
+    item++;
+  }
 
+  PG_FREE_IF_COPY(query, 0);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 Datum
 tsqueryrecv(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  TSQuery query;
+  int i, len;
+  QueryItem *item;
+  int datalen;
+  char *ptr;
+  uint32 size;
+  const char **operands;
+  bool needcleanup;
+
+  size = pq_getmsgint(buf, sizeof(uint32));
+  if (size > (MaxAllocSize / sizeof(QueryItem)))
+  {
+    elog(ERROR, "invalid size of tsquery");
+  }
+
+  /* Allocate space to temporarily hold operand strings */
+  operands = palloc(size * sizeof(char *));
+
+  /* Allocate space for all the QueryItems. */
+  len = HDRSIZETQ + sizeof(QueryItem) * size;
+  query = (TSQuery)palloc0(len);
+  query->size = size;
+  item = GETQUERY(query);
+
+  datalen = 0;
+  for (i = 0; i < size; i++)
+  {
+    item->type = (int8)pq_getmsgint(buf, sizeof(int8));
+
+    if (item->type == QI_VAL)
+    {
+      size_t val_len; /* length after recoding to server
+                       * encoding */
+      uint8 weight;
+      uint8 prefix;
+      const char *val;
+      pg_crc32 valcrc;
+
+      weight = (uint8)pq_getmsgint(buf, sizeof(uint8));
+      prefix = (uint8)pq_getmsgint(buf, sizeof(uint8));
+      val = pq_getmsgstring(buf);
+      val_len = strlen(val);
+
+      /* Sanity checks */
+
+      if (weight > 0xF)
+      {
+        elog(ERROR, "invalid tsquery: invalid weight bitmap");
+      }
+
+      if (val_len > MAXSTRLEN)
+      {
+        elog(ERROR, "invalid tsquery: operand too long");
+      }
+
+      if (datalen > MAXSTRPOS)
+      {
+        elog(ERROR, "invalid tsquery: total operand length exceeded");
+      }
+
+      /* Looks valid. */
+
+      INIT_LEGACY_CRC32(valcrc);
+      COMP_LEGACY_CRC32(valcrc, val, val_len);
+      FIN_LEGACY_CRC32(valcrc);
+
+      item->qoperand.weight = weight;
+      item->qoperand.prefix = (prefix) ? true : false;
+      item->qoperand.valcrc = (int32)valcrc;
+      item->qoperand.length = val_len;
+      item->qoperand.distance = datalen;
+
+      /*
+       * Operand strings are copied to the final struct after this loop;
+       * here we just collect them to an array
+       */
+      operands[i] = val;
+
+      datalen += val_len + 1; /* + 1 for the '\0' terminator */
+    }
+    else if (item->type == QI_OPR)
+    {
+      int8 oper;
+
+      oper = (int8)pq_getmsgint(buf, sizeof(int8));
+      if (oper != OP_NOT && oper != OP_OR && oper != OP_AND && oper != OP_PHRASE)
+      {
+        elog(ERROR, "invalid tsquery: unrecognized operator type %d", (int)oper);
+      }
+      if (i == size - 1)
+      {
+        elog(ERROR, "invalid pointer to right operand");
+      }
+
+      item->qoperator.oper = oper;
+      if (oper == OP_PHRASE)
+      {
+        item->qoperator.distance = (int16)pq_getmsgint(buf, sizeof(int16));
+      }
+    }
+    else
+    {
+      elog(ERROR, "unrecognized tsquery node type: %d", item->type);
+    }
+
+    item++;
+  }
+
+  /* Enlarge buffer to make room for the operand values. */
+  query = (TSQuery)repalloc(query, len + datalen);
+  item = GETQUERY(query);
+  ptr = GETOPERAND(query);
+
+  /*
+   * Fill in the left-pointers. Checks that the tree is well-formed as a
+   * side-effect.
+   */
+  findoprnd(item, size, &needcleanup);
+
+  /* Can't have found any QI_VALSTOP nodes */
+  Assert(!needcleanup);
+
+  /* Copy operands to output struct */
+  for (i = 0; i < size; i++)
+  {
+    if (item->type == QI_VAL)
+    {
+      memcpy(ptr, operands[i], item->qoperand.length + 1);
+      ptr += item->qoperand.length + 1;
+    }
+    item++;
+  }
+
+  pfree(operands);
+
+  Assert(ptr - GETOPERAND(query) == datalen);
+
+  SET_VARSIZE(query, len + datalen);
+
+  PG_RETURN_TSQUERY(query);
 }
 
 /*
@@ -1366,38 +1366,38 @@ tsqueryrecv(PG_FUNCTION_ARGS)
 Datum
 tsquerytree(PG_FUNCTION_ARGS)
 {
+  TSQuery query = PG_GETARG_TSQUERY(0);
+  INFIX nrm;
+  text *res;
+  QueryItem *q;
+  int len;
 
+  if (query->size == 0)
+  {
+    res = (text *)palloc(VARHDRSZ);
+    SET_VARSIZE(res, VARHDRSZ);
+    PG_RETURN_POINTER(res);
+  }
 
+  q = clean_NOT(GETQUERY(query), &len);
 
+  if (!q)
+  {
+    res = cstring_to_text("T");
+  }
+  else
+  {
+    nrm.curpol = q;
+    nrm.buflen = 32;
+    nrm.cur = nrm.buf = (char *)palloc(sizeof(char) * nrm.buflen);
+    *(nrm.cur) = '\0';
+    nrm.op = GETOPERAND(query);
+    infix(&nrm, -1, false);
+    res = cstring_to_text_with_len(nrm.buf, nrm.cur - nrm.buf);
+    pfree(q);
+  }
 
+  PG_FREE_IF_COPY(query, 0);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(res);
 }

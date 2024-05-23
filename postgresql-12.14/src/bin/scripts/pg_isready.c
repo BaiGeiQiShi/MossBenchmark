@@ -61,8 +61,10 @@ main(int argc, char **argv)
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pgscripts"));
   handle_help_version_opts(argc, argv, progname, help);
 
-  while ((c = getopt_long(argc, argv, "d:h:p:qt:U:", long_options, NULL)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "d:h:p:qt:U:", long_options, NULL)) != -1)
+  {
+    switch (c)
+    {
     case 'd':
       pgdbname = pg_strdup(optarg);
       break;
@@ -81,7 +83,7 @@ main(int argc, char **argv)
     case 'U':
       pguser = pg_strdup(optarg);
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 
       /*
@@ -92,7 +94,8 @@ main(int argc, char **argv)
     }
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 
@@ -121,58 +124,85 @@ main(int argc, char **argv)
   /*
    * Get the host and port so we can display them in our output
    */
-  if (pgdbname && (strncmp(pgdbname, "postgresql://", 13) == 0 || strncmp(pgdbname, "postgres://", 11) == 0 || strchr(pgdbname, '=') != NULL)) {
+  if (pgdbname && (strncmp(pgdbname, "postgresql://", 13) == 0 || strncmp(pgdbname, "postgres://", 11) == 0 || strchr(pgdbname, '=') != NULL))
+  {
     opts = PQconninfoParse(pgdbname, &errmsg);
-    if (opts == NULL) {
+    if (opts == NULL)
+    {
       pg_log_error("%s", errmsg);
       exit(PQPING_NO_ATTEMPT);
     }
   }
 
   defs = PQconndefaults();
-  if (defs == NULL) {
+  if (defs == NULL)
+  {
     pg_log_error("could not fetch default options");
     exit(PQPING_NO_ATTEMPT);
   }
 
-  for (opt = opts, def = defs; def->keyword; def++) {
-    if (strcmp(def->keyword, "host") == 0) {
-      if (opt && opt->val) {
+  for (opt = opts, def = defs; def->keyword; def++)
+  {
+    if (strcmp(def->keyword, "host") == 0)
+    {
+      if (opt && opt->val)
+      {
         pghost_str = opt->val;
-      } else if (pghost) {
+      }
+      else if (pghost)
+      {
         pghost_str = pghost;
-      } else if (def->val) {
+      }
+      else if (def->val)
+      {
         pghost_str = def->val;
-      } else {
+      }
+      else
+      {
         pghost_str = DEFAULT_PGSOCKET_DIR;
       }
-    } else if (strcmp(def->keyword, "hostaddr") == 0) {
-      if (opt && opt->val) {
+    }
+    else if (strcmp(def->keyword, "hostaddr") == 0)
+    {
+      if (opt && opt->val)
+      {
         pghostaddr_str = opt->val;
-      } else if (def->val) {
+      }
+      else if (def->val)
+      {
         pghostaddr_str = def->val;
       }
-    } else if (strcmp(def->keyword, "port") == 0) {
-      if (opt && opt->val) {
+    }
+    else if (strcmp(def->keyword, "port") == 0)
+    {
+      if (opt && opt->val)
+      {
         pgport_str = opt->val;
-      } else if (pgport) {
+      }
+      else if (pgport)
+      {
         pgport_str = pgport;
-      } else if (def->val) {
+      }
+      else if (def->val)
+      {
         pgport_str = def->val;
       }
     }
 
-    if (opt) {
+    if (opt)
+    {
       opt++;
     }
   }
 
   rv = PQpingParams(keywords, values, 1);
 
-  if (!quiet) {
+  if (!quiet)
+  {
     printf("%s:%s - ", pghostaddr_str != NULL ? pghostaddr_str : pghost_str, pgport_str);
 
-    switch (rv) {
+    switch (rv)
+    {
     case PQPING_OK:
       printf(_("accepting connections\n"));
       break;
@@ -185,7 +215,7 @@ main(int argc, char **argv)
     case PQPING_NO_ATTEMPT:
       printf(_("no attempt\n"));
       break;
-    default:;
+    default:
       printf(_("unknown\n"));
     }
   }
@@ -209,7 +239,7 @@ help(const char *progname)
   printf(_("\nConnection options:\n"));
   printf(_("  -h, --host=HOSTNAME      database server host or socket directory\n"));
   printf(_("  -p, --port=PORT          database server port\n"));
-  printf(_("  -t, --timeout=SECS       seconds to wait when attempting connection, 0 disables (default:; %s)\n"),DEFAULT_CONNECT_TIMEOUT);
+  printf(_("  -t, --timeout=SECS       seconds to wait when attempting connection, 0 disables (default: %s)\n"), DEFAULT_CONNECT_TIMEOUT);
   printf(_("  -U, --username=USERNAME  user name to connect as\n"));
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }

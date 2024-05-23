@@ -67,8 +67,8 @@ plainnode(PLAINTREE *state, NODE *node)
 
   if (state->cur == state->len)
   {
-
-
+    state->len *= 2;
+    state->ptr = (QueryItem *)repalloc((void *)state->ptr, state->len * sizeof(QueryItem));
   }
   memcpy((void *)&(state->ptr[state->cur]), (void *)node->valnode, sizeof(QueryItem));
   if (node->valnode->type == QI_VAL)
@@ -110,7 +110,7 @@ plaintree(NODE *root, int *len)
   }
   else
   {
-
+    pl.ptr = NULL;
   }
   *len = pl.cur;
   return pl.ptr;
@@ -124,15 +124,15 @@ freetree(NODE *node)
 
   if (!node)
   {
-
+    return;
   }
   if (node->left)
   {
-
+    freetree(node->left);
   }
   if (node->right)
   {
-
+    freetree(node->right);
   }
   pfree(node);
 }
@@ -146,63 +146,63 @@ freetree(NODE *node)
 static NODE *
 clean_NOT_intree(NODE *node)
 {
+  /* since this function recurses, it could be driven to stack overflow. */
+  check_stack_depth();
 
+  if (node->valnode->type == QI_VAL)
+  {
+    return node;
+  }
 
+  if (node->valnode->qoperator.oper == OP_NOT)
+  {
+    freetree(node);
+    return NULL;
+  }
 
+  /* operator & or | */
+  if (node->valnode->qoperator.oper == OP_OR)
+  {
+    if ((node->left = clean_NOT_intree(node->left)) == NULL || (node->right = clean_NOT_intree(node->right)) == NULL)
+    {
+      freetree(node);
+      return NULL;
+    }
+  }
+  else
+  {
+    NODE *res = node;
 
+    Assert(node->valnode->qoperator.oper == OP_AND || node->valnode->qoperator.oper == OP_PHRASE);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    node->left = clean_NOT_intree(node->left);
+    node->right = clean_NOT_intree(node->right);
+    if (node->left == NULL && node->right == NULL)
+    {
+      pfree(node);
+      res = NULL;
+    }
+    else if (node->left == NULL)
+    {
+      res = node->right;
+      pfree(node);
+    }
+    else if (node->right == NULL)
+    {
+      res = node->left;
+      pfree(node);
+    }
+    return res;
+  }
+  return node;
 }
 
 QueryItem *
 clean_NOT(QueryItem *ptr, int *len)
 {
+  NODE *root = maketree(ptr);
 
-
-
+  return plaintree(clean_NOT_intree(root), len);
 }
 
 /*
@@ -218,9 +218,9 @@ clean_NOT(QueryItem *ptr, int *len)
  *		(b <-> (a <-> a)) <-> c  should become	b <3> c
  *		b <-> ((a <-> a) <-> c)  should become	b <3> c
  * To handle that, we define two output parameters:
- *		ladd: amount to add to a phrase distance to the left of this
- *node radd: amount to add to a phrase distance to the right of this node We
- *need two outputs because we could need to bubble up adjustments to two
+ *		ladd: amount to add to a phrase distance to the left of this node
+ *		radd: amount to add to a phrase distance to the right of this node
+ * We need two outputs because we could need to bubble up adjustments to two
  * different parent phrase operators.  Consider
  *		w <-> (((a <-> x) <2> (y <3> a)) <-> z)
  * After we've removed the two a's and are considering the <2> node (which is
@@ -409,7 +409,7 @@ cleanup_tsquery_stopwords(TSQuery in)
 
   if (in->size == 0)
   {
-
+    return in;
   }
 
   /* eliminate stop words */

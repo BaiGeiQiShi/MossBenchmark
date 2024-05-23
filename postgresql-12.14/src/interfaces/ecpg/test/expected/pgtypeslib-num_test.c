@@ -32,7 +32,8 @@ print_double(double x)
   sprintf(convert, "%g", x);
   vallen = strlen(convert);
 
-  if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0') {
+  if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0')
+  {
     convert[vallen - 3] = convert[vallen - 2];
     convert[vallen - 2] = convert[vallen - 1];
     convert[vallen - 1] = '\0';
@@ -72,7 +73,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 27 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -82,7 +84,8 @@ main(void)
     ECPGsetcommit(__LINE__, "off", NULL);
 #line 29 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -92,7 +95,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table test ( text char ( 5 ) , num numeric ( 14 , 7 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -125,7 +129,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test ( text , num ) values ( 'test' , $1  )", ECPGt_numeric, &(des), (long)1, (long)0, sizeof(numeric), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 55 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -139,7 +144,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select num from test where text = 'test'", ECPGt_EOIT, ECPGt_numeric, &(des), (long)1, (long)0, sizeof(numeric), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 61 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -187,7 +193,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 101 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -197,7 +204,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 102 "num_test.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

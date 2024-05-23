@@ -45,7 +45,7 @@ get_tsearch_config_filename(const char *basename, const char *extension)
    */
   if (strspn(basename, "abcdefghijklmnopqrstuvwxyz0123456789_") != strlen(basename))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid text search configuration file name \"%s\"", basename)));
   }
 
   get_share_path(my_exec_path, sharepath);
@@ -75,7 +75,7 @@ readstoplist(const char *fname, StopList *s, char *(*wordop)(const char *))
 
     if (!tsearch_readline_begin(&trst, filename))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not open stop-word file \"%s\": %m", filename)));
     }
 
     while ((line = tsearch_readline(&trst)) != NULL)
@@ -92,8 +92,8 @@ readstoplist(const char *fname, StopList *s, char *(*wordop)(const char *))
       /* Skip empty lines */
       if (*line == '\0')
       {
-
-
+        pfree(line);
+        continue;
       }
 
       if (s->len >= reallen)
@@ -120,7 +120,7 @@ readstoplist(const char *fname, StopList *s, char *(*wordop)(const char *))
       }
       else
       {
-
+        stop[s->len] = line;
       }
 
       (s->len)++;

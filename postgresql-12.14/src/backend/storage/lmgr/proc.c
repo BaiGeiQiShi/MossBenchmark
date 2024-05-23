@@ -314,12 +314,12 @@ InitProcess(void)
    */
   if (ProcGlobal == NULL)
   {
-
+    elog(PANIC, "proc header uninitialized");
   }
 
   if (MyProc != NULL)
   {
-
+    elog(ERROR, "you already exist");
   }
 
   /* Decide which list should supply our PGPROC. */
@@ -333,7 +333,7 @@ InitProcess(void)
   }
   else if (am_walsender)
   {
-
+    procgloballist = &ProcGlobal->walsenderFreeProcs;
   }
   else
   {
@@ -366,12 +366,12 @@ InitProcess(void)
      * error message.  XXX do we need to give a different failure message
      * in the autovacuum case?
      */
-
-
-
-
-
-
+    SpinLockRelease(ProcStructLock);
+    if (am_walsender)
+    {
+      ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("number of requested standby connections exceeds max_wal_senders (currently %d)", max_wal_senders)));
+    }
+    ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("sorry, too many clients already")));
   }
   MyPgXact = &ProcGlobal->allPgXact[MyProc->pgprocno];
 
@@ -541,12 +541,12 @@ InitAuxiliaryProcess(void)
    */
   if (ProcGlobal == NULL || AuxiliaryProcs == NULL)
   {
-
+    elog(PANIC, "proc header uninitialized");
   }
 
   if (MyProc != NULL)
   {
-
+    elog(ERROR, "you already exist");
   }
 
   /*
@@ -573,8 +573,8 @@ InitAuxiliaryProcess(void)
   }
   if (proctype >= NUM_AUXILIARY_PROCS)
   {
-
-
+    SpinLockRelease(ProcStructLock);
+    elog(FATAL, "all AuxiliaryProcs are in use");
   }
 
   /* Mark auxiliary proc as in use by me */
@@ -652,12 +652,12 @@ InitAuxiliaryProcess(void)
 void
 PublishStartupProcessInformation(void)
 {
+  SpinLockAcquire(ProcStructLock);
 
+  ProcGlobal->startupProc = MyProc;
+  ProcGlobal->startupProcPid = MyProcPid;
 
-
-
-
-
+  SpinLockRelease(ProcStructLock);
 }
 
 /*
@@ -670,10 +670,10 @@ PublishStartupProcessInformation(void)
 void
 SetStartupBufferPinWaitBufId(int bufid)
 {
+  /* use volatile pointer to prevent code rearrangement */
+  volatile PROC_HDR *procglobal = ProcGlobal;
 
-
-
-
+  procglobal->startupBufferPinWaitBufId = bufid;
 }
 
 /*
@@ -682,10 +682,10 @@ SetStartupBufferPinWaitBufId(int bufid)
 int
 GetStartupBufferPinWaitBufId(void)
 {
+  /* use volatile pointer to prevent code rearrangement */
+  volatile PROC_HDR *procglobal = ProcGlobal;
 
-
-
-
+  return procglobal->startupBufferPinWaitBufId;
 }
 
 /*
@@ -719,12 +719,12 @@ HaveNFreeProcs(int n)
 bool
 IsWaitingForLock(void)
 {
+  if (lockAwaited == NULL)
+  {
+    return false;
+  }
 
-
-
-
-
-
+  return true;
 }
 
 /*
@@ -783,10 +783,10 @@ LockErrorCleanup(void)
      * did grant us the lock, we'd better remember it in our local lock
      * table.
      */
-
-
-
-
+    if (MyProc->waitStatus == STATUS_OK)
+    {
+      GrantAwaitedLock();
+    }
   }
 
   lockAwaited = NULL;
@@ -817,7 +817,7 @@ ProcReleaseLocks(bool isCommit)
 {
   if (!MyProc)
   {
-
+    return;
   }
   /* If waiting, get off wait queue (should only be needed after error) */
   LockErrorCleanup();
@@ -877,7 +877,7 @@ ProcKill(int code, Datum arg)
   /* Make sure active replication slots are released */
   if (MyReplicationSlot != NULL)
   {
-
+    ReplicationSlotRelease();
   }
 
   /* Also cleanup all the temporary slots. */
@@ -902,13 +902,13 @@ ProcKill(int code, Datum arg)
       leader->lockGroupLeader = NULL;
       if (leader != MyProc)
       {
-
+        procgloballist = leader->procgloballist;
 
         /* Leader exited first; return its PGPROC. */
-
-
-
-
+        SpinLockAcquire(ProcStructLock);
+        leader->links.next = (SHM_QUEUE *)*procgloballist;
+        *procgloballist = leader;
+        SpinLockRelease(ProcStructLock);
       }
     }
     else if (leader != MyProc)
@@ -971,8 +971,8 @@ ProcKill(int code, Datum arg)
 
 /*
  * AuxiliaryProcKill() -- Cut-down version of ProcKill for auxiliary
- *		processes (bgwriter, etc).  The PGPROC and sema are not
- *released, only marked as not-in-use.
+ *		processes (bgwriter, etc).  The PGPROC and sema are not released, only
+ *		marked as not-in-use.
  */
 static void
 AuxiliaryProcKill(int code, Datum arg)
@@ -1027,9 +1027,9 @@ AuxiliaryPidGetProc(int pid)
   PGPROC *result = NULL;
   int index;
 
-  if (pid == 0)
-  { /* never match dummy PGPROCs */
-
+  if (pid == 0) /* never match dummy PGPROCs */
+  {
+    return NULL;
   }
 
   for (index = 0; index < NUM_AUXILIARY_PROCS; index++)
@@ -1126,15 +1126,15 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
     SHM_QUEUE *procLocks = &(lock->procLocks);
     PROCLOCK *otherproclock;
 
-
-
-
-
-
-
-
-
-
+    otherproclock = (PROCLOCK *)SHMQueueNext(procLocks, procLocks, offsetof(PROCLOCK, lockLink));
+    while (otherproclock != NULL)
+    {
+      if (otherproclock->groupLeader == leader)
+      {
+        myHeldLocks |= otherproclock->holdMask;
+      }
+      otherproclock = (PROCLOCK *)SHMQueueNext(procLocks, &otherproclock->lockLink, offsetof(PROCLOCK, lockLink));
+    }
   }
 
   /*
@@ -1171,8 +1171,8 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
        */
       if (leader != NULL && leader == proc->lockGroupLeader)
       {
-
-
+        proc_node = proc->links.next;
+        continue;
       }
       /* Must he wait for me? */
       if (lockMethodTable->conflictTab[proc->waitLockMode] & myHeldLocks)
@@ -1192,19 +1192,19 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
           break;
         }
         /* I must go before this waiter.  Check special case. */
-
-
-
-
-
-
-
+        if ((lockMethodTable->conflictTab[lockmode] & aheadRequests) == 0 && LockCheckConflicts(lockMethodTable, lockmode, lock, proclock) == STATUS_OK)
+        {
+          /* Skip the wait and just grant myself the lock. */
+          GrantLock(lock, proclock, lockmode);
+          GrantAwaitedLock();
+          return STATUS_OK;
+        }
         /* Break out of loop to put myself before him */
-
+        break;
       }
       /* Nope, so advance to next waiter */
-
-
+      aheadRequests |= LOCKBIT_ON(proc->waitLockMode);
+      proc_node = proc->links.next;
     }
 
     /*
@@ -1265,7 +1265,7 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
    */
   if (RecoveryInProgress() && !InRecovery)
   {
-
+    CheckRecoveryConflictDeadlock();
   }
 
   /* Reset deadlock_state before enabling the timeout handler */
@@ -1326,7 +1326,7 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
     if (InHotStandby)
     {
       /* Set a timer and wait for that or for the Lock to be granted */
-
+      ResolveRecoveryConflictWithLock(locallock->tag.lock);
     }
     else
     {
@@ -1357,57 +1357,57 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
       PGPROC *autovac = GetBlockingAutoVacuumPgproc();
       PGXACT *autovac_pgxact = &ProcGlobal->allPgXact[autovac->pgprocno];
 
-
+      LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 
       /*
        * Only do it if the worker is not working to protect against Xid
        * wraparound.
        */
+      if ((autovac_pgxact->vacuumFlags & PROC_IS_AUTOVACUUM) && !(autovac_pgxact->vacuumFlags & PROC_VACUUM_FOR_WRAPAROUND))
+      {
+        int pid = autovac->pid;
+        StringInfoData locktagbuf;
+        StringInfoData logbuf; /* errdetail for server log */
 
+        initStringInfo(&locktagbuf);
+        initStringInfo(&logbuf);
+        DescribeLockTag(&locktagbuf, &lock->tag);
+        appendStringInfo(&logbuf, _("Process %d waits for %s on %s."), MyProcPid, GetLockmodeName(lock->tag.locktag_lockmethodid, lockmode), locktagbuf.data);
 
+        /* release lock as quickly as possible */
+        LWLockRelease(ProcArrayLock);
 
+        /* send the autovacuum worker Back to Old Kent Road */
+        ereport(DEBUG1, (errmsg("sending cancel to blocking autovacuum PID %d", pid), errdetail_log("%s", logbuf.data)));
 
+        if (kill(pid, SIGINT) < 0)
+        {
+          /*
+           * There's a race condition here: once we release the
+           * ProcArrayLock, it's possible for the autovac worker to
+           * close up shop and exit before we can do the kill().
+           * Therefore, we do not whinge about no-such-process.
+           * Other errors such as EPERM could conceivably happen if
+           * the kernel recycles the PID fast enough, but such cases
+           * seem improbable enough that it's probably best to issue
+           * a warning if we see some other errno.
+           */
+          if (errno != ESRCH)
+          {
+            ereport(WARNING, (errmsg("could not send signal to process %d: %m", pid)));
+          }
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        pfree(logbuf.data);
+        pfree(locktagbuf.data);
+      }
+      else
+      {
+        LWLockRelease(ProcArrayLock);
+      }
 
       /* prevent signal from being sent again more than once */
-
+      allow_autovacuum_cancel = false;
     }
 
     /*
@@ -1426,15 +1426,15 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
       bool first_holder = true, first_waiter = true;
       int lockHoldersNum = 0;
 
+      initStringInfo(&buf);
+      initStringInfo(&lock_waiters_sbuf);
+      initStringInfo(&lock_holders_sbuf);
 
-
-
-
-
-
-
-
-
+      DescribeLockTag(&buf, &locallock->tag.lock);
+      modename = GetLockmodeName(locallock->tag.lock.locktag_lockmethodid, lockmode);
+      TimestampDifference(get_timeout_start_time(DEADLOCK_TIMEOUT), GetCurrentTimestamp(), &secs, &usecs);
+      msecs = secs * 1000 + usecs / 1000;
+      usecs = usecs % 1000;
 
       /*
        * we loop over the lock's procLocks to gather a list of all
@@ -1445,100 +1445,100 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
        * this lock.
        */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      LWLockAcquire(partitionLock, LW_SHARED);
+
+      procLocks = &(lock->procLocks);
+      proclock = (PROCLOCK *)SHMQueueNext(procLocks, procLocks, offsetof(PROCLOCK, lockLink));
+
+      while (proclock)
+      {
+        /*
+         * we are a waiter if myProc->waitProcLock == proclock; we are
+         * a holder if it is NULL or something different
+         */
+        if (proclock->tag.myProc->waitProcLock == proclock)
+        {
+          if (first_waiter)
+          {
+            appendStringInfo(&lock_waiters_sbuf, "%d", proclock->tag.myProc->pid);
+            first_waiter = false;
+          }
+          else
+          {
+            appendStringInfo(&lock_waiters_sbuf, ", %d", proclock->tag.myProc->pid);
+          }
+        }
+        else
+        {
+          if (first_holder)
+          {
+            appendStringInfo(&lock_holders_sbuf, "%d", proclock->tag.myProc->pid);
+            first_holder = false;
+          }
+          else
+          {
+            appendStringInfo(&lock_holders_sbuf, ", %d", proclock->tag.myProc->pid);
+          }
+
+          lockHoldersNum++;
+        }
+
+        proclock = (PROCLOCK *)SHMQueueNext(procLocks, &proclock->lockLink, offsetof(PROCLOCK, lockLink));
+      }
+
+      LWLockRelease(partitionLock);
+
+      if (deadlock_state == DS_SOFT_DEADLOCK)
+      {
+        ereport(LOG, (errmsg("process %d avoided deadlock for %s on %s by rearranging queue order after %ld.%03d ms", MyProcPid, modename, buf.data, msecs, usecs), (errdetail_log_plural("Process holding the lock: %s. Wait queue: %s.", "Processes holding the lock: %s. Wait queue: %s.", lockHoldersNum, lock_holders_sbuf.data, lock_waiters_sbuf.data))));
+      }
+      else if (deadlock_state == DS_HARD_DEADLOCK)
+      {
+        /*
+         * This message is a bit redundant with the error that will be
+         * reported subsequently, but in some cases the error report
+         * might not make it to the log (eg, if it's caught by an
+         * exception handler), and we want to ensure all long-wait
+         * events get logged.
+         */
+        ereport(LOG, (errmsg("process %d detected deadlock while waiting for %s on %s after %ld.%03d ms", MyProcPid, modename, buf.data, msecs, usecs), (errdetail_log_plural("Process holding the lock: %s. Wait queue: %s.", "Processes holding the lock: %s. Wait queue: %s.", lockHoldersNum, lock_holders_sbuf.data, lock_waiters_sbuf.data))));
+      }
+
+      if (myWaitStatus == STATUS_WAITING)
+      {
+        ereport(LOG, (errmsg("process %d still waiting for %s on %s after %ld.%03d ms", MyProcPid, modename, buf.data, msecs, usecs), (errdetail_log_plural("Process holding the lock: %s. Wait queue: %s.", "Processes holding the lock: %s. Wait queue: %s.", lockHoldersNum, lock_holders_sbuf.data, lock_waiters_sbuf.data))));
+      }
+      else if (myWaitStatus == STATUS_OK)
+      {
+        ereport(LOG, (errmsg("process %d acquired %s on %s after %ld.%03d ms", MyProcPid, modename, buf.data, msecs, usecs)));
+      }
+      else
+      {
+        Assert(myWaitStatus == STATUS_ERROR);
+
+        /*
+         * Currently, the deadlock checker always kicks its own
+         * process, which means that we'll only see STATUS_ERROR when
+         * deadlock_state == DS_HARD_DEADLOCK, and there's no need to
+         * print redundant messages.  But for completeness and
+         * future-proofing, print a message if it looks like someone
+         * else kicked us off the lock.
+         */
+        if (deadlock_state != DS_HARD_DEADLOCK)
+        {
+          ereport(LOG, (errmsg("process %d failed to acquire %s on %s after %ld.%03d ms", MyProcPid, modename, buf.data, msecs, usecs), (errdetail_log_plural("Process holding the lock: %s. Wait queue: %s.", "Processes holding the lock: %s. Wait queue: %s.", lockHoldersNum, lock_holders_sbuf.data, lock_waiters_sbuf.data))));
+        }
+      }
 
       /*
        * At this point we might still need to wait for the lock. Reset
        * state so we don't print the above messages again.
        */
+      deadlock_state = DS_NO_DEADLOCK;
 
-
-
-
-
+      pfree(buf.data);
+      pfree(lock_holders_sbuf.data);
+      pfree(lock_waiters_sbuf.data);
     }
   } while (myWaitStatus == STATUS_WAITING);
 
@@ -1554,11 +1554,11 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
     {
       DisableTimeoutParams timeouts[2];
 
-
-
-
-
-
+      timeouts[0].id = DEADLOCK_TIMEOUT;
+      timeouts[0].keep_indicator = false;
+      timeouts[1].id = LOCK_TIMEOUT;
+      timeouts[1].keep_indicator = true;
+      disable_timeouts(timeouts, 2);
     }
     else
     {
@@ -1614,7 +1614,7 @@ ProcWakeup(PGPROC *proc, int waitStatus)
   /* Proc should be sleeping ... */
   if (proc->links.prev == NULL || proc->links.next == NULL)
   {
-
+    return NULL;
   }
   Assert(proc->waitStatus == STATUS_WAITING);
 
@@ -1734,7 +1734,7 @@ CheckDeadLock(void)
    */
   if (MyProc->links.prev == NULL || MyProc->links.next == NULL)
   {
-
+    goto check_done;
   }
 
 #ifdef LOCK_DEBUG
@@ -1783,7 +1783,7 @@ CheckDeadLock(void)
    * until it can get all the locks it needs. (2) This avoids O(N^2)
    * behavior inside LWLockRelease.
    */
-check_done:;
+check_done:
   for (i = NUM_LOCK_PARTITIONS; --i >= 0;)
   {
     LWLockRelease(LockHashPartitionLockByIndex(i));
@@ -1839,7 +1839,7 @@ ProcSendSignal(int pid)
 
   if (RecoveryInProgress())
   {
-
+    SpinLockAcquire(ProcStructLock);
 
     /*
      * Check to see whether it is the Startup process we wish to signal.
@@ -1849,12 +1849,12 @@ ProcSendSignal(int pid)
      * backend, so BackendPidGetProc() will not return any pid at all. So
      * we remember the information for this special case.
      */
+    if (pid == ProcGlobal->startupProcPid)
+    {
+      proc = ProcGlobal->startupProc;
+    }
 
-
-
-
-
-
+    SpinLockRelease(ProcStructLock);
   }
 
   if (proc == NULL)

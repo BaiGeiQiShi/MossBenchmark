@@ -40,8 +40,8 @@ get_user_name(char **errstr)
   pw = getpwuid(user_id);
   if (!pw)
   {
-
-
+    *errstr = psprintf(_("could not look up effective user ID %ld: %s"), (long)user_id, errno ? strerror(errno) : _("user does not exist"));
+    return NULL;
   }
 
   return pw->pw_name;
@@ -76,8 +76,8 @@ get_user_name_or_exit(const char *progname)
 
   if (!user_name)
   {
-
-
+    fprintf(stderr, "%s: %s\n", progname, errstr);
+    exit(1);
   }
   return user_name;
 }

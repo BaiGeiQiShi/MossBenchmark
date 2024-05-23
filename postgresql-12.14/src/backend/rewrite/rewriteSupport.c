@@ -60,7 +60,7 @@ SetRelationRuleStatus(Oid relationId, bool relHasRules)
   tuple = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(relationId));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", relationId);
   }
   classForm = (Form_pg_class)GETSTRUCT(tuple);
 

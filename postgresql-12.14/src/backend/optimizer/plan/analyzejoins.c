@@ -53,8 +53,8 @@ is_innerrel_unique_for(PlannerInfo *root, Relids joinrelids, Relids outerrelids,
 
 /*
  * remove_useless_joins
- *		Check for relations that don't actually need to be joined at
- *all, and remove them from the query.
+ *		Check for relations that don't actually need to be joined at all,
+ *		and remove them from the query.
  *
  * We are passed the current joinlist and return the updated list.  Other
  * data structures that have to be updated are accessible via "root".
@@ -68,7 +68,7 @@ remove_useless_joins(PlannerInfo *root, List *joinlist)
    * We are only interested in relations that are left-joined to, so we can
    * scan the join_info_list to find them easily.
    */
-restart:;
+restart:
   foreach (lc, root->join_info_list)
   {
     SpecialJoinInfo *sjinfo = (SpecialJoinInfo *)lfirst(lc);
@@ -95,7 +95,7 @@ restart:;
     joinlist = remove_rel_from_joinlist(joinlist, innerrelid, &nremoved);
     if (nremoved != 1)
     {
-
+      elog(ERROR, "failed to find relation %d in joinlist", innerrelid);
     }
 
     /*
@@ -120,8 +120,7 @@ restart:;
 
 /*
  * clause_sides_match_join
- *	  Determine whether a join clause is of the right form to use in this
- *join.
+ *	  Determine whether a join clause is of the right form to use in this join.
  *
  * We already know that the clause is a binary opclause referencing only the
  * rels in the current join.  The point here is to check whether it has the
@@ -144,7 +143,7 @@ clause_sides_match_join(RestrictInfo *rinfo, Relids outerrelids, Relids innerrel
     rinfo->outer_is_left = false;
     return true;
   }
-
+  return false; /* no good for these input relations */
 }
 
 /*
@@ -233,7 +232,7 @@ join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo)
 
     if (bms_overlap(phinfo->ph_lateral, innerrel->relids))
     {
-
+      return false; /* it references innerrel laterally */
     }
     if (bms_is_subset(phinfo->ph_needed, joinrelids))
     {
@@ -241,7 +240,7 @@ join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo)
     }
     if (!bms_overlap(phinfo->ph_eval_at, innerrel->relids))
     {
-
+      continue; /* it definitely doesn't reference innerrel */
     }
     if (bms_is_subset(phinfo->ph_eval_at, innerrel->relids))
     {
@@ -280,7 +279,7 @@ join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo)
        */
       if (bms_is_member(innerrelid, restrictinfo->clause_relids))
       {
-
+        return false;
       }
       continue; /* else, ignore; not useful here */
     }
@@ -288,7 +287,7 @@ join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo)
     /* Ignore if it's not a mergejoinable clause */
     if (!restrictinfo->can_join || restrictinfo->mergeopfamilies == NIL)
     {
-
+      continue; /* not mergejoinable */
     }
 
     /*
@@ -297,7 +296,7 @@ join_is_removable(PlannerInfo *root, SpecialJoinInfo *sjinfo)
      */
     if (!clause_sides_match_join(restrictinfo, sjinfo->min_lefthand, innerrel->relids))
     {
-
+      continue; /* no good for these input relations */
     }
 
     /* OK, add to list */
@@ -511,7 +510,7 @@ remove_rel_from_joinlist(List *joinlist, int relid, int *nremoved)
     }
     else
     {
-
+      elog(ERROR, "unrecognized joinlist node type: %d", (int)nodeTag(jlnode));
     }
   }
 
@@ -521,8 +520,7 @@ remove_rel_from_joinlist(List *joinlist, int relid, int *nremoved)
 /*
  * reduce_unique_semijoins
  *		Check for semijoins that can be simplified to plain inner joins
- *		because the inner relation is provably unique for the join
- *clauses.
+ *		because the inner relation is provably unique for the join clauses.
  *
  * Ideally this would happen during reduce_outer_joins, but we don't have
  * enough information at that point.
@@ -603,8 +601,7 @@ reduce_unique_semijoins(PlannerInfo *root)
 
 /*
  * rel_supports_distinctness
- *		Could the relation possibly be proven distinct on some set of
- *columns?
+ *		Could the relation possibly be proven distinct on some set of columns?
  *
  * This is effectively a pre-checking function for rel_is_distinct_for().
  * It must return true if rel_is_distinct_for() could possibly return true
@@ -658,8 +655,7 @@ rel_supports_distinctness(PlannerInfo *root, RelOptInfo *rel)
 
 /*
  * rel_is_distinct_for
- *		Does the relation return only distinct rows according to
- *clause_list?
+ *		Does the relation return only distinct rows according to clause_list?
  *
  * clause_list is a list of join restriction clauses involving this rel and
  * some other one.  Return true if no two rows emitted by this rel could
@@ -685,7 +681,7 @@ rel_is_distinct_for(PlannerInfo *root, RelOptInfo *rel, List *clause_list)
    */
   if (rel->reloptkind != RELOPT_BASEREL)
   {
-
+    return false;
   }
   if (rel->rtekind == RTE_RELATION)
   {
@@ -847,8 +843,8 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
         break; /* exit early if no match */
       }
     }
-    if (l == NULL)
-    { /* had matches for all? */
+    if (l == NULL) /* had matches for all? */
+    {
       return true;
     }
   }
@@ -862,7 +858,7 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
    */
   if (query->hasTargetSRFs)
   {
-
+    return false;
   }
 
   /*
@@ -882,8 +878,8 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
         break; /* exit early if no match */
       }
     }
-    if (l == NULL)
-    { /* had matches for all? */
+    if (l == NULL) /* had matches for all? */
+    {
       return true;
     }
   }
@@ -893,10 +889,10 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
      * If we have grouping sets with expressions, we probably don't have
      * uniqueness and analysis would be hard. Punt.
      */
-
-
-
-
+    if (query->groupClause)
+    {
+      return false;
+    }
 
     /*
      * If we have no groupClause (therefore no grouping expressions), we
@@ -904,14 +900,14 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
      * then we're returning only one row and are certainly unique. But
      * otherwise, we know we're certainly not unique.
      */
-
-
-
-
-
-
-
-
+    if (list_length(query->groupingSets) == 1 && ((GroupingSet *)linitial(query->groupingSets))->kind == GROUPING_SET_EMPTY)
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
   else
   {
@@ -948,7 +944,7 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
 
         if (tle->resjunk)
         {
-
+          continue; /* ignore resjunk columns */
         }
 
         /* non-resjunk columns should have grouping clauses */
@@ -962,8 +958,8 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
           break; /* exit early if no match */
         }
       }
-      if (l == NULL)
-      { /* had matches for all? */
+      if (l == NULL) /* had matches for all? */
+      {
         return true;
       }
     }
@@ -1073,10 +1069,10 @@ innerrel_is_unique(PlannerInfo *root, Relids joinrelids, Relids outerrelids, Rel
   {
     Relids unique_for_rels = (Relids)lfirst(lc);
 
-
-
-
-
+    if (bms_is_subset(outerrelids, unique_for_rels))
+    {
+      return false;
+    }
   }
 
   /* No cached information, so try to make the proof. */
@@ -1171,7 +1167,7 @@ is_innerrel_unique_for(PlannerInfo *root, Relids joinrelids, Relids outerrelids,
      */
     if (!clause_sides_match_join(restrictinfo, outerrelids, innerrel->relids))
     {
-
+      continue; /* no good for these input relations */
     }
 
     /* OK, add to list */

@@ -28,17 +28,22 @@ pg_GSS_error_int(char *s, size_t len, OM_uint32 stat, int type)
   size_t i = 0;
   OM_uint32 lmin_s, msg_ctx = 0;
 
-  do {
-    if (gss_display_status(&lmin_s, stat, type, GSS_C_NO_OID, &msg_ctx, &gmsg) != GSS_S_COMPLETE) {
+  do
+  {
+    if (gss_display_status(&lmin_s, stat, type, GSS_C_NO_OID, &msg_ctx, &gmsg) != GSS_S_COMPLETE)
+    {
       break;
     }
-    if (i > 0) {
-      if (i < len) {
+    if (i > 0)
+    {
+      if (i < len)
+      {
         s[i] = ' ';
       }
       i++;
     }
-    if (i < len) {
+    if (i < len)
+    {
       memcpy(s + i, gmsg.value, Min(len - i, gmsg.length));
     }
     i += gmsg.length;
@@ -46,9 +51,12 @@ pg_GSS_error_int(char *s, size_t len, OM_uint32 stat, int type)
   } while (msg_ctx);
 
   /* add nul termination */
-  if (i < len) {
+  if (i < len)
+  {
     s[i] = '\0';
-  } else {
+  }
+  else
+  {
     elog(COMMERROR, "incomplete GSS error report");
     s[len - 1] = '\0';
   }

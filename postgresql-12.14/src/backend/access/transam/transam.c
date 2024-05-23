@@ -76,7 +76,7 @@ TransactionLogFetch(TransactionId transactionId)
     {
       return TRANSACTION_STATUS_COMMITTED;
     }
-
+    return TRANSACTION_STATUS_ABORTED;
   }
 
   /*
@@ -159,17 +159,17 @@ TransactionIdDidCommit(TransactionId transactionId)
   {
     TransactionId parentXid;
 
-
-
-
-
-
-
-
-
-
-
-
+    if (TransactionIdPrecedes(transactionId, TransactionXmin))
+    {
+      return false;
+    }
+    parentXid = SubTransGetParent(transactionId);
+    if (!TransactionIdIsValid(parentXid))
+    {
+      elog(WARNING, "no pg_subtrans entry for subcommitted XID %u", transactionId);
+      return false;
+    }
+    return TransactionIdDidCommit(parentXid);
   }
 
   /*
@@ -210,18 +210,18 @@ TransactionIdDidAbort(TransactionId transactionId)
   {
     TransactionId parentXid;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    if (TransactionIdPrecedes(transactionId, TransactionXmin))
+    {
+      return true;
+    }
+    parentXid = SubTransGetParent(transactionId);
+    if (!TransactionIdIsValid(parentXid))
+    {
+      /* see notes in TransactionIdDidCommit */
+      elog(WARNING, "no pg_subtrans entry for subcommitted XID %u", transactionId);
+      return true;
+    }
+    return TransactionIdDidAbort(parentXid);
   }
 
   /*
@@ -253,13 +253,13 @@ TransactionIdDidAbort(TransactionId transactionId)
 bool
 TransactionIdIsKnownCompleted(TransactionId transactionId)
 {
+  if (TransactionIdEquals(transactionId, cachedFetchXid))
+  {
+    /* If it's in the cache at all, it must be completed. */
+    return true;
+  }
 
-
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -280,8 +280,7 @@ TransactionIdCommitTree(TransactionId xid, int nxids, TransactionId *xids)
 
 /*
  * TransactionIdAsyncCommitTree
- *		Same as above, but for async commits.  The commit record LSN is
- *needed.
+ *		Same as above, but for async commits.  The commit record LSN is needed.
  */
 void
 TransactionIdAsyncCommitTree(TransactionId xid, int nxids, TransactionId *xids, XLogRecPtr lsn)
@@ -336,7 +335,7 @@ TransactionIdPrecedesOrEquals(TransactionId id1, TransactionId id2)
 
   if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
   {
-
+    return (id1 <= id2);
   }
 
   diff = (int32)(id1 - id2);
@@ -370,7 +369,7 @@ TransactionIdFollowsOrEquals(TransactionId id1, TransactionId id2)
 
   if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
   {
-
+    return (id1 >= id2);
   }
 
   diff = (int32)(id1 - id2);
@@ -442,7 +441,7 @@ TransactionIdGetCommitLSN(TransactionId xid)
   /*
    * Get the transaction status.
    */
+  (void)TransactionIdGetStatus(xid, &result);
 
-
-
+  return result;
 }

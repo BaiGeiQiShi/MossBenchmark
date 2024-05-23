@@ -133,8 +133,7 @@ typedef struct ResourceOwnerData
 } ResourceOwnerData;
 
 /*****************************************************************************
- *	  GLOBAL MEMORY
- **
+ *	  GLOBAL MEMORY															 *
  *****************************************************************************/
 
 ResourceOwner CurrentResourceOwner = NULL;
@@ -185,8 +184,7 @@ static void
 PrintDSMLeakWarning(dsm_segment *seg);
 
 /*****************************************************************************
- *	  INTERNAL ROUTINES
- **
+ *	  INTERNAL ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -420,8 +418,7 @@ ResourceArrayFree(ResourceArray *resarr)
 }
 
 /*****************************************************************************
- *	  EXPORTED ROUTINES
- **
+ *	  EXPORTED ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -462,8 +459,8 @@ ResourceOwnerCreate(ResourceOwner parent, const char *name)
 
 /*
  * ResourceOwnerRelease
- *		Release all resources owned by a ResourceOwner and its
- *descendants, but don't delete the owner objects themselves.
+ *		Release all resources owned by a ResourceOwner and its descendants,
+ *		but don't delete the owner objects themselves.
  *
  * Note that this executes just one phase of release, and so typically
  * must be called three times.  We do it this way because (a) we want to
@@ -531,7 +528,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintBufferLeakWarning(res);
       }
       ReleaseBuffer(res);
     }
@@ -543,7 +540,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintRelCacheLeakWarning(res);
       }
       RelationClose(res);
     }
@@ -553,11 +550,11 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
     {
       dsm_segment *res = (dsm_segment *)DatumGetPointer(foundres);
 
-
-
-
-
-
+      if (isCommit)
+      {
+        PrintDSMLeakWarning(res);
+      }
+      dsm_detach(res);
     }
 
     /* Ditto for JIT contexts */
@@ -565,7 +562,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
     {
       JitContext *context = (JitContext *)PointerGetDatum(foundres);
 
-
+      jit_release_context(context);
     }
   }
   else if (phase == RESOURCE_RELEASE_LOCKS)
@@ -635,7 +632,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintCatCacheLeakWarning(res);
       }
       ReleaseCatCache(res);
     }
@@ -647,7 +644,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintCatCacheListLeakWarning(res);
       }
       ReleaseCatCacheList(res);
     }
@@ -659,7 +656,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintPlanCacheLeakWarning(res);
       }
       ReleaseCachedPlan(res, true);
     }
@@ -671,7 +668,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintTupleDescLeakWarning(res);
       }
       DecrTupleDescRefCount(res);
     }
@@ -683,7 +680,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintSnapshotLeakWarning(res);
       }
       UnregisterSnapshot(res);
     }
@@ -695,7 +692,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
 
       if (isCommit)
       {
-
+        PrintFileLeakWarning(res);
       }
       FileClose(res);
     }
@@ -704,7 +701,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner, ResourceReleasePhase phase, bo
   /* Let add-on modules get a chance too */
   for (item = ResourceRelease_callbacks; item; item = item->next)
   {
-
+    item->callback(phase, isCommit, isTopLevel, item->arg);
   }
 
   CurrentResourceOwner = save;
@@ -830,38 +827,38 @@ ResourceOwnerNewParent(ResourceOwner owner, ResourceOwner newparent)
 void
 RegisterResourceReleaseCallback(ResourceReleaseCallback callback, void *arg)
 {
+  ResourceReleaseCallbackItem *item;
 
-
-
-
-
-
-
+  item = (ResourceReleaseCallbackItem *)MemoryContextAlloc(TopMemoryContext, sizeof(ResourceReleaseCallbackItem));
+  item->callback = callback;
+  item->arg = arg;
+  item->next = ResourceRelease_callbacks;
+  ResourceRelease_callbacks = item;
 }
 
 void
 UnregisterResourceReleaseCallback(ResourceReleaseCallback callback, void *arg)
 {
+  ResourceReleaseCallbackItem *item;
+  ResourceReleaseCallbackItem *prev;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  prev = NULL;
+  for (item = ResourceRelease_callbacks; item; prev = item, item = item->next)
+  {
+    if (item->callback == callback && item->arg == arg)
+    {
+      if (prev)
+      {
+        prev->next = item->next;
+      }
+      else
+      {
+        ResourceRelease_callbacks = item->next;
+      }
+      pfree(item);
+      break;
+    }
+  }
 }
 
 /*
@@ -945,7 +942,7 @@ ResourceOwnerForgetBuffer(ResourceOwner owner, Buffer buffer)
 {
   if (!ResourceArrayRemove(&(owner->bufferarr), BufferGetDatum(buffer)))
   {
-
+    elog(ERROR, "buffer %d is not owned by resource owner %s", buffer, owner->name);
   }
 }
 
@@ -1038,7 +1035,7 @@ ResourceOwnerForgetCatCacheRef(ResourceOwner owner, HeapTuple tuple)
 {
   if (!ResourceArrayRemove(&(owner->catrefarr), PointerGetDatum(tuple)))
   {
-
+    elog(ERROR, "catcache reference %p is not owned by resource owner %s", tuple, owner->name);
   }
 }
 
@@ -1074,7 +1071,7 @@ ResourceOwnerForgetCatCacheListRef(ResourceOwner owner, CatCList *list)
 {
   if (!ResourceArrayRemove(&(owner->catlistrefarr), PointerGetDatum(list)))
   {
-
+    elog(ERROR, "catcache list reference %p is not owned by resource owner %s", list, owner->name);
   }
 }
 
@@ -1110,7 +1107,7 @@ ResourceOwnerForgetRelationRef(ResourceOwner owner, Relation rel)
 {
   if (!ResourceArrayRemove(&(owner->relrefarr), PointerGetDatum(rel)))
   {
-
+    elog(ERROR, "relcache reference %s is not owned by resource owner %s", RelationGetRelationName(rel), owner->name);
   }
 }
 
@@ -1120,7 +1117,7 @@ ResourceOwnerForgetRelationRef(ResourceOwner owner, Relation rel)
 static void
 PrintRelCacheLeakWarning(Relation rel)
 {
-
+  elog(WARNING, "relcache reference leak: relation \"%s\" not closed", RelationGetRelationName(rel));
 }
 
 /*
@@ -1155,7 +1152,7 @@ ResourceOwnerForgetPlanCacheRef(ResourceOwner owner, CachedPlan *plan)
 {
   if (!ResourceArrayRemove(&(owner->planrefarr), PointerGetDatum(plan)))
   {
-
+    elog(ERROR, "plancache reference %p is not owned by resource owner %s", plan, owner->name);
   }
 }
 
@@ -1165,7 +1162,7 @@ ResourceOwnerForgetPlanCacheRef(ResourceOwner owner, CachedPlan *plan)
 static void
 PrintPlanCacheLeakWarning(CachedPlan *plan)
 {
-
+  elog(WARNING, "plancache reference leak: plan %p not closed", plan);
 }
 
 /*
@@ -1200,7 +1197,7 @@ ResourceOwnerForgetTupleDesc(ResourceOwner owner, TupleDesc tupdesc)
 {
   if (!ResourceArrayRemove(&(owner->tupdescarr), PointerGetDatum(tupdesc)))
   {
-
+    elog(ERROR, "tupdesc reference %p is not owned by resource owner %s", tupdesc, owner->name);
   }
 }
 
@@ -1210,7 +1207,7 @@ ResourceOwnerForgetTupleDesc(ResourceOwner owner, TupleDesc tupdesc)
 static void
 PrintTupleDescLeakWarning(TupleDesc tupdesc)
 {
-
+  elog(WARNING, "TupleDesc reference leak: TupleDesc %p (%u,%d) still referenced", tupdesc, tupdesc->tdtypeid, tupdesc->tdtypmod);
 }
 
 /*
@@ -1245,7 +1242,7 @@ ResourceOwnerForgetSnapshot(ResourceOwner owner, Snapshot snapshot)
 {
   if (!ResourceArrayRemove(&(owner->snapshotarr), PointerGetDatum(snapshot)))
   {
-
+    elog(ERROR, "snapshot reference %p is not owned by resource owner %s", snapshot, owner->name);
   }
 }
 
@@ -1255,7 +1252,7 @@ ResourceOwnerForgetSnapshot(ResourceOwner owner, Snapshot snapshot)
 static void
 PrintSnapshotLeakWarning(Snapshot snapshot)
 {
-
+  elog(WARNING, "Snapshot reference leak: Snapshot %p still referenced", snapshot);
 }
 
 /*
@@ -1290,7 +1287,7 @@ ResourceOwnerForgetFile(ResourceOwner owner, File file)
 {
   if (!ResourceArrayRemove(&(owner->filearr), FileGetDatum(file)))
   {
-
+    elog(ERROR, "temporary file %d is not owned by resource owner %s", file, owner->name);
   }
 }
 
@@ -1300,7 +1297,7 @@ ResourceOwnerForgetFile(ResourceOwner owner, File file)
 static void
 PrintFileLeakWarning(File file)
 {
-
+  elog(WARNING, "temporary file leak: File %d still referenced", file);
 }
 
 /*
@@ -1335,7 +1332,7 @@ ResourceOwnerForgetDSM(ResourceOwner owner, dsm_segment *seg)
 {
   if (!ResourceArrayRemove(&(owner->dsmarr), PointerGetDatum(seg)))
   {
-
+    elog(ERROR, "dynamic shared memory segment %u is not owned by resource owner %s", dsm_segment_handle(seg), owner->name);
   }
 }
 
@@ -1345,7 +1342,7 @@ ResourceOwnerForgetDSM(ResourceOwner owner, dsm_segment *seg)
 static void
 PrintDSMLeakWarning(dsm_segment *seg)
 {
-
+  elog(WARNING, "dynamic shared memory leak: segment %u still referenced", dsm_segment_handle(seg));
 }
 
 /*
@@ -1358,7 +1355,7 @@ PrintDSMLeakWarning(dsm_segment *seg)
 void
 ResourceOwnerEnlargeJIT(ResourceOwner owner)
 {
-
+  ResourceArrayEnlarge(&(owner->jitarr));
 }
 
 /*
@@ -1369,7 +1366,7 @@ ResourceOwnerEnlargeJIT(ResourceOwner owner)
 void
 ResourceOwnerRememberJIT(ResourceOwner owner, Datum handle)
 {
-
+  ResourceArrayAdd(&(owner->jitarr), handle);
 }
 
 /*
@@ -1378,8 +1375,8 @@ ResourceOwnerRememberJIT(ResourceOwner owner, Datum handle)
 void
 ResourceOwnerForgetJIT(ResourceOwner owner, Datum handle)
 {
-
-
-
-
+  if (!ResourceArrayRemove(&(owner->jitarr), handle))
+  {
+    elog(ERROR, "JIT context %p is not owned by resource owner %s", DatumGetPointer(handle), owner->name);
+  }
 }

@@ -21,8 +21,7 @@
 #include "utils/builtins.h"
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -57,8 +56,7 @@ charout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		charrecv			- converts external binary
- *format to char
+ *		charrecv			- converts external binary format to char
  *
  * The external representation is one byte, with no character set
  * conversion.  This is somewhat dubious, perhaps, but in many
@@ -67,9 +65,9 @@ charout(PG_FUNCTION_ARGS)
 Datum
 charrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_CHAR(pq_getmsgbyte(buf));
 }
 
 /*
@@ -78,17 +76,16 @@ charrecv(PG_FUNCTION_ARGS)
 Datum
 charsend(PG_FUNCTION_ARGS)
 {
+  char arg1 = PG_GETARG_CHAR(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendbyte(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*****************************************************************************
- *	 PUBLIC ROUTINES
- **
+ *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -155,22 +152,22 @@ charge(PG_FUNCTION_ARGS)
 Datum
 chartoi4(PG_FUNCTION_ARGS)
 {
+  char arg1 = PG_GETARG_CHAR(0);
 
-
-
+  PG_RETURN_INT32((int32)((int8)arg1));
 }
 
 Datum
 i4tochar(PG_FUNCTION_ARGS)
 {
+  int32 arg1 = PG_GETARG_INT32(0);
 
+  if (arg1 < SCHAR_MIN || arg1 > SCHAR_MAX)
+  {
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("\"char\" out of range")));
+  }
 
-
-
-
-
-
-
+  PG_RETURN_CHAR((int8)arg1);
 }
 
 Datum
@@ -190,7 +187,7 @@ text_char(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result = '\0';
   }
 
   PG_RETURN_CHAR(result);
@@ -199,22 +196,22 @@ text_char(PG_FUNCTION_ARGS)
 Datum
 char_text(PG_FUNCTION_ARGS)
 {
+  char arg1 = PG_GETARG_CHAR(0);
+  text *result = palloc(VARHDRSZ + 1);
 
+  /*
+   * Convert \0 to an empty string, for consistency with charout (and
+   * because the text stuff doesn't like embedded nulls all that well).
+   */
+  if (arg1 != '\0')
+  {
+    SET_VARSIZE(result, VARHDRSZ + 1);
+    *(VARDATA(result)) = arg1;
+  }
+  else
+  {
+    SET_VARSIZE(result, VARHDRSZ);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(result);
 }

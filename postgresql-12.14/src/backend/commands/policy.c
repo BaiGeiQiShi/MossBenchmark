@@ -75,7 +75,7 @@ RangeVarCallbackForPolicy(const RangeVar *rv, Oid relid, Oid oldrelid, void *arg
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    return;
   }
 
   classform = (Form_pg_class)GETSTRUCT(tuple);
@@ -90,13 +90,13 @@ RangeVarCallbackForPolicy(const RangeVar *rv, Oid relid, Oid oldrelid, void *arg
   /* No system table modifications unless explicitly allowed. */
   if (!allowSystemTableMods && IsSystemClass(relid, classform))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied: \"%s\" is a system catalog", rv->relname)));
   }
 
   /* Relation type MUST be a table. */
   if (relkind != RELKIND_RELATION && relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table", rv->relname)));
   }
 
   ReleaseSysCache(tuple);
@@ -118,7 +118,7 @@ parse_policy_command(const char *cmd_name)
 
   if (!cmd_name)
   {
-
+    elog(ERROR, "unrecognized policy command");
   }
 
   if (strcmp(cmd_name, "all") == 0)
@@ -143,7 +143,7 @@ parse_policy_command(const char *cmd_name)
   }
   else
   {
-
+    elog(ERROR, "unrecognized policy command");
   }
 
   return polcmd;
@@ -164,11 +164,11 @@ policy_role_list_to_array(List *roles, int *num_roles)
   /* Handle no roles being passed in as being for public */
   if (roles == NIL)
   {
+    *num_roles = 1;
+    role_oids = (Datum *)palloc(*num_roles * sizeof(Datum));
+    role_oids[0] = ObjectIdGetDatum(ACL_ID_PUBLIC);
 
-
-
-
-
+    return role_oids;
   }
 
   *num_roles = list_length(roles);
@@ -185,8 +185,8 @@ policy_role_list_to_array(List *roles, int *num_roles)
     {
       if (*num_roles != 1)
       {
-
-
+        ereport(WARNING, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ignoring specified roles other than PUBLIC"), errhint("All roles are members of the PUBLIC role.")));
+        *num_roles = 1;
       }
       role_oids[0] = ObjectIdGetDatum(ACL_ID_PUBLIC);
 
@@ -273,7 +273,7 @@ RelationBuildRowSecurity(Relation relation)
     /* shouldn't be null, but let's check for luck */
     if (isnull)
     {
-
+      elog(ERROR, "unexpected null value in pg_policy.polroles");
     }
     MemoryContextSwitchTo(rscxt);
     policy->roles = DatumGetArrayTypePCopy(datum);
@@ -336,8 +336,8 @@ RelationBuildRowSecurity(Relation relation)
 
 /*
  * RemovePolicyById -
- *	 remove a policy by its OID.  If a policy does not exist with the
- *provided oid, then an error is raised.
+ *	 remove a policy by its OID.  If a policy does not exist with the provided
+ *	 oid, then an error is raised.
  *
  * policy_id - the oid of the policy.
  */
@@ -365,7 +365,7 @@ RemovePolicyById(Oid policy_id)
   /* If the policy exists, then remove it, otherwise raise an error. */
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "could not find tuple for policy %u", policy_id);
   }
 
   /*
@@ -379,12 +379,12 @@ RemovePolicyById(Oid policy_id)
   rel = table_open(relid, AccessExclusiveLock);
   if (rel->rd_rel->relkind != RELKIND_RELATION && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table", RelationGetRelationName(rel))));
   }
 
   if (!allowSystemTableMods && IsSystemRelation(rel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied: \"%s\" is a system catalog", RelationGetRelationName(rel))));
   }
 
   CatalogTupleDelete(pg_policy_rel, &tuple->t_self);
@@ -453,7 +453,7 @@ RemoveRoleFromObjectPolicy(Oid roleid, Oid classid, Oid policy_id)
   /* Raise an error if we don't find the policy. */
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "could not find tuple for policy %u", policy_id);
   }
 
   /* Identify rel the policy belongs to */
@@ -601,7 +601,7 @@ CreatePolicy(CreatePolicyStmt *stmt)
    */
   if ((polcmd == ACL_SELECT_CHR || polcmd == ACL_DELETE_CHR) && stmt->with_check != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("WITH CHECK cannot be applied to SELECT or DELETE")));
   }
 
   /*
@@ -610,7 +610,7 @@ CreatePolicy(CreatePolicyStmt *stmt)
    */
   if (polcmd == ACL_INSERT_CHR && stmt->qual != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("only WITH CHECK expression allowed for INSERT")));
   }
 
   /* Collect role ids */
@@ -813,17 +813,17 @@ AlterPolicy(AlterPolicyStmt *stmt)
     RangeTblEntry *rte;
     ParseState *with_check_pstate = make_parsestate(NULL);
 
+    rte = addRangeTableEntryForRelation(with_check_pstate, target_table, AccessShareLock, NULL, false, false);
 
+    addRTEtoQuery(with_check_pstate, rte, false, true, true);
 
-
-
-
+    with_check_qual = transformWhereClause(with_check_pstate, copyObject(stmt->with_check), EXPR_KIND_POLICY, "POLICY");
 
     /* Fix up collation information */
+    assign_expr_collations(with_check_pstate, with_check_qual);
 
-
-
-
+    with_check_parse_rtable = with_check_pstate->p_rtable;
+    free_parsestate(with_check_pstate);
   }
 
   /* zero-clear */
@@ -847,7 +847,7 @@ AlterPolicy(AlterPolicyStmt *stmt)
   /* Check that the policy is found, raise an error if not. */
   if (!HeapTupleIsValid(policy_tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("policy \"%s\" for table \"%s\" does not exist", stmt->policy_name, RelationGetRelationName(target_table))));
   }
 
   /* Get policy command */
@@ -860,7 +860,7 @@ AlterPolicy(AlterPolicyStmt *stmt)
    */
   if ((polcmd == ACL_SELECT_CHR || polcmd == ACL_DELETE_CHR) && stmt->with_check != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("only USING expression allowed for SELECT, DELETE")));
   }
 
   /*
@@ -869,7 +869,7 @@ AlterPolicy(AlterPolicyStmt *stmt)
    */
   if ((polcmd == ACL_INSERT_CHR) && stmt->qual != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("only WITH CHECK expression allowed for INSERT")));
   }
 
   policy_id = ((Form_pg_policy)GETSTRUCT(policy_tuple))->oid;
@@ -948,8 +948,8 @@ AlterPolicy(AlterPolicyStmt *stmt)
 
   if (with_check_qual != NULL)
   {
-
-
+    replaces[Anum_pg_policy_polwithcheck - 1] = true;
+    values[Anum_pg_policy_polwithcheck - 1] = CStringGetTextDatum(nodeToString(with_check_qual));
   }
   else
   {
@@ -970,16 +970,16 @@ AlterPolicy(AlterPolicyStmt *stmt)
       ParseState *with_check_pstate;
 
       /* parsestate is built just to build the range table */
+      with_check_pstate = make_parsestate(NULL);
 
-
-
-
+      with_check_value = TextDatumGetCString(value_datum);
+      with_check_qual = stringToNode(with_check_value);
 
       /* Add this rel to the parsestate's rangetable, for dependencies */
+      addRangeTableEntryForRelation(with_check_pstate, target_table, AccessShareLock, NULL, false, false);
 
-
-
-
+      with_check_parse_rtable = with_check_pstate->p_rtable;
+      free_parsestate(with_check_pstate);
     }
   }
 
@@ -1087,7 +1087,7 @@ rename_policy(RenameStmt *stmt)
   /* Complain if we did not find the policy */
   if (!HeapTupleIsValid(policy_tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("policy \"%s\" for table \"%s\" does not exist", stmt->subname, RelationGetRelationName(target_table))));
   }
 
   opoloid = ((Form_pg_policy)GETSTRUCT(policy_tuple))->oid;

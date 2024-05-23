@@ -40,7 +40,7 @@ md5_text(PG_FUNCTION_ARGS)
   /* get the hash result */
   if (pg_md5_hash(VARDATA_ANY(in_text), len, hexsum) == false)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
   /* convert to text and return it */
@@ -60,7 +60,7 @@ md5_bytea(PG_FUNCTION_ARGS)
   len = VARSIZE_ANY_EXHDR(in);
   if (pg_md5_hash(VARDATA_ANY(in), len, hexsum) == false)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
   PG_RETURN_TEXT_P(cstring_to_text(hexsum));

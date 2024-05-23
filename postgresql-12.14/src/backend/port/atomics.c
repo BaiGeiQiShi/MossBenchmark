@@ -43,7 +43,8 @@ pg_spinlock_barrier(void)
 #ifdef PG_HAVE_COMPILER_BARRIER_EMULATION
 void
 pg_extern_compiler_barrier(void)
-{ /* do nothing */
+{
+  /* do nothing */
 }
 #endif
 
@@ -147,7 +148,8 @@ pg_atomic_compare_exchange_u32_impl(volatile pg_atomic_uint32 *ptr, uint32 *expe
   /* perform compare/exchange logic */
   ret = ptr->value == *expected;
   *expected = ptr->value;
-  if (ret) {
+  if (ret)
+  {
     ptr->value = newval;
   }
 
@@ -208,7 +210,8 @@ pg_atomic_compare_exchange_u64_impl(volatile pg_atomic_uint64 *ptr, uint64 *expe
   /* perform compare/exchange logic */
   ret = ptr->value == *expected;
   *expected = ptr->value;
-  if (ret) {
+  if (ret)
+  {
     ptr->value = newval;
   }
 

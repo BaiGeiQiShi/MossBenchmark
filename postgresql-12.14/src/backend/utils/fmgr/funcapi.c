@@ -67,7 +67,7 @@ init_MultiFuncCall(PG_FUNCTION_ARGS)
    */
   if (fcinfo->resultinfo == NULL || !IsA(fcinfo->resultinfo, ReturnSetInfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
 
   if (fcinfo->flinfo->fn_extra == NULL)
@@ -112,10 +112,10 @@ init_MultiFuncCall(PG_FUNCTION_ARGS)
   else
   {
     /* second and subsequent calls */
-
+    elog(ERROR, "init_MultiFuncCall cannot be called more than once");
 
     /* never reached, but keep compiler happy */
-
+    retval = NULL;
   }
 
   return retval;
@@ -172,12 +172,12 @@ shutdown_MultiFuncCall(Datum arg)
 
 /*
  * get_call_result_type
- *		Given a function's call info record, determine the kind of
- *datatype it is supposed to return.  If resultTypeId isn't NULL, *resultTypeId
- *		receives the actual datatype OID (this is mainly useful for
- *scalar result types).  If resultTupleDesc isn't NULL, *resultTupleDesc
- *		receives a pointer to a TupleDesc when the result is of a
- *composite type, or NULL when it's a scalar result.
+ *		Given a function's call info record, determine the kind of datatype
+ *		it is supposed to return.  If resultTypeId isn't NULL, *resultTypeId
+ *		receives the actual datatype OID (this is mainly useful for scalar
+ *		result types).  If resultTupleDesc isn't NULL, *resultTupleDesc
+ *		receives a pointer to a TupleDesc when the result is of a composite
+ *		type, or NULL when it's a scalar result.
  *
  * One hard case that this handles is resolution of actual rowtypes for
  * functions returning RECORD (from either the function's OUT parameter
@@ -272,7 +272,7 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", funcid);
   }
   procform = (Form_pg_proc)GETSTRUCT(tp);
 
@@ -325,9 +325,9 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   {
     Oid newrettype = exprType(call_expr);
 
-    if (newrettype == InvalidOid)
-    { /* this probably should not happen */
-
+    if (newrettype == InvalidOid) /* this probably should not happen */
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine actual result type for function \"%s\" declared to return type %s", NameStr(procform->proname), format_type_be(rettype))));
     }
     rettype = newrettype;
   }
@@ -345,17 +345,17 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   result = get_type_func_class(rettype, &base_rettype);
   switch (result)
   {
-  case TYPEFUNC_COMPOSITE:;
-  case TYPEFUNC_COMPOSITE_DOMAIN:;
+  case TYPEFUNC_COMPOSITE:
+  case TYPEFUNC_COMPOSITE_DOMAIN:
     if (resultTupleDesc)
     {
       *resultTupleDesc = lookup_rowtype_tupdesc_copy(base_rettype, -1);
     }
     /* Named composite types can't have any polymorphic columns */
     break;
-  case TYPEFUNC_SCALAR:;
+  case TYPEFUNC_SCALAR:
     break;
-  case TYPEFUNC_RECORD:;
+  case TYPEFUNC_RECORD:
     /* We must get the tupledesc from call context */
     if (rsinfo && IsA(rsinfo, ReturnSetInfo) && rsinfo->expectedDesc != NULL)
     {
@@ -367,8 +367,8 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
       /* Assume no polymorphic columns here, either */
     }
     break;
-  default:;;
-
+  default:
+    break;
   }
 
   ReleaseSysCache(tp);
@@ -378,8 +378,7 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
 
 /*
  * get_expr_result_tupdesc
- *		Get a tupdesc describing the result of a composite-valued
- *expression
+ *		Get a tupdesc describing the result of a composite-valued expression
  *
  * If expression is not composite or rowtype can't be determined, returns NULL
  * if noError is true, else throws error.
@@ -404,14 +403,14 @@ get_expr_result_tupdesc(Node *expr, bool noError)
   {
     Oid exprTypeId = exprType(expr);
 
-
-
-
-
-
-
-
-
+    if (exprTypeId != RECORDOID)
+    {
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("type %s is not composite", format_type_be(exprTypeId))));
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("record type has not been registered")));
+    }
   }
 
   return NULL;
@@ -436,7 +435,7 @@ resolve_anyelement_from_others(polymorphic_actuals *actuals)
 
     if (!OidIsValid(array_typelem))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("argument declared %s is not an array but type %s", "anyarray", format_type_be(array_base_type))));
     }
     actuals->anyelement_type = array_typelem;
   }
@@ -448,13 +447,13 @@ resolve_anyelement_from_others(polymorphic_actuals *actuals)
 
     if (!OidIsValid(range_typelem))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("argument declared %s is not a range type but type %s", "anyrange", format_type_be(range_base_type))));
     }
     actuals->anyelement_type = range_typelem;
   }
   else
   {
-
+    elog(ERROR, "could not determine polymorphic type");
   }
 }
 
@@ -477,13 +476,13 @@ resolve_anyarray_from_others(polymorphic_actuals *actuals)
 
     if (!OidIsValid(array_typeid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find array type for data type %s", format_type_be(actuals->anyelement_type))));
     }
     actuals->anyarray_type = array_typeid;
   }
   else
   {
-
+    elog(ERROR, "could not determine polymorphic type");
   }
 }
 
@@ -493,11 +492,11 @@ resolve_anyarray_from_others(polymorphic_actuals *actuals)
 static void
 resolve_anyrange_from_others(polymorphic_actuals *actuals)
 {
-
-
-
-
-
+  /*
+   * We can't deduce a range type from other polymorphic inputs, because
+   * there may be multiple range types with the same subtype.
+   */
+  elog(ERROR, "could not determine polymorphic type");
 }
 
 /*
@@ -526,21 +525,21 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
   {
     switch (TupleDescAttr(tupdesc, i)->atttypid)
     {
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       have_polymorphic_result = true;
       have_anyelement_result = true;
       break;
-    case ANYARRAYOID:;
+    case ANYARRAYOID:
       have_polymorphic_result = true;
       have_anyarray_result = true;
       break;
-    case ANYRANGEOID:;
+    case ANYRANGEOID:
       have_polymorphic_result = true;
       have_anyrange_result = true;
       break;
-    default:;;
+    default:
       break;
     }
   }
@@ -564,40 +563,40 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
   {
     switch (declared_args->values[i])
     {
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       if (!OidIsValid(poly_actuals.anyelement_type))
       {
         poly_actuals.anyelement_type = get_call_expr_argtype(call_expr, i);
         if (!OidIsValid(poly_actuals.anyelement_type))
         {
-
+          return false;
         }
       }
       break;
-    case ANYARRAYOID:;
+    case ANYARRAYOID:
       if (!OidIsValid(poly_actuals.anyarray_type))
       {
         poly_actuals.anyarray_type = get_call_expr_argtype(call_expr, i);
         if (!OidIsValid(poly_actuals.anyarray_type))
         {
-
+          return false;
         }
       }
       break;
-    case ANYRANGEOID:;
+    case ANYRANGEOID:
       if (!OidIsValid(poly_actuals.anyrange_type))
       {
         poly_actuals.anyrange_type = get_call_expr_argtype(call_expr, i);
         if (!OidIsValid(poly_actuals.anyrange_type))
         {
-
+          return false;
         }
       }
       break;
-    default:;;
-
+    default:
+      break;
     }
   }
 
@@ -614,7 +613,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
 
   if (have_anyrange_result && !OidIsValid(poly_actuals.anyrange_type))
   {
-
+    resolve_anyrange_from_others(&poly_actuals);
   }
 
   /*
@@ -629,7 +628,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
   }
   else if (OidIsValid(poly_actuals.anyarray_type))
   {
-
+    anycollation = get_typcollation(poly_actuals.anyarray_type);
   }
 
   if (OidIsValid(anycollation))
@@ -654,21 +653,21 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
 
     switch (att->atttypid)
     {
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       TupleDescInitEntry(tupdesc, i + 1, NameStr(att->attname), poly_actuals.anyelement_type, -1, 0);
       TupleDescInitEntryCollation(tupdesc, i + 1, anycollation);
       break;
-    case ANYARRAYOID:;
+    case ANYARRAYOID:
       TupleDescInitEntry(tupdesc, i + 1, NameStr(att->attname), poly_actuals.anyarray_type, -1, 0);
       TupleDescInitEntryCollation(tupdesc, i + 1, anycollation);
       break;
-    case ANYRANGEOID:;
+    case ANYRANGEOID:
       TupleDescInitEntry(tupdesc, i + 1, NameStr(att->attname), poly_actuals.anyrange_type, -1, 0);
       /* no collation should be attached to a range type */
       break;
-    default:;;
+    default:
       break;
     }
   }
@@ -711,9 +710,9 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
 
     switch (argtypes[i])
     {
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       if (argmode == PROARGMODE_OUT || argmode == PROARGMODE_TABLE)
       {
         have_polymorphic_result = true;
@@ -726,13 +725,13 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
           poly_actuals.anyelement_type = get_call_expr_argtype(call_expr, inargno);
           if (!OidIsValid(poly_actuals.anyelement_type))
           {
-
+            return false;
           }
         }
         argtypes[i] = poly_actuals.anyelement_type;
       }
       break;
-    case ANYARRAYOID:;
+    case ANYARRAYOID:
       if (argmode == PROARGMODE_OUT || argmode == PROARGMODE_TABLE)
       {
         have_polymorphic_result = true;
@@ -745,32 +744,32 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
           poly_actuals.anyarray_type = get_call_expr_argtype(call_expr, inargno);
           if (!OidIsValid(poly_actuals.anyarray_type))
           {
-
+            return false;
           }
         }
         argtypes[i] = poly_actuals.anyarray_type;
       }
       break;
-    case ANYRANGEOID:;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    default:;;
+    case ANYRANGEOID:
+      if (argmode == PROARGMODE_OUT || argmode == PROARGMODE_TABLE)
+      {
+        have_polymorphic_result = true;
+        have_anyrange_result = true;
+      }
+      else
+      {
+        if (!OidIsValid(poly_actuals.anyrange_type))
+        {
+          poly_actuals.anyrange_type = get_call_expr_argtype(call_expr, inargno);
+          if (!OidIsValid(poly_actuals.anyrange_type))
+          {
+            return false;
+          }
+        }
+        argtypes[i] = poly_actuals.anyrange_type;
+      }
+      break;
+    default:
       break;
     }
     if (argmode != PROARGMODE_OUT && argmode != PROARGMODE_TABLE)
@@ -788,7 +787,7 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
   /* If needed, deduce one polymorphic type from others */
   if (have_anyelement_result && !OidIsValid(poly_actuals.anyelement_type))
   {
-
+    resolve_anyelement_from_others(&poly_actuals);
   }
 
   if (have_anyarray_result && !OidIsValid(poly_actuals.anyarray_type))
@@ -798,7 +797,7 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
 
   if (have_anyrange_result && !OidIsValid(poly_actuals.anyrange_type))
   {
-
+    resolve_anyrange_from_others(&poly_actuals);
   }
 
   /* And finally replace the output column types as needed */
@@ -806,18 +805,18 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
   {
     switch (argtypes[i])
     {
-    case ANYELEMENTOID:;
-    case ANYNONARRAYOID:;
-    case ANYENUMOID:;
+    case ANYELEMENTOID:
+    case ANYNONARRAYOID:
+    case ANYENUMOID:
       argtypes[i] = poly_actuals.anyelement_type;
       break;
-    case ANYARRAYOID:;
+    case ANYARRAYOID:
       argtypes[i] = poly_actuals.anyarray_type;
       break;
-    case ANYRANGEOID:;
-
-
-    default:;;
+    case ANYRANGEOID:
+      argtypes[i] = poly_actuals.anyrange_type;
+      break;
+    default:
       break;
     }
   }
@@ -841,23 +840,23 @@ get_type_func_class(Oid typid, Oid *base_typeid)
 
   switch (get_typtype(typid))
   {
-  case TYPTYPE_COMPOSITE:;
+  case TYPTYPE_COMPOSITE:
     return TYPEFUNC_COMPOSITE;
-  case TYPTYPE_BASE:;
-  case TYPTYPE_ENUM:;
-  case TYPTYPE_RANGE:;
+  case TYPTYPE_BASE:
+  case TYPTYPE_ENUM:
+  case TYPTYPE_RANGE:
     return TYPEFUNC_SCALAR;
-  case TYPTYPE_DOMAIN:;
+  case TYPTYPE_DOMAIN:
     *base_typeid = typid = getBaseType(typid);
     if (get_typtype(typid) == TYPTYPE_COMPOSITE)
     {
       return TYPEFUNC_COMPOSITE_DOMAIN;
     }
-    else
-    { /* domain base type can't be a pseudotype */
+    else /* domain base type can't be a pseudotype */
+    {
       return TYPEFUNC_SCALAR;
     }
-  case TYPTYPE_PSEUDO:;
+  case TYPTYPE_PSEUDO:
     if (typid == RECORDOID)
     {
       return TYPEFUNC_RECORD;
@@ -873,10 +872,10 @@ get_type_func_class(Oid typid, Oid *base_typeid)
     {
       return TYPEFUNC_SCALAR;
     }
-
+    return TYPEFUNC_OTHER;
   }
   /* shouldn't get here, probably */
-
+  return TYPEFUNC_OTHER;
 }
 
 /*
@@ -919,7 +918,7 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
     numargs = ARR_DIMS(arr)[0];
     if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
     {
-
+      elog(ERROR, "proallargtypes is not a 1-D Oid array");
     }
     Assert(numargs >= procStruct->pronargs);
     *p_argtypes = (Oid *)palloc(numargs * sizeof(Oid));
@@ -943,9 +942,9 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   else
   {
     deconstruct_array(DatumGetArrayTypeP(proargnames), TEXTOID, -1, false, 'i', &elems, NULL, &nelems);
-    if (nelems != numargs)
-    { /* should not happen */
-
+    if (nelems != numargs) /* should not happen */
+    {
+      elog(ERROR, "proargnames must have the same number of elements as the function has arguments");
     }
     *p_argnames = (char **)palloc(sizeof(char *) * numargs);
     for (i = 0; i < numargs; i++)
@@ -965,7 +964,7 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
     arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
-
+      elog(ERROR, "proargmodes is not a 1-D char array");
     }
     *p_argmodes = (char *)palloc(numargs * sizeof(char));
     memcpy(*p_argmodes, ARR_DATA_PTR(arr), numargs * sizeof(char));
@@ -998,16 +997,16 @@ get_func_trftypes(HeapTuple procTup, Oid **p_trftypes)
      * deconstruct_array() since the array data is just going to look like
      * a C array of values.
      */
+    arr = DatumGetArrayTypeP(protrftypes); /* ensure not toasted */
+    nelems = ARR_DIMS(arr)[0];
+    if (ARR_NDIM(arr) != 1 || nelems < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
+    {
+      elog(ERROR, "protrftypes is not a 1-D Oid array");
+    }
+    *p_trftypes = (Oid *)palloc(nelems * sizeof(Oid));
+    memcpy(*p_trftypes, ARR_DATA_PTR(arr), nelems * sizeof(Oid));
 
-
-
-
-
-
-
-
-
-
+    return nelems;
   }
   else
   {
@@ -1051,7 +1050,7 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
   arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
   if (ARR_NDIM(arr) != 1 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
   {
-
+    elog(ERROR, "proargnames is not a 1-D text array");
   }
   deconstruct_array(arr, TEXTOID, -1, false, 'i', &argnames, NULL, &numargs);
   if (proargmodes != PointerGetDatum(NULL))
@@ -1059,7 +1058,7 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
     arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
-
+      elog(ERROR, "proargmodes is not a 1-D char array");
     }
     argmodes = (char *)ARR_DATA_PTR(arr);
   }
@@ -1071,8 +1070,8 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
   /* zero elements probably shouldn't happen, but handle it gracefully */
   if (numargs <= 0)
   {
-
-
+    *arg_names = NULL;
+    return 0;
   }
 
   /* extract input-argument names */
@@ -1129,7 +1128,7 @@ get_func_result_name(Oid functionId)
   procTuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(functionId));
   if (!HeapTupleIsValid(procTuple))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", functionId);
   }
 
   /* If there are no named OUT parameters, return NULL */
@@ -1155,13 +1154,13 @@ get_func_result_name(Oid functionId)
     numargs = ARR_DIMS(arr)[0];
     if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
-
+      elog(ERROR, "proargmodes is not a 1-D char array");
     }
     argmodes = (char *)ARR_DATA_PTR(arr);
     arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
     {
-
+      elog(ERROR, "proargnames is not a 1-D text array");
     }
     deconstruct_array(arr, TEXTOID, -1, false, 'i', &argnames, NULL, &nargnames);
     Assert(nargnames == numargs);
@@ -1179,15 +1178,15 @@ get_func_result_name(Oid functionId)
       if (++numoutargs > 1)
       {
         /* multiple out args, so forget it */
-
-
+        result = NULL;
+        break;
       }
       result = TextDatumGetCString(argnames[i]);
       if (result == NULL || result[0] == '\0')
       {
         /* Parameter is not named, so forget it */
-
-
+        result = NULL;
+        break;
       }
     }
   }
@@ -1282,13 +1281,13 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
   numargs = ARR_DIMS(arr)[0];
   if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
   {
-
+    elog(ERROR, "proallargtypes is not a 1-D Oid array");
   }
   argtypes = (Oid *)ARR_DATA_PTR(arr);
   arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
   if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
   {
-
+    elog(ERROR, "proargmodes is not a 1-D char array");
   }
   argmodes = (char *)ARR_DATA_PTR(arr);
   if (proargnames != PointerGetDatum(NULL))
@@ -1296,7 +1295,7 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
     arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
     {
-
+      elog(ERROR, "proargnames is not a 1-D text array");
     }
     deconstruct_array(arr, TEXTOID, -1, false, 'i', &argnames, NULL, &nargnames);
     Assert(nargnames == numargs);
@@ -1305,7 +1304,7 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
   /* zero elements probably shouldn't happen, but handle it gracefully */
   if (numargs <= 0)
   {
-
+    return NULL;
   }
 
   /* extract output-argument types and names */
@@ -1345,7 +1344,7 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
    */
   if (numoutargs < 2 && prokind != PROKIND_PROCEDURE)
   {
-
+    return NULL;
   }
 
   desc = CreateTemplateTupleDesc(numoutargs);
@@ -1369,19 +1368,19 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
 TupleDesc
 RelationNameGetTupleDesc(const char *relname)
 {
+  RangeVar *relvar;
+  Relation rel;
+  TupleDesc tupdesc;
+  List *relname_list;
 
+  /* Open relation and copy the tuple description */
+  relname_list = stringToQualifiedNameList(relname);
+  relvar = makeRangeVarFromNameList(relname_list);
+  rel = relation_openrv(relvar, AccessShareLock);
+  tupdesc = CreateTupleDescCopy(RelationGetDescr(rel));
+  relation_close(rel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
+  return tupdesc;
 }
 
 /*
@@ -1402,84 +1401,84 @@ RelationNameGetTupleDesc(const char *relname)
 TupleDesc
 TypeGetTupleDesc(Oid typeoid, List *colaliases)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Oid base_typeoid;
+  TypeFuncClass functypclass = get_type_func_class(typeoid, &base_typeoid);
+  TupleDesc tupdesc = NULL;
+
+  /*
+   * Build a suitable tupledesc representing the output rows.  We
+   * intentionally do not support TYPEFUNC_COMPOSITE_DOMAIN here, as it's
+   * unlikely that legacy callers of this obsolete function would be
+   * prepared to apply domain constraints.
+   */
+  if (functypclass == TYPEFUNC_COMPOSITE)
+  {
+    /* Composite data type, e.g. a table's row type */
+    tupdesc = lookup_rowtype_tupdesc_copy(base_typeoid, -1);
+
+    if (colaliases != NIL)
+    {
+      int natts = tupdesc->natts;
+      int varattno;
+
+      /* does the list length match the number of attributes? */
+      if (list_length(colaliases) != natts)
+      {
+        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("number of aliases does not match number of columns")));
+      }
+
+      /* OK, use the aliases instead */
+      for (varattno = 0; varattno < natts; varattno++)
+      {
+        char *label = strVal(list_nth(colaliases, varattno));
+        Form_pg_attribute attr = TupleDescAttr(tupdesc, varattno);
+
+        if (label != NULL)
+        {
+          namestrcpy(&(attr->attname), label);
+        }
+      }
+
+      /* The tuple type is now an anonymous record type */
+      tupdesc->tdtypeid = RECORDOID;
+      tupdesc->tdtypmod = -1;
+    }
+  }
+  else if (functypclass == TYPEFUNC_SCALAR)
+  {
+    /* Base data type, i.e. scalar */
+    char *attname;
+
+    /* the alias list is required for base types */
+    if (colaliases == NIL)
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("no column alias was provided")));
+    }
+
+    /* the alias list length must be 1 */
+    if (list_length(colaliases) != 1)
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("number of aliases does not match number of columns")));
+    }
+
+    /* OK, get the column alias */
+    attname = strVal(linitial(colaliases));
+
+    tupdesc = CreateTemplateTupleDesc(1);
+    TupleDescInitEntry(tupdesc, (AttrNumber)1, attname, typeoid, -1, 0);
+  }
+  else if (functypclass == TYPEFUNC_RECORD)
+  {
+    /* XXX can't support this because typmod wasn't passed in ... */
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine row description for function returning record")));
+  }
+  else
+  {
+    /* crummy error message, but parser should have caught this */
+    elog(ERROR, "function in FROM has unsupported return type");
+  }
+
+  return tupdesc;
 }
 
 /*
@@ -1578,7 +1577,7 @@ extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_
 
       if (!OidIsValid(types_res[i]) || (convert_unknown && types_res[i] == UNKNOWNOID))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine data type for argument %d", i + 1)));
       }
     }
   }

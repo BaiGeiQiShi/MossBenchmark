@@ -90,7 +90,7 @@ TidExprListCreate(TidScanState *tidstate)
       }
       else
       {
-
+        elog(ERROR, "could not identify CTID variable");
       }
       tidexpr->isarray = false;
     }
@@ -111,7 +111,7 @@ TidExprListCreate(TidScanState *tidstate)
     }
     else
     {
-
+      elog(ERROR, "could not identify CTID expression");
     }
 
     tidstate->tss_tidexprs = lappend(tidstate->tss_tidexprs, tidexpr);
@@ -168,7 +168,7 @@ TidListEval(TidScanState *tidstate)
       itemptr = (ItemPointer)DatumGetPointer(ExecEvalExprSwitchContext(tidexpr->exprstate, econtext, &isNull));
       if (isNull)
       {
-
+        continue;
       }
 
       /*
@@ -180,7 +180,7 @@ TidListEval(TidScanState *tidstate)
        */
       if (!table_tuple_tid_valid(scan, itemptr))
       {
-
+        continue;
       }
 
       if (numTids >= numAllocTids)
@@ -202,7 +202,7 @@ TidListEval(TidScanState *tidstate)
       arraydatum = ExecEvalExprSwitchContext(tidexpr->exprstate, econtext, &isNull);
       if (isNull)
       {
-
+        continue;
       }
       itemarray = DatumGetArrayTypeP(arraydatum);
       deconstruct_array(itemarray, TIDOID, sizeof(ItemPointerData), false, 's', &ipdatums, &ipnulls, &ndatums);
@@ -215,14 +215,14 @@ TidListEval(TidScanState *tidstate)
       {
         if (ipnulls[i])
         {
-
+          continue;
         }
 
         itemptr = (ItemPointer)DatumGetPointer(ipdatums[i]);
 
         if (!table_tuple_tid_valid(scan, itemptr))
         {
-
+          continue;
         }
 
         tidList[numTids++] = *itemptr;
@@ -239,8 +239,8 @@ TidListEval(TidScanState *tidstate)
       {
         if (numTids >= numAllocTids)
         {
-
-
+          numAllocTids *= 2;
+          tidList = (ItemPointerData *)repalloc(tidList, numAllocTids * sizeof(ItemPointerData));
         }
         tidList[numTids++] = cursor_tid;
       }
@@ -293,11 +293,11 @@ itemptr_comparator(const void *a, const void *b)
 
   if (ba < bb)
   {
-
+    return -1;
   }
   if (ba > bb)
   {
-
+    return 1;
   }
   if (oa < ob)
   {
@@ -307,7 +307,7 @@ itemptr_comparator(const void *a, const void *b)
   {
     return 1;
   }
-
+  return 0;
 }
 
 /* ----------------------------------------------------------------
@@ -361,7 +361,7 @@ TidNext(TidScanState *node)
     if (node->tss_TidPtr < 0)
     {
       /* initialize for backward scan */
-
+      node->tss_TidPtr = numTids - 1;
     }
     else
     {
@@ -403,7 +403,7 @@ TidNext(TidScanState *node)
     /* Bad TID or failed snapshot qual; try next */
     if (bBackward)
     {
-
+      node->tss_TidPtr--;
     }
     else
     {
@@ -426,12 +426,12 @@ TidNext(TidScanState *node)
 static bool
 TidRecheck(TidScanState *node, TupleTableSlot *slot)
 {
-
-
-
-
-
-
+  /*
+   * XXX shouldn't we check here to make sure tuple matches TID list? In
+   * runtime-key case this is not certain, is it?  However, in the WHERE
+   * CURRENT OF case it might not match anyway ...
+   */
+  return true;
 }
 
 /* ----------------------------------------------------------------
@@ -443,13 +443,12 @@ TidRecheck(TidScanState *node, TupleTableSlot *slot)
  *		access method functions.
  *
  *		Conditions:
- *		  -- the "cursor" maintained by the AMI is positioned at the
- *tuple returned previously.
+ *		  -- the "cursor" maintained by the AMI is positioned at the tuple
+ *			 returned previously.
  *
  *		Initial States:
  *		  -- the relation indicated is opened for scanning so that the
- *			 "cursor" is positioned before the first qualifying
- *tuple.
+ *			 "cursor" is positioned before the first qualifying tuple.
  *		  -- tidPtr is -1.
  * ----------------------------------------------------------------
  */

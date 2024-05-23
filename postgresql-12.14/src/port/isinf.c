@@ -28,11 +28,12 @@ isinf(double d)
 {
   fpclass_t type = fpclass(d);
 
-  switch (type) {
+  switch (type)
+  {
   case FP_NINF:
   case FP_PINF:
     return 1;
-  default:;
+  default:
     break;
   }
   return 0;
@@ -54,10 +55,12 @@ isinf(double x)
   int fpclass = fp_class_d(x);
 #endif
 
-  if (fpclass == FP_POS_INF) {
+  if (fpclass == FP_POS_INF)
+  {
     return 1;
   }
-  if (fpclass == FP_NEG_INF) {
+  if (fpclass == FP_NEG_INF)
+  {
     return -1;
   }
   return 0;
@@ -70,10 +73,12 @@ isinf(double x)
 {
   int fpclass = class(x);
 
-  if (fpclass == FP_PLUS_INF) {
+  if (fpclass == FP_PLUS_INF)
+  {
     return 1;
   }
-  if (fpclass == FP_MINUS_INF) {
+  if (fpclass == FP_MINUS_INF)
+  {
     return -1;
   }
   return 0;

@@ -59,7 +59,7 @@ ExecLimit(PlanState *pstate)
    */
   switch (node->lstate)
   {
-  case LIMIT_INITIAL:;
+  case LIMIT_INITIAL:
 
     /*
      * First call for this node, so compute limit/offset. (We can't do
@@ -71,14 +71,14 @@ ExecLimit(PlanState *pstate)
 
     /* FALL THRU */
 
-  case LIMIT_RESCAN:;
+  case LIMIT_RESCAN:
 
     /*
      * If backwards scan, just return NULL without changing state.
      */
     if (!ScanDirectionIsForward(direction))
     {
-
+      return NULL;
     }
 
     /*
@@ -118,15 +118,15 @@ ExecLimit(PlanState *pstate)
     node->lstate = LIMIT_INWINDOW;
     break;
 
-  case LIMIT_EMPTY:;
+  case LIMIT_EMPTY:
 
     /*
      * The subplan is known to return no tuples (or not more than
      * OFFSET tuples, in general).  So we return no tuples.
      */
+    return NULL;
 
-
-  case LIMIT_INWINDOW:;
+  case LIMIT_INWINDOW:
     if (ScanDirectionIsForward(direction))
     {
       /*
@@ -177,17 +177,17 @@ ExecLimit(PlanState *pstate)
       slot = ExecProcNode(outerPlan);
       if (TupIsNull(slot))
       {
-
+        elog(ERROR, "LIMIT subplan failed to run backwards");
       }
       node->subSlot = slot;
       node->position--;
     }
     break;
 
-  case LIMIT_SUBPLANEOF:;
+  case LIMIT_SUBPLANEOF:
     if (ScanDirectionIsForward(direction))
     {
-
+      return NULL;
     }
 
     /*
@@ -197,17 +197,17 @@ ExecLimit(PlanState *pstate)
     slot = ExecProcNode(outerPlan);
     if (TupIsNull(slot))
     {
-
+      elog(ERROR, "LIMIT subplan failed to run backwards");
     }
     node->subSlot = slot;
     node->lstate = LIMIT_INWINDOW;
     /* position does not change 'cause we didn't advance it before */
     break;
 
-  case LIMIT_WINDOWEND:;
+  case LIMIT_WINDOWEND:
     if (ScanDirectionIsForward(direction))
     {
-
+      return NULL;
     }
 
     /*
@@ -219,10 +219,10 @@ ExecLimit(PlanState *pstate)
     /* position does not change 'cause we didn't advance it before */
     break;
 
-  case LIMIT_WINDOWSTART:;
+  case LIMIT_WINDOWSTART:
     if (!ScanDirectionIsForward(direction))
     {
-
+      return NULL;
     }
 
     /*
@@ -234,10 +234,10 @@ ExecLimit(PlanState *pstate)
     /* position does not change 'cause we didn't change it before */
     break;
 
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "impossible LIMIT state: %d", (int)node->lstate);
+    slot = NULL; /* keep compiler quiet */
+    break;
   }
 
   /* Return the current tuple */
@@ -271,7 +271,7 @@ recompute_limits(LimitState *node)
       node->offset = DatumGetInt64(val);
       if (node->offset < 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE), errmsg("OFFSET must not be negative")));
       }
     }
   }
@@ -295,7 +295,7 @@ recompute_limits(LimitState *node)
       node->count = DatumGetInt64(val);
       if (node->count < 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_ROW_COUNT_IN_LIMIT_CLAUSE), errmsg("LIMIT must not be negative")));
       }
       node->noCount = false;
     }

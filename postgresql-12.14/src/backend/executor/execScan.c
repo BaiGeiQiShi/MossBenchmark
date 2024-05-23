@@ -98,7 +98,8 @@ ExecScanFetch(ScanState *node, ExecScanAccessMtd accessMtd, ExecScanRecheckMtd r
       /* Check if it meets the access-method conditions */
       if (!(*recheckMtd)(node, slot))
       {
-        return ExecClearTuple(slot); /* would not be returned by scan */
+        return ExecClearTuple(slot); /* would not be returned by
+                                      * scan */
       }
       return slot;
     }
@@ -147,21 +148,19 @@ ExecScanFetch(ScanState *node, ExecScanAccessMtd accessMtd, ExecScanRecheckMtd r
  *		returns the next qualifying tuple in the direction specified
  *		in the global variable ExecDirection.
  *		The access method returns the next tuple and ExecScan() is
- *		responsible for checking the tuple returned against the
- *qual-clause.
+ *		responsible for checking the tuple returned against the qual-clause.
  *
  *		A 'recheck method' must also be provided that can check an
  *		arbitrary tuple of the relation against any qual conditions
  *		that are implemented internal to the access method.
  *
  *		Conditions:
- *		  -- the "cursor" maintained by the AMI is positioned at the
- *tuple returned previously.
+ *		  -- the "cursor" maintained by the AMI is positioned at the tuple
+ *			 returned previously.
  *
  *		Initial States:
  *		  -- the relation indicated is opened for scanning so that the
- *			 "cursor" is positioned before the first qualifying
- *tuple.
+ *			 "cursor" is positioned before the first qualifying tuple.
  * ----------------------------------------------------------------
  */
 TupleTableSlot *
@@ -294,8 +293,7 @@ ExecAssignScanProjectionInfo(ScanState *node)
 
 /*
  * ExecAssignScanProjectionInfoWithVarno
- *		As above, but caller can specify varno expected in Vars in the
- *tlist.
+ *		As above, but caller can specify varno expected in Vars in the tlist.
  */
 void
 ExecAssignScanProjectionInfoWithVarno(ScanState *node, Index varno)

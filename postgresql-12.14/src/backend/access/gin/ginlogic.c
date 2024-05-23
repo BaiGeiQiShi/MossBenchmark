@@ -54,13 +54,13 @@
 static bool
 trueConsistentFn(GinScanKey key)
 {
-
-
+  key->recheckCurItem = false;
+  return true;
 }
 static GinTernaryValue
 trueTriConsistentFn(GinScanKey key)
 {
-
+  return GIN_TRUE;
 }
 
 /*
@@ -95,19 +95,19 @@ directTriConsistentFn(GinScanKey key)
 static bool
 shimBoolConsistentFn(GinScanKey key)
 {
+  GinTernaryValue result;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  result = DatumGetGinTernaryValue(FunctionCall7Coll(key->triConsistentFmgrInfo, key->collation, PointerGetDatum(key->entryRes), UInt16GetDatum(key->strategy), key->query, UInt32GetDatum(key->nuserentries), PointerGetDatum(key->extra_data), PointerGetDatum(key->queryValues), PointerGetDatum(key->queryCategories)));
+  if (result == GIN_MAYBE)
+  {
+    key->recheckCurItem = true;
+    return true;
+  }
+  else
+  {
+    key->recheckCurItem = false;
+    return result;
+  }
 }
 
 /*
@@ -125,83 +125,83 @@ shimBoolConsistentFn(GinScanKey key)
 static GinTernaryValue
 shimTriConsistentFn(GinScanKey key)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  int nmaybe;
+  int maybeEntries[MAX_MAYBE_ENTRIES];
+  int i;
+  bool boolResult;
+  bool recheck = false;
+  GinTernaryValue curResult;
+
+  /*
+   * Count how many MAYBE inputs there are, and store their indexes in
+   * maybeEntries. If there are too many MAYBE inputs, it's not feasible to
+   * test all combinations, so give up and return MAYBE.
+   */
+  nmaybe = 0;
+  for (i = 0; i < key->nentries; i++)
+  {
+    if (key->entryRes[i] == GIN_MAYBE)
+    {
+      if (nmaybe >= MAX_MAYBE_ENTRIES)
+      {
+        return GIN_MAYBE;
+      }
+      maybeEntries[nmaybe++] = i;
+    }
+  }
+
+  /*
+   * If none of the inputs were MAYBE, so we can just call consistent
+   * function as is.
+   */
+  if (nmaybe == 0)
+  {
+    return directBoolConsistentFn(key);
+  }
+
+  /* First call consistent function with all the maybe-inputs set FALSE */
+  for (i = 0; i < nmaybe; i++)
+  {
+    key->entryRes[maybeEntries[i]] = GIN_FALSE;
+  }
+  curResult = directBoolConsistentFn(key);
+
+  for (;;)
+  {
+    /* Twiddle the entries for next combination. */
+    for (i = 0; i < nmaybe; i++)
+    {
+      if (key->entryRes[maybeEntries[i]] == GIN_FALSE)
+      {
+        key->entryRes[maybeEntries[i]] = GIN_TRUE;
+        break;
+      }
+      else
+      {
+        key->entryRes[maybeEntries[i]] = GIN_FALSE;
+      }
+    }
+    if (i == nmaybe)
+    {
+      break;
+    }
+
+    boolResult = directBoolConsistentFn(key);
+    recheck |= key->recheckCurItem;
+
+    if (curResult != boolResult)
+    {
+      return GIN_MAYBE;
+    }
+  }
+
+  /* TRUE with recheck is taken to mean MAYBE */
+  if (curResult == GIN_TRUE && recheck)
+  {
+    curResult = GIN_MAYBE;
+  }
+
+  return curResult;
 }
 
 /*
@@ -212,8 +212,8 @@ ginInitConsistentFunction(GinState *ginstate, GinScanKey key)
 {
   if (key->searchMode == GIN_SEARCH_MODE_EVERYTHING)
   {
-
-
+    key->boolConsistentFn = trueConsistentFn;
+    key->triConsistentFn = trueTriConsistentFn;
   }
   else
   {
@@ -227,7 +227,7 @@ ginInitConsistentFunction(GinState *ginstate, GinScanKey key)
     }
     else
     {
-
+      key->boolConsistentFn = shimBoolConsistentFn;
     }
 
     if (OidIsValid(ginstate->triConsistentFn[key->attnum - 1].fn_oid))
@@ -236,7 +236,7 @@ ginInitConsistentFunction(GinState *ginstate, GinScanKey key)
     }
     else
     {
-
+      key->triConsistentFn = shimTriConsistentFn;
     }
   }
 }

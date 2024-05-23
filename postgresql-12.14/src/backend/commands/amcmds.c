@@ -55,14 +55,14 @@ CreateAccessMethod(CreateAmStmt *stmt)
   /* Must be super user */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to create access method \"%s\"", stmt->amname), errhint("Must be superuser to create an access method.")));
   }
 
   /* Check if name is used */
   amoid = GetSysCacheOid1(AMNAME, Anum_pg_am_oid, CStringGetDatum(stmt->amname));
   if (OidIsValid(amoid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("access method \"%s\" already exists", stmt->amname)));
   }
 
   /*
@@ -116,7 +116,7 @@ RemoveAccessMethodById(Oid amOid)
 
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to drop access methods")));
   }
 
   relation = table_open(AccessMethodRelationId, RowExclusiveLock);
@@ -124,7 +124,7 @@ RemoveAccessMethodById(Oid amOid)
   tup = SearchSysCache1(AMOID, ObjectIdGetDatum(amOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for access method %u", amOid);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -229,14 +229,14 @@ get_am_type_string(char amtype)
 {
   switch (amtype)
   {
-  case AMTYPE_INDEX:;
-
-  case AMTYPE_TABLE:;
+  case AMTYPE_INDEX:
+    return "INDEX";
+  case AMTYPE_TABLE:
     return "TABLE";
-  default:;;
+  default:
     /* shouldn't happen */
-
-
+    elog(ERROR, "invalid access method type '%c'", amtype);
+    return NULL; /* keep compiler quiet */
   }
 }
 
@@ -255,7 +255,7 @@ lookup_am_handler_func(List *handler_name, char amtype)
 
   if (handler_name == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("handler function is not specified")));
   }
 
   /* handlers have one argument of type internal */
@@ -264,14 +264,14 @@ lookup_am_handler_func(List *handler_name, char amtype)
   /* check that handler has the correct return type */
   switch (amtype)
   {
-  case AMTYPE_INDEX:;
+  case AMTYPE_INDEX:
     expectedType = INDEX_AM_HANDLEROID;
     break;
-  case AMTYPE_TABLE:;
+  case AMTYPE_TABLE:
     expectedType = TABLE_AM_HANDLEROID;
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized access method type \"%c\"", amtype);
   }
 
   if (get_func_rettype(handlerOid) != expectedType)

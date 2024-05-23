@@ -73,8 +73,8 @@ getQuadrant(Point *centroid, Point *tst)
     return 4;
   }
 
-
-
+  elog(ERROR, "getQuadrant: impossible case");
+  return 0;
 }
 
 /* Returns bounding box of a given quadrant inside given bounding box */
@@ -85,21 +85,21 @@ getQuadrantArea(BOX *bbox, Point *centroid, int quadrant)
 
   switch (quadrant)
   {
-  case 1:;
+  case 1:
     result->high = bbox->high;
     result->low = *centroid;
     break;
-  case 2:;
+  case 2:
     result->high.x = bbox->high.x;
     result->high.y = centroid->y;
     result->low.x = centroid->x;
     result->low.y = bbox->low.y;
     break;
-  case 3:;
+  case 3:
     result->high = *centroid;
     result->low = bbox->low;
     break;
-  case 4:;
+  case 4:
     result->high.x = centroid->x;
     result->high.y = bbox->high.y;
     result->low.x = bbox->low.x;
@@ -306,34 +306,34 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
 
     switch (in->scankeys[i].sk_strategy)
     {
-    case RTLeftStrategyNumber:;
+    case RTLeftStrategyNumber:
       if (SPTEST(point_right, centroid, query))
       {
         which &= (1 << 3) | (1 << 4);
       }
       break;
-    case RTRightStrategyNumber:;
+    case RTRightStrategyNumber:
       if (SPTEST(point_left, centroid, query))
       {
         which &= (1 << 1) | (1 << 2);
       }
       break;
-    case RTSameStrategyNumber:;
+    case RTSameStrategyNumber:
       which &= (1 << getQuadrant(centroid, query));
       break;
-    case RTBelowStrategyNumber:;
+    case RTBelowStrategyNumber:
       if (SPTEST(point_above, centroid, query))
       {
         which &= (1 << 2) | (1 << 3);
       }
       break;
-    case RTAboveStrategyNumber:;
+    case RTAboveStrategyNumber:
       if (SPTEST(point_below, centroid, query))
       {
         which &= (1 << 1) | (1 << 4);
       }
       break;
-    case RTContainedByStrategyNumber:;
+    case RTContainedByStrategyNumber:
 
       /*
        * For this operator, the query is a box not a point.  We
@@ -364,14 +364,14 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
         which &= r;
       }
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized strategy number: %d", in->scankeys[i].sk_strategy);
+      break;
     }
 
     if (which == 0)
     {
-
+      break; /* no need to consider remaining conditions */
     }
   }
 
@@ -433,22 +433,22 @@ spg_quad_leaf_consistent(PG_FUNCTION_ARGS)
 
     switch (in->scankeys[i].sk_strategy)
     {
-    case RTLeftStrategyNumber:;
+    case RTLeftStrategyNumber:
       res = SPTEST(point_left, datum, query);
       break;
-    case RTRightStrategyNumber:;
+    case RTRightStrategyNumber:
       res = SPTEST(point_right, datum, query);
       break;
-    case RTSameStrategyNumber:;
+    case RTSameStrategyNumber:
       res = SPTEST(point_eq, datum, query);
       break;
-    case RTBelowStrategyNumber:;
+    case RTBelowStrategyNumber:
       res = SPTEST(point_below, datum, query);
       break;
-    case RTAboveStrategyNumber:;
+    case RTAboveStrategyNumber:
       res = SPTEST(point_above, datum, query);
       break;
-    case RTContainedByStrategyNumber:;
+    case RTContainedByStrategyNumber:
 
       /*
        * For this operator, the query is a box not a point.  We
@@ -457,9 +457,9 @@ spg_quad_leaf_consistent(PG_FUNCTION_ARGS)
        */
       res = SPTEST(box_contain_pt, query, datum);
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized strategy number: %d", in->scankeys[i].sk_strategy);
+      break;
     }
 
     if (!res)

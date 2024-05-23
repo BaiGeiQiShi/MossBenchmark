@@ -61,22 +61,21 @@ WorkTableScanNext(WorkTableScanState *node)
 }
 
 /*
- * WorkTableScanRecheck -- access method routine to recheck a tuple in
- * EvalPlanQual
+ * WorkTableScanRecheck -- access method routine to recheck a tuple in EvalPlanQual
  */
 static bool
 WorkTableScanRecheck(WorkTableScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------
  *		ExecWorkTableScan(node)
  *
- *		Scans the worktable sequentially and returns the next qualifying
- *tuple. We call the ExecScan() routine and pass it the appropriate access
- *method functions.
+ *		Scans the worktable sequentially and returns the next qualifying tuple.
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
  * ----------------------------------------------------------------
  */
 static TupleTableSlot *

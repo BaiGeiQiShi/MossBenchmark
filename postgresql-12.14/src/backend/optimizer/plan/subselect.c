@@ -410,7 +410,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot, List *plan_pa
     arraytype = get_promoted_array_type(exprType((Node *)te->expr));
     if (!OidIsValid(arraytype))
     {
-
+      elog(ERROR, "could not find array type for datatype %s", format_type_be(exprType((Node *)te->expr)));
     }
     prm = generate_new_exec_param(root, arraytype, exprTypmod((Node *)te->expr), exprCollation((Node *)te->expr));
     splan->setParam = list_make1_int(prm->paramid);
@@ -422,11 +422,11 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot, List *plan_pa
     /* Adjust the Params */
     List *params;
 
-
-
-
-
-
+    Assert(testexpr != NULL);
+    params = generate_subquery_params(root, plan->targetlist, &splan->paramIds);
+    result = convert_testexpr(root, testexpr, params);
+    splan->setParam = list_copy(splan->paramIds);
+    isInitPlan = true;
 
     /*
      * The executable expression is returned to become part of the outer
@@ -615,7 +615,7 @@ generate_subquery_vars(PlannerInfo *root, List *tlist, Index varno)
 
     if (tent->resjunk)
     {
-
+      continue;
     }
 
     var = makeVarFromTargetEntry(varno, tent);
@@ -657,7 +657,7 @@ convert_testexpr_mutator(Node *node, convert_testexpr_context *context)
     {
       if (param->paramid <= 0 || param->paramid > list_length(context->subst_nodes))
       {
-
+        elog(ERROR, "unexpected PARAM_SUBLINK ID: %d", param->paramid);
       }
 
       /*
@@ -710,7 +710,7 @@ subplan_is_hashable(Plan *plan)
   subquery_size = plan->plan_rows * (MAXALIGN(plan->plan_width) + MAXALIGN(SizeofHeapTupleHeader));
   if (subquery_size > work_mem * 1024L)
   {
-
+    return false;
   }
 
   return true;
@@ -746,11 +746,11 @@ testexpr_is_hashable(Node *testexpr, List *param_ids)
 
       if (!IsA(andarg, OpExpr))
       {
-
+        return false;
       }
       if (!test_opexpr_is_hashable((OpExpr *)andarg, param_ids))
       {
-
+        return false;
       }
     }
     return true;
@@ -772,7 +772,7 @@ test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids)
    */
   if (!hash_ok_operator(testexpr))
   {
-
+    return false;
   }
 
   /*
@@ -788,7 +788,7 @@ test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids)
    */
   if (list_length(testexpr->args) != 2)
   {
-
+    return false;
   }
   if (contain_exec_param((Node *)linitial(testexpr->args), param_ids))
   {
@@ -796,7 +796,7 @@ test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids)
   }
   if (contain_var_clause((Node *)lsecond(testexpr->args)))
   {
-
+    return false;
   }
   return true;
 }
@@ -815,7 +815,7 @@ hash_ok_operator(OpExpr *expr)
   /* quick out if not a binary operator */
   if (list_length(expr->args) != 2)
   {
-
+    return false;
   }
   if (opid == ARRAY_EQ_OP)
   {
@@ -823,7 +823,7 @@ hash_ok_operator(OpExpr *expr)
     /* XXX record_eq will need same treatment when it becomes hashable */
     Node *leftarg = linitial(expr->args);
 
-
+    return op_hashjoinable(opid, exprType(leftarg));
   }
   else
   {
@@ -834,7 +834,7 @@ hash_ok_operator(OpExpr *expr)
     tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opid));
     if (!HeapTupleIsValid(tup))
     {
-
+      elog(ERROR, "cache lookup failed for operator %u", opid);
     }
     optup = (Form_pg_operator)GETSTRUCT(tup);
     if (!optup->oprcanhash || !func_strict(optup->oprcode))
@@ -887,7 +887,7 @@ SS_make_multiexprs_unique(PlannerInfo *root, PlannerInfo *subroot)
     splan = (SubPlan *)tent->expr;
     if (splan->subLinkType != MULTIEXPR_SUBLINK)
     {
-
+      continue;
     }
 
     /* Found one, get the associated subplan */
@@ -961,7 +961,7 @@ SS_make_multiexprs_unique_walker(Node *node, void *context)
 
     if (p->paramkind != PARAM_MULTIEXPR)
     {
-
+      return false;
     }
     subqueryid = p->paramid >> 16;
     colno = p->paramid & 0xFFFF;
@@ -1087,7 +1087,7 @@ SS_process_ctes(PlannerInfo *root)
      */
     if (root->plan_params)
     {
-
+      elog(ERROR, "unexpected outer reference in CTE query");
     }
 
     /*
@@ -1408,7 +1408,7 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink, Relids availabl
    */
   if (!bms_is_subset(upper_varnos, available_rels))
   {
-
+    return NULL;
   }
 
   /*
@@ -1497,7 +1497,7 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink, bool under_n
    */
   if (subselect->cteList)
   {
-
+    return NULL;
   }
 
   /*
@@ -1531,7 +1531,7 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink, bool under_n
    */
   if (contain_vars_of_level((Node *)subselect, 1))
   {
-
+    return NULL;
   }
 
   /*
@@ -1548,7 +1548,7 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink, bool under_n
    */
   if (contain_volatile_functions(whereClause))
   {
-
+    return NULL;
   }
 
   /*
@@ -1607,7 +1607,7 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink, bool under_n
    */
   if (!bms_is_subset(upper_varnos, available_rels))
   {
-
+    return NULL;
   }
 
   /* Now we can attach the modified subquery rtable to the parent */
@@ -1666,7 +1666,7 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
    */
   if (query->commandType != CMD_SELECT || query->setOperations || query->hasAggs || query->groupingSets || query->hasWindowFuncs || query->hasTargetSRFs || query->hasModifyingCTE || query->havingQual || query->limitOffset || query->rowMarks)
   {
-
+    return false;
   }
 
   /*
@@ -1693,7 +1693,7 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 
     if (!IsA(node, Const))
     {
-
+      return false;
     }
 
     limit = (Const *)node;
@@ -1770,7 +1770,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (contain_vars_of_level((Node *)subselect, 1))
   {
-
+    return NULL;
   }
 
   /*
@@ -1778,7 +1778,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (contain_volatile_functions(whereClause))
   {
-
+    return NULL;
   }
 
   /*
@@ -1847,7 +1847,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
           continue;
         }
         /* If no commutator, no chance to optimize the WHERE clause */
-
+        return NULL;
       }
     }
     /* Couldn't handle it as a hash clause */
@@ -1859,7 +1859,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (leftargs == NIL)
   {
-
+    return NULL;
   }
 
   /*
@@ -1873,11 +1873,11 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (contain_vars_of_level((Node *)newWhere, 1) || contain_vars_of_level((Node *)rightargs, 1))
   {
-
+    return NULL;
   }
   if (root->parse->hasAggs && (contain_aggs_of_level((Node *)newWhere, 1) || contain_aggs_of_level((Node *)rightargs, 1)))
   {
-
+    return NULL;
   }
 
   /*
@@ -1888,7 +1888,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (contain_vars_of_level((Node *)leftargs, 0))
   {
-
+    return NULL;
   }
 
   /*
@@ -1897,7 +1897,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect, Node **testexpr, List
    */
   if (contain_subplans((Node *)leftargs))
   {
-
+    return NULL;
   }
 
   /*
@@ -2069,7 +2069,7 @@ process_sublinks_mutator(Node *node, process_sublinks_context *context)
   {
     if (((PlaceHolderVar *)node)->phlevelsup > 0)
     {
-
+      return node;
     }
   }
   else if (IsA(node, Aggref))
@@ -2125,7 +2125,7 @@ process_sublinks_mutator(Node *node, process_sublinks_context *context)
       newarg = process_sublinks_mutator(lfirst(l), &locContext);
       if (is_andclause(newarg))
       {
-
+        newargs = list_concat(newargs, ((BoolExpr *)newarg)->args);
       }
       else
       {
@@ -2150,7 +2150,7 @@ process_sublinks_mutator(Node *node, process_sublinks_context *context)
       newarg = process_sublinks_mutator(lfirst(l), &locContext);
       if (is_orclause(newarg))
       {
-
+        newargs = list_concat(newargs, ((BoolExpr *)newarg)->args);
       }
       else
       {
@@ -2424,7 +2424,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   {
     if (gather_param < 0)
     {
-
+      elog(ERROR, "parallel-aware plan node is not below a Gather");
     }
     context.paramids = bms_add_member(context.paramids, gather_param);
   }
@@ -2432,20 +2432,20 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   /* Check additional node-type-specific fields */
   switch (nodeTag(plan))
   {
-  case T_Result:;
+  case T_Result:
     finalize_primnode(((Result *)plan)->resconstantqual, &context);
     break;
 
-  case T_SeqScan:;
+  case T_SeqScan:
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_SampleScan:;
+  case T_SampleScan:
     finalize_primnode((Node *)((SampleScan *)plan)->tablesample, &context);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_IndexScan:;
+  case T_IndexScan:
     finalize_primnode((Node *)((IndexScan *)plan)->indexqual, &context);
     finalize_primnode((Node *)((IndexScan *)plan)->indexorderby, &context);
 
@@ -2457,7 +2457,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
     finalize_primnode((Node *)((IndexOnlyScan *)plan)->indexqual, &context);
     finalize_primnode((Node *)((IndexOnlyScan *)plan)->recheckqual, &context);
     finalize_primnode((Node *)((IndexOnlyScan *)plan)->indexorderby, &context);
@@ -2468,7 +2468,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_BitmapIndexScan:;
+  case T_BitmapIndexScan:
     finalize_primnode((Node *)((BitmapIndexScan *)plan)->indexqual, &context);
 
     /*
@@ -2477,17 +2477,17 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
      */
     break;
 
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
     finalize_primnode((Node *)((BitmapHeapScan *)plan)->bitmapqualorig, &context);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_TidScan:;
+  case T_TidScan:
     finalize_primnode((Node *)((TidScan *)plan)->tidquals, &context);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
   {
     SubqueryScan *sscan = (SubqueryScan *)plan;
     RelOptInfo *rel;
@@ -2509,7 +2509,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_FunctionScan:;
+  case T_FunctionScan:
   {
     FunctionScan *fscan = (FunctionScan *)plan;
     ListCell *lc;
@@ -2541,17 +2541,17 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
     finalize_primnode((Node *)((TableFuncScan *)plan)->tablefunc, &context);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_ValuesScan:;
+  case T_ValuesScan:
     finalize_primnode((Node *)((ValuesScan *)plan)->values_lists, &context);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_CteScan:;
+  case T_CteScan:
   {
     /*
      * You might think we should add the node's cteParam to
@@ -2570,7 +2570,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
     /* so, do this ... */
     if (plan_id < 1 || plan_id > list_length(root->glob->subplans))
     {
-
+      elog(ERROR, "could not find plan for CteScan referencing plan ID %d", plan_id);
     }
     cteplan = (Plan *)list_nth(root->glob->subplans, plan_id - 1);
     context.paramids = bms_add_members(context.paramids, cteplan->extParam);
@@ -2584,45 +2584,45 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_WorkTableScan:;
+  case T_WorkTableScan:
     context.paramids = bms_add_member(context.paramids, ((WorkTableScan *)plan)->wtParam);
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_NamedTuplestoreScan:;
+  case T_NamedTuplestoreScan:
     context.paramids = bms_add_members(context.paramids, scan_params);
     break;
 
-  case T_ForeignScan:;
+  case T_ForeignScan:
   {
     ForeignScan *fscan = (ForeignScan *)plan;
 
-
-
+    finalize_primnode((Node *)fscan->fdw_exprs, &context);
+    finalize_primnode((Node *)fscan->fdw_recheck_quals, &context);
 
     /* We assume fdw_scan_tlist cannot contain Params */
-
+    context.paramids = bms_add_members(context.paramids, scan_params);
   }
+  break;
 
-
-  case T_CustomScan:;
+  case T_CustomScan:
   {
     CustomScan *cscan = (CustomScan *)plan;
     ListCell *lc;
 
-
+    finalize_primnode((Node *)cscan->custom_exprs, &context);
     /* We assume custom_scan_tlist cannot contain Params */
-
+    context.paramids = bms_add_members(context.paramids, scan_params);
 
     /* child nodes if any */
-
-
-
-
+    foreach (lc, cscan->custom_plans)
+    {
+      context.paramids = bms_add_members(context.paramids, finalize_plan(root, (Plan *)lfirst(lc), gather_param, valid_params, scan_params));
+    }
   }
+  break;
 
-
-  case T_ModifyTable:;
+  case T_ModifyTable:
   {
     ModifyTable *mtplan = (ModifyTable *)plan;
     ListCell *l;
@@ -2642,7 +2642,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_Append:;
+  case T_Append:
   {
     ListCell *l;
 
@@ -2653,7 +2653,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_MergeAppend:;
+  case T_MergeAppend:
   {
     ListCell *l;
 
@@ -2664,7 +2664,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_BitmapAnd:;
+  case T_BitmapAnd:
   {
     ListCell *l;
 
@@ -2675,7 +2675,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_BitmapOr:;
+  case T_BitmapOr:
   {
     ListCell *l;
 
@@ -2686,7 +2686,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_NestLoop:;
+  case T_NestLoop:
   {
     ListCell *l;
 
@@ -2701,36 +2701,36 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_MergeJoin:;
+  case T_MergeJoin:
     finalize_primnode((Node *)((Join *)plan)->joinqual, &context);
     finalize_primnode((Node *)((MergeJoin *)plan)->mergeclauses, &context);
     break;
 
-  case T_HashJoin:;
+  case T_HashJoin:
     finalize_primnode((Node *)((Join *)plan)->joinqual, &context);
     finalize_primnode((Node *)((HashJoin *)plan)->hashclauses, &context);
     break;
 
-  case T_Limit:;
+  case T_Limit:
     finalize_primnode(((Limit *)plan)->limitOffset, &context);
     finalize_primnode(((Limit *)plan)->limitCount, &context);
     break;
 
-  case T_RecursiveUnion:;
+  case T_RecursiveUnion:
     /* child nodes are allowed to reference wtParam */
     locally_added_param = ((RecursiveUnion *)plan)->wtParam;
     valid_params = bms_add_member(bms_copy(valid_params), locally_added_param);
     /* wtParam does *not* get added to scan_params */
     break;
 
-  case T_LockRows:;
+  case T_LockRows:
     /* Force descendant scan nodes to reference epqParam */
     locally_added_param = ((LockRows *)plan)->epqParam;
     valid_params = bms_add_member(bms_copy(valid_params), locally_added_param);
     scan_params = bms_add_member(bms_copy(scan_params), locally_added_param);
     break;
 
-  case T_Agg:;
+  case T_Agg:
   {
     Agg *agg = (Agg *)plan;
 
@@ -2751,12 +2751,12 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
   }
   break;
 
-  case T_WindowAgg:;
+  case T_WindowAgg:
     finalize_primnode(((WindowAgg *)plan)->startOffset, &context);
     finalize_primnode(((WindowAgg *)plan)->endOffset, &context);
     break;
 
-  case T_Gather:;
+  case T_Gather:
     /* child nodes are allowed to reference rescan_param, if any */
     locally_added_param = ((Gather *)plan)->rescan_param;
     if (locally_added_param >= 0)
@@ -2775,7 +2775,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
     /* rescan_param does *not* get added to scan_params */
     break;
 
-  case T_GatherMerge:;
+  case T_GatherMerge:
     /* child nodes are allowed to reference rescan_param, if any */
     locally_added_param = ((GatherMerge *)plan)->rescan_param;
     if (locally_added_param >= 0)
@@ -2794,18 +2794,18 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
     /* rescan_param does *not* get added to scan_params */
     break;
 
-  case T_ProjectSet:;
-  case T_Hash:;
-  case T_Material:;
-  case T_Sort:;
-  case T_Unique:;
-  case T_SetOp:;
-  case T_Group:;
+  case T_ProjectSet:
+  case T_Hash:
+  case T_Material:
+  case T_Sort:
+  case T_Unique:
+  case T_SetOp:
+  case T_Group:
     /* no node-type-specific fields need fixing */
     break;
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(plan));
   }
 
   /* Process left and right child plans, if any */
@@ -2842,7 +2842,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, int gather_param, Bitmapset *valid_
 
   if (!bms_is_subset(context.paramids, valid_params))
   {
-
+    elog(ERROR, "plan should not reference subplan's variable");
   }
 
   /*

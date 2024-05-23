@@ -141,56 +141,56 @@ WalWriterMain(void)
   if (sigsetjmp(local_sigjmp_buf, 1) != 0)
   {
     /* Since not using PG_TRY, must reset error stack by hand */
-
+    error_context_stack = NULL;
 
     /* Prevent interrupts while cleaning up */
-
+    HOLD_INTERRUPTS();
 
     /* Report the error to the server log */
-
+    EmitErrorReport();
 
     /*
      * These operations are really just a minimal subset of
      * AbortTransaction().  We don't have very many resources to worry
      * about in walwriter, but we do have LWLocks, and perhaps buffers?
      */
-
-
-
-
-
-
-
-
-
-
+    LWLockReleaseAll();
+    ConditionVariableCancelSleep();
+    pgstat_report_wait_end();
+    AbortBufferIO();
+    UnlockBuffers();
+    ReleaseAuxProcessResources(false);
+    AtEOXact_Buffers(false);
+    AtEOXact_SMgr();
+    AtEOXact_Files(false);
+    AtEOXact_HashTables(false);
 
     /*
      * Now return to normal top-level context and clear ErrorContext for
      * next time.
      */
-
-
+    MemoryContextSwitchTo(walwriter_context);
+    FlushErrorState();
 
     /* Flush any leaked data in the top-level context */
-
+    MemoryContextResetAndDeleteChildren(walwriter_context);
 
     /* Now we can allow interrupts again */
-
+    RESUME_INTERRUPTS();
 
     /*
      * Sleep at least 1 second after any error.  A write error is likely
      * to be repeated, and we don't want to be filling the error logs as
      * fast as we can.
      */
-
+    pg_usleep(1000000L);
 
     /*
      * Close all open files after any error.  This is helpful on Windows,
      * where holding deleted files open causes various strange errors.
      * It's not clear we need it elsewhere, but shouldn't hurt.
      */
-
+    smgrcloseall();
   }
 
   /* We can now handle ereport(ERROR) */
@@ -232,8 +232,8 @@ WalWriterMain(void)
      */
     if (hibernating != (left_till_hibernate <= 1))
     {
-
-
+      hibernating = (left_till_hibernate <= 1);
+      SetWalWriterSleeping(hibernating);
     }
 
     /* Clear any already-pending wakeups */
@@ -244,8 +244,8 @@ WalWriterMain(void)
      */
     if (got_SIGHUP)
     {
-
-
+      got_SIGHUP = false;
+      ProcessConfigFile(PGC_SIGHUP);
     }
     if (shutdown_requested)
     {
@@ -277,7 +277,7 @@ WalWriterMain(void)
     }
     else
     {
-
+      cur_timeout = WalWriterDelay * HIBERNATE_FACTOR;
     }
 
     (void)WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, cur_timeout, WAIT_EVENT_WAL_WRITER_MAIN);
@@ -298,33 +298,33 @@ WalWriterMain(void)
 static void
 wal_quickdie(SIGNAL_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
+   * because shared memory may be corrupted, so we don't want to try to
+   * clean up our transaction.  Just nail the windows shut and get out of
+   * town.  The callbacks wouldn't be safe to run from a signal handler,
+   * anyway.
+   *
+   * Note we do _exit(2) not _exit(0).  This is to force the postmaster into
+   * a system reset cycle if someone sends a manual SIGQUIT to a random
+   * backend.  This is necessary precisely because we don't clean up our
+   * shared memory state.  (The "dead man switch" mechanism in pmsignal.c
+   * should ensure the postmaster sees this as a crash, too, but no harm in
+   * being doubly sure.)
+   */
+  _exit(2);
 }
 
 /* SIGHUP: set flag to re-read config file at next convenient time */
 static void
 WalSigHupHandler(SIGNAL_ARGS)
 {
+  int save_errno = errno;
 
+  got_SIGHUP = true;
+  SetLatch(MyLatch);
 
-
-
-
-
+  errno = save_errno;
 }
 
 /* SIGTERM: set flag to exit normally */

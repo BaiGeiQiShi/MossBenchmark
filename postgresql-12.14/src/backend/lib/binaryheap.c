@@ -114,7 +114,7 @@ binaryheap_add_unordered(binaryheap *heap, Datum d)
 {
   if (heap->bh_size >= heap->bh_space)
   {
-
+    elog(ERROR, "out of binary heap slots");
   }
   heap->bh_has_heap_property = false;
   heap->bh_nodes[heap->bh_size] = d;
@@ -148,13 +148,13 @@ binaryheap_build(binaryheap *heap)
 void
 binaryheap_add(binaryheap *heap, Datum d)
 {
-
-
-
-
-
-
-
+  if (heap->bh_size >= heap->bh_space)
+  {
+    elog(ERROR, "out of binary heap slots");
+  }
+  heap->bh_nodes[heap->bh_size] = d;
+  heap->bh_size++;
+  sift_up(heap, heap->bh_size - 1);
 }
 
 /*
@@ -242,29 +242,29 @@ swap_nodes(binaryheap *heap, int a, int b)
 static void
 sift_up(binaryheap *heap, int node_off)
 {
+  while (node_off != 0)
+  {
+    int cmp;
+    int parent_off;
 
+    /*
+     * If this node is smaller than its parent, the heap condition is
+     * satisfied, and we're done.
+     */
+    parent_off = parent_offset(node_off);
+    cmp = heap->bh_compare(heap->bh_nodes[node_off], heap->bh_nodes[parent_off], heap->bh_arg);
+    if (cmp <= 0)
+    {
+      break;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /*
+     * Otherwise, swap the node and its parent and go on to check the
+     * node's new parent.
+     */
+    swap_nodes(heap, node_off, parent_off);
+    node_off = parent_off;
+  }
 }
 
 /*

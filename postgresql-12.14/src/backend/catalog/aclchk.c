@@ -203,7 +203,7 @@ merge_acl_with_grant(Acl *old_acl, bool is_grant, bool grant_option, DropBehavio
      */
     if (is_grant && grant_option && aclitem.ai_grantee == ACL_ID_PUBLIC)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("grant options can only be granted to roles")));
     }
 
     aclitem.ai_grantor = grantorId;
@@ -243,50 +243,50 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
 
   switch (objtype)
   {
-  case OBJECT_COLUMN:;
+  case OBJECT_COLUMN:
     whole_mask = ACL_ALL_RIGHTS_COLUMN;
     break;
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
     whole_mask = ACL_ALL_RIGHTS_RELATION;
     break;
-  case OBJECT_SEQUENCE:;
+  case OBJECT_SEQUENCE:
     whole_mask = ACL_ALL_RIGHTS_SEQUENCE;
     break;
-  case OBJECT_DATABASE:;
+  case OBJECT_DATABASE:
     whole_mask = ACL_ALL_RIGHTS_DATABASE;
     break;
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     whole_mask = ACL_ALL_RIGHTS_FUNCTION;
     break;
-  case OBJECT_LANGUAGE:;
+  case OBJECT_LANGUAGE:
     whole_mask = ACL_ALL_RIGHTS_LANGUAGE;
     break;
-  case OBJECT_LARGEOBJECT:;
+  case OBJECT_LARGEOBJECT:
     whole_mask = ACL_ALL_RIGHTS_LARGEOBJECT;
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     whole_mask = ACL_ALL_RIGHTS_SCHEMA;
     break;
-  case OBJECT_TABLESPACE:;
-
-
-  case OBJECT_FDW:;
+  case OBJECT_TABLESPACE:
+    whole_mask = ACL_ALL_RIGHTS_TABLESPACE;
+    break;
+  case OBJECT_FDW:
     whole_mask = ACL_ALL_RIGHTS_FDW;
     break;
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     whole_mask = ACL_ALL_RIGHTS_FOREIGN_SERVER;
     break;
-  case OBJECT_EVENT_TRIGGER:;
-
+  case OBJECT_EVENT_TRIGGER:
+    elog(ERROR, "grantable rights not supported for event triggers");
     /* not reached, but keep compiler quiet */
-
-  case OBJECT_TYPE:;
+    return ACL_NO_RIGHTS;
+  case OBJECT_TYPE:
     whole_mask = ACL_ALL_RIGHTS_TYPE;
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized object type: %d", objtype);
     /* not reached, but keep compiler quiet */
-
+    return ACL_NO_RIGHTS;
   }
 
   /*
@@ -300,7 +300,7 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
     {
       if (objtype == OBJECT_COLUMN && colname)
       {
-
+        aclcheck_error_col(ACLCHECK_NO_PRIV, objtype, objname, colname);
       }
       else
       {
@@ -323,7 +323,7 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
     {
       if (objtype == OBJECT_COLUMN && colname)
       {
-
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_GRANTED), errmsg("no privileges were granted for column \"%s\" of relation \"%s\"", colname, objname)));
       }
       else
       {
@@ -332,14 +332,14 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
     }
     else if (!all_privs && this_privileges != privileges)
     {
-
-
-
-
-
-
-
-
+      if (objtype == OBJECT_COLUMN && colname)
+      {
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_GRANTED), errmsg("not all privileges were granted for column \"%s\" of relation \"%s\"", colname, objname)));
+      }
+      else
+      {
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_GRANTED), errmsg("not all privileges were granted for \"%s\"", objname)));
+      }
     }
   }
   else
@@ -348,7 +348,7 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
     {
       if (objtype == OBJECT_COLUMN && colname)
       {
-
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_REVOKED), errmsg("no privileges could be revoked for column \"%s\" of relation \"%s\"", colname, objname)));
       }
       else
       {
@@ -357,14 +357,14 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs, 
     }
     else if (!all_privs && this_privileges != privileges)
     {
-
-
-
-
-
-
-
-
+      if (objtype == OBJECT_COLUMN && colname)
+      {
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_REVOKED), errmsg("not all privileges could be revoked for column \"%s\" of relation \"%s\"", colname, objname)));
+      }
+      else
+      {
+        ereport(WARNING, (errcode(ERRCODE_WARNING_PRIVILEGE_NOT_REVOKED), errmsg("not all privileges could be revoked for \"%s\"", objname)));
+      }
     }
   }
 
@@ -391,15 +391,15 @@ ExecuteGrantStmt(GrantStmt *stmt)
   /* Collect the OIDs of the target objects */
   switch (stmt->targtype)
   {
-  case ACL_TARGET_OBJECT:;
+  case ACL_TARGET_OBJECT:
     istmt.objects = objectNamesToOids(stmt->objtype, stmt->objects);
     break;
-  case ACL_TARGET_ALL_IN_SCHEMA:;
+  case ACL_TARGET_ALL_IN_SCHEMA:
     istmt.objects = objectsInSchemaToOids(stmt->objtype, stmt->objects);
     break;
     /* ACL_TARGET_DEFAULTS should not be seen here */
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized GrantStmt.targtype: %d", (int)stmt->targtype);
   }
 
   /* all_privs to be filled below */
@@ -421,10 +421,10 @@ ExecuteGrantStmt(GrantStmt *stmt)
 
     switch (grantee->roletype)
     {
-    case ROLESPEC_PUBLIC:;
+    case ROLESPEC_PUBLIC:
       grantee_uid = ACL_ID_PUBLIC;
       break;
-    default:;;
+    default:
       grantee_uid = get_rolespec_oid(grantee, false);
       break;
     }
@@ -437,7 +437,7 @@ ExecuteGrantStmt(GrantStmt *stmt)
    */
   switch (stmt->objtype)
   {
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
 
     /*
      * Because this might be a sequence, we test both relation and
@@ -447,63 +447,63 @@ ExecuteGrantStmt(GrantStmt *stmt)
     all_privileges = ACL_ALL_RIGHTS_RELATION | ACL_ALL_RIGHTS_SEQUENCE;
     errormsg = gettext_noop("invalid privilege type %s for relation");
     break;
-  case OBJECT_SEQUENCE:;
-
-
-
-  case OBJECT_DATABASE:;
+  case OBJECT_SEQUENCE:
+    all_privileges = ACL_ALL_RIGHTS_SEQUENCE;
+    errormsg = gettext_noop("invalid privilege type %s for sequence");
+    break;
+  case OBJECT_DATABASE:
     all_privileges = ACL_ALL_RIGHTS_DATABASE;
     errormsg = gettext_noop("invalid privilege type %s for database");
     break;
-  case OBJECT_DOMAIN:;
+  case OBJECT_DOMAIN:
     all_privileges = ACL_ALL_RIGHTS_TYPE;
     errormsg = gettext_noop("invalid privilege type %s for domain");
     break;
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     all_privileges = ACL_ALL_RIGHTS_FUNCTION;
     errormsg = gettext_noop("invalid privilege type %s for function");
     break;
-  case OBJECT_LANGUAGE:;
+  case OBJECT_LANGUAGE:
     all_privileges = ACL_ALL_RIGHTS_LANGUAGE;
     errormsg = gettext_noop("invalid privilege type %s for language");
     break;
-  case OBJECT_LARGEOBJECT:;
+  case OBJECT_LARGEOBJECT:
     all_privileges = ACL_ALL_RIGHTS_LARGEOBJECT;
     errormsg = gettext_noop("invalid privilege type %s for large object");
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     all_privileges = ACL_ALL_RIGHTS_SCHEMA;
     errormsg = gettext_noop("invalid privilege type %s for schema");
     break;
-  case OBJECT_PROCEDURE:;
+  case OBJECT_PROCEDURE:
     all_privileges = ACL_ALL_RIGHTS_FUNCTION;
     errormsg = gettext_noop("invalid privilege type %s for procedure");
     break;
-  case OBJECT_ROUTINE:;
+  case OBJECT_ROUTINE:
     all_privileges = ACL_ALL_RIGHTS_FUNCTION;
     errormsg = gettext_noop("invalid privilege type %s for routine");
     break;
-  case OBJECT_TABLESPACE:;
-
-
-
-  case OBJECT_TYPE:;
+  case OBJECT_TABLESPACE:
+    all_privileges = ACL_ALL_RIGHTS_TABLESPACE;
+    errormsg = gettext_noop("invalid privilege type %s for tablespace");
+    break;
+  case OBJECT_TYPE:
     all_privileges = ACL_ALL_RIGHTS_TYPE;
     errormsg = gettext_noop("invalid privilege type %s for type");
     break;
-  case OBJECT_FDW:;
+  case OBJECT_FDW:
     all_privileges = ACL_ALL_RIGHTS_FDW;
     errormsg = gettext_noop("invalid privilege type %s for foreign-data wrapper");
     break;
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     all_privileges = ACL_ALL_RIGHTS_FOREIGN_SERVER;
     errormsg = gettext_noop("invalid privilege type %s for foreign server");
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized GrantStmt.objtype: %d", (int)stmt->objtype);
     /* keep compiler quiet */
-
-
+    all_privileges = ACL_NO_RIGHTS;
+    errormsg = NULL;
   }
 
   if (stmt->privileges == NIL)
@@ -534,15 +534,15 @@ ExecuteGrantStmt(GrantStmt *stmt)
       {
         if (stmt->objtype != OBJECT_TABLE)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("column privileges are only valid for relations")));
         }
         istmt.col_privs = lappend(istmt.col_privs, privnode);
         continue;
       }
 
-      if (privnode->priv_name == NULL)
-      { /* parser mistake? */
-
+      if (privnode->priv_name == NULL) /* parser mistake? */
+      {
+        elog(ERROR, "AccessPriv node must specify privilege or columns");
       }
       priv = string_to_privilege(privnode->priv_name);
 
@@ -568,42 +568,42 @@ ExecGrantStmt_oids(InternalGrant *istmt)
 {
   switch (istmt->objtype)
   {
-  case OBJECT_TABLE:;
-  case OBJECT_SEQUENCE:;
+  case OBJECT_TABLE:
+  case OBJECT_SEQUENCE:
     ExecGrant_Relation(istmt);
     break;
-  case OBJECT_DATABASE:;
+  case OBJECT_DATABASE:
     ExecGrant_Database(istmt);
     break;
-  case OBJECT_DOMAIN:;
-  case OBJECT_TYPE:;
+  case OBJECT_DOMAIN:
+  case OBJECT_TYPE:
     ExecGrant_Type(istmt);
     break;
-  case OBJECT_FDW:;
+  case OBJECT_FDW:
     ExecGrant_Fdw(istmt);
     break;
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     ExecGrant_ForeignServer(istmt);
     break;
-  case OBJECT_FUNCTION:;
-  case OBJECT_PROCEDURE:;
-  case OBJECT_ROUTINE:;
+  case OBJECT_FUNCTION:
+  case OBJECT_PROCEDURE:
+  case OBJECT_ROUTINE:
     ExecGrant_Function(istmt);
     break;
-  case OBJECT_LANGUAGE:;
+  case OBJECT_LANGUAGE:
     ExecGrant_Language(istmt);
     break;
-  case OBJECT_LARGEOBJECT:;
+  case OBJECT_LARGEOBJECT:
     ExecGrant_Largeobject(istmt);
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     ExecGrant_Namespace(istmt);
     break;
-  case OBJECT_TABLESPACE:;
-
-
-  default:;;
-
+  case OBJECT_TABLESPACE:
+    ExecGrant_Tablespace(istmt);
+    break;
+  default:
+    elog(ERROR, "unrecognized GrantStmt.objtype: %d", (int)istmt->objtype);
   }
 
   /*
@@ -638,8 +638,8 @@ objectNamesToOids(ObjectType objtype, List *objnames)
 
   switch (objtype)
   {
-  case OBJECT_TABLE:;
-  case OBJECT_SEQUENCE:;
+  case OBJECT_TABLE:
+  case OBJECT_SEQUENCE:
     foreach (cell, objnames)
     {
       RangeVar *relvar = (RangeVar *)lfirst(cell);
@@ -649,7 +649,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, relOid);
     }
     break;
-  case OBJECT_DATABASE:;
+  case OBJECT_DATABASE:
     foreach (cell, objnames)
     {
       char *dbname = strVal(lfirst(cell));
@@ -659,8 +659,8 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, dbid);
     }
     break;
-  case OBJECT_DOMAIN:;
-  case OBJECT_TYPE:;
+  case OBJECT_DOMAIN:
+  case OBJECT_TYPE:
     foreach (cell, objnames)
     {
       List *typname = (List *)lfirst(cell);
@@ -670,7 +670,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, oid);
     }
     break;
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     foreach (cell, objnames)
     {
       ObjectWithArgs *func = (ObjectWithArgs *)lfirst(cell);
@@ -680,7 +680,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, funcid);
     }
     break;
-  case OBJECT_LANGUAGE:;
+  case OBJECT_LANGUAGE:
     foreach (cell, objnames)
     {
       char *langname = strVal(lfirst(cell));
@@ -690,7 +690,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, oid);
     }
     break;
-  case OBJECT_LARGEOBJECT:;
+  case OBJECT_LARGEOBJECT:
     foreach (cell, objnames)
     {
       Oid lobjOid = oidparse(lfirst(cell));
@@ -703,7 +703,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, lobjOid);
     }
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     foreach (cell, objnames)
     {
       char *nspname = strVal(lfirst(cell));
@@ -713,7 +713,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, oid);
     }
     break;
-  case OBJECT_PROCEDURE:;
+  case OBJECT_PROCEDURE:
     foreach (cell, objnames)
     {
       ObjectWithArgs *func = (ObjectWithArgs *)lfirst(cell);
@@ -723,27 +723,27 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, procid);
     }
     break;
-  case OBJECT_ROUTINE:;
+  case OBJECT_ROUTINE:
+    foreach (cell, objnames)
+    {
+      ObjectWithArgs *func = (ObjectWithArgs *)lfirst(cell);
+      Oid routid;
 
+      routid = LookupFuncWithArgs(OBJECT_ROUTINE, func, false);
+      objects = lappend_oid(objects, routid);
+    }
+    break;
+  case OBJECT_TABLESPACE:
+    foreach (cell, objnames)
+    {
+      char *spcname = strVal(lfirst(cell));
+      Oid spcoid;
 
-
-
-
-
-
-
-
-  case OBJECT_TABLESPACE:;
-
-
-
-
-
-
-
-
-
-  case OBJECT_FDW:;
+      spcoid = get_tablespace_oid(spcname, false);
+      objects = lappend_oid(objects, spcoid);
+    }
+    break;
+  case OBJECT_FDW:
     foreach (cell, objnames)
     {
       char *fdwname = strVal(lfirst(cell));
@@ -752,7 +752,7 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, fdwid);
     }
     break;
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     foreach (cell, objnames)
     {
       char *srvname = strVal(lfirst(cell));
@@ -761,8 +761,8 @@ objectNamesToOids(ObjectType objtype, List *objnames)
       objects = lappend_oid(objects, srvid);
     }
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized GrantStmt.objtype: %d", (int)objtype);
   }
 
   return objects;
@@ -791,7 +791,7 @@ objectsInSchemaToOids(ObjectType objtype, List *nspnames)
 
     switch (objtype)
     {
-    case OBJECT_TABLE:;
+    case OBJECT_TABLE:
       objs = getRelationsInNamespace(namespaceId, RELKIND_RELATION);
       objects = list_concat(objects, objs);
       objs = getRelationsInNamespace(namespaceId, RELKIND_VIEW);
@@ -803,13 +803,13 @@ objectsInSchemaToOids(ObjectType objtype, List *nspnames)
       objs = getRelationsInNamespace(namespaceId, RELKIND_PARTITIONED_TABLE);
       objects = list_concat(objects, objs);
       break;
-    case OBJECT_SEQUENCE:;
-
-
-
-    case OBJECT_FUNCTION:;
-    case OBJECT_PROCEDURE:;
-    case OBJECT_ROUTINE:;
+    case OBJECT_SEQUENCE:
+      objs = getRelationsInNamespace(namespaceId, RELKIND_SEQUENCE);
+      objects = list_concat(objects, objs);
+      break;
+    case OBJECT_FUNCTION:
+    case OBJECT_PROCEDURE:
+    case OBJECT_ROUTINE:
     {
       ScanKeyData key[2];
       int keycount;
@@ -844,9 +844,9 @@ objectsInSchemaToOids(ObjectType objtype, List *nspnames)
       table_close(rel, AccessShareLock);
     }
     break;
-    default:;;
+    default:
       /* should not happen */
-
+      elog(ERROR, "unrecognized GrantStmt.objtype: %d", (int)objtype);
     }
   }
 
@@ -911,7 +911,7 @@ ExecAlterDefaultPrivilegesStmt(ParseState *pstate, AlterDefaultPrivilegesStmt *s
     {
       if (dnspnames)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       dnspnames = defel;
     }
@@ -919,13 +919,13 @@ ExecAlterDefaultPrivilegesStmt(ParseState *pstate, AlterDefaultPrivilegesStmt *s
     {
       if (drolespecs)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       drolespecs = defel;
     }
     else
     {
-
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
     }
   }
 
@@ -961,10 +961,10 @@ ExecAlterDefaultPrivilegesStmt(ParseState *pstate, AlterDefaultPrivilegesStmt *s
 
     switch (grantee->roletype)
     {
-    case ROLESPEC_PUBLIC:;
+    case ROLESPEC_PUBLIC:
       grantee_uid = ACL_ID_PUBLIC;
       break;
-    default:;;
+    default:
       grantee_uid = get_rolespec_oid(grantee, false);
       break;
     }
@@ -977,39 +977,39 @@ ExecAlterDefaultPrivilegesStmt(ParseState *pstate, AlterDefaultPrivilegesStmt *s
    */
   switch (action->objtype)
   {
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
     all_privileges = ACL_ALL_RIGHTS_RELATION;
     errormsg = gettext_noop("invalid privilege type %s for relation");
     break;
-  case OBJECT_SEQUENCE:;
-
-
-
-  case OBJECT_FUNCTION:;
+  case OBJECT_SEQUENCE:
+    all_privileges = ACL_ALL_RIGHTS_SEQUENCE;
+    errormsg = gettext_noop("invalid privilege type %s for sequence");
+    break;
+  case OBJECT_FUNCTION:
     all_privileges = ACL_ALL_RIGHTS_FUNCTION;
     errormsg = gettext_noop("invalid privilege type %s for function");
     break;
-  case OBJECT_PROCEDURE:;
-
-
-
-  case OBJECT_ROUTINE:;
-
-
-
-  case OBJECT_TYPE:;
+  case OBJECT_PROCEDURE:
+    all_privileges = ACL_ALL_RIGHTS_FUNCTION;
+    errormsg = gettext_noop("invalid privilege type %s for procedure");
+    break;
+  case OBJECT_ROUTINE:
+    all_privileges = ACL_ALL_RIGHTS_FUNCTION;
+    errormsg = gettext_noop("invalid privilege type %s for routine");
+    break;
+  case OBJECT_TYPE:
     all_privileges = ACL_ALL_RIGHTS_TYPE;
     errormsg = gettext_noop("invalid privilege type %s for type");
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     all_privileges = ACL_ALL_RIGHTS_SCHEMA;
     errormsg = gettext_noop("invalid privilege type %s for schema");
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized GrantStmt.objtype: %d", (int)action->objtype);
     /* keep compiler quiet */
-
-
+    all_privileges = ACL_NO_RIGHTS;
+    errormsg = NULL;
   }
 
   if (action->privileges == NIL)
@@ -1034,18 +1034,18 @@ ExecAlterDefaultPrivilegesStmt(ParseState *pstate, AlterDefaultPrivilegesStmt *s
 
       if (privnode->cols)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("default privileges cannot be set for columns")));
       }
 
-      if (privnode->priv_name == NULL)
-      { /* parser mistake? */
-
+      if (privnode->priv_name == NULL) /* parser mistake? */
+      {
+        elog(ERROR, "AccessPriv node must specify privilege");
       }
       priv = string_to_privilege(privnode->priv_name);
 
       if (priv & ~((AclMode)all_privileges))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg(errormsg, privilege_to_string(priv))));
       }
 
       iacls.privileges |= priv;
@@ -1172,7 +1172,7 @@ SetDefaultACL(InternalDefaultACL *iacls)
    */
   switch (iacls->objtype)
   {
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
     objtype = DEFACLOBJ_RELATION;
     if (iacls->all_privs && this_privileges == ACL_NO_RIGHTS)
     {
@@ -1180,31 +1180,31 @@ SetDefaultACL(InternalDefaultACL *iacls)
     }
     break;
 
-  case OBJECT_SEQUENCE:;
+  case OBJECT_SEQUENCE:
+    objtype = DEFACLOBJ_SEQUENCE;
+    if (iacls->all_privs && this_privileges == ACL_NO_RIGHTS)
+    {
+      this_privileges = ACL_ALL_RIGHTS_SEQUENCE;
+    }
+    break;
 
-
-
-
-
-
-
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     objtype = DEFACLOBJ_FUNCTION;
     if (iacls->all_privs && this_privileges == ACL_NO_RIGHTS)
     {
-
+      this_privileges = ACL_ALL_RIGHTS_FUNCTION;
     }
     break;
 
-  case OBJECT_TYPE:;
+  case OBJECT_TYPE:
     objtype = DEFACLOBJ_TYPE;
     if (iacls->all_privs && this_privileges == ACL_NO_RIGHTS)
     {
-
+      this_privileges = ACL_ALL_RIGHTS_TYPE;
     }
     break;
 
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     if (OidIsValid(iacls->nspid))
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("cannot use IN SCHEMA clause when using GRANT/REVOKE ON SCHEMAS")));
@@ -1216,10 +1216,10 @@ SetDefaultACL(InternalDefaultACL *iacls)
     }
     break;
 
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized objtype: %d", (int)iacls->objtype);
+    objtype = 0; /* keep compiler quiet */
+    break;
   }
 
   /* Search for existing row for this object type in catalog */
@@ -1237,7 +1237,7 @@ SetDefaultACL(InternalDefaultACL *iacls)
     }
     else
     {
-
+      old_acl = NULL; /* this case shouldn't happen, probably */
     }
     isNew = false;
   }
@@ -1400,59 +1400,59 @@ RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid)
     HeapTuple tuple;
 
     /* first fetch info needed by SetDefaultACL */
+    rel = table_open(DefaultAclRelationId, AccessShareLock);
 
+    ScanKeyInit(&skey[0], Anum_pg_default_acl_oid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(objid));
 
+    scan = systable_beginscan(rel, DefaultAclOidIndexId, true, NULL, 1, skey);
 
+    tuple = systable_getnext(scan);
 
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "could not find tuple for default ACL %u", objid);
+    }
 
+    pg_default_acl_tuple = (Form_pg_default_acl)GETSTRUCT(tuple);
 
+    iacls.roleid = pg_default_acl_tuple->defaclrole;
+    iacls.nspid = pg_default_acl_tuple->defaclnamespace;
 
+    switch (pg_default_acl_tuple->defaclobjtype)
+    {
+    case DEFACLOBJ_RELATION:
+      iacls.objtype = OBJECT_TABLE;
+      break;
+    case DEFACLOBJ_SEQUENCE:
+      iacls.objtype = OBJECT_SEQUENCE;
+      break;
+    case DEFACLOBJ_FUNCTION:
+      iacls.objtype = OBJECT_FUNCTION;
+      break;
+    case DEFACLOBJ_TYPE:
+      iacls.objtype = OBJECT_TYPE;
+      break;
+    case DEFACLOBJ_NAMESPACE:
+      iacls.objtype = OBJECT_SCHEMA;
+      break;
+    default:
+      /* Shouldn't get here */
+      elog(ERROR, "unexpected default ACL type: %d", (int)pg_default_acl_tuple->defaclobjtype);
+      break;
+    }
 
+    systable_endscan(scan);
+    table_close(rel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    iacls.is_grant = false;
+    iacls.all_privs = true;
+    iacls.privileges = ACL_NO_RIGHTS;
+    iacls.grantees = list_make1_oid(roleid);
+    iacls.grant_option = false;
+    iacls.behavior = DROP_CASCADE;
 
     /* Do it */
-
+    SetDefaultACL(&iacls);
   }
   else
   {
@@ -1460,40 +1460,40 @@ RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid)
 
     switch (classid)
     {
-    case RelationRelationId:;
+    case RelationRelationId:
       /* it's OK to use TABLE for a sequence */
       istmt.objtype = OBJECT_TABLE;
       break;
-    case DatabaseRelationId:;
+    case DatabaseRelationId:
       istmt.objtype = OBJECT_DATABASE;
       break;
-    case TypeRelationId:;
-
-
-    case ProcedureRelationId:;
-
-
-    case LanguageRelationId:;
-
-
-    case LargeObjectRelationId:;
-
-
-    case NamespaceRelationId:;
-
-
-    case TableSpaceRelationId:;
-
-
-    case ForeignServerRelationId:;
+    case TypeRelationId:
+      istmt.objtype = OBJECT_TYPE;
+      break;
+    case ProcedureRelationId:
+      istmt.objtype = OBJECT_ROUTINE;
+      break;
+    case LanguageRelationId:
+      istmt.objtype = OBJECT_LANGUAGE;
+      break;
+    case LargeObjectRelationId:
+      istmt.objtype = OBJECT_LARGEOBJECT;
+      break;
+    case NamespaceRelationId:
+      istmt.objtype = OBJECT_SCHEMA;
+      break;
+    case TableSpaceRelationId:
+      istmt.objtype = OBJECT_TABLESPACE;
+      break;
+    case ForeignServerRelationId:
       istmt.objtype = OBJECT_FOREIGN_SERVER;
       break;
-    case ForeignDataWrapperRelationId:;
-
-
-    default:;;
-
-
+    case ForeignDataWrapperRelationId:
+      istmt.objtype = OBJECT_FDW;
+      break;
+    default:
+      elog(ERROR, "unexpected object class %u", classid);
+      break;
     }
     istmt.is_grant = false;
     istmt.objects = list_make1_oid(objid);
@@ -1529,7 +1529,7 @@ RemoveDefaultACLById(Oid defaclOid)
 
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "could not find tuple for default ACL %u", defaclOid);
   }
 
   CatalogTupleDelete(rel, &tuple->t_self);
@@ -1558,12 +1558,12 @@ expand_col_privileges(List *colnames, Oid table_oid, AclMode this_privileges, Ac
     attnum = get_attnum(table_oid, colname);
     if (attnum == InvalidAttrNumber)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column \"%s\" of relation \"%s\" does not exist", colname, get_rel_name(table_oid))));
     }
     attnum -= FirstLowInvalidHeapAttributeNumber;
     if (attnum <= 0 || attnum >= num_col_privileges)
     {
-
+      elog(ERROR, "column number out of range"); /* safety check */
     }
     col_privileges[attnum] |= this_privileges;
   }
@@ -1601,7 +1601,7 @@ expand_all_col_privileges(Oid table_oid, Form_pg_class classForm, AclMode this_p
     attTuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(table_oid), Int16GetDatum(curr_att));
     if (!HeapTupleIsValid(attTuple))
     {
-
+      elog(ERROR, "cache lookup failed for attribute %d of relation %u", curr_att, table_oid);
     }
 
     isdropped = ((Form_pg_attribute)GETSTRUCT(attTuple))->attisdropped;
@@ -1647,7 +1647,7 @@ ExecGrant_Attribute(InternalGrant *istmt, Oid relOid, const char *relname, AttrN
   attr_tuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(relOid), Int16GetDatum(attnum));
   if (!HeapTupleIsValid(attr_tuple))
   {
-
+    elog(ERROR, "cache lookup failed for attribute %d of relation %u", attnum, relOid);
   }
   pg_attribute_tuple = (Form_pg_attribute)GETSTRUCT(attr_tuple);
 
@@ -1780,26 +1780,26 @@ ExecGrant_Relation(InternalGrant *istmt)
     tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for relation %u", relOid);
     }
     pg_class_tuple = (Form_pg_class)GETSTRUCT(tuple);
 
     /* Not sensible to grant on an index */
     if (pg_class_tuple->relkind == RELKIND_INDEX || pg_class_tuple->relkind == RELKIND_PARTITIONED_INDEX)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is an index", NameStr(pg_class_tuple->relname))));
     }
 
     /* Composite types aren't tables either */
     if (pg_class_tuple->relkind == RELKIND_COMPOSITE_TYPE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a composite type", NameStr(pg_class_tuple->relname))));
     }
 
     /* Used GRANT SEQUENCE on a non-sequence? */
     if (istmt->objtype == OBJECT_SEQUENCE && pg_class_tuple->relkind != RELKIND_SEQUENCE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", NameStr(pg_class_tuple->relname))));
     }
 
     /* Adjust the default permissions based on object type */
@@ -1841,8 +1841,8 @@ ExecGrant_Relation(InternalGrant *istmt)
            * which operations succeeded.  This is required because
            * WARNING allows the command to continue.
            */
-
-
+          ereport(WARNING, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("sequence \"%s\" only supports USAGE, SELECT, and UPDATE privileges", NameStr(pg_class_tuple->relname))));
+          this_privileges &= (AclMode)ACL_ALL_RIGHTS_SEQUENCE;
         }
       }
       else
@@ -1855,7 +1855,7 @@ ExecGrant_Relation(InternalGrant *istmt)
            * because we didn't in the combined TABLE | SEQUENCE
            * check.
            */
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("invalid privilege type %s for table", "USAGE")));
         }
       }
     }
@@ -1892,10 +1892,10 @@ ExecGrant_Relation(InternalGrant *istmt)
     {
       switch (pg_class_tuple->relkind)
       {
-      case RELKIND_SEQUENCE:;
+      case RELKIND_SEQUENCE:
         old_acl = acldefault(OBJECT_SEQUENCE, ownerId);
         break;
-      default:;;
+      default:
         old_acl = acldefault(OBJECT_TABLE, ownerId);
         break;
       }
@@ -1934,10 +1934,10 @@ ExecGrant_Relation(InternalGrant *istmt)
 
       switch (pg_class_tuple->relkind)
       {
-      case RELKIND_SEQUENCE:;
+      case RELKIND_SEQUENCE:
         objtype = OBJECT_SEQUENCE;
         break;
-      default:;;
+      default:
         objtype = OBJECT_TABLE;
         break;
       }
@@ -2000,7 +2000,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 
       if (this_privileges & ~((AclMode)ACL_ALL_RIGHTS_COLUMN))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("invalid privilege type %s for column", privilege_to_string(this_privileges))));
       }
 
       if (pg_class_tuple->relkind == RELKIND_SEQUENCE && this_privileges & ~((AclMode)ACL_SELECT))
@@ -2010,9 +2010,9 @@ ExecGrant_Relation(InternalGrant *istmt)
          * This is a warning not error because we do it that way for
          * relation-level privileges.
          */
+        ereport(WARNING, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("sequence \"%s\" only supports SELECT column privileges", NameStr(pg_class_tuple->relname))));
 
-
-
+        this_privileges &= (AclMode)ACL_SELECT;
       }
 
       expand_col_privileges(col_privs->cols, relOid, this_privileges, col_privileges, num_col_privileges);
@@ -2084,7 +2084,7 @@ ExecGrant_Database(InternalGrant *istmt)
     tuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(datId));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for database %u", datId);
     }
 
     pg_database_tuple = (Form_pg_database)GETSTRUCT(tuple);
@@ -2193,7 +2193,7 @@ ExecGrant_Fdw(InternalGrant *istmt)
     tuple = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
     }
 
     pg_fdw_tuple = (Form_pg_foreign_data_wrapper)GETSTRUCT(tuple);
@@ -2305,7 +2305,7 @@ ExecGrant_ForeignServer(InternalGrant *istmt)
     tuple = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(srvid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for foreign server %u", srvid);
     }
 
     pg_server_tuple = (Form_pg_foreign_server)GETSTRUCT(tuple);
@@ -2417,7 +2417,7 @@ ExecGrant_Function(InternalGrant *istmt)
     tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcId));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for function %u", funcId);
     }
 
     pg_proc_tuple = (Form_pg_proc)GETSTRUCT(tuple);
@@ -2529,14 +2529,16 @@ ExecGrant_Language(InternalGrant *istmt)
     tuple = SearchSysCache1(LANGOID, ObjectIdGetDatum(langId));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for language %u", langId);
     }
 
     pg_language_tuple = (Form_pg_language)GETSTRUCT(tuple);
 
     if (!pg_language_tuple->lanpltrusted)
     {
-      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("language \"%s\" is not trusted", NameStr(pg_language_tuple->lanname)), errdetail("GRANT and REVOKE are not allowed on untrusted languages, because only superusers can use untrusted languages.")));
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("language \"%s\" is not trusted", NameStr(pg_language_tuple->lanname)),
+                         errdetail("GRANT and REVOKE are not allowed on untrusted languages, "
+                                   "because only superusers can use untrusted languages.")));
     }
 
     /*
@@ -2654,7 +2656,7 @@ ExecGrant_Largeobject(InternalGrant *istmt)
     tuple = systable_getnext(scan);
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "could not find tuple for large object %u", loid);
     }
 
     form_lo_meta = (Form_pg_largeobject_metadata)GETSTRUCT(tuple);
@@ -2767,7 +2769,7 @@ ExecGrant_Namespace(InternalGrant *istmt)
     tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(nspid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for namespace %u", nspid);
     }
 
     pg_namespace_tuple = (Form_pg_namespace)GETSTRUCT(tuple);
@@ -2844,110 +2846,110 @@ ExecGrant_Namespace(InternalGrant *istmt)
 static void
 ExecGrant_Tablespace(InternalGrant *istmt)
 {
+  Relation relation;
+  ListCell *cell;
+
+  if (istmt->all_privs && istmt->privileges == ACL_NO_RIGHTS)
+  {
+    istmt->privileges = ACL_ALL_RIGHTS_TABLESPACE;
+  }
+
+  relation = table_open(TableSpaceRelationId, RowExclusiveLock);
+
+  foreach (cell, istmt->objects)
+  {
+    Oid tblId = lfirst_oid(cell);
+    Form_pg_tablespace pg_tablespace_tuple;
+    Datum aclDatum;
+    bool isNull;
+    AclMode avail_goptions;
+    AclMode this_privileges;
+    Acl *old_acl;
+    Acl *new_acl;
+    Oid grantorId;
+    Oid ownerId;
+    HeapTuple newtuple;
+    Datum values[Natts_pg_tablespace];
+    bool nulls[Natts_pg_tablespace];
+    bool replaces[Natts_pg_tablespace];
+    int noldmembers;
+    int nnewmembers;
+    Oid *oldmembers;
+    Oid *newmembers;
+    HeapTuple tuple;
+
+    /* Search syscache for pg_tablespace */
+    tuple = SearchSysCache1(TABLESPACEOID, ObjectIdGetDatum(tblId));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for tablespace %u", tblId);
+    }
+
+    pg_tablespace_tuple = (Form_pg_tablespace)GETSTRUCT(tuple);
+
+    /*
+     * Get owner ID and working copy of existing ACL. If there's no ACL,
+     * substitute the proper default.
+     */
+    ownerId = pg_tablespace_tuple->spcowner;
+    aclDatum = heap_getattr(tuple, Anum_pg_tablespace_spcacl, RelationGetDescr(relation), &isNull);
+    if (isNull)
+    {
+      old_acl = acldefault(OBJECT_TABLESPACE, ownerId);
+      /* There are no old member roles according to the catalogs */
+      noldmembers = 0;
+      oldmembers = NULL;
+    }
+    else
+    {
+      old_acl = DatumGetAclPCopy(aclDatum);
+      /* Get the roles mentioned in the existing ACL */
+      noldmembers = aclmembers(old_acl, &oldmembers);
+    }
+
+    /* Determine ID to do the grant as, and available grant options */
+    select_best_grantor(GetUserId(), istmt->privileges, old_acl, ownerId, &grantorId, &avail_goptions);
+
+    /*
+     * Restrict the privileges to what we can actually grant, and emit the
+     * standards-mandated warning and error messages.
+     */
+    this_privileges = restrict_and_check_grant(istmt->is_grant, avail_goptions, istmt->all_privs, istmt->privileges, tblId, grantorId, OBJECT_TABLESPACE, NameStr(pg_tablespace_tuple->spcname), 0, NULL);
+
+    /*
+     * Generate new ACL.
+     */
+    new_acl = merge_acl_with_grant(old_acl, istmt->is_grant, istmt->grant_option, istmt->behavior, istmt->grantees, this_privileges, grantorId, ownerId);
+
+    /*
+     * We need the members of both old and new ACLs so we can correct the
+     * shared dependency information.
+     */
+    nnewmembers = aclmembers(new_acl, &newmembers);
+
+    /* finished building new ACL value, now insert it */
+    MemSet(values, 0, sizeof(values));
+    MemSet(nulls, false, sizeof(nulls));
+    MemSet(replaces, false, sizeof(replaces));
+
+    replaces[Anum_pg_tablespace_spcacl - 1] = true;
+    values[Anum_pg_tablespace_spcacl - 1] = PointerGetDatum(new_acl);
+
+    newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values, nulls, replaces);
+
+    CatalogTupleUpdate(relation, &newtuple->t_self, newtuple);
+
+    /* Update the shared dependency ACL info */
+    updateAclDependencies(TableSpaceRelationId, tblId, 0, ownerId, noldmembers, oldmembers, nnewmembers, newmembers);
+
+    ReleaseSysCache(tuple);
+    pfree(new_acl);
+
+    /* prevent error when processing duplicate objects */
+    CommandCounterIncrement();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  table_close(relation, RowExclusiveLock);
 }
 
 static void
@@ -2989,7 +2991,7 @@ ExecGrant_Type(InternalGrant *istmt)
     tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typId));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for type %u", typId);
     }
 
     pg_type_tuple = (Form_pg_type)GETSTRUCT(tuple);
@@ -3120,20 +3122,20 @@ string_to_privilege(const char *privname)
   {
     return ACL_CREATE_TEMP;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (strcmp(privname, "temp") == 0)
+  {
+    return ACL_CREATE_TEMP;
+  }
+  if (strcmp(privname, "connect") == 0)
+  {
+    return ACL_CONNECT;
+  }
+  if (strcmp(privname, "rule") == 0)
+  {
+    return 0; /* ignore old RULE privileges */
+  }
+  ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unrecognized privilege type \"%s\"", privname)));
+  return 0; /* appease compiler */
 }
 
 static const char *
@@ -3141,32 +3143,32 @@ privilege_to_string(AclMode privilege)
 {
   switch (privilege)
   {
-  case ACL_INSERT:;
+  case ACL_INSERT:
     return "INSERT";
-  case ACL_SELECT:;
-
-  case ACL_UPDATE:;
-
-  case ACL_DELETE:;
-
-  case ACL_TRUNCATE:;
-
-  case ACL_REFERENCES:;
-
-  case ACL_TRIGGER:;
-
-  case ACL_EXECUTE:;
-
-  case ACL_USAGE:;
+  case ACL_SELECT:
+    return "SELECT";
+  case ACL_UPDATE:
+    return "UPDATE";
+  case ACL_DELETE:
+    return "DELETE";
+  case ACL_TRUNCATE:
+    return "TRUNCATE";
+  case ACL_REFERENCES:
+    return "REFERENCES";
+  case ACL_TRIGGER:
+    return "TRIGGER";
+  case ACL_EXECUTE:
+    return "EXECUTE";
+  case ACL_USAGE:
     return "USAGE";
-  case ACL_CREATE:;
-
-  case ACL_CREATE_TEMP:;
-
-  case ACL_CONNECT:;
-
-  default:;;
-
+  case ACL_CREATE:
+    return "CREATE";
+  case ACL_CREATE_TEMP:
+    return "TEMP";
+  case ACL_CONNECT:
+    return "CONNECT";
+  default:
+    elog(ERROR, "unrecognized privilege: %d", (int)privilege);
   }
   return NULL; /* appease compiler */
 }
@@ -3182,235 +3184,235 @@ aclcheck_error(AclResult aclerr, ObjectType objtype, const char *objectname)
 {
   switch (aclerr)
   {
-  case ACLCHECK_OK:;
+  case ACLCHECK_OK:
     /* no error, so return to caller */
-
-  case ACLCHECK_NO_PRIV:;
+    break;
+  case ACLCHECK_NO_PRIV:
   {
     const char *msg = "???";
 
     switch (objtype)
     {
-    case OBJECT_AGGREGATE:;
+    case OBJECT_AGGREGATE:
       msg = gettext_noop("permission denied for aggregate %s");
       break;
-    case OBJECT_COLLATION:;
-
-
-    case OBJECT_COLUMN:;
-
-
-    case OBJECT_CONVERSION:;
-
-
-    case OBJECT_DATABASE:;
+    case OBJECT_COLLATION:
+      msg = gettext_noop("permission denied for collation %s");
+      break;
+    case OBJECT_COLUMN:
+      msg = gettext_noop("permission denied for column %s");
+      break;
+    case OBJECT_CONVERSION:
+      msg = gettext_noop("permission denied for conversion %s");
+      break;
+    case OBJECT_DATABASE:
       msg = gettext_noop("permission denied for database %s");
       break;
-    case OBJECT_DOMAIN:;
-
-
-    case OBJECT_EVENT_TRIGGER:;
-
-
-    case OBJECT_EXTENSION:;
-
-
-    case OBJECT_FDW:;
+    case OBJECT_DOMAIN:
+      msg = gettext_noop("permission denied for domain %s");
+      break;
+    case OBJECT_EVENT_TRIGGER:
+      msg = gettext_noop("permission denied for event trigger %s");
+      break;
+    case OBJECT_EXTENSION:
+      msg = gettext_noop("permission denied for extension %s");
+      break;
+    case OBJECT_FDW:
       msg = gettext_noop("permission denied for foreign-data wrapper %s");
       break;
-    case OBJECT_FOREIGN_SERVER:;
+    case OBJECT_FOREIGN_SERVER:
       msg = gettext_noop("permission denied for foreign server %s");
       break;
-    case OBJECT_FOREIGN_TABLE:;
-
-
-    case OBJECT_FUNCTION:;
+    case OBJECT_FOREIGN_TABLE:
+      msg = gettext_noop("permission denied for foreign table %s");
+      break;
+    case OBJECT_FUNCTION:
       msg = gettext_noop("permission denied for function %s");
       break;
-    case OBJECT_INDEX:;
-
-
-    case OBJECT_LANGUAGE:;
+    case OBJECT_INDEX:
+      msg = gettext_noop("permission denied for index %s");
+      break;
+    case OBJECT_LANGUAGE:
       msg = gettext_noop("permission denied for language %s");
       break;
-    case OBJECT_LARGEOBJECT:;
-
-
-    case OBJECT_MATVIEW:;
-
-
-    case OBJECT_OPCLASS:;
-
-
-    case OBJECT_OPERATOR:;
-
-
-    case OBJECT_OPFAMILY:;
-
-
-    case OBJECT_POLICY:;
-
-
-    case OBJECT_PROCEDURE:;
+    case OBJECT_LARGEOBJECT:
+      msg = gettext_noop("permission denied for large object %s");
+      break;
+    case OBJECT_MATVIEW:
+      msg = gettext_noop("permission denied for materialized view %s");
+      break;
+    case OBJECT_OPCLASS:
+      msg = gettext_noop("permission denied for operator class %s");
+      break;
+    case OBJECT_OPERATOR:
+      msg = gettext_noop("permission denied for operator %s");
+      break;
+    case OBJECT_OPFAMILY:
+      msg = gettext_noop("permission denied for operator family %s");
+      break;
+    case OBJECT_POLICY:
+      msg = gettext_noop("permission denied for policy %s");
+      break;
+    case OBJECT_PROCEDURE:
       msg = gettext_noop("permission denied for procedure %s");
       break;
-    case OBJECT_PUBLICATION:;
-
-
-    case OBJECT_ROUTINE:;
-
-
-    case OBJECT_SCHEMA:;
+    case OBJECT_PUBLICATION:
+      msg = gettext_noop("permission denied for publication %s");
+      break;
+    case OBJECT_ROUTINE:
+      msg = gettext_noop("permission denied for routine %s");
+      break;
+    case OBJECT_SCHEMA:
       msg = gettext_noop("permission denied for schema %s");
       break;
-    case OBJECT_SEQUENCE:;
-
-
-    case OBJECT_STATISTIC_EXT:;
-
-
-    case OBJECT_SUBSCRIPTION:;
-
-
-    case OBJECT_TABLE:;
+    case OBJECT_SEQUENCE:
+      msg = gettext_noop("permission denied for sequence %s");
+      break;
+    case OBJECT_STATISTIC_EXT:
+      msg = gettext_noop("permission denied for statistics object %s");
+      break;
+    case OBJECT_SUBSCRIPTION:
+      msg = gettext_noop("permission denied for subscription %s");
+      break;
+    case OBJECT_TABLE:
       msg = gettext_noop("permission denied for table %s");
       break;
-    case OBJECT_TABLESPACE:;
+    case OBJECT_TABLESPACE:
       msg = gettext_noop("permission denied for tablespace %s");
       break;
-    case OBJECT_TSCONFIGURATION:;
-
-
-    case OBJECT_TSDICTIONARY:;
-
-
-    case OBJECT_TYPE:;
+    case OBJECT_TSCONFIGURATION:
+      msg = gettext_noop("permission denied for text search configuration %s");
+      break;
+    case OBJECT_TSDICTIONARY:
+      msg = gettext_noop("permission denied for text search dictionary %s");
+      break;
+    case OBJECT_TYPE:
       msg = gettext_noop("permission denied for type %s");
       break;
-    case OBJECT_VIEW:;
+    case OBJECT_VIEW:
       msg = gettext_noop("permission denied for view %s");
       break;
       /* these currently aren't used */
-    case OBJECT_ACCESS_METHOD:;
-    case OBJECT_AMOP:;
-    case OBJECT_AMPROC:;
-    case OBJECT_ATTRIBUTE:;
-    case OBJECT_CAST:;
-    case OBJECT_DEFAULT:;
-    case OBJECT_DEFACL:;
-    case OBJECT_DOMCONSTRAINT:;
-    case OBJECT_PUBLICATION_REL:;
-    case OBJECT_ROLE:;
-    case OBJECT_RULE:;
-    case OBJECT_TABCONSTRAINT:;
-    case OBJECT_TRANSFORM:;
-    case OBJECT_TRIGGER:;
-    case OBJECT_TSPARSER:;
-    case OBJECT_TSTEMPLATE:;
-    case OBJECT_USER_MAPPING:;
-
+    case OBJECT_ACCESS_METHOD:
+    case OBJECT_AMOP:
+    case OBJECT_AMPROC:
+    case OBJECT_ATTRIBUTE:
+    case OBJECT_CAST:
+    case OBJECT_DEFAULT:
+    case OBJECT_DEFACL:
+    case OBJECT_DOMCONSTRAINT:
+    case OBJECT_PUBLICATION_REL:
+    case OBJECT_ROLE:
+    case OBJECT_RULE:
+    case OBJECT_TABCONSTRAINT:
+    case OBJECT_TRANSFORM:
+    case OBJECT_TRIGGER:
+    case OBJECT_TSPARSER:
+    case OBJECT_TSTEMPLATE:
+    case OBJECT_USER_MAPPING:
+      elog(ERROR, "unsupported object type %d", objtype);
     }
 
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg(msg, objectname)));
     break;
   }
-  case ACLCHECK_NOT_OWNER:;
+  case ACLCHECK_NOT_OWNER:
   {
     const char *msg = "???";
 
     switch (objtype)
     {
-    case OBJECT_AGGREGATE:;
+    case OBJECT_AGGREGATE:
       msg = gettext_noop("must be owner of aggregate %s");
       break;
-    case OBJECT_COLLATION:;
-
-
-    case OBJECT_CONVERSION:;
+    case OBJECT_COLLATION:
+      msg = gettext_noop("must be owner of collation %s");
+      break;
+    case OBJECT_CONVERSION:
       msg = gettext_noop("must be owner of conversion %s");
       break;
-    case OBJECT_DATABASE:;
-
-
-    case OBJECT_DOMAIN:;
-
-
-    case OBJECT_EVENT_TRIGGER:;
-
-
-    case OBJECT_EXTENSION:;
-
-
-    case OBJECT_FDW:;
+    case OBJECT_DATABASE:
+      msg = gettext_noop("must be owner of database %s");
+      break;
+    case OBJECT_DOMAIN:
+      msg = gettext_noop("must be owner of domain %s");
+      break;
+    case OBJECT_EVENT_TRIGGER:
+      msg = gettext_noop("must be owner of event trigger %s");
+      break;
+    case OBJECT_EXTENSION:
+      msg = gettext_noop("must be owner of extension %s");
+      break;
+    case OBJECT_FDW:
       msg = gettext_noop("must be owner of foreign-data wrapper %s");
       break;
-    case OBJECT_FOREIGN_SERVER:;
+    case OBJECT_FOREIGN_SERVER:
       msg = gettext_noop("must be owner of foreign server %s");
       break;
-    case OBJECT_FOREIGN_TABLE:;
-
-
-    case OBJECT_FUNCTION:;
+    case OBJECT_FOREIGN_TABLE:
+      msg = gettext_noop("must be owner of foreign table %s");
+      break;
+    case OBJECT_FUNCTION:
       msg = gettext_noop("must be owner of function %s");
       break;
-    case OBJECT_INDEX:;
+    case OBJECT_INDEX:
       msg = gettext_noop("must be owner of index %s");
       break;
-    case OBJECT_LANGUAGE:;
+    case OBJECT_LANGUAGE:
       msg = gettext_noop("must be owner of language %s");
       break;
-    case OBJECT_LARGEOBJECT:;
-
-
-    case OBJECT_MATVIEW:;
-
-
-    case OBJECT_OPCLASS:;
+    case OBJECT_LARGEOBJECT:
+      msg = gettext_noop("must be owner of large object %s");
+      break;
+    case OBJECT_MATVIEW:
+      msg = gettext_noop("must be owner of materialized view %s");
+      break;
+    case OBJECT_OPCLASS:
       msg = gettext_noop("must be owner of operator class %s");
       break;
-    case OBJECT_OPERATOR:;
+    case OBJECT_OPERATOR:
       msg = gettext_noop("must be owner of operator %s");
       break;
-    case OBJECT_OPFAMILY:;
+    case OBJECT_OPFAMILY:
       msg = gettext_noop("must be owner of operator family %s");
       break;
-    case OBJECT_PROCEDURE:;
+    case OBJECT_PROCEDURE:
       msg = gettext_noop("must be owner of procedure %s");
       break;
-    case OBJECT_PUBLICATION:;
+    case OBJECT_PUBLICATION:
       msg = gettext_noop("must be owner of publication %s");
       break;
-    case OBJECT_ROUTINE:;
-
-
-    case OBJECT_SEQUENCE:;
+    case OBJECT_ROUTINE:
+      msg = gettext_noop("must be owner of routine %s");
+      break;
+    case OBJECT_SEQUENCE:
       msg = gettext_noop("must be owner of sequence %s");
       break;
-    case OBJECT_SUBSCRIPTION:;
+    case OBJECT_SUBSCRIPTION:
       msg = gettext_noop("must be owner of subscription %s");
       break;
-    case OBJECT_TABLE:;
+    case OBJECT_TABLE:
       msg = gettext_noop("must be owner of table %s");
       break;
-    case OBJECT_TYPE:;
+    case OBJECT_TYPE:
       msg = gettext_noop("must be owner of type %s");
       break;
-    case OBJECT_VIEW:;
+    case OBJECT_VIEW:
       msg = gettext_noop("must be owner of view %s");
       break;
-    case OBJECT_SCHEMA:;
+    case OBJECT_SCHEMA:
       msg = gettext_noop("must be owner of schema %s");
       break;
-    case OBJECT_STATISTIC_EXT:;
+    case OBJECT_STATISTIC_EXT:
       msg = gettext_noop("must be owner of statistics object %s");
       break;
-    case OBJECT_TABLESPACE:;
-
-
-    case OBJECT_TSCONFIGURATION:;
+    case OBJECT_TABLESPACE:
+      msg = gettext_noop("must be owner of tablespace %s");
+      break;
+    case OBJECT_TSCONFIGURATION:
       msg = gettext_noop("must be owner of text search configuration %s");
       break;
-    case OBJECT_TSDICTIONARY:;
+    case OBJECT_TSDICTIONARY:
       msg = gettext_noop("must be owner of text search dictionary %s");
       break;
 
@@ -3420,59 +3422,59 @@ aclcheck_error(AclResult aclerr, ObjectType objtype, const char *objectname)
        * ownership is attached.  See also
        * check_object_ownership().
        */
-    case OBJECT_COLUMN:;
-    case OBJECT_POLICY:;
-    case OBJECT_RULE:;
-    case OBJECT_TABCONSTRAINT:;
-    case OBJECT_TRIGGER:;
+    case OBJECT_COLUMN:
+    case OBJECT_POLICY:
+    case OBJECT_RULE:
+    case OBJECT_TABCONSTRAINT:
+    case OBJECT_TRIGGER:
       msg = gettext_noop("must be owner of relation %s");
       break;
       /* these currently aren't used */
-    case OBJECT_ACCESS_METHOD:;
-    case OBJECT_AMOP:;
-    case OBJECT_AMPROC:;
-    case OBJECT_ATTRIBUTE:;
-    case OBJECT_CAST:;
-    case OBJECT_DEFAULT:;
-    case OBJECT_DEFACL:;
-    case OBJECT_DOMCONSTRAINT:;
-    case OBJECT_PUBLICATION_REL:;
-    case OBJECT_ROLE:;
-    case OBJECT_TRANSFORM:;
-    case OBJECT_TSPARSER:;
-    case OBJECT_TSTEMPLATE:;
-    case OBJECT_USER_MAPPING:;
-
+    case OBJECT_ACCESS_METHOD:
+    case OBJECT_AMOP:
+    case OBJECT_AMPROC:
+    case OBJECT_ATTRIBUTE:
+    case OBJECT_CAST:
+    case OBJECT_DEFAULT:
+    case OBJECT_DEFACL:
+    case OBJECT_DOMCONSTRAINT:
+    case OBJECT_PUBLICATION_REL:
+    case OBJECT_ROLE:
+    case OBJECT_TRANSFORM:
+    case OBJECT_TSPARSER:
+    case OBJECT_TSTEMPLATE:
+    case OBJECT_USER_MAPPING:
+      elog(ERROR, "unsupported object type %d", objtype);
     }
 
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg(msg, objectname)));
     break;
   }
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized AclResult: %d", (int)aclerr);
+    break;
   }
 }
 
 void
 aclcheck_error_col(AclResult aclerr, ObjectType objtype, const char *objectname, const char *colname)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  switch (aclerr)
+  {
+  case ACLCHECK_OK:
+    /* no error, so return to caller */
+    break;
+  case ACLCHECK_NO_PRIV:
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for column \"%s\" of relation \"%s\"", colname, objectname)));
+    break;
+  case ACLCHECK_NOT_OWNER:
+    /* relation msg is OK since columns don't have separate owners */
+    aclcheck_error(aclerr, objtype, objectname);
+    break;
+  default:
+    elog(ERROR, "unrecognized AclResult: %d", (int)aclerr);
+    break;
+  }
 }
 
 /*
@@ -3495,41 +3497,41 @@ pg_aclmask(ObjectType objtype, Oid table_oid, AttrNumber attnum, Oid roleid, Acl
 {
   switch (objtype)
   {
-  case OBJECT_COLUMN:;
-
-  case OBJECT_TABLE:;
-  case OBJECT_SEQUENCE:;
+  case OBJECT_COLUMN:
+    return pg_class_aclmask(table_oid, roleid, mask, how) | pg_attribute_aclmask(table_oid, attnum, roleid, mask, how);
+  case OBJECT_TABLE:
+  case OBJECT_SEQUENCE:
     return pg_class_aclmask(table_oid, roleid, mask, how);
-  case OBJECT_DATABASE:;
-
-  case OBJECT_FUNCTION:;
-
-  case OBJECT_LANGUAGE:;
+  case OBJECT_DATABASE:
+    return pg_database_aclmask(table_oid, roleid, mask, how);
+  case OBJECT_FUNCTION:
+    return pg_proc_aclmask(table_oid, roleid, mask, how);
+  case OBJECT_LANGUAGE:
     return pg_language_aclmask(table_oid, roleid, mask, how);
-  case OBJECT_LARGEOBJECT:;
-
-  case OBJECT_SCHEMA:;
-
-  case OBJECT_STATISTIC_EXT:;
-
+  case OBJECT_LARGEOBJECT:
+    return pg_largeobject_aclmask_snapshot(table_oid, roleid, mask, how, NULL);
+  case OBJECT_SCHEMA:
+    return pg_namespace_aclmask(table_oid, roleid, mask, how);
+  case OBJECT_STATISTIC_EXT:
+    elog(ERROR, "grantable rights not supported for statistics objects");
     /* not reached, but keep compiler quiet */
-
-  case OBJECT_TABLESPACE:;
-
-  case OBJECT_FDW:;
+    return ACL_NO_RIGHTS;
+  case OBJECT_TABLESPACE:
+    return pg_tablespace_aclmask(table_oid, roleid, mask, how);
+  case OBJECT_FDW:
     return pg_foreign_data_wrapper_aclmask(table_oid, roleid, mask, how);
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     return pg_foreign_server_aclmask(table_oid, roleid, mask, how);
-  case OBJECT_EVENT_TRIGGER:;
-
+  case OBJECT_EVENT_TRIGGER:
+    elog(ERROR, "grantable rights not supported for event triggers");
     /* not reached, but keep compiler quiet */
-
-  case OBJECT_TYPE:;
+    return ACL_NO_RIGHTS;
+  case OBJECT_TYPE:
     return pg_type_aclmask(table_oid, roleid, mask, how);
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized objtype: %d", (int)objtype);
     /* not reached, but keep compiler quiet */
-
+    return ACL_NO_RIGHTS;
   }
 }
 
@@ -3571,14 +3573,14 @@ pg_attribute_aclmask(Oid table_oid, AttrNumber attnum, Oid roleid, AclMode mask,
   attTuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(table_oid), Int16GetDatum(attnum));
   if (!HeapTupleIsValid(attTuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("attribute %d of relation with OID %u does not exist", attnum, table_oid)));
   }
   attributeForm = (Form_pg_attribute)GETSTRUCT(attTuple);
 
   /* Throw error on dropped columns, too */
   if (attributeForm->attisdropped)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("attribute %d of relation with OID %u does not exist", attnum, table_oid)));
   }
 
   aclDatum = SysCacheGetAttr(ATTNUM, attTuple, Anum_pg_attribute_attacl, &isNull);
@@ -3605,8 +3607,8 @@ pg_attribute_aclmask(Oid table_oid, AttrNumber attnum, Oid roleid, AclMode mask,
   classTuple = SearchSysCache1(RELOID, ObjectIdGetDatum(table_oid));
   if (!HeapTupleIsValid(classTuple))
   {
-
-
+    ReleaseSysCache(attTuple);
+    return 0;
   }
   classForm = (Form_pg_class)GETSTRUCT(classTuple);
 
@@ -3650,7 +3652,7 @@ pg_class_aclmask(Oid table_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(table_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE), errmsg("relation with OID %u does not exist", table_oid)));
   }
   classForm = (Form_pg_class)GETSTRUCT(tuple);
 
@@ -3693,10 +3695,10 @@ pg_class_aclmask(Oid table_oid, Oid roleid, AclMode mask, AclMaskHow how)
     /* No ACL, so build default ACL */
     switch (classForm->relkind)
     {
-    case RELKIND_SEQUENCE:;
+    case RELKIND_SEQUENCE:
       acl = acldefault(OBJECT_SEQUENCE, ownerId);
       break;
-    default:;;
+    default:
       acl = acldefault(OBJECT_TABLE, ownerId);
       break;
     }
@@ -3746,7 +3748,7 @@ pg_database_aclmask(Oid db_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(db_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database with OID %u does not exist", db_oid)));
   }
 
   ownerId = ((Form_pg_database)GETSTRUCT(tuple))->datdba;
@@ -3802,7 +3804,7 @@ pg_proc_aclmask(Oid proc_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(proc_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function with OID %u does not exist", proc_oid)));
   }
 
   ownerId = ((Form_pg_proc)GETSTRUCT(tuple))->proowner;
@@ -3858,7 +3860,7 @@ pg_language_aclmask(Oid lang_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(LANGOID, ObjectIdGetDatum(lang_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("language with OID %u does not exist", lang_oid)));
   }
 
   ownerId = ((Form_pg_language)GETSTRUCT(tuple))->lanowner;
@@ -3932,7 +3934,7 @@ pg_largeobject_aclmask_snapshot(Oid lobj_oid, Oid roleid, AclMode mask, AclMaskH
   tuple = systable_getnext(scan);
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("large object %u does not exist", lobj_oid)));
   }
 
   ownerId = ((Form_pg_largeobject_metadata)GETSTRUCT(tuple))->lomowner;
@@ -4012,7 +4014,7 @@ pg_namespace_aclmask(Oid nsp_oid, Oid roleid, AclMode mask, AclMaskHow how)
     }
     else
     {
-
+      return mask & ACL_USAGE;
     }
   }
 
@@ -4022,7 +4024,7 @@ pg_namespace_aclmask(Oid nsp_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(nsp_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("schema with OID %u does not exist", nsp_oid)));
   }
 
   ownerId = ((Form_pg_namespace)GETSTRUCT(tuple))->nspowner;
@@ -4078,7 +4080,7 @@ pg_tablespace_aclmask(Oid spc_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(TABLESPACEOID, ObjectIdGetDatum(spc_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace with OID %u does not exist", spc_oid)));
   }
 
   ownerId = ((Form_pg_tablespace)GETSTRUCT(tuple))->spcowner;
@@ -4094,7 +4096,7 @@ pg_tablespace_aclmask(Oid spc_oid, Oid roleid, AclMode mask, AclMaskHow how)
   else
   {
     /* detoast ACL if necessary */
-
+    acl = DatumGetAclP(aclDatum);
   }
 
   result = aclmask(acl, roleid, ownerId, mask, how);
@@ -4138,7 +4140,7 @@ pg_foreign_data_wrapper_aclmask(Oid fdw_oid, Oid roleid, AclMode mask, AclMaskHo
   tuple = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdw_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign-data wrapper with OID %u does not exist", fdw_oid)));
   }
   fdwForm = (Form_pg_foreign_data_wrapper)GETSTRUCT(tuple);
 
@@ -4201,7 +4203,7 @@ pg_foreign_server_aclmask(Oid srv_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(srv_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign server with OID %u does not exist", srv_oid)));
   }
   srvForm = (Form_pg_foreign_server)GETSTRUCT(tuple);
 
@@ -4263,7 +4265,7 @@ pg_type_aclmask(Oid type_oid, Oid roleid, AclMode mask, AclMaskHow how)
   tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type with OID %u does not exist", type_oid)));
   }
   typeForm = (Form_pg_type)GETSTRUCT(tuple);
 
@@ -4281,7 +4283,7 @@ pg_type_aclmask(Oid type_oid, Oid roleid, AclMode mask, AclMaskHow how)
     /* this case is not a user-facing error, so elog not ereport */
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for type %u", elttype_oid);
     }
     typeForm = (Form_pg_type)GETSTRUCT(tuple);
   }
@@ -4376,7 +4378,7 @@ pg_attribute_aclcheck_all(Oid table_oid, Oid roleid, AclMode mode, AclMaskHow ho
   classTuple = SearchSysCache1(RELOID, ObjectIdGetDatum(table_oid));
   if (!HeapTupleIsValid(classTuple))
   {
-
+    return ACLCHECK_NO_PRIV;
   }
   classForm = (Form_pg_class)GETSTRUCT(classTuple);
 
@@ -4398,7 +4400,7 @@ pg_attribute_aclcheck_all(Oid table_oid, Oid roleid, AclMode mode, AclMaskHow ho
     attTuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(table_oid), Int16GetDatum(curr_att));
     if (!HeapTupleIsValid(attTuple))
     {
-
+      continue;
     }
 
     /* ignore dropped columns */
@@ -4629,7 +4631,7 @@ pg_class_ownercheck(Oid class_oid, Oid roleid)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(class_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE), errmsg("relation with OID %u does not exist", class_oid)));
   }
 
   ownerId = ((Form_pg_class)GETSTRUCT(tuple))->relowner;
@@ -4657,7 +4659,7 @@ pg_type_ownercheck(Oid type_oid, Oid roleid)
   tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type with OID %u does not exist", type_oid)));
   }
 
   ownerId = ((Form_pg_type)GETSTRUCT(tuple))->typowner;
@@ -4685,7 +4687,7 @@ pg_oper_ownercheck(Oid oper_oid, Oid roleid)
   tuple = SearchSysCache1(OPEROID, ObjectIdGetDatum(oper_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator with OID %u does not exist", oper_oid)));
   }
 
   ownerId = ((Form_pg_operator)GETSTRUCT(tuple))->oprowner;
@@ -4713,7 +4715,7 @@ pg_proc_ownercheck(Oid proc_oid, Oid roleid)
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(proc_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function with OID %u does not exist", proc_oid)));
   }
 
   ownerId = ((Form_pg_proc)GETSTRUCT(tuple))->proowner;
@@ -4738,17 +4740,17 @@ pg_language_ownercheck(Oid lan_oid, Oid roleid)
     return true;
   }
 
+  tuple = SearchSysCache1(LANGOID, ObjectIdGetDatum(lan_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("language with OID %u does not exist", lan_oid)));
+  }
 
+  ownerId = ((Form_pg_language)GETSTRUCT(tuple))->lanowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -4782,7 +4784,7 @@ pg_largeobject_ownercheck(Oid lobj_oid, Oid roleid)
   tuple = systable_getnext(scan);
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("large object %u does not exist", lobj_oid)));
   }
 
   ownerId = ((Form_pg_largeobject_metadata)GETSTRUCT(tuple))->lomowner;
@@ -4811,7 +4813,7 @@ pg_namespace_ownercheck(Oid nsp_oid, Oid roleid)
   tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(nsp_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("schema with OID %u does not exist", nsp_oid)));
   }
 
   ownerId = ((Form_pg_namespace)GETSTRUCT(tuple))->nspowner;
@@ -4837,17 +4839,17 @@ pg_tablespace_ownercheck(Oid spc_oid, Oid roleid)
   }
 
   /* Search syscache for pg_tablespace */
+  spctuple = SearchSysCache1(TABLESPACEOID, ObjectIdGetDatum(spc_oid));
+  if (!HeapTupleIsValid(spctuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace with OID %u does not exist", spc_oid)));
+  }
 
+  spcowner = ((Form_pg_tablespace)GETSTRUCT(spctuple))->spcowner;
 
+  ReleaseSysCache(spctuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, spcowner);
 }
 
 /*
@@ -4856,26 +4858,26 @@ pg_tablespace_ownercheck(Oid spc_oid, Oid roleid)
 bool
 pg_opclass_ownercheck(Oid opc_oid, Oid roleid)
 {
+  HeapTuple tuple;
+  Oid ownerId;
 
+  /* Superusers bypass all permission checking. */
+  if (superuser_arg(roleid))
+  {
+    return true;
+  }
 
+  tuple = SearchSysCache1(CLAOID, ObjectIdGetDatum(opc_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("operator class with OID %u does not exist", opc_oid)));
+  }
 
+  ownerId = ((Form_pg_opclass)GETSTRUCT(tuple))->opcowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -4884,26 +4886,26 @@ pg_opclass_ownercheck(Oid opc_oid, Oid roleid)
 bool
 pg_opfamily_ownercheck(Oid opf_oid, Oid roleid)
 {
+  HeapTuple tuple;
+  Oid ownerId;
 
+  /* Superusers bypass all permission checking. */
+  if (superuser_arg(roleid))
+  {
+    return true;
+  }
 
+  tuple = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opf_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("operator family with OID %u does not exist", opf_oid)));
+  }
 
+  ownerId = ((Form_pg_opfamily)GETSTRUCT(tuple))->opfowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -4921,17 +4923,17 @@ pg_ts_dict_ownercheck(Oid dict_oid, Oid roleid)
     return true;
   }
 
+  tuple = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dict_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("text search dictionary with OID %u does not exist", dict_oid)));
+  }
 
+  ownerId = ((Form_pg_ts_dict)GETSTRUCT(tuple))->dictowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -4949,17 +4951,17 @@ pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid)
     return true;
   }
 
+  tuple = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfg_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("text search configuration with OID %u does not exist", cfg_oid)));
+  }
 
+  ownerId = ((Form_pg_ts_config)GETSTRUCT(tuple))->cfgowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -4980,7 +4982,7 @@ pg_foreign_data_wrapper_ownercheck(Oid srv_oid, Oid roleid)
   tuple = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(srv_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign-data wrapper with OID %u does not exist", srv_oid)));
   }
 
   ownerId = ((Form_pg_foreign_data_wrapper)GETSTRUCT(tuple))->fdwowner;
@@ -5008,7 +5010,7 @@ pg_foreign_server_ownercheck(Oid srv_oid, Oid roleid)
   tuple = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(srv_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign server with OID %u does not exist", srv_oid)));
   }
 
   ownerId = ((Form_pg_foreign_server)GETSTRUCT(tuple))->srvowner;
@@ -5033,17 +5035,17 @@ pg_event_trigger_ownercheck(Oid et_oid, Oid roleid)
     return true;
   }
 
+  tuple = SearchSysCache1(EVENTTRIGGEROID, ObjectIdGetDatum(et_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("event trigger with OID %u does not exist", et_oid)));
+  }
 
+  ownerId = ((Form_pg_event_trigger)GETSTRUCT(tuple))->evtowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -5064,7 +5066,7 @@ pg_database_ownercheck(Oid db_oid, Oid roleid)
   tuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(db_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database with OID %u does not exist", db_oid)));
   }
 
   dba = ((Form_pg_database)GETSTRUCT(tuple))->datdba;
@@ -5080,26 +5082,26 @@ pg_database_ownercheck(Oid db_oid, Oid roleid)
 bool
 pg_collation_ownercheck(Oid coll_oid, Oid roleid)
 {
+  HeapTuple tuple;
+  Oid ownerId;
 
+  /* Superusers bypass all permission checking. */
+  if (superuser_arg(roleid))
+  {
+    return true;
+  }
 
+  tuple = SearchSysCache1(COLLOID, ObjectIdGetDatum(coll_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("collation with OID %u does not exist", coll_oid)));
+  }
 
+  ownerId = ((Form_pg_collation)GETSTRUCT(tuple))->collowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -5114,13 +5116,13 @@ pg_conversion_ownercheck(Oid conv_oid, Oid roleid)
   /* Superusers bypass all permission checking. */
   if (superuser_arg(roleid))
   {
-
+    return true;
   }
 
   tuple = SearchSysCache1(CONVOID, ObjectIdGetDatum(conv_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("conversion with OID %u does not exist", conv_oid)));
   }
 
   ownerId = ((Form_pg_conversion)GETSTRUCT(tuple))->conowner;
@@ -5149,24 +5151,24 @@ pg_extension_ownercheck(Oid ext_oid, Oid roleid)
   }
 
   /* There's no syscache for pg_extension, so do it the hard way */
+  pg_extension = table_open(ExtensionRelationId, AccessShareLock);
 
+  ScanKeyInit(&entry[0], Anum_pg_extension_oid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(ext_oid));
 
+  scan = systable_beginscan(pg_extension, ExtensionOidIndexId, true, NULL, 1, entry);
 
+  tuple = systable_getnext(scan);
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("extension with OID %u does not exist", ext_oid)));
+  }
 
+  ownerId = ((Form_pg_extension)GETSTRUCT(tuple))->extowner;
 
+  systable_endscan(scan);
+  table_close(pg_extension, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -5187,7 +5189,7 @@ pg_publication_ownercheck(Oid pub_oid, Oid roleid)
   tuple = SearchSysCache1(PUBLICATIONOID, ObjectIdGetDatum(pub_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("publication with OID %u does not exist", pub_oid)));
   }
 
   ownerId = ((Form_pg_publication)GETSTRUCT(tuple))->pubowner;
@@ -5212,17 +5214,17 @@ pg_subscription_ownercheck(Oid sub_oid, Oid roleid)
     return true;
   }
 
+  tuple = SearchSysCache1(SUBSCRIPTIONOID, ObjectIdGetDatum(sub_oid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("subscription with OID %u does not exist", sub_oid)));
+  }
 
+  ownerId = ((Form_pg_subscription)GETSTRUCT(tuple))->subowner;
 
+  ReleaseSysCache(tuple);
 
-
-
-
-
-
-
-
-
+  return has_privs_of_role(roleid, ownerId);
 }
 
 /*
@@ -5243,7 +5245,7 @@ pg_statistics_object_ownercheck(Oid stat_oid, Oid roleid)
   tuple = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(stat_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("statistics object with OID %u does not exist", stat_oid)));
   }
 
   ownerId = ((Form_pg_statistic_ext)GETSTRUCT(tuple))->stxowner;
@@ -5358,34 +5360,34 @@ get_user_default_acl(ObjectType objtype, Oid ownerId, Oid nsp_oid)
    */
   if (IsBootstrapProcessingMode())
   {
-
+    return NULL;
   }
 
   /* Check if object type is supported in pg_default_acl */
   switch (objtype)
   {
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
     defaclobjtype = DEFACLOBJ_RELATION;
     break;
 
-  case OBJECT_SEQUENCE:;
+  case OBJECT_SEQUENCE:
     defaclobjtype = DEFACLOBJ_SEQUENCE;
     break;
 
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     defaclobjtype = DEFACLOBJ_FUNCTION;
     break;
 
-  case OBJECT_TYPE:;
+  case OBJECT_TYPE:
     defaclobjtype = DEFACLOBJ_TYPE;
     break;
 
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     defaclobjtype = DEFACLOBJ_NAMESPACE;
     break;
 
-  default:;;
-
+  default:
+    return NULL;
   }
 
   /* Look up the relevant pg_default_acl entries */
@@ -5458,277 +5460,277 @@ recordDependencyOnNewAcl(Oid classId, Oid objectId, int32 objsubId, Oid ownerId,
 void
 recordExtObjInitPriv(Oid objoid, Oid classoid)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * pg_class / pg_attribute
+   *
+   * If this is a relation then we need to see if there are any sub-objects
+   * (eg: columns) for it and, if so, be sure to call
+   * recordExtensionInitPrivWorker() for each one.
+   */
+  if (classoid == RelationRelationId)
+  {
+    Form_pg_class pg_class_tuple;
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for relation %u", objoid);
+    }
+    pg_class_tuple = (Form_pg_class)GETSTRUCT(tuple);
+
+    /* Indexes don't have permissions */
+    if (pg_class_tuple->relkind == RELKIND_INDEX || pg_class_tuple->relkind == RELKIND_PARTITIONED_INDEX)
+    {
+      return;
+    }
+
+    /* Composite types don't have permissions either */
+    if (pg_class_tuple->relkind == RELKIND_COMPOSITE_TYPE)
+    {
+      return;
+    }
+
+    /*
+     * If this isn't a sequence, index, or composite type then it's
+     * possibly going to have columns associated with it that might have
+     * ACLs.
+     */
+    if (pg_class_tuple->relkind != RELKIND_SEQUENCE)
+    {
+      AttrNumber curr_att;
+      AttrNumber nattrs = pg_class_tuple->relnatts;
+
+      for (curr_att = 1; curr_att <= nattrs; curr_att++)
+      {
+        HeapTuple attTuple;
+        Datum attaclDatum;
+
+        attTuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(objoid), Int16GetDatum(curr_att));
+
+        if (!HeapTupleIsValid(attTuple))
+        {
+          continue;
+        }
+
+        /* ignore dropped columns */
+        if (((Form_pg_attribute)GETSTRUCT(attTuple))->attisdropped)
+        {
+          ReleaseSysCache(attTuple);
+          continue;
+        }
+
+        attaclDatum = SysCacheGetAttr(ATTNUM, attTuple, Anum_pg_attribute_attacl, &isNull);
+
+        /* no need to do anything for a NULL ACL */
+        if (isNull)
+        {
+          ReleaseSysCache(attTuple);
+          continue;
+        }
+
+        recordExtensionInitPrivWorker(objoid, classoid, curr_att, DatumGetAclP(attaclDatum));
+
+        ReleaseSysCache(attTuple);
+      }
+    }
+
+    aclDatum = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_relacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_foreign_data_wrapper */
+  else if (classoid == ForeignDataWrapperRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for foreign data wrapper %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(FOREIGNDATAWRAPPEROID, tuple, Anum_pg_foreign_data_wrapper_fdwacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_foreign_server */
+  else if (classoid == ForeignServerRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for foreign server %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(FOREIGNSERVEROID, tuple, Anum_pg_foreign_server_srvacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_language */
+  else if (classoid == LanguageRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(LANGOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for language %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(LANGOID, tuple, Anum_pg_language_lanacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_largeobject_metadata */
+  else if (classoid == LargeObjectMetadataRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+    ScanKeyData entry[1];
+    SysScanDesc scan;
+    Relation relation;
+
+    relation = table_open(LargeObjectMetadataRelationId, RowExclusiveLock);
+
+    /* There's no syscache for pg_largeobject_metadata */
+    ScanKeyInit(&entry[0], Anum_pg_largeobject_metadata_oid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(objoid));
+
+    scan = systable_beginscan(relation, LargeObjectMetadataOidIndexId, true, NULL, 1, entry);
+
+    tuple = systable_getnext(scan);
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "could not find tuple for large object %u", objoid);
+    }
+
+    aclDatum = heap_getattr(tuple, Anum_pg_largeobject_metadata_lomacl, RelationGetDescr(relation), &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    systable_endscan(scan);
+  }
+  /* pg_namespace */
+  else if (classoid == NamespaceRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for schema %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(NAMESPACEOID, tuple, Anum_pg_namespace_nspacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_proc */
+  else if (classoid == ProcedureRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for function %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_proacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  /* pg_type */
+  else if (classoid == TypeRelationId)
+  {
+    Datum aclDatum;
+    bool isNull;
+    HeapTuple tuple;
+
+    tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for type %u", objoid);
+    }
+
+    aclDatum = SysCacheGetAttr(TYPEOID, tuple, Anum_pg_type_typacl, &isNull);
+
+    /* Add the record, if any, for the top-level object */
+    if (!isNull)
+    {
+      recordExtensionInitPrivWorker(objoid, classoid, 0, DatumGetAclP(aclDatum));
+    }
+
+    ReleaseSysCache(tuple);
+  }
+  else if (classoid == AccessMethodRelationId || classoid == AggregateRelationId || classoid == CastRelationId || classoid == CollationRelationId || classoid == ConversionRelationId || classoid == EventTriggerRelationId || classoid == OperatorRelationId || classoid == OperatorClassRelationId || classoid == OperatorFamilyRelationId || classoid == NamespaceRelationId || classoid == TSConfigRelationId || classoid == TSDictionaryRelationId || classoid == TSParserRelationId || classoid == TSTemplateRelationId || classoid == TransformRelationId)
+  {
+    /* no ACL for these object types, so do nothing. */
+  }
+
+  /*
+   * complain if we are given a class OID for a class that extensions don't
+   * support or that we don't recognize.
+   */
+  else
+  {
+    elog(ERROR, "unrecognized or unsupported class OID: %u", classoid);
+  }
 }
 
 /*
@@ -5738,69 +5740,69 @@ recordExtObjInitPriv(Oid objoid, Oid classoid)
 void
 removeExtObjInitPriv(Oid objoid, Oid classoid)
 {
+  /*
+   * If this is a relation then we need to see if there are any sub-objects
+   * (eg: columns) for it and, if so, be sure to call
+   * recordExtensionInitPrivWorker() for each one.
+   */
+  if (classoid == RelationRelationId)
+  {
+    Form_pg_class pg_class_tuple;
+    HeapTuple tuple;
 
+    tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(objoid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for relation %u", objoid);
+    }
+    pg_class_tuple = (Form_pg_class)GETSTRUCT(tuple);
 
+    /* Indexes don't have permissions */
+    if (pg_class_tuple->relkind == RELKIND_INDEX || pg_class_tuple->relkind == RELKIND_PARTITIONED_INDEX)
+    {
+      return;
+    }
 
+    /* Composite types don't have permissions either */
+    if (pg_class_tuple->relkind == RELKIND_COMPOSITE_TYPE)
+    {
+      return;
+    }
 
+    /*
+     * If this isn't a sequence, index, or composite type then it's
+     * possibly going to have columns associated with it that might have
+     * ACLs.
+     */
+    if (pg_class_tuple->relkind != RELKIND_SEQUENCE)
+    {
+      AttrNumber curr_att;
+      AttrNumber nattrs = pg_class_tuple->relnatts;
 
+      for (curr_att = 1; curr_att <= nattrs; curr_att++)
+      {
+        HeapTuple attTuple;
 
+        attTuple = SearchSysCache2(ATTNUM, ObjectIdGetDatum(objoid), Int16GetDatum(curr_att));
 
+        if (!HeapTupleIsValid(attTuple))
+        {
+          continue;
+        }
 
+        /* when removing, remove all entries, even dropped columns */
 
+        recordExtensionInitPrivWorker(objoid, classoid, curr_att, NULL);
 
+        ReleaseSysCache(attTuple);
+      }
+    }
 
+    ReleaseSysCache(tuple);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Remove the record, if any, for the top-level object */
+  recordExtensionInitPrivWorker(objoid, classoid, 0, NULL);
 }
 
 /*
@@ -5836,7 +5838,7 @@ recordExtensionInitPriv(Oid objoid, Oid classoid, int objsubid, Acl *new_acl)
     return;
   }
 
-
+  recordExtensionInitPrivWorker(objoid, classoid, objsubid, new_acl);
 }
 
 /*
@@ -5854,85 +5856,85 @@ recordExtensionInitPriv(Oid objoid, Oid classoid, int objsubid, Acl *new_acl)
 static void
 recordExtensionInitPrivWorker(Oid objoid, Oid classoid, int objsubid, Acl *new_acl)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Relation relation;
+  ScanKeyData key[3];
+  SysScanDesc scan;
+  HeapTuple tuple;
+  HeapTuple oldtuple;
+
+  relation = table_open(InitPrivsRelationId, RowExclusiveLock);
+
+  ScanKeyInit(&key[0], Anum_pg_init_privs_objoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(objoid));
+  ScanKeyInit(&key[1], Anum_pg_init_privs_classoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(classoid));
+  ScanKeyInit(&key[2], Anum_pg_init_privs_objsubid, BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(objsubid));
+
+  scan = systable_beginscan(relation, InitPrivsObjIndexId, true, NULL, 3, key);
+
+  /* There should exist only one entry or none. */
+  oldtuple = systable_getnext(scan);
+
+  /* If we find an entry, update it with the latest ACL. */
+  if (HeapTupleIsValid(oldtuple))
+  {
+    Datum values[Natts_pg_init_privs];
+    bool nulls[Natts_pg_init_privs];
+    bool replace[Natts_pg_init_privs];
+
+    /* If we have a new ACL to set, then update the row with it. */
+    if (new_acl)
+    {
+      MemSet(values, 0, sizeof(values));
+      MemSet(nulls, false, sizeof(nulls));
+      MemSet(replace, false, sizeof(replace));
+
+      values[Anum_pg_init_privs_initprivs - 1] = PointerGetDatum(new_acl);
+      replace[Anum_pg_init_privs_initprivs - 1] = true;
+
+      oldtuple = heap_modify_tuple(oldtuple, RelationGetDescr(relation), values, nulls, replace);
+
+      CatalogTupleUpdate(relation, &oldtuple->t_self, oldtuple);
+    }
+    else
+    {
+      /* new_acl is NULL, so delete the entry we found. */
+      CatalogTupleDelete(relation, &oldtuple->t_self);
+    }
+  }
+  else
+  {
+    Datum values[Natts_pg_init_privs];
+    bool nulls[Natts_pg_init_privs];
+
+    /*
+     * Only add a new entry if the new ACL is non-NULL.
+     *
+     * If we are passed in a NULL ACL and no entry exists, we can just
+     * fall through and do nothing.
+     */
+    if (new_acl)
+    {
+      /* No entry found, so add it. */
+      MemSet(nulls, false, sizeof(nulls));
+
+      values[Anum_pg_init_privs_objoid - 1] = ObjectIdGetDatum(objoid);
+      values[Anum_pg_init_privs_classoid - 1] = ObjectIdGetDatum(classoid);
+      values[Anum_pg_init_privs_objsubid - 1] = Int32GetDatum(objsubid);
+
+      /* This function only handles initial privileges of extensions */
+      values[Anum_pg_init_privs_privtype - 1] = CharGetDatum(INITPRIVS_EXTENSION);
+
+      values[Anum_pg_init_privs_initprivs - 1] = PointerGetDatum(new_acl);
+
+      tuple = heap_form_tuple(RelationGetDescr(relation), values, nulls);
+
+      CatalogTupleInsert(relation, tuple);
+    }
+  }
+
+  systable_endscan(scan);
+
+  /* prevent error when processing objects multiple times */
+  CommandCounterIncrement();
+
+  table_close(relation, RowExclusiveLock);
 }

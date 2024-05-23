@@ -22,7 +22,8 @@ PG_MODULE_MAGIC;
 /*
  * Our test trees store an integer key, and nothing else.
  */
-typedef struct IntRBTreeNode {
+typedef struct IntRBTreeNode
+{
   RBTNode rbtnode;
   int key;
 } IntRBTreeNode;
@@ -50,7 +51,8 @@ irbt_combine(RBTNode *existing, const RBTNode *newdata, void *arg)
   const IntRBTreeNode *eexist = (const IntRBTreeNode *)existing;
   const IntRBTreeNode *enew = (const IntRBTreeNode *)newdata;
 
-  if (eexist->key != enew->key) {
+  if (eexist->key != enew->key)
+  {
     elog(ERROR, "red-black tree combines %d into %d", enew->key, eexist->key);
   }
 }
@@ -98,10 +100,12 @@ GetPermutation(int size)
    * fail to generate permutations with the last integer last).  The swap
    * step can be optimized by combining it with the insertion.
    */
-  for (i = 1; i < size; i++) {
+  for (i = 1; i < size; i++)
+  {
     int j = random() % (i + 1);
 
-    if (j < i) { /* avoid fetching undefined data if j=i */
+    if (j < i) /* avoid fetching undefined data if j=i */
+    {
       permutation[i] = permutation[j];
     }
     permutation[j] = i;
@@ -123,10 +127,12 @@ rbt_populate(RBTree *tree, int size, int step)
   int i;
 
   /* Insert values.  We don't expect any collisions. */
-  for (i = 0; i < size; i++) {
+  for (i = 0; i < size; i++)
+  {
     node.key = step * permutation[i];
     rbt_insert(tree, (RBTNode *)&node, &isNew);
-    if (!isNew) {
+    if (!isNew)
+    {
       elog(ERROR, "unexpected !isNew result from rbt_insert");
     }
   }
@@ -135,10 +141,12 @@ rbt_populate(RBTree *tree, int size, int step)
    * Re-insert the first value to make sure collisions work right.  It's
    * probably not useful to test that case over again for all the values.
    */
-  if (size > 0) {
+  if (size > 0)
+  {
     node.key = step * permutation[0];
     rbt_insert(tree, (RBTNode *)&node, &isNew);
-    if (isNew) {
+    if (isNew)
+    {
       elog(ERROR, "unexpected isNew result from rbt_insert");
     }
   }
@@ -162,7 +170,8 @@ testleftright(int size)
 
   /* check iteration over empty tree */
   rbt_begin_iterate(tree, LeftRightWalk, &iter);
-  if (rbt_iterate(&iter) != NULL) {
+  if (rbt_iterate(&iter) != NULL)
+  {
     elog(ERROR, "left-right walk over empty tree produced an element");
   }
 
@@ -172,19 +181,23 @@ testleftright(int size)
   /* iterate over the tree */
   rbt_begin_iterate(tree, LeftRightWalk, &iter);
 
-  while ((node = (IntRBTreeNode *)rbt_iterate(&iter)) != NULL) {
+  while ((node = (IntRBTreeNode *)rbt_iterate(&iter)) != NULL)
+  {
     /* check that order is increasing */
-    if (node->key <= lastKey) {
+    if (node->key <= lastKey)
+    {
       elog(ERROR, "left-right walk gives elements not in sorted order");
     }
     lastKey = node->key;
     count++;
   }
 
-  if (lastKey != size - 1) {
+  if (lastKey != size - 1)
+  {
     elog(ERROR, "left-right walk did not reach end");
   }
-  if (count != size) {
+  if (count != size)
+  {
     elog(ERROR, "left-right walk missed some elements");
   }
 }
@@ -205,7 +218,8 @@ testrightleft(int size)
 
   /* check iteration over empty tree */
   rbt_begin_iterate(tree, RightLeftWalk, &iter);
-  if (rbt_iterate(&iter) != NULL) {
+  if (rbt_iterate(&iter) != NULL)
+  {
     elog(ERROR, "right-left walk over empty tree produced an element");
   }
 
@@ -215,19 +229,23 @@ testrightleft(int size)
   /* iterate over the tree */
   rbt_begin_iterate(tree, RightLeftWalk, &iter);
 
-  while ((node = (IntRBTreeNode *)rbt_iterate(&iter)) != NULL) {
+  while ((node = (IntRBTreeNode *)rbt_iterate(&iter)) != NULL)
+  {
     /* check that order is decreasing */
-    if (node->key >= lastKey) {
+    if (node->key >= lastKey)
+    {
       elog(ERROR, "right-left walk gives elements not in sorted order");
     }
     lastKey = node->key;
     count++;
   }
 
-  if (lastKey != 0) {
+  if (lastKey != 0)
+  {
     elog(ERROR, "right-left walk did not reach end");
   }
-  if (count != size) {
+  if (count != size)
+  {
     elog(ERROR, "right-left walk missed some elements");
   }
 }
@@ -246,16 +264,19 @@ testfind(int size)
   rbt_populate(tree, size, 2);
 
   /* Check that all inserted elements can be found */
-  for (i = 0; i < size; i++) {
+  for (i = 0; i < size; i++)
+  {
     IntRBTreeNode node;
     IntRBTreeNode *resultNode;
 
     node.key = 2 * i;
     resultNode = (IntRBTreeNode *)rbt_find(tree, (RBTNode *)&node);
-    if (resultNode == NULL) {
+    if (resultNode == NULL)
+    {
       elog(ERROR, "inserted element was not found");
     }
-    if (node.key != resultNode->key) {
+    if (node.key != resultNode->key)
+    {
       elog(ERROR, "find operation in rbtree gave wrong result");
     }
   }
@@ -264,13 +285,15 @@ testfind(int size)
    * Check that not-inserted elements can not be found, being sure to try
    * values before the first and after the last element.
    */
-  for (i = -1; i <= 2 * size; i += 2) {
+  for (i = -1; i <= 2 * size; i += 2)
+  {
     IntRBTreeNode node;
     IntRBTreeNode *resultNode;
 
     node.key = i;
     resultNode = (IntRBTreeNode *)rbt_find(tree, (RBTNode *)&node);
-    if (resultNode != NULL) {
+    if (resultNode != NULL)
+    {
       elog(ERROR, "not-inserted element was found");
     }
   }
@@ -287,7 +310,8 @@ testleftmost(int size)
   IntRBTreeNode *result;
 
   /* Check that empty tree has no leftmost element */
-  if (rbt_leftmost(tree) != NULL) {
+  if (rbt_leftmost(tree) != NULL)
+  {
     elog(ERROR, "leftmost node of empty tree is not NULL");
   }
 
@@ -296,7 +320,8 @@ testleftmost(int size)
 
   /* Check that leftmost element is the smallest one */
   result = (IntRBTreeNode *)rbt_leftmost(tree);
-  if (result == NULL || result->key != 0) {
+  if (result == NULL || result->key != 0)
+  {
     elog(ERROR, "rbt_leftmost gave wrong result");
   }
 }
@@ -319,10 +344,12 @@ testdelete(int size, int delsize)
   deleteIds = (int *)palloc(delsize * sizeof(int));
   chosen = (bool *)palloc0(size * sizeof(bool));
 
-  for (i = 0; i < delsize; i++) {
+  for (i = 0; i < delsize; i++)
+  {
     int k = random() % size;
 
-    while (chosen[k]) {
+    while (chosen[k])
+    {
       k = (k + 1) % size;
     }
     deleteIds[i] = k;
@@ -330,14 +357,16 @@ testdelete(int size, int delsize)
   }
 
   /* Delete elements */
-  for (i = 0; i < delsize; i++) {
+  for (i = 0; i < delsize; i++)
+  {
     IntRBTreeNode find;
     IntRBTreeNode *node;
 
     find.key = deleteIds[i];
     /* Locate the node to be deleted */
     node = (IntRBTreeNode *)rbt_find(tree, (RBTNode *)&find);
-    if (node == NULL || node->key != deleteIds[i]) {
+    if (node == NULL || node->key != deleteIds[i])
+    {
       elog(ERROR, "expected element was not found during deleting");
     }
     /* Delete it */
@@ -345,37 +374,46 @@ testdelete(int size, int delsize)
   }
 
   /* Check that deleted elements are deleted */
-  for (i = 0; i < size; i++) {
+  for (i = 0; i < size; i++)
+  {
     IntRBTreeNode node;
     IntRBTreeNode *result;
 
     node.key = i;
     result = (IntRBTreeNode *)rbt_find(tree, (RBTNode *)&node);
-    if (chosen[i]) {
+    if (chosen[i])
+    {
       /* Deleted element should be absent */
-      if (result != NULL) {
+      if (result != NULL)
+      {
         elog(ERROR, "deleted element still present in the rbtree");
       }
-    } else {
+    }
+    else
+    {
       /* Else it should be present */
-      if (result == NULL || result->key != i) {
+      if (result == NULL || result->key != i)
+      {
         elog(ERROR, "delete operation removed wrong rbtree value");
       }
     }
   }
 
   /* Delete remaining elements, so as to exercise reducing tree to empty */
-  for (i = 0; i < size; i++) {
+  for (i = 0; i < size; i++)
+  {
     IntRBTreeNode find;
     IntRBTreeNode *node;
 
-    if (chosen[i]) {
+    if (chosen[i])
+    {
       continue;
     }
     find.key = i;
     /* Locate the node to be deleted */
     node = (IntRBTreeNode *)rbt_find(tree, (RBTNode *)&find);
-    if (node == NULL || node->key != i) {
+    if (node == NULL || node->key != i)
+    {
       elog(ERROR, "expected element was not found during deleting");
     }
     /* Delete it */
@@ -383,7 +421,8 @@ testdelete(int size, int delsize)
   }
 
   /* Tree should now be empty */
-  if (rbt_leftmost(tree) != NULL) {
+  if (rbt_leftmost(tree) != NULL)
+  {
     elog(ERROR, "deleting all elements failed");
   }
 
@@ -403,7 +442,8 @@ test_rb_tree(PG_FUNCTION_ARGS)
 {
   int size = PG_GETARG_INT32(0);
 
-  if (size <= 0 || size > MaxAllocSize / sizeof(int)) {
+  if (size <= 0 || size > MaxAllocSize / sizeof(int))
+  {
     elog(ERROR, "invalid size for test_rb_tree: %d", size);
   }
   testleftright(size);

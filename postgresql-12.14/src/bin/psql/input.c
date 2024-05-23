@@ -67,7 +67,8 @@ char *
 gets_interactive(const char *prompt, PQExpBuffer query_buf)
 {
 #ifdef USE_READLINE
-  if (useReadline) {
+  if (useReadline)
+  {
     char *result;
 
     /*
@@ -112,9 +113,11 @@ void
 pg_append_history(const char *s, PQExpBuffer history_buf)
 {
 #ifdef USE_READLINE
-  if (useHistory && s) {
+  if (useHistory && s)
+  {
     appendPQExpBufferStr(history_buf, s);
-    if (!s[0] || s[strlen(s) - 1] != '\n') {
+    if (!s[0] || s[strlen(s) - 1] != '\n')
+    {
       appendPQExpBufferChar(history_buf, '\n');
     }
   }
@@ -122,7 +125,8 @@ pg_append_history(const char *s, PQExpBuffer history_buf)
 }
 
 /*
- * Emit accumulated history entry to readline's history mechanism,* then reset the buffer to empty.
+ * Emit accumulated history entry to readline's history mechanism,
+ * then reset the buffer to empty.
  *
  * Note: we write nothing if history_buf is empty, so extra calls to this
  * function don't hurt.  There must have been at least one line added by
@@ -142,12 +146,17 @@ pg_send_history(PQExpBuffer history_buf)
     ;
   s[i + 1] = '\0';
 
-  if (useHistory && s[0]) {
-    if (((pset.histcontrol & hctl_ignorespace) && s[0] == ' ') || ((pset.histcontrol & hctl_ignoredups) && prev_hist && strcmp(s, prev_hist) == 0)) {
+  if (useHistory && s[0])
+  {
+    if (((pset.histcontrol & hctl_ignorespace) && s[0] == ' ') || ((pset.histcontrol & hctl_ignoredups) && prev_hist && strcmp(s, prev_hist) == 0))
+    {
       /* Ignore this line as far as history is concerned */
-    } else {
+    }
+    else
+    {
       /* Save each previous line for ignoredups processing */
-      if (prev_hist) {
+      if (prev_hist)
+      {
         free(prev_hist);
       }
       prev_hist = pg_strdup(s);
@@ -180,13 +189,17 @@ gets_fromFile(FILE *source)
 
   char line[1024];
 
-  if (buffer == NULL) { /* first time through? */
+  if (buffer == NULL) /* first time through? */
+  {
     buffer = createPQExpBuffer();
-  } else {
+  }
+  else
+  {
     resetPQExpBuffer(buffer);
   }
 
-  for (;;) {
+  for (;;)
+  {
     char *result;
 
     /* Enable SIGINT to longjmp to sigint_interrupt_jmp */
@@ -199,8 +212,10 @@ gets_fromFile(FILE *source)
     sigint_interrupt_enabled = false;
 
     /* EOF or error? */
-    if (result == NULL) {
-      if (ferror(source)) {
+    if (result == NULL)
+    {
+      if (ferror(source))
+      {
         pg_log_error("could not read from input file: %m");
         return NULL;
       }
@@ -209,19 +224,22 @@ gets_fromFile(FILE *source)
 
     appendPQExpBufferStr(buffer, line);
 
-    if (PQExpBufferBroken(buffer)) {
+    if (PQExpBufferBroken(buffer))
+    {
       pg_log_error("out of memory");
       return NULL;
     }
 
     /* EOL? */
-    if (buffer->len > 0 && buffer->data[buffer->len - 1] == '\n') {
+    if (buffer->len > 0 && buffer->data[buffer->len - 1] == '\n')
+    {
       buffer->data[buffer->len - 1] = '\0';
       return pg_strdup(buffer->data);
     }
   }
 
-  if (buffer->len > 0) { /* EOF after reading some bufferload(s) */
+  if (buffer->len > 0) /* EOF after reading some bufferload(s) */
+  {
     return pg_strdup(buffer->data);
   }
 
@@ -262,14 +280,16 @@ gets_fromFile(FILE *source)
  *		END_ITERATE_HISTORY();
  */
 #define BEGIN_ITERATE_HISTORY(VARNAME)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     HIST_ENTRY *VARNAME;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     bool use_prev_;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
     history_set_pos(0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
     use_prev_ = (previous_history() != NULL);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
     history_set_pos(0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-    for (VARNAME = current_history(); VARNAME != NULL; VARNAME = use_prev_ ? previous_history() : next_history()) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    for (VARNAME = current_history(); VARNAME != NULL; VARNAME = use_prev_ ? previous_history() : next_history())                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       (void)0
 
 #define END_ITERATE_HISTORY()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
@@ -288,8 +308,10 @@ encode_history(void)
     char *cur_ptr;
 
     /* some platforms declare HIST_ENTRY.line as const char * */
-    for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++) {
-      if (*cur_ptr == '\n') {
+    for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++)
+    {
+      if (*cur_ptr == '\n')
+      {
         *cur_ptr = NL_IN_HISTORY;
       }
     }
@@ -308,8 +330,10 @@ decode_history(void)
     char *cur_ptr;
 
     /* some platforms declare HIST_ENTRY.line as const char * */
-    for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++) {
-      if (*cur_ptr == NL_IN_HISTORY) {
+    for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++)
+    {
+      if (*cur_ptr == NL_IN_HISTORY)
+      {
         *cur_ptr = '\n';
       }
     }
@@ -328,7 +352,8 @@ void
 initializeInput(int flags)
 {
 #ifdef USE_READLINE
-  if (flags & 1) {
+  if (flags & 1)
+  {
     const char *histfile;
     char home[MAXPGPATH];
 
@@ -344,25 +369,32 @@ initializeInput(int flags)
 
     histfile = GetVariable(pset.vars, "HISTFILE");
 
-    if (histfile == NULL) {
+    if (histfile == NULL)
+    {
       char *envhist;
 
       envhist = getenv("PSQL_HISTORY");
-      if (envhist != NULL && strlen(envhist) > 0) {
+      if (envhist != NULL && strlen(envhist) > 0)
+      {
         histfile = envhist;
       }
     }
 
-    if (histfile == NULL) {
-      if (get_home_path(home)) {
+    if (histfile == NULL)
+    {
+      if (get_home_path(home))
+      {
         psql_history = psprintf("%s/%s", home, PSQLHISTORY);
       }
-    } else {
+    }
+    else
+    {
       psql_history = pg_strdup(histfile);
       expand_tilde(&psql_history);
     }
 
-    if (psql_history) {
+    if (psql_history)
+    {
       read_history(psql_history);
       decode_history();
     }
@@ -375,7 +407,8 @@ initializeInput(int flags)
 /*
  * This function saves the readline history when psql exits.
  *
- * fname: pathname of history file.  (Should really be "const char *",* but some ancient versions of readline omit the const-decoration.)
+ * fname: pathname of history file.  (Should really be "const char *",
+ * but some ancient versions of readline omit the const-decoration.)
  *
  * max_lines: if >= 0, limit history file to that many entries.
  */
@@ -387,10 +420,12 @@ saveHistory(char *fname, int max_lines)
 
   /*
    * Suppressing the write attempt when HISTFILE is set to /dev/null may
-   * look like a negligible optimization, but it's necessary on e.g. macOS,* where write_history will fail because it tries to chmod the target
+   * look like a negligible optimization, but it's necessary on e.g. macOS,
+   * where write_history will fail because it tries to chmod the target
    * file.
    */
-  if (strcmp(fname, DEVNULL) != 0) {
+  if (strcmp(fname, DEVNULL) != 0)
+  {
     /*
      * Encode \n, since otherwise readline will reload multiline history
      * entries as separate lines.  (libedit doesn't really need this, but
@@ -412,35 +447,43 @@ saveHistory(char *fname, int max_lines)
       int fd;
 
       /* truncate previous entries if needed */
-      if (max_lines >= 0) {
+      if (max_lines >= 0)
+      {
         nlines = Max(max_lines - history_lines_added, 0);
         (void)history_truncate_file(fname, nlines);
       }
       /* append_history fails if file doesn't already exist :-( */
       fd = open(fname, O_CREAT | O_WRONLY | PG_BINARY, 0600);
-      if (fd >= 0) {
+      if (fd >= 0)
+      {
         close(fd);
       }
       /* append the appropriate number of lines */
-      if (max_lines >= 0) {
+      if (max_lines >= 0)
+      {
         nlines = Min(max_lines, history_lines_added);
-      } else {
+      }
+      else
+      {
         nlines = history_lines_added;
       }
       errnum = append_history(nlines, fname);
-      if (errnum == 0) {
+      if (errnum == 0)
+      {
         return true;
       }
     }
 #else /* don't have append support */
     {
       /* truncate what we have ... */
-      if (max_lines >= 0) {
+      if (max_lines >= 0)
+      {
         stifle_history(max_lines);
       }
       /* ... and overwrite file.  Tough luck for concurrent sessions. */
       errnum = write_history(fname);
-      if (errnum == 0) {
+      if (errnum == 0)
+      {
         return true;
       }
     }
@@ -468,17 +511,22 @@ printHistory(const char *fname, unsigned short int pager)
   FILE *output;
   bool is_pager;
 
-  if (!useHistory) {
+  if (!useHistory)
+  {
     return false;
   }
 
-  if (fname == NULL) {
+  if (fname == NULL)
+  {
     /* use pager, if enabled, when printing to console */
     output = PageOutput(INT_MAX, pager ? &(pset.popt.topt) : NULL);
     is_pager = true;
-  } else {
+  }
+  else
+  {
     output = fopen(fname, "w");
-    if (output == NULL) {
+    if (output == NULL)
+    {
       pg_log_error("could not save history to file \"%s\": %m", fname);
       return false;
     }
@@ -491,9 +539,12 @@ printHistory(const char *fname, unsigned short int pager)
   }
   END_ITERATE_HISTORY();
 
-  if (is_pager) {
+  if (is_pager)
+  {
     ClosePager(output);
-  } else {
+  }
+  else
+  {
     fclose(output);
   }
 
@@ -508,7 +559,8 @@ static void
 finishInput(void)
 {
 #ifdef USE_READLINE
-  if (useHistory && psql_history) {
+  if (useHistory && psql_history)
+  {
     (void)saveHistory(psql_history, pset.histsize);
     free(psql_history);
     psql_history = NULL;

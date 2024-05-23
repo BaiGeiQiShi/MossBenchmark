@@ -1,16 +1,15 @@
 /*-------------------------------------------------------------------------
  *
  * nodeGroup.c
- *	  Routines to handle group nodes (used for queries with GROUP BY
- *clause).
+ *	  Routines to handle group nodes (used for queries with GROUP BY clause).
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * DESCRIPTION
- *	  The Group node is designed for handling queries with a GROUP BY
- *clause. Its outer plan must deliver tuples that are sorted in the order
+ *	  The Group node is designed for handling queries with a GROUP BY clause.
+ *	  Its outer plan must deliver tuples that are sorted in the order
  *	  specified by the grouping columns (ie. tuples from the same group are
  *	  consecutive).  That way, we just have to compare adjacent tuples to
  *	  locate group boundaries.
@@ -48,7 +47,7 @@ ExecGroup(PlanState *pstate)
    */
   if (node->grp_done)
   {
-
+    return NULL;
   }
   econtext = node->ss.ps.ps_ExprContext;
 
@@ -97,7 +96,7 @@ ExecGroup(PlanState *pstate)
     }
     else
     {
-
+      InstrCountFiltered1(node, 1);
     }
   }
 
@@ -154,7 +153,7 @@ ExecGroup(PlanState *pstate)
     }
     else
     {
-
+      InstrCountFiltered1(node, 1);
     }
   }
 }

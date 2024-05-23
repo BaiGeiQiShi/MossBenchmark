@@ -206,9 +206,9 @@ typedef struct autovac_table
  * wi_dboid		OID of the database this worker is supposed to work on
  * wi_tableoid	OID of the table currently being vacuumed, if any
  * wi_sharedrel flag indicating whether table is marked relisshared
- * wi_proc		pointer to PGPROC of the running worker, NULL if not
- *started wi_launchtime Time at which this worker was launched wi_cost_*
- *Vacuum cost-based delay parameters current in this worker
+ * wi_proc		pointer to PGPROC of the running worker, NULL if not started
+ * wi_launchtime Time at which this worker was launched
+ * wi_cost_*	Vacuum cost-based delay parameters current in this worker
  *
  * All fields are protected by AutovacuumLock, except for wi_tableoid and
  * wi_sharedrel which are protected by AutovacuumScheduleLock (note these
@@ -270,8 +270,8 @@ typedef struct AutoVacuumWorkItem
  * av_freeWorkers	the WorkerInfo freelist
  * av_runningWorkers the WorkerInfo non-free queue
  * av_startingWorker pointer to WorkerInfo currently being started (cleared by
- *					the worker itself as soon as it's up and
- *running) av_workItems		work item array
+ *					the worker itself as soon as it's up and running)
+ * av_workItems		work item array
  *
  * This struct is protected by AutovacuumLock, except for av_signal and parts
  * of the worker list (see above).
@@ -422,7 +422,7 @@ StartAutoVacLauncher(void)
     AutoVacLauncherMain(0, NULL);
     break;
 #endif
-  default:;
+  default:
     return (int)AutoVacPID;
   }
 
@@ -1522,7 +1522,7 @@ StartAutoVacWorker(void)
     AutoVacWorkerMain(0, NULL);
     break;
 #endif
-  default:;
+  default:
     return (int)worker_pid;
   }
 
@@ -2696,7 +2696,7 @@ perform_work_item(AutoVacuumWorkItem *workitem)
     case AVW_BRINSummarizeRange:
       DirectFunctionCall2(brin_summarize_range, ObjectIdGetDatum(workitem->avw_relation), Int64GetDatum((int64)workitem->avw_blockNumber));
       break;
-    default:;
+    default:
       elog(WARNING, "unrecognized work item found: type %d", workitem->avw_type);
       break;
     }
@@ -3195,8 +3195,8 @@ autovac_report_workitem(AutoVacuumWorkItem *workitem, const char *nspname, const
 
 /*
  * AutoVacuumingActive
- *		Check GUC vars and report whether the autovacuum process should
- *be running.
+ *		Check GUC vars and report whether the autovacuum process should be
+ *		running.
  */
 bool
 AutoVacuumingActive(void)
@@ -3266,8 +3266,8 @@ autovac_init(void)
 
 /*
  * IsAutoVacuum functions
- *		Return whether this is either a launcher autovacuum process or a
- *worker process.
+ *		Return whether this is either a launcher autovacuum process or a worker
+ *		process.
  */
 bool
 IsAutoVacuumLauncherProcess(void)

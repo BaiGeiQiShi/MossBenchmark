@@ -36,7 +36,8 @@
 #include <math.h>
 
 /*
- * We used to use the platform's NL_ARGMAX here, but that's a bad idea,* first because the point of this module is to remove platform dependencies
+ * We used to use the platform's NL_ARGMAX here, but that's a bad idea,
+ * first because the point of this module is to remove platform dependencies
  * not perpetuate them, and second because some platforms use ridiculously
  * large values, leading to excessive stack consumption in dopr().
  */
@@ -110,7 +111,8 @@
 /*
  * We use the platform's native snprintf() for some machine-dependent cases.
  * While that's required by C99, Microsoft Visual Studio lacks it before
- * VS2015.  Fortunately, we don't really need the length check in practice,* so just fall back to native sprintf() on that platform.
+ * VS2015.  Fortunately, we don't really need the length check in practice,
+ * so just fall back to native sprintf() on that platform.
  */
 #if defined(_MSC_VER) && _MSC_VER < 1900 /* pre-VS2015 */
 #define snprintf(str, size, ...) sprintf(str, __VA_ARGS__)
@@ -125,10 +127,12 @@
  * In snprintf, we use nchars to count the number of bytes dropped on the
  * floor due to buffer overrun.  The correct result of snprintf is thus
  * (bufptr - bufstart) + nchars.  (This isn't as inconsistent as it might
- * seem: nchars is the number of emitted bytes that are not in the buffer now,* either because we sent them to the stream or because we couldn't fit them
+ * seem: nchars is the number of emitted bytes that are not in the buffer now,
+ * either because we sent them to the stream or because we couldn't fit them
  * into the buffer to begin with.)
  */
-typedef struct {
+typedef struct
+{
   char *bufptr;   /* next buffer output position */
   char *bufstart; /* first buffer element */
   char *bufend;   /* last+1 buffer element, or NULL */
@@ -140,12 +144,22 @@ typedef struct {
 
 /*
  * Info about the type and value of a formatting parameter.  Note that we
- * don't currently support "long double", "wint_t", or "wchar_t *" data,* nor the '%n' formatting code; else we'd need more types.  Also, at this
+ * don't currently support "long double", "wint_t", or "wchar_t *" data,
+ * nor the '%n' formatting code; else we'd need more types.  Also, at this
  * level we need not worry about signed vs unsigned values.
  */
-typedef enum { ATYPE_NONE = 0, ATYPE_INT, ATYPE_LONG, ATYPE_LONGLONG, ATYPE_DOUBLE, ATYPE_CHARPTR } PrintfArgType;
+typedef enum
+{
+  ATYPE_NONE = 0,
+  ATYPE_INT,
+  ATYPE_LONG,
+  ATYPE_LONGLONG,
+  ATYPE_DOUBLE,
+  ATYPE_CHARPTR
+} PrintfArgType;
 
-typedef union {
+typedef union
+{
   int i;
   long l;
   long long ll;
@@ -177,7 +191,8 @@ pg_vsnprintf(char *str, size_t count, const char *fmt, va_list args)
    * local buffer.  Callers cannot tell, since the function result doesn't
    * depend on count.
    */
-  if (count == 0) {
+  if (count == 0)
+  {
     str = onebyte;
     count = 1;
   }
@@ -236,7 +251,8 @@ pg_vfprintf(FILE *stream, const char *fmt, va_list args)
   PrintfTarget target;
   char buffer[1024]; /* size is arbitrary */
 
-  if (stream == NULL) {
+  if (stream == NULL)
+  {
     errno = EINVAL;
     return -1;
   }
@@ -294,12 +310,14 @@ flushbuffer(PrintfTarget *target)
    * Don't write anything if we already failed; this is to ensure we
    * preserve the original failure's errno.
    */
-  if (!target->failed && nc > 0) {
+  if (!target->failed && nc > 0)
+  {
     size_t written;
 
     written = fwrite(target->bufstart, 1, nc, target->stream);
     target->nchars += written;
-    if (written != nc) {
+    if (written != nc)
+    {
       target->failed = true;
     }
   }
@@ -345,7 +363,8 @@ trailing_pad(int padlen, PrintfTarget *target);
 static inline const char *
 strchrnul(const char *s, int c)
 {
-  while (*s != '\0' && *s != c) {
+  while (*s != '\0' && *s != c)
+  {
     s++;
   }
   return s;
@@ -402,19 +421,23 @@ dopr(PrintfTarget *target, const char *format, va_list args)
    */
   have_dollar = false;
 
-  while (*format != '\0') {
+  while (*format != '\0')
+  {
     /* Locate next conversion specifier */
-    if (*format != '%') {
+    if (*format != '%')
+    {
       /* Scan to next '%' or end of string */
       const char *next_pct = strchrnul(format + 1, '%');
 
       /* Dump literal data we just scanned over */
       dostr(format, next_pct - format, target);
-      if (target->failed) {
+      if (target->failed)
+      {
         break;
       }
 
-      if (*next_pct == '\0') {
+      if (*next_pct == '\0')
+      {
         break;
       }
       format = next_pct;
@@ -425,7 +448,8 @@ dopr(PrintfTarget *target, const char *format, va_list args)
      * sufficient for find_arguments() to start here, without rescanning
      * earlier literal text.
      */
-    if (first_pct == NULL) {
+    if (first_pct == NULL)
+    {
       first_pct = format;
     }
 
@@ -433,14 +457,17 @@ dopr(PrintfTarget *target, const char *format, va_list args)
     format++;
 
     /* Fast path for conversion spec that is exactly %s */
-    if (*format == 's') {
+    if (*format == 's')
+    {
       format++;
       strvalue = va_arg(args, char *);
-      if (strvalue == NULL) {
+      if (strvalue == NULL)
+      {
         strvalue = "(null)";
       }
       dostr(strvalue, strlen(strvalue), target);
-      if (target->failed) {
+      if (target->failed)
+      {
         break;
       }
       continue;
@@ -452,7 +479,8 @@ dopr(PrintfTarget *target, const char *format, va_list args)
     have_star = afterstar = false;
   nextch2:
     ch = *format++;
-    switch (ch) {
+    switch (ch)
+    {
     case '-':
       leftjust = 1;
       goto nextch2;
@@ -461,7 +489,8 @@ dopr(PrintfTarget *target, const char *format, va_list args)
       goto nextch2;
     case '0':
       /* set zero padding if no nonzero digits yet */
-      if (accum == 0 && !pointflag) {
+      if (accum == 0 && !pointflag)
+      {
         zpad = '0';
       }
       /* FALL THRU */
@@ -477,35 +506,46 @@ dopr(PrintfTarget *target, const char *format, va_list args)
       accum = accum * 10 + (ch - '0');
       goto nextch2;
     case '.':
-      if (have_star) {
+      if (have_star)
+      {
         have_star = false;
-      } else {
+      }
+      else
+      {
         fieldwidth = accum;
       }
       pointflag = 1;
       accum = 0;
       goto nextch2;
     case '*':
-      if (have_dollar) {
+      if (have_dollar)
+      {
         /*
          * We'll process value after reading n$.  Note it's OK to
          * assume have_dollar is set correctly, because in a valid
          * format string the initial % must have had n$ if * does.
          */
         afterstar = true;
-      } else {
+      }
+      else
+      {
         /* fetch and process value now */
         int starval = va_arg(args, int);
 
-        if (pointflag) {
+        if (pointflag)
+        {
           precision = starval;
-          if (precision < 0) {
+          if (precision < 0)
+          {
             precision = 0;
             pointflag = 0;
           }
-        } else {
+        }
+        else
+        {
           fieldwidth = starval;
-          if (fieldwidth < 0) {
+          if (fieldwidth < 0)
+          {
             leftjust = 1;
             fieldwidth = -fieldwidth;
           }
@@ -516,40 +556,53 @@ dopr(PrintfTarget *target, const char *format, va_list args)
       goto nextch2;
     case '$':
       /* First dollar sign? */
-      if (!have_dollar) {
+      if (!have_dollar)
+      {
         /* Yup, so examine all conversion specs in format */
-        if (!find_arguments(first_pct, args, argvalues)) {
+        if (!find_arguments(first_pct, args, argvalues))
+        {
           goto bad_format;
         }
         have_dollar = true;
       }
-      if (afterstar) {
+      if (afterstar)
+      {
         /* fetch and process star value */
         int starval = argvalues[accum].i;
 
-        if (pointflag) {
+        if (pointflag)
+        {
           precision = starval;
-          if (precision < 0) {
+          if (precision < 0)
+          {
             precision = 0;
             pointflag = 0;
           }
-        } else {
+        }
+        else
+        {
           fieldwidth = starval;
-          if (fieldwidth < 0) {
+          if (fieldwidth < 0)
+          {
             leftjust = 1;
             fieldwidth = -fieldwidth;
           }
         }
         afterstar = false;
-      } else {
+      }
+      else
+      {
         fmtpos = accum;
       }
       accum = 0;
       goto nextch2;
     case 'l':
-      if (longflag) {
+      if (longflag)
+      {
         longlongflag = 1;
-      } else {
+      }
+      else
+      {
         longflag = 1;
       }
       goto nextch2;
@@ -572,27 +625,44 @@ dopr(PrintfTarget *target, const char *format, va_list args)
       goto nextch2;
     case 'd':
     case 'i':
-      if (!have_star) {
-        if (pointflag) {
+      if (!have_star)
+      {
+        if (pointflag)
+        {
           precision = accum;
-        } else {
+        }
+        else
+        {
           fieldwidth = accum;
         }
       }
-      if (have_dollar) {
-        if (longlongflag) {
+      if (have_dollar)
+      {
+        if (longlongflag)
+        {
           numvalue = argvalues[fmtpos].ll;
-        } else if (longflag) {
+        }
+        else if (longflag)
+        {
           numvalue = argvalues[fmtpos].l;
-        } else {
+        }
+        else
+        {
           numvalue = argvalues[fmtpos].i;
         }
-      } else {
-        if (longlongflag) {
+      }
+      else
+      {
+        if (longlongflag)
+        {
           numvalue = va_arg(args, long long);
-        } else if (longflag) {
+        }
+        else if (longflag)
+        {
           numvalue = va_arg(args, long);
-        } else {
+        }
+        else
+        {
           numvalue = va_arg(args, int);
         }
       }
@@ -602,71 +672,106 @@ dopr(PrintfTarget *target, const char *format, va_list args)
     case 'u':
     case 'x':
     case 'X':
-      if (!have_star) {
-        if (pointflag) {
+      if (!have_star)
+      {
+        if (pointflag)
+        {
           precision = accum;
-        } else {
+        }
+        else
+        {
           fieldwidth = accum;
         }
       }
-      if (have_dollar) {
-        if (longlongflag) {
+      if (have_dollar)
+      {
+        if (longlongflag)
+        {
           numvalue = (unsigned long long)argvalues[fmtpos].ll;
-        } else if (longflag) {
+        }
+        else if (longflag)
+        {
           numvalue = (unsigned long)argvalues[fmtpos].l;
-        } else {
+        }
+        else
+        {
           numvalue = (unsigned int)argvalues[fmtpos].i;
         }
-      } else {
-        if (longlongflag) {
+      }
+      else
+      {
+        if (longlongflag)
+        {
           numvalue = (unsigned long long)va_arg(args, long long);
-        } else if (longflag) {
+        }
+        else if (longflag)
+        {
           numvalue = (unsigned long)va_arg(args, long);
-        } else {
+        }
+        else
+        {
           numvalue = (unsigned int)va_arg(args, int);
         }
       }
       fmtint(numvalue, ch, forcesign, leftjust, fieldwidth, zpad, precision, pointflag, target);
       break;
     case 'c':
-      if (!have_star) {
-        if (pointflag) {
+      if (!have_star)
+      {
+        if (pointflag)
+        {
           precision = accum;
-        } else {
+        }
+        else
+        {
           fieldwidth = accum;
         }
       }
-      if (have_dollar) {
+      if (have_dollar)
+      {
         cvalue = (unsigned char)argvalues[fmtpos].i;
-      } else {
+      }
+      else
+      {
         cvalue = (unsigned char)va_arg(args, int);
       }
       fmtchar(cvalue, leftjust, fieldwidth, target);
       break;
     case 's':
-      if (!have_star) {
-        if (pointflag) {
+      if (!have_star)
+      {
+        if (pointflag)
+        {
           precision = accum;
-        } else {
+        }
+        else
+        {
           fieldwidth = accum;
         }
       }
-      if (have_dollar) {
+      if (have_dollar)
+      {
         strvalue = argvalues[fmtpos].cptr;
-      } else {
+      }
+      else
+      {
         strvalue = va_arg(args, char *);
       }
       /* If string is NULL, silently substitute "(null)" */
-      if (strvalue == NULL) {
+      if (strvalue == NULL)
+      {
         strvalue = "(null)";
       }
       fmtstr(strvalue, leftjust, fieldwidth, precision, pointflag, target);
       break;
     case 'p':
       /* fieldwidth/leftjust are ignored ... */
-      if (have_dollar) {
+      if (have_dollar)
+      {
         strvalue = argvalues[fmtpos].cptr;
-      } else {
+      }
+      else
+      {
         strvalue = va_arg(args, char *);
       }
       fmtptr((const void *)strvalue, target);
@@ -676,41 +781,50 @@ dopr(PrintfTarget *target, const char *format, va_list args)
     case 'f':
     case 'g':
     case 'G':
-      if (!have_star) {
-        if (pointflag) {
+      if (!have_star)
+      {
+        if (pointflag)
+        {
           precision = accum;
-        } else {
+        }
+        else
+        {
           fieldwidth = accum;
         }
       }
-      if (have_dollar) {
+      if (have_dollar)
+      {
         fvalue = argvalues[fmtpos].d;
-      } else {
+      }
+      else
+      {
         fvalue = va_arg(args, double);
       }
       fmtfloat(fvalue, ch, forcesign, leftjust, fieldwidth, zpad, precision, pointflag, target);
       break;
-    case 'm': {
+    case 'm':
+    {
       char errbuf[PG_STRERROR_R_BUFLEN];
       const char *errm = strerror_r(save_errno, errbuf, sizeof(errbuf));
 
       dostr(errm, strlen(errm), target);
-    } break;
+    }
+    break;
     case '%':
       dopr_outch('%', target);
       break;
-    default:;
+    default:
 
       /*
        * Anything else --- in particular, '\0' indicating end of
        * format string --- is bogus.
        */
       goto bad_format;
-      break;
     }
 
     /* Check for failure after each conversion spec */
-    if (target->failed) {
+    if (target->failed)
+    {
       break;
     }
   }
@@ -750,14 +864,18 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
    * However, we don't need to analyze them to the same level of detail.
    *
    * Since we're only called if there's a dollar-type spec somewhere, we can
-   * fail immediately if we find a non-dollar spec.  Per the C99 standard,* all argument references in the format string must be one or the other.
+   * fail immediately if we find a non-dollar spec.  Per the C99 standard,
+   * all argument references in the format string must be one or the other.
    */
-  while (*format != '\0') {
+  while (*format != '\0')
+  {
     /* Locate next conversion specifier */
-    if (*format != '%') {
+    if (*format != '%')
+    {
       /* Unlike dopr, we can just quit if there's no more specifiers */
       format = strchr(format + 1, '%');
-      if (format == NULL) {
+      if (format == NULL)
+      {
         break;
       }
     }
@@ -769,7 +887,8 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
     afterstar = false;
   nextch1:
     ch = *format++;
-    switch (ch) {
+    switch (ch)
+    {
     case '-':
     case '+':
       goto nextch1;
@@ -789,32 +908,41 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
       accum = 0;
       goto nextch1;
     case '*':
-      if (afterstar) {
+      if (afterstar)
+      {
         return false; /* previous star missing dollar */
       }
       afterstar = true;
       accum = 0;
       goto nextch1;
     case '$':
-      if (accum <= 0 || accum > PG_NL_ARGMAX) {
+      if (accum <= 0 || accum > PG_NL_ARGMAX)
+      {
         return false;
       }
-      if (afterstar) {
-        if (argtypes[accum] && argtypes[accum] != ATYPE_INT) {
+      if (afterstar)
+      {
+        if (argtypes[accum] && argtypes[accum] != ATYPE_INT)
+        {
           return false;
         }
         argtypes[accum] = ATYPE_INT;
         last_dollar = Max(last_dollar, accum);
         afterstar = false;
-      } else {
+      }
+      else
+      {
         fmtpos = accum;
       }
       accum = 0;
       goto nextch1;
     case 'l':
-      if (longflag) {
+      if (longflag)
+      {
         longlongflag = 1;
-      } else {
+      }
+      else
+      {
         longflag = 1;
       }
       goto nextch1;
@@ -841,45 +969,62 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
     case 'u':
     case 'x':
     case 'X':
-      if (fmtpos) {
+      if (fmtpos)
+      {
         PrintfArgType atype;
 
-        if (longlongflag) {
+        if (longlongflag)
+        {
           atype = ATYPE_LONGLONG;
-        } else if (longflag) {
+        }
+        else if (longflag)
+        {
           atype = ATYPE_LONG;
-        } else {
+        }
+        else
+        {
           atype = ATYPE_INT;
         }
-        if (argtypes[fmtpos] && argtypes[fmtpos] != atype) {
+        if (argtypes[fmtpos] && argtypes[fmtpos] != atype)
+        {
           return false;
         }
         argtypes[fmtpos] = atype;
         last_dollar = Max(last_dollar, fmtpos);
-      } else {
+      }
+      else
+      {
         return false; /* non-dollar conversion spec */
       }
       break;
     case 'c':
-      if (fmtpos) {
-        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_INT) {
+      if (fmtpos)
+      {
+        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_INT)
+        {
           return false;
         }
         argtypes[fmtpos] = ATYPE_INT;
         last_dollar = Max(last_dollar, fmtpos);
-      } else {
+      }
+      else
+      {
         return false; /* non-dollar conversion spec */
       }
       break;
     case 's':
     case 'p':
-      if (fmtpos) {
-        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_CHARPTR) {
+      if (fmtpos)
+      {
+        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_CHARPTR)
+        {
           return false;
         }
         argtypes[fmtpos] = ATYPE_CHARPTR;
         last_dollar = Max(last_dollar, fmtpos);
-      } else {
+      }
+      else
+      {
         return false; /* non-dollar conversion spec */
       }
       break;
@@ -888,30 +1033,33 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
     case 'f':
     case 'g':
     case 'G':
-      if (fmtpos) {
-        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_DOUBLE) {
+      if (fmtpos)
+      {
+        if (argtypes[fmtpos] && argtypes[fmtpos] != ATYPE_DOUBLE)
+        {
           return false;
         }
         argtypes[fmtpos] = ATYPE_DOUBLE;
         last_dollar = Max(last_dollar, fmtpos);
-      } else {
+      }
+      else
+      {
         return false; /* non-dollar conversion spec */
       }
       break;
     case 'm':
     case '%':
       break;
-    default:; {
-    }
+    default:
       return false; /* bogus format string */
-      break;
     }
 
     /*
      * If we finish the spec with afterstar still set, there's a
      * non-dollar star in there.
      */
-    if (afterstar) {
+    if (afterstar)
+    {
       return false; /* non-dollar conversion spec */
     }
   }
@@ -921,8 +1069,10 @@ find_arguments(const char *format, va_list args, PrintfArgValue *argvalues)
    * order.  (Since we rejected any non-dollar specs that would have
    * collected arguments, we know that dopr() hasn't collected any yet.)
    */
-  for (i = 1; i <= last_dollar; i++) {
-    switch (argtypes[i]) {
+  for (i = 1; i <= last_dollar; i++)
+  {
+    switch (argtypes[i])
+    {
     case ATYPE_NONE:
       return false;
     case ATYPE_INT:
@@ -955,15 +1105,19 @@ fmtstr(const char *value, int leftjust, int minlen, int maxwidth, int pointflag,
    * If a maxwidth (precision) is specified, we must not fetch more bytes
    * than that.
    */
-  if (pointflag) {
+  if (pointflag)
+  {
     vallen = strnlen(value, maxwidth);
-  } else {
+  }
+  else
+  {
     vallen = strlen(value);
   }
 
   padlen = compute_padlen(minlen, vallen, leftjust);
 
-  if (padlen > 0) {
+  if (padlen > 0)
+  {
     dopr_outchmulti(' ', padlen, target);
     padlen = 0;
   }
@@ -981,9 +1135,12 @@ fmtptr(const void *value, PrintfTarget *target)
 
   /* we rely on regular C library's snprintf to do the basic conversion */
   vallen = snprintf(convert, sizeof(convert), "%p", value);
-  if (vallen < 0) {
+  if (vallen < 0)
+  {
     target->failed = true;
-  } else {
+  }
+  else
+  {
     dostr(convert, vallen, target);
   }
 }
@@ -1001,7 +1158,8 @@ fmtint(long long value, char type, int forcesign, int leftjust, int minlen, int 
   int padlen;  /* amount to pad */
   int zeropad; /* extra leading zeroes */
 
-  switch (type) {
+  switch (type)
+  {
   case 'd':
   case 'i':
     base = 10;
@@ -1024,9 +1182,8 @@ fmtint(long long value, char type, int forcesign, int leftjust, int minlen, int 
     base = 16;
     dosign = 0;
     break;
-  default:;
+  default:
     return; /* keep compiler quiet */
-    break;
   }
 
   /* disable MSVC warning about applying unary minus to an unsigned value */
@@ -1035,9 +1192,12 @@ fmtint(long long value, char type, int forcesign, int leftjust, int minlen, int 
 #pragma warning(disable : 4146)
 #endif
   /* Handle +/- */
-  if (dosign && adjust_sign((value < 0), forcesign, &signvalue)) {
+  if (dosign && adjust_sign((value < 0), forcesign, &signvalue))
+  {
     uvalue = -(unsigned long long)value;
-  } else {
+  }
+  else
+  {
     uvalue = (unsigned long long)value;
   }
 #if _MSC_VER
@@ -1048,11 +1208,15 @@ fmtint(long long value, char type, int forcesign, int leftjust, int minlen, int 
    * SUS: the result of converting 0 with an explicit precision of 0 is no
    * characters
    */
-  if (value == 0 && pointflag && precision == 0) {
+  if (value == 0 && pointflag && precision == 0)
+  {
     vallen = 0;
-  } else {
+  }
+  else
+  {
     /* make integer string */
-    do {
+    do
+    {
       convert[sizeof(convert) - (++vallen)] = cvt[uvalue % base];
       uvalue = uvalue / base;
     } while (uvalue);
@@ -1064,7 +1228,8 @@ fmtint(long long value, char type, int forcesign, int leftjust, int minlen, int 
 
   leading_pad(zpad, signvalue, &padlen, target);
 
-  if (zeropad > 0) {
+  if (zeropad > 0)
+  {
     dopr_outchmulti('0', zeropad, target);
   }
 
@@ -1080,7 +1245,8 @@ fmtchar(int value, int leftjust, int minlen, PrintfTarget *target)
 
   padlen = compute_padlen(minlen, 1, leftjust);
 
-  if (padlen > 0) {
+  if (padlen > 0)
+  {
     dopr_outchmulti(' ', padlen, target);
     padlen = 0;
   }
@@ -1102,7 +1268,8 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
   int padlen;         /* amount to pad with spaces */
 
   /*
-   * We rely on the regular C library's snprintf to do the basic conversion,* then handle padding considerations here.
+   * We rely on the regular C library's snprintf to do the basic conversion,
+   * then handle padding considerations here.
    *
    * The dynamic range of "double" is about 1E+-308 for IEEE math, and not
    * too wildly more than that with other hardware.  In "f" format, snprintf
@@ -1117,16 +1284,20 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
    * We handle infinities and NaNs specially to ensure platform-independent
    * output.
    */
-  if (precision < 0) { /* cover possible overflow of "accum" */
+  if (precision < 0) /* cover possible overflow of "accum" */
+  {
     precision = 0;
   }
   prec = Min(precision, 350);
 
-  if (isnan(value)) {
+  if (isnan(value))
+  {
     strcpy(convert, "NaN");
     vallen = 3;
     /* no zero padding, regardless of precision spec */
-  } else {
+  }
+  else
+  {
     /*
      * Handle sign (NaNs have no sign, so we don't do this in the case
      * above).  "value < 0.0" will not be true for IEEE minus zero, so we
@@ -1135,15 +1306,19 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
      */
     static const double dzero = 0.0;
 
-    if (adjust_sign((value < 0.0 || (value == 0.0 && memcmp(&value, &dzero, sizeof(double)) != 0)), forcesign, &signvalue)) {
+    if (adjust_sign((value < 0.0 || (value == 0.0 && memcmp(&value, &dzero, sizeof(double)) != 0)), forcesign, &signvalue))
+    {
       value = -value;
     }
 
-    if (isinf(value)) {
+    if (isinf(value))
+    {
       strcpy(convert, "Infinity");
       vallen = 8;
       /* no zero padding, regardless of precision spec */
-    } else if (pointflag) {
+    }
+    else if (pointflag)
+    {
       zeropadlen = precision - prec;
       fmt[0] = '%';
       fmt[1] = '.';
@@ -1151,13 +1326,16 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
       fmt[3] = type;
       fmt[4] = '\0';
       vallen = snprintf(convert, sizeof(convert), fmt, prec, value);
-    } else {
+    }
+    else
+    {
       fmt[0] = '%';
       fmt[1] = type;
       fmt[2] = '\0';
       vallen = snprintf(convert, sizeof(convert), fmt, value);
     }
-    if (vallen < 0) {
+    if (vallen < 0)
+    {
       goto fail;
     }
 
@@ -1167,7 +1345,8 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
      * such results to look like the way everyone else does it.
      */
 #ifdef WIN32
-    if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0') {
+    if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0')
+    {
       convert[vallen - 3] = convert[vallen - 2];
       convert[vallen - 2] = convert[vallen - 1];
       vallen--;
@@ -1179,28 +1358,37 @@ fmtfloat(double value, char type, int forcesign, int leftjust, int minlen, int z
 
   leading_pad(zpad, signvalue, &padlen, target);
 
-  if (zeropadlen > 0) {
+  if (zeropadlen > 0)
+  {
     /* If 'e' or 'E' format, inject zeroes before the exponent */
     char *epos = strrchr(convert, 'e');
 
-    if (!epos) {
+    if (!epos)
+    {
       epos = strrchr(convert, 'E');
     }
-    if (epos) {
+    if (epos)
+    {
       /* pad before exponent */
       dostr(convert, epos - convert, target);
-      if (zeropadlen > 0) {
+      if (zeropadlen > 0)
+      {
         dopr_outchmulti('0', zeropadlen, target);
       }
       dostr(epos, vallen - (epos - convert), target);
-    } else {
+    }
+    else
+    {
       /* no exponent, pad after the digits */
       dostr(convert, vallen, target);
-      if (zeropadlen > 0) {
+      if (zeropadlen > 0)
+      {
         dopr_outchmulti('0', zeropadlen, target);
       }
     }
-  } else {
+  }
+  else
+  {
     /* no zero padding, just emit the number as-is */
     dostr(convert, vallen, target);
   }
@@ -1243,43 +1431,56 @@ pg_strfromd(char *str, size_t count, int precision, double value)
    * the knowledge that we're using "g" format without padding allows the
    * convert[] buffer to be reasonably small.
    */
-  if (precision < 1) {
+  if (precision < 1)
+  {
     precision = 1;
-  } else if (precision > 32) {
+  }
+  else if (precision > 32)
+  {
     precision = 32;
   }
 
   /*
-   * The rest is just an inlined version of the fmtfloat() logic above,* simplified using the knowledge that no padding is wanted.
+   * The rest is just an inlined version of the fmtfloat() logic above,
+   * simplified using the knowledge that no padding is wanted.
    */
-  if (isnan(value)) {
+  if (isnan(value))
+  {
     strcpy(convert, "NaN");
     vallen = 3;
-  } else {
+  }
+  else
+  {
     static const double dzero = 0.0;
 
-    if (value < 0.0 || (value == 0.0 && memcmp(&value, &dzero, sizeof(double)) != 0)) {
+    if (value < 0.0 || (value == 0.0 && memcmp(&value, &dzero, sizeof(double)) != 0))
+    {
       signvalue = '-';
       value = -value;
     }
 
-    if (isinf(value)) {
+    if (isinf(value))
+    {
       strcpy(convert, "Infinity");
       vallen = 8;
-    } else {
+    }
+    else
+    {
       fmt[0] = '%';
       fmt[1] = '.';
       fmt[2] = '*';
       fmt[3] = 'g';
       fmt[4] = '\0';
       vallen = snprintf(convert, sizeof(convert), fmt, precision, value);
-      if (vallen < 0) {
+      if (vallen < 0)
+      {
         target.failed = true;
         goto fail;
       }
 
 #ifdef WIN32
-      if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0') {
+      if (vallen >= 6 && convert[vallen - 5] == 'e' && convert[vallen - 3] == '0')
+      {
         convert[vallen - 3] = convert[vallen - 2];
         convert[vallen - 2] = convert[vallen - 1];
         vallen--;
@@ -1288,7 +1489,8 @@ pg_strfromd(char *str, size_t count, int precision, double value)
     }
   }
 
-  if (signvalue) {
+  if (signvalue)
+  {
     dopr_outch(signvalue, &target);
   }
 
@@ -1303,22 +1505,29 @@ static void
 dostr(const char *str, int slen, PrintfTarget *target)
 {
   /* fast path for common case of slen == 1 */
-  if (slen == 1) {
+  if (slen == 1)
+  {
     dopr_outch(*str, target);
     return;
   }
 
-  while (slen > 0) {
+  while (slen > 0)
+  {
     int avail;
 
-    if (target->bufend != NULL) {
+    if (target->bufend != NULL)
+    {
       avail = target->bufend - target->bufptr;
-    } else {
+    }
+    else
+    {
       avail = slen;
     }
-    if (avail <= 0) {
+    if (avail <= 0)
+    {
       /* buffer full, can we dump to stream? */
-      if (target->stream == NULL) {
+      if (target->stream == NULL)
+      {
         target->nchars += slen; /* no, lose the data */
         return;
       }
@@ -1336,9 +1545,11 @@ dostr(const char *str, int slen, PrintfTarget *target)
 static void
 dopr_outch(int c, PrintfTarget *target)
 {
-  if (target->bufend != NULL && target->bufptr >= target->bufend) {
+  if (target->bufend != NULL && target->bufptr >= target->bufend)
+  {
     /* buffer full, can we dump to stream? */
-    if (target->stream == NULL) {
+    if (target->stream == NULL)
+    {
       target->nchars++; /* no, lose the data */
       return;
     }
@@ -1351,22 +1562,29 @@ static void
 dopr_outchmulti(int c, int slen, PrintfTarget *target)
 {
   /* fast path for common case of slen == 1 */
-  if (slen == 1) {
+  if (slen == 1)
+  {
     dopr_outch(c, target);
     return;
   }
 
-  while (slen > 0) {
+  while (slen > 0)
+  {
     int avail;
 
-    if (target->bufend != NULL) {
+    if (target->bufend != NULL)
+    {
       avail = target->bufend - target->bufptr;
-    } else {
+    }
+    else
+    {
       avail = slen;
     }
-    if (avail <= 0) {
+    if (avail <= 0)
+    {
       /* buffer full, can we dump to stream? */
-      if (target->stream == NULL) {
+      if (target->stream == NULL)
+      {
         target->nchars += slen; /* no, lose the data */
         return;
       }
@@ -1383,10 +1601,13 @@ dopr_outchmulti(int c, int slen, PrintfTarget *target)
 static int
 adjust_sign(int is_negative, int forcesign, int *signvalue)
 {
-  if (is_negative) {
+  if (is_negative)
+  {
     *signvalue = '-';
     return true;
-  } else if (forcesign) {
+  }
+  else if (forcesign)
+  {
     *signvalue = '+';
   }
   return false;
@@ -1398,10 +1619,12 @@ compute_padlen(int minlen, int vallen, int leftjust)
   int padlen;
 
   padlen = minlen - vallen;
-  if (padlen < 0) {
+  if (padlen < 0)
+  {
     padlen = 0;
   }
-  if (leftjust) {
+  if (leftjust)
+  {
     padlen = -padlen;
   }
   return padlen;
@@ -1412,27 +1635,35 @@ leading_pad(int zpad, int signvalue, int *padlen, PrintfTarget *target)
 {
   int maxpad;
 
-  if (*padlen > 0 && zpad) {
-    if (signvalue) {
+  if (*padlen > 0 && zpad)
+  {
+    if (signvalue)
+    {
       dopr_outch(signvalue, target);
       --(*padlen);
       signvalue = 0;
     }
-    if (*padlen > 0) {
+    if (*padlen > 0)
+    {
       dopr_outchmulti(zpad, *padlen, target);
       *padlen = 0;
     }
   }
   maxpad = (signvalue != 0);
-  if (*padlen > maxpad) {
+  if (*padlen > maxpad)
+  {
     dopr_outchmulti(' ', *padlen - maxpad, target);
     *padlen = maxpad;
   }
-  if (signvalue) {
+  if (signvalue)
+  {
     dopr_outch(signvalue, target);
-    if (*padlen > 0) {
+    if (*padlen > 0)
+    {
       --(*padlen);
-    } else if (*padlen < 0) {
+    }
+    else if (*padlen < 0)
+    {
       ++(*padlen);
     }
   }
@@ -1441,7 +1672,8 @@ leading_pad(int zpad, int signvalue, int *padlen, PrintfTarget *target)
 static void
 trailing_pad(int padlen, PrintfTarget *target)
 {
-  if (padlen < 0) {
+  if (padlen < 0)
+  {
     dopr_outchmulti(' ', -padlen, target);
   }
 }

@@ -8,7 +8,8 @@
  *	  1. Read the existing pg_control (which will include the last
  *		 checkpoint record).  If it is an old format then update to
  *		 current format.
- *	  2. If pg_control is corrupt, attempt to intuit reasonable values,*		 by scanning the old xlog if necessary.
+ *	  2. If pg_control is corrupt, attempt to intuit reasonable values,
+ *		 by scanning the old xlog if necessary.
  *	  3. Modify pg_control to reflect a "shutdown" state with a checkpoint
  *		 record at the start of xlog.
  *	  4. Flush the existing xlog files and write a new segment with
@@ -116,19 +117,24 @@ main(int argc, char *argv[])
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_resetwal"));
   progname = get_progname(argv[0]);
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage();
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_resetwal (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((c = getopt_long(argc, argv, "c:D:e:fl:m:no:O:u:x:", long_options, NULL)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "c:D:e:fl:m:no:O:u:x:", long_options, NULL)) != -1)
+  {
+    switch (c)
+    {
     case 'D':
       DataDir = optarg;
       break;
@@ -143,14 +149,16 @@ main(int argc, char *argv[])
 
     case 'e':
       set_xid_epoch = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         /*------
           translator: the second %s is a command line argument (-e, etc) */
         pg_log_error("invalid argument for option %s", "-e");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (set_xid_epoch == -1) {
+      if (set_xid_epoch == -1)
+      {
         pg_log_error("transaction ID epoch (-e) must not be -1");
         exit(1);
       }
@@ -158,12 +166,14 @@ main(int argc, char *argv[])
 
     case 'u':
       set_oldest_xid = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-u");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (!TransactionIdIsNormal(set_oldest_xid)) {
+      if (!TransactionIdIsNormal(set_oldest_xid))
+      {
         pg_log_error("oldest transaction ID (-u) must be greater than or equal to %u", FirstNormalTransactionId);
         exit(1);
       }
@@ -171,12 +181,14 @@ main(int argc, char *argv[])
 
     case 'x':
       set_xid = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-x");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (!TransactionIdIsNormal(set_xid)) {
+      if (!TransactionIdIsNormal(set_xid))
+      {
         pg_log_error("transaction ID (-x) must be greater than or equal to %u", FirstNormalTransactionId);
         exit(1);
       }
@@ -184,24 +196,28 @@ main(int argc, char *argv[])
 
     case 'c':
       set_oldest_commit_ts_xid = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != ',') {
+      if (endptr == optarg || *endptr != ',')
+      {
         pg_log_error("invalid argument for option %s", "-c");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
       set_newest_commit_ts_xid = strtoul(endptr + 1, &endptr2, 0);
-      if (endptr2 == endptr + 1 || *endptr2 != '\0') {
+      if (endptr2 == endptr + 1 || *endptr2 != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-c");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
 
-      if (set_oldest_commit_ts_xid < 2 && set_oldest_commit_ts_xid != 0) {
+      if (set_oldest_commit_ts_xid < 2 && set_oldest_commit_ts_xid != 0)
+      {
         pg_log_error("transaction ID (-c) must be either 0 or greater than or equal to 2");
         exit(1);
       }
 
-      if (set_newest_commit_ts_xid < 2 && set_newest_commit_ts_xid != 0) {
+      if (set_newest_commit_ts_xid < 2 && set_newest_commit_ts_xid != 0)
+      {
         pg_log_error("transaction ID (-c) must be either 0 or greater than or equal to 2");
         exit(1);
       }
@@ -209,12 +225,14 @@ main(int argc, char *argv[])
 
     case 'o':
       set_oid = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-o");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (set_oid == 0) {
+      if (set_oid == 0)
+      {
         pg_log_error("OID (-o) must not be 0");
         exit(1);
       }
@@ -222,19 +240,22 @@ main(int argc, char *argv[])
 
     case 'm':
       set_mxid = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != ',') {
+      if (endptr == optarg || *endptr != ',')
+      {
         pg_log_error("invalid argument for option %s", "-m");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
 
       set_oldestmxid = strtoul(endptr + 1, &endptr2, 0);
-      if (endptr2 == endptr + 1 || *endptr2 != '\0') {
+      if (endptr2 == endptr + 1 || *endptr2 != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-m");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (set_mxid == 0) {
+      if (set_mxid == 0)
+      {
         pg_log_error("multitransaction ID (-m) must not be 0");
         exit(1);
       }
@@ -243,7 +264,8 @@ main(int argc, char *argv[])
        * XXX It'd be nice to have more sanity checks here, e.g. so
        * that oldest is not wrapped around w.r.t. nextMulti.
        */
-      if (set_oldestmxid == 0) {
+      if (set_oldestmxid == 0)
+      {
         pg_log_error("oldest multitransaction ID (-m) must not be 0");
         exit(1);
       }
@@ -251,19 +273,22 @@ main(int argc, char *argv[])
 
     case 'O':
       set_mxoff = strtoul(optarg, &endptr, 0);
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         pg_log_error("invalid argument for option %s", "-O");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
       }
-      if (set_mxoff == -1) {
+      if (set_mxoff == -1)
+      {
         pg_log_error("multitransaction offset (-O) must not be -1");
         exit(1);
       }
       break;
 
     case 'l':
-      if (strspn(optarg, "01234567890ABCDEFabcdef") != XLOG_FNAME_LEN) {
+      if (strspn(optarg, "01234567890ABCDEFabcdef") != XLOG_FNAME_LEN)
+      {
         pg_log_error("invalid argument for option %s", "-l");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
@@ -278,34 +303,39 @@ main(int argc, char *argv[])
 
     case 1:
       set_wal_segsize = strtol(optarg, &endptr, 10) * 1024 * 1024;
-      if (endptr == optarg || *endptr != '\0') {
+      if (endptr == optarg || *endptr != '\0')
+      {
         pg_log_error("argument of --wal-segsize must be a number");
         exit(1);
       }
-      if (!IsValidWalSegSize(set_wal_segsize)) {
+      if (!IsValidWalSegSize(set_wal_segsize))
+      {
         pg_log_error("argument of --wal-segsize must be a power of 2 between 1 and 1024");
         exit(1);
       }
       break;
 
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  if (DataDir == NULL && optind < argc) {
+  if (DataDir == NULL && optind < argc)
+  {
     DataDir = argv[optind++];
   }
 
   /* Complain if any arguments remain */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (DataDir == NULL) {
+  if (DataDir == NULL)
+  {
     pg_log_error("no data directory specified");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -318,7 +348,8 @@ main(int argc, char *argv[])
    * the data directory.
    */
 #ifndef WIN32
-  if (geteuid() == 0) {
+  if (geteuid() == 0)
+  {
     pg_log_error("cannot be executed by \"root\"");
     pg_log_info("You must run %s as the PostgreSQL superuser.", progname);
     exit(1);
@@ -328,14 +359,16 @@ main(int argc, char *argv[])
   get_restricted_token();
 
   /* Set mask based on PGDATA permissions */
-  if (!GetDataDirectoryCreatePerm(DataDir)) {
+  if (!GetDataDirectoryCreatePerm(DataDir))
+  {
     pg_log_error("could not read permissions of directory \"%s\": %m", DataDir);
     exit(1);
   }
 
   umask(pg_mode_mask);
 
-  if (chdir(DataDir) < 0) {
+  if (chdir(DataDir) < 0)
+  {
     pg_log_error("could not change directory to \"%s\": %m", DataDir);
     exit(1);
   }
@@ -347,12 +380,16 @@ main(int argc, char *argv[])
    * Check for a postmaster lock file --- if there is one, refuse to
    * proceed, on grounds we might be interfering with a live installation.
    */
-  if ((fd = open("postmaster.pid", O_RDONLY, 0)) < 0) {
-    if (errno != ENOENT) {
+  if ((fd = open("postmaster.pid", O_RDONLY, 0)) < 0)
+  {
+    if (errno != ENOENT)
+    {
       pg_log_error("could not open file \"%s\" for reading: %m", "postmaster.pid");
       exit(1);
     }
-  } else {
+  }
+  else
+  {
     pg_log_error("lock file \"%s\" exists", "postmaster.pid");
     pg_log_info("Is a server running?  If not, delete the lock file and try again.");
     exit(1);
@@ -361,20 +398,25 @@ main(int argc, char *argv[])
   /*
    * Attempt to read the existing pg_control file
    */
-  if (!ReadControlFile()) {
+  if (!ReadControlFile())
+  {
     GuessControlValues();
   }
 
   /*
    * If no new WAL segment size was specified, use the control file value.
    */
-  if (set_wal_segsize != 0) {
+  if (set_wal_segsize != 0)
+  {
     WalSegSz = set_wal_segsize;
-  } else {
+  }
+  else
+  {
     WalSegSz = ControlFile.xlog_seg_size;
   }
 
-  if (log_fname != NULL) {
+  if (log_fname != NULL)
+  {
     XLogFromFileName(log_fname, &minXlogTli, &minXlogSegNo, WalSegSz);
   }
 
@@ -387,61 +429,75 @@ main(int argc, char *argv[])
    * If we're not going to proceed with the reset, print the current control
    * file parameters.
    */
-  if ((guessed && !force) || noupdate) {
+  if ((guessed && !force) || noupdate)
+  {
     PrintControlValues(guessed);
   }
 
   /*
-   * Adjust fields if required by switches.  (Do this now so that printout,* if any, includes these values.)
+   * Adjust fields if required by switches.  (Do this now so that printout,
+   * if any, includes these values.)
    */
-  if (set_xid_epoch != -1) {
+  if (set_xid_epoch != -1)
+  {
     ControlFile.checkPointCopy.nextFullXid = FullTransactionIdFromEpochAndXid(set_xid_epoch, XidFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
   }
 
-  if (set_oldest_xid != 0) {
+  if (set_oldest_xid != 0)
+  {
     ControlFile.checkPointCopy.oldestXid = set_oldest_xid;
     ControlFile.checkPointCopy.oldestXidDB = InvalidOid;
   }
 
-  if (set_xid != 0) {
+  if (set_xid != 0)
+  {
     ControlFile.checkPointCopy.nextFullXid = FullTransactionIdFromEpochAndXid(EpochFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid), set_xid);
   }
 
-  if (set_oldest_commit_ts_xid != 0) {
+  if (set_oldest_commit_ts_xid != 0)
+  {
     ControlFile.checkPointCopy.oldestCommitTsXid = set_oldest_commit_ts_xid;
   }
-  if (set_newest_commit_ts_xid != 0) {
+  if (set_newest_commit_ts_xid != 0)
+  {
     ControlFile.checkPointCopy.newestCommitTsXid = set_newest_commit_ts_xid;
   }
 
-  if (set_oid != 0) {
+  if (set_oid != 0)
+  {
     ControlFile.checkPointCopy.nextOid = set_oid;
   }
 
-  if (set_mxid != 0) {
+  if (set_mxid != 0)
+  {
     ControlFile.checkPointCopy.nextMulti = set_mxid;
 
     ControlFile.checkPointCopy.oldestMulti = set_oldestmxid;
-    if (ControlFile.checkPointCopy.oldestMulti < FirstMultiXactId) {
+    if (ControlFile.checkPointCopy.oldestMulti < FirstMultiXactId)
+    {
       ControlFile.checkPointCopy.oldestMulti += FirstMultiXactId;
     }
     ControlFile.checkPointCopy.oldestMultiDB = InvalidOid;
   }
 
-  if (set_mxoff != -1) {
+  if (set_mxoff != -1)
+  {
     ControlFile.checkPointCopy.nextMultiOffset = set_mxoff;
   }
 
-  if (minXlogTli > ControlFile.checkPointCopy.ThisTimeLineID) {
+  if (minXlogTli > ControlFile.checkPointCopy.ThisTimeLineID)
+  {
     ControlFile.checkPointCopy.ThisTimeLineID = minXlogTli;
     ControlFile.checkPointCopy.PrevTimeLineID = minXlogTli;
   }
 
-  if (set_wal_segsize != 0) {
+  if (set_wal_segsize != 0)
+  {
     ControlFile.xlog_seg_size = WalSegSz;
   }
 
-  if (minXlogSegNo > newXlogSegNo) {
+  if (minXlogSegNo > newXlogSegNo)
+  {
     newXlogSegNo = minXlogSegNo;
   }
 
@@ -449,12 +505,16 @@ main(int argc, char *argv[])
    * If we had to guess anything, and -f was not given, just print the
    * guessed values and exit.  Also print if -n is given.
    */
-  if ((guessed && !force) || noupdate) {
+  if ((guessed && !force) || noupdate)
+  {
     PrintNewControlValues();
-    if (!noupdate) {
+    if (!noupdate)
+    {
       printf(_("\nIf these values seem acceptable, use -f to force reset.\n"));
       exit(1);
-    } else {
+    }
+    else
+    {
       exit(0);
     }
   }
@@ -462,8 +522,11 @@ main(int argc, char *argv[])
   /*
    * Don't reset from a dirty pg_control without -f, either.
    */
-  if (ControlFile.state != DB_SHUTDOWNED && !force) {
-    printf(_("The database server was not shut down cleanly.\nResetting the write-ahead log might cause data to be lost.\nIf you want to proceed anyway, use -f to force reset.\n"));
+  if (ControlFile.state != DB_SHUTDOWNED && !force)
+  {
+    printf(_("The database server was not shut down cleanly.\n"
+             "Resetting the write-ahead log might cause data to be lost.\n"
+             "If you want to proceed anyway, use -f to force reset.\n"));
     exit(1);
   }
 
@@ -487,7 +550,8 @@ main(int argc, char *argv[])
  * major version; that can't do anything good.  Note that we don't treat
  * mismatching version info in pg_control as a reason to bail out, because
  * recovering from a corrupted pg_control is one of the main reasons for this
- * program to exist at all.  However, PG_VERSION is unlikely to get corrupted,* and if it were it would be easy to fix by hand.  So let's make this check
+ * program to exist at all.  However, PG_VERSION is unlikely to get corrupted,
+ * and if it were it would be easy to fix by hand.  So let's make this check
  * to prevent simple user errors.
  */
 static void
@@ -498,16 +562,21 @@ CheckDataVersion(void)
   char rawline[64];
   int len;
 
-  if ((ver_fd = fopen(ver_file, "r")) == NULL) {
+  if ((ver_fd = fopen(ver_file, "r")) == NULL)
+  {
     pg_log_error("could not open file \"%s\" for reading: %m", ver_file);
     exit(1);
   }
 
   /* version number has to be the first line read */
-  if (!fgets(rawline, sizeof(rawline), ver_fd)) {
-    if (!ferror(ver_fd)) {
+  if (!fgets(rawline, sizeof(rawline), ver_fd))
+  {
+    if (!ferror(ver_fd))
+    {
       pg_log_error("unexpected empty file \"%s\"", ver_file);
-    } else {
+    }
+    else
+    {
       pg_log_error("could not read file \"%s\": %m", ver_file);
     }
     exit(1);
@@ -515,16 +584,19 @@ CheckDataVersion(void)
 
   /* remove trailing newline, handling Windows newlines as well */
   len = strlen(rawline);
-  if (len > 0 && rawline[len - 1] == '\n') {
+  if (len > 0 && rawline[len - 1] == '\n')
+  {
     rawline[--len] = '\0';
-    if (len > 0 && rawline[len - 1] == '\r') {
+    if (len > 0 && rawline[len - 1] == '\r')
+    {
       rawline[--len] = '\0';
     }
   }
 
-  if (strcmp(rawline, PG_MAJORVERSION) != 0) {
+  if (strcmp(rawline, PG_MAJORVERSION) != 0)
+  {
     pg_log_error("data directory is of wrong version");
-    pg_log_info("File \"%s\" contains \"%s\", which is not compatible with this program's version \"%s\".",ver_file, rawline, PG_MAJORVERSION);
+    pg_log_info("File \"%s\" contains \"%s\", which is not compatible with this program's version \"%s\".", ver_file, rawline, PG_MAJORVERSION);
     exit(1);
   }
 
@@ -545,15 +617,20 @@ ReadControlFile(void)
   char *buffer;
   pg_crc32c crc;
 
-  if ((fd = open(XLOG_CONTROL_FILE, O_RDONLY | PG_BINARY, 0)) < 0) {
+  if ((fd = open(XLOG_CONTROL_FILE, O_RDONLY | PG_BINARY, 0)) < 0)
+  {
     /*
      * If pg_control is not there at all, or we can't read it, the odds
      * are we've been handed a bad DataDir path, so give up. User can do
      * "touch pg_control" to force us to proceed.
      */
     pg_log_error("could not open file \"%s\" for reading: %m", XLOG_CONTROL_FILE);
-    if (errno == ENOENT) {
-      pg_log_info("If you are sure the data directory path is correct, execute\n  touch %s\nand try again.",XLOG_CONTROL_FILE);
+    if (errno == ENOENT)
+    {
+      pg_log_info("If you are sure the data directory path is correct, execute\n"
+                  "  touch %s\n"
+                  "and try again.",
+          XLOG_CONTROL_FILE);
     }
     exit(1);
   }
@@ -562,19 +639,22 @@ ReadControlFile(void)
   buffer = (char *)pg_malloc(PG_CONTROL_FILE_SIZE);
 
   len = read(fd, buffer, PG_CONTROL_FILE_SIZE);
-  if (len < 0) {
+  if (len < 0)
+  {
     pg_log_error("could not read file \"%s\": %m", XLOG_CONTROL_FILE);
     exit(1);
   }
   close(fd);
 
-  if (len >= sizeof(ControlFileData) && ((ControlFileData *)buffer)->pg_control_version == PG_CONTROL_VERSION) {
+  if (len >= sizeof(ControlFileData) && ((ControlFileData *)buffer)->pg_control_version == PG_CONTROL_VERSION)
+  {
     /* Check the CRC. */
     INIT_CRC32C(crc);
     COMP_CRC32C(crc, buffer, offsetof(ControlFileData, crc));
     FIN_CRC32C(crc);
 
-    if (!EQ_CRC32C(crc, ((ControlFileData *)buffer)->crc)) {
+    if (!EQ_CRC32C(crc, ((ControlFileData *)buffer)->crc))
+    {
       /* We will use the data but treat it as guessed. */
       pg_log_warning("pg_control exists but has invalid CRC; proceed with caution");
       guessed = true;
@@ -583,8 +663,9 @@ ReadControlFile(void)
     memcpy(&ControlFile, buffer, sizeof(ControlFile));
 
     /* return false if WAL segment size is not valid */
-    if (!IsValidWalSegSize(ControlFile.xlog_seg_size)) {
-      pg_log_warning(ngettext("pg_control specifies invalid WAL segment size (%d byte); proceed with caution","pg_control specifies invalid WAL segment size (%d bytes); proceed with caution",ControlFile.xlog_seg_size),ControlFile.xlog_seg_size);
+    if (!IsValidWalSegSize(ControlFile.xlog_seg_size))
+    {
+      pg_log_warning(ngettext("pg_control specifies invalid WAL segment size (%d byte); proceed with caution", "pg_control specifies invalid WAL segment size (%d bytes); proceed with caution", ControlFile.xlog_seg_size), ControlFile.xlog_seg_size);
       return false;
     }
 
@@ -686,9 +767,12 @@ PrintControlValues(bool guessed)
 {
   char sysident_str[32];
 
-  if (guessed) {
+  if (guessed)
+  {
     printf(_("Guessed pg_control values:\n\n"));
-  } else {
+  }
+  else
+  {
     printf(_("Current pg_control values:\n\n"));
   }
 
@@ -745,38 +829,46 @@ PrintNewControlValues(void)
   XLogFileName(fname, ControlFile.checkPointCopy.ThisTimeLineID, newXlogSegNo, WalSegSz);
   printf(_("First log segment after reset:        %s\n"), fname);
 
-  if (set_mxid != 0) {
+  if (set_mxid != 0)
+  {
     printf(_("NextMultiXactId:                      %u\n"), ControlFile.checkPointCopy.nextMulti);
     printf(_("OldestMultiXid:                       %u\n"), ControlFile.checkPointCopy.oldestMulti);
     printf(_("OldestMulti's DB:                     %u\n"), ControlFile.checkPointCopy.oldestMultiDB);
   }
 
-  if (set_mxoff != -1) {
+  if (set_mxoff != -1)
+  {
     printf(_("NextMultiOffset:                      %u\n"), ControlFile.checkPointCopy.nextMultiOffset);
   }
 
-  if (set_oid != 0) {
+  if (set_oid != 0)
+  {
     printf(_("NextOID:                              %u\n"), ControlFile.checkPointCopy.nextOid);
   }
 
-  if (set_xid != 0) {
+  if (set_xid != 0)
+  {
     printf(_("NextXID:                              %u\n"), XidFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
     printf(_("OldestXID:                            %u\n"), ControlFile.checkPointCopy.oldestXid);
     printf(_("OldestXID's DB:                       %u\n"), ControlFile.checkPointCopy.oldestXidDB);
   }
 
-  if (set_xid_epoch != -1) {
+  if (set_xid_epoch != -1)
+  {
     printf(_("NextXID epoch:                        %u\n"), EpochFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
   }
 
-  if (set_oldest_commit_ts_xid != 0) {
+  if (set_oldest_commit_ts_xid != 0)
+  {
     printf(_("oldestCommitTsXid:                    %u\n"), ControlFile.checkPointCopy.oldestCommitTsXid);
   }
-  if (set_newest_commit_ts_xid != 0) {
+  if (set_newest_commit_ts_xid != 0)
+  {
     printf(_("newestCommitTsXid:                    %u\n"), ControlFile.checkPointCopy.newestCommitTsXid);
   }
 
-  if (set_wal_segsize != 0) {
+  if (set_wal_segsize != 0)
+  {
     printf(_("Bytes per WAL segment:                %u\n"), ControlFile.xlog_seg_size);
   }
 }
@@ -851,13 +943,16 @@ FindEndOfXLOG(void)
    * conservative, because of xlog.c's attempts to pre-create files.
    */
   xldir = opendir(XLOGDIR);
-  if (xldir == NULL) {
+  if (xldir == NULL)
+  {
     pg_log_error("could not open directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
 
-  while (errno = 0, (xlde = readdir(xldir)) != NULL) {
-    if (IsXLogFileName(xlde->d_name) || IsPartialXLogFileName(xlde->d_name)) {
+  while (errno = 0, (xlde = readdir(xldir)) != NULL)
+  {
+    if (IsXLogFileName(xlde->d_name) || IsPartialXLogFileName(xlde->d_name))
+    {
       unsigned int tli, log, seg;
       XLogSegNo segno;
 
@@ -875,18 +970,21 @@ FindEndOfXLOG(void)
        * timelines other than the target TLI, but this seems safer.
        * Better too large a result than too small...
        */
-      if (segno > newXlogSegNo) {
+      if (segno > newXlogSegNo)
+      {
         newXlogSegNo = segno;
       }
     }
   }
 
-  if (errno) {
+  if (errno)
+  {
     pg_log_error("could not read directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
 
-  if (closedir(xldir)) {
+  if (closedir(xldir))
+  {
     pg_log_error("could not close directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
@@ -911,27 +1009,33 @@ KillExistingXLOG(void)
   char path[MAXPGPATH + sizeof(XLOGDIR)];
 
   xldir = opendir(XLOGDIR);
-  if (xldir == NULL) {
+  if (xldir == NULL)
+  {
     pg_log_error("could not open directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
 
-  while (errno = 0, (xlde = readdir(xldir)) != NULL) {
-    if (IsXLogFileName(xlde->d_name) || IsPartialXLogFileName(xlde->d_name)) {
+  while (errno = 0, (xlde = readdir(xldir)) != NULL)
+  {
+    if (IsXLogFileName(xlde->d_name) || IsPartialXLogFileName(xlde->d_name))
+    {
       snprintf(path, sizeof(path), "%s/%s", XLOGDIR, xlde->d_name);
-      if (unlink(path) < 0) {
+      if (unlink(path) < 0)
+      {
         pg_log_error("could not delete file \"%s\": %m", path);
         exit(1);
       }
     }
   }
 
-  if (errno) {
+  if (errno)
+  {
     pg_log_error("could not read directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
 
-  if (closedir(xldir)) {
+  if (closedir(xldir))
+  {
     pg_log_error("could not close directory \"%s\": %m", XLOGDIR);
     exit(1);
   }
@@ -950,27 +1054,33 @@ KillExistingArchiveStatus(void)
   char path[MAXPGPATH + sizeof(ARCHSTATDIR)];
 
   xldir = opendir(ARCHSTATDIR);
-  if (xldir == NULL) {
+  if (xldir == NULL)
+  {
     pg_log_error("could not open directory \"%s\": %m", ARCHSTATDIR);
     exit(1);
   }
 
-  while (errno = 0, (xlde = readdir(xldir)) != NULL) {
-    if (strspn(xlde->d_name, "0123456789ABCDEF") == XLOG_FNAME_LEN && (strcmp(xlde->d_name + XLOG_FNAME_LEN, ".ready") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".done") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".partial.ready") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".partial.done") == 0)) {
+  while (errno = 0, (xlde = readdir(xldir)) != NULL)
+  {
+    if (strspn(xlde->d_name, "0123456789ABCDEF") == XLOG_FNAME_LEN && (strcmp(xlde->d_name + XLOG_FNAME_LEN, ".ready") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".done") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".partial.ready") == 0 || strcmp(xlde->d_name + XLOG_FNAME_LEN, ".partial.done") == 0))
+    {
       snprintf(path, sizeof(path), "%s/%s", ARCHSTATDIR, xlde->d_name);
-      if (unlink(path) < 0) {
+      if (unlink(path) < 0)
+      {
         pg_log_error("could not delete file \"%s\": %m", path);
         exit(1);
       }
     }
   }
 
-  if (errno) {
+  if (errno)
+  {
     pg_log_error("could not read directory \"%s\": %m", ARCHSTATDIR);
     exit(1);
   }
 
-  if (closedir(xldir)) {
+  if (closedir(xldir))
+  {
     pg_log_error("could not close directory \"%s\": %m", ARCHSTATDIR);
     exit(1);
   }
@@ -1032,15 +1142,18 @@ WriteEmptyXLOG(void)
   unlink(path);
 
   fd = open(path, O_RDWR | O_CREAT | O_EXCL | PG_BINARY, pg_file_create_mode);
-  if (fd < 0) {
+  if (fd < 0)
+  {
     pg_log_error("could not open file \"%s\": %m", path);
     exit(1);
   }
 
   errno = 0;
-  if (write(fd, buffer.data, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+  if (write(fd, buffer.data, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+  {
     /* if write didn't set errno, assume problem is no disk space */
-    if (errno == 0) {
+    if (errno == 0)
+    {
       errno = ENOSPC;
     }
     pg_log_error("could not write file \"%s\": %m", path);
@@ -1049,10 +1162,13 @@ WriteEmptyXLOG(void)
 
   /* Fill the rest of the file with zeroes */
   memset(buffer.data, 0, XLOG_BLCKSZ);
-  for (nbytes = XLOG_BLCKSZ; nbytes < WalSegSz; nbytes += XLOG_BLCKSZ) {
+  for (nbytes = XLOG_BLCKSZ; nbytes < WalSegSz; nbytes += XLOG_BLCKSZ)
+  {
     errno = 0;
-    if (write(fd, buffer.data, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
-      if (errno == 0) {
+    if (write(fd, buffer.data, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+    {
+      if (errno == 0)
+      {
         errno = ENOSPC;
       }
       pg_log_error("could not write file \"%s\": %m", path);
@@ -1060,7 +1176,8 @@ WriteEmptyXLOG(void)
     }
   }
 
-  if (fsync(fd) != 0) {
+  if (fsync(fd) != 0)
+  {
     pg_log_error("fsync error: %m");
     exit(1);
   }
@@ -1074,7 +1191,9 @@ usage(void)
   printf(_("%s resets the PostgreSQL write-ahead log.\n\n"), progname);
   printf(_("Usage:\n  %s [OPTION]... DATADIR\n\n"), progname);
   printf(_("Options:\n"));
-  printf(_("  -c, --commit-timestamp-ids=XID,XID\n                                   set oldest and newest transactions bearing\n                                   commit timestamp (zero means no change)\n"));
+  printf(_("  -c, --commit-timestamp-ids=XID,XID\n"
+           "                                   set oldest and newest transactions bearing\n"
+           "                                   commit timestamp (zero means no change)\n"));
   printf(_(" [-D, --pgdata=]DATADIR            data directory\n"));
   printf(_("  -e, --epoch=XIDEPOCH             set next transaction ID epoch\n"));
   printf(_("  -f, --force                      force update to be done\n"));

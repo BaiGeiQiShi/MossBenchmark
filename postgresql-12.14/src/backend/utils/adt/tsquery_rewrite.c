@@ -70,7 +70,7 @@ findeq(QTNode *node, QTNode *ex, QTNode *subs, bool *isfind)
         }
         else
         {
-
+          node = NULL;
         }
         *isfind = true;
       }
@@ -118,7 +118,7 @@ findeq(QTNode *node, QTNode *ex, QTNode *subs, bool *isfind)
         else
         {
           /* ex->child[j] has no match; we can give up immediately */
-
+          break;
         }
       }
 
@@ -177,7 +177,7 @@ findeq(QTNode *node, QTNode *ex, QTNode *subs, bool *isfind)
 
     if (node->valnode->qoperand.valcrc != ex->valnode->qoperand.valcrc)
     {
-
+      return node;
     }
     else if (QTNEq(node, ex))
     {
@@ -282,7 +282,7 @@ findsubquery(QTNode *root, QTNode *ex, QTNode *subs, bool *isfind)
 
   if (isfind)
   {
-
+    *isfind = DidFind;
   }
 
   return root;
@@ -304,8 +304,8 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 
   if (query->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(in, 1);
+    PG_RETURN_POINTER(rewrited);
   }
 
   tree = QT2QTN(GETQUERY(query), GETOPERAND(query));
@@ -318,19 +318,19 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 
   if ((plan = SPI_prepare(buf, 0, NULL)) == NULL)
   {
-
+    elog(ERROR, "SPI_prepare(\"%s\") failed", buf);
   }
 
   if ((portal = SPI_cursor_open(NULL, plan, NULL, NULL, true)) == NULL)
   {
-
+    elog(ERROR, "SPI_cursor_open(\"%s\") failed", buf);
   }
 
   SPI_cursor_fetch(portal, true, 100);
 
   if (SPI_tuptable == NULL || SPI_tuptable->tupdesc->natts != 2 || SPI_gettypeid(SPI_tuptable->tupdesc, 1) != TSQUERYOID || SPI_gettypeid(SPI_tuptable->tupdesc, 2) != TSQUERYOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ts_rewrite query must return two tsquery columns")));
   }
 
   while (SPI_processed > 0 && tree)
@@ -344,7 +344,7 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 
       if (isnull)
       {
-
+        continue;
       }
 
       sdata = SPI_getbinval(SPI_tuptable->vals[i], SPI_tuptable->tupdesc, 2, &isnull);
@@ -357,15 +357,15 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 
         if (qtex->size == 0)
         {
-
-
-
-
-
-
-
-
-
+          if (qtex != (TSQuery)DatumGetPointer(qdata))
+          {
+            pfree(qtex);
+          }
+          if (qtsubs != (TSQuery)DatumGetPointer(sdata))
+          {
+            pfree(qtsubs);
+          }
+          continue;
         }
 
         qex = QT2QTN(GETQUERY(qtex), GETOPERAND(qtex));
@@ -385,12 +385,12 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
         QTNFree(qex);
         if (qtex != (TSQuery)DatumGetPointer(qdata))
         {
-
+          pfree(qtex);
         }
         QTNFree(qsubs);
         if (qtsubs != (TSQuery)DatumGetPointer(sdata))
         {
-
+          pfree(qtsubs);
         }
 
         if (tree)
@@ -421,8 +421,8 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
   }
   else
   {
-
-
+    SET_VARSIZE(rewrited, HDRSIZETQ);
+    rewrited->size = 0;
   }
 
   pfree(buf);
@@ -441,9 +441,9 @@ tsquery_rewrite(PG_FUNCTION_ARGS)
 
   if (query->size == 0 || ex->size == 0)
   {
-
-
-
+    PG_FREE_IF_COPY(ex, 1);
+    PG_FREE_IF_COPY(subst, 2);
+    PG_RETURN_POINTER(rewrited);
   }
 
   tree = QT2QTN(GETQUERY(query), GETOPERAND(query));

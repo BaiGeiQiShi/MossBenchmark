@@ -19,10 +19,10 @@
 /*
  * INTERFACE ROUTINES
  *		ExecSubqueryScan			scans a subquery.
- *		ExecSubqueryNext			retrieve next tuple in
- *sequential order. ExecInitSubqueryScan		creates and initializes
- *a subqueryscan node. ExecEndSubqueryScan			releases any
- *storage allocated. ExecReScanSubqueryScan		rescans the relation
+ *		ExecSubqueryNext			retrieve next tuple in sequential order.
+ *		ExecInitSubqueryScan		creates and initializes a subqueryscan node.
+ *		ExecEndSubqueryScan			releases any storage allocated.
+ *		ExecReScanSubqueryScan		rescans the relation
  *
  */
 #include "postgres.h"
@@ -67,8 +67,8 @@ SubqueryNext(SubqueryScanState *node)
 static bool
 SubqueryRecheck(SubqueryScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------

@@ -151,15 +151,15 @@ RoleMembershipCacheCallback(Datum arg, int cacheid, uint32 hashvalue);
 
 /*
  * getid
- *		Consumes the first alphanumeric string (identifier) found in
- *string 's', ignoring any leading white space.  If it finds a double quote it
- *returns the word inside the quotes.
+ *		Consumes the first alphanumeric string (identifier) found in string
+ *		's', ignoring any leading white space.  If it finds a double quote
+ *		it returns the word inside the quotes.
  *
  * RETURNS:
- *		the string position in 's' that points to the next non-space
- *character in 's', after any quotes.  Also:
- *		- loads the identifier into 'n'.  (If no identifier is found,
- *'n' contains an empty string.)  'n' must be NAMEDATALEN bytes.
+ *		the string position in 's' that points to the next non-space character
+ *		in 's', after any quotes.  Also:
+ *		- loads the identifier into 'n'.  (If no identifier is found, 'n'
+ *		  contains an empty string.)  'n' must be NAMEDATALEN bytes.
  */
 static const char *
 getid(const char *s, char *n)
@@ -171,7 +171,7 @@ getid(const char *s, char *n)
 
   while (isspace((unsigned char)*s))
   {
-
+    s++;
   }
   /* This code had better match what putid() does, below */
   for (; *s != '\0' && (isalnum((unsigned char)*s) || *s == '_' || *s == '"' || in_quotes); s++)
@@ -185,13 +185,13 @@ getid(const char *s, char *n)
         continue;
       }
       /* it's an escaped double quote; skip the escaping char */
-
+      s++;
     }
 
     /* Add the character to the string */
     if (len >= NAMEDATALEN - 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NAME_TOO_LONG), errmsg("identifier too long"), errdetail("Identifier must be less than %d characters.", NAMEDATALEN)));
     }
 
     n[len++] = *s;
@@ -199,7 +199,7 @@ getid(const char *s, char *n)
   n[len] = '\0';
   while (isspace((unsigned char)*s))
   {
-
+    s++;
   }
   return s;
 }
@@ -220,26 +220,26 @@ putid(char *p, const char *s)
     /* This test had better match what getid() does, above */
     if (!isalnum((unsigned char)*src) && *src != '_')
     {
-
-
+      safe = false;
+      break;
     }
   }
   if (!safe)
   {
-
+    *p++ = '"';
   }
   for (src = s; *src; src++)
   {
     /* A double quote character in a username is encoded as "" */
     if (*src == '"')
     {
-
+      *p++ = '"';
     }
     *p++ = *src;
   }
   if (!safe)
   {
-
+    *p++ = '"';
   }
   *p = '\0';
 }
@@ -255,8 +255,8 @@ putid(char *p, const char *s)
  *		The group|user decoration is unnecessary in the roles world,
  *		but we still accept it for backward compatibility.
  *
- *		This routine is called by the parser as well as aclitemin(),
- *hence the added generality.
+ *		This routine is called by the parser as well as aclitemin(), hence
+ *		the added generality.
  *
  * RETURNS:
  *		the string position in 's' immediately following the ACL
@@ -280,20 +280,20 @@ aclparse(const char *s, AclItem *aip)
   if (*s != '=')
   {
     /* we just read a keyword, not a name */
-
-
-
-
-
-
-
-
-
+    if (strcmp(name, "group") != 0 && strcmp(name, "user") != 0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("unrecognized key word: \"%s\"", name), errhint("ACL key word must be \"group\" or \"user\".")));
+    }
+    s = getid(s, name); /* move s to the name beyond the keyword */
+    if (name[0] == '\0')
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("missing name"), errhint("A name must follow the \"group\" or \"user\" key word.")));
+    }
   }
 
   if (*s != '=')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("missing \"=\" sign")));
   }
 
   privs = goption = ACL_NO_RIGHTS;
@@ -302,50 +302,50 @@ aclparse(const char *s, AclItem *aip)
   {
     switch (*s)
     {
-    case '*':;
-
-
-    case ACL_INSERT_CHR:;
-
-
-    case ACL_SELECT_CHR:;
+    case '*':
+      goption |= read;
+      break;
+    case ACL_INSERT_CHR:
+      read = ACL_INSERT;
+      break;
+    case ACL_SELECT_CHR:
       read = ACL_SELECT;
       break;
-    case ACL_UPDATE_CHR:;
-
-
-    case ACL_DELETE_CHR:;
-
-
-    case ACL_TRUNCATE_CHR:;
-
-
-    case ACL_REFERENCES_CHR:;
-
-
-    case ACL_TRIGGER_CHR:;
-
-
-    case ACL_EXECUTE_CHR:;
-
-
-    case ACL_USAGE_CHR:;
+    case ACL_UPDATE_CHR:
+      read = ACL_UPDATE;
+      break;
+    case ACL_DELETE_CHR:
+      read = ACL_DELETE;
+      break;
+    case ACL_TRUNCATE_CHR:
+      read = ACL_TRUNCATE;
+      break;
+    case ACL_REFERENCES_CHR:
+      read = ACL_REFERENCES;
+      break;
+    case ACL_TRIGGER_CHR:
+      read = ACL_TRIGGER;
+      break;
+    case ACL_EXECUTE_CHR:
+      read = ACL_EXECUTE;
+      break;
+    case ACL_USAGE_CHR:
       read = ACL_USAGE;
       break;
-    case ACL_CREATE_CHR:;
+    case ACL_CREATE_CHR:
       read = ACL_CREATE;
       break;
-    case ACL_CREATE_TEMP_CHR:;
-
-
-    case ACL_CONNECT_CHR:;
-
-
-    case 'R': ;/* ignore old RULE privileges */
-
-
-    default:;;
-
+    case ACL_CREATE_TEMP_CHR:
+      read = ACL_CREATE_TEMP;
+      break;
+    case ACL_CONNECT_CHR:
+      read = ACL_CONNECT;
+      break;
+    case 'R': /* ignore old RULE privileges */
+      read = 0;
+      break;
+    default:
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid mode character: must be one of \"%s\"", ACL_ALL_RIGHTS_STR)));
     }
 
     privs |= read;
@@ -369,14 +369,14 @@ aclparse(const char *s, AclItem *aip)
     s = getid(s + 1, name2);
     if (name2[0] == '\0')
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("a name must follow the \"/\" sign")));
     }
     aip->ai_grantor = get_role_oid(name2, false);
   }
   else
   {
-
-
+    aip->ai_grantor = BOOTSTRAP_SUPERUSERID;
+    ereport(WARNING, (errcode(ERRCODE_INVALID_GRANTOR), errmsg("defaulting grantor to user ID %u", BOOTSTRAP_SUPERUSERID)));
   }
 
   ACLITEM_SET_PRIVS_GOPTIONS(*aip, privs, goption);
@@ -403,7 +403,7 @@ allocacl(int n)
 
   if (n < 0)
   {
-
+    elog(ERROR, "invalid size: %d", n);
   }
   size = ACL_N_SIZE(n);
   new_acl = (Acl *)palloc0(size);
@@ -476,14 +476,14 @@ aclmerge(const Acl *left_acl, const Acl *right_acl, Oid ownerId)
   /* Check for cases where one or both are empty/null */
   if (left_acl == NULL || ACL_NUM(left_acl) == 0)
   {
-
-
-
-
-
-
-
-
+    if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+    {
+      return NULL;
+    }
+    else
+    {
+      return aclcopy(right_acl);
+    }
   }
   else
   {
@@ -536,14 +536,14 @@ aclequal(const Acl *left_acl, const Acl *right_acl)
   /* Check for cases where one or both are empty/null */
   if (left_acl == NULL || ACL_NUM(left_acl) == 0)
   {
-
-
-
-
-
-
-
-
+    if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
   else
   {
@@ -574,22 +574,22 @@ check_acl(const Acl *acl)
 {
   if (ARR_ELEMTYPE(acl) != ACLITEMOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ACL array contains wrong data type")));
   }
   if (ARR_NDIM(acl) != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ACL arrays must be one-dimensional")));
   }
   if (ARR_HASNULL(acl))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("ACL arrays must not contain null values")));
   }
 }
 
 /*
  * aclitemin
- *		Allocates storage for, and fills in, a new AclItem given a
- *string 's' that contains an ACL specification.  See aclparse for details.
+ *		Allocates storage for, and fills in, a new AclItem given a string
+ *		's' that contains an ACL specification.  See aclparse for details.
  *
  * RETURNS:
  *		the new AclItem
@@ -604,11 +604,11 @@ aclitemin(PG_FUNCTION_ARGS)
   s = aclparse(s, aip);
   while (isspace((unsigned char)*s))
   {
-
+    ++s;
   }
   if (*s)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("extra garbage at the end of the ACL specification")));
   }
 
   PG_RETURN_ACLITEM_P(aip);
@@ -617,8 +617,7 @@ aclitemin(PG_FUNCTION_ARGS)
 /*
  * aclitemout
  *		Allocates storage for, and fills in, a new null-delimited string
- *		containing a formatted ACL specification.  See aclparse for
- *details.
+ *		containing a formatted ACL specification.  See aclparse for details.
  *
  * RETURNS:
  *		the new string
@@ -648,7 +647,7 @@ aclitemout(PG_FUNCTION_ARGS)
     else
     {
       /* Generate numeric OID if we don't find an entry */
-
+      sprintf(p, "%u", aip->ai_grantee);
     }
   }
   while (*p)
@@ -682,7 +681,7 @@ aclitemout(PG_FUNCTION_ARGS)
   else
   {
     /* Generate numeric OID if we don't find an entry */
-
+    sprintf(p, "%u", aip->ai_grantor);
   }
 
   PG_RETURN_CSTRING(out);
@@ -717,23 +716,23 @@ aclitemComparator(const void *arg1, const void *arg2)
   {
     return -1;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (a1->ai_grantor > a2->ai_grantor)
+  {
+    return 1;
+  }
+  if (a1->ai_grantor < a2->ai_grantor)
+  {
+    return -1;
+  }
+  if (a1->ai_privs > a2->ai_privs)
+  {
+    return 1;
+  }
+  if (a1->ai_privs < a2->ai_privs)
+  {
+    return -1;
+  }
+  return 0;
 }
 
 /*
@@ -803,64 +802,64 @@ acldefault(ObjectType objtype, Oid ownerId)
 
   switch (objtype)
   {
-  case OBJECT_COLUMN:;
+  case OBJECT_COLUMN:
     /* by default, columns have no extra privileges */
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_NO_RIGHTS;
     break;
-  case OBJECT_TABLE:;
+  case OBJECT_TABLE:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_RELATION;
     break;
-  case OBJECT_SEQUENCE:;
+  case OBJECT_SEQUENCE:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_SEQUENCE;
     break;
-  case OBJECT_DATABASE:;
+  case OBJECT_DATABASE:
     /* for backwards compatibility, grant some rights by default */
     world_default = ACL_CREATE_TEMP | ACL_CONNECT;
     owner_default = ACL_ALL_RIGHTS_DATABASE;
     break;
-  case OBJECT_FUNCTION:;
+  case OBJECT_FUNCTION:
     /* Grant EXECUTE by default, for now */
     world_default = ACL_EXECUTE;
     owner_default = ACL_ALL_RIGHTS_FUNCTION;
     break;
-  case OBJECT_LANGUAGE:;
+  case OBJECT_LANGUAGE:
     /* Grant USAGE by default, for now */
     world_default = ACL_USAGE;
     owner_default = ACL_ALL_RIGHTS_LANGUAGE;
     break;
-  case OBJECT_LARGEOBJECT:;
+  case OBJECT_LARGEOBJECT:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_LARGEOBJECT;
     break;
-  case OBJECT_SCHEMA:;
+  case OBJECT_SCHEMA:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_SCHEMA;
     break;
-  case OBJECT_TABLESPACE:;
+  case OBJECT_TABLESPACE:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_TABLESPACE;
     break;
-  case OBJECT_FDW:;
+  case OBJECT_FDW:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_FDW;
     break;
-  case OBJECT_FOREIGN_SERVER:;
+  case OBJECT_FOREIGN_SERVER:
     world_default = ACL_NO_RIGHTS;
     owner_default = ACL_ALL_RIGHTS_FOREIGN_SERVER;
     break;
-  case OBJECT_DOMAIN:;
-  case OBJECT_TYPE:;
+  case OBJECT_DOMAIN:
+  case OBJECT_TYPE:
     world_default = ACL_USAGE;
     owner_default = ACL_ALL_RIGHTS_TYPE;
     break;
-  default:;;
-
-
-
-
+  default:
+    elog(ERROR, "unrecognized objtype: %d", (int)objtype);
+    world_default = ACL_NO_RIGHTS; /* keep compiler quiet */
+    owner_default = ACL_NO_RIGHTS;
+    break;
   }
 
   nacl = 0;
@@ -917,44 +916,44 @@ acldefault_sql(PG_FUNCTION_ARGS)
 
   switch (objtypec)
   {
-  case 'c':;
-
-
-  case 'r':;
+  case 'c':
+    objtype = OBJECT_COLUMN;
+    break;
+  case 'r':
     objtype = OBJECT_TABLE;
     break;
-  case 's':;
-
-
-  case 'd':;
-
-
-  case 'f':;
-
-
-  case 'l':;
-
-
-  case 'L':;
-
-
-  case 'n':;
-
-
-  case 't':;
-
-
-  case 'F':;
-
-
-  case 'S':;
-
-
-  case 'T':;
-
-
-  default:;;
-
+  case 's':
+    objtype = OBJECT_SEQUENCE;
+    break;
+  case 'd':
+    objtype = OBJECT_DATABASE;
+    break;
+  case 'f':
+    objtype = OBJECT_FUNCTION;
+    break;
+  case 'l':
+    objtype = OBJECT_LANGUAGE;
+    break;
+  case 'L':
+    objtype = OBJECT_LARGEOBJECT;
+    break;
+  case 'n':
+    objtype = OBJECT_SCHEMA;
+    break;
+  case 't':
+    objtype = OBJECT_TABLESPACE;
+    break;
+  case 'F':
+    objtype = OBJECT_FDW;
+    break;
+  case 'S':
+    objtype = OBJECT_FOREIGN_SERVER;
+    break;
+  case 'T':
+    objtype = OBJECT_TYPE;
+    break;
+  default:
+    elog(ERROR, "unrecognized objtype abbreviation: %c", objtypec);
   }
 
   PG_RETURN_ACL_P(acldefault(objtype, owner));
@@ -1035,15 +1034,15 @@ aclupdate(const Acl *old_acl, const AclItem *mod_aip, int modechg, Oid ownerId, 
   /* apply the specified permissions change */
   switch (modechg)
   {
-  case ACL_MODECHG_ADD:;
+  case ACL_MODECHG_ADD:
     ACLITEM_SET_RIGHTS(new_aip[dst], old_rights | ACLITEM_GET_RIGHTS(*mod_aip));
     break;
-  case ACL_MODECHG_DEL:;
+  case ACL_MODECHG_DEL:
     ACLITEM_SET_RIGHTS(new_aip[dst], old_rights & ~ACLITEM_GET_RIGHTS(*mod_aip));
     break;
-  case ACL_MODECHG_EQL:;
-
-
+  case ACL_MODECHG_EQL:
+    ACLITEM_SET_RIGHTS(new_aip[dst], ACLITEM_GET_RIGHTS(*mod_aip));
+    break;
   }
 
   new_rights = ACLITEM_GET_RIGHTS(new_aip[dst]);
@@ -1114,10 +1113,10 @@ aclnewowner(const Acl *old_acl, Oid oldOwnerId, Oid newOwnerId)
     {
       dst_aip->ai_grantor = newOwnerId;
     }
-
-
-
-
+    else if (dst_aip->ai_grantor == newOwnerId)
+    {
+      newpresent = true;
+    }
     if (dst_aip->ai_grantee == oldOwnerId)
     {
       dst_aip->ai_grantee = newOwnerId;
@@ -1159,7 +1158,7 @@ aclnewowner(const Acl *old_acl, Oid oldOwnerId, Oid newOwnerId)
       {
         if (ACLITEM_GET_RIGHTS(*src_aip) == ACL_NO_RIGHTS)
         {
-
+          continue;
         }
         if (aclitem_match(targ_aip, src_aip))
         {
@@ -1219,7 +1218,7 @@ check_circularity(const Acl *old_acl, const AclItem *mod_aip, Oid ownerId)
   memcpy(acl, old_acl, ACL_SIZE(old_acl));
 
   /* Zap all grant options of target grantee, plus what depends on 'em */
-cc_restart:;
+cc_restart:
   num = ACL_NUM(acl);
   aip = ACL_DAT(acl);
   for (i = 0; i < num; i++)
@@ -1244,7 +1243,7 @@ cc_restart:;
 
   if ((ACLITEM_GET_GOPTIONS(*mod_aip) & ~own_privs) != 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_GRANT_OPERATION), errmsg("grant options cannot be granted back to your own grantor")));
   }
 
   pfree(acl);
@@ -1277,7 +1276,7 @@ recursive_revoke(Acl *acl, Oid grantee, AclMode revoke_privs, Oid ownerId, DropB
   /* The owner can never truly lose grant options, so short-circuit */
   if (grantee == ownerId)
   {
-
+    return acl;
   }
 
   /* The grantee might still have some grant options via another grantor */
@@ -1288,7 +1287,7 @@ recursive_revoke(Acl *acl, Oid grantee, AclMode revoke_privs, Oid ownerId, DropB
     return acl;
   }
 
-restart:;
+restart:
   num = ACL_NUM(acl);
   aip = ACL_DAT(acl);
   for (i = 0; i < num; i++)
@@ -1356,7 +1355,7 @@ aclmask(const Acl *acl, Oid roleid, Oid ownerId, AclMode mask, AclMaskHow how)
    */
   if (acl == NULL)
   {
-
+    elog(ERROR, "null ACL");
   }
 
   check_acl(acl);
@@ -1423,7 +1422,7 @@ aclmask(const Acl *acl, Oid roleid, Oid ownerId, AclMode mask, AclMaskHow how)
       {
         return result;
       }
-
+      remaining = mask & ~result;
     }
   }
 
@@ -1449,7 +1448,7 @@ aclmask_direct(const Acl *acl, Oid roleid, Oid ownerId, AclMode mask, AclMaskHow
    */
   if (acl == NULL)
   {
-
+    elog(ERROR, "null ACL");
   }
 
   check_acl(acl);
@@ -1457,7 +1456,7 @@ aclmask_direct(const Acl *acl, Oid roleid, Oid ownerId, AclMode mask, AclMaskHow
   /* Quick exit for mask == 0 */
   if (mask == 0)
   {
-
+    return 0;
   }
 
   result = 0;
@@ -1465,11 +1464,11 @@ aclmask_direct(const Acl *acl, Oid roleid, Oid ownerId, AclMode mask, AclMaskHow
   /* Owner always implicitly has all grant options */
   if ((mask & ACLITEM_ALL_GOPTION_BITS) && roleid == ownerId)
   {
-
-
-
-
-
+    result = mask & ACLITEM_ALL_GOPTION_BITS;
+    if ((how == ACLMASK_ALL) ? (result == mask) : (result != 0))
+    {
+      return result;
+    }
   }
 
   num = ACL_NUM(acl);
@@ -1569,126 +1568,126 @@ aclmembers(const Acl *acl, Oid **roleids)
 Datum
 aclinsert(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("aclinsert is no longer supported")));
 
-
-
+  PG_RETURN_NULL(); /* keep compiler quiet */
 }
 
 Datum
 aclremove(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("aclremove is no longer supported")));
 
-
-
+  PG_RETURN_NULL(); /* keep compiler quiet */
 }
 
 Datum
 aclcontains(PG_FUNCTION_ARGS)
 {
+  Acl *acl = PG_GETARG_ACL_P(0);
+  AclItem *aip = PG_GETARG_ACLITEM_P(1);
+  AclItem *aidat;
+  int i, num;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  check_acl(acl);
+  num = ACL_NUM(acl);
+  aidat = ACL_DAT(acl);
+  for (i = 0; i < num; ++i)
+  {
+    if (aip->ai_grantee == aidat[i].ai_grantee && aip->ai_grantor == aidat[i].ai_grantor && (ACLITEM_GET_RIGHTS(*aip) & ACLITEM_GET_RIGHTS(aidat[i])) == ACLITEM_GET_RIGHTS(*aip))
+    {
+      PG_RETURN_BOOL(true);
+    }
+  }
+  PG_RETURN_BOOL(false);
 }
 
 Datum
 makeaclitem(PG_FUNCTION_ARGS)
 {
+  Oid grantee = PG_GETARG_OID(0);
+  Oid grantor = PG_GETARG_OID(1);
+  text *privtext = PG_GETARG_TEXT_PP(2);
+  bool goption = PG_GETARG_BOOL(3);
+  AclItem *result;
+  AclMode priv;
 
+  priv = convert_priv_string(privtext);
 
+  result = (AclItem *)palloc(sizeof(AclItem));
 
+  result->ai_grantee = grantee;
+  result->ai_grantor = grantor;
 
+  ACLITEM_SET_PRIVS_GOPTIONS(*result, priv, (goption ? priv : ACL_NO_RIGHTS));
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_ACLITEM_P(result);
 }
 
 static AclMode
 convert_priv_string(text *priv_type_text)
 {
+  char *priv_type = text_to_cstring(priv_type_text);
 
+  if (pg_strcasecmp(priv_type, "SELECT") == 0)
+  {
+    return ACL_SELECT;
+  }
+  if (pg_strcasecmp(priv_type, "INSERT") == 0)
+  {
+    return ACL_INSERT;
+  }
+  if (pg_strcasecmp(priv_type, "UPDATE") == 0)
+  {
+    return ACL_UPDATE;
+  }
+  if (pg_strcasecmp(priv_type, "DELETE") == 0)
+  {
+    return ACL_DELETE;
+  }
+  if (pg_strcasecmp(priv_type, "TRUNCATE") == 0)
+  {
+    return ACL_TRUNCATE;
+  }
+  if (pg_strcasecmp(priv_type, "REFERENCES") == 0)
+  {
+    return ACL_REFERENCES;
+  }
+  if (pg_strcasecmp(priv_type, "TRIGGER") == 0)
+  {
+    return ACL_TRIGGER;
+  }
+  if (pg_strcasecmp(priv_type, "EXECUTE") == 0)
+  {
+    return ACL_EXECUTE;
+  }
+  if (pg_strcasecmp(priv_type, "USAGE") == 0)
+  {
+    return ACL_USAGE;
+  }
+  if (pg_strcasecmp(priv_type, "CREATE") == 0)
+  {
+    return ACL_CREATE;
+  }
+  if (pg_strcasecmp(priv_type, "TEMP") == 0)
+  {
+    return ACL_CREATE_TEMP;
+  }
+  if (pg_strcasecmp(priv_type, "TEMPORARY") == 0)
+  {
+    return ACL_CREATE_TEMP;
+  }
+  if (pg_strcasecmp(priv_type, "CONNECT") == 0)
+  {
+    return ACL_CONNECT;
+  }
+  if (pg_strcasecmp(priv_type, "RULE") == 0)
+  {
+    return 0; /* ignore old RULE privileges */
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized privilege type: \"%s\"", priv_type)));
+  return ACL_NO_RIGHTS; /* keep compiler quiet */
 }
 
 /*
@@ -1724,12 +1723,12 @@ convert_any_priv_string(text *priv_type_text, const priv_map *privileges)
     /* Drop leading/trailing whitespace in this chunk */
     while (*chunk && isspace((unsigned char)*chunk))
     {
-
+      chunk++;
     }
     chunk_len = strlen(chunk);
     while (chunk_len > 0 && isspace((unsigned char)chunk[chunk_len - 1]))
     {
-
+      chunk_len--;
     }
     chunk[chunk_len] = '\0';
 
@@ -1757,33 +1756,33 @@ convert_aclright_to_string(int aclright)
 {
   switch (aclright)
   {
-  case ACL_INSERT:;
-
-  case ACL_SELECT:;
-
-  case ACL_UPDATE:;
-
-  case ACL_DELETE:;
-
-  case ACL_TRUNCATE:;
-
-  case ACL_REFERENCES:;
-
-  case ACL_TRIGGER:;
-
-  case ACL_EXECUTE:;
-
-  case ACL_USAGE:;
+  case ACL_INSERT:
+    return "INSERT";
+  case ACL_SELECT:
+    return "SELECT";
+  case ACL_UPDATE:
+    return "UPDATE";
+  case ACL_DELETE:
+    return "DELETE";
+  case ACL_TRUNCATE:
+    return "TRUNCATE";
+  case ACL_REFERENCES:
+    return "REFERENCES";
+  case ACL_TRIGGER:
+    return "TRIGGER";
+  case ACL_EXECUTE:
+    return "EXECUTE";
+  case ACL_USAGE:
     return "USAGE";
-  case ACL_CREATE:;
-
-  case ACL_CREATE_TEMP:;
-
-  case ACL_CONNECT:;
-
-  default:;;
-
-
+  case ACL_CREATE:
+    return "CREATE";
+  case ACL_CREATE_TEMP:
+    return "TEMPORARY";
+  case ACL_CONNECT:
+    return "CONNECT";
+  default:
+    elog(ERROR, "unrecognized aclright: %d", aclright);
+    return NULL;
   }
 }
 
@@ -1855,8 +1854,8 @@ aclexplode(PG_FUNCTION_ARGS)
     {
       idx[1] = 0;
       idx[0]++;
-      if (idx[0] >= ACL_NUM(acl))
-      { /* done */
+      if (idx[0] >= ACL_NUM(acl)) /* done */
+      {
         break;
       }
     }
@@ -1969,7 +1968,7 @@ has_table_privilege_name_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -2046,7 +2045,7 @@ has_table_privilege_id_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -2146,7 +2145,7 @@ has_sequence_privilege_name(PG_FUNCTION_ARGS)
   sequenceoid = convert_table_name(sequencename);
   if (get_rel_relkind(sequenceoid) != RELKIND_SEQUENCE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", text_to_cstring(sequencename))));
   }
 
   aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
@@ -2162,29 +2161,29 @@ has_sequence_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_sequence_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid sequenceoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
+  char relkind;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_sequence_priv_string(priv_type_text);
+  relkind = get_rel_relkind(sequenceoid);
+  if (relkind == '\0')
+  {
+    PG_RETURN_NULL();
+  }
+  else if (relkind != RELKIND_SEQUENCE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", get_rel_name(sequenceoid))));
+  }
 
+  aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2208,11 +2207,11 @@ has_sequence_privilege_id(PG_FUNCTION_ARGS)
   relkind = get_rel_relkind(sequenceoid);
   if (relkind == '\0')
   {
-
+    PG_RETURN_NULL();
   }
   else if (relkind != RELKIND_SEQUENCE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", get_rel_name(sequenceoid))));
   }
 
   aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
@@ -2228,23 +2227,23 @@ has_sequence_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_sequence_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *sequencename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid sequenceoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_sequence_priv_string(priv_type_text);
+  sequenceoid = convert_table_name(sequencename);
+  if (get_rel_relkind(sequenceoid) != RELKIND_SEQUENCE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", text_to_cstring(sequencename))));
+  }
 
+  aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2255,27 +2254,27 @@ has_sequence_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_sequence_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid sequenceoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
+  char relkind;
 
+  mode = convert_sequence_priv_string(priv_type_text);
+  relkind = get_rel_relkind(sequenceoid);
+  if (relkind == '\0')
+  {
+    PG_RETURN_NULL();
+  }
+  else if (relkind != RELKIND_SEQUENCE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a sequence", get_rel_name(sequenceoid))));
+  }
 
+  aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2297,8 +2296,8 @@ convert_sequence_priv_string(text *priv_type_text)
  *		user name, user OID, or implicit user = current_user.
  *
  *		The result is a boolean value: true if user has the indicated
- *		privilege for any column of the table, false if not.  The
- *variants that take a relation OID return NULL if the OID doesn't exist.
+ *		privilege for any column of the table, false if not.  The variants
+ *		that take a relation OID return NULL if the OID doesn't exist.
  */
 
 /*
@@ -2309,26 +2308,26 @@ convert_sequence_priv_string(text *priv_type_text)
 Datum
 has_any_column_privilege_name_name(PG_FUNCTION_ARGS)
 {
+  Name rolename = PG_GETARG_NAME(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  Oid tableoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*rolename));
+  tableoid = convert_table_name(tablename);
+  mode = convert_column_priv_string(priv_type_text);
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2340,25 +2339,25 @@ has_any_column_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_any_column_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *tablename = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid tableoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  tableoid = convert_table_name(tablename);
+  mode = convert_column_priv_string(priv_type_text);
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2369,29 +2368,29 @@ has_any_column_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_any_column_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_column_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2403,28 +2402,28 @@ has_any_column_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_any_column_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid tableoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_column_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2435,24 +2434,24 @@ has_any_column_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_any_column_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid tableoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  tableoid = convert_table_name(tablename);
+  mode = convert_column_priv_string(priv_type_text);
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2463,27 +2462,27 @@ has_any_column_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_any_column_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_column_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  /* First check at table level, then examine each column if needed */
+  aclresult = pg_class_aclcheck(tableoid, roleid, mode);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclresult = pg_attribute_aclcheck_all(tableoid, roleid, mode, ACLMASK_ANY);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2496,8 +2495,8 @@ has_any_column_privilege_id_id(PG_FUNCTION_ARGS)
  *		The result is a boolean value: true if user has the indicated
  *		privilege, false if not.  The variants that take a relation OID
  *		return NULL (rather than throwing an error) if that relation OID
- *		doesn't exist.  Likewise, the variants that take an integer
- *attnum return NULL (rather than throwing an error) if there is no such
+ *		doesn't exist.  Likewise, the variants that take an integer attnum
+ *		return NULL (rather than throwing an error) if there is no such
  *		pg_attribute entry.  All variants return NULL if an attisdropped
  *		column is selected.  These rules are meant to avoid unnecessary
  *		failures in queries that scan pg_attribute.
@@ -2560,11 +2559,11 @@ column_privilege_check(Oid tableoid, AttrNumber attnum, Oid roleid, AclMode mode
     ReleaseSysCache(attTuple);
     return -1;
   }
+  ReleaseSysCache(attTuple);
 
+  aclresult = pg_attribute_aclcheck(tableoid, attnum, roleid, mode);
 
-
-
-
+  return (aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -2575,27 +2574,27 @@ column_privilege_check(Oid tableoid, AttrNumber attnum, Oid roleid, AclMode mode
 Datum
 has_column_privilege_name_name_name(PG_FUNCTION_ARGS)
 {
+  Name rolename = PG_GETARG_NAME(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  text *column = PG_GETARG_TEXT_PP(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid roleid;
+  Oid tableoid;
+  AttrNumber colattnum;
+  AclMode mode;
+  int privresult;
 
+  roleid = get_role_oid_or_public(NameStr(*rolename));
+  tableoid = convert_table_name(tablename);
+  colattnum = convert_column_name(tableoid, column);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2606,25 +2605,25 @@ has_column_privilege_name_name_name(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_name_name_attnum(PG_FUNCTION_ARGS)
 {
+  Name rolename = PG_GETARG_NAME(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  AttrNumber colattnum = PG_GETARG_INT16(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid roleid;
+  Oid tableoid;
+  AclMode mode;
+  int privresult;
 
+  roleid = get_role_oid_or_public(NameStr(*rolename));
+  tableoid = convert_table_name(tablename);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2635,25 +2634,25 @@ has_column_privilege_name_name_attnum(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_name_id_name(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  text *column = PG_GETARG_TEXT_PP(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid roleid;
+  AttrNumber colattnum;
+  AclMode mode;
+  int privresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  colattnum = convert_column_name(tableoid, column);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2664,23 +2663,23 @@ has_column_privilege_name_id_name(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_name_id_attnum(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  AttrNumber colattnum = PG_GETARG_INT16(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid roleid;
+  AclMode mode;
+  int privresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2691,25 +2690,25 @@ has_column_privilege_name_id_attnum(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_id_name_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  text *column = PG_GETARG_TEXT_PP(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid tableoid;
+  AttrNumber colattnum;
+  AclMode mode;
+  int privresult;
 
+  tableoid = convert_table_name(tablename);
+  colattnum = convert_column_name(tableoid, column);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2720,23 +2719,23 @@ has_column_privilege_id_name_name(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_id_name_attnum(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *tablename = PG_GETARG_TEXT_PP(1);
+  AttrNumber colattnum = PG_GETARG_INT16(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  Oid tableoid;
+  AclMode mode;
+  int privresult;
 
+  tableoid = convert_table_name(tablename);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2747,23 +2746,23 @@ has_column_privilege_id_name_attnum(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_id_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  text *column = PG_GETARG_TEXT_PP(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  AttrNumber colattnum;
+  AclMode mode;
+  int privresult;
 
+  colattnum = convert_column_name(tableoid, column);
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2774,21 +2773,21 @@ has_column_privilege_id_id_name(PG_FUNCTION_ARGS)
 Datum
 has_column_privilege_id_id_attnum(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid tableoid = PG_GETARG_OID(1);
+  AttrNumber colattnum = PG_GETARG_INT16(2);
+  text *priv_type_text = PG_GETARG_TEXT_PP(3);
+  AclMode mode;
+  int privresult;
 
+  mode = convert_column_priv_string(priv_type_text);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  privresult = column_privilege_check(tableoid, colattnum, roleid, mode);
+  if (privresult < 0)
+  {
+    PG_RETURN_NULL();
+  }
+  PG_RETURN_BOOL(privresult);
 }
 
 /*
@@ -2943,7 +2942,7 @@ convert_column_name(Oid tableoid, text *column)
     }
     else
     {
-
+      attnum = attributeForm->attnum;
     }
     ReleaseSysCache(attTuple);
   }
@@ -2999,21 +2998,21 @@ convert_column_priv_string(text *priv_type_text)
 Datum
 has_database_privilege_name_name(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  text *databasename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  Oid databaseoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  databaseoid = convert_database_name(databasename);
+  mode = convert_database_priv_string(priv_type_text);
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3025,20 +3024,20 @@ has_database_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_database_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *databasename = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid databaseoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  databaseoid = convert_database_name(databasename);
+  mode = convert_database_priv_string(priv_type_text);
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3049,24 +3048,24 @@ has_database_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_database_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid databaseoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_database_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3078,23 +3077,23 @@ has_database_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_database_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid databaseoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_database_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3105,19 +3104,19 @@ has_database_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_database_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *databasename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid databaseoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  databaseoid = convert_database_name(databasename);
+  mode = convert_database_priv_string(priv_type_text);
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3128,22 +3127,22 @@ has_database_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_database_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid databaseoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_database_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3156,9 +3155,9 @@ has_database_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_database_name(text *databasename)
 {
+  char *dbname = text_to_cstring(databasename);
 
-
-
+  return get_database_oid(dbname, false);
 }
 
 /*
@@ -3168,16 +3167,16 @@ convert_database_name(text *databasename)
 static AclMode
 convert_database_priv_string(text *priv_type_text)
 {
+  static const priv_map database_priv_map[] = {{"CREATE", ACL_CREATE}, {"CREATE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_CREATE)}, {"TEMPORARY", ACL_CREATE_TEMP}, {"TEMPORARY WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_CREATE_TEMP)}, {"TEMP", ACL_CREATE_TEMP}, {"TEMP WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_CREATE_TEMP)}, {"CONNECT", ACL_CONNECT}, {"CONNECT WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_CONNECT)}, {NULL, 0}};
 
-
-
+  return convert_any_priv_string(priv_type_text, database_priv_map);
 }
 
 /*
  * has_foreign_data_wrapper_privilege variants
- *		These are all named "has_foreign_data_wrapper_privilege" at the
- *SQL level. They take various combinations of foreign-data wrapper name, fdw
- *OID, user name, user OID, or implicit user = current_user.
+ *		These are all named "has_foreign_data_wrapper_privilege" at the SQL level.
+ *		They take various combinations of foreign-data wrapper name,
+ *		fdw OID, user name, user OID, or implicit user = current_user.
  *
  *		The result is a boolean value: true if user has the indicated
  *		privilege, false if not.
@@ -3253,7 +3252,7 @@ has_foreign_data_wrapper_privilege_name_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
@@ -3281,7 +3280,7 @@ has_foreign_data_wrapper_privilege_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
@@ -3330,7 +3329,7 @@ has_foreign_data_wrapper_privilege_id_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
@@ -3409,20 +3408,20 @@ has_function_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_function_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *functionname = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid functionoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  functionoid = convert_function_name(functionname);
+  mode = convert_function_priv_string(priv_type_text);
 
+  aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3433,24 +3432,24 @@ has_function_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_function_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid functionoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_function_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3462,23 +3461,23 @@ has_function_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_function_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid functionoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_function_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3489,19 +3488,19 @@ has_function_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_function_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *functionname = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid functionoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  functionoid = convert_function_name(functionname);
+  mode = convert_function_priv_string(priv_type_text);
 
+  aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3512,22 +3511,22 @@ has_function_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_function_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid functionoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_function_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3547,7 +3546,7 @@ convert_function_name(text *functionname)
 
   if (!OidIsValid(oid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function \"%s\" does not exist", funcname)));
   }
 
   return oid;
@@ -3583,21 +3582,21 @@ convert_function_priv_string(text *priv_type_text)
 Datum
 has_language_privilege_name_name(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  text *languagename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  Oid languageoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  languageoid = convert_language_name(languagename);
+  mode = convert_language_priv_string(priv_type_text);
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3609,20 +3608,20 @@ has_language_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_language_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *languagename = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid languageoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  languageoid = convert_language_name(languagename);
+  mode = convert_language_priv_string(priv_type_text);
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3633,24 +3632,24 @@ has_language_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_language_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid languageoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_language_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3662,23 +3661,23 @@ has_language_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_language_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid languageoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_language_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3689,19 +3688,19 @@ has_language_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_language_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *languagename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid languageoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  languageoid = convert_language_name(languagename);
+  mode = convert_language_priv_string(priv_type_text);
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3712,22 +3711,22 @@ has_language_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_language_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid languageoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_language_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_language_aclcheck(languageoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3740,9 +3739,9 @@ has_language_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_language_name(text *languagename)
 {
+  char *langname = text_to_cstring(languagename);
 
-
-
+  return get_language_oid(langname, false);
 }
 
 /*
@@ -3752,9 +3751,9 @@ convert_language_name(text *languagename)
 static AclMode
 convert_language_priv_string(text *priv_type_text)
 {
+  static const priv_map language_priv_map[] = {{"USAGE", ACL_USAGE}, {"USAGE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_USAGE)}, {NULL, 0}};
 
-
-
+  return convert_any_priv_string(priv_type_text, language_priv_map);
 }
 
 /*
@@ -3801,20 +3800,20 @@ has_schema_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_schema_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *schemaname = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid schemaoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  schemaoid = convert_schema_name(schemaname);
+  mode = convert_schema_priv_string(priv_type_text);
 
+  aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3825,24 +3824,24 @@ has_schema_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_schema_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid schemaoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_schema_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3854,23 +3853,23 @@ has_schema_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_schema_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid schemaoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_schema_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3881,19 +3880,19 @@ has_schema_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_schema_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *schemaname = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid schemaoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  schemaoid = convert_schema_name(schemaname);
+  mode = convert_schema_priv_string(priv_type_text);
 
+  aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3904,22 +3903,22 @@ has_schema_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_schema_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid schemaoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_schema_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -3953,8 +3952,7 @@ convert_schema_priv_string(text *priv_type_text)
  * has_server_privilege variants
  *		These are all named "has_server_privilege" at the SQL level.
  *		They take various combinations of foreign server name,
- *		server OID, user name, user OID, or implicit user =
- *current_user.
+ *		server OID, user name, user OID, or implicit user = current_user.
  *
  *		The result is a boolean value: true if user has the indicated
  *		privilege, false if not.
@@ -4030,7 +4028,7 @@ has_server_privilege_name_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
@@ -4058,7 +4056,7 @@ has_server_privilege_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
@@ -4107,7 +4105,7 @@ has_server_privilege_id_id(PG_FUNCTION_ARGS)
 
   if (!SearchSysCacheExists1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid)))
   {
-
+    PG_RETURN_NULL();
   }
 
   aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
@@ -4145,8 +4143,8 @@ convert_server_priv_string(text *priv_type_text)
 /*
  * has_tablespace_privilege variants
  *		These are all named "has_tablespace_privilege" at the SQL level.
- *		They take various combinations of tablespace name, tablespace
- *OID, user name, user OID, or implicit user = current_user.
+ *		They take various combinations of tablespace name, tablespace OID,
+ *		user name, user OID, or implicit user = current_user.
  *
  *		The result is a boolean value: true if user has the indicated
  *		privilege, false if not.
@@ -4160,21 +4158,21 @@ convert_server_priv_string(text *priv_type_text)
 Datum
 has_tablespace_privilege_name_name(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  text *tablespacename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  Oid tablespaceoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  tablespaceoid = convert_tablespace_name(tablespacename);
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4186,20 +4184,20 @@ has_tablespace_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_tablespace_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *tablespacename = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid tablespaceoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  tablespaceoid = convert_tablespace_name(tablespacename);
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4210,24 +4208,24 @@ has_tablespace_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_tablespace_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid tablespaceoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TABLESPACEOID, ObjectIdGetDatum(tablespaceoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4239,23 +4237,23 @@ has_tablespace_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_tablespace_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid tablespaceoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TABLESPACEOID, ObjectIdGetDatum(tablespaceoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4266,19 +4264,19 @@ has_tablespace_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_tablespace_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *tablespacename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid tablespaceoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  tablespaceoid = convert_tablespace_name(tablespacename);
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4289,22 +4287,22 @@ has_tablespace_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_tablespace_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid tablespaceoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_tablespace_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TABLESPACEOID, ObjectIdGetDatum(tablespaceoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_tablespace_aclcheck(tablespaceoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4317,9 +4315,9 @@ has_tablespace_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_tablespace_name(text *tablespacename)
 {
+  char *spcname = text_to_cstring(tablespacename);
 
-
-
+  return get_tablespace_oid(spcname, false);
 }
 
 /*
@@ -4329,9 +4327,9 @@ convert_tablespace_name(text *tablespacename)
 static AclMode
 convert_tablespace_priv_string(text *priv_type_text)
 {
+  static const priv_map tablespace_priv_map[] = {{"CREATE", ACL_CREATE}, {"CREATE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_CREATE)}, {NULL, 0}};
 
-
-
+  return convert_any_priv_string(priv_type_text, tablespace_priv_map);
 }
 
 /*
@@ -4378,20 +4376,20 @@ has_type_privilege_name_name(PG_FUNCTION_ARGS)
 Datum
 has_type_privilege_name(PG_FUNCTION_ARGS)
 {
+  text *typename = PG_GETARG_TEXT_PP(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  Oid typeoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  typeoid = convert_type_name(typename);
+  mode = convert_type_priv_string(priv_type_text);
 
+  aclresult = pg_type_aclcheck(typeoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4402,24 +4400,24 @@ has_type_privilege_name(PG_FUNCTION_ARGS)
 Datum
 has_type_privilege_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid typeoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid_or_public(NameStr(*username));
+  mode = convert_type_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_type_aclcheck(typeoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4431,23 +4429,23 @@ has_type_privilege_name_id(PG_FUNCTION_ARGS)
 Datum
 has_type_privilege_id(PG_FUNCTION_ARGS)
 {
+  Oid typeoid = PG_GETARG_OID(0);
+  text *priv_type_text = PG_GETARG_TEXT_PP(1);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = GetUserId();
+  mode = convert_type_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_type_aclcheck(typeoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4458,19 +4456,19 @@ has_type_privilege_id(PG_FUNCTION_ARGS)
 Datum
 has_type_privilege_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  text *typename = PG_GETARG_TEXT_PP(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid typeoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  typeoid = convert_type_name(typename);
+  mode = convert_type_priv_string(priv_type_text);
 
+  aclresult = pg_type_aclcheck(typeoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4481,22 +4479,22 @@ has_type_privilege_id_name(PG_FUNCTION_ARGS)
 Datum
 has_type_privilege_id_id(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Oid typeoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  AclMode mode;
+  AclResult aclresult;
 
+  mode = convert_type_priv_string(priv_type_text);
 
+  if (!SearchSysCacheExists1(TYPEOID, ObjectIdGetDatum(typeoid)))
+  {
+    PG_RETURN_NULL();
+  }
 
+  aclresult = pg_type_aclcheck(typeoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4516,7 +4514,7 @@ convert_type_name(text *typename)
 
   if (!OidIsValid(oid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type \"%s\" does not exist", typname)));
   }
 
   return oid;
@@ -4552,21 +4550,21 @@ convert_type_priv_string(text *priv_type_text)
 Datum
 pg_has_role_name_name(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Name rolename = PG_GETARG_NAME(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  Oid roleoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid(NameStr(*username), false);
+  roleoid = get_role_oid(NameStr(*rolename), false);
+  mode = convert_role_priv_string(priv_type_text);
 
+  aclresult = pg_role_aclcheck(roleoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4602,19 +4600,19 @@ pg_has_role_name(PG_FUNCTION_ARGS)
 Datum
 pg_has_role_name_id(PG_FUNCTION_ARGS)
 {
+  Name username = PG_GETARG_NAME(0);
+  Oid roleoid = PG_GETARG_OID(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleid = get_role_oid(NameStr(*username), false);
+  mode = convert_role_priv_string(priv_type_text);
 
+  aclresult = pg_role_aclcheck(roleoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4648,19 +4646,19 @@ pg_has_role_id(PG_FUNCTION_ARGS)
 Datum
 pg_has_role_id_name(PG_FUNCTION_ARGS)
 {
+  Oid roleid = PG_GETARG_OID(0);
+  Name rolename = PG_GETARG_NAME(1);
+  text *priv_type_text = PG_GETARG_TEXT_PP(2);
+  Oid roleoid;
+  AclMode mode;
+  AclResult aclresult;
 
+  roleoid = get_role_oid(NameStr(*rolename), false);
+  mode = convert_role_priv_string(priv_type_text);
 
+  aclresult = pg_role_aclcheck(roleoid, roleid, mode);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
 }
 
 /*
@@ -4720,17 +4718,17 @@ pg_role_aclcheck(Oid role_oid, Oid roleid, AclMode mode)
      * session and call stack.  That suits two-argument pg_has_role(), but
      * it gives the three-argument version a lamentable whimsy.
      */
-
-
-
-
+    if (is_admin_of_role(roleid, role_oid))
+    {
+      return ACLCHECK_OK;
+    }
   }
   if (mode & ACL_CREATE)
   {
-
-
-
-
+    if (is_member_of_role(roleid, role_oid))
+    {
+      return ACLCHECK_OK;
+    }
   }
   if (mode & ACL_USAGE)
   {
@@ -5015,8 +5013,7 @@ is_member_of_role(Oid member, Oid role)
 
 /*
  * check_is_member_of_role
- *		is_member_of_role with a standard permission-violation error if
- *not
+ *		is_member_of_role with a standard permission-violation error if not
  */
 void
 check_is_member_of_role(Oid member, Oid role)
@@ -5039,7 +5036,7 @@ is_member_of_role_nosuper(Oid member, Oid role)
   /* Fast path for simple case */
   if (member == role)
   {
-
+    return true;
   }
 
   /*
@@ -5063,7 +5060,7 @@ is_admin_of_role(Oid member, Oid role)
 
   if (superuser_arg(member))
   {
-
+    return true;
   }
 
   if (member == role)
@@ -5145,18 +5142,18 @@ is_admin_of_role(Oid member, Oid role)
 static int
 count_one_bits(AclMode mask)
 {
+  int nbits = 0;
 
-
-
-
-
-
-
-
-
-
-
-
+  /* this code relies on AclMode being an unsigned type */
+  while (mask)
+  {
+    if (mask & 1)
+    {
+      nbits++;
+    }
+    mask >>= 1;
+  }
+  return nbits;
 }
 
 /*
@@ -5239,12 +5236,12 @@ select_best_grantor(Oid roleId, AclMode privileges, const Acl *acl, Oid ownerId,
     {
       int nnewrights = count_one_bits(otherprivs);
 
-
-
-
-
-
-
+      if (nnewrights > nrights)
+      {
+        *grantorId = otherrole;
+        *grantOptions = otherprivs;
+        nrights = nnewrights;
+      }
     }
   }
 }
@@ -5277,7 +5274,7 @@ get_role_oid_or_public(const char *rolname)
 {
   if (strcmp(rolname, "public") == 0)
   {
-
+    return ACL_ID_PUBLIC;
   }
 
   return get_role_oid(rolname, false);
@@ -5297,26 +5294,26 @@ get_rolespec_oid(const RoleSpec *role, bool missing_ok)
 
   switch (role->roletype)
   {
-  case ROLESPEC_CSTRING:;
+  case ROLESPEC_CSTRING:
     Assert(role->rolename);
     oid = get_role_oid(role->rolename, missing_ok);
     break;
 
-  case ROLESPEC_CURRENT_USER:;
+  case ROLESPEC_CURRENT_USER:
     oid = GetUserId();
     break;
 
-  case ROLESPEC_SESSION_USER:;
+  case ROLESPEC_SESSION_USER:
+    oid = GetSessionUserId();
+    break;
 
+  case ROLESPEC_PUBLIC:
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", "public")));
+    oid = InvalidOid; /* make compiler happy */
+    break;
 
-
-  case ROLESPEC_PUBLIC:;
-
-
-
-
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected role type %d", role->roletype);
   }
 
   return oid;
@@ -5333,38 +5330,38 @@ get_rolespec_tuple(const RoleSpec *role)
 
   switch (role->roletype)
   {
-  case ROLESPEC_CSTRING:;
+  case ROLESPEC_CSTRING:
     Assert(role->rolename);
     tuple = SearchSysCache1(AUTHNAME, CStringGetDatum(role->rolename));
     if (!HeapTupleIsValid(tuple))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", role->rolename)));
     }
     break;
 
-  case ROLESPEC_CURRENT_USER:;
+  case ROLESPEC_CURRENT_USER:
+    tuple = SearchSysCache1(AUTHOID, GetUserId());
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for role %u", GetUserId());
+    }
+    break;
 
+  case ROLESPEC_SESSION_USER:
+    tuple = SearchSysCache1(AUTHOID, GetSessionUserId());
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for role %u", GetSessionUserId());
+    }
+    break;
 
+  case ROLESPEC_PUBLIC:
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role \"%s\" does not exist", "public")));
+    tuple = NULL; /* make compiler happy */
+    break;
 
-
-
-
-
-  case ROLESPEC_SESSION_USER:;
-
-
-
-
-
-
-
-  case ROLESPEC_PUBLIC:;
-
-
-
-
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected role type %d", role->roletype);
   }
 
   return tuple;
@@ -5400,23 +5397,23 @@ check_rolespec_name(const RoleSpec *role, const char *detail_msg)
 {
   if (!role)
   {
-
+    return;
   }
 
   if (role->roletype != ROLESPEC_CSTRING)
   {
-
+    return;
   }
 
   if (IsReservedName(role->rolename))
   {
-
-
-
-
-
-
-
-
+    if (detail_msg)
+    {
+      ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("role name \"%s\" is reserved", role->rolename), errdetail_internal("%s", detail_msg)));
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("role name \"%s\" is reserved", role->rolename)));
+    }
   }
 }

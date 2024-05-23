@@ -32,8 +32,8 @@
  * a threshold size (but that is not the concern of this module).
  *
  * INTERFACE ROUTINES
- *		ss_get_location		- return current scan location of a
- *relation ss_report_location	- update current scan location
+ *		ss_get_location		- return current scan location of a relation
+ *		ss_report_location	- update current scan location
  *
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
@@ -162,7 +162,7 @@ SyncScanShmemInit(void)
   }
   else
   {
-
+    Assert(found);
   }
 }
 
@@ -218,7 +218,7 @@ ss_search(RelFileNode relfilenode, BlockNumber location, bool set)
         item->prev->next = item->next;
         if (item->next)
         {
-
+          item->next->prev = item->prev;
         }
 
         /* link */
@@ -264,7 +264,7 @@ ss_get_location(Relation rel, BlockNumber relnblocks)
    */
   if (startloc >= relnblocks)
   {
-
+    startloc = 0;
   }
 
 #ifdef TRACE_SYNCSCAN

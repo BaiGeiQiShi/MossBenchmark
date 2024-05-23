@@ -55,7 +55,8 @@ static PyObject *
 PLy_quote_ident(PyObject *self, PyObject *args);
 
 /* A list of all known exceptions, generated from backend/utils/errcodes.txt */
-typedef struct ExceptionMap {
+typedef struct ExceptionMap
+{
   char *name;
   char *classname;
   int sqlstate;
@@ -69,34 +70,56 @@ static PyMethodDef PLy_methods[] = {
     /*
      * logging methods
      */
-    {"debug", (PyCFunction)PLy_debug, METH_VARARGS | METH_KEYWORDS, NULL}, {"log", (PyCFunction)PLy_log, METH_VARARGS | METH_KEYWORDS, NULL}, {"info", (PyCFunction)PLy_info, METH_VARARGS | METH_KEYWORDS, NULL}, {"notice", (PyCFunction)PLy_notice, METH_VARARGS | METH_KEYWORDS, NULL}, {"warning", (PyCFunction)PLy_warning, METH_VARARGS | METH_KEYWORDS, NULL}, {"error", (PyCFunction)PLy_error, METH_VARARGS | METH_KEYWORDS, NULL}, {"fatal", (PyCFunction)PLy_fatal, METH_VARARGS | METH_KEYWORDS, NULL},/*
+    {"debug", (PyCFunction)PLy_debug, METH_VARARGS | METH_KEYWORDS, NULL}, {"log", (PyCFunction)PLy_log, METH_VARARGS | METH_KEYWORDS, NULL}, {"info", (PyCFunction)PLy_info, METH_VARARGS | METH_KEYWORDS, NULL}, {"notice", (PyCFunction)PLy_notice, METH_VARARGS | METH_KEYWORDS, NULL}, {"warning", (PyCFunction)PLy_warning, METH_VARARGS | METH_KEYWORDS, NULL}, {"error", (PyCFunction)PLy_error, METH_VARARGS | METH_KEYWORDS, NULL}, {"fatal", (PyCFunction)PLy_fatal, METH_VARARGS | METH_KEYWORDS, NULL},
+
+    /*
      * create a stored plan
      */
-    {"prepare", PLy_spi_prepare, METH_VARARGS, NULL},/*
+    {"prepare", PLy_spi_prepare, METH_VARARGS, NULL},
+
+    /*
      * execute a plan or query
      */
-    {"execute", PLy_spi_execute, METH_VARARGS, NULL},/*
+    {"execute", PLy_spi_execute, METH_VARARGS, NULL},
+
+    /*
      * escaping strings
      */
-    {"quote_literal", PLy_quote_literal, METH_VARARGS, NULL}, {"quote_nullable", PLy_quote_nullable, METH_VARARGS, NULL}, {"quote_ident", PLy_quote_ident, METH_VARARGS, NULL},/*
+    {"quote_literal", PLy_quote_literal, METH_VARARGS, NULL}, {"quote_nullable", PLy_quote_nullable, METH_VARARGS, NULL}, {"quote_ident", PLy_quote_ident, METH_VARARGS, NULL},
+
+    /*
      * create the subtransaction context manager
      */
-    {"subtransaction", PLy_subtransaction_new, METH_NOARGS, NULL},/*
+    {"subtransaction", PLy_subtransaction_new, METH_NOARGS, NULL},
+
+    /*
      * create a cursor
      */
-    {"cursor", PLy_cursor, METH_VARARGS, NULL},/*
+    {"cursor", PLy_cursor, METH_VARARGS, NULL},
+
+    /*
      * transaction control
      */
-    {"commit", PLy_commit, METH_NOARGS, NULL}, {"rollback", PLy_rollback, METH_NOARGS, NULL},{NULL, NULL, 0, NULL}};
+    {"commit", PLy_commit, METH_NOARGS, NULL}, {"rollback", PLy_rollback, METH_NOARGS, NULL},
+
+    {NULL, NULL, 0, NULL}};
 
 static PyMethodDef PLy_exc_methods[] = {{NULL, NULL, 0, NULL}};
 
 #if PY_MAJOR_VERSION >= 3
 static PyModuleDef PLy_module = {
-    PyModuleDef_HEAD_INIT,.m_name = "plpy",.m_size = -1,.m_methods = PLy_methods,};
+    PyModuleDef_HEAD_INIT,
+    .m_name = "plpy",
+    .m_size = -1,
+    .m_methods = PLy_methods,
+};
 
 static PyModuleDef PLy_exc_module = {
-    PyModuleDef_HEAD_INIT,.m_name = "spiexceptions",.m_size = -1,.m_methods = PLy_exc_methods,};
+    PyModuleDef_HEAD_INIT,
+    .m_name = "spiexceptions",
+    .m_size = -1,
+    .m_methods = PLy_exc_methods,
+};
 
 /*
  * Must have external linkage, because PyMODINIT_FUNC does dllexport on
@@ -108,7 +131,8 @@ PyInit_plpy(void)
   PyObject *m;
 
   m = PyModule_Create(&PLy_module);
-  if (m == NULL) {
+  if (m == NULL)
+  {
     return NULL;
   }
 
@@ -151,11 +175,13 @@ PLy_init_plpy(void)
   main_mod = PyImport_AddModule("__main__");
   main_dict = PyModule_GetDict(main_mod);
   plpy_mod = PyImport_AddModule("plpy");
-  if (plpy_mod == NULL) {
+  if (plpy_mod == NULL)
+  {
     PLy_elog(ERROR, "could not import \"plpy\" module");
   }
   PyDict_SetItemString(main_dict, "plpy", plpy_mod);
-  if (PyErr_Occurred()) {
+  if (PyErr_Occurred())
+  {
     PLy_elog(ERROR, "could not import \"plpy\" module");
   }
 }
@@ -171,7 +197,8 @@ PLy_add_exceptions(PyObject *plpy)
 #else
   excmod = PyModule_Create(&PLy_exc_module);
 #endif
-  if (excmod == NULL) {
+  if (excmod == NULL)
+  {
     PLy_elog(ERROR, "could not create the spiexceptions module");
   }
 
@@ -180,7 +207,8 @@ PLy_add_exceptions(PyObject *plpy)
    * reason; we must do that.
    */
   Py_INCREF(excmod);
-  if (PyModule_AddObject(plpy, "spiexceptions", excmod) < 0) {
+  if (PyModule_AddObject(plpy, "spiexceptions", excmod) < 0)
+  {
     PLy_elog(ERROR, "could not add the spiexceptions module");
   }
 
@@ -205,7 +233,8 @@ PLy_create_exception(char *name, PyObject *base, PyObject *dict, const char *mod
   PyObject *exc;
 
   exc = PyErr_NewException(name, base, dict);
-  if (exc == NULL) {
+  if (exc == NULL)
+  {
     PLy_elog(ERROR, NULL);
   }
 
@@ -233,19 +262,22 @@ PLy_generate_spi_exceptions(PyObject *mod, PyObject *base)
 {
   int i;
 
-  for (i = 0; exception_map[i].name != NULL; i++) {
+  for (i = 0; exception_map[i].name != NULL; i++)
+  {
     bool found;
     PyObject *exc;
     PLyExceptionEntry *entry;
     PyObject *sqlstate;
     PyObject *dict = PyDict_New();
 
-    if (dict == NULL) {
+    if (dict == NULL)
+    {
       PLy_elog(ERROR, NULL);
     }
 
     sqlstate = PyString_FromString(unpack_sql_state(exception_map[i].sqlstate));
-    if (sqlstate == NULL) {
+    if (sqlstate == NULL)
+    {
       PLy_elog(ERROR, "could not generate SPI exceptions");
     }
 
@@ -316,7 +348,8 @@ PLy_quote_literal(PyObject *self, PyObject *args)
   char *quoted;
   PyObject *ret;
 
-  if (!PyArg_ParseTuple(args, "s:quote_literal", &str)) {
+  if (!PyArg_ParseTuple(args, "s:quote_literal", &str))
+  {
     return NULL;
   }
 
@@ -334,11 +367,13 @@ PLy_quote_nullable(PyObject *self, PyObject *args)
   char *quoted;
   PyObject *ret;
 
-  if (!PyArg_ParseTuple(args, "z:quote_nullable", &str)) {
+  if (!PyArg_ParseTuple(args, "z:quote_nullable", &str))
+  {
     return NULL;
   }
 
-  if (str == NULL) {
+  if (str == NULL)
+  {
     return PyString_FromString("NULL");
   }
 
@@ -356,7 +391,8 @@ PLy_quote_ident(PyObject *self, PyObject *args)
   const char *quoted;
   PyObject *ret;
 
-  if (!PyArg_ParseTuple(args, "s:quote_ident", &str)) {
+  if (!PyArg_ParseTuple(args, "s:quote_ident", &str))
+  {
     return NULL;
   }
 
@@ -370,10 +406,12 @@ PLy_quote_ident(PyObject *self, PyObject *args)
 static char *
 object_to_string(PyObject *obj)
 {
-  if (obj) {
+  if (obj)
+  {
     PyObject *so = PyObject_Str(obj);
 
-    if (so != NULL) {
+    if (so != NULL)
+    {
       char *str;
 
       str = pstrdup(PyString_AsString(so));
@@ -404,22 +442,27 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
   PyObject *volatile so;
   Py_ssize_t pos = 0;
 
-  if (PyTuple_Size(args) == 1) {
+  if (PyTuple_Size(args) == 1)
+  {
     /*
      * Treat single argument specially to avoid undesirable ('tuple',)
      * decoration.
      */
     PyObject *o;
 
-    if (!PyArg_UnpackTuple(args, "plpy.elog", 1, 1, &o)) {
+    if (!PyArg_UnpackTuple(args, "plpy.elog", 1, 1, &o))
+    {
       PLy_elog(ERROR, "could not unpack arguments in plpy.elog");
     }
     so = PyObject_Str(o);
-  } else {
+  }
+  else
+  {
     so = PyObject_Str(args);
   }
 
-  if (so == NULL || ((message = PyString_AsString(so)) == NULL)) {
+  if (so == NULL || ((message = PyString_AsString(so)) == NULL))
+  {
     level = ERROR;
     message = dgettext(TEXTDOMAIN, "could not parse error message in plpy.elog");
   }
@@ -427,51 +470,77 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
 
   Py_XDECREF(so);
 
-  if (kw != NULL) {
-    while (PyDict_Next(kw, &pos, &key, &value)) {
+  if (kw != NULL)
+  {
+    while (PyDict_Next(kw, &pos, &key, &value))
+    {
       char *keyword = PyString_AsString(key);
 
-      if (strcmp(keyword, "message") == 0) {
+      if (strcmp(keyword, "message") == 0)
+      {
         /* the message should not be overwritten */
-        if (PyTuple_Size(args) != 0) {
+        if (PyTuple_Size(args) != 0)
+        {
           PLy_exception_set(PyExc_TypeError, "argument 'message' given by name and position");
           return NULL;
         }
 
-        if (message) {
+        if (message)
+        {
           pfree(message);
         }
         message = object_to_string(value);
-      } else if (strcmp(keyword, "detail") == 0) {
+      }
+      else if (strcmp(keyword, "detail") == 0)
+      {
         detail = object_to_string(value);
-      } else if (strcmp(keyword, "hint") == 0) {
+      }
+      else if (strcmp(keyword, "hint") == 0)
+      {
         hint = object_to_string(value);
-      } else if (strcmp(keyword, "sqlstate") == 0) {
+      }
+      else if (strcmp(keyword, "sqlstate") == 0)
+      {
         sqlstatestr = object_to_string(value);
-      } else if (strcmp(keyword, "schema_name") == 0) {
+      }
+      else if (strcmp(keyword, "schema_name") == 0)
+      {
         schema_name = object_to_string(value);
-      } else if (strcmp(keyword, "table_name") == 0) {
+      }
+      else if (strcmp(keyword, "table_name") == 0)
+      {
         table_name = object_to_string(value);
-      } else if (strcmp(keyword, "column_name") == 0) {
+      }
+      else if (strcmp(keyword, "column_name") == 0)
+      {
         column_name = object_to_string(value);
-      } else if (strcmp(keyword, "datatype_name") == 0) {
+      }
+      else if (strcmp(keyword, "datatype_name") == 0)
+      {
         datatype_name = object_to_string(value);
-      } else if (strcmp(keyword, "constraint_name") == 0) {
+      }
+      else if (strcmp(keyword, "constraint_name") == 0)
+      {
         constraint_name = object_to_string(value);
-      } else {
+      }
+      else
+      {
         PLy_exception_set(PyExc_TypeError, "'%s' is an invalid keyword argument for this function", keyword);
         return NULL;
       }
     }
   }
 
-  if (sqlstatestr != NULL) {
-    if (strlen(sqlstatestr) != 5) {
+  if (sqlstatestr != NULL)
+  {
+    if (strlen(sqlstatestr) != 5)
+    {
       PLy_exception_set(PyExc_ValueError, "invalid SQLSTATE code");
       return NULL;
     }
 
-    if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5) {
+    if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5)
+    {
       PLy_exception_set(PyExc_ValueError, "invalid SQLSTATE code");
       return NULL;
     }
@@ -482,28 +551,36 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
   oldcontext = CurrentMemoryContext;
   PG_TRY();
   {
-    if (message != NULL) {
+    if (message != NULL)
+    {
       pg_verifymbstr(message, strlen(message), false);
     }
-    if (detail != NULL) {
+    if (detail != NULL)
+    {
       pg_verifymbstr(detail, strlen(detail), false);
     }
-    if (hint != NULL) {
+    if (hint != NULL)
+    {
       pg_verifymbstr(hint, strlen(hint), false);
     }
-    if (schema_name != NULL) {
+    if (schema_name != NULL)
+    {
       pg_verifymbstr(schema_name, strlen(schema_name), false);
     }
-    if (table_name != NULL) {
+    if (table_name != NULL)
+    {
       pg_verifymbstr(table_name, strlen(table_name), false);
     }
-    if (column_name != NULL) {
+    if (column_name != NULL)
+    {
       pg_verifymbstr(column_name, strlen(column_name), false);
     }
-    if (datatype_name != NULL) {
+    if (datatype_name != NULL)
+    {
       pg_verifymbstr(datatype_name, strlen(datatype_name), false);
     }
-    if (constraint_name != NULL) {
+    if (constraint_name != NULL)
+    {
       pg_verifymbstr(constraint_name, strlen(constraint_name), false);
     }
 

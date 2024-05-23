@@ -237,7 +237,7 @@ DeadLockCheck(PGPROC *proc)
     nWaitOrders = 0;
     if (!FindLockCycle(proc, possibleConstraints, &nSoftEdges))
     {
-
+      elog(FATAL, "deadlock seems to have disappeared");
     }
 
     return DS_HARD_DEADLOCK; /* cannot find a non-deadlocked state */
@@ -278,14 +278,14 @@ DeadLockCheck(PGPROC *proc)
   {
     return DS_SOFT_DEADLOCK;
   }
-
-
-
-
-
-
-
-
+  else if (blocking_autovacuum_proc != NULL)
+  {
+    return DS_BLOCKED_BY_AUTOVACUUM;
+  }
+  else
+  {
+    return DS_NO_DEADLOCK;
+  }
 }
 
 /*
@@ -296,12 +296,12 @@ DeadLockCheck(PGPROC *proc)
 PGPROC *
 GetBlockingAutoVacuumPgproc(void)
 {
+  PGPROC *ptr;
 
+  ptr = blocking_autovacuum_proc;
+  blocking_autovacuum_proc = NULL;
 
-
-
-
-
+  return ptr;
 }
 
 /*
@@ -334,7 +334,7 @@ DeadLockCheckRecurse(PGPROC *proc)
   }
   if (nCurConstraints >= maxCurConstraints)
   {
-
+    return true; /* out of room for active constraints? */
   }
   oldPossibleConstraints = nPossibleConstraints;
   if (nPossibleConstraints + nEdges + MaxBackends <= maxPossibleConstraints)
@@ -346,7 +346,7 @@ DeadLockCheckRecurse(PGPROC *proc)
   else
   {
     /* Not room; will need to regenerate the edges on-the-fly */
-
+    savedList = false;
   }
 
   /*
@@ -357,10 +357,10 @@ DeadLockCheckRecurse(PGPROC *proc)
     if (!savedList && i > 0)
     {
       /* Regenerate the list of possible added constraints */
-
-
-
-
+      if (nEdges != TestConfiguration(proc))
+      {
+        elog(FATAL, "inconsistent results during deadlock check");
+      }
     }
     curConstraints[nCurConstraints] = possibleConstraints[oldPossibleConstraints + i];
     nCurConstraints++;
@@ -369,10 +369,10 @@ DeadLockCheckRecurse(PGPROC *proc)
       return false; /* found a valid solution! */
     }
     /* give up on that added constraint, try again */
-
+    nCurConstraints--;
   }
   nPossibleConstraints = oldPossibleConstraints;
-
+  return true; /* no solution found */
 }
 
 /*--------------------
@@ -402,7 +402,7 @@ TestConfiguration(PGPROC *startProc)
    */
   if (nPossibleConstraints + MaxBackends > maxPossibleConstraints)
   {
-
+    return -1;
   }
 
   /*
@@ -411,7 +411,7 @@ TestConfiguration(PGPROC *startProc)
    */
   if (!ExpandConstraints(curConstraints, nCurConstraints))
   {
-
+    return -1;
   }
 
   /*
@@ -423,19 +423,19 @@ TestConfiguration(PGPROC *startProc)
   {
     if (FindLockCycle(curConstraints[i].waiter, softEdges, &nSoftEdges))
     {
-
-
-
-
-
+      if (nSoftEdges == 0)
+      {
+        return -1; /* hard deadlock detected */
+      }
+      softFound = nSoftEdges;
     }
     if (FindLockCycle(curConstraints[i].blocker, softEdges, &nSoftEdges))
     {
-
-
-
-
-
+      if (nSoftEdges == 0)
+      {
+        return -1; /* hard deadlock detected */
+      }
+      softFound = nSoftEdges;
     }
   }
   if (FindLockCycle(startProc, softEdges, &nSoftEdges))
@@ -489,7 +489,7 @@ FindLockCycleRecurse(PGPROC *checkProc, int depth, EDGE *softEdges, /* output ar
    */
   if (checkProc->lockGroupLeader != NULL)
   {
-
+    checkProc = checkProc->lockGroupLeader;
   }
 
   /*
@@ -543,12 +543,12 @@ FindLockCycleRecurse(PGPROC *checkProc, int depth, EDGE *softEdges, /* output ar
   {
     PGPROC *memberProc;
 
+    memberProc = dlist_container(PGPROC, lockGroupLink, iter.cur);
 
-
-
-
-
-
+    if (memberProc->links.next != NULL && memberProc->waitLock != NULL && memberProc != checkProc && FindLockCycleRecurseMember(memberProc, checkProc, depth, softEdges, nSoftEdges))
+    {
+      return true;
+    }
   }
 
   return false;
@@ -634,7 +634,7 @@ FindLockCycleRecurseMember(PGPROC *checkProc, PGPROC *checkProcLeader, int depth
            */
           if (checkProc == MyProc && pgxact->vacuumFlags & PROC_IS_AUTOVACUUM)
           {
-
+            blocking_autovacuum_proc = proc;
           }
 
           /* We're done looking at this proclock */
@@ -698,19 +698,19 @@ FindLockCycleRecurseMember(PGPROC *checkProc, PGPROC *checkProcLeader, int depth
           /* fill deadlockDetails[] */
           DEADLOCK_INFO *info = &deadlockDetails[depth];
 
-
-
-
+          info->locktag = lock->tag;
+          info->lockmode = checkProc->waitLockMode;
+          info->pid = checkProc->pid;
 
           /*
            * Add this edge to the list of soft edges in the cycle
            */
-
-
-
-
-
-
+          Assert(*nSoftEdges < MaxBackends);
+          softEdges[*nSoftEdges].waiter = checkProcLeader;
+          softEdges[*nSoftEdges].blocker = leader;
+          softEdges[*nSoftEdges].lock = lock;
+          (*nSoftEdges)++;
+          return true;
         }
       }
     }
@@ -735,17 +735,17 @@ FindLockCycleRecurseMember(PGPROC *checkProc, PGPROC *checkProcLeader, int depth
     }
     else
     {
-
-
-
-
-
-
-
-
-
-
-
+      proc = (PGPROC *)waitQueue->links.next;
+      queue_size = waitQueue->size;
+      while (queue_size-- > 0)
+      {
+        if (proc->lockGroupLeader == checkProcLeader)
+        {
+          lastGroupMember = proc;
+        }
+        proc = (PGPROC *)proc->links.next;
+      }
+      Assert(lastGroupMember != NULL);
     }
 
     /*
@@ -831,14 +831,14 @@ ExpandConstraints(EDGE *constraints, int nConstraints)
     /* Did we already make a list for this lock? */
     for (j = nWaitOrders; --j >= 0;)
     {
-
-
-
-
+      if (waitOrders[j].lock == lock)
+      {
+        break;
+      }
     }
     if (j >= 0)
     {
-
+      continue;
     }
     /* No, so allocate a new list */
     waitOrders[nWaitOrders].lock = lock;
@@ -853,7 +853,7 @@ ExpandConstraints(EDGE *constraints, int nConstraints)
      */
     if (!TopoSort(lock, constraints, i + 1, waitOrders[nWaitOrders].procs))
     {
-
+      return false;
     }
     nWaitOrders++;
   }
@@ -955,8 +955,8 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
         }
         else
         {
-
-
+          Assert(beforeConstraints[j] <= 0);
+          beforeConstraints[j] = -1;
         }
       }
     }
@@ -964,7 +964,7 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
     /* If no matching waiter, constraint is not relevant to this lock. */
     if (jj < 0)
     {
-
+      continue;
     }
 
     /*
@@ -988,8 +988,8 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
         }
         else
         {
-
-
+          Assert(beforeConstraints[k] <= 0);
+          beforeConstraints[k] = -1;
         }
       }
     }
@@ -997,7 +997,7 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
     /* If no matching blocker, constraint is not relevant to this lock. */
     if (kk < 0)
     {
-
+      continue;
     }
 
     Assert(beforeConstraints[jj] >= 0);
@@ -1028,7 +1028,7 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
     /* Find next candidate to output */
     while (topoProcs[last] == NULL)
     {
-
+      last--;
     }
     for (j = last; j >= 0; j--)
     {
@@ -1041,7 +1041,7 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
     /* If no available candidate, topological sort fails */
     if (j < 0)
     {
-
+      return false;
     }
 
     /*
@@ -1056,7 +1056,7 @@ TopoSort(LOCK *lock, EDGE *constraints, int nConstraints, PGPROC **ordering) /* 
     proc = topoProcs[j];
     if (proc->lockGroupLeader != NULL)
     {
-
+      proc = proc->lockGroupLeader;
     }
     Assert(proc != NULL);
     for (c = 0; c <= last; ++c)

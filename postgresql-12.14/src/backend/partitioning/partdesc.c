@@ -132,27 +132,27 @@ RelationBuildPartitionDesc(Relation rel)
       Datum datum;
       bool isnull;
 
-
-
-
-
-
-
-
-
-
-
-
+      pg_class = table_open(RelationRelationId, AccessShareLock);
+      ScanKeyInit(&key[0], Anum_pg_class_oid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(inhrelid));
+      scan = systable_beginscan(pg_class, ClassOidIndexId, true, NULL, 1, key);
+      tuple = systable_getnext(scan);
+      datum = heap_getattr(tuple, Anum_pg_class_relpartbound, RelationGetDescr(pg_class), &isnull);
+      if (!isnull)
+      {
+        boundspec = stringToNode(TextDatumGetCString(datum));
+      }
+      systable_endscan(scan);
+      table_close(pg_class, AccessShareLock);
     }
 
     /* Sanity checks. */
     if (!boundspec)
     {
-
+      elog(ERROR, "missing relpartbound for relation %u", inhrelid);
     }
     if (!IsA(boundspec, PartitionBoundSpec))
     {
-
+      elog(ERROR, "invalid relpartbound for relation %u", inhrelid);
     }
 
     /*
@@ -167,7 +167,7 @@ RelationBuildPartitionDesc(Relation rel)
       partdefid = get_default_partition_oid(RelationGetRelid(rel));
       if (partdefid != inhrelid)
       {
-
+        elog(ERROR, "expected partdefid %u, but got %u", inhrelid, partdefid);
       }
     }
 
@@ -256,8 +256,7 @@ CreatePartitionDirectory(MemoryContext mcxt)
 
 /*
  * PartitionDirectoryLookup
- *		Look up the partition descriptor for a relation in the
- *directory.
+ *		Look up the partition descriptor for a relation in the directory.
  *
  * The purpose of this function is to ensure that we get the same
  * PartitionDesc for each relation every time we look it up.  In the
@@ -320,7 +319,7 @@ equalPartitionDescs(PartitionKey key, PartitionDesc partdesc1, PartitionDesc par
   {
     if (partdesc2 == NULL)
     {
-
+      return false;
     }
     if (partdesc1->nparts != partdesc2->nparts)
     {
@@ -338,7 +337,7 @@ equalPartitionDescs(PartitionKey key, PartitionDesc partdesc1, PartitionDesc par
     {
       if (partdesc1->oids[i] != partdesc2->oids[i])
       {
-
+        return false;
       }
     }
 
@@ -350,17 +349,17 @@ equalPartitionDescs(PartitionKey key, PartitionDesc partdesc1, PartitionDesc par
     {
       if (partdesc2->boundinfo == NULL)
       {
-
+        return false;
       }
 
       if (!partition_bounds_equal(key->partnatts, key->parttyplen, key->parttypbyval, partdesc1->boundinfo, partdesc2->boundinfo))
       {
-
+        return false;
       }
     }
     else if (partdesc2->boundinfo != NULL)
     {
-
+      return false;
     }
   }
   else if (partdesc2 != NULL)

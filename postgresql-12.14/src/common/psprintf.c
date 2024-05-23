@@ -114,7 +114,7 @@ pvsnprintf(char *buf, size_t len, const char *fmt, va_list args)
   if (unlikely(nprinted < 0))
   {
 #ifndef FRONTEND
-
+    elog(ERROR, "vsnprintf failed: %m with format string \"%s\"", fmt);
 #else
     fprintf(stderr, "vsnprintf failed: %s with format string \"%s\"\n", strerror(errno), fmt);
     exit(EXIT_FAILURE);
@@ -138,7 +138,7 @@ pvsnprintf(char *buf, size_t len, const char *fmt, va_list args)
   if (unlikely((size_t)nprinted > MaxAllocSize - 1))
   {
 #ifndef FRONTEND
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory")));
 #else
     fprintf(stderr, _("out of memory\n"));
     exit(EXIT_FAILURE);

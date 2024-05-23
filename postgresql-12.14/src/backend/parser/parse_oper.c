@@ -82,8 +82,8 @@ InvalidateOprCacheCallBack(Datum arg, int cacheid, uint32 hashvalue);
 
 /*
  * LookupOperName
- *		Given a possibly-qualified operator name and exact input
- *datatypes, look up the operator.
+ *		Given a possibly-qualified operator name and exact input datatypes,
+ *		look up the operator.
  *
  * Pass oprleft = InvalidOid for a prefix op, oprright = InvalidOid for
  * a postfix op.
@@ -113,7 +113,7 @@ LookupOperName(ParseState *pstate, List *opername, Oid oprleft, Oid oprright, bo
 
     if (!OidIsValid(oprleft))
     {
-
+      oprkind = 'l';
     }
     else if (!OidIsValid(oprright))
     {
@@ -225,7 +225,7 @@ get_sort_group_operators(Oid argtype, bool needLT, bool needEQ, bool needGT, Oid
   }
   if (needEQ && !OidIsValid(eq_opr))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify an equality operator for type %s", format_type_be(argtype))));
   }
 
   /* Return results as needed */
@@ -258,9 +258,9 @@ oprid(Operator op)
 Oid
 oprfuncid(Operator op)
 {
+  Form_pg_operator pgopform = (Form_pg_operator)GETSTRUCT(op);
 
-
-
+  return pgopform->oprcode;
 }
 
 /* binary_oper_exact()
@@ -429,11 +429,11 @@ oper(ParseState *pstate, List *opname, Oid ltypeId, Oid rtypeId, bool noError, i
 
       if (rtypeId == InvalidOid)
       {
-
+        rtypeId = ltypeId;
       }
       else if (ltypeId == InvalidOid)
       {
-
+        ltypeId = rtypeId;
       }
       inputOids[0] = ltypeId;
       inputOids[1] = rtypeId;
@@ -465,8 +465,8 @@ oper(ParseState *pstate, List *opname, Oid ltypeId, Oid rtypeId, bool noError, i
  *	given an opname and input datatypes, find a compatible binary operator
  *
  *	This is tighter than oper() because it will not return an operator that
- *	requires coercion of the input datatypes (but binary-compatible
- *operators are accepted).  Otherwise, the semantics are the same.
+ *	requires coercion of the input datatypes (but binary-compatible operators
+ *	are accepted).  Otherwise, the semantics are the same.
  */
 Operator
 compatible_oper(ParseState *pstate, List *op, Oid arg1, Oid arg2, bool noError, int location)
@@ -478,7 +478,7 @@ compatible_oper(ParseState *pstate, List *op, Oid arg1, Oid arg2, bool noError, 
   optup = oper(pstate, op, arg1, arg2, noError, location);
   if (optup == (Operator)NULL)
   {
-
+    return (Operator)NULL; /* must be noError case */
   }
 
   /* but is it good enough? */
@@ -489,14 +489,14 @@ compatible_oper(ParseState *pstate, List *op, Oid arg1, Oid arg2, bool noError, 
   }
 
   /* nope... */
+  ReleaseSysCache(optup);
 
+  if (!noError)
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator requires run-time type coercion: %s", op_signature_string(op, 'b', arg1, arg2)), parser_errposition(pstate, location)));
+  }
 
-
-
-
-
-
-
+  return (Operator)NULL;
 }
 
 /* compatible_oper_opid() -- get OID of a binary operator
@@ -518,7 +518,7 @@ compatible_oper_opid(List *op, Oid arg1, Oid arg2, bool noError)
     ReleaseSysCache(optup);
     return result;
   }
-
+  return InvalidOid;
 }
 
 /* right_oper() -- search for a unary right operator (postfix operator)
@@ -554,11 +554,11 @@ right_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
     operOid = find_oper_cache_entry(&key);
     if (OidIsValid(operOid))
     {
-
-
-
-
-
+      tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
+      if (HeapTupleIsValid(tup))
+      {
+        return (Operator)tup;
+      }
     }
   }
 
@@ -599,10 +599,10 @@ right_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
       make_oper_cache_entry(&key, operOid);
     }
   }
-
-
-
-
+  else if (!noError)
+  {
+    op_error(pstate, op, 'r', arg, InvalidOid, fdresult, location);
+  }
 
   return (Operator)tup;
 }
@@ -697,18 +697,18 @@ left_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
       make_oper_cache_entry(&key, operOid);
     }
   }
-
-
-
-
+  else if (!noError)
+  {
+    op_error(pstate, op, 'l', InvalidOid, arg, fdresult, location);
+  }
 
   return (Operator)tup;
 }
 
 /*
  * op_signature_string
- *		Build a string representing an operator name, including arg
- *type(s). The result is something like "integer + integer".
+ *		Build a string representing an operator name, including arg type(s).
+ *		The result is something like "integer + integer".
  *
  * This is typically used in the construction of operator-not-found error
  * messages.
@@ -743,11 +743,19 @@ op_error(ParseState *pstate, List *op, char oprkind, Oid arg1, Oid arg2, FuncDet
 {
   if (fdresult == FUNCDETAIL_MULTIPLE)
   {
-    ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("operator is not unique: %s", op_signature_string(op, oprkind, arg1, arg2)), errhint("Could not choose a best candidate operator. You might need to add explicit type casts."), parser_errposition(pstate, location)));
+    ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("operator is not unique: %s", op_signature_string(op, oprkind, arg1, arg2)),
+                       errhint("Could not choose a best candidate operator. "
+                               "You might need to add explicit type casts."),
+                       parser_errposition(pstate, location)));
   }
   else
   {
-    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator does not exist: %s", op_signature_string(op, oprkind, arg1, arg2)), (!arg1 || !arg2) ? errhint("No operator matches the given name and argument type. You might need to add an explicit type cast.") : errhint("No operator matches the given name and argument types. You might need to add explicit type casts."), parser_errposition(pstate, location)));
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator does not exist: %s", op_signature_string(op, oprkind, arg1, arg2)),
+                       (!arg1 || !arg2) ? errhint("No operator matches the given name and argument type. "
+                                                  "You might need to add an explicit type cast.")
+                                        : errhint("No operator matches the given name and argument types. "
+                                                  "You might need to add explicit type casts."),
+                       parser_errposition(pstate, location)));
   }
 }
 
@@ -804,7 +812,7 @@ make_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree, Node *last_s
   /* Check it's not a shell */
   if (!RegProcedureIsValid(opform->oprcode))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator is only a shell: %s", op_signature_string(opname, opform->oprkind, opform->oprleft, opform->oprright)), parser_errposition(pstate, location)));
   }
 
   /* Do typecasting and build the expression tree */
@@ -912,7 +920,7 @@ make_scalar_array_op(ParseState *pstate, List *opname, bool useOr, Node *ltree, 
   /* Check it's not a shell */
   if (!RegProcedureIsValid(opform->oprcode))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("operator is only a shell: %s", op_signature_string(opname, opform->oprkind, opform->oprleft, opform->oprright)), parser_errposition(pstate, location)));
   }
 
   args = list_make2(ltree, rtree);
@@ -937,7 +945,7 @@ make_scalar_array_op(ParseState *pstate, List *opname, bool useOr, Node *ltree, 
   }
   if (get_func_retset(opform->oprcode))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("op ANY/ALL (array) requires operator not to return a set"), parser_errposition(pstate, location)));
   }
 
   /*
@@ -956,7 +964,7 @@ make_scalar_array_op(ParseState *pstate, List *opname, bool useOr, Node *ltree, 
     res_atypeId = get_array_type(declared_arg_types[1]);
     if (!OidIsValid(res_atypeId))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find array type for data type %s", format_type_be(declared_arg_types[1])), parser_errposition(pstate, location)));
     }
   }
   actual_arg_types[1] = atypeId;
@@ -1049,7 +1057,7 @@ make_oper_cache_key(ParseState *pstate, OprCacheKey *key, List *opname, Oid ltyp
     /* get the active search path */
     if (fetch_search_path_array(key->search_path, MAX_CACHED_PATH_LEN) > MAX_CACHED_PATH_LEN)
     {
-
+      return false; /* oops, didn't fit */
     }
   }
 
@@ -1126,7 +1134,7 @@ InvalidateOprCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
   {
     if (hash_search(OprCacheHash, (void *)&hentry->key, HASH_REMOVE, NULL) == NULL)
     {
-
+      elog(ERROR, "hash table corrupted");
     }
   }
 }

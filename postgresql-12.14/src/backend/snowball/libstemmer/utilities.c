@@ -7,7 +7,8 @@ create_s(void)
 {
   symbol *p;
   void *mem = malloc(HEAD + (CREATE_SIZE + 1) * sizeof(symbol));
-  if (mem == NULL) {
+  if (mem == NULL)
+  {
     return NULL;
   }
   p = (symbol *)(HEAD + (char *)mem);
@@ -19,7 +20,8 @@ create_s(void)
 extern void
 lose_s(symbol *p)
 {
-  if (p == NULL) {
+  if (p == NULL)
+  {
     return;
   }
   free((char *)p - HEAD);
@@ -37,16 +39,22 @@ extern int
 skip_utf8(const symbol *p, int c, int lb, int l, int n)
 {
   int b;
-  if (n >= 0) {
-    for (; n > 0; n--) {
-      if (c >= l) {
+  if (n >= 0)
+  {
+    for (; n > 0; n--)
+    {
+      if (c >= l)
+      {
         return -1;
       }
       b = p[c++];
-      if (b >= 0xC0) { /* 1100 0000 */
-        while (c < l) {
+      if (b >= 0xC0)
+      { /* 1100 0000 */
+        while (c < l)
+        {
           b = p[c];
-          if (b >= 0xC0 || b < 0x80) {
+          if (b >= 0xC0 || b < 0x80)
+          {
             break;
           }
           /* break unless b is 10------ */
@@ -54,16 +62,23 @@ skip_utf8(const symbol *p, int c, int lb, int l, int n)
         }
       }
     }
-  } else {
-    for (; n < 0; n++) {
-      if (c <= lb) {
+  }
+  else
+  {
+    for (; n < 0; n++)
+    {
+      if (c <= lb)
+      {
         return -1;
       }
       b = p[--c];
-      if (b >= 0x80) { /* 1000 0000 */
-        while (c > lb) {
+      if (b >= 0x80)
+      { /* 1000 0000 */
+        while (c > lb)
+        {
           b = p[c];
-          if (b >= 0xC0) {
+          if (b >= 0xC0)
+          {
             break; /* 1100 0000 */
           }
           c--;
@@ -80,16 +95,19 @@ static int
 get_utf8(const symbol *p, int c, int l, int *slot)
 {
   int b0, b1;
-  if (c >= l) {
+  if (c >= l)
+  {
     return 0;
   }
   b0 = p[c++];
-  if (b0 < 0xC0 || c == l) { /* 1100 0000 */
+  if (b0 < 0xC0 || c == l)
+  { /* 1100 0000 */
     *slot = b0;
     return 1;
   }
   b1 = p[c++];
-  if (b0 < 0xE0 || c == l) { /* 1110 0000 */
+  if (b0 < 0xE0 || c == l)
+  { /* 1110 0000 */
     *slot = (b0 & 0x1F) << 6 | (b1 & 0x3F);
     return 2;
   }
@@ -101,16 +119,19 @@ static int
 get_b_utf8(const symbol *p, int c, int lb, int *slot)
 {
   int b0, b1;
-  if (c <= lb) {
+  if (c <= lb)
+  {
     return 0;
   }
   b0 = p[--c];
-  if (b0 < 0x80 || c == lb) { /* 1000 0000 */
+  if (b0 < 0x80 || c == lb)
+  { /* 1000 0000 */
     *slot = b0;
     return 1;
   }
   b1 = p[--c];
-  if (b1 >= 0xC0 || c == lb) { /* 1100 0000 */
+  if (b1 >= 0xC0 || c == lb)
+  { /* 1100 0000 */
     *slot = (b1 & 0x1F) << 6 | (b0 & 0x3F);
     return 2;
   }
@@ -121,13 +142,16 @@ get_b_utf8(const symbol *p, int c, int lb, int *slot)
 extern int
 in_grouping_U(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
     int w = get_utf8(z->p, z->c, z->l, &ch);
-    if (!w) {
+    if (!w)
+    {
       return -1;
     }
-    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0) {
+    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)
+    {
       return w;
     }
     z->c += w;
@@ -138,13 +162,16 @@ in_grouping_U(struct SN_env *z, const unsigned char *s, int min, int max, int re
 extern int
 in_grouping_b_U(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
     int w = get_b_utf8(z->p, z->c, z->lb, &ch);
-    if (!w) {
+    if (!w)
+    {
       return -1;
     }
-    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0) {
+    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)
+    {
       return w;
     }
     z->c -= w;
@@ -155,13 +182,16 @@ in_grouping_b_U(struct SN_env *z, const unsigned char *s, int min, int max, int 
 extern int
 out_grouping_U(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
     int w = get_utf8(z->p, z->c, z->l, &ch);
-    if (!w) {
+    if (!w)
+    {
       return -1;
     }
-    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)) {
+    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0))
+    {
       return w;
     }
     z->c += w;
@@ -172,13 +202,16 @@ out_grouping_U(struct SN_env *z, const unsigned char *s, int min, int max, int r
 extern int
 out_grouping_b_U(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
     int w = get_b_utf8(z->p, z->c, z->lb, &ch);
-    if (!w) {
+    if (!w)
+    {
       return -1;
     }
-    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)) {
+    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0))
+    {
       return w;
     }
     z->c -= w;
@@ -191,13 +224,16 @@ out_grouping_b_U(struct SN_env *z, const unsigned char *s, int min, int max, int
 extern int
 in_grouping(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
-    if (z->c >= z->l) {
+    if (z->c >= z->l)
+    {
       return -1;
     }
     ch = z->p[z->c];
-    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0) {
+    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)
+    {
       return 1;
     }
     z->c++;
@@ -208,13 +244,16 @@ in_grouping(struct SN_env *z, const unsigned char *s, int min, int max, int repe
 extern int
 in_grouping_b(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
-    if (z->c <= z->lb) {
+    if (z->c <= z->lb)
+    {
       return -1;
     }
     ch = z->p[z->c - 1];
-    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0) {
+    if (ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)
+    {
       return 1;
     }
     z->c--;
@@ -225,13 +264,16 @@ in_grouping_b(struct SN_env *z, const unsigned char *s, int min, int max, int re
 extern int
 out_grouping(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
-    if (z->c >= z->l) {
+    if (z->c >= z->l)
+    {
       return -1;
     }
     ch = z->p[z->c];
-    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)) {
+    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0))
+    {
       return 1;
     }
     z->c++;
@@ -242,13 +284,16 @@ out_grouping(struct SN_env *z, const unsigned char *s, int min, int max, int rep
 extern int
 out_grouping_b(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
 {
-  do {
+  do
+  {
     int ch;
-    if (z->c <= z->lb) {
+    if (z->c <= z->lb)
+    {
       return -1;
     }
     ch = z->p[z->c - 1];
-    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0)) {
+    if (!(ch > max || (ch -= min) < 0 || (s[ch >> 3] & (0X1 << (ch & 0X7))) == 0))
+    {
       return 1;
     }
     z->c--;
@@ -259,7 +304,8 @@ out_grouping_b(struct SN_env *z, const unsigned char *s, int min, int max, int r
 extern int
 eq_s(struct SN_env *z, int s_size, const symbol *s)
 {
-  if (z->l - z->c < s_size || memcmp(z->p + z->c, s, s_size * sizeof(symbol)) != 0) {
+  if (z->l - z->c < s_size || memcmp(z->p + z->c, s, s_size * sizeof(symbol)) != 0)
+  {
     return 0;
   }
   z->c += s_size;
@@ -269,7 +315,8 @@ eq_s(struct SN_env *z, int s_size, const symbol *s)
 extern int
 eq_s_b(struct SN_env *z, int s_size, const symbol *s)
 {
-  if (z->c - z->lb < s_size || memcmp(z->p + z->c - s_size, s, s_size * sizeof(symbol)) != 0) {
+  if (z->c - z->lb < s_size || memcmp(z->p + z->c - s_size, s, s_size * sizeof(symbol)) != 0)
+  {
     return 0;
   }
   z->c -= s_size;
@@ -306,37 +353,47 @@ find_among(struct SN_env *z, const struct among *v, int v_size)
 
   int first_key_inspected = 0;
 
-  while (1) {
+  while (1)
+  {
     int k = i + ((j - i) >> 1);
     int diff = 0;
     int common = common_i < common_j ? common_i : common_j; /* smaller */
     w = v + k;
     {
       int i2;
-      for (i2 = common; i2 < w->s_size; i2++) {
-        if (c + common == l) {
+      for (i2 = common; i2 < w->s_size; i2++)
+      {
+        if (c + common == l)
+        {
           diff = -1;
           break;
         }
         diff = q[common] - w->s[i2];
-        if (diff != 0) {
+        if (diff != 0)
+        {
           break;
         }
         common++;
       }
     }
-    if (diff < 0) {
+    if (diff < 0)
+    {
       j = k;
       common_j = common;
-    } else {
+    }
+    else
+    {
       i = k;
       common_i = common;
     }
-    if (j - i <= 1) {
-      if (i > 0) {
+    if (j - i <= 1)
+    {
+      if (i > 0)
+      {
         break; /* v->s has been inspected */
       }
-      if (j == i) {
+      if (j == i)
+      {
         break; /* only one item in v */
       }
 
@@ -344,29 +401,35 @@ find_among(struct SN_env *z, const struct among *v, int v_size)
          v->s inspected. This looks messy, but is actually
          the optimal approach.  */
 
-      if (first_key_inspected) {
+      if (first_key_inspected)
+      {
         break;
       }
       first_key_inspected = 1;
     }
   }
-  while (1) {
+  while (1)
+  {
     w = v + i;
-    if (common_i >= w->s_size) {
+    if (common_i >= w->s_size)
+    {
       z->c = c + w->s_size;
-      if (w->function == 0) {
+      if (w->function == 0)
+      {
         return w->result;
       }
       {
         int res = w->function(z);
         z->c = c + w->s_size;
-        if (res) {
+        if (res)
+        {
           return w->result;
         }
       }
     }
     i = w->substring_i;
-    if (i < 0) {
+    if (i < 0)
+    {
       return 0;
     }
   }
@@ -392,62 +455,78 @@ find_among_b(struct SN_env *z, const struct among *v, int v_size)
 
   int first_key_inspected = 0;
 
-  while (1) {
+  while (1)
+  {
     int k = i + ((j - i) >> 1);
     int diff = 0;
     int common = common_i < common_j ? common_i : common_j;
     w = v + k;
     {
       int i2;
-      for (i2 = w->s_size - 1 - common; i2 >= 0; i2--) {
-        if (c - common == lb) {
+      for (i2 = w->s_size - 1 - common; i2 >= 0; i2--)
+      {
+        if (c - common == lb)
+        {
           diff = -1;
           break;
         }
         diff = q[-common] - w->s[i2];
-        if (diff != 0) {
+        if (diff != 0)
+        {
           break;
         }
         common++;
       }
     }
-    if (diff < 0) {
+    if (diff < 0)
+    {
       j = k;
       common_j = common;
-    } else {
+    }
+    else
+    {
       i = k;
       common_i = common;
     }
-    if (j - i <= 1) {
-      if (i > 0) {
+    if (j - i <= 1)
+    {
+      if (i > 0)
+      {
         break;
       }
-      if (j == i) {
+      if (j == i)
+      {
         break;
       }
-      if (first_key_inspected) {
+      if (first_key_inspected)
+      {
         break;
       }
       first_key_inspected = 1;
     }
   }
-  while (1) {
+  while (1)
+  {
     w = v + i;
-    if (common_i >= w->s_size) {
+    if (common_i >= w->s_size)
+    {
       z->c = c - w->s_size;
-      if (w->function == 0) {
+      if (w->function == 0)
+      {
         return w->result;
       }
       {
         int res = w->function(z);
         z->c = c - w->s_size;
-        if (res) {
+        if (res)
+        {
           return w->result;
         }
       }
     }
     i = w->substring_i;
-    if (i < 0) {
+    if (i < 0)
+    {
       return 0;
     }
   }
@@ -462,7 +541,8 @@ increase_size(symbol *p, int n)
   symbol *q;
   int new_size = n + 20;
   void *mem = realloc((char *)p - HEAD, HEAD + (new_size + 1) * sizeof(symbol));
-  if (mem == NULL) {
+  if (mem == NULL)
+  {
     lose_s(p);
     return NULL;
   }
@@ -481,34 +561,44 @@ replace_s(struct SN_env *z, int c_bra, int c_ket, int s_size, const symbol *s, i
 {
   int adjustment;
   int len;
-  if (z->p == NULL) {
+  if (z->p == NULL)
+  {
     z->p = create_s();
-    if (z->p == NULL) {
+    if (z->p == NULL)
+    {
       return -1;
     }
   }
   adjustment = s_size - (c_ket - c_bra);
   len = SIZE(z->p);
-  if (adjustment != 0) {
-    if (adjustment + len > CAPACITY(z->p)) {
+  if (adjustment != 0)
+  {
+    if (adjustment + len > CAPACITY(z->p))
+    {
       z->p = increase_size(z->p, adjustment + len);
-      if (z->p == NULL) {
+      if (z->p == NULL)
+      {
         return -1;
       }
     }
     memmove(z->p + c_ket + adjustment, z->p + c_ket, (len - c_ket) * sizeof(symbol));
     SET_SIZE(z->p, adjustment + len);
     z->l += adjustment;
-    if (z->c >= c_ket) {
+    if (z->c >= c_ket)
+    {
       z->c += adjustment;
-    } else if (z->c > c_bra) {
+    }
+    else if (z->c > c_bra)
+    {
       z->c = c_bra;
     }
   }
-  if (s_size) {
+  if (s_size)
+  {
     memmove(z->p + c_bra, s, s_size * sizeof(symbol));
   }
-  if (adjptr != NULL) {
+  if (adjptr != NULL)
+  {
     *adjptr = adjustment;
   }
   return 0;
@@ -532,7 +622,8 @@ slice_check(struct SN_env *z)
 extern int
 slice_from_s(struct SN_env *z, int s_size, const symbol *s)
 {
-  if (slice_check(z)) {
+  if (slice_check(z))
+  {
     return -1;
   }
   return replace_s(z, z->bra, z->ket, s_size, s, NULL);
@@ -554,13 +645,16 @@ extern int
 insert_s(struct SN_env *z, int bra, int ket, int s_size, const symbol *s)
 {
   int adjustment;
-  if (replace_s(z, bra, ket, s_size, s, &adjustment)) {
+  if (replace_s(z, bra, ket, s_size, s, &adjustment))
+  {
     return -1;
   }
-  if (bra <= z->bra) {
+  if (bra <= z->bra)
+  {
     z->bra += adjustment;
   }
-  if (bra <= z->ket) {
+  if (bra <= z->ket)
+  {
     z->ket += adjustment;
   }
   return 0;
@@ -575,15 +669,18 @@ insert_v(struct SN_env *z, int bra, int ket, const symbol *p)
 extern symbol *
 slice_to(struct SN_env *z, symbol *p)
 {
-  if (slice_check(z)) {
+  if (slice_check(z))
+  {
     lose_s(p);
     return NULL;
   }
   {
     int len = z->ket - z->bra;
-    if (CAPACITY(p) < len) {
+    if (CAPACITY(p) < len)
+    {
       p = increase_size(p, len);
-      if (p == NULL) {
+      if (p == NULL)
+      {
         return NULL;
       }
     }
@@ -597,9 +694,11 @@ extern symbol *
 assign_to(struct SN_env *z, symbol *p)
 {
   int len = z->l;
-  if (CAPACITY(p) < len) {
+  if (CAPACITY(p) < len)
+  {
     p = increase_size(p, len);
-    if (p == NULL) {
+    if (p == NULL)
+    {
       return NULL;
     }
   }
@@ -613,9 +712,11 @@ len_utf8(const symbol *p)
 {
   int size = SIZE(p);
   int len = 0;
-  while (size--) {
+  while (size--)
+  {
     symbol b = *p++;
-    if (b >= 0xC0 || b < 0x80) {
+    if (b >= 0xC0 || b < 0x80)
+    {
       ++len;
     }
   }

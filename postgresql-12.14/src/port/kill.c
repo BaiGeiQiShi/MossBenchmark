@@ -27,25 +27,30 @@ pgkill(int pid, int sig)
   DWORD bytes;
 
   /* we allow signal 0 here, but it will be ignored in pg_queue_signal */
-  if (sig >= PG_SIGNAL_COUNT || sig < 0) {
+  if (sig >= PG_SIGNAL_COUNT || sig < 0)
+  {
     errno = EINVAL;
     return -1;
   }
-  if (pid <= 0) {
+  if (pid <= 0)
+  {
     /* No support for process groups */
     errno = EINVAL;
     return -1;
   }
 
   /* special case for SIGKILL: just ask the system to terminate the target */
-  if (sig == SIGKILL) {
+  if (sig == SIGKILL)
+  {
     HANDLE prochandle;
 
-    if ((prochandle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid)) == NULL) {
+    if ((prochandle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid)) == NULL)
+    {
       errno = ESRCH;
       return -1;
     }
-    if (!TerminateProcess(prochandle, 255)) {
+    if (!TerminateProcess(prochandle, 255))
+    {
       _dosmaperr(GetLastError());
       CloseHandle(prochandle);
       return -1;
@@ -55,15 +60,18 @@ pgkill(int pid, int sig)
   }
   snprintf(pipename, sizeof(pipename), "\\\\.\\pipe\\pgsignal_%u", pid);
 
-  if (CallNamedPipe(pipename, &sigData, 1, &sigRet, 1, &bytes, 1000)) {
-    if (bytes != 1 || sigRet != sig) {
+  if (CallNamedPipe(pipename, &sigData, 1, &sigRet, 1, &bytes, 1000))
+  {
+    if (bytes != 1 || sigRet != sig)
+    {
       errno = ESRCH;
       return -1;
     }
     return 0;
   }
 
-  switch (GetLastError()) {
+  switch (GetLastError())
+  {
   case ERROR_BROKEN_PIPE:
   case ERROR_BAD_PIPE:
 
@@ -80,7 +88,7 @@ pgkill(int pid, int sig)
   case ERROR_ACCESS_DENIED:
     errno = EPERM;
     return -1;
-  default:;
+  default:
     errno = EINVAL; /* unexpected */
     return -1;
   }

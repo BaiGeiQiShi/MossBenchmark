@@ -55,8 +55,10 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "createdb", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:wWeO:D:T:E:l:", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWeO:D:T:E:l:", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -99,13 +101,14 @@ main(int argc, char *argv[])
     case 3:
       maintenance_db = pg_strdup(optarg);
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  switch (argc - optind) {
+  switch (argc - optind)
+  {
   case 0:
     break;
   case 1:
@@ -115,18 +118,21 @@ main(int argc, char *argv[])
     dbname = argv[optind];
     comment = argv[optind + 1];
     break;
-  default:;
+  default:
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind + 2]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (locale) {
-    if (lc_ctype) {
+  if (locale)
+  {
+    if (lc_ctype)
+    {
       pg_log_error("only one of --locale and --lc-ctype can be specified");
       exit(1);
     }
-    if (lc_collate) {
+    if (lc_collate)
+    {
       pg_log_error("only one of --locale and --lc-collate can be specified");
       exit(1);
     }
@@ -134,25 +140,34 @@ main(int argc, char *argv[])
     lc_collate = locale;
   }
 
-  if (encoding) {
-    if (pg_char_to_encoding(encoding) < 0) {
+  if (encoding)
+  {
+    if (pg_char_to_encoding(encoding) < 0)
+    {
       pg_log_error("\"%s\" is not a valid encoding name", encoding);
       exit(1);
     }
   }
 
-  if (dbname == NULL) {
-    if (getenv("PGDATABASE")) {
+  if (dbname == NULL)
+  {
+    if (getenv("PGDATABASE"))
+    {
       dbname = getenv("PGDATABASE");
-    } else if (getenv("PGUSER")) {
+    }
+    else if (getenv("PGUSER"))
+    {
       dbname = getenv("PGUSER");
-    } else {
+    }
+    else
+    {
       dbname = get_user_name_or_exit(progname);
     }
   }
 
   /* No point in trying to use postgres db when creating postgres db. */
-  if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0) {
+  if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0)
+  {
     maintenance_db = "template1";
   }
 
@@ -169,36 +184,44 @@ main(int argc, char *argv[])
 
   appendPQExpBuffer(&sql, "CREATE DATABASE %s", fmtId(dbname));
 
-  if (owner) {
+  if (owner)
+  {
     appendPQExpBuffer(&sql, " OWNER %s", fmtId(owner));
   }
-  if (tablespace) {
+  if (tablespace)
+  {
     appendPQExpBuffer(&sql, " TABLESPACE %s", fmtId(tablespace));
   }
-  if (encoding) {
+  if (encoding)
+  {
     appendPQExpBufferStr(&sql, " ENCODING ");
     appendStringLiteralConn(&sql, encoding, conn);
   }
-  if (template) {
+  if (template)
+  {
     appendPQExpBuffer(&sql, " TEMPLATE %s", fmtId(template));
   }
-  if (lc_collate) {
+  if (lc_collate)
+  {
     appendPQExpBufferStr(&sql, " LC_COLLATE ");
     appendStringLiteralConn(&sql, lc_collate, conn);
   }
-  if (lc_ctype) {
+  if (lc_ctype)
+  {
     appendPQExpBufferStr(&sql, " LC_CTYPE ");
     appendStringLiteralConn(&sql, lc_ctype, conn);
   }
 
   appendPQExpBufferChar(&sql, ';');
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", sql.data);
   }
   result = PQexec(conn, sql.data);
 
-  if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(result) != PGRES_COMMAND_OK)
+  {
     pg_log_error("database creation failed: %s", PQerrorMessage(conn));
     PQfinish(conn);
     exit(1);
@@ -206,17 +229,20 @@ main(int argc, char *argv[])
 
   PQclear(result);
 
-  if (comment) {
+  if (comment)
+  {
     printfPQExpBuffer(&sql, "COMMENT ON DATABASE %s IS ", fmtId(dbname));
     appendStringLiteralConn(&sql, comment, conn);
     appendPQExpBufferChar(&sql, ';');
 
-    if (echo) {
+    if (echo)
+    {
       printf("%s\n", sql.data);
     }
     result = PQexec(conn, sql.data);
 
-    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+    if (PQresultStatus(result) != PGRES_COMMAND_OK)
+    {
       pg_log_error("comment creation failed (database was created): %s", PQerrorMessage(conn));
       PQfinish(conn);
       exit(1);

@@ -53,14 +53,14 @@ RS_isRegis(const char *str)
       {
         state = RS_IN_NONEOF;
       }
-
-
-
-
-
-
-
-
+      else if (t_isalpha(c))
+      {
+        state = RS_IN_ONEOF_IN;
+      }
+      else
+      {
+        return false;
+      }
     }
     else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
     {
@@ -72,12 +72,12 @@ RS_isRegis(const char *str)
       }
       else
       {
-
+        return false;
       }
     }
     else
     {
-
+      elog(ERROR, "internal error in RS_isRegis: state %d", state);
     }
     c += pg_mblen(c);
   }
@@ -121,7 +121,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
         }
         else
         {
-
+          ptr = r->node = newRegisNode(NULL, len);
         }
         COPYCHAR(ptr->data, c);
         ptr->type = RSF_ONEOF;
@@ -131,7 +131,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
       {
         if (ptr)
         {
-
+          ptr = newRegisNode(ptr, len);
         }
         else
         {
@@ -140,9 +140,9 @@ RS_compile(Regis *r, bool issuffix, const char *str)
         ptr->type = RSF_ONEOF;
         state = RS_IN_ONEOF;
       }
-      else
-      { /* shouldn't get here */
-
+      else /* shouldn't get here */
+      {
+        elog(ERROR, "invalid regis pattern: \"%s\"", str);
       }
     }
     else if (state == RS_IN_ONEOF)
@@ -152,16 +152,16 @@ RS_compile(Regis *r, bool issuffix, const char *str)
         ptr->type = RSF_NONEOF;
         state = RS_IN_NONEOF;
       }
-
-
-
-
-
-
-
-
-
-
+      else if (t_isalpha(c))
+      {
+        COPYCHAR(ptr->data, c);
+        ptr->len = pg_mblen(c);
+        state = RS_IN_ONEOF_IN;
+      }
+      else /* shouldn't get here */
+      {
+        elog(ERROR, "invalid regis pattern: \"%s\"", str);
+      }
     }
     else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
     {
@@ -174,21 +174,21 @@ RS_compile(Regis *r, bool issuffix, const char *str)
       {
         state = RS_IN_WAIT;
       }
-      else
-      { /* shouldn't get here */
-
+      else /* shouldn't get here */
+      {
+        elog(ERROR, "invalid regis pattern: \"%s\"", str);
       }
     }
     else
     {
-
+      elog(ERROR, "internal error in RS_compile: state %d", state);
     }
     c += pg_mblen(c);
   }
 
-  if (state != RS_IN_WAIT)
-  { /* shouldn't get here */
-
+  if (state != RS_IN_WAIT) /* shouldn't get here */
+  {
+    elog(ERROR, "invalid regis pattern: \"%s\"", str);
   }
 
   ptr = r->node;
@@ -202,16 +202,16 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 void
 RS_free(Regis *r)
 {
+  RegisNode *ptr = r->node, *tmp;
 
+  while (ptr)
+  {
+    tmp = ptr->next;
+    pfree(ptr);
+    ptr = tmp;
+  }
 
-
-
-
-
-
-
-
-
+  r->node = NULL;
 }
 
 static bool
@@ -277,20 +277,20 @@ RS_execute(Regis *r, char *str)
   {
     switch (ptr->type)
     {
-    case RSF_ONEOF:;
+    case RSF_ONEOF:
       if (!mb_strchr((char *)ptr->data, c))
       {
-
+        return false;
       }
       break;
-    case RSF_NONEOF:;
+    case RSF_NONEOF:
       if (mb_strchr((char *)ptr->data, c))
       {
-
+        return false;
       }
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized regis node type: %d", ptr->type);
     }
     ptr = ptr->next;
     c += pg_mblen(c);

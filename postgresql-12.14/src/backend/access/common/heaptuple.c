@@ -326,8 +326,7 @@ heap_fill_tuple(TupleDesc tupleDesc, Datum *values, bool *isnull, char *data, Si
  */
 
 /* ----------------
- *		heap_attisnull	- returns true iff tuple attribute is not
- *present
+ *		heap_attisnull	- returns true iff tuple attribute is not present
  * ----------------
  */
 bool
@@ -340,14 +339,14 @@ heap_attisnull(HeapTuple tup, int attnum, TupleDesc tupleDesc)
   Assert(!tupleDesc || attnum <= tupleDesc->natts);
   if (attnum > (int)HeapTupleHeaderGetNatts(tup->t_data))
   {
-
-
-
-
-
-
-
-
+    if (tupleDesc && TupleDescAttr(tupleDesc, attnum - 1)->atthasmissing)
+    {
+      return false;
+    }
+    else
+    {
+      return true;
+    }
   }
 
   if (attnum > 0)
@@ -359,22 +358,22 @@ heap_attisnull(HeapTuple tup, int attnum, TupleDesc tupleDesc)
     return att_isnull(attnum - 1, tup->t_data->t_bits);
   }
 
+  switch (attnum)
+  {
+  case TableOidAttributeNumber:
+  case SelfItemPointerAttributeNumber:
+  case MinTransactionIdAttributeNumber:
+  case MinCommandIdAttributeNumber:
+  case MaxTransactionIdAttributeNumber:
+  case MaxCommandIdAttributeNumber:
+    /* these are never null */
+    break;
 
+  default:
+    elog(ERROR, "invalid attnum: %d", attnum);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /* ----------------
@@ -395,9 +394,9 @@ heap_attisnull(HeapTuple tup, int attnum, TupleDesc tupleDesc)
  *		you cache the offsets once, examining all the other tuples using
  *		the same attribute descriptor will go much quicker. -cim 5/4/91
  *
- *		NOTE: if you need to change this code, see also
- *heap_deform_tuple. Also see nocache_index_getattr, which is the same code for
- *index tuples.
+ *		NOTE: if you need to change this code, see also heap_deform_tuple.
+ *		Also see nocache_index_getattr, which is the same code for index
+ *		tuples.
  * ----------------
  */
 Datum
@@ -629,18 +628,18 @@ heap_getsysattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
 
   switch (attnum)
   {
-  case SelfItemPointerAttributeNumber:;
+  case SelfItemPointerAttributeNumber:
     /* pass-by-reference datatype */
     result = PointerGetDatum(&(tup->t_self));
     break;
-  case MinTransactionIdAttributeNumber:;
+  case MinTransactionIdAttributeNumber:
     result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmin(tup->t_data));
     break;
-  case MaxTransactionIdAttributeNumber:;
+  case MaxTransactionIdAttributeNumber:
     result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmax(tup->t_data));
     break;
-  case MinCommandIdAttributeNumber:;
-  case MaxCommandIdAttributeNumber:;
+  case MinCommandIdAttributeNumber:
+  case MaxCommandIdAttributeNumber:
 
     /*
      * cmin and cmax are now both aliases for the same field, which
@@ -650,13 +649,13 @@ heap_getsysattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
      */
     result = CommandIdGetDatum(HeapTupleHeaderGetRawCommandId(tup->t_data));
     break;
-  case TableOidAttributeNumber:;
+  case TableOidAttributeNumber:
     result = ObjectIdGetDatum(tup->t_tableOid);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "invalid attnum: %d", attnum);
+    result = 0; /* keep compiler quiet */
+    break;
   }
   return result;
 }
@@ -677,7 +676,7 @@ heap_copytuple(HeapTuple tuple)
 
   if (!HeapTupleIsValid(tuple) || tuple->t_data == NULL)
   {
-
+    return NULL;
   }
 
   newTuple = (HeapTuple)palloc(HEAPTUPLESIZE + tuple->t_len);
@@ -701,17 +700,17 @@ heap_copytuple(HeapTuple tuple)
 void
 heap_copytuple_with_tuple(HeapTuple src, HeapTuple dest)
 {
+  if (!HeapTupleIsValid(src) || src->t_data == NULL)
+  {
+    dest->t_data = NULL;
+    return;
+  }
 
-
-
-
-
-
-
-
-
-
-
+  dest->t_len = src->t_len;
+  dest->t_self = src->t_self;
+  dest->t_tableOid = src->t_tableOid;
+  dest->t_data = (HeapTupleHeader)palloc(src->t_len);
+  memcpy((char *)dest->t_data, (char *)src->t_data, src->t_len);
 }
 
 /*
@@ -727,198 +726,198 @@ heap_copytuple_with_tuple(HeapTuple src, HeapTuple dest)
 static void
 expand_tuple(HeapTuple *targetHeapTuple, MinimalTuple *targetMinimalTuple, HeapTuple sourceTuple, TupleDesc tupleDesc)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  AttrMissing *attrmiss = NULL;
+  int attnum;
+  int firstmissingnum = 0;
+  bool hasNulls = HeapTupleHasNulls(sourceTuple);
+  HeapTupleHeader targetTHeader;
+  HeapTupleHeader sourceTHeader = sourceTuple->t_data;
+  int sourceNatts = HeapTupleHeaderGetNatts(sourceTHeader);
+  int natts = tupleDesc->natts;
+  int sourceNullLen;
+  int targetNullLen;
+  Size sourceDataLen = sourceTuple->t_len - sourceTHeader->t_hoff;
+  Size targetDataLen;
+  Size len;
+  int hoff;
+  bits8 *nullBits = NULL;
+  int bitMask = 0;
+  char *targetData;
+  uint16 *infoMask;
+
+  Assert((targetHeapTuple && !targetMinimalTuple) || (!targetHeapTuple && targetMinimalTuple));
+
+  Assert(sourceNatts < natts);
+
+  sourceNullLen = (hasNulls ? BITMAPLEN(sourceNatts) : 0);
+
+  targetDataLen = sourceDataLen;
+
+  if (tupleDesc->constr && tupleDesc->constr->missing)
+  {
+    /*
+     * If there are missing values we want to put them into the tuple.
+     * Before that we have to compute the extra length for the values
+     * array and the variable length data.
+     */
+    attrmiss = tupleDesc->constr->missing;
+
+    /*
+     * Find the first item in attrmiss for which we don't have a value in
+     * the source. We can ignore all the missing entries before that.
+     */
+    for (firstmissingnum = sourceNatts; firstmissingnum < natts; firstmissingnum++)
+    {
+      if (attrmiss[firstmissingnum].am_present)
+      {
+        break;
+      }
+      else
+      {
+        hasNulls = true;
+      }
+    }
+
+    /*
+     * Now walk the missing attributes. If there is a missing value make
+     * space for it. Otherwise, it's going to be NULL.
+     */
+    for (attnum = firstmissingnum; attnum < natts; attnum++)
+    {
+      if (attrmiss[attnum].am_present)
+      {
+        Form_pg_attribute att = TupleDescAttr(tupleDesc, attnum);
+
+        targetDataLen = att_align_datum(targetDataLen, att->attalign, att->attlen, attrmiss[attnum].am_value);
+
+        targetDataLen = att_addlength_pointer(targetDataLen, att->attlen, attrmiss[attnum].am_value);
+      }
+      else
+      {
+        /* no missing value, so it must be null */
+        hasNulls = true;
+      }
+    }
+  } /* end if have missing values */
+  else
+  {
+    /*
+     * If there are no missing values at all then NULLS must be allowed,
+     * since some of the attributes are known to be absent.
+     */
+    hasNulls = true;
+  }
+
+  len = 0;
+
+  if (hasNulls)
+  {
+    targetNullLen = BITMAPLEN(natts);
+    len += targetNullLen;
+  }
+  else
+  {
+    targetNullLen = 0;
+  }
+
+  /*
+   * Allocate and zero the space needed.  Note that the tuple body and
+   * HeapTupleData management structure are allocated in one chunk.
+   */
+  if (targetHeapTuple)
+  {
+    len += offsetof(HeapTupleHeaderData, t_bits);
+    hoff = len = MAXALIGN(len); /* align user data safely */
+    len += targetDataLen;
+
+    *targetHeapTuple = (HeapTuple)palloc0(HEAPTUPLESIZE + len);
+    (*targetHeapTuple)->t_data = targetTHeader = (HeapTupleHeader)((char *)*targetHeapTuple + HEAPTUPLESIZE);
+    (*targetHeapTuple)->t_len = len;
+    (*targetHeapTuple)->t_tableOid = sourceTuple->t_tableOid;
+    (*targetHeapTuple)->t_self = sourceTuple->t_self;
+
+    targetTHeader->t_infomask = sourceTHeader->t_infomask;
+    targetTHeader->t_hoff = hoff;
+    HeapTupleHeaderSetNatts(targetTHeader, natts);
+    HeapTupleHeaderSetDatumLength(targetTHeader, len);
+    HeapTupleHeaderSetTypeId(targetTHeader, tupleDesc->tdtypeid);
+    HeapTupleHeaderSetTypMod(targetTHeader, tupleDesc->tdtypmod);
+    /* We also make sure that t_ctid is invalid unless explicitly set */
+    ItemPointerSetInvalid(&(targetTHeader->t_ctid));
+    if (targetNullLen > 0)
+    {
+      nullBits = (bits8 *)((char *)(*targetHeapTuple)->t_data + offsetof(HeapTupleHeaderData, t_bits));
+    }
+    targetData = (char *)(*targetHeapTuple)->t_data + hoff;
+    infoMask = &(targetTHeader->t_infomask);
+  }
+  else
+  {
+    len += SizeofMinimalTupleHeader;
+    hoff = len = MAXALIGN(len); /* align user data safely */
+    len += targetDataLen;
+
+    *targetMinimalTuple = (MinimalTuple)palloc0(len);
+    (*targetMinimalTuple)->t_len = len;
+    (*targetMinimalTuple)->t_hoff = hoff + MINIMAL_TUPLE_OFFSET;
+    (*targetMinimalTuple)->t_infomask = sourceTHeader->t_infomask;
+    /* Same macro works for MinimalTuples */
+    HeapTupleHeaderSetNatts(*targetMinimalTuple, natts);
+    if (targetNullLen > 0)
+    {
+      nullBits = (bits8 *)((char *)*targetMinimalTuple + offsetof(MinimalTupleData, t_bits));
+    }
+    targetData = (char *)*targetMinimalTuple + hoff;
+    infoMask = &((*targetMinimalTuple)->t_infomask);
+  }
+
+  if (targetNullLen > 0)
+  {
+    if (sourceNullLen > 0)
+    {
+      /* if bitmap pre-existed copy in - all is set */
+      memcpy(nullBits, ((char *)sourceTHeader) + offsetof(HeapTupleHeaderData, t_bits), sourceNullLen);
+      nullBits += sourceNullLen - 1;
+    }
+    else
+    {
+      sourceNullLen = BITMAPLEN(sourceNatts);
+      /* Set NOT NULL for all existing attributes */
+      memset(nullBits, 0xff, sourceNullLen);
+
+      nullBits += sourceNullLen - 1;
+
+      if (sourceNatts & 0x07)
+      {
+        /* build the mask (inverted!) */
+        bitMask = 0xff << (sourceNatts & 0x07);
+        /* Voila */
+        *nullBits = ~bitMask;
+      }
+    }
+
+    bitMask = (1 << ((sourceNatts - 1) & 0x07));
+  } /* End if have null bitmap */
+
+  memcpy(targetData, ((char *)sourceTuple->t_data) + sourceTHeader->t_hoff, sourceDataLen);
+
+  targetData += sourceDataLen;
+
+  /* Now fill in the missing values */
+  for (attnum = sourceNatts; attnum < natts; attnum++)
+  {
+
+    Form_pg_attribute attr = TupleDescAttr(tupleDesc, attnum);
+
+    if (attrmiss && attrmiss[attnum].am_present)
+    {
+      fill_val(attr, nullBits ? &nullBits : NULL, &bitMask, &targetData, infoMask, attrmiss[attnum].am_value, false);
+    }
+    else
+    {
+      fill_val(attr, &nullBits, &bitMask, &targetData, infoMask, (Datum)0, true);
+    }
+  } /* end loop over missing attributes */
 }
 
 /*
@@ -927,10 +926,10 @@ expand_tuple(HeapTuple *targetHeapTuple, MinimalTuple *targetMinimalTuple, HeapT
 MinimalTuple
 minimal_expand_tuple(HeapTuple sourceTuple, TupleDesc tupleDesc)
 {
+  MinimalTuple minimalTuple;
 
-
-
-
+  expand_tuple(NULL, &minimalTuple, sourceTuple, tupleDesc);
+  return minimalTuple;
 }
 
 /*
@@ -939,10 +938,10 @@ minimal_expand_tuple(HeapTuple sourceTuple, TupleDesc tupleDesc)
 HeapTuple
 heap_expand_tuple(HeapTuple sourceTuple, TupleDesc tupleDesc)
 {
+  HeapTuple heapTuple;
 
-
-
-
+  expand_tuple(&heapTuple, NULL, sourceTuple, tupleDesc);
+  return heapTuple;
 }
 
 /* ----------------
@@ -962,7 +961,7 @@ heap_copy_tuple_as_datum(HeapTuple tuple, TupleDesc tupleDesc)
    */
   if (HeapTupleHasExternal(tuple))
   {
-
+    return toast_flatten_tuple_to_datum(tuple->t_data, tuple->t_len, tupleDesc);
   }
 
   /*
@@ -1000,7 +999,7 @@ heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull)
 
   if (numberOfAttributes > MaxTupleAttributeNumber)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("number of columns (%d) exceeds limit (%d)", numberOfAttributes, MaxTupleAttributeNumber)));
   }
 
   /*
@@ -1063,8 +1062,7 @@ heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull)
 
 /*
  * heap_modify_tuple
- *		form a new tuple from an old tuple and a set of replacement
- *values.
+ *		form a new tuple from an old tuple and a set of replacement values.
  *
  * The replValues, replIsnull, and doReplace arrays must be of the length
  * indicated by tupleDesc->natts.  The new tuple is constructed using the data
@@ -1127,8 +1125,7 @@ heap_modify_tuple(HeapTuple tuple, TupleDesc tupleDesc, Datum *replValues, bool 
 
 /*
  * heap_modify_tuple_by_cols
- *		form a new tuple from an old tuple and a set of replacement
- *values.
+ *		form a new tuple from an old tuple and a set of replacement values.
  *
  * This is like heap_modify_tuple, except that instead of specifying which
  * column(s) to replace by a boolean map, an array of target column numbers
@@ -1162,7 +1159,7 @@ heap_modify_tuple_by_cols(HeapTuple tuple, TupleDesc tupleDesc, int nCols, int *
 
     if (attnum <= 0 || attnum > numberOfAttributes)
     {
-
+      elog(ERROR, "invalid column number %d", attnum);
     }
     values[attnum - 1] = replValues[i];
     isnull[attnum - 1] = replIsnull[i];
@@ -1307,8 +1304,8 @@ heap_freetuple(HeapTuple htup)
 
 /*
  * heap_form_minimal_tuple
- *		construct a MinimalTuple from the given values[] and isnull[]
- *arrays, which are of the length indicated by tupleDescriptor->natts
+ *		construct a MinimalTuple from the given values[] and isnull[] arrays,
+ *		which are of the length indicated by tupleDescriptor->natts
  *
  * This is exactly like heap_form_tuple() except that the result is a
  * "minimal" tuple lacking a HeapTupleData header as well as room for system
@@ -1328,7 +1325,7 @@ heap_form_minimal_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull)
 
   if (numberOfAttributes > MaxTupleAttributeNumber)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("number of columns (%d) exceeds limit (%d)", numberOfAttributes, MaxTupleAttributeNumber)));
   }
 
   /*
@@ -1453,5 +1450,5 @@ minimal_tuple_from_heap_tuple(HeapTuple htup)
 size_t
 varsize_any(void *p)
 {
-
+  return VARSIZE_ANY(p);
 }

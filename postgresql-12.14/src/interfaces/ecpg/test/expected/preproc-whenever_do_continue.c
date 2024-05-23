@@ -22,7 +22,8 @@ main(void)
   /* exec sql begin declare section */
 
 #line 15 "whenever_do_continue.pgc"
-  struct {
+  struct
+  {
 #line 12 "whenever_do_continue.pgc"
     char ename[12];
 
@@ -48,7 +49,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 23 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -56,10 +58,11 @@ main(void)
 
   strcpy(msg, "create");
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"create table emp ( ename varchar , sal double precision , comm double precision )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table emp ( ename varchar , sal double precision , comm double precision )", ECPGt_EOIT, ECPGt_EORT);
 #line 26 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -70,7 +73,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into emp values ( 'Ram' , 111100 , 21 )", ECPGt_EOIT, ECPGt_EORT);
 #line 29 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -80,7 +84,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into emp values ( 'aryan' , 11110 , null )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -90,7 +95,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into emp values ( 'josh' , 10000 , 10 )", ECPGt_EOIT, ECPGt_EORT);
 #line 31 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -100,21 +106,22 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into emp values ( 'tom' , 20000 , null )", ECPGt_EOIT, ECPGt_EORT);
 #line 32 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 32 "whenever_do_continue.pgc"
 
-  /* declare c cursor for select ename , sal , comm from emp order by ename
-   * collate \"C\" asc */
+  /* declare c cursor for select ename , sal , comm from emp order by ename collate \"C\" asc */
 #line 34 "whenever_do_continue.pgc"
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"declare c cursor for select ename , sal , comm from emp order by ename collate \"C\" asc",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare c cursor for select ename , sal , comm from emp order by ename collate \"C\" asc", ECPGt_EOIT, ECPGt_EORT);
 #line 36 "whenever_do_continue.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -124,22 +131,24 @@ main(void)
   /* exec sql whenever not found  break ; */
 #line 39 "whenever_do_continue.pgc"
 
-  /* The DO CONTINUE makes the loop start at the next iteration when an error
-   * occurs.*/
+  /* The DO CONTINUE makes the loop start at the next iteration when an error occurs.*/
   /* exec sql whenever sqlerror  continue ; */
 #line 42 "whenever_do_continue.pgc"
 
-  for (loopcount = 0; loopcount < 100; loopcount++) {
+  for (loopcount = 0; loopcount < 100; loopcount++)
+  {
     {
       ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch c", ECPGt_EOIT, ECPGt_char, &(emp.ename), (long)12, (long)1, (12) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(emp.sal), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_float, &(emp.comm), (long)1, (long)1, sizeof(float), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 46 "whenever_do_continue.pgc"
 
-      if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+      if (sqlca.sqlcode == ECPG_NOT_FOUND)
+      {
         break;
       }
 #line 46 "whenever_do_continue.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         continue;
       }
     }

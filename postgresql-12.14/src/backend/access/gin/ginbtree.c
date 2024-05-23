@@ -52,8 +52,8 @@ ginTraverseLock(Buffer buffer, bool searchMode)
       if (!GinPageIsLeaf(page))
       {
         /* restore old lock type (very rare) */
-
-
+        LockBuffer(buffer, GIN_UNLOCK);
+        LockBuffer(buffer, GIN_SHARE);
       }
       else
       {
@@ -113,7 +113,7 @@ ginFindLeafPage(GinBtree btree, bool searchMode, bool rootConflictCheck, Snapsho
      */
     if (!searchMode && GinPageIsIncompleteSplit(page))
     {
-
+      ginFinishSplit(btree, stack, false, NULL);
     }
 
     /*
@@ -124,25 +124,25 @@ ginFindLeafPage(GinBtree btree, bool searchMode, bool rootConflictCheck, Snapsho
     {
       BlockNumber rightlink = GinPageGetOpaque(page)->rightlink;
 
+      if (rightlink == InvalidBlockNumber)
+      {
+        /* rightmost page */
+        break;
+      }
 
+      stack->buffer = ginStepRight(stack->buffer, btree->index, access);
+      stack->blkno = rightlink;
+      page = BufferGetPage(stack->buffer);
+      TestForOldSnapshot(snapshot, btree->index, page);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (!searchMode && GinPageIsIncompleteSplit(page))
+      {
+        ginFinishSplit(btree, stack, false, NULL);
+      }
     }
 
-    if (GinPageIsLeaf(page))
-    { /* we found, return locked page */
+    if (GinPageIsLeaf(page)) /* we found, return locked page */
+    {
       return stack;
     }
 
@@ -196,7 +196,7 @@ ginStepRight(Buffer buffer, Relation index, int lockmode)
   page = BufferGetPage(nextbuffer);
   if (isLeaf != GinPageIsLeaf(page) || isData != GinPageIsData(page))
   {
-
+    elog(ERROR, "right sibling of GIN page is of different type");
   }
 
   return nextbuffer;
@@ -227,103 +227,103 @@ freeGinBtreeStack(GinBtreeStack *stack)
 static void
 ginFindParents(GinBtree btree, GinBtreeStack *stack)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Page page;
+  Buffer buffer;
+  BlockNumber blkno, leftmostBlkno;
+  OffsetNumber offset;
+  GinBtreeStack *root;
+  GinBtreeStack *ptr;
+
+  /*
+   * Unwind the stack all the way up to the root, leaving only the root
+   * item.
+   *
+   * Be careful not to release the pin on the root page! The pin on root
+   * page is required to lock out concurrent vacuums on the tree.
+   */
+  root = stack->parent;
+  while (root->parent)
+  {
+    ReleaseBuffer(root->buffer);
+    root = root->parent;
+  }
+
+  Assert(root->blkno == btree->rootBlkno);
+  Assert(BufferGetBlockNumber(root->buffer) == btree->rootBlkno);
+  root->off = InvalidOffsetNumber;
+
+  blkno = root->blkno;
+  buffer = root->buffer;
+  offset = InvalidOffsetNumber;
+
+  ptr = (GinBtreeStack *)palloc(sizeof(GinBtreeStack));
+
+  for (;;)
+  {
+    LockBuffer(buffer, GIN_EXCLUSIVE);
+    page = BufferGetPage(buffer);
+    if (GinPageIsLeaf(page))
+    {
+      elog(ERROR, "Lost path");
+    }
+
+    if (GinPageIsIncompleteSplit(page))
+    {
+      Assert(blkno != btree->rootBlkno);
+      ptr->blkno = blkno;
+      ptr->buffer = buffer;
+
+      /*
+       * parent may be wrong, but if so, the ginFinishSplit call will
+       * recurse to call ginFindParents again to fix it.
+       */
+      ptr->parent = root;
+      ptr->off = InvalidOffsetNumber;
+
+      ginFinishSplit(btree, ptr, false, NULL);
+    }
+
+    leftmostBlkno = btree->getLeftMostChild(btree, page);
+
+    while ((offset = btree->findChildPtr(btree, page, stack->blkno, InvalidOffsetNumber)) == InvalidOffsetNumber)
+    {
+      blkno = GinPageGetOpaque(page)->rightlink;
+      if (blkno == InvalidBlockNumber)
+      {
+        UnlockReleaseBuffer(buffer);
+        break;
+      }
+      buffer = ginStepRight(buffer, btree->index, GIN_EXCLUSIVE);
+      page = BufferGetPage(buffer);
+
+      /* finish any incomplete splits, as above */
+      if (GinPageIsIncompleteSplit(page))
+      {
+        Assert(blkno != btree->rootBlkno);
+        ptr->blkno = blkno;
+        ptr->buffer = buffer;
+        ptr->parent = root;
+        ptr->off = InvalidOffsetNumber;
+
+        ginFinishSplit(btree, ptr, false, NULL);
+      }
+    }
+
+    if (blkno != InvalidBlockNumber)
+    {
+      ptr->blkno = blkno;
+      ptr->buffer = buffer;
+      ptr->parent = root; /* it may be wrong, but in next call we will
+                           * correct */
+      ptr->off = offset;
+      stack->parent = ptr;
+      return;
+    }
+
+    /* Descend down to next level */
+    blkno = leftmostBlkno;
+    buffer = ReadBuffer(btree->index, blkno);
+  }
 }
 
 /*
@@ -391,7 +391,7 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
   if (rc == GPTP_NO_WORK)
   {
     /* Nothing to do */
-
+    result = true;
   }
   else if (rc == GPTP_INSERT)
   {
@@ -490,8 +490,8 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
     data.flags = xlflags;
     if (BufferIsValid(childbuf))
     {
-
-
+      data.leftChildBlkno = BufferGetBlockNumber(childbuf);
+      data.rightChildBlkno = GinPageGetOpaque(childpage)->rightlink;
     }
     else
     {
@@ -595,8 +595,8 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
     /* We also clear childbuf's INCOMPLETE_SPLIT flag, if passed */
     if (BufferIsValid(childbuf))
     {
-
-
+      GinPageGetOpaque(childpage)->flags &= ~GIN_INCOMPLETE_SPLIT;
+      MarkBufferDirty(childbuf);
     }
 
     /* write WAL record */
@@ -624,7 +624,7 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
       }
       if (BufferIsValid(childbuf))
       {
-
+        XLogRegisterBuffer(3, childbuf, REGBUF_STANDARD);
       }
 
       XLogRegisterData((char *)&data, sizeof(ginxlogSplit));
@@ -639,7 +639,7 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
       }
       if (BufferIsValid(childbuf))
       {
-
+        PageSetLSN(childpage, recptr);
       }
     }
     END_CRIT_SECTION();
@@ -663,8 +663,8 @@ ginPlaceToPage(GinBtree btree, GinBtreeStack *stack, void *insertdata, BlockNumb
   }
   else
   {
-
-
+    elog(ERROR, "invalid return code from GIN placeToPage method: %d", rc);
+    result = false; /* keep compiler quiet */
   }
 
   /* Clean up temp context */
@@ -698,7 +698,7 @@ ginFinishSplit(GinBtree btree, GinBtreeStack *stack, bool freestack, GinStatsDat
    */
   if (!freestack)
   {
-
+    elog(DEBUG1, "finishing incomplete split of block %u in gin index \"%s\"", stack->blkno, RelationGetRelationName(btree->index));
   }
 
   /* this loop crawls up the stack until the insertion is complete */
@@ -722,34 +722,34 @@ ginFinishSplit(GinBtree btree, GinBtreeStack *stack, bool freestack, GinStatsDat
      */
     if (GinPageIsIncompleteSplit(BufferGetPage(parent->buffer)))
     {
-
+      ginFinishSplit(btree, parent, false, buildStats);
     }
 
     /* move right if it's needed */
     page = BufferGetPage(parent->buffer);
     while ((parent->off = btree->findChildPtr(btree, page, stack->blkno, parent->off)) == InvalidOffsetNumber)
     {
+      if (GinPageRightMost(page))
+      {
+        /*
+         * rightmost page, but we don't find parent, we should use
+         * plain search...
+         */
+        LockBuffer(parent->buffer, GIN_UNLOCK);
+        ginFindParents(btree, stack);
+        parent = stack->parent;
+        Assert(parent != NULL);
+        break;
+      }
 
+      parent->buffer = ginStepRight(parent->buffer, btree->index, GIN_EXCLUSIVE);
+      parent->blkno = BufferGetBlockNumber(parent->buffer);
+      page = BufferGetPage(parent->buffer);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (GinPageIsIncompleteSplit(BufferGetPage(parent->buffer)))
+      {
+        ginFinishSplit(btree, parent, false, buildStats);
+      }
     }
 
     /* insert the downlink */
@@ -807,7 +807,7 @@ ginInsertValue(GinBtree btree, GinBtreeStack *stack, void *insertdata, GinStatsD
   /* If the leaf page was incompletely split, finish the split first */
   if (GinPageIsIncompleteSplit(BufferGetPage(stack->buffer)))
   {
-
+    ginFinishSplit(btree, stack, false, buildStats);
   }
 
   done = ginPlaceToPage(btree, stack, insertdata, InvalidBlockNumber, InvalidBuffer, buildStats);

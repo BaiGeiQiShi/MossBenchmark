@@ -158,7 +158,7 @@ ProcessQuery(PlannedStmt *plan, const char *sourceText, ParamListInfo params, Qu
     case CMD_DELETE:
       snprintf(completionTag, COMPLETION_TAG_BUFSIZE, "DELETE " UINT64_FORMAT, queryDesc->estate->es_processed);
       break;
-    default:;
+    default:
       strcpy(completionTag, "???");
       break;
     }
@@ -175,8 +175,7 @@ ProcessQuery(PlannedStmt *plan, const char *sourceText, ParamListInfo params, Qu
 
 /*
  * ChoosePortalStrategy
- *		Select portal execution strategy given the intended statement
- *list.
+ *		Select portal execution strategy given the intended statement list.
  *
  * The list elements can be Querys or PlannedStmts.
  * That's more general than portals need, but plancache.c uses this too.
@@ -319,8 +318,8 @@ ChoosePortalStrategy(List *stmts)
 
 /*
  * FetchPortalTargetList
- *		Given a portal that returns tuples, extract the query
- *targetlist. Returns NIL if the portal doesn't have a determinable targetlist.
+ *		Given a portal that returns tuples, extract the query targetlist.
+ *		Returns NIL if the portal doesn't have a determinable targetlist.
  *
  * Note: do not modify the result.
  */
@@ -338,9 +337,8 @@ FetchPortalTargetList(Portal portal)
 
 /*
  * FetchStatementTargetList
- *		Given a statement that returns tuples, extract the query
- *targetlist. Returns NIL if the statement doesn't have a determinable
- *targetlist.
+ *		Given a statement that returns tuples, extract the query targetlist.
+ *		Returns NIL if the statement doesn't have a determinable targetlist.
  *
  * This can be applied to a Query or a PlannedStmt.
  * That's more general than portals need, but plancache.c uses this too.
@@ -827,7 +825,7 @@ PortalRun(Portal portal, long count, bool isTopLevel, bool run_once, DestReceive
       result = true;
       break;
 
-    default:;
+    default:
       elog(ERROR, "unrecognized portal strategy: %d", (int)portal->strategy);
       result = false; /* keep compiler quiet */
       break;
@@ -894,8 +892,8 @@ PortalRun(Portal portal, long count, bool isTopLevel, bool run_once, DestReceive
 /*
  * PortalRunSelect
  *		Execute a portal's query in PORTAL_ONE_SELECT mode, and also
- *		when fetching from a completed holdStore in
- *PORTAL_ONE_RETURNING, PORTAL_ONE_MOD_WITH, and PORTAL_UTIL_SELECT cases.
+ *		when fetching from a completed holdStore in PORTAL_ONE_RETURNING,
+ *		PORTAL_ONE_MOD_WITH, and PORTAL_UTIL_SELECT cases.
  *
  * This handles simple N-rows-forward-or-backward cases.  For more complex
  * nonsequential access to a portal, see PortalRunFetch.
@@ -1049,8 +1047,7 @@ PortalRunSelect(Portal portal, bool forward, long count, DestReceiver *dest)
 
 /*
  * FillPortalStore
- *		Run the query and load result tuples into the portal's tuple
- *store.
+ *		Run the query and load result tuples into the portal's tuple store.
  *
  * This is used for PORTAL_ONE_RETURNING, PORTAL_ONE_MOD_WITH, and
  * PORTAL_UTIL_SELECT cases only.
@@ -1085,7 +1082,7 @@ FillPortalStore(Portal portal, bool isTopLevel)
     PortalRunUtility(portal, linitial_node(PlannedStmt, portal->stmts), isTopLevel, true, treceiver, completionTag);
     break;
 
-  default:;
+  default:
     elog(ERROR, "unsupported portal strategy: %d", (int)portal->strategy);
     break;
   }
@@ -1518,7 +1515,7 @@ PortalRunFetch(Portal portal, FetchDirection fdirection, long count, DestReceive
       result = DoPortalRunFetch(portal, fdirection, count, dest);
       break;
 
-    default:;
+    default:
       elog(ERROR, "unsupported portal strategy");
       result = 0; /* keep compiler quiet */
       break;
@@ -1693,7 +1690,7 @@ DoPortalRunFetch(Portal portal, FetchDirection fdirection, long count, DestRecei
       fdirection = FETCH_FORWARD;
     }
     break;
-  default:;
+  default:
     elog(ERROR, "bogus direction");
     break;
   }

@@ -185,7 +185,7 @@ hex2_to_uchar(const unsigned char *ptr, const unsigned char *str)
   /* Handle the first character */
   if (*ptr > 127)
   {
-
+    goto invalid_input;
   }
 
   lookup = hexlookup[*ptr];
@@ -201,7 +201,7 @@ hex2_to_uchar(const unsigned char *ptr, const unsigned char *str)
 
   if (*ptr > 127)
   {
-
+    goto invalid_input;
   }
 
   lookup = hexlookup[*ptr];
@@ -214,7 +214,7 @@ hex2_to_uchar(const unsigned char *ptr, const unsigned char *str)
 
   return ret;
 
-invalid_input:;
+invalid_input:
   ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "macaddr8", str)));
 
   /* We do not actually reach here */
@@ -254,31 +254,31 @@ macaddr8_in(PG_FUNCTION_ARGS)
 
     switch (count)
     {
-    case 1:;
+    case 1:
       a = hex2_to_uchar(ptr, str);
       break;
-    case 2:;
+    case 2:
       b = hex2_to_uchar(ptr, str);
       break;
-    case 3:;
+    case 3:
       c = hex2_to_uchar(ptr, str);
       break;
-    case 4:;
+    case 4:
       d = hex2_to_uchar(ptr, str);
       break;
-    case 5:;
+    case 5:
       e = hex2_to_uchar(ptr, str);
       break;
-    case 6:;
+    case 6:
       f = hex2_to_uchar(ptr, str);
       break;
-    case 7:;
+    case 7:
       g = hex2_to_uchar(ptr, str);
       break;
-    case 8:;
+    case 8:
       h = hex2_to_uchar(ptr, str);
       break;
-    default:;;
+    default:
       /* must be trailing garbage... */
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "macaddr8", str)));
     }
@@ -334,7 +334,7 @@ macaddr8_in(PG_FUNCTION_ARGS)
   }
   else if (count != 8)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "macaddr8", str)));
   }
 
   result = (macaddr8 *)palloc0(sizeof(macaddr8));
@@ -368,39 +368,38 @@ macaddr8_out(PG_FUNCTION_ARGS)
 }
 
 /*
- * macaddr8_recv - converts external binary format(EUI-48 and EUI-64) to
- * macaddr8
+ * macaddr8_recv - converts external binary format(EUI-48 and EUI-64) to macaddr8
  *
  * The external representation is just the eight bytes, MSB first.
  */
 Datum
 macaddr8_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  macaddr8 *addr;
 
+  addr = (macaddr8 *)palloc0(sizeof(macaddr8));
 
+  addr->a = pq_getmsgbyte(buf);
+  addr->b = pq_getmsgbyte(buf);
+  addr->c = pq_getmsgbyte(buf);
 
+  if (buf->len == 6)
+  {
+    addr->d = 0xFF;
+    addr->e = 0xFE;
+  }
+  else
+  {
+    addr->d = pq_getmsgbyte(buf);
+    addr->e = pq_getmsgbyte(buf);
+  }
 
+  addr->f = pq_getmsgbyte(buf);
+  addr->g = pq_getmsgbyte(buf);
+  addr->h = pq_getmsgbyte(buf);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_MACADDR8_P(addr);
 }
 
 /*
@@ -409,20 +408,20 @@ macaddr8_recv(PG_FUNCTION_ARGS)
 Datum
 macaddr8_send(PG_FUNCTION_ARGS)
 {
+  macaddr8 *addr = PG_GETARG_MACADDR8_P(0);
+  StringInfoData buf;
 
+  pq_begintypsend(&buf);
+  pq_sendbyte(&buf, addr->a);
+  pq_sendbyte(&buf, addr->b);
+  pq_sendbyte(&buf, addr->c);
+  pq_sendbyte(&buf, addr->d);
+  pq_sendbyte(&buf, addr->e);
+  pq_sendbyte(&buf, addr->f);
+  pq_sendbyte(&buf, addr->g);
+  pq_sendbyte(&buf, addr->h);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -654,21 +653,21 @@ macaddr8_set7bit(PG_FUNCTION_ARGS)
 Datum
 macaddrtomacaddr8(PG_FUNCTION_ARGS)
 {
+  macaddr *addr6 = PG_GETARG_MACADDR_P(0);
+  macaddr8 *result;
 
+  result = (macaddr8 *)palloc0(sizeof(macaddr8));
 
+  result->a = addr6->a;
+  result->b = addr6->b;
+  result->c = addr6->c;
+  result->d = 0xFF;
+  result->e = 0xFE;
+  result->f = addr6->d;
+  result->g = addr6->e;
+  result->h = addr6->f;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_MACADDR8_P(result);
 }
 
 Datum
@@ -681,7 +680,11 @@ macaddr8tomacaddr(PG_FUNCTION_ARGS)
 
   if ((addr->d != 0xFF) || (addr->e != 0xFE))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("macaddr8 data out of range to convert to macaddr"),
+                       errhint("Only addresses that have FF and FE as values in the "
+                               "4th and 5th bytes from the left, for example "
+                               "xx:xx:xx:ff:fe:xx:xx:xx, are eligible to be converted "
+                               "from macaddr8 to macaddr.")));
   }
 
   result->a = addr->a;

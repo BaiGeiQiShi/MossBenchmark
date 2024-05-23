@@ -72,11 +72,14 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
   int c1, ku, ten;
   int l;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *euc;
-    if (!IS_HIGHBIT_SET(c1)) {
+    if (!IS_HIGHBIT_SET(c1))
+    {
       /* ASCII */
-      if (c1 == 0) {
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
       }
       *p++ = c1;
@@ -87,19 +90,22 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
 
     l = pg_encoding_verifymb(PG_EUC_JIS_2004, (const char *)euc, len);
 
-    if (l < 0) {
+    if (l < 0)
+    {
       report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
     }
 
     if (c1 == SS2 && l == 2) /* JIS X 0201 kana? */
     {
       *p++ = euc[1];
-    } else if (c1 == SS3 && l == 3) /* JIS X 0213 plane 2? */
+    }
+    else if (c1 == SS3 && l == 3) /* JIS X 0213 plane 2? */
     {
       ku = euc[1] - 0xa0;
       ten = euc[2] - 0xa0;
 
-      switch (ku) {
+      switch (ku)
+      {
       case 1:
       case 3:
       case 4:
@@ -111,23 +117,34 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
       case 15:
         *p++ = ((ku + 0x1df) >> 1) - (ku >> 3) * 3;
         break;
-      default:;
-        if (ku >= 78 && ku <= 94) {
+      default:
+        if (ku >= 78 && ku <= 94)
+        {
           *p++ = (ku + 0x19b) >> 1;
-        } else {
+        }
+        else
+        {
           report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
         }
       }
 
-      if (ku % 2) {
-        if (ten >= 1 && ten <= 63) {
+      if (ku % 2)
+      {
+        if (ten >= 1 && ten <= 63)
+        {
           *p++ = ten + 0x3f;
-        } else if (ten >= 64 && ten <= 94) {
+        }
+        else if (ten >= 64 && ten <= 94)
+        {
           *p++ = ten + 0x40;
-        } else {
+        }
+        else
+        {
           report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
         }
-      } else {
+      }
+      else
+      {
         *p++ = ten + 0x9e;
       }
     }
@@ -137,26 +154,41 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
       ku = c1 - 0xa0;
       ten = euc[1] - 0xa0;
 
-      if (ku >= 1 && ku <= 62) {
+      if (ku >= 1 && ku <= 62)
+      {
         *p++ = (ku + 0x101) >> 1;
-      } else if (ku >= 63 && ku <= 94) {
+      }
+      else if (ku >= 63 && ku <= 94)
+      {
         *p++ = (ku + 0x181) >> 1;
-      } else {
+      }
+      else
+      {
         report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
       }
 
-      if (ku % 2) {
-        if (ten >= 1 && ten <= 63) {
+      if (ku % 2)
+      {
+        if (ten >= 1 && ten <= 63)
+        {
           *p++ = ten + 0x3f;
-        } else if (ten >= 64 && ten <= 94) {
+        }
+        else if (ten >= 64 && ten <= 94)
+        {
           *p++ = ten + 0x40;
-        } else {
+        }
+        else
+        {
           report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
         }
-      } else {
+      }
+      else
+      {
         *p++ = ten + 0x9e;
       }
-    } else {
+    }
+    else
+    {
       report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
     }
 
@@ -176,16 +208,23 @@ get_ten(int b, int *ku)
 {
   int ten;
 
-  if (b >= 0x40 && b <= 0x7e) {
+  if (b >= 0x40 && b <= 0x7e)
+  {
     ten = b - 0x3f;
     *ku = 1;
-  } else if (b >= 0x80 && b <= 0x9e) {
+  }
+  else if (b >= 0x80 && b <= 0x9e)
+  {
     ten = b - 0x40;
     *ku = 1;
-  } else if (b >= 0x9f && b <= 0xfc) {
+  }
+  else if (b >= 0x9f && b <= 0xfc)
+  {
     ten = b - 0x9e;
     *ku = 0;
-  } else {
+  }
+  else
+  {
     ten = -1; /* error */
     *ku = 0;  /* keep compiler quiet */
   }
@@ -204,12 +243,15 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
   int plane;
   int l;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *sjis;
 
-    if (!IS_HIGHBIT_SET(c1)) {
+    if (!IS_HIGHBIT_SET(c1))
+    {
       /* ASCII */
-      if (c1 == 0) {
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
       }
       *p++ = c1;
@@ -220,15 +262,19 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
 
     l = pg_encoding_verifymb(PG_SHIFT_JIS_2004, (const char *)sjis, len);
 
-    if (l < 0 || l > len) {
+    if (l < 0 || l > len)
+    {
       report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
     }
 
-    if (c1 >= 0xa1 && c1 <= 0xdf && l == 1) {
+    if (c1 >= 0xa1 && c1 <= 0xdf && l == 1)
+    {
       /* JIS X0201 (1 byte kana) */
       *p++ = SS2;
       *p++ = c1;
-    } else if (l == 2) {
+    }
+    else if (l == 2)
+    {
       int c2 = sjis[1];
 
       plane = 1;
@@ -242,29 +288,35 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
       {
         ku = (c1 << 1) - 0x100;
         ten = get_ten(c2, &kubun);
-        if (ten < 0) {
+        if (ten < 0)
+        {
           report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
         }
         ku -= kubun;
-      } else if (c1 >= 0xe0 && c1 <= 0xef) /* plane 1 62ku-94ku */
+      }
+      else if (c1 >= 0xe0 && c1 <= 0xef) /* plane 1 62ku-94ku */
       {
         ku = (c1 << 1) - 0x180;
         ten = get_ten(c2, &kubun);
-        if (ten < 0) {
+        if (ten < 0)
+        {
           report_invalid_encoding(PG_SHIFT_JIS_2004,
 
               (const char *)sjis, len);
         }
         ku -= kubun;
-      } else if (c1 >= 0xf0 && c1 <= 0xf3) /* plane 2
-                                            * 1,3,4,5,8,12,13,14,15 ku */
+      }
+      else if (c1 >= 0xf0 && c1 <= 0xf3) /* plane 2
+                                          * 1,3,4,5,8,12,13,14,15 ku */
       {
         plane = 2;
         ten = get_ten(c2, &kubun);
-        if (ten < 0) {
+        if (ten < 0)
+        {
           report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
         }
-        switch (c1) {
+        switch (c1)
+        {
         case 0xf0:
           ku = kubun == 0 ? 8 : 1;
           break;
@@ -274,27 +326,35 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
         case 0xf2:
           ku = kubun == 0 ? 12 : 5;
           break;
-        default:;
+        default:
           ku = kubun == 0 ? 14 : 13;
           break;
         }
-      } else if (c1 >= 0xf4 && c1 <= 0xfc) /* plane 2 78-94ku */
+      }
+      else if (c1 >= 0xf4 && c1 <= 0xfc) /* plane 2 78-94ku */
       {
         plane = 2;
         ten = get_ten(c2, &kubun);
-        if (ten < 0) {
+        if (ten < 0)
+        {
           report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
         }
-        if (c1 == 0xf4 && kubun == 1) {
+        if (c1 == 0xf4 && kubun == 1)
+        {
           ku = 15;
-        } else {
+        }
+        else
+        {
           ku = (c1 << 1) - 0x19a - kubun;
         }
-      } else {
+      }
+      else
+      {
         report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
       }
 
-      if (plane == 2) {
+      if (plane == 2)
+      {
         *p++ = SS3;
       }
 

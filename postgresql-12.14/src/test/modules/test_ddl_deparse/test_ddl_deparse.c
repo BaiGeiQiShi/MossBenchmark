@@ -31,7 +31,8 @@ get_command_type(PG_FUNCTION_ARGS)
   CollectedCommand *cmd = (CollectedCommand *)PG_GETARG_POINTER(0);
   const char *type;
 
-  switch (cmd->type) {
+  switch (cmd->type)
+  {
   case SCT_Simple:
     type = "simple";
     break;
@@ -53,7 +54,7 @@ get_command_type(PG_FUNCTION_ARGS)
   case SCT_AlterTSConfig:
     type = "alter text search configuration";
     break;
-  default:;
+  default:
     type = "unknown command type";
     break;
   }
@@ -70,7 +71,8 @@ get_command_tag(PG_FUNCTION_ARGS)
 {
   CollectedCommand *cmd = (CollectedCommand *)PG_GETARG_POINTER(0);
 
-  if (!cmd->parsetree) {
+  if (!cmd->parsetree)
+  {
     PG_RETURN_NULL();
   }
 
@@ -88,16 +90,19 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
   ArrayBuildState *astate = NULL;
   ListCell *cell;
 
-  if (cmd->type != SCT_AlterTable) {
+  if (cmd->type != SCT_AlterTable)
+  {
     elog(ERROR, "command is not ALTER TABLE");
   }
 
-  foreach (cell, cmd->d.alterTable.subcmds) {
+  foreach (cell, cmd->d.alterTable.subcmds)
+  {
     CollectedATSubcmd *sub = lfirst(cell);
     AlterTableCmd *subcmd = castNode(AlterTableCmd, sub->parsetree);
     const char *strtype;
 
-    switch (subcmd->subtype) {
+    switch (subcmd->subtype)
+    {
     case AT_AddColumn:
       strtype = "ADD COLUMN";
       break;
@@ -281,7 +286,7 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
     case AT_GenericOptions:
       strtype = "SET OPTIONS";
       break;
-    default:;
+    default:
       strtype = "unrecognized";
       break;
     }
@@ -289,7 +294,8 @@ get_altertable_subcmdtypes(PG_FUNCTION_ARGS)
     astate = accumArrayResult(astate, CStringGetTextDatum(strtype), false, TEXTOID, CurrentMemoryContext);
   }
 
-  if (astate == NULL) {
+  if (astate == NULL)
+  {
     elog(ERROR, "empty alter table subcommand list");
   }
 

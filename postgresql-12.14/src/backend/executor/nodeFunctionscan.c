@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * nodeFunctionscan.c
- *	  Support routines for scanning RangeFunctions (functions in
- *rangetable).
+ *	  Support routines for scanning RangeFunctions (functions in rangetable).
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -16,10 +15,10 @@
 /*
  * INTERFACE ROUTINES
  *		ExecFunctionScan		scans a function.
- *		ExecFunctionNext		retrieve next tuple in
- *sequential order. ExecInitFunctionScan	creates and initializes a
- *functionscan node. ExecEndFunctionScan		releases any storage
- *allocated. ExecReScanFunctionScan	rescans the function
+ *		ExecFunctionNext		retrieve next tuple in sequential order.
+ *		ExecInitFunctionScan	creates and initializes a functionscan node.
+ *		ExecEndFunctionScan		releases any storage allocated.
+ *		ExecReScanFunctionScan	rescans the function
  */
 #include "postgres.h"
 
@@ -245,8 +244,8 @@ FunctionNext(FunctionScanState *node)
 static bool
 FunctionRecheck(FunctionScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------
@@ -393,7 +392,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
     else
     {
       /* crummy error message, but parser should have caught this */
-
+      elog(ERROR, "function in FROM has unsupported return type");
     }
 
     fs->tupdesc = tupdesc;

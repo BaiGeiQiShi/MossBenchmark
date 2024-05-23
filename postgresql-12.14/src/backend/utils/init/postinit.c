@@ -247,24 +247,24 @@ PerformAuthentication(Port *port)
   {
     StringInfoData logmsg;
 
+    initStringInfo(&logmsg);
+    if (am_walsender)
+    {
+      appendStringInfo(&logmsg, _("replication connection authorized: user=%s"), port->user_name);
+    }
+    else
+    {
+      appendStringInfo(&logmsg, _("connection authorized: user=%s"), port->user_name);
+    }
+    if (!am_walsender)
+    {
+      appendStringInfo(&logmsg, _(" database=%s"), port->database_name);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (port->application_name != NULL)
+    {
+      appendStringInfo(&logmsg, _(" application_name=%s"), port->application_name);
+    }
 
 #ifdef USE_SSL
     if (port->ssl_in_use)
@@ -288,8 +288,8 @@ PerformAuthentication(Port *port)
     }
 #endif
 
-
-
+    ereport(LOG, errmsg_internal("%s", logmsg.data));
+    pfree(logmsg.data);
   }
 
   set_ps_display("startup", false);
@@ -312,14 +312,14 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
   tup = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(MyDatabaseId));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for database %u", MyDatabaseId);
   }
   dbform = (Form_pg_database)GETSTRUCT(tup);
 
   /* This recheck is strictly paranoia */
   if (strcmp(name, NameStr(dbform->datname)) != 0)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database \"%s\" has disappeared from pg_database", name), errdetail("Database OID %u now seems to belong to \"%s\".", MyDatabaseId, NameStr(dbform->datname))));
   }
 
   /*
@@ -338,7 +338,7 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
      */
     if (!dbform->datallowconn && !override_allow_connections)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("database \"%s\" is not currently accepting connections", name)));
     }
 
     /*
@@ -348,7 +348,7 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
      */
     if (!am_superuser && pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CONNECT) != ACLCHECK_OK)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for database \"%s\"", name), errdetail("User does not have CONNECT privilege.")));
     }
 
     /*
@@ -363,7 +363,7 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
      */
     if (dbform->datconnlimit >= 0 && !am_superuser && CountDBConnections(MyDatabaseId) > dbform->datconnlimit)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("too many connections for database \"%s\"", name)));
     }
   }
 
@@ -383,12 +383,20 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
 
   if (pg_perm_setlocale(LC_COLLATE, collate) == NULL)
   {
-
+    ereport(FATAL, (errmsg("database locale is incompatible with operating system"),
+                       errdetail("The database was initialized with LC_COLLATE \"%s\", "
+                                 " which is not recognized by setlocale().",
+                           collate),
+                       errhint("Recreate the database with another locale or install the missing locale.")));
   }
 
   if (pg_perm_setlocale(LC_CTYPE, ctype) == NULL)
   {
-
+    ereport(FATAL, (errmsg("database locale is incompatible with operating system"),
+                       errdetail("The database was initialized with LC_CTYPE \"%s\", "
+                                 " which is not recognized by setlocale().",
+                           ctype),
+                       errhint("Recreate the database with another locale or install the missing locale.")));
   }
 
   /* Make the locale settings visible as GUC variables, too */
@@ -446,45 +454,45 @@ pg_split_opts(char **argv, int *argcp, const char *optstr)
   {
     bool last_was_escape = false;
 
-
+    resetStringInfo(&s);
 
     /* skip over leading space */
+    while (isspace((unsigned char)*optstr))
+    {
+      optstr++;
+    }
 
-
-
-
-
-
-
-
-
+    if (*optstr == '\0')
+    {
+      break;
+    }
 
     /*
      * Parse a single option, stopping at the first space, unless it's
      * escaped.
      */
+    while (*optstr)
+    {
+      if (isspace((unsigned char)*optstr) && !last_was_escape)
+      {
+        break;
+      }
 
+      if (!last_was_escape && *optstr == '\\')
+      {
+        last_was_escape = true;
+      }
+      else
+      {
+        last_was_escape = false;
+        appendStringInfoChar(&s, *optstr);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      optstr++;
+    }
 
     /* now store the option in the next argv[] position */
-
+    argv[(*argcp)++] = pstrdup(s.data);
   }
 
   pfree(s.data);
@@ -513,7 +521,7 @@ InitializeMaxBackends(void)
   /* internal error because the values were all checked previously */
   if (MaxBackends > MAX_BACKENDS)
   {
-
+    elog(ERROR, "too many backends configured");
   }
 }
 
@@ -563,8 +571,7 @@ BaseInit(void)
  * already have a PGPROC struct ... but it's not completely filled in yet.
  *
  * Note:
- *		Be very careful with the order of calls in the InitPostgres
- *function.
+ *		Be very careful with the order of calls in the InitPostgres function.
  * --------------------------------
  */
 void
@@ -596,7 +603,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
 
   if (MyBackendId > MaxBackends || MyBackendId <= 0)
   {
-
+    elog(FATAL, "bad backend ID: %d", MyBackendId);
   }
 
   /* Now that we have a BackendId, we can participate in ProcSignal */
@@ -741,7 +748,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
     am_superuser = true;
     if (!ThereIsAtLeastOneRole())
     {
-
+      ereport(WARNING, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("no roles are defined in this database system"), errhint("You should immediately run CREATE USER \"%s\" SUPERUSER;.", username != NULL ? username : "postgres")));
     }
   }
   else if (IsBackgroundWorker)
@@ -772,14 +779,14 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
    */
   if ((!am_superuser || am_walsender) && MyProcPort != NULL && MyProcPort->canAcceptConnections == CAC_SUPERUSER)
   {
-
-
-
-
-
-
-
-
+    if (am_walsender)
+    {
+      ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("new replication connections are not allowed during database shutdown")));
+    }
+    else
+    {
+      ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to connect during database shutdown")));
+    }
   }
 
   /*
@@ -787,7 +794,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
    */
   if (IsBinaryUpgrade && !am_superuser)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to connect in binary upgrade mode")));
   }
 
   /*
@@ -797,18 +804,18 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
    */
   if (!am_superuser && !am_walsender && ReservedBackends > 0 && !HaveNFreeProcs(ReservedBackends))
   {
-
+    ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("remaining connection slots are reserved for non-replication superuser connections")));
   }
 
   /* Check replication permissions needed for walsender processes. */
   if (am_walsender)
   {
+    Assert(!bootstrap);
 
-
-
-
-
-
+    if (!superuser() && !has_rolreplication(GetUserId()))
+    {
+      ereport(FATAL, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or replication role to start walsender")));
+    }
   }
 
   /*
@@ -820,27 +827,27 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
   if (am_walsender && !am_db_walsender)
   {
     /* process any options passed in the startup packet */
-
-
-
-
+    if (MyProcPort != NULL)
+    {
+      process_startup_options(MyProcPort, am_superuser);
+    }
 
     /* Apply PostAuthDelay as soon as we've read all options */
-
-
-
-
+    if (PostAuthDelay > 0)
+    {
+      pg_usleep(PostAuthDelay * 1000000L);
+    }
 
     /* initialize client encoding */
-
+    InitializeClientEncoding();
 
     /* report this backend in the PgBackendStatus array */
-
+    pgstat_bestart();
 
     /* close the transaction we started above */
+    CommitTransactionCommand();
 
-
-
+    return;
   }
 
   /*
@@ -880,7 +887,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
     tuple = GetDatabaseTupleByOid(dboid);
     if (!HeapTupleIsValid(tuple))
     {
-
+      ereport(FATAL, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database %u does not exist", dboid)));
     }
     dbform = (Form_pg_database)GETSTRUCT(tuple);
     MyDatabaseId = dbform->oid;
@@ -969,7 +976,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
     tuple = GetDatabaseTuple(dbname);
     if (!HeapTupleIsValid(tuple) || MyDatabaseId != ((Form_pg_database)GETSTRUCT(tuple))->oid || MyDatabaseTableSpace != ((Form_pg_database)GETSTRUCT(tuple))->dattablespace)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database \"%s\" does not exist", dbname), errdetail("It seems to have just been dropped or renamed.")));
     }
   }
 
@@ -983,14 +990,14 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
   {
     if (access(fullpath, F_OK) == -1)
     {
-
-
-
-
-
-
-
-
+      if (errno == ENOENT)
+      {
+        ereport(FATAL, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database \"%s\" does not exist", dbname), errdetail("The database subdirectory \"%s\" is missing.", fullpath)));
+      }
+      else
+      {
+        ereport(FATAL, (errcode_for_file_access(), errmsg("could not access directory \"%s\": %m", fullpath)));
+      }
     }
 
     ValidatePgVersion(fullpath);
@@ -1036,7 +1043,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username, Oid useroid
   /* Apply PostAuthDelay as soon as we've read all options */
   if (PostAuthDelay > 0)
   {
-
+    pg_usleep(PostAuthDelay * 1000000L);
   }
 
   /*
@@ -1093,20 +1100,20 @@ process_startup_options(Port *port, bool am_superuser)
     int maxac;
     int ac;
 
+    maxac = 2 + (strlen(port->cmdline_options) + 1) / 2;
 
+    av = (char **)palloc(maxac * sizeof(char *));
+    ac = 0;
 
+    av[ac++] = "postgres";
 
+    pg_split_opts(av, &ac, port->cmdline_options);
 
+    av[ac] = NULL;
 
+    Assert(ac < maxac);
 
-
-
-
-
-
-
-
-
+    (void)process_postgres_switches(ac, av, gucctx, NULL);
   }
 
   /*
@@ -1198,7 +1205,7 @@ StatementTimeoutHandler(void)
    */
   if (ClientAuthInProgress)
   {
-
+    sig = SIGTERM;
   }
 
 #ifdef HAVE_SETSID
@@ -1224,9 +1231,9 @@ LockTimeoutHandler(void)
 static void
 IdleInTransactionSessionTimeoutHandler(void)
 {
-
-
-
+  IdleInTransactionSessionTimeoutPending = true;
+  InterruptPending = true;
+  SetLatch(MyLatch);
 }
 
 /*

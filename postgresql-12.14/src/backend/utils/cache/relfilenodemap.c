@@ -49,8 +49,7 @@ typedef struct
 
 /*
  * RelfilenodeMapInvalidateCallback
- *		Flush mapping entries when pg_class is updated in a relevant
- *fashion.
+ *		Flush mapping entries when pg_class is updated in a relevant fashion.
  */
 static void
 RelfilenodeMapInvalidateCallback(Datum arg, Oid relid)
@@ -75,7 +74,7 @@ RelfilenodeMapInvalidateCallback(Datum arg, Oid relid)
     {
       if (hash_search(RelfilenodeMapHash, (void *)&entry->key, HASH_REMOVE, NULL) == NULL)
       {
-
+        elog(ERROR, "hash table corrupted");
       }
     }
   }
@@ -94,7 +93,7 @@ InitializeRelfilenodeMap(void)
   /* Make sure we've initialized CacheMemoryContext. */
   if (CacheMemoryContext == NULL)
   {
-
+    CreateCacheMemoryContext();
   }
 
   /* build skey */
@@ -154,7 +153,7 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
   /* pg_class will show 0 when the value is actually MyDatabaseTableSpace */
   if (reltablespace == MyDatabaseTableSpace)
   {
-
+    reltablespace = 0;
   }
 
   MemSet(&key, 0, sizeof(key));
@@ -172,7 +171,7 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
 
   if (found)
   {
-
+    return entry->relid;
   }
 
   /* ok, no previous cache entry, do it the hard way */
@@ -214,7 +213,7 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
 
       if (found)
       {
-
+        elog(ERROR, "unexpected duplicate for tablespace %u, relfilenode %u", reltablespace, relfilenode);
       }
       found = true;
 
@@ -241,7 +240,7 @@ RelidByRelfilenode(Oid reltablespace, Oid relfilenode)
   entry = hash_search(RelfilenodeMapHash, (void *)&key, HASH_ENTER, &found);
   if (found)
   {
-
+    elog(ERROR, "corrupted hashtable");
   }
   entry->relid = relid;
 

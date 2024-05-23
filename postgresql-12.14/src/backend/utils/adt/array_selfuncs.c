@@ -100,8 +100,8 @@ scalararraysel_containment(PlannerInfo *root, Node *leftop, Node *rightop, Oid e
   if (((Const *)leftop)->constisnull)
   {
     /* qual can't succeed if null on left */
-
-
+    ReleaseVariableStats(vardata);
+    return (Selectivity)0.0;
   }
   constval = ((Const *)leftop)->constvalue;
 
@@ -109,8 +109,8 @@ scalararraysel_containment(PlannerInfo *root, Node *leftop, Node *rightop, Oid e
   typentry = lookup_type_cache(elemtype, TYPECACHE_CMP_PROC_FINFO);
   if (!OidIsValid(typentry->cmp_proc_finfo.fn_oid))
   {
-
-
+    ReleaseVariableStats(vardata);
+    return -1.0;
   }
   cmpfunc = &typentry->cmp_proc_finfo;
 
@@ -129,51 +129,51 @@ scalararraysel_containment(PlannerInfo *root, Node *leftop, Node *rightop, Oid e
     AttStatsSlot sslot;
     AttStatsSlot hslot;
 
-
+    stats = (Form_pg_statistic)GETSTRUCT(vardata.statsTuple);
 
     /* MCELEM will be an array of same type as element */
+    if (get_attstatsslot(&sslot, vardata.statsTuple, STATISTIC_KIND_MCELEM, InvalidOid, ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
+    {
+      /* For ALL case, also get histogram of distinct-element counts */
+      if (useOr || !get_attstatsslot(&hslot, vardata.statsTuple, STATISTIC_KIND_DECHIST, InvalidOid, ATTSTATSSLOT_NUMBERS))
+      {
+        memset(&hslot, 0, sizeof(hslot));
+      }
 
+      /*
+       * For = ANY, estimate as var @> ARRAY[const].
+       *
+       * For = ALL, estimate as var <@ ARRAY[const].
+       */
+      if (useOr)
+      {
+        selec = mcelem_array_contain_overlap_selec(sslot.values, sslot.nvalues, sslot.numbers, sslot.nnumbers, &constval, 1, OID_ARRAY_CONTAINS_OP, typentry);
+      }
+      else
+      {
+        selec = mcelem_array_contained_selec(sslot.values, sslot.nvalues, sslot.numbers, sslot.nnumbers, &constval, 1, hslot.numbers, hslot.nnumbers, OID_ARRAY_CONTAINED_OP, typentry);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      free_attstatsslot(&hslot);
+      free_attstatsslot(&sslot);
+    }
+    else
+    {
+      /* No most-common-elements info, so do without */
+      if (useOr)
+      {
+        selec = mcelem_array_contain_overlap_selec(NULL, 0, NULL, 0, &constval, 1, OID_ARRAY_CONTAINS_OP, typentry);
+      }
+      else
+      {
+        selec = mcelem_array_contained_selec(NULL, 0, NULL, 0, &constval, 1, NULL, 0, OID_ARRAY_CONTAINED_OP, typentry);
+      }
+    }
 
     /*
      * MCE stats count only non-null rows, so adjust for null rows.
      */
-
+    selec *= (1.0 - stats->stanullfrac);
   }
   else
   {
@@ -184,7 +184,7 @@ scalararraysel_containment(PlannerInfo *root, Node *leftop, Node *rightop, Oid e
     }
     else
     {
-
+      selec = mcelem_array_contained_selec(NULL, 0, NULL, 0, &constval, 1, NULL, 0, OID_ARRAY_CONTAINED_OP, typentry);
     }
     /* we assume no nulls here, so no stanullfrac correction */
   }
@@ -226,7 +226,7 @@ arraycontsel(PG_FUNCTION_ARGS)
    */
   if (!get_restriction_variable(root, args, varRelid, &vardata, &other, &varonleft))
   {
-
+    PG_RETURN_FLOAT8(DEFAULT_SEL(operator));
   }
 
   /*
@@ -234,8 +234,8 @@ arraycontsel(PG_FUNCTION_ARGS)
    */
   if (!IsA(other, Const))
   {
-
-
+    ReleaseVariableStats(vardata);
+    PG_RETURN_FLOAT8(DEFAULT_SEL(operator));
   }
 
   /*
@@ -244,8 +244,8 @@ arraycontsel(PG_FUNCTION_ARGS)
    */
   if (((Const *)other)->constisnull)
   {
-
-
+    ReleaseVariableStats(vardata);
+    PG_RETURN_FLOAT8(0.0);
   }
 
   /*
@@ -254,14 +254,14 @@ arraycontsel(PG_FUNCTION_ARGS)
    */
   if (!varonleft)
   {
-
-
-
-
-
-
-
-
+    if (operator== OID_ARRAY_CONTAINS_OP)
+    {
+      operator= OID_ARRAY_CONTAINED_OP;
+    }
+    else if (operator== OID_ARRAY_CONTAINED_OP)
+    {
+      operator= OID_ARRAY_CONTAINS_OP;
+    }
   }
 
   /*
@@ -277,7 +277,7 @@ arraycontsel(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    selec = DEFAULT_SEL(operator);
   }
 
   ReleaseVariableStats(vardata);
@@ -293,10 +293,10 @@ arraycontsel(PG_FUNCTION_ARGS)
 Datum
 arraycontjoinsel(PG_FUNCTION_ARGS)
 {
+  /* For the moment this is just a stub */
+  Oid operator= PG_GETARG_OID(1);
 
-
-
-
+  PG_RETURN_FLOAT8(DEFAULT_SEL(operator));
 }
 
 /*
@@ -318,7 +318,7 @@ calc_arraycontsel(VariableStatData *vardata, Datum constval, Oid elemtype, Oid o
   typentry = lookup_type_cache(elemtype, TYPECACHE_CMP_PROC_FINFO);
   if (!OidIsValid(typentry->cmp_proc_finfo.fn_oid))
   {
-
+    return DEFAULT_SEL(operator);
   }
   cmpfunc = &typentry->cmp_proc_finfo;
 
@@ -357,7 +357,7 @@ calc_arraycontsel(VariableStatData *vardata, Datum constval, Oid elemtype, Oid o
     else
     {
       /* No most-common-elements info, so do without */
-
+      selec = mcelem_array_selec(array, typentry, NULL, 0, NULL, 0, NULL, 0, operator);
     }
 
     /*
@@ -375,7 +375,7 @@ calc_arraycontsel(VariableStatData *vardata, Datum constval, Oid elemtype, Oid o
   /* If constant was toasted, release the copy we made */
   if (PointerGetDatum(array) != constval)
   {
-
+    pfree(array);
   }
 
   return selec;
@@ -445,8 +445,8 @@ mcelem_array_selec(ArrayType *array, TypeCacheEntry *typentry, Datum *mcelem, in
   }
   else
   {
-
-
+    elog(ERROR, "arraycontsel called for unrecognized operator %u", operator);
+    selec = 0.0; /* keep compiler quiet */
   }
 
   pfree(elem_values);
@@ -509,7 +509,7 @@ mcelem_array_contain_overlap_selec(Datum *mcelem, int nmcelem, float4 *numbers, 
   }
   else
   {
-
+    use_bsearch = false;
   }
 
   if (operator== OID_ARRAY_CONTAINS_OP)
@@ -538,7 +538,7 @@ mcelem_array_contain_overlap_selec(Datum *mcelem, int nmcelem, float4 *numbers, 
     /* Ignore any duplicates in the array data. */
     if (i > 0 && element_compare(&array_data[i - 1], &array_data[i], typentry) == 0)
     {
-
+      continue;
     }
 
     /* Find the smallest MCELEM >= this array item. */
@@ -548,23 +548,23 @@ mcelem_array_contain_overlap_selec(Datum *mcelem, int nmcelem, float4 *numbers, 
     }
     else
     {
+      while (mcelem_index < nmcelem)
+      {
+        int cmp = element_compare(&mcelem[mcelem_index], &array_data[i], typentry);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if (cmp < 0)
+        {
+          mcelem_index++;
+        }
+        else
+        {
+          if (cmp == 0)
+          {
+            match = true; /* mcelem is found */
+          }
+          break;
+        }
+      }
     }
 
     if (match && numbers)
@@ -668,13 +668,13 @@ mcelem_array_contained_selec(Datum *mcelem, int nmcelem, float4 *numbers, int nn
    */
   if (numbers == NULL || nnumbers != nmcelem + 3)
   {
-
+    return DEFAULT_CONTAIN_SEL;
   }
 
   /* Can't do much without a count histogram, either */
   if (hist == NULL || nhist < 3)
   {
-
+    return DEFAULT_CONTAIN_SEL;
   }
 
   /*
@@ -715,7 +715,7 @@ mcelem_array_contained_selec(Datum *mcelem, int nmcelem, float4 *numbers, int nn
     /* Ignore any duplicates in the array data. */
     if (i > 0 && element_compare(&array_data[i - 1], &array_data[i], typentry) == 0)
     {
-
+      continue;
     }
 
     /*
@@ -757,7 +757,7 @@ mcelem_array_contained_selec(Datum *mcelem, int nmcelem, float4 *numbers, int nn
        * The element is not in MCELEM.  Punt, but assume that the
        * selectivity cannot be more than minfreq / 2.
        */
-
+      elem_selec[unique_nitems] = Min(DEFAULT_CONTAIN_SEL, minfreq / 2);
     }
 
     unique_nitems++;
@@ -812,11 +812,11 @@ mcelem_array_contained_selec(Datum *mcelem, int nmcelem, float4 *numbers, int nn
     double b = (double)nmcelem;
     int n;
 
-
+    n = (int)((sqrt(b * b + 4 * EFFORT * b) - b) / 2);
 
     /* Sort, then take just the first n elements */
-
-
+    qsort(elem_selec, unique_nitems, sizeof(float), float_compare_desc);
+    unique_nitems = n;
   }
 
   /*
@@ -913,7 +913,7 @@ calc_hist(const float4 *hist, int nhist, int n)
       }
       else
       {
-
+        next_interval = 0;
       }
 
       /*
@@ -937,14 +937,14 @@ calc_hist(const float4 *hist, int nhist, int n)
     else
     {
       /* k does not appear as an exact histogram bound. */
-
-
-
-
-
-
-
-
+      if (prev_interval > 0)
+      {
+        hist_part[k] = frac / prev_interval;
+      }
+      else
+      {
+        hist_part[k] = 0.0f;
+      }
     }
   }
 
@@ -1018,32 +1018,32 @@ calc_distr(const float *p, int n, int m, float rest)
     float t;
 
     /* Swap rows */
+    tmp = row;
+    row = prev_row;
+    prev_row = tmp;
 
-
-
-
-
-
-
-
+    for (i = 0; i <= m; i++)
+    {
+      row[i] = 0.0f;
+    }
 
     /* Value of Poisson distribution for 0 occurrences */
-
+    t = exp(-rest);
 
     /*
      * Calculate convolution of previously computed distribution and the
      * Poisson distribution.
      */
+    for (i = 0; i <= m; i++)
+    {
+      for (j = 0; j <= m - i; j++)
+      {
+        row[j + i] += prev_row[j] * t;
+      }
 
-
-
-
-
-
-
-
-
-
+      /* Get Poisson distribution value for (i + 1) occurrences */
+      t *= rest / (float)(i + 1);
+    }
   }
 
   pfree(prev_row);
@@ -1062,13 +1062,13 @@ floor_log2(uint32 n)
   }
   if (n >= (1 << 16))
   {
-
-
+    n >>= 16;
+    logval += 16;
   }
   if (n >= (1 << 8))
   {
-
-
+    n >>= 8;
+    logval += 8;
   }
   if (n >= (1 << 4))
   {
@@ -1148,19 +1148,19 @@ element_compare(const void *key1, const void *key2, void *arg)
 static int
 float_compare_desc(const void *key1, const void *key2)
 {
+  float d1 = *((const float *)key1);
+  float d2 = *((const float *)key2);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (d1 > d2)
+  {
+    return -1;
+  }
+  else if (d1 < d2)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
 }

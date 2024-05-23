@@ -195,15 +195,15 @@ pg_lock_status(PG_FUNCTION_ARGS)
     }
     else
     {
-
-
+      snprintf(tnbuf, sizeof(tnbuf), "unknown %d", (int)instance->locktag.locktag_type);
+      locktypename = tnbuf;
     }
     values[0] = CStringGetTextDatum(locktypename);
 
     switch ((LockTagType)instance->locktag.locktag_type)
     {
-    case LOCKTAG_RELATION:;
-    case LOCKTAG_RELATION_EXTEND:;
+    case LOCKTAG_RELATION:
+    case LOCKTAG_RELATION_EXTEND:
       values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
       values[2] = ObjectIdGetDatum(instance->locktag.locktag_field2);
       nulls[3] = true;
@@ -214,40 +214,40 @@ pg_lock_status(PG_FUNCTION_ARGS)
       nulls[8] = true;
       nulls[9] = true;
       break;
-    case LOCKTAG_DATABASE_FROZEN_IDS:;
-
-
-
-
-
-
-
-
-
-
-    case LOCKTAG_PAGE:;
-
-
-
-
-
-
-
-
-
-
-    case LOCKTAG_TUPLE:;
-
-
-
-
-
-
-
-
-
-
-    case LOCKTAG_TRANSACTION:;
+    case LOCKTAG_DATABASE_FROZEN_IDS:
+      values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
+      nulls[2] = true;
+      nulls[3] = true;
+      nulls[4] = true;
+      nulls[5] = true;
+      nulls[6] = true;
+      nulls[7] = true;
+      nulls[8] = true;
+      nulls[9] = true;
+      break;
+    case LOCKTAG_PAGE:
+      values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
+      values[2] = ObjectIdGetDatum(instance->locktag.locktag_field2);
+      values[3] = UInt32GetDatum(instance->locktag.locktag_field3);
+      nulls[4] = true;
+      nulls[5] = true;
+      nulls[6] = true;
+      nulls[7] = true;
+      nulls[8] = true;
+      nulls[9] = true;
+      break;
+    case LOCKTAG_TUPLE:
+      values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
+      values[2] = ObjectIdGetDatum(instance->locktag.locktag_field2);
+      values[3] = UInt32GetDatum(instance->locktag.locktag_field3);
+      values[4] = UInt16GetDatum(instance->locktag.locktag_field4);
+      nulls[5] = true;
+      nulls[6] = true;
+      nulls[7] = true;
+      nulls[8] = true;
+      nulls[9] = true;
+      break;
+    case LOCKTAG_TRANSACTION:
       values[6] = TransactionIdGetDatum(instance->locktag.locktag_field1);
       nulls[1] = true;
       nulls[2] = true;
@@ -258,7 +258,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
       nulls[8] = true;
       nulls[9] = true;
       break;
-    case LOCKTAG_VIRTUALTRANSACTION:;
+    case LOCKTAG_VIRTUALTRANSACTION:
       values[5] = VXIDGetDatum(instance->locktag.locktag_field1, instance->locktag.locktag_field2);
       nulls[1] = true;
       nulls[2] = true;
@@ -269,10 +269,10 @@ pg_lock_status(PG_FUNCTION_ARGS)
       nulls[8] = true;
       nulls[9] = true;
       break;
-    case LOCKTAG_OBJECT:;
-    case LOCKTAG_USERLOCK:;
-    case LOCKTAG_ADVISORY:;
-    default:; ;/* treat unknown locktags like OBJECT */
+    case LOCKTAG_OBJECT:
+    case LOCKTAG_USERLOCK:
+    case LOCKTAG_ADVISORY:
+    default: /* treat unknown locktags like OBJECT */
       values[1] = ObjectIdGetDatum(instance->locktag.locktag_field1);
       values[7] = ObjectIdGetDatum(instance->locktag.locktag_field2);
       values[8] = ObjectIdGetDatum(instance->locktag.locktag_field3);
@@ -292,7 +292,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      nulls[11] = true;
     }
     values[12] = CStringGetTextDatum(GetLockmodeName(instance->locktag.locktag_lockmethodid, mode));
     values[13] = BoolGetDatum(granted);
@@ -341,7 +341,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      nulls[4] = true;
     }
     if ((lockType == PREDLOCKTAG_TUPLE) || (lockType == PREDLOCKTAG_PAGE))
     {
@@ -349,7 +349,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      nulls[3] = true;
     }
 
     /* these fields are targets for other types of locks */
@@ -367,7 +367,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      nulls[11] = true;
     }
 
     /*
@@ -464,7 +464,7 @@ pg_blocking_pids(PG_FUNCTION_ARGS)
       /* Members of same lock group never block each other, either */
       if (instance->leaderPid == blocked_instance->leaderPid)
       {
-
+        continue;
       }
 
       if (conflictMask & instance->holdMask)
@@ -519,35 +519,35 @@ pg_blocking_pids(PG_FUNCTION_ARGS)
 Datum
 pg_safe_snapshot_blocking_pids(PG_FUNCTION_ARGS)
 {
+  int blocked_pid = PG_GETARG_INT32(0);
+  int *blockers;
+  int num_blockers;
+  Datum *blocker_datums;
 
+  /* A buffer big enough for any possible blocker list without truncation */
+  blockers = (int *)palloc(MaxBackends * sizeof(int));
 
+  /* Collect a snapshot of processes waited for by GetSafeSnapshot */
+  num_blockers = GetSafeSnapshotBlockingPids(blocked_pid, blockers, MaxBackends);
 
+  /* Convert int array to Datum array */
+  if (num_blockers > 0)
+  {
+    int i;
 
+    blocker_datums = (Datum *)palloc(num_blockers * sizeof(Datum));
+    for (i = 0; i < num_blockers; ++i)
+    {
+      blocker_datums[i] = Int32GetDatum(blockers[i]);
+    }
+  }
+  else
+  {
+    blocker_datums = NULL;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Construct array, using hardwired knowledge about int4 type */
+  PG_RETURN_ARRAYTYPE_P(construct_array(blocker_datums, num_blockers, INT4OID, sizeof(int32), true, 'i'));
 }
 
 /*
@@ -578,7 +578,7 @@ pg_isolation_test_session_is_blocked(PG_FUNCTION_ARGS)
   Assert(ARR_ELEMTYPE(interesting_pids_a) == INT4OID);
   if (array_contains_nulls(interesting_pids_a))
   {
-
+    elog(ERROR, "array must not contain nulls");
   }
   interesting_pids = (int32 *)ARR_DATA_PTR(interesting_pids_a);
   num_interesting_pids = ArrayGetNItems(ARR_NDIM(interesting_pids_a), ARR_DIMS(interesting_pids_a));
@@ -649,7 +649,7 @@ PreventAdvisoryLocksInParallelMode(void)
 {
   if (IsInParallelMode())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE), errmsg("cannot use advisory locks during a parallel operation")));
   }
 }
 
@@ -731,16 +731,16 @@ pg_advisory_xact_lock_shared_int8(PG_FUNCTION_ARGS)
 Datum
 pg_try_advisory_lock_int8(PG_FUNCTION_ARGS)
 {
+  int64 key = PG_GETARG_INT64(0);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT64(tag, key);
 
+  res = LockAcquire(&tag, ExclusiveLock, true, true);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -752,37 +752,36 @@ pg_try_advisory_lock_int8(PG_FUNCTION_ARGS)
 Datum
 pg_try_advisory_xact_lock_int8(PG_FUNCTION_ARGS)
 {
+  int64 key = PG_GETARG_INT64(0);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT64(tag, key);
 
+  res = LockAcquire(&tag, ExclusiveLock, false, true);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
- * pg_try_advisory_lock_shared(int8) - acquire share lock on an int8 key, no
- * wait
+ * pg_try_advisory_lock_shared(int8) - acquire share lock on an int8 key, no wait
  *
  * Returns true if successful, false if lock not available
  */
 Datum
 pg_try_advisory_lock_shared_int8(PG_FUNCTION_ARGS)
 {
+  int64 key = PG_GETARG_INT64(0);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT64(tag, key);
 
+  res = LockAcquire(&tag, ShareLock, true, true);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -794,16 +793,16 @@ pg_try_advisory_lock_shared_int8(PG_FUNCTION_ARGS)
 Datum
 pg_try_advisory_xact_lock_shared_int8(PG_FUNCTION_ARGS)
 {
+  int64 key = PG_GETARG_INT64(0);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT64(tag, key);
 
+  res = LockAcquire(&tag, ShareLock, false, true);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -921,25 +920,24 @@ pg_advisory_xact_lock_shared_int4(PG_FUNCTION_ARGS)
 }
 
 /*
- * pg_try_advisory_lock(int4, int4) - acquire exclusive lock on 2 int4 keys, no
- * wait
+ * pg_try_advisory_lock(int4, int4) - acquire exclusive lock on 2 int4 keys, no wait
  *
  * Returns true if successful, false if lock not available
  */
 Datum
 pg_try_advisory_lock_int4(PG_FUNCTION_ARGS)
 {
+  int32 key1 = PG_GETARG_INT32(0);
+  int32 key2 = PG_GETARG_INT32(1);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT32(tag, key1, key2);
 
+  res = LockAcquire(&tag, ExclusiveLock, true, true);
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -951,39 +949,38 @@ pg_try_advisory_lock_int4(PG_FUNCTION_ARGS)
 Datum
 pg_try_advisory_xact_lock_int4(PG_FUNCTION_ARGS)
 {
+  int32 key1 = PG_GETARG_INT32(0);
+  int32 key2 = PG_GETARG_INT32(1);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT32(tag, key1, key2);
 
+  res = LockAcquire(&tag, ExclusiveLock, false, true);
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
- * pg_try_advisory_lock_shared(int4, int4) - acquire share lock on 2 int4 keys,
- * no wait
+ * pg_try_advisory_lock_shared(int4, int4) - acquire share lock on 2 int4 keys, no wait
  *
  * Returns true if successful, false if lock not available
  */
 Datum
 pg_try_advisory_lock_shared_int4(PG_FUNCTION_ARGS)
 {
+  int32 key1 = PG_GETARG_INT32(0);
+  int32 key2 = PG_GETARG_INT32(1);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT32(tag, key1, key2);
 
+  res = LockAcquire(&tag, ShareLock, true, true);
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*
@@ -995,17 +992,17 @@ pg_try_advisory_lock_shared_int4(PG_FUNCTION_ARGS)
 Datum
 pg_try_advisory_xact_lock_shared_int4(PG_FUNCTION_ARGS)
 {
+  int32 key1 = PG_GETARG_INT32(0);
+  int32 key2 = PG_GETARG_INT32(1);
+  LOCKTAG tag;
+  LockAcquireResult res;
 
+  PreventAdvisoryLocksInParallelMode();
+  SET_LOCKTAG_INT32(tag, key1, key2);
 
+  res = LockAcquire(&tag, ShareLock, false, true);
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res != LOCKACQUIRE_NOT_AVAIL);
 }
 
 /*

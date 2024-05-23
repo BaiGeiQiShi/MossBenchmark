@@ -136,7 +136,7 @@ pqsignal_pm(int signo, pqsigfunc func)
 #endif
   if (sigaction(signo, &act, &oact) < 0)
   {
-
+    return SIG_ERR;
   }
   return oact.sa_handler;
 #else /* WIN32 */

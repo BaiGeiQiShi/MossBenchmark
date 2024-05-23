@@ -39,7 +39,8 @@ char exclusiveCleanupFileName[MAXFNAMELEN]; /* the oldest file we want
  * =====================================================================
  *
  *	Currently, this section assumes that the Archive is a locally
- *	accessible directory. If you want to make other assumptions,*	such as using a vendor-specific archive and access API, these
+ *	accessible directory. If you want to make other assumptions,
+ *	such as using a vendor-specific archive and access API, these
  *	routines are the ones you'll need to change. You're
  *	encouraged to submit any changes to pgsql-hackers@lists.postgresql.org
  *	or personally to the current maintainer. Those changes may be
@@ -60,7 +61,8 @@ Initialize(void)
    */
   struct stat stat_buf;
 
-  if (stat(archiveLocation, &stat_buf) != 0 || !S_ISDIR(stat_buf.st_mode)) {
+  if (stat(archiveLocation, &stat_buf) != 0 || !S_ISDIR(stat_buf.st_mode))
+  {
     pg_log_error("archive location \"%s\" does not exist", archiveLocation);
     exit(2);
   }
@@ -72,14 +74,16 @@ TrimExtension(char *filename, char *extension)
   int flen;
   int elen;
 
-  if (extension == NULL) {
+  if (extension == NULL)
+  {
     return;
   }
 
   elen = strlen(extension);
   flen = strlen(filename);
 
-  if (flen > elen && strcmp(filename + flen - elen, extension) == 0) {
+  if (flen > elen && strcmp(filename + flen - elen, extension) == 0)
+  {
     filename[flen - elen] = '\0';
   }
 }
@@ -92,8 +96,10 @@ CleanupPriorWALFiles(void)
   struct dirent *xlde;
   char walfile[MAXPGPATH];
 
-  if ((xldir = opendir(archiveLocation)) != NULL) {
-    while (errno = 0, (xlde = readdir(xldir)) != NULL) {
+  if ((xldir = opendir(archiveLocation)) != NULL)
+  {
+    while (errno = 0, (xlde = readdir(xldir)) != NULL)
+    {
       /*
        * Truncation is essentially harmless, because we skip names of
        * length other than XLOG_FNAME_LEN.  (In principle, one could use
@@ -115,7 +121,8 @@ CleanupPriorWALFiles(void)
        * file. Note that this means files are not removed in the order
        * they were originally written, in case this worries you.
        */
-      if ((IsXLogFileName(walfile) || IsPartialXLogFileName(walfile)) && strcmp(walfile + 8, exclusiveCleanupFileName + 8) < 0) {
+      if ((IsXLogFileName(walfile) || IsPartialXLogFileName(walfile)) && strcmp(walfile + 8, exclusiveCleanupFileName + 8) < 0)
+      {
         char WALFilePath[MAXPGPATH * 2]; /* the file path
                                           * including archive */
 
@@ -126,7 +133,8 @@ CleanupPriorWALFiles(void)
          */
         snprintf(WALFilePath, sizeof(WALFilePath), "%s/%s", archiveLocation, xlde->d_name);
 
-        if (dryrun) {
+        if (dryrun)
+        {
           /*
            * Prints the name of the file to be removed and skips the
            * actual removal.  The regular printout is so that the
@@ -140,20 +148,25 @@ CleanupPriorWALFiles(void)
         pg_log_debug("removing file \"%s\"", WALFilePath);
 
         rc = unlink(WALFilePath);
-        if (rc != 0) {
+        if (rc != 0)
+        {
           pg_log_error("could not remove file \"%s\": %m", WALFilePath);
           break;
         }
       }
     }
 
-    if (errno) {
+    if (errno)
+    {
       pg_log_error("could not read archive location \"%s\": %m", archiveLocation);
     }
-    if (closedir(xldir)) {
+    if (closedir(xldir))
+    {
       pg_log_error("could not close archive location \"%s\": %m", archiveLocation);
     }
-  } else {
+  }
+  else
+  {
     pg_log_error("could not open archive location \"%s\": %m", archiveLocation);
   }
 }
@@ -179,15 +192,19 @@ SetWALFileNameForCleanup(void)
    * 000000010000000000000010.00000020.backup are after
    * 000000010000000000000010.
    */
-  if (IsXLogFileName(restartWALFileName)) {
+  if (IsXLogFileName(restartWALFileName))
+  {
     strcpy(exclusiveCleanupFileName, restartWALFileName);
     fnameOK = true;
-  } else if (IsPartialXLogFileName(restartWALFileName)) {
+  }
+  else if (IsPartialXLogFileName(restartWALFileName))
+  {
     int args;
     uint32 tli = 1, log = 0, seg = 0;
 
     args = sscanf(restartWALFileName, "%08X%08X%08X.partial", &tli, &log, &seg);
-    if (args == 3) {
+    if (args == 3)
+    {
       fnameOK = true;
 
       /*
@@ -196,12 +213,15 @@ SetWALFileNameForCleanup(void)
        */
       XLogFileNameById(exclusiveCleanupFileName, tli, log, seg);
     }
-  } else if (IsBackupHistoryFileName(restartWALFileName)) {
+  }
+  else if (IsBackupHistoryFileName(restartWALFileName))
+  {
     int args;
     uint32 tli = 1, log = 0, seg = 0, offset = 0;
 
     args = sscanf(restartWALFileName, "%08X%08X%08X.%08X.backup", &tli, &log, &seg, &offset);
-    if (args == 4) {
+    if (args == 4)
+    {
       fnameOK = true;
 
       /*
@@ -212,7 +232,8 @@ SetWALFileNameForCleanup(void)
     }
   }
 
-  if (!fnameOK) {
+  if (!fnameOK)
+  {
     pg_log_error("invalid file name argument");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(2);
@@ -236,8 +257,15 @@ usage(void)
   printf(_("  -V, --version  output version information, then exit\n"));
   printf(_("  -x EXT         clean up files if they have this extension\n"));
   printf(_("  -?, --help     show this help, then exit\n"));
-  printf(_("\nFor use as archive_cleanup_command in postgresql.conf:\n  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\ne.g.\n  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n"));
-  printf(_("\nOr for use as a standalone archive cleaner:\ne.g.\n  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n"));
+  printf(_("\n"
+           "For use as archive_cleanup_command in postgresql.conf:\n"
+           "  archive_cleanup_command = 'pg_archivecleanup [OPTION]... ARCHIVELOCATION %%r'\n"
+           "e.g.\n"
+           "  archive_cleanup_command = 'pg_archivecleanup /mnt/server/archiverdir %%r'\n"));
+  printf(_("\n"
+           "Or for use as a standalone archive cleaner:\n"
+           "e.g.\n"
+           "  pg_archivecleanup /mnt/server/archiverdir 000000010000000000000010.00000020.backup\n"));
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
@@ -251,19 +279,24 @@ main(int argc, char **argv)
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_archivecleanup"));
   progname = get_progname(argv[0]);
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage();
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_archivecleanup (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((c = getopt(argc, argv, "x:dn")) != -1) {
-    switch (c) {
+  while ((c = getopt(argc, argv, "x:dn")) != -1)
+  {
+    switch (c)
+    {
     case 'd': /* Debug mode */
       pg_logging_set_level(PG_LOG_DEBUG);
       break;
@@ -274,7 +307,7 @@ main(int argc, char **argv)
       additional_ext = pg_strdup(optarg); /* Extension to remove
                                            * from xlogfile names */
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(2);
       break;
@@ -283,29 +316,37 @@ main(int argc, char **argv)
 
   /*
    * We will go to the archiveLocation to check restartWALFileName.
-   * restartWALFileName may not exist anymore, which would not be an error,* so we separate the archiveLocation and restartWALFileName so we can
+   * restartWALFileName may not exist anymore, which would not be an error,
+   * so we separate the archiveLocation and restartWALFileName so we can
    * check separately whether archiveLocation exists, if not that is an
    * error
    */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     archiveLocation = argv[optind];
     optind++;
-  } else {
+  }
+  else
+  {
     pg_log_error("must specify archive location");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(2);
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     restartWALFileName = argv[optind];
     optind++;
-  } else {
+  }
+  else
+  {
     pg_log_error("must specify oldest kept WAL file");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(2);
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(2);
