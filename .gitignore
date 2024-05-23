@@ -2,7 +2,8 @@
 **/domgad-out
 **/identify_path
 **/log/**
-**/output*
+**/output/**
+**/output.origin/**
 **/quantify_path
 **/tmp
 **/compare.txt
