@@ -29,7 +29,8 @@ static const char *progname;
 
 static int WalSegSz;
 
-typedef struct XLogDumpPrivate {
+typedef struct XLogDumpPrivate
+{
   TimeLineID timeline;
   char *inpath;
   XLogRecPtr startptr;
@@ -37,7 +38,8 @@ typedef struct XLogDumpPrivate {
   bool endptr_reached;
 } XLogDumpPrivate;
 
-typedef struct XLogDumpConfig {
+typedef struct XLogDumpConfig
+{
   /* display options */
   bool bkp_details;
   int stop_after_records;
@@ -52,7 +54,8 @@ typedef struct XLogDumpConfig {
   bool filter_by_xid_enabled;
 } XLogDumpConfig;
 
-typedef struct Stats {
+typedef struct Stats
+{
   uint64 count;
   uint64 rec_len;
   uint64 fpi_len;
@@ -60,14 +63,16 @@ typedef struct Stats {
 
 #define MAX_XLINFO_TYPES 16
 
-typedef struct XLogDumpStats {
+typedef struct XLogDumpStats
+{
   uint64 count;
   Stats rmgr_stats[RM_NEXT_ID];
   Stats record_stats[RM_NEXT_ID][MAX_XLINFO_TYPES];
 } XLogDumpStats;
 
 #define fatal_error(...)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     pg_log_fatal(__VA_ARGS__);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
     exit(EXIT_FAILURE);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
   } while (0)
@@ -77,7 +82,8 @@ print_rmgr_list(void)
 {
   int i;
 
-  for (i = 0; i <= RM_MAX_ID; i++) {
+  for (i = 0; i <= RM_MAX_ID; i++)
+  {
     printf("%s\n", RmgrDescTable[i].rm_name);
   }
 }
@@ -91,7 +97,8 @@ verify_directory(const char *directory)
 {
   DIR *dir = opendir(directory);
 
-  if (dir == NULL) {
+  if (dir == NULL)
+  {
     return false;
   }
   closedir(dir);
@@ -113,13 +120,15 @@ split_path(const char *path, char **dir, char **fname)
   sep = strrchr(path, '/');
 
   /* directory path */
-  if (sep != NULL) {
+  if (sep != NULL)
+  {
     *dir = pg_strdup(path);
     (*dir)[(sep - path) + 1] = '\0'; /* no strndup */
     *fname = pg_strdup(sep + 1);
   }
   /* local directory */
-  else {
+  else
+  {
     *dir = NULL;
     *fname = pg_strdup(path);
   }
@@ -141,14 +150,16 @@ open_file_in_directory(const char *directory, const char *fname)
   snprintf(fpath, MAXPGPATH, "%s/%s", directory, fname);
   fd = open(fpath, O_RDONLY | PG_BINARY, 0);
 
-  if (fd < 0 && errno != ENOENT) {
+  if (fd < 0 && errno != ENOENT)
+  {
     fatal_error("could not open file \"%s\": %s", fname, strerror(errno));
   }
   return fd;
 }
 
 /*
- * Try to find fname in the given directory. Returns true if it is found,* false otherwise. If fname is NULL, search the complete directory for any
+ * Try to find fname in the given directory. Returns true if it is found,
+ * false otherwise. If fname is NULL, search the complete directory for any
  * file with a valid WAL file name. If file is successfully opened, set the
  * wal segment size.
  */
@@ -159,7 +170,8 @@ search_directory(const char *directory, const char *fname)
   DIR *xldir;
 
   /* open file if valid filename is provided */
-  if (fname != NULL) {
+  if (fname != NULL)
+  {
     fd = open_file_in_directory(directory, fname);
   }
 
@@ -168,11 +180,14 @@ search_directory(const char *directory, const char *fname)
    * we find any file whose name is a valid WAL file name then try to open
    * it.  If we cannot open it, bail out.
    */
-  else if ((xldir = opendir(directory)) != NULL) {
+  else if ((xldir = opendir(directory)) != NULL)
+  {
     struct dirent *xlde;
 
-    while ((xlde = readdir(xldir)) != NULL) {
-      if (IsXLogFileName(xlde->d_name)) {
+    while ((xlde = readdir(xldir)) != NULL)
+    {
+      if (IsXLogFileName(xlde->d_name))
+      {
         fd = open_file_in_directory(directory, xlde->d_name);
         fname = pg_strdup(xlde->d_name);
         break;
@@ -183,22 +198,29 @@ search_directory(const char *directory, const char *fname)
   }
 
   /* set WalSegSz if file is successfully opened */
-  if (fd >= 0) {
+  if (fd >= 0)
+  {
     PGAlignedXLogBlock buf;
     int r;
 
     r = read(fd, buf.data, XLOG_BLCKSZ);
-    if (r == XLOG_BLCKSZ) {
+    if (r == XLOG_BLCKSZ)
+    {
       XLogLongPageHeader longhdr = (XLogLongPageHeader)buf.data;
 
       WalSegSz = longhdr->xlp_seg_size;
 
-      if (!IsValidWalSegSize(WalSegSz)) {
-        fatal_error(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the WAL file \"%s\" header specifies %d byte","WAL segment size must be a power of two between 1 MB and 1 GB, but the WAL file \"%s\" header specifies %d bytes",WalSegSz),fname, WalSegSz);
+      if (!IsValidWalSegSize(WalSegSz))
+      {
+        fatal_error(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the WAL file \"%s\" header specifies %d byte", "WAL segment size must be a power of two between 1 MB and 1 GB, but the WAL file \"%s\" header specifies %d bytes", WalSegSz), fname, WalSegSz);
       }
-    } else if (r < 0) {
+    }
+    else if (r < 0)
+    {
       fatal_error("could not read file \"%s\": %s", fname, strerror(errno));
-    } else {
+    }
+    else
+    {
       fatal_error("could not read file \"%s\": read %d of %zu", fname, r, (Size)XLOG_BLCKSZ);
     }
     close(fd);
@@ -227,37 +249,46 @@ identify_target_directory(XLogDumpPrivate *private, char *directory, char *fname
 {
   char fpath[MAXPGPATH];
 
-  if (directory != NULL) {
-    if (search_directory(directory, fname)) {
+  if (directory != NULL)
+  {
+    if (search_directory(directory, fname))
+    {
       private->inpath = pg_strdup(directory);
       return;
     }
 
     /* directory / XLOGDIR */
     snprintf(fpath, MAXPGPATH, "%s/%s", directory, XLOGDIR);
-    if (search_directory(fpath, fname)) {
+    if (search_directory(fpath, fname))
+    {
       private->inpath = pg_strdup(fpath);
       return;
     }
-  } else {
+  }
+  else
+  {
     const char *datadir;
 
     /* current directory */
-    if (search_directory(".", fname)) {
+    if (search_directory(".", fname))
+    {
       private->inpath = pg_strdup(".");
       return;
     }
     /* XLOGDIR */
-    if (search_directory(XLOGDIR, fname)) {
+    if (search_directory(XLOGDIR, fname))
+    {
       private->inpath = pg_strdup(XLOGDIR);
       return;
     }
 
     datadir = getenv("PGDATA");
     /* $PGDATA / XLOGDIR */
-    if (datadir != NULL) {
+    if (datadir != NULL)
+    {
       snprintf(fpath, MAXPGPATH, "%s/%s", datadir, XLOGDIR);
-      if (search_directory(fpath, fname)) {
+      if (search_directory(fpath, fname))
+      {
         private->inpath = pg_strdup(fpath);
         return;
       }
@@ -265,9 +296,12 @@ identify_target_directory(XLogDumpPrivate *private, char *directory, char *fname
   }
 
   /* could not locate WAL file */
-  if (fname) {
+  if (fname)
+  {
     fatal_error("could not locate WAL file \"%s\"", fname);
-  } else {
+  }
+  else
+  {
     fatal_error("could not find any WAL file");
   }
 }
@@ -292,19 +326,22 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id, XLogRecPtr start
   recptr = startptr;
   nbytes = count;
 
-  while (nbytes > 0) {
+  while (nbytes > 0)
+  {
     uint32 startoff;
     int segbytes;
     int readbytes;
 
     startoff = XLogSegmentOffset(recptr, WalSegSz);
 
-    if (sendFile < 0 || !XLByteInSeg(recptr, sendSegNo, WalSegSz)) {
+    if (sendFile < 0 || !XLByteInSeg(recptr, sendSegNo, WalSegSz))
+    {
       char fname[MAXFNAMELEN];
       int tries;
 
       /* Switch to another logfile segment */
-      if (sendFile >= 0) {
+      if (sendFile >= 0)
+      {
         close(sendFile);
       }
 
@@ -318,12 +355,15 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id, XLogRecPtr start
        * available. So we loop for 5 seconds looking for the file to
        * appear before giving up.
        */
-      for (tries = 0; tries < 10; tries++) {
+      for (tries = 0; tries < 10; tries++)
+      {
         sendFile = open_file_in_directory(directory, fname);
-        if (sendFile >= 0) {
+        if (sendFile >= 0)
+        {
           break;
         }
-        if (errno == ENOENT) {
+        if (errno == ENOENT)
+        {
           int save_errno = errno;
 
           /* File not there yet, try again */
@@ -336,15 +376,18 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id, XLogRecPtr start
         break;
       }
 
-      if (sendFile < 0) {
+      if (sendFile < 0)
+      {
         fatal_error("could not find file \"%s\": %s", fname, strerror(errno));
       }
       sendOff = 0;
     }
 
     /* Need to seek in the file? */
-    if (sendOff != startoff) {
-      if (lseek(sendFile, (off_t)startoff, SEEK_SET) < 0) {
+    if (sendOff != startoff)
+    {
+      if (lseek(sendFile, (off_t)startoff, SEEK_SET) < 0)
+      {
         int err = errno;
         char fname[MAXPGPATH];
 
@@ -356,14 +399,18 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id, XLogRecPtr start
     }
 
     /* How many bytes are within this segment? */
-    if (nbytes > (WalSegSz - startoff)) {
+    if (nbytes > (WalSegSz - startoff))
+    {
       segbytes = WalSegSz - startoff;
-    } else {
+    }
+    else
+    {
       segbytes = nbytes;
     }
 
     readbytes = read(sendFile, p, segbytes);
-    if (readbytes <= 0) {
+    if (readbytes <= 0)
+    {
       int err = errno;
       char fname[MAXPGPATH];
       int save_errno = errno;
@@ -371,9 +418,12 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id, XLogRecPtr start
       XLogFileName(fname, timeline_id, sendSegNo, WalSegSz);
       errno = save_errno;
 
-      if (readbytes < 0) {
+      if (readbytes < 0)
+      {
         fatal_error("could not read from log file %s, offset %u, length %d: %s", fname, sendOff, segbytes, strerror(err));
-      } else if (readbytes == 0) {
+      }
+      else if (readbytes == 0)
+      {
         fatal_error("could not read from log file %s, offset %u: read %d of %zu", fname, sendOff, readbytes, (Size)segbytes);
       }
     }
@@ -396,12 +446,18 @@ XLogDumpReadPage(XLogReaderState *state, XLogRecPtr targetPagePtr, int reqLen, X
   XLogDumpPrivate *private = state->private_data;
   int count = XLOG_BLCKSZ;
 
-  if (private->endptr != InvalidXLogRecPtr) {
-    if (targetPagePtr + XLOG_BLCKSZ <= private->endptr) {
+  if (private->endptr != InvalidXLogRecPtr)
+  {
+    if (targetPagePtr + XLOG_BLCKSZ <= private->endptr)
+    {
       count = XLOG_BLCKSZ;
-    } else if (targetPagePtr + reqLen <= private->endptr) {
+    }
+    else if (targetPagePtr + reqLen <= private->endptr)
+    {
       count = private->endptr - targetPagePtr;
-    } else {
+    }
+    else
+    {
       private->endptr_reached = true;
       return -1;
     }
@@ -428,8 +484,10 @@ XLogDumpRecordLen(XLogReaderState *record, uint32 *rec_len, uint32 *fpi_len)
    * add an accessor macro for this.
    */
   *fpi_len = 0;
-  for (block_id = 0; block_id <= record->max_block_id; block_id++) {
-    if (XLogRecHasBlockImage(record, block_id)) {
+  for (block_id = 0; block_id <= record->max_block_id; block_id++)
+  {
+    if (XLogRecHasBlockImage(record, block_id))
+    {
       *fpi_len += record->blocks[block_id].bimg_len;
     }
   }
@@ -479,7 +537,8 @@ XLogDumpCountRecord(XLogDumpConfig *config, XLogDumpStats *stats, XLogReaderStat
    * following three bits for the opcode. We filter opcode out of xl_info
    * and use it as the identifier of the record.
    */
-  if (rmid == RM_XACT_ID) {
+  if (rmid == RM_XACT_ID)
+  {
     recid &= 0x07;
   }
 
@@ -507,54 +566,77 @@ XLogDumpDisplayRecord(XLogDumpConfig *config, XLogReaderState *record)
 
   XLogDumpRecordLen(record, &rec_len, &fpi_len);
 
-  printf("rmgr: %-11s len (rec/tot): %6u/%6u, tx: %10u, lsn: %X/%08X, prev %X/%08X, ",desc->rm_name, rec_len, XLogRecGetTotalLen(record), XLogRecGetXid(record), (uint32)(record->ReadRecPtr >> 32), (uint32)record->ReadRecPtr, (uint32)(xl_prev >> 32), (uint32)xl_prev);
+  printf("rmgr: %-11s len (rec/tot): %6u/%6u, tx: %10u, lsn: %X/%08X, prev %X/%08X, ", desc->rm_name, rec_len, XLogRecGetTotalLen(record), XLogRecGetXid(record), (uint32)(record->ReadRecPtr >> 32), (uint32)record->ReadRecPtr, (uint32)(xl_prev >> 32), (uint32)xl_prev);
 
   id = desc->rm_identify(info);
-  if (id == NULL) {
+  if (id == NULL)
+  {
     printf("desc: UNKNOWN (%x) ", info & ~XLR_INFO_MASK);
-  } else {
+  }
+  else
+  {
     printf("desc: %s ", id);
   }
 
   /* the desc routine will printf the description directly to stdout */
   desc->rm_desc(NULL, record);
 
-  if (!config->bkp_details) {
+  if (!config->bkp_details)
+  {
     /* print block references (short format) */
-    for (block_id = 0; block_id <= record->max_block_id; block_id++) {
-      if (!XLogRecHasBlockRef(record, block_id)) {
+    for (block_id = 0; block_id <= record->max_block_id; block_id++)
+    {
+      if (!XLogRecHasBlockRef(record, block_id))
+      {
         continue;
       }
 
       XLogRecGetBlockTag(record, block_id, &rnode, &forknum, &blk);
-      if (forknum != MAIN_FORKNUM) {
+      if (forknum != MAIN_FORKNUM)
+      {
         printf(", blkref #%u: rel %u/%u/%u fork %s blk %u", block_id, rnode.spcNode, rnode.dbNode, rnode.relNode, forkNames[forknum], blk);
-      } else {
+      }
+      else
+      {
         printf(", blkref #%u: rel %u/%u/%u blk %u", block_id, rnode.spcNode, rnode.dbNode, rnode.relNode, blk);
       }
-      if (XLogRecHasBlockImage(record, block_id)) {
-        if (XLogRecBlockImageApply(record, block_id)) {
+      if (XLogRecHasBlockImage(record, block_id))
+      {
+        if (XLogRecBlockImageApply(record, block_id))
+        {
           printf(" FPW");
-        } else {
+        }
+        else
+        {
           printf(" FPW for WAL verification");
         }
       }
     }
     putchar('\n');
-  } else {
+  }
+  else
+  {
     /* print block references (detailed format) */
     putchar('\n');
-    for (block_id = 0; block_id <= record->max_block_id; block_id++) {
-      if (!XLogRecHasBlockRef(record, block_id)) {
+    for (block_id = 0; block_id <= record->max_block_id; block_id++)
+    {
+      if (!XLogRecHasBlockRef(record, block_id))
+      {
         continue;
       }
 
       XLogRecGetBlockTag(record, block_id, &rnode, &forknum, &blk);
       printf("\tblkref #%u: rel %u/%u/%u fork %s blk %u", block_id, rnode.spcNode, rnode.dbNode, rnode.relNode, forkNames[forknum], blk);
-      if (XLogRecHasBlockImage(record, block_id)) {
-        if (record->blocks[block_id].bimg_info & BKPIMAGE_IS_COMPRESSED) {
-          printf(" (FPW%s); hole: offset: %u, length: %u, compression saved: %u",XLogRecBlockImageApply(record, block_id) ? "" : " for WAL verification", record->blocks[block_id].hole_offset, record->blocks[block_id].hole_length, BLCKSZ - record->blocks[block_id].hole_length - record->blocks[block_id].bimg_len);
-        } else {
+      if (XLogRecHasBlockImage(record, block_id))
+      {
+        if (record->blocks[block_id].bimg_info & BKPIMAGE_IS_COMPRESSED)
+        {
+          printf(" (FPW%s); hole: offset: %u, length: %u, "
+                 "compression saved: %u",
+              XLogRecBlockImageApply(record, block_id) ? "" : " for WAL verification", record->blocks[block_id].hole_offset, record->blocks[block_id].hole_length, BLCKSZ - record->blocks[block_id].hole_length - record->blocks[block_id].bimg_len);
+        }
+        else
+        {
           printf(" (FPW%s); hole: offset: %u, length: %u", XLogRecBlockImageApply(record, block_id) ? "" : " for WAL verification", record->blocks[block_id].hole_offset, record->blocks[block_id].hole_length);
         }
       }
@@ -572,26 +654,35 @@ XLogDumpStatsRow(const char *name, uint64 n, uint64 total_count, uint64 rec_len,
   double n_pct, rec_len_pct, fpi_len_pct, tot_len_pct;
 
   n_pct = 0;
-  if (total_count != 0) {
+  if (total_count != 0)
+  {
     n_pct = 100 * (double)n / total_count;
   }
 
   rec_len_pct = 0;
-  if (total_rec_len != 0) {
+  if (total_rec_len != 0)
+  {
     rec_len_pct = 100 * (double)rec_len / total_rec_len;
   }
 
   fpi_len_pct = 0;
-  if (total_fpi_len != 0) {
+  if (total_fpi_len != 0)
+  {
     fpi_len_pct = 100 * (double)fpi_len / total_fpi_len;
   }
 
   tot_len_pct = 0;
-  if (total_len != 0) {
+  if (total_len != 0)
+  {
     tot_len_pct = 100 * (double)tot_len / total_len;
   }
 
-  printf("%-27s %20" INT64_MODIFIER "u (%6.02f) %20" INT64_MODIFIER "u (%6.02f) %20" INT64_MODIFIER "u (%6.02f) %20" INT64_MODIFIER "u (%6.02f)\n",name, n, n_pct, rec_len, rec_len_pct, fpi_len, fpi_len_pct, tot_len, tot_len_pct);
+  printf("%-27s "
+         "%20" INT64_MODIFIER "u (%6.02f) "
+         "%20" INT64_MODIFIER "u (%6.02f) "
+         "%20" INT64_MODIFIER "u (%6.02f) "
+         "%20" INT64_MODIFIER "u (%6.02f)\n",
+      name, n, n_pct, rec_len, rec_len_pct, fpi_len, fpi_len_pct, tot_len, tot_len_pct);
 }
 
 /*
@@ -609,13 +700,16 @@ XLogDumpDisplayStats(XLogDumpConfig *config, XLogDumpStats *stats)
 
   /* ---
    * Make a first pass to calculate column totals:
-   * count(*),* sum(xl_len+SizeOfXLogRecord),* sum(xl_tot_len-xl_len-SizeOfXLogRecord), and
+   * count(*),
+   * sum(xl_len+SizeOfXLogRecord),
+   * sum(xl_tot_len-xl_len-SizeOfXLogRecord), and
    * sum(xl_tot_len).
    * These are used to calculate percentages for each record type.
    * ---
    */
 
-  for (ri = 0; ri < RM_NEXT_ID; ri++) {
+  for (ri = 0; ri < RM_NEXT_ID; ri++)
+  {
     total_count += stats->rmgr_stats[ri].count;
     total_rec_len += stats->rmgr_stats[ri].rec_len;
     total_fpi_len += stats->rmgr_stats[ri].fpi_len;
@@ -627,21 +721,28 @@ XLogDumpDisplayStats(XLogDumpConfig *config, XLogDumpStats *stats)
    * strlen("(100.00%)")
    */
 
-  printf("%-27s %20s %8s %20s %8s %20s %8s %20s %8s\n%-27s %20s %8s %20s %8s %20s %8s %20s %8s\n","Type", "N", "(%)", "Record size", "(%)", "FPI size", "(%)", "Combined size", "(%)", "----", "-", "---", "-----------", "---", "--------", "---", "-------------", "---");
+  printf("%-27s %20s %8s %20s %8s %20s %8s %20s %8s\n"
+         "%-27s %20s %8s %20s %8s %20s %8s %20s %8s\n",
+      "Type", "N", "(%)", "Record size", "(%)", "FPI size", "(%)", "Combined size", "(%)", "----", "-", "---", "-----------", "---", "--------", "---", "-------------", "---");
 
-  for (ri = 0; ri < RM_NEXT_ID; ri++) {
+  for (ri = 0; ri < RM_NEXT_ID; ri++)
+  {
     uint64 count, rec_len, fpi_len, tot_len;
     const RmgrDescData *desc = &RmgrDescTable[ri];
 
-    if (!config->stats_per_record) {
+    if (!config->stats_per_record)
+    {
       count = stats->rmgr_stats[ri].count;
       rec_len = stats->rmgr_stats[ri].rec_len;
       fpi_len = stats->rmgr_stats[ri].fpi_len;
       tot_len = rec_len + fpi_len;
 
       XLogDumpStatsRow(desc->rm_name, count, total_count, rec_len, total_rec_len, fpi_len, total_fpi_len, tot_len, total_len);
-    } else {
-      for (rj = 0; rj < MAX_XLINFO_TYPES; rj++) {
+    }
+    else
+    {
+      for (rj = 0; rj < MAX_XLINFO_TYPES; rj++)
+      {
         const char *id;
 
         count = stats->record_stats[ri][rj].count;
@@ -650,13 +751,15 @@ XLogDumpDisplayStats(XLogDumpConfig *config, XLogDumpStats *stats)
         tot_len = rec_len + fpi_len;
 
         /* Skip undefined combinations and ones that didn't occur */
-        if (count == 0) {
+        if (count == 0)
+        {
           continue;
         }
 
         /* the upper four bits in xl_info are the rmgr's */
         id = desc->rm_identify(rj << 4);
-        if (id == NULL) {
+        if (id == NULL)
+        {
           id = psprintf("UNKNOWN (%x)", rj << 4);
         }
 
@@ -675,22 +778,29 @@ XLogDumpDisplayStats(XLogDumpConfig *config, XLogDumpStats *stats)
    */
 
   rec_len_pct = 0;
-  if (total_len != 0) {
+  if (total_len != 0)
+  {
     rec_len_pct = 100 * (double)total_rec_len / total_len;
   }
 
   fpi_len_pct = 0;
-  if (total_len != 0) {
+  if (total_len != 0)
+  {
     fpi_len_pct = 100 * (double)total_fpi_len / total_len;
   }
 
-  printf("%-27s %20" INT64_MODIFIER "u %-9s%20" INT64_MODIFIER "u %-9s%20" INT64_MODIFIER "u %-9s%20" INT64_MODIFIER "u %-6s\n","Total", stats->count, "", total_rec_len, psprintf("[%.02f%%]", rec_len_pct), total_fpi_len, psprintf("[%.02f%%]", fpi_len_pct), total_len, "[100%]");
+  printf("%-27s "
+         "%20" INT64_MODIFIER "u %-9s"
+         "%20" INT64_MODIFIER "u %-9s"
+         "%20" INT64_MODIFIER "u %-9s"
+         "%20" INT64_MODIFIER "u %-6s\n",
+      "Total", stats->count, "", total_rec_len, psprintf("[%.02f%%]", rec_len_pct), total_fpi_len, psprintf("[%.02f%%]", fpi_len_pct), total_len, "[100%]");
 }
 
 static void
 usage(void)
 {
-  printf(_("%s decodes and displays PostgreSQL write-ahead logs for debugging.\n\n"),progname);
+  printf(_("%s decodes and displays PostgreSQL write-ahead logs for debugging.\n\n"), progname);
   printf(_("Usage:\n"));
   printf(_("  %s [OPTION]... [STARTSEG [ENDSEG]]\n"), progname);
   printf(_("\nOptions:\n"));
@@ -698,13 +808,18 @@ usage(void)
   printf(_("  -e, --end=RECPTR       stop reading at WAL location RECPTR\n"));
   printf(_("  -f, --follow           keep retrying after reaching end of WAL\n"));
   printf(_("  -n, --limit=N          number of records to display\n"));
-  printf(_("  -p, --path=PATH        directory in which to find log segment files or a\n                         directory with a ./pg_wal that contains such files\n                         (default:; current directory, ./pg_wal, $PGDATA/pg_wal)\n"));
-  printf(_("  -r, --rmgr=RMGR        only show records generated by resource manager RMGR;\n                         use --rmgr=list to list valid resource manager names\n"));
+  printf(_("  -p, --path=PATH        directory in which to find log segment files or a\n"
+           "                         directory with a ./pg_wal that contains such files\n"
+           "                         (default: current directory, ./pg_wal, $PGDATA/pg_wal)\n"));
+  printf(_("  -r, --rmgr=RMGR        only show records generated by resource manager RMGR;\n"
+           "                         use --rmgr=list to list valid resource manager names\n"));
   printf(_("  -s, --start=RECPTR     start reading at WAL location RECPTR\n"));
-  printf(_("  -t, --timeline=TLI     timeline from which to read log records\n                         (default:; 1 or the value used in STARTSEG)\n"));
+  printf(_("  -t, --timeline=TLI     timeline from which to read log records\n"
+           "                         (default: 1 or the value used in STARTSEG)\n"));
   printf(_("  -V, --version          output version information, then exit\n"));
   printf(_("  -x, --xid=XID          only show records with transaction ID XID\n"));
-  printf(_("  -z, --stats[=record]   show statistics instead of records\n                         (optionally, show per-record statistics)\n"));
+  printf(_("  -z, --stats[=record]   show statistics instead of records\n"
+           "                         (optionally, show per-record statistics)\n"));
   printf(_("  -?, --help             show this help, then exit\n"));
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
@@ -731,12 +846,15 @@ main(int argc, char **argv)
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_waldump"));
   progname = get_progname(argv[0]);
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage();
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_waldump (PostgreSQL) " PG_VERSION);
       exit(0);
     }
@@ -761,18 +879,22 @@ main(int argc, char **argv)
   config.stats = false;
   config.stats_per_record = false;
 
-  if (argc <= 1) {
+  if (argc <= 1)
+  {
     pg_log_error("no arguments specified");
     goto bad_argument;
   }
 
-  while ((option = getopt_long(argc, argv, "be:fn:p:r:s:t:x:z", long_options, &optindex)) != -1) {
-    switch (option) {
+  while ((option = getopt_long(argc, argv, "be:fn:p:r:s:t:x:z", long_options, &optindex)) != -1)
+  {
+    switch (option)
+    {
     case 'b':
       config.bkp_details = true;
       break;
     case 'e':
-      if (sscanf(optarg, "%X/%X", &xlogid, &xrecoff) != 2) {
+      if (sscanf(optarg, "%X/%X", &xlogid, &xrecoff) != 2)
+      {
         pg_log_error("could not parse end WAL location \"%s\"", optarg);
         goto bad_argument;
       }
@@ -782,7 +904,8 @@ main(int argc, char **argv)
       config.follow = true;
       break;
     case 'n':
-      if (sscanf(optarg, "%d", &config.stop_after_records) != 1) {
+      if (sscanf(optarg, "%d", &config.stop_after_records) != 1)
+      {
         pg_log_error("could not parse limit \"%s\"", optarg);
         goto bad_argument;
       }
@@ -791,42 +914,52 @@ main(int argc, char **argv)
       private
       .inpath = pg_strdup(optarg);
       break;
-    case 'r': {
+    case 'r':
+    {
       int i;
 
-      if (pg_strcasecmp(optarg, "list") == 0) {
+      if (pg_strcasecmp(optarg, "list") == 0)
+      {
         print_rmgr_list();
         exit(EXIT_SUCCESS);
       }
 
-      for (i = 0; i <= RM_MAX_ID; i++) {
-        if (pg_strcasecmp(optarg, RmgrDescTable[i].rm_name) == 0) {
+      for (i = 0; i <= RM_MAX_ID; i++)
+      {
+        if (pg_strcasecmp(optarg, RmgrDescTable[i].rm_name) == 0)
+        {
           config.filter_by_rmgr = i;
           break;
         }
       }
 
-      if (config.filter_by_rmgr == -1) {
+      if (config.filter_by_rmgr == -1)
+      {
         pg_log_error("resource manager \"%s\" does not exist", optarg);
         goto bad_argument;
       }
-    } break;
+    }
+    break;
     case 's':
-      if (sscanf(optarg, "%X/%X", &xlogid, &xrecoff) != 2) {
+      if (sscanf(optarg, "%X/%X", &xlogid, &xrecoff) != 2)
+      {
         pg_log_error("could not parse start WAL location \"%s\"", optarg);
         goto bad_argument;
-      } else
+      }
+      else
       private
       .startptr = (uint64)xlogid << 32 | xrecoff;
       break;
     case 't':
-      if (sscanf(optarg, "%d", &private.timeline) != 1) {
+      if (sscanf(optarg, "%d", &private.timeline) != 1)
+      {
         pg_log_error("could not parse timeline \"%s\"", optarg);
         goto bad_argument;
       }
       break;
     case 'x':
-      if (sscanf(optarg, "%u", &config.filter_by_xid) != 1) {
+      if (sscanf(optarg, "%u", &config.filter_by_xid) != 1)
+      {
         pg_log_error("could not parse \"%s\" as a transaction ID", optarg);
         goto bad_argument;
       }
@@ -835,35 +968,43 @@ main(int argc, char **argv)
     case 'z':
       config.stats = true;
       config.stats_per_record = false;
-      if (optarg) {
-        if (strcmp(optarg, "record") == 0) {
+      if (optarg)
+      {
+        if (strcmp(optarg, "record") == 0)
+        {
           config.stats_per_record = true;
-        } else if (strcmp(optarg, "rmgr") != 0) {
+        }
+        else if (strcmp(optarg, "rmgr") != 0)
+        {
           pg_log_error("unrecognized argument to --stats: %s", optarg);
           goto bad_argument;
         }
       }
       break;
-    default:;
+    default:
       goto bad_argument;
     }
   }
 
-  if ((optind + 2) < argc) {
+  if ((optind + 2) < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind + 2]);
     goto bad_argument;
   }
 
-  if (private.inpath != NULL) {
+  if (private.inpath != NULL)
+  {
     /* validate path points to directory */
-    if (!verify_directory(private.inpath)) {
+    if (!verify_directory(private.inpath))
+    {
       pg_log_error("path \"%s\" could not be opened: %s", private.inpath, strerror(errno));
       goto bad_argument;
     }
   }
 
   /* parse files as start/end boundaries, extract path if not specified */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     char *directory = NULL;
     char *fname = NULL;
     int fd;
@@ -871,17 +1012,20 @@ main(int argc, char **argv)
 
     split_path(argv[optind], &directory, &fname);
 
-    if (private.inpath == NULL && directory != NULL) {
+    if (private.inpath == NULL && directory != NULL)
+    {
       private.inpath = directory;
 
-      if (!verify_directory(private.inpath)) {
+      if (!verify_directory(private.inpath))
+      {
         fatal_error("could not open directory \"%s\": %s", private.inpath, strerror(errno));
       }
     }
 
     identify_target_directory(&private, private.inpath, fname);
     fd = open_file_in_directory(private.inpath, fname);
-    if (fd < 0) {
+    if (fd < 0)
+    {
       fatal_error("could not open file \"%s\"", fname);
     }
     close(fd);
@@ -889,27 +1033,33 @@ main(int argc, char **argv)
     /* parse position from file */
     XLogFromFileName(fname, &private.timeline, &segno, WalSegSz);
 
-    if (XLogRecPtrIsInvalid(private.startptr)) {
+    if (XLogRecPtrIsInvalid(private.startptr))
+    {
       XLogSegNoOffsetToRecPtr(segno, 0, WalSegSz, private.startptr);
-    } else if (!XLByteInSeg(private.startptr, segno, WalSegSz)) {
+    }
+    else if (!XLByteInSeg(private.startptr, segno, WalSegSz))
+    {
       pg_log_error("start WAL location %X/%X is not inside file \"%s\"", (uint32)(private.startptr >> 32), (uint32) private.startptr, fname);
       goto bad_argument;
     }
 
     /* no second file specified, set end position */
-    if (!(optind + 1 < argc) && XLogRecPtrIsInvalid(private.endptr)) {
+    if (!(optind + 1 < argc) && XLogRecPtrIsInvalid(private.endptr))
+    {
       XLogSegNoOffsetToRecPtr(segno + 1, 0, WalSegSz, private.endptr);
     }
 
     /* parse ENDSEG if passed */
-    if (optind + 1 < argc) {
+    if (optind + 1 < argc)
+    {
       XLogSegNo endsegno;
 
       /* ignore directory, already have that */
       split_path(argv[optind + 1], &directory, &fname);
 
       fd = open_file_in_directory(private.inpath, fname);
-      if (fd < 0) {
+      if (fd < 0)
+      {
         fatal_error("could not open file \"%s\"", fname);
       }
       close(fd);
@@ -917,11 +1067,13 @@ main(int argc, char **argv)
       /* parse position from file */
       XLogFromFileName(fname, &private.timeline, &endsegno, WalSegSz);
 
-      if (endsegno < segno) {
+      if (endsegno < segno)
+      {
         fatal_error("ENDSEG %s is before STARTSEG %s", argv[optind + 1], argv[optind]);
       }
 
-      if (XLogRecPtrIsInvalid(private.endptr)) {
+      if (XLogRecPtrIsInvalid(private.endptr))
+      {
         XLogSegNoOffsetToRecPtr(endsegno + 1, 0, WalSegSz, private.endptr);
       }
 
@@ -929,16 +1081,20 @@ main(int argc, char **argv)
       segno = endsegno;
     }
 
-    if (!XLByteInSeg(private.endptr, segno, WalSegSz) && private.endptr != (segno + 1) * WalSegSz) {
+    if (!XLByteInSeg(private.endptr, segno, WalSegSz) && private.endptr != (segno + 1) * WalSegSz)
+    {
       pg_log_error("end WAL location %X/%X is not inside file \"%s\"", (uint32)(private.endptr >> 32), (uint32) private.endptr, argv[argc - 1]);
       goto bad_argument;
     }
-  } else {
+  }
+  else
+  {
     identify_target_directory(&private, private.inpath, NULL);
   }
 
   /* we don't know what to print */
-  if (XLogRecPtrIsInvalid(private.startptr)) {
+  if (XLogRecPtrIsInvalid(private.startptr))
+  {
     pg_log_error("no start WAL location given");
     goto bad_argument;
   }
@@ -947,14 +1103,16 @@ main(int argc, char **argv)
 
   /* we have everything we need, start reading */
   xlogreader_state = XLogReaderAllocate(WalSegSz, XLogDumpReadPage, &private);
-  if (!xlogreader_state) {
+  if (!xlogreader_state)
+  {
     fatal_error("out of memory");
   }
 
   /* first find a valid recptr to start from */
   first_record = XLogFindNextRecord(xlogreader_state, private.startptr);
 
-  if (first_record == InvalidXLogRecPtr) {
+  if (first_record == InvalidXLogRecPtr)
+  {
     fatal_error("could not find a valid record after %X/%X", (uint32)(private.startptr >> 32), (uint32) private.startptr);
   }
 
@@ -963,17 +1121,23 @@ main(int argc, char **argv)
    * to the start of a record and also wasn't a pointer to the beginning of
    * a segment (e.g. we were used in file mode).
    */
-  if (first_record != private.startptr && XLogSegmentOffset(private.startptr, WalSegSz) != 0) {
+  if (first_record != private.startptr && XLogSegmentOffset(private.startptr, WalSegSz) != 0)
+  {
     printf(ngettext("first record is after %X/%X, at %X/%X, skipping over %u byte\n", "first record is after %X/%X, at %X/%X, skipping over %u bytes\n", (first_record - private.startptr)), (uint32)(private.startptr >> 32), (uint32) private.startptr, (uint32)(first_record >> 32), (uint32)first_record, (uint32)(first_record - private.startptr));
   }
 
-  for (;;) {
+  for (;;)
+  {
     /* try to read the next record */
     record = XLogReadRecord(xlogreader_state, first_record, &errormsg);
-    if (!record) {
-      if (!config.follow || private.endptr_reached) {
+    if (!record)
+    {
+      if (!config.follow || private.endptr_reached)
+      {
         break;
-      } else {
+      }
+      else
+      {
         pg_usleep(1000000L); /* 1 second */
         continue;
       }
@@ -983,33 +1147,41 @@ main(int argc, char **argv)
     first_record = InvalidXLogRecPtr;
 
     /* apply all specified filters */
-    if (config.filter_by_rmgr != -1 && config.filter_by_rmgr != record->xl_rmid) {
+    if (config.filter_by_rmgr != -1 && config.filter_by_rmgr != record->xl_rmid)
+    {
       continue;
     }
 
-    if (config.filter_by_xid_enabled && config.filter_by_xid != record->xl_xid) {
+    if (config.filter_by_xid_enabled && config.filter_by_xid != record->xl_xid)
+    {
       continue;
     }
 
     /* process the record */
-    if (config.stats == true) {
+    if (config.stats == true)
+    {
       XLogDumpCountRecord(&config, &stats, xlogreader_state);
-    } else {
+    }
+    else
+    {
       XLogDumpDisplayRecord(&config, xlogreader_state);
     }
 
     /* check whether we printed enough */
     config.already_displayed_records++;
-    if (config.stop_after_records > 0 && config.already_displayed_records >= config.stop_after_records) {
+    if (config.stop_after_records > 0 && config.already_displayed_records >= config.stop_after_records)
+    {
       break;
     }
   }
 
-  if (config.stats == true) {
+  if (config.stats == true)
+  {
     XLogDumpDisplayStats(&config, &stats);
   }
 
-  if (errormsg) {
+  if (errormsg)
+  {
     fatal_error("error in WAL record at %X/%X: %s", (uint32)(xlogreader_state->ReadRecPtr >> 32), (uint32)xlogreader_state->ReadRecPtr, errormsg);
   }
 

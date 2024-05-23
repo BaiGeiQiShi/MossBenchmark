@@ -63,16 +63,22 @@ plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
   int extrachecks = 0;
   int *myextra;
 
-  if (pg_strcasecmp(*newvalue, "all") == 0) {
+  if (pg_strcasecmp(*newvalue, "all") == 0)
+  {
     extrachecks = PLPGSQL_XCHECK_ALL;
-  } else if (pg_strcasecmp(*newvalue, "none") == 0) {
+  }
+  else if (pg_strcasecmp(*newvalue, "none") == 0)
+  {
     extrachecks = PLPGSQL_XCHECK_NONE;
-  } else {
+  }
+  else
+  {
     /* Need a modifiable copy of string */
     rawstring = pstrdup(*newvalue);
 
     /* Parse string into list of identifiers */
-    if (!SplitIdentifierString(rawstring, ',', &elemlist)) {
+    if (!SplitIdentifierString(rawstring, ',', &elemlist))
+    {
       /* syntax error in list */
       GUC_check_errdetail("List syntax is invalid.");
       pfree(rawstring);
@@ -80,21 +86,31 @@ plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
       return false;
     }
 
-    foreach (l, elemlist) {
+    foreach (l, elemlist)
+    {
       char *tok = (char *)lfirst(l);
 
-      if (pg_strcasecmp(tok, "shadowed_variables") == 0) {
+      if (pg_strcasecmp(tok, "shadowed_variables") == 0)
+      {
         extrachecks |= PLPGSQL_XCHECK_SHADOWVAR;
-      } else if (pg_strcasecmp(tok, "too_many_rows") == 0) {
+      }
+      else if (pg_strcasecmp(tok, "too_many_rows") == 0)
+      {
         extrachecks |= PLPGSQL_XCHECK_TOOMANYROWS;
-      } else if (pg_strcasecmp(tok, "strict_multi_assignment") == 0) {
+      }
+      else if (pg_strcasecmp(tok, "strict_multi_assignment") == 0)
+      {
         extrachecks |= PLPGSQL_XCHECK_STRICTMULTIASSIGNMENT;
-      } else if (pg_strcasecmp(tok, "all") == 0 || pg_strcasecmp(tok, "none") == 0) {
+      }
+      else if (pg_strcasecmp(tok, "all") == 0 || pg_strcasecmp(tok, "none") == 0)
+      {
         GUC_check_errdetail("Key word \"%s\" cannot be combined with other key words.", tok);
         pfree(rawstring);
         list_free(elemlist);
         return false;
-      } else {
+      }
+      else
+      {
         GUC_check_errdetail("Unrecognized key word: \"%s\".", tok);
         pfree(rawstring);
         list_free(elemlist);
@@ -107,7 +123,8 @@ plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
   }
 
   myextra = (int *)malloc(sizeof(int));
-  if (!myextra) {
+  if (!myextra)
+  {
     return false;
   }
   *myextra = extrachecks;
@@ -139,15 +156,16 @@ _PG_init(void)
   /* Be sure we do initialization only once (should be redundant now) */
   static bool inited = false;
 
-  if (inited) {
+  if (inited)
+  {
     return;
   }
 
   pg_bindtextdomain(TEXTDOMAIN);
 
-  DefineCustomEnumVariable("plpgsql.variable_conflict",gettext_noop("Sets handling of conflicts between PL/pgSQL variable names and table column names."),NULL, &plpgsql_variable_conflict, PLPGSQL_RESOLVE_ERROR, variable_conflict_options, PGC_SUSET, 0, NULL, NULL, NULL);
+  DefineCustomEnumVariable("plpgsql.variable_conflict", gettext_noop("Sets handling of conflicts between PL/pgSQL variable names and table column names."), NULL, &plpgsql_variable_conflict, PLPGSQL_RESOLVE_ERROR, variable_conflict_options, PGC_SUSET, 0, NULL, NULL, NULL);
 
-  DefineCustomBoolVariable("plpgsql.print_strict_params",gettext_noop("Print information about parameters in the DETAIL part of the error messages generated on INTO ... STRICT failures."),NULL, &plpgsql_print_strict_params, false, PGC_USERSET, 0, NULL, NULL, NULL);
+  DefineCustomBoolVariable("plpgsql.print_strict_params", gettext_noop("Print information about parameters in the DETAIL part of the error messages generated on INTO ... STRICT failures."), NULL, &plpgsql_print_strict_params, false, PGC_USERSET, 0, NULL, NULL, NULL);
 
   DefineCustomBoolVariable("plpgsql.check_asserts", gettext_noop("Perform checks given in ASSERT statements."), NULL, &plpgsql_check_asserts, true, PGC_USERSET, 0, NULL, NULL, NULL);
 
@@ -190,7 +208,8 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
   /*
    * Connect to SPI manager
    */
-  if ((rc = SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0)) != SPI_OK_CONNECT) {
+  if ((rc = SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0)) != SPI_OK_CONNECT)
+  {
     elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
   }
 
@@ -209,12 +228,17 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
      * Determine if called as function or trigger and call appropriate
      * subhandler
      */
-    if (CALLED_AS_TRIGGER(fcinfo)) {
+    if (CALLED_AS_TRIGGER(fcinfo))
+    {
       retval = PointerGetDatum(plpgsql_exec_trigger(func, (TriggerData *)fcinfo->context));
-    } else if (CALLED_AS_EVENT_TRIGGER(fcinfo)) {
+    }
+    else if (CALLED_AS_EVENT_TRIGGER(fcinfo))
+    {
       plpgsql_exec_event_trigger(func, (EventTriggerData *)fcinfo->context);
       retval = (Datum)0;
-    } else {
+    }
+    else
+    {
       retval = plpgsql_exec_function(func, fcinfo, NULL, !nonatomic);
     }
   }
@@ -234,7 +258,8 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
   /*
    * Disconnect from SPI manager
    */
-  if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+  if ((rc = SPI_finish()) != SPI_OK_FINISH)
+  {
     elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
   }
 
@@ -263,7 +288,8 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
   /*
    * Connect to SPI manager
    */
-  if ((rc = SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC)) != SPI_OK_CONNECT) {
+  if ((rc = SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC)) != SPI_OK_CONNECT)
+  {
     elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
   }
 
@@ -345,7 +371,8 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
   /*
    * Disconnect from SPI manager
    */
-  if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+  if ((rc = SPI_finish()) != SPI_OK_FINISH)
+  {
     elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
   }
 
@@ -376,13 +403,15 @@ plpgsql_validator(PG_FUNCTION_ARGS)
   bool is_event_trigger = false;
   int i;
 
-  if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid)) {
+  if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
+  {
     PG_RETURN_VOID();
   }
 
   /* Get the new function's pg_proc entry */
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
-  if (!HeapTupleIsValid(tuple)) {
+  if (!HeapTupleIsValid(tuple))
+  {
     elog(ERROR, "cache lookup failed for function %u", funcoid);
   }
   proc = (Form_pg_proc)GETSTRUCT(tuple);
@@ -391,13 +420,19 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 
   /* Disallow pseudotype result */
   /* except for TRIGGER, RECORD, VOID, or polymorphic */
-  if (functyptype == TYPTYPE_PSEUDO) {
+  if (functyptype == TYPTYPE_PSEUDO)
+  {
     /* we assume OPAQUE with no arguments means a trigger */
-    if (proc->prorettype == TRIGGEROID || (proc->prorettype == OPAQUEOID && proc->pronargs == 0)) {
+    if (proc->prorettype == TRIGGEROID || (proc->prorettype == OPAQUEOID && proc->pronargs == 0))
+    {
       is_dml_trigger = true;
-    } else if (proc->prorettype == EVTTRIGGEROID) {
+    }
+    else if (proc->prorettype == EVTTRIGGEROID)
+    {
       is_event_trigger = true;
-    } else if (proc->prorettype != RECORDOID && proc->prorettype != VOIDOID && !IsPolymorphicType(proc->prorettype)) {
+    }
+    else if (proc->prorettype != RECORDOID && proc->prorettype != VOIDOID && !IsPolymorphicType(proc->prorettype))
+    {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/pgSQL functions cannot return type %s", format_type_be(proc->prorettype))));
     }
   }
@@ -405,16 +440,20 @@ plpgsql_validator(PG_FUNCTION_ARGS)
   /* Disallow pseudotypes in arguments (either IN or OUT) */
   /* except for RECORD and polymorphic */
   numargs = get_func_arg_info(tuple, &argtypes, &argnames, &argmodes);
-  for (i = 0; i < numargs; i++) {
-    if (get_typtype(argtypes[i]) == TYPTYPE_PSEUDO) {
-      if (argtypes[i] != RECORDOID && !IsPolymorphicType(argtypes[i])) {
+  for (i = 0; i < numargs; i++)
+  {
+    if (get_typtype(argtypes[i]) == TYPTYPE_PSEUDO)
+    {
+      if (argtypes[i] != RECORDOID && !IsPolymorphicType(argtypes[i]))
+      {
         ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/pgSQL functions cannot accept type %s", format_type_be(argtypes[i]))));
       }
     }
   }
 
   /* Postpone body checks if !check_function_bodies */
-  if (check_function_bodies) {
+  if (check_function_bodies)
+  {
     LOCAL_FCINFO(fake_fcinfo, 0);
     FmgrInfo flinfo;
     int rc;
@@ -424,7 +463,8 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     /*
      * Connect to SPI manager (is this needed for compilation?)
      */
-    if ((rc = SPI_connect()) != SPI_OK_CONNECT) {
+    if ((rc = SPI_connect()) != SPI_OK_CONNECT)
+    {
       elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
     }
 
@@ -437,11 +477,14 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     fake_fcinfo->flinfo = &flinfo;
     flinfo.fn_oid = funcoid;
     flinfo.fn_mcxt = CurrentMemoryContext;
-    if (is_dml_trigger) {
+    if (is_dml_trigger)
+    {
       MemSet(&trigdata, 0, sizeof(trigdata));
       trigdata.type = T_TriggerData;
       fake_fcinfo->context = (Node *)&trigdata;
-    } else if (is_event_trigger) {
+    }
+    else if (is_event_trigger)
+    {
       MemSet(&etrigdata, 0, sizeof(etrigdata));
       etrigdata.type = T_EventTriggerData;
       fake_fcinfo->context = (Node *)&etrigdata;
@@ -453,7 +496,8 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     /*
      * Disconnect from SPI manager
      */
-    if ((rc = SPI_finish()) != SPI_OK_FINISH) {
+    if ((rc = SPI_finish()) != SPI_OK_FINISH)
+    {
       elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
     }
   }

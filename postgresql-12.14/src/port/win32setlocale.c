@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * win32setlocale.c
- *		Wrapper to work around bugs in Windows setlocale()
- *implementation
+ *		Wrapper to work around bugs in Windows setlocale() implementation
  *
  * Copyright (c) 2011-2019, PostgreSQL Global Development Group
  *
@@ -37,9 +36,11 @@
 
 #undef setlocale
 
-struct locale_map {
+struct locale_map
+{
   /*
-   * String in locale name to replace. Can be a single string (end is NULL),* or separate start and end strings. If two strings are given, the locale
+   * String in locale name to replace. Can be a single string (end is NULL),
+   * or separate start and end strings. If two strings are given, the locale
    * name must contain both of them, and everything between them is
    * replaced. This is used for a poor-man's regexp search, allowing
    * replacement of "start.*end".
@@ -62,7 +63,9 @@ static const struct locale_map locale_map_argument[] = {
      * "ARE" is the ISO-3166 three-letter code for U.A.E. It is not on the
      * above list, but seems to work anyway.
      */
-    {"Hong Kong S.A.R.", NULL, "HKG"}, {"U.A.E.", NULL, "ARE"},/*
+    {"Hong Kong S.A.R.", NULL, "HKG"}, {"U.A.E.", NULL, "ARE"},
+
+    /*
      * The ISO-3166 country code for Macau S.A.R. is MAC, but Windows doesn't
      * seem to recognize that. And Macau isn't listed in the table of accepted
      * abbreviations linked above. Fortunately, "ZHM" seems to be accepted as
@@ -102,7 +105,8 @@ map_locale(const struct locale_map *map, const char *locale)
   int i;
 
   /* Check if the locale name matches any of the problematic ones. */
-  for (i = 0; map[i].locale_name_start != NULL; i++) {
+  for (i = 0; map[i].locale_name_start != NULL; i++)
+  {
     const char *needle_start = map[i].locale_name_start;
     const char *needle_end = map[i].locale_name_end;
     const char *replacement = map[i].replacement;
@@ -111,25 +115,33 @@ map_locale(const struct locale_map *map, const char *locale)
     char *match_end = NULL;
 
     match = strstr(locale, needle_start);
-    if (match) {
+    if (match)
+    {
       /*
        * Found a match for the first part. If this was a two-part
        * replacement, find the second part.
        */
       match_start = match;
-      if (needle_end) {
+      if (needle_end)
+      {
         match = strstr(match_start + strlen(needle_start), needle_end);
-        if (match) {
+        if (match)
+        {
           match_end = match + strlen(needle_end);
-        } else {
+        }
+        else
+        {
           match_start = NULL;
         }
-      } else {
+      }
+      else
+      {
         match_end = match_start + strlen(needle_start);
       }
     }
 
-    if (match_start) {
+    if (match_start)
+    {
       /* Found a match. Replace the matched string. */
       int matchpos = match_start - locale;
       int replacementlen = strlen(replacement);
@@ -137,7 +149,8 @@ map_locale(const struct locale_map *map, const char *locale)
       int restlen = strlen(rest);
 
       /* check that the result fits in the static buffer */
-      if (matchpos + replacementlen + restlen + 1 > MAX_LOCALE_NAME_LEN) {
+      if (matchpos + replacementlen + restlen + 1 > MAX_LOCALE_NAME_LEN)
+      {
         return NULL;
       }
 
@@ -160,9 +173,12 @@ pgwin32_setlocale(int category, const char *locale)
   const char *argument;
   char *result;
 
-  if (locale == NULL) {
+  if (locale == NULL)
+  {
     argument = NULL;
-  } else {
+  }
+  else
+  {
     argument = map_locale(locale_map_argument, locale);
   }
 
@@ -173,7 +189,8 @@ pgwin32_setlocale(int category, const char *locale)
    * setlocale() is specified to return a "char *" that the caller is
    * forbidden to modify, so casting away the "const" is innocuous.
    */
-  if (result) {
+  if (result)
+  {
     result = unconstify(char *, map_locale(locale_map_result, result));
   }
 

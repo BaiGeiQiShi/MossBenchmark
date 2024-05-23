@@ -123,20 +123,20 @@ float_zero_divide_error(void)
 int
 is_infinite(double val)
 {
+  int inf = isinf(val);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (inf == 0)
+  {
+    return 0;
+  }
+  else if (val > 0)
+  {
+    return 1;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /* ========== USER I/O ROUTINES ========== */
@@ -220,38 +220,38 @@ float4in(PG_FUNCTION_ARGS)
      */
     if (pg_strncasecmp(num, "NaN", 3) == 0)
     {
-
-
+      val = get_float4_nan();
+      endptr = num + 3;
     }
     else if (pg_strncasecmp(num, "Infinity", 8) == 0)
     {
-
-
+      val = get_float4_infinity();
+      endptr = num + 8;
     }
     else if (pg_strncasecmp(num, "+Infinity", 9) == 0)
     {
-
-
+      val = get_float4_infinity();
+      endptr = num + 9;
     }
     else if (pg_strncasecmp(num, "-Infinity", 9) == 0)
     {
-
-
+      val = -get_float4_infinity();
+      endptr = num + 9;
     }
     else if (pg_strncasecmp(num, "inf", 3) == 0)
     {
-
-
+      val = get_float4_infinity();
+      endptr = num + 3;
     }
     else if (pg_strncasecmp(num, "+inf", 4) == 0)
     {
-
-
+      val = get_float4_infinity();
+      endptr = num + 4;
     }
     else if (pg_strncasecmp(num, "-inf", 4) == 0)
     {
-
-
+      val = -get_float4_infinity();
+      endptr = num + 4;
     }
     else if (save_errno == ERANGE)
     {
@@ -332,20 +332,18 @@ float4out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		float4recv			- converts external binary
- *format to float4
+ *		float4recv			- converts external binary format to float4
  */
 Datum
 float4recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_FLOAT4(pq_getmsgfloat4(buf));
 }
 
 /*
- *		float4send			- converts float4 to binary
- *format
+ *		float4send			- converts float4 to binary format
  */
 Datum
 float4send(PG_FUNCTION_ARGS)
@@ -446,38 +444,38 @@ float8in_internal_opt_error(char *num, char **endptr_p, const char *type_name, c
      */
     if (pg_strncasecmp(num, "NaN", 3) == 0)
     {
-
-
+      val = get_float8_nan();
+      endptr = num + 3;
     }
     else if (pg_strncasecmp(num, "Infinity", 8) == 0)
     {
-
-
+      val = get_float8_infinity();
+      endptr = num + 8;
     }
     else if (pg_strncasecmp(num, "+Infinity", 9) == 0)
     {
-
-
+      val = get_float8_infinity();
+      endptr = num + 9;
     }
     else if (pg_strncasecmp(num, "-Infinity", 9) == 0)
     {
-
-
+      val = -get_float8_infinity();
+      endptr = num + 9;
     }
     else if (pg_strncasecmp(num, "inf", 3) == 0)
     {
-
-
+      val = get_float8_infinity();
+      endptr = num + 3;
     }
     else if (pg_strncasecmp(num, "+inf", 4) == 0)
     {
-
-
+      val = get_float8_infinity();
+      endptr = num + 4;
     }
     else if (pg_strncasecmp(num, "-inf", 4) == 0)
     {
-
-
+      val = -get_float8_infinity();
+      endptr = num + 4;
     }
     else if (save_errno == ERANGE)
     {
@@ -497,12 +495,16 @@ float8in_internal_opt_error(char *num, char **endptr_p, const char *type_name, c
         char *errnumber = pstrdup(num);
 
         errnumber[endptr - num] = '\0';
-        RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("\"%s\" is out of range for type double precision", errnumber))));
+        RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("\"%s\" is out of range for "
+                                                                                         "type double precision",
+                                                                                      errnumber))));
       }
     }
     else
     {
-      RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", type_name, orig_string))));
+      RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type "
+                                                                                        "%s: \"%s\"",
+                                                                                     type_name, orig_string))));
     }
   }
 #ifdef HAVE_BUGGY_SOLARIS_STRTOD
@@ -533,7 +535,9 @@ float8in_internal_opt_error(char *num, char **endptr_p, const char *type_name, c
   }
   else if (*endptr != '\0')
   {
-    RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", type_name, orig_string))));
+    RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type "
+                                                                                      "%s: \"%s\"",
+                                                                                   type_name, orig_string))));
   }
 
   return val;
@@ -584,20 +588,18 @@ float8out_internal(double num)
 }
 
 /*
- *		float8recv			- converts external binary
- *format to float8
+ *		float8recv			- converts external binary format to float8
  */
 Datum
 float8recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_FLOAT8(pq_getmsgfloat8(buf));
 }
 
 /*
- *		float8send			- converts float8 to binary
- *format
+ *		float8send			- converts float8 to binary format
  */
 Datum
 float8send(PG_FUNCTION_ARGS)
@@ -645,9 +647,9 @@ float4um(PG_FUNCTION_ARGS)
 Datum
 float4up(PG_FUNCTION_ARGS)
 {
+  float4 arg = PG_GETARG_FLOAT4(0);
 
-
-
+  PG_RETURN_FLOAT4(arg);
 }
 
 Datum
@@ -671,19 +673,19 @@ float4larger(PG_FUNCTION_ARGS)
 Datum
 float4smaller(PG_FUNCTION_ARGS)
 {
+  float4 arg1 = PG_GETARG_FLOAT4(0);
+  float4 arg2 = PG_GETARG_FLOAT4(1);
+  float4 result;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  if (float4_lt(arg1, arg2))
+  {
+    result = arg1;
+  }
+  else
+  {
+    result = arg2;
+  }
+  PG_RETURN_FLOAT4(result);
 }
 
 /*
@@ -719,9 +721,9 @@ float8um(PG_FUNCTION_ARGS)
 Datum
 float8up(PG_FUNCTION_ARGS)
 {
+  float8 arg = PG_GETARG_FLOAT8(0);
 
-
-
+  PG_RETURN_FLOAT8(arg);
 }
 
 Datum
@@ -857,8 +859,7 @@ float8div(PG_FUNCTION_ARGS)
  */
 
 /*
- *		float4{eq,ne,lt,le,gt,ge}		- float4/float4
- *comparison operations
+ *		float4{eq,ne,lt,le,gt,ge}		- float4/float4 comparison operations
  */
 int
 float4_cmp_internal(float4 a, float4 b)
@@ -956,8 +957,7 @@ btfloat4sortsupport(PG_FUNCTION_ARGS)
 }
 
 /*
- *		float8{eq,ne,lt,le,gt,ge}		- float8/float8
- *comparison operations
+ *		float8{eq,ne,lt,le,gt,ge}		- float8/float8 comparison operations
  */
 int
 float8_cmp_internal(float8 a, float8 b)
@@ -1057,21 +1057,21 @@ btfloat8sortsupport(PG_FUNCTION_ARGS)
 Datum
 btfloat48cmp(PG_FUNCTION_ARGS)
 {
+  float4 arg1 = PG_GETARG_FLOAT4(0);
+  float8 arg2 = PG_GETARG_FLOAT8(1);
 
-
-
-
-
+  /* widen float4 to float8 and then compare */
+  PG_RETURN_INT32(float8_cmp_internal(arg1, arg2));
 }
 
 Datum
 btfloat84cmp(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float4 arg2 = PG_GETARG_FLOAT4(1);
 
-
-
-
-
+  /* widen float4 to float8 and then compare */
+  PG_RETURN_INT32(float8_cmp_internal(arg1, arg2));
 }
 
 /*
@@ -1243,8 +1243,7 @@ in_range_float4_float8(PG_FUNCTION_ARGS)
  */
 
 /*
- *		ftod			- converts a float4 number to a float8
- *number
+ *		ftod			- converts a float4 number to a float8 number
  */
 Datum
 ftod(PG_FUNCTION_ARGS)
@@ -1255,31 +1254,29 @@ ftod(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dtof			- converts a float8 number to a float4
- *number
+ *		dtof			- converts a float8 number to a float4 number
  */
 Datum
 dtof(PG_FUNCTION_ARGS)
 {
+  float8 num = PG_GETARG_FLOAT8(0);
+  float4 result;
 
+  result = (float4)num;
+  if (unlikely(isinf(result)) && !isinf(num))
+  {
+    float_overflow_error();
+  }
+  if (unlikely(result == 0.0f) && num != 0.0)
+  {
+    float_underflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT4(result);
 }
 
 /*
- *		dtoi4			- converts a float8 number to an int4
- *number
+ *		dtoi4			- converts a float8 number to an int4 number
  */
 Datum
 dtoi4(PG_FUNCTION_ARGS)
@@ -1303,8 +1300,7 @@ dtoi4(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dtoi2			- converts a float8 number to an int2
- *number
+ *		dtoi2			- converts a float8 number to an int2 number
  */
 Datum
 dtoi2(PG_FUNCTION_ARGS)
@@ -1328,8 +1324,7 @@ dtoi2(PG_FUNCTION_ARGS)
 }
 
 /*
- *		i4tod			- converts an int4 number to a float8
- *number
+ *		i4tod			- converts an int4 number to a float8 number
  */
 Datum
 i4tod(PG_FUNCTION_ARGS)
@@ -1340,8 +1335,7 @@ i4tod(PG_FUNCTION_ARGS)
 }
 
 /*
- *		i2tod			- converts an int2 number to a float8
- *number
+ *		i2tod			- converts an int2 number to a float8 number
  */
 Datum
 i2tod(PG_FUNCTION_ARGS)
@@ -1352,8 +1346,7 @@ i2tod(PG_FUNCTION_ARGS)
 }
 
 /*
- *		ftoi4			- converts a float4 number to an int4
- *number
+ *		ftoi4			- converts a float4 number to an int4 number
  */
 Datum
 ftoi4(PG_FUNCTION_ARGS)
@@ -1377,8 +1370,7 @@ ftoi4(PG_FUNCTION_ARGS)
 }
 
 /*
- *		ftoi2			- converts a float4 number to an int2
- *number
+ *		ftoi2			- converts a float4 number to an int2 number
  */
 Datum
 ftoi2(PG_FUNCTION_ARGS)
@@ -1402,8 +1394,7 @@ ftoi2(PG_FUNCTION_ARGS)
 }
 
 /*
- *		i4tof			- converts an int4 number to a float4
- *number
+ *		i4tof			- converts an int4 number to a float4 number
  */
 Datum
 i4tof(PG_FUNCTION_ARGS)
@@ -1414,15 +1405,14 @@ i4tof(PG_FUNCTION_ARGS)
 }
 
 /*
- *		i2tof			- converts an int2 number to a float4
- *number
+ *		i2tof			- converts an int2 number to a float4 number
  */
 Datum
 i2tof(PG_FUNCTION_ARGS)
 {
+  int16 num = PG_GETARG_INT16(0);
 
-
-
+  PG_RETURN_FLOAT4((float4)num);
 }
 
 /*
@@ -1443,8 +1433,8 @@ dround(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dceil			- returns the smallest integer greater
- *than or equal to the specified float
+ *		dceil			- returns the smallest integer greater than or
+ *						  equal to the specified float
  */
 Datum
 dceil(PG_FUNCTION_ARGS)
@@ -1455,8 +1445,8 @@ dceil(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dfloor			- returns the largest integer lesser
- *than or equal to the specified float
+ *		dfloor			- returns the largest integer lesser than or
+ *						  equal to the specified float
  */
 Datum
 dfloor(PG_FUNCTION_ARGS)
@@ -1467,9 +1457,9 @@ dfloor(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dsign			- returns -1 if the argument is less
- *than 0, 0 if the argument is equal to 0, and 1 if the argument is greater than
- *zero.
+ *		dsign			- returns -1 if the argument is less than 0, 0
+ *						  if the argument is equal to 0, and 1 if the
+ *						  argument is greater than zero.
  */
 Datum
 dsign(PG_FUNCTION_ARGS)
@@ -1494,9 +1484,11 @@ dsign(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dtrunc			- returns truncation-towards-zero of
- *arg1, arg1 >= 0 ... the greatest integer less than or equal to arg1 arg1 < 0
- *... the least integer greater than or equal to arg1
+ *		dtrunc			- returns truncation-towards-zero of arg1,
+ *						  arg1 >= 0 ... the greatest integer less
+ *										than or equal to arg1
+ *						  arg1 < 0	... the least integer greater
+ *										than or equal to arg1
  */
 Datum
 dtrunc(PG_FUNCTION_ARGS)
@@ -1527,17 +1519,17 @@ dsqrt(PG_FUNCTION_ARGS)
 
   if (arg1 < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION), errmsg("cannot take square root of a negative number")));
   }
 
   result = sqrt(arg1);
   if (unlikely(isinf(result)) && !isinf(arg1))
   {
-
+    float_overflow_error();
   }
   if (unlikely(result == 0.0) && arg1 != 0.0)
   {
-
+    float_underflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -1555,11 +1547,11 @@ dcbrt(PG_FUNCTION_ARGS)
   result = cbrt(arg1);
   if (unlikely(isinf(result)) && !isinf(arg1))
   {
-
+    float_overflow_error();
   }
   if (unlikely(result == 0.0) && arg1 != 0.0)
   {
-
+    float_underflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -1605,11 +1597,11 @@ dpow(PG_FUNCTION_ARGS)
    */
   if (arg1 == 0 && arg2 < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION), errmsg("zero raised to a negative power is undefined")));
   }
   if (arg1 < 0 && floor(arg2) != arg2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION), errmsg("a negative number raised to a non-integer power yields a complex result")));
   }
 
   /*
@@ -1625,23 +1617,23 @@ dpow(PG_FUNCTION_ARGS)
   result = pow(arg1, arg2);
   if (errno == EDOM && isnan(result))
   {
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if ((fabs(arg1) > 1 && arg2 >= 0) || (fabs(arg1) < 1 && arg2 < 0))
+    {
+      /* The sign of Inf is not significant in this case. */
+      result = get_float8_infinity();
+    }
+    else if (fabs(arg1) != 1)
+    {
+      result = 0;
+    }
+    else
+    {
+      result = 1;
+    }
   }
   else if (errno == ERANGE && result != 0 && !isinf(result))
   {
-
+    result = get_float8_infinity();
   }
 
   if (unlikely(isinf(result)) && !isinf(arg1) && !isinf(arg2))
@@ -1650,15 +1642,14 @@ dpow(PG_FUNCTION_ARGS)
   }
   if (unlikely(result == 0.0) && arg1 != 0.0)
   {
-
+    float_underflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		dexp			- returns the exponential function of
- *arg1
+ *		dexp			- returns the exponential function of arg1
  */
 Datum
 dexp(PG_FUNCTION_ARGS)
@@ -1670,12 +1661,12 @@ dexp(PG_FUNCTION_ARGS)
   result = exp(arg1);
   if (errno == ERANGE && result != 0 && !isinf(result))
   {
-
+    result = get_float8_infinity();
   }
 
   if (unlikely(isinf(result)) && !isinf(arg1))
   {
-
+    float_overflow_error();
   }
   if (unlikely(result == 0.0))
   {
@@ -1710,11 +1701,11 @@ dlog1(PG_FUNCTION_ARGS)
   result = log(arg1);
   if (unlikely(isinf(result)) && !isinf(arg1))
   {
-
+    float_overflow_error();
   }
   if (unlikely(result == 0.0) && arg1 != 1.0)
   {
-
+    float_underflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -1726,34 +1717,34 @@ dlog1(PG_FUNCTION_ARGS)
 Datum
 dlog10(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /*
+   * Emit particular SQLSTATE error codes for log(). The SQL spec doesn't
+   * define log(), but it does define ln(), so it makes sense to emit the
+   * same error code for an analogous error condition.
+   */
+  if (arg1 == 0.0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_ARGUMENT_FOR_LOG), errmsg("cannot take logarithm of zero")));
+  }
+  if (arg1 < 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_ARGUMENT_FOR_LOG), errmsg("cannot take logarithm of a negative number")));
+  }
 
+  result = log10(arg1);
+  if (unlikely(isinf(result)) && !isinf(arg1))
+  {
+    float_overflow_error();
+  }
+  if (unlikely(result == 0.0) && arg1 != 1.0)
+  {
+    float_underflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1762,32 +1753,32 @@ dlog10(PG_FUNCTION_ARGS)
 Datum
 dacos(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if the input is NaN */
+  if (isnan(arg1))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /*
+   * The principal branch of the inverse cosine function maps values in the
+   * range [-1, 1] to values in the range [0, Pi], so we should reject any
+   * inputs outside that range and the result will always be finite.
+   */
+  if (arg1 < -1.0 || arg1 > 1.0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
+  }
 
+  result = acos(arg1);
+  if (unlikely(isinf(result)))
+  {
+    float_overflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1796,32 +1787,32 @@ dacos(PG_FUNCTION_ARGS)
 Datum
 dasin(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if the input is NaN */
+  if (isnan(arg1))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /*
+   * The principal branch of the inverse sine function maps values in the
+   * range [-1, 1] to values in the range [-Pi/2, Pi/2], so we should reject
+   * any inputs outside that range and the result will always be finite.
+   */
+  if (arg1 < -1.0 || arg1 > 1.0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
+  }
 
+  result = asin(arg1);
+  if (unlikely(isinf(result)))
+  {
+    float_overflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1830,57 +1821,56 @@ dasin(PG_FUNCTION_ARGS)
 Datum
 datan(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if the input is NaN */
+  if (isnan(arg1))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /*
+   * The principal branch of the inverse tangent function maps all inputs to
+   * values in the range [-Pi/2, Pi/2], so the result should always be
+   * finite, even if the input is infinite.
+   */
+  result = atan(arg1);
+  if (unlikely(isinf(result)))
+  {
+    float_overflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		atan2			- returns the arctan of arg1/arg2
- *(radians)
+ *		atan2			- returns the arctan of arg1/arg2 (radians)
  */
 Datum
 datan2(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 arg2 = PG_GETARG_FLOAT8(1);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if either input is NaN */
+  if (isnan(arg1) || isnan(arg2))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /*
+   * atan2 maps all inputs to values in the range [-Pi, Pi], so the result
+   * should always be finite, even if the inputs are infinite.
+   */
+  result = atan2(arg1, arg2);
+  if (unlikely(isinf(result)))
+  {
+    float_overflow_error();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1895,7 +1885,7 @@ dcos(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if the input is NaN */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   /*
@@ -1917,44 +1907,43 @@ dcos(PG_FUNCTION_ARGS)
   result = cos(arg1);
   if (errno != 0 || isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		dcot			- returns the cotangent of arg1
- *(radians)
+ *		dcot			- returns the cotangent of arg1 (radians)
  */
 Datum
 dcot(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if the input is NaN */
+  if (isnan(arg1))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /* Be sure to throw an error if the input is infinite --- see dcos() */
+  errno = 0;
+  result = tan(arg1);
+  if (errno != 0 || isinf(arg1))
+  {
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
+  }
 
+  result = 1.0 / result;
+  /* Not checking for overflow because cot(0) == Inf */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1969,7 +1958,7 @@ dsin(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if the input is NaN */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   /* Be sure to throw an error if the input is infinite --- see dcos() */
@@ -1977,11 +1966,11 @@ dsin(PG_FUNCTION_ARGS)
   result = sin(arg1);
   if (errno != 0 || isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -1993,25 +1982,25 @@ dsin(PG_FUNCTION_ARGS)
 Datum
 dtan(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float8 result;
 
+  /* Per the POSIX spec, return NaN if the input is NaN */
+  if (isnan(arg1))
+  {
+    PG_RETURN_FLOAT8(get_float8_nan());
+  }
 
+  /* Be sure to throw an error if the input is infinite --- see dcos() */
+  errno = 0;
+  result = tan(arg1);
+  if (errno != 0 || isinf(arg1))
+  {
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
+  }
+  /* Not checking for overflow because tan(pi/2) == Inf */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(result);
 }
 
 /* ========== DEGREE-BASED TRIGONOMETRIC FUNCTIONS ========== */
@@ -2065,13 +2054,13 @@ init_degree_constants(void)
   } while (0)
 
 /*
- *		asind_q1		- returns the inverse sine of x in
- *degrees, for x in the range [0, 1].  The result is an angle in the first
- *quadrant --- [0, 90] degrees.
+ *		asind_q1		- returns the inverse sine of x in degrees, for x in
+ *						  the range [0, 1].  The result is an angle in the
+ *						  first quadrant --- [0, 90] degrees.
  *
- *						  For the 3 special case inputs
- *(0, 0.5 and 1), this function will return exact values (0, 30 and 90 degrees
- *respectively).
+ *						  For the 3 special case inputs (0, 0.5 and 1), this
+ *						  function will return exact values (0, 30 and 90
+ *						  degrees respectively).
  */
 static double
 asind_q1(double x)
@@ -2097,13 +2086,13 @@ asind_q1(double x)
 }
 
 /*
- *		acosd_q1		- returns the inverse cosine of x in
- *degrees, for x in the range [0, 1].  The result is an angle in the first
- *quadrant --- [0, 90] degrees.
+ *		acosd_q1		- returns the inverse cosine of x in degrees, for x in
+ *						  the range [0, 1].  The result is an angle in the
+ *						  first quadrant --- [0, 90] degrees.
  *
- *						  For the 3 special case inputs
- *(0, 0.5 and 1), this function will return exact values (0, 60 and 90 degrees
- *respectively).
+ *						  For the 3 special case inputs (0, 0.5 and 1), this
+ *						  function will return exact values (0, 60 and 90
+ *						  degrees respectively).
  */
 static double
 acosd_q1(double x)
@@ -2140,7 +2129,7 @@ dacosd(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if the input is NaN */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2152,7 +2141,7 @@ dacosd(PG_FUNCTION_ARGS)
    */
   if (arg1 < -1.0 || arg1 > 1.0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   if (arg1 >= 0.0)
@@ -2166,7 +2155,7 @@ dacosd(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -2184,7 +2173,7 @@ dasind(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if the input is NaN */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2196,7 +2185,7 @@ dasind(PG_FUNCTION_ARGS)
    */
   if (arg1 < -1.0 || arg1 > 1.0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   if (arg1 >= 0.0)
@@ -2210,7 +2199,7 @@ dasind(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -2229,7 +2218,7 @@ datand(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if the input is NaN */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2245,15 +2234,14 @@ datand(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		atan2d			- returns the arctan of arg1/arg2
- *(degrees)
+ *		atan2d			- returns the arctan of arg1/arg2 (degrees)
  */
 Datum
 datan2d(PG_FUNCTION_ARGS)
@@ -2266,7 +2254,7 @@ datan2d(PG_FUNCTION_ARGS)
   /* Per the POSIX spec, return NaN if either input is NaN */
   if (isnan(arg1) || isnan(arg2))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2285,16 +2273,16 @@ datan2d(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		sind_0_to_30	- returns the sine of an angle that lies between
- *0 and 30 degrees.  This will return exactly 0 when x is 0, and exactly 0.5
- *when x is 30 degrees.
+ *		sind_0_to_30	- returns the sine of an angle that lies between 0 and
+ *						  30 degrees.  This will return exactly 0 when x is 0,
+ *						  and exactly 0.5 when x is 30 degrees.
  */
 static double
 sind_0_to_30(double x)
@@ -2305,9 +2293,9 @@ sind_0_to_30(double x)
 }
 
 /*
- *		cosd_0_to_60	- returns the cosine of an angle that lies
- *between 0 and 60 degrees.  This will return exactly 1 when x is 0, and exactly
- *0.5 when x is 60 degrees.
+ *		cosd_0_to_60	- returns the cosine of an angle that lies between 0
+ *						  and 60 degrees.  This will return exactly 1 when x
+ *						  is 0, and exactly 0.5 when x is 60 degrees.
  */
 static double
 cosd_0_to_60(double x)
@@ -2318,8 +2306,8 @@ cosd_0_to_60(double x)
 }
 
 /*
- *		sind_q1			- returns the sine of an angle in the
- *first quadrant (0 to 90 degrees).
+ *		sind_q1			- returns the sine of an angle in the first quadrant
+ *						  (0 to 90 degrees).
  */
 static double
 sind_q1(double x)
@@ -2341,8 +2329,8 @@ sind_q1(double x)
 }
 
 /*
- *		cosd_q1			- returns the cosine of an angle in the
- *first quadrant (0 to 90 degrees).
+ *		cosd_q1			- returns the cosine of an angle in the first quadrant
+ *						  (0 to 90 degrees).
  */
 static double
 cosd_q1(double x)
@@ -2379,12 +2367,12 @@ dcosd(PG_FUNCTION_ARGS)
    */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   if (isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2395,7 +2383,7 @@ dcosd(PG_FUNCTION_ARGS)
   if (arg1 < 0.0)
   {
     /* cosd(-x) = cosd(x) */
-
+    arg1 = -arg1;
   }
 
   if (arg1 > 180.0)
@@ -2415,15 +2403,14 @@ dcosd(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		dcotd			- returns the cotangent of arg1
- *(degrees)
+ *		dcotd			- returns the cotangent of arg1 (degrees)
  */
 Datum
 dcotd(PG_FUNCTION_ARGS)
@@ -2439,12 +2426,12 @@ dcotd(PG_FUNCTION_ARGS)
    */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   if (isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2455,8 +2442,8 @@ dcotd(PG_FUNCTION_ARGS)
   if (arg1 < 0.0)
   {
     /* cotd(-x) = -cotd(x) */
-
-
+    arg1 = -arg1;
+    sign = -sign;
   }
 
   if (arg1 > 180.0)
@@ -2507,12 +2494,12 @@ dsind(PG_FUNCTION_ARGS)
    */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   if (isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2523,8 +2510,8 @@ dsind(PG_FUNCTION_ARGS)
   if (arg1 < 0.0)
   {
     /* sind(-x) = -sind(x) */
-
-
+    arg1 = -arg1;
+    sign = -sign;
   }
 
   if (arg1 > 180.0)
@@ -2544,7 +2531,7 @@ dsind(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -2567,12 +2554,12 @@ dtand(PG_FUNCTION_ARGS)
    */
   if (isnan(arg1))
   {
-
+    PG_RETURN_FLOAT8(get_float8_nan());
   }
 
   if (isinf(arg1))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("input is out of range")));
   }
 
   INIT_DEGREE_CONSTANTS();
@@ -2583,8 +2570,8 @@ dtand(PG_FUNCTION_ARGS)
   if (arg1 < 0.0)
   {
     /* tand(-x) = -tand(x) */
-
-
+    arg1 = -arg1;
+    sign = -sign;
   }
 
   if (arg1 > 180.0)
@@ -2625,9 +2612,9 @@ dtand(PG_FUNCTION_ARGS)
 Datum
 degrees(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
 
-
-
+  PG_RETURN_FLOAT8(float8_div(arg1, RADIANS_PER_DEGREE));
 }
 
 /*
@@ -2645,9 +2632,9 @@ dpi(PG_FUNCTION_ARGS)
 Datum
 radians(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
 
-
-
+  PG_RETURN_FLOAT8(float8_mul(arg1, RADIANS_PER_DEGREE));
 }
 
 /* ========== HYPERBOLIC FUNCTIONS ========== */
@@ -2671,14 +2658,14 @@ dsinh(PG_FUNCTION_ARGS)
    */
   if (errno == ERANGE)
   {
-
-
-
-
-
-
-
-
+    if (arg1 < 0)
+    {
+      result = -get_float8_infinity();
+    }
+    else
+    {
+      result = get_float8_infinity();
+    }
   }
 
   PG_RETURN_FLOAT8(result);
@@ -2702,12 +2689,12 @@ dcosh(PG_FUNCTION_ARGS)
    */
   if (errno == ERANGE)
   {
-
+    result = get_float8_infinity();
   }
 
   if (unlikely(result == 0.0))
   {
-
+    float_underflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
@@ -2729,15 +2716,14 @@ dtanh(PG_FUNCTION_ARGS)
 
   if (unlikely(isinf(result)))
   {
-
+    float_overflow_error();
   }
 
   PG_RETURN_FLOAT8(result);
 }
 
 /*
- *		dasinh			- returns the inverse hyperbolic sine of
- *arg1
+ *		dasinh			- returns the inverse hyperbolic sine of arg1
  */
 Datum
 dasinh(PG_FUNCTION_ARGS)
@@ -2754,8 +2740,7 @@ dasinh(PG_FUNCTION_ARGS)
 }
 
 /*
- *		dacosh			- returns the inverse hyperbolic cosine
- *of arg1
+ *		dacosh			- returns the inverse hyperbolic cosine of arg1
  */
 Datum
 dacosh(PG_FUNCTION_ARGS)
@@ -2780,8 +2765,7 @@ dacosh(PG_FUNCTION_ARGS)
 }
 
 /*
- *		datanh			- returns the inverse hyperbolic tangent
- *of arg1
+ *		datanh			- returns the inverse hyperbolic tangent of arg1
  */
 Datum
 datanh(PG_FUNCTION_ARGS)
@@ -2806,11 +2790,11 @@ datanh(PG_FUNCTION_ARGS)
    */
   if (arg1 == -1.0)
   {
-
+    result = -get_float8_infinity();
   }
   else if (arg1 == 1.0)
   {
-
+    result = get_float8_infinity();
   }
   else
   {
@@ -2842,10 +2826,10 @@ drandom(PG_FUNCTION_ARGS)
       uint64 iseed;
 
       /* Mix the PID with the most predictable bits of the timestamp */
-
-
-
-
+      iseed = (uint64)now ^ ((uint64)MyProcPid << 32);
+      drandom_seed[0] = (unsigned short)iseed;
+      drandom_seed[1] = (unsigned short)(iseed >> 16);
+      drandom_seed[2] = (unsigned short)(iseed >> 32);
     }
     drandom_seed_set = true;
   }
@@ -2862,22 +2846,22 @@ drandom(PG_FUNCTION_ARGS)
 Datum
 setseed(PG_FUNCTION_ARGS)
 {
+  float8 seed = PG_GETARG_FLOAT8(0);
+  uint64 iseed;
 
+  if (seed < -1 || seed > 1 || isnan(seed))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("setseed parameter %g is out of allowed range [-1,1]", seed)));
+  }
 
+  /* Use sign bit + 47 fractional bits to fill drandom_seed[] */
+  iseed = (int64)(seed * (float8)UINT64CONST(0x7FFFFFFFFFFF));
+  drandom_seed[0] = (unsigned short)iseed;
+  drandom_seed[1] = (unsigned short)(iseed >> 16);
+  drandom_seed[2] = (unsigned short)(iseed >> 32);
+  drandom_seed_set = true;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_VOID();
 }
 
 /*
@@ -2885,14 +2869,13 @@ setseed(PG_FUNCTION_ARGS)
  *		FLOAT AGGREGATE OPERATORS
  *		=========================
  *
- *		float8_accum		- accumulate for AVG(), variance
- *aggregates, etc. float4_accum		- same, but input data is float4
- *		float8_avg			- produce final result for float
- *AVG() float8_var_samp		- produce final result for float VAR_SAMP()
- *		float8_var_pop		- produce final result for float
- *VAR_POP() float8_stddev_samp	- produce final result for float STDDEV_SAMP()
- *		float8_stddev_pop	- produce final result for float
- *STDDEV_POP()
+ *		float8_accum		- accumulate for AVG(), variance aggregates, etc.
+ *		float4_accum		- same, but input data is float4
+ *		float8_avg			- produce final result for float AVG()
+ *		float8_var_samp		- produce final result for float VAR_SAMP()
+ *		float8_var_pop		- produce final result for float VAR_POP()
+ *		float8_stddev_samp	- produce final result for float STDDEV_SAMP()
+ *		float8_stddev_pop	- produce final result for float STDDEV_POP()
  *
  * The naive schoolbook implementation of these aggregates works by
  * accumulating sum(X) and sum(X^2).  However, this approach suffers from
@@ -2939,7 +2922,7 @@ check_float8_array(ArrayType *transarray, const char *caller, int n)
    */
   if (ARR_NDIM(transarray) != 1 || ARR_DIMS(transarray)[0] != n || ARR_HASNULL(transarray) || ARR_ELEMTYPE(transarray) != FLOAT8OID)
   {
-
+    elog(ERROR, "%s: expected %d-element float8 array", caller, n);
   }
   return (float8 *)ARR_DATA_PTR(transarray);
 }
@@ -3005,7 +2988,7 @@ float8_combine(PG_FUNCTION_ARGS)
     Sxx = Sxx1 + Sxx2 + N1 * N2 * tmp * tmp / N;
     if (unlikely(isinf(Sxx)) && !isinf(Sxx1) && !isinf(Sxx2))
     {
-
+      float_overflow_error();
     }
   }
 
@@ -3016,11 +2999,11 @@ float8_combine(PG_FUNCTION_ARGS)
    */
   if (AggCheckCallContext(fcinfo, NULL))
   {
+    transvalues1[0] = N;
+    transvalues1[1] = Sx;
+    transvalues1[2] = Sxx;
 
-
-
-
-
+    PG_RETURN_ARRAYTYPE_P(transarray1);
   }
   else
   {
@@ -3071,7 +3054,7 @@ float8_accum(PG_FUNCTION_ARGS)
     {
       if (!isinf(transvalues[1]) && !isinf(newval))
       {
-
+        float_overflow_error();
       }
 
       Sxx = get_float8_nan();
@@ -3153,12 +3136,12 @@ float4_accum(PG_FUNCTION_ARGS)
      */
     if (isinf(Sx) || isinf(Sxx))
     {
+      if (!isinf(transvalues[1]) && !isinf(newval))
+      {
+        float_overflow_error();
+      }
 
-
-
-
-
-
+      Sxx = get_float8_nan();
     }
   }
   else
@@ -3193,13 +3176,13 @@ float4_accum(PG_FUNCTION_ARGS)
     Datum transdatums[3];
     ArrayType *result;
 
+    transdatums[0] = Float8GetDatumFast(N);
+    transdatums[1] = Float8GetDatumFast(Sx);
+    transdatums[2] = Float8GetDatumFast(Sxx);
 
+    result = construct_array(transdatums, 3, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, 'd');
 
-
-
-
-
-
+    PG_RETURN_ARRAYTYPE_P(result);
   }
 }
 
@@ -3239,7 +3222,7 @@ float8_var_pop(PG_FUNCTION_ARGS)
   /* Population variance is undefined when N is 0, so return NULL */
   if (N == 0.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx is guaranteed to be non-negative */
@@ -3285,7 +3268,7 @@ float8_stddev_pop(PG_FUNCTION_ARGS)
   /* Population stddev is undefined when N is 0, so return NULL */
   if (N == 0.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx is guaranteed to be non-negative */
@@ -3378,23 +3361,23 @@ float8_regr_accum(PG_FUNCTION_ARGS)
      */
     if (isinf(Sx) || isinf(Sxx) || isinf(Sy) || isinf(Syy) || isinf(Sxy))
     {
+      if (((isinf(Sx) || isinf(Sxx)) && !isinf(transvalues[1]) && !isinf(newvalX)) || ((isinf(Sy) || isinf(Syy)) && !isinf(transvalues[3]) && !isinf(newvalY)) || (isinf(Sxy) && !isinf(transvalues[1]) && !isinf(newvalX) && !isinf(transvalues[3]) && !isinf(newvalY)))
+      {
+        float_overflow_error();
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (isinf(Sxx))
+      {
+        Sxx = get_float8_nan();
+      }
+      if (isinf(Syy))
+      {
+        Syy = get_float8_nan();
+      }
+      if (isinf(Sxy))
+      {
+        Sxy = get_float8_nan();
+      }
     }
   }
   else
@@ -3411,7 +3394,7 @@ float8_regr_accum(PG_FUNCTION_ARGS)
     }
     if (isnan(newvalY) || isinf(newvalY))
     {
-
+      Syy = Sxy = get_float8_nan();
     }
   }
 
@@ -3525,19 +3508,19 @@ float8_regr_combine(PG_FUNCTION_ARGS)
     Sxx = Sxx1 + Sxx2 + N1 * N2 * tmp1 * tmp1 / N;
     if (unlikely(isinf(Sxx)) && !isinf(Sxx1) && !isinf(Sxx2))
     {
-
+      float_overflow_error();
     }
     Sy = float8_pl(Sy1, Sy2);
     tmp2 = Sy1 / N1 - Sy2 / N2;
     Syy = Syy1 + Syy2 + N1 * N2 * tmp2 * tmp2 / N;
     if (unlikely(isinf(Syy)) && !isinf(Syy1) && !isinf(Syy2))
     {
-
+      float_overflow_error();
     }
     Sxy = Sxy1 + Sxy2 + N1 * N2 * tmp1 * tmp2 / N;
     if (unlikely(isinf(Sxy)) && !isinf(Sxy1) && !isinf(Sxy2))
     {
-
+      float_overflow_error();
     }
   }
 
@@ -3548,14 +3531,14 @@ float8_regr_combine(PG_FUNCTION_ARGS)
    */
   if (AggCheckCallContext(fcinfo, NULL))
   {
+    transvalues1[0] = N;
+    transvalues1[1] = Sx;
+    transvalues1[2] = Sxx;
+    transvalues1[3] = Sy;
+    transvalues1[4] = Syy;
+    transvalues1[5] = Sxy;
 
-
-
-
-
-
-
-
+    PG_RETURN_ARRAYTYPE_P(transarray1);
   }
   else
   {
@@ -3589,7 +3572,7 @@ float8_regr_sxx(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx is guaranteed to be non-negative */
@@ -3611,7 +3594,7 @@ float8_regr_syy(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Syy is guaranteed to be non-negative */
@@ -3633,7 +3616,7 @@ float8_regr_sxy(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* A negative result is valid here */
@@ -3655,7 +3638,7 @@ float8_regr_avgx(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8(Sx / N);
@@ -3675,7 +3658,7 @@ float8_regr_avgy(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8(Sy / N);
@@ -3695,7 +3678,7 @@ float8_covar_pop(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8(Sxy / N);
@@ -3737,7 +3720,7 @@ float8_corr(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx and Syy are guaranteed to be non-negative */
@@ -3745,7 +3728,7 @@ float8_corr(PG_FUNCTION_ARGS)
   /* per spec, return NULL for horizontal and vertical lines */
   if (Sxx == 0 || Syy == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8(Sxy / sqrt(Sxx * Syy));
@@ -3767,7 +3750,7 @@ float8_regr_r2(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx and Syy are guaranteed to be non-negative */
@@ -3775,13 +3758,13 @@ float8_regr_r2(PG_FUNCTION_ARGS)
   /* per spec, return NULL for a vertical line */
   if (Sxx == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* per spec, return 1.0 for a horizontal line */
   if (Syy == 0)
   {
-
+    PG_RETURN_FLOAT8(1.0);
   }
 
   PG_RETURN_FLOAT8((Sxy * Sxy) / (Sxx * Syy));
@@ -3802,7 +3785,7 @@ float8_regr_slope(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx is guaranteed to be non-negative */
@@ -3810,7 +3793,7 @@ float8_regr_slope(PG_FUNCTION_ARGS)
   /* per spec, return NULL for a vertical line */
   if (Sxx == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8(Sxy / Sxx);
@@ -3833,7 +3816,7 @@ float8_regr_intercept(PG_FUNCTION_ARGS)
   /* if N is 0 we should return NULL */
   if (N < 1.0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Note that Sxx is guaranteed to be non-negative */
@@ -3841,7 +3824,7 @@ float8_regr_intercept(PG_FUNCTION_ARGS)
   /* per spec, return NULL for a vertical line */
   if (Sxx == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_FLOAT8((Sy - Sx * Sxy / Sxx) / N);
@@ -3871,19 +3854,19 @@ float48pl(PG_FUNCTION_ARGS)
 Datum
 float48mi(PG_FUNCTION_ARGS)
 {
+  float4 arg1 = PG_GETARG_FLOAT4(0);
+  float8 arg2 = PG_GETARG_FLOAT8(1);
 
-
-
-
+  PG_RETURN_FLOAT8(float8_mi((float8)arg1, arg2));
 }
 
 Datum
 float48mul(PG_FUNCTION_ARGS)
 {
+  float4 arg1 = PG_GETARG_FLOAT4(0);
+  float8 arg2 = PG_GETARG_FLOAT8(1);
 
-
-
-
+  PG_RETURN_FLOAT8(float8_mul((float8)arg1, arg2));
 }
 
 Datum
@@ -3913,19 +3896,19 @@ float84pl(PG_FUNCTION_ARGS)
 Datum
 float84mi(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float4 arg2 = PG_GETARG_FLOAT4(1);
 
-
-
-
+  PG_RETURN_FLOAT8(float8_mi(arg1, (float8)arg2));
 }
 
 Datum
 float84mul(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float4 arg2 = PG_GETARG_FLOAT4(1);
 
-
-
-
+  PG_RETURN_FLOAT8(float8_mul(arg1, (float8)arg2));
 }
 
 Datum
@@ -3944,8 +3927,7 @@ float84div(PG_FUNCTION_ARGS)
  */
 
 /*
- *		float48{eq,ne,lt,le,gt,ge}		- float4/float8
- *comparison operations
+ *		float48{eq,ne,lt,le,gt,ge}		- float4/float8 comparison operations
  */
 Datum
 float48eq(PG_FUNCTION_ARGS)
@@ -4002,8 +3984,7 @@ float48ge(PG_FUNCTION_ARGS)
 }
 
 /*
- *		float84{eq,ne,lt,le,gt,ge}		- float8/float4
- *comparison operations
+ *		float84{eq,ne,lt,le,gt,ge}		- float8/float4 comparison operations
  */
 Datum
 float84eq(PG_FUNCTION_ARGS)
@@ -4017,10 +3998,10 @@ float84eq(PG_FUNCTION_ARGS)
 Datum
 float84ne(PG_FUNCTION_ARGS)
 {
+  float8 arg1 = PG_GETARG_FLOAT8(0);
+  float4 arg2 = PG_GETARG_FLOAT4(1);
 
-
-
-
+  PG_RETURN_BOOL(float8_ne(arg1, (float8)arg2));
 }
 
 Datum
@@ -4108,7 +4089,7 @@ width_bucket_float8(PG_FUNCTION_ARGS)
     {
       if (pg_add_s32_overflow(count, 1, &result))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
       }
     }
     else
@@ -4126,7 +4107,7 @@ width_bucket_float8(PG_FUNCTION_ARGS)
     {
       if (pg_add_s32_overflow(count, 1, &result))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
       }
     }
     else

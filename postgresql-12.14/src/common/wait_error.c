@@ -31,42 +31,42 @@
 char *
 wait_result_to_str(int exitstatus)
 {
+  char str[512];
 
+  if (WIFEXITED(exitstatus))
+  {
+    /*
+     * Give more specific error message for some common exit codes that
+     * have a special meaning in shells.
+     */
+    switch (WEXITSTATUS(exitstatus))
+    {
+    case 126:
+      snprintf(str, sizeof(str), _("command not executable"));
+      break;
 
+    case 127:
+      snprintf(str, sizeof(str), _("command not found"));
+      break;
 
+    default:
+      snprintf(str, sizeof(str), _("child process exited with exit code %d"), WEXITSTATUS(exitstatus));
+    }
+  }
+  else if (WIFSIGNALED(exitstatus))
+  {
+#if defined(WIN32)
+    snprintf(str, sizeof(str), _("child process was terminated by exception 0x%X"), WTERMSIG(exitstatus));
+#else
+    snprintf(str, sizeof(str), _("child process was terminated by signal %d: %s"), WTERMSIG(exitstatus), pg_strsignal(WTERMSIG(exitstatus)));
+#endif
+  }
+  else
+  {
+    snprintf(str, sizeof(str), _("child process exited with unrecognized status %d"), exitstatus);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return pstrdup(str);
 }
 
 /*
@@ -76,7 +76,8 @@ wait_result_to_str(int exitstatus)
  * The reason this is worth having a wrapper function for is that
  * there are two cases: the signal might have been received by our
  * immediate child process, or there might've been a shell process
- * between us and the child that died.  The shell will, per POSIX,* report the child death using exit code 128 + signal number.
+ * between us and the child that died.  The shell will, per POSIX,
+ * report the child death using exit code 128 + signal number.
  *
  * If there is no possibility of an intermediate shell, this function
  * need not (and probably should not) be used.
@@ -84,15 +85,15 @@ wait_result_to_str(int exitstatus)
 bool
 wait_result_is_signal(int exit_status, int signum)
 {
-
-
-
-
-
-
-
-
-
+  if (WIFSIGNALED(exit_status) && WTERMSIG(exit_status) == signum)
+  {
+    return true;
+  }
+  if (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == 128 + signum)
+  {
+    return true;
+  }
+  return false;
 }
 
 /*
@@ -107,13 +108,13 @@ wait_result_is_signal(int exit_status, int signum)
 bool
 wait_result_is_any_signal(int exit_status, bool include_command_not_found)
 {
-
-
-
-
-
-
-
-
-
+  if (WIFSIGNALED(exit_status))
+  {
+    return true;
+  }
+  if (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) > (include_command_not_found ? 125 : 128))
+  {
+    return true;
+  }
+  return false;
 }

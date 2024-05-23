@@ -14,9 +14,9 @@
  */
 /* INTERFACE ROUTINES
  *		ExecInitBitmapOr	- initialize the BitmapOr node
- *		MultiExecBitmapOr	- retrieve the result bitmap from the
- *node ExecEndBitmapOr		- shut down the BitmapOr node ExecReScanBitmapOr
- *- rescan the BitmapOr node
+ *		MultiExecBitmapOr	- retrieve the result bitmap from the node
+ *		ExecEndBitmapOr		- shut down the BitmapOr node
+ *		ExecReScanBitmapOr	- rescan the BitmapOr node
  *
  *	 NOTES
  *		BitmapOr nodes don't make use of their left and right
@@ -41,8 +41,8 @@
 static TupleTableSlot *
 ExecBitmapOr(PlanState *pstate)
 {
-
-
+  elog(ERROR, "BitmapOr node does not support ExecProcNode call convention");
+  return NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -117,7 +117,7 @@ MultiExecBitmapOr(BitmapOrState *node)
   /* must provide our own instrumentation support */
   if (node->ps.instrument)
   {
-
+    InstrStartNode(node->ps.instrument);
   }
 
   /*
@@ -153,41 +153,41 @@ MultiExecBitmapOr(BitmapOrState *node)
 
       if (subresult != result)
       {
-
+        elog(ERROR, "unrecognized result from subplan");
       }
     }
     else
     {
       /* standard implementation */
+      subresult = (TIDBitmap *)MultiExecProcNode(subnode);
 
+      if (!subresult || !IsA(subresult, TIDBitmap))
+      {
+        elog(ERROR, "unrecognized result from subplan");
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (result == NULL)
+      {
+        result = subresult; /* first subplan */
+      }
+      else
+      {
+        tbm_union(result, subresult);
+        tbm_free(subresult);
+      }
     }
   }
 
   /* We could return an empty result set here? */
   if (result == NULL)
   {
-
+    elog(ERROR, "BitmapOr doesn't support zero inputs");
   }
 
   /* must provide our own instrumentation support */
   if (node->ps.instrument)
   {
-
+    InstrStopNode(node->ps.instrument, 0 /* XXX */);
   }
 
   return (Node *)result;

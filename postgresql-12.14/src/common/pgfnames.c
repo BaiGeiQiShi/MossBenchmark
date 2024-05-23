@@ -45,8 +45,8 @@ pgfnames(const char *path)
   dir = opendir(path);
   if (dir == NULL)
   {
-
-
+    pg_log_warning("could not open directory \"%s\": %m", path);
+    return NULL;
   }
 
   filenames = (char **)palloc(fnsize * sizeof(char *));
@@ -66,14 +66,14 @@ pgfnames(const char *path)
 
   if (errno)
   {
-
+    pg_log_warning("could not read directory \"%s\": %m", path);
   }
 
   filenames[numnames] = NULL;
 
   if (closedir(dir))
   {
-
+    pg_log_warning("could not close directory \"%s\": %m", path);
   }
 
   return filenames;

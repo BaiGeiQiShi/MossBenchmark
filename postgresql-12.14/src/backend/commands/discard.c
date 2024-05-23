@@ -33,24 +33,24 @@ DiscardCommand(DiscardStmt *stmt, bool isTopLevel)
 {
   switch (stmt->target)
   {
-  case DISCARD_ALL:;
+  case DISCARD_ALL:
     DiscardAll(isTopLevel);
     break;
 
-  case DISCARD_PLANS:;
+  case DISCARD_PLANS:
     ResetPlanCache();
     break;
 
-  case DISCARD_SEQUENCES:;
+  case DISCARD_SEQUENCES:
     ResetSequenceCaches();
     break;
 
-  case DISCARD_TEMP:;
+  case DISCARD_TEMP:
     ResetTempTableNamespace();
     break;
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized DISCARD target: %d", stmt->target);
   }
 }
 

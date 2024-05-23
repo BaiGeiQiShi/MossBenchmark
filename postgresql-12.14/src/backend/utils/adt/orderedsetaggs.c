@@ -125,7 +125,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
    */
   if (AggCheckCallContext(fcinfo, &gcontext) != AGG_CONTEXT_AGGREGATE)
   {
-
+    elog(ERROR, "ordered-set aggregate called in non-aggregate context");
   }
 
   /*
@@ -144,11 +144,11 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
     aggref = AggGetAggref(fcinfo);
     if (!aggref)
     {
-
+      elog(ERROR, "ordered-set aggregate called in non-aggregate context");
     }
     if (!AGGKIND_IS_ORDERED_SET(aggref->aggkind))
     {
-
+      elog(ERROR, "ordered-set aggregate support function called for non-ordered-set aggregate");
     }
 
     /*
@@ -252,7 +252,7 @@ ordered_set_startup(FunctionCallInfo fcinfo, bool use_tuples)
 
       if (numSortCols != 1 || aggref->aggkind == AGGKIND_HYPOTHETICAL)
       {
-
+        elog(ERROR, "ordered-set aggregate support function does not support multiple aggregated columns");
       }
 
       sortcl = (SortGroupClause *)linitial(sortlist);
@@ -432,14 +432,14 @@ percentile_disc_final(PG_FUNCTION_ARGS)
   /* Get and check the percentile argument */
   if (PG_ARGISNULL(1))
   {
-
+    PG_RETURN_NULL();
   }
 
   percentile = PG_GETARG_FLOAT8(1);
 
   if (percentile < 0 || percentile > 1 || isnan(percentile))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("percentile value %g is not between 0 and 1", percentile)));
   }
 
   /* If there were no regular rows, the result is NULL */
@@ -453,7 +453,7 @@ percentile_disc_final(PG_FUNCTION_ARGS)
   /* number_of_rows could be zero if we only saw NULL input values */
   if (osastate->number_of_rows == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Finish the sort, or rescan if we already did */
@@ -464,7 +464,7 @@ percentile_disc_final(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    tuplesort_rescan(osastate->sortstate);
   }
 
   /*----------
@@ -480,19 +480,19 @@ percentile_disc_final(PG_FUNCTION_ARGS)
   {
     if (!tuplesort_skiptuples(osastate->sortstate, rownum - 1, true))
     {
-
+      elog(ERROR, "missing row in percentile_disc");
     }
   }
 
   if (!tuplesort_getdatum(osastate->sortstate, true, &val, &isnull, NULL))
   {
-
+    elog(ERROR, "missing row in percentile_disc");
   }
 
   /* We shouldn't have stored any nulls, but do the right thing anyway */
   if (isnull)
   {
-
+    PG_RETURN_NULL();
   }
   else
   {
@@ -519,10 +519,10 @@ float8_lerp(Datum lo, Datum hi, double pct)
 static Datum
 interval_lerp(Datum lo, Datum hi, double pct)
 {
+  Datum diff_result = DirectFunctionCall2(interval_mi, hi, lo);
+  Datum mul_result = DirectFunctionCall2(interval_mul, diff_result, Float8GetDatumFast(pct));
 
-
-
-
+  return DirectFunctionCall2(interval_pl, mul_result, lo);
 }
 
 /*
@@ -546,20 +546,20 @@ percentile_cont_final_common(FunctionCallInfo fcinfo, Oid expect_type, LerpFunc 
   /* Get and check the percentile argument */
   if (PG_ARGISNULL(1))
   {
-
+    PG_RETURN_NULL();
   }
 
   percentile = PG_GETARG_FLOAT8(1);
 
   if (percentile < 0 || percentile > 1 || isnan(percentile))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("percentile value %g is not between 0 and 1", percentile)));
   }
 
   /* If there were no regular rows, the result is NULL */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   osastate = (OSAPerGroupState *)PG_GETARG_POINTER(0);
@@ -567,7 +567,7 @@ percentile_cont_final_common(FunctionCallInfo fcinfo, Oid expect_type, LerpFunc 
   /* number_of_rows could be zero if we only saw NULL input values */
   if (osastate->number_of_rows == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   Assert(expect_type == osastate->qstate->sortColType);
@@ -590,16 +590,16 @@ percentile_cont_final_common(FunctionCallInfo fcinfo, Oid expect_type, LerpFunc 
 
   if (!tuplesort_skiptuples(osastate->sortstate, first_row, true))
   {
-
+    elog(ERROR, "missing row in percentile_cont");
   }
 
   if (!tuplesort_getdatum(osastate->sortstate, true, &first_val, &isnull, NULL))
   {
-
+    elog(ERROR, "missing row in percentile_cont");
   }
   if (isnull)
   {
-
+    PG_RETURN_NULL();
   }
 
   if (first_row == second_row)
@@ -610,12 +610,12 @@ percentile_cont_final_common(FunctionCallInfo fcinfo, Oid expect_type, LerpFunc 
   {
     if (!tuplesort_getdatum(osastate->sortstate, true, &second_val, &isnull, NULL))
     {
-
+      elog(ERROR, "missing row in percentile_cont");
     }
 
     if (isnull)
     {
-
+      PG_RETURN_NULL();
     }
 
     proportion = (percentile * (osastate->number_of_rows - 1)) - first_row;
@@ -640,7 +640,7 @@ percentile_cont_float8_final(PG_FUNCTION_ARGS)
 Datum
 percentile_cont_interval_final(PG_FUNCTION_ARGS)
 {
-
+  return percentile_cont_final_common(fcinfo, INTERVALOID, interval_lerp);
 }
 
 /*
@@ -705,7 +705,7 @@ setup_pct_info(int num_percentiles, Datum *percentiles_datum, bool *percentiles_
 
       if (p < 0 || p > 1 || isnan(p))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("percentile value %g is not between 0 and 1", p)));
       }
 
       if (continuous)
@@ -765,7 +765,7 @@ percentile_disc_multi_final(PG_FUNCTION_ARGS)
   /* If there were no regular rows, the result is NULL */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   osastate = (OSAPerGroupState *)PG_GETARG_POINTER(0);
@@ -773,13 +773,13 @@ percentile_disc_multi_final(PG_FUNCTION_ARGS)
   /* number_of_rows could be zero if we only saw NULL input values */
   if (osastate->number_of_rows == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Deconstruct the percentile-array input */
   if (PG_ARGISNULL(1))
   {
-
+    PG_RETURN_NULL();
   }
   param = PG_GETARG_ARRAYTYPE_P(1);
 
@@ -789,7 +789,7 @@ percentile_disc_multi_final(PG_FUNCTION_ARGS)
 
   if (num_percentiles == 0)
   {
-
+    PG_RETURN_POINTER(construct_empty_array(osastate->qstate->sortColType));
   }
 
   pct_info = setup_pct_info(num_percentiles, percentiles_datum, percentiles_null, osastate->number_of_rows, false);
@@ -828,7 +828,7 @@ percentile_disc_multi_final(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      tuplesort_rescan(osastate->sortstate);
     }
 
     for (; i < num_percentiles; i++)
@@ -841,12 +841,12 @@ percentile_disc_multi_final(PG_FUNCTION_ARGS)
       {
         if (!tuplesort_skiptuples(osastate->sortstate, target_row - rownum - 1, true))
         {
-
+          elog(ERROR, "missing row in percentile_disc");
         }
 
         if (!tuplesort_getdatum(osastate->sortstate, true, &val, &isnull, NULL))
         {
-
+          elog(ERROR, "missing row in percentile_disc");
         }
 
         rownum = target_row;
@@ -886,7 +886,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
   /* If there were no regular rows, the result is NULL */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   osastate = (OSAPerGroupState *)PG_GETARG_POINTER(0);
@@ -894,7 +894,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
   /* number_of_rows could be zero if we only saw NULL input values */
   if (osastate->number_of_rows == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   Assert(expect_type == osastate->qstate->sortColType);
@@ -902,7 +902,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
   /* Deconstruct the percentile-array input */
   if (PG_ARGISNULL(1))
   {
-
+    PG_RETURN_NULL();
   }
   param = PG_GETARG_ARRAYTYPE_P(1);
 
@@ -912,7 +912,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
 
   if (num_percentiles == 0)
   {
-
+    PG_RETURN_POINTER(construct_empty_array(osastate->qstate->sortColType));
   }
 
   pct_info = setup_pct_info(num_percentiles, percentiles_datum, percentiles_null, osastate->number_of_rows, true);
@@ -933,8 +933,8 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
       break;
     }
 
-
-
+    result_datum[idx] = (Datum)0;
+    result_isnull[idx] = true;
   }
 
   /*
@@ -951,7 +951,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
     }
     else
     {
-
+      tuplesort_rescan(osastate->sortstate);
     }
 
     for (; i < num_percentiles; i++)
@@ -970,12 +970,12 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
       {
         if (!tuplesort_skiptuples(osastate->sortstate, first_row - rownum - 1, true))
         {
-
+          elog(ERROR, "missing row in percentile_cont");
         }
 
         if (!tuplesort_getdatum(osastate->sortstate, true, &first_val, &isnull, NULL) || isnull)
         {
-
+          elog(ERROR, "missing row in percentile_cont");
         }
 
         rownum = first_row;
@@ -997,7 +997,7 @@ percentile_cont_multi_final_common(FunctionCallInfo fcinfo, Oid expect_type, int
       {
         if (!tuplesort_getdatum(osastate->sortstate, true, &second_val, &isnull, NULL) || isnull)
         {
-
+          elog(ERROR, "missing row in percentile_cont");
         }
         rownum++;
       }
@@ -1039,9 +1039,9 @@ percentile_cont_float8_multi_final(PG_FUNCTION_ARGS)
 Datum
 percentile_cont_interval_multi_final(PG_FUNCTION_ARGS)
 {
-
-
-
+  return percentile_cont_multi_final_common(fcinfo, INTERVALOID,
+      /* hard-wired info on type interval */
+      16, false, 'd', interval_lerp);
 }
 
 /*
@@ -1068,7 +1068,7 @@ mode_final(PG_FUNCTION_ARGS)
   /* If there were no regular rows, the result is NULL */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   osastate = (OSAPerGroupState *)PG_GETARG_POINTER(0);
@@ -1076,7 +1076,7 @@ mode_final(PG_FUNCTION_ARGS)
   /* number_of_rows could be zero if we only saw NULL input values */
   if (osastate->number_of_rows == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Look up the equality function for the datatype, if we didn't already */
@@ -1096,7 +1096,7 @@ mode_final(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    tuplesort_rescan(osastate->sortstate);
   }
 
   /* Scan tuples and count frequencies */
@@ -1105,7 +1105,7 @@ mode_final(PG_FUNCTION_ARGS)
     /* we don't expect any nulls, but ignore them if found */
     if (isnull)
     {
-
+      continue;
     }
 
     if (last_val_freq == 0)
@@ -1167,7 +1167,7 @@ mode_final(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    PG_RETURN_NULL();
   }
 }
 
@@ -1184,7 +1184,7 @@ hypothetical_check_argtypes(FunctionCallInfo fcinfo, int nargs, TupleDesc tupdes
   /* check that we have an int4 flag column */
   if (!tupdesc || (nargs + 1) != tupdesc->natts || TupleDescAttr(tupdesc, nargs)->atttypid != INT4OID)
   {
-
+    elog(ERROR, "type mismatch in hypothetical-set function");
   }
 
   /* check that direct args match in type with aggregated args */
@@ -1194,7 +1194,7 @@ hypothetical_check_argtypes(FunctionCallInfo fcinfo, int nargs, TupleDesc tupdes
 
     if (get_fn_expr_argtype(fcinfo->flinfo, i + 1) != attr->atttypid)
     {
-
+      elog(ERROR, "type mismatch in hypothetical-set function");
     }
   }
 }
@@ -1230,7 +1230,7 @@ hypothetical_rank_common(FunctionCallInfo fcinfo, int flag, int64 *number_of_row
   /* Adjust nargs to be the number of direct (or aggregated) args */
   if (nargs % 2 != 0)
   {
-
+    elog(ERROR, "wrong number of arguments in hypothetical-set function");
   }
   nargs /= 2;
 
@@ -1356,7 +1356,7 @@ hypothetical_dense_rank_final(PG_FUNCTION_ARGS)
   /* If there were no regular rows, the rank is always 1 */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_INT64(rank);
   }
 
   osastate = (OSAPerGroupState *)PG_GETARG_POINTER(0);
@@ -1375,7 +1375,7 @@ hypothetical_dense_rank_final(PG_FUNCTION_ARGS)
   /* Adjust nargs to be the number of direct (or aggregated) args */
   if (nargs % 2 != 0)
   {
-
+    elog(ERROR, "wrong number of arguments in hypothetical-set function");
   }
   nargs /= 2;
 

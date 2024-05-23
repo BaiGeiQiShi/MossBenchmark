@@ -36,9 +36,11 @@ isolation_start_test(const char *testname, _stringlist **resultfiles, _stringlis
   char *appnameenv;
 
   /* need to do the path lookup here, check isolation_init() for details */
-  if (!looked_up_isolation_exec) {
+  if (!looked_up_isolation_exec)
+  {
     /* look for isolationtester binary */
-    if (find_other_exec(saved_argv0, "isolationtester", PG_ISOLATION_VERSIONSTR, isolation_exec) != 0) {
+    if (find_other_exec(saved_argv0, "isolationtester", PG_ISOLATION_VERSIONSTR, isolation_exec) != 0)
+    {
       fprintf(stderr, _("could not find proper isolationtester binary\n"));
       exit(2);
     }
@@ -52,30 +54,35 @@ isolation_start_test(const char *testname, _stringlist **resultfiles, _stringlis
    * outside of the source tree.
    */
   snprintf(infile, sizeof(infile), "%s/specs/%s.spec", outputdir, testname);
-  if (!file_exists(infile)) {
+  if (!file_exists(infile))
+  {
     snprintf(infile, sizeof(infile), "%s/specs/%s.spec", inputdir, testname);
   }
 
   snprintf(outfile, sizeof(outfile), "%s/results/%s.out", outputdir, testname);
 
   snprintf(expectfile, sizeof(expectfile), "%s/expected/%s.out", outputdir, testname);
-  if (!file_exists(expectfile)) {
+  if (!file_exists(expectfile))
+  {
     snprintf(expectfile, sizeof(expectfile), "%s/expected/%s.out", inputdir, testname);
   }
 
   add_stringlist_item(resultfiles, outfile);
   add_stringlist_item(expectfiles, expectfile);
 
-  if (launcher) {
+  if (launcher)
+  {
     offset += snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset, "%s ", launcher);
-    if (offset >= sizeof(psql_cmd)) {
+    if (offset >= sizeof(psql_cmd))
+    {
       fprintf(stderr, _("command too long\n"));
       exit(2);
     }
   }
 
   offset += snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset, "\"%s\" \"dbname=%s\" < \"%s\" > \"%s\" 2>&1", isolation_exec, dblist->str, infile, outfile);
-  if (offset >= sizeof(psql_cmd)) {
+  if (offset >= sizeof(psql_cmd))
+  {
     fprintf(stderr, _("command too long\n"));
     exit(2);
   }
@@ -85,7 +92,8 @@ isolation_start_test(const char *testname, _stringlist **resultfiles, _stringlis
 
   pid = spawn_process(psql_cmd);
 
-  if (pid == INVALID_PID) {
+  if (pid == INVALID_PID)
+  {
     fprintf(stderr, _("could not start process for test %s\n"), testname);
     exit(2);
   }
@@ -111,7 +119,8 @@ isolation_init(int argc, char **argv)
    * and do the lookup the first time through isolation_start_test().
    */
   argv0_len = strlcpy(saved_argv0, argv[0], MAXPGPATH);
-  if (argv0_len >= MAXPGPATH) {
+  if (argv0_len >= MAXPGPATH)
+  {
     fprintf(stderr, _("path for isolationtester executable is longer than %d bytes\n"), (int)(MAXPGPATH - 1));
     exit(2);
   }

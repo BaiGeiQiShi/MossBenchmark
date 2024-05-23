@@ -214,8 +214,8 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk, Buffer *buf, O
   mapBlk = revmap_get_blkno(revmap, heapBlk);
   if (mapBlk == InvalidBlockNumber)
   {
-
-
+    *off = InvalidOffsetNumber;
+    return NULL;
   }
 
   ItemPointerSetInvalid(&previptr);
@@ -227,7 +227,7 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk, Buffer *buf, O
     {
       if (revmap->rm_currBuf != InvalidBuffer)
       {
-
+        ReleaseBuffer(revmap->rm_currBuf);
       }
 
       Assert(mapBlk != InvalidBlockNumber);
@@ -254,7 +254,7 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk, Buffer *buf, O
      */
     if (ItemPointerIsValid(&previptr) && ItemPointerEquals(&previptr, iptr))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg_internal("corrupted BRIN index: inconsistent range map")));
     }
     previptr = *iptr;
 
@@ -286,8 +286,8 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk, Buffer *buf, O
        */
       if (*off > PageGetMaxOffsetNumber(page))
       {
-
-
+        LockBuffer(*buf, BUFFER_LOCK_UNLOCK);
+        return NULL;
       }
 
       lp = PageGetItemId(page, *off);
@@ -310,7 +310,7 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk, Buffer *buf, O
     /*
      * No luck. Assume that the revmap was updated concurrently.
      */
-
+    LockBuffer(*buf, BUFFER_LOCK_UNLOCK);
   }
   /* not reached, but keep compiler quiet */
   return NULL;
@@ -378,22 +378,22 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
   /* if this is no longer a regular page, tell caller to start over */
   if (!BRIN_IS_REGULAR_PAGE(regPg))
   {
-
-
-
-
+    LockBuffer(revmapBuf, BUFFER_LOCK_UNLOCK);
+    LockBuffer(regBuf, BUFFER_LOCK_UNLOCK);
+    brinRevmapTerminate(revmap);
+    return false;
   }
 
   regOffset = ItemPointerGetOffsetNumber(iptr);
   if (regOffset > PageGetMaxOffsetNumber(regPg))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("corrupted BRIN index: inconsistent range map")));
   }
 
   lp = PageGetItemId(regPg, regOffset);
   if (!ItemIdIsUsed(lp))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("corrupted BRIN index: inconsistent range map")));
   }
 
   /*
@@ -478,7 +478,7 @@ revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk)
 
   if (mapBlk == InvalidBlockNumber)
   {
-
+    elog(ERROR, "revmap does not cover heap block %u", heapBlk);
   }
 
   /* Ensure the buffer we got is in the expected range */
@@ -493,7 +493,7 @@ revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk)
   {
     if (revmap->rm_currBuf != InvalidBuffer)
     {
-
+      ReleaseBuffer(revmap->rm_currBuf);
     }
 
     revmap->rm_currBuf = ReadBuffer(revmap->rm_irel, mapBlk);
@@ -565,15 +565,15 @@ revmap_physical_extend(BrinRevmap *revmap)
   nblocks = RelationGetNumberOfBlocks(irel);
   if (mapBlk < nblocks)
   {
-
-
-
+    buf = ReadBuffer(irel, mapBlk);
+    LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+    page = BufferGetPage(buf);
   }
   else
   {
     if (needLock)
     {
-
+      LockRelationForExtension(irel, ExclusiveLock);
     }
 
     buf = ReadBuffer(irel, P_NEW);
@@ -585,37 +585,37 @@ revmap_physical_extend(BrinRevmap *revmap)
        * up and have caller start over.  We will have to evacuate that
        * page from under whoever is using it.
        */
-
-
-
-
-
-
-
+      if (needLock)
+      {
+        UnlockRelationForExtension(irel, ExclusiveLock);
+      }
+      LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
+      ReleaseBuffer(buf);
+      return;
     }
     LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
     page = BufferGetPage(buf);
 
     if (needLock)
     {
-
+      UnlockRelationForExtension(irel, ExclusiveLock);
     }
   }
 
   /* Check that it's a regular block (or an empty page) */
   if (!PageIsNew(page) && !BRIN_IS_REGULAR_PAGE(page))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("unexpected page type 0x%04X in BRIN index \"%s\" block %u", BrinPageType(page), RelationGetRelationName(irel), BufferGetBlockNumber(buf))));
   }
 
   /* If the page is in use, evacuate it and restart */
   if (brin_start_evacuating_page(irel, buf))
   {
-
-
+    LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
+    brin_evacuate_page(irel, revmap->rm_pagesPerRange, revmap, buf);
 
     /* have caller start over */
-
+    return;
   }
 
   /*

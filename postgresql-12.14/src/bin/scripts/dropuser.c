@@ -50,8 +50,10 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "dropuser", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:wWei", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWei", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -76,38 +78,45 @@ main(int argc, char *argv[])
     case 0:
       /* this covers the long options */
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  switch (argc - optind) {
+  switch (argc - optind)
+  {
   case 0:
     break;
   case 1:
     dropuser = argv[optind];
     break;
-  default:;
+  default:
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind + 1]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (dropuser == NULL) {
-    if (interactive) {
+  if (dropuser == NULL)
+  {
+    if (interactive)
+    {
       simple_prompt("Enter name of role to drop: ", dropuser_buf, sizeof(dropuser_buf), true);
       dropuser = dropuser_buf;
-    } else {
+    }
+    else
+    {
       pg_log_error("missing required argument role name");
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  if (interactive) {
+  if (interactive)
+  {
     printf(_("Role \"%s\" will be permanently removed.\n"), dropuser);
-    if (!yesno_prompt("Are you sure?")) {
+    if (!yesno_prompt("Are you sure?"))
+    {
       exit(0);
     }
   }
@@ -124,12 +133,14 @@ main(int argc, char *argv[])
   initPQExpBuffer(&sql);
   appendPQExpBuffer(&sql, "DROP ROLE %s%s;", (if_exists ? "IF EXISTS " : ""), fmtId(dropuser));
 
-  if (echo) {
+  if (echo)
+  {
     printf("%s\n", sql.data);
   }
   result = PQexec(conn, sql.data);
 
-  if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(result) != PGRES_COMMAND_OK)
+  {
     pg_log_error("removal of role \"%s\" failed: %s", dropuser, PQerrorMessage(conn));
     PQfinish(conn);
     exit(1);
@@ -148,7 +159,8 @@ help(const char *progname)
   printf(_("  %s [OPTION]... [ROLENAME]\n"), progname);
   printf(_("\nOptions:\n"));
   printf(_("  -e, --echo                show the commands being sent to the server\n"));
-  printf(_("  -i, --interactive         prompt before deleting anything, and prompt for\n                            role name if not specified\n"));
+  printf(_("  -i, --interactive         prompt before deleting anything, and prompt for\n"
+           "                            role name if not specified\n"));
   printf(_("  -V, --version             output version information, then exit\n"));
   printf(_("  --if-exists               don't report error if user doesn't exist\n"));
   printf(_("  -?, --help                show this help, then exit\n"));

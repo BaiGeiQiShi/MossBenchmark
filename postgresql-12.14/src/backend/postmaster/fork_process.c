@@ -93,20 +93,20 @@ fork_process(void)
       int fd = open(oomfilename, O_WRONLY, 0);
 
       /* We ignore all errors */
+      if (fd >= 0)
+      {
+        const char *oomvalue = getenv("PG_OOM_ADJUST_VALUE");
+        int rc;
 
+        if (oomvalue == NULL) /* supply a useful default */
+        {
+          oomvalue = "0";
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
+        rc = write(fd, oomvalue, strlen(oomvalue));
+        (void)rc;
+        close(fd);
+      }
     }
 
     /*

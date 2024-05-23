@@ -65,13 +65,13 @@ check_publication_add_relation(Relation targetrel)
   /* Can't be system table */
   if (IsCatalogRelation(targetrel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("\"%s\" is a system table", RelationGetRelationName(targetrel)), errdetail("System tables cannot be added to publications.")));
   }
 
   /* UNLOGGED and TEMP relations cannot be part of publication. */
   if (!RelationNeedsWAL(targetrel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("table \"%s\" cannot be replicated", RelationGetRelationName(targetrel)), errdetail("Temporary and unlogged relations cannot be replicated.")));
   }
 }
 
@@ -126,7 +126,7 @@ pg_relation_is_publishable(PG_FUNCTION_ARGS)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    PG_RETURN_NULL();
   }
   result = is_publishable_class(relid, (Form_pg_class)GETSTRUCT(tuple));
   ReleaseSysCache(tuple);
@@ -305,33 +305,33 @@ GetAllTablesPublications(void)
 List *
 GetAllTablesPublicationRelations(void)
 {
+  Relation classRel;
+  ScanKeyData key[1];
+  TableScanDesc scan;
+  HeapTuple tuple;
+  List *result = NIL;
 
+  classRel = table_open(RelationRelationId, AccessShareLock);
 
+  ScanKeyInit(&key[0], Anum_pg_class_relkind, BTEqualStrategyNumber, F_CHAREQ, CharGetDatum(RELKIND_RELATION));
 
+  scan = table_beginscan_catalog(classRel, 1, key);
 
+  while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+  {
+    Form_pg_class relForm = (Form_pg_class)GETSTRUCT(tuple);
+    Oid relid = relForm->oid;
 
+    if (is_publishable_class(relid, relForm))
+    {
+      result = lappend_oid(result, relid);
+    }
+  }
 
+  table_endscan(scan);
+  table_close(classRel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -350,7 +350,7 @@ GetPublication(Oid pubid)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for publication %u", pubid);
   }
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
@@ -380,12 +380,12 @@ GetPublicationByName(const char *pubname, bool missing_ok)
   oid = GetSysCacheOid1(PUBLICATIONNAME, Anum_pg_publication_oid, CStringGetDatum(pubname));
   if (!OidIsValid(oid))
   {
+    if (missing_ok)
+    {
+      return NULL;
+    }
 
-
-
-
-
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("publication \"%s\" does not exist", pubname)));
   }
 
   return GetPublication(oid);
@@ -427,11 +427,11 @@ get_publication_name(Oid pubid, bool missing_ok)
 
   if (!HeapTupleIsValid(tup))
   {
-
-
-
-
-
+    if (!missing_ok)
+    {
+      elog(ERROR, "cache lookup failed for publication %u", pubid);
+    }
+    return NULL;
   }
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
@@ -448,50 +448,50 @@ get_publication_name(Oid pubid, bool missing_ok)
 Datum
 pg_get_publication_tables(PG_FUNCTION_ARGS)
 {
+  FuncCallContext *funcctx;
+  char *pubname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+  Publication *publication;
+  List *tables;
+  ListCell **lcp;
 
+  /* stuff done only on the first call of the function */
+  if (SRF_IS_FIRSTCALL())
+  {
+    MemoryContext oldcontext;
 
+    /* create a function context for cross-call persistence */
+    funcctx = SRF_FIRSTCALL_INIT();
 
+    /* switch to memory context appropriate for multiple function calls */
+    oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
+    publication = GetPublicationByName(pubname, false);
+    if (publication->alltables)
+    {
+      tables = GetAllTablesPublicationRelations();
+    }
+    else
+    {
+      tables = GetPublicationRelations(publication->oid);
+    }
+    lcp = (ListCell **)palloc(sizeof(ListCell *));
+    *lcp = list_head(tables);
+    funcctx->user_fctx = (void *)lcp;
 
+    MemoryContextSwitchTo(oldcontext);
+  }
 
+  /* stuff done on every call of the function */
+  funcctx = SRF_PERCALL_SETUP();
+  lcp = (ListCell **)funcctx->user_fctx;
 
+  while (*lcp != NULL)
+  {
+    Oid relid = lfirst_oid(*lcp);
 
+    *lcp = lnext(*lcp);
+    SRF_RETURN_NEXT(funcctx, ObjectIdGetDatum(relid));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  SRF_RETURN_DONE(funcctx);
 }

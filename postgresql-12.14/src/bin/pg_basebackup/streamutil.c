@@ -57,14 +57,16 @@ static char password[100];
 PGconn *conn = NULL;
 
 /*
- * Connect to the server. Returns a valid PGconn pointer if connected,* or NULL on non-permanent error. On permanent error, the function will
+ * Connect to the server. Returns a valid PGconn pointer if connected,
+ * or NULL on non-permanent error. On permanent error, the function will
  * call exit(1) directly.
  */
 PGconn *
 GetConnection(void)
 {
   PGconn *tmpconn;
-  int argcount = 7; /* dbname, replication, fallback_app_name,* host, user, port, password */
+  int argcount = 7; /* dbname, replication, fallback_app_name,
+                     * host, user, port, password */
   int i;
   const char **keywords;
   const char **values;
@@ -78,21 +80,26 @@ GetConnection(void)
   Assert(dbname == NULL || connection_string == NULL);
 
   /*
-   * Merge the connection info inputs given in form of connection string,* options and default values (dbname=replication, replication=true, etc.)
+   * Merge the connection info inputs given in form of connection string,
+   * options and default values (dbname=replication, replication=true, etc.)
    * Explicitly discard any dbname value in the connection string;
    * otherwise, PQconnectdbParams() would interpret that value as being
    * itself a connection string.
    */
   i = 0;
-  if (connection_string) {
+  if (connection_string)
+  {
     conn_opts = PQconninfoParse(connection_string, &err_msg);
-    if (conn_opts == NULL) {
+    if (conn_opts == NULL)
+    {
       pg_log_error("%s", err_msg);
       exit(1);
     }
 
-    for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++) {
-      if (conn_opt->val != NULL && conn_opt->val[0] != '\0' && strcmp(conn_opt->keyword, "dbname") != 0) {
+    for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++)
+    {
+      if (conn_opt->val != NULL && conn_opt->val[0] != '\0' && strcmp(conn_opt->keyword, "dbname") != 0)
+      {
         argcount++;
       }
     }
@@ -100,14 +107,18 @@ GetConnection(void)
     keywords = pg_malloc0((argcount + 1) * sizeof(*keywords));
     values = pg_malloc0((argcount + 1) * sizeof(*values));
 
-    for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++) {
-      if (conn_opt->val != NULL && conn_opt->val[0] != '\0' && strcmp(conn_opt->keyword, "dbname") != 0) {
+    for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++)
+    {
+      if (conn_opt->val != NULL && conn_opt->val[0] != '\0' && strcmp(conn_opt->keyword, "dbname") != 0)
+      {
         keywords[i] = conn_opt->keyword;
         values[i] = conn_opt->val;
         i++;
       }
     }
-  } else {
+  }
+  else
+  {
     keywords = pg_malloc0((argcount + 1) * sizeof(*keywords));
     values = pg_malloc0((argcount + 1) * sizeof(*values));
   }
@@ -122,17 +133,20 @@ GetConnection(void)
   values[i] = progname;
   i++;
 
-  if (dbhost) {
+  if (dbhost)
+  {
     keywords[i] = "host";
     values[i] = dbhost;
     i++;
   }
-  if (dbuser) {
+  if (dbuser)
+  {
     keywords[i] = "user";
     values[i] = dbuser;
     i++;
   }
-  if (dbport) {
+  if (dbport)
+  {
     keywords[i] = "port";
     values[i] = dbport;
     i++;
@@ -141,19 +155,24 @@ GetConnection(void)
   /* If -W was given, force prompt for password, but only the first time */
   need_password = (dbgetpassword == 1 && !have_password);
 
-  do {
+  do
+  {
     /* Get a new password if appropriate */
-    if (need_password) {
+    if (need_password)
+    {
       simple_prompt("Password: ", password, sizeof(password), false);
       have_password = true;
       need_password = false;
     }
 
     /* Use (or reuse, on a subsequent connection) password if we have it */
-    if (have_password) {
+    if (have_password)
+    {
       keywords[i] = "password";
       values[i] = password;
-    } else {
+    }
+    else
+    {
       keywords[i] = NULL;
       values[i] = NULL;
     }
@@ -164,24 +183,28 @@ GetConnection(void)
      * If there is too little memory even to allocate the PGconn object
      * and PQconnectdbParams returns NULL, we call exit(1) directly.
      */
-    if (!tmpconn) {
+    if (!tmpconn)
+    {
       pg_log_error("could not connect to server");
       exit(1);
     }
 
     /* If we need a password and -w wasn't given, loop back and get one */
-    if (PQstatus(tmpconn) == CONNECTION_BAD && PQconnectionNeedsPassword(tmpconn) && dbgetpassword != -1) {
+    if (PQstatus(tmpconn) == CONNECTION_BAD && PQconnectionNeedsPassword(tmpconn) && dbgetpassword != -1)
+    {
       PQfinish(tmpconn);
       need_password = true;
     }
   } while (need_password);
 
-  if (PQstatus(tmpconn) != CONNECTION_OK) {
+  if (PQstatus(tmpconn) != CONNECTION_OK)
+  {
     pg_log_error("%s", PQerrorMessage(tmpconn));
     PQfinish(tmpconn);
     free(values);
     free(keywords);
-    if (conn_opts) {
+    if (conn_opts)
+    {
       PQconninfoFree(conn_opts);
     }
     return NULL;
@@ -190,7 +213,8 @@ GetConnection(void)
   /* Connection ok! */
   free(values);
   free(keywords);
-  if (conn_opts) {
+  if (conn_opts)
+  {
     PQconninfoFree(conn_opts);
   }
 
@@ -200,11 +224,13 @@ GetConnection(void)
    * the search path cannot be changed (by us or attackers) on earlier
    * versions.
    */
-  if (dbname != NULL && PQserverVersion(tmpconn) >= 100000) {
+  if (dbname != NULL && PQserverVersion(tmpconn) >= 100000)
+  {
     PGresult *res;
 
     res = PQexec(tmpconn, ALWAYS_SECURE_SEARCH_PATH_SQL);
-    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) != PGRES_TUPLES_OK)
+    {
       pg_log_error("could not clear search_path: %s", PQerrorMessage(tmpconn));
       PQclear(res);
       PQfinish(tmpconn);
@@ -218,13 +244,15 @@ GetConnection(void)
    * the server we are connecting to.
    */
   tmpparam = PQparameterStatus(tmpconn, "integer_datetimes");
-  if (!tmpparam) {
+  if (!tmpparam)
+  {
     pg_log_error("could not determine server setting for integer_datetimes");
     PQfinish(tmpconn);
     exit(1);
   }
 
-  if (strcmp(tmpparam, "on") != 0) {
+  if (strcmp(tmpparam, "on") != 0)
+  {
     pg_log_error("integer_datetimes compile flag does not match server");
     PQfinish(tmpconn);
     exit(1);
@@ -234,7 +262,8 @@ GetConnection(void)
    * Retrieve the source data directory mode and use it to construct a umask
    * for creating directories and files.
    */
-  if (!RetrieveDataDirCreatePerm(tmpconn)) {
+  if (!RetrieveDataDirCreatePerm(tmpconn))
+  {
     PQfinish(tmpconn);
     exit(1);
   }
@@ -257,27 +286,31 @@ RetrieveWalSegSize(PGconn *conn)
   Assert(conn != NULL);
 
   /* for previous versions set the default xlog seg size */
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_SHOW_CMD) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_SHOW_CMD)
+  {
     WalSegSz = DEFAULT_XLOG_SEG_SIZE;
     return true;
   }
 
   res = PQexec(conn, "SHOW wal_segment_size");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not send replication command \"%s\": %s", "SHOW wal_segment_size", PQerrorMessage(conn));
 
     PQclear(res);
     return false;
   }
-  if (PQntuples(res) != 1 || PQnfields(res) < 1) {
-    pg_log_error("could not fetch WAL segment size: got %d rows and %d fields, expected %d rows and %d or more fields",PQntuples(res), PQnfields(res), 1, 1);
+  if (PQntuples(res) != 1 || PQnfields(res) < 1)
+  {
+    pg_log_error("could not fetch WAL segment size: got %d rows and %d fields, expected %d rows and %d or more fields", PQntuples(res), PQnfields(res), 1, 1);
 
     PQclear(res);
     return false;
   }
 
   /* fetch xlog value and unit from the result */
-  if (sscanf(PQgetvalue(res, 0, 0), "%d%2s", &xlog_val, xlog_unit) != 2) {
+  if (sscanf(PQgetvalue(res, 0, 0), "%d%2s", &xlog_val, xlog_unit) != 2)
+  {
     pg_log_error("WAL segment size could not be parsed");
     PQclear(res);
     return false;
@@ -286,17 +319,21 @@ RetrieveWalSegSize(PGconn *conn)
   PQclear(res);
 
   /* set the multiplier based on unit to convert xlog_val to bytes */
-  if (strcmp(xlog_unit, "MB") == 0) {
+  if (strcmp(xlog_unit, "MB") == 0)
+  {
     multiplier = 1024 * 1024;
-  } else if (strcmp(xlog_unit, "GB") == 0) {
+  }
+  else if (strcmp(xlog_unit, "GB") == 0)
+  {
     multiplier = 1024 * 1024 * 1024;
   }
 
   /* convert and set WalSegSz */
   WalSegSz = xlog_val * multiplier;
 
-  if (!IsValidWalSegSize(WalSegSz)) {
-    pg_log_error(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the remote server reported a value of %d byte","WAL segment size must be a power of two between 1 MB and 1 GB, but the remote server reported a value of %d bytes",WalSegSz),WalSegSz);
+  if (!IsValidWalSegSize(WalSegSz))
+  {
+    pg_log_error(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the remote server reported a value of %d byte", "WAL segment size must be a power of two between 1 MB and 1 GB, but the remote server reported a value of %d bytes", WalSegSz), WalSegSz);
     return false;
   }
 
@@ -324,25 +361,29 @@ RetrieveDataDirCreatePerm(PGconn *conn)
   Assert(conn != NULL);
 
   /* for previous versions leave the default group access */
-  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_GROUP_ACCESS) {
+  if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_GROUP_ACCESS)
+  {
     return true;
   }
 
   res = PQexec(conn, "SHOW data_directory_mode");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not send replication command \"%s\": %s", "SHOW data_directory_mode", PQerrorMessage(conn));
 
     PQclear(res);
     return false;
   }
-  if (PQntuples(res) != 1 || PQnfields(res) < 1) {
-    pg_log_error("could not fetch group access flag: got %d rows and %d fields, expected %d rows and %d or more fields",PQntuples(res), PQnfields(res), 1, 1);
+  if (PQntuples(res) != 1 || PQnfields(res) < 1)
+  {
+    pg_log_error("could not fetch group access flag: got %d rows and %d fields, expected %d rows and %d or more fields", PQntuples(res), PQnfields(res), 1, 1);
 
     PQclear(res);
     return false;
   }
 
-  if (sscanf(PQgetvalue(res, 0, 0), "%o", &data_directory_mode) != 1) {
+  if (sscanf(PQgetvalue(res, 0, 0), "%o", &data_directory_mode) != 1)
+  {
     pg_log_error("group access flag could not be parsed: %s", PQgetvalue(res, 0, 0));
 
     PQclear(res);
@@ -373,32 +414,38 @@ RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *
   Assert(conn != NULL);
 
   res = PQexec(conn, "IDENTIFY_SYSTEM");
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("could not send replication command \"%s\": %s", "IDENTIFY_SYSTEM", PQerrorMessage(conn));
 
     PQclear(res);
     return false;
   }
-  if (PQntuples(res) != 1 || PQnfields(res) < 3) {
-    pg_log_error("could not identify system: got %d rows and %d fields, expected %d rows and %d or more fields",PQntuples(res), PQnfields(res), 1, 3);
+  if (PQntuples(res) != 1 || PQnfields(res) < 3)
+  {
+    pg_log_error("could not identify system: got %d rows and %d fields, expected %d rows and %d or more fields", PQntuples(res), PQnfields(res), 1, 3);
 
     PQclear(res);
     return false;
   }
 
   /* Get system identifier */
-  if (sysid != NULL) {
+  if (sysid != NULL)
+  {
     *sysid = pg_strdup(PQgetvalue(res, 0, 0));
   }
 
   /* Get timeline ID to start streaming from */
-  if (starttli != NULL) {
+  if (starttli != NULL)
+  {
     *starttli = atoi(PQgetvalue(res, 0, 1));
   }
 
   /* Get LSN start position if necessary */
-  if (startpos != NULL) {
-    if (sscanf(PQgetvalue(res, 0, 2), "%X/%X", &hi, &lo) != 2) {
+  if (startpos != NULL)
+  {
+    if (sscanf(PQgetvalue(res, 0, 2), "%X/%X", &hi, &lo) != 2)
+    {
       pg_log_error("could not parse write-ahead log location \"%s\"", PQgetvalue(res, 0, 2));
 
       PQclear(res);
@@ -408,16 +455,20 @@ RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *
   }
 
   /* Get database name, only available in 9.4 and newer versions */
-  if (db_name != NULL) {
+  if (db_name != NULL)
+  {
     *db_name = NULL;
-    if (PQserverVersion(conn) >= 90400) {
-      if (PQnfields(res) < 4) {
-        pg_log_error("could not identify system: got %d rows and %d fields, expected %d rows and %d or more fields",PQntuples(res), PQnfields(res), 1, 4);
+    if (PQserverVersion(conn) >= 90400)
+    {
+      if (PQnfields(res) < 4)
+      {
+        pg_log_error("could not identify system: got %d rows and %d fields, expected %d rows and %d or more fields", PQntuples(res), PQnfields(res), 1, 4);
 
         PQclear(res);
         return false;
       }
-      if (!PQgetisnull(res, 0, 3)) {
+      if (!PQgetisnull(res, 0, 3))
+      {
         *db_name = pg_strdup(PQgetvalue(res, 0, 3));
       }
     }
@@ -444,31 +495,41 @@ CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, b
 
   /* Build query */
   appendPQExpBuffer(query, "CREATE_REPLICATION_SLOT \"%s\"", slot_name);
-  if (is_temporary) {
+  if (is_temporary)
+  {
     appendPQExpBuffer(query, " TEMPORARY");
   }
-  if (is_physical) {
+  if (is_physical)
+  {
     appendPQExpBuffer(query, " PHYSICAL");
-    if (reserve_wal) {
+    if (reserve_wal)
+    {
       appendPQExpBuffer(query, " RESERVE_WAL");
     }
-  } else {
+  }
+  else
+  {
     appendPQExpBuffer(query, " LOGICAL \"%s\"", plugin);
-    if (PQserverVersion(conn) >= 100000) {
+    if (PQserverVersion(conn) >= 100000)
+    {
       /* pg_recvlogical doesn't use an exported snapshot, so suppress */
       appendPQExpBuffer(query, " NOEXPORT_SNAPSHOT");
     }
   }
 
   res = PQexec(conn, query->data);
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     const char *sqlstate = PQresultErrorField(res, PG_DIAG_SQLSTATE);
 
-    if (slot_exists_ok && sqlstate && strcmp(sqlstate, ERRCODE_DUPLICATE_OBJECT) == 0) {
+    if (slot_exists_ok && sqlstate && strcmp(sqlstate, ERRCODE_DUPLICATE_OBJECT) == 0)
+    {
       destroyPQExpBuffer(query);
       PQclear(res);
       return true;
-    } else {
+    }
+    else
+    {
       pg_log_error("could not send replication command \"%s\": %s", query->data, PQerrorMessage(conn));
 
       destroyPQExpBuffer(query);
@@ -477,8 +538,9 @@ CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, b
     }
   }
 
-  if (PQntuples(res) != 1 || PQnfields(res) != 4) {
-    pg_log_error("could not create replication slot \"%s\": got %d rows and %d fields, expected %d rows and %d fields",slot_name, PQntuples(res), PQnfields(res), 1, 4);
+  if (PQntuples(res) != 1 || PQnfields(res) != 4)
+  {
+    pg_log_error("could not create replication slot \"%s\": got %d rows and %d fields, expected %d rows and %d fields", slot_name, PQntuples(res), PQnfields(res), 1, 4);
 
     destroyPQExpBuffer(query);
     PQclear(res);
@@ -507,7 +569,8 @@ DropReplicationSlot(PGconn *conn, const char *slot_name)
   /* Build query */
   appendPQExpBuffer(query, "DROP_REPLICATION_SLOT \"%s\"", slot_name);
   res = PQexec(conn, query->data);
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     pg_log_error("could not send replication command \"%s\": %s", query->data, PQerrorMessage(conn));
 
     destroyPQExpBuffer(query);
@@ -515,8 +578,9 @@ DropReplicationSlot(PGconn *conn, const char *slot_name)
     return false;
   }
 
-  if (PQntuples(res) != 0 || PQnfields(res) != 0) {
-    pg_log_error("could not drop replication slot \"%s\": got %d rows and %d fields, expected %d rows and %d fields",slot_name, PQntuples(res), PQnfields(res), 0, 0);
+  if (PQntuples(res) != 0 || PQnfields(res) != 0)
+  {
+    pg_log_error("could not drop replication slot \"%s\": got %d rows and %d fields, expected %d rows and %d fields", slot_name, PQntuples(res), PQnfields(res), 0, 0);
 
     destroyPQExpBuffer(query);
     PQclear(res);
@@ -555,10 +619,13 @@ feTimestampDifference(TimestampTz start_time, TimestampTz stop_time, long *secs,
 {
   TimestampTz diff = stop_time - start_time;
 
-  if (diff <= 0) {
+  if (diff <= 0)
+  {
     *secs = 0;
     *microsecs = 0;
-  } else {
+  }
+  else
+  {
     *secs = (long)(diff / USECS_PER_SEC);
     *microsecs = (int)(diff % USECS_PER_SEC);
   }

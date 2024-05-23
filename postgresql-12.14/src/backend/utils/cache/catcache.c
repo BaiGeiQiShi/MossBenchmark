@@ -244,7 +244,7 @@ GetCCHashEqFuncs(Oid keytype, CCHashFN *hashfunc, RegProcedure *eqfunc, CCFastEq
     *fasteqfunc = oidvectoreqfast;
     *eqfunc = F_OIDVECTOREQ;
     break;
-  default:;
+  default:
     elog(FATAL, "type %u not supported as catcache key", keytype);
     *hashfunc = NULL; /* keep compiler quiet */
 
@@ -292,7 +292,7 @@ CatalogCacheComputeHashValue(CatCache *cache, int nkeys, Datum v1, Datum v2, Dat
 
     hashValue ^= oneHash;
     break;
-  default:;
+  default:
     elog(FATAL, "wrong number of hash keys: %d", nkeys);
     break;
   }
@@ -332,7 +332,7 @@ CatalogCacheComputeTupleHashValue(CatCache *cache, int nkeys, HeapTuple tuple)
     v1 = fastgetattr(tuple, cc_keyno[0], cc_tupdesc, &isNull);
     Assert(!isNull);
     break;
-  default:;
+  default:
     elog(FATAL, "wrong number of hash keys: %d", nkeys);
     break;
   }
@@ -669,9 +669,9 @@ ResetCatalogCaches(void)
  *	we also tried to force re-execution of CatalogCacheInitializeCache for
  *	the cache(s) on that catalog.  This is a bad idea since it leads to all
  *	kinds of trouble if a cache flush occurs while loading cache entries.
- *	We now avoid the need to do it by copying cc_tupdesc out of the
- *relcache, rather than relying on the relcache to keep a tupdesc for us.  Of
- *course this assumes the tupdesc of a cachable system table will not change...)
+ *	We now avoid the need to do it by copying cc_tupdesc out of the relcache,
+ *	rather than relying on the relcache to keep a tupdesc for us.  Of course
+ *	this assumes the tupdesc of a cachable system table will not change...)
  */
 void
 CatalogCacheFlushCatalog(Oid catId)
@@ -1022,8 +1022,8 @@ InitCatCachePhase2(CatCache *cache, bool touch_index)
  *		criticalRelcachesBuilt), we don't have to worry anymore.
  *
  *		Similarly, during backend startup we have to be able to use the
- *		pg_authid and pg_auth_members syscaches for authentication even
- *if we don't yet have relcache entries for those catalogs' indexes.
+ *		pg_authid and pg_auth_members syscaches for authentication even if
+ *		we don't yet have relcache entries for those catalogs' indexes.
  */
 static bool
 IndexScanOK(CatCache *cache, ScanKey cur_skey)
@@ -1069,7 +1069,7 @@ IndexScanOK(CatCache *cache, ScanKey cur_skey)
     }
     break;
 
-  default:;
+  default:
     break;
   }
 
@@ -1080,8 +1080,8 @@ IndexScanOK(CatCache *cache, ScanKey cur_skey)
 /*
  *	SearchCatCacheInternal
  *
- *		This call searches a system cache for a tuple, opening the
- *relation if necessary (on the first access to a particular cache).
+ *		This call searches a system cache for a tuple, opening the relation
+ *		if necessary (on the first access to a particular cache).
  *
  *		The result is NULL if not found, or a pointer to a HeapTuple in
  *		the cache.  The caller must not modify the tuple, and must call
@@ -1409,13 +1409,13 @@ GetCatCacheHashValue(CatCache *cache, Datum v1, Datum v2, Datum v3, Datum v4)
  *		Generate a list of all tuples matching a partial key (that is,
  *		a key specifying just the first K of the cache's N key columns).
  *
- *		It doesn't make any sense to specify all of the cache's key
- *columns here: since the key is unique, there could be at most one match, so
- *		you ought to use SearchCatCache() instead.  Hence this function
- *takes one less Datum argument than SearchCatCache() does.
+ *		It doesn't make any sense to specify all of the cache's key columns
+ *		here: since the key is unique, there could be at most one match, so
+ *		you ought to use SearchCatCache() instead.  Hence this function takes
+ *		one less Datum argument than SearchCatCache() does.
  *
- *		The caller must not modify the list object or the pointed-to
- *tuples, and must call ReleaseCatCacheList() when done with the list.
+ *		The caller must not modify the list object or the pointed-to tuples,
+ *		and must call ReleaseCatCacheList() when done with the list.
  */
 CatCList *
 SearchCatCacheList(CatCache *cache, int nkeys, Datum v1, Datum v2, Datum v3)
@@ -1715,8 +1715,8 @@ ReleaseCatCacheList(CatCList *list)
 
 /*
  * CatalogCacheCreateEntry
- *		Create a new CatCTup entry, copying the given HeapTuple and
- *other supplied data into it.  The new entry initially has refcount 0.
+ *		Create a new CatCTup entry, copying the given HeapTuple and other
+ *		supplied data into it.  The new entry initially has refcount 0.
  */
 static CatCTup *
 CatalogCacheCreateEntry(CatCache *cache, HeapTuple ntp, Datum *arguments, uint32 hashValue, Index hashIndex, bool negative)
@@ -1888,10 +1888,9 @@ CatCacheCopyKeys(TupleDesc tupdesc, int nkeys, int *attnos, Datum *srckeys, Datu
  *	This is part of a rather subtle chain of events, so pay attention:
  *
  *	When a tuple is inserted or deleted, it cannot be flushed from the
- *	catcaches immediately, for reasons explained at the top of
- *cache/inval.c. Instead we have to add entry(s) for the tuple to a list of
- *pending tuple invalidations that will be done at the end of the command or
- *transaction.
+ *	catcaches immediately, for reasons explained at the top of cache/inval.c.
+ *	Instead we have to add entry(s) for the tuple to a list of pending tuple
+ *	invalidations that will be done at the end of the command or transaction.
  *
  *	The lists of tuples that need to be flushed are kept by inval.c.  This
  *	routine is a helper routine for inval.c.  Given a tuple belonging to
@@ -1908,9 +1907,9 @@ CatCacheCopyKeys(TupleDesc tupdesc, int nkeys, int *attnos, Datum *srckeys, Datu
  *
  *	Note that it is irrelevant whether the given tuple is actually loaded
  *	into the catcache at the moment.  Even if it's not there now, it might
- *	be by the end of the command, or there might be a matching negative
- *entry to flush --- or other backends' caches might have such entries --- so we
- *have to make list entries to flush it later.
+ *	be by the end of the command, or there might be a matching negative entry
+ *	to flush --- or other backends' caches might have such entries --- so
+ *	we have to make list entries to flush it later.
  *
  *	Also note that it's not an error if there are no catcaches for the
  *	specified relation.  inval.c doesn't know exactly which rels have

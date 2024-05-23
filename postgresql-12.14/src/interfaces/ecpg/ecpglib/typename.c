@@ -17,7 +17,8 @@
 const char *
 ecpg_type_name(enum ECPGttype typ)
 {
-  switch (typ) {
+  switch (typ)
+  {
   case ECPGt_char:
   case ECPGt_string:
     return "char";
@@ -63,7 +64,7 @@ ecpg_type_name(enum ECPGttype typ)
     return "interval";
   case ECPGt_const:
     return "Const";
-  default:;
+  default:
     abort();
   }
   return ""; /* keep MSC compiler happy */
@@ -72,7 +73,8 @@ ecpg_type_name(enum ECPGttype typ)
 int
 ecpg_dynamic_type(Oid type)
 {
-  switch (type) {
+  switch (type)
+  {
   case BOOLOID:
     return SQL3_BOOLEAN; /* bool */
   case INT2OID:
@@ -97,7 +99,7 @@ ecpg_dynamic_type(Oid type)
     return SQL3_DATE_TIME_TIMESTAMP; /* datetime */
   case NUMERICOID:
     return SQL3_NUMERIC; /* numeric */
-  default:;
+  default:
     return 0;
   }
 }
@@ -105,7 +107,8 @@ ecpg_dynamic_type(Oid type)
 int
 sqlda_dynamic_type(Oid type, enum COMPAT_MODE compat)
 {
-  switch (type) {
+  switch (type)
+  {
   case CHAROID:
   case VARCHAROID:
   case BPCHAROID:
@@ -136,7 +139,7 @@ sqlda_dynamic_type(Oid type, enum COMPAT_MODE compat)
     return ECPGt_long;
 #endif
     /* Unhandled types always return a string */
-  default:;
+  default:
     return ECPGt_char;
   }
 }

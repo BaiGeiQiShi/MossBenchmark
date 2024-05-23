@@ -10,24 +10,19 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
 /* the edge recombination algorithm is adopted from Genitor : */
 /*************************************************************/
 /*															 */
-/*	Copyright (c) 1990
- */
-/*	Darrell L. Whitley
- */
-/*	Computer Science Department
- */
-/*	Colorado State University
- */
+/*	Copyright (c) 1990										 */
+/*	Darrell L. Whitley										 */
+/*	Computer Science Department								 */
+/*	Colorado State University								 */
 /*															 */
 /*	Permission is hereby granted to copy all or any part of  */
 /*	this program for free distribution.   The author's name  */
@@ -150,8 +145,7 @@ gimme_edge_table(PlannerInfo *root, Gene *tour1, Gene *tour2, int num_gene, Edge
  *	  once with the direction from city1 to city2)
  *
  *	  returns 1 if edge was not already registered and was just added;
- *			  0 if edge was already registered and edge_table is
- *unchanged
+ *			  0 if edge was already registered and edge_table is unchanged
  */
 static int
 gimme_edge(PlannerInfo *root, Gene gene1, Gene gene2, Edge *edge_table)
@@ -221,9 +215,9 @@ gimme_tour(PlannerInfo *root, Edge *edge_table, Gene *new_gene, int num_gene)
 
     else
     { /* cope with fault */
+      edge_failures++;
 
-
-
+      new_gene[i] = edge_failure(root, new_gene, i - 1, edge_table, num_gene);
     }
 
     /* mark this node as incorporated */
@@ -338,7 +332,7 @@ gimme_gene(PlannerInfo *root, Edge edge, Edge *edge_table)
     }
     else if (minimum_count == -1)
     {
-
+      elog(ERROR, "minimum_count not set");
     }
     else if (edge_table[(int)friend].unused_edges == minimum_edges)
     {
@@ -368,7 +362,7 @@ gimme_gene(PlannerInfo *root, Edge edge, Edge *edge_table)
 
   /* ... should never be reached */
   elog(ERROR, "neither shared nor minimum number nor random edge found");
-
+  return 0; /* to keep the compiler quiet */
 }
 
 /* edge_failure
@@ -379,105 +373,105 @@ gimme_gene(PlannerInfo *root, Edge edge, Edge *edge_table)
 static Gene
 edge_failure(PlannerInfo *root, Gene *gene, int index, Edge *edge_table, int num_gene)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  int i;
+  Gene fail_gene = gene[index];
+  int remaining_edges = 0;
+  int four_count = 0;
+  int rand_decision;
+
+  /*
+   * how many edges remain? how many gene with four total (initial) edges
+   * remain?
+   */
+
+  for (i = 1; i <= num_gene; i++)
+  {
+    if ((edge_table[i].unused_edges != -1) && (i != (int)fail_gene))
+    {
+      remaining_edges++;
+
+      if (edge_table[i].total_edges == 4)
+      {
+        four_count++;
+      }
+    }
+  }
+
+  /*
+   * random decision of the gene with remaining edges and whose total_edges
+   * == 4
+   */
+
+  if (four_count != 0)
+  {
+
+    rand_decision = geqo_randint(root, four_count - 1, 0);
+
+    for (i = 1; i <= num_gene; i++)
+    {
+
+      if ((Gene)i != fail_gene && edge_table[i].unused_edges != -1 && edge_table[i].total_edges == 4)
+      {
+
+        four_count--;
+
+        if (rand_decision == four_count)
+        {
+          return (Gene)i;
+        }
+      }
+    }
+
+    elog(LOG, "no edge found via random decision and total_edges == 4");
+  }
+  else if (remaining_edges != 0)
+  {
+    /* random decision of the gene with remaining edges */
+    rand_decision = geqo_randint(root, remaining_edges - 1, 0);
+
+    for (i = 1; i <= num_gene; i++)
+    {
+
+      if ((Gene)i != fail_gene && edge_table[i].unused_edges != -1)
+      {
+
+        remaining_edges--;
+
+        if (rand_decision == remaining_edges)
+        {
+          return i;
+        }
+      }
+    }
+
+    elog(LOG, "no edge found via random decision with remaining edges");
+  }
+
+  /*
+   * edge table seems to be empty; this happens sometimes on the last point
+   * due to the fact that the first point is removed from the table even
+   * though only one of its edges has been determined
+   */
+
+  else
+  { /* occurs only at the last point in the tour;
+     * simply look for the point which is not yet
+     * used */
+
+    for (i = 1; i <= num_gene; i++)
+    {
+      if (edge_table[i].unused_edges >= 0)
+      {
+        return (Gene)i;
+      }
+    }
+
+    elog(LOG, "no edge found via looking for the last unused point");
+  }
+
+  /* ... should never be reached */
+  elog(ERROR, "no edge found");
+  return 0; /* to keep the compiler quiet */
 }
 
 #endif /* defined(ERX) */

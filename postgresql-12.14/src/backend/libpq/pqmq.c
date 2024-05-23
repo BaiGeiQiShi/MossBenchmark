@@ -87,6 +87,7 @@ pq_set_parallel_master(pid_t pid, BackendId backend_id)
 static void
 mq_comm_reset(void)
 {
+  /* Nothing to do. */
 }
 
 static int
@@ -99,15 +100,15 @@ mq_flush(void)
 static int
 mq_flush_if_writable(void)
 {
-
-
+  /* Nothing to do. */
+  return 0;
 }
 
 static bool
 mq_is_send_pending(void)
 {
-
-
+  /* There's never anything pending. */
+  return 0;
 }
 
 /*
@@ -131,12 +132,12 @@ mq_putmessage(char msgtype, const char *s, size_t len)
    */
   if (pq_mq_busy)
   {
-
-
-
-
-
-
+    if (pq_mq_handle != NULL)
+    {
+      shm_mq_detach(pq_mq_handle);
+    }
+    pq_mq_handle = NULL;
+    return EOF;
   }
 
   /*
@@ -147,7 +148,7 @@ mq_putmessage(char msgtype, const char *s, size_t len)
    */
   if (pq_mq_handle == NULL)
   {
-
+    return 0;
   }
 
   pq_mq_busy = true;
@@ -183,7 +184,7 @@ mq_putmessage(char msgtype, const char *s, size_t len)
   Assert(result == SHM_MQ_SUCCESS || result == SHM_MQ_DETACHED);
   if (result != SHM_MQ_SUCCESS)
   {
-
+    return EOF;
   }
   return 0;
 }
@@ -191,24 +192,26 @@ mq_putmessage(char msgtype, const char *s, size_t len)
 static void
 mq_putmessage_noblock(char msgtype, const char *s, size_t len)
 {
-
-
-
-
-
-
-
-
+  /*
+   * While the shm_mq machinery does support sending a message in
+   * non-blocking mode, there's currently no way to try sending beginning to
+   * send the message that doesn't also commit us to completing the
+   * transmission.  This could be improved in the future, but for now we
+   * don't need it.
+   */
+  elog(ERROR, "not currently supported");
 }
 
 static void
 mq_startcopyout(void)
 {
+  /* Nothing to do. */
 }
 
 static void
 mq_endcopyout(bool errorAbort)
 {
+  /* Nothing to do. */
 }
 
 /*
@@ -238,10 +241,10 @@ pq_parse_errornotice(StringInfo msg, ErrorData *edata)
 
     switch (code)
     {
-    case PG_DIAG_SEVERITY:;
+    case PG_DIAG_SEVERITY:
       /* ignore, trusting we'll get a nonlocalized version */
       break;
-    case PG_DIAG_SEVERITY_NONLOCALIZED:;
+    case PG_DIAG_SEVERITY_NONLOCALIZED:
       if (strcmp(value, "DEBUG") == 0)
       {
         /*
@@ -249,7 +252,7 @@ pq_parse_errornotice(StringInfo msg, ErrorData *edata)
          * presumably it was >= client_min_messages, so select
          * DEBUG1 to ensure we'll pass it on to the client.
          */
-
+        edata->elevel = DEBUG1;
       }
       else if (strcmp(value, "LOG") == 0)
       {
@@ -257,92 +260,92 @@ pq_parse_errornotice(StringInfo msg, ErrorData *edata)
          * It can't be LOG_SERVER_ONLY, or the worker wouldn't
          * have sent it to us; so LOG is the correct value.
          */
-
+        edata->elevel = LOG;
       }
       else if (strcmp(value, "INFO") == 0)
       {
-
+        edata->elevel = INFO;
       }
       else if (strcmp(value, "NOTICE") == 0)
       {
-
+        edata->elevel = NOTICE;
       }
       else if (strcmp(value, "WARNING") == 0)
       {
-
+        edata->elevel = WARNING;
       }
       else if (strcmp(value, "ERROR") == 0)
       {
         edata->elevel = ERROR;
       }
-
-
-
-
-
-
-
-
-
-
-
-
+      else if (strcmp(value, "FATAL") == 0)
+      {
+        edata->elevel = FATAL;
+      }
+      else if (strcmp(value, "PANIC") == 0)
+      {
+        edata->elevel = PANIC;
+      }
+      else
+      {
+        elog(ERROR, "unrecognized error severity: \"%s\"", value);
+      }
       break;
-    case PG_DIAG_SQLSTATE:;
+    case PG_DIAG_SQLSTATE:
       if (strlen(value) != 5)
       {
-
+        elog(ERROR, "invalid SQLSTATE: \"%s\"", value);
       }
       edata->sqlerrcode = MAKE_SQLSTATE(value[0], value[1], value[2], value[3], value[4]);
       break;
-    case PG_DIAG_MESSAGE_PRIMARY:;
+    case PG_DIAG_MESSAGE_PRIMARY:
       edata->message = pstrdup(value);
       break;
-    case PG_DIAG_MESSAGE_DETAIL:;
-
-
-    case PG_DIAG_MESSAGE_HINT:;
-
-
-    case PG_DIAG_STATEMENT_POSITION:;
-
-
-    case PG_DIAG_INTERNAL_POSITION:;
-
-
-    case PG_DIAG_INTERNAL_QUERY:;
-
-
-    case PG_DIAG_CONTEXT:;
-
-
-    case PG_DIAG_SCHEMA_NAME:;
-
-
-    case PG_DIAG_TABLE_NAME:;
-
-
-    case PG_DIAG_COLUMN_NAME:;
-
-
-    case PG_DIAG_DATATYPE_NAME:;
-
-
-    case PG_DIAG_CONSTRAINT_NAME:;
-
-
-    case PG_DIAG_SOURCE_FILE:;
+    case PG_DIAG_MESSAGE_DETAIL:
+      edata->detail = pstrdup(value);
+      break;
+    case PG_DIAG_MESSAGE_HINT:
+      edata->hint = pstrdup(value);
+      break;
+    case PG_DIAG_STATEMENT_POSITION:
+      edata->cursorpos = pg_strtoint32(value);
+      break;
+    case PG_DIAG_INTERNAL_POSITION:
+      edata->internalpos = pg_strtoint32(value);
+      break;
+    case PG_DIAG_INTERNAL_QUERY:
+      edata->internalquery = pstrdup(value);
+      break;
+    case PG_DIAG_CONTEXT:
+      edata->context = pstrdup(value);
+      break;
+    case PG_DIAG_SCHEMA_NAME:
+      edata->schema_name = pstrdup(value);
+      break;
+    case PG_DIAG_TABLE_NAME:
+      edata->table_name = pstrdup(value);
+      break;
+    case PG_DIAG_COLUMN_NAME:
+      edata->column_name = pstrdup(value);
+      break;
+    case PG_DIAG_DATATYPE_NAME:
+      edata->datatype_name = pstrdup(value);
+      break;
+    case PG_DIAG_CONSTRAINT_NAME:
+      edata->constraint_name = pstrdup(value);
+      break;
+    case PG_DIAG_SOURCE_FILE:
       edata->filename = pstrdup(value);
       break;
-    case PG_DIAG_SOURCE_LINE:;
+    case PG_DIAG_SOURCE_LINE:
       edata->lineno = pg_strtoint32(value);
       break;
-    case PG_DIAG_SOURCE_FUNCTION:;
+    case PG_DIAG_SOURCE_FUNCTION:
       edata->funcname = pstrdup(value);
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized error field code: %d", (int)code);
+      break;
     }
   }
 }

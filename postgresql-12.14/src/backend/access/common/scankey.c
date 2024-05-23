@@ -50,8 +50,7 @@ ScanKeyEntryInitialize(ScanKey entry, int flags, AttrNumber attributeNumber, Str
 /*
  * ScanKeyInit
  *		Shorthand version of ScanKeyEntryInitialize: flags and subtype
- *		are assumed to be zero (the usual value), and collation is
- *defaulted.
+ *		are assumed to be zero (the usual value), and collation is defaulted.
  *
  * This is the recommended version for hardwired lookups in system catalogs.
  * It cannot handle NULL arguments, unary operators, or nondefault operators,

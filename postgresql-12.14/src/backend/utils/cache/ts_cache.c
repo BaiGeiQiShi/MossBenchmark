@@ -129,7 +129,7 @@ lookup_ts_parser_cache(Oid prsId)
     /* Also make sure CacheMemoryContext exists */
     if (!CacheMemoryContext)
     {
-
+      CreateCacheMemoryContext();
     }
   }
 
@@ -153,7 +153,7 @@ lookup_ts_parser_cache(Oid prsId)
     tp = SearchSysCache1(TSPARSEROID, ObjectIdGetDatum(prsId));
     if (!HeapTupleIsValid(tp))
     {
-
+      elog(ERROR, "cache lookup failed for text search parser %u", prsId);
     }
     prs = (Form_pg_ts_parser)GETSTRUCT(tp);
 
@@ -162,15 +162,15 @@ lookup_ts_parser_cache(Oid prsId)
      */
     if (!OidIsValid(prs->prsstart))
     {
-
+      elog(ERROR, "text search parser %u has no prsstart method", prsId);
     }
     if (!OidIsValid(prs->prstoken))
     {
-
+      elog(ERROR, "text search parser %u has no prstoken method", prsId);
     }
     if (!OidIsValid(prs->prsend))
     {
-
+      elog(ERROR, "text search parser %u has no prsend method", prsId);
     }
 
     if (entry == NULL)
@@ -232,7 +232,7 @@ lookup_ts_dictionary_cache(Oid dictId)
     /* Also make sure CacheMemoryContext exists */
     if (!CacheMemoryContext)
     {
-
+      CreateCacheMemoryContext();
     }
   }
 
@@ -258,7 +258,7 @@ lookup_ts_dictionary_cache(Oid dictId)
     tpdict = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictId));
     if (!HeapTupleIsValid(tpdict))
     {
-
+      elog(ERROR, "cache lookup failed for text search dictionary %u", dictId);
     }
     dict = (Form_pg_ts_dict)GETSTRUCT(tpdict);
 
@@ -267,7 +267,7 @@ lookup_ts_dictionary_cache(Oid dictId)
      */
     if (!OidIsValid(dict->dicttemplate))
     {
-
+      elog(ERROR, "text search dictionary %u has no template", dictId);
     }
 
     /*
@@ -276,7 +276,7 @@ lookup_ts_dictionary_cache(Oid dictId)
     tptmpl = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(dict->dicttemplate));
     if (!HeapTupleIsValid(tptmpl))
     {
-
+      elog(ERROR, "cache lookup failed for text search template %u", dict->dicttemplate);
     }
     template = (Form_pg_ts_template)GETSTRUCT(tptmpl);
 
@@ -285,7 +285,7 @@ lookup_ts_dictionary_cache(Oid dictId)
      */
     if (!OidIsValid(template->tmpllexize))
     {
-
+      elog(ERROR, "text search template %u has no lexize method", template->tmpllexize);
     }
 
     if (entry == NULL)
@@ -378,7 +378,7 @@ init_ts_config_cache(void)
   /* Also make sure CacheMemoryContext exists */
   if (!CacheMemoryContext)
   {
-
+    CreateCacheMemoryContext();
   }
 }
 
@@ -426,7 +426,7 @@ lookup_ts_config_cache(Oid cfgId)
     tp = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
     if (!HeapTupleIsValid(tp))
     {
-
+      elog(ERROR, "cache lookup failed for text search configuration %u", cfgId);
     }
     cfg = (Form_pg_ts_config)GETSTRUCT(tp);
 
@@ -435,7 +435,7 @@ lookup_ts_config_cache(Oid cfgId)
      */
     if (!OidIsValid(cfg->cfgparser))
     {
-
+      elog(ERROR, "text search configuration %u has no parser", cfgId);
     }
 
     if (entry == NULL)
@@ -492,11 +492,11 @@ lookup_ts_config_cache(Oid cfgId)
 
       if (toktype <= 0 || toktype > MAXTOKENTYPE)
       {
-
+        elog(ERROR, "maptokentype value %d is out of range", toktype);
       }
       if (toktype < maxtokentype)
       {
-
+        elog(ERROR, "maptokentype entries are out of order");
       }
       if (toktype > maxtokentype)
       {
@@ -516,7 +516,7 @@ lookup_ts_config_cache(Oid cfgId)
         /* continuing data for current token type */
         if (ndicts >= MAXDICTSPERTT)
         {
-
+          elog(ERROR, "too many pg_ts_config_map entries for one token type");
         }
         mapdicts[ndicts++] = cfgmap->mapdict;
       }
@@ -563,14 +563,14 @@ getTSCurrentConfig(bool emitError)
   /* fail if GUC hasn't been set up yet */
   if (TSCurrentConfig == NULL || *TSCurrentConfig == '\0')
   {
-
-
-
-
-
-
-
-
+    if (emitError)
+    {
+      elog(ERROR, "text search configuration isn't set");
+    }
+    else
+    {
+      return InvalidOid;
+    }
   }
 
   if (TSConfigCacheHash == NULL)
@@ -627,7 +627,7 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
     tuple = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for text search configuration %u", cfgId);
     }
     cfg = (Form_pg_ts_config)GETSTRUCT(tuple);
 
@@ -641,7 +641,7 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
     pfree(buf);
     if (!*newval)
     {
-
+      return false;
     }
   }
 

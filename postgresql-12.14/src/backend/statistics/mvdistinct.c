@@ -135,8 +135,7 @@ statext_ndistinct_build(double totalrows, int numrows, HeapTuple *rows, Bitmapse
 
 /*
  * statext_ndistinct_load
- *		Load the ndistinct value for the indicated pg_statistic_ext
- *tuple
+ *		Load the ndistinct value for the indicated pg_statistic_ext tuple
  */
 MVNDistinct *
 statext_ndistinct_load(Oid mvoid)
@@ -149,13 +148,13 @@ statext_ndistinct_load(Oid mvoid)
   htup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(mvoid));
   if (!HeapTupleIsValid(htup))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", mvoid);
   }
 
   ndist = SysCacheGetAttr(STATEXTDATASTXOID, htup, Anum_pg_statistic_ext_data_stxdndistinct, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "requested statistics kind \"%c\" is not yet built for statistics object %u", STATS_EXT_NDISTINCT, mvoid);
   }
 
   result = statext_ndistinct_deserialize(DatumGetByteaPP(ndist));
@@ -258,13 +257,13 @@ statext_ndistinct_deserialize(bytea *data)
 
   if (data == NULL)
   {
-
+    return NULL;
   }
 
   /* we expect at least the basic fields of MVNDistinct struct */
   if (VARSIZE_ANY_EXHDR(data) < SizeOfHeader)
   {
-
+    elog(ERROR, "invalid MVNDistinct size %zd (expected at least %zd)", VARSIZE_ANY_EXHDR(data), SizeOfHeader);
   }
 
   /* initialize pointer to the data part (skip the varlena header) */
@@ -280,22 +279,22 @@ statext_ndistinct_deserialize(bytea *data)
 
   if (ndist.magic != STATS_NDISTINCT_MAGIC)
   {
-
+    elog(ERROR, "invalid ndistinct magic %08x (expected %08x)", ndist.magic, STATS_NDISTINCT_MAGIC);
   }
   if (ndist.type != STATS_NDISTINCT_TYPE_BASIC)
   {
-
+    elog(ERROR, "invalid ndistinct type %d (expected %d)", ndist.type, STATS_NDISTINCT_TYPE_BASIC);
   }
   if (ndist.nitems == 0)
   {
-
+    elog(ERROR, "invalid zero-length item array in MVNDistinct");
   }
 
   /* what minimum bytea size do we expect for those parameters */
   minimum_size = MinSizeOfItems(ndist.nitems);
   if (VARSIZE_ANY_EXHDR(data) < minimum_size)
   {
-
+    elog(ERROR, "invalid MVNDistinct size %zd (expected at least %zd)", VARSIZE_ANY_EXHDR(data), minimum_size);
   }
 
   /*
@@ -352,9 +351,9 @@ statext_ndistinct_deserialize(bytea *data)
 Datum
 pg_ndistinct_in(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_ndistinct")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -405,9 +404,9 @@ pg_ndistinct_out(PG_FUNCTION_ARGS)
 Datum
 pg_ndistinct_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_ndistinct")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -419,7 +418,7 @@ pg_ndistinct_recv(PG_FUNCTION_ARGS)
 Datum
 pg_ndistinct_send(PG_FUNCTION_ARGS)
 {
-
+  return byteasend(fcinfo);
 }
 
 /*
@@ -474,9 +473,9 @@ ndistinct_for_combination(double totalrows, int numrows, HeapTuple *rows, VacAtt
     TypeCacheEntry *type;
 
     type = lookup_type_cache(colstat->attrtypid, TYPECACHE_LT_OPR);
-    if (type->lt_opr == InvalidOid)
-    { /* shouldn't happen */
-
+    if (type->lt_opr == InvalidOid) /* shouldn't happen */
+    {
+      elog(ERROR, "cache lookup failed for ordering operator for type %u", colstat->attrtypid);
     }
 
     /* prepare the sort function for this dimension */
@@ -536,12 +535,12 @@ estimate_ndistinct(double totalrows, int numrows, int d, int f1)
   /* Clamp to sane range in case of roundoff error */
   if (ndistinct < (double)d)
   {
-
+    ndistinct = (double)d;
   }
 
   if (ndistinct > totalrows)
   {
-
+    ndistinct = totalrows;
   }
 
   return floor(ndistinct + 0.5);

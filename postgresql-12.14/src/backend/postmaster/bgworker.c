@@ -195,7 +195,7 @@ BackgroundWorkerShmemInit(void)
   }
   else
   {
-
+    Assert(found);
   }
 }
 
@@ -244,8 +244,8 @@ BackgroundWorkerStateChange(bool allow_new_workers)
    */
   if (max_worker_processes != BackgroundWorkerData->total_slots)
   {
-
-
+    elog(LOG, "inconsistent background worker state (max_worker_processes=%d, total_slots=%d", max_worker_processes, BackgroundWorkerData->total_slots);
+    return;
   }
 
   /*
@@ -286,7 +286,7 @@ BackgroundWorkerStateChange(bool allow_new_workers)
         else
         {
           /* Report never-started, now-terminated worker as dead. */
-
+          ReportBackgroundWorkerPID(rw);
         }
       }
       continue;
@@ -300,7 +300,7 @@ BackgroundWorkerStateChange(bool allow_new_workers)
      */
     if (!allow_new_workers)
     {
-
+      slot->terminate = true;
     }
 
     /*
@@ -319,22 +319,22 @@ BackgroundWorkerStateChange(bool allow_new_workers)
        * bgw_notify_pid and the update of parallel_terminate_count
        * complete before the store to in_use.
        */
+      notify_pid = slot->worker.bgw_notify_pid;
+      if ((slot->worker.bgw_flags & BGWORKER_CLASS_PARALLEL) != 0)
+      {
+        BackgroundWorkerData->parallel_terminate_count++;
+      }
+      slot->pid = 0;
 
+      pg_memory_barrier();
+      slot->in_use = false;
 
+      if (notify_pid != 0)
+      {
+        kill(notify_pid, SIGUSR1);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      continue;
     }
 
     /*
@@ -343,8 +343,8 @@ BackgroundWorkerStateChange(bool allow_new_workers)
     rw = malloc(sizeof(RegisteredBgWorker));
     if (rw == NULL)
     {
-
-
+      ereport(LOG, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
+      return;
     }
 
     /*
@@ -382,8 +382,8 @@ BackgroundWorkerStateChange(bool allow_new_workers)
     rw->rw_worker.bgw_notify_pid = slot->worker.bgw_notify_pid;
     if (!PostmasterMarkPIDForWorkerNotify(rw->rw_worker.bgw_notify_pid))
     {
-
-
+      elog(DEBUG1, "worker notification PID %lu is not valid", (long)rw->rw_worker.bgw_notify_pid);
+      rw->rw_worker.bgw_notify_pid = 0;
     }
 
     /* Initialize postmaster bookkeeping. */
@@ -517,7 +517,7 @@ BackgroundWorkerStopNotifications(pid_t pid)
     rw = slist_container(RegisteredBgWorker, rw_lnode, siter.cur);
     if (rw->rw_worker.bgw_notify_pid == pid)
     {
-
+      rw->rw_worker.bgw_notify_pid = 0;
     }
   }
 }
@@ -554,11 +554,11 @@ ForgetUnstartedBackgroundWorkers(void)
       /* ... then zap it, and notify the waiter */
       int notify_pid = rw->rw_worker.bgw_notify_pid;
 
-
-
-
-
-
+      ForgetBackgroundWorker(&iter);
+      if (notify_pid != 0)
+      {
+        kill(notify_pid, SIGUSR1);
+      }
     }
   }
 }
@@ -576,48 +576,48 @@ ForgetUnstartedBackgroundWorkers(void)
 void
 ResetBackgroundWorkerCrashTimes(void)
 {
+  slist_mutable_iter iter;
 
+  slist_foreach_modify(iter, &BackgroundWorkerList)
+  {
+    RegisteredBgWorker *rw;
 
+    rw = slist_container(RegisteredBgWorker, rw_lnode, iter.cur);
 
+    if (rw->rw_worker.bgw_restart_time == BGW_NEVER_RESTART)
+    {
+      /*
+       * Workers marked BGW_NEVER_RESTART shouldn't get relaunched after
+       * the crash, so forget about them.  (If we wait until after the
+       * crash to forget about them, and they are parallel workers,
+       * parallel_terminate_count will get incremented after we've
+       * already zeroed parallel_register_count, which would be bad.)
+       */
+      ForgetBackgroundWorker(&iter);
+    }
+    else
+    {
+      /*
+       * The accounting which we do via parallel_register_count and
+       * parallel_terminate_count would get messed up if a worker marked
+       * parallel could survive a crash and restart cycle. All such
+       * workers should be marked BGW_NEVER_RESTART, and thus control
+       * should never reach this branch.
+       */
+      Assert((rw->rw_worker.bgw_flags & BGWORKER_CLASS_PARALLEL) == 0);
 
+      /*
+       * Allow this worker to be restarted immediately after we finish
+       * resetting.
+       */
+      rw->rw_crashed_at = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * If there was anyone waiting for it, they're history.
+       */
+      rw->rw_worker.bgw_notify_pid = 0;
+    }
+  }
 }
 
 #ifdef EXEC_BACKEND
@@ -654,14 +654,14 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
   {
     if (!(worker->bgw_flags & BGWORKER_SHMEM_ACCESS))
     {
-
-
+      ereport(elevel, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("background worker \"%s\": must attach to shared memory in order to request a database connection", worker->bgw_name)));
+      return false;
     }
 
     if (worker->bgw_start_time == BgWorkerStart_PostmasterStart)
     {
-
-
+      ereport(elevel, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("background worker \"%s\": cannot request database access if starting at postmaster start", worker->bgw_name)));
+      return false;
     }
 
     /* XXX other checks? */
@@ -669,8 +669,8 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 
   if ((worker->bgw_restart_time < 0 && worker->bgw_restart_time != BGW_NEVER_RESTART) || (worker->bgw_restart_time > USECS_PER_DAY / 1000))
   {
-
-
+    ereport(elevel, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("background worker \"%s\": invalid restart interval", worker->bgw_name)));
+    return false;
   }
 
   /*
@@ -680,8 +680,8 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
    */
   if (worker->bgw_restart_time != BGW_NEVER_RESTART && (worker->bgw_flags & BGWORKER_CLASS_PARALLEL) != 0)
   {
-
-
+    ereport(elevel, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("background worker \"%s\": parallel workers may not be configured for restart", worker->bgw_name)));
+    return false;
   }
 
   /*
@@ -689,7 +689,7 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
    */
   if (strcmp(worker->bgw_type, "") == 0)
   {
-
+    strcpy(worker->bgw_type, worker->bgw_name);
   }
 
   return true;
@@ -698,21 +698,21 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 static void
 bgworker_quickdie(SIGNAL_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
+   * because shared memory may be corrupted, so we don't want to try to
+   * clean up our transaction.  Just nail the windows shut and get out of
+   * town.  The callbacks wouldn't be safe to run from a signal handler,
+   * anyway.
+   *
+   * Note we do _exit(2) not _exit(0).  This is to force the postmaster into
+   * a system reset cycle if someone sends a manual SIGQUIT to a random
+   * backend.  This is necessary precisely because we don't clean up our
+   * shared memory state.  (The "dead man switch" mechanism in pmsignal.c
+   * should ensure the postmaster sees this as a crash, too, but no harm in
+   * being doubly sure.)
+   */
+  _exit(2);
 }
 
 /*
@@ -721,9 +721,9 @@ bgworker_quickdie(SIGNAL_ARGS)
 static void
 bgworker_die(SIGNAL_ARGS)
 {
+  PG_SETMASK(&BlockSig);
 
-
-
+  ereport(FATAL, (errcode(ERRCODE_ADMIN_SHUTDOWN), errmsg("terminating background worker \"%s\" due to administrator command", MyBgworkerEntry->bgw_type)));
 }
 
 /*
@@ -735,11 +735,11 @@ bgworker_die(SIGNAL_ARGS)
 static void
 bgworker_sigusr1_handler(SIGNAL_ARGS)
 {
+  int save_errno = errno;
 
+  latch_sigusr1_handler();
 
-
-
-
+  errno = save_errno;
 }
 
 /*
@@ -757,7 +757,7 @@ StartBackgroundWorker(void)
 
   if (worker == NULL)
   {
-
+    elog(FATAL, "unable to find bgworker entry");
   }
 
   IsBackgroundWorker = true;
@@ -774,8 +774,8 @@ StartBackgroundWorker(void)
    */
   if ((worker->bgw_flags & BGWORKER_SHMEM_ACCESS) == 0)
   {
-
-
+    dsm_detach_all();
+    PGSharedMemoryDetach();
   }
 
   SetProcessingMode(InitProcessing);
@@ -783,7 +783,7 @@ StartBackgroundWorker(void)
   /* Apply PostAuthDelay */
   if (PostAuthDelay > 0)
   {
-
+    pg_usleep(PostAuthDelay * 1000000L);
   }
 
   /*
@@ -802,9 +802,9 @@ StartBackgroundWorker(void)
   }
   else
   {
-
-
-
+    pqsignal(SIGINT, SIG_IGN);
+    pqsignal(SIGUSR1, bgworker_sigusr1_handler);
+    pqsignal(SIGFPE, SIG_IGN);
   }
   pqsignal(SIGTERM, bgworker_die);
   pqsignal(SIGHUP, SIG_IGN);
@@ -918,22 +918,22 @@ RegisterBackgroundWorker(BackgroundWorker *worker)
 
   if (!process_shared_preload_libraries_in_progress && strcmp(worker->bgw_library_name, "postgres") != 0)
   {
-
-
-
-
-
+    if (!IsUnderPostmaster)
+    {
+      ereport(LOG, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("background worker \"%s\": must be registered in shared_preload_libraries", worker->bgw_name)));
+    }
+    return;
   }
 
   if (!SanityCheckBackgroundWorker(worker, LOG))
   {
-
+    return;
   }
 
   if (worker->bgw_notify_pid != 0)
   {
-
-
+    ereport(LOG, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("background worker \"%s\": only dynamic background workers can request notification", worker->bgw_name)));
+    return;
   }
 
   /*
@@ -944,8 +944,8 @@ RegisterBackgroundWorker(BackgroundWorker *worker)
    */
   if (++numworkers > max_worker_processes)
   {
-
-
+    ereport(LOG, (errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED), errmsg("too many background workers"), errdetail_plural("Up to %d background worker can be registered with the current settings.", "Up to %d background workers can be registered with the current settings.", max_worker_processes, max_worker_processes), errhint("Consider increasing the configuration parameter \"max_worker_processes\".")));
+    return;
   }
 
   /*
@@ -954,8 +954,8 @@ RegisterBackgroundWorker(BackgroundWorker *worker)
   rw = malloc(sizeof(RegisteredBgWorker));
   if (rw == NULL)
   {
-
-
+    ereport(LOG, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
+    return;
   }
 
   rw->rw_worker = *worker;
@@ -996,12 +996,12 @@ RegisterDynamicBackgroundWorker(BackgroundWorker *worker, BackgroundWorkerHandle
    */
   if (!IsUnderPostmaster)
   {
-
+    return false;
   }
 
   if (!SanityCheckBackgroundWorker(worker, ERROR))
   {
-
+    return false;
   }
 
   parallel = (worker->bgw_flags & BGWORKER_CLASS_PARALLEL) != 0;
@@ -1159,37 +1159,37 @@ GetBackgroundWorkerPid(BackgroundWorkerHandle *handle, pid_t *pidp)
 BgwHandleStatus
 WaitForBackgroundWorkerStartup(BackgroundWorkerHandle *handle, pid_t *pidp)
 {
+  BgwHandleStatus status;
+  int rc;
 
+  for (;;)
+  {
+    pid_t pid;
 
+    CHECK_FOR_INTERRUPTS();
 
+    status = GetBackgroundWorkerPid(handle, &pid);
+    if (status == BGWH_STARTED)
+    {
+      *pidp = pid;
+    }
+    if (status != BGWH_NOT_YET_STARTED)
+    {
+      break;
+    }
 
+    rc = WaitLatch(MyLatch, WL_LATCH_SET | WL_POSTMASTER_DEATH, 0, WAIT_EVENT_BGWORKER_STARTUP);
 
+    if (rc & WL_POSTMASTER_DEATH)
+    {
+      status = BGWH_POSTMASTER_DIED;
+      break;
+    }
 
+    ResetLatch(MyLatch);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return status;
 }
 
 /*
@@ -1225,8 +1225,8 @@ WaitForBackgroundWorkerShutdown(BackgroundWorkerHandle *handle)
 
     if (rc & WL_POSTMASTER_DEATH)
     {
-
-
+      status = BGWH_POSTMASTER_DIED;
+      break;
     }
 
     ResetLatch(MyLatch);
@@ -1345,7 +1345,7 @@ GetBackgroundWorkerTypeByPid(pid_t pid)
 
   if (!found)
   {
-
+    return NULL;
   }
 
   return result;

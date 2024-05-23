@@ -201,7 +201,8 @@ static LogicalDecodingContext *logical_decoding_ctx = NULL;
 static XLogRecPtr logical_startptr = InvalidXLogRecPtr;
 
 /* A sample associating a WAL location with the time it was written. */
-typedef struct {
+typedef struct
+{
   XLogRecPtr lsn;
   TimestampTz time;
 } WalTimeSample;
@@ -210,7 +211,8 @@ typedef struct {
 #define LAG_TRACKER_BUFFER_SIZE 8192
 
 /* A mechanism for tracking replication lag. */
-typedef struct {
+typedef struct
+{
   XLogRecPtr last_lsn;
   WalTimeSample buffer[LAG_TRACKER_BUFFER_SIZE];
   int write_head;
@@ -329,12 +331,14 @@ WalSndErrorCleanup(void)
   ConditionVariableCancelSleep();
   pgstat_report_wait_end();
 
-  if (sendFile >= 0) {
+  if (sendFile >= 0)
+  {
     close(sendFile);
     sendFile = -1;
   }
 
-  if (MyReplicationSlot != NULL) {
+  if (MyReplicationSlot != NULL)
+  {
     ReplicationSlotRelease();
   }
 
@@ -342,7 +346,8 @@ WalSndErrorCleanup(void)
 
   replication_active = false;
 
-  if (got_STOPPING || got_SIGUSR2) {
+  if (got_STOPPING || got_SIGUSR2)
+  {
     proc_exit(0);
   }
 
@@ -360,7 +365,8 @@ WalSndShutdown(void)
    * Reset whereToSendOutput to prevent ereport from attempting to send any
    * more messages to the standby.
    */
-  if (whereToSendOutput == DestRemote) {
+  if (whereToSendOutput == DestRemote)
+  {
     whereToSendOutput = DestNone;
   }
 
@@ -393,16 +399,20 @@ IdentifySystem(void)
   snprintf(sysid, sizeof(sysid), UINT64_FORMAT, GetSystemIdentifier());
 
   am_cascading_walsender = RecoveryInProgress();
-  if (am_cascading_walsender) {
+  if (am_cascading_walsender)
+  {
     /* this also updates ThisTimeLineID */
     logptr = GetStandbyFlushRecPtr();
-  } else {
+  }
+  else
+  {
     logptr = GetFlushRecPtr();
   }
 
   snprintf(xloc, sizeof(xloc), "%X/%X", (uint32)(logptr >> 32), (uint32)logptr);
 
-  if (MyDatabaseId != InvalidOid) {
+  if (MyDatabaseId != InvalidOid)
+  {
     MemoryContext cur = CurrentMemoryContext;
 
     /* syscache access needs a transaction env. */
@@ -438,9 +448,12 @@ IdentifySystem(void)
   values[2] = CStringGetTextDatum(xloc);
 
   /* column 4: database name, or NULL if none */
-  if (dbname) {
+  if (dbname)
+  {
     values[3] = CStringGetTextDatum(dbname);
-  } else {
+  }
+  else
+  {
     nulls[3] = true;
   }
 
@@ -507,32 +520,39 @@ SendTimeLineHistory(TimeLineHistoryCmd *cmd)
   pq_sendbytes(&buf, histfname, len);
 
   fd = OpenTransientFile(path, O_RDONLY | PG_BINARY);
-  if (fd < 0) {
+  if (fd < 0)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", path)));
   }
 
   /* Determine file length and send it to client */
   histfilelen = lseek(fd, 0, SEEK_END);
-  if (histfilelen < 0) {
+  if (histfilelen < 0)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not seek to end of file \"%s\": %m", path)));
   }
-  if (lseek(fd, 0, SEEK_SET) != 0) {
+  if (lseek(fd, 0, SEEK_SET) != 0)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not seek to beginning of file \"%s\": %m", path)));
   }
 
   pq_sendint32(&buf, histfilelen); /* col2 len */
 
   bytesleft = histfilelen;
-  while (bytesleft > 0) {
+  while (bytesleft > 0)
+  {
     PGAlignedBlock rbuf;
     int nread;
 
     pgstat_report_wait_start(WAIT_EVENT_WALSENDER_TIMELINE_HISTORY_READ);
     nread = read(fd, rbuf.data, sizeof(rbuf));
     pgstat_report_wait_end();
-    if (nread < 0) {
+    if (nread < 0)
+    {
       ereport(ERROR, (errcode_for_file_access(), errmsg("could not read file \"%s\": %m", path)));
-    } else if (nread == 0) {
+    }
+    else if (nread == 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("could not read file \"%s\": read %d of %zu", path, nread, (Size)bytesleft)));
     }
 
@@ -540,7 +560,8 @@ SendTimeLineHistory(TimeLineHistoryCmd *cmd)
     bytesleft -= nread;
   }
 
-  if (CloseTransientFile(fd)) {
+  if (CloseTransientFile(fd))
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", path)));
   }
 
@@ -559,7 +580,8 @@ StartReplication(StartReplicationCmd *cmd)
   StringInfoData buf;
   XLogRecPtr FlushPtr;
 
-  if (ThisTimeLineID == 0) {
+  if (ThisTimeLineID == 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("IDENTIFY_SYSTEM has not been run before START_REPLICATION")));
   }
 
@@ -572,9 +594,11 @@ StartReplication(StartReplicationCmd *cmd)
    * written at wal_level='minimal'.
    */
 
-  if (cmd->slotname) {
+  if (cmd->slotname)
+  {
     ReplicationSlotAcquire(cmd->slotname, true);
-    if (SlotIsLogical(MyReplicationSlot)) {
+    if (SlotIsLogical(MyReplicationSlot))
+    {
       ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), (errmsg("cannot use a logical replication slot for physical replication"))));
     }
   }
@@ -584,21 +608,28 @@ StartReplication(StartReplicationCmd *cmd)
    * that. Otherwise use the timeline of the last replayed record, which is
    * kept in ThisTimeLineID.
    */
-  if (am_cascading_walsender) {
+  if (am_cascading_walsender)
+  {
     /* this also updates ThisTimeLineID */
     FlushPtr = GetStandbyFlushRecPtr();
-  } else {
+  }
+  else
+  {
     FlushPtr = GetFlushRecPtr();
   }
 
-  if (cmd->timeline != 0) {
+  if (cmd->timeline != 0)
+  {
     XLogRecPtr switchpoint;
 
     sendTimeLine = cmd->timeline;
-    if (sendTimeLine == ThisTimeLineID) {
+    if (sendTimeLine == ThisTimeLineID)
+    {
       sendTimeLineIsHistoric = false;
       sendTimeLineValidUpto = InvalidXLogRecPtr;
-    } else {
+    }
+    else
+    {
       List *timeLineHistory;
 
       sendTimeLineIsHistoric = true;
@@ -629,12 +660,15 @@ StartReplication(StartReplicationCmd *cmd)
        * that's older than the switchpoint, if it's still in the same
        * WAL segment.
        */
-      if (!XLogRecPtrIsInvalid(switchpoint) && switchpoint < cmd->startpoint) {
-        ereport(ERROR, (errmsg("requested starting point %X/%X on timeline %u is not in this server's history",    (uint32)(cmd->startpoint >> 32), (uint32)(cmd->startpoint), cmd->timeline),  errdetail("This server's history forked from timeline %u at %X/%X.", cmd->timeline, (uint32)(switchpoint >> 32), (uint32)(switchpoint))));
+      if (!XLogRecPtrIsInvalid(switchpoint) && switchpoint < cmd->startpoint)
+      {
+        ereport(ERROR, (errmsg("requested starting point %X/%X on timeline %u is not in this server's history", (uint32)(cmd->startpoint >> 32), (uint32)(cmd->startpoint), cmd->timeline), errdetail("This server's history forked from timeline %u at %X/%X.", cmd->timeline, (uint32)(switchpoint >> 32), (uint32)(switchpoint))));
       }
       sendTimeLineValidUpto = switchpoint;
     }
-  } else {
+  }
+  else
+  {
     sendTimeLine = ThisTimeLineID;
     sendTimeLineValidUpto = InvalidXLogRecPtr;
     sendTimeLineIsHistoric = false;
@@ -643,7 +677,8 @@ StartReplication(StartReplicationCmd *cmd)
   streamingDoneSending = streamingDoneReceiving = false;
 
   /* If there is nothing to stream, don't even enter COPY mode */
-  if (!sendTimeLineIsHistoric || cmd->startpoint < sendTimeLineValidUpto) {
+  if (!sendTimeLineIsHistoric || cmd->startpoint < sendTimeLineValidUpto)
+  {
     /*
      * When we first start replication the standby will be behind the
      * primary. For some applications, for example synchronous
@@ -666,8 +701,9 @@ StartReplication(StartReplicationCmd *cmd)
      * Don't allow a request to stream from a future point in WAL that
      * hasn't been flushed to disk in this server yet.
      */
-    if (FlushPtr < cmd->startpoint) {
-      ereport(ERROR, (errmsg("requested starting point %X/%X is ahead of the WAL flush position of this server %X/%X",     (uint32)(cmd->startpoint >> 32), (uint32)(cmd->startpoint), (uint32)(FlushPtr >> 32), (uint32)(FlushPtr))));
+    if (FlushPtr < cmd->startpoint)
+    {
+      ereport(ERROR, (errmsg("requested starting point %X/%X is ahead of the WAL flush position of this server %X/%X", (uint32)(cmd->startpoint >> 32), (uint32)(cmd->startpoint), (uint32)(FlushPtr >> 32), (uint32)(FlushPtr))));
     }
 
     /* Start streaming from the requested point */
@@ -686,7 +722,8 @@ StartReplication(StartReplicationCmd *cmd)
     WalSndLoop(XLogSendPhysical);
 
     replication_active = false;
-    if (got_STOPPING) {
+    if (got_STOPPING)
+    {
       proc_exit(0);
     }
     WalSndSetState(WALSNDSTATE_STARTUP);
@@ -694,7 +731,8 @@ StartReplication(StartReplicationCmd *cmd)
     Assert(streamingDoneSending && streamingDoneReceiving);
   }
 
-  if (cmd->slotname) {
+  if (cmd->slotname)
+  {
     ReplicationSlotRelease();
   }
 
@@ -702,7 +740,8 @@ StartReplication(StartReplicationCmd *cmd)
    * Copy is finished now. Send a single-row result set indicating the next
    * timeline.
    */
-  if (sendTimeLineIsHistoric) {
+  if (sendTimeLineIsHistoric)
+  {
     char startpos_str[8 + 1 + 8 + 1];
     DestReceiver *dest;
     TupOutputState *tstate;
@@ -763,13 +802,17 @@ logical_read_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr, int req
   flushptr = WalSndWaitForWal(targetPagePtr + reqLen);
 
   /* fail if not (implies we are going to shut down) */
-  if (flushptr < targetPagePtr + reqLen) {
+  if (flushptr < targetPagePtr + reqLen)
+  {
     return -1;
   }
 
-  if (targetPagePtr + XLOG_BLCKSZ <= flushptr) {
+  if (targetPagePtr + XLOG_BLCKSZ <= flushptr)
+  {
     count = XLOG_BLCKSZ; /* more than one block available */
-  } else {
+  }
+  else
+  {
     count = flushptr - targetPagePtr; /* part of the page available */
   }
 
@@ -790,31 +833,42 @@ parseCreateReplSlotOptions(CreateReplicationSlotCmd *cmd, bool *reserve_wal, CRS
   bool reserve_wal_given = false;
 
   /* Parse options */
-  foreach (lc, cmd->options) {
+  foreach (lc, cmd->options)
+  {
     DefElem *defel = (DefElem *)lfirst(lc);
 
-    if (strcmp(defel->defname, "export_snapshot") == 0) {
-      if (snapshot_action_given || cmd->kind != REPLICATION_KIND_LOGICAL) {
+    if (strcmp(defel->defname, "export_snapshot") == 0)
+    {
+      if (snapshot_action_given || cmd->kind != REPLICATION_KIND_LOGICAL)
+      {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
 
       snapshot_action_given = true;
       *snapshot_action = defGetBoolean(defel) ? CRS_EXPORT_SNAPSHOT : CRS_NOEXPORT_SNAPSHOT;
-    } else if (strcmp(defel->defname, "use_snapshot") == 0) {
-      if (snapshot_action_given || cmd->kind != REPLICATION_KIND_LOGICAL) {
+    }
+    else if (strcmp(defel->defname, "use_snapshot") == 0)
+    {
+      if (snapshot_action_given || cmd->kind != REPLICATION_KIND_LOGICAL)
+      {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
 
       snapshot_action_given = true;
       *snapshot_action = CRS_USE_SNAPSHOT;
-    } else if (strcmp(defel->defname, "reserve_wal") == 0) {
-      if (reserve_wal_given || cmd->kind != REPLICATION_KIND_PHYSICAL) {
+    }
+    else if (strcmp(defel->defname, "reserve_wal") == 0)
+    {
+      if (reserve_wal_given || cmd->kind != REPLICATION_KIND_PHYSICAL)
+      {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
 
       reserve_wal_given = true;
       *reserve_wal = true;
-    } else {
+    }
+    else
+    {
       elog(ERROR, "unrecognized option: %s", defel->defname);
     }
   }
@@ -845,9 +899,12 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
   sendTimeLineIsHistoric = false;
   sendTimeLine = ThisTimeLineID;
 
-  if (cmd->kind == REPLICATION_KIND_PHYSICAL) {
+  if (cmd->kind == REPLICATION_KIND_PHYSICAL)
+  {
     ReplicationSlotCreate(cmd->slotname, false, cmd->temporary ? RS_TEMPORARY : RS_PERSISTENT);
-  } else {
+  }
+  else
+  {
     CheckLogicalDecodingRequirements();
 
     /*
@@ -860,7 +917,8 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
     ReplicationSlotCreate(cmd->slotname, true, cmd->temporary ? RS_TEMPORARY : RS_EPHEMERAL);
   }
 
-  if (cmd->kind == REPLICATION_KIND_LOGICAL) {
+  if (cmd->kind == REPLICATION_KIND_LOGICAL)
+  {
     LogicalDecodingContext *ctx;
     bool need_full_snapshot = false;
 
@@ -868,27 +926,45 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
      * Do options check early so that we can bail before calling the
      * DecodingContextFindStartpoint which can take long time.
      */
-    if (snapshot_action == CRS_EXPORT_SNAPSHOT) {
-      if (IsTransactionBlock()) {
-        ereport(ERROR,  (errmsg("%s must not be called inside a transaction", "CREATE_REPLICATION_SLOT ... EXPORT_SNAPSHOT")));
+    if (snapshot_action == CRS_EXPORT_SNAPSHOT)
+    {
+      if (IsTransactionBlock())
+      {
+        ereport(ERROR,
+            /*- translator: %s is a CREATE_REPLICATION_SLOT statement */
+            (errmsg("%s must not be called inside a transaction", "CREATE_REPLICATION_SLOT ... EXPORT_SNAPSHOT")));
       }
 
       need_full_snapshot = true;
-    } else if (snapshot_action == CRS_USE_SNAPSHOT) {
-      if (!IsTransactionBlock()) {
-        ereport(ERROR,  (errmsg("%s must be called inside a transaction", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
+    }
+    else if (snapshot_action == CRS_USE_SNAPSHOT)
+    {
+      if (!IsTransactionBlock())
+      {
+        ereport(ERROR,
+            /*- translator: %s is a CREATE_REPLICATION_SLOT statement */
+            (errmsg("%s must be called inside a transaction", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
       }
 
-      if (XactIsoLevel != XACT_REPEATABLE_READ) {
-        ereport(ERROR, (errmsg("%s must be called in REPEATABLE READ isolation mode transaction",  "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
+      if (XactIsoLevel != XACT_REPEATABLE_READ)
+      {
+        ereport(ERROR,
+            /*- translator: %s is a CREATE_REPLICATION_SLOT statement */
+            (errmsg("%s must be called in REPEATABLE READ isolation mode transaction", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
       }
 
-      if (FirstSnapshotSet) {
-        ereport(ERROR,  (errmsg("%s must be called before any query", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
+      if (FirstSnapshotSet)
+      {
+        ereport(ERROR,
+            /*- translator: %s is a CREATE_REPLICATION_SLOT statement */
+            (errmsg("%s must be called before any query", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
       }
 
-      if (IsSubTransaction()) {
-        ereport(ERROR,  (errmsg("%s must not be called in a subtransaction", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
+      if (IsSubTransaction())
+      {
+        ereport(ERROR,
+            /*- translator: %s is a CREATE_REPLICATION_SLOT statement */
+            (errmsg("%s must not be called in a subtransaction", "CREATE_REPLICATION_SLOT ... USE_SNAPSHOT")));
       }
 
       need_full_snapshot = true;
@@ -914,9 +990,12 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
      * NB. We will convert the snapbuild.c kind of snapshot to normal
      * snapshot when doing this.
      */
-    if (snapshot_action == CRS_EXPORT_SNAPSHOT) {
+    if (snapshot_action == CRS_EXPORT_SNAPSHOT)
+    {
       snapshot_name = SnapBuildExportSnapshot(ctx->snapshot_builder);
-    } else if (snapshot_action == CRS_USE_SNAPSHOT) {
+    }
+    else if (snapshot_action == CRS_USE_SNAPSHOT)
+    {
       Snapshot snap;
 
       snap = SnapBuildInitialSnapshot(ctx->snapshot_builder);
@@ -926,16 +1005,20 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
     /* don't need the decoding context anymore */
     FreeDecodingContext(ctx);
 
-    if (!cmd->temporary) {
+    if (!cmd->temporary)
+    {
       ReplicationSlotPersist();
     }
-  } else if (cmd->kind == REPLICATION_KIND_PHYSICAL && reserve_wal) {
+  }
+  else if (cmd->kind == REPLICATION_KIND_PHYSICAL && reserve_wal)
+  {
     ReplicationSlotReserveWal();
 
     ReplicationSlotMarkDirty();
 
     /* Write this slot to disk if it's a permanent one. */
-    if (!cmd->temporary) {
+    if (!cmd->temporary)
+    {
       ReplicationSlotSave();
     }
   }
@@ -970,16 +1053,22 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
   values[1] = CStringGetTextDatum(xloc);
 
   /* snapshot name, or NULL if none */
-  if (snapshot_name != NULL) {
+  if (snapshot_name != NULL)
+  {
     values[2] = CStringGetTextDatum(snapshot_name);
-  } else {
+  }
+  else
+  {
     nulls[2] = true;
   }
 
   /* plugin, or NULL if none */
-  if (cmd->plugin != NULL) {
+  if (cmd->plugin != NULL)
+  {
     values[3] = CStringGetTextDatum(cmd->plugin);
-  } else {
+  }
+  else
+  {
     nulls[3] = true;
   }
 
@@ -1021,7 +1110,8 @@ StartLogicalReplication(StartReplicationCmd *cmd)
    * about an eventual switch from running in recovery, to running in a
    * normal environment. Client code is expected to handle reconnects.
    */
-  if (am_cascading_walsender && !RecoveryInProgress()) {
+  if (am_cascading_walsender && !RecoveryInProgress())
+  {
     ereport(LOG, (errmsg("terminating walsender process after promotion")));
     got_STOPPING = true;
   }
@@ -1069,7 +1159,8 @@ StartLogicalReplication(StartReplicationCmd *cmd)
   ReplicationSlotRelease();
 
   replication_active = false;
-  if (got_STOPPING) {
+  if (got_STOPPING)
+  {
     proc_exit(0);
   }
   WalSndSetState(WALSNDSTATE_STARTUP);
@@ -1083,14 +1174,15 @@ StartLogicalReplication(StartReplicationCmd *cmd)
  *
  * Prepare a write into a StringInfo.
  *
- * Don't do anything lasting in here, it's quite possible that nothing will be
- * done with the data.
+ * Don't do anything lasting in here, it's quite possible that nothing will be done
+ * with the data.
  */
 static void
 WalSndPrepareWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid, bool last_write)
 {
   /* can't have sync rep confused by sending the same LSN several times */
-  if (!last_write) {
+  if (!last_write)
+  {
     lsn = InvalidXLogRecPtr;
   }
 
@@ -1135,12 +1227,14 @@ WalSndWriteData(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid, 
   CHECK_FOR_INTERRUPTS();
 
   /* Try to flush pending output to the client */
-  if (pq_flush_if_writable() != 0) {
+  if (pq_flush_if_writable() != 0)
+  {
     WalSndShutdown();
   }
 
   /* Try taking fast path unless we get too close to walsender timeout. */
-  if (now < TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2) && !pq_is_send_pending()) {
+  if (now < TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2) && !pq_is_send_pending())
+  {
     return;
   }
 
@@ -1155,7 +1249,8 @@ WalSndWriteData(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid, 
 static void
 ProcessPendingWrites(void)
 {
-  for (;;) {
+  for (;;)
+  {
     int wakeEvents;
     long sleeptime;
 
@@ -1168,7 +1263,8 @@ ProcessPendingWrites(void)
     /* Send keepalive if the time has come */
     WalSndKeepaliveIfNecessary();
 
-    if (!pq_is_send_pending()) {
+    if (!pq_is_send_pending())
+    {
       break;
     }
 
@@ -1185,14 +1281,16 @@ ProcessPendingWrites(void)
     CHECK_FOR_INTERRUPTS();
 
     /* Process any requests or signals received recently */
-    if (ConfigReloadPending) {
+    if (ConfigReloadPending)
+    {
       ConfigReloadPending = false;
       ProcessConfigFile(PGC_SIGHUP);
       SyncRepInitConfig();
     }
 
     /* Try to flush pending output to the client */
-    if (pq_flush_if_writable() != 0) {
+    if (pq_flush_if_writable() != 0)
+    {
       WalSndShutdown();
     }
   }
@@ -1222,7 +1320,8 @@ WalSndUpdateProgress(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId 
    * transaction LSN.
    */
 #define WALSND_LOGICAL_LAG_TRACK_INTERVAL_MS 1000
-  if (end_xact && TimestampDifferenceExceeds(sendTime, now, WALSND_LOGICAL_LAG_TRACK_INTERVAL_MS)) {
+  if (end_xact && TimestampDifferenceExceeds(sendTime, now, WALSND_LOGICAL_LAG_TRACK_INTERVAL_MS))
+  {
     LagTrackerWrite(lsn, now);
     sendTime = now;
   }
@@ -1234,7 +1333,8 @@ WalSndUpdateProgress(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId 
    * don't send any changes to the downstream and the receiver can timeout
    * due to that.
    */
-  if (!end_xact && now >= TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2)) {
+  if (!end_xact && now >= TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2))
+  {
     ProcessPendingWrites();
   }
 }
@@ -1257,18 +1357,23 @@ WalSndWaitForWal(XLogRecPtr loc)
    * have enough WAL available. This is particularly interesting if we're
    * far behind.
    */
-  if (RecentFlushPtr != InvalidXLogRecPtr && loc <= RecentFlushPtr) {
+  if (RecentFlushPtr != InvalidXLogRecPtr && loc <= RecentFlushPtr)
+  {
     return RecentFlushPtr;
   }
 
   /* Get a more recent flush pointer. */
-  if (!RecoveryInProgress()) {
+  if (!RecoveryInProgress())
+  {
     RecentFlushPtr = GetFlushRecPtr();
-  } else {
+  }
+  else
+  {
     RecentFlushPtr = GetXLogReplayRecPtr(NULL);
   }
 
-  for (;;) {
+  for (;;)
+  {
     long sleeptime;
 
     /* Clear any already-pending wakeups */
@@ -1277,7 +1382,8 @@ WalSndWaitForWal(XLogRecPtr loc)
     CHECK_FOR_INTERRUPTS();
 
     /* Process any requests or signals received recently */
-    if (ConfigReloadPending) {
+    if (ConfigReloadPending)
+    {
       ConfigReloadPending = false;
       ProcessConfigFile(PGC_SIGHUP);
       SyncRepInitConfig();
@@ -1291,14 +1397,18 @@ WalSndWaitForWal(XLogRecPtr loc)
      * otherwise we'd possibly end up waiting for WAL that never gets
      * written, because walwriter has shut down already.
      */
-    if (got_STOPPING) {
+    if (got_STOPPING)
+    {
       XLogBackgroundFlush();
     }
 
     /* Update our idea of the currently flushed position. */
-    if (!RecoveryInProgress()) {
+    if (!RecoveryInProgress())
+    {
       RecentFlushPtr = GetFlushRecPtr();
-    } else {
+    }
+    else
+    {
       RecentFlushPtr = GetXLogReplayRecPtr(NULL);
     }
 
@@ -1309,7 +1419,8 @@ WalSndWaitForWal(XLogRecPtr loc)
      * RecentFlushPtr, so we can send all remaining data before shutting
      * down.
      */
-    if (got_STOPPING) {
+    if (got_STOPPING)
+    {
       break;
     }
 
@@ -1321,12 +1432,14 @@ WalSndWaitForWal(XLogRecPtr loc)
      * otherwise idle, this keepalive will trigger a reply. Processing the
      * reply will update these MyWalSnd locations.
      */
-    if (MyWalSnd->flush < sentPtr && MyWalSnd->write < sentPtr && !waiting_for_ping_response) {
+    if (MyWalSnd->flush < sentPtr && MyWalSnd->write < sentPtr && !waiting_for_ping_response)
+    {
       WalSndKeepalive(false);
     }
 
     /* check whether we're done */
-    if (loc <= RecentFlushPtr) {
+    if (loc <= RecentFlushPtr)
+    {
       break;
     }
 
@@ -1336,7 +1449,8 @@ WalSndWaitForWal(XLogRecPtr loc)
     /*
      * Try to flush any pending output to the client.
      */
-    if (pq_flush_if_writable() != 0) {
+    if (pq_flush_if_writable() != 0)
+    {
       WalSndShutdown();
     }
 
@@ -1345,7 +1459,8 @@ WalSndWaitForWal(XLogRecPtr loc)
      * ourselves, and the output buffer is empty, it's time to exit
      * streaming, so fail the current WAL fetch request.
      */
-    if (streamingDoneReceiving && streamingDoneSending && !pq_is_send_pending()) {
+    if (streamingDoneReceiving && streamingDoneSending && !pq_is_send_pending())
+    {
       break;
     }
 
@@ -1366,7 +1481,8 @@ WalSndWaitForWal(XLogRecPtr loc)
 
     wakeEvents = WL_LATCH_SET | WL_EXIT_ON_PM_DEATH | WL_SOCKET_READABLE | WL_TIMEOUT;
 
-    if (pq_is_send_pending()) {
+    if (pq_is_send_pending())
+    {
       wakeEvents |= WL_SOCKET_WRITEABLE;
     }
 
@@ -1396,7 +1512,8 @@ exec_replication_command(const char *cmd_string)
    * If WAL sender has been told that shutdown is getting close, switch its
    * status accordingly to handle the next replication commands correctly.
    */
-  if (got_STOPPING) {
+  if (got_STOPPING)
+  {
     WalSndSetState(WALSNDSTATE_STOPPING);
   }
 
@@ -1405,7 +1522,8 @@ exec_replication_command(const char *cmd_string)
    * generate WAL while the shutdown checkpoint is being written.  To be
    * safe, we just prohibit all new commands.
    */
-  if (MyWalSnd->state == WALSNDSTATE_STOPPING) {
+  if (MyWalSnd->state == WALSNDSTATE_STOPPING)
+  {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot execute new commands while WAL sender is in stopping mode")));
   }
 
@@ -1428,7 +1546,8 @@ exec_replication_command(const char *cmd_string)
   /*
    * Is it a WalSender command?
    */
-  if (!replication_scanner_is_replication_command()) {
+  if (!replication_scanner_is_replication_command())
+  {
     /* Nope; clean up and get out. */
     replication_scanner_finish();
 
@@ -1436,7 +1555,8 @@ exec_replication_command(const char *cmd_string)
     MemoryContextDelete(cmd_context);
 
     /* XXX this is a pretty random place to make this check */
-    if (MyDatabaseId == InvalidOid) {
+    if (MyDatabaseId == InvalidOid)
+    {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot execute SQL commands in WAL sender for physical replication")));
     }
 
@@ -1448,7 +1568,8 @@ exec_replication_command(const char *cmd_string)
    * Looks like a WalSender command, so parse it.
    */
   parse_rc = replication_yyparse();
-  if (parse_rc != 0) {
+  if (parse_rc != 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg_internal("replication command parser returned %d", parse_rc)));
   }
   replication_scanner_finish();
@@ -1473,8 +1594,10 @@ exec_replication_command(const char *cmd_string)
   /*
    * Disallow replication commands in aborted transaction blocks.
    */
-  if (IsAbortedTransactionBlockState()) {
-    ereport(ERROR, (errcode(ERRCODE_IN_FAILED_SQL_TRANSACTION), errmsg("current transaction is aborted, commands ignored until end of transaction block")));
+  if (IsAbortedTransactionBlockState())
+  {
+    ereport(ERROR, (errcode(ERRCODE_IN_FAILED_SQL_TRANSACTION), errmsg("current transaction is aborted, "
+                                                                       "commands ignored until end of transaction block")));
   }
 
   CHECK_FOR_INTERRUPTS();
@@ -1487,7 +1610,8 @@ exec_replication_command(const char *cmd_string)
   initStringInfo(&reply_message);
   initStringInfo(&tmpbuf);
 
-  switch (cmd_node->type) {
+  switch (cmd_node->type)
+  {
   case T_IdentifySystemCmd:
     IdentifySystem();
     break;
@@ -1505,14 +1629,18 @@ exec_replication_command(const char *cmd_string)
     DropReplicationSlot((DropReplicationSlotCmd *)cmd_node);
     break;
 
-  case T_StartReplicationCmd: {
+  case T_StartReplicationCmd:
+  {
     StartReplicationCmd *cmd = (StartReplicationCmd *)cmd_node;
 
     PreventInTransactionBlock(true, "START_REPLICATION");
 
-    if (cmd->kind == REPLICATION_KIND_PHYSICAL) {
+    if (cmd->kind == REPLICATION_KIND_PHYSICAL)
+    {
       StartReplication(cmd);
-    } else {
+    }
+    else
+    {
       StartLogicalReplication(cmd);
     }
     break;
@@ -1523,7 +1651,8 @@ exec_replication_command(const char *cmd_string)
     SendTimeLineHistory((TimeLineHistoryCmd *)cmd_node);
     break;
 
-  case T_VariableShowStmt: {
+  case T_VariableShowStmt:
+  {
     DestReceiver *dest = CreateDestReceiver(DestRemoteSimple);
     VariableShowStmt *n = (VariableShowStmt *)cmd_node;
 
@@ -1531,9 +1660,10 @@ exec_replication_command(const char *cmd_string)
     StartTransactionCommand();
     GetPGVariable(n->name, dest);
     CommitTransactionCommand();
-  } break;
+  }
+  break;
 
-  default:;
+  default:
     elog(ERROR, "unrecognized replication command node tag: %u", cmd_node->type);
   }
 
@@ -1569,15 +1699,18 @@ ProcessRepliesIfAny(void)
    * message is the beginning of a new command, and should be processed in
    * the main processing loop.
    */
-  while (!streamingDoneReceiving) {
+  while (!streamingDoneReceiving)
+  {
     pq_startmsgread();
     r = pq_getbyte_if_available(&firstchar);
-    if (r < 0) {
+    if (r < 0)
+    {
       /* unexpected error or EOF */
       ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unexpected EOF on standby connection")));
       proc_exit(0);
     }
-    if (r == 0) {
+    if (r == 0)
+    {
       /* no data available without blocking */
       pq_endmsgread();
       break;
@@ -1585,13 +1718,15 @@ ProcessRepliesIfAny(void)
 
     /* Read the message contents */
     resetStringInfo(&reply_message);
-    if (pq_getmessage(&reply_message, 0)) {
+    if (pq_getmessage(&reply_message, 0))
+    {
       ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unexpected EOF on standby connection")));
       proc_exit(0);
     }
 
     /* Handle the very limited subset of commands expected in this phase */
-    switch (firstchar) {
+    switch (firstchar)
+    {
       /*
        * 'd' means a standby reply wrapped in a CopyData packet.
        */
@@ -1605,7 +1740,8 @@ ProcessRepliesIfAny(void)
        * Reply with CopyDone, if we had not sent that already.
        */
     case 'c':
-      if (!streamingDoneSending) {
+      if (!streamingDoneSending)
+      {
         pq_putmessage_noblock('c', NULL, 0);
         streamingDoneSending = true;
       }
@@ -1620,7 +1756,7 @@ ProcessRepliesIfAny(void)
     case 'X':
       proc_exit(0);
 
-    default:;
+    default:
       ereport(FATAL, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid standby message type \"%c\"", firstchar)));
     }
   }
@@ -1628,7 +1764,8 @@ ProcessRepliesIfAny(void)
   /*
    * Save the last reply timestamp if we've received at least one reply.
    */
-  if (received) {
+  if (received)
+  {
     last_reply_timestamp = last_processing;
     waiting_for_ping_response = false;
   }
@@ -1647,7 +1784,8 @@ ProcessStandbyMessage(void)
    */
   msgtype = pq_getmsgbyte(&reply_message);
 
-  switch (msgtype) {
+  switch (msgtype)
+  {
   case 'r':
     ProcessStandbyReplyMessage();
     break;
@@ -1656,7 +1794,7 @@ ProcessStandbyMessage(void)
     ProcessStandbyHSFeedbackMessage();
     break;
 
-  default:;
+  default:
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unexpected message type \"%c\"", msgtype)));
     proc_exit(0);
   }
@@ -1673,13 +1811,15 @@ PhysicalConfirmReceivedLocation(XLogRecPtr lsn)
 
   Assert(lsn != InvalidXLogRecPtr);
   SpinLockAcquire(&slot->mutex);
-  if (slot->data.restart_lsn != lsn) {
+  if (slot->data.restart_lsn != lsn)
+  {
     changed = true;
     slot->data.restart_lsn = lsn;
   }
   SpinLockRelease(&slot->mutex);
 
-  if (changed) {
+  if (changed)
+  {
     ReplicationSlotMarkDirty();
     ReplicationSlotsComputeRequiredLSN();
   }
@@ -1714,7 +1854,8 @@ ProcessStandbyReplyMessage(void)
   replyTime = pq_getmsgint64(&reply_message);
   replyRequested = pq_getmsgbyte(&reply_message);
 
-  if (log_min_messages <= DEBUG2) {
+  if (log_min_messages <= DEBUG2)
+  {
     char *replyTimeStr;
 
     /* Copy because timestamptz_to_str returns a static buffer */
@@ -1740,17 +1881,22 @@ ProcessStandbyReplyMessage(void)
    * until more WAL traffic arrives.
    */
   clearLagTimes = false;
-  if (applyPtr == sentPtr) {
-    if (fullyAppliedLastTime) {
+  if (applyPtr == sentPtr)
+  {
+    if (fullyAppliedLastTime)
+    {
       clearLagTimes = true;
     }
     fullyAppliedLastTime = true;
-  } else {
+  }
+  else
+  {
     fullyAppliedLastTime = false;
   }
 
   /* Send a reply if the standby requested one. */
-  if (replyRequested) {
+  if (replyRequested)
+  {
     WalSndKeepalive(false);
   }
 
@@ -1765,30 +1911,38 @@ ProcessStandbyReplyMessage(void)
     walsnd->write = writePtr;
     walsnd->flush = flushPtr;
     walsnd->apply = applyPtr;
-    if (writeLag != -1 || clearLagTimes) {
+    if (writeLag != -1 || clearLagTimes)
+    {
       walsnd->writeLag = writeLag;
     }
-    if (flushLag != -1 || clearLagTimes) {
+    if (flushLag != -1 || clearLagTimes)
+    {
       walsnd->flushLag = flushLag;
     }
-    if (applyLag != -1 || clearLagTimes) {
+    if (applyLag != -1 || clearLagTimes)
+    {
       walsnd->applyLag = applyLag;
     }
     walsnd->replyTime = replyTime;
     SpinLockRelease(&walsnd->mutex);
   }
 
-  if (!am_cascading_walsender) {
+  if (!am_cascading_walsender)
+  {
     SyncRepReleaseWaiters();
   }
 
   /*
    * Advance our local xmin horizon when the client confirmed a flush.
    */
-  if (MyReplicationSlot && flushPtr != InvalidXLogRecPtr) {
-    if (SlotIsLogical(MyReplicationSlot)) {
+  if (MyReplicationSlot && flushPtr != InvalidXLogRecPtr)
+  {
+    if (SlotIsLogical(MyReplicationSlot))
+    {
       LogicalConfirmReceivedLocation(flushPtr);
-    } else {
+    }
+    else
+    {
       PhysicalConfirmReceivedLocation(flushPtr);
     }
   }
@@ -1809,19 +1963,22 @@ PhysicalReplicationSlotNewXmin(TransactionId feedbackXmin, TransactionId feedbac
    * and effective_xmin since the consequences of a missed increase are
    * limited to query cancellations, so set both at once.
    */
-  if (!TransactionIdIsNormal(slot->data.xmin) || !TransactionIdIsNormal(feedbackXmin) || TransactionIdPrecedes(slot->data.xmin, feedbackXmin)) {
+  if (!TransactionIdIsNormal(slot->data.xmin) || !TransactionIdIsNormal(feedbackXmin) || TransactionIdPrecedes(slot->data.xmin, feedbackXmin))
+  {
     changed = true;
     slot->data.xmin = feedbackXmin;
     slot->effective_xmin = feedbackXmin;
   }
-  if (!TransactionIdIsNormal(slot->data.catalog_xmin) || !TransactionIdIsNormal(feedbackCatalogXmin) || TransactionIdPrecedes(slot->data.catalog_xmin, feedbackCatalogXmin)) {
+  if (!TransactionIdIsNormal(slot->data.catalog_xmin) || !TransactionIdIsNormal(feedbackCatalogXmin) || TransactionIdPrecedes(slot->data.catalog_xmin, feedbackCatalogXmin))
+  {
     changed = true;
     slot->data.catalog_xmin = feedbackCatalogXmin;
     slot->effective_catalog_xmin = feedbackCatalogXmin;
   }
   SpinLockRelease(&slot->mutex);
 
-  if (changed) {
+  if (changed)
+  {
     ReplicationSlotMarkDirty();
     ReplicationSlotsComputeRequiredXmin(false);
   }
@@ -1848,17 +2005,23 @@ TransactionIdInRecentPast(TransactionId xid, uint32 epoch)
   nextXid = XidFromFullTransactionId(nextFullXid);
   nextEpoch = EpochFromFullTransactionId(nextFullXid);
 
-  if (xid <= nextXid) {
-    if (epoch != nextEpoch) {
+  if (xid <= nextXid)
+  {
+    if (epoch != nextEpoch)
+    {
       return false;
     }
-  } else {
-    if (epoch + 1 != nextEpoch) {
+  }
+  else
+  {
+    if (epoch + 1 != nextEpoch)
+    {
       return false;
     }
   }
 
-  if (!TransactionIdPrecedesOrEquals(xid, nextXid)) {
+  if (!TransactionIdPrecedesOrEquals(xid, nextXid))
+  {
     return false; /* epoch OK, but it's wrapped around */
   }
 
@@ -1888,13 +2051,14 @@ ProcessStandbyHSFeedbackMessage(void)
   feedbackCatalogXmin = pq_getmsgint(&reply_message, 4);
   feedbackCatalogEpoch = pq_getmsgint(&reply_message, 4);
 
-  if (log_min_messages <= DEBUG2) {
+  if (log_min_messages <= DEBUG2)
+  {
     char *replyTimeStr;
 
     /* Copy because timestamptz_to_str returns a static buffer */
     replyTimeStr = pstrdup(timestamptz_to_str(replyTime));
 
-    elog(DEBUG2,"hot standby feedback xmin %u epoch %u, catalog_xmin %u epoch %u reply_time %s",feedbackXmin, feedbackEpoch, feedbackCatalogXmin, feedbackCatalogEpoch, replyTimeStr);
+    elog(DEBUG2, "hot standby feedback xmin %u epoch %u, catalog_xmin %u epoch %u reply_time %s", feedbackXmin, feedbackEpoch, feedbackCatalogXmin, feedbackCatalogEpoch, replyTimeStr);
 
     pfree(replyTimeStr);
   }
@@ -1915,9 +2079,11 @@ ProcessStandbyHSFeedbackMessage(void)
    * Unset WalSender's xmins if the feedback message values are invalid.
    * This happens when the downstream turned hot_standby_feedback off.
    */
-  if (!TransactionIdIsNormal(feedbackXmin) && !TransactionIdIsNormal(feedbackCatalogXmin)) {
+  if (!TransactionIdIsNormal(feedbackXmin) && !TransactionIdIsNormal(feedbackCatalogXmin))
+  {
     MyPgXact->xmin = InvalidTransactionId;
-    if (MyReplicationSlot != NULL) {
+    if (MyReplicationSlot != NULL)
+    {
       PhysicalReplicationSlotNewXmin(feedbackXmin, feedbackCatalogXmin);
     }
     return;
@@ -1927,11 +2093,13 @@ ProcessStandbyHSFeedbackMessage(void)
    * Check that the provided xmin/epoch are sane, that is, not in the future
    * and not so far back as to be already wrapped around.  Ignore if not.
    */
-  if (TransactionIdIsNormal(feedbackXmin) && !TransactionIdInRecentPast(feedbackXmin, feedbackEpoch)) {
+  if (TransactionIdIsNormal(feedbackXmin) && !TransactionIdInRecentPast(feedbackXmin, feedbackEpoch))
+  {
     return;
   }
 
-  if (TransactionIdIsNormal(feedbackCatalogXmin) && !TransactionIdInRecentPast(feedbackCatalogXmin, feedbackCatalogEpoch)) {
+  if (TransactionIdIsNormal(feedbackCatalogXmin) && !TransactionIdInRecentPast(feedbackCatalogXmin, feedbackCatalogEpoch))
+  {
     return;
   }
 
@@ -1965,12 +2133,18 @@ ProcessStandbyHSFeedbackMessage(void)
    * XXX: It might make sense to generalize the ephemeral slot concept and
    * always use the slot mechanism to handle the feedback xmin.
    */
-  if (MyReplicationSlot != NULL) { /* XXX: persistency configurable? */
+  if (MyReplicationSlot != NULL) /* XXX: persistency configurable? */
+  {
     PhysicalReplicationSlotNewXmin(feedbackXmin, feedbackCatalogXmin);
-  } else {
-    if (TransactionIdIsNormal(feedbackCatalogXmin) && TransactionIdPrecedes(feedbackCatalogXmin, feedbackXmin)) {
+  }
+  else
+  {
+    if (TransactionIdIsNormal(feedbackCatalogXmin) && TransactionIdPrecedes(feedbackCatalogXmin, feedbackXmin))
+    {
       MyPgXact->xmin = feedbackCatalogXmin;
-    } else {
+    }
+    else
+    {
       MyPgXact->xmin = feedbackXmin;
     }
   }
@@ -1988,7 +2162,8 @@ WalSndComputeSleeptime(TimestampTz now)
 {
   long sleeptime = 10000; /* 10 s */
 
-  if (wal_sender_timeout > 0 && last_reply_timestamp > 0) {
+  if (wal_sender_timeout > 0 && last_reply_timestamp > 0)
+  {
     TimestampTz wakeup_time;
 
     /*
@@ -2002,7 +2177,8 @@ WalSndComputeSleeptime(TimestampTz now)
      * WalSndKeepaliveIfNecessary() wants to send a keepalive once half of
      * the timeout passed without a response.
      */
-    if (!waiting_for_ping_response) {
+    if (!waiting_for_ping_response)
+    {
       wakeup_time = TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2);
     }
 
@@ -2031,13 +2207,15 @@ WalSndCheckTimeOut(void)
   TimestampTz timeout;
 
   /* don't bail out if we're doing something that doesn't require timeouts */
-  if (last_reply_timestamp <= 0) {
+  if (last_reply_timestamp <= 0)
+  {
     return;
   }
 
   timeout = TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout);
 
-  if (wal_sender_timeout > 0 && last_processing >= timeout) {
+  if (wal_sender_timeout > 0 && last_processing >= timeout)
+  {
     /*
      * Since typically expiration of replication timeout means
      * communication problem, we don't send the error message to the
@@ -2064,14 +2242,16 @@ WalSndLoop(WalSndSendDataCallback send_data)
    * Loop until we reach the end of this timeline or the client requests to
    * stop streaming.
    */
-  for (;;) {
+  for (;;)
+  {
     /* Clear any already-pending wakeups */
     ResetLatch(MyLatch);
 
     CHECK_FOR_INTERRUPTS();
 
     /* Process any requests or signals received recently */
-    if (ConfigReloadPending) {
+    if (ConfigReloadPending)
+    {
       ConfigReloadPending = false;
       ProcessConfigFile(PGC_SIGHUP);
       SyncRepInitConfig();
@@ -2085,7 +2265,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
      * ourselves, and the output buffer is empty, it's time to exit
      * streaming.
      */
-    if (streamingDoneReceiving && streamingDoneSending && !pq_is_send_pending()) {
+    if (streamingDoneReceiving && streamingDoneSending && !pq_is_send_pending())
+    {
       break;
     }
 
@@ -2095,19 +2276,24 @@ WalSndLoop(WalSndSendDataCallback send_data)
      * again until we've flushed it ... but we'd better assume we are not
      * caught up.
      */
-    if (!pq_is_send_pending()) {
+    if (!pq_is_send_pending())
+    {
       send_data();
-    } else {
+    }
+    else
+    {
       WalSndCaughtUp = false;
     }
 
     /* Try to flush pending output to the client */
-    if (pq_flush_if_writable() != 0) {
+    if (pq_flush_if_writable() != 0)
+    {
       WalSndShutdown();
     }
 
     /* If nothing remains to be sent right now ... */
-    if (WalSndCaughtUp && !pq_is_send_pending()) {
+    if (WalSndCaughtUp && !pq_is_send_pending())
+    {
       /*
        * If we're in catchup state, move to streaming.  This is an
        * important state change for users to know about, since before
@@ -2116,7 +2302,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
        * important for synchronous replication, since commits that
        * started to wait at that point might wait for some time.
        */
-      if (MyWalSnd->state == WALSNDSTATE_CATCHUP) {
+      if (MyWalSnd->state == WALSNDSTATE_CATCHUP)
+      {
         ereport(DEBUG1, (errmsg("\"%s\" has now caught up with upstream server", application_name)));
         WalSndSetState(WALSNDSTATE_STREAMING);
       }
@@ -2128,7 +2315,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
        * normal termination at shutdown, or a promotion, the walsender
        * is not sure which.
        */
-      if (got_SIGUSR2) {
+      if (got_SIGUSR2)
+      {
         WalSndDone(send_data);
       }
     }
@@ -2147,13 +2335,15 @@ WalSndLoop(WalSndSendDataCallback send_data)
      * pq_flush_if_writable flushed it all --- we should immediately try
      * to send more.
      */
-    if ((WalSndCaughtUp && !streamingDoneSending) || pq_is_send_pending()) {
+    if ((WalSndCaughtUp && !streamingDoneSending) || pq_is_send_pending())
+    {
       long sleeptime;
       int wakeEvents;
 
       wakeEvents = WL_LATCH_SET | WL_EXIT_ON_PM_DEATH | WL_TIMEOUT;
 
-      if (!streamingDoneReceiving) {
+      if (!streamingDoneReceiving)
+      {
         wakeEvents |= WL_SOCKET_READABLE;
       }
 
@@ -2163,7 +2353,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
        */
       sleeptime = WalSndComputeSleeptime(GetCurrentTimestamp());
 
-      if (pq_is_send_pending()) {
+      if (pq_is_send_pending())
+      {
         wakeEvents |= WL_SOCKET_WRITEABLE;
       }
 
@@ -2191,15 +2382,19 @@ InitWalSenderSlot(void)
    * Find a free walsender slot and reserve it. This must not fail due to
    * the prior check for free WAL senders in InitProcess().
    */
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
     SpinLockAcquire(&walsnd->mutex);
 
-    if (walsnd->pid != 0) {
+    if (walsnd->pid != 0)
+    {
       SpinLockRelease(&walsnd->mutex);
       continue;
-    } else {
+    }
+    else
+    {
       /*
        * Found a free slot. Reserve it for us.
        */
@@ -2272,18 +2467,21 @@ retry:
   recptr = startptr;
   nbytes = count;
 
-  while (nbytes > 0) {
+  while (nbytes > 0)
+  {
     uint32 startoff;
     int segbytes;
     int readbytes;
 
     startoff = XLogSegmentOffset(recptr, wal_segment_size);
 
-    if (sendFile < 0 || !XLByteInSeg(recptr, sendSegNo, wal_segment_size)) {
+    if (sendFile < 0 || !XLByteInSeg(recptr, sendSegNo, wal_segment_size))
+    {
       char path[MAXPGPATH];
 
       /* Switch to another logfile segment */
-      if (sendFile >= 0) {
+      if (sendFile >= 0)
+      {
         close(sendFile);
       }
 
@@ -2316,11 +2514,13 @@ retry:
        *-------
        */
       curFileTimeLine = sendTimeLine;
-      if (sendTimeLineIsHistoric) {
+      if (sendTimeLineIsHistoric)
+      {
         XLogSegNo endSegNo;
 
         XLByteToSeg(sendTimeLineValidUpto, endSegNo, wal_segment_size);
-        if (sendSegNo == endSegNo) {
+        if (sendSegNo == endSegNo)
+        {
           curFileTimeLine = sendTimeLineNextTLI;
         }
       }
@@ -2328,15 +2528,19 @@ retry:
       XLogFilePath(path, curFileTimeLine, sendSegNo, wal_segment_size);
 
       sendFile = BasicOpenFile(path, O_RDONLY | PG_BINARY);
-      if (sendFile < 0) {
+      if (sendFile < 0)
+      {
         /*
          * If the file is not found, assume it's because the standby
          * asked for a too old WAL segment that has already been
          * removed or recycled.
          */
-        if (errno == ENOENT) {
+        if (errno == ENOENT)
+        {
           ereport(ERROR, (errcode_for_file_access(), errmsg("requested WAL segment %s has already been removed", XLogFileNameP(curFileTimeLine, sendSegNo))));
-        } else {
+        }
+        else
+        {
           ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", path)));
         }
       }
@@ -2344,26 +2548,34 @@ retry:
     }
 
     /* Need to seek in the file? */
-    if (sendOff != startoff) {
-      if (lseek(sendFile, (off_t)startoff, SEEK_SET) < 0) {
+    if (sendOff != startoff)
+    {
+      if (lseek(sendFile, (off_t)startoff, SEEK_SET) < 0)
+      {
         ereport(ERROR, (errcode_for_file_access(), errmsg("could not seek in log segment %s to offset %u: %m", XLogFileNameP(curFileTimeLine, sendSegNo), startoff)));
       }
       sendOff = startoff;
     }
 
     /* How many bytes are within this segment? */
-    if (nbytes > (wal_segment_size - startoff)) {
+    if (nbytes > (wal_segment_size - startoff))
+    {
       segbytes = wal_segment_size - startoff;
-    } else {
+    }
+    else
+    {
       segbytes = nbytes;
     }
 
     pgstat_report_wait_start(WAIT_EVENT_WAL_READ);
     readbytes = read(sendFile, p, segbytes);
     pgstat_report_wait_end();
-    if (readbytes < 0) {
+    if (readbytes < 0)
+    {
       ereport(ERROR, (errcode_for_file_access(), errmsg("could not read from log segment %s, offset %u, length %zu: %m", XLogFileNameP(curFileTimeLine, sendSegNo), sendOff, (Size)segbytes)));
-    } else if (readbytes == 0) {
+    }
+    else if (readbytes == 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("could not read from log segment %s, offset %u: read %d of %zu", XLogFileNameP(curFileTimeLine, sendSegNo), sendOff, readbytes, (Size)segbytes)));
     }
 
@@ -2391,7 +2603,8 @@ retry:
    * check what we read was valid after reading into the buffer. If it's
    * invalid, we try to open and read the file again.
    */
-  if (am_cascading_walsender) {
+  if (am_cascading_walsender)
+  {
     WalSnd *walsnd = MyWalSnd;
     bool reload;
 
@@ -2400,7 +2613,8 @@ retry:
     walsnd->needreload = false;
     SpinLockRelease(&walsnd->mutex);
 
-    if (reload && sendFile >= 0) {
+    if (reload && sendFile >= 0)
+    {
       close(sendFile);
       sendFile = -1;
 
@@ -2428,24 +2642,29 @@ XLogSendPhysical(void)
   Size nbytes;
 
   /* If requested switch the WAL sender to the stopping state. */
-  if (got_STOPPING) {
+  if (got_STOPPING)
+  {
     WalSndSetState(WALSNDSTATE_STOPPING);
   }
 
-  if (streamingDoneSending) {
+  if (streamingDoneSending)
+  {
     WalSndCaughtUp = true;
     return;
   }
 
   /* Figure out how far we can safely send the WAL. */
-  if (sendTimeLineIsHistoric) {
+  if (sendTimeLineIsHistoric)
+  {
     /*
      * Streaming an old timeline that's in this server's history, but is
      * not the one we're currently inserting or replaying. It can be
      * streamed up to the point where we switched off that timeline.
      */
     SendRqstPtr = sendTimeLineValidUpto;
-  } else if (am_cascading_walsender) {
+  }
+  else if (am_cascading_walsender)
+  {
     /*
      * Streaming the latest timeline on a standby.
      *
@@ -2467,25 +2686,30 @@ XLogSendPhysical(void)
 
     SendRqstPtr = GetStandbyFlushRecPtr();
 
-    if (!RecoveryInProgress()) {
+    if (!RecoveryInProgress())
+    {
       /*
        * We have been promoted. RecoveryInProgress() updated
        * ThisTimeLineID to the new current timeline.
        */
       am_cascading_walsender = false;
       becameHistoric = true;
-    } else {
+    }
+    else
+    {
       /*
        * Still a cascading standby. But is the timeline we're sending
        * still the one recovery is recovering from? ThisTimeLineID was
        * updated by the GetStandbyFlushRecPtr() call above.
        */
-      if (sendTimeLine != ThisTimeLineID) {
+      if (sendTimeLine != ThisTimeLineID)
+      {
         becameHistoric = true;
       }
     }
 
-    if (becameHistoric) {
+    if (becameHistoric)
+    {
       /*
        * The timeline we were sending has become historic. Read the
        * timeline history file of the new timeline to see where exactly
@@ -2503,7 +2727,9 @@ XLogSendPhysical(void)
 
       SendRqstPtr = sendTimeLineValidUpto;
     }
-  } else {
+  }
+  else
+  {
     /*
      * Streaming the current timeline on a master.
      *
@@ -2557,9 +2783,11 @@ XLogSendPhysical(void)
    * replay the partial WAL record either, so it can still follow our
    * timeline switch.
    */
-  if (sendTimeLineIsHistoric && sendTimeLineValidUpto <= sentPtr) {
+  if (sendTimeLineIsHistoric && sendTimeLineValidUpto <= sentPtr)
+  {
     /* close the current file. */
-    if (sendFile >= 0) {
+    if (sendFile >= 0)
+    {
       close(sendFile);
     }
     sendFile = -1;
@@ -2576,7 +2804,8 @@ XLogSendPhysical(void)
 
   /* Do we have any work to do? */
   Assert(sentPtr <= SendRqstPtr);
-  if (SendRqstPtr <= sentPtr) {
+  if (SendRqstPtr <= sentPtr)
+  {
     WalSndCaughtUp = true;
     return;
   }
@@ -2597,14 +2826,20 @@ XLogSendPhysical(void)
   endptr += MAX_SEND_SIZE;
 
   /* if we went beyond SendRqstPtr, back off */
-  if (SendRqstPtr <= endptr) {
+  if (SendRqstPtr <= endptr)
+  {
     endptr = SendRqstPtr;
-    if (sendTimeLineIsHistoric) {
+    if (sendTimeLineIsHistoric)
+    {
       WalSndCaughtUp = false;
-    } else {
+    }
+    else
+    {
       WalSndCaughtUp = true;
     }
-  } else {
+  }
+  else
+  {
     /* round down to page boundary. */
     endptr -= (endptr % XLOG_BLCKSZ);
     WalSndCaughtUp = false;
@@ -2653,7 +2888,8 @@ XLogSendPhysical(void)
   }
 
   /* Report progress of XLOG streaming in PS display */
-  if (update_process_title) {
+  if (update_process_title)
+  {
     char activitymsg[50];
 
     snprintf(activitymsg, sizeof(activitymsg), "streaming %X/%X", (uint32)(sentPtr >> 32), (uint32)sentPtr);
@@ -2692,11 +2928,13 @@ XLogSendLogical(void)
   logical_startptr = InvalidXLogRecPtr;
 
   /* xlog record was invalid */
-  if (errm != NULL) {
+  if (errm != NULL)
+  {
     elog(ERROR, "%s", errm);
   }
 
-  if (record != NULL) {
+  if (record != NULL)
+  {
     /*
      * Note the lack of any call to LagTrackerWrite() which is handled by
      * WalSndUpdateProgress which is called by output plugin through
@@ -2711,14 +2949,18 @@ XLogSendLogical(void)
    * If first time through in this session, initialize flushPtr.  Otherwise,
    * we only need to update flushPtr if EndRecPtr is past it.
    */
-  if (flushPtr == InvalidXLogRecPtr) {
+  if (flushPtr == InvalidXLogRecPtr)
+  {
     flushPtr = GetFlushRecPtr();
-  } else if (logical_decoding_ctx->reader->EndRecPtr >= flushPtr) {
+  }
+  else if (logical_decoding_ctx->reader->EndRecPtr >= flushPtr)
+  {
     flushPtr = GetFlushRecPtr();
   }
 
   /* If EndRecPtr is still past our flushPtr, it means we caught up. */
-  if (logical_decoding_ctx->reader->EndRecPtr >= flushPtr) {
+  if (logical_decoding_ctx->reader->EndRecPtr >= flushPtr)
+  {
     WalSndCaughtUp = true;
   }
 
@@ -2727,7 +2969,8 @@ XLogSendLogical(void)
    * terminate the connection in an orderly manner, after writing out all
    * the pending data.
    */
-  if (WalSndCaughtUp && got_STOPPING) {
+  if (WalSndCaughtUp && got_STOPPING)
+  {
     got_SIGUSR2 = true;
   }
 
@@ -2765,14 +3008,16 @@ WalSndDone(WalSndSendDataCallback send_data)
    */
   replicatedPtr = XLogRecPtrIsInvalid(MyWalSnd->flush) ? MyWalSnd->write : MyWalSnd->flush;
 
-  if (WalSndCaughtUp && sentPtr == replicatedPtr && !pq_is_send_pending()) {
+  if (WalSndCaughtUp && sentPtr == replicatedPtr && !pq_is_send_pending())
+  {
     /* Inform the standby that XLOG streaming is done */
     EndCommand("COPY 0", DestRemote);
     pq_flush();
 
     proc_exit(0);
   }
-  if (!waiting_for_ping_response) {
+  if (!waiting_for_ping_response)
+  {
     WalSndKeepalive(true);
   }
 }
@@ -2806,7 +3051,8 @@ GetStandbyFlushRecPtr(void)
   ThisTimeLineID = replayTLI;
 
   result = replayPtr;
-  if (receiveTLI == ThisTimeLineID && receivePtr > replayPtr) {
+  if (receiveTLI == ThisTimeLineID && receivePtr > replayPtr)
+  {
     result = receivePtr;
   }
 
@@ -2821,11 +3067,13 @@ WalSndRqstFileReload(void)
 {
   int i;
 
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
     SpinLockAcquire(&walsnd->mutex);
-    if (walsnd->pid == 0) {
+    if (walsnd->pid == 0)
+    {
       SpinLockRelease(&walsnd->mutex);
       continue;
     }
@@ -2848,9 +3096,12 @@ HandleWalSndInitStopping(void)
    * will send any outstanding WAL, wait for it to be replicated to the
    * standby, and then exit gracefully.
    */
-  if (!replication_active) {
+  if (!replication_active)
+  {
     kill(MyProcPid, SIGTERM);
-  } else {
+  }
+  else
+  {
     got_STOPPING = true;
   }
 }
@@ -2912,15 +3163,18 @@ WalSndShmemInit(void)
 
   WalSndCtl = (WalSndCtlData *)ShmemInitStruct("Wal Sender Ctl", WalSndShmemSize(), &found);
 
-  if (!found) {
+  if (!found)
+  {
     /* First time through, so initialize */
     MemSet(WalSndCtl, 0, WalSndShmemSize());
 
-    for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; i++) {
+    for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; i++)
+    {
       SHMQueueInit(&(WalSndCtl->SyncRepQueue[i]));
     }
 
-    for (i = 0; i < max_wal_senders; i++) {
+    for (i = 0; i < max_wal_senders; i++)
+    {
       WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
       SpinLockInit(&walsnd->mutex);
@@ -2939,7 +3193,8 @@ WalSndWakeup(void)
 {
   int i;
 
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     Latch *latch;
     WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
@@ -2951,7 +3206,8 @@ WalSndWakeup(void)
     latch = walsnd->latch;
     SpinLockRelease(&walsnd->mutex);
 
-    if (latch != NULL) {
+    if (latch != NULL)
+    {
       SetLatch(latch);
     }
   }
@@ -2968,7 +3224,8 @@ WalSndInitStopping(void)
 {
   int i;
 
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     WalSnd *walsnd = &WalSndCtl->walsnds[i];
     pid_t pid;
 
@@ -2976,7 +3233,8 @@ WalSndInitStopping(void)
     pid = walsnd->pid;
     SpinLockRelease(&walsnd->mutex);
 
-    if (pid == 0) {
+    if (pid == 0)
+    {
       continue;
     }
 
@@ -2992,21 +3250,25 @@ WalSndInitStopping(void)
 void
 WalSndWaitStopping(void)
 {
-  for (;;) {
+  for (;;)
+  {
     int i;
     bool all_stopped = true;
 
-    for (i = 0; i < max_wal_senders; i++) {
+    for (i = 0; i < max_wal_senders; i++)
+    {
       WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
       SpinLockAcquire(&walsnd->mutex);
 
-      if (walsnd->pid == 0) {
+      if (walsnd->pid == 0)
+      {
         SpinLockRelease(&walsnd->mutex);
         continue;
       }
 
-      if (walsnd->state != WALSNDSTATE_STOPPING) {
+      if (walsnd->state != WALSNDSTATE_STOPPING)
+      {
         all_stopped = false;
         SpinLockRelease(&walsnd->mutex);
         break;
@@ -3015,7 +3277,8 @@ WalSndWaitStopping(void)
     }
 
     /* safe to leave if confirmation is done for all WAL senders */
-    if (all_stopped) {
+    if (all_stopped)
+    {
       return;
     }
 
@@ -3031,7 +3294,8 @@ WalSndSetState(WalSndState state)
 
   Assert(am_walsender);
 
-  if (walsnd->state == state) {
+  if (walsnd->state == state)
+  {
     return;
   }
 
@@ -3047,7 +3311,8 @@ WalSndSetState(WalSndState state)
 static const char *
 WalSndGetStateString(WalSndState state)
 {
-  switch (state) {
+  switch (state)
+  {
   case WALSNDSTATE_STARTUP:
     return "startup";
   case WALSNDSTATE_BACKUP:
@@ -3092,15 +3357,19 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
   int i;
 
   /* check to see if caller supports us returning a tuplestore */
-  if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo)) {
+  if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+  {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
-  if (!(rsinfo->allowedModes & SFRM_Materialize)) {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
+  if (!(rsinfo->allowedModes & SFRM_Materialize))
+  {
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* Build a tuple descriptor for our result type */
-  if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE) {
+  if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+  {
     elog(ERROR, "return type must be a row type");
   }
 
@@ -3120,7 +3389,8 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
    */
   num_standbys = SyncRepGetCandidateStandbys(&sync_standbys);
 
-  for (i = 0; i < max_wal_senders; i++) {
+  for (i = 0; i < max_wal_senders; i++)
+  {
     WalSnd *walsnd = &WalSndCtl->walsnds[i];
     XLogRecPtr sentPtr;
     XLogRecPtr write;
@@ -3140,7 +3410,8 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 
     /* Collect data from shared memory */
     SpinLockAcquire(&walsnd->mutex);
-    if (walsnd->pid == 0) {
+    if (walsnd->pid == 0)
+    {
       SpinLockRelease(&walsnd->mutex);
       continue;
     }
@@ -3163,8 +3434,10 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
      * along with walsnd_index.
      */
     is_sync_standby = false;
-    for (j = 0; j < num_standbys; j++) {
-      if (sync_standbys[j].walsnd_index == i && sync_standbys[j].pid == pid) {
+    for (j = 0; j < num_standbys; j++)
+    {
+      if (sync_standbys[j].walsnd_index == i && sync_standbys[j].pid == pid)
+      {
         is_sync_standby = true;
         break;
       }
@@ -3173,32 +3446,39 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
     memset(nulls, 0, sizeof(nulls));
     values[0] = Int32GetDatum(pid);
 
-    if (!is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS)) {
+    if (!is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS))
+    {
       /*
        * Only superusers and members of pg_read_all_stats can see
        * details. Other users only get the pid value to know it's a
        * walsender, but no details.
        */
       MemSet(&nulls[1], true, PG_STAT_GET_WAL_SENDERS_COLS - 1);
-    } else {
+    }
+    else
+    {
       values[1] = CStringGetTextDatum(WalSndGetStateString(state));
 
-      if (XLogRecPtrIsInvalid(sentPtr)) {
+      if (XLogRecPtrIsInvalid(sentPtr))
+      {
         nulls[2] = true;
       }
       values[2] = LSNGetDatum(sentPtr);
 
-      if (XLogRecPtrIsInvalid(write)) {
+      if (XLogRecPtrIsInvalid(write))
+      {
         nulls[3] = true;
       }
       values[3] = LSNGetDatum(write);
 
-      if (XLogRecPtrIsInvalid(flush)) {
+      if (XLogRecPtrIsInvalid(flush))
+      {
         nulls[4] = true;
       }
       values[4] = LSNGetDatum(flush);
 
-      if (XLogRecPtrIsInvalid(apply)) {
+      if (XLogRecPtrIsInvalid(apply))
+      {
         nulls[5] = true;
       }
       values[5] = LSNGetDatum(apply);
@@ -3210,21 +3490,30 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
        */
       priority = XLogRecPtrIsInvalid(flush) ? 0 : priority;
 
-      if (writeLag < 0) {
+      if (writeLag < 0)
+      {
         nulls[6] = true;
-      } else {
+      }
+      else
+      {
         values[6] = IntervalPGetDatum(offset_to_interval(writeLag));
       }
 
-      if (flushLag < 0) {
+      if (flushLag < 0)
+      {
         nulls[7] = true;
-      } else {
+      }
+      else
+      {
         values[7] = IntervalPGetDatum(offset_to_interval(flushLag));
       }
 
-      if (applyLag < 0) {
+      if (applyLag < 0)
+      {
         nulls[8] = true;
-      } else {
+      }
+      else
+      {
         values[8] = IntervalPGetDatum(offset_to_interval(applyLag));
       }
 
@@ -3241,17 +3530,25 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
        * basically useless to report "sync" or "potential" as their sync
        * states. We report just "quorum" for them.
        */
-      if (priority == 0) {
+      if (priority == 0)
+      {
         values[10] = CStringGetTextDatum("async");
-      } else if (is_sync_standby) {
+      }
+      else if (is_sync_standby)
+      {
         values[10] = SyncRepConfig->syncrep_method == SYNC_REP_PRIORITY ? CStringGetTextDatum("sync") : CStringGetTextDatum("quorum");
-      } else {
+      }
+      else
+      {
         values[10] = CStringGetTextDatum("potential");
       }
 
-      if (replyTime == 0) {
+      if (replyTime == 0)
+      {
         nulls[11] = true;
-      } else {
+      }
+      else
+      {
         values[11] = TimestampTzGetDatum(replyTime);
       }
     }
@@ -3289,7 +3586,8 @@ WalSndKeepalive(bool requestReply)
   pq_putmessage_noblock('d', output_message.data, output_message.len);
 
   /* Set local flag */
-  if (requestReply) {
+  if (requestReply)
+  {
     waiting_for_ping_response = true;
   }
 }
@@ -3306,11 +3604,13 @@ WalSndKeepaliveIfNecessary(void)
    * Don't send keepalive messages if timeouts are globally disabled or
    * we're doing something not partaking in timeouts.
    */
-  if (wal_sender_timeout <= 0 || last_reply_timestamp <= 0) {
+  if (wal_sender_timeout <= 0 || last_reply_timestamp <= 0)
+  {
     return;
   }
 
-  if (waiting_for_ping_response) {
+  if (waiting_for_ping_response)
+  {
     return;
   }
 
@@ -3320,11 +3620,13 @@ WalSndKeepaliveIfNecessary(void)
    * an immediate reply.
    */
   ping_time = TimestampTzPlusMilliseconds(last_reply_timestamp, wal_sender_timeout / 2);
-  if (last_processing >= ping_time) {
+  if (last_processing >= ping_time)
+  {
     WalSndKeepalive(true);
 
     /* Try to flush pending output to the client */
-    if (pq_flush_if_writable() != 0) {
+    if (pq_flush_if_writable() != 0)
+    {
       WalSndShutdown();
     }
   }
@@ -3343,7 +3645,8 @@ LagTrackerWrite(XLogRecPtr lsn, TimestampTz local_flush_time)
   int new_write_head;
   int i;
 
-  if (!am_walsender) {
+  if (!am_walsender)
+  {
     return;
   }
 
@@ -3351,7 +3654,8 @@ LagTrackerWrite(XLogRecPtr lsn, TimestampTz local_flush_time)
    * If the lsn hasn't advanced since last time, then do nothing.  This way
    * we only record a new sample when new WAL has been written.
    */
-  if (lag_tracker->last_lsn == lsn) {
+  if (lag_tracker->last_lsn == lsn)
+  {
     return;
   }
   lag_tracker->last_lsn = lsn;
@@ -3364,8 +3668,10 @@ LagTrackerWrite(XLogRecPtr lsn, TimestampTz local_flush_time)
    */
   new_write_head = (lag_tracker->write_head + 1) % LAG_TRACKER_BUFFER_SIZE;
   buffer_full = false;
-  for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; ++i) {
-    if (new_write_head == lag_tracker->read_heads[i]) {
+  for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; ++i)
+  {
+    if (new_write_head == lag_tracker->read_heads[i])
+    {
       buffer_full = true;
     }
   }
@@ -3375,11 +3681,15 @@ LagTrackerWrite(XLogRecPtr lsn, TimestampTz local_flush_time)
    * the last sample, as a simple (if somewhat uneven) way to lower the
    * sampling rate.  There may be better adaptive compaction algorithms.
    */
-  if (buffer_full) {
+  if (buffer_full)
+  {
     new_write_head = lag_tracker->write_head;
-    if (lag_tracker->write_head > 0) {
+    if (lag_tracker->write_head > 0)
+    {
       lag_tracker->write_head--;
-    } else {
+    }
+    else
+    {
       lag_tracker->write_head = LAG_TRACKER_BUFFER_SIZE - 1;
     }
   }
@@ -3409,7 +3719,8 @@ LagTrackerRead(int head, XLogRecPtr lsn, TimestampTz now)
   TimestampTz time = 0;
 
   /* Read all unread samples up to this LSN or end of buffer. */
-  while (lag_tracker->read_heads[head] != lag_tracker->write_head && lag_tracker->buffer[lag_tracker->read_heads[head]].lsn <= lsn) {
+  while (lag_tracker->read_heads[head] != lag_tracker->write_head && lag_tracker->buffer[lag_tracker->read_heads[head]].lsn <= lsn)
+  {
     time = lag_tracker->buffer[lag_tracker->read_heads[head]].time;
     lag_tracker->last_read[head] = lag_tracker->buffer[lag_tracker->read_heads[head]];
     lag_tracker->read_heads[head] = (lag_tracker->read_heads[head] + 1) % LAG_TRACKER_BUFFER_SIZE;
@@ -3422,14 +3733,18 @@ LagTrackerRead(int head, XLogRecPtr lsn, TimestampTz now)
    * interpolation at the beginning of the next burst of WAL after a period
    * of idleness.
    */
-  if (lag_tracker->read_heads[head] == lag_tracker->write_head) {
+  if (lag_tracker->read_heads[head] == lag_tracker->write_head)
+  {
     lag_tracker->last_read[head].time = 0;
   }
 
-  if (time > now) {
+  if (time > now)
+  {
     /* If the clock somehow went backwards, treat as not found. */
     return -1;
-  } else if (time == 0) {
+  }
+  else if (time == 0)
+  {
     /*
      * We didn't cross a time.  If there is a future sample that we
      * haven't reached yet, and we've already reached at least one sample,
@@ -3439,16 +3754,20 @@ LagTrackerRead(int head, XLogRecPtr lsn, TimestampTz now)
      * eventually start moving again and cross one of our samples before
      * we can show the lag increasing.
      */
-    if (lag_tracker->read_heads[head] == lag_tracker->write_head) {
+    if (lag_tracker->read_heads[head] == lag_tracker->write_head)
+    {
       /* There are no future samples, so we can't interpolate. */
       return -1;
-    } else if (lag_tracker->last_read[head].time != 0) {
+    }
+    else if (lag_tracker->last_read[head].time != 0)
+    {
       /* We can interpolate between last_read and the next sample. */
       double fraction;
       WalTimeSample prev = lag_tracker->last_read[head];
       WalTimeSample next = lag_tracker->buffer[lag_tracker->read_heads[head]];
 
-      if (lsn < prev.lsn) {
+      if (lsn < prev.lsn)
+      {
         /*
          * Reported LSNs shouldn't normally go backwards, but it's
          * possible when there is a timeline change.  Treat as not
@@ -3459,7 +3778,8 @@ LagTrackerRead(int head, XLogRecPtr lsn, TimestampTz now)
 
       Assert(prev.lsn < next.lsn);
 
-      if (prev.time > next.time) {
+      if (prev.time > next.time)
+      {
         /* If the clock somehow went backwards, treat as not found. */
         return -1;
       }
@@ -3469,7 +3789,9 @@ LagTrackerRead(int head, XLogRecPtr lsn, TimestampTz now)
 
       /* Scale the local flush time proportionally. */
       time = (TimestampTz)((double)prev.time + (next.time - prev.time) * fraction);
-    } else {
+    }
+    else
+    {
       /*
        * We have only a future sample, implying that we were entirely
        * caught up but and now there is a new burst of WAL and the

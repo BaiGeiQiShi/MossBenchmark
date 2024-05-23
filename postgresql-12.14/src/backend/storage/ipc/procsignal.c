@@ -115,7 +115,7 @@ ProcSignalInit(int pss_idx)
   /* sanity check */
   if (slot->pss_pid != 0)
   {
-
+    elog(LOG, "process %d taking over ProcSignal slot %d, but it's not empty", MyProcPid, pss_idx);
   }
 
   /* Clear out any leftover signal reasons */
@@ -160,8 +160,8 @@ CleanupProcSignalState(int status, Datum arg)
      * don't ERROR here. We're exiting anyway, and don't want to get into
      * infinite loop trying to exit
      */
-
-
+    elog(LOG, "process %d releasing ProcSignal slot %d, but it contains %d", MyProcPid, pss_idx, (int)slot->pss_pid);
+    return; /* XXX better to zero the slot anyway? */
   }
 
   slot->pss_pid = 0;
@@ -213,24 +213,24 @@ SendProcSignal(pid_t pid, ProcSignalReason reason, BackendId backendId)
      */
     int i;
 
+    for (i = NumProcSignalSlots - 1; i >= 0; i--)
+    {
+      slot = &ProcSignalSlots[i];
 
+      if (slot->pss_pid == pid)
+      {
+        /* the above note about race conditions applies here too */
 
-
-
-
-
-
-
-
-
-
-
-
-
+        /* Atomically set the proper flag */
+        slot->pss_signalFlags[reason] = true;
+        /* Send signal */
+        return kill(pid, SIGUSR1);
+      }
+    }
   }
 
   errno = ESRCH;
-
+  return -1;
 }
 
 /*
@@ -281,37 +281,37 @@ procsignal_sigusr1_handler(SIGNAL_ARGS)
 
   if (CheckProcSignal(PROCSIG_WALSND_INIT_STOPPING))
   {
-
+    HandleWalSndInitStopping();
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_DATABASE))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_DATABASE);
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_TABLESPACE))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_TABLESPACE);
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_LOCK))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_LOCK);
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_SNAPSHOT);
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_STARTUP_DEADLOCK);
   }
 
   if (CheckProcSignal(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN))
   {
-
+    RecoveryConflictInterrupt(PROCSIG_RECOVERY_CONFLICT_BUFFERPIN);
   }
 
   SetLatch(MyLatch);

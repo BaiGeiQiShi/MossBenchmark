@@ -42,21 +42,18 @@ PG_FUNCTION_INFO_V1(test_integerset);
  * A struct to define a pattern of integers, for use with the test_pattern()
  * function.
  */
-typedef struct {
+typedef struct
+{
   char *test_name;   /* short name of the test, for humans */
   char *pattern_str; /* a bit pattern */
   uint64 spacing;    /* pattern repeats at this interval */
   uint64 num_values; /* number of integers to set in total */
 } test_spec;
 
-static const test_spec test_specs[] = {{"all ones", "1111111111", 10, 10000000}, {"alternating bits", "0101010101", 10, 10000000}, {"clusters of ten", "1111111111", 10000, 10000000},
-    {"clusters of hundred",
-        "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
-        10000, 100000000},
-    {"one-every-64k", "1", 65536, 10000000}, {"sparse", "100000000000000000000000000000001", 10000000, 10000000}, {"single values, distance > 2^32", "1", UINT64CONST(10000000000), 1000000}, {"clusters, distance > 2^32", "10101010", UINT64CONST(10000000000), 10000000},
+static const test_spec test_specs[] = {{"all ones", "1111111111", 10, 10000000}, {"alternating bits", "0101010101", 10, 10000000}, {"clusters of ten", "1111111111", 10000, 10000000}, {"clusters of hundred", "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111", 10000, 100000000}, {"one-every-64k", "1", 65536, 10000000}, {"sparse", "100000000000000000000000000000001", 10000000, 10000000}, {"single values, distance > 2^32", "1", UINT64CONST(10000000000), 1000000}, {"clusters, distance > 2^32", "10101010", UINT64CONST(10000000000), 10000000},
     {
-        "clusters, distance > 2^60", "10101010", UINT64CONST(2000000000000000000), 23 /* can't be much higher than this,
-                                                                                       * or we overflow uint64 */
+        "clusters, distance > 2^60", "10101010", UINT64CONST(2000000000000000000), 23 /* can't be much higher than this, or we
+                                                                                       * overflow uint64 */
     }};
 
 static void
@@ -92,7 +89,8 @@ test_integerset(PG_FUNCTION_ARGS)
   test_single_value_and_filler(PG_UINT64_MAX, 1000, 2000);
 
   /* Test different test patterns, with lots of entries */
-  for (int i = 0; i < lengthof(test_specs); i++) {
+  for (int i = 0; i < lengthof(test_specs); i++)
+  {
     test_pattern(&test_specs[i]);
   }
 
@@ -117,7 +115,8 @@ test_pattern(const test_spec *spec)
   uint64 pattern_num_values;
 
   elog(NOTICE, "testing intset with pattern \"%s\"", spec->test_name);
-  if (intset_test_stats) {
+  if (intset_test_stats)
+  {
     fprintf(stderr, "-----\ntesting intset with pattern \"%s\"\n", spec->test_name);
   }
 
@@ -125,8 +124,10 @@ test_pattern(const test_spec *spec)
   patternlen = strlen(spec->pattern_str);
   pattern_values = palloc(patternlen * sizeof(uint64));
   pattern_num_values = 0;
-  for (int i = 0; i < patternlen; i++) {
-    if (spec->pattern_str[i] == '1') {
+  for (int i = 0; i < patternlen; i++)
+  {
+    if (spec->pattern_str[i] == '1')
+    {
       pattern_values[pattern_num_values++] = i;
     }
   }
@@ -152,10 +153,12 @@ test_pattern(const test_spec *spec)
 
   n = 0;
   last_int = 0;
-  while (n < spec->num_values) {
+  while (n < spec->num_values)
+  {
     uint64 x = 0;
 
-    for (int i = 0; i < pattern_num_values && n < spec->num_values; i++) {
+    for (int i = 0; i < pattern_num_values && n < spec->num_values; i++)
+    {
       x = last_int + pattern_values[i];
 
       intset_add_member(intset, x);
@@ -166,7 +169,8 @@ test_pattern(const test_spec *spec)
 
   endtime = GetCurrentTimestamp();
 
-  if (intset_test_stats) {
+  if (intset_test_stats)
+  {
     fprintf(stderr, "added " UINT64_FORMAT " values in %d ms\n", spec->num_values, (int)(endtime - starttime) / 1000);
   }
 
@@ -178,7 +182,8 @@ test_pattern(const test_spec *spec)
    * but it's hard to automate testing that, so if you're making changes to
    * the implementation, just observe that manually.
    */
-  if (intset_test_stats) {
+  if (intset_test_stats)
+  {
     uint64 mem_usage;
 
     /*
@@ -194,7 +199,8 @@ test_pattern(const test_spec *spec)
 
   /* Check that intset_get_num_entries works */
   n = intset_num_entries(intset);
-  if (n != spec->num_values) {
+  if (n != spec->num_values)
+  {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected " UINT64_FORMAT, n, spec->num_values);
   }
 
@@ -203,7 +209,8 @@ test_pattern(const test_spec *spec)
    */
   starttime = GetCurrentTimestamp();
 
-  for (n = 0; n < 100000; n++) {
+  for (n = 0; n < 100000; n++)
+  {
     bool b;
     bool expected;
     uint64 x;
@@ -219,16 +226,24 @@ test_pattern(const test_spec *spec)
     x = x % (last_int + 1000);
 
     /* Do we expect this value to be present in the set? */
-    if (x >= last_int) {
+    if (x >= last_int)
+    {
       expected = false;
-    } else {
+    }
+    else
+    {
       uint64 idx = x % spec->spacing;
 
-      if (idx >= patternlen) {
+      if (idx >= patternlen)
+      {
         expected = false;
-      } else if (spec->pattern_str[idx] == '1') {
+      }
+      else if (spec->pattern_str[idx] == '1')
+      {
         expected = true;
-      } else {
+      }
+      else
+      {
         expected = false;
       }
     }
@@ -236,12 +251,14 @@ test_pattern(const test_spec *spec)
     /* Is it present according to intset_is_member() ? */
     b = intset_is_member(intset, x);
 
-    if (b != expected) {
+    if (b != expected)
+    {
       elog(ERROR, "mismatch at " UINT64_FORMAT ": %d vs %d", x, b, expected);
     }
   }
   endtime = GetCurrentTimestamp();
-  if (intset_test_stats) {
+  if (intset_test_stats)
+  {
     fprintf(stderr, "probed " UINT64_FORMAT " values in %d ms\n", n, (int)(endtime - starttime) / 1000);
   }
 
@@ -253,16 +270,20 @@ test_pattern(const test_spec *spec)
   intset_begin_iterate(intset);
   n = 0;
   last_int = 0;
-  while (n < spec->num_values) {
-    for (int i = 0; i < pattern_num_values && n < spec->num_values; i++) {
+  while (n < spec->num_values)
+  {
+    for (int i = 0; i < pattern_num_values && n < spec->num_values; i++)
+    {
       uint64 expected = last_int + pattern_values[i];
       uint64 x;
 
-      if (!intset_iterate_next(intset, &x)) {
+      if (!intset_iterate_next(intset, &x))
+      {
         break;
       }
 
-      if (x != expected) {
+      if (x != expected)
+      {
         elog(ERROR, "iterate returned wrong value; got " UINT64_FORMAT ", expected " UINT64_FORMAT, x, expected);
       }
       n++;
@@ -270,14 +291,17 @@ test_pattern(const test_spec *spec)
     last_int += spec->spacing;
   }
   endtime = GetCurrentTimestamp();
-  if (intset_test_stats) {
+  if (intset_test_stats)
+  {
     fprintf(stderr, "iterated " UINT64_FORMAT " values in %d ms\n", n, (int)(endtime - starttime) / 1000);
   }
 
-  if (n < spec->num_values) {
+  if (n < spec->num_values)
+  {
     elog(ERROR, "iterator stopped short after " UINT64_FORMAT " entries, expected " UINT64_FORMAT, n, spec->num_values);
   }
-  if (n > spec->num_values) {
+  if (n > spec->num_values)
+  {
     elog(ERROR, "iterator returned " UINT64_FORMAT " entries, " UINT64_FORMAT " was expected", n, spec->num_values);
   }
 
@@ -303,7 +327,8 @@ test_single_value(uint64 value)
 
   /* Test intset_get_num_entries() */
   num_entries = intset_num_entries(intset);
-  if (num_entries != 1) {
+  if (num_entries != 1)
+  {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected 1", num_entries);
   }
 
@@ -311,16 +336,20 @@ test_single_value(uint64 value)
    * Test intset_is_member() at various special values, like 0 and maximum
    * possible 64-bit integer, as well as the value itself.
    */
-  if (intset_is_member(intset, 0) != (value == 0)) {
+  if (intset_is_member(intset, 0) != (value == 0))
+  {
     elog(ERROR, "intset_is_member failed for 0");
   }
-  if (intset_is_member(intset, 1) != (value == 1)) {
+  if (intset_is_member(intset, 1) != (value == 1))
+  {
     elog(ERROR, "intset_is_member failed for 1");
   }
-  if (intset_is_member(intset, PG_UINT64_MAX) != (value == PG_UINT64_MAX)) {
+  if (intset_is_member(intset, PG_UINT64_MAX) != (value == PG_UINT64_MAX))
+  {
     elog(ERROR, "intset_is_member failed for PG_UINT64_MAX");
   }
-  if (intset_is_member(intset, value) != true) {
+  if (intset_is_member(intset, value) != true)
+  {
     elog(ERROR, "intset_is_member failed for the tested value");
   }
 
@@ -329,12 +358,14 @@ test_single_value(uint64 value)
    */
   intset_begin_iterate(intset);
   found = intset_iterate_next(intset, &x);
-  if (!found || x != value) {
+  if (!found || x != value)
+  {
     elog(ERROR, "intset_iterate_next failed for " UINT64_FORMAT, x);
   }
 
   found = intset_iterate_next(intset, &x);
-  if (found) {
+  if (found)
+  {
     elog(ERROR, "intset_iterate_next failed " UINT64_FORMAT, x);
   }
 }
@@ -366,24 +397,28 @@ test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
   intset = intset_create();
 
   iter_expected = palloc(sizeof(uint64) * (filler_max - filler_min + 1));
-  if (value < filler_min) {
+  if (value < filler_min)
+  {
     intset_add_member(intset, value);
     iter_expected[n++] = value;
   }
 
-  for (x = filler_min; x < filler_max; x++) {
+  for (x = filler_min; x < filler_max; x++)
+  {
     intset_add_member(intset, x);
     iter_expected[n++] = x;
   }
 
-  if (value >= filler_max) {
+  if (value >= filler_max)
+  {
     intset_add_member(intset, value);
     iter_expected[n++] = value;
   }
 
   /* Test intset_get_num_entries() */
   num_entries = intset_num_entries(intset);
-  if (num_entries != n) {
+  if (num_entries != n)
+  {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected " UINT64_FORMAT, num_entries, n);
   }
 
@@ -406,19 +441,23 @@ test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
   check_with_filler(intset, PG_UINT64_MAX, value, filler_min, filler_max);
 
   intset_begin_iterate(intset);
-  for (uint64 i = 0; i < n; i++) {
+  for (uint64 i = 0; i < n; i++)
+  {
     found = intset_iterate_next(intset, &x);
-    if (!found || x != iter_expected[i]) {
+    if (!found || x != iter_expected[i])
+    {
       elog(ERROR, "intset_iterate_next failed for " UINT64_FORMAT, x);
     }
   }
   found = intset_iterate_next(intset, &x);
-  if (found) {
+  if (found)
+  {
     elog(ERROR, "intset_iterate_next failed " UINT64_FORMAT, x);
   }
 
   mem_usage = intset_memory_usage(intset);
-  if (mem_usage < 5000 || mem_usage > 500000000) {
+  if (mem_usage < 5000 || mem_usage > 500000000)
+  {
     elog(ERROR, "intset_memory_usage() reported suspicious value: " UINT64_FORMAT, mem_usage);
   }
 }
@@ -439,7 +478,8 @@ check_with_filler(IntegerSet *intset, uint64 x, uint64 value, uint64 filler_min,
 
   actual = intset_is_member(intset, x);
 
-  if (actual != expected) {
+  if (actual != expected)
+  {
     elog(ERROR, "intset_is_member failed for " UINT64_FORMAT, x);
   }
 }
@@ -458,19 +498,23 @@ test_empty(void)
   intset = intset_create();
 
   /* Test intset_is_member() */
-  if (intset_is_member(intset, 0) != false) {
+  if (intset_is_member(intset, 0) != false)
+  {
     elog(ERROR, "intset_is_member on empty set returned true");
   }
-  if (intset_is_member(intset, 1) != false) {
+  if (intset_is_member(intset, 1) != false)
+  {
     elog(ERROR, "intset_is_member on empty set returned true");
   }
-  if (intset_is_member(intset, PG_UINT64_MAX) != false) {
+  if (intset_is_member(intset, PG_UINT64_MAX) != false)
+  {
     elog(ERROR, "intset_is_member on empty set returned true");
   }
 
   /* Test iterator */
   intset_begin_iterate(intset);
-  if (intset_iterate_next(intset, &x)) {
+  if (intset_iterate_next(intset, &x))
+  {
     elog(ERROR, "intset_iterate_next on empty set returned a value (" UINT64_FORMAT ")", x);
   }
 }
@@ -536,41 +580,48 @@ test_huge_distances(void)
    * add more smaller values to the end, to make sure that all the above
    * values get flushed and packed into the tree structure.
    */
-  while (num_values < 1000) {
+  while (num_values < 1000)
+  {
     val += pg_lrand48();
     values[num_values++] = val;
   }
 
   /* Create an IntegerSet using these values */
   intset = intset_create();
-  for (int i = 0; i < num_values; i++) {
+  for (int i = 0; i < num_values; i++)
+  {
     intset_add_member(intset, values[i]);
   }
 
   /*
    * Test intset_is_member() around each of these values
    */
-  for (int i = 0; i < num_values; i++) {
+  for (int i = 0; i < num_values; i++)
+  {
     uint64 x = values[i];
     bool expected;
     bool result;
 
-    if (x > 0) {
+    if (x > 0)
+    {
       expected = (values[i - 1] == x - 1);
       result = intset_is_member(intset, x - 1);
-      if (result != expected) {
+      if (result != expected)
+      {
         elog(ERROR, "intset_is_member failed for " UINT64_FORMAT, x - 1);
       }
     }
 
     result = intset_is_member(intset, x);
-    if (result != true) {
+    if (result != true)
+    {
       elog(ERROR, "intset_is_member failed for " UINT64_FORMAT, x);
     }
 
     expected = (i != num_values - 1) ? (values[i + 1] == x + 1) : false;
     result = intset_is_member(intset, x + 1);
-    if (result != expected) {
+    if (result != expected)
+    {
       elog(ERROR, "intset_is_member failed for " UINT64_FORMAT, x + 1);
     }
   }
@@ -579,14 +630,17 @@ test_huge_distances(void)
    * Test iterator
    */
   intset_begin_iterate(intset);
-  for (int i = 0; i < num_values; i++) {
+  for (int i = 0; i < num_values; i++)
+  {
     found = intset_iterate_next(intset, &x);
-    if (!found || x != values[i]) {
+    if (!found || x != values[i])
+    {
       elog(ERROR, "intset_iterate_next failed for " UINT64_FORMAT, x);
     }
   }
   found = intset_iterate_next(intset, &x);
-  if (found) {
+  if (found)
+  {
     elog(ERROR, "intset_iterate_next failed " UINT64_FORMAT, x);
   }
 }

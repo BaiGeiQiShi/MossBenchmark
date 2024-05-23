@@ -19,7 +19,8 @@
 #include "c.h"
 
 #define _DIAGASSERT(x)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
 /*	$NetBSD: gettemp.c,v 1.17 2014/01/21 19:09:48 seanb Exp $	*/
@@ -112,38 +113,51 @@ GETTEMP(char *path, int *doopen, int domkdir)
   pid = getpid();
 
   /* Move to end of path and count trailing X's. */
-  for (trv = path; *trv; ++trv) {
-    if (*trv == 'X') {
+  for (trv = path; *trv; ++trv)
+  {
+    if (*trv == 'X')
+    {
       xcnt++;
-    } else {
+    }
+    else
+    {
       xcnt = 0;
     }
   }
 
   /* Use at least one from xtra.  Use 2 if more than 6 X's. */
-  if (xcnt > 0) {
+  if (xcnt > 0)
+  {
     *--trv = xtra[0];
     xcnt--;
   }
-  if (xcnt > 5) {
+  if (xcnt > 5)
+  {
     *--trv = xtra[1];
     xcnt--;
   }
 
   /* Set remaining X's to pid digits with 0's to the left. */
-  for (; xcnt > 0; xcnt--) {
+  for (; xcnt > 0; xcnt--)
+  {
     *--trv = (pid % 10) + '0';
     pid /= 10;
   }
 
   /* update xtra for next call. */
-  if (xtra[0] != 'z') {
+  if (xtra[0] != 'z')
+  {
     xtra[0]++;
-  } else {
+  }
+  else
+  {
     xtra[0] = 'a';
-    if (xtra[1] != 'z') {
+    if (xtra[1] != 'z')
+    {
       xtra[1]++;
-    } else {
+    }
+    else
+    {
       xtra[1] = 'a';
     }
   }
@@ -152,20 +166,25 @@ GETTEMP(char *path, int *doopen, int domkdir)
    * check the target directory; if you have six X's and it doesn't exist
    * this runs for a *very* long time.
    */
-  for (start = trv + 1;; --trv) {
-    if (trv <= path) {
+  for (start = trv + 1;; --trv)
+  {
+    if (trv <= path)
+    {
       break;
     }
-    if (*trv == '/') {
+    if (*trv == '/')
+    {
       int e;
 
       *trv = '\0';
       e = stat(path, &sbuf);
       *trv = '/';
-      if (e == -1) {
+      if (e == -1)
+      {
         return doopen == NULL && !domkdir;
       }
-      if (!S_ISDIR(sbuf.st_mode)) {
+      if (!S_ISDIR(sbuf.st_mode))
+      {
         errno = ENOTDIR;
         return doopen == NULL && !domkdir;
       }
@@ -173,36 +192,54 @@ GETTEMP(char *path, int *doopen, int domkdir)
     }
   }
 
-  for (;;) {
-    if (doopen) {
-      if ((*doopen = open(path, O_CREAT | O_EXCL | O_RDWR, 0600)) >= 0) {
+  for (;;)
+  {
+    if (doopen)
+    {
+      if ((*doopen = open(path, O_CREAT | O_EXCL | O_RDWR, 0600)) >= 0)
+      {
         return 1;
       }
-      if (errno != EEXIST) {
+      if (errno != EEXIST)
+      {
         return 0;
       }
-    } else if (domkdir) {
-      if (mkdir(path, 0700) >= 0) {
+    }
+    else if (domkdir)
+    {
+      if (mkdir(path, 0700) >= 0)
+      {
         return 1;
       }
-      if (errno != EEXIST) {
+      if (errno != EEXIST)
+      {
         return 0;
       }
-    } else if (lstat(path, &sbuf)) {
+    }
+    else if (lstat(path, &sbuf))
+    {
       return errno == ENOENT ? 1 : 0;
     }
 
     /* tricky little algorithm for backward compatibility */
-    for (trv = start;;) {
-      if (!*trv) {
+    for (trv = start;;)
+    {
+      if (!*trv)
+      {
         return 0;
       }
-      if (*trv == 'z') {
+      if (*trv == 'z')
+      {
         *trv++ = 'a';
-      } else {
-        if (isdigit((unsigned char)*trv)) {
+      }
+      else
+      {
+        if (isdigit((unsigned char)*trv))
+        {
           *trv = 'a';
-        } else {
+        }
+        else
+        {
           ++*trv;
         }
         break;

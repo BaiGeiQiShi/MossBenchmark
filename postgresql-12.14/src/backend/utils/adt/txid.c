@@ -126,7 +126,7 @@ TransactionIdInRecentPast(uint64 xid_with_epoch, TransactionId *extracted_xid)
 
   if (!TransactionIdIsValid(xid))
   {
-
+    return false;
   }
 
   /* For non-normal transaction IDs, we can ignore the epoch. */
@@ -175,18 +175,18 @@ convert_xid(TransactionId xid, const TxidEpoch *state)
   /* return special xid's as-is */
   if (!TransactionIdIsNormal(xid))
   {
-
+    return (txid)xid;
   }
 
   /* xid can be on either side when near wrap-around */
   epoch = (uint64)state->epoch;
   if (xid > state->last_xid && TransactionIdPrecedes(xid, state->last_xid))
   {
-
+    epoch--;
   }
   else if (xid < state->last_xid && TransactionIdFollows(xid, state->last_xid))
   {
-
+    epoch++;
   }
 
   return (epoch << 32) | xid;
@@ -227,23 +227,23 @@ sort_snapshot(TxidSnapshot *snap)
 
   if (snap->nxip > 1)
   {
-
+    qsort(snap->xip, snap->nxip, sizeof(txid), cmp_txid);
 
     /* remove duplicates */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    nxip = snap->nxip;
+    idx1 = idx2 = 0;
+    while (idx1 < nxip)
+    {
+      if (snap->xip[idx1] != last)
+      {
+        last = snap->xip[idx2++] = snap->xip[idx1];
+      }
+      else
+      {
+        snap->nxip--;
+      }
+      idx1++;
+    }
   }
 }
 
@@ -386,7 +386,7 @@ parse_snapshot(const char *str)
   xmin = str2txid(str, &endp);
   if (*endp != ':')
   {
-
+    goto bad_format;
   }
   str = endp + 1;
 
@@ -432,13 +432,13 @@ parse_snapshot(const char *str)
     }
     else if (*str != '\0')
     {
-
+      goto bad_format;
     }
   }
 
   return buf_finalize(buf);
 
-bad_format:;
+bad_format:
   ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "txid_snapshot", str_start)));
   return NULL; /* keep compiler quiet */
 }
@@ -522,7 +522,7 @@ txid_current_snapshot(PG_FUNCTION_ARGS)
   cur = GetActiveSnapshot();
   if (cur == NULL)
   {
-
+    elog(ERROR, "no active snapshot set");
   }
 
   load_xid_epoch(&state);
@@ -543,7 +543,7 @@ txid_current_snapshot(PG_FUNCTION_ARGS)
   snap->nxip = nxip;
   for (i = 0; i < nxip; i++)
   {
-
+    snap->xip[i] = convert_xid(cur->xip[i], &state);
   }
 
   /*
@@ -616,58 +616,58 @@ txid_snapshot_out(PG_FUNCTION_ARGS)
 Datum
 txid_snapshot_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  TxidSnapshot *snap;
+  txid last = 0;
+  int nxip;
+  int i;
+  txid xmin, xmax;
 
+  /* load and validate nxip */
+  nxip = pq_getmsgint(buf, 4);
+  if (nxip < 0 || nxip > TXID_SNAPSHOT_MAX_NXIP)
+  {
+    goto bad_format;
+  }
 
+  xmin = pq_getmsgint64(buf);
+  xmax = pq_getmsgint64(buf);
+  if (xmin == 0 || xmax == 0 || xmin > xmax || xmax > MAX_TXID)
+  {
+    goto bad_format;
+  }
 
+  snap = palloc(TXID_SNAPSHOT_SIZE(nxip));
+  snap->xmin = xmin;
+  snap->xmax = xmax;
 
+  for (i = 0; i < nxip; i++)
+  {
+    txid cur = pq_getmsgint64(buf);
 
+    if (cur < last || cur < xmin || cur >= xmax)
+    {
+      goto bad_format;
+    }
 
+    /* skip duplicate xips */
+    if (cur == last)
+    {
+      i--;
+      nxip--;
+      continue;
+    }
 
+    snap->xip[i] = cur;
+    last = cur;
+  }
+  snap->nxip = nxip;
+  SET_VARSIZE(snap, TXID_SNAPSHOT_SIZE(nxip));
+  PG_RETURN_POINTER(snap);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bad_format:
+  ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid external txid_snapshot data")));
+  PG_RETURN_POINTER(NULL); /* keep compiler quiet */
 }
 
 /*
@@ -680,19 +680,19 @@ txid_snapshot_recv(PG_FUNCTION_ARGS)
 Datum
 txid_snapshot_send(PG_FUNCTION_ARGS)
 {
+  TxidSnapshot *snap = (TxidSnapshot *)PG_GETARG_VARLENA_P(0);
+  StringInfoData buf;
+  uint32 i;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, snap->nxip);
+  pq_sendint64(&buf, snap->xmin);
+  pq_sendint64(&buf, snap->xmax);
+  for (i = 0; i < snap->nxip; i++)
+  {
+    pq_sendint64(&buf, snap->xip[i]);
+  }
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*

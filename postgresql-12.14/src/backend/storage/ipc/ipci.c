@@ -68,11 +68,11 @@ static bool addin_request_allowed = true;
 void
 RequestAddinShmemSpace(Size size)
 {
-
-
-
-
-
+  if (IsUnderPostmaster || !addin_request_allowed)
+  {
+    return; /* too late */
+  }
+  total_addin_request = add_size(total_addin_request, size);
 }
 
 /*
@@ -186,7 +186,7 @@ CreateSharedMemoryAndSemaphores(int port)
      * should only be reached in the EXEC_BACKEND case.
      */
 #ifndef EXEC_BACKEND
-
+    elog(PANIC, "should be attached to shared memory already");
 #endif
   }
 
@@ -289,6 +289,6 @@ CreateSharedMemoryAndSemaphores(int port)
    */
   if (shmem_startup_hook)
   {
-
+    shmem_startup_hook();
   }
 }

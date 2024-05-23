@@ -106,7 +106,7 @@ BuildEventTriggerCache(void)
      */
     if (CacheMemoryContext == NULL)
     {
-
+      CreateCacheMemoryContext();
     }
     EventTriggerCacheContext = AllocSetContextCreate(CacheMemoryContext, "EventTriggerCache", ALLOCSET_DEFAULT_SIZES);
     CacheRegisterSyscacheCallback(EVENTTRIGGEROID, InvalidateEventCacheCallback, (Datum)0);
@@ -182,7 +182,7 @@ BuildEventTriggerCache(void)
     }
     else
     {
-
+      continue;
     }
 
     /* Allocate new cache item. */
@@ -251,7 +251,7 @@ DecodeTextArrayToCString(Datum array, char ***cstringp)
 
   if (ARR_NDIM(arr) != 1 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
   {
-
+    elog(ERROR, "expected 1-D text array");
   }
   deconstruct_array(arr, TEXTOID, -1, false, 'i', &elems, NULL, &nelems);
 

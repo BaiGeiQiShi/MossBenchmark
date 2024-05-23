@@ -48,7 +48,8 @@ test_predtest(PG_FUNCTION_ARGS)
   int i;
 
   /* We use SPI to parse, plan, and execute the test query */
-  if (SPI_connect() != SPI_OK_CONNECT) {
+  if (SPI_connect() != SPI_OK_CONNECT)
+  {
     elog(ERROR, "SPI_connect failed");
   }
 
@@ -59,21 +60,25 @@ test_predtest(PG_FUNCTION_ARGS)
    * refutation holds.
    */
   spiplan = SPI_prepare(query_string, 0, NULL);
-  if (spiplan == NULL) {
+  if (spiplan == NULL)
+  {
     elog(ERROR, "SPI_prepare failed for \"%s\"", query_string);
   }
 
   spirc = SPI_execute_plan(spiplan, NULL, NULL, true, 0);
-  if (spirc != SPI_OK_SELECT) {
+  if (spirc != SPI_OK_SELECT)
+  {
     elog(ERROR, "failed to execute \"%s\"", query_string);
   }
   tupdesc = SPI_tuptable->tupdesc;
-  if (tupdesc->natts != 2 || TupleDescAttr(tupdesc, 0)->atttypid != BOOLOID || TupleDescAttr(tupdesc, 1)->atttypid != BOOLOID) {
+  if (tupdesc->natts != 2 || TupleDescAttr(tupdesc, 0)->atttypid != BOOLOID || TupleDescAttr(tupdesc, 1)->atttypid != BOOLOID)
+  {
     elog(ERROR, "query must yield two boolean columns");
   }
 
   s_i_holds = w_i_holds = s_r_holds = w_r_holds = true;
-  for (i = 0; i < SPI_processed; i++) {
+  for (i = 0; i < SPI_processed; i++)
+  {
     HeapTuple tup = SPI_tuptable->vals[i];
     Datum dat;
     bool isnull;
@@ -81,39 +86,53 @@ test_predtest(PG_FUNCTION_ARGS)
 
     /* Extract column values in a 3-way representation */
     dat = SPI_getbinval(tup, tupdesc, 1, &isnull);
-    if (isnull) {
+    if (isnull)
+    {
       c1 = 'n';
-    } else if (DatumGetBool(dat)) {
+    }
+    else if (DatumGetBool(dat))
+    {
       c1 = 't';
-    } else {
+    }
+    else
+    {
       c1 = 'f';
     }
 
     dat = SPI_getbinval(tup, tupdesc, 2, &isnull);
-    if (isnull) {
+    if (isnull)
+    {
       c2 = 'n';
-    } else if (DatumGetBool(dat)) {
+    }
+    else if (DatumGetBool(dat))
+    {
       c2 = 't';
-    } else {
+    }
+    else
+    {
       c2 = 'f';
     }
 
     /* Check for violations of various proof conditions */
 
     /* strong implication: truth of c2 implies truth of c1 */
-    if (c2 == 't' && c1 != 't') {
+    if (c2 == 't' && c1 != 't')
+    {
       s_i_holds = false;
     }
     /* weak implication: non-falsity of c2 implies non-falsity of c1 */
-    if (c2 != 'f' && c1 == 'f') {
+    if (c2 != 'f' && c1 == 'f')
+    {
       w_i_holds = false;
     }
     /* strong refutation: truth of c2 implies falsity of c1 */
-    if (c2 == 't' && c1 != 'f') {
+    if (c2 == 't' && c1 != 'f')
+    {
       s_r_holds = false;
     }
     /* weak refutation: truth of c2 implies non-truth of c1 */
-    if (c2 == 't' && c1 == 't') {
+    if (c2 == 't' && c1 == 't')
+    {
       w_r_holds = false;
     }
   }
@@ -124,11 +143,13 @@ test_predtest(PG_FUNCTION_ARGS)
    */
   cplan = SPI_plan_get_cached_plan(spiplan);
 
-  if (list_length(cplan->stmt_list) != 1) {
+  if (list_length(cplan->stmt_list) != 1)
+  {
     elog(ERROR, "failed to decipher query plan");
   }
   stmt = linitial_node(PlannedStmt, cplan->stmt_list);
-  if (stmt->commandType != CMD_SELECT) {
+  if (stmt->commandType != CMD_SELECT)
+  {
     elog(ERROR, "failed to decipher query plan");
   }
   plan = stmt->planTree;
@@ -164,23 +185,28 @@ test_predtest(PG_FUNCTION_ARGS)
   /*
    * Issue warning if any proof is demonstrably incorrect.
    */
-  if (strong_implied_by && !s_i_holds) {
+  if (strong_implied_by && !s_i_holds)
+  {
     elog(WARNING, "strong_implied_by result is incorrect");
   }
-  if (weak_implied_by && !w_i_holds) {
+  if (weak_implied_by && !w_i_holds)
+  {
     elog(WARNING, "weak_implied_by result is incorrect");
   }
-  if (strong_refuted_by && !s_r_holds) {
+  if (strong_refuted_by && !s_r_holds)
+  {
     elog(WARNING, "strong_refuted_by result is incorrect");
   }
-  if (weak_refuted_by && !w_r_holds) {
+  if (weak_refuted_by && !w_r_holds)
+  {
     elog(WARNING, "weak_refuted_by result is incorrect");
   }
 
   /*
    * Clean up and return a record of the results.
    */
-  if (SPI_finish() != SPI_OK_FINISH) {
+  if (SPI_finish() != SPI_OK_FINISH)
+  {
     elog(ERROR, "SPI_finish failed");
   }
 

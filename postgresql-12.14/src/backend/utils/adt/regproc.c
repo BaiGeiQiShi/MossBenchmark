@@ -48,8 +48,7 @@ static void
 parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *nargs, Oid *argtypes);
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -89,7 +88,7 @@ regprocin(PG_FUNCTION_ARGS)
    */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regproc values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -105,7 +104,7 @@ regprocin(PG_FUNCTION_ARGS)
   }
   else if (clist->next != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("more than one function named \"%s\"", pro_name_or_oid)));
   }
 
   result = clist->oid;
@@ -170,7 +169,7 @@ regprocout(PG_FUNCTION_ARGS)
      */
     if (IsBootstrapProcessingMode())
     {
-
+      result = pstrdup(proname);
     }
     else
     {
@@ -188,7 +187,7 @@ regprocout(PG_FUNCTION_ARGS)
       }
       else
       {
-
+        nspname = get_namespace_name(procform->pronamespace);
       }
 
       result = quote_qualified_identifier(nspname, proname);
@@ -199,33 +198,31 @@ regprocout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any pg_proc entry, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", proid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regprocrecv			- converts external binary
- *format to regproc
+ *		regprocrecv			- converts external binary format to regproc
  */
 Datum
 regprocrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regprocsend			- converts regproc to binary
- *format
+ *		regprocsend			- converts regproc to binary format
  */
 Datum
 regprocsend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -249,20 +246,20 @@ regprocedurein(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(pro_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (pro_name_or_oid[0] >= '0' && pro_name_or_oid[0] <= '9' && strspn(pro_name_or_oid, "0123456789") == strlen(pro_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(pro_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regprocedure values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -407,8 +404,8 @@ format_procedure_internal(Oid procedure_oid, bool force_qualify)
   else
   {
     /* If OID doesn't match any pg_proc entry, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", procedure_oid);
   }
 
   return result;
@@ -432,7 +429,7 @@ format_procedure_parts(Oid procedure_oid, List **objnames, List **objargs)
 
   if (!HeapTupleIsValid(proctup))
   {
-
+    elog(ERROR, "cache lookup failed for procedure with OID %u", procedure_oid);
   }
 
   procform = (Form_pg_proc)GETSTRUCT(proctup);
@@ -461,7 +458,7 @@ regprocedureout(PG_FUNCTION_ARGS)
 
   if (proid == InvalidOid)
   {
-
+    result = pstrdup("-");
   }
   else
   {
@@ -472,25 +469,23 @@ regprocedureout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		regprocedurerecv			- converts external
- *binary format to regprocedure
+ *		regprocedurerecv			- converts external binary format to regprocedure
  */
 Datum
 regprocedurerecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regproceduresend			- converts regprocedure
- *to binary format
+ *		regproceduresend			- converts regprocedure to binary format
  */
 Datum
 regproceduresend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -512,14 +507,14 @@ regoperin(PG_FUNCTION_ARGS)
   /* '0' ? */
   if (strcmp(opr_name_or_oid, "0") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (opr_name_or_oid[0] >= '0' && opr_name_or_oid[0] <= '9' && strspn(opr_name_or_oid, "0123456789") == strlen(opr_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(opr_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* Else it's a name, possibly schema-qualified */
@@ -527,7 +522,7 @@ regoperin(PG_FUNCTION_ARGS)
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regoper values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -543,7 +538,7 @@ regoperin(PG_FUNCTION_ARGS)
   }
   else if (clist->next != NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("more than one operator named %s", opr_name_or_oid)));
   }
 
   result = clist->oid;
@@ -590,8 +585,8 @@ regoperout(PG_FUNCTION_ARGS)
 
   if (oprid == InvalidOid)
   {
-
-
+    result = pstrdup("0");
+    PG_RETURN_CSTRING(result);
   }
 
   opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(oprid));
@@ -608,7 +603,7 @@ regoperout(PG_FUNCTION_ARGS)
      */
     if (IsBootstrapProcessingMode())
     {
-
+      result = pstrdup(oprname);
     }
     else
     {
@@ -627,10 +622,10 @@ regoperout(PG_FUNCTION_ARGS)
       {
         const char *nspname;
 
-
-
-
-
+        nspname = get_namespace_name(operform->oprnamespace);
+        nspname = quote_identifier(nspname);
+        result = (char *)palloc(strlen(nspname) + strlen(oprname) + 2);
+        sprintf(result, "%s.%s", nspname, oprname);
       }
     }
 
@@ -641,33 +636,31 @@ regoperout(PG_FUNCTION_ARGS)
     /*
      * If OID doesn't match any pg_operator entry, return it numerically
      */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", oprid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regoperrecv			- converts external binary
- *format to regoper
+ *		regoperrecv			- converts external binary format to regoper
  */
 Datum
 regoperrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regopersend			- converts regoper to binary
- *format
+ *		regopersend			- converts regoper to binary format
  */
 Datum
 regopersend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -690,20 +683,20 @@ regoperatorin(PG_FUNCTION_ARGS)
   /* '0' ? */
   if (strcmp(opr_name_or_oid, "0") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (opr_name_or_oid[0] >= '0' && opr_name_or_oid[0] <= '9' && strspn(opr_name_or_oid, "0123456789") == strlen(opr_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(opr_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regoperator values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -715,11 +708,11 @@ regoperatorin(PG_FUNCTION_ARGS)
   parseNameAndArgTypes(opr_name_or_oid, true, &names, &nargs, argtypes);
   if (nargs == 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("missing argument"), errhint("Use NONE to denote the missing argument of a unary operator.")));
   }
   if (nargs != 2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg("too many arguments"), errhint("Provide two argument types for operator.")));
   }
 
   result = OpernameGetOprid(names, argtypes[0], argtypes[1]);
@@ -754,11 +747,11 @@ to_regoperator(PG_FUNCTION_ARGS)
   parseNameAndArgTypes(opr_name_or_oid, true, &names, &nargs, argtypes);
   if (nargs == 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("missing argument"), errhint("Use NONE to denote the missing argument of a unary operator.")));
   }
   if (nargs != 2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg("too many arguments"), errhint("Provide two argument types for operator.")));
   }
 
   result = OpernameGetOprid(names, argtypes[0], argtypes[1]);
@@ -815,7 +808,7 @@ format_operator_internal(Oid operator_oid, bool force_qualify)
     }
     else
     {
-
+      appendStringInfoString(&buf, "NONE,");
     }
 
     if (operform->oprright)
@@ -824,7 +817,7 @@ format_operator_internal(Oid operator_oid, bool force_qualify)
     }
     else
     {
-
+      appendStringInfoString(&buf, "NONE)");
     }
 
     result = buf.data;
@@ -836,8 +829,8 @@ format_operator_internal(Oid operator_oid, bool force_qualify)
     /*
      * If OID doesn't match any pg_operator entry, return it numerically
      */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", operator_oid);
   }
 
   return result;
@@ -864,7 +857,7 @@ format_operator_parts(Oid operator_oid, List **objnames, List **objargs)
   opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operator_oid));
   if (!HeapTupleIsValid(opertup))
   {
-
+    elog(ERROR, "cache lookup failed for operator with OID %u", operator_oid);
   }
 
   oprForm = (Form_pg_operator)GETSTRUCT(opertup);
@@ -893,7 +886,7 @@ regoperatorout(PG_FUNCTION_ARGS)
 
   if (oprid == InvalidOid)
   {
-
+    result = pstrdup("0");
   }
   else
   {
@@ -904,25 +897,23 @@ regoperatorout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		regoperatorrecv			- converts external binary
- *format to regoperator
+ *		regoperatorrecv			- converts external binary format to regoperator
  */
 Datum
 regoperatorrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regoperatorsend			- converts regoperator to binary
- *format
+ *		regoperatorsend			- converts regoperator to binary format
  */
 Datum
 regoperatorsend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -943,7 +934,7 @@ regclassin(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(class_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
@@ -958,7 +949,7 @@ regclassin(PG_FUNCTION_ARGS)
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regclass values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -1034,7 +1025,7 @@ regclassout(PG_FUNCTION_ARGS)
      */
     if (IsBootstrapProcessingMode())
     {
-
+      result = pstrdup(classname);
     }
     else
     {
@@ -1060,33 +1051,31 @@ regclassout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any pg_class entry, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", classid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regclassrecv			- converts external binary
- *format to regclass
+ *		regclassrecv			- converts external binary format to regclass
  */
 Datum
 regclassrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regclasssend			- converts regclass to binary
- *format
+ *		regclasssend			- converts regclass to binary format
  */
 Datum
 regclasssend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -1113,7 +1102,7 @@ regtypein(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(typ_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
@@ -1128,7 +1117,7 @@ regtypein(PG_FUNCTION_ARGS)
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regtype values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -1179,8 +1168,8 @@ regtypeout(PG_FUNCTION_ARGS)
 
   if (typid == InvalidOid)
   {
-
-
+    result = pstrdup("-");
+    PG_RETURN_CSTRING(result);
   }
 
   typetup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
@@ -1198,7 +1187,7 @@ regtypeout(PG_FUNCTION_ARGS)
     {
       char *typname = NameStr(typeform->typname);
 
-
+      result = pstrdup(typname);
     }
     else
     {
@@ -1210,33 +1199,31 @@ regtypeout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any pg_type entry, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", typid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regtyperecv			- converts external binary
- *format to regtype
+ *		regtyperecv			- converts external binary format to regtype
  */
 Datum
 regtyperecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regtypesend			- converts regtype to binary
- *format
+ *		regtypesend			- converts regtype to binary format
  */
 Datum
 regtypesend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -1257,20 +1244,20 @@ regconfigin(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(cfg_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (cfg_name_or_oid[0] >= '0' && cfg_name_or_oid[0] <= '9' && strspn(cfg_name_or_oid, "0123456789") == strlen(cfg_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(cfg_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regconfig values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -1290,75 +1277,72 @@ regconfigin(PG_FUNCTION_ARGS)
 Datum
 regconfigout(PG_FUNCTION_ARGS)
 {
+  Oid cfgid = PG_GETARG_OID(0);
+  char *result;
+  HeapTuple cfgtup;
 
+  if (cfgid == InvalidOid)
+  {
+    result = pstrdup("-");
+    PG_RETURN_CSTRING(result);
+  }
 
+  cfgtup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgid));
 
+  if (HeapTupleIsValid(cfgtup))
+  {
+    Form_pg_ts_config cfgform = (Form_pg_ts_config)GETSTRUCT(cfgtup);
+    char *cfgname = NameStr(cfgform->cfgname);
+    char *nspname;
 
+    /*
+     * Would this config be found by regconfigin? If not, qualify it.
+     */
+    if (TSConfigIsVisible(cfgid))
+    {
+      nspname = NULL;
+    }
+    else
+    {
+      nspname = get_namespace_name(cfgform->cfgnamespace);
+    }
 
+    result = quote_qualified_identifier(nspname, cfgname);
 
+    ReleaseSysCache(cfgtup);
+  }
+  else
+  {
+    /* If OID doesn't match any pg_ts_config row, return it numerically */
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", cfgid);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regconfigrecv			- converts external binary
- *format to regconfig
+ *		regconfigrecv			- converts external binary format to regconfig
  */
 Datum
 regconfigrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regconfigsend			- converts regconfig to binary
- *format
+ *		regconfigsend			- converts regconfig to binary format
  */
 Datum
 regconfigsend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
- * regdictionaryin		- converts "tsdictionaryname" to tsdictionary
- * OID
+ * regdictionaryin		- converts "tsdictionaryname" to tsdictionary OID
  *
  * We also accept a numeric OID, for symmetry with the output routine.
  *
@@ -1375,20 +1359,20 @@ regdictionaryin(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(dict_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (dict_name_or_oid[0] >= '0' && dict_name_or_oid[0] <= '9' && strspn(dict_name_or_oid, "0123456789") == strlen(dict_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(dict_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regdictionary values must be OIDs in bootstrap mode");
   }
 
   /*
@@ -1403,8 +1387,7 @@ regdictionaryin(PG_FUNCTION_ARGS)
 }
 
 /*
- * regdictionaryout		- converts tsdictionary OID to
- * "tsdictionaryname"
+ * regdictionaryout		- converts tsdictionary OID to "tsdictionaryname"
  */
 Datum
 regdictionaryout(PG_FUNCTION_ARGS)
@@ -1415,8 +1398,8 @@ regdictionaryout(PG_FUNCTION_ARGS)
 
   if (dictid == InvalidOid)
   {
-
-
+    result = pstrdup("-");
+    PG_RETURN_CSTRING(result);
   }
 
   dicttup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictid));
@@ -1437,7 +1420,7 @@ regdictionaryout(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      nspname = get_namespace_name(dictform->dictnamespace);
     }
 
     result = quote_qualified_identifier(nspname, dictname);
@@ -1447,33 +1430,31 @@ regdictionaryout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any pg_ts_dict row, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", dictid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regdictionaryrecv	- converts external binary format to
- *regdictionary
+ *		regdictionaryrecv	- converts external binary format to regdictionary
  */
 Datum
 regdictionaryrecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regdictionarysend	- converts regdictionary to binary
- *format
+ *		regdictionarysend	- converts regdictionary to binary format
  */
 Datum
 regdictionarysend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -1494,20 +1475,20 @@ regrolein(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(role_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (role_name_or_oid[0] >= '0' && role_name_or_oid[0] <= '9' && strspn(role_name_or_oid, "0123456789") == strlen(role_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(role_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regrole values must be OIDs in bootstrap mode");
   }
 
   /* Normal case: see if the name matches any pg_authid entry. */
@@ -1565,8 +1546,8 @@ regroleout(PG_FUNCTION_ARGS)
 
   if (roleoid == InvalidOid)
   {
-
-
+    result = pstrdup("-");
+    PG_RETURN_CSTRING(result);
   }
 
   result = GetUserNameFromId(roleoid, true);
@@ -1579,8 +1560,8 @@ regroleout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any role, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", roleoid);
   }
 
   PG_RETURN_CSTRING(result);
@@ -1592,8 +1573,8 @@ regroleout(PG_FUNCTION_ARGS)
 Datum
 regrolerecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
@@ -1602,8 +1583,8 @@ regrolerecv(PG_FUNCTION_ARGS)
 Datum
 regrolesend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -1624,20 +1605,20 @@ regnamespacein(PG_FUNCTION_ARGS)
   /* '-' ? */
   if (strcmp(nsp_name_or_oid, "-") == 0)
   {
-
+    PG_RETURN_OID(InvalidOid);
   }
 
   /* Numeric OID? */
   if (nsp_name_or_oid[0] >= '0' && nsp_name_or_oid[0] <= '9' && strspn(nsp_name_or_oid, "0123456789") == strlen(nsp_name_or_oid))
   {
-
-
+    result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(nsp_name_or_oid)));
+    PG_RETURN_OID(result);
   }
 
   /* The rest of this wouldn't work in bootstrap mode */
   if (IsBootstrapProcessingMode())
   {
-
+    elog(ERROR, "regnamespace values must be OIDs in bootstrap mode");
   }
 
   /* Normal case: see if the name matches any pg_namespace entry. */
@@ -1695,8 +1676,8 @@ regnamespaceout(PG_FUNCTION_ARGS)
 
   if (nspid == InvalidOid)
   {
-
-
+    result = pstrdup("-");
+    PG_RETURN_CSTRING(result);
   }
 
   result = get_namespace_name(nspid);
@@ -1709,33 +1690,31 @@ regnamespaceout(PG_FUNCTION_ARGS)
   else
   {
     /* If OID doesn't match any namespace, return it numerically */
-
-
+    result = (char *)palloc(NAMEDATALEN);
+    snprintf(result, NAMEDATALEN, "%u", nspid);
   }
 
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		regnamespacerecv	- converts external binary format to
- *regnamespace
+ *		regnamespacerecv	- converts external binary format to regnamespace
  */
 Datum
 regnamespacerecv(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidrecv, so share code */
+  return oidrecv(fcinfo);
 }
 
 /*
- *		regnamespacesend		- converts regnamespace to
- *binary format
+ *		regnamespacesend		- converts regnamespace to binary format
  */
 Datum
 regnamespacesend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as oidsend, so share code */
+  return oidsend(fcinfo);
 }
 
 /*
@@ -1776,12 +1755,12 @@ stringToQualifiedNameList(const char *string)
 
   if (!SplitIdentifierString(rawname, '.', &namelist))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid name syntax")));
   }
 
   if (namelist == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid name syntax")));
   }
 
   foreach (l, namelist)
@@ -1798,8 +1777,7 @@ stringToQualifiedNameList(const char *string)
 }
 
 /*****************************************************************************
- *	 SUPPORT ROUTINES
- **
+ *	 SUPPORT ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -1834,7 +1812,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
   {
     if (*ptr == '"')
     {
-
+      in_quote = !in_quote;
     }
     else if (*ptr == '(' && !in_quote)
     {
@@ -1843,7 +1821,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
   }
   if (*ptr == '\0')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected a left parenthesis")));
   }
 
   /* Separate the name and parse it into a list */
@@ -1861,7 +1839,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
   }
   if (*ptr2 != ')')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected a right parenthesis")));
   }
 
   *ptr2 = '\0';
@@ -1875,14 +1853,14 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
     /* allow leading whitespace */
     while (scanner_isspace(*ptr))
     {
-
+      ptr++;
     }
     if (*ptr == '\0')
     {
       /* End of string.  Okay unless we had a comma before. */
       if (had_comma)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected a type name")));
       }
       break;
     }
@@ -1895,7 +1873,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
     {
       if (*ptr == '"')
       {
-
+        in_quote = !in_quote;
       }
       else if (*ptr == ',' && !in_quote && paren_count == 0)
       {
@@ -1905,20 +1883,20 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
       {
         switch (*ptr)
         {
-        case '(':;
-        case '[':;
-
-
-        case ')':;
-        case ']':;
-
-
+        case '(':
+        case '[':
+          paren_count++;
+          break;
+        case ')':
+        case ']':
+          paren_count--;
+          break;
         }
       }
     }
     if (in_quote || paren_count != 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("improper type name")));
     }
 
     ptr2 = ptr;
@@ -1939,14 +1917,14 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
       {
         break;
       }
-
+      *ptr2 = '\0';
     }
 
     if (allowNone && pg_strcasecmp(typename, "none") == 0)
     {
       /* Special case for NONE */
-
-
+      typeid = InvalidOid;
+      typmod = -1;
     }
     else
     {
@@ -1955,7 +1933,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
     }
     if (*nargs >= FUNC_MAX_ARGS)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg("too many arguments")));
     }
 
     argtypes[*nargs] = typeid;

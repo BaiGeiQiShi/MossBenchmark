@@ -73,11 +73,14 @@ euc_kr2mic(const unsigned char *euc, unsigned char *p, int len)
   int c1;
   int l;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *euc;
-    if (IS_HIGHBIT_SET(c1)) {
+    if (IS_HIGHBIT_SET(c1))
+    {
       l = pg_encoding_verifymb(PG_EUC_KR, (const char *)euc, len);
-      if (l != 2) {
+      if (l != 2)
+      {
         report_invalid_encoding(PG_EUC_KR, (const char *)euc, len);
       }
       *p++ = LC_KS5601;
@@ -85,8 +88,11 @@ euc_kr2mic(const unsigned char *euc, unsigned char *p, int len)
       *p++ = euc[1];
       euc += 2;
       len -= 2;
-    } else { /* should be ASCII */
-      if (c1 == 0) {
+    }
+    else
+    { /* should be ASCII */
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_EUC_KR, (const char *)euc, len);
       }
       *p++ = c1;
@@ -106,11 +112,14 @@ mic2euc_kr(const unsigned char *mic, unsigned char *p, int len)
   int c1;
   int l;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *mic;
-    if (!IS_HIGHBIT_SET(c1)) {
+    if (!IS_HIGHBIT_SET(c1))
+    {
       /* ASCII */
-      if (c1 == 0) {
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_MULE_INTERNAL, (const char *)mic, len);
       }
       *p++ = c1;
@@ -119,13 +128,17 @@ mic2euc_kr(const unsigned char *mic, unsigned char *p, int len)
       continue;
     }
     l = pg_encoding_verifymb(PG_MULE_INTERNAL, (const char *)mic, len);
-    if (l < 0) {
+    if (l < 0)
+    {
       report_invalid_encoding(PG_MULE_INTERNAL, (const char *)mic, len);
     }
-    if (c1 == LC_KS5601) {
+    if (c1 == LC_KS5601)
+    {
       *p++ = mic[1];
       *p++ = mic[2];
-    } else {
+    }
+    else
+    {
       report_untranslatable_char(PG_MULE_INTERNAL, PG_EUC_KR, (const char *)mic, len);
     }
     mic += l;

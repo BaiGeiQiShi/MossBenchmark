@@ -69,7 +69,7 @@ initHyperLogLog(hyperLogLogState *cState, uint8 bwidth)
 
   if (bwidth < 4 || bwidth > 16)
   {
-
+    elog(ERROR, "bit width must be between 4 and 16 inclusive");
   }
 
   cState->registerWidth = bwidth;
@@ -90,16 +90,16 @@ initHyperLogLog(hyperLogLogState *cState, uint8 bwidth)
    */
   switch (cState->nRegisters)
   {
-  case 16:;
-
-
-  case 32:;
-
-
-  case 64:;
-
-
-  default:;;
+  case 16:
+    alpha = 0.673;
+    break;
+  case 32:
+    alpha = 0.697;
+    break;
+  case 64:
+    alpha = 0.709;
+    break;
+  default:
     alpha = 0.7213 / (1.0 + 1.079 / cState->nRegisters);
   }
 
@@ -129,20 +129,20 @@ initHyperLogLog(hyperLogLogState *cState, uint8 bwidth)
 void
 initHyperLogLogError(hyperLogLogState *cState, double error)
 {
+  uint8 bwidth = 4;
 
+  while (bwidth < 16)
+  {
+    double m = (Size)1 << bwidth;
 
+    if (1.04 / sqrt(m) < error)
+    {
+      break;
+    }
+    bwidth++;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  initHyperLogLog(cState, bwidth);
 }
 
 /*
@@ -154,8 +154,8 @@ initHyperLogLogError(hyperLogLogState *cState, double error)
 void
 freeHyperLogLog(hyperLogLogState *cState)
 {
-
-
+  Assert(cState->hashesArr != NULL);
+  pfree(cState->hashesArr);
 }
 
 /*
@@ -221,7 +221,7 @@ estimateHyperLogLog(hyperLogLogState *cState)
   else if (result > (1.0 / 30.0) * POW_2_32)
   {
     /* Large range correction */
-
+    result = NEG_POW_2_32 * log(1.0 - (result / POW_2_32));
   }
 
   return result;

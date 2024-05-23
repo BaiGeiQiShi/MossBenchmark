@@ -64,14 +64,20 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
 
   PyErr_Fetch(&exc, &val, &tb);
 
-  if (exc != NULL) {
+  if (exc != NULL)
+  {
     PyErr_NormalizeException(&exc, &val, &tb);
 
-    if (PyErr_GivenExceptionMatches(val, PLy_exc_spi_error)) {
+    if (PyErr_GivenExceptionMatches(val, PLy_exc_spi_error))
+    {
       PLy_get_spi_error_data(val, &sqlerrcode, &detail, &hint, &query, &position, &schema_name, &table_name, &column_name, &datatype_name, &constraint_name);
-    } else if (PyErr_GivenExceptionMatches(val, PLy_exc_error)) {
+    }
+    else if (PyErr_GivenExceptionMatches(val, PLy_exc_error))
+    {
       PLy_get_error_data(val, &sqlerrcode, &detail, &hint, &schema_name, &table_name, &column_name, &datatype_name, &constraint_name);
-    } else if (PyErr_GivenExceptionMatches(val, PLy_exc_fatal)) {
+    }
+    else if (PyErr_GivenExceptionMatches(val, PLy_exc_fatal))
+    {
       elevel = FATAL;
     }
   }
@@ -79,9 +85,11 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
   /* this releases our refcount on tb! */
   PLy_traceback(exc, val, tb, &xmsg, &tbmsg, &tb_depth);
 
-  if (fmt) {
+  if (fmt)
+  {
     initStringInfo(&emsg);
-    for (;;) {
+    for (;;)
+    {
       va_list ap;
       int needed;
 
@@ -89,7 +97,8 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
       va_start(ap, fmt);
       needed = appendStringInfoVA(&emsg, dgettext(TEXTDOMAIN, fmt), ap);
       va_end(ap);
-      if (needed == 0) {
+      if (needed == 0)
+      {
         break;
       }
       enlargeStringInfo(&emsg, needed);
@@ -100,11 +109,15 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
     Assert(detail == NULL);
 
     /* If there's an exception message, it goes in the detail. */
-    if (xmsg) {
+    if (xmsg)
+    {
       detail = xmsg;
     }
-  } else {
-    if (xmsg) {
+  }
+  else
+  {
+    if (xmsg)
+    {
       primary = xmsg;
     }
   }
@@ -115,13 +128,16 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
   }
   PG_CATCH();
   {
-    if (fmt) {
+    if (fmt)
+    {
       pfree(emsg.data);
     }
-    if (xmsg) {
+    if (xmsg)
+    {
       pfree(xmsg);
     }
-    if (tbmsg) {
+    if (tbmsg)
+    {
       pfree(tbmsg);
     }
     Py_XDECREF(exc);
@@ -131,13 +147,16 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
   }
   PG_END_TRY();
 
-  if (fmt) {
+  if (fmt)
+  {
     pfree(emsg.data);
   }
-  if (xmsg) {
+  if (xmsg)
+  {
     pfree(xmsg);
   }
-  if (tbmsg) {
+  if (tbmsg)
+  {
     pfree(tbmsg);
   }
   Py_XDECREF(exc);
@@ -151,7 +170,8 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
  * tbmsg (both as palloc'd strings) and the traceback depth in
  * tb_depth.
  *
- * We release refcounts on all the Python objects in the traceback stack,* but not on e or v.
+ * We release refcounts on all the Python objects in the traceback stack,
+ * but not on e or v.
  */
 static void
 PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg, int *tb_depth)
@@ -168,7 +188,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
   /*
    * if no exception, return nulls
    */
-  if (e == NULL) {
+  if (e == NULL)
+  {
     *xmsg = NULL;
     *tbmsg = NULL;
     *tb_depth = 0;
@@ -182,33 +203,45 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
 
   e_type_o = PyObject_GetAttrString(e, "__name__");
   e_module_o = PyObject_GetAttrString(e, "__module__");
-  if (e_type_o) {
+  if (e_type_o)
+  {
     e_type_s = PyString_AsString(e_type_o);
   }
-  if (e_type_s) {
+  if (e_type_s)
+  {
     e_module_s = PyString_AsString(e_module_o);
   }
 
-  if (v && ((vob = PyObject_Str(v)) != NULL)) {
+  if (v && ((vob = PyObject_Str(v)) != NULL))
+  {
     vstr = PyString_AsString(vob);
-  } else {
+  }
+  else
+  {
     vstr = "unknown";
   }
 
   initStringInfo(&xstr);
-  if (!e_type_s || !e_module_s) {
-    if (PyString_Check(e)) {
+  if (!e_type_s || !e_module_s)
+  {
+    if (PyString_Check(e))
+    {
       /* deprecated string exceptions */
       appendStringInfoString(&xstr, PyString_AsString(e));
-    } else {
+    }
+    else
+    {
       /* shouldn't happen */
       appendStringInfoString(&xstr, "unrecognized exception");
     }
   }
   /* mimics behavior of traceback.format_exception_only */
-  else if (strcmp(e_module_s, "builtins") == 0 || strcmp(e_module_s, "__main__") == 0 || strcmp(e_module_s, "exceptions") == 0) {
+  else if (strcmp(e_module_s, "builtins") == 0 || strcmp(e_module_s, "__main__") == 0 || strcmp(e_module_s, "exceptions") == 0)
+  {
     appendStringInfo(&xstr, "%s", e_type_s);
-  } else {
+  }
+  else
+  {
     appendStringInfo(&xstr, "%s.%s", e_module_s, e_type_s);
   }
   appendStringInfo(&xstr, ": %s", vstr);
@@ -223,7 +256,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
   initStringInfo(&tbstr);
   /* Mimic Python traceback reporting as close as possible. */
   appendStringInfoString(&tbstr, "Traceback (most recent call last):");
-  while (tb != NULL && tb != Py_None) {
+  while (tb != NULL && tb != Py_None)
+  {
     PyObject *volatile tb_prev = NULL;
     PyObject *volatile frame = NULL;
     PyObject *volatile code = NULL;
@@ -240,27 +274,32 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
       PyErr_Clear();
 
       lineno = PyObject_GetAttrString(tb, "tb_lineno");
-      if (lineno == NULL) {
+      if (lineno == NULL)
+      {
         elog(ERROR, "could not get line number from Python traceback");
       }
 
       frame = PyObject_GetAttrString(tb, "tb_frame");
-      if (frame == NULL) {
+      if (frame == NULL)
+      {
         elog(ERROR, "could not get frame from Python traceback");
       }
 
       code = PyObject_GetAttrString(frame, "f_code");
-      if (code == NULL) {
+      if (code == NULL)
+      {
         elog(ERROR, "could not get code object from Python frame");
       }
 
       name = PyObject_GetAttrString(code, "co_name");
-      if (name == NULL) {
+      if (name == NULL)
+      {
         elog(ERROR, "could not get function name from Python code object");
       }
 
       filename = PyObject_GetAttrString(code, "co_filename");
-      if (filename == NULL) {
+      if (filename == NULL)
+      {
         elog(ERROR, "could not get file name from Python code object");
       }
     }
@@ -276,7 +315,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     PG_END_TRY();
 
     /* The first frame always points at <module>, skip it. */
-    if (*tb_depth > 0) {
+    if (*tb_depth > 0)
+    {
       PLyExecutionContext *exec_ctx = PLy_current_execution_context();
       char *proname;
       char *fname;
@@ -288,9 +328,12 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
        * The second frame points at the internal function, but to mimic
        * Python error reporting we want to say <module>.
        */
-      if (*tb_depth == 1) {
+      if (*tb_depth == 1)
+      {
         fname = "<module>";
-      } else {
+      }
+      else
+      {
         fname = PyString_AsString(name);
       }
 
@@ -298,9 +341,12 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
       plain_filename = PyString_AsString(filename);
       plain_lineno = PyInt_AsLong(lineno);
 
-      if (proname == NULL) {
+      if (proname == NULL)
+      {
         appendStringInfo(&tbstr, "\n  PL/Python anonymous code block, line %ld, in %s", plain_lineno - 1, fname);
-      } else {
+      }
+      else
+      {
         appendStringInfo(&tbstr, "\n  PL/Python function \"%s\", line %ld, in %s", proname, plain_lineno - 1, fname);
       }
 
@@ -308,7 +354,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
        * function code object was compiled with "<string>" as the
        * filename
        */
-      if (exec_ctx->curr_proc && plain_filename != NULL && strcmp(plain_filename, "<string>") == 0) {
+      if (exec_ctx->curr_proc && plain_filename != NULL && strcmp(plain_filename, "<string>") == 0)
+      {
         /*
          * If we know the current procedure, append the exact line
          * from the source, again mimicking Python's traceback.py
@@ -319,7 +366,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
          * the source of imported modules.
          */
         line = get_source_line(exec_ctx->curr_proc->src, plain_lineno);
-        if (line) {
+        if (line)
+        {
           appendStringInfo(&tbstr, "\n    %s", line);
           pfree(line);
         }
@@ -337,7 +385,8 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     tb = PyObject_GetAttrString(tb, "tb_next");
     Assert(tb_prev != Py_None);
     Py_DECREF(tb_prev);
-    if (tb == NULL) {
+    if (tb == NULL)
+    {
       elog(ERROR, "could not traverse Python traceback");
     }
     (*tb_depth)++;
@@ -361,12 +410,14 @@ PLy_get_sqlerrcode(PyObject *exc, int *sqlerrcode)
   char *buffer;
 
   sqlstate = PyObject_GetAttrString(exc, "sqlstate");
-  if (sqlstate == NULL) {
+  if (sqlstate == NULL)
+  {
     return;
   }
 
   buffer = PyString_AsString(sqlstate);
-  if (strlen(buffer) == 5 && strspn(buffer, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") == 5) {
+  if (strlen(buffer) == 5 && strspn(buffer, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") == 5)
+  {
     *sqlerrcode = MAKE_SQLSTATE(buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]);
   }
 
@@ -383,9 +434,12 @@ PLy_get_spi_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hin
 
   spidata = PyObject_GetAttrString(exc, "spidata");
 
-  if (spidata != NULL) {
+  if (spidata != NULL)
+  {
     PyArg_ParseTuple(spidata, "izzzizzzzz", sqlerrcode, detail, hint, query, position, schema_name, table_name, column_name, datatype_name, constraint_name);
-  } else {
+  }
+  else
+  {
     /*
      * If there's no spidata, at least set the sqlerrcode. This can happen
      * if someone explicitly raises a SPI exception from Python code.
@@ -426,28 +480,34 @@ get_source_line(const char *src, int lineno)
   int current = 0;
 
   /* sanity check */
-  if (lineno <= 0) {
+  if (lineno <= 0)
+  {
     return NULL;
   }
 
-  while (current < lineno) {
+  while (current < lineno)
+  {
     s = next;
     next = strchr(s + 1, '\n');
     current++;
-    if (next == NULL) {
+    if (next == NULL)
+    {
       break;
     }
   }
 
-  if (current != lineno) {
+  if (current != lineno)
+  {
     return NULL;
   }
 
-  while (*s && isspace((unsigned char)*s)) {
+  while (*s && isspace((unsigned char)*s))
+  {
     s++;
   }
 
-  if (next == NULL) {
+  if (next == NULL)
+  {
     return pstrdup(s);
   }
 
@@ -456,7 +516,8 @@ get_source_line(const char *src, int lineno)
    * never happen if Python reported a frame created on that line, but check
    * anyway.
    */
-  if (next < s) {
+  if (next < s)
+  {
     return NULL;
   }
 
@@ -499,49 +560,60 @@ PLy_exception_set_with_details(PyObject *excclass, ErrorData *edata)
   PyObject *error = NULL;
 
   args = Py_BuildValue("(s)", edata->message);
-  if (!args) {
+  if (!args)
+  {
     goto failure;
   }
 
   /* create a new exception with the error message as the parameter */
   error = PyObject_CallObject(excclass, args);
-  if (!error) {
+  if (!error)
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "sqlstate", unpack_sql_state(edata->sqlerrcode))) {
+  if (!set_string_attr(error, "sqlstate", unpack_sql_state(edata->sqlerrcode)))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "detail", edata->detail)) {
+  if (!set_string_attr(error, "detail", edata->detail))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "hint", edata->hint)) {
+  if (!set_string_attr(error, "hint", edata->hint))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "query", edata->internalquery)) {
+  if (!set_string_attr(error, "query", edata->internalquery))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "schema_name", edata->schema_name)) {
+  if (!set_string_attr(error, "schema_name", edata->schema_name))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "table_name", edata->table_name)) {
+  if (!set_string_attr(error, "table_name", edata->table_name))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "column_name", edata->column_name)) {
+  if (!set_string_attr(error, "column_name", edata->column_name))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "datatype_name", edata->datatype_name)) {
+  if (!set_string_attr(error, "datatype_name", edata->datatype_name))
+  {
     goto failure;
   }
 
-  if (!set_string_attr(error, "constraint_name", edata->constraint_name)) {
+  if (!set_string_attr(error, "constraint_name", edata->constraint_name))
+  {
     goto failure;
   }
 
@@ -566,7 +638,8 @@ get_string_attr(PyObject *obj, char *attrname, char **str)
   PyObject *val;
 
   val = PyObject_GetAttrString(obj, attrname);
-  if (val != NULL && val != Py_None) {
+  if (val != NULL && val != Py_None)
+  {
     *str = pstrdup(PyString_AsString(val));
   }
   Py_XDECREF(val);
@@ -581,12 +654,16 @@ set_string_attr(PyObject *obj, char *attrname, char *str)
   int result;
   PyObject *val;
 
-  if (str != NULL) {
+  if (str != NULL)
+  {
     val = PyString_FromString(str);
-    if (!val) {
+    if (!val)
+    {
       return false;
     }
-  } else {
+  }
+  else
+  {
     val = Py_None;
     Py_INCREF(Py_None);
   }

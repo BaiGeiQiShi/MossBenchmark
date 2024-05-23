@@ -118,7 +118,7 @@ SubTransGetParent(TransactionId xid)
   /* Bootstrap and frozen XIDs have no parent */
   if (!TransactionIdIsNormal(xid))
   {
-
+    return InvalidTransactionId;
   }
 
   /* lock is acquired by SimpleLruReadPage_ReadOnly */
@@ -159,7 +159,7 @@ SubTransGetTopmostTransaction(TransactionId xid)
     previousXid = parentXid;
     if (TransactionIdPrecedes(parentXid, TransactionXmin))
     {
-
+      break;
     }
     parentXid = SubTransGetParent(parentXid);
 
@@ -170,7 +170,7 @@ SubTransGetTopmostTransaction(TransactionId xid)
      */
     if (!TransactionIdPrecedes(parentXid, previousXid))
     {
-
+      elog(ERROR, "pg_subtrans contains invalid entry: xid %u points to parent xid %u", previousXid, parentXid);
     }
   }
 
@@ -267,13 +267,13 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 
   while (startPage != endPage)
   {
-
-
+    (void)ZeroSUBTRANSPage(startPage);
+    startPage++;
     /* must account for wraparound */
-
-
-
-
+    if (startPage > TransactionIdToPage(MaxTransactionId))
+    {
+      startPage = 0;
+    }
   }
   (void)ZeroSUBTRANSPage(startPage);
 

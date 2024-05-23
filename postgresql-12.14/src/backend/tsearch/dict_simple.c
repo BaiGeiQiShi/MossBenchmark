@@ -38,28 +38,28 @@ dsimple_init(PG_FUNCTION_ARGS)
   {
     DefElem *defel = (DefElem *)lfirst(l);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (strcmp(defel->defname, "stopwords") == 0)
+    {
+      if (stoploaded)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple StopWords parameters")));
+      }
+      readstoplist(defGetString(defel), &d->stoplist, lowerstr);
+      stoploaded = true;
+    }
+    else if (strcmp(defel->defname, "accept") == 0)
+    {
+      if (acceptloaded)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple Accept parameters")));
+      }
+      d->accept = defGetBoolean(defel);
+      acceptloaded = true;
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized simple dictionary parameter: \"%s\"", defel->defname)));
+    }
   }
 
   PG_RETURN_POINTER(d);
@@ -79,9 +79,9 @@ dsimple_lexize(PG_FUNCTION_ARGS)
   if (*txt == '\0' || searchstoplist(&(d->stoplist), txt))
   {
     /* reject as stopword */
-
-
-
+    pfree(txt);
+    res = palloc0(sizeof(TSLexeme) * 2);
+    PG_RETURN_POINTER(res);
   }
   else if (d->accept)
   {
@@ -93,7 +93,7 @@ dsimple_lexize(PG_FUNCTION_ARGS)
   else
   {
     /* report as unrecognized */
-
-
+    pfree(txt);
+    PG_RETURN_POINTER(NULL);
   }
 }

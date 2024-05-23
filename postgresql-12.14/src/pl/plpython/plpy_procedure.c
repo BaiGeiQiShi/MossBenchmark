@@ -53,7 +53,8 @@ init_procedure_caches(void)
 char *
 PLy_procedure_name(PLyProcedure *proc)
 {
-  if (proc == NULL) {
+  if (proc == NULL)
+  {
     return "<unknown procedure>";
   }
   return proc->proname;
@@ -82,7 +83,8 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
   bool found = false;
 
   procTup = SearchSysCache1(PROCOID, ObjectIdGetDatum(fn_oid));
-  if (!HeapTupleIsValid(procTup)) {
+  if (!HeapTupleIsValid(procTup))
+  {
     elog(ERROR, "cache lookup failed for function %u", fn_oid);
   }
 
@@ -91,7 +93,8 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
    * information (e.g. during validation). In that case we just don't cache
    * anything.
    */
-  if (use_cache) {
+  if (use_cache)
+  {
     key.fn_oid = fn_oid;
     key.fn_rel = fn_rel;
     entry = hash_search(PLy_procedure_cache, &key, HASH_ENTER, &found);
@@ -100,16 +103,21 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
 
   PG_TRY();
   {
-    if (!found) {
+    if (!found)
+    {
       /* Haven't found it, create a new procedure */
       proc = PLy_procedure_create(procTup, fn_oid, is_trigger);
-      if (use_cache) {
+      if (use_cache)
+      {
         entry->proc = proc;
       }
-    } else if (!PLy_procedure_valid(proc, procTup)) {
+    }
+    else if (!PLy_procedure_valid(proc, procTup))
+    {
       /* Found it, but it's invalid, free and reuse the cache entry */
       entry->proc = NULL;
-      if (proc) {
+      if (proc)
+      {
         PLy_procedure_delete(proc);
       }
       proc = PLy_procedure_create(procTup, fn_oid, is_trigger);
@@ -120,7 +128,8 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
   PG_CATCH();
   {
     /* Do not leave an uninitialized entry in the cache */
-    if (use_cache) {
+    if (use_cache)
+    {
       hash_search(PLy_procedure_cache, &key, HASH_REMOVE, NULL);
     }
     PG_RE_THROW();
@@ -148,13 +157,16 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 
   procStruct = (Form_pg_proc)GETSTRUCT(procTup);
   rv = snprintf(procName, sizeof(procName), "__plpython_procedure_%s_%u", NameStr(procStruct->proname), fn_oid);
-  if (rv >= sizeof(procName) || rv < 0) {
+  if (rv >= sizeof(procName) || rv < 0)
+  {
     elog(ERROR, "procedure name would overrun buffer");
   }
 
   /* Replace any not-legal-in-Python-names characters with '_' */
-  for (ptr = procName; *ptr; ptr++) {
-    if (!((*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= 'a' && *ptr <= 'z') || (*ptr >= '0' && *ptr <= '9'))) {
+  for (ptr = procName; *ptr; ptr++)
+  {
+    if (!((*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= 'a' && *ptr <= 'z') || (*ptr >= '0' && *ptr <= '9')))
+    {
       *ptr = '_';
     }
   }
@@ -197,26 +209,33 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
     proc->argstack = NULL;
 
     /*
-     * get information required for output conversion of the return value,* but only if this isn't a trigger.
+     * get information required for output conversion of the return value,
+     * but only if this isn't a trigger.
      */
-    if (!is_trigger) {
+    if (!is_trigger)
+    {
       Oid rettype = procStruct->prorettype;
       HeapTuple rvTypeTup;
       Form_pg_type rvTypeStruct;
 
       rvTypeTup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(rettype));
-      if (!HeapTupleIsValid(rvTypeTup)) {
+      if (!HeapTupleIsValid(rvTypeTup))
+      {
         elog(ERROR, "cache lookup failed for type %u", rettype);
       }
       rvTypeStruct = (Form_pg_type)GETSTRUCT(rvTypeTup);
 
       /* Disallow pseudotype result, except for void or record */
-      if (rvTypeStruct->typtype == TYPTYPE_PSEUDO) {
+      if (rvTypeStruct->typtype == TYPTYPE_PSEUDO)
+      {
         if (rettype == VOIDOID || rettype == RECORDOID)
           /* okay */;
-        else if (rettype == TRIGGEROID || rettype == EVTTRIGGEROID) {
+        else if (rettype == TRIGGEROID || rettype == EVTTRIGGEROID)
+        {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("trigger functions can only be called as triggers")));
-        } else {
+        }
+        else
+        {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/Python functions cannot return type %s", format_type_be(rettype))));
         }
       }
@@ -225,7 +244,9 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
       PLy_output_setup_func(&proc->result, proc->mcxt, rettype, -1, proc);
 
       ReleaseSysCache(rvTypeTup);
-    } else {
+    }
+    else
+    {
       /*
        * In a trigger function, we use proc->result and proc->result_in
        * for converting tuples, but we don't yet have enough info to set
@@ -241,7 +262,8 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
      * If the function returns record, those I/O functions will be set up
      * when the function is first called.
      */
-    if (procStruct->pronargs) {
+    if (procStruct->pronargs)
+    {
       Oid *types;
       char **names, *modes;
       int pos, total;
@@ -250,12 +272,17 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
       total = get_func_arg_info(procTup, &types, &names, &modes);
 
       /* count number of in+inout args into proc->nargs */
-      if (modes == NULL) {
+      if (modes == NULL)
+      {
         proc->nargs = total;
-      } else {
+      }
+      else
+      {
         /* proc->nargs was initialized to 0 above */
-        for (i = 0; i < total; i++) {
-          if (modes[i] != PROARGMODE_OUT && modes[i] != PROARGMODE_TABLE) {
+        for (i = 0; i < total; i++)
+        {
+          if (modes[i] != PROARGMODE_OUT && modes[i] != PROARGMODE_TABLE)
+          {
             (proc->nargs)++;
           }
         }
@@ -265,24 +292,28 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
       proc->argnames = (char **)palloc0(sizeof(char *) * proc->nargs);
       proc->args = (PLyDatumToOb *)palloc0(sizeof(PLyDatumToOb) * proc->nargs);
 
-      for (i = pos = 0; i < total; i++) {
+      for (i = pos = 0; i < total; i++)
+      {
         HeapTuple argTypeTup;
         Form_pg_type argTypeStruct;
 
-        if (modes && (modes[i] == PROARGMODE_OUT || modes[i] == PROARGMODE_TABLE)) {
+        if (modes && (modes[i] == PROARGMODE_OUT || modes[i] == PROARGMODE_TABLE))
+        {
           continue; /* skip OUT arguments */
         }
 
         Assert(types[i] == procStruct->proargtypes.values[pos]);
 
         argTypeTup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(types[i]));
-        if (!HeapTupleIsValid(argTypeTup)) {
+        if (!HeapTupleIsValid(argTypeTup))
+        {
           elog(ERROR, "cache lookup failed for type %u", types[i]);
         }
         argTypeStruct = (Form_pg_type)GETSTRUCT(argTypeTup);
 
         /* disallow pseudotype arguments */
-        if (argTypeStruct->typtype == TYPTYPE_PSEUDO) {
+        if (argTypeStruct->typtype == TYPTYPE_PSEUDO)
+        {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/Python functions cannot accept type %s", format_type_be(types[i]))));
         }
 
@@ -303,7 +334,8 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
      * get the text of the function.
      */
     prosrcdatum = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_prosrc, &isnull);
-    if (isnull) {
+    if (isnull)
+    {
       elog(ERROR, "null prosrc");
     }
     procSource = TextDatumGetCString(prosrcdatum);
@@ -340,7 +372,8 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
    * all functions
    */
   proc->statics = PyDict_New();
-  if (!proc->statics) {
+  if (!proc->statics)
+  {
     PLy_elog(ERROR, NULL);
   }
   PyDict_SetItemString(proc->globals, "SD", proc->statics);
@@ -354,7 +387,8 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
   crv = PyRun_String(msrc, Py_file_input, proc->globals, NULL);
   pfree(msrc);
 
-  if (crv != NULL) {
+  if (crv != NULL)
+  {
     int clen;
     char call[NAMEDATALEN + 256];
 
@@ -364,18 +398,23 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
      * compile a call to the function
      */
     clen = snprintf(call, sizeof(call), "%s()", proc->pyname);
-    if (clen < 0 || clen >= sizeof(call)) {
+    if (clen < 0 || clen >= sizeof(call))
+    {
       elog(ERROR, "string would overflow buffer");
     }
     proc->code = Py_CompileString(call, "<string>", Py_eval_input);
-    if (proc->code != NULL) {
+    if (proc->code != NULL)
+    {
       return;
     }
   }
 
-  if (proc->proname) {
+  if (proc->proname)
+  {
     PLy_elog(ERROR, "could not compile PL/Python function \"%s\"", proc->proname);
-  } else {
+  }
+  else
+  {
     PLy_elog(ERROR, "could not compile anonymous PL/Python code block");
   }
 }
@@ -395,12 +434,14 @@ PLy_procedure_delete(PLyProcedure *proc)
 static bool
 PLy_procedure_valid(PLyProcedure *proc, HeapTuple procTup)
 {
-  if (proc == NULL) {
+  if (proc == NULL)
+  {
     return false;
   }
 
   /* If the pg_proc tuple has changed, it's not valid */
-  if (!(proc->fn_xmin == HeapTupleHeaderGetRawXmin(procTup->t_data) && ItemPointerEquals(&proc->fn_tid, &procTup->t_self))) {
+  if (!(proc->fn_xmin == HeapTupleHeaderGetRawXmin(procTup->t_data) && ItemPointerEquals(&proc->fn_tid, &procTup->t_self)))
+  {
     return false;
   }
 
@@ -427,16 +468,21 @@ PLy_procedure_munge_source(const char *name, const char *src)
   sp = src;
   mp = mrc + plen;
 
-  while (*sp != '\0') {
-    if (*sp == '\r' && *(sp + 1) == '\n') {
+  while (*sp != '\0')
+  {
+    if (*sp == '\r' && *(sp + 1) == '\n')
+    {
       sp++;
     }
 
-    if (*sp == '\n' || *sp == '\r') {
+    if (*sp == '\n' || *sp == '\r')
+    {
       *mp++ = '\n';
       *mp++ = '\t';
       sp++;
-    } else {
+    }
+    else
+    {
       *mp++ = *sp++;
     }
   }
@@ -444,7 +490,8 @@ PLy_procedure_munge_source(const char *name, const char *src)
   *mp++ = '\n';
   *mp = '\0';
 
-  if (mp > (mrc + mlen)) {
+  if (mp > (mrc + mlen))
+  {
     elog(FATAL, "buffer overrun in PLy_munge_source");
   }
 

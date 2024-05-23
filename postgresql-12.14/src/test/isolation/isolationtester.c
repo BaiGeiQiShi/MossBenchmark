@@ -25,7 +25,8 @@
  * conns[0] is the global setup, teardown, and watchdog connection.  Additional
  * connections represent spec-defined sessions.
  */
-typedef struct IsoConnInfo {
+typedef struct IsoConnInfo
+{
   /* The libpq connection object for this connection. */
   PGconn *conn;
   /* The backend PID, in numeric and string formats. */
@@ -89,8 +90,10 @@ disconnect_atexit(void)
 {
   int i;
 
-  for (i = 0; i < nconns; i++) {
-    if (conns[i].conn) {
+  for (i = 0; i < nconns; i++)
+  {
+    if (conns[i].conn)
+    {
       PQfinish(conns[i].conn);
     }
   }
@@ -107,12 +110,14 @@ main(int argc, char **argv)
   int opt;
   int i;
 
-  while ((opt = getopt(argc, argv, "V")) != -1) {
-    switch (opt) {
+  while ((opt = getopt(argc, argv, "V")) != -1)
+  {
+    switch (opt)
+    {
     case 'V':
       puts("isolationtester (PostgreSQL) " PG_VERSION);
       exit(0);
-    default:;
+    default:
       fprintf(stderr, "Usage: isolationtester [CONNINFO]\n");
       return EXIT_FAILURE;
     }
@@ -131,9 +136,12 @@ main(int argc, char **argv)
    * and using environment variables or defaults for all other connection
    * parameters.
    */
-  if (argc > optind) {
+  if (argc > optind)
+  {
     conninfo = argv[optind];
-  } else {
+  }
+  else
+  {
     conninfo = "dbname = postgres";
   }
 
@@ -142,7 +150,8 @@ main(int argc, char **argv)
    * in seconds) as the max time to wait for any one step to complete.
    */
   env_wait = getenv("PGISOLATIONTIMEOUT");
-  if (env_wait != NULL) {
+  if (env_wait != NULL)
+  {
     max_step_wait = ((int64)atoi(env_wait)) * USECS_PER_SEC;
   }
 
@@ -163,19 +172,24 @@ main(int argc, char **argv)
   conns = (IsoConnInfo *)pg_malloc0(nconns * sizeof(IsoConnInfo));
   atexit(disconnect_atexit);
 
-  for (i = 0; i < nconns; i++) {
+  for (i = 0; i < nconns; i++)
+  {
     const char *sessionname;
 
-    if (i == 0) {
+    if (i == 0)
+    {
       sessionname = "control connection";
-    } else {
+    }
+    else
+    {
       sessionname = testspec->sessions[i - 1]->name;
     }
 
     conns[i].sessionname = sessionname;
 
     conns[i].conn = PQconnectdb(conninfo);
-    if (PQstatus(conns[i].conn) != CONNECTION_OK) {
+    if (PQstatus(conns[i].conn) != CONNECTION_OK)
+    {
       fprintf(stderr, "Connection %d failed: %s", i, PQerrorMessage(conns[i].conn));
       exit(1);
     }
@@ -186,9 +200,12 @@ main(int argc, char **argv)
      * control connection gets a "blackhole" processor instead (hides all
      * messages).
      */
-    if (i != 0) {
+    if (i != 0)
+    {
       PQsetNoticeProcessor(conns[i].conn, isotesterNoticeProcessor, (void *)&conns[i]);
-    } else {
+    }
+    else
+    {
       PQsetNoticeProcessor(conns[i].conn, blackholeNoticeProcessor, NULL);
     }
 
@@ -199,9 +216,12 @@ main(int argc, char **argv)
      * name is that we don't know the name of the test currently running.
      */
     res = PQexecParams(conns[i].conn,
-        "SELECT set_config('application_name',\n  current_setting('application_name') || '/' || $1,\n  false)",
+        "SELECT set_config('application_name',\n"
+        "  current_setting('application_name') || '/' || $1,\n"
+        "  false)",
         1, NULL, &sessionname, NULL, NULL, 0);
-    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) != PGRES_TUPLES_OK)
+    {
       fprintf(stderr, "setting of application name failed: %s", PQerrorMessage(conns[i].conn));
       exit(1);
     }
@@ -223,13 +243,15 @@ main(int argc, char **argv)
   appendPQExpBufferStr(&wait_query, "SELECT pg_catalog.pg_isolation_test_session_is_blocked($1, '{");
   /* The spec syntax requires at least one session; assume that here. */
   appendPQExpBufferStr(&wait_query, conns[1].backend_pid_str);
-  for (i = 2; i < nconns; i++) {
+  for (i = 2; i < nconns; i++)
+  {
     appendPQExpBuffer(&wait_query, ",%s", conns[i].backend_pid_str);
   }
   appendPQExpBufferStr(&wait_query, "}')");
 
   res = PQprepare(conns[0].conn, PREP_WAITING, wait_query.data, 0, NULL);
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     fprintf(stderr, "prepare of lock wait query failed: %s", PQerrorMessage(conns[0].conn));
     exit(1);
   }
@@ -257,15 +279,18 @@ check_testspec(TestSpec *testspec)
 
   /* Create a sorted lookup table of all steps. */
   nallsteps = 0;
-  for (i = 0; i < testspec->nsessions; i++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
     nallsteps += testspec->sessions[i]->nsteps;
   }
 
   allsteps = pg_malloc(nallsteps * sizeof(Step *));
 
   k = 0;
-  for (i = 0; i < testspec->nsessions; i++) {
-    for (j = 0; j < testspec->sessions[i]->nsteps; j++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
+    for (j = 0; j < testspec->sessions[i]->nsteps; j++)
+    {
       allsteps[k++] = testspec->sessions[i]->steps[j];
     }
   }
@@ -273,18 +298,22 @@ check_testspec(TestSpec *testspec)
   qsort(allsteps, nallsteps, sizeof(Step *), step_qsort_cmp);
 
   /* Verify that all step names are unique. */
-  for (i = 1; i < nallsteps; i++) {
-    if (strcmp(allsteps[i - 1]->name, allsteps[i]->name) == 0) {
+  for (i = 1; i < nallsteps; i++)
+  {
+    if (strcmp(allsteps[i - 1]->name, allsteps[i]->name) == 0)
+    {
       fprintf(stderr, "duplicate step name: %s\n", allsteps[i]->name);
       exit(1);
     }
   }
 
   /* Set the session index fields in steps. */
-  for (i = 0; i < testspec->nsessions; i++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
     Session *session = testspec->sessions[i];
 
-    for (j = 0; j < session->nsteps; j++) {
+    for (j = 0; j < session->nsteps; j++)
+    {
       session->steps[j]->session = i;
     }
   }
@@ -293,14 +322,17 @@ check_testspec(TestSpec *testspec)
    * If we have manually-specified permutations, link PermutationSteps to
    * Steps, and fill in blocker links.
    */
-  for (i = 0; i < testspec->npermutations; i++) {
+  for (i = 0; i < testspec->npermutations; i++)
+  {
     Permutation *p = testspec->permutations[i];
 
-    for (j = 0; j < p->nsteps; j++) {
+    for (j = 0; j < p->nsteps; j++)
+    {
       PermutationStep *pstep = p->steps[j];
       Step **this = (Step **)bsearch(pstep->name, allsteps, nallsteps, sizeof(Step *), step_bsearch_cmp);
 
-      if (this == NULL) {
+      if (this == NULL)
+      {
         fprintf(stderr, "undefined step \"%s\" specified in permutation\n", pstep->name);
         exit(1);
       }
@@ -316,34 +348,39 @@ check_testspec(TestSpec *testspec)
      * Note that it's OK to reference later permutation steps, so this
      * can't be combined with the previous loop.
      */
-    for (j = 0; j < p->nsteps; j++) {
+    for (j = 0; j < p->nsteps; j++)
+    {
       PermutationStep *pstep = p->steps[j];
 
-      for (k = 0; k < pstep->nblockers; k++) {
+      for (k = 0; k < pstep->nblockers; k++)
+      {
         PermutationStepBlocker *blocker = pstep->blockers[k];
         int n;
 
-        if (blocker->blocktype == PSB_ONCE) {
+        if (blocker->blocktype == PSB_ONCE)
+        {
           continue; /* nothing to link to */
         }
 
         blocker->step = NULL;
-        for (n = 0; n < p->nsteps; n++) {
+        for (n = 0; n < p->nsteps; n++)
+        {
           PermutationStep *otherp = p->steps[n];
 
-          if (strcmp(otherp->name, blocker->stepname) == 0) {
+          if (strcmp(otherp->name, blocker->stepname) == 0)
+          {
             blocker->step = otherp->step;
             break;
           }
         }
-        if (blocker->step == NULL) {
-          fprintf(stderr,
-              "undefined blocking step \"%s\" referenced in permutation step \"%s\"\n",
-              blocker->stepname, pstep->name);
+        if (blocker->step == NULL)
+        {
+          fprintf(stderr, "undefined blocking step \"%s\" referenced in permutation step \"%s\"\n", blocker->stepname, pstep->name);
           exit(1);
         }
         /* can't block on completion of step of own session */
-        if (blocker->step->session == pstep->step->session) {
+        if (blocker->step->session == pstep->step->session)
+        {
           fprintf(stderr, "permutation step \"%s\" cannot block on its own session\n", pstep->name);
           exit(1);
         }
@@ -356,9 +393,12 @@ check_testspec(TestSpec *testspec)
    * been used, warning about anything defined but not used.  We can skip
    * this when using automatically-generated permutations.
    */
-  if (testspec->permutations) {
-    for (i = 0; i < nallsteps; i++) {
-      if (!allsteps[i]->used) {
+  if (testspec->permutations)
+  {
+    for (i = 0; i < nallsteps; i++)
+    {
+      if (!allsteps[i]->used)
+      {
         fprintf(stderr, "unused step name: %s\n", allsteps[i]->name);
       }
     }
@@ -374,9 +414,12 @@ check_testspec(TestSpec *testspec)
 static void
 run_testspec(TestSpec *testspec)
 {
-  if (testspec->permutations) {
+  if (testspec->permutations)
+  {
     run_named_permutations(testspec);
-  } else {
+  }
+  else
+  {
     run_all_permutations(testspec);
   }
 }
@@ -395,14 +438,16 @@ run_all_permutations(TestSpec *testspec)
 
   /* Count the total number of steps in all sessions */
   nsteps = 0;
-  for (i = 0; i < testspec->nsessions; i++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
     nsteps += testspec->sessions[i]->nsteps;
   }
 
   /* Create PermutationStep workspace array */
   steps = (PermutationStep *)pg_malloc0(sizeof(PermutationStep) * nsteps);
   stepptrs = (PermutationStep **)pg_malloc(sizeof(PermutationStep *) * nsteps);
-  for (i = 0; i < nsteps; i++) {
+  for (i = 0; i < nsteps; i++)
+  {
     stepptrs[i] = steps + i;
   }
 
@@ -416,7 +461,8 @@ run_all_permutations(TestSpec *testspec)
    * already picked from this pile.
    */
   piles = pg_malloc(sizeof(int) * testspec->nsessions);
-  for (i = 0; i < testspec->nsessions; i++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
     piles[i] = 0;
   }
 
@@ -433,9 +479,11 @@ run_all_permutations_recurse(TestSpec *testspec, int *piles, int nsteps, Permuta
   int i;
   bool found = false;
 
-  for (i = 0; i < testspec->nsessions; i++) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
     /* If there's any more steps in this pile, pick it and recurse */
-    if (piles[i] < testspec->sessions[i]->nsteps) {
+    if (piles[i] < testspec->sessions[i]->nsteps)
+    {
       Step *newstep = testspec->sessions[i]->steps[piles[i]];
 
       /*
@@ -457,7 +505,8 @@ run_all_permutations_recurse(TestSpec *testspec, int *piles, int nsteps, Permuta
   }
 
   /* If all the piles were empty, this permutation is completed. Run it */
-  if (!found) {
+  if (!found)
+  {
     run_permutation(testspec, nsteps, steps);
   }
 }
@@ -470,7 +519,8 @@ run_named_permutations(TestSpec *testspec)
 {
   int i;
 
-  for (i = 0; i < testspec->npermutations; i++) {
+  for (i = 0; i < testspec->npermutations; i++)
+  {
     Permutation *p = testspec->permutations[i];
 
     run_permutation(testspec, p->nsteps, p->steps);
@@ -509,17 +559,22 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
   waiting = pg_malloc(sizeof(PermutationStep *) * testspec->nsessions);
 
   printf("\nstarting permutation:");
-  for (i = 0; i < nsteps; i++) {
+  for (i = 0; i < nsteps; i++)
+  {
     printf(" %s", steps[i]->name);
   }
   printf("\n");
 
   /* Perform setup */
-  for (i = 0; i < testspec->nsetupsqls; i++) {
+  for (i = 0; i < testspec->nsetupsqls; i++)
+  {
     res = PQexec(conns[0].conn, testspec->setupsqls[i]);
-    if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) == PGRES_TUPLES_OK)
+    {
       printResultSet(res);
-    } else if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+    }
+    else if (PQresultStatus(res) != PGRES_COMMAND_OK)
+    {
       fprintf(stderr, "setup failed: %s", PQerrorMessage(conns[0].conn));
       exit(1);
     }
@@ -527,12 +582,17 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
   }
 
   /* Perform per-session setup */
-  for (i = 0; i < testspec->nsessions; i++) {
-    if (testspec->sessions[i]->setupsql) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
+    if (testspec->sessions[i]->setupsql)
+    {
       res = PQexec(conns[i + 1].conn, testspec->sessions[i]->setupsql);
-      if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+      if (PQresultStatus(res) == PGRES_TUPLES_OK)
+      {
         printResultSet(res);
-      } else if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+      }
+      else if (PQresultStatus(res) != PGRES_COMMAND_OK)
+      {
         fprintf(stderr, "setup of session %s failed: %s", conns[i + 1].sessionname, PQerrorMessage(conns[i + 1].conn));
         exit(1);
       }
@@ -541,7 +601,8 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
   }
 
   /* Perform steps */
-  for (i = 0; i < nsteps; i++) {
+  for (i = 0; i < nsteps; i++)
+  {
     PermutationStep *pstep = steps[i];
     Step *step = pstep->step;
     IsoConnInfo *iconn = &conns[1 + step->session];
@@ -553,12 +614,14 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
      * Check whether the session that needs to perform the next step is
      * still blocked on an earlier step.  If so, wait for it to finish.
      */
-    if (iconn->active_step != NULL) {
+    if (iconn->active_step != NULL)
+    {
       struct timeval start_time;
 
       gettimeofday(&start_time, NULL);
 
-      while (iconn->active_step != NULL) {
+      while (iconn->active_step != NULL)
+      {
         PermutationStep *oldstep = iconn->active_step;
 
         /*
@@ -566,19 +629,24 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
          * STEP_NONBLOCK, it might not complete because of blocker
          * conditions.
          */
-        if (!try_complete_step(testspec, oldstep, STEP_RETRY)) {
+        if (!try_complete_step(testspec, oldstep, STEP_RETRY))
+        {
           /* Done, so remove oldstep from the waiting[] array. */
           int w;
 
-          for (w = 0; w < nwaiting; w++) {
-            if (oldstep == waiting[w]) {
+          for (w = 0; w < nwaiting; w++)
+          {
+            if (oldstep == waiting[w])
+            {
               break;
             }
           }
-          if (w >= nwaiting) {
+          if (w >= nwaiting)
+          {
             abort(); /* can't happen */
           }
-          if (w + 1 < nwaiting) {
+          if (w + 1 < nwaiting)
+          {
             memmove(&waiting[w], &waiting[w + 1], (nwaiting - (w + 1)) * sizeof(PermutationStep *));
           }
           nwaiting--;
@@ -601,7 +669,8 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
          * to die.  (We don't bother with trying to cancel anything,
          * since it's unclear what to cancel in this case.)
          */
-        if (iconn->active_step != NULL) {
+        if (iconn->active_step != NULL)
+        {
           struct timeval current_time;
           int64 td;
 
@@ -609,13 +678,16 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
           td = (int64)current_time.tv_sec - (int64)start_time.tv_sec;
           td *= USECS_PER_SEC;
           td += (int64)current_time.tv_usec - (int64)start_time.tv_usec;
-          if (td > 2 * max_step_wait) {
+          if (td > 2 * max_step_wait)
+          {
             fprintf(stderr, "step %s timed out after %d seconds\n", iconn->active_step->name, (int)(td / USECS_PER_SEC));
             fprintf(stderr, "active steps are:");
-            for (j = 1; j < nconns; j++) {
+            for (j = 1; j < nconns; j++)
+            {
               IsoConnInfo *oconn = &conns[j];
 
-              if (oconn->active_step != NULL) {
+              if (oconn->active_step != NULL)
+              {
                 fprintf(stderr, " %s", oconn->active_step->name);
               }
             }
@@ -627,7 +699,8 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
     }
 
     /* Send the query for this step. */
-    if (!PQsendQuery(conn, step->sql)) {
+    if (!PQsendQuery(conn, step->sql))
+    {
       fprintf(stdout, "failed to send query for step %s: %s\n", step->name, PQerrorMessage(conn));
       exit(1);
     }
@@ -636,10 +709,12 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
     iconn->active_step = pstep;
 
     /* Remember target number of NOTICEs for any blocker conditions. */
-    for (j = 0; j < pstep->nblockers; j++) {
+    for (j = 0; j < pstep->nblockers; j++)
+    {
       PermutationStepBlocker *blocker = pstep->blockers[j];
 
-      if (blocker->blocktype == PSB_NUM_NOTICES) {
+      if (blocker->blocktype == PSB_NUM_NOTICES)
+      {
         blocker->target_notices = blocker->num_notices + conns[blocker->step->session + 1].total_notices;
       }
     }
@@ -651,25 +726,32 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
     nwaiting = try_complete_steps(testspec, waiting, nwaiting, STEP_NONBLOCK | STEP_RETRY);
 
     /* If this step is waiting, add it to the array of waiters. */
-    if (mustwait) {
+    if (mustwait)
+    {
       waiting[nwaiting++] = pstep;
     }
   }
 
   /* Wait for any remaining queries. */
   nwaiting = try_complete_steps(testspec, waiting, nwaiting, STEP_RETRY);
-  if (nwaiting != 0) {
+  if (nwaiting != 0)
+  {
     fprintf(stderr, "failed to complete permutation due to mutually-blocking steps\n");
     exit(1);
   }
 
   /* Perform per-session teardown */
-  for (i = 0; i < testspec->nsessions; i++) {
-    if (testspec->sessions[i]->teardownsql) {
+  for (i = 0; i < testspec->nsessions; i++)
+  {
+    if (testspec->sessions[i]->teardownsql)
+    {
       res = PQexec(conns[i + 1].conn, testspec->sessions[i]->teardownsql);
-      if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+      if (PQresultStatus(res) == PGRES_TUPLES_OK)
+      {
         printResultSet(res);
-      } else if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+      }
+      else if (PQresultStatus(res) != PGRES_COMMAND_OK)
+      {
         fprintf(stderr, "teardown of session %s failed: %s", conns[i + 1].sessionname, PQerrorMessage(conns[i + 1].conn));
         /* don't exit on teardown failure */
       }
@@ -678,11 +760,15 @@ run_permutation(TestSpec *testspec, int nsteps, PermutationStep **steps)
   }
 
   /* Perform teardown */
-  if (testspec->teardownsql) {
+  if (testspec->teardownsql)
+  {
     res = PQexec(conns[0].conn, testspec->teardownsql);
-    if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) == PGRES_TUPLES_OK)
+    {
       printResultSet(res);
-    } else if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+    }
+    else if (PQresultStatus(res) != PGRES_COMMAND_OK)
+    {
       fprintf(stderr, "teardown failed: %s", PQerrorMessage(conns[0].conn));
       /* don't exit on teardown failure */
     }
@@ -704,7 +790,8 @@ try_complete_steps(TestSpec *testspec, PermutationStep **waiting, int nwaiting, 
   int old_nwaiting;
   bool have_blocker;
 
-  do {
+  do
+  {
     int w = 0;
 
     /* Reset latch; we only care about notices received within loop. */
@@ -715,16 +802,22 @@ try_complete_steps(TestSpec *testspec, PermutationStep **waiting, int nwaiting, 
     have_blocker = false;
 
     /* Scan the array, try to complete steps. */
-    while (w < nwaiting) {
-      if (try_complete_step(testspec, waiting[w], flags)) {
+    while (w < nwaiting)
+    {
+      if (try_complete_step(testspec, waiting[w], flags))
+      {
         /* Still blocked, leave it alone. */
-        if (waiting[w]->nblockers > 0) {
+        if (waiting[w]->nblockers > 0)
+        {
           have_blocker = true;
         }
         w++;
-      } else {
+      }
+      else
+      {
         /* Done, remove it from array. */
-        if (w + 1 < nwaiting) {
+        if (w + 1 < nwaiting)
+        {
           memmove(&waiting[w], &waiting[w + 1], (nwaiting - (w + 1)) * sizeof(PermutationStep *));
         }
         nwaiting--;
@@ -776,20 +869,24 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
    * wait.  This is useful for ensuring consistent output when the step
    * might or might not complete so fast that we don't observe it waiting.
    */
-  if (!(flags & STEP_RETRY)) {
+  if (!(flags & STEP_RETRY))
+  {
     int i;
 
-    for (i = 0; i < pstep->nblockers; i++) {
+    for (i = 0; i < pstep->nblockers; i++)
+    {
       PermutationStepBlocker *blocker = pstep->blockers[i];
 
-      if (blocker->blocktype == PSB_ONCE) {
+      if (blocker->blocktype == PSB_ONCE)
+      {
         printf("step %s: %s <waiting ...>\n", step->name, step->sql);
         return true;
       }
     }
   }
 
-  if (sock < 0) {
+  if (sock < 0)
+  {
     fprintf(stderr, "invalid socket: %s", PQerrorMessage(conn));
     exit(1);
   }
@@ -797,7 +894,8 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
   gettimeofday(&start_time, NULL);
   FD_ZERO(&read_set);
 
-  while (PQisBusy(conn)) {
+  while (PQisBusy(conn))
+  {
     FD_SET(sock, &read_set);
     timeout.tv_sec = 0;
     timeout.tv_usec = 10000; /* Check for lock waits every 10ms. */
@@ -805,22 +903,26 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
     ret = select(sock + 1, &read_set, NULL, NULL, &timeout);
     if (ret < 0) /* error in select() */
     {
-      if (errno == EINTR) {
+      if (errno == EINTR)
+      {
         continue;
       }
       fprintf(stderr, "select failed: %s\n", strerror(errno));
       exit(1);
-    } else if (ret == 0) /* select() timeout: check for lock wait */
+    }
+    else if (ret == 0) /* select() timeout: check for lock wait */
     {
       struct timeval current_time;
       int64 td;
 
       /* If it's OK for the step to block, check whether it has. */
-      if (flags & STEP_NONBLOCK) {
+      if (flags & STEP_NONBLOCK)
+      {
         bool waiting;
 
         res = PQexecPrepared(conns[0].conn, PREP_WAITING, 1, &conns[step->session + 1].backend_pid_str, NULL, NULL, 0);
-        if (PQresultStatus(res) != PGRES_TUPLES_OK || PQntuples(res) != 1) {
+        if (PQresultStatus(res) != PGRES_TUPLES_OK || PQntuples(res) != 1)
+        {
           fprintf(stderr, "lock wait query failed: %s", PQerrorMessage(conns[0].conn));
           exit(1);
         }
@@ -838,11 +940,13 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
            * returns false, we might as well go examine the
            * available result.
            */
-          if (!PQconsumeInput(conn)) {
+          if (!PQconsumeInput(conn))
+          {
             fprintf(stderr, "PQconsumeInput failed: %s\n", PQerrorMessage(conn));
             exit(1);
           }
-          if (!PQisBusy(conn)) {
+          if (!PQisBusy(conn))
+          {
             break;
           }
 
@@ -850,7 +954,8 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
            * conn is still busy, so conclude that the step really is
            * waiting.
            */
-          if (!(flags & STEP_RETRY)) {
+          if (!(flags & STEP_RETRY))
+          {
             printf("step %s: %s <waiting ...>\n", step->name, step->sql);
           }
           return true;
@@ -873,20 +978,25 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
        * failing, but remaining permutations and tests should still be
        * OK.
        */
-      if (td > max_step_wait && !canceled) {
+      if (td > max_step_wait && !canceled)
+      {
         PGcancel *cancel = PQgetCancel(conn);
 
-        if (cancel != NULL) {
+        if (cancel != NULL)
+        {
           char buf[256];
 
-          if (PQcancel(cancel, buf, sizeof(buf))) {
+          if (PQcancel(cancel, buf, sizeof(buf)))
+          {
             /*
              * print to stdout not stderr, as this should appear
              * in the test case's results
              */
             printf("isolationtester: canceling step %s after %d seconds\n", step->name, (int)(td / USECS_PER_SEC));
             canceled = true;
-          } else {
+          }
+          else
+          {
             fprintf(stderr, "PQcancel failed: %s\n", buf);
           }
           PQfreeCancel(cancel);
@@ -900,11 +1010,13 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
        * later tests to fail.  That stinks, but it's better than waiting
        * forever for the server to respond to the cancel.
        */
-      if (td > 2 * max_step_wait) {
+      if (td > 2 * max_step_wait)
+      {
         fprintf(stderr, "step %s timed out after %d seconds\n", step->name, (int)(td / USECS_PER_SEC));
         exit(1);
       }
-    } else if (!PQconsumeInput(conn)) /* select(): data available */
+    }
+    else if (!PQconsumeInput(conn)) /* select(): data available */
     {
       fprintf(stderr, "PQconsumeInput failed: %s\n", PQerrorMessage(conn));
       exit(1);
@@ -915,22 +1027,29 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
    * The step is done, but we won't report it as complete so long as there
    * are blockers.
    */
-  if (step_has_blocker(pstep)) {
-    if (!(flags & STEP_RETRY)) {
+  if (step_has_blocker(pstep))
+  {
+    if (!(flags & STEP_RETRY))
+    {
       printf("step %s: %s <waiting ...>\n", step->name, step->sql);
     }
     return true;
   }
 
   /* Otherwise, go ahead and complete it. */
-  if (flags & STEP_RETRY) {
+  if (flags & STEP_RETRY)
+  {
     printf("step %s: <... completed>\n", step->name);
-  } else {
+  }
+  else
+  {
     printf("step %s: %s\n", step->name, step->sql);
   }
 
-  while ((res = PQgetResult(conn))) {
-    switch (PQresultStatus(res)) {
+  while ((res = PQgetResult(conn)))
+  {
+    switch (PQresultStatus(res))
+    {
     case PGRES_COMMAND_OK:
     case PGRES_EMPTY_QUERY:
       break;
@@ -948,14 +1067,17 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
         const char *sev = PQresultErrorField(res, PG_DIAG_SEVERITY);
         const char *msg = PQresultErrorField(res, PG_DIAG_MESSAGE_PRIMARY);
 
-        if (sev && msg) {
+        if (sev && msg)
+        {
           printf("%s:  %s\n", sev, msg);
-        } else {
+        }
+        else
+        {
           printf("%s\n", PQresultErrorMessage(res));
         }
       }
       break;
-    default:;
+    default:
       printf("unexpected result status: %s\n", PQresStatus(PQresultStatus(res)));
     }
     PQclear(res);
@@ -963,19 +1085,23 @@ try_complete_step(TestSpec *testspec, PermutationStep *pstep, int flags)
 
   /* Report any available NOTIFY messages, too */
   PQconsumeInput(conn);
-  while ((notify = PQnotifies(conn)) != NULL) {
+  while ((notify = PQnotifies(conn)) != NULL)
+  {
     /* Try to identify which session it came from */
     const char *sendername = NULL;
     char pidstring[32];
     int i;
 
-    for (i = 0; i < testspec->nsessions; i++) {
-      if (notify->be_pid == conns[i + 1].backend_pid) {
+    for (i = 0; i < testspec->nsessions; i++)
+    {
+      if (notify->be_pid == conns[i + 1].backend_pid)
+      {
         sendername = conns[i + 1].sessionname;
         break;
       }
     }
-    if (sendername == NULL) {
+    if (sendername == NULL)
+    {
       /* Doesn't seem to be any test session, so show the hard way */
       snprintf(pidstring, sizeof(pidstring), "PID %d", notify->be_pid);
       sendername = pidstring;
@@ -997,25 +1123,29 @@ step_has_blocker(PermutationStep *pstep)
 {
   int i;
 
-  for (i = 0; i < pstep->nblockers; i++) {
+  for (i = 0; i < pstep->nblockers; i++)
+  {
     PermutationStepBlocker *blocker = pstep->blockers[i];
     IsoConnInfo *iconn;
 
-    switch (blocker->blocktype) {
+    switch (blocker->blocktype)
+    {
     case PSB_ONCE:
       /* Ignore; try_complete_step handles this specially */
       break;
     case PSB_OTHER_STEP:
       /* Block if referenced step is active */
       iconn = &conns[1 + blocker->step->session];
-      if (iconn->active_step && iconn->active_step->step == blocker->step) {
+      if (iconn->active_step && iconn->active_step->step == blocker->step)
+      {
         return true;
       }
       break;
     case PSB_NUM_NOTICES:
       /* Block if not enough notices received yet */
       iconn = &conns[1 + blocker->step->session];
-      if (iconn->total_notices < blocker->target_notices) {
+      if (iconn->total_notices < blocker->target_notices)
+      {
         return true;
       }
       break;

@@ -41,7 +41,8 @@ static int numCatalogIds = 0;
 /*
  * These variables are static to avoid the notational cruft of having to pass
  * them into findTableByOid() and friends.  For each of these arrays, we build
- * a sorted-by-OID index array immediately after the objects are fetched,* and then we use binary search in findTableByOid() and friends.  (qsort'ing
+ * a sorted-by-OID index array immediately after the objects are fetched,
+ * and then we use binary search in findTableByOid() and friends.  (qsort'ing
  * the object arrays themselves would be simpler, but it doesn't work because
  * pg_dump.c may have already established pointers between items.)
  */
@@ -268,8 +269,8 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 }
 
 /* flagInhTables -
- *	 Fill in parent link fields of tables for which we need that
- *information, and mark parents of target tables as interesting
+ *	 Fill in parent link fields of tables for which we need that information,
+ *	 and mark parents of target tables as interesting
  *
  * Note that only direct ancestors of targets are marked interesting.
  * This is sufficient; we don't much care whether they inherited their
@@ -283,31 +284,37 @@ flagInhTables(Archive *fout, TableInfo *tblinfo, int numTables, InhInfo *inhinfo
   DumpOptions *dopt = fout->dopt;
   int i, j;
 
-  for (i = 0; i < numTables; i++) {
+  for (i = 0; i < numTables; i++)
+  {
     bool find_parents = true;
     bool mark_parents = true;
 
     /* Some kinds never have parents */
-    if (tblinfo[i].relkind == RELKIND_SEQUENCE || tblinfo[i].relkind == RELKIND_VIEW || tblinfo[i].relkind == RELKIND_MATVIEW) {
+    if (tblinfo[i].relkind == RELKIND_SEQUENCE || tblinfo[i].relkind == RELKIND_VIEW || tblinfo[i].relkind == RELKIND_MATVIEW)
+    {
       continue;
     }
 
     /*
-     * Normally, we don't bother computing anything for non-target tables,* but if load-via-partition-root is specified, we gather information
+     * Normally, we don't bother computing anything for non-target tables,
+     * but if load-via-partition-root is specified, we gather information
      * on every partition in the system so that getRootTableInfo can trace
      * from any given to leaf partition all the way up to the root.  (We
      * don't need to mark them as interesting for getTableAttrs, though.)
      */
-    if (!tblinfo[i].dobj.dump) {
+    if (!tblinfo[i].dobj.dump)
+    {
       mark_parents = false;
 
-      if (!dopt->load_via_partition_root || !tblinfo[i].ispartition) {
+      if (!dopt->load_via_partition_root || !tblinfo[i].ispartition)
+      {
         find_parents = false;
       }
     }
 
     /* If needed, find all the immediate parent tables. */
-    if (find_parents) {
+    if (find_parents)
+    {
       findParentsByOid(&tblinfo[i], inhinfo, numInherits);
     }
 
@@ -315,11 +322,13 @@ flagInhTables(Archive *fout, TableInfo *tblinfo, int numTables, InhInfo *inhinfo
      * If needed, mark the parents as interesting for getTableAttrs and
      * getIndexes.
      */
-    if (mark_parents) {
+    if (mark_parents)
+    {
       int numParents = tblinfo[i].numParents;
       TableInfo **parents = tblinfo[i].parents;
 
-      for (j = 0; j < numParents; j++) {
+      for (j = 0; j < numParents; j++)
+      {
         parents[j]->interesting = true;
       }
     }
@@ -339,11 +348,13 @@ flagInhIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 
   parentIndexArray = (DumpableObject ***)pg_malloc0(getMaxDumpId() * sizeof(DumpableObject **));
 
-  for (i = 0; i < numTables; i++) {
+  for (i = 0; i < numTables; i++)
+  {
     TableInfo *parenttbl;
     IndexAttachInfo *attachinfo;
 
-    if (!tblinfo[i].ispartition || tblinfo[i].numParents == 0) {
+    if (!tblinfo[i].ispartition || tblinfo[i].numParents == 0)
+    {
       continue;
     }
 
@@ -357,21 +368,25 @@ flagInhIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
      * its partitions, create an indexed array for each parent the first
      * time it is required.
      */
-    if (parentIndexArray[parenttbl->dobj.dumpId] == NULL) {
+    if (parentIndexArray[parenttbl->dobj.dumpId] == NULL)
+    {
       parentIndexArray[parenttbl->dobj.dumpId] = buildIndexArray(parenttbl->indexes, parenttbl->numIndexes, sizeof(IndxInfo));
     }
 
     attachinfo = (IndexAttachInfo *)pg_malloc0(tblinfo[i].numIndexes * sizeof(IndexAttachInfo));
-    for (j = 0, k = 0; j < tblinfo[i].numIndexes; j++) {
+    for (j = 0, k = 0; j < tblinfo[i].numIndexes; j++)
+    {
       IndxInfo *index = &(tblinfo[i].indexes[j]);
       IndxInfo *parentidx;
 
-      if (index->parentidx == 0) {
+      if (index->parentidx == 0)
+      {
         continue;
       }
 
       parentidx = findIndexByOid(index->parentidx, parentIndexArray[parenttbl->dobj.dumpId], parenttbl->numIndexes);
-      if (parentidx == NULL) {
+      if (parentidx == NULL)
+      {
         continue;
       }
 
@@ -411,8 +426,10 @@ flagInhIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
     }
   }
 
-  for (i = 0; i < numTables; i++) {
-    if (parentIndexArray[i]) {
+  for (i = 0; i < numTables; i++)
+  {
+    if (parentIndexArray[i])
+    {
       pg_free(parentIndexArray[i]);
     }
   }
@@ -448,48 +465,56 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
 {
   int i, j, k;
 
-  for (i = 0; i < numTables; i++) {
+  for (i = 0; i < numTables; i++)
+  {
     TableInfo *tbinfo = &(tblinfo[i]);
     int numParents;
     TableInfo **parents;
 
     /* Some kinds never have parents */
-    if (tbinfo->relkind == RELKIND_SEQUENCE || tbinfo->relkind == RELKIND_VIEW || tbinfo->relkind == RELKIND_MATVIEW) {
+    if (tbinfo->relkind == RELKIND_SEQUENCE || tbinfo->relkind == RELKIND_VIEW || tbinfo->relkind == RELKIND_MATVIEW)
+    {
       continue;
     }
 
     /* Don't bother computing anything for non-target tables, either */
-    if (!tbinfo->dobj.dump) {
+    if (!tbinfo->dobj.dump)
+    {
       continue;
     }
 
     numParents = tbinfo->numParents;
     parents = tbinfo->parents;
 
-    if (numParents == 0) {
+    if (numParents == 0)
+    {
       continue; /* nothing to see here, move along */
     }
 
     /* For each column, search for matching column names in parent(s) */
-    for (j = 0; j < tbinfo->numatts; j++) {
+    for (j = 0; j < tbinfo->numatts; j++)
+    {
       bool foundNotNull;   /* Attr was NOT NULL in a parent */
       bool foundDefault;   /* Found a default in a parent */
       bool foundGenerated; /* Found a generated in a parent */
 
       /* no point in examining dropped columns */
-      if (tbinfo->attisdropped[j]) {
+      if (tbinfo->attisdropped[j])
+      {
         continue;
       }
 
       foundNotNull = false;
       foundDefault = false;
       foundGenerated = false;
-      for (k = 0; k < numParents; k++) {
+      for (k = 0; k < numParents; k++)
+      {
         TableInfo *parent = parents[k];
         int inhAttrInd;
 
         inhAttrInd = strInArray(tbinfo->attnames[j], parent->attnames, parent->numatts);
-        if (inhAttrInd >= 0) {
+        if (inhAttrInd >= 0)
+        {
           foundNotNull |= parent->notnull[inhAttrInd];
           foundDefault |= (parent->attrdefs[inhAttrInd] != NULL && !parent->attgenerated[inhAttrInd]);
           foundGenerated |= parent->attgenerated[inhAttrInd];
@@ -500,7 +525,8 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
       tbinfo->inhNotNull[j] = foundNotNull;
 
       /* Manufacture a DEFAULT NULL clause if necessary */
-      if (foundDefault && tbinfo->attrdefs[j] == NULL) {
+      if (foundDefault && tbinfo->attrdefs[j] == NULL)
+      {
         AttrDefInfo *attrDef;
 
         attrDef = (AttrDefInfo *)pg_malloc(sizeof(AttrDefInfo));
@@ -517,10 +543,13 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
         attrDef->adef_expr = pg_strdup("NULL");
 
         /* Will column be dumped explicitly? */
-        if (shouldPrintColumn(dopt, tbinfo, j)) {
+        if (shouldPrintColumn(dopt, tbinfo, j))
+        {
           attrDef->separate = false;
           /* No dependency needed: NULL cannot have dependencies */
-        } else {
+        }
+        else
+        {
           /* column will be suppressed, print default separately */
           attrDef->separate = true;
           /* ensure it comes out after the table */
@@ -531,7 +560,8 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
       }
 
       /* Remove generation expression from child */
-      if (foundGenerated && !tbinfo->ispartition && !dopt->binary_upgrade) {
+      if (foundGenerated && !tbinfo->ispartition && !dopt->binary_upgrade)
+      {
         tbinfo->attrdefs[j] = NULL;
       }
     }
@@ -540,9 +570,11 @@ flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
 
 /*
  * AssignDumpId
- *		Given a newly-created dumpable object, assign a dump ID,*		and enter the object into the lookup table.
+ *		Given a newly-created dumpable object, assign a dump ID,
+ *		and enter the object into the lookup table.
  *
- * The caller is expected to have filled in objType and catId,* but not any of the other standard fields of a DumpableObject.
+ * The caller is expected to have filled in objType and catId,
+ * but not any of the other standard fields of a DumpableObject.
  */
 void
 AssignDumpId(DumpableObject *dobj)
@@ -557,13 +589,17 @@ AssignDumpId(DumpableObject *dobj)
   dobj->nDeps = 0;
   dobj->allocDeps = 0;
 
-  while (dobj->dumpId >= allocedDumpIds) {
+  while (dobj->dumpId >= allocedDumpIds)
+  {
     int newAlloc;
 
-    if (allocedDumpIds <= 0) {
+    if (allocedDumpIds <= 0)
+    {
       newAlloc = 256;
       dumpIdMap = (DumpableObject **)pg_malloc(newAlloc * sizeof(DumpableObject *));
-    } else {
+    }
+    else
+    {
       newAlloc = allocedDumpIds * 2;
       dumpIdMap = (DumpableObject **)pg_realloc(dumpIdMap, newAlloc * sizeof(DumpableObject *));
     }
@@ -605,7 +641,8 @@ getMaxDumpId(void)
 DumpableObject *
 findObjectByDumpId(DumpId dumpId)
 {
-  if (dumpId <= 0 || dumpId >= allocedDumpIds) {
+  if (dumpId <= 0 || dumpId >= allocedDumpIds)
+  {
     return NULL; /* out of range? */
   }
   return dumpIdMap[dumpId];
@@ -617,7 +654,8 @@ findObjectByDumpId(DumpId dumpId)
  * Returns NULL for unknown ID
  *
  * We use binary search in a sorted list that is built on first call.
- * If AssignDumpId() and findObjectByCatalogId() calls were freely intermixed,* the code would work, but possibly be very slow.  In the current usage
+ * If AssignDumpId() and findObjectByCatalogId() calls were freely intermixed,
+ * the code would work, but possibly be very slow.  In the current usage
  * pattern that does not happen, indeed we build the list at most twice.
  */
 DumpableObject *
@@ -626,12 +664,15 @@ findObjectByCatalogId(CatalogId catalogId)
   DumpableObject **low;
   DumpableObject **high;
 
-  if (!catalogIdMapValid) {
-    if (catalogIdMap) {
+  if (!catalogIdMapValid)
+  {
+    if (catalogIdMap)
+    {
       free(catalogIdMap);
     }
     getDumpableObjects(&catalogIdMap, &numCatalogIds);
-    if (numCatalogIds > 1) {
+    if (numCatalogIds > 1)
+    {
       qsort((void *)catalogIdMap, numCatalogIds, sizeof(DumpableObject *), DOCatalogIdCompare);
     }
     catalogIdMapValid = true;
@@ -642,26 +683,34 @@ findObjectByCatalogId(CatalogId catalogId)
    * bsearch is nearly as bad as doing it ourselves; and the generalized
    * bsearch function is noticeably slower as well.
    */
-  if (numCatalogIds <= 0) {
+  if (numCatalogIds <= 0)
+  {
     return NULL;
   }
   low = catalogIdMap;
   high = catalogIdMap + (numCatalogIds - 1);
-  while (low <= high) {
+  while (low <= high)
+  {
     DumpableObject **middle;
     int difference;
 
     middle = low + (high - low) / 2;
     /* comparison must match DOCatalogIdCompare, below */
     difference = oidcmp((*middle)->catId.oid, catalogId.oid);
-    if (difference == 0) {
+    if (difference == 0)
+    {
       difference = oidcmp((*middle)->catId.tableoid, catalogId.tableoid);
     }
-    if (difference == 0) {
+    if (difference == 0)
+    {
       return *middle;
-    } else if (difference < 0) {
+    }
+    else if (difference < 0)
+    {
       low = middle + 1;
-    } else {
+    }
+    else
+    {
       high = middle - 1;
     }
   }
@@ -687,22 +736,29 @@ findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs)
    * bsearch is nearly as bad as doing it ourselves; and the generalized
    * bsearch function is noticeably slower as well.
    */
-  if (numObjs <= 0) {
+  if (numObjs <= 0)
+  {
     return NULL;
   }
   low = indexArray;
   high = indexArray + (numObjs - 1);
-  while (low <= high) {
+  while (low <= high)
+  {
     DumpableObject **middle;
     int difference;
 
     middle = low + (high - low) / 2;
     difference = oidcmp((*middle)->catId.oid, oid);
-    if (difference == 0) {
+    if (difference == 0)
+    {
       return *middle;
-    } else if (difference < 0) {
+    }
+    else if (difference < 0)
+    {
       low = middle + 1;
-    } else {
+    }
+    else
+    {
       high = middle - 1;
     }
   }
@@ -719,12 +775,14 @@ buildIndexArray(void *objArray, int numObjs, Size objSize)
   int i;
 
   ptrs = (DumpableObject **)pg_malloc(numObjs * sizeof(DumpableObject *));
-  for (i = 0; i < numObjs; i++) {
+  for (i = 0; i < numObjs; i++)
+  {
     ptrs[i] = (DumpableObject *)((char *)objArray + i * objSize);
   }
 
   /* We can use DOCatalogIdCompare to sort since its first key is OID */
-  if (numObjs > 1) {
+  if (numObjs > 1)
+  {
     qsort((void *)ptrs, numObjs, sizeof(DumpableObject *), DOCatalogIdCompare);
   }
 
@@ -746,7 +804,8 @@ DOCatalogIdCompare(const void *p1, const void *p2)
    * a few distinct values of tableoid.
    */
   cmpval = oidcmp(obj1->catId.oid, obj2->catId.oid);
-  if (cmpval == 0) {
+  if (cmpval == 0)
+  {
     cmpval = oidcmp(obj1->catId.tableoid, obj2->catId.tableoid);
   }
   return cmpval;
@@ -764,8 +823,10 @@ getDumpableObjects(DumpableObject ***objs, int *numObjs)
 
   *objs = (DumpableObject **)pg_malloc(allocedDumpIds * sizeof(DumpableObject *));
   j = 0;
-  for (i = 1; i < allocedDumpIds; i++) {
-    if (dumpIdMap[i]) {
+  for (i = 1; i < allocedDumpIds; i++)
+  {
+    if (dumpIdMap[i])
+    {
       (*objs)[j++] = dumpIdMap[i];
     }
   }
@@ -780,11 +841,15 @@ getDumpableObjects(DumpableObject ***objs, int *numObjs)
 void
 addObjectDependency(DumpableObject *dobj, DumpId refId)
 {
-  if (dobj->nDeps >= dobj->allocDeps) {
-    if (dobj->allocDeps <= 0) {
+  if (dobj->nDeps >= dobj->allocDeps)
+  {
+    if (dobj->allocDeps <= 0)
+    {
       dobj->allocDeps = 16;
       dobj->dependencies = (DumpId *)pg_malloc(dobj->allocDeps * sizeof(DumpId));
-    } else {
+    }
+    else
+    {
       dobj->allocDeps *= 2;
       dobj->dependencies = (DumpId *)pg_realloc(dobj->dependencies, dobj->allocDeps * sizeof(DumpId));
     }
@@ -803,8 +868,10 @@ removeObjectDependency(DumpableObject *dobj, DumpId refId)
   int i;
   int j = 0;
 
-  for (i = 0; i < dobj->nDeps; i++) {
-    if (dobj->dependencies[i] != refId) {
+  for (i = 0; i < dobj->nDeps; i++)
+  {
+    if (dobj->dependencies[i] != refId)
+    {
       dobj->dependencies[j++] = dobj->dependencies[i];
     }
   }
@@ -920,7 +987,8 @@ void
 setExtensionMembership(ExtensionMemberId *extmems, int nextmems)
 {
   /* Sort array in preparation for binary searches */
-  if (nextmems > 1) {
+  if (nextmems > 1)
+  {
     qsort((void *)extmems, nextmems, sizeof(ExtensionMemberId), ExtensionMemberIdCompare);
   }
   /* And save */
@@ -943,26 +1011,34 @@ findOwningExtension(CatalogId catalogId)
    * bsearch is nearly as bad as doing it ourselves; and the generalized
    * bsearch function is noticeably slower as well.
    */
-  if (numextmembers <= 0) {
+  if (numextmembers <= 0)
+  {
     return NULL;
   }
   low = extmembers;
   high = extmembers + (numextmembers - 1);
-  while (low <= high) {
+  while (low <= high)
+  {
     ExtensionMemberId *middle;
     int difference;
 
     middle = low + (high - low) / 2;
     /* comparison must match ExtensionMemberIdCompare, below */
     difference = oidcmp(middle->catId.oid, catalogId.oid);
-    if (difference == 0) {
+    if (difference == 0)
+    {
       difference = oidcmp(middle->catId.tableoid, catalogId.tableoid);
     }
-    if (difference == 0) {
+    if (difference == 0)
+    {
       return middle->ext;
-    } else if (difference < 0) {
+    }
+    else if (difference < 0)
+    {
       low = middle + 1;
-    } else {
+    }
+    else
+    {
       high = middle - 1;
     }
   }
@@ -984,7 +1060,8 @@ ExtensionMemberIdCompare(const void *p1, const void *p2)
    * a few distinct values of tableoid.
    */
   cmpval = oidcmp(obj1->catId.oid, obj2->catId.oid);
-  if (cmpval == 0) {
+  if (cmpval == 0)
+  {
     cmpval = oidcmp(obj1->catId.tableoid, obj2->catId.tableoid);
   }
   return cmpval;
@@ -1002,30 +1079,38 @@ findParentsByOid(TableInfo *self, InhInfo *inhinfo, int numInherits)
   int numParents;
 
   numParents = 0;
-  for (i = 0; i < numInherits; i++) {
-    if (inhinfo[i].inhrelid == oid) {
+  for (i = 0; i < numInherits; i++)
+  {
+    if (inhinfo[i].inhrelid == oid)
+    {
       numParents++;
     }
   }
 
   self->numParents = numParents;
 
-  if (numParents > 0) {
+  if (numParents > 0)
+  {
     self->parents = (TableInfo **)pg_malloc(sizeof(TableInfo *) * numParents);
     j = 0;
-    for (i = 0; i < numInherits; i++) {
-      if (inhinfo[i].inhrelid == oid) {
+    for (i = 0; i < numInherits; i++)
+    {
+      if (inhinfo[i].inhrelid == oid)
+      {
         TableInfo *parent;
 
         parent = findTableByOid(inhinfo[i].inhparent);
-        if (parent == NULL) {
-          pg_log_error("failed sanity check, parent OID %u of table \"%s\" (OID %u) not found",inhinfo[i].inhparent, self->dobj.name, oid);
+        if (parent == NULL)
+        {
+          pg_log_error("failed sanity check, parent OID %u of table \"%s\" (OID %u) not found", inhinfo[i].inhparent, self->dobj.name, oid);
           exit_nicely(1);
         }
         self->parents[j++] = parent;
       }
     }
-  } else {
+  }
+  else
+  {
     self->parents = NULL;
   }
 }
@@ -1048,11 +1133,15 @@ parseOidArray(const char *str, Oid *array, int arraysize)
 
   argNum = 0;
   j = 0;
-  for (;;) {
+  for (;;)
+  {
     s = *str++;
-    if (s == ' ' || s == '\0') {
-      if (j > 0) {
-        if (argNum >= arraysize) {
+    if (s == ' ' || s == '\0')
+    {
+      if (j > 0)
+      {
+        if (argNum >= arraysize)
+        {
           pg_log_error("could not parse numeric array \"%s\": too many numbers", str);
           exit_nicely(1);
         }
@@ -1060,11 +1149,15 @@ parseOidArray(const char *str, Oid *array, int arraysize)
         array[argNum++] = atooid(temp);
         j = 0;
       }
-      if (s == '\0') {
+      if (s == '\0')
+      {
         break;
       }
-    } else {
-      if (!(isdigit((unsigned char)s) || s == '-') || j >= sizeof(temp) - 1) {
+    }
+    else
+    {
+      if (!(isdigit((unsigned char)s) || s == '-') || j >= sizeof(temp) - 1)
+      {
         pg_log_error("could not parse numeric array \"%s\": invalid character in number", str);
         exit_nicely(1);
       }
@@ -1072,7 +1165,8 @@ parseOidArray(const char *str, Oid *array, int arraysize)
     }
   }
 
-  while (argNum < arraysize) {
+  while (argNum < arraysize)
+  {
     array[argNum++] = InvalidOid;
   }
 }
@@ -1081,8 +1175,7 @@ parseOidArray(const char *str, Oid *array, int arraysize)
  * strInArray:
  *	  takes in a string and a string array and the number of elements in the
  * string array.
- *	  returns the index if the string is somewhere in the array, -1
- *otherwise
+ *	  returns the index if the string is somewhere in the array, -1 otherwise
  */
 
 static int
@@ -1090,8 +1183,10 @@ strInArray(const char *pattern, char **arr, int arr_size)
 {
   int i;
 
-  for (i = 0; i < arr_size; i++) {
-    if (strcmp(pattern, arr[i]) == 0) {
+  for (i = 0; i < arr_size; i++)
+  {
+    if (strcmp(pattern, arr[i]) == 0)
+    {
       return i;
     }
   }

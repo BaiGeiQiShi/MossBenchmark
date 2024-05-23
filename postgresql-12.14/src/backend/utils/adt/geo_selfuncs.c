@@ -22,8 +22,8 @@
 #include "utils/geo_decls.h"
 
 /*
- *	Selectivity functions for geometric operators.  These are bogus --
- *unless we know the actual key distribution in the index, we can't make a good
+ *	Selectivity functions for geometric operators.  These are bogus -- unless
+ *	we know the actual key distribution in the index, we can't make a good
  *	prediction of the selectivity of these operators.
  *
  *	Note: the values used here may look unreasonably small.  Perhaps they
@@ -34,9 +34,9 @@
  *	In general, GiST needs to search multiple subtrees in order to guarantee
  *	that all occurrences of the same key have been found.  Because of this,
  *	the estimated cost for scanning the index ought to be higher than the
- *	output selectivity would indicate.  gistcostestimate(), over in
- *selfuncs.c, ought to be adjusted accordingly --- but until we can generate
- *somewhat realistic numbers here, it hardly matters...
+ *	output selectivity would indicate.  gistcostestimate(), over in selfuncs.c,
+ *	ought to be adjusted accordingly --- but until we can generate somewhat
+ *	realistic numbers here, it hardly matters...
  */
 
 /*

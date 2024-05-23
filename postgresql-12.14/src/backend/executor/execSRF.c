@@ -117,7 +117,8 @@ ExecMakeTableFunctionResult(SetExprState *setexpr, ExprContext *econtext, Memory
    * values would otherwise disappear when we reset that context in the
    * inner loop.  As the caller's CurrentMemoryContext is typically a
    * query-lifespan context, we don't want to leak memory there.  We require
-   * the caller to pass a separate memory context that can be used for this,* and can be reset each time through to avoid bloat.
+   * the caller to pass a separate memory context that can be used for this,
+   * and can be reset each time through to avoid bloat.
    */
   MemoryContextReset(argContext);
   callerContext = MemoryContextSwitchTo(argContext);
@@ -293,7 +294,7 @@ ExecMakeTableFunctionResult(SetExprState *setexpr, ExprContext *econtext, Memory
              */
             if (HeapTupleHeaderGetTypeId(td) != tupdesc->tdtypeid || HeapTupleHeaderGetTypMod(td) != tupdesc->tdtypmod)
             {
-
+              ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("rows returned by function are not all of the same row type")));
             }
           }
 
@@ -343,7 +344,7 @@ ExecMakeTableFunctionResult(SetExprState *setexpr, ExprContext *econtext, Memory
       /* check we're on the same page as the function author */
       if (!first_time || rsinfo.isDone != ExprSingleResult)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_E_R_I_E_SRF_PROTOCOL_VIOLATED), errmsg("table-function protocol for materialize mode was not followed")));
       }
       /* Done evaluating the set result */
       break;
@@ -356,10 +357,11 @@ ExecMakeTableFunctionResult(SetExprState *setexpr, ExprContext *econtext, Memory
     first_time = false;
   }
 
-no_function_result:;
+no_function_result:
 
   /*
-   * If we got nothing from the function (ie, an empty-set or NULL result),* we have to create the tuplestore to return, and if it's a
+   * If we got nothing from the function (ie, an empty-set or NULL result),
+   * we have to create the tuplestore to return, and if it's a
    * non-set-returning function then insert a single all-nulls row.  As
    * above, we depend on the expectedDesc to manufacture the dummy row.
    */
@@ -441,7 +443,7 @@ ExecInitFunctionResultSet(Expr *expr, ExprContext *econtext, PlanState *parent)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(expr));
   }
 
   /* shouldn't get here unless the selected function returns set */
@@ -474,7 +476,7 @@ ExecMakeFunctionResultSet(SetExprState *fcache, ExprContext *econtext, MemoryCon
   bool callit;
   int i;
 
-restart:;
+restart:
 
   /* Guard against stack overflow due to overly complex expressions */
   check_stack_depth();
@@ -625,7 +627,7 @@ restart:;
     /* check we're on the same page as the function author */
     if (rsinfo.isDone != ExprSingleResult)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_E_R_I_E_SRF_PROTOCOL_VIOLATED), errmsg("table-function protocol for materialize mode was not followed")));
     }
     if (rsinfo.setResult != NULL)
     {
@@ -660,7 +662,7 @@ init_sexpr(Oid foid, Oid input_collation, Expr *node, SetExprState *sexpr, PlanS
   aclresult = pg_proc_aclcheck(foid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(foid));
   }
   InvokeFunctionExecuteHook(foid);
 
@@ -672,7 +674,7 @@ init_sexpr(Oid foid, Oid input_collation, Expr *node, SetExprState *sexpr, PlanS
    */
   if (list_length(sexpr->args) > FUNC_MAX_ARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg_plural("cannot pass more than %d argument to a function", "cannot pass more than %d arguments to a function", FUNC_MAX_ARGS, FUNC_MAX_ARGS)));
   }
 
   /* Set up the primary fmgr lookup information */
@@ -686,7 +688,7 @@ init_sexpr(Oid foid, Oid input_collation, Expr *node, SetExprState *sexpr, PlanS
   /* If function returns set, check if that's allowed by caller */
   if (sexpr->func.fn_retset && !allowSRF)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set"), parent ? executor_errposition(parent->state, exprLocation((Node *)node)) : 0));
   }
 
   /* Otherwise, caller should have marked the sexpr correctly */
@@ -730,7 +732,7 @@ init_sexpr(Oid foid, Oid input_collation, Expr *node, SetExprState *sexpr, PlanS
     else
     {
       /* Else, we will fail if function needs an expectedDesc */
-
+      sexpr->funcResultDesc = NULL;
     }
 
     MemoryContextSwitchTo(oldcontext);
@@ -818,7 +820,8 @@ ExecPrepareTuplestoreResult(SetExprState *sexpr, ExprContext *econtext, Tuplesto
     oldcontext = MemoryContextSwitchTo(sexpr->func.fn_mcxt);
 
     /*
-     * If we were not able to determine the result rowtype from context,* and the function didn't return a tupdesc, we have to fail.
+     * If we were not able to determine the result rowtype from context,
+     * and the function didn't return a tupdesc, we have to fail.
      */
     if (sexpr->funcResultDesc)
     {
@@ -831,8 +834,9 @@ ExecPrepareTuplestoreResult(SetExprState *sexpr, ExprContext *econtext, Tuplesto
     }
     else
     {
-
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function returning setof record called in "
+                                                                     "context that cannot accept type record")));
+      slotDesc = NULL; /* keep compiler quiet */
     }
 
     sexpr->funcResultSlot = MakeSingleTupleTableSlot(slotDesc, &TTSOpsMinimalTuple);
@@ -905,7 +909,7 @@ tupledesc_match(TupleDesc dst_tupdesc, TupleDesc src_tupdesc)
 
     if (dattr->attlen != sattr->attlen || dattr->attalign != sattr->attalign)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("function return row and query-specified return row do not match"), errdetail("Physical storage mismatch on dropped attribute at ordinal position %d.", i + 1)));
     }
   }
 }

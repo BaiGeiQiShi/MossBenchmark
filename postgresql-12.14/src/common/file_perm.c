@@ -36,9 +36,9 @@ SetDataDirectoryCreatePerm(int dataDirMode)
   /* If the data directory mode has group access */
   if ((PG_DIR_MODE_GROUP & dataDirMode) == PG_DIR_MODE_GROUP)
   {
-
-
-
+    pg_dir_create_mode = PG_DIR_MODE_GROUP;
+    pg_file_create_mode = PG_FILE_MODE_GROUP;
+    pg_mode_mask = PG_MODE_MASK_GROUP;
   }
   /* Else use default permissions */
   else

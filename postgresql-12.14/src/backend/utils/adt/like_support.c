@@ -125,9 +125,9 @@ textregexeq_support(PG_FUNCTION_ARGS)
 Datum
 texticregexeq_support(PG_FUNCTION_ARGS)
 {
+  Node *rawreq = (Node *)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_POINTER(like_regex_support(rawreq, Pattern_Type_Regex_IC));
 }
 
 /* Common code for the above */
@@ -145,21 +145,21 @@ like_regex_support(Node *rawreq, Pattern_Type ptype)
     SupportRequestSelectivity *req = (SupportRequestSelectivity *)rawreq;
     Selectivity s1;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (req->is_join)
+    {
+      /*
+       * For the moment we just punt.  If patternjoinsel is ever
+       * improved to do better, this should be made to call it.
+       */
+      s1 = DEFAULT_MATCH_SEL;
+    }
+    else
+    {
+      /* Share code with operator restriction selectivity functions */
+      s1 = patternsel_common(req->root, InvalidOid, req->funcid, req->args, req->varRelid, req->inputcollid, ptype, false);
+    }
+    req->selectivity = s1;
+    ret = (Node *)req;
   }
   else if (IsA(rawreq, SupportRequestIndexCondition))
   {
@@ -173,7 +173,7 @@ like_regex_support(Node *rawreq, Pattern_Type ptype)
      */
     if (req->indexarg != 0)
     {
-
+      return NULL;
     }
 
     if (is_opclause(req->node))
@@ -183,13 +183,13 @@ like_regex_support(Node *rawreq, Pattern_Type ptype)
       Assert(list_length(clause->args) == 2);
       ret = (Node *)match_pattern_prefix((Node *)linitial(clause->args), (Node *)lsecond(clause->args), ptype, clause->inputcollid, req->opfamily, req->indexcollation);
     }
+    else if (is_funcclause(req->node)) /* be paranoid */
+    {
+      FuncExpr *clause = (FuncExpr *)req->node;
 
-
-
-
-
-
-
+      Assert(list_length(clause->args) == 2);
+      ret = (Node *)match_pattern_prefix((Node *)linitial(clause->args), (Node *)lsecond(clause->args), ptype, clause->inputcollid, req->opfamily, req->indexcollation);
+    }
   }
 
   return ret;
@@ -222,7 +222,7 @@ match_pattern_prefix(Node *leftop, Node *rightop, Pattern_Type ptype, Oid expr_c
    */
   if (!IsA(rightop, Const) || ((Const *)rightop)->constisnull)
   {
-
+    return NIL;
   }
   patt = (Const *)rightop;
 
@@ -241,7 +241,7 @@ match_pattern_prefix(Node *leftop, Node *rightop, Pattern_Type ptype, Oid expr_c
    */
   if (expr_coll && !get_collation_isdeterministic(expr_coll))
   {
-
+    return NIL;
   }
 
   /*
@@ -279,37 +279,37 @@ match_pattern_prefix(Node *leftop, Node *rightop, Pattern_Type ptype, Oid expr_c
    */
   switch (opfamily)
   {
-  case TEXT_BTREE_FAM_OID:;
+  case TEXT_BTREE_FAM_OID:
     if (!(pstatus == Pattern_Prefix_Exact || lc_collate_is_c(indexcollation)))
     {
-
+      return NIL;
     }
     rdatatype = TEXTOID;
     break;
 
-  case TEXT_PATTERN_BTREE_FAM_OID:;
-  case TEXT_SPGIST_FAM_OID:;
+  case TEXT_PATTERN_BTREE_FAM_OID:
+  case TEXT_SPGIST_FAM_OID:
+    rdatatype = TEXTOID;
+    break;
 
-
-
-  case BPCHAR_BTREE_FAM_OID:;
+  case BPCHAR_BTREE_FAM_OID:
     if (!(pstatus == Pattern_Prefix_Exact || lc_collate_is_c(indexcollation)))
     {
-
+      return NIL;
     }
     rdatatype = BPCHAROID;
     break;
 
-  case BPCHAR_PATTERN_BTREE_FAM_OID:;
+  case BPCHAR_PATTERN_BTREE_FAM_OID:
+    rdatatype = BPCHAROID;
+    break;
 
+  case BYTEA_BTREE_FAM_OID:
+    rdatatype = BYTEAOID;
+    break;
 
-
-  case BYTEA_BTREE_FAM_OID:;
-
-
-
-  default:;;
-
+  default:
+    return NIL;
   }
 
   /* OK, prepare to create the indexqual(s) */
@@ -370,7 +370,7 @@ match_pattern_prefix(Node *leftop, Node *rightop, Pattern_Type ptype, Oid expr_c
   oproid = get_opfamily_member(opfamily, ldatatype, rdatatype, BTLessStrategyNumber);
   if (oproid == InvalidOid)
   {
-
+    return result;
   }
   fmgr_info(get_opcode(oproid), &ltproc);
   greaterstr = make_greater_string(prefix, &ltproc, indexcollation);
@@ -435,8 +435,8 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
   }
   if (!varonleft || !IsA(other, Const))
   {
-
-
+    ReleaseVariableStats(vardata);
+    return result;
   }
 
   /*
@@ -445,8 +445,8 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
    */
   if (((Const *)other)->constisnull)
   {
-
-
+    ReleaseVariableStats(vardata);
+    return 0.0;
   }
   constval = ((Const *)other)->constvalue;
   consttype = ((Const *)other)->consttype;
@@ -459,8 +459,8 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
    */
   if (consttype != TEXTOID && consttype != BYTEAOID)
   {
-
-
+    ReleaseVariableStats(vardata);
+    return result;
   }
 
   /*
@@ -478,19 +478,19 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
 
   switch (vartype)
   {
-  case TEXTOID:;
-  case NAMEOID:;
+  case TEXTOID:
+  case NAMEOID:
     opfamily = TEXT_BTREE_FAM_OID;
     break;
-  case BPCHAROID:;
+  case BPCHAROID:
     opfamily = BPCHAR_BTREE_FAM_OID;
     break;
-  case BYTEAOID:;
+  case BYTEAOID:
     opfamily = BYTEA_BTREE_FAM_OID;
     break;
-  default:;;
-
-
+  default:
+    ReleaseVariableStats(vardata);
+    return result;
   }
 
   /*
@@ -525,16 +525,16 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
 
     switch (prefix->consttype)
     {
-    case TEXTOID:;
+    case TEXTOID:
       prefixstr = TextDatumGetCString(prefix->constvalue);
       break;
-    case BYTEAOID:;
-
-
-    default:;;
-
-
-
+    case BYTEAOID:
+      prefixstr = DatumGetCString(DirectFunctionCall1(byteaout, prefix->constvalue));
+      break;
+    default:
+      elog(ERROR, "unrecognized consttype: %u", prefix->consttype);
+      ReleaseVariableStats(vardata);
+      return result;
     }
     prefix = string_to_const(prefixstr, vartype);
     pfree(prefixstr);
@@ -549,7 +549,7 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
 
     if (eqopr == InvalidOid)
     {
-
+      elog(ERROR, "no = operator for opfamily %u", opfamily);
     }
     result = var_eq_const_ext(&vardata, eqopr, collation, prefix->constvalue, false, true, false);
   }
@@ -601,8 +601,8 @@ patternsel_common(PlannerInfo *root, Oid oprid, Oid opfuncid, List *args, int va
       }
       heursel = prefixsel * rest_selec;
 
-      if (selec < 0)
-      { /* fewer than 10 histogram entries? */
+      if (selec < 0) /* fewer than 10 histogram entries? */
+      {
         selec = heursel;
       }
       else
@@ -687,7 +687,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
     operator= get_negator(operator);
     if (!OidIsValid(operator))
     {
-
+      elog(ERROR, "patternsel called for operator without a negator");
     }
   }
 
@@ -695,8 +695,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 }
 
 /*
- *		regexeqsel		- Selectivity of regular-expression
- *pattern match.
+ *		regexeqsel		- Selectivity of regular-expression pattern match.
  */
 Datum
 regexeqsel(PG_FUNCTION_ARGS)
@@ -710,7 +709,7 @@ regexeqsel(PG_FUNCTION_ARGS)
 Datum
 icregexeqsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternsel(fcinfo, Pattern_Type_Regex_IC, false));
 }
 
 /*
@@ -733,8 +732,7 @@ prefixsel(PG_FUNCTION_ARGS)
 
 /*
  *
- *		iclikesel			- Selectivity of ILIKE pattern
- *match.
+ *		iclikesel			- Selectivity of ILIKE pattern match.
  */
 Datum
 iclikesel(PG_FUNCTION_ARGS)
@@ -743,8 +741,7 @@ iclikesel(PG_FUNCTION_ARGS)
 }
 
 /*
- *		regexnesel		- Selectivity of regular-expression
- *pattern non-match.
+ *		regexnesel		- Selectivity of regular-expression pattern non-match.
  */
 Datum
 regexnesel(PG_FUNCTION_ARGS)
@@ -753,8 +750,7 @@ regexnesel(PG_FUNCTION_ARGS)
 }
 
 /*
- *		icregexnesel	- Selectivity of case-insensitive regex
- *non-match.
+ *		icregexnesel	- Selectivity of case-insensitive regex non-match.
  */
 Datum
 icregexnesel(PG_FUNCTION_ARGS)
@@ -772,74 +768,67 @@ nlikesel(PG_FUNCTION_ARGS)
 }
 
 /*
- *		icnlikesel		- Selectivity of ILIKE pattern
- *non-match.
+ *		icnlikesel		- Selectivity of ILIKE pattern non-match.
  */
 Datum
 icnlikesel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternsel(fcinfo, Pattern_Type_Like_IC, true));
 }
 
 /*
- * patternjoinsel		- Generic code for pattern-match join
- * selectivity.
+ * patternjoinsel		- Generic code for pattern-match join selectivity.
  */
 static double
 patternjoinsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 {
-
-
+  /* For the moment we just punt. */
+  return negate ? (1.0 - DEFAULT_MATCH_SEL) : DEFAULT_MATCH_SEL;
 }
 
 /*
- *		regexeqjoinsel	- Join selectivity of regular-expression pattern
- *match.
+ *		regexeqjoinsel	- Join selectivity of regular-expression pattern match.
  */
 Datum
 regexeqjoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Regex, false));
 }
 
 /*
- *		icregexeqjoinsel	- Join selectivity of case-insensitive
- *regex match.
+ *		icregexeqjoinsel	- Join selectivity of case-insensitive regex match.
  */
 Datum
 icregexeqjoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Regex_IC, false));
 }
 
 /*
- *		likejoinsel			- Join selectivity of LIKE
- *pattern match.
+ *		likejoinsel			- Join selectivity of LIKE pattern match.
  */
 Datum
 likejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Like, false));
 }
 
 /*
- *		prefixjoinsel			- Join selectivity of prefix
- *operator
+ *		prefixjoinsel			- Join selectivity of prefix operator
  */
 Datum
 prefixjoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Prefix, false));
 }
 
 /*
- *		iclikejoinsel			- Join selectivity of ILIKE
- *pattern match.
+ *		iclikejoinsel			- Join selectivity of ILIKE pattern match.
  */
 Datum
 iclikejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Like_IC, false));
 }
 
 /*
@@ -848,37 +837,34 @@ iclikejoinsel(PG_FUNCTION_ARGS)
 Datum
 regexnejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Regex, true));
 }
 
 /*
- *		icregexnejoinsel	- Join selectivity of case-insensitive
- *regex non-match.
+ *		icregexnejoinsel	- Join selectivity of case-insensitive regex non-match.
  */
 Datum
 icregexnejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Regex_IC, true));
 }
 
 /*
- *		nlikejoinsel		- Join selectivity of LIKE pattern
- *non-match.
+ *		nlikejoinsel		- Join selectivity of LIKE pattern non-match.
  */
 Datum
 nlikejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Like, true));
 }
 
 /*
- *		icnlikejoinsel		- Join selectivity of ILIKE pattern
- *non-match.
+ *		icnlikejoinsel		- Join selectivity of ILIKE pattern non-match.
  */
 Datum
 icnlikejoinsel(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_FLOAT8(patternjoinsel(fcinfo, Pattern_Type_Like_IC, true));
 }
 
 /*-------------------------------------------------------------------------
@@ -928,7 +914,7 @@ like_fixed_prefix(Const *patt_const, bool case_insensitive, Oid collation, Const
   {
     if (typeid == BYTEAOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("case insensitive matching not supported on type bytea")));
     }
 
     /* If case-insensitive, we need locale info */
@@ -936,18 +922,18 @@ like_fixed_prefix(Const *patt_const, bool case_insensitive, Oid collation, Const
     {
       locale_is_c = true;
     }
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (collation != DEFAULT_COLLATION_OID)
+    {
+      if (!OidIsValid(collation))
+      {
+        /*
+         * This typically means that the parser could not resolve a
+         * conflict of implicit collations, so report it that way.
+         */
+        ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for ILIKE"), errhint("Use the COLLATE clause to set the collation explicitly.")));
+      }
+      locale = pg_newlocale_from_collation(collation);
+    }
   }
 
   if (typeid != BYTEAOID)
@@ -981,7 +967,7 @@ like_fixed_prefix(Const *patt_const, bool case_insensitive, Oid collation, Const
       pos++;
       if (pos >= pattlen)
       {
-
+        break;
       }
     }
 
@@ -1041,7 +1027,7 @@ regex_fixed_prefix(Const *patt_const, bool case_insensitive, Oid collation, Cons
    */
   if (typeid == BYTEAOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("regular-expression matching not supported on type bytea")));
   }
 
   /* Use the regexp machinery to extract the prefix, if any */
@@ -1099,28 +1085,28 @@ pattern_fixed_prefix(Const *patt, Pattern_Type ptype, Oid collation, Const **pre
 
   switch (ptype)
   {
-  case Pattern_Type_Like:;
+  case Pattern_Type_Like:
     result = like_fixed_prefix(patt, false, collation, prefix, rest_selec);
     break;
-  case Pattern_Type_Like_IC:;
+  case Pattern_Type_Like_IC:
     result = like_fixed_prefix(patt, true, collation, prefix, rest_selec);
     break;
-  case Pattern_Type_Regex:;
+  case Pattern_Type_Regex:
     result = regex_fixed_prefix(patt, false, collation, prefix, rest_selec);
     break;
-  case Pattern_Type_Regex_IC:;
-
-
-  case Pattern_Type_Prefix:;
+  case Pattern_Type_Regex_IC:
+    result = regex_fixed_prefix(patt, true, collation, prefix, rest_selec);
+    break;
+  case Pattern_Type_Prefix:
     /* Prefix type work is trivial.  */
     result = Pattern_Prefix_Partial;
     *rest_selec = 1.0; /* all */
     *prefix = makeConst(patt->consttype, patt->consttypmod, patt->constcollid, patt->constlen, datumCopy(patt->constvalue, patt->constbyval, patt->constlen), patt->constisnull, patt->constbyval);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized ptype: %d", (int)ptype);
+    result = Pattern_Prefix_None; /* keep compiler quiet */
+    break;
   }
   return result;
 }
@@ -1156,7 +1142,7 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata, Oid vartype, Oi
   cmpopr = get_opfamily_member(opfamily, vartype, vartype, BTGreaterEqualStrategyNumber);
   if (cmpopr == InvalidOid)
   {
-
+    elog(ERROR, "no >= operator for opfamily %u", opfamily);
   }
   fmgr_info(get_opcode(cmpopr), &opproc);
 
@@ -1174,7 +1160,7 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata, Oid vartype, Oi
   cmpopr = get_opfamily_member(opfamily, vartype, vartype, BTLessStrategyNumber);
   if (cmpopr == InvalidOid)
   {
-
+    elog(ERROR, "no < operator for opfamily %u", opfamily);
   }
   fmgr_info(get_opcode(cmpopr), &opproc);
   greaterstrcon = make_greater_string(prefixcon, &opproc, collation);
@@ -1212,7 +1198,7 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata, Oid vartype, Oi
   cmpopr = get_opfamily_member(opfamily, vartype, vartype, BTEqualStrategyNumber);
   if (cmpopr == InvalidOid)
   {
-
+    elog(ERROR, "no = operator for opfamily %u", opfamily);
   }
   eq_sel = var_eq_const_ext(vardata, cmpopr, collation, prefixcon->constvalue, false, true, false);
 
@@ -1269,7 +1255,7 @@ like_selectivity(const char *patt, int pattlen, bool case_insensitive)
       pos++;
       if (pos >= pattlen)
       {
-
+        break;
       }
       sel *= FIXED_CHAR_SEL;
     }
@@ -1281,7 +1267,7 @@ like_selectivity(const char *patt, int pattlen, bool case_insensitive)
   /* Could get sel > 1 if multiple wildcards */
   if (sel > 1.0)
   {
-
+    sel = 1.0;
   }
   return sel;
 }
@@ -1330,12 +1316,12 @@ regex_selectivity_sub(const char *patt, int pattlen, bool case_insensitive)
 
       if (patt[++pos] == '^')
       {
-
-
+        negclass = true;
+        pos++;
       }
-      if (patt[pos] == ']')
-      { /* ']' at start of class is not special */
-
+      if (patt[pos] == ']') /* ']' at start of class is not special */
+      {
+        pos++;
       }
       while (pos < pattlen && patt[pos] != ']')
       {
@@ -1363,14 +1349,14 @@ regex_selectivity_sub(const char *patt, int pattlen, bool case_insensitive)
     }
     else if (patt[pos] == '{')
     {
-
-
-
-
-
-
-
-
+      while (pos < pattlen && patt[pos] != '}')
+      {
+        pos++;
+      }
+      if (paren_depth == 0)
+      {
+        sel *= PARTIAL_WILDCARD_SEL;
+      }
     }
     else if (patt[pos] == '\\')
     {
@@ -1378,7 +1364,7 @@ regex_selectivity_sub(const char *patt, int pattlen, bool case_insensitive)
       pos++;
       if (pos >= pattlen)
       {
-
+        break;
       }
       if (paren_depth == 0)
       {
@@ -1454,24 +1440,24 @@ pattern_char_isalpha(char c, bool is_multibyte, pg_locale_t locale, bool locale_
   {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (is_multibyte && IS_HIGHBIT_SET(c))
+  {
+    return true;
+  }
+  else if (locale && locale->provider == COLLPROVIDER_ICU)
+  {
+    return IS_HIGHBIT_SET(c) || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+  }
+#ifdef HAVE_LOCALE_T
+  else if (locale && locale->provider == COLLPROVIDER_LIBC)
+  {
+    return isalpha_l((unsigned char)c, locale->info.lt);
+  }
+#endif
+  else
+  {
+    return isalpha((unsigned char)c);
+  }
 }
 
 /*
@@ -1481,12 +1467,12 @@ pattern_char_isalpha(char c, bool is_multibyte, pg_locale_t locale, bool locale_
 static bool
 byte_increment(unsigned char *ptr, int len)
 {
-
-
-
-
-
-
+  if (*ptr >= 255)
+  {
+    return false;
+  }
+  (*ptr)++;
+  return true;
 }
 
 /*
@@ -1550,11 +1536,11 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
   {
     bytea *bstr = DatumGetByteaPP(str_const->constvalue);
 
-
-
-
-
-
+    len = VARSIZE_ANY_EXHDR(bstr);
+    workstr = (char *)palloc(len);
+    memcpy(workstr, VARDATA_ANY(bstr), len);
+    Assert((Pointer)bstr == DatumGetPointer(str_const->constvalue));
+    cmpstr = str_const->constvalue;
   }
   else
   {
@@ -1577,51 +1563,51 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
       static char suffixchar = 0;
       static Oid suffixcollation = 0;
 
+      if (!suffixchar || suffixcollation != collation)
+      {
+        char *best;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        best = "Z";
+        if (varstr_cmp(best, 1, "z", 1, collation) < 0)
+        {
+          best = "z";
+        }
+        if (varstr_cmp(best, 1, "y", 1, collation) < 0)
+        {
+          best = "y";
+        }
+        if (varstr_cmp(best, 1, "9", 1, collation) < 0)
+        {
+          best = "9";
+        }
+        suffixchar = *best;
+        suffixcollation = collation;
+      }
 
       /* And build the string to compare to */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (datatype == NAMEOID)
+      {
+        cmptxt = palloc(len + 2);
+        memcpy(cmptxt, workstr, len);
+        cmptxt[len] = suffixchar;
+        cmptxt[len + 1] = '\0';
+        cmpstr = PointerGetDatum(cmptxt);
+      }
+      else
+      {
+        cmptxt = palloc(VARHDRSZ + len + 1);
+        SET_VARSIZE(cmptxt, VARHDRSZ + len + 1);
+        memcpy(VARDATA(cmptxt), workstr, len);
+        *(VARDATA(cmptxt) + len) = suffixchar;
+        cmpstr = PointerGetDatum(cmptxt);
+      }
     }
   }
 
   /* Select appropriate character-incrementer function */
   if (datatype == BYTEAOID)
   {
-
+    charinc = byte_increment;
   }
   else
   {
@@ -1637,7 +1623,7 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
     /* Identify the last character --- for bytea, just the last byte */
     if (datatype == BYTEAOID)
     {
-
+      charlen = 1;
     }
     else
     {
@@ -1659,7 +1645,7 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
 
       if (datatype == BYTEAOID)
       {
-
+        workstr_const = string_to_bytea_const(workstr, len);
       }
       else
       {
@@ -1671,15 +1657,15 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
         /* Successfully made a string larger than cmpstr */
         if (cmptxt)
         {
-
+          pfree(cmptxt);
         }
         pfree(workstr);
         return workstr_const;
       }
 
       /* No good, release unusable value and try again */
-
-
+      pfree(DatumGetPointer(workstr_const->constvalue));
+      pfree(workstr_const);
     }
 
     /*
@@ -1687,17 +1673,17 @@ make_greater_string(const Const *str_const, FmgrInfo *ltproc, Oid collation)
      * increment the next one.
      */
     len -= charlen;
-
+    workstr[len] = '\0';
   }
 
   /* Failed... */
   if (cmptxt)
   {
-
+    pfree(cmptxt);
   }
+  pfree(workstr);
 
-
-
+  return NULL;
 }
 
 /*
@@ -1720,7 +1706,7 @@ string_to_datum(const char *str, Oid datatype)
   }
   else if (datatype == BYTEAOID)
   {
-
+    return DirectFunctionCall1(byteain, CStringGetDatum(str));
   }
   else
   {
@@ -1744,26 +1730,26 @@ string_to_const(const char *str, Oid datatype)
    */
   switch (datatype)
   {
-  case TEXTOID:;
-  case VARCHAROID:;
-  case BPCHAROID:;
+  case TEXTOID:
+  case VARCHAROID:
+  case BPCHAROID:
     collation = DEFAULT_COLLATION_OID;
     constlen = -1;
     break;
 
-  case NAMEOID:;
+  case NAMEOID:
     collation = C_COLLATION_OID;
     constlen = NAMEDATALEN;
     break;
 
-  case BYTEAOID:;
+  case BYTEAOID:
+    collation = InvalidOid;
+    constlen = -1;
+    break;
 
-
-
-
-  default:;;
-
-
+  default:
+    elog(ERROR, "unexpected datatype in string_to_const: %u", datatype);
+    return NULL;
   }
 
   return makeConst(datatype, -1, collation, constlen, conval, false, false);

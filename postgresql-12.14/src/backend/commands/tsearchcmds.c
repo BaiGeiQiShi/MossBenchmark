@@ -72,25 +72,25 @@ get_ts_parser_func(DefElem *defel, int attnum)
   typeId[0] = INTERNALOID;
   switch (attnum)
   {
-  case Anum_pg_ts_parser_prsstart:;
+  case Anum_pg_ts_parser_prsstart:
     nargs = 2;
     typeId[1] = INT4OID;
     break;
-  case Anum_pg_ts_parser_prstoken:;
+  case Anum_pg_ts_parser_prstoken:
     nargs = 3;
     typeId[1] = INTERNALOID;
     typeId[2] = INTERNALOID;
     break;
-  case Anum_pg_ts_parser_prsend:;
+  case Anum_pg_ts_parser_prsend:
     nargs = 1;
     retTypeId = VOIDOID;
     break;
-  case Anum_pg_ts_parser_prsheadline:;
-
-
-
-
-  case Anum_pg_ts_parser_prslextype:;
+  case Anum_pg_ts_parser_prsheadline:
+    nargs = 3;
+    typeId[1] = INTERNALOID;
+    typeId[2] = TSQUERYOID;
+    break;
+  case Anum_pg_ts_parser_prslextype:
     nargs = 1;
 
     /*
@@ -99,16 +99,16 @@ get_ts_parser_func(DefElem *defel, int attnum)
      * argument is not actually used, but is just passed as a zero.
      */
     break;
-  default:;;
+  default:
     /* should not be here */
-
-
+    elog(ERROR, "unrecognized attribute for text search parser: %d", attnum);
+    nargs = 0; /* keep compiler quiet */
   }
 
   procOid = LookupFuncName(funcName, nargs, typeId, false);
   if (get_func_rettype(procOid) != retTypeId)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("function %s should return type %s", func_signature_string(funcName, nargs, NIL, typeId), format_type_be(retTypeId))));
   }
 
   return ObjectIdGetDatum(procOid);
@@ -156,8 +156,8 @@ makeParserDependencies(HeapTuple tuple)
 
   if (OidIsValid(prs->prsheadline))
   {
-
-
+    referenced.objectId = prs->prsheadline;
+    recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
   return myself;
@@ -182,7 +182,7 @@ DefineTSParser(List *names, List *parameters)
 
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create text search parsers")));
   }
 
   prsRel = table_open(TSParserRelationId, RowExclusiveLock);
@@ -221,7 +221,7 @@ DefineTSParser(List *names, List *parameters)
     }
     else if (strcmp(defel->defname, "headline") == 0)
     {
-
+      values[Anum_pg_ts_parser_prsheadline - 1] = get_ts_parser_func(defel, Anum_pg_ts_parser_prsheadline);
     }
     else if (strcmp(defel->defname, "lextypes") == 0)
     {
@@ -238,22 +238,22 @@ DefineTSParser(List *names, List *parameters)
    */
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_parser_prsstart - 1])))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser start method is required")));
   }
 
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_parser_prstoken - 1])))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser gettoken method is required")));
   }
 
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_parser_prsend - 1])))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser end method is required")));
   }
 
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_parser_prslextype - 1])))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser lextypes method is required")));
   }
 
   /*
@@ -290,7 +290,7 @@ RemoveTSParserById(Oid prsId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for text search parser %u", prsId);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -361,9 +361,9 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
   }
 
   tup = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(tmplId));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for text search template %u", tmplId);
   }
   tform = (Form_pg_ts_template)GETSTRUCT(tup);
 
@@ -372,10 +372,10 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
   if (!OidIsValid(initmethod))
   {
     /* If there is no init method, disallow any options */
-
-
-
-
+    if (dictoptions)
+    {
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("text search template \"%s\" does not accept options", NameStr(tform->tmplname))));
+    }
   }
   else
   {
@@ -422,7 +422,7 @@ DefineTSDictionary(List *names, List *parameters)
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
   /*
@@ -448,7 +448,7 @@ DefineTSDictionary(List *names, List *parameters)
    */
   if (!OidIsValid(templId))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search template is required")));
   }
 
   verify_dictoptions(templId, dictoptions);
@@ -508,7 +508,7 @@ RemoveTSDictionaryById(Oid dictId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for text search dictionary %u", dictId);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -524,126 +524,126 @@ RemoveTSDictionaryById(Oid dictId)
 ObjectAddress
 AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 {
+  HeapTuple tup, newtup;
+  Relation rel;
+  Oid dictId;
+  ListCell *pl;
+  List *dictoptions;
+  Datum opt;
+  bool isnull;
+  Datum repl_val[Natts_pg_ts_dict];
+  bool repl_null[Natts_pg_ts_dict];
+  bool repl_repl[Natts_pg_ts_dict];
+  ObjectAddress address;
+
+  dictId = get_ts_dict_oid(stmt->dictname, false);
+
+  rel = table_open(TSDictionaryRelationId, RowExclusiveLock);
+
+  tup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictId));
+
+  if (!HeapTupleIsValid(tup))
+  {
+    elog(ERROR, "cache lookup failed for text search dictionary %u", dictId);
+  }
+
+  /* must be owner */
+  if (!pg_ts_dict_ownercheck(dictId, GetUserId()))
+  {
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TSDICTIONARY, NameListToString(stmt->dictname));
+  }
+
+  /* deserialize the existing set of options */
+  opt = SysCacheGetAttr(TSDICTOID, tup, Anum_pg_ts_dict_dictinitoption, &isnull);
+  if (isnull)
+  {
+    dictoptions = NIL;
+  }
+  else
+  {
+    dictoptions = deserialize_deflist(opt);
+  }
+
+  /*
+   * Modify the options list as per specified changes
+   */
+  foreach (pl, stmt->options)
+  {
+    DefElem *defel = (DefElem *)lfirst(pl);
+    ListCell *cell;
+    ListCell *prev;
+    ListCell *next;
+
+    /*
+     * Remove any matches ...
+     */
+    prev = NULL;
+    for (cell = list_head(dictoptions); cell; cell = next)
+    {
+      DefElem *oldel = (DefElem *)lfirst(cell);
+
+      next = lnext(cell);
+      if (strcmp(oldel->defname, defel->defname) == 0)
+      {
+        dictoptions = list_delete_cell(dictoptions, cell, prev);
+      }
+      else
+      {
+        prev = cell;
+      }
+    }
+
+    /*
+     * and add new value if it's got one
+     */
+    if (defel->arg)
+    {
+      dictoptions = lappend(dictoptions, defel);
+    }
+  }
+
+  /*
+   * Validate
+   */
+  verify_dictoptions(((Form_pg_ts_dict)GETSTRUCT(tup))->dicttemplate, dictoptions);
+
+  /*
+   * Looks good, update
+   */
+  memset(repl_val, 0, sizeof(repl_val));
+  memset(repl_null, false, sizeof(repl_null));
+  memset(repl_repl, false, sizeof(repl_repl));
+
+  if (dictoptions)
+  {
+    repl_val[Anum_pg_ts_dict_dictinitoption - 1] = PointerGetDatum(serialize_deflist(dictoptions));
+  }
+  else
+  {
+    repl_null[Anum_pg_ts_dict_dictinitoption - 1] = true;
+  }
+  repl_repl[Anum_pg_ts_dict_dictinitoption - 1] = true;
+
+  newtup = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null, repl_repl);
 
+  CatalogTupleUpdate(rel, &newtup->t_self, newtup);
 
+  InvokeObjectPostAlterHook(TSDictionaryRelationId, dictId, 0);
 
+  ObjectAddressSet(address, TSDictionaryRelationId, dictId);
 
+  /*
+   * NOTE: because we only support altering the options, not the template,
+   * there is no need to update dependencies.  This might have to change if
+   * the options ever reference inside-the-database objects.
+   */
 
+  heap_freetuple(newtup);
+  ReleaseSysCache(tup);
 
+  table_close(rel, RowExclusiveLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return address;
 }
 
 /* ---------------------- TS Template commands -----------------------*/
@@ -669,22 +669,22 @@ get_ts_template_func(DefElem *defel, int attnum)
   typeId[3] = INTERNALOID;
   switch (attnum)
   {
-  case Anum_pg_ts_template_tmplinit:;
+  case Anum_pg_ts_template_tmplinit:
     nargs = 1;
     break;
-  case Anum_pg_ts_template_tmpllexize:;
+  case Anum_pg_ts_template_tmpllexize:
     nargs = 4;
     break;
-  default:;;
+  default:
     /* should not be here */
-
-
+    elog(ERROR, "unrecognized attribute for text search template: %d", attnum);
+    nargs = 0; /* keep compiler quiet */
   }
 
   procOid = LookupFuncName(funcName, nargs, typeId, false);
   if (get_func_rettype(procOid) != retTypeId)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("function %s should return type %s", func_signature_string(funcName, nargs, NIL, typeId), format_type_be(retTypeId))));
   }
 
   return ObjectIdGetDatum(procOid);
@@ -748,7 +748,7 @@ DefineTSTemplate(List *names, List *parameters)
 
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create text search templates")));
   }
 
   /* Convert list of names to a name and namespace */
@@ -796,7 +796,7 @@ DefineTSTemplate(List *names, List *parameters)
    */
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_template_tmpllexize - 1])))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search template lexize method is required")));
   }
 
   /*
@@ -833,7 +833,7 @@ RemoveTSTemplateById(Oid tmplId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for text search template %u", tmplId);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -858,14 +858,14 @@ GetTSConfigTuple(List *names)
   cfgId = get_ts_config_oid(names, true);
   if (!OidIsValid(cfgId))
   {
-
+    return NULL;
   }
 
   tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for text search configuration %u", cfgId);
   }
 
   return tup;
@@ -983,7 +983,7 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
   /*
@@ -1003,13 +1003,13 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("text search configuration parameter \"%s\" not recognized", defel->defname)));
     }
   }
 
   if (OidIsValid(sourceOid) && OidIsValid(prsOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("cannot specify both PARSER and COPY options")));
   }
 
   /* make copied tsconfig available to callers */
@@ -1028,7 +1028,7 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
     tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(sourceOid));
     if (!HeapTupleIsValid(tup))
     {
-
+      elog(ERROR, "cache lookup failed for text search configuration %u", sourceOid);
     }
 
     cfg = (Form_pg_ts_config)GETSTRUCT(tup);
@@ -1044,7 +1044,7 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
    */
   if (!OidIsValid(prsOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser is required")));
   }
 
   cfgRel = table_open(TSConfigRelationId, RowExclusiveLock);
@@ -1141,7 +1141,7 @@ RemoveTSConfigurationById(Oid cfgId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for text search dictionary %u", cfgId);
   }
 
   CatalogTupleDelete(relCfg, &tup->t_self);
@@ -1182,7 +1182,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
   tup = GetTSConfigTuple(stmt->cfgname);
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("text search configuration \"%s\" does not exist", NameListToString(stmt->cfgname))));
   }
 
   cfgId = ((Form_pg_ts_config)GETSTRUCT(tup))->oid;
@@ -1190,7 +1190,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
   /* must be owner */
   if (!pg_ts_config_ownercheck(cfgId, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TSCONFIGURATION, NameListToString(stmt->cfgname));
   }
 
   relMap = table_open(TSConfigMapRelationId, RowExclusiveLock);
@@ -1200,10 +1200,10 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
   {
     MakeConfigurationMapping(stmt, tup, relMap);
   }
-
-
-
-
+  else if (stmt->tokentype)
+  {
+    DropConfigurationMapping(stmt, tup, relMap);
+  }
 
   /* Update dependencies */
   makeConfigurationDependencies(tup, true, relMap);
@@ -1239,7 +1239,7 @@ getTokenTypes(Oid prsId, List *tokennames)
 
   if (!OidIsValid(prs->lextypeOid))
   {
-
+    elog(ERROR, "method lextype isn't defined for text search parser %u", prsId);
   }
 
   /* lextype takes one dummy argument */
@@ -1265,7 +1265,7 @@ getTokenTypes(Oid prsId, List *tokennames)
     }
     if (!found)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("token type \"%s\" does not exist", strVal(val))));
     }
     i++;
   }
@@ -1356,18 +1356,18 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
       {
         bool tokmatch = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
+        for (j = 0; j < ntoken; j++)
+        {
+          if (cfgmap->maptokentype == tokens[j])
+          {
+            tokmatch = true;
+            break;
+          }
+        }
+        if (!tokmatch)
+        {
+          continue;
+        }
       }
 
       /*
@@ -1429,57 +1429,57 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
 static void
 DropConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation relMap)
 {
+  Form_pg_ts_config tsform;
+  Oid cfgId;
+  ScanKeyData skey[2];
+  SysScanDesc scan;
+  HeapTuple maptup;
+  int i;
+  Oid prsId;
+  int *tokens;
+  ListCell *c;
 
+  tsform = (Form_pg_ts_config)GETSTRUCT(tup);
+  cfgId = tsform->oid;
+  prsId = tsform->cfgparser;
 
+  tokens = getTokenTypes(prsId, stmt->tokentype);
 
+  i = 0;
+  foreach (c, stmt->tokentype)
+  {
+    Value *val = (Value *)lfirst(c);
+    bool found = false;
 
+    ScanKeyInit(&skey[0], Anum_pg_ts_config_map_mapcfg, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(cfgId));
+    ScanKeyInit(&skey[1], Anum_pg_ts_config_map_maptokentype, BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(tokens[i]));
 
+    scan = systable_beginscan(relMap, TSConfigMapIndexId, true, NULL, 2, skey);
 
+    while (HeapTupleIsValid((maptup = systable_getnext(scan))))
+    {
+      CatalogTupleDelete(relMap, &maptup->t_self);
+      found = true;
+    }
 
+    systable_endscan(scan);
 
+    if (!found)
+    {
+      if (!stmt->missing_ok)
+      {
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("mapping for token type \"%s\" does not exist", strVal(val))));
+      }
+      else
+      {
+        ereport(NOTICE, (errmsg("mapping for token type \"%s\" does not exist, skipping", strVal(val))));
+      }
+    }
 
+    i++;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  EventTriggerCollectAlterTSConfig(stmt, cfgId, NULL, 0);
 }
 
 /*
@@ -1511,7 +1511,7 @@ serialize_deflist(List *deflist)
     /* If backslashes appear, force E syntax to determine their handling */
     if (strchr(val, '\\'))
     {
-
+      appendStringInfoChar(&buf, ESCAPE_STRING_SYNTAX);
     }
     appendStringInfoChar(&buf, '\'');
     while (*val)
@@ -1520,7 +1520,7 @@ serialize_deflist(List *deflist)
 
       if (SQL_STR_DOUBLE(ch, true))
       {
-
+        appendStringInfoChar(&buf, ch);
       }
       appendStringInfoChar(&buf, ch);
     }
@@ -1570,15 +1570,15 @@ deserialize_deflist(Datum txt)
   {
     switch (state)
     {
-    case CS_WAITKEY:;
+    case CS_WAITKEY:
       if (isspace((unsigned char)*ptr) || *ptr == ',')
       {
         continue;
       }
       if (*ptr == '"')
       {
-
-
+        wsptr = workspace;
+        state = CS_INQKEY;
       }
       else
       {
@@ -1587,7 +1587,7 @@ deserialize_deflist(Datum txt)
         state = CS_INKEY;
       }
       break;
-    case CS_INKEY:;
+    case CS_INKEY:
       if (isspace((unsigned char)*ptr))
       {
         *wsptr++ = '\0';
@@ -1603,36 +1603,36 @@ deserialize_deflist(Datum txt)
         *wsptr++ = *ptr;
       }
       break;
-    case CS_INQKEY:;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    case CS_WAITEQ:;
+    case CS_INQKEY:
+      if (*ptr == '"')
+      {
+        if (ptr + 1 < endptr && ptr[1] == '"')
+        {
+          /* copy only one of the two quotes */
+          *wsptr++ = *ptr++;
+        }
+        else
+        {
+          *wsptr++ = '\0';
+          state = CS_WAITEQ;
+        }
+      }
+      else
+      {
+        *wsptr++ = *ptr;
+      }
+      break;
+    case CS_WAITEQ:
       if (*ptr == '=')
       {
         state = CS_WAITVALUE;
       }
-
-
-
-
+      else if (!isspace((unsigned char)*ptr))
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid parameter list format: \"%s\"", text_to_cstring(in))));
+      }
       break;
-    case CS_WAITVALUE:;
+    case CS_WAITVALUE:
       if (*ptr == '\'')
       {
         startvalue = wsptr;
@@ -1640,14 +1640,14 @@ deserialize_deflist(Datum txt)
       }
       else if (*ptr == 'E' && ptr + 1 < endptr && ptr[1] == '\'')
       {
-
-
-
+        ptr++;
+        startvalue = wsptr;
+        state = CS_INSQVALUE;
       }
       else if (*ptr == '"')
       {
-
-
+        startvalue = wsptr;
+        state = CS_INDQVALUE;
       }
       else if (!isspace((unsigned char)*ptr))
       {
@@ -1656,13 +1656,13 @@ deserialize_deflist(Datum txt)
         state = CS_INWVALUE;
       }
       break;
-    case CS_INSQVALUE:;
+    case CS_INSQVALUE:
       if (*ptr == '\'')
       {
         if (ptr + 1 < endptr && ptr[1] == '\'')
         {
           /* copy only one of the two quotes */
-
+          *wsptr++ = *ptr++;
         }
         else
         {
@@ -1673,42 +1673,42 @@ deserialize_deflist(Datum txt)
       }
       else if (*ptr == '\\')
       {
-
-
-
-
-
-
-
-
-
+        if (ptr + 1 < endptr && ptr[1] == '\\')
+        {
+          /* copy only one of the two backslashes */
+          *wsptr++ = *ptr++;
+        }
+        else
+        {
+          *wsptr++ = *ptr;
+        }
       }
       else
       {
         *wsptr++ = *ptr;
       }
       break;
-    case CS_INDQVALUE:;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    case CS_INWVALUE:;
+    case CS_INDQVALUE:
+      if (*ptr == '"')
+      {
+        if (ptr + 1 < endptr && ptr[1] == '"')
+        {
+          /* copy only one of the two quotes */
+          *wsptr++ = *ptr++;
+        }
+        else
+        {
+          *wsptr++ = '\0';
+          result = lappend(result, makeDefElem(pstrdup(workspace), (Node *)makeString(pstrdup(startvalue)), -1));
+          state = CS_WAITKEY;
+        }
+      }
+      else
+      {
+        *wsptr++ = *ptr;
+      }
+      break;
+    case CS_INWVALUE:
       if (*ptr == ',' || isspace((unsigned char)*ptr))
       {
         *wsptr++ = '\0';
@@ -1720,8 +1720,8 @@ deserialize_deflist(Datum txt)
         *wsptr++ = *ptr;
       }
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized deserialize_deflist state: %d", state);
     }
   }
 
@@ -1732,7 +1732,7 @@ deserialize_deflist(Datum txt)
   }
   else if (state != CS_WAITKEY)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid parameter list format: \"%s\"", text_to_cstring(in))));
   }
 
   pfree(workspace);

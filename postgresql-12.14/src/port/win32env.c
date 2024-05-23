@@ -1,9 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * win32env.c
- *	  putenv() and unsetenv() for win32, which update both process
- *environment and caches in (potentially multiple) C run-time library (CRT)
- *versions.
+ *	  putenv() and unsetenv() for win32, which update both process environment
+ *	  and caches in (potentially multiple) C run-time library (CRT) versions.
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -44,22 +43,27 @@ pgwin32_putenv(const char *envval)
    * Need a copy of the string so we can modify it.
    */
   envcpy = strdup(envval);
-  if (!envcpy) {
+  if (!envcpy)
+  {
     return -1;
   }
   cp = strchr(envcpy, '=');
-  if (cp == NULL) {
+  if (cp == NULL)
+  {
     free(envcpy);
     return -1;
   }
   *cp = '\0';
   cp++;
-  if (strlen(cp)) {
+  if (strlen(cp))
+  {
     /*
-     * Only call SetEnvironmentVariable() when we are adding a variable,* not when removing it. Calling it on both crashes on at least
+     * Only call SetEnvironmentVariable() when we are adding a variable,
+     * not when removing it. Calling it on both crashes on at least
      * certain versions of MinGW.
      */
-    if (!SetEnvironmentVariable(envcpy, cp)) {
+    if (!SetEnvironmentVariable(envcpy, cp))
+    {
       free(envcpy);
       return -1;
     }
@@ -73,15 +77,18 @@ pgwin32_putenv(const char *envval)
    * against.  Addresses within these modules may become invalid the moment
    * we call FreeLibrary(), so don't cache them.
    */
-  for (i = 0; modulenames[i]; i++) {
+  for (i = 0; modulenames[i]; i++)
+  {
     HMODULE hmodule = NULL;
     BOOL res = GetModuleHandleEx(0, modulenames[i], &hmodule);
 
-    if (res != 0 && hmodule != NULL) {
+    if (res != 0 && hmodule != NULL)
+    {
       PUTENVPROC putenvFunc;
 
       putenvFunc = (PUTENVPROC)GetProcAddress(hmodule, "_putenv");
-      if (putenvFunc) {
+      if (putenvFunc)
+      {
         putenvFunc(envval);
       }
       FreeLibrary(hmodule);
@@ -102,7 +109,8 @@ pgwin32_unsetenv(const char *name)
   char *envbuf;
 
   envbuf = (char *)malloc(strlen(name) + 2);
-  if (!envbuf) {
+  if (!envbuf)
+  {
     return;
   }
 

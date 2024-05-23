@@ -13,16 +13,16 @@
  *-------------------------------------------------------------------------
  */
 /* INTERFACE ROUTINES
- *		ExecInitMergeAppend		- initialize the MergeAppend
- *node ExecMergeAppend			- retrieve the next tuple from the node
+ *		ExecInitMergeAppend		- initialize the MergeAppend node
+ *		ExecMergeAppend			- retrieve the next tuple from the node
  *		ExecEndMergeAppend		- shut down the MergeAppend node
  *		ExecReScanMergeAppend	- rescan the MergeAppend node
  *
  *	 NOTES
  *		A MergeAppend node contains a list of one or more subplans.
- *		These are each expected to deliver tuples that are sorted
- *according to a common sort key.  The MergeAppend node merges these streams to
- *produce output sorted the same way.
+ *		These are each expected to deliver tuples that are sorted according
+ *		to a common sort key.  The MergeAppend node merges these streams
+ *		to produce output sorted the same way.
  *
  *		MergeAppend nodes don't make use of their left and right
  *		subtrees, rather they maintain a list of subplans so
@@ -31,8 +31,9 @@
  *				   ...
  *				   /
  *				MergeAppend---+------+------+--- nil
- *				/	\		  |		 |
- *| nil	nil		 ...    ...    ... subplans
+ *				/	\		  |		 |		|
+ *			  nil	nil		 ...    ...    ...
+ *								 subplans
  */
 
 #include "postgres.h"
@@ -386,8 +387,8 @@ ExecReScanMergeAppend(MergeAppendState *node)
    */
   if (node->ms_prune_state && bms_overlap(node->ps.chgParam, node->ms_prune_state->execparamids))
   {
-
-
+    bms_free(node->ms_valid_subplans);
+    node->ms_valid_subplans = NULL;
   }
 
   for (i = 0; i < node->ms_nplans; i++)
@@ -409,7 +410,7 @@ ExecReScanMergeAppend(MergeAppendState *node)
      */
     if (subnode->chgParam == NULL)
     {
-
+      ExecReScan(subnode);
     }
   }
   binaryheap_reset(node->ms_heap);

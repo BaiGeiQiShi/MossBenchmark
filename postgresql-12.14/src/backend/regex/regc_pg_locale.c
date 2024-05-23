@@ -62,7 +62,8 @@
  * NB: the coding here assumes pg_wchar is an unsigned type.
  */
 
-typedef enum {
+typedef enum
+{
   PG_REGEX_LOCALE_C,       /* C locale (encoding independent) */
   PG_REGEX_LOCALE_WIDE,    /* Use <wctype.h> functions */
   PG_REGEX_LOCALE_1BYTE,   /* Use <ctype.h> functions */
@@ -228,22 +229,30 @@ static const unsigned char pg_char_properties[128] = {
 void
 pg_set_regex_collation(Oid collation)
 {
-  if (lc_ctype_is_c(collation)) {
+  if (lc_ctype_is_c(collation))
+  {
     /* C/POSIX collations use this path regardless of database encoding */
     pg_regex_strategy = PG_REGEX_LOCALE_C;
     pg_regex_locale = 0;
     pg_regex_collation = C_COLLATION_OID;
-  } else {
-    if (collation == DEFAULT_COLLATION_OID) {
+  }
+  else
+  {
+    if (collation == DEFAULT_COLLATION_OID)
+    {
       pg_regex_locale = 0;
-    } else if (OidIsValid(collation)) {
+    }
+    else if (OidIsValid(collation))
+    {
       /*
        * NB: pg_newlocale_from_collation will fail if not HAVE_LOCALE_T;
        * the case of pg_regex_locale != 0 but not HAVE_LOCALE_T does not
        * have to be considered below.
        */
       pg_regex_locale = pg_newlocale_from_collation(collation);
-    } else {
+    }
+    else
+    {
       /*
        * This typically means that the parser could not resolve a
        * conflict of implicit collations, so report it that way.
@@ -251,25 +260,37 @@ pg_set_regex_collation(Oid collation)
       ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for regular expression"), errhint("Use the COLLATE clause to set the collation explicitly.")));
     }
 
-    if (pg_regex_locale && !pg_regex_locale->deterministic) {
+    if (pg_regex_locale && !pg_regex_locale->deterministic)
+    {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("nondeterministic collations are not supported for regular expressions")));
     }
 
 #ifdef USE_ICU
-    if (pg_regex_locale && pg_regex_locale->provider == COLLPROVIDER_ICU) {
+    if (pg_regex_locale && pg_regex_locale->provider == COLLPROVIDER_ICU)
+    {
       pg_regex_strategy = PG_REGEX_LOCALE_ICU;
-    } else
+    }
+    else
 #endif
-        if (GetDatabaseEncoding() == PG_UTF8) {
-      if (pg_regex_locale) {
+        if (GetDatabaseEncoding() == PG_UTF8)
+    {
+      if (pg_regex_locale)
+      {
         pg_regex_strategy = PG_REGEX_LOCALE_WIDE_L;
-      } else {
+      }
+      else
+      {
         pg_regex_strategy = PG_REGEX_LOCALE_WIDE;
       }
-    } else {
-      if (pg_regex_locale) {
+    }
+    else
+    {
+      if (pg_regex_locale)
+      {
         pg_regex_strategy = PG_REGEX_LOCALE_1BYTE_L;
-      } else {
+      }
+      else
+      {
         pg_regex_strategy = PG_REGEX_LOCALE_1BYTE;
       }
     }
@@ -281,11 +302,13 @@ pg_set_regex_collation(Oid collation)
 static int
 pg_wc_isdigit(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISDIGIT));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswdigit((wint_t)c);
     }
     /* FALL THRU */
@@ -293,7 +316,8 @@ pg_wc_isdigit(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isdigit((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswdigit_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -315,11 +339,13 @@ pg_wc_isdigit(pg_wchar c)
 static int
 pg_wc_isalpha(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISALPHA));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswalpha((wint_t)c);
     }
     /* FALL THRU */
@@ -327,7 +353,8 @@ pg_wc_isalpha(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isalpha((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswalpha_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -349,11 +376,13 @@ pg_wc_isalpha(pg_wchar c)
 static int
 pg_wc_isalnum(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISALNUM));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswalnum((wint_t)c);
     }
     /* FALL THRU */
@@ -361,7 +390,8 @@ pg_wc_isalnum(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isalnum((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswalnum_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -383,11 +413,13 @@ pg_wc_isalnum(pg_wchar c)
 static int
 pg_wc_isupper(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISUPPER));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswupper((wint_t)c);
     }
     /* FALL THRU */
@@ -395,7 +427,8 @@ pg_wc_isupper(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isupper((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswupper_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -417,11 +450,13 @@ pg_wc_isupper(pg_wchar c)
 static int
 pg_wc_islower(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISLOWER));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswlower((wint_t)c);
     }
     /* FALL THRU */
@@ -429,7 +464,8 @@ pg_wc_islower(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && islower((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswlower_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -451,11 +487,13 @@ pg_wc_islower(pg_wchar c)
 static int
 pg_wc_isgraph(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISGRAPH));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswgraph((wint_t)c);
     }
     /* FALL THRU */
@@ -463,7 +501,8 @@ pg_wc_isgraph(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isgraph((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswgraph_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -485,11 +524,13 @@ pg_wc_isgraph(pg_wchar c)
 static int
 pg_wc_isprint(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISPRINT));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswprint((wint_t)c);
     }
     /* FALL THRU */
@@ -497,7 +538,8 @@ pg_wc_isprint(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isprint((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswprint_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -519,11 +561,13 @@ pg_wc_isprint(pg_wchar c)
 static int
 pg_wc_ispunct(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISPUNCT));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswpunct((wint_t)c);
     }
     /* FALL THRU */
@@ -531,7 +575,8 @@ pg_wc_ispunct(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && ispunct((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswpunct_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -553,11 +598,13 @@ pg_wc_ispunct(pg_wchar c)
 static int
 pg_wc_isspace(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
     return (c <= (pg_wchar)127 && (pg_char_properties[c] & PG_ISSPACE));
   case PG_REGEX_LOCALE_WIDE:
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswspace((wint_t)c);
     }
     /* FALL THRU */
@@ -565,7 +612,8 @@ pg_wc_isspace(pg_wchar c)
     return (c <= (pg_wchar)UCHAR_MAX && isspace((unsigned char)c));
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return iswspace_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -587,40 +635,48 @@ pg_wc_isspace(pg_wchar c)
 static pg_wchar
 pg_wc_toupper(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_toupper((unsigned char)c);
     }
     return c;
   case PG_REGEX_LOCALE_WIDE:
     /* force C behavior for ASCII characters, per comments above */
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_toupper((unsigned char)c);
     }
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return towupper((wint_t)c);
     }
     /* FALL THRU */
   case PG_REGEX_LOCALE_1BYTE:
     /* force C behavior for ASCII characters, per comments above */
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_toupper((unsigned char)c);
     }
-    if (c <= (pg_wchar)UCHAR_MAX) {
+    if (c <= (pg_wchar)UCHAR_MAX)
+    {
       return toupper((unsigned char)c);
     }
     return c;
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return towupper_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
     /* FALL THRU */
   case PG_REGEX_LOCALE_1BYTE_L:
 #ifdef HAVE_LOCALE_T
-    if (c <= (pg_wchar)UCHAR_MAX) {
+    if (c <= (pg_wchar)UCHAR_MAX)
+    {
       return toupper_l((unsigned char)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -637,40 +693,48 @@ pg_wc_toupper(pg_wchar c)
 static pg_wchar
 pg_wc_tolower(pg_wchar c)
 {
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_tolower((unsigned char)c);
     }
     return c;
   case PG_REGEX_LOCALE_WIDE:
     /* force C behavior for ASCII characters, per comments above */
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_tolower((unsigned char)c);
     }
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return towlower((wint_t)c);
     }
     /* FALL THRU */
   case PG_REGEX_LOCALE_1BYTE:
     /* force C behavior for ASCII characters, per comments above */
-    if (c <= (pg_wchar)127) {
+    if (c <= (pg_wchar)127)
+    {
       return pg_ascii_tolower((unsigned char)c);
     }
-    if (c <= (pg_wchar)UCHAR_MAX) {
+    if (c <= (pg_wchar)UCHAR_MAX)
+    {
       return tolower((unsigned char)c);
     }
     return c;
   case PG_REGEX_LOCALE_WIDE_L:
 #ifdef HAVE_LOCALE_T
-    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF) {
+    if (sizeof(wchar_t) >= 4 || c <= (pg_wchar)0xFFFF)
+    {
       return towlower_l((wint_t)c, pg_regex_locale->info.lt);
     }
 #endif
     /* FALL THRU */
   case PG_REGEX_LOCALE_1BYTE_L:
 #ifdef HAVE_LOCALE_T
-    if (c <= (pg_wchar)UCHAR_MAX) {
+    if (c <= (pg_wchar)UCHAR_MAX)
+    {
       return tolower_l((unsigned char)c, pg_regex_locale->info.lt);
     }
 #endif
@@ -699,7 +763,8 @@ pg_wc_tolower(pg_wchar c)
 
 typedef int (*pg_wc_probefunc)(pg_wchar c);
 
-typedef struct pg_ctype_cache {
+typedef struct pg_ctype_cache
+{
   pg_wc_probefunc probefunc;   /* pg_wc_isalpha or a sibling */
   Oid collation;               /* collation this entry is for */
   struct cvec cv;              /* cache entry contents */
@@ -716,11 +781,14 @@ store_match(pg_ctype_cache *pcc, pg_wchar chr1, int nchrs)
 {
   chr *newchrs;
 
-  if (nchrs > 1) {
-    if (pcc->cv.nranges >= pcc->cv.rangespace) {
+  if (nchrs > 1)
+  {
+    if (pcc->cv.nranges >= pcc->cv.rangespace)
+    {
       pcc->cv.rangespace *= 2;
       newchrs = (chr *)realloc(pcc->cv.ranges, pcc->cv.rangespace * sizeof(chr) * 2);
-      if (newchrs == NULL) {
+      if (newchrs == NULL)
+      {
         return false;
       }
       pcc->cv.ranges = newchrs;
@@ -728,12 +796,16 @@ store_match(pg_ctype_cache *pcc, pg_wchar chr1, int nchrs)
     pcc->cv.ranges[pcc->cv.nranges * 2] = chr1;
     pcc->cv.ranges[pcc->cv.nranges * 2 + 1] = chr1 + nchrs - 1;
     pcc->cv.nranges++;
-  } else {
+  }
+  else
+  {
     assert(nchrs == 1);
-    if (pcc->cv.nchrs >= pcc->cv.chrspace) {
+    if (pcc->cv.nchrs >= pcc->cv.chrspace)
+    {
       pcc->cv.chrspace *= 2;
       newchrs = (chr *)realloc(pcc->cv.chrs, pcc->cv.chrspace * sizeof(chr));
-      if (newchrs == NULL) {
+      if (newchrs == NULL)
+      {
         return false;
       }
       pcc->cv.chrs = newchrs;
@@ -762,8 +834,10 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
   /*
    * Do we already have the answer cached?
    */
-  for (pcc = pg_ctype_cache_list; pcc != NULL; pcc = pcc->next) {
-    if (pcc->probefunc == probefunc && pcc->collation == pg_regex_collation) {
+  for (pcc = pg_ctype_cache_list; pcc != NULL; pcc = pcc->next)
+  {
+    if (pcc->probefunc == probefunc && pcc->collation == pg_regex_collation)
+    {
       return &pcc->cv;
     }
   }
@@ -772,7 +846,8 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
    * Nope, so initialize some workspace ...
    */
   pcc = (pg_ctype_cache *)malloc(sizeof(pg_ctype_cache));
-  if (pcc == NULL) {
+  if (pcc == NULL)
+  {
     return NULL;
   }
   pcc->probefunc = probefunc;
@@ -783,7 +858,8 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
   pcc->cv.nranges = 0;
   pcc->cv.rangespace = 64;
   pcc->cv.ranges = (chr *)malloc(pcc->cv.rangespace * sizeof(chr) * 2);
-  if (pcc->cv.chrs == NULL || pcc->cv.ranges == NULL) {
+  if (pcc->cv.chrs == NULL || pcc->cv.ranges == NULL)
+  {
     goto out_of_memory;
   }
   pcc->cv.cclasscode = cclasscode;
@@ -801,7 +877,8 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
    * would always be true for production values of MAX_SIMPLE_CHR, but it's
    * useful to allow it to be small for testing purposes.)
    */
-  switch (pg_regex_strategy) {
+  switch (pg_regex_strategy)
+  {
   case PG_REGEX_LOCALE_C:
 #if MAX_SIMPLE_CHR >= 127
     max_chr = (pg_wchar)127;
@@ -826,7 +903,7 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
   case PG_REGEX_LOCALE_ICU:
     max_chr = (pg_wchar)MAX_SIMPLE_CHR;
     break;
-  default:;
+  default:
     max_chr = 0; /* can't get here, but keep compiler quiet */
     break;
   }
@@ -836,19 +913,26 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
    */
   nmatches = 0; /* number of consecutive matches */
 
-  for (cur_chr = 0; cur_chr <= max_chr; cur_chr++) {
-    if ((*probefunc)(cur_chr)) {
+  for (cur_chr = 0; cur_chr <= max_chr; cur_chr++)
+  {
+    if ((*probefunc)(cur_chr))
+    {
       nmatches++;
-    } else if (nmatches > 0) {
-      if (!store_match(pcc, cur_chr - nmatches, nmatches)) {
+    }
+    else if (nmatches > 0)
+    {
+      if (!store_match(pcc, cur_chr - nmatches, nmatches))
+      {
         goto out_of_memory;
       }
       nmatches = 0;
     }
   }
 
-  if (nmatches > 0) {
-    if (!store_match(pcc, cur_chr - nmatches, nmatches)) {
+  if (nmatches > 0)
+  {
+    if (!store_match(pcc, cur_chr - nmatches, nmatches))
+    {
       goto out_of_memory;
     }
   }
@@ -856,25 +940,33 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
   /*
    * We might have allocated more memory than needed, if so free it
    */
-  if (pcc->cv.nchrs == 0) {
+  if (pcc->cv.nchrs == 0)
+  {
     free(pcc->cv.chrs);
     pcc->cv.chrs = NULL;
     pcc->cv.chrspace = 0;
-  } else if (pcc->cv.nchrs < pcc->cv.chrspace) {
+  }
+  else if (pcc->cv.nchrs < pcc->cv.chrspace)
+  {
     newchrs = (chr *)realloc(pcc->cv.chrs, pcc->cv.nchrs * sizeof(chr));
-    if (newchrs == NULL) {
+    if (newchrs == NULL)
+    {
       goto out_of_memory;
     }
     pcc->cv.chrs = newchrs;
     pcc->cv.chrspace = pcc->cv.nchrs;
   }
-  if (pcc->cv.nranges == 0) {
+  if (pcc->cv.nranges == 0)
+  {
     free(pcc->cv.ranges);
     pcc->cv.ranges = NULL;
     pcc->cv.rangespace = 0;
-  } else if (pcc->cv.nranges < pcc->cv.rangespace) {
+  }
+  else if (pcc->cv.nranges < pcc->cv.rangespace)
+  {
     newchrs = (chr *)realloc(pcc->cv.ranges, pcc->cv.nranges * sizeof(chr) * 2);
-    if (newchrs == NULL) {
+    if (newchrs == NULL)
+    {
       goto out_of_memory;
     }
     pcc->cv.ranges = newchrs;
@@ -893,10 +985,12 @@ pg_ctype_get_cache(pg_wc_probefunc probefunc, int cclasscode)
    * Failure, clean up
    */
 out_of_memory:
-  if (pcc->cv.chrs) {
+  if (pcc->cv.chrs)
+  {
     free(pcc->cv.chrs);
   }
-  if (pcc->cv.ranges) {
+  if (pcc->cv.ranges)
+  {
     free(pcc->cv.ranges);
   }
   free(pcc);

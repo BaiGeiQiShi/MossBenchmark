@@ -102,7 +102,7 @@ gistvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   /* No-op in ANALYZE ONLY mode */
   if (info->analyze_only)
   {
-
+    return stats;
   }
 
   /*
@@ -138,7 +138,7 @@ gistvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   {
     if (gist_stats->stats.num_index_tuples > info->num_heap_tuples)
     {
-
+      gist_stats->stats.num_index_tuples = info->num_heap_tuples;
     }
   }
 
@@ -203,7 +203,7 @@ gistvacuumscan(IndexVacuumInfo *info, GistBulkDeleteResult *stats, IndexBulkDele
   }
   else
   {
-
+    vstate.startNSN = gistGetFakeLSN(rel);
   }
 
   /*
@@ -271,7 +271,7 @@ gistvacuumscan(IndexVacuumInfo *info, GistBulkDeleteResult *stats, IndexBulkDele
    */
   if (stats->stats.pages_free > 0)
   {
-
+    IndexFreeSpaceMapVacuum(rel);
   }
 
   /* update statistics */
@@ -301,7 +301,7 @@ gistvacuumpage(GistVacState *vstate, BlockNumber blkno, BlockNumber orig_blkno)
   Page page;
   BlockNumber recurse_to;
 
-restart:;
+restart:
   recurse_to = InvalidBlockNumber;
 
   /* call vacuum_delay_point while not holding any buffer lock */
@@ -319,14 +319,14 @@ restart:;
   if (gistPageRecyclable(page))
   {
     /* Okay to recycle this page */
-
-
-
+    RecordFreeIndexPage(rel, blkno);
+    stats->stats.pages_free++;
+    stats->stats.pages_deleted++;
   }
   else if (GistPageIsDeleted(page))
   {
     /* Already deleted, but can't recycle yet */
-
+    stats->stats.pages_deleted++;
   }
   else if (GistPageIsLeaf(page))
   {
@@ -348,7 +348,7 @@ restart:;
      */
     if ((GistFollowRight(page) || vstate->startNSN < GistPageGetNSN(page)) && (opaque->rightlink != InvalidBlockNumber) && (opaque->rightlink < orig_blkno))
     {
-
+      recurse_to = opaque->rightlink;
     }
 
     /*
@@ -393,7 +393,7 @@ restart:;
       }
       else
       {
-
+        PageSetLSN(page, gistGetFakeLSN(rel));
       }
 
       END_CRIT_SECTION();
@@ -443,7 +443,7 @@ restart:;
 
       if (GistTupleIsInvalid(idxtuple))
       {
-
+        ereport(LOG, (errmsg("index \"%s\" contains an inner tuple marked as invalid", RelationGetRelationName(rel)), errdetail("This is caused by an incomplete page split at crash recovery before upgrading to PostgreSQL 9.1."), errhint("Please REINDEX it.")));
       }
     }
 
@@ -469,8 +469,8 @@ restart:;
    */
   if (recurse_to != InvalidBlockNumber)
   {
-
-
+    blkno = recurse_to;
+    goto restart;
   }
 }
 
@@ -510,9 +510,9 @@ gistvacuum_delete_empty_pages(IndexVacuumInfo *info, GistBulkDeleteResult *stats
        * This page was an internal page earlier, but now it's something
        * else. Shouldn't happen...
        */
-
-
-
+      Assert(false);
+      UnlockReleaseBuffer(buffer);
+      continue;
     }
 
     /*
@@ -561,7 +561,7 @@ gistvacuum_delete_empty_pages(IndexVacuumInfo *info, GistBulkDeleteResult *stats
        */
       if (PageGetMaxOffsetNumber(page) == FirstOffsetNumber)
       {
-
+        break;
       }
 
       leafbuf = ReadBufferExtended(rel, MAIN_FORKNUM, leafs_to_delete[i], RBM_NORMAL, info->strategy);
@@ -619,18 +619,18 @@ gistdeletepage(IndexVacuumInfo *info, GistBulkDeleteResult *stats, Buffer parent
   if (!GistPageIsLeaf(leafPage))
   {
     /* a leaf page should never become a non-leaf page */
-
-
+    Assert(false);
+    return false;
   }
 
   if (GistFollowRight(leafPage))
   {
-
+    return false; /* don't mess with a concurrent page split */
   }
 
   if (PageGetMaxOffsetNumber(leafPage) != InvalidOffsetNumber)
   {
-
+    return false; /* not empty anymore */
   }
 
   /*
@@ -643,20 +643,20 @@ gistdeletepage(IndexVacuumInfo *info, GistBulkDeleteResult *stats, Buffer parent
   if (PageIsNew(parentPage) || GistPageIsDeleted(parentPage) || GistPageIsLeaf(parentPage))
   {
     /* shouldn't happen, internal pages are never deleted */
-
-
+    Assert(false);
+    return false;
   }
 
   if (PageGetMaxOffsetNumber(parentPage) < downlink || PageGetMaxOffsetNumber(parentPage) <= FirstOffsetNumber)
   {
-
+    return false;
   }
 
   iid = PageGetItemId(parentPage, downlink);
   idxtuple = (IndexTuple)PageGetItem(parentPage, iid);
   if (BufferGetBlockNumber(leafBuffer) != ItemPointerGetBlockNumber(&(idxtuple->t_tid)))
   {
-
+    return false;
   }
 
   /*
@@ -688,7 +688,7 @@ gistdeletepage(IndexVacuumInfo *info, GistBulkDeleteResult *stats, Buffer parent
   }
   else
   {
-
+    recptr = gistGetFakeLSN(info->index);
   }
   PageSetLSN(parentPage, recptr);
   PageSetLSN(leafPage, recptr);

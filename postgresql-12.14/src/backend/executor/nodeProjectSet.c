@@ -5,11 +5,11 @@
  *
  * DESCRIPTION
  *
- *		ProjectSet nodes are inserted by the planner to evaluate
- *set-returning functions in the targetlist.  It's guaranteed that all
- *set-returning functions are directly at the top level of the targetlist, i.e.
- *they can't be inside more-complex expressions.  If that'd otherwise be the
- *case, the planner adds additional ProjectSet nodes.
+ *		ProjectSet nodes are inserted by the planner to evaluate set-returning
+ *		functions in the targetlist.  It's guaranteed that all set-returning
+ *		functions are directly at the top level of the targetlist, i.e. they
+ *		can't be inside more-complex expressions.  If that'd otherwise be
+ *		the case, the planner adds additional ProjectSet nodes.
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -34,8 +34,8 @@ ExecProjectSRF(ProjectSetState *node, bool continuing);
 /* ----------------------------------------------------------------
  *		ExecProjectSet(node)
  *
- *		Return tuples after evaluating the targetlist (which contains
- *set returning functions).
+ *		Return tuples after evaluating the targetlist (which contains set
+ *		returning functions).
  * ----------------------------------------------------------------
  */
 static TupleTableSlot *
@@ -124,11 +124,10 @@ ExecProjectSet(PlanState *pstate)
 /* ----------------------------------------------------------------
  *		ExecProjectSRF
  *
- *		Project a targetlist containing one or more set-returning
- *functions.
+ *		Project a targetlist containing one or more set-returning functions.
  *
- *		'continuing' indicates whether to continue projecting rows for
- *the same input tuple; or whether a new input tuple is being projected.
+ *		'continuing' indicates whether to continue projecting rows for the
+ *		same input tuple; or whether a new input tuple is being projected.
  *
  *		Returns NULL if no output tuple has been produced.
  *

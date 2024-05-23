@@ -74,7 +74,8 @@ main(void)
     ECPGconnect(__LINE__, 1, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 27 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -85,7 +86,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "set datestyle to iso", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -96,7 +98,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "create table descr_t1 ( id serial primary key , t text )", ECPGt_EOIT, ECPGt_EORT);
 #line 33 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -107,7 +110,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into descr_t1 ( id , t ) values ( default , 'a' )", ECPGt_EOIT, ECPGt_EORT);
 #line 36 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -117,7 +121,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into descr_t1 ( id , t ) values ( default , 'b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 37 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -127,7 +132,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into descr_t1 ( id , t ) values ( default , 'c' )", ECPGt_EOIT, ECPGt_EORT);
 #line 38 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -137,7 +143,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into descr_t1 ( id , t ) values ( default , 'd' )", ECPGt_EOIT, ECPGt_EORT);
 #line 39 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -148,7 +155,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 42 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -164,7 +172,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "desc1");
 #line 51 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 51 "describe.pgc"
@@ -172,7 +181,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "desc2");
 #line 52 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 52 "describe.pgc"
@@ -182,7 +192,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "st_id1", stmt1);
 #line 55 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -216,17 +227,20 @@ main(void)
   }
 #line 65 "describe.pgc"
 
-  if (sqlda1 == NULL) {
+  if (sqlda1 == NULL)
+  {
     printf("sqlda1 NULL\n");
     exit(1);
   }
 
-  if (sqlda2 == NULL) {
+  if (sqlda2 == NULL)
+  {
     printf("sqlda2 NULL\n");
     exit(1);
   }
 
-  if (sqlda3 == NULL) {
+  if (sqlda3 == NULL)
+  {
     printf("sqlda3 NULL\n");
     exit(1);
   }
@@ -237,7 +251,8 @@ main(void)
 
 #line 86 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -248,39 +263,46 @@ main(void)
 
 #line 87 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 87 "describe.pgc"
 
-  if (count1 != count2) {
+  if (count1 != count2)
+  {
     printf("count1 (%d) != count2 (%d)\n", count1, count2);
     exit(1);
   }
 
-  if (count1 != sqlda1->sqld) {
+  if (count1 != sqlda1->sqld)
+  {
     printf("count1 (%d) != sqlda1->sqld (%d)\n", count1, sqlda1->sqld);
     exit(1);
   }
 
-  if (count1 != sqlda2->sqld) {
+  if (count1 != sqlda2->sqld)
+  {
     printf("count1 (%d) != sqlda2->sqld (%d)\n", count1, sqlda2->sqld);
     exit(1);
   }
 
-  if (count1 != sqlda3->sqld) {
+  if (count1 != sqlda3->sqld)
+  {
     printf("count1 (%d) != sqlda3->sqld (%d)\n", count1, sqlda3->sqld);
     exit(1);
   }
 
-  for (i = 1; i <= count1; i++) {
+  for (i = 1; i <= count1; i++)
+  {
     {
       ECPGget_desc(__LINE__, "desc1", i, ECPGd_name, ECPGt_char, (field_name1), (long)30, (long)1, (30) * sizeof(char), ECPGd_EODT);
 
 #line 115 "describe.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
@@ -291,20 +313,24 @@ main(void)
 
 #line 116 "describe.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
 #line 116 "describe.pgc"
 
-    printf("%d\n\tfield_name1 '%s'\n\tfield_name2 '%s'\n\tsqlda1 '%s'\n\tsqlda2 '%s'\n\tsqlda3 '%s'\n",i, field_name1, field_name2, sqlda1->sqlvar[i - 1].sqlname, sqlda2->sqlvar[i - 1].sqlname, sqlda3->sqlvar[i - 1].sqlname);
+    printf("%d\n\tfield_name1 '%s'\n\tfield_name2 '%s'\n\t"
+           "sqlda1 '%s'\n\tsqlda2 '%s'\n\tsqlda3 '%s'\n",
+        i, field_name1, field_name2, sqlda1->sqlvar[i - 1].sqlname, sqlda2->sqlvar[i - 1].sqlname, sqlda3->sqlvar[i - 1].sqlname);
   }
 
   strcpy(msg, "deallocate");
   ECPGdeallocate_desc(__LINE__, "desc1");
 #line 126 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 126 "describe.pgc"
@@ -312,7 +338,8 @@ main(void)
   ECPGdeallocate_desc(__LINE__, "desc2");
 #line 127 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 127 "describe.pgc"
@@ -325,7 +352,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id1");
 #line 132 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -337,7 +365,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "desc1");
 #line 137 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 137 "describe.pgc"
@@ -345,7 +374,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "desc2");
 #line 138 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 138 "describe.pgc"
@@ -355,7 +385,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "st_id2", stmt2);
 #line 141 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -389,7 +420,8 @@ main(void)
   }
 #line 151 "describe.pgc"
 
-  if (sqlda1 == NULL || sqlda2 == NULL || sqlda3 == NULL) {
+  if (sqlda1 == NULL || sqlda2 == NULL || sqlda3 == NULL)
+  {
     exit(1);
   }
 
@@ -399,7 +431,8 @@ main(void)
 
 #line 157 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -410,23 +443,27 @@ main(void)
 
 #line 158 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 158 "describe.pgc"
 
-  if (!(count1 == count2 && count1 == sqlda1->sqld && count1 == sqlda2->sqld && count1 == sqlda3->sqld)) {
+  if (!(count1 == count2 && count1 == sqlda1->sqld && count1 == sqlda2->sqld && count1 == sqlda3->sqld))
+  {
     exit(1);
   }
 
-  for (i = 1; i <= count1; i++) {
+  for (i = 1; i <= count1; i++)
+  {
     {
       ECPGget_desc(__LINE__, "desc1", i, ECPGd_name, ECPGt_char, (field_name1), (long)30, (long)1, (30) * sizeof(char), ECPGd_EODT);
 
 #line 168 "describe.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
@@ -437,20 +474,24 @@ main(void)
 
 #line 169 "describe.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
 #line 169 "describe.pgc"
 
-    printf("%d\n\tfield_name1 '%s'\n\tfield_name2 '%s'\n\tsqlda1 '%s'\n\tsqlda2 '%s'\n\tsqlda3 '%s'\n",i, field_name1, field_name2, sqlda1->sqlvar[i - 1].sqlname, sqlda2->sqlvar[i - 1].sqlname, sqlda3->sqlvar[i - 1].sqlname);
+    printf("%d\n\tfield_name1 '%s'\n\tfield_name2 '%s'\n\t"
+           "sqlda1 '%s'\n\tsqlda2 '%s'\n\tsqlda3 '%s'\n",
+        i, field_name1, field_name2, sqlda1->sqlvar[i - 1].sqlname, sqlda2->sqlvar[i - 1].sqlname, sqlda3->sqlvar[i - 1].sqlname);
   }
 
   strcpy(msg, "deallocate");
   ECPGdeallocate_desc(__LINE__, "desc1");
 #line 179 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 179 "describe.pgc"
@@ -458,7 +499,8 @@ main(void)
   ECPGdeallocate_desc(__LINE__, "desc2");
 #line 180 "describe.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 180 "describe.pgc"
@@ -471,7 +513,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id2");
 #line 185 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -484,7 +527,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "drop table descr_t1", ECPGt_EOIT, ECPGt_EORT);
 #line 190 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -495,7 +539,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 193 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -506,7 +551,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 196 "describe.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }

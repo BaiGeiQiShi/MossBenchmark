@@ -306,7 +306,7 @@ on_proc_exit(pg_on_exit_callback function, Datum arg)
 {
   if (on_proc_exit_index >= MAX_ON_EXITS)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg_internal("out of on_proc_exit slots")));
   }
 
   on_proc_exit_list[on_proc_exit_index].function = function;
@@ -334,7 +334,7 @@ before_shmem_exit(pg_on_exit_callback function, Datum arg)
 {
   if (before_shmem_exit_index >= MAX_ON_EXITS)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg_internal("out of before_shmem_exit slots")));
   }
 
   before_shmem_exit_list[before_shmem_exit_index].function = function;
@@ -344,8 +344,8 @@ before_shmem_exit(pg_on_exit_callback function, Datum arg)
 
   if (!atexit_callback_setup)
   {
-
-
+    atexit(atexit_callback);
+    atexit_callback_setup = true;
   }
 }
 
@@ -362,7 +362,7 @@ on_shmem_exit(pg_on_exit_callback function, Datum arg)
 {
   if (on_shmem_exit_index >= MAX_ON_EXITS)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg_internal("out of on_shmem_exit slots")));
   }
 
   on_shmem_exit_list[on_shmem_exit_index].function = function;
@@ -372,8 +372,8 @@ on_shmem_exit(pg_on_exit_callback function, Datum arg)
 
   if (!atexit_callback_setup)
   {
-
-
+    atexit(atexit_callback);
+    atexit_callback_setup = true;
   }
 }
 
@@ -399,8 +399,8 @@ cancel_before_shmem_exit(pg_on_exit_callback function, Datum arg)
  *		on_exit_reset
  *
  *		this function clears all on_proc_exit() and on_shmem_exit()
- *		registered functions.  This is used just after forking a
- *backend, so that the backend doesn't believe it should call the postmaster's
+ *		registered functions.  This is used just after forking a backend,
+ *		so that the backend doesn't believe it should call the postmaster's
  *		on-exit routines when it exits...
  * ----------------------------------------------------------------
  */

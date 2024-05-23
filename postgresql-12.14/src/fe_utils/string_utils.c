@@ -45,7 +45,9 @@ defaultGetLocalPQExpBuffer(void)
   {
     /* same buffer, just wipe contents */
     resetPQExpBuffer(id_return);
-  } else {
+  }
+  else
+  {
     /* new buffer */
     id_return = createPQExpBuffer();
   }
@@ -56,7 +58,8 @@ defaultGetLocalPQExpBuffer(void)
 /*
  *	Quotes input string if it's not a legitimate SQL identifier as-is.
  *
- *	Note that the returned string must be used before calling fmtId again,*	since we re-use the same return buffer each time.
+ *	Note that the returned string must be used before calling fmtId again,
+ *	since we re-use the same return buffer each time.
  */
 const char *
 fmtId(const char *rawid)
@@ -70,23 +73,30 @@ fmtId(const char *rawid)
    * These checks need to match the identifier production in scan.l. Don't
    * use islower() etc.
    */
-  if (quote_all_identifiers) {
+  if (quote_all_identifiers)
+  {
     need_quotes = true;
   }
   /* slightly different rules for first character */
-  else if (!((rawid[0] >= 'a' && rawid[0] <= 'z') || rawid[0] == '_')) {
+  else if (!((rawid[0] >= 'a' && rawid[0] <= 'z') || rawid[0] == '_'))
+  {
     need_quotes = true;
-  } else {
+  }
+  else
+  {
     /* otherwise check the entire string */
-    for (cp = rawid; *cp; cp++) {
-      if (!((*cp >= 'a' && *cp <= 'z') || (*cp >= '0' && *cp <= '9') || (*cp == '_'))) {
+    for (cp = rawid; *cp; cp++)
+    {
+      if (!((*cp >= 'a' && *cp <= 'z') || (*cp >= '0' && *cp <= '9') || (*cp == '_')))
+      {
         need_quotes = true;
         break;
       }
     }
   }
 
-  if (!need_quotes) {
+  if (!need_quotes)
+  {
     /*
      * Check for keyword.  We quote keywords except for unreserved ones.
      * (In some cases we could avoid quoting a col_name or type_func_name
@@ -97,23 +107,29 @@ fmtId(const char *rawid)
      */
     int kwnum = ScanKeywordLookup(rawid, &ScanKeywords);
 
-    if (kwnum >= 0 && ScanKeywordCategories[kwnum] != UNRESERVED_KEYWORD) {
+    if (kwnum >= 0 && ScanKeywordCategories[kwnum] != UNRESERVED_KEYWORD)
+    {
       need_quotes = true;
     }
   }
 
-  if (!need_quotes) {
+  if (!need_quotes)
+  {
     /* no quoting needed */
     appendPQExpBufferStr(id_return, rawid);
-  } else {
+  }
+  else
+  {
     appendPQExpBufferChar(id_return, '"');
-    for (cp = rawid; *cp; cp++) {
+    for (cp = rawid; *cp; cp++)
+    {
       /*
        * Did we find a double-quote in the string? Then make this a
        * double double-quote per SQL99. Before, we put in a
        * backslash/double-quote pair. - thomas 2000-08-05
        */
-      if (*cp == '"') {
+      if (*cp == '"')
+      {
         appendPQExpBufferChar(id_return, '"');
       }
       appendPQExpBufferChar(id_return, *cp);
@@ -139,7 +155,8 @@ fmtQualifiedId(const char *schema, const char *id)
   PQExpBuffer lcl_pqexp = createPQExpBuffer();
 
   /* Some callers might fail to provide a schema name */
-  if (schema && *schema) {
+  if (schema && *schema)
+  {
     appendPQExpBuffer(lcl_pqexp, "%s.", fmtId(schema));
   }
   appendPQExpBufferStr(lcl_pqexp, fmtId(id));
@@ -165,18 +182,27 @@ fmtQualifiedId(const char *schema, const char *id)
 char *
 formatPGVersionNumber(int version_number, bool include_minor, char *buf, size_t buflen)
 {
-  if (version_number >= 100000) {
+  if (version_number >= 100000)
+  {
     /* New two-part style */
-    if (include_minor) {
+    if (include_minor)
+    {
       snprintf(buf, buflen, "%d.%d", version_number / 10000, version_number % 10000);
-    } else {
+    }
+    else
+    {
       snprintf(buf, buflen, "%d", version_number / 10000);
     }
-  } else {
+  }
+  else
+  {
     /* Old three-part style */
-    if (include_minor) {
+    if (include_minor)
+    {
       snprintf(buf, buflen, "%d.%d.%d", version_number / 10000, (version_number / 100) % 100, version_number % 100);
-    } else {
+    }
+    else
+    {
       snprintf(buf, buflen, "%d.%d", version_number / 10000, (version_number / 100) % 100);
     }
   }
@@ -188,8 +214,10 @@ formatPGVersionNumber(int version_number, bool include_minor, char *buf, size_t 
  * the given buffer.  We assume the specified client_encoding and
  * standard_conforming_strings settings.
  *
- * This is essentially equivalent to libpq's PQescapeStringInternal,* except for the output buffer structure.  We need it in situations
- * where we do not have a PGconn available.  Where we do,* appendStringLiteralConn is a better choice.
+ * This is essentially equivalent to libpq's PQescapeStringInternal,
+ * except for the output buffer structure.  We need it in situations
+ * where we do not have a PGconn available.  Where we do,
+ * appendStringLiteralConn is a better choice.
  */
 void
 appendStringLiteral(PQExpBuffer buf, const char *str, int encoding, bool std_strings)
@@ -198,22 +226,26 @@ appendStringLiteral(PQExpBuffer buf, const char *str, int encoding, bool std_str
   const char *source = str;
   char *target;
 
-  if (!enlargePQExpBuffer(buf, 2 * length + 2)) {
+  if (!enlargePQExpBuffer(buf, 2 * length + 2))
+  {
     return;
   }
 
   target = buf->data + buf->len;
   *target++ = '\'';
 
-  while (*source != '\0') {
+  while (*source != '\0')
+  {
     char c = *source;
     int len;
     int i;
 
     /* Fast path for plain ASCII */
-    if (!IS_HIGHBIT_SET(c)) {
+    if (!IS_HIGHBIT_SET(c))
+    {
       /* Apply quoting if needed */
-      if (SQL_STR_DOUBLE(c, !std_strings)) {
+      if (SQL_STR_DOUBLE(c, !std_strings))
+      {
         *target++ = c;
       }
       /* Copy the character */
@@ -226,8 +258,10 @@ appendStringLiteral(PQExpBuffer buf, const char *str, int encoding, bool std_str
     len = PQmblen(source, encoding);
 
     /* Copy the character */
-    for (i = 0; i < len; i++) {
-      if (*source == '\0') {
+    for (i = 0; i < len; i++)
+    {
+      if (*source == '\0')
+      {
         break;
       }
       *target++ = *source++;
@@ -241,11 +275,14 @@ appendStringLiteral(PQExpBuffer buf, const char *str, int encoding, bool std_str
      * multibyte character).  This should be enough to make a string that
      * the server will error out on.
      */
-    if (i < len) {
+    if (i < len)
+    {
       char *stop = buf->data + buf->maxlen - 2;
 
-      for (; i < len; i++) {
-        if (target >= stop) {
+      for (; i < len; i++)
+      {
+        if (target >= stop)
+        {
           break;
         }
         *target++ = ' ';
@@ -275,9 +312,11 @@ appendStringLiteralConn(PQExpBuffer buf, const char *str, PGconn *conn)
    * XXX This is a kluge to silence escape_string_warning in our utility
    * programs.  It should go away someday.
    */
-  if (strchr(str, '\\') != NULL && PQserverVersion(conn) >= 80100) {
+  if (strchr(str, '\\') != NULL && PQserverVersion(conn) >= 80100)
+  {
     /* ensure we are not adjacent to an identifier */
-    if (buf->len > 0 && buf->data[buf->len - 1] != ' ') {
+    if (buf->len > 0 && buf->data[buf->len - 1] != ' ')
+    {
       appendPQExpBufferChar(buf, ' ');
     }
     appendPQExpBufferChar(buf, ESCAPE_STRING_SYNTAX);
@@ -286,7 +325,8 @@ appendStringLiteralConn(PQExpBuffer buf, const char *str, PGconn *conn)
   }
   /* XXX end kluge */
 
-  if (!enlargePQExpBuffer(buf, 2 * length + 2)) {
+  if (!enlargePQExpBuffer(buf, 2 * length + 2))
+  {
     return;
   }
   appendPQExpBufferChar(buf, '\'');
@@ -312,7 +352,8 @@ appendStringLiteralDQ(PQExpBuffer buf, const char *str, const char *dqprefix)
 
   /* start with $ + dqprefix if not NULL */
   appendPQExpBufferChar(delimBuf, '$');
-  if (dqprefix) {
+  if (dqprefix)
+  {
     appendPQExpBufferStr(delimBuf, dqprefix);
   }
 
@@ -321,7 +362,8 @@ appendStringLiteralDQ(PQExpBuffer buf, const char *str, const char *dqprefix)
    * present in the string being quoted. We don't check with the trailing $
    * because a string ending in $foo must not be quoted with $foo$.
    */
-  while (strstr(str, delimBuf->data) != NULL) {
+  while (strstr(str, delimBuf->data) != NULL)
+  {
     appendPQExpBufferChar(delimBuf, suffixes[nextchar++]);
     nextchar %= sizeof(suffixes) - 1;
   }
@@ -359,19 +401,22 @@ appendByteaLiteral(PQExpBuffer buf, const unsigned char *str, size_t length, boo
    * an intelligent format choice is impossible.  It might be better to
    * always use the old escaped format.
    */
-  if (!enlargePQExpBuffer(buf, 2 * length + 5)) {
+  if (!enlargePQExpBuffer(buf, 2 * length + 5))
+  {
     return;
   }
 
   target = buf->data + buf->len;
   *target++ = '\'';
-  if (!std_strings) {
+  if (!std_strings)
+  {
     *target++ = '\\';
   }
   *target++ = '\\';
   *target++ = 'x';
 
-  while (length-- > 0) {
+  while (length-- > 0)
+  {
     unsigned char c = *source++;
 
     *target++ = hextbl[(c >> 4) & 0xF];
@@ -386,7 +431,8 @@ appendByteaLiteral(PQExpBuffer buf, const unsigned char *str, size_t length, boo
 }
 
 /*
- * Append the given string to the shell command being built in the buffer,* with shell-style quoting as needed to create exactly one argument.
+ * Append the given string to the shell command being built in the buffer,
+ * with shell-style quoting as needed to create exactly one argument.
  *
  * Forbid LF or CR characters, which have scant practical use beyond designing
  * security breaches.  The Windows command shell is unusable as a conduit for
@@ -401,8 +447,9 @@ appendByteaLiteral(PQExpBuffer buf, const unsigned char *str, size_t length, boo
 void
 appendShellString(PQExpBuffer buf, const char *str)
 {
-  if (!appendShellStringNoError(buf, str)) {
-    fprintf(stderr,_("shell command argument contains a newline or carriage return: \"%s\"\n"),str);
+  if (!appendShellStringNoError(buf, str))
+  {
+    fprintf(stderr, _("shell command argument contains a newline or carriage return: \"%s\"\n"), str);
     exit(EXIT_FAILURE);
   }
 }
@@ -420,22 +467,28 @@ appendShellStringNoError(PQExpBuffer buf, const char *str)
    * Don't bother with adding quotes if the string is nonempty and clearly
    * contains only safe characters.
    */
-  if (*str != '\0' && strspn(str, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./:") == strlen(str)) {
+  if (*str != '\0' && strspn(str, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./:") == strlen(str))
+  {
     appendPQExpBufferStr(buf, str);
     return ok;
   }
 
 #ifndef WIN32
   appendPQExpBufferChar(buf, '\'');
-  for (p = str; *p; p++) {
-    if (*p == '\n' || *p == '\r') {
+  for (p = str; *p; p++)
+  {
+    if (*p == '\n' || *p == '\r')
+    {
       ok = false;
       continue;
     }
 
-    if (*p == '\'') {
+    if (*p == '\'')
+    {
       appendPQExpBufferStr(buf, "'\"'\"'");
-    } else {
+    }
+    else
+    {
       appendPQExpBufferChar(buf, *p);
     }
   }
@@ -444,7 +497,8 @@ appendShellStringNoError(PQExpBuffer buf, const char *str)
 
   /*
    * A Windows system() argument experiences two layers of interpretation.
-   * First, cmd.exe interprets the string.  Its behavior is undocumented,* but a caret escapes any byte except LF or CR that would otherwise have
+   * First, cmd.exe interprets the string.  Its behavior is undocumented,
+   * but a caret escapes any byte except LF or CR that would otherwise have
    * special meaning.  Handling of a caret before LF or CR differs between
    * "cmd.exe /c" and other modes, and it is unusable here.
    *
@@ -453,22 +507,30 @@ appendShellStringNoError(PQExpBuffer buf, const char *str)
    * backslash-double quote sequences specially.
    */
   appendPQExpBufferStr(buf, "^\"");
-  for (p = str; *p; p++) {
-    if (*p == '\n' || *p == '\r') {
+  for (p = str; *p; p++)
+  {
+    if (*p == '\n' || *p == '\r')
+    {
       ok = false;
       continue;
     }
 
     /* Change N backslashes before a double quote to 2N+1 backslashes. */
-    if (*p == '"') {
-      while (backslash_run_length) {
+    if (*p == '"')
+    {
+      while (backslash_run_length)
+      {
         appendPQExpBufferStr(buf, "^\\");
         backslash_run_length--;
       }
       appendPQExpBufferStr(buf, "^\\");
-    } else if (*p == '\\') {
+    }
+    else if (*p == '\\')
+    {
       backslash_run_length++;
-    } else {
+    }
+    else
+    {
       backslash_run_length = 0;
     }
 
@@ -476,7 +538,8 @@ appendShellStringNoError(PQExpBuffer buf, const char *str)
      * Decline to caret-escape the most mundane characters, to ease
      * debugging and lest we approach the command length limit.
      */
-    if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9'))) {
+    if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9')))
+    {
       appendPQExpBufferChar(buf, '^');
     }
     appendPQExpBufferChar(buf, *p);
@@ -486,7 +549,8 @@ appendShellStringNoError(PQExpBuffer buf, const char *str)
    * Change N backslashes at end of argument to 2N backslashes, because they
    * precede the double quote that terminates the argument.
    */
-  while (backslash_run_length) {
+  while (backslash_run_length)
+  {
     appendPQExpBufferStr(buf, "^\\");
     backslash_run_length--;
   }
@@ -511,19 +575,24 @@ appendConnStrVal(PQExpBuffer buf, const char *str)
    * it. This is quite conservative, but better safe than sorry.
    */
   needquotes = true;
-  for (s = str; *s; s++) {
-    if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == '_' || *s == '.')) {
+  for (s = str; *s; s++)
+  {
+    if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == '_' || *s == '.'))
+    {
       needquotes = true;
       break;
     }
     needquotes = false;
   }
 
-  if (needquotes) {
+  if (needquotes)
+  {
     appendPQExpBufferChar(buf, '\'');
-    while (*str) {
+    while (*str)
+    {
       /* ' and \ must be escaped by to \' and \\ */
-      if (*str == '\'' || *str == '\\') {
+      if (*str == '\'' || *str == '\\')
+      {
         appendPQExpBufferChar(buf, '\\');
       }
 
@@ -531,7 +600,9 @@ appendConnStrVal(PQExpBuffer buf, const char *str)
       str++;
     }
     appendPQExpBufferChar(buf, '\'');
-  } else {
+  }
+  else
+  {
     appendPQExpBufferStr(buf, str);
   }
 }
@@ -553,19 +624,23 @@ appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
    */
   complex = false;
 
-  for (s = dbname; *s; s++) {
-    if (*s == '\n' || *s == '\r') {
+  for (s = dbname; *s; s++)
+  {
+    if (*s == '\n' || *s == '\r')
+    {
       fprintf(stderr, _("database name contains a newline or carriage return: \"%s\"\n"), dbname);
       exit(EXIT_FAILURE);
     }
 
-    if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == '_' || *s == '.')) {
+    if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == '_' || *s == '.'))
+    {
       complex = true;
     }
   }
 
   appendPQExpBufferStr(buf, "\\connect ");
-  if (complex) {
+  if (complex)
+  {
     PQExpBufferData connstr;
 
     initPQExpBuffer(&connstr);
@@ -583,7 +658,9 @@ appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
     appendPQExpBufferStr(buf, fmtId(connstr.data));
 
     termPQExpBuffer(&connstr);
-  } else {
+  }
+  else
+  {
     appendPQExpBufferStr(buf, fmtId(dbname));
   }
   appendPQExpBufferChar(buf, '\n');
@@ -620,11 +697,13 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
   *itemarray = NULL;
   *nitems = 0;
   inputlen = strlen(atext);
-  if (inputlen < 2 || atext[0] != '{' || atext[inputlen - 1] != '}') {
+  if (inputlen < 2 || atext[0] != '{' || atext[inputlen - 1] != '}')
+  {
     return false; /* bad input */
   }
   items = (char **)malloc(inputlen * (sizeof(char *) + sizeof(char)));
-  if (items == NULL) {
+  if (items == NULL)
+  {
     return false; /* out of memory */
   }
   *itemarray = items;
@@ -632,27 +711,38 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
 
   atext++; /* advance over initial '{' */
   curitem = 0;
-  while (*atext != '}') {
-    if (*atext == '\0') {
+  while (*atext != '}')
+  {
+    if (*atext == '\0')
+    {
       return false; /* premature end of string */
     }
     items[curitem] = strings;
-    while (*atext != '}' && *atext != ',') {
-      if (*atext == '\0') {
+    while (*atext != '}' && *atext != ',')
+    {
+      if (*atext == '\0')
+      {
         return false; /* premature end of string */
       }
-      if (*atext != '"') {
+      if (*atext != '"')
+      {
         *strings++ = *atext++; /* copy unquoted data */
-      } else {
+      }
+      else
+      {
         /* process quoted substring */
         atext++;
-        while (*atext != '"') {
-          if (*atext == '\0') {
+        while (*atext != '"')
+        {
+          if (*atext == '\0')
+          {
             return false; /* premature end of string */
           }
-          if (*atext == '\\') {
+          if (*atext == '\\')
+          {
             atext++;
-            if (*atext == '\0') {
+            if (*atext == '\0')
+            {
               return false; /* premature end of string */
             }
           }
@@ -662,12 +752,14 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
       }
     }
     *strings++ = '\0';
-    if (*atext == ',') {
+    if (*atext == ',')
+    {
       atext++;
     }
     curitem++;
   }
-  if (atext[1] != '\0') {
+  if (atext[1] != '\0')
+  {
     return false; /* bogus syntax (embedded '}') */
   }
   *nitems = curitem;
@@ -692,14 +784,17 @@ appendReloptionsArray(PQExpBuffer buffer, const char *reloptions, const char *pr
   int noptions;
   int i;
 
-  if (!parsePGArray(reloptions, &options, &noptions)) {
-    if (options) {
+  if (!parsePGArray(reloptions, &options, &noptions))
+  {
+    if (options)
+    {
       free(options);
     }
     return false;
   }
 
-  for (i = 0; i < noptions; i++) {
+  for (i = 0; i < noptions; i++)
+  {
     char *option = options[i];
     char *name;
     char *separator;
@@ -711,14 +806,18 @@ appendReloptionsArray(PQExpBuffer buffer, const char *reloptions, const char *pr
      */
     name = option;
     separator = strchr(option, '=');
-    if (separator) {
+    if (separator)
+    {
       *separator = '\0';
       value = separator + 1;
-    } else {
+    }
+    else
+    {
       value = "";
     }
 
-    if (i > 0) {
+    if (i > 0)
+    {
       appendPQExpBufferStr(buffer, ", ");
     }
     appendPQExpBuffer(buffer, "%s%s=", prefix, fmtId(name));
@@ -731,14 +830,18 @@ appendReloptionsArray(PQExpBuffer buffer, const char *reloptions, const char *pr
      * don't want to assume very much here about what custom reloptions
      * might mean.)
      */
-    if (strcmp(fmtId(value), value) == 0) {
+    if (strcmp(fmtId(value), value) == 0)
+    {
       appendPQExpBufferStr(buffer, value);
-    } else {
+    }
+    else
+    {
       appendStringLiteral(buffer, value, encoding, std_strings);
     }
   }
 
-  if (options) {
+  if (options)
+  {
     free(options);
   }
 
@@ -783,9 +886,11 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern, bool h
 
 #define WHEREAND() (appendPQExpBufferStr(buf, have_where ? "  AND " : "WHERE "), have_where = true, added_clause = true)
 
-  if (pattern == NULL) {
-    /* default:; select all visible objects */
-    if (visibilityrule) {
+  if (pattern == NULL)
+  {
+    /* Default: select all visible objects */
+    if (visibilityrule)
+    {
       WHEREAND();
       appendPQExpBuffer(buf, "%s\n", visibilityrule);
     }
@@ -813,35 +918,50 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern, bool h
   inquotes = false;
   cp = pattern;
 
-  while (*cp) {
+  while (*cp)
+  {
     char ch = *cp;
 
-    if (ch == '"') {
-      if (inquotes && cp[1] == '"') {
+    if (ch == '"')
+    {
+      if (inquotes && cp[1] == '"')
+      {
         /* emit one quote, stay in inquotes mode */
         appendPQExpBufferChar(&namebuf, '"');
         cp++;
-      } else {
+      }
+      else
+      {
         inquotes = !inquotes;
       }
       cp++;
-    } else if (!inquotes && isupper((unsigned char)ch)) {
+    }
+    else if (!inquotes && isupper((unsigned char)ch))
+    {
       appendPQExpBufferChar(&namebuf, pg_tolower((unsigned char)ch));
       cp++;
-    } else if (!inquotes && ch == '*') {
+    }
+    else if (!inquotes && ch == '*')
+    {
       appendPQExpBufferStr(&namebuf, ".*");
       cp++;
-    } else if (!inquotes && ch == '?') {
+    }
+    else if (!inquotes && ch == '?')
+    {
       appendPQExpBufferChar(&namebuf, '.');
       cp++;
-    } else if (!inquotes && ch == '.') {
+    }
+    else if (!inquotes && ch == '.')
+    {
       /* Found schema/name separator, move current pattern to schema */
       resetPQExpBuffer(&schemabuf);
       appendPQExpBufferStr(&schemabuf, namebuf.data);
       resetPQExpBuffer(&namebuf);
       appendPQExpBufferStr(&namebuf, "^(");
       cp++;
-    } else if (ch == '$') {
+    }
+    else if (ch == '$')
+    {
       /*
        * Dollar is always quoted, whether inside quotes or not. The
        * reason is that it's allowed in SQL identifiers, so there's a
@@ -851,20 +971,25 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern, bool h
        */
       appendPQExpBufferStr(&namebuf, "\\$");
       cp++;
-    } else {
+    }
+    else
+    {
       /*
        * Ordinary data character, transfer to pattern
        *
-       * Inside double quotes, or at all times if force_escape is true,* quote regexp special characters with a backslash to avoid
+       * Inside double quotes, or at all times if force_escape is true,
+       * quote regexp special characters with a backslash to avoid
        * regexp errors.  Outside quotes, however, let them pass through
        * as-is; this lets knowledgeable users build regexp expressions
        * that are more powerful than shell-style patterns.
        */
-      if ((inquotes || force_escape) && strchr("|*+?()[]{}.^$\\", ch)) {
+      if ((inquotes || force_escape) && strchr("|*+?()[]{}.^$\\", ch))
+      {
         appendPQExpBufferChar(&namebuf, '\\');
       }
       i = PQmblen(cp, encoding);
-      while (i-- && *cp) {
+      while (i-- && *cp)
+      {
         appendPQExpBufferChar(&namebuf, *cp);
         cp++;
       }
@@ -879,31 +1004,40 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern, bool h
    * We want the regex matches to use the database's default collation where
    * collation-sensitive behavior is required (for example, which characters
    * match '\w').  That happened by default before PG v12, but if the server
-   * is >= v12 then we need to force it through explicit COLLATE clauses,* otherwise the "C" collation attached to "name" catalog columns wins.
+   * is >= v12 then we need to force it through explicit COLLATE clauses,
+   * otherwise the "C" collation attached to "name" catalog columns wins.
    */
-  if (namebuf.len > 2) {
+  if (namebuf.len > 2)
+  {
     /* We have a name pattern, so constrain the namevar(s) */
 
     appendPQExpBufferStr(&namebuf, ")$");
     /* Optimize away a "*" pattern */
-    if (strcmp(namebuf.data, "^(.*)$") != 0) {
+    if (strcmp(namebuf.data, "^(.*)$") != 0)
+    {
       WHEREAND();
-      if (altnamevar) {
+      if (altnamevar)
+      {
         appendPQExpBuffer(buf, "(%s OPERATOR(pg_catalog.~) ", namevar);
         appendStringLiteralConn(buf, namebuf.data, conn);
-        if (PQserverVersion(conn) >= 120000) {
+        if (PQserverVersion(conn) >= 120000)
+        {
           appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
         }
         appendPQExpBuffer(buf, "\n        OR %s OPERATOR(pg_catalog.~) ", altnamevar);
         appendStringLiteralConn(buf, namebuf.data, conn);
-        if (PQserverVersion(conn) >= 120000) {
+        if (PQserverVersion(conn) >= 120000)
+        {
           appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
         }
         appendPQExpBufferStr(buf, ")\n");
-      } else {
+      }
+      else
+      {
         appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", namevar);
         appendStringLiteralConn(buf, namebuf.data, conn);
-        if (PQserverVersion(conn) >= 120000) {
+        if (PQserverVersion(conn) >= 120000)
+        {
           appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
         }
         appendPQExpBufferChar(buf, '\n');
@@ -911,23 +1045,29 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern, bool h
     }
   }
 
-  if (schemabuf.len > 2) {
+  if (schemabuf.len > 2)
+  {
     /* We have a schema pattern, so constrain the schemavar */
 
     appendPQExpBufferStr(&schemabuf, ")$");
     /* Optimize away a "*" pattern */
-    if (strcmp(schemabuf.data, "^(.*)$") != 0 && schemavar) {
+    if (strcmp(schemabuf.data, "^(.*)$") != 0 && schemavar)
+    {
       WHEREAND();
       appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", schemavar);
       appendStringLiteralConn(buf, schemabuf.data, conn);
-      if (PQserverVersion(conn) >= 120000) {
+      if (PQserverVersion(conn) >= 120000)
+      {
         appendPQExpBufferStr(buf, " COLLATE pg_catalog.default");
       }
       appendPQExpBufferChar(buf, '\n');
     }
-  } else {
+  }
+  else
+  {
     /* No schema pattern given, so select only visible objects */
-    if (visibilityrule) {
+    if (visibilityrule)
+    {
       WHEREAND();
       appendPQExpBuffer(buf, "%s\n", visibilityrule);
     }

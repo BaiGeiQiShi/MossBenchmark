@@ -42,7 +42,8 @@ scram_HMAC_init(scram_HMAC_ctx *ctx, const uint8 *key, int keylen)
    * If the key is longer than the block size (64 bytes for SHA-256), pass
    * it through SHA-256 once to shrink it down.
    */
-  if (keylen > SHA256_HMAC_B) {
+  if (keylen > SHA256_HMAC_B)
+  {
     pg_sha256_ctx sha256_ctx;
 
     pg_sha256_init(&sha256_ctx);
@@ -55,7 +56,8 @@ scram_HMAC_init(scram_HMAC_ctx *ctx, const uint8 *key, int keylen)
   memset(k_ipad, HMAC_IPAD, SHA256_HMAC_B);
   memset(ctx->k_opad, HMAC_OPAD, SHA256_HMAC_B);
 
-  for (i = 0; i < keylen; i++) {
+  for (i = 0; i < keylen; i++)
+  {
     k_ipad[i] ^= key[i];
     ctx->k_opad[i] ^= key[i];
   }
@@ -122,11 +124,13 @@ scram_SaltedPassword(const char *password, const char *salt, int saltlen, int it
   memcpy(result, Ui_prev, SCRAM_KEY_LEN);
 
   /* Subsequent iterations */
-  for (i = 2; i <= iterations; i++) {
+  for (i = 2; i <= iterations; i++)
+  {
     scram_HMAC_init(&hmac_ctx, (uint8 *)password, password_len);
     scram_HMAC_update(&hmac_ctx, (const char *)Ui_prev, SCRAM_KEY_LEN);
     scram_HMAC_final(Ui, &hmac_ctx);
-    for (j = 0; j < SCRAM_KEY_LEN; j++) {
+    for (j = 0; j < SCRAM_KEY_LEN; j++)
+    {
       result[j] ^= Ui[j];
     }
     memcpy(Ui_prev, Ui, SCRAM_KEY_LEN);
@@ -191,7 +195,8 @@ scram_build_verifier(const char *salt, int saltlen, int iterations, const char *
   char *p;
   int maxlen;
 
-  if (iterations <= 0) {
+  if (iterations <= 0)
+  {
     iterations = SCRAM_DEFAULT_ITERATIONS;
   }
 
@@ -214,7 +219,8 @@ scram_build_verifier(const char *salt, int saltlen, int iterations, const char *
 
 #ifdef FRONTEND
   result = malloc(maxlen);
-  if (!result) {
+  if (!result)
+  {
     return NULL;
   }
 #else

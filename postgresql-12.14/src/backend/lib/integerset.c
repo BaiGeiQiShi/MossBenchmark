@@ -318,30 +318,30 @@ intset_create(void)
 static intset_internal_node *
 intset_new_internal_node(IntegerSet *intset)
 {
+  intset_internal_node *n;
 
+  n = (intset_internal_node *)MemoryContextAlloc(intset->context, sizeof(intset_internal_node));
+  intset->mem_used += GetMemoryChunkSpace(n);
 
+  n->level = 0; /* caller must set */
+  n->num_items = 0;
 
-
-
-
-
-
-
+  return n;
 }
 
 static intset_leaf_node *
 intset_new_leaf_node(IntegerSet *intset)
 {
+  intset_leaf_node *n;
 
+  n = (intset_leaf_node *)MemoryContextAlloc(intset->context, sizeof(intset_leaf_node));
+  intset->mem_used += GetMemoryChunkSpace(n);
 
+  n->level = 0;
+  n->num_items = 0;
+  n->next = NULL;
 
-
-
-
-
-
-
-
+  return n;
 }
 
 /*
@@ -359,7 +359,7 @@ intset_num_entries(IntegerSet *intset)
 uint64
 intset_memory_usage(IntegerSet *intset)
 {
-
+  return intset->mem_used;
 }
 
 /*
@@ -372,19 +372,19 @@ intset_add_member(IntegerSet *intset, uint64 x)
 {
   if (intset->iter_active)
   {
-
+    elog(ERROR, "cannot add new values to integer set while iteration is in progress");
   }
 
   if (x <= intset->highest_value && intset->num_entries > 0)
   {
-
+    elog(ERROR, "cannot add value to integer set out of order");
   }
 
   if (intset->num_buffered_values >= MAX_BUFFERED_VALUES)
   {
     /* Time to flush our buffer */
-
-
+    intset_flush_buffered_values(intset);
+    Assert(intset->num_buffered_values < MAX_BUFFERED_VALUES);
   }
 
   /* Add it to the buffer of newly-added values */
@@ -400,77 +400,77 @@ intset_add_member(IntegerSet *intset, uint64 x)
 static void
 intset_flush_buffered_values(IntegerSet *intset)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  uint64 *values = intset->buffered_values;
+  uint64 num_values = intset->num_buffered_values;
+  int num_packed = 0;
+  intset_leaf_node *leaf;
+
+  leaf = (intset_leaf_node *)intset->rightmost_nodes[0];
+
+  /*
+   * If the tree is completely empty, create the first leaf page, which is
+   * also the root.
+   */
+  if (leaf == NULL)
+  {
+    /*
+     * This is the very first item in the set.
+     *
+     * Allocate root node. It's also a leaf.
+     */
+    leaf = intset_new_leaf_node(intset);
+
+    intset->root = (intset_node *)leaf;
+    intset->leftmost_leaf = leaf;
+    intset->rightmost_nodes[0] = (intset_node *)leaf;
+    intset->num_levels = 1;
+  }
+
+  /*
+   * If there are less than MAX_VALUES_PER_LEAF_ITEM values in the buffer,
+   * stop.  In most cases, we cannot encode that many values in a single
+   * value, but this way, the encoder doesn't have to worry about running
+   * out of input.
+   */
+  while (num_values - num_packed >= MAX_VALUES_PER_LEAF_ITEM)
+  {
+    leaf_item item;
+    int num_encoded;
+
+    /*
+     * Construct the next leaf item, packing as many buffered values as
+     * possible.
+     */
+    item.first = values[num_packed];
+    item.codeword = simple8b_encode(&values[num_packed + 1], &num_encoded, item.first);
+
+    /*
+     * Add the item to the node, allocating a new node if the old one is
+     * full.
+     */
+    if (leaf->num_items >= MAX_LEAF_ITEMS)
+    {
+      /* Allocate new leaf and link it to the tree */
+      intset_leaf_node *old_leaf = leaf;
+
+      leaf = intset_new_leaf_node(intset);
+      old_leaf->next = leaf;
+      intset->rightmost_nodes[0] = (intset_node *)leaf;
+      intset_update_upper(intset, 1, (intset_node *)leaf, item.first);
+    }
+    leaf->items[leaf->num_items++] = item;
+
+    num_packed += 1 + num_encoded;
+  }
+
+  /*
+   * Move any remaining buffered values to the beginning of the array.
+   */
+  if (num_packed < intset->num_buffered_values)
+  {
+    memmove(&intset->buffered_values[0], &intset->buffered_values[num_packed], (intset->num_buffered_values - num_packed) * sizeof(uint64));
+  }
+  intset->num_buffered_values -= num_packed;
 }
 
 /*
@@ -481,76 +481,76 @@ intset_flush_buffered_values(IntegerSet *intset)
 static void
 intset_update_upper(IntegerSet *intset, int level, intset_node *child, uint64 child_key)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  intset_internal_node *parent;
+
+  Assert(level > 0);
+
+  /*
+   * Create a new root node, if necessary.
+   */
+  if (level >= intset->num_levels)
+  {
+    intset_node *oldroot = intset->root;
+    uint64 downlink_key;
+
+    /* MAX_TREE_LEVELS should be more than enough, this shouldn't happen */
+    if (intset->num_levels == MAX_TREE_LEVELS)
+    {
+      elog(ERROR, "could not expand integer set, maximum number of levels reached");
+    }
+    intset->num_levels++;
+
+    /*
+     * Get the first value on the old root page, to be used as the
+     * downlink.
+     */
+    if (intset->root->level == 0)
+    {
+      downlink_key = ((intset_leaf_node *)oldroot)->items[0].first;
+    }
+    else
+    {
+      downlink_key = ((intset_internal_node *)oldroot)->values[0];
+    }
+
+    parent = intset_new_internal_node(intset);
+    parent->level = level;
+    parent->values[0] = downlink_key;
+    parent->downlinks[0] = oldroot;
+    parent->num_items = 1;
+
+    intset->root = (intset_node *)parent;
+    intset->rightmost_nodes[level] = (intset_node *)parent;
+  }
+
+  /*
+   * Place the downlink on the parent page.
+   */
+  parent = (intset_internal_node *)intset->rightmost_nodes[level];
+
+  if (parent->num_items < MAX_INTERNAL_ITEMS)
+  {
+    parent->values[parent->num_items] = child_key;
+    parent->downlinks[parent->num_items] = child;
+    parent->num_items++;
+  }
+  else
+  {
+    /*
+     * Doesn't fit.  Allocate new parent, with the downlink as the first
+     * item on it, and recursively insert the downlink to the new parent
+     * to the grandparent.
+     */
+    parent = intset_new_internal_node(intset);
+    parent->level = level;
+    parent->values[0] = child_key;
+    parent->downlinks[0] = child;
+    parent->num_items = 1;
+
+    intset->rightmost_nodes[level] = (intset_node *)parent;
+
+    intset_update_upper(intset, level + 1, (intset_node *)parent, child_key);
+  }
 }
 
 /*
@@ -575,7 +575,7 @@ intset_is_member(IntegerSet *intset, uint64 x)
     itemno = intset_binsrch_uint64(x, intset->buffered_values, intset->num_buffered_values, false);
     if (itemno >= intset->num_buffered_values)
     {
-
+      return false;
     }
     else
     {
@@ -591,47 +591,47 @@ intset_is_member(IntegerSet *intset, uint64 x)
   {
     return false;
   }
+  node = intset->root;
+  for (level = intset->num_levels - 1; level > 0; level--)
+  {
+    intset_internal_node *n = (intset_internal_node *)node;
 
+    Assert(node->level == level);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    itemno = intset_binsrch_uint64(x, n->values, n->num_items, true);
+    if (itemno == 0)
+    {
+      return false;
+    }
+    node = n->downlinks[itemno - 1];
+  }
+  Assert(node->level == 0);
+  leaf = (intset_leaf_node *)node;
 
   /*
    * Binary search to find the right item on the leaf page
    */
-
-
-
-
-
-
+  itemno = intset_binsrch_leaf(x, leaf->items, leaf->num_items, true);
+  if (itemno == 0)
+  {
+    return false;
+  }
+  item = &leaf->items[itemno - 1];
 
   /* Is this a match to the first value on the item? */
-
-
-
-
-
+  if (item->first == x)
+  {
+    return true;
+  }
+  Assert(x > item->first);
 
   /* Is it in the packed codeword? */
+  if (simple8b_contains(item->codeword, x, item->first))
+  {
+    return true;
+  }
 
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -677,21 +677,21 @@ intset_iterate_next(IntegerSet *intset, uint64 *next)
       leaf_item *item;
       int num_decoded;
 
+      item = &intset->iter_node->items[intset->iter_itemno++];
 
-
-
-
-
-
-
+      intset->iter_values_buf[0] = item->first;
+      num_decoded = simple8b_decode(item->codeword, &intset->iter_values_buf[1], item->first);
+      intset->iter_num_values = num_decoded + 1;
+      intset->iter_valueno = 0;
+      continue;
     }
 
     /* No more items on this leaf, step to next node */
     if (intset->iter_node)
     {
-
-
-
+      intset->iter_node = intset->iter_node->next;
+      intset->iter_itemno = 0;
+      continue;
     }
 
     /*
@@ -706,13 +706,13 @@ intset_iterate_next(IntegerSet *intset, uint64 *next)
       continue;
     }
 
-
+    break;
   }
 
   /* No more results. */
   intset->iter_active = false;
-
-
+  *next = 0; /* prevent uninitialized-variable warnings */
+  return false;
 }
 
 /*
@@ -739,14 +739,14 @@ intset_binsrch_uint64(uint64 item, uint64 *arr, int arr_elems, bool nextkey)
 
     if (nextkey)
     {
-
-
-
-
-
-
-
-
+      if (item >= arr[mid])
+      {
+        low = mid + 1;
+      }
+      else
+      {
+        high = mid;
+      }
     }
     else
     {
@@ -768,39 +768,39 @@ intset_binsrch_uint64(uint64 item, uint64 *arr, int arr_elems, bool nextkey)
 static int
 intset_binsrch_leaf(uint64 item, leaf_item *arr, int arr_elems, bool nextkey)
 {
+  int low, high, mid;
 
+  low = 0;
+  high = arr_elems;
+  while (high > low)
+  {
+    mid = low + (high - low) / 2;
 
+    if (nextkey)
+    {
+      if (item >= arr[mid].first)
+      {
+        low = mid + 1;
+      }
+      else
+      {
+        high = mid;
+      }
+    }
+    else
+    {
+      if (item > arr[mid].first)
+      {
+        low = mid + 1;
+      }
+      else
+      {
+        high = mid;
+      }
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return low;
 }
 
 /*
@@ -900,103 +900,103 @@ static const struct simple8b_mode
 static uint64
 simple8b_encode(const uint64 *ints, int *num_encoded, uint64 base)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  int selector;
+  int nints;
+  int bits;
+  uint64 diff;
+  uint64 last_val;
+  uint64 codeword;
+  int i;
+
+  Assert(ints[0] > base);
+
+  /*
+   * Select the "mode" to use for this codeword.
+   *
+   * In each iteration, check if the next value can be represented in the
+   * current mode we're considering.  If it's too large, then step up the
+   * mode to a wider one, and repeat.  If it fits, move on to the next
+   * integer.  Repeat until the codeword is full, given the current mode.
+   *
+   * Note that we don't have any way to represent unused slots in the
+   * codeword, so we require each codeword to be "full".  It is always
+   * possible to produce a full codeword unless the very first delta is too
+   * large to be encoded.  For example, if the first delta is small but the
+   * second is too large to be encoded, we'll end up using the last "mode",
+   * which has nints == 1.
+   */
+  selector = 0;
+  nints = simple8b_modes[0].num_ints;
+  bits = simple8b_modes[0].bits_per_int;
+  diff = ints[0] - base - 1;
+  last_val = ints[0];
+  i = 0; /* number of deltas we have accepted */
+  for (;;)
+  {
+    if (diff >= (UINT64CONST(1) << bits))
+    {
+      /* too large, step up to next mode */
+      selector++;
+      nints = simple8b_modes[selector].num_ints;
+      bits = simple8b_modes[selector].bits_per_int;
+      /* we might already have accepted enough deltas for this mode */
+      if (i >= nints)
+      {
+        break;
+      }
+    }
+    else
+    {
+      /* accept this delta; then done if codeword is full */
+      i++;
+      if (i >= nints)
+      {
+        break;
+      }
+      /* examine next delta */
+      Assert(ints[i] > last_val);
+      diff = ints[i] - last_val - 1;
+      last_val = ints[i];
+    }
+  }
+
+  if (nints == 0)
+  {
+    /*
+     * The first delta is too large to be encoded with Simple-8b.
+     *
+     * If there is at least one not-too-large integer in the input, we
+     * will encode it using mode 15 (or a more compact mode).  Hence, we
+     * can only get here if the *first* delta is >= 2^60.
+     */
+    Assert(i == 0);
+    *num_encoded = 0;
+    return EMPTY_CODEWORD;
+  }
+
+  /*
+   * Encode the integers using the selected mode.  Note that we shift them
+   * into the codeword in reverse order, so that they will come out in the
+   * correct order in the decoder.
+   */
+  codeword = 0;
+  if (bits > 0)
+  {
+    for (i = nints - 1; i > 0; i--)
+    {
+      diff = ints[i] - ints[i - 1] - 1;
+      codeword |= diff;
+      codeword <<= bits;
+    }
+    diff = ints[0] - base - 1;
+    codeword |= diff;
+  }
+
+  /* add selector to the codeword, and return */
+  codeword |= (uint64)selector << 60;
+
+  *num_encoded = nints;
+  return codeword;
 }
 
 /*
@@ -1006,27 +1006,27 @@ simple8b_encode(const uint64 *ints, int *num_encoded, uint64 base)
 static int
 simple8b_decode(uint64 codeword, uint64 *decoded, uint64 base)
 {
+  int selector = (codeword >> 60);
+  int nints = simple8b_modes[selector].num_ints;
+  int bits = simple8b_modes[selector].bits_per_int;
+  uint64 mask = (UINT64CONST(1) << bits) - 1;
+  uint64 curr_value;
 
+  if (codeword == EMPTY_CODEWORD)
+  {
+    return 0;
+  }
 
+  curr_value = base;
+  for (int i = 0; i < nints; i++)
+  {
+    uint64 diff = codeword & mask;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    curr_value += 1 + diff;
+    decoded[i] = curr_value;
+    codeword >>= bits;
+  }
+  return nints;
 }
 
 /*
@@ -1037,46 +1037,46 @@ simple8b_decode(uint64 codeword, uint64 *decoded, uint64 base)
 static bool
 simple8b_contains(uint64 codeword, uint64 key, uint64 base)
 {
+  int selector = (codeword >> 60);
+  int nints = simple8b_modes[selector].num_ints;
+  int bits = simple8b_modes[selector].bits_per_int;
 
+  if (codeword == EMPTY_CODEWORD)
+  {
+    return false;
+  }
 
+  if (bits == 0)
+  {
+    /* Special handling for 0-bit cases. */
+    return (key - base) <= nints;
+  }
+  else
+  {
+    uint64 mask = (UINT64CONST(1) << bits) - 1;
+    uint64 curr_value;
 
+    curr_value = base;
+    for (int i = 0; i < nints; i++)
+    {
+      uint64 diff = codeword & mask;
 
+      curr_value += 1 + diff;
 
+      if (curr_value >= key)
+      {
+        if (curr_value == key)
+        {
+          return true;
+        }
+        else
+        {
+          return false;
+        }
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      codeword >>= bits;
+    }
+  }
+  return false;
 }

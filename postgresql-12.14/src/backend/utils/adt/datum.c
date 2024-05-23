@@ -83,7 +83,7 @@ datumGetSize(Datum value, bool typByVal, int typLen)
 
       if (!PointerIsValid(s))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("invalid Datum pointer")));
       }
 
       size = (Size)VARSIZE_ANY(s);
@@ -95,15 +95,15 @@ datumGetSize(Datum value, bool typByVal, int typLen)
 
       if (!PointerIsValid(s))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("invalid Datum pointer")));
       }
 
       size = (Size)(strlen(s) + 1);
     }
     else
     {
-
-
+      elog(ERROR, "invalid typLen: %d", typLen);
+      size = 0; /* keep compiler quiet */
     }
   }
 
@@ -301,17 +301,17 @@ datum_image_eq(Datum value1, Datum value2, bool typByVal, int typLen)
       /* Only free memory if it's a copy made here. */
       if ((Pointer)arg1val != (Pointer)value1)
       {
-
+        pfree(arg1val);
       }
       if ((Pointer)arg2val != (Pointer)value2)
       {
-
+        pfree(arg2val);
       }
     }
   }
   else
   {
-
+    elog(ERROR, "unexpected typLen: %d", typLen);
   }
 
   return result;
@@ -383,7 +383,7 @@ datumSerialize(Datum value, bool isnull, bool typByVal, int typLen, char **start
   /* Write header word. */
   if (isnull)
   {
-
+    header = -2;
   }
   else if (typByVal)
   {
@@ -453,8 +453,8 @@ datumRestore(char **start_address, bool *isnull)
   /* If this datum is NULL, we can stop here. */
   if (header == -2)
   {
-
-
+    *isnull = true;
+    return (Datum)0;
   }
 
   /* OK, datum is not null. */

@@ -15,8 +15,8 @@
 /*
  * INTERFACE ROUTINES
  *		MultiExecBitmapIndexScan	scans a relation using index.
- *		ExecInitBitmapIndexScan		creates and initializes state
- *info. ExecReScanBitmapIndexScan	prepares to rescan the plan.
+ *		ExecInitBitmapIndexScan		creates and initializes state info.
+ *		ExecReScanBitmapIndexScan	prepares to rescan the plan.
  *		ExecEndBitmapIndexScan		releases all storage.
  */
 #include "postgres.h"
@@ -37,8 +37,8 @@
 static TupleTableSlot *
 ExecBitmapIndexScan(PlanState *pstate)
 {
-
-
+  elog(ERROR, "BitmapIndexScan node does not support ExecProcNode call convention");
+  return NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -107,8 +107,8 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
     CHECK_FOR_INTERRUPTS();
 
     doscan = ExecIndexAdvanceArrayKeys(node->biss_ArrayKeys, node->biss_NumArrayKeys);
-    if (doscan)
-    { /* reset index scan */
+    if (doscan) /* reset index scan */
+    {
       index_rescan(node->biss_ScanDesc, node->biss_ScanKeys, node->biss_NumScanKeys, NULL, 0);
     }
   }

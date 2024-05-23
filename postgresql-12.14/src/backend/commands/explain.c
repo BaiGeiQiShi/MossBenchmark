@@ -169,11 +169,11 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt, const char *queryString, Par
     }
     else if (strcmp(opt->defname, "buffers") == 0)
     {
-
+      es->buffers = defGetBoolean(opt);
     }
     else if (strcmp(opt->defname, "settings") == 0)
     {
-
+      es->settings = defGetBoolean(opt);
     }
     else if (strcmp(opt->defname, "timing") == 0)
     {
@@ -191,34 +191,34 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt, const char *queryString, Par
 
       if (strcmp(p, "text") == 0)
       {
-
+        es->format = EXPLAIN_FORMAT_TEXT;
       }
       else if (strcmp(p, "xml") == 0)
       {
-
+        es->format = EXPLAIN_FORMAT_XML;
       }
       else if (strcmp(p, "json") == 0)
       {
         es->format = EXPLAIN_FORMAT_JSON;
       }
-
-
-
-
-
-
-
-
+      else if (strcmp(p, "yaml") == 0)
+      {
+        es->format = EXPLAIN_FORMAT_YAML;
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized value for EXPLAIN option \"%s\": \"%s\"", opt->defname, p), parser_errposition(pstate, opt->location)));
+      }
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unrecognized EXPLAIN option \"%s\"", opt->defname), parser_errposition(pstate, opt->location)));
     }
   }
 
   if (es->buffers && !es->analyze)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("EXPLAIN option BUFFERS requires ANALYZE")));
   }
 
   /* if the timing was not set explicitly, set default value */
@@ -227,7 +227,7 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt, const char *queryString, Par
   /* check that timing is used with EXPLAIN ANALYZE */
   if (es->timing && !es->analyze)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("EXPLAIN option TIMING requires ANALYZE")));
   }
 
   /* if the summary was not set explicitly, set default value */
@@ -256,10 +256,10 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt, const char *queryString, Par
      * In the case of an INSTEAD NOTHING, tell at least that.  But in
      * non-text format, the output is delimited, so this isn't necessary.
      */
-
-
-
-
+    if (es->format == EXPLAIN_FORMAT_TEXT)
+    {
+      appendStringInfoString(es->str, "Query rewrites to nothing\n");
+    }
   }
   else
   {
@@ -335,7 +335,7 @@ ExplainResultDesc(ExplainStmt *stmt)
 
       if (strcmp(p, "xml") == 0)
       {
-
+        result_type = XMLOID;
       }
       else if (strcmp(p, "json") == 0)
       {
@@ -343,7 +343,7 @@ ExplainResultDesc(ExplainStmt *stmt)
       }
       else
       {
-
+        result_type = TEXTOID;
       }
       /* don't "break", as ExplainQuery will use the last value */
     }
@@ -374,7 +374,7 @@ ExplainOneQuery(Query *query, int cursorOptions, IntoClause *into, ExplainState 
   /* if an advisor plugin is present, let it manage things */
   if (ExplainOneQuery_hook)
   {
-
+    (*ExplainOneQuery_hook)(query, cursorOptions, into, es, queryString, params, queryEnv);
   }
   else
   {
@@ -410,7 +410,7 @@ ExplainOneUtility(Node *utilityStmt, IntoClause *into, ExplainState *es, const c
 {
   if (utilityStmt == NULL)
   {
-
+    return;
   }
 
   if (IsA(utilityStmt, CreateTableAsStmt))
@@ -448,28 +448,28 @@ ExplainOneUtility(Node *utilityStmt, IntoClause *into, ExplainState *es, const c
   {
     ExplainExecuteQuery((ExecuteStmt *)utilityStmt, into, es, queryString, params, queryEnv);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (IsA(utilityStmt, NotifyStmt))
+  {
+    if (es->format == EXPLAIN_FORMAT_TEXT)
+    {
+      appendStringInfoString(es->str, "NOTIFY\n");
+    }
+    else
+    {
+      ExplainDummyGroup("Notify", NULL, es);
+    }
+  }
+  else
+  {
+    if (es->format == EXPLAIN_FORMAT_TEXT)
+    {
+      appendStringInfoString(es->str, "Utility statements have no plan structure\n");
+    }
+    else
+    {
+      ExplainDummyGroup("Utility Statement", NULL, es);
+    }
+  }
 }
 
 /*
@@ -507,7 +507,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es, con
 
   if (es->buffers)
   {
-
+    instrument_option |= INSTRUMENT_BUFFERS;
   }
 
   /*
@@ -662,60 +662,60 @@ ExplainPrintSettings(ExplainState *es)
   }
 
   /* request an array of relevant settings */
+  gucs = get_explain_guc_options(&num);
 
+  if (es->format != EXPLAIN_FORMAT_TEXT)
+  {
+    ExplainOpenGroup("Settings", "Settings", true, es);
 
+    for (int i = 0; i < num; i++)
+    {
+      char *setting;
+      struct config_generic *conf = gucs[i];
 
+      setting = GetConfigOptionByName(conf->name, NULL, true);
 
+      ExplainPropertyText(conf->name, setting, es);
+    }
 
+    ExplainCloseGroup("Settings", "Settings", true, es);
+  }
+  else
+  {
+    StringInfoData str;
 
+    /* In TEXT mode, print nothing if there are no options */
+    if (num <= 0)
+    {
+      return;
+    }
 
+    initStringInfo(&str);
 
+    for (int i = 0; i < num; i++)
+    {
+      char *setting;
+      struct config_generic *conf = gucs[i];
 
+      if (i > 0)
+      {
+        appendStringInfoString(&str, ", ");
+      }
 
+      setting = GetConfigOptionByName(conf->name, NULL, true);
 
+      if (setting)
+      {
+        appendStringInfo(&str, "%s = '%s'", conf->name, setting);
+      }
+      else
+      {
+        appendStringInfo(&str, "%s = NULL", conf->name);
+      }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ExplainPropertyText("Settings", str.data, es);
+  }
 }
 
 /*
@@ -753,7 +753,7 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
   ps = queryDesc->planstate;
   if (IsA(ps, GatherState) && ((Gather *)ps->plan)->invisible)
   {
-
+    ps = outerPlanState(ps);
   }
   ExplainNode(ps, NIL, NULL, NULL, es);
 
@@ -805,14 +805,14 @@ ExplainPrintTriggers(ExplainState *es, QueryDesc *queryDesc)
 
   foreach (l, routerels)
   {
-
-
+    rInfo = (ResultRelInfo *)lfirst(l);
+    report_triggers(rInfo, show_relname, es);
   }
 
   foreach (l, targrels)
   {
-
-
+    rInfo = (ResultRelInfo *)lfirst(l);
+    report_triggers(rInfo, show_relname, es);
   }
 
   ExplainCloseGroup("Triggers", "Triggers", false, es);
@@ -838,7 +838,7 @@ ExplainPrintJITSummary(ExplainState *es, QueryDesc *queryDesc)
    */
   if (queryDesc->estate->es_jit)
   {
-
+    InstrJitAgg(&ji, &queryDesc->estate->es_jit->instr);
   }
 
   /* If this process has done JIT in parallel workers, merge stats */
@@ -870,68 +870,68 @@ ExplainPrintJIT(ExplainState *es, int jit_flags, JitInstrumentation *ji, int wor
   }
 
   /* calculate total time */
+  INSTR_TIME_SET_ZERO(total_time);
+  INSTR_TIME_ADD(total_time, ji->generation_counter);
+  INSTR_TIME_ADD(total_time, ji->inlining_counter);
+  INSTR_TIME_ADD(total_time, ji->optimization_counter);
+  INSTR_TIME_ADD(total_time, ji->emission_counter);
 
-
-
-
-
-
-
+  ExplainOpenGroup("JIT", "JIT", true, es);
 
   /* for higher density, open code the text output format */
+  if (es->format == EXPLAIN_FORMAT_TEXT)
+  {
+    appendStringInfoSpaces(es->str, es->indent * 2);
+    if (for_workers)
+    {
+      appendStringInfo(es->str, "JIT for worker %u:\n", worker_num);
+    }
+    else
+    {
+      appendStringInfo(es->str, "JIT:\n");
+    }
+    es->indent += 1;
 
+    ExplainPropertyInteger("Functions", NULL, ji->created_functions, es);
 
+    appendStringInfoSpaces(es->str, es->indent * 2);
+    appendStringInfo(es->str, "Options: %s %s, %s %s, %s %s, %s %s\n", "Inlining", jit_flags & PGJIT_INLINE ? "true" : "false", "Optimization", jit_flags & PGJIT_OPT3 ? "true" : "false", "Expressions", jit_flags & PGJIT_EXPR ? "true" : "false", "Deforming", jit_flags & PGJIT_DEFORM ? "true" : "false");
 
+    if (es->analyze && es->timing)
+    {
+      appendStringInfoSpaces(es->str, es->indent * 2);
+      appendStringInfo(es->str, "Timing: %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms\n", "Generation", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter), "Inlining", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter), "Optimization", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter), "Emission", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter), "Total", 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
+    }
 
+    es->indent -= 1;
+  }
+  else
+  {
+    ExplainPropertyInteger("Worker Number", NULL, worker_num, es);
+    ExplainPropertyInteger("Functions", NULL, ji->created_functions, es);
 
+    ExplainOpenGroup("Options", "Options", true, es);
+    ExplainPropertyBool("Inlining", jit_flags & PGJIT_INLINE, es);
+    ExplainPropertyBool("Optimization", jit_flags & PGJIT_OPT3, es);
+    ExplainPropertyBool("Expressions", jit_flags & PGJIT_EXPR, es);
+    ExplainPropertyBool("Deforming", jit_flags & PGJIT_DEFORM, es);
+    ExplainCloseGroup("Options", "Options", true, es);
 
+    if (es->analyze && es->timing)
+    {
+      ExplainOpenGroup("Timing", "Timing", true, es);
 
+      ExplainPropertyFloat("Generation", "ms", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter), 3, es);
+      ExplainPropertyFloat("Inlining", "ms", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter), 3, es);
+      ExplainPropertyFloat("Optimization", "ms", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter), 3, es);
+      ExplainPropertyFloat("Emission", "ms", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter), 3, es);
+      ExplainPropertyFloat("Total", "ms", 1000.0 * INSTR_TIME_GET_DOUBLE(total_time), 3, es);
 
+      ExplainCloseGroup("Timing", "Timing", true, es);
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ExplainCloseGroup("JIT", "JIT", true, es);
 }
 
 /*
@@ -945,10 +945,10 @@ ExplainPrintJIT(ExplainState *es, int jit_flags, JitInstrumentation *ji, int wor
 void
 ExplainQueryText(ExplainState *es, QueryDesc *queryDesc)
 {
-
-
-
-
+  if (queryDesc->sourceText)
+  {
+    ExplainPropertyText("Query Text", queryDesc->sourceText, es);
+  }
 }
 
 /*
@@ -964,87 +964,87 @@ report_triggers(ResultRelInfo *rInfo, bool show_relname, ExplainState *es)
   {
     return;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  for (nt = 0; nt < rInfo->ri_TrigDesc->numtriggers; nt++)
+  {
+    Trigger *trig = rInfo->ri_TrigDesc->triggers + nt;
+    Instrumentation *instr = rInfo->ri_TrigInstrument + nt;
+    char *relname;
+    char *conname = NULL;
+
+    /* Must clean up instrumentation state */
+    InstrEndLoop(instr);
+
+    /*
+     * We ignore triggers that were never invoked; they likely aren't
+     * relevant to the current query type.
+     */
+    if (instr->ntuples == 0)
+    {
+      continue;
+    }
+
+    ExplainOpenGroup("Trigger", NULL, true, es);
+
+    relname = RelationGetRelationName(rInfo->ri_RelationDesc);
+    if (OidIsValid(trig->tgconstraint))
+    {
+      conname = get_constraint_name(trig->tgconstraint);
+    }
+
+    /*
+     * In text format, we avoid printing both the trigger name and the
+     * constraint name unless VERBOSE is specified.  In non-text formats
+     * we just print everything.
+     */
+    if (es->format == EXPLAIN_FORMAT_TEXT)
+    {
+      if (es->verbose || conname == NULL)
+      {
+        appendStringInfo(es->str, "Trigger %s", trig->tgname);
+      }
+      else
+      {
+        appendStringInfoString(es->str, "Trigger");
+      }
+      if (conname)
+      {
+        appendStringInfo(es->str, " for constraint %s", conname);
+      }
+      if (show_relname)
+      {
+        appendStringInfo(es->str, " on %s", relname);
+      }
+      if (es->timing)
+      {
+        appendStringInfo(es->str, ": time=%.3f calls=%.0f\n", 1000.0 * instr->total, instr->ntuples);
+      }
+      else
+      {
+        appendStringInfo(es->str, ": calls=%.0f\n", instr->ntuples);
+      }
+    }
+    else
+    {
+      ExplainPropertyText("Trigger Name", trig->tgname, es);
+      if (conname)
+      {
+        ExplainPropertyText("Constraint Name", conname, es);
+      }
+      ExplainPropertyText("Relation", relname, es);
+      if (es->timing)
+      {
+        ExplainPropertyFloat("Time", "ms", 1000.0 * instr->total, 3, es);
+      }
+      ExplainPropertyFloat("Calls", NULL, instr->ntuples, 0, es);
+    }
+
+    if (conname)
+    {
+      pfree(conname);
+    }
+
+    ExplainCloseGroup("Trigger", NULL, true, es);
+  }
 }
 
 /* Compute elapsed time in seconds since given timestamp */
@@ -1074,35 +1074,35 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 
   switch (nodeTag(plan))
   {
-  case T_SeqScan:;
-  case T_SampleScan:;
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
-  case T_BitmapHeapScan:;
-  case T_TidScan:;
-  case T_SubqueryScan:;
-  case T_FunctionScan:;
-  case T_TableFuncScan:;
-  case T_ValuesScan:;
-  case T_CteScan:;
-  case T_NamedTuplestoreScan:;
-  case T_WorkTableScan:;
+  case T_SeqScan:
+  case T_SampleScan:
+  case T_IndexScan:
+  case T_IndexOnlyScan:
+  case T_BitmapHeapScan:
+  case T_TidScan:
+  case T_SubqueryScan:
+  case T_FunctionScan:
+  case T_TableFuncScan:
+  case T_ValuesScan:
+  case T_CteScan:
+  case T_NamedTuplestoreScan:
+  case T_WorkTableScan:
     *rels_used = bms_add_member(*rels_used, ((Scan *)plan)->scanrelid);
     break;
-  case T_ForeignScan:;
-
-
-  case T_CustomScan:;
-
-
-  case T_ModifyTable:;
+  case T_ForeignScan:
+    *rels_used = bms_add_members(*rels_used, ((ForeignScan *)plan)->fs_relids);
+    break;
+  case T_CustomScan:
+    *rels_used = bms_add_members(*rels_used, ((CustomScan *)plan)->custom_relids);
+    break;
+  case T_ModifyTable:
     *rels_used = bms_add_member(*rels_used, ((ModifyTable *)plan)->nominalRelation);
     if (((ModifyTable *)plan)->exclRelRTI)
     {
       *rels_used = bms_add_member(*rels_used, ((ModifyTable *)plan)->exclRelRTI);
     }
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -1144,177 +1144,177 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
 
   switch (nodeTag(plan))
   {
-  case T_Result:;
+  case T_Result:
     pname = sname = "Result";
     break;
-  case T_ProjectSet:;
+  case T_ProjectSet:
     pname = sname = "ProjectSet";
     break;
-  case T_ModifyTable:;
+  case T_ModifyTable:
     sname = "ModifyTable";
     switch (((ModifyTable *)plan)->operation)
     {
-    case CMD_INSERT:;
+    case CMD_INSERT:
       pname = operation = "Insert";
       break;
-    case CMD_UPDATE:;
+    case CMD_UPDATE:
       pname = operation = "Update";
       break;
-    case CMD_DELETE:;
+    case CMD_DELETE:
       pname = operation = "Delete";
       break;
-    default:;;
-
-
+    default:
+      pname = "???";
+      break;
     }
     break;
-  case T_Append:;
+  case T_Append:
     pname = sname = "Append";
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     pname = sname = "Merge Append";
     break;
-  case T_RecursiveUnion:;
+  case T_RecursiveUnion:
     pname = sname = "Recursive Union";
     break;
-  case T_BitmapAnd:;
+  case T_BitmapAnd:
     pname = sname = "BitmapAnd";
     break;
-  case T_BitmapOr:;
+  case T_BitmapOr:
     pname = sname = "BitmapOr";
     break;
-  case T_NestLoop:;
+  case T_NestLoop:
     pname = sname = "Nested Loop";
     break;
-  case T_MergeJoin:;
+  case T_MergeJoin:
     pname = "Merge"; /* "Join" gets added by jointype switch */
     sname = "Merge Join";
     break;
-  case T_HashJoin:;
+  case T_HashJoin:
     pname = "Hash"; /* "Join" gets added by jointype switch */
     sname = "Hash Join";
     break;
-  case T_SeqScan:;
+  case T_SeqScan:
     pname = sname = "Seq Scan";
     break;
-  case T_SampleScan:;
+  case T_SampleScan:
     pname = sname = "Sample Scan";
     break;
-  case T_Gather:;
+  case T_Gather:
     pname = sname = "Gather";
     break;
-  case T_GatherMerge:;
+  case T_GatherMerge:
     pname = sname = "Gather Merge";
     break;
-  case T_IndexScan:;
+  case T_IndexScan:
     pname = sname = "Index Scan";
     break;
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
     pname = sname = "Index Only Scan";
     break;
-  case T_BitmapIndexScan:;
+  case T_BitmapIndexScan:
     pname = sname = "Bitmap Index Scan";
     break;
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
     pname = sname = "Bitmap Heap Scan";
     break;
-  case T_TidScan:;
+  case T_TidScan:
     pname = sname = "Tid Scan";
     break;
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
     pname = sname = "Subquery Scan";
     break;
-  case T_FunctionScan:;
+  case T_FunctionScan:
     pname = sname = "Function Scan";
     break;
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
     pname = sname = "Table Function Scan";
     break;
-  case T_ValuesScan:;
+  case T_ValuesScan:
     pname = sname = "Values Scan";
     break;
-  case T_CteScan:;
+  case T_CteScan:
     pname = sname = "CTE Scan";
     break;
-  case T_NamedTuplestoreScan:;
+  case T_NamedTuplestoreScan:
     pname = sname = "Named Tuplestore Scan";
     break;
-  case T_WorkTableScan:;
+  case T_WorkTableScan:
     pname = sname = "WorkTable Scan";
     break;
-  case T_ForeignScan:;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  case T_CustomScan:;
-
-
-
-
-
-
-
-
-
-
-
-  case T_Material:;
+  case T_ForeignScan:
+    sname = "Foreign Scan";
+    switch (((ForeignScan *)plan)->operation)
+    {
+    case CMD_SELECT:
+      pname = "Foreign Scan";
+      operation = "Select";
+      break;
+    case CMD_INSERT:
+      pname = "Foreign Insert";
+      operation = "Insert";
+      break;
+    case CMD_UPDATE:
+      pname = "Foreign Update";
+      operation = "Update";
+      break;
+    case CMD_DELETE:
+      pname = "Foreign Delete";
+      operation = "Delete";
+      break;
+    default:
+      pname = "???";
+      break;
+    }
+    break;
+  case T_CustomScan:
+    sname = "Custom Scan";
+    custom_name = ((CustomScan *)plan)->methods->CustomName;
+    if (custom_name)
+    {
+      pname = psprintf("Custom Scan (%s)", custom_name);
+    }
+    else
+    {
+      pname = sname;
+    }
+    break;
+  case T_Material:
     pname = sname = "Materialize";
     break;
-  case T_Sort:;
+  case T_Sort:
     pname = sname = "Sort";
     break;
-  case T_Group:;
+  case T_Group:
     pname = sname = "Group";
     break;
-  case T_Agg:;
+  case T_Agg:
   {
     Agg *agg = (Agg *)plan;
 
     sname = "Aggregate";
     switch (agg->aggstrategy)
     {
-    case AGG_PLAIN:;
+    case AGG_PLAIN:
       pname = "Aggregate";
       strategy = "Plain";
       break;
-    case AGG_SORTED:;
+    case AGG_SORTED:
       pname = "GroupAggregate";
       strategy = "Sorted";
       break;
-    case AGG_HASHED:;
+    case AGG_HASHED:
       pname = "HashAggregate";
       strategy = "Hashed";
       break;
-    case AGG_MIXED:;
+    case AGG_MIXED:
       pname = "MixedAggregate";
       strategy = "Mixed";
       break;
-    default:;;
-
-
-
+    default:
+      pname = "Aggregate ???";
+      strategy = "???";
+      break;
     }
 
     if (DO_AGGSPLIT_SKIPFINAL(agg->aggsplit))
@@ -1333,42 +1333,42 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
   }
   break;
-  case T_WindowAgg:;
+  case T_WindowAgg:
     pname = sname = "WindowAgg";
     break;
-  case T_Unique:;
+  case T_Unique:
     pname = sname = "Unique";
     break;
-  case T_SetOp:;
+  case T_SetOp:
     sname = "SetOp";
     switch (((SetOp *)plan)->strategy)
     {
-    case SETOP_SORTED:;
+    case SETOP_SORTED:
       pname = "SetOp";
       strategy = "Sorted";
       break;
-    case SETOP_HASHED:;
+    case SETOP_HASHED:
       pname = "HashSetOp";
       strategy = "Hashed";
       break;
-    default:;;
-
-
-
+    default:
+      pname = "SetOp ???";
+      strategy = "???";
+      break;
     }
     break;
-  case T_LockRows:;
+  case T_LockRows:
     pname = sname = "LockRows";
     break;
-  case T_Limit:;
+  case T_Limit:
     pname = sname = "Limit";
     break;
-  case T_Hash:;
+  case T_Hash:
     pname = sname = "Hash";
     break;
-  default:;;
-
-
+  default:
+    pname = sname = "???";
+    break;
   }
 
   ExplainOpenGroup("Plan", relationship ? NULL : "Plan", true, es);
@@ -1415,37 +1415,37 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
     if (plan_name)
     {
-
+      ExplainPropertyText("Subplan Name", plan_name, es);
     }
     if (custom_name)
     {
-
+      ExplainPropertyText("Custom Plan Provider", custom_name, es);
     }
     ExplainPropertyBool("Parallel Aware", plan->parallel_aware, es);
   }
 
   switch (nodeTag(plan))
   {
-  case T_SeqScan:;
-  case T_SampleScan:;
-  case T_BitmapHeapScan:;
-  case T_TidScan:;
-  case T_SubqueryScan:;
-  case T_FunctionScan:;
-  case T_TableFuncScan:;
-  case T_ValuesScan:;
-  case T_CteScan:;
-  case T_WorkTableScan:;
+  case T_SeqScan:
+  case T_SampleScan:
+  case T_BitmapHeapScan:
+  case T_TidScan:
+  case T_SubqueryScan:
+  case T_FunctionScan:
+  case T_TableFuncScan:
+  case T_ValuesScan:
+  case T_CteScan:
+  case T_WorkTableScan:
     ExplainScanTarget((Scan *)plan, es);
     break;
-  case T_ForeignScan:;
-  case T_CustomScan:;
-
-
-
-
-
-  case T_IndexScan:;
+  case T_ForeignScan:
+  case T_CustomScan:
+    if (((Scan *)plan)->scanrelid > 0)
+    {
+      ExplainScanTarget((Scan *)plan, es);
+    }
+    break;
+  case T_IndexScan:
   {
     IndexScan *indexscan = (IndexScan *)plan;
 
@@ -1453,7 +1453,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     ExplainScanTarget((Scan *)indexscan, es);
   }
   break;
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
   {
     IndexOnlyScan *indexonlyscan = (IndexOnlyScan *)plan;
 
@@ -1461,7 +1461,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     ExplainScanTarget((Scan *)indexonlyscan, es);
   }
   break;
-  case T_BitmapIndexScan:;
+  case T_BitmapIndexScan:
   {
     BitmapIndexScan *bitmapindexscan = (BitmapIndexScan *)plan;
     const char *indexname = explain_get_index_name(bitmapindexscan->indexid);
@@ -1472,42 +1472,42 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
     else
     {
-
+      ExplainPropertyText("Index Name", indexname, es);
     }
   }
   break;
-  case T_ModifyTable:;
+  case T_ModifyTable:
     ExplainModifyTarget((ModifyTable *)plan, es);
     break;
-  case T_NestLoop:;
-  case T_MergeJoin:;
-  case T_HashJoin:;
+  case T_NestLoop:
+  case T_MergeJoin:
+  case T_HashJoin:
   {
     const char *jointype;
 
     switch (((Join *)plan)->jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       jointype = "Inner";
       break;
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
       jointype = "Left";
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       jointype = "Full";
       break;
-    case JOIN_RIGHT:;
+    case JOIN_RIGHT:
       jointype = "Right";
       break;
-    case JOIN_SEMI:;
+    case JOIN_SEMI:
       jointype = "Semi";
       break;
-    case JOIN_ANTI:;
+    case JOIN_ANTI:
       jointype = "Anti";
       break;
-    default:;;
-
-
+    default:
+      jointype = "???";
+      break;
     }
     if (es->format == EXPLAIN_FORMAT_TEXT)
     {
@@ -1530,27 +1530,27 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
   }
   break;
-  case T_SetOp:;
+  case T_SetOp:
   {
     const char *setopcmd;
 
     switch (((SetOp *)plan)->cmd)
     {
-    case SETOPCMD_INTERSECT:;
+    case SETOPCMD_INTERSECT:
       setopcmd = "Intersect";
       break;
-    case SETOPCMD_INTERSECT_ALL:;
-
-
-    case SETOPCMD_EXCEPT:;
+    case SETOPCMD_INTERSECT_ALL:
+      setopcmd = "Intersect All";
+      break;
+    case SETOPCMD_EXCEPT:
       setopcmd = "Except";
       break;
-    case SETOPCMD_EXCEPT_ALL:;
-
-
-    default:;;
-
-
+    case SETOPCMD_EXCEPT_ALL:
+      setopcmd = "Except All";
+      break;
+    default:
+      setopcmd = "???";
+      break;
     }
     if (es->format == EXPLAIN_FORMAT_TEXT)
     {
@@ -1558,11 +1558,11 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
     else
     {
-
+      ExplainPropertyText("Command", setopcmd, es);
     }
   }
   break;
-  default:;;
+  default:
     break;
   }
 
@@ -1633,13 +1633,13 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
     else
     {
-
-
-
-
-
-
-
+      if (es->timing)
+      {
+        ExplainPropertyFloat("Actual Startup Time", "ms", 0.0, 3, es);
+        ExplainPropertyFloat("Actual Total Time", "ms", 0.0, 3, es);
+      }
+      ExplainPropertyFloat("Actual Rows", NULL, 0.0, 0, es);
+      ExplainPropertyFloat("Actual Loops", NULL, 0.0, 0, es);
     }
   }
 
@@ -1658,23 +1658,23 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
   /* unique join */
   switch (nodeTag(plan))
   {
-  case T_NestLoop:;
-  case T_MergeJoin:;
-  case T_HashJoin:;
+  case T_NestLoop:
+  case T_MergeJoin:
+  case T_HashJoin:
     /* try not to be too chatty about this in text mode */
     if (es->format != EXPLAIN_FORMAT_TEXT || (es->verbose && ((Join *)plan)->inner_unique))
     {
       ExplainPropertyBool("Inner Unique", ((Join *)plan)->inner_unique, es);
     }
     break;
-  default:;;
+  default:
     break;
   }
 
   /* quals, sort keys, etc */
   switch (nodeTag(plan))
   {
-  case T_IndexScan:;
+  case T_IndexScan:
     show_scan_qual(((IndexScan *)plan)->indexqualorig, "Index Cond", planstate, ancestors, es);
     if (((IndexScan *)plan)->indexqualorig)
     {
@@ -1687,7 +1687,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
     show_scan_qual(((IndexOnlyScan *)plan)->indexqual, "Index Cond", planstate, ancestors, es);
     if (((IndexOnlyScan *)plan)->recheckqual)
     {
@@ -1701,13 +1701,13 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
     if (es->analyze)
     {
-
+      ExplainPropertyFloat("Heap Fetches", NULL, planstate->instrument->ntuples2, 0, es);
     }
     break;
-  case T_BitmapIndexScan:;
+  case T_BitmapIndexScan:
     show_scan_qual(((BitmapIndexScan *)plan)->indexqualorig, "Index Cond", planstate, ancestors, es);
     break;
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
     show_scan_qual(((BitmapHeapScan *)plan)->bitmapqualorig, "Recheck Cond", planstate, ancestors, es);
     if (((BitmapHeapScan *)plan)->bitmapqualorig)
     {
@@ -1723,30 +1723,30 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_tidbitmap_info((BitmapHeapScanState *)planstate, es);
     }
     break;
-  case T_SampleScan:;
+  case T_SampleScan:
     show_tablesample(((SampleScan *)plan)->tablesample, planstate, ancestors, es);
     /* fall through to print additional fields the same as SeqScan */
     /* FALLTHROUGH */
-  case T_SeqScan:;
-  case T_ValuesScan:;
-  case T_CteScan:;
-  case T_NamedTuplestoreScan:;
-  case T_WorkTableScan:;
-  case T_SubqueryScan:;
+  case T_SeqScan:
+  case T_ValuesScan:
+  case T_CteScan:
+  case T_NamedTuplestoreScan:
+  case T_WorkTableScan:
+  case T_SubqueryScan:
     show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
     {
       show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_Gather:;
+  case T_Gather:
   {
     Gather *gather = (Gather *)plan;
 
     show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
     {
-
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     ExplainPropertyInteger("Workers Planned", NULL, gather->num_workers, es);
 
@@ -1774,10 +1774,10 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       int n;
       SharedJitInstrumentation *w = child->worker_jit_instrument;
 
-
-
-
-
+      for (n = 0; n < w->num_workers; ++n)
+      {
+        ExplainPrintJIT(es, child->state->es_jit_flags, &w->jit_instr[n], n);
+      }
     }
 
     if (gather->single_copy || es->format != EXPLAIN_FORMAT_TEXT)
@@ -1786,21 +1786,21 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
   }
   break;
-  case T_GatherMerge:;
+  case T_GatherMerge:
   {
     GatherMerge *gm = (GatherMerge *)plan;
 
     show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
     {
-
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     ExplainPropertyInteger("Workers Planned", NULL, gm->num_workers, es);
 
     /* Show params evaluated at gather-merge node */
     if (gm->initParam)
     {
-
+      show_eval_params(gm->initParam, es);
     }
 
     if (es->analyze)
@@ -1812,7 +1812,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
   }
   break;
-  case T_FunctionScan:;
+  case T_FunctionScan:
     if (es->verbose)
     {
       List *fexprs = NIL;
@@ -1833,7 +1833,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
     if (es->verbose)
     {
       TableFunc *tablefunc = ((TableFuncScan *)plan)->tablefunc;
@@ -1846,7 +1846,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_TidScan:;
+  case T_TidScan:
   {
     /*
      * The tidquals list has OR semantics, so be sure to show it
@@ -1866,30 +1866,30 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     }
   }
   break;
-  case T_ForeignScan:;
-
-
-
-
-
-
-
-  case T_CustomScan:;
+  case T_ForeignScan:
+    show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+    if (plan->qual)
+    {
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
+    }
+    show_foreignscan_info((ForeignScanState *)planstate, es);
+    break;
+  case T_CustomScan:
   {
     CustomScanState *css = (CustomScanState *)planstate;
 
-
-
-
-
-
-
-
-
-
+    show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
+    if (plan->qual)
+    {
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
+    }
+    if (css->methods->ExplainCustomScan)
+    {
+      css->methods->ExplainCustomScan(css, ancestors, es);
+    }
   }
-
-  case T_NestLoop:;
+  break;
+  case T_NestLoop:
     show_upper_qual(((NestLoop *)plan)->join.joinqual, "Join Filter", planstate, ancestors, es);
     if (((NestLoop *)plan)->join.joinqual)
     {
@@ -1901,7 +1901,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 2, planstate, es);
     }
     break;
-  case T_MergeJoin:;
+  case T_MergeJoin:
     show_upper_qual(((MergeJoin *)plan)->mergeclauses, "Merge Cond", planstate, ancestors, es);
     show_upper_qual(((MergeJoin *)plan)->join.joinqual, "Join Filter", planstate, ancestors, es);
     if (((MergeJoin *)plan)->join.joinqual)
@@ -1914,7 +1914,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 2, planstate, es);
     }
     break;
-  case T_HashJoin:;
+  case T_HashJoin:
     show_upper_qual(((HashJoin *)plan)->hashclauses, "Hash Cond", planstate, ancestors, es);
     show_upper_qual(((HashJoin *)plan)->join.joinqual, "Join Filter", planstate, ancestors, es);
     if (((HashJoin *)plan)->join.joinqual)
@@ -1927,7 +1927,7 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 2, planstate, es);
     }
     break;
-  case T_Agg:;
+  case T_Agg:
     show_agg_keys(castNode(AggState, planstate), ancestors, es);
     show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
@@ -1935,43 +1935,43 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
       show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_Group:;
+  case T_Group:
     show_group_keys(castNode(GroupState, planstate), ancestors, es);
     show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
     {
-
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_Sort:;
+  case T_Sort:
     show_sort_keys(castNode(SortState, planstate), ancestors, es);
     show_sort_info(castNode(SortState, planstate), es);
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     show_merge_append_keys(castNode(MergeAppendState, planstate), ancestors, es);
     break;
-  case T_Result:;
+  case T_Result:
     show_upper_qual((List *)((Result *)plan)->resconstantqual, "One-Time Filter", planstate, ancestors, es);
     show_upper_qual(plan->qual, "Filter", planstate, ancestors, es);
     if (plan->qual)
     {
-
+      show_instrumentation_count("Rows Removed by Filter", 1, planstate, es);
     }
     break;
-  case T_ModifyTable:;
+  case T_ModifyTable:
     show_modifytable_info(castNode(ModifyTableState, planstate), ancestors, es);
     break;
-  case T_Hash:;
+  case T_Hash:
     show_hash_info(castNode(HashState, planstate), es);
     break;
-  default:;;
+  default:
     break;
   }
 
   /* Show buffer usage */
   if (es->buffers && planstate->instrument)
   {
-
+    show_buffer_usage(es, &planstate->instrument->bufusage);
   }
 
   /* Show worker detail */
@@ -1981,72 +1981,72 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
     bool opened_group = false;
     int n;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    for (n = 0; n < w->num_workers; ++n)
+    {
+      Instrumentation *instrument = &w->instrument[n];
+      double nloops = instrument->nloops;
+      double startup_ms;
+      double total_ms;
+      double rows;
+
+      if (nloops <= 0)
+      {
+        continue;
+      }
+      startup_ms = 1000.0 * instrument->startup / nloops;
+      total_ms = 1000.0 * instrument->total / nloops;
+      rows = instrument->ntuples / nloops;
+
+      if (es->format == EXPLAIN_FORMAT_TEXT)
+      {
+        appendStringInfoSpaces(es->str, es->indent * 2);
+        appendStringInfo(es->str, "Worker %d: ", n);
+        if (es->timing)
+        {
+          appendStringInfo(es->str, "actual time=%.3f..%.3f rows=%.0f loops=%.0f\n", startup_ms, total_ms, rows, nloops);
+        }
+        else
+        {
+          appendStringInfo(es->str, "actual rows=%.0f loops=%.0f\n", rows, nloops);
+        }
+        es->indent++;
+        if (es->buffers)
+        {
+          show_buffer_usage(es, &instrument->bufusage);
+        }
+        es->indent--;
+      }
+      else
+      {
+        if (!opened_group)
+        {
+          ExplainOpenGroup("Workers", "Workers", false, es);
+          opened_group = true;
+        }
+        ExplainOpenGroup("Worker", NULL, true, es);
+        ExplainPropertyInteger("Worker Number", NULL, n, es);
+
+        if (es->timing)
+        {
+          ExplainPropertyFloat("Actual Startup Time", "ms", startup_ms, 3, es);
+          ExplainPropertyFloat("Actual Total Time", "ms", total_ms, 3, es);
+        }
+        ExplainPropertyFloat("Actual Rows", NULL, rows, 0, es);
+        ExplainPropertyFloat("Actual Loops", NULL, nloops, 0, es);
+
+        if (es->buffers)
+        {
+          show_buffer_usage(es, &instrument->bufusage);
+        }
+
+        ExplainCloseGroup("Worker", NULL, true, es);
+      }
+    }
+
+    if (opened_group)
+    {
+      ExplainCloseGroup("Workers", "Workers", false, es);
+    }
   }
 
   /*
@@ -2059,13 +2059,13 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
    */
   switch (nodeTag(plan))
   {
-  case T_Append:;
+  case T_Append:
     ExplainMissingMembers(((AppendState *)planstate)->as_nplans, list_length(((Append *)plan)->appendplans), es);
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     ExplainMissingMembers(((MergeAppendState *)planstate)->ms_nplans, list_length(((MergeAppend *)plan)->mergeplans), es);
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -2099,28 +2099,28 @@ ExplainNode(PlanState *planstate, List *ancestors, const char *relationship, con
   /* special child plans */
   switch (nodeTag(plan))
   {
-  case T_ModifyTable:;
+  case T_ModifyTable:
     ExplainMemberNodes(((ModifyTableState *)planstate)->mt_plans, ((ModifyTableState *)planstate)->mt_nplans, ancestors, es);
     break;
-  case T_Append:;
+  case T_Append:
     ExplainMemberNodes(((AppendState *)planstate)->appendplans, ((AppendState *)planstate)->as_nplans, ancestors, es);
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     ExplainMemberNodes(((MergeAppendState *)planstate)->mergeplans, ((MergeAppendState *)planstate)->ms_nplans, ancestors, es);
     break;
-  case T_BitmapAnd:;
+  case T_BitmapAnd:
     ExplainMemberNodes(((BitmapAndState *)planstate)->bitmapplans, ((BitmapAndState *)planstate)->nplans, ancestors, es);
     break;
-  case T_BitmapOr:;
+  case T_BitmapOr:
     ExplainMemberNodes(((BitmapOrState *)planstate)->bitmapplans, ((BitmapOrState *)planstate)->nplans, ancestors, es);
     break;
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
     ExplainNode(((SubqueryScanState *)planstate)->subplan, ancestors, "Subquery", NULL, es);
     break;
-  case T_CustomScan:;
-
-
-  default:;;
+  case T_CustomScan:
+    ExplainCustomChildren((CustomScanState *)planstate, ancestors, es);
+    break;
+  default:
     break;
   }
 
@@ -2190,7 +2190,7 @@ show_plan_tlist(PlanState *planstate, List *ancestors, ExplainState *es)
    */
   if (IsA(plan, ForeignScan) && ((ForeignScan *)plan)->operation != CMD_SELECT)
   {
-
+    return;
   }
 
   /* Set up deparsing context */
@@ -2395,7 +2395,7 @@ show_grouping_set_keys(PlanState *planstate, Agg *aggnode, Sort *sortnode, List 
 
       if (!target)
       {
-
+        elog(ERROR, "no tlist entry for key %d", keyresno);
       }
       /* Deparse the expression, showing any top-level cast */
       exprstr = deparse_expression((Node *)target->expr, context, useprefix, true);
@@ -2454,7 +2454,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel, int nkeys, AttrNu
 
   if (nkeys <= 0)
   {
-
+    return;
   }
 
   initStringInfo(&sortkeybuf);
@@ -2472,7 +2472,7 @@ show_sort_group_keys(PlanState *planstate, const char *qlabel, int nkeys, AttrNu
 
     if (!target)
     {
-
+      elog(ERROR, "no tlist entry for key %d", keyresno);
     }
     /* Deparse the expression, showing any top-level cast */
     exprstr = deparse_expression((Node *)target->expr, context, useprefix, true);
@@ -2516,7 +2516,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr, Oid sortOperator, Oid col
 
     if (collname == NULL)
     {
-
+      elog(ERROR, "cache lookup failed for collation %u", collation);
     }
     appendStringInfo(buf, " COLLATE %s", quote_identifier(collname));
   }
@@ -2533,7 +2533,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr, Oid sortOperator, Oid col
 
     if (opname == NULL)
     {
-
+      elog(ERROR, "cache lookup failed for operator %u", sortOperator);
     }
     appendStringInfo(buf, " USING %s", opname);
     /* Determine whether operator would be considered ASC or DESC */
@@ -2547,7 +2547,7 @@ show_sortorder_options(StringInfo buf, Node *sortexpr, Oid sortOperator, Oid col
   }
   else if (!nullsFirst && reverse)
   {
-
+    appendStringInfoString(buf, " NULLS LAST");
   }
 }
 
@@ -2598,7 +2598,7 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate, List *ancestors, 
     {
       if (!first)
       {
-
+        appendStringInfoString(es->str, ", ");
       }
       appendStringInfoString(es->str, (const char *)lfirst(lc));
       first = false;
@@ -2612,12 +2612,12 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate, List *ancestors, 
   }
   else
   {
-
-
-
-
-
-
+    ExplainPropertyText("Sampling Method", method_name, es);
+    ExplainPropertyList("Sampling Parameters", params, es);
+    if (repeatable)
+    {
+      ExplainPropertyText("Repeatable Seed", repeatable, es);
+    }
   }
 }
 
@@ -2652,9 +2652,9 @@ show_sort_info(SortState *sortstate, ExplainState *es)
     }
     else
     {
-
-
-
+      ExplainPropertyText("Sort Method", sortMethod, es);
+      ExplainPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
+      ExplainPropertyText("Sort Space Type", spaceType, es);
     }
   }
 
@@ -2673,7 +2673,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
       sinstrument = &sortstate->shared_info->sinstrument[n];
       if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
       {
-
+        continue; /* ignore any unfilled slots */
       }
       sortMethod = tuplesort_method_name(sinstrument->sortMethod);
       spaceType = tuplesort_space_type_name(sinstrument->spaceType);
@@ -2686,22 +2686,22 @@ show_sort_info(SortState *sortstate, ExplainState *es)
       }
       else
       {
-
-
-
-
-
-
-
-
-
-
-
+        if (!opened_group)
+        {
+          ExplainOpenGroup("Workers", "Workers", false, es);
+          opened_group = true;
+        }
+        ExplainOpenGroup("Worker", NULL, true, es);
+        ExplainPropertyInteger("Worker Number", NULL, n, es);
+        ExplainPropertyText("Sort Method", sortMethod, es);
+        ExplainPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
+        ExplainPropertyText("Sort Space Type", spaceType, es);
+        ExplainCloseGroup("Worker", NULL, true, es);
       }
     }
     if (opened_group)
     {
-
+      ExplainCloseGroup("Workers", "Workers", false, es);
     }
   }
 }
@@ -2782,16 +2782,16 @@ show_hash_info(HashState *hashstate, ExplainState *es)
       ExplainPropertyInteger("Original Hash Batches", NULL, hinstrument.nbatch_original, es);
       ExplainPropertyInteger("Peak Memory Usage", "kB", spacePeakKb, es);
     }
-
-
-
-
-
-
-
-
-
-
+    else if (hinstrument.nbatch_original != hinstrument.nbatch || hinstrument.nbuckets_original != hinstrument.nbuckets)
+    {
+      appendStringInfoSpaces(es->str, es->indent * 2);
+      appendStringInfo(es->str, "Buckets: %d (originally %d)  Batches: %d (originally %d)  Memory Usage: %ldkB\n", hinstrument.nbuckets, hinstrument.nbuckets_original, hinstrument.nbatch, hinstrument.nbatch_original, spacePeakKb);
+    }
+    else
+    {
+      appendStringInfoSpaces(es->str, es->indent * 2);
+      appendStringInfo(es->str, "Buckets: %d  Batches: %d  Memory Usage: %ldkB\n", hinstrument.nbuckets, hinstrument.nbatch, spacePeakKb);
+    }
   }
 }
 
@@ -2803,8 +2803,8 @@ show_tidbitmap_info(BitmapHeapScanState *planstate, ExplainState *es)
 {
   if (es->format != EXPLAIN_FORMAT_TEXT)
   {
-
-
+    ExplainPropertyInteger("Exact Heap Blocks", NULL, planstate->exact_pages, es);
+    ExplainPropertyInteger("Lossy Heap Blocks", NULL, planstate->lossy_pages, es);
   }
   else
   {
@@ -2818,7 +2818,7 @@ show_tidbitmap_info(BitmapHeapScanState *planstate, ExplainState *es)
       }
       if (planstate->lossy_pages > 0)
       {
-
+        appendStringInfo(es->str, " lossy=%ld", planstate->lossy_pages);
       }
       appendStringInfoChar(es->str, '\n');
     }
@@ -2860,7 +2860,7 @@ show_instrumentation_count(const char *qlabel, int which, PlanState *planstate, 
     }
     else
     {
-
+      ExplainPropertyFloat(qlabel, NULL, 0.0, 0, es);
     }
   }
 }
@@ -2871,23 +2871,23 @@ show_instrumentation_count(const char *qlabel, int which, PlanState *planstate, 
 static void
 show_foreignscan_info(ForeignScanState *fsstate, ExplainState *es)
 {
+  FdwRoutine *fdwroutine = fsstate->fdwroutine;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Let the FDW emit whatever fields it wants */
+  if (((ForeignScan *)fsstate->ss.ps.plan)->operation != CMD_SELECT)
+  {
+    if (fdwroutine->ExplainDirectModify != NULL)
+    {
+      fdwroutine->ExplainDirectModify(fsstate, es);
+    }
+  }
+  else
+  {
+    if (fdwroutine->ExplainForeignScan != NULL)
+    {
+      fdwroutine->ExplainForeignScan(fsstate, es);
+    }
+  }
 }
 
 /*
@@ -2932,7 +2932,7 @@ explain_get_index_name(Oid indexId)
 
   if (explain_get_index_name_hook)
   {
-
+    result = (*explain_get_index_name_hook)(indexId);
   }
   else
   {
@@ -2944,7 +2944,7 @@ explain_get_index_name(Oid indexId)
     result = get_rel_name(indexId);
     if (result == NULL)
     {
-
+      elog(ERROR, "cache lookup failed for index %u", indexId);
     }
   }
   return result;
@@ -2956,116 +2956,116 @@ explain_get_index_name(Oid indexId)
 static void
 show_buffer_usage(ExplainState *es, const BufferUsage *usage)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (es->format == EXPLAIN_FORMAT_TEXT)
+  {
+    bool has_shared = (usage->shared_blks_hit > 0 || usage->shared_blks_read > 0 || usage->shared_blks_dirtied > 0 || usage->shared_blks_written > 0);
+    bool has_local = (usage->local_blks_hit > 0 || usage->local_blks_read > 0 || usage->local_blks_dirtied > 0 || usage->local_blks_written > 0);
+    bool has_temp = (usage->temp_blks_read > 0 || usage->temp_blks_written > 0);
+    bool has_timing = (!INSTR_TIME_IS_ZERO(usage->blk_read_time) || !INSTR_TIME_IS_ZERO(usage->blk_write_time));
+
+    /* Show only positive counter values. */
+    if (has_shared || has_local || has_temp)
+    {
+      appendStringInfoSpaces(es->str, es->indent * 2);
+      appendStringInfoString(es->str, "Buffers:");
+
+      if (has_shared)
+      {
+        appendStringInfoString(es->str, " shared");
+        if (usage->shared_blks_hit > 0)
+        {
+          appendStringInfo(es->str, " hit=%ld", usage->shared_blks_hit);
+        }
+        if (usage->shared_blks_read > 0)
+        {
+          appendStringInfo(es->str, " read=%ld", usage->shared_blks_read);
+        }
+        if (usage->shared_blks_dirtied > 0)
+        {
+          appendStringInfo(es->str, " dirtied=%ld", usage->shared_blks_dirtied);
+        }
+        if (usage->shared_blks_written > 0)
+        {
+          appendStringInfo(es->str, " written=%ld", usage->shared_blks_written);
+        }
+        if (has_local || has_temp)
+        {
+          appendStringInfoChar(es->str, ',');
+        }
+      }
+      if (has_local)
+      {
+        appendStringInfoString(es->str, " local");
+        if (usage->local_blks_hit > 0)
+        {
+          appendStringInfo(es->str, " hit=%ld", usage->local_blks_hit);
+        }
+        if (usage->local_blks_read > 0)
+        {
+          appendStringInfo(es->str, " read=%ld", usage->local_blks_read);
+        }
+        if (usage->local_blks_dirtied > 0)
+        {
+          appendStringInfo(es->str, " dirtied=%ld", usage->local_blks_dirtied);
+        }
+        if (usage->local_blks_written > 0)
+        {
+          appendStringInfo(es->str, " written=%ld", usage->local_blks_written);
+        }
+        if (has_temp)
+        {
+          appendStringInfoChar(es->str, ',');
+        }
+      }
+      if (has_temp)
+      {
+        appendStringInfoString(es->str, " temp");
+        if (usage->temp_blks_read > 0)
+        {
+          appendStringInfo(es->str, " read=%ld", usage->temp_blks_read);
+        }
+        if (usage->temp_blks_written > 0)
+        {
+          appendStringInfo(es->str, " written=%ld", usage->temp_blks_written);
+        }
+      }
+      appendStringInfoChar(es->str, '\n');
+    }
+
+    /* As above, show only positive counter values. */
+    if (has_timing)
+    {
+      appendStringInfoSpaces(es->str, es->indent * 2);
+      appendStringInfoString(es->str, "I/O Timings:");
+      if (!INSTR_TIME_IS_ZERO(usage->blk_read_time))
+      {
+        appendStringInfo(es->str, " read=%0.3f", INSTR_TIME_GET_MILLISEC(usage->blk_read_time));
+      }
+      if (!INSTR_TIME_IS_ZERO(usage->blk_write_time))
+      {
+        appendStringInfo(es->str, " write=%0.3f", INSTR_TIME_GET_MILLISEC(usage->blk_write_time));
+      }
+      appendStringInfoChar(es->str, '\n');
+    }
+  }
+  else
+  {
+    ExplainPropertyInteger("Shared Hit Blocks", NULL, usage->shared_blks_hit, es);
+    ExplainPropertyInteger("Shared Read Blocks", NULL, usage->shared_blks_read, es);
+    ExplainPropertyInteger("Shared Dirtied Blocks", NULL, usage->shared_blks_dirtied, es);
+    ExplainPropertyInteger("Shared Written Blocks", NULL, usage->shared_blks_written, es);
+    ExplainPropertyInteger("Local Hit Blocks", NULL, usage->local_blks_hit, es);
+    ExplainPropertyInteger("Local Read Blocks", NULL, usage->local_blks_read, es);
+    ExplainPropertyInteger("Local Dirtied Blocks", NULL, usage->local_blks_dirtied, es);
+    ExplainPropertyInteger("Local Written Blocks", NULL, usage->local_blks_written, es);
+    ExplainPropertyInteger("Temp Read Blocks", NULL, usage->temp_blks_read, es);
+    ExplainPropertyInteger("Temp Written Blocks", NULL, usage->temp_blks_written, es);
+    if (track_io_timing)
+    {
+      ExplainPropertyFloat("I/O Read Time", "ms", INSTR_TIME_GET_MILLISEC(usage->blk_read_time), 3, es);
+      ExplainPropertyFloat("I/O Write Time", "ms", INSTR_TIME_GET_MILLISEC(usage->blk_write_time), 3, es);
+    }
+  }
 }
 
 /*
@@ -3088,23 +3088,23 @@ ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir, ExplainState *
   {
     const char *scandir;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    switch (indexorderdir)
+    {
+    case BackwardScanDirection:
+      scandir = "Backward";
+      break;
+    case NoMovementScanDirection:
+      scandir = "NoMovement";
+      break;
+    case ForwardScanDirection:
+      scandir = "Forward";
+      break;
+    default:
+      scandir = "???";
+      break;
+    }
+    ExplainPropertyText("Scan Direction", scandir, es);
+    ExplainPropertyText("Index Name", indexname, es);
   }
 }
 
@@ -3151,15 +3151,15 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 
   switch (nodeTag(plan))
   {
-  case T_SeqScan:;
-  case T_SampleScan:;
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
-  case T_BitmapHeapScan:;
-  case T_TidScan:;
-  case T_ForeignScan:;
-  case T_CustomScan:;
-  case T_ModifyTable:;
+  case T_SeqScan:
+  case T_SampleScan:
+  case T_IndexScan:
+  case T_IndexOnlyScan:
+  case T_BitmapHeapScan:
+  case T_TidScan:
+  case T_ForeignScan:
+  case T_CustomScan:
+  case T_ModifyTable:
     /* Assert it's on a real relation */
     Assert(rte->rtekind == RTE_RELATION);
     objectname = get_rel_name(rte->relid);
@@ -3167,7 +3167,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
     namespace = get_namespace_name(get_rel_namespace(rte->relid));
     objecttag = "Relation Name";
     break;
-  case T_FunctionScan:;
+  case T_FunctionScan:
   {
     FunctionScan *fscan = (FunctionScan *)plan;
 
@@ -3197,34 +3197,34 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
     objecttag = "Function Name";
   }
   break;
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
     Assert(rte->rtekind == RTE_TABLEFUNC);
     objectname = "xmltable";
     objecttag = "Table Function Name";
     break;
-  case T_ValuesScan:;
+  case T_ValuesScan:
     Assert(rte->rtekind == RTE_VALUES);
     break;
-  case T_CteScan:;
+  case T_CteScan:
     /* Assert it's on a non-self-reference CTE */
     Assert(rte->rtekind == RTE_CTE);
     Assert(!rte->self_reference);
     objectname = rte->ctename;
     objecttag = "CTE Name";
     break;
-  case T_NamedTuplestoreScan:;
-
-
-
-
-  case T_WorkTableScan:;
+  case T_NamedTuplestoreScan:
+    Assert(rte->rtekind == RTE_NAMEDTUPLESTORE);
+    objectname = rte->enrname;
+    objecttag = "Tuplestore Name";
+    break;
+  case T_WorkTableScan:
     /* Assert it's on a self-reference CTE */
     Assert(rte->rtekind == RTE_CTE);
     Assert(rte->self_reference);
     objectname = rte->ctename;
     objecttag = "CTE Name";
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -3252,7 +3252,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
     }
     if (namespace != NULL)
     {
-
+      ExplainPropertyText("Schema", namespace, es);
     }
     ExplainPropertyText("Alias", refname, es);
   }
@@ -3279,22 +3279,22 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors, ExplainState *
 
   switch (node->operation)
   {
-  case CMD_INSERT:;
+  case CMD_INSERT:
     operation = "Insert";
     foperation = "Foreign Insert";
     break;
-  case CMD_UPDATE:;
+  case CMD_UPDATE:
     operation = "Update";
     foperation = "Foreign Update";
     break;
-  case CMD_DELETE:;
+  case CMD_DELETE:
     operation = "Delete";
     foperation = "Foreign Delete";
     break;
-  default:;;
-
-
-
+  default:
+    operation = "???";
+    foperation = "Foreign ???";
+    break;
   }
 
   /* Should we explicitly label target relations? */
@@ -3340,7 +3340,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors, ExplainState *
     {
       List *fdw_private = (List *)list_nth(node->fdwPrivLists, j);
 
-
+      fdwroutine->ExplainForeignModify(mtstate, resultRelInfo, fdw_private, j, es);
     }
 
     if (labeltargets)
@@ -3391,15 +3391,15 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors, ExplainState *
       double insert_path;
       double other_path;
 
-
+      InstrEndLoop(mtstate->mt_plans[0]->instrument);
 
       /* count the number of source rows */
+      total = mtstate->mt_plans[0]->instrument->ntuples;
+      other_path = mtstate->ps.instrument->ntuples2;
+      insert_path = total - other_path;
 
-
-
-
-
-
+      ExplainPropertyFloat("Tuples Inserted", NULL, insert_path, 0, es);
+      ExplainPropertyFloat("Conflicting Tuples", NULL, other_path, 0, es);
     }
   }
 
@@ -3485,13 +3485,13 @@ ExplainSubPlans(List *plans, List *ancestors, const char *relationship, ExplainS
 static void
 ExplainCustomChildren(CustomScanState *css, List *ancestors, ExplainState *es)
 {
+  ListCell *cell;
+  const char *label = (list_length(css->custom_ps) != 1 ? "children" : "child");
 
-
-
-
-
-
-
+  foreach (cell, css->custom_ps)
+  {
+    ExplainNode((PlanState *)lfirst(cell), ancestors, label, NULL, es);
+  }
 }
 
 /*
@@ -3506,7 +3506,7 @@ ExplainPropertyList(const char *qlabel, List *data, ExplainState *es)
 
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     appendStringInfoSpaces(es->str, es->indent * 2);
     appendStringInfo(es->str, "%s: ", qlabel);
     foreach (lc, data)
@@ -3521,23 +3521,23 @@ ExplainPropertyList(const char *qlabel, List *data, ExplainState *es)
     appendStringInfoChar(es->str, '\n');
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
+    ExplainXMLTag(qlabel, X_OPENING, es);
+    foreach (lc, data)
+    {
+      char *str;
 
+      appendStringInfoSpaces(es->str, es->indent * 2 + 2);
+      appendStringInfoString(es->str, "<Item>");
+      str = escape_xml((const char *)lfirst(lc));
+      appendStringInfoString(es->str, str);
+      pfree(str);
+      appendStringInfoString(es->str, "</Item>\n");
+    }
+    ExplainXMLTag(qlabel, X_CLOSING, es);
+    break;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     ExplainJSONLineEnding(es);
     appendStringInfoSpaces(es->str, es->indent * 2);
     escape_json(es->str, qlabel);
@@ -3546,7 +3546,7 @@ ExplainPropertyList(const char *qlabel, List *data, ExplainState *es)
     {
       if (!first)
       {
-
+        appendStringInfoString(es->str, ", ");
       }
       escape_json(es->str, (const char *)lfirst(lc));
       first = false;
@@ -3554,17 +3554,17 @@ ExplainPropertyList(const char *qlabel, List *data, ExplainState *es)
     appendStringInfoChar(es->str, ']');
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
-
-
-
-
-
-
-
-
-
-
+  case EXPLAIN_FORMAT_YAML:
+    ExplainYAMLLineStarting(es);
+    appendStringInfo(es->str, "%s: ", qlabel);
+    foreach (lc, data)
+    {
+      appendStringInfoChar(es->str, '\n');
+      appendStringInfoSpaces(es->str, es->indent * 2 + 2);
+      appendStringInfoString(es->str, "- ");
+      escape_yaml(es->str, (const char *)lfirst(lc));
+    }
+    break;
   }
 }
 
@@ -3580,41 +3580,41 @@ ExplainPropertyListNested(const char *qlabel, List *data, ExplainState *es)
 
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_TEXT:
+  case EXPLAIN_FORMAT_XML:
     ExplainPropertyList(qlabel, data, es);
     return;
 
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
+    ExplainJSONLineEnding(es);
+    appendStringInfoSpaces(es->str, es->indent * 2);
+    appendStringInfoChar(es->str, '[');
+    foreach (lc, data)
+    {
+      if (!first)
+      {
+        appendStringInfoString(es->str, ", ");
+      }
+      escape_json(es->str, (const char *)lfirst(lc));
+      first = false;
+    }
+    appendStringInfoChar(es->str, ']');
+    break;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  case EXPLAIN_FORMAT_YAML:;
-
-
-
-
-
-
-
-
-
-
-
-
-
+  case EXPLAIN_FORMAT_YAML:
+    ExplainYAMLLineStarting(es);
+    appendStringInfoString(es->str, "- [");
+    foreach (lc, data)
+    {
+      if (!first)
+      {
+        appendStringInfoString(es->str, ", ");
+      }
+      escape_yaml(es->str, (const char *)lfirst(lc));
+      first = false;
+    }
+    appendStringInfoChar(es->str, ']');
+    break;
   }
 }
 
@@ -3634,7 +3634,7 @@ ExplainProperty(const char *qlabel, const char *unit, const char *value, bool nu
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     appendStringInfoSpaces(es->str, es->indent * 2);
     if (unit)
     {
@@ -3646,21 +3646,21 @@ ExplainProperty(const char *qlabel, const char *unit, const char *value, bool nu
     }
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
   {
     char *str;
 
-
-
-
-
-
-
-
+    appendStringInfoSpaces(es->str, es->indent * 2);
+    ExplainXMLTag(qlabel, X_OPENING | X_NOWHITESPACE, es);
+    str = escape_xml(value);
+    appendStringInfoString(es->str, str);
+    pfree(str);
+    ExplainXMLTag(qlabel, X_CLOSING | X_NOWHITESPACE, es);
+    appendStringInfoChar(es->str, '\n');
   }
+  break;
 
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     ExplainJSONLineEnding(es);
     appendStringInfoSpaces(es->str, es->indent * 2);
     escape_json(es->str, qlabel);
@@ -3675,18 +3675,18 @@ ExplainProperty(const char *qlabel, const char *unit, const char *value, bool nu
     }
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
-
-
-
-
-
-
-
-
-
-
-
+  case EXPLAIN_FORMAT_YAML:
+    ExplainYAMLLineStarting(es);
+    appendStringInfo(es->str, "%s: ", qlabel);
+    if (numeric)
+    {
+      appendStringInfoString(es->str, value);
+    }
+    else
+    {
+      escape_yaml(es->str, value);
+    }
+    break;
   }
 }
 
@@ -3748,16 +3748,16 @@ ExplainOpenGroup(const char *objtype, const char *labelname, bool labeled, Expla
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     /* nothing to do */
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
+    ExplainXMLTag(objtype, X_OPENING, es);
+    es->indent++;
+    break;
 
-
-
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     ExplainJSONLineEnding(es);
     appendStringInfoSpaces(es->str, 2 * es->indent);
     if (labelname)
@@ -3777,7 +3777,7 @@ ExplainOpenGroup(const char *objtype, const char *labelname, bool labeled, Expla
     es->indent++;
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
+  case EXPLAIN_FORMAT_YAML:
 
     /*
      * In YAML format, the grouping stack is an integer list.  0 means
@@ -3785,19 +3785,19 @@ ExplainOpenGroup(const char *objtype, const char *labelname, bool labeled, Expla
      * level is unlabelled and must be marked with "- ".  See
      * ExplainYAMLLineStarting().
      */
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ExplainYAMLLineStarting(es);
+    if (labelname)
+    {
+      appendStringInfo(es->str, "%s: ", labelname);
+      es->grouping_stack = lcons_int(1, es->grouping_stack);
+    }
+    else
+    {
+      appendStringInfoString(es->str, "- ");
+      es->grouping_stack = lcons_int(0, es->grouping_stack);
+    }
+    es->indent++;
+    break;
   }
 }
 
@@ -3810,16 +3810,16 @@ ExplainCloseGroup(const char *objtype, const char *labelname, bool labeled, Expl
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     /* nothing to do */
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
+    es->indent--;
+    ExplainXMLTag(objtype, X_CLOSING, es);
+    break;
 
-
-
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     es->indent--;
     appendStringInfoChar(es->str, '\n');
     appendStringInfoSpaces(es->str, 2 * es->indent);
@@ -3827,10 +3827,10 @@ ExplainCloseGroup(const char *objtype, const char *labelname, bool labeled, Expl
     es->grouping_stack = list_delete_first(es->grouping_stack);
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
-
-
-
+  case EXPLAIN_FORMAT_YAML:
+    es->indent--;
+    es->grouping_stack = list_delete_first(es->grouping_stack);
+    break;
   }
 }
 
@@ -3843,41 +3843,41 @@ ExplainCloseGroup(const char *objtype, const char *labelname, bool labeled, Expl
 static void
 ExplainDummyGroup(const char *objtype, const char *labelname, ExplainState *es)
 {
+  switch (es->format)
+  {
+  case EXPLAIN_FORMAT_TEXT:
+    /* nothing to do */
+    break;
 
+  case EXPLAIN_FORMAT_XML:
+    ExplainXMLTag(objtype, X_CLOSE_IMMEDIATE, es);
+    break;
 
+  case EXPLAIN_FORMAT_JSON:
+    ExplainJSONLineEnding(es);
+    appendStringInfoSpaces(es->str, 2 * es->indent);
+    if (labelname)
+    {
+      escape_json(es->str, labelname);
+      appendStringInfoString(es->str, ": ");
+    }
+    escape_json(es->str, objtype);
+    break;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  case EXPLAIN_FORMAT_YAML:
+    ExplainYAMLLineStarting(es);
+    if (labelname)
+    {
+      escape_yaml(es->str, labelname);
+      appendStringInfoString(es->str, ": ");
+    }
+    else
+    {
+      appendStringInfoString(es->str, "- ");
+    }
+    escape_yaml(es->str, objtype);
+    break;
+  }
 }
 
 /*
@@ -3891,25 +3891,25 @@ ExplainBeginOutput(ExplainState *es)
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     /* nothing to do */
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
+    appendStringInfoString(es->str, "<explain xmlns=\"http://www.postgresql.org/2009/explain\">\n");
+    es->indent++;
+    break;
 
-
-
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     /* top-level structure is an array of plans */
     appendStringInfoChar(es->str, '[');
     es->grouping_stack = lcons_int(0, es->grouping_stack);
     es->indent++;
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
-
-
+  case EXPLAIN_FORMAT_YAML:
+    es->grouping_stack = lcons_int(0, es->grouping_stack);
+    break;
   }
 }
 
@@ -3921,24 +3921,24 @@ ExplainEndOutput(ExplainState *es)
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     /* nothing to do */
     break;
 
-  case EXPLAIN_FORMAT_XML:;
+  case EXPLAIN_FORMAT_XML:
+    es->indent--;
+    appendStringInfoString(es->str, "</explain>");
+    break;
 
-
-
-
-  case EXPLAIN_FORMAT_JSON:;
+  case EXPLAIN_FORMAT_JSON:
     es->indent--;
     appendStringInfoString(es->str, "\n]");
     es->grouping_stack = list_delete_first(es->grouping_stack);
     break;
 
-  case EXPLAIN_FORMAT_YAML:;
-
-
+  case EXPLAIN_FORMAT_YAML:
+    es->grouping_stack = list_delete_first(es->grouping_stack);
+    break;
   }
 }
 
@@ -3950,16 +3950,16 @@ ExplainSeparatePlans(ExplainState *es)
 {
   switch (es->format)
   {
-  case EXPLAIN_FORMAT_TEXT:;
+  case EXPLAIN_FORMAT_TEXT:
     /* add a blank line */
     appendStringInfoChar(es->str, '\n');
     break;
 
-  case EXPLAIN_FORMAT_XML:;
-  case EXPLAIN_FORMAT_JSON:;
-  case EXPLAIN_FORMAT_YAML:;
+  case EXPLAIN_FORMAT_XML:
+  case EXPLAIN_FORMAT_JSON:
+  case EXPLAIN_FORMAT_YAML:
     /* nothing to do */
-
+    break;
   }
 }
 
@@ -3977,31 +3977,31 @@ ExplainSeparatePlans(ExplainState *es)
 static void
 ExplainXMLTag(const char *tagname, int flags, ExplainState *es)
 {
+  const char *s;
+  const char *valid = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if ((flags & X_NOWHITESPACE) == 0)
+  {
+    appendStringInfoSpaces(es->str, 2 * es->indent);
+  }
+  appendStringInfoCharMacro(es->str, '<');
+  if ((flags & X_CLOSING) != 0)
+  {
+    appendStringInfoCharMacro(es->str, '/');
+  }
+  for (s = tagname; *s; s++)
+  {
+    appendStringInfoChar(es->str, strchr(valid, *s) ? *s : '-');
+  }
+  if ((flags & X_CLOSE_IMMEDIATE) != 0)
+  {
+    appendStringInfoString(es->str, " /");
+  }
+  appendStringInfoCharMacro(es->str, '>');
+  if ((flags & X_NOWHITESPACE) == 0)
+  {
+    appendStringInfoCharMacro(es->str, '\n');
+  }
 }
 
 /*
@@ -4038,16 +4038,16 @@ ExplainJSONLineEnding(ExplainState *es)
 static void
 ExplainYAMLLineStarting(ExplainState *es)
 {
-
-
-
-
-
-
-
-
-
-
+  Assert(es->format == EXPLAIN_FORMAT_YAML);
+  if (linitial_int(es->grouping_stack) == 0)
+  {
+    linitial_int(es->grouping_stack) = 1;
+  }
+  else
+  {
+    appendStringInfoChar(es->str, '\n');
+    appendStringInfoSpaces(es->str, es->indent * 2);
+  }
 }
 
 /*
@@ -4063,5 +4063,5 @@ ExplainYAMLLineStarting(ExplainState *es)
 static void
 escape_yaml(StringInfo buf, const char *str)
 {
-
+  escape_json(buf, str);
 }

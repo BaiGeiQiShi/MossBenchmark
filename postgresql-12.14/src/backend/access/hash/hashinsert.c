@@ -29,8 +29,8 @@ _hash_vacuum_one_page(Relation rel, Relation hrel, Buffer metabuf, Buffer buf);
 /*
  *	_hash_doinsert() -- Handle insertion of a single index tuple.
  *
- *		This routine is called by the public interface routines,
- *hashbuild and hashinsert.  By here, itup is completely filled in.
+ *		This routine is called by the public interface routines, hashbuild
+ *		and hashinsert.  By here, itup is completely filled in.
  */
 void
 _hash_doinsert(Relation rel, IndexTuple itup, Relation heapRel)
@@ -59,7 +59,7 @@ _hash_doinsert(Relation rel, IndexTuple itup, Relation heapRel)
   itemsz = MAXALIGN(itemsz); /* be safe, PageAddItem will do this but we
                               * need to be consistent */
 
-restart_insert:;
+restart_insert:
 
   /*
    * Read the metapage.  We don't lock it yet; HashMaxItemSize() will
@@ -78,7 +78,7 @@ restart_insert:;
    */
   if (itemsz > HashMaxItemSize(metapage))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds hash maximum %zu", itemsz, HashMaxItemSize(metapage)), errhint("Values larger than a buffer page cannot be indexed.")));
   }
 
   /* Lock the primary bucket page for the target bucket. */
@@ -106,14 +106,14 @@ restart_insert:;
   if (H_BUCKET_BEING_SPLIT(pageopaque) && IsBufferCleanupOK(buf))
   {
     /* release the lock on bucket buffer, before completing the split. */
+    LockBuffer(buf, BUFFER_LOCK_UNLOCK);
 
-
-
+    _hash_finish_split(rel, metabuf, buf, bucket, usedmetap->hashm_maxbucket, usedmetap->hashm_highmask, usedmetap->hashm_lowmask);
 
     /* release the pin on old and meta buffer.  retry for insert. */
-
-
-
+    _hash_dropbuf(rel, buf);
+    _hash_dropbuf(rel, metabuf);
+    goto restart_insert;
   }
 
   /* Do the insertion */
@@ -129,15 +129,15 @@ restart_insert:;
     if (H_HAS_DEAD_TUPLES(pageopaque))
     {
 
+      if (IsBufferCleanupOK(buf))
+      {
+        _hash_vacuum_one_page(rel, heapRel, metabuf, buf);
 
-
-
-
-
-
-
-
-
+        if (PageGetFreeSpace(page) >= itemsz)
+        {
+          break; /* OK, now we have enough space */
+        }
+      }
     }
 
     /*
@@ -283,7 +283,7 @@ _hash_pgaddtup(Relation rel, Buffer buf, Size itemsize, IndexTuple itup)
 
   if (PageAddItem(page, (Item)itup, itemsize, itup_off, false, false) == InvalidOffsetNumber)
   {
-
+    elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(rel));
   }
 
   return itup_off;
@@ -324,7 +324,7 @@ _hash_pgaddmultitup(Relation rel, Buffer buf, IndexTuple *itups, OffsetNumber *i
 
     if (PageAddItem(page, (Item)itups[i], itemsize, itup_off, false, false) == InvalidOffsetNumber)
     {
-
+      elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(rel));
     }
   }
 }
@@ -339,92 +339,92 @@ _hash_pgaddmultitup(Relation rel, Buffer buf, IndexTuple *itups, OffsetNumber *i
 static void
 _hash_vacuum_one_page(Relation rel, Relation hrel, Buffer metabuf, Buffer buf)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  OffsetNumber deletable[MaxOffsetNumber];
+  int ndeletable = 0;
+  OffsetNumber offnum, maxoff;
+  Page page = BufferGetPage(buf);
+  HashPageOpaque pageopaque;
+  HashMetaPage metap;
+
+  /* Scan each tuple in page to see if it is marked as LP_DEAD */
+  maxoff = PageGetMaxOffsetNumber(page);
+  for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum = OffsetNumberNext(offnum))
+  {
+    ItemId itemId = PageGetItemId(page, offnum);
+
+    if (ItemIdIsDead(itemId))
+    {
+      deletable[ndeletable++] = offnum;
+    }
+  }
+
+  if (ndeletable > 0)
+  {
+    TransactionId latestRemovedXid;
+
+    latestRemovedXid = index_compute_xid_horizon_for_tuples(rel, hrel, buf, deletable, ndeletable);
+
+    /*
+     * Write-lock the meta page so that we can decrement tuple count.
+     */
+    LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
+
+    /* No ereport(ERROR) until changes are logged */
+    START_CRIT_SECTION();
+
+    PageIndexMultiDelete(page, deletable, ndeletable);
+
+    /*
+     * Mark the page as not containing any LP_DEAD items. This is not
+     * certainly true (there might be some that have recently been marked,
+     * but weren't included in our target-item list), but it will almost
+     * always be true and it doesn't seem worth an additional page scan to
+     * check it. Remember that LH_PAGE_HAS_DEAD_TUPLES is only a hint
+     * anyway.
+     */
+    pageopaque = (HashPageOpaque)PageGetSpecialPointer(page);
+    pageopaque->hasho_flag &= ~LH_PAGE_HAS_DEAD_TUPLES;
+
+    metap = HashPageGetMeta(BufferGetPage(metabuf));
+    metap->hashm_ntuples -= ndeletable;
+
+    MarkBufferDirty(buf);
+    MarkBufferDirty(metabuf);
+
+    /* XLOG stuff */
+    if (RelationNeedsWAL(rel))
+    {
+      xl_hash_vacuum_one_page xlrec;
+      XLogRecPtr recptr;
+
+      xlrec.latestRemovedXid = latestRemovedXid;
+      xlrec.ntuples = ndeletable;
+
+      XLogBeginInsert();
+      XLogRegisterBuffer(0, buf, REGBUF_STANDARD);
+      XLogRegisterData((char *)&xlrec, SizeOfHashVacuumOnePage);
+
+      /*
+       * We need the target-offsets array whether or not we store the
+       * whole buffer, to allow us to find the latestRemovedXid on a
+       * standby server.
+       */
+      XLogRegisterData((char *)deletable, ndeletable * sizeof(OffsetNumber));
+
+      XLogRegisterBuffer(1, metabuf, REGBUF_STANDARD);
+
+      recptr = XLogInsert(RM_HASH_ID, XLOG_HASH_VACUUM_ONE_PAGE);
+
+      PageSetLSN(BufferGetPage(buf), recptr);
+      PageSetLSN(BufferGetPage(metabuf), recptr);
+    }
+
+    END_CRIT_SECTION();
+
+    /*
+     * Releasing write lock on meta page as we have updated the tuple
+     * count.
+     */
+    LockBuffer(metabuf, BUFFER_LOCK_UNLOCK);
+  }
 }

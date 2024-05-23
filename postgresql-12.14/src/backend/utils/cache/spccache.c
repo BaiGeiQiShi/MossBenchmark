@@ -63,7 +63,7 @@ InvalidateTableSpaceCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
     }
     if (hash_search(TableSpaceCacheHash, (void *)&spc->oid, HASH_REMOVE, NULL) == NULL)
     {
-
+      elog(ERROR, "hash table corrupted");
     }
   }
 }
@@ -86,7 +86,7 @@ InitializeTableSpaceCache(void)
   /* Make sure we've initialized CacheMemoryContext. */
   if (!CacheMemoryContext)
   {
-
+    CreateCacheMemoryContext();
   }
 
   /* Watch for invalidation events. */
@@ -136,7 +136,7 @@ get_tablespace(Oid spcid)
   tp = SearchSysCache1(TABLESPACEOID, ObjectIdGetDatum(spcid));
   if (!HeapTupleIsValid(tp))
   {
-
+    opts = NULL;
   }
   else
   {
@@ -170,12 +170,11 @@ get_tablespace(Oid spcid)
 
 /*
  * get_tablespace_page_costs
- *		Return random and/or sequential page costs for a given
- *tablespace.
+ *		Return random and/or sequential page costs for a given tablespace.
  *
  *		This value is not locked by the transaction, so this value may
- *		be changed while a SELECT that has used these values for
- *planning is still executing.
+ *		be changed while a SELECT that has used these values for planning
+ *		is still executing.
  */
 void
 get_tablespace_page_costs(Oid spcid, double *spc_random_page_cost, double *spc_seq_page_cost)
@@ -192,7 +191,7 @@ get_tablespace_page_costs(Oid spcid, double *spc_random_page_cost, double *spc_s
     }
     else
     {
-
+      *spc_random_page_cost = spc->opts->random_page_cost;
     }
   }
 
@@ -213,8 +212,8 @@ get_tablespace_page_costs(Oid spcid, double *spc_random_page_cost, double *spc_s
  * get_tablespace_io_concurrency
  *
  *		This value is not locked by the transaction, so this value may
- *		be changed while a SELECT that has used these values for
- *planning is still executing.
+ *		be changed while a SELECT that has used these values for planning
+ *		is still executing.
  */
 int
 get_tablespace_io_concurrency(Oid spcid)
@@ -227,6 +226,6 @@ get_tablespace_io_concurrency(Oid spcid)
   }
   else
   {
-
+    return spc->opts->effective_io_concurrency;
   }
 }

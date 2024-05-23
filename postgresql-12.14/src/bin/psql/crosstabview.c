@@ -19,7 +19,8 @@
  * Value/position from the resultset that goes into the horizontal or vertical
  * crosstabview header.
  */
-typedef struct _pivot_field {
+typedef struct _pivot_field
+{
   /*
    * Pointer obtained from PQgetvalue() for colV or colH. Each distinct
    * value becomes an entry in the vertical header (colV), or horizontal
@@ -46,7 +47,8 @@ typedef struct _pivot_field {
 } pivot_field;
 
 /* Node in avl_tree */
-typedef struct _avl_node {
+typedef struct _avl_node
+{
   /* Node contents */
   pivot_field field;
 
@@ -68,7 +70,8 @@ typedef struct _avl_node {
  * Control structure for the AVL tree (binary search tree kept
  * balanced with the AVL algorithm)
  */
-typedef struct _avl_tree {
+typedef struct _avl_tree
+{
   int count;      /* Total number of nodes */
   avl_node *root; /* root of the tree */
   avl_node *end;  /* Immutable dereferenceable empty tree */
@@ -96,7 +99,9 @@ rankCompare(const void *a, const void *b);
 /*
  * Main entry point to this module.
  *
- * Process the data from *res according to the options in pset (global),* to generate the horizontal and vertical headers contents,* then call printCrosstab() for the actual output.
+ * Process the data from *res according to the options in pset (global),
+ * to generate the horizontal and vertical headers contents,
+ * then call printCrosstab() for the actual output.
  */
 bool
 PrintResultsInCrosstab(const PGresult *res)
@@ -117,44 +122,56 @@ PrintResultsInCrosstab(const PGresult *res)
   avlInit(&piv_rows);
   avlInit(&piv_columns);
 
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     pg_log_error("\\crosstabview: statement did not return a result set");
     goto error_return;
   }
 
-  if (PQnfields(res) < 3) {
+  if (PQnfields(res) < 3)
+  {
     pg_log_error("\\crosstabview: query must return at least three columns");
     goto error_return;
   }
 
   /* Process first optional arg (vertical header column) */
-  if (pset.ctv_args[0] == NULL) {
+  if (pset.ctv_args[0] == NULL)
+  {
     field_for_rows = 0;
-  } else {
+  }
+  else
+  {
     field_for_rows = indexOfColumn(pset.ctv_args[0], res);
-    if (field_for_rows < 0) {
+    if (field_for_rows < 0)
+    {
       goto error_return;
     }
   }
 
   /* Process second optional arg (horizontal header column) */
-  if (pset.ctv_args[1] == NULL) {
+  if (pset.ctv_args[1] == NULL)
+  {
     field_for_columns = 1;
-  } else {
+  }
+  else
+  {
     field_for_columns = indexOfColumn(pset.ctv_args[1], res);
-    if (field_for_columns < 0) {
+    if (field_for_columns < 0)
+    {
       goto error_return;
     }
   }
 
   /* Insist that header columns be distinct */
-  if (field_for_columns == field_for_rows) {
+  if (field_for_columns == field_for_rows)
+  {
     pg_log_error("\\crosstabview: vertical and horizontal headers must be different columns");
     goto error_return;
   }
 
   /* Process third optional arg (data column) */
-  if (pset.ctv_args[2] == NULL) {
+  if (pset.ctv_args[2] == NULL)
+  {
     int i;
 
     /*
@@ -162,32 +179,42 @@ PrintResultsInCrosstab(const PGresult *res)
      * used as either vertical or horizontal headers.  Must be exactly
      * three columns, or this won't be unique.
      */
-    if (PQnfields(res) != 3) {
+    if (PQnfields(res) != 3)
+    {
       pg_log_error("\\crosstabview: data column must be specified when query returns more than three columns");
       goto error_return;
     }
 
     field_for_data = -1;
-    for (i = 0; i < PQnfields(res); i++) {
-      if (i != field_for_rows && i != field_for_columns) {
+    for (i = 0; i < PQnfields(res); i++)
+    {
+      if (i != field_for_rows && i != field_for_columns)
+      {
         field_for_data = i;
         break;
       }
     }
     Assert(field_for_data >= 0);
-  } else {
+  }
+  else
+  {
     field_for_data = indexOfColumn(pset.ctv_args[2], res);
-    if (field_for_data < 0) {
+    if (field_for_data < 0)
+    {
       goto error_return;
     }
   }
 
   /* Process fourth optional arg (horizontal header sort column) */
-  if (pset.ctv_args[3] == NULL) {
+  if (pset.ctv_args[3] == NULL)
+  {
     sort_field_for_columns = -1; /* no sort column */
-  } else {
+  }
+  else
+  {
     sort_field_for_columns = indexOfColumn(pset.ctv_args[3], res);
-    if (sort_field_for_columns < 0) {
+    if (sort_field_for_columns < 0)
+    {
       goto error_return;
     }
   }
@@ -198,7 +225,8 @@ PrintResultsInCrosstab(const PGresult *res)
    * DISTINCT values.
    */
 
-  for (rn = 0; rn < PQntuples(res); rn++) {
+  for (rn = 0; rn < PQntuples(res); rn++)
+  {
     char *val;
     char *val1;
 
@@ -206,13 +234,15 @@ PrintResultsInCrosstab(const PGresult *res)
     val = PQgetisnull(res, rn, field_for_columns) ? NULL : PQgetvalue(res, rn, field_for_columns);
     val1 = NULL;
 
-    if (sort_field_for_columns >= 0 && !PQgetisnull(res, rn, sort_field_for_columns)) {
+    if (sort_field_for_columns >= 0 && !PQgetisnull(res, rn, sort_field_for_columns))
+    {
       val1 = PQgetvalue(res, rn, sort_field_for_columns);
     }
 
     avlMergeValue(&piv_columns, val, val1);
 
-    if (piv_columns.count > CROSSTABVIEW_MAX_COLUMNS) {
+    if (piv_columns.count > CROSSTABVIEW_MAX_COLUMNS)
+    {
       pg_log_error("\\crosstabview: maximum number of columns (%d) exceeded", CROSSTABVIEW_MAX_COLUMNS);
       goto error_return;
     }
@@ -241,7 +271,8 @@ PrintResultsInCrosstab(const PGresult *res)
    * Third part: optionally, process the ranking data for the horizontal
    * header
    */
-  if (sort_field_for_columns >= 0) {
+  if (sort_field_for_columns >= 0)
+  {
     rankSort(num_columns, array_columns);
   }
 
@@ -286,7 +317,8 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
    * This avoids an O(N^2) loop later.
    */
   horiz_map = (int *)pg_malloc(sizeof(int) * num_columns);
-  for (i = 0; i < num_columns; i++) {
+  for (i = 0; i < num_columns; i++)
+  {
     horiz_map[piv_columns[i].rank] = i;
   }
 
@@ -295,7 +327,8 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
    */
   col_align = column_type_alignment(PQftype(results, field_for_data));
 
-  for (i = 0; i < num_columns; i++) {
+  for (i = 0; i < num_columns; i++)
+  {
     char *colname;
 
     colname = piv_columns[horiz_map[i]].name ? piv_columns[horiz_map[i]].name : (popt.nullPrint ? popt.nullPrint : "");
@@ -305,7 +338,8 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
   pg_free(horiz_map);
 
   /* Step 2: set row names in the first output column (vertical header) */
-  for (i = 0; i < num_rows; i++) {
+  for (i = 0; i < num_rows; i++)
+  {
     int k = piv_rows[i].rank;
 
     cont.cells[k * (num_columns + 1)] = piv_rows[i].name ? piv_rows[i].name : (popt.nullPrint ? popt.nullPrint : "");
@@ -315,16 +349,20 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
   /*
    * Step 3: fill in the content cells.
    */
-  for (rn = 0; rn < PQntuples(results); rn++) {
+  for (rn = 0; rn < PQntuples(results); rn++)
+  {
     int row_number;
     int col_number;
     pivot_field *rp, *cp;
     pivot_field elt;
 
     /* Find target row */
-    if (!PQgetisnull(results, rn, field_for_rows)) {
+    if (!PQgetisnull(results, rn, field_for_rows))
+    {
       elt.name = PQgetvalue(results, rn, field_for_rows);
-    } else {
+    }
+    else
+    {
       elt.name = NULL;
     }
     rp = (pivot_field *)bsearch(&elt, piv_rows, num_rows, sizeof(pivot_field), pivotFieldCompare);
@@ -332,9 +370,12 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     row_number = rp->rank;
 
     /* Find target column */
-    if (!PQgetisnull(results, rn, field_for_columns)) {
+    if (!PQgetisnull(results, rn, field_for_columns))
+    {
       elt.name = PQgetvalue(results, rn, field_for_columns);
-    } else {
+    }
+    else
+    {
       elt.name = NULL;
     }
 
@@ -343,7 +384,8 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     col_number = cp->rank;
 
     /* Place value into cell */
-    if (col_number >= 0 && row_number >= 0) {
+    if (col_number >= 0 && row_number >= 0)
+    {
       int idx;
 
       /* index into the cont.cells array */
@@ -352,8 +394,9 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
       /*
        * If the cell already contains a value, raise an error.
        */
-      if (cont.cells[idx] != NULL) {
-        pg_log_error("\\crosstabview: query result contains multiple data values for row \"%s\", column \"%s\"",rp->name ? rp->name : (popt.nullPrint ? popt.nullPrint : "(null)"), cp->name ? cp->name : (popt.nullPrint ? popt.nullPrint : "(null)"));
+      if (cont.cells[idx] != NULL)
+      {
+        pg_log_error("\\crosstabview: query result contains multiple data values for row \"%s\", column \"%s\"", rp->name ? rp->name : (popt.nullPrint ? popt.nullPrint : "(null)"), cp->name ? cp->name : (popt.nullPrint ? popt.nullPrint : "(null)"));
         goto error;
       }
 
@@ -365,8 +408,10 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
    * The non-initialized cells must be set to an empty string for the print
    * functions
    */
-  for (i = 0; i < cont.cellsadded; i++) {
-    if (cont.cells[i] == NULL) {
+  for (i = 0; i < cont.cellsadded; i++)
+  {
+    if (cont.cells[i] == NULL)
+    {
       cont.cells[i] = "";
     }
   }
@@ -382,9 +427,9 @@ error:
 
 /*
  * The avl* functions below provide a minimalistic implementation of AVL binary
- * trees, to efficiently collect the distinct values that will form the
- * horizontal and vertical headers. It only supports adding new values, no
- * removal or even search.
+ * trees, to efficiently collect the distinct values that will form the horizontal
+ * and vertical headers. It only supports adding new values, no removal or even
+ * search.
  */
 static void
 avlInit(avl_tree *tree)
@@ -399,17 +444,21 @@ avlInit(avl_tree *tree)
 static void
 avlFree(avl_tree *tree, avl_node *node)
 {
-  if (node->children[0] != tree->end) {
+  if (node->children[0] != tree->end)
+  {
     avlFree(tree, node->children[0]);
     pg_free(node->children[0]);
   }
-  if (node->children[1] != tree->end) {
+  if (node->children[1] != tree->end)
+  {
     avlFree(tree, node->children[1]);
     pg_free(node->children[1]);
   }
-  if (node == tree->root) {
+  if (node == tree->root)
+  {
     /* free the root separately as it's not child of anything */
-    if (node != tree->end) {
+    if (node != tree->end)
+    {
       pg_free(node);
     }
     /* free the tree->end struct only once and when all else is freed */
@@ -456,15 +505,18 @@ avlAdjustBalance(avl_tree *tree, avl_node **node)
   avl_node *current = *node;
   int b = avlBalance(current) / 2;
 
-  if (b != 0) {
+  if (b != 0)
+  {
     int dir = (1 - b) / 2;
 
-    if (avlBalance(current->children[dir]) == -b) {
+    if (avlBalance(current->children[dir]) == -b)
+    {
       avlRotate(&current->children[dir], !dir);
     }
     current = avlRotate(node, dir);
   }
-  if (current != tree->end) {
+  if (current != tree->end)
+  {
     avlUpdateHeight(current);
   }
 }
@@ -479,7 +531,8 @@ avlInsertNode(avl_tree *tree, avl_node **node, pivot_field field)
 {
   avl_node *current = *node;
 
-  if (current == tree->end) {
+  if (current == tree->end)
+  {
     avl_node *new_node = (avl_node *)pg_malloc(sizeof(avl_node));
 
     new_node->height = 1;
@@ -487,10 +540,13 @@ avlInsertNode(avl_tree *tree, avl_node **node, pivot_field field)
     new_node->children[0] = new_node->children[1] = tree->end;
     tree->count++;
     *node = new_node;
-  } else {
+  }
+  else
+  {
     int cmp = pivotFieldCompare(&field, &current->field);
 
-    if (cmp != 0) {
+    if (cmp != 0)
+    {
       avlInsertNode(tree, cmp > 0 ? &current->children[1] : &current->children[0], field);
       avlAdjustBalance(tree, node);
     }
@@ -518,7 +574,8 @@ avlMergeValue(avl_tree *tree, char *name, char *sort_value)
 static int
 avlCollectFields(avl_tree *tree, avl_node *node, pivot_field *fields, int idx)
 {
-  if (node == tree->end) {
+  if (node == tree->end)
+  {
     return idx;
   }
 
@@ -535,14 +592,18 @@ rankSort(int num_columns, pivot_field *piv_columns)
   int i;
 
   hmap = (int *)pg_malloc(sizeof(int) * num_columns * 2);
-  for (i = 0; i < num_columns; i++) {
+  for (i = 0; i < num_columns; i++)
+  {
     char *val = piv_columns[i].sort_value;
 
     /* ranking information is valid if non null and matches /^-?\d+$/ */
-    if (val && ((*val == '-' && strspn(val + 1, "0123456789") == strlen(val + 1)) || strspn(val, "0123456789") == strlen(val))) {
+    if (val && ((*val == '-' && strspn(val + 1, "0123456789") == strlen(val + 1)) || strspn(val, "0123456789") == strlen(val)))
+    {
       hmap[i * 2] = atoi(val);
       hmap[i * 2 + 1] = i;
-    } else {
+    }
+    else
+    {
       /* invalid rank information ignored (equivalent to rank 0) */
       hmap[i * 2] = 0;
       hmap[i * 2 + 1] = i;
@@ -551,7 +612,8 @@ rankSort(int num_columns, pivot_field *piv_columns)
 
   qsort(hmap, num_columns, sizeof(int) * 2, rankCompare);
 
-  for (i = 0; i < num_columns; i++) {
+  for (i = 0; i < num_columns; i++)
+  {
     piv_columns[hmap[i * 2 + 1]].rank = i;
   }
 
@@ -572,14 +634,18 @@ indexOfColumn(char *arg, const PGresult *res)
 {
   int idx;
 
-  if (arg[0] && strspn(arg, "0123456789") == strlen(arg)) {
+  if (arg[0] && strspn(arg, "0123456789") == strlen(arg))
+  {
     /* if arg contains only digits, it's a column number */
     idx = atoi(arg) - 1;
-    if (idx < 0 || idx >= PQnfields(res)) {
+    if (idx < 0 || idx >= PQnfields(res))
+    {
       pg_log_error("\\crosstabview: column number %d is out of range 1..%d", idx + 1, PQnfields(res));
       return -1;
     }
-  } else {
+  }
+  else
+  {
     int i;
 
     /*
@@ -591,9 +657,12 @@ indexOfColumn(char *arg, const PGresult *res)
 
     /* Now look for match(es) among res' column names */
     idx = -1;
-    for (i = 0; i < PQnfields(res); i++) {
-      if (strcmp(arg, PQfname(res, i)) == 0) {
-        if (idx >= 0) {
+    for (i = 0; i < PQnfields(res); i++)
+    {
+      if (strcmp(arg, PQfname(res, i)) == 0)
+      {
+        if (idx >= 0)
+        {
           /* another idx was already found for the same name */
           pg_log_error("\\crosstabview: ambiguous column name: \"%s\"", arg);
           return -1;
@@ -601,7 +670,8 @@ indexOfColumn(char *arg, const PGresult *res)
         idx = i;
       }
     }
-    if (idx == -1) {
+    if (idx == -1)
+    {
       pg_log_error("\\crosstabview: column name not found: \"%s\"", arg);
       return -1;
     }
@@ -624,9 +694,12 @@ pivotFieldCompare(const void *a, const void *b)
   const pivot_field *pb = (const pivot_field *)b;
 
   /* test null values */
-  if (!pb->name) {
+  if (!pb->name)
+  {
     return pa->name ? -1 : 0;
-  } else if (!pa->name) {
+  }
+  else if (!pa->name)
+  {
     return 1;
   }
 

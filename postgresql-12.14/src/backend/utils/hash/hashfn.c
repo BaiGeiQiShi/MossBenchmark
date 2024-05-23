@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * hashfn.c
- *		Generic hashing functions, and hash functions for use in
- *dynahash.c hashtables
+ *		Generic hashing functions, and hash functions for use in dynahash.c
+ *		hashtables
  *
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
@@ -146,8 +146,8 @@
 
 /*
  * hash_any() -- hash a variable-length key into a 32-bit value
- *		k		: the key (the unaligned variable-length array
- *of bytes) len		: the length of the key, counting by bytes
+ *		k		: the key (the unaligned variable-length array of bytes)
+ *		len		: the length of the key, counting by bytes
  *
  * Returns a uint32 value.  Every bit of the key affects every bit of
  * the return value.  Every 1-bit and 2-bit delta achieves avalanche.
@@ -232,39 +232,39 @@ hash_any(register const unsigned char *k, register int keylen)
 #else  /* !WORDS_BIGENDIAN */
     switch (len)
     {
-    case 11:;
+    case 11:
       c += ((uint32)k[10] << 24);
       /* fall through */
-    case 10:;
+    case 10:
       c += ((uint32)k[9] << 16);
       /* fall through */
-    case 9:;
+    case 9:
       c += ((uint32)k[8] << 8);
       /* fall through */
-    case 8:;
+    case 8:
       /* the lowest byte of c is reserved for the length */
       b += ka[1];
       a += ka[0];
       break;
-    case 7:;
+    case 7:
       b += ((uint32)k[6] << 16);
       /* fall through */
-    case 6:;
+    case 6:
       b += ((uint32)k[5] << 8);
       /* fall through */
-    case 5:;
+    case 5:
       b += k[4];
       /* fall through */
-    case 4:;
+    case 4:
       a += ka[0];
       break;
-    case 3:;
+    case 3:
       a += ((uint32)k[2] << 16);
       /* fall through */
-    case 2:;
+    case 2:
       a += ((uint32)k[1] << 8);
       /* fall through */
-    case 1:;
+    case 1:
       a += k[0];
       /* case 0: nothing left to add */
     }
@@ -333,38 +333,38 @@ hash_any(register const unsigned char *k, register int keylen)
 #else  /* !WORDS_BIGENDIAN */
     switch (len)
     {
-    case 11:;
+    case 11:
       c += ((uint32)k[10] << 24);
       /* fall through */
-    case 10:;
+    case 10:
       c += ((uint32)k[9] << 16);
       /* fall through */
-    case 9:;
+    case 9:
       c += ((uint32)k[8] << 8);
       /* fall through */
-    case 8:;
+    case 8:
       /* the lowest byte of c is reserved for the length */
       b += ((uint32)k[7] << 24);
       /* fall through */
-    case 7:;
+    case 7:
       b += ((uint32)k[6] << 16);
       /* fall through */
-    case 6:;
+    case 6:
       b += ((uint32)k[5] << 8);
       /* fall through */
-    case 5:;
+    case 5:
       b += k[4];
       /* fall through */
-    case 4:;
+    case 4:
       a += ((uint32)k[3] << 24);
       /* fall through */
-    case 3:;
+    case 3:
       a += ((uint32)k[2] << 16);
       /* fall through */
-    case 2:;
+    case 2:
       a += ((uint32)k[1] << 8);
       /* fall through */
-    case 1:;
+    case 1:
       a += k[0];
       /* case 0: nothing left to add */
     }
@@ -379,9 +379,9 @@ hash_any(register const unsigned char *k, register int keylen)
 
 /*
  * hash_any_extended() -- hash into a 64-bit value, using an optional seed
- *		k		: the key (the unaligned variable-length array
- *of bytes) len		: the length of the key, counting by bytes seed	: a
- *64-bit seed (0 means no seed)
+ *		k		: the key (the unaligned variable-length array of bytes)
+ *		len		: the length of the key, counting by bytes
+ *		seed	: a 64-bit seed (0 means no seed)
  *
  * Returns a uint64 value.  Otherwise similar to hash_any.
  */
@@ -468,39 +468,39 @@ hash_any_extended(register const unsigned char *k, register int keylen, uint64 s
 #else  /* !WORDS_BIGENDIAN */
     switch (len)
     {
-    case 11:;
+    case 11:
       c += ((uint32)k[10] << 24);
       /* fall through */
-    case 10:;
+    case 10:
       c += ((uint32)k[9] << 16);
       /* fall through */
-    case 9:;
+    case 9:
       c += ((uint32)k[8] << 8);
       /* fall through */
-    case 8:;
+    case 8:
       /* the lowest byte of c is reserved for the length */
       b += ka[1];
       a += ka[0];
       break;
-    case 7:;
-
+    case 7:
+      b += ((uint32)k[6] << 16);
       /* fall through */
-    case 6:;
+    case 6:
       b += ((uint32)k[5] << 8);
       /* fall through */
-    case 5:;
+    case 5:
       b += k[4];
       /* fall through */
-    case 4:;
+    case 4:
       a += ka[0];
       break;
-    case 3:;
+    case 3:
       a += ((uint32)k[2] << 16);
       /* fall through */
-    case 2:;
+    case 2:
       a += ((uint32)k[1] << 8);
       /* fall through */
-    case 1:;
+    case 1:
       a += k[0];
       /* case 0: nothing left to add */
     }
@@ -569,38 +569,38 @@ hash_any_extended(register const unsigned char *k, register int keylen, uint64 s
 #else  /* !WORDS_BIGENDIAN */
     switch (len)
     {
-    case 11:;
-
+    case 11:
+      c += ((uint32)k[10] << 24);
       /* fall through */
-    case 10:;
+    case 10:
       c += ((uint32)k[9] << 16);
       /* fall through */
-    case 9:;
+    case 9:
       c += ((uint32)k[8] << 8);
       /* fall through */
-    case 8:;
+    case 8:
       /* the lowest byte of c is reserved for the length */
       b += ((uint32)k[7] << 24);
       /* fall through */
-    case 7:;
+    case 7:
       b += ((uint32)k[6] << 16);
       /* fall through */
-    case 6:;
+    case 6:
       b += ((uint32)k[5] << 8);
       /* fall through */
-    case 5:;
+    case 5:
       b += k[4];
       /* fall through */
-    case 4:;
+    case 4:
       a += ((uint32)k[3] << 24);
       /* fall through */
-    case 3:;
+    case 3:
       a += ((uint32)k[2] << 16);
       /* fall through */
-    case 2:;
+    case 2:
       a += ((uint32)k[1] << 8);
       /* fall through */
-    case 1:;
+    case 1:
       a += k[0];
       /* case 0: nothing left to add */
     }

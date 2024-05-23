@@ -13,24 +13,19 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
 /* the cx algorithm is adopted from Genitor : */
 /*************************************************************/
 /*															 */
-/*	Copyright (c) 1990
- */
-/*	Darrell L. Whitley
- */
-/*	Computer Science Department
- */
-/*	Colorado State University
- */
+/*	Copyright (c) 1990										 */
+/*	Darrell L. Whitley										 */
+/*	Computer Science Department								 */
+/*	Colorado State University								 */
 /*															 */
 /*	Permission is hereby granted to copy all or any part of  */
 /*	this program for free distribution.   The author's name  */
@@ -56,7 +51,8 @@ cx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene, C
   int num_diffs = 0;
 
   /* initialize city table */
-  for (i = 1; i <= num_gene; i++) {
+  for (i = 1; i <= num_gene; i++)
+  {
     city_table[i].used = 0;
     city_table[tour2[i - 1]].tour2_position = i - 1;
     city_table[tour1[i - 1]].tour1_position = i - 1;
@@ -78,7 +74,8 @@ cx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene, C
 
   /* STEP 1 */
 
-  while (tour2[curr_pos] != tour1[start_pos]) {
+  while (tour2[curr_pos] != tour1[start_pos])
+  {
     city_table[(int)tour2[curr_pos]].used = 1;
     curr_pos = city_table[(int)tour2[curr_pos]].tour1_position;
     offspring[curr_pos] = tour1[curr_pos];
@@ -88,9 +85,12 @@ cx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene, C
   /* STEP 2 */
 
   /* failed to create a complete tour */
-  if (count < num_gene) {
-    for (i = 1; i <= num_gene; i++) {
-      if (!city_table[i].used) {
+  if (count < num_gene)
+  {
+    for (i = 1; i <= num_gene; i++)
+    {
+      if (!city_table[i].used)
+      {
         offspring[city_table[i].tour2_position] = tour2[(int)city_table[i].tour2_position];
         count++;
       }
@@ -100,11 +100,14 @@ cx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene, C
   /* STEP 3 */
 
   /* still failed to create a complete tour */
-  if (count < num_gene) {
+  if (count < num_gene)
+  {
 
     /* count the number of differences between mom and offspring */
-    for (i = 0; i < num_gene; i++) {
-      if (tour1[i] != offspring[i]) {
+    for (i = 0; i < num_gene; i++)
+    {
+      if (tour1[i] != offspring[i])
+      {
         num_diffs++;
       }
     }

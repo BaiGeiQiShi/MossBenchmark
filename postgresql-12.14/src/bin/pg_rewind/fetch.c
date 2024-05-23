@@ -5,7 +5,8 @@
  *
  * This file forms an abstraction of getting files from the "source".
  * There are two implementations of this interface: one for copying files
- * from a data directory via normal filesystem operations (copy_fetch.c),* and another for fetching files from a remote server via a libpq
+ * from a data directory via normal filesystem operations (copy_fetch.c),
+ * and another for fetching files from a remote server via a libpq
  * connection (libpq_fetch.c)
  *
  *
@@ -26,9 +27,12 @@
 void
 fetchSourceFileList(void)
 {
-  if (datadir_source) {
+  if (datadir_source)
+  {
     traverse_datadir(datadir_source, &process_source_file);
-  } else {
+  }
+  else
+  {
     libpqProcessFileList();
   }
 }
@@ -39,9 +43,12 @@ fetchSourceFileList(void)
 void
 executeFileMap(void)
 {
-  if (datadir_source) {
+  if (datadir_source)
+  {
     copy_executeFileMap(filemap);
-  } else {
+  }
+  else
+  {
     libpq_executeFileMap(filemap);
   }
 }
@@ -54,9 +61,12 @@ executeFileMap(void)
 char *
 fetchFile(const char *filename, size_t *filesize)
 {
-  if (datadir_source) {
+  if (datadir_source)
+  {
     return slurpFile(datadir_source, filename, filesize);
-  } else {
+  }
+  else
+  {
     return libpqGetFile(filename, filesize);
   }
 }

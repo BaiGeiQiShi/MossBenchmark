@@ -98,7 +98,7 @@ record_in(PG_FUNCTION_ARGS)
    */
   if (tupType == RECORDOID && tupTypmod < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("input of anonymous composite types is not implemented")));
   }
 
   /*
@@ -160,9 +160,9 @@ record_in(PG_FUNCTION_ARGS)
     /* Ignore dropped columns in datatype, but fill with nulls */
     if (att->attisdropped)
     {
-
-
-
+      values[i] = (Datum)0;
+      nulls[i] = true;
+      continue;
     }
 
     if (needComma)
@@ -197,13 +197,13 @@ record_in(PG_FUNCTION_ARGS)
 
         if (ch == '\0')
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed record literal: \"%s\"", string), errdetail("Unexpected end of input.")));
         }
         if (ch == '\\')
         {
           if (*ptr == '\0')
           {
-
+            ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed record literal: \"%s\"", string), errdetail("Unexpected end of input.")));
           }
           appendStringInfoChar(&buf, *ptr++);
         }
@@ -439,180 +439,180 @@ record_out(PG_FUNCTION_ARGS)
 Datum
 record_recv(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  Oid tupType = PG_GETARG_OID(1);
+  int32 tupTypmod = PG_GETARG_INT32(2);
+  HeapTupleHeader result;
+  TupleDesc tupdesc;
+  HeapTuple tuple;
+  RecordIOData *my_extra;
+  int ncolumns;
+  int usercols;
+  int validcols;
+  int i;
+  Datum *values;
+  bool *nulls;
+
+  check_stack_depth(); /* recurses for record-type columns */
+
+  /*
+   * Give a friendly error message if we did not get enough info to identify
+   * the target record type.  (lookup_rowtype_tupdesc would fail anyway, but
+   * with a non-user-friendly message.)  In ordinary SQL usage, we'll get -1
+   * for typmod, since composite types and RECORD have no type modifiers at
+   * the SQL level, and thus must fail for RECORD.  However some callers can
+   * supply a valid typmod, and then we can do something useful for RECORD.
+   */
+  if (tupType == RECORDOID && tupTypmod < 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("input of anonymous composite types is not implemented")));
+  }
+
+  tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
+  ncolumns = tupdesc->natts;
+
+  /*
+   * We arrange to look up the needed I/O info just once per series of
+   * calls, assuming the record type doesn't change underneath us.
+   */
+  my_extra = (RecordIOData *)fcinfo->flinfo->fn_extra;
+  if (my_extra == NULL || my_extra->ncolumns != ncolumns)
+  {
+    fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt, offsetof(RecordIOData, columns) + ncolumns * sizeof(ColumnIOData));
+    my_extra = (RecordIOData *)fcinfo->flinfo->fn_extra;
+    my_extra->record_type = InvalidOid;
+    my_extra->record_typmod = 0;
+  }
+
+  if (my_extra->record_type != tupType || my_extra->record_typmod != tupTypmod)
+  {
+    MemSet(my_extra, 0, offsetof(RecordIOData, columns) + ncolumns * sizeof(ColumnIOData));
+    my_extra->record_type = tupType;
+    my_extra->record_typmod = tupTypmod;
+    my_extra->ncolumns = ncolumns;
+  }
+
+  values = (Datum *)palloc(ncolumns * sizeof(Datum));
+  nulls = (bool *)palloc(ncolumns * sizeof(bool));
+
+  /* Fetch number of columns user thinks it has */
+  usercols = pq_getmsgint(buf, 4);
+
+  /* Need to scan to count nondeleted columns */
+  validcols = 0;
+  for (i = 0; i < ncolumns; i++)
+  {
+    if (!TupleDescAttr(tupdesc, i)->attisdropped)
+    {
+      validcols++;
+    }
+  }
+  if (usercols != validcols)
+  {
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("wrong number of columns: %d, expected %d", usercols, validcols)));
+  }
+
+  /* Process each column */
+  for (i = 0; i < ncolumns; i++)
+  {
+    Form_pg_attribute att = TupleDescAttr(tupdesc, i);
+    ColumnIOData *column_info = &my_extra->columns[i];
+    Oid column_type = att->atttypid;
+    Oid coltypoid;
+    int itemlen;
+    StringInfoData item_buf;
+    StringInfo bufptr;
+    char csave;
+
+    /* Ignore dropped columns in datatype, but fill with nulls */
+    if (att->attisdropped)
+    {
+      values[i] = (Datum)0;
+      nulls[i] = true;
+      continue;
+    }
+
+    /* Verify column datatype */
+    coltypoid = pq_getmsgint(buf, sizeof(Oid));
+    if (coltypoid != column_type)
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("wrong data type: %u, expected %u", coltypoid, column_type)));
+    }
+
+    /* Get and check the item length */
+    itemlen = pq_getmsgint(buf, 4);
+    if (itemlen < -1 || itemlen > (buf->len - buf->cursor))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("insufficient data left in message")));
+    }
+
+    if (itemlen == -1)
+    {
+      /* -1 length means NULL */
+      bufptr = NULL;
+      nulls[i] = true;
+      csave = 0; /* keep compiler quiet */
+    }
+    else
+    {
+      /*
+       * Rather than copying data around, we just set up a phony
+       * StringInfo pointing to the correct portion of the input buffer.
+       * We assume we can scribble on the input buffer so as to maintain
+       * the convention that StringInfos have a trailing null.
+       */
+      item_buf.data = &buf->data[buf->cursor];
+      item_buf.maxlen = itemlen + 1;
+      item_buf.len = itemlen;
+      item_buf.cursor = 0;
+
+      buf->cursor += itemlen;
+
+      csave = buf->data[buf->cursor];
+      buf->data[buf->cursor] = '\0';
+
+      bufptr = &item_buf;
+      nulls[i] = false;
+    }
+
+    /* Now call the column's receiveproc */
+    if (column_info->column_type != column_type)
+    {
+      getTypeBinaryInputInfo(column_type, &column_info->typiofunc, &column_info->typioparam);
+      fmgr_info_cxt(column_info->typiofunc, &column_info->proc, fcinfo->flinfo->fn_mcxt);
+      column_info->column_type = column_type;
+    }
+
+    values[i] = ReceiveFunctionCall(&column_info->proc, bufptr, column_info->typioparam, att->atttypmod);
+
+    if (bufptr)
+    {
+      /* Trouble if it didn't eat the whole buffer */
+      if (item_buf.cursor != itemlen)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("improper binary format in record column %d", i + 1)));
+      }
+
+      buf->data[buf->cursor] = csave;
+    }
+  }
+
+  tuple = heap_form_tuple(tupdesc, values, nulls);
+
+  /*
+   * We cannot return tuple->t_data because heap_form_tuple allocates it as
+   * part of a larger chunk, and our caller may expect to be able to pfree
+   * our result.  So must copy the info into a new palloc chunk.
+   */
+  result = (HeapTupleHeader)palloc(tuple->t_len);
+  memcpy(result, tuple->t_data, tuple->t_len);
+
+  heap_freetuple(tuple);
+  pfree(values);
+  pfree(nulls);
+  ReleaseTupleDesc(tupdesc);
+
+  PG_RETURN_HEAPTUPLEHEADER(result);
 }
 
 /*
@@ -621,118 +621,118 @@ record_recv(PG_FUNCTION_ARGS)
 Datum
 record_send(PG_FUNCTION_ARGS)
 {
+  HeapTupleHeader rec = PG_GETARG_HEAPTUPLEHEADER(0);
+  Oid tupType;
+  int32 tupTypmod;
+  TupleDesc tupdesc;
+  HeapTupleData tuple;
+  RecordIOData *my_extra;
+  int ncolumns;
+  int validcols;
+  int i;
+  Datum *values;
+  bool *nulls;
+  StringInfoData buf;
+
+  check_stack_depth(); /* recurses for record-type columns */
+
+  /* Extract type info from the tuple itself */
+  tupType = HeapTupleHeaderGetTypeId(rec);
+  tupTypmod = HeapTupleHeaderGetTypMod(rec);
+  tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
+  ncolumns = tupdesc->natts;
+
+  /* Build a temporary HeapTuple control structure */
+  tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
+  ItemPointerSetInvalid(&(tuple.t_self));
+  tuple.t_tableOid = InvalidOid;
+  tuple.t_data = rec;
+
+  /*
+   * We arrange to look up the needed I/O info just once per series of
+   * calls, assuming the record type doesn't change underneath us.
+   */
+  my_extra = (RecordIOData *)fcinfo->flinfo->fn_extra;
+  if (my_extra == NULL || my_extra->ncolumns != ncolumns)
+  {
+    fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt, offsetof(RecordIOData, columns) + ncolumns * sizeof(ColumnIOData));
+    my_extra = (RecordIOData *)fcinfo->flinfo->fn_extra;
+    my_extra->record_type = InvalidOid;
+    my_extra->record_typmod = 0;
+  }
+
+  if (my_extra->record_type != tupType || my_extra->record_typmod != tupTypmod)
+  {
+    MemSet(my_extra, 0, offsetof(RecordIOData, columns) + ncolumns * sizeof(ColumnIOData));
+    my_extra->record_type = tupType;
+    my_extra->record_typmod = tupTypmod;
+    my_extra->ncolumns = ncolumns;
+  }
+
+  values = (Datum *)palloc(ncolumns * sizeof(Datum));
+  nulls = (bool *)palloc(ncolumns * sizeof(bool));
+
+  /* Break down the tuple into fields */
+  heap_deform_tuple(&tuple, tupdesc, values, nulls);
+
+  /* And build the result string */
+  pq_begintypsend(&buf);
+
+  /* Need to scan to count nondeleted columns */
+  validcols = 0;
+  for (i = 0; i < ncolumns; i++)
+  {
+    if (!TupleDescAttr(tupdesc, i)->attisdropped)
+    {
+      validcols++;
+    }
+  }
+  pq_sendint32(&buf, validcols);
+
+  for (i = 0; i < ncolumns; i++)
+  {
+    Form_pg_attribute att = TupleDescAttr(tupdesc, i);
+    ColumnIOData *column_info = &my_extra->columns[i];
+    Oid column_type = att->atttypid;
+    Datum attr;
+    bytea *outputbytes;
+
+    /* Ignore dropped columns in datatype */
+    if (att->attisdropped)
+    {
+      continue;
+    }
+
+    pq_sendint32(&buf, column_type);
+
+    if (nulls[i])
+    {
+      /* emit -1 data length to signify a NULL */
+      pq_sendint32(&buf, -1);
+      continue;
+    }
+
+    /*
+     * Convert the column value to binary
+     */
+    if (column_info->column_type != column_type)
+    {
+      getTypeBinaryOutputInfo(column_type, &column_info->typiofunc, &column_info->typisvarlena);
+      fmgr_info_cxt(column_info->typiofunc, &column_info->proc, fcinfo->flinfo->fn_mcxt);
+      column_info->column_type = column_type;
+    }
+
+    attr = values[i];
+    outputbytes = SendFunctionCall(&column_info->proc, attr);
+    pq_sendint32(&buf, VARSIZE(outputbytes) - VARHDRSZ);
+    pq_sendbytes(&buf, VARDATA(outputbytes), VARSIZE(outputbytes) - VARHDRSZ);
+  }
 
+  pfree(values);
+  pfree(nulls);
+  ReleaseTupleDesc(tupdesc);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -846,13 +846,13 @@ record_cmp(FunctionCallInfo fcinfo)
      */
     if (i1 < ncolumns1 && TupleDescAttr(tupdesc1, i1)->attisdropped)
     {
-
-
+      i1++;
+      continue;
     }
     if (i2 < ncolumns2 && TupleDescAttr(tupdesc2, i2)->attisdropped)
     {
-
-
+      i2++;
+      continue;
     }
     if (i1 >= ncolumns1 || i2 >= ncolumns2)
     {
@@ -877,7 +877,7 @@ record_cmp(FunctionCallInfo fcinfo)
     collation = att1->attcollation;
     if (collation != att2->attcollation)
     {
-
+      collation = InvalidOid;
     }
 
     /*
@@ -911,8 +911,8 @@ record_cmp(FunctionCallInfo fcinfo)
       if (nulls2[i2])
       {
         /* arg1 is less than arg2 */
-
-
+        result = -1;
+        break;
       }
 
       /* Compare the pair of elements */
@@ -1080,13 +1080,13 @@ record_eq(PG_FUNCTION_ARGS)
      */
     if (i1 < ncolumns1 && TupleDescAttr(tupdesc1, i1)->attisdropped)
     {
-
-
+      i1++;
+      continue;
     }
     if (i2 < ncolumns2 && TupleDescAttr(tupdesc2, i2)->attisdropped)
     {
-
-
+      i2++;
+      continue;
     }
     if (i1 >= ncolumns1 || i2 >= ncolumns2)
     {
@@ -1111,7 +1111,7 @@ record_eq(PG_FUNCTION_ARGS)
     collation = att1->attcollation;
     if (collation != att2->attcollation)
     {
-
+      collation = InvalidOid;
     }
 
     /*
@@ -1328,13 +1328,13 @@ record_image_cmp(FunctionCallInfo fcinfo)
      */
     if (i1 < ncolumns1 && TupleDescAttr(tupdesc1, i1)->attisdropped)
     {
-
-
+      i1++;
+      continue;
     }
     if (i2 < ncolumns2 && TupleDescAttr(tupdesc2, i2)->attisdropped)
     {
-
-
+      i2++;
+      continue;
     }
     if (i1 >= ncolumns1 || i2 >= ncolumns2)
     {
@@ -1368,14 +1368,14 @@ record_image_cmp(FunctionCallInfo fcinfo)
       if (nulls1[i1])
       {
         /* arg1 is greater than arg2 */
-
-
+        result = 1;
+        break;
       }
       if (nulls2[i2])
       {
         /* arg1 is less than arg2 */
-
-
+        result = -1;
+        break;
       }
 
       /* Compare the pair of elements */
@@ -1409,16 +1409,16 @@ record_image_cmp(FunctionCallInfo fcinfo)
 
         if ((Pointer)arg1val != (Pointer)values1[i1])
         {
-
+          pfree(arg1val);
         }
         if ((Pointer)arg2val != (Pointer)values2[i2])
         {
-
+          pfree(arg2val);
         }
       }
       else
       {
-
+        elog(ERROR, "unexpected attlen: %d", att1->attlen);
       }
 
       if (cmpresult < 0)
@@ -1468,8 +1468,9 @@ record_image_cmp(FunctionCallInfo fcinfo)
 
 /*
  * record_image_eq :
- *		  compares two records for identical contents, based on byte
- *images result : returns true if the records are identical, false otherwise.
+ *		  compares two records for identical contents, based on byte images
+ * result :
+ *		  returns true if the records are identical, false otherwise.
  *
  * Note: we do not use record_image_cmp here, since we can avoid
  * de-toasting for unequal lengths this way.
@@ -1570,13 +1571,13 @@ record_image_eq(PG_FUNCTION_ARGS)
      */
     if (i1 < ncolumns1 && TupleDescAttr(tupdesc1, i1)->attisdropped)
     {
-
-
+      i1++;
+      continue;
     }
     if (i2 < ncolumns2 && TupleDescAttr(tupdesc2, i2)->attisdropped)
     {
-
-
+      i2++;
+      continue;
     }
     if (i1 >= ncolumns1 || i2 >= ncolumns2)
     {
@@ -1601,8 +1602,8 @@ record_image_eq(PG_FUNCTION_ARGS)
     {
       if (nulls1[i1] || nulls2[i2])
       {
-
-
+        result = false;
+        break;
       }
 
       /* Compare the pair of elements */

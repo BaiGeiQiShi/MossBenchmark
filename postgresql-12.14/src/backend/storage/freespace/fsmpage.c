@@ -115,7 +115,7 @@ fsm_set_avail(Page page, int slot, uint8 value)
    */
   if (value > fsmpage->fp_nodes[0])
   {
-
+    fsm_rebuild_page(page);
   }
 
   return true;
@@ -172,7 +172,7 @@ fsm_search_avail(Buffer buf, uint8 minvalue, bool advancenext, bool exclusive_lo
   int target;
   uint16 slot;
 
-restart:;
+restart:
 
   /*
    * Check the root first, and exit quickly if there's no leaf with enough
@@ -191,7 +191,7 @@ restart:;
   target = fsmpage->fp_next_slot;
   if (target < 0 || target >= LeafNodesPerPage)
   {
-
+    target = 0;
   }
   target += NonLeafNodesPerPage;
 
@@ -284,19 +284,19 @@ restart:;
       ForkNumber forknum;
       BlockNumber blknum;
 
-
-
+      BufferGetTag(buf, &rnode, &forknum, &blknum);
+      elog(DEBUG1, "fixing corrupt FSM block %u, relation %u/%u/%u", blknum, rnode.spcNode, rnode.dbNode, rnode.relNode);
 
       /* make sure we hold an exclusive lock */
-
-
-
-
-
-
-
-
-
+      if (!exclusive_lock_held)
+      {
+        LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+        LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+        exclusive_lock_held = true;
+      }
+      fsm_rebuild_page(page);
+      MarkBufferDirtyHint(buf, false);
+      goto restart;
     }
   }
 

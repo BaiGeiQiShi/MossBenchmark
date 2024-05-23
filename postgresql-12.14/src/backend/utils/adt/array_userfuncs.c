@@ -75,12 +75,12 @@ fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
 
     if (!OidIsValid(arr_typeid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
     }
     element_type = get_element_type(arr_typeid);
     if (!OidIsValid(element_type))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("input data type is not an array")));
     }
 
     eah = construct_empty_expanded_array(element_type, resultcxt, my_extra);
@@ -109,7 +109,7 @@ array_append(PG_FUNCTION_ARGS)
   isNull = PG_ARGISNULL(1);
   if (isNull)
   {
-
+    newelem = (Datum)0;
   }
   else
   {
@@ -125,7 +125,7 @@ array_append(PG_FUNCTION_ARGS)
     /* index of added elem is at lb[0] + (dimv[0] - 1) + 1 */
     if (pg_add_s32_overflow(lb[0], dimv[0], &indx))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
     }
   }
   else if (eah->ndims == 0)
@@ -134,7 +134,7 @@ array_append(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("argument must be empty or one-dimensional array")));
   }
 
   /* Perform element insertion */
@@ -165,7 +165,7 @@ array_prepend(PG_FUNCTION_ARGS)
   isNull = PG_ARGISNULL(0);
   if (isNull)
   {
-
+    newelem = (Datum)0;
   }
   else
   {
@@ -181,18 +181,18 @@ array_prepend(PG_FUNCTION_ARGS)
 
     if (pg_sub_s32_overflow(lb0, 1, &indx))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
     }
   }
-
-
-
-
-
-
-
-
-
+  else if (eah->ndims == 0)
+  {
+    indx = 1;
+    lb0 = 1;
+  }
+  else
+  {
+    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("argument must be empty or one-dimensional array")));
+  }
 
   /* Perform element insertion */
   my_extra = (ArrayMetaState *)fcinfo->flinfo->fn_extra;
@@ -237,15 +237,15 @@ array_cat(PG_FUNCTION_ARGS)
   {
     if (PG_ARGISNULL(1))
     {
-
+      PG_RETURN_NULL();
     }
     result = PG_GETARG_ARRAYTYPE_P(1);
     PG_RETURN_ARRAYTYPE_P(result);
   }
   if (PG_ARGISNULL(1))
   {
-
-
+    result = PG_GETARG_ARRAYTYPE_P(0);
+    PG_RETURN_ARRAYTYPE_P(result);
   }
 
   v1 = PG_GETARG_ARRAYTYPE_P(0);
@@ -257,7 +257,10 @@ array_cat(PG_FUNCTION_ARGS)
   /* Check we have matching element types */
   if (element_type1 != element_type2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("cannot concatenate incompatible arrays"),
+                       errdetail("Arrays with element types %s and %s are not "
+                                 "compatible for concatenation.",
+                           format_type_be(element_type1), format_type_be(element_type2))));
   }
 
   /* OK, use it */
@@ -283,7 +286,7 @@ array_cat(PG_FUNCTION_ARGS)
    */
   if (ndims1 == 0 && ndims2 > 0)
   {
-
+    PG_RETURN_ARRAYTYPE_P(v2);
   }
 
   if (ndims2 == 0)
@@ -294,7 +297,10 @@ array_cat(PG_FUNCTION_ARGS)
   /* the rest fall under rule 3, 4, or 5 */
   if (ndims1 != ndims2 && ndims1 != ndims2 - 1 && ndims1 != ndims2 + 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("cannot concatenate incompatible arrays"),
+                       errdetail("Arrays of %d and %d dimensions are not "
+                                 "compatible for concatenation.",
+                           ndims1, ndims2)));
   }
 
   /* get argument array details */
@@ -328,7 +334,9 @@ array_cat(PG_FUNCTION_ARGS)
     {
       if (dims1[i] != dims2[i] || lbs1[i] != lbs2[i])
       {
-
+        ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("cannot concatenate incompatible arrays"),
+                           errdetail("Arrays with differing element dimensions are "
+                                     "not compatible for concatenation.")));
       }
 
       dims[i] = dims1[i];
@@ -355,7 +363,9 @@ array_cat(PG_FUNCTION_ARGS)
     {
       if (dims1[i] != dims[i + 1] || lbs1[i] != lbs[i + 1])
       {
-
+        ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("cannot concatenate incompatible arrays"),
+                           errdetail("Arrays with differing dimensions are not "
+                                     "compatible for concatenation.")));
       }
     }
   }
@@ -381,7 +391,9 @@ array_cat(PG_FUNCTION_ARGS)
     {
       if (dims2[i] != dims[i + 1] || lbs2[i] != lbs[i + 1])
       {
-
+        ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("cannot concatenate incompatible arrays"),
+                           errdetail("Arrays with differing dimensions are not "
+                                     "compatible for concatenation.")));
       }
     }
   }
@@ -394,8 +406,8 @@ array_cat(PG_FUNCTION_ARGS)
   ndatabytes = ndatabytes1 + ndatabytes2;
   if (ARR_HASNULL(v1) || ARR_HASNULL(v2))
   {
-
-
+    dataoffset = ARR_OVERHEAD_WITHNULLS(ndims, nitems);
+    nbytes = ndatabytes + dataoffset;
   }
   else
   {
@@ -415,8 +427,8 @@ array_cat(PG_FUNCTION_ARGS)
   /* handle the null bitmap if needed */
   if (ARR_HASNULL(result))
   {
-
-
+    array_bitmap_copy(ARR_NULLBITMAP(result), 0, bitmap1, 0, nitems1);
+    array_bitmap_copy(ARR_NULLBITMAP(result), nitems1, bitmap2, 0, nitems2);
   }
 
   PG_RETURN_ARRAYTYPE_P(result);
@@ -435,7 +447,7 @@ array_agg_transfn(PG_FUNCTION_ARGS)
 
   if (arg1_typeid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
   }
 
   /*
@@ -447,7 +459,7 @@ array_agg_transfn(PG_FUNCTION_ARGS)
   if (!AggCheckCallContext(fcinfo, &aggcontext))
   {
     /* cannot be called directly because of internal-type argument */
-
+    elog(ERROR, "array_agg_transfn called in non-aggregate context");
   }
 
   if (PG_ARGISNULL(0))
@@ -515,7 +527,7 @@ array_agg_array_transfn(PG_FUNCTION_ARGS)
 
   if (arg1_typeid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
   }
 
   /*
@@ -527,7 +539,7 @@ array_agg_array_transfn(PG_FUNCTION_ARGS)
   if (!AggCheckCallContext(fcinfo, &aggcontext))
   {
     /* cannot be called directly because of internal-type argument */
-
+    elog(ERROR, "array_agg_array_transfn called in non-aggregate context");
   }
 
   if (PG_ARGISNULL(0))
@@ -562,7 +574,7 @@ array_agg_array_finalfn(PG_FUNCTION_ARGS)
 
   if (state == NULL)
   {
-
+    PG_RETURN_NULL(); /* returns null iff no input values */
   }
 
   /*
@@ -620,7 +632,7 @@ array_position_common(FunctionCallInfo fcinfo)
 
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   array = PG_GETARG_ARRAYTYPE_P(0);
@@ -658,7 +670,7 @@ array_position_common(FunctionCallInfo fcinfo)
   {
     if (PG_ARGISNULL(2))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("initial position must not be null")));
     }
 
     position_min = PG_GETARG_INT32(2);
@@ -689,7 +701,7 @@ array_position_common(FunctionCallInfo fcinfo)
 
     if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify an equality operator for type %s", format_type_be(element_type))));
     }
 
     my_extra->element_type = element_type;
@@ -830,7 +842,7 @@ array_positions(PG_FUNCTION_ARGS)
 
     if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify an equality operator for type %s", format_type_be(element_type))));
     }
 
     my_extra->element_type = element_type;

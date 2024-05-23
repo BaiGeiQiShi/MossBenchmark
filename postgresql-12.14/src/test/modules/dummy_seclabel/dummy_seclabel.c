@@ -27,12 +27,15 @@ PG_FUNCTION_INFO_V1(dummy_seclabel_dummy);
 static void
 dummy_object_relabel(const ObjectAddress *object, const char *seclabel)
 {
-  if (seclabel == NULL || strcmp(seclabel, "unclassified") == 0 || strcmp(seclabel, "classified") == 0) {
+  if (seclabel == NULL || strcmp(seclabel, "unclassified") == 0 || strcmp(seclabel, "classified") == 0)
+  {
     return;
   }
 
-  if (strcmp(seclabel, "secret") == 0 || strcmp(seclabel, "top secret") == 0) {
-    if (!superuser()) {
+  if (strcmp(seclabel, "secret") == 0 || strcmp(seclabel, "top secret") == 0)
+  {
+    if (!superuser())
+    {
       ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("only superuser can set '%s' label", seclabel)));
     }
     return;

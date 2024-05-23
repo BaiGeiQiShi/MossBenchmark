@@ -81,7 +81,8 @@ typedef int IpcMemoryId;    /* shared memory ID returned by shmget(2) */
  * attempt to recycle a given key.  We'll waste keys longer in some cases, but
  * avoiding the problems of the alternative justifies that loss.
  */
-typedef enum {
+typedef enum
+{
   SHMSTATE_ANALYSIS_FAILURE, /* unexpected failure to analyze the ID */
   SHMSTATE_ATTACHED,         /* pertinent to DataDir, has attached PIDs */
   SHMSTATE_ENOENT,           /* no segment of that ID */
@@ -137,9 +138,12 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
   {
     char *pg_shmem_addr = getenv("PG_SHMEM_ADDR");
 
-    if (pg_shmem_addr) {
+    if (pg_shmem_addr)
+    {
       requestedAddress = (void *)strtoul(pg_shmem_addr, NULL, 0);
-    } else {
+    }
+    else
+    {
 #if defined(__darwin__) && SIZEOF_VOID_P == 8
       /*
        * Provide a default value that is believed to avoid problems with
@@ -153,7 +157,8 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 
   shmid = shmget(memKey, size, IPC_CREAT | IPC_EXCL | IPCProtection);
 
-  if (shmid < 0) {
+  if (shmid < 0)
+  {
     int shmget_errno = errno;
 
     /*
@@ -178,10 +183,12 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
      * against SHMMIN in the preexisting-segment case, so we will not get
      * EINVAL a second time if there is such a segment.
      */
-    if (shmget_errno == EINVAL) {
+    if (shmget_errno == EINVAL)
+    {
       shmid = shmget(memKey, 0, IPC_CREAT | IPC_EXCL | IPCProtection);
 
-      if (shmid < 0) {
+      if (shmid < 0)
+      {
         /* As above, fail quietly if we verify a collision */
         if (errno == EEXIST || errno == EACCES
 #ifdef EIDRM
@@ -190,14 +197,17 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
         )
           return NULL;
         /* Otherwise, fall through to report the original error */
-      } else {
+      }
+      else
+      {
         /*
          * On most platforms we cannot get here because SHMMIN is
          * greater than zero.  However, if we do succeed in creating a
          * zero-size segment, free it and then fall through to report
          * the original error.
          */
-        if (shmctl(shmid, IPC_RMID, NULL) < 0) {
+        if (shmctl(shmid, IPC_RMID, NULL) < 0)
+        {
           elog(LOG, "shmctl(%d, %d, 0) failed: %m", (int)shmid, IPC_RMID);
         }
       }
@@ -213,7 +223,28 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
      * not-enough-RAM is ENOMEM.
      */
     errno = shmget_errno;
-    ereport(FATAL, (errmsg("could not create shared memory segment: %m"), errdetail("Failed system call was shmget(key=%lu, size=%zu, 0%o).", (unsigned long)memKey, size, IPC_CREAT | IPC_EXCL | IPCProtection), (shmget_errno == EINVAL) ? errhint("This error usually means that PostgreSQL's request for a shared memory segment exceeded your kernel's SHMMAX parameter, or possibly that it is less than your kernel's SHMMIN parameter.\nThe PostgreSQL documentation contains more information about shared memory configuration.")                             : 0,    (shmget_errno == ENOMEM) ? errhint("This error usually means that PostgreSQL's request for a shared memory segment exceeded your kernel's SHMALL parameter.  You might need to reconfigure the kernel with larger SHMALL.\nThe PostgreSQL documentation contains more information about shared memory configuration.")                              : 0,     (shmget_errno == ENOSPC) ? errhint("This error does *not* mean that you have run out of disk space.  It occurs either if all available shared memory IDs have been taken, in which case you need to raise the SHMMNI parameter in your kernel, or because the system's overall limit for shared memory has been reached.\nThe PostgreSQL documentation contains more information about shared memory configuration.")                              : 0));
+    ereport(FATAL, (errmsg("could not create shared memory segment: %m"), errdetail("Failed system call was shmget(key=%lu, size=%zu, 0%o).", (unsigned long)memKey, size, IPC_CREAT | IPC_EXCL | IPCProtection),
+                       (shmget_errno == EINVAL) ? errhint("This error usually means that PostgreSQL's request for a shared memory "
+                                                          "segment exceeded your kernel's SHMMAX parameter, or possibly that "
+                                                          "it is less than "
+                                                          "your kernel's SHMMIN parameter.\n"
+                                                          "The PostgreSQL documentation contains more information about shared "
+                                                          "memory configuration.")
+                                                : 0,
+                       (shmget_errno == ENOMEM) ? errhint("This error usually means that PostgreSQL's request for a shared "
+                                                          "memory segment exceeded your kernel's SHMALL parameter.  You might need "
+                                                          "to reconfigure the kernel with larger SHMALL.\n"
+                                                          "The PostgreSQL documentation contains more information about shared "
+                                                          "memory configuration.")
+                                                : 0,
+                       (shmget_errno == ENOSPC) ? errhint("This error does *not* mean that you have run out of disk space.  "
+                                                          "It occurs either if all available shared memory IDs have been taken, "
+                                                          "in which case you need to raise the SHMMNI parameter in your kernel, "
+                                                          "or because the system's overall limit for shared memory has been "
+                                                          "reached.\n"
+                                                          "The PostgreSQL documentation contains more information about shared "
+                                                          "memory configuration.")
+                                                : 0));
   }
 
   /* Register on-exit routine to delete the new segment */
@@ -222,7 +253,8 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
   /* OK, should be able to attach to the segment */
   memAddress = shmat(shmid, requestedAddress, PG_SHMAT_FLAGS);
 
-  if (memAddress == (void *)-1) {
+  if (memAddress == (void *)-1)
+  {
     elog(FATAL, "shmat(id=%d, addr=%p, flags=0x%x) failed: %m", shmid, requestedAddress, PG_SHMAT_FLAGS);
   }
 
@@ -245,32 +277,29 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 }
 
 /****************************************************************************/
-/*	IpcMemoryDetach(status, shmaddr)	removes a shared memory segment
- */
-/*										from
- * process' address space			*/
-/*	(called as an on_shmem_exit callback, hence funny argument list)
- */
+/*	IpcMemoryDetach(status, shmaddr)	removes a shared memory segment		*/
+/*										from process' address space			*/
+/*	(called as an on_shmem_exit callback, hence funny argument list)		*/
 /****************************************************************************/
 static void
 IpcMemoryDetach(int status, Datum shmaddr)
 {
   /* Detach System V shared memory block. */
-  if (shmdt(DatumGetPointer(shmaddr)) < 0) {
+  if (shmdt(DatumGetPointer(shmaddr)) < 0)
+  {
     elog(LOG, "shmdt(%p) failed: %m", DatumGetPointer(shmaddr));
   }
 }
 
 /****************************************************************************/
-/*	IpcMemoryDelete(status, shmId)		deletes a shared memory segment
- */
-/*	(called as an on_shmem_exit callback, hence funny argument list)
- */
+/*	IpcMemoryDelete(status, shmId)		deletes a shared memory segment		*/
+/*	(called as an on_shmem_exit callback, hence funny argument list)		*/
 /****************************************************************************/
 static void
 IpcMemoryDelete(int status, Datum shmId)
 {
-  if (shmctl(DatumGetInt32(shmId), IPC_RMID, NULL) < 0) {
+  if (shmctl(DatumGetInt32(shmId), IPC_RMID, NULL) < 0)
+  {
     elog(LOG, "shmctl(%d, %d, 0) failed: %m", DatumGetInt32(shmId), IPC_RMID);
   }
 }
@@ -293,10 +322,12 @@ PGSharedMemoryIsInUse(unsigned long id1, unsigned long id2)
   IpcMemoryState state;
 
   state = PGSharedMemoryAttach((IpcMemoryId)id2, NULL, &memAddress);
-  if (memAddress && shmdt(memAddress) < 0) {
+  if (memAddress && shmdt(memAddress) < 0)
+  {
     elog(LOG, "shmdt(%p) failed: %m", memAddress);
   }
-  switch (state) {
+  switch (state)
+  {
   case SHMSTATE_ENOENT:
   case SHMSTATE_FOREIGN:
   case SHMSTATE_UNATTACHED:
@@ -328,13 +359,15 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
   /*
    * First, try to stat the shm segment ID, to see if it exists at all.
    */
-  if (shmctl(shmId, IPC_STAT, &shmStat) < 0) {
+  if (shmctl(shmId, IPC_STAT, &shmStat) < 0)
+  {
     /*
      * EINVAL actually has multiple possible causes documented in the
      * shmctl man page, but we assume it must mean the segment no longer
      * exists.
      */
-    if (errno == EINVAL) {
+    if (errno == EINVAL)
+    {
       return SHMSTATE_ENOENT;
     }
 
@@ -343,7 +376,8 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
      * Postgres shmem segment (or at least, not one that is relevant to
      * our data directory).
      */
-    if (errno == EACCES) {
+    if (errno == EACCES)
+    {
       return SHMSTATE_FOREIGN;
     }
 
@@ -355,7 +389,8 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
      * equivalent to EINVAL on that platform.
      */
 #ifdef HAVE_LINUX_EIDRM_BUG
-    if (errno == EIDRM) {
+    if (errno == EIDRM)
+    {
       return SHMSTATE_ENOENT;
     }
 #endif
@@ -377,12 +412,14 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
    * testing.  Since our test setups don't open any TCP ports on Unix, such
    * cases don't conflict otherwise.)
    */
-  if (stat(DataDir, &statbuf) < 0) {
+  if (stat(DataDir, &statbuf) < 0)
+  {
     return SHMSTATE_ANALYSIS_FAILURE; /* can't stat; be conservative */
   }
 
   hdr = (PGShmemHeader *)shmat(shmId, attachAt, PG_SHMAT_FLAGS);
-  if (hdr == (PGShmemHeader *)-1) {
+  if (hdr == (PGShmemHeader *)-1)
+  {
     /*
      * Attachment failed.  The cases we're interested in are the same as
      * for the shmctl() call above.  In particular, note that the owning
@@ -393,14 +430,17 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
      * problem with that address not a vanished segment, so it's best to
      * pass NULL when probing for conflicting segments.
      */
-    if (errno == EINVAL) {
+    if (errno == EINVAL)
+    {
       return SHMSTATE_ENOENT; /* segment disappeared */
     }
-    if (errno == EACCES) {
+    if (errno == EACCES)
+    {
       return SHMSTATE_FOREIGN; /* must be non-Postgres */
     }
 #ifdef HAVE_LINUX_EIDRM_BUG
-    if (errno == EIDRM) {
+    if (errno == EIDRM)
+    {
       return SHMSTATE_ENOENT; /* segment disappeared */
     }
 #endif
@@ -409,7 +449,8 @@ PGSharedMemoryAttach(IpcMemoryId shmId, void *attachAt, PGShmemHeader **addr)
   }
   *addr = hdr;
 
-  if (hdr->magic != PGShmemMagic || hdr->device != statbuf.st_dev || hdr->inode != statbuf.st_ino) {
+  if (hdr->magic != PGShmemMagic || hdr->device != statbuf.st_dev || hdr->inode != statbuf.st_ino)
+  {
     /*
      * It's either not a Postgres segment, or not one for my data
      * directory.
@@ -477,10 +518,14 @@ GetHugePageSize(Size *hugepagesize, int *mmap_flags)
     unsigned int sz;
     char ch;
 
-    if (fp) {
-      while (fgets(buf, sizeof(buf), fp)) {
-        if (sscanf(buf, "Hugepagesize: %u %c", &sz, &ch) == 2) {
-          if (ch == 'k') {
+    if (fp)
+    {
+      while (fgets(buf, sizeof(buf), fp))
+      {
+        if (sscanf(buf, "Hugepagesize: %u %c", &sz, &ch) == 2)
+        {
+          if (ch == 'k')
+          {
             *hugepagesize = sz * (Size)1024;
             break;
           }
@@ -513,7 +558,8 @@ CreateAnonymousSegment(Size *size)
   /* PGSharedMemoryCreate should have dealt with this case */
   Assert(huge_pages != HUGE_PAGES_ON);
 #else
-  if (huge_pages == HUGE_PAGES_ON || huge_pages == HUGE_PAGES_TRY) {
+  if (huge_pages == HUGE_PAGES_ON || huge_pages == HUGE_PAGES_TRY)
+  {
     /*
      * Round up the request size to a suitable large value.
      */
@@ -522,19 +568,22 @@ CreateAnonymousSegment(Size *size)
 
     GetHugePageSize(&hugepagesize, &mmap_flags);
 
-    if (allocsize % hugepagesize != 0) {
+    if (allocsize % hugepagesize != 0)
+    {
       allocsize += hugepagesize - (allocsize % hugepagesize);
     }
 
     ptr = mmap(NULL, allocsize, PROT_READ | PROT_WRITE, PG_MMAP_FLAGS | mmap_flags, -1, 0);
     mmap_errno = errno;
-    if (huge_pages == HUGE_PAGES_TRY && ptr == MAP_FAILED) {
+    if (huge_pages == HUGE_PAGES_TRY && ptr == MAP_FAILED)
+    {
       elog(DEBUG1, "mmap(%zu) with MAP_HUGETLB failed, huge pages disabled: %m", allocsize);
     }
   }
 #endif
 
-  if (ptr == MAP_FAILED && huge_pages != HUGE_PAGES_ON) {
+  if (ptr == MAP_FAILED && huge_pages != HUGE_PAGES_ON)
+  {
     /*
      * Use the original size, not the rounded-up value, when falling back
      * to non-huge pages.
@@ -544,9 +593,17 @@ CreateAnonymousSegment(Size *size)
     mmap_errno = errno;
   }
 
-  if (ptr == MAP_FAILED) {
+  if (ptr == MAP_FAILED)
+  {
     errno = mmap_errno;
-    ereport(FATAL, (errmsg("could not map anonymous shared memory: %m"), (mmap_errno == ENOMEM) ? errhint("This error usually means that PostgreSQL's request for a shared memory segment exceeded available memory, swap space, or huge pages. To reduce the request size (currently %zu bytes), reduce PostgreSQL's shared memory usage, perhaps by reducing shared_buffers or max_connections.",             *size)      : 0));
+    ereport(FATAL, (errmsg("could not map anonymous shared memory: %m"), (mmap_errno == ENOMEM) ? errhint("This error usually means that PostgreSQL's request "
+                                                                                                          "for a shared memory segment exceeded available memory, "
+                                                                                                          "swap space, or huge pages. To reduce the request size "
+                                                                                                          "(currently %zu bytes), reduce PostgreSQL's shared "
+                                                                                                          "memory usage, perhaps by reducing shared_buffers or "
+                                                                                                          "max_connections.",
+                                                                                                      *size)
+                                                                                                : 0));
   }
 
   *size = allocsize;
@@ -561,8 +618,10 @@ static void
 AnonymousShmemDetach(int status, Datum arg)
 {
   /* Release anonymous shared memory block, if any. */
-  if (AnonymousShmem != NULL) {
-    if (munmap(AnonymousShmem, AnonymousShmemSize) < 0) {
+  if (AnonymousShmem != NULL)
+  {
+    if (munmap(AnonymousShmem, AnonymousShmemSize) < 0)
+    {
       elog(LOG, "munmap(%p, %zu) failed: %m", AnonymousShmem, AnonymousShmemSize);
     }
     AnonymousShmem = NULL;
@@ -595,20 +654,23 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
 
   /* Complain if hugepages demanded but we can't possibly support them */
 #if !defined(MAP_HUGETLB)
-  if (huge_pages == HUGE_PAGES_ON) {
+  if (huge_pages == HUGE_PAGES_ON)
+  {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("huge pages not supported on this platform")));
   }
 #endif
 
   /* For now, we don't support huge pages in SysV memory */
-  if (huge_pages == HUGE_PAGES_ON && shared_memory_type != SHMEM_TYPE_MMAP) {
+  if (huge_pages == HUGE_PAGES_ON && shared_memory_type != SHMEM_TYPE_MMAP)
+  {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("huge pages not supported with the current shared_memory_type setting")));
   }
 
   /* Room for a header? */
   Assert(size > MAXALIGN(sizeof(PGShmemHeader)));
 
-  if (shared_memory_type == SHMEM_TYPE_MMAP) {
+  if (shared_memory_type == SHMEM_TYPE_MMAP)
+  {
     AnonymousShmem = CreateAnonymousSegment(&size);
     AnonymousShmemSize = size;
 
@@ -617,7 +679,9 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
 
     /* Now we need only allocate a minimal-sized SysV shmem block. */
     sysvsize = sizeof(PGShmemHeader);
-  } else {
+  }
+  else
+  {
     sysvsize = size;
   }
 
@@ -629,14 +693,16 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
    */
   NextShmemSegID = 1 + port * 1000;
 
-  for (;;) {
+  for (;;)
+  {
     IpcMemoryId shmid;
     PGShmemHeader *oldhdr;
     IpcMemoryState state;
 
     /* Try to create new segment */
     memAddress = InternalIpcMemoryCreate(NextShmemSegID, sysvsize);
-    if (memAddress) {
+    if (memAddress)
+    {
       break; /* successful create and attach */
     }
 
@@ -648,17 +714,21 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
      * safely treat SHMSTATE_ENOENT like SHMSTATE_FOREIGN.
      */
     shmid = shmget(NextShmemSegID, sizeof(PGShmemHeader), 0);
-    if (shmid < 0) {
+    if (shmid < 0)
+    {
       oldhdr = NULL;
       state = SHMSTATE_FOREIGN;
-    } else {
+    }
+    else
+    {
       state = PGSharedMemoryAttach(shmid, NULL, &oldhdr);
     }
 
-    switch (state) {
+    switch (state)
+    {
     case SHMSTATE_ANALYSIS_FAILURE:
     case SHMSTATE_ATTACHED:
-      ereport(FATAL, (errcode(ERRCODE_LOCK_FILE_EXISTS), errmsg("pre-existing shared memory block (key %lu, ID %lu) is still in use",     (unsigned long)NextShmemSegID, (unsigned long)shmid), errhint("Terminate any old server processes associated with data directory \"%s\".",  DataDir)));
+      ereport(FATAL, (errcode(ERRCODE_LOCK_FILE_EXISTS), errmsg("pre-existing shared memory block (key %lu, ID %lu) is still in use", (unsigned long)NextShmemSegID, (unsigned long)shmid), errhint("Terminate any old server processes associated with data directory \"%s\".", DataDir)));
       break;
     case SHMSTATE_ENOENT:
 
@@ -684,16 +754,19 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
        * if some other process creates the same shmem key before we
        * do, in which case we'll try the next key.
        */
-      if (oldhdr->dsm_control != 0) {
+      if (oldhdr->dsm_control != 0)
+      {
         dsm_cleanup_using_control_segment(oldhdr->dsm_control);
       }
-      if (shmctl(shmid, IPC_RMID, NULL) < 0) {
+      if (shmctl(shmid, IPC_RMID, NULL) < 0)
+      {
         NextShmemSegID++;
       }
       break;
     }
 
-    if (oldhdr && shmdt(oldhdr) < 0) {
+    if (oldhdr && shmdt(oldhdr) < 0)
+    {
       elog(LOG, "shmdt(%p) failed: %m", oldhdr);
     }
   }
@@ -705,7 +778,8 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
   hdr->dsm_control = 0;
 
   /* Fill in the data directory ID info, too */
-  if (stat(DataDir, &statbuf) < 0) {
+  if (stat(DataDir, &statbuf) < 0)
+  {
     ereport(FATAL, (errcode_for_file_access(), errmsg("could not stat data directory \"%s\": %m", DataDir)));
   }
   hdr->device = statbuf.st_dev;
@@ -728,7 +802,8 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
    * block. Otherwise, the System V shared memory block is only a shim, and
    * we must return a pointer to the real block.
    */
-  if (AnonymousShmem == NULL) {
+  if (AnonymousShmem == NULL)
+  {
     return hdr;
   }
   memcpy(AnonymousShmem, hdr, sizeof(PGShmemHeader));
@@ -768,16 +843,21 @@ PGSharedMemoryReAttach(void)
 
   elog(DEBUG3, "attaching to %p", UsedShmemSegAddr);
   shmid = shmget(UsedShmemSegID, sizeof(PGShmemHeader), 0);
-  if (shmid < 0) {
+  if (shmid < 0)
+  {
     state = SHMSTATE_FOREIGN;
-  } else {
+  }
+  else
+  {
     state = PGSharedMemoryAttach(shmid, UsedShmemSegAddr, &hdr);
   }
-  if (state != SHMSTATE_ATTACHED) {
+  if (state != SHMSTATE_ATTACHED)
+  {
     elog(FATAL, "could not reattach to shared memory (key=%d, addr=%p): %m", (int)UsedShmemSegID, UsedShmemSegAddr);
   }
-  if (hdr != origUsedShmemSegAddr) {
-    elog(FATAL, reattaching to shared memory returned unexpected address (got %p, expected %p)", hdr, origUsedShmemSegAddr);
+  if (hdr != origUsedShmemSegAddr)
+  {
+    elog(FATAL, "reattaching to shared memory returned unexpected address (got %p, expected %p)", hdr, origUsedShmemSegAddr);
   }
   dsm_set_control_handle(hdr->dsm_control);
 
@@ -833,7 +913,8 @@ PGSharedMemoryNoReAttach(void)
 void
 PGSharedMemoryDetach(void)
 {
-  if (UsedShmemSegAddr != NULL) {
+  if (UsedShmemSegAddr != NULL)
+  {
     if ((shmdt(UsedShmemSegAddr) < 0)
 #if defined(EXEC_BACKEND) && defined(__CYGWIN__)
         /* Work-around for cygipc exec bug */
@@ -844,8 +925,10 @@ PGSharedMemoryDetach(void)
     UsedShmemSegAddr = NULL;
   }
 
-  if (AnonymousShmem != NULL) {
-    if (munmap(AnonymousShmem, AnonymousShmemSize) < 0) {
+  if (AnonymousShmem != NULL)
+  {
+    if (munmap(AnonymousShmem, AnonymousShmemSize) < 0)
+    {
       elog(LOG, "munmap(%p, %zu) failed: %m", AnonymousShmem, AnonymousShmemSize);
     }
     AnonymousShmem = NULL;

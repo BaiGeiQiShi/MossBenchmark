@@ -22,7 +22,8 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
-typedef struct MinmaxOpaque {
+typedef struct MinmaxOpaque
+{
   Oid cached_subtype;
   FmgrInfo strategy_procinfos[BTMaxStrategyNumber];
 } MinmaxOpaque;
@@ -74,8 +75,10 @@ brin_minmax_add_value(PG_FUNCTION_ARGS)
    * If the new value is null, we record that we saw it if it's the first
    * one; otherwise, there's nothing to do.
    */
-  if (isnull) {
-    if (column->bv_hasnulls) {
+  if (isnull)
+  {
+    if (column->bv_hasnulls)
+    {
       PG_RETURN_BOOL(false);
     }
 
@@ -90,7 +93,8 @@ brin_minmax_add_value(PG_FUNCTION_ARGS)
    * If the recorded value is null, store the new value (which we know to be
    * not null) as both minimum and maximum, and we're done.
    */
-  if (column->bv_allnulls) {
+  if (column->bv_allnulls)
+  {
     column->bv_values[0] = datumCopy(newval, attr->attbyval, attr->attlen);
     column->bv_values[1] = datumCopy(newval, attr->attbyval, attr->attlen);
     column->bv_allnulls = false;
@@ -104,8 +108,10 @@ brin_minmax_add_value(PG_FUNCTION_ARGS)
    */
   cmpFn = minmax_get_strategy_procinfo(bdesc, attno, attr->atttypid, BTLessStrategyNumber);
   compar = FunctionCall2Coll(cmpFn, colloid, newval, column->bv_values[0]);
-  if (DatumGetBool(compar)) {
-    if (!attr->attbyval) {
+  if (DatumGetBool(compar))
+  {
+    if (!attr->attbyval)
+    {
       pfree(DatumGetPointer(column->bv_values[0]));
     }
     column->bv_values[0] = datumCopy(newval, attr->attbyval, attr->attlen);
@@ -117,8 +123,10 @@ brin_minmax_add_value(PG_FUNCTION_ARGS)
    */
   cmpFn = minmax_get_strategy_procinfo(bdesc, attno, attr->atttypid, BTGreaterStrategyNumber);
   compar = FunctionCall2Coll(cmpFn, colloid, newval, column->bv_values[1]);
-  if (DatumGetBool(compar)) {
-    if (!attr->attbyval) {
+  if (DatumGetBool(compar))
+  {
+    if (!attr->attbyval)
+    {
       pfree(DatumGetPointer(column->bv_values[1]));
     }
     column->bv_values[1] = datumCopy(newval, attr->attbyval, attr->attlen);
@@ -148,9 +156,12 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
   Assert(key->sk_attno == column->bv_attno);
 
   /* handle IS NULL/IS NOT NULL tests */
-  if (key->sk_flags & SK_ISNULL) {
-    if (key->sk_flags & SK_SEARCHNULL) {
-      if (column->bv_allnulls || column->bv_hasnulls) {
+  if (key->sk_flags & SK_ISNULL)
+  {
+    if (key->sk_flags & SK_SEARCHNULL)
+    {
+      if (column->bv_allnulls || column->bv_hasnulls)
+      {
         PG_RETURN_BOOL(true);
       }
       PG_RETURN_BOOL(false);
@@ -160,7 +171,8 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
      * For IS NOT NULL, we can only skip ranges that are known to have
      * only nulls.
      */
-    if (key->sk_flags & SK_SEARCHNOTNULL) {
+    if (key->sk_flags & SK_SEARCHNOTNULL)
+    {
       PG_RETURN_BOOL(!column->bv_allnulls);
     }
 
@@ -172,14 +184,16 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
   }
 
   /* if the range is all empty, it cannot possibly be consistent */
-  if (column->bv_allnulls) {
+  if (column->bv_allnulls)
+  {
     PG_RETURN_BOOL(false);
   }
 
   attno = key->sk_attno;
   subtype = key->sk_subtype;
   value = key->sk_argument;
-  switch (key->sk_strategy) {
+  switch (key->sk_strategy)
+  {
   case BTLessStrategyNumber:
   case BTLessEqualStrategyNumber:
     finfo = minmax_get_strategy_procinfo(bdesc, attno, subtype, key->sk_strategy);
@@ -194,7 +208,8 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
      */
     finfo = minmax_get_strategy_procinfo(bdesc, attno, subtype, BTLessEqualStrategyNumber);
     matches = FunctionCall2Coll(finfo, colloid, column->bv_values[0], value);
-    if (!DatumGetBool(matches)) {
+    if (!DatumGetBool(matches))
+    {
       break;
     }
     /* max() >= scankey */
@@ -206,7 +221,7 @@ brin_minmax_consistent(PG_FUNCTION_ARGS)
     finfo = minmax_get_strategy_procinfo(bdesc, attno, subtype, key->sk_strategy);
     matches = FunctionCall2Coll(finfo, colloid, column->bv_values[1], value);
     break;
-  default:;
+  default:
     /* shouldn't happen */
     elog(ERROR, "invalid strategy number %d", key->sk_strategy);
     matches = 0;
@@ -235,12 +250,14 @@ brin_minmax_union(PG_FUNCTION_ARGS)
   Assert(col_a->bv_attno == col_b->bv_attno);
 
   /* Adjust "hasnulls" */
-  if (!col_a->bv_hasnulls && col_b->bv_hasnulls) {
+  if (!col_a->bv_hasnulls && col_b->bv_hasnulls)
+  {
     col_a->bv_hasnulls = true;
   }
 
   /* If there are no values in B, there's nothing left to do */
-  if (col_b->bv_allnulls) {
+  if (col_b->bv_allnulls)
+  {
     PG_RETURN_VOID();
   }
 
@@ -253,7 +270,8 @@ brin_minmax_union(PG_FUNCTION_ARGS)
    * because values in A might contain garbage.  Note we already established
    * that B contains values.
    */
-  if (col_a->bv_allnulls) {
+  if (col_a->bv_allnulls)
+  {
     col_a->bv_allnulls = false;
     col_a->bv_values[0] = datumCopy(col_b->bv_values[0], attr->attbyval, attr->attlen);
     col_a->bv_values[1] = datumCopy(col_b->bv_values[1], attr->attbyval, attr->attlen);
@@ -263,8 +281,10 @@ brin_minmax_union(PG_FUNCTION_ARGS)
   /* Adjust minimum, if B's min is less than A's min */
   finfo = minmax_get_strategy_procinfo(bdesc, attno, attr->atttypid, BTLessStrategyNumber);
   needsadj = FunctionCall2Coll(finfo, colloid, col_b->bv_values[0], col_a->bv_values[0]);
-  if (needsadj) {
-    if (!attr->attbyval) {
+  if (needsadj)
+  {
+    if (!attr->attbyval)
+    {
       pfree(DatumGetPointer(col_a->bv_values[0]));
     }
     col_a->bv_values[0] = datumCopy(col_b->bv_values[0], attr->attbyval, attr->attlen);
@@ -273,8 +293,10 @@ brin_minmax_union(PG_FUNCTION_ARGS)
   /* Adjust maximum, if B's max is greater than A's max */
   finfo = minmax_get_strategy_procinfo(bdesc, attno, attr->atttypid, BTGreaterStrategyNumber);
   needsadj = FunctionCall2Coll(finfo, colloid, col_b->bv_values[1], col_a->bv_values[1]);
-  if (needsadj) {
-    if (!attr->attbyval) {
+  if (needsadj)
+  {
+    if (!attr->attbyval)
+    {
       pfree(DatumGetPointer(col_a->bv_values[1]));
     }
     col_a->bv_values[1] = datumCopy(col_b->bv_values[1], attr->attbyval, attr->attlen);
@@ -303,16 +325,19 @@ minmax_get_strategy_procinfo(BrinDesc *bdesc, uint16 attno, Oid subtype, uint16 
    * to avoid repetitive syscache lookups.  If the subtype changed,
    * invalidate all the cached entries.
    */
-  if (opaque->cached_subtype != subtype) {
+  if (opaque->cached_subtype != subtype)
+  {
     uint16 i;
 
-    for (i = 1; i <= BTMaxStrategyNumber; i++) {
+    for (i = 1; i <= BTMaxStrategyNumber; i++)
+    {
       opaque->strategy_procinfos[i - 1].fn_oid = InvalidOid;
     }
     opaque->cached_subtype = subtype;
   }
 
-  if (opaque->strategy_procinfos[strategynum - 1].fn_oid == InvalidOid) {
+  if (opaque->strategy_procinfos[strategynum - 1].fn_oid == InvalidOid)
+  {
     Form_pg_attribute attr;
     HeapTuple tuple;
     Oid opfamily, oprid;
@@ -322,7 +347,8 @@ minmax_get_strategy_procinfo(BrinDesc *bdesc, uint16 attno, Oid subtype, uint16 
     attr = TupleDescAttr(bdesc->bd_tupdesc, attno - 1);
     tuple = SearchSysCache4(AMOPSTRATEGY, ObjectIdGetDatum(opfamily), ObjectIdGetDatum(attr->atttypid), ObjectIdGetDatum(subtype), Int16GetDatum(strategynum));
 
-    if (!HeapTupleIsValid(tuple)) {
+    if (!HeapTupleIsValid(tuple))
+    {
       elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", strategynum, attr->atttypid, subtype, opfamily);
     }
 

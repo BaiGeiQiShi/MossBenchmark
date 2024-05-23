@@ -1,7 +1,6 @@
 /*
  * pg_db_role_setting.c
- *		Routines to support manipulation of the pg_db_role_setting
- *relation
+ *		Routines to support manipulation of the pg_db_role_setting relation
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -54,40 +53,40 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
    */
   if (setstmt->kind == VAR_RESET_ALL)
   {
+    if (HeapTupleIsValid(tuple))
+    {
+      ArrayType *new = NULL;
+      Datum datum;
+      bool isnull;
 
+      datum = heap_getattr(tuple, Anum_pg_db_role_setting_setconfig, RelationGetDescr(rel), &isnull);
 
+      if (!isnull)
+      {
+        new = GUCArrayReset(DatumGetArrayTypeP(datum));
+      }
 
+      if (new)
+      {
+        Datum repl_val[Natts_pg_db_role_setting];
+        bool repl_null[Natts_pg_db_role_setting];
+        bool repl_repl[Natts_pg_db_role_setting];
+        HeapTuple newtuple;
 
+        memset(repl_repl, false, sizeof(repl_repl));
 
+        repl_val[Anum_pg_db_role_setting_setconfig - 1] = PointerGetDatum(new);
+        repl_repl[Anum_pg_db_role_setting_setconfig - 1] = true;
+        repl_null[Anum_pg_db_role_setting_setconfig - 1] = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        newtuple = heap_modify_tuple(tuple, RelationGetDescr(rel), repl_val, repl_null, repl_repl);
+        CatalogTupleUpdate(rel, &tuple->t_self, newtuple);
+      }
+      else
+      {
+        CatalogTupleDelete(rel, &tuple->t_self);
+      }
+    }
   }
   else if (HeapTupleIsValid(tuple))
   {
@@ -114,7 +113,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
     }
     else
     {
-
+      a = GUCArrayDelete(a, setstmt->name);
     }
 
     if (a)
@@ -126,7 +125,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
     }
     else
     {
-
+      CatalogTupleDelete(rel, &tuple->t_self);
     }
   }
   else if (valuestr)

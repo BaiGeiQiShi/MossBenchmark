@@ -61,26 +61,26 @@ typedef struct spgBulkDeleteState
 static void
 spgAddPendingTID(spgBulkDeleteState *bds, ItemPointer tid)
 {
+  spgVacPendingItem *pitem;
+  spgVacPendingItem **listLink;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* search the list for pre-existing entry */
+  listLink = &bds->pendingList;
+  while (*listLink != NULL)
+  {
+    pitem = *listLink;
+    if (ItemPointerEquals(tid, &pitem->tid))
+    {
+      return; /* already in list, do nothing */
+    }
+    listLink = &pitem->next;
+  }
+  /* not there, so append new entry */
+  pitem = (spgVacPendingItem *)palloc(sizeof(spgVacPendingItem));
+  pitem->tid = *tid;
+  pitem->done = false;
+  pitem->next = NULL;
+  *listLink = pitem;
 }
 
 /*
@@ -89,17 +89,17 @@ spgAddPendingTID(spgBulkDeleteState *bds, ItemPointer tid)
 static void
 spgClearPendingList(spgBulkDeleteState *bds)
 {
+  spgVacPendingItem *pitem;
+  spgVacPendingItem *nitem;
 
-
-
-
-
-
-
-
-
-
-
+  for (pitem = bds->pendingList; pitem != NULL; pitem = nitem)
+  {
+    nitem = pitem->next;
+    /* All items in list should have been dealt with */
+    Assert(pitem->done);
+    pfree(pitem);
+  }
+  bds->pendingList = NULL;
 }
 
 /*
@@ -172,7 +172,7 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer, bool forP
         /* paranoia about corrupted chain links */
         if (lt->nextOffset < FirstOffsetNumber || lt->nextOffset > max || predecessor[lt->nextOffset] != InvalidOffsetNumber)
         {
-
+          elog(ERROR, "inconsistent tuple chain links in page %u of index \"%s\"", BufferGetBlockNumber(buffer), RelationGetRelationName(index));
         }
         predecessor[lt->nextOffset] = i;
       }
@@ -195,7 +195,7 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer, bool forP
        */
       if (TransactionIdFollowsOrEquals(dt->xid, bds->myXmin))
       {
-
+        spgAddPendingTID(bds, &dt->pointer);
       }
     }
     else
@@ -263,7 +263,7 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer, bool forP
       if (lt->tupstate != SPGIST_LIVE)
       {
         /* all tuples in chain should be live */
-
+        elog(ERROR, "unexpected SPGiST tuple state: %d", lt->tupstate);
       }
 
       if (deletable[j])
@@ -309,8 +309,8 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer, bool forP
     if (prevLive == InvalidOffsetNumber)
     {
       /* The chain is entirely removable, so we need a DEAD tuple */
-
-
+      toDead[xlrec.nDead] = i;
+      xlrec.nDead++;
     }
     else if (interveningDeletable)
     {
@@ -324,7 +324,7 @@ vacuumLeafPage(spgBulkDeleteState *bds, Relation index, Buffer buffer, bool forP
   /* sanity check ... */
   if (nDeletable != xlrec.nDead + xlrec.nPlaceholder + xlrec.nMove)
   {
-
+    elog(ERROR, "inconsistent counts of deletable tuples");
   }
 
   /* Do the updates */
@@ -431,7 +431,7 @@ vacuumLeafRoot(spgBulkDeleteState *bds, Relation index, Buffer buffer)
     else
     {
       /* all tuples on root should be live */
-
+      elog(ERROR, "unexpected SPGiST tuple state: %d", lt->tupstate);
     }
   }
 
@@ -668,115 +668,115 @@ spgvacuumpage(spgBulkDeleteState *bds, BlockNumber blkno)
 static void
 spgprocesspending(spgBulkDeleteState *bds)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Relation index = bds->info->index;
+  spgVacPendingItem *pitem;
+  spgVacPendingItem *nitem;
+  BlockNumber blkno;
+  Buffer buffer;
+  Page page;
+
+  for (pitem = bds->pendingList; pitem != NULL; pitem = pitem->next)
+  {
+    if (pitem->done)
+    {
+      continue; /* ignore already-done items */
+    }
+
+    /* call vacuum_delay_point while not holding any buffer lock */
+    vacuum_delay_point();
+
+    /* examine the referenced page */
+    blkno = ItemPointerGetBlockNumber(&pitem->tid);
+    buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno, RBM_NORMAL, bds->info->strategy);
+    LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
+    page = (Page)BufferGetPage(buffer);
+
+    if (PageIsNew(page) || SpGistPageIsDeleted(page))
+    {
+      /* Probably shouldn't happen, but ignore it */
+    }
+    else if (SpGistPageIsLeaf(page))
+    {
+      if (SpGistBlockIsRoot(blkno))
+      {
+        /* this should definitely not happen */
+        elog(ERROR, "redirection leads to root page of index \"%s\"", RelationGetRelationName(index));
+      }
+
+      /* deal with any deletable tuples */
+      vacuumLeafPage(bds, index, buffer, true);
+      /* might as well do this while we are here */
+      vacuumRedirectAndPlaceholder(index, buffer);
+
+      SpGistSetLastUsedPage(index, buffer);
+
+      /*
+       * We can mark as done not only this item, but any later ones
+       * pointing at the same page, since we vacuumed the whole page.
+       */
+      pitem->done = true;
+      for (nitem = pitem->next; nitem != NULL; nitem = nitem->next)
+      {
+        if (ItemPointerGetBlockNumber(&nitem->tid) == blkno)
+        {
+          nitem->done = true;
+        }
+      }
+    }
+    else
+    {
+      /*
+       * On an inner page, visit the referenced inner tuple and add all
+       * its downlinks to the pending list.  We might have pending items
+       * for more than one inner tuple on the same page (in fact this is
+       * pretty likely given the way space allocation works), so get
+       * them all while we are here.
+       */
+      for (nitem = pitem; nitem != NULL; nitem = nitem->next)
+      {
+        if (nitem->done)
+        {
+          continue;
+        }
+        if (ItemPointerGetBlockNumber(&nitem->tid) == blkno)
+        {
+          OffsetNumber offset;
+          SpGistInnerTuple innerTuple;
+
+          offset = ItemPointerGetOffsetNumber(&nitem->tid);
+          innerTuple = (SpGistInnerTuple)PageGetItem(page, PageGetItemId(page, offset));
+          if (innerTuple->tupstate == SPGIST_LIVE)
+          {
+            SpGistNodeTuple node;
+            int i;
+
+            SGITITERATE(innerTuple, i, node)
+            {
+              if (ItemPointerIsValid(&node->t_tid))
+              {
+                spgAddPendingTID(bds, &node->t_tid);
+              }
+            }
+          }
+          else if (innerTuple->tupstate == SPGIST_REDIRECT)
+          {
+            /* transfer attention to redirect point */
+            spgAddPendingTID(bds, &((SpGistDeadTuple)innerTuple)->pointer);
+          }
+          else
+          {
+            elog(ERROR, "unexpected SPGiST tuple state: %d", innerTuple->tupstate);
+          }
+
+          nitem->done = true;
+        }
+      }
+    }
+
+    UnlockReleaseBuffer(buffer);
+  }
+
+  spgClearPendingList(bds);
 }
 
 /*
@@ -840,7 +840,7 @@ spgvacuumscan(spgBulkDeleteState *bds)
       /* empty the pending-list after each page */
       if (bds->pendingList != NULL)
       {
-
+        spgprocesspending(bds);
       }
     }
   }
@@ -942,7 +942,7 @@ spgvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   /* No-op in ANALYZE ONLY mode */
   if (info->analyze_only)
   {
-
+    return stats;
   }
 
   /*
@@ -972,7 +972,7 @@ spgvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   {
     if (stats->num_index_tuples > info->num_heap_tuples)
     {
-
+      stats->num_index_tuples = info->num_heap_tuples;
     }
   }
 

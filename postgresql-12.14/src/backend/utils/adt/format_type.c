@@ -66,7 +66,7 @@ format_type(PG_FUNCTION_ARGS)
   /* Since this function is not strict, we must test for null args */
   if (PG_ARGISNULL(0))
   {
-
+    PG_RETURN_NULL();
   }
 
   type_oid = PG_GETARG_OID(0);
@@ -96,14 +96,12 @@ format_type(PG_FUNCTION_ARGS)
  *
  * The following bits in 'flags' modify the behavior:
  * - FORMAT_TYPE_TYPEMOD_GIVEN
- *			include the typmod in the output (typmod could still be
- *-1 though)
+ *			include the typmod in the output (typmod could still be -1 though)
  * - FORMAT_TYPE_ALLOW_INVALID
- *			if the type OID is invalid or unknown, return ??? or
- *such instead of failing
+ *			if the type OID is invalid or unknown, return ??? or such instead
+ *			of failing
  * - FORMAT_TYPE_FORCE_QUALIFY
- *			always schema-qualify type names, regardless of
- *search_path
+ *			always schema-qualify type names, regardless of search_path
  *
  * Note that TYPEMOD_GIVEN is not interchangeable with "typemod == -1";
  * see the comments above for format_type().
@@ -122,20 +120,20 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
 
   if (type_oid == InvalidOid && (flags & FORMAT_TYPE_ALLOW_INVALID) != 0)
   {
-
+    return pstrdup("-");
   }
 
   tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(type_oid));
   if (!HeapTupleIsValid(tuple))
   {
-
-
-
-
-
-
-
-
+    if ((flags & FORMAT_TYPE_ALLOW_INVALID) != 0)
+    {
+      return pstrdup("???");
+    }
+    else
+    {
+      elog(ERROR, "cache lookup failed for type %u", type_oid);
+    }
   }
   typeform = (Form_pg_type)GETSTRUCT(tuple);
 
@@ -155,14 +153,14 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(array_base_type));
     if (!HeapTupleIsValid(tuple))
     {
-
-
-
-
-
-
-
-
+      if ((flags & FORMAT_TYPE_ALLOW_INVALID) != 0)
+      {
+        return pstrdup("???[]");
+      }
+      else
+      {
+        elog(ERROR, "cache lookup failed for type %u", type_oid);
+      }
     }
     typeform = (Form_pg_type)GETSTRUCT(tuple);
     type_oid = array_base_type;
@@ -190,7 +188,7 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
 
   switch (type_oid)
   {
-  case BITOID:;
+  case BITOID:
     if (with_typemod)
     {
       buf = printTypmod("bit", typemod, typeform->typmodout);
@@ -209,11 +207,11 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case BOOLOID:;
+  case BOOLOID:
     buf = pstrdup("boolean");
     break;
 
-  case BPCHAROID:;
+  case BPCHAROID:
     if (with_typemod)
     {
       buf = printTypmod("character", typemod, typeform->typmodout);
@@ -232,27 +230,27 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case FLOAT4OID:;
+  case FLOAT4OID:
     buf = pstrdup("real");
     break;
 
-  case FLOAT8OID:;
+  case FLOAT8OID:
     buf = pstrdup("double precision");
     break;
 
-  case INT2OID:;
+  case INT2OID:
     buf = pstrdup("smallint");
     break;
 
-  case INT4OID:;
+  case INT4OID:
     buf = pstrdup("integer");
     break;
 
-  case INT8OID:;
+  case INT8OID:
     buf = pstrdup("bigint");
     break;
 
-  case NUMERICOID:;
+  case NUMERICOID:
     if (with_typemod)
     {
       buf = printTypmod("numeric", typemod, typeform->typmodout);
@@ -263,10 +261,10 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case INTERVALOID:;
+  case INTERVALOID:
     if (with_typemod)
     {
-
+      buf = printTypmod("interval", typemod, typeform->typmodout);
     }
     else
     {
@@ -274,10 +272,10 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case TIMEOID:;
+  case TIMEOID:
     if (with_typemod)
     {
-
+      buf = printTypmod("time", typemod, typeform->typmodout);
     }
     else
     {
@@ -285,10 +283,10 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case TIMETZOID:;
+  case TIMETZOID:
     if (with_typemod)
     {
-
+      buf = printTypmod("time", typemod, typeform->typmodout);
     }
     else
     {
@@ -296,10 +294,10 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case TIMESTAMPOID:;
+  case TIMESTAMPOID:
     if (with_typemod)
     {
-
+      buf = printTypmod("timestamp", typemod, typeform->typmodout);
     }
     else
     {
@@ -307,10 +305,10 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case TIMESTAMPTZOID:;
+  case TIMESTAMPTZOID:
     if (with_typemod)
     {
-
+      buf = printTypmod("timestamp", typemod, typeform->typmodout);
     }
     else
     {
@@ -318,7 +316,7 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case VARBITOID:;
+  case VARBITOID:
     if (with_typemod)
     {
       buf = printTypmod("bit varying", typemod, typeform->typmodout);
@@ -329,7 +327,7 @@ format_type_extended(Oid type_oid, int32 typemod, bits16 flags)
     }
     break;
 
-  case VARCHAROID:;
+  case VARCHAROID:
     if (with_typemod)
     {
       buf = printTypmod("character varying", typemod, typeform->typmodout);
@@ -426,7 +424,7 @@ printTypmod(const char *typname, int32 typmod, Oid typmodout)
   if (typmodout == InvalidOid)
   {
     /* Default behavior: just print the integer typmod with parens */
-
+    res = psprintf("%s(%d)", typname, (int)typmod);
   }
   else
   {
@@ -464,18 +462,18 @@ type_maximum_size(Oid type_oid, int32 typemod)
 
   switch (type_oid)
   {
-  case BPCHAROID:;
-  case VARCHAROID:;
+  case BPCHAROID:
+  case VARCHAROID:
     /* typemod includes varlena header */
 
     /* typemod is in characters not bytes */
     return (typemod - VARHDRSZ) * pg_encoding_max_length(GetDatabaseEncoding()) + VARHDRSZ;
 
-  case NUMERICOID:;
+  case NUMERICOID:
     return numeric_maximum_size(typemod);
 
-  case VARBITOID:;
-  case BITOID:;
+  case VARBITOID:
+  case BITOID:
     /* typemod is the (max) number of bits */
     return (typemod + (BITS_PER_BYTE - 1)) / BITS_PER_BYTE + 2 * sizeof(int32);
   }
@@ -485,44 +483,43 @@ type_maximum_size(Oid type_oid, int32 typemod)
 }
 
 /*
- * oidvectortypes			- converts a vector of type OIDs to
- * "typname" list
+ * oidvectortypes			- converts a vector of type OIDs to "typname" list
  */
 Datum
 oidvectortypes(PG_FUNCTION_ARGS)
 {
+  oidvector *oidArray = (oidvector *)PG_GETARG_POINTER(0);
+  char *result;
+  int numargs = oidArray->dim1;
+  int num;
+  size_t total;
+  size_t left;
 
+  total = 20 * numargs + 1;
+  result = palloc(total);
+  result[0] = '\0';
+  left = total - 1;
 
+  for (num = 0; num < numargs; num++)
+  {
+    char *typename = format_type_extended(oidArray->values[num], -1, FORMAT_TYPE_ALLOW_INVALID);
+    size_t slen = strlen(typename);
 
+    if (left < (slen + 2))
+    {
+      total += slen + 2;
+      result = repalloc(result, total);
+      left += slen + 2;
+    }
 
+    if (num > 0)
+    {
+      strcat(result, ", ");
+      left -= 2;
+    }
+    strcat(result, typename);
+    left -= slen;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(cstring_to_text(result));
 }

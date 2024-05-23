@@ -12,8 +12,7 @@
 
 /*
  * Copyright (c) 1983, 1990, 1993
- *		The Regents of the University of California.  All rights
- *reserved.
+ *		The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,42 +61,55 @@ inet_aton(const char *cp, struct in_addr *addr)
   u_int parts[4];
   u_int *pp = parts;
 
-  for (;;) {
+  for (;;)
+  {
     /*
-     * Collect number up to ``.''. Values are specified as for C: 0x=hex,* 0=octal, other=decimal.
+     * Collect number up to ``.''. Values are specified as for C: 0x=hex,
+     * 0=octal, other=decimal.
      */
     val = 0;
     base = 10;
-    if (*cp == '0') {
-      if (*++cp == 'x' || *cp == 'X') {
+    if (*cp == '0')
+    {
+      if (*++cp == 'x' || *cp == 'X')
+      {
         base = 16, cp++;
-      } else {
+      }
+      else
+      {
         base = 8;
       }
     }
-    while ((c = *cp) != '\0') {
-      if (isdigit((unsigned char)c)) {
+    while ((c = *cp) != '\0')
+    {
+      if (isdigit((unsigned char)c))
+      {
         val = (val * base) + (c - '0');
         cp++;
         continue;
       }
-      if (base == 16 && isxdigit((unsigned char)c)) {
+      if (base == 16 && isxdigit((unsigned char)c))
+      {
         val = (val << 4) + (c + 10 - (islower((unsigned char)c) ? 'a' : 'A'));
         cp++;
         continue;
       }
       break;
     }
-    if (*cp == '.') {
+    if (*cp == '.')
+    {
       /*
        * Internet format: a.b.c.d a.b.c	(with c treated as 16-bits)
        * a.b	   (with b treated as 24 bits)
        */
-      if (pp >= parts + 3 || val > 0xff) {
+      if (pp >= parts + 3 || val > 0xff)
+      {
         return 0;
       }
       *pp++ = val, cp++;
-    } else {
+    }
+    else
+    {
       break;
     }
   }
@@ -105,8 +117,10 @@ inet_aton(const char *cp, struct in_addr *addr)
   /*
    * Check for trailing junk.
    */
-  while (*cp) {
-    if (!isspace((unsigned char)*cp++)) {
+  while (*cp)
+  {
+    if (!isspace((unsigned char)*cp++))
+    {
       return 0;
     }
   }
@@ -115,33 +129,38 @@ inet_aton(const char *cp, struct in_addr *addr)
    * Concoct the address according to the number of parts specified.
    */
   n = pp - parts + 1;
-  switch (n) {
+  switch (n)
+  {
 
   case 1: /* a -- 32 bits */
     break;
 
   case 2: /* a.b -- 8.24 bits */
-    if (val > 0xffffff) {
+    if (val > 0xffffff)
+    {
       return 0;
     }
     val |= parts[0] << 24;
     break;
 
   case 3: /* a.b.c -- 8.8.16 bits */
-    if (val > 0xffff) {
+    if (val > 0xffff)
+    {
       return 0;
     }
     val |= (parts[0] << 24) | (parts[1] << 16);
     break;
 
   case 4: /* a.b.c.d -- 8.8.8.8 bits */
-    if (val > 0xff) {
+    if (val > 0xff)
+    {
       return 0;
     }
     val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
     break;
   }
-  if (addr) {
+  if (addr)
+  {
     addr->s_addr = pg_hton32(val);
   }
   return 1;

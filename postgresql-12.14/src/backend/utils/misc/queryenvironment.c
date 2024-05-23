@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * queryenvironment.c
- *	  Query environment, to store context-specific values like ephemeral
- *named relations.  Initial use is for named tuplestores for delta information
+ *	  Query environment, to store context-specific values like ephemeral named
+ *	  relations.  Initial use is for named tuplestores for delta information
  *	  from "normal" relations.
  *
  * The initial implementation uses a list because the number of such relations
@@ -84,13 +84,13 @@ register_ENR(QueryEnvironment *queryEnv, EphemeralNamedRelation enr)
 void
 unregister_ENR(QueryEnvironment *queryEnv, const char *name)
 {
+  EphemeralNamedRelation match;
 
-
-
-
-
-
-
+  match = get_ENR(queryEnv, name);
+  if (match)
+  {
+    queryEnv->namedRelList = list_delete(queryEnv->namedRelList, match);
+  }
 }
 
 /*
@@ -106,7 +106,7 @@ get_ENR(QueryEnvironment *queryEnv, const char *name)
 
   if (queryEnv == NULL)
   {
-
+    return NULL;
   }
 
   foreach (lc, queryEnv->namedRelList)
@@ -140,7 +140,7 @@ ENRMetadataGetTupDesc(EphemeralNamedRelationMetadata enrmd)
 
   if (enrmd->tupdesc != NULL)
   {
-
+    tupdesc = enrmd->tupdesc;
   }
   else
   {

@@ -97,7 +97,7 @@ macaddr_in(PG_FUNCTION_ARGS)
 
   if ((a < 0) || (a > 255) || (b < 0) || (b > 255) || (c < 0) || (c > 255) || (d < 0) || (d > 255) || (e < 0) || (e > 255) || (f < 0) || (f > 255))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("invalid octet value in \"macaddr\" value: \"%s\"", str)));
   }
 
   result = (macaddr *)palloc(sizeof(macaddr));
@@ -130,47 +130,45 @@ macaddr_out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		macaddr_recv			- converts external binary
- *format to macaddr
+ *		macaddr_recv			- converts external binary format to macaddr
  *
  * The external representation is just the six bytes, MSB first.
  */
 Datum
 macaddr_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  macaddr *addr;
 
+  addr = (macaddr *)palloc(sizeof(macaddr));
 
+  addr->a = pq_getmsgbyte(buf);
+  addr->b = pq_getmsgbyte(buf);
+  addr->c = pq_getmsgbyte(buf);
+  addr->d = pq_getmsgbyte(buf);
+  addr->e = pq_getmsgbyte(buf);
+  addr->f = pq_getmsgbyte(buf);
 
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_MACADDR_P(addr);
 }
 
 /*
- *		macaddr_send			- converts macaddr to binary
- *format
+ *		macaddr_send			- converts macaddr to binary format
  */
 Datum
 macaddr_send(PG_FUNCTION_ARGS)
 {
+  macaddr *addr = PG_GETARG_MACADDR_P(0);
+  StringInfoData buf;
 
-
-
-
-
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendbyte(&buf, addr->a);
+  pq_sendbyte(&buf, addr->b);
+  pq_sendbyte(&buf, addr->c);
+  pq_sendbyte(&buf, addr->d);
+  pq_sendbyte(&buf, addr->e);
+  pq_sendbyte(&buf, addr->f);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -194,7 +192,7 @@ macaddr_cmp_internal(macaddr *a1, macaddr *a2)
   }
   else if (lobits(a1) > lobits(a2))
   {
-
+    return 1;
   }
   else
   {
@@ -205,10 +203,10 @@ macaddr_cmp_internal(macaddr *a1, macaddr *a2)
 Datum
 macaddr_cmp(PG_FUNCTION_ARGS)
 {
+  macaddr *a1 = PG_GETARG_MACADDR_P(0);
+  macaddr *a2 = PG_GETARG_MACADDR_P(1);
 
-
-
-
+  PG_RETURN_INT32(macaddr_cmp_internal(a1, a2));
 }
 
 /*
@@ -452,7 +450,7 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
     return false;
   }
 
-
+  abbr_card = estimateHyperLogLog(&uss->abbr_card);
 
   /*
    * If we have >100k distinct values, then even if we were sorting many
@@ -460,17 +458,20 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
    * that many rows of abbrevs would probably not be worth it. At this point
    * we stop counting because we know that we're now fully committed.
    */
-
-
-
-
-
-
-
-
-
-
-
+  if (abbr_card > 100000.0)
+  {
+#ifdef TRACE_SORT
+    if (trace_sort)
+    {
+      elog(LOG,
+          "macaddr_abbrev: estimation ends at cardinality %f"
+          " after " INT64_FORMAT " values (%d rows)",
+          abbr_card, uss->input_count, memtupcount);
+    }
+#endif
+    uss->estimating = false;
+    return false;
+  }
 
   /*
    * Target minimum cardinality is 1 per ~2k of non-null inputs. 0.5 row
@@ -478,25 +479,28 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
    * where we've had exactly one abbreviated value in the first 2k
    * (non-null) rows.
    */
-
-
-
-
-
-
-
-
-
-
+  if (abbr_card < uss->input_count / 2000.0 + 0.5)
+  {
+#ifdef TRACE_SORT
+    if (trace_sort)
+    {
+      elog(LOG,
+          "macaddr_abbrev: aborting abbreviation at cardinality %f"
+          " below threshold %f after " INT64_FORMAT " values (%d rows)",
+          abbr_card, uss->input_count / 2000.0 + 0.5, uss->input_count, memtupcount);
+    }
+#endif
+    return true;
+  }
 
 #ifdef TRACE_SORT
-
-
-
-
+  if (trace_sort)
+  {
+    elog(LOG, "macaddr_abbrev: cardinality %f after " INT64_FORMAT " values (%d rows)", abbr_card, uss->input_count, memtupcount);
+  }
 #endif
 
-
+  return false;
 }
 
 /*

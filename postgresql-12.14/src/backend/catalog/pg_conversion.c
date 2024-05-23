@@ -53,7 +53,7 @@ ConversionCreate(const char *conname, Oid connamespace, Oid conowner, int32 conf
   /* sanity checks */
   if (!conname)
   {
-
+    elog(ERROR, "no conversion name supplied");
   }
 
   /* make sure there is no existing conversion of same name */
@@ -161,7 +161,7 @@ RemoveConversionById(Oid conversionOid)
   }
   else
   {
-
+    elog(ERROR, "could not find tuple for conversion %u", conversionOid);
   }
   table_endscan(scan);
   table_close(rel, RowExclusiveLock);

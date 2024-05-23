@@ -58,12 +58,12 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo);
 
 /*
  * process_equivalence
- *	  The given clause has a mergejoinable operator and can be applied
- *without any delay by an outer join, so its two sides can be considered equal
+ *	  The given clause has a mergejoinable operator and can be applied without
+ *	  any delay by an outer join, so its two sides can be considered equal
  *	  anywhere they are both computable; moreover that equality can be
  *	  extended transitively.  Record this knowledge in the EquivalenceClass
- *	  data structure, if applicable.  Returns true if successful, false if
- *not (in which case caller should treat the clause as ordinary, not an
+ *	  data structure, if applicable.  Returns true if successful, false if not
+ *	  (in which case caller should treat the clause as ordinary, not an
  *	  equivalence).
  *
  * In some cases, although we cannot convert a clause into EquivalenceClass
@@ -180,11 +180,11 @@ process_equivalence(PlannerInfo *root, RestrictInfo **p_restrictinfo, bool below
   {
     if (!bms_is_empty(item1_relids) && contain_nonstrict_functions((Node *)item1))
     {
-
+      return false; /* LHS is non-strict but not constant */
     }
     if (!bms_is_empty(item2_relids) && contain_nonstrict_functions((Node *)item2))
     {
-
+      return false; /* RHS is non-strict but not constant */
     }
   }
 
@@ -232,7 +232,7 @@ process_equivalence(PlannerInfo *root, RestrictInfo **p_restrictinfo, bool below
     /* Never match to a volatile EC */
     if (cur_ec->ec_has_volatile)
     {
-
+      continue;
     }
 
     /*
@@ -303,17 +303,17 @@ process_equivalence(PlannerInfo *root, RestrictInfo **p_restrictinfo, bool below
     /* If case 1, nothing to do, except add to sources */
     if (ec1 == ec2)
     {
-
-
-
-
+      ec1->ec_sources = lappend(ec1->ec_sources, restrictinfo);
+      ec1->ec_below_outer_join |= below_outer_join;
+      ec1->ec_min_security = Min(ec1->ec_min_security, restrictinfo->security_level);
+      ec1->ec_max_security = Max(ec1->ec_max_security, restrictinfo->security_level);
       /* mark the RI as associated with this eclass */
-
-
+      restrictinfo->left_ec = ec1;
+      restrictinfo->right_ec = ec1;
       /* mark the RI as usable with this pair of EMs */
-
-
-
+      restrictinfo->left_em = em1;
+      restrictinfo->right_em = em2;
+      return true;
     }
 
     /*
@@ -323,7 +323,7 @@ process_equivalence(PlannerInfo *root, RestrictInfo **p_restrictinfo, bool below
      */
     if (root->canon_pathkeys != NIL)
     {
-
+      elog(ERROR, "too late to merge equivalence classes");
     }
 
     /*
@@ -672,9 +672,9 @@ get_eclass_for_sort_expr(PlannerInfo *root, Expr *expr, Relids nullable_relids, 
   newec->ec_max_security = 0;
   newec->ec_merged = NULL;
 
-  if (newec->ec_has_volatile && sortref == 0)
-  { /* should not happen */
-
+  if (newec->ec_has_volatile && sortref == 0) /* should not happen */
+  {
+    elog(ERROR, "volatile EquivalenceClass has no sortref");
   }
 
   /*
@@ -917,8 +917,8 @@ generate_base_implied_equalities_no_const(PlannerInfo *root, EquivalenceClass *e
       if (!OidIsValid(eq_op))
       {
         /* failed... */
-
-
+        ec->ec_broken = true;
+        break;
       }
       process_implied_equality(root, eq_op, ec->ec_collation, prev_em->em_expr, cur_em->em_expr, bms_copy(ec->ec_relids), bms_union(prev_em->em_nullable_relids, cur_em->em_nullable_relids), ec->ec_min_security, ec->ec_below_outer_join, false);
     }
@@ -1251,8 +1251,8 @@ generate_join_implied_equalities_normal(PlannerInfo *root, EquivalenceClass *ec,
         if (!OidIsValid(eq_op))
         {
           /* failed... */
-
-
+          ec->ec_broken = true;
+          return NIL;
         }
         /* do NOT set parent_ec, this qual is not redundant! */
         rinfo = create_join_clause(root, ec, eq_op, prev_em, cur_em, NULL);
@@ -1620,7 +1620,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo, bool outer_
   /* If clause is outerjoin_delayed, operator must be strict */
   if (rinfo->outerjoin_delayed && !op_strict(opno))
   {
-
+    return false;
   }
 
   /* Extract needed info from the clause */
@@ -1656,7 +1656,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo, bool outer_
     /* Never match to a volatile EC */
     if (cur_ec->ec_has_volatile)
     {
-
+      continue;
     }
     /* It has to match the outer-join clause as to semantics, too */
     if (collation != cur_ec->ec_collation)
@@ -1704,7 +1704,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo, bool outer_
       eq_op = select_equality_operator(cur_ec, inner_datatype, cur_em->em_datatype);
       if (!OidIsValid(eq_op))
       {
-
+        continue; /* can't generate equality */
       }
       newrinfo = build_implied_join_equality(root, eq_op, cur_ec->ec_collation, innervar, cur_em->em_expr, bms_copy(inner_relids), bms_copy(inner_nullable_relids), cur_ec->ec_min_security);
       if (process_equivalence(root, &newrinfo, true))
@@ -1724,7 +1724,7 @@ reconsider_outer_join_clause(PlannerInfo *root, RestrictInfo *rinfo, bool outer_
     }
     else
     {
-
+      break;
     }
   }
 
@@ -1780,7 +1780,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
     /* Never match to a volatile EC */
     if (cur_ec->ec_has_volatile)
     {
-
+      continue;
     }
     /* It has to match the outer-join clause as to semantics, too */
     if (collation != cur_ec->ec_collation)
@@ -1789,7 +1789,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
     }
     if (!equal(rinfo->mergeopfamilies, cur_ec->ec_opfamilies))
     {
-
+      continue;
     }
 
     /*
@@ -1818,7 +1818,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
 
         if (list_length(cexpr->args) != 2)
         {
-
+          continue;
         }
         cfirst = (Node *)linitial(cexpr->args);
         csecond = (Node *)lsecond(cexpr->args);
@@ -1890,7 +1890,7 @@ reconsider_full_join_clause(PlannerInfo *root, RestrictInfo *rinfo)
      * appears in at most one EC (XXX might stop being true if we allow
      * stripping of coercions above?)
      */
-
+    break;
   }
 
   return false; /* failed to make any deduction */
@@ -1923,7 +1923,7 @@ exprs_known_equal(PlannerInfo *root, Node *item1, Node *item2)
     /* Never match to a volatile EC */
     if (ec->ec_has_volatile)
     {
-
+      continue;
     }
 
     foreach (lc2, ec->ec_members)
@@ -1985,7 +1985,7 @@ match_eclasses_to_foreign_key_col(PlannerInfo *root, ForeignKeyOptInfo *fkinfo, 
     /* Never match to a volatile EC */
     if (ec->ec_has_volatile)
     {
-
+      continue;
     }
     /* Note: it seems okay to match to "broken" eclasses here */
 
@@ -2005,18 +2005,18 @@ match_eclasses_to_foreign_key_col(PlannerInfo *root, ForeignKeyOptInfo *fkinfo, 
 
       if (em->em_is_child)
       {
-
+        continue; /* ignore children here */
       }
 
       /* EM must be a Var, possibly with RelabelType */
       var = (Var *)em->em_expr;
       while (var && IsA(var, RelabelType))
       {
-
+        var = (Var *)((RelabelType *)var)->arg;
       }
       if (!(var && IsA(var, Var)))
       {
-
+        continue;
       }
 
       /* Match? */
@@ -2037,8 +2037,8 @@ match_eclasses_to_foreign_key_col(PlannerInfo *root, ForeignKeyOptInfo *fkinfo, 
          * this before scanning the members, but it's probably cheaper
          * to test for member matches first.
          */
-        if (opfamilies == NIL)
-        { /* compute if we didn't already */
+        if (opfamilies == NIL) /* compute if we didn't already */
+        {
           opfamilies = get_mergejoin_opfamilies(eqop);
         }
         if (equal(opfamilies, ec->ec_opfamilies))
@@ -2046,7 +2046,7 @@ match_eclasses_to_foreign_key_col(PlannerInfo *root, ForeignKeyOptInfo *fkinfo, 
           return ec;
         }
         /* Otherwise, done with this EC, move on to the next */
-
+        break;
       }
     }
   }
@@ -2091,7 +2091,7 @@ add_child_rel_equivalences(PlannerInfo *root, AppendRelInfo *appinfo, RelOptInfo
      */
     if (cur_ec->ec_has_volatile)
     {
-
+      continue;
     }
 
     /*
@@ -2212,7 +2212,7 @@ add_child_join_rel_equivalences(PlannerInfo *root, int nappinfos, AppendRelInfo 
      */
     if (cur_ec->ec_has_volatile)
     {
-
+      continue;
     }
 
     /*
@@ -2267,8 +2267,8 @@ add_child_join_rel_equivalences(PlannerInfo *root, int nappinfos, AppendRelInfo 
         else
         {
           /* Must do multi-level transformation */
-
-
+          Assert(parent_joinrel->reloptkind == RELOPT_OTHER_JOINREL);
+          child_expr = (Expr *)adjust_appendrel_attrs_multilevel(root, (Node *)cur_em->em_expr, child_relids, top_parent_relids);
         }
 
         /*
@@ -2431,7 +2431,7 @@ generate_implied_equalities_for_column(PlannerInfo *root, RelOptInfo *rel, ec_ma
       eq_op = select_equality_operator(cur_ec, cur_em->em_datatype, other_em->em_datatype);
       if (!OidIsValid(eq_op))
       {
-
+        continue;
       }
 
       /* set parent_ec to mark as redundant with other joinclauses */
@@ -2607,7 +2607,7 @@ eclass_useful_for_merging(PlannerInfo *root, EquivalenceClass *eclass, RelOptInf
 
     if (cur_em->em_is_child)
     {
-
+      continue; /* ignore children here */
     }
 
     if (!bms_overlap(cur_em->em_relids, relids))
@@ -2621,9 +2621,9 @@ eclass_useful_for_merging(PlannerInfo *root, EquivalenceClass *eclass, RelOptInf
 
 /*
  * is_redundant_derived_clause
- *		Test whether rinfo is derived from same EC as any clause in
- *clauselist; if so, it can be presumed to represent a condition that's
- *redundant with that member of the list.
+ *		Test whether rinfo is derived from same EC as any clause in clauselist;
+ *		if so, it can be presumed to represent a condition that's redundant
+ *		with that member of the list.
  */
 bool
 is_redundant_derived_clause(RestrictInfo *rinfo, List *clauselist)
@@ -2652,10 +2652,9 @@ is_redundant_derived_clause(RestrictInfo *rinfo, List *clauselist)
 
 /*
  * is_redundant_with_indexclauses
- *		Test whether rinfo is redundant with any clause in the
- *IndexClause list.  Here, for convenience, we test both simple identity and
- *		whether it is derived from the same EC as any member of the
- *list.
+ *		Test whether rinfo is redundant with any clause in the IndexClause
+ *		list.  Here, for convenience, we test both simple identity and
+ *		whether it is derived from the same EC as any member of the list.
  */
 bool
 is_redundant_with_indexclauses(RestrictInfo *rinfo, List *indexclauses)

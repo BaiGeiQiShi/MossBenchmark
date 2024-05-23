@@ -79,7 +79,7 @@ expand_array(Datum arraydatum, MemoryContext parentcontext, ArrayMetaState *meta
      */
     if (metacache == NULL)
     {
-
+      metacache = &fakecache;
     }
     metacache->element_type = oldeah->element_type;
     metacache->typlen = oldeah->typlen;
@@ -198,8 +198,8 @@ copy_byval_expanded_array(ExpandedArrayHeader *eah, ExpandedArrayHeader *oldeah)
   memcpy(eah->dvalues, oldeah->dvalues, dvalueslen * sizeof(Datum));
   if (oldeah->dnulls)
   {
-
-
+    eah->dnulls = (bool *)MemoryContextAlloc(objcxt, dvalueslen * sizeof(bool));
+    memcpy(eah->dnulls, oldeah->dnulls, dvalueslen * sizeof(bool));
   }
   else
   {
@@ -258,20 +258,20 @@ EA_get_flat_size(ExpandedObjectHeader *eohptr)
   {
     if (dnulls && dnulls[i])
     {
-
+      continue;
     }
     nbytes = att_addlength_datum(nbytes, eah->typlen, dvalues[i]);
     nbytes = att_align_nominal(nbytes, eah->typalign);
     /* check for overflow of total request */
     if (!AllocSizeIsValid(nbytes))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("array size exceeds the maximum allowed (%d)", (int)MaxAllocSize)));
     }
   }
 
   if (dnulls)
   {
-
+    nbytes += ARR_OVERHEAD_WITHNULLS(ndims, nelems);
   }
   else
   {
@@ -315,7 +315,7 @@ EA_flatten_into(ExpandedObjectHeader *eohptr, void *result, Size allocated_size)
 
   if (eah->dnulls)
   {
-
+    dataoffset = ARR_OVERHEAD_WITHNULLS(ndims, nelems);
   }
   else
   {
@@ -359,8 +359,8 @@ DatumGetExpandedArray(Datum d)
   }
 
   /* Else expand the hard way */
-
-
+  d = expand_array(d, CurrentMemoryContext, NULL);
+  return (ExpandedArrayHeader *)DatumGetEOHP(d);
 }
 
 /*

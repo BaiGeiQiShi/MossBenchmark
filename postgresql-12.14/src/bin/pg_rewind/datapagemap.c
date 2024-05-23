@@ -16,7 +16,8 @@
 
 #include "common/logging.h"
 
-struct datapagemap_iterator {
+struct datapagemap_iterator
+{
   datapagemap_t *map;
   BlockNumber nextblkno;
 };
@@ -38,7 +39,8 @@ datapagemap_add(datapagemap_t *map, BlockNumber blkno)
   bitno = blkno % 8;
 
   /* enlarge or create bitmap if needed */
-  if (map->bitmapsize <= offset) {
+  if (map->bitmapsize <= offset)
+  {
     int oldsize = map->bitmapsize;
     int newsize;
 
@@ -66,7 +68,8 @@ datapagemap_add(datapagemap_t *map, BlockNumber blkno)
 /*
  * Start iterating through all entries in the page map.
  *
- * After datapagemap_iterate, call datapagemap_next to return the entries,* until it returns false. After you're done, use pg_free() to destroy the
+ * After datapagemap_iterate, call datapagemap_next to return the entries,
+ * until it returns false. After you're done, use pg_free() to destroy the
  * iterator.
  */
 datapagemap_iterator_t *
@@ -86,18 +89,21 @@ datapagemap_next(datapagemap_iterator_t *iter, BlockNumber *blkno)
 {
   datapagemap_t *map = iter->map;
 
-  for (;;) {
+  for (;;)
+  {
     BlockNumber blk = iter->nextblkno;
     int nextoff = blk / 8;
     int bitno = blk % 8;
 
-    if (nextoff >= map->bitmapsize) {
+    if (nextoff >= map->bitmapsize)
+    {
       break;
     }
 
     iter->nextblkno++;
 
-    if (map->bitmap[nextoff] & (1 << bitno)) {
+    if (map->bitmap[nextoff] & (1 << bitno))
+    {
       *blkno = blk;
       return true;
     }
@@ -117,7 +123,8 @@ datapagemap_print(datapagemap_t *map)
   BlockNumber blocknum;
 
   iter = datapagemap_iterate(map);
-  while (datapagemap_next(iter, &blocknum)) {
+  while (datapagemap_next(iter, &blocknum))
+  {
     pg_log_debug("block %u", blocknum);
   }
 

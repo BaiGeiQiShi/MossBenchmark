@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * partcache.c
- *		Support routines for manipulating partition information cached
- *in relcache
+ *		Support routines for manipulating partition information cached in
+ *		relcache
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
@@ -170,7 +170,7 @@ RelationBuildPartitionKey(Relation relation)
     opclasstup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclass->values[i]));
     if (!HeapTupleIsValid(opclasstup))
     {
-
+      elog(ERROR, "cache lookup failed for opclass %u", opclass->values[i]);
     }
 
     opclassform = (Form_pg_opclass)GETSTRUCT(opclasstup);
@@ -181,7 +181,7 @@ RelationBuildPartitionKey(Relation relation)
     funcid = get_opfamily_proc(opclassform->opcfamily, opclassform->opcintype, opclassform->opcintype, procnum);
     if (!OidIsValid(funcid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator class \"%s\" of access method %s is missing support function %d for type %s", NameStr(opclassform->opcname), (key->strategy == PARTITION_STRATEGY_HASH) ? "hash" : "btree", procnum, format_type_be(opclassform->opcintype))));
     }
 
     fmgr_info_cxt(funcid, &key->partsupfunc[i], partkeycxt);
@@ -202,7 +202,7 @@ RelationBuildPartitionKey(Relation relation)
     {
       if (partexprs_item == NULL)
       {
-
+        elog(ERROR, "wrong number of partition key expressions");
       }
 
       key->parttypid[i] = exprType(lfirst(partexprs_item));
@@ -331,7 +331,7 @@ generate_partition_qual(Relation rel)
   tuple = SearchSysCache1(RELOID, RelationGetRelid(rel));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", RelationGetRelid(rel));
   }
 
   boundDatum = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_relpartbound, &isnull);
@@ -366,7 +366,7 @@ generate_partition_qual(Relation rel)
   /* There can never be a whole-row reference here */
   if (found_whole_row)
   {
-
+    elog(ERROR, "unexpected whole-row reference found in partition key");
   }
 
   /* Assert that we're not leaking any old data during assignments below */

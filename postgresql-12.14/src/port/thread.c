@@ -3,8 +3,7 @@
  * thread.c
  *
  *		  Prototypes and macros around system calls, used to help make
- *		  threaded libraries reentrant and safe to use from threaded
- *applications.
+ *		  threaded libraries reentrant and safe to use from threaded applications.
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
@@ -31,7 +30,8 @@
  *	that require them.  However, internally, these *_r functions merely
  *	call the thread-safe standard library functions.
  *
- *	For example, BSD/OS 4.3 uses Bind 8.2.3 for getpwuid().  Internally,*	getpwuid() calls pthread_setspecific/pthread_getspecific() to return
+ *	For example, BSD/OS 4.3 uses Bind 8.2.3 for getpwuid().  Internally,
+ *	getpwuid() calls pthread_setspecific/pthread_getspecific() to return
  *	static data to the caller in a thread-safe manner.  However, BSD/OS
  *	also has getpwuid_r(), which merely calls getpwuid() and shifts
  *	around the arguments to match the getpwuid_r() function declaration.
@@ -45,8 +45,7 @@
  *			(*_THREADSAFE=yes)
  *		use non-*_r functions if they are thread-safe
  *
- *	One thread-safe solution for gethostbyname() might be to use
- *getaddrinfo().
+ *	One thread-safe solution for gethostbyname() might be to use getaddrinfo().
  *
  *	Run src/test/thread to test if your operating system has thread-safe
  *	non-*_r functions.
@@ -100,13 +99,17 @@ pqGethostbyname(const char *name, struct hostent *resultbuf, char *buffer, size_
   /* no gethostbyname_r(), just use gethostbyname() */
   *result = gethostbyname(name);
 
-  if (*result != NULL) {
+  if (*result != NULL)
+  {
     *herrno = h_errno;
   }
 
-  if (*result != NULL) {
+  if (*result != NULL)
+  {
     return 0;
-  } else {
+  }
+  else
+  {
     return -1;
   }
 #endif

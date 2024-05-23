@@ -102,7 +102,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   aclresult = pg_namespace_aclcheck(aggNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(aggNamespace));
   }
 
   /* Deconstruct the output of the aggr_args grammar production */
@@ -164,7 +164,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
     else if (strcmp(defel->defname, "mfinalfunc") == 0)
     {
-
+      mfinalfuncName = defGetQualifiedName(defel);
     }
     else if (strcmp(defel->defname, "finalfunc_extra") == 0)
     {
@@ -172,7 +172,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
     else if (strcmp(defel->defname, "mfinalfunc_extra") == 0)
     {
-
+      mfinalfuncExtraArgs = defGetBoolean(defel);
     }
     else if (strcmp(defel->defname, "finalfunc_modify") == 0)
     {
@@ -180,11 +180,11 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
     else if (strcmp(defel->defname, "mfinalfunc_modify") == 0)
     {
-
+      mfinalfuncModify = extractModify(defel);
     }
     else if (strcmp(defel->defname, "sortop") == 0)
     {
-
+      sortoperatorName = defGetQualifiedName(defel);
     }
     else if (strcmp(defel->defname, "basetype") == 0)
     {
@@ -196,7 +196,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
       {
         if (aggKind == AGGKIND_NORMAL)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("only ordered-set aggregates can be hypothetical")));
         }
         aggKind = AGGKIND_HYPOTHETICAL;
       }
@@ -219,7 +219,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
     else if (strcmp(defel->defname, "msspace") == 0)
     {
-
+      mtransSpace = defGetInt32(defel);
     }
     else if (strcmp(defel->defname, "initcond") == 0)
     {
@@ -252,7 +252,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   }
   if (transfuncName == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate sfunc must be specified")));
   }
 
   /*
@@ -264,34 +264,34 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   {
     if (mtransfuncName == NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate msfunc must be specified when mstype is specified")));
     }
     if (minvtransfuncName == NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate minvfunc must be specified when mstype is specified")));
     }
   }
   else
   {
     if (mtransfuncName != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate msfunc must not be specified without mstype")));
     }
     if (minvtransfuncName != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate minvfunc must not be specified without mstype")));
     }
     if (mfinalfuncName != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate mfinalfunc must not be specified without mstype")));
     }
     if (mtransSpace != 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate msspace must not be specified without mstype")));
     }
     if (minitval != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate minitcond must not be specified without mstype")));
     }
   }
 
@@ -354,7 +354,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
 
     if (baseType != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("basetype is redundant with aggregate input type specification")));
     }
 
     numArgs = list_length(args);
@@ -384,7 +384,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
       /* okay */;
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate transition data type cannot be %s", format_type_be(transTypeId))));
     }
   }
 
@@ -395,7 +395,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
      */
     if (transTypeId != INTERNALOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("serialization functions may be specified only when the aggregate transition data type is %s", format_type_be(INTERNALOID))));
     }
   }
   else if (serialfuncName || deserialfuncName)
@@ -416,12 +416,12 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     mtransTypeType = get_typtype(mtransTypeId);
     if (mtransTypeType == TYPTYPE_PSEUDO && !IsPolymorphicType(mtransTypeId))
     {
-
-
-
-
-
-
+      if (mtransTypeId == INTERNALOID && superuser())
+        /* okay */;
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate transition data type cannot be %s", format_type_be(mtransTypeId))));
+      }
     }
   }
 
@@ -461,11 +461,11 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
     else if (strcmp(parallel, "restricted") == 0)
     {
-
+      proparallel = PROPARALLEL_RESTRICTED;
     }
     else if (strcmp(parallel, "unsafe") == 0)
     {
-
+      proparallel = PROPARALLEL_UNSAFE;
     }
     else
     {
@@ -506,7 +506,7 @@ extractModify(DefElem *defel)
 
   if (strcmp(val, "read_only") == 0)
   {
-
+    return AGGMODIFY_READ_ONLY;
   }
   if (strcmp(val, "shareable") == 0)
   {
@@ -516,6 +516,6 @@ extractModify(DefElem *defel)
   {
     return AGGMODIFY_READ_WRITE;
   }
-
-
+  ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("parameter \"%s\" must be READ_ONLY, SHAREABLE, or READ_WRITE", defel->defname)));
+  return 0; /* keep compiler quiet */
 }

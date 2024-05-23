@@ -35,8 +35,8 @@
  *
  *		It scans the inner relation to join with current outer tuple.
  *
- *		If none is found, next tuple from the outer relation is
- *retrieved and the inner relation is scanned from the beginning again to join
+ *		If none is found, next tuple from the outer relation is retrieved
+ *		and the inner relation is scanned from the beginning again to join
  *		with the outer tuple.
  *
  *		NULL is returned if all the remaining outer tuples are tried and
@@ -46,9 +46,10 @@
  *
  *		Conditions:
  *		  -- outerTuple contains current tuple from outer relation and
- *			 the right son(inner relation) maintains "cursor" at the
- *tuple returned previously. This is achieved by maintaining a scan position on
- *the outer relation.
+ *			 the right son(inner relation) maintains "cursor" at the tuple
+ *			 returned previously.
+ *				This is achieved by maintaining a scan position on the outer
+ *				relation.
  *
  *		Initial States:
  *		  -- the outer child and the inner child
@@ -326,15 +327,15 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
   /* set up null tuples for outer joins, if needed */
   switch (node->join.jointype)
   {
-  case JOIN_INNER:;
-  case JOIN_SEMI:;
+  case JOIN_INNER:
+  case JOIN_SEMI:
     break;
-  case JOIN_LEFT:;
-  case JOIN_ANTI:;
+  case JOIN_LEFT:
+  case JOIN_ANTI:
     nlstate->nl_NullInnerTupleSlot = ExecInitNullTupleSlot(estate, ExecGetResultType(innerPlanState(nlstate)), &TTSOpsVirtual);
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized join type: %d", (int)node->join.jointype);
   }
 
   /*

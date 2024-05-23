@@ -103,16 +103,16 @@ anybit_typmodin(ArrayType *ta, const char *typename)
    */
   if (n != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid type modifier")));
   }
 
   if (*tl < 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("length for type %s must be at least 1", typename)));
   }
   if (*tl > (MaxAttrSize * BITS_PER_BYTE))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("length for type %s cannot exceed %d", typename, MaxAttrSize * BITS_PER_BYTE)));
   }
 
   typmod = *tl;
@@ -134,7 +134,7 @@ anybit_typmodout(int32 typmod)
   }
   else
   {
-
+    *res = '\0';
   }
 
   return res;
@@ -199,7 +199,7 @@ bit_in(PG_FUNCTION_ARGS)
   {
     if (slen > VARBITMAXLEN / 4)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("bit string length exceeds the maximum allowed (%d)", VARBITMAXLEN)));
     }
     bitlen = slen * 4;
   }
@@ -214,7 +214,7 @@ bit_in(PG_FUNCTION_ARGS)
   }
   else if (bitlen != atttypmod)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH), errmsg("bit string length %d does not match type bit(%d)", bitlen, atttypmod)));
   }
 
   len = VARBITTOTALLEN(atttypmod);
@@ -237,7 +237,7 @@ bit_in(PG_FUNCTION_ARGS)
       }
       else if (*sp != '0')
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("\"%c\" is not a valid binary digit", *sp)));
       }
 
       x >>= 1;
@@ -267,7 +267,7 @@ bit_in(PG_FUNCTION_ARGS)
       }
       else
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("\"%c\" is not a valid hexadecimal digit", *sp)));
       }
 
       if (bc)
@@ -334,47 +334,46 @@ bit_out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		bit_recv			- converts external binary
- *format to bit
+ *		bit_recv			- converts external binary format to bit
  */
 Datum
 bit_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
+#ifdef NOT_USED
+  Oid typelem = PG_GETARG_OID(1);
+#endif
+  int32 atttypmod = PG_GETARG_INT32(2);
+  VarBit *result;
+  int len, bitlen;
 
+  bitlen = pq_getmsgint(buf, sizeof(int32));
+  if (bitlen < 0 || bitlen > VARBITMAXLEN)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid length in external bit string")));
+  }
 
+  /*
+   * Sometimes atttypmod is not supplied. If it is supplied we need to make
+   * sure that the bitstring fits.
+   */
+  if (atttypmod > 0 && bitlen != atttypmod)
+  {
+    ereport(ERROR, (errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH), errmsg("bit string length %d does not match type bit(%d)", bitlen, atttypmod)));
+  }
 
+  len = VARBITTOTALLEN(bitlen);
+  result = (VarBit *)palloc(len);
+  SET_VARSIZE(result, len);
+  VARBITLEN(result) = bitlen;
 
+  pq_copymsgbytes(buf, (char *)VARBITS(result), VARBITBYTES(result));
 
+  /* Make sure last byte is correctly zero-padded */
+  VARBIT_PAD(result);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_VARBIT_P(result);
 }
 
 /*
@@ -383,8 +382,8 @@ bit_recv(PG_FUNCTION_ARGS)
 Datum
 bit_send(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as varbit_send, so share code */
+  return varbit_send(fcinfo);
 }
 
 /*
@@ -453,8 +452,7 @@ bittypmodout(PG_FUNCTION_ARGS)
  * varbit_in -
  *	  converts a string to the internal representation of a bitstring.
  *		This is the same as bit_in except that atttypmod is taken as
- *		the maximum length, not the exact length to force the bitstring
- *to.
+ *		the maximum length, not the exact length to force the bitstring to.
  */
 Datum
 varbit_in(PG_FUNCTION_ARGS)
@@ -478,8 +476,8 @@ varbit_in(PG_FUNCTION_ARGS)
   /* Check that the first character is a b or an x */
   if (input_string[0] == 'b' || input_string[0] == 'B')
   {
-
-
+    bit_not_hex = true;
+    sp = input_string + 1;
   }
   else if (input_string[0] == 'x' || input_string[0] == 'X')
   {
@@ -505,7 +503,7 @@ varbit_in(PG_FUNCTION_ARGS)
   {
     if (slen > VARBITMAXLEN / 4)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("bit string length exceeds the maximum allowed (%d)", VARBITMAXLEN)));
     }
     bitlen = slen * 4;
   }
@@ -520,7 +518,7 @@ varbit_in(PG_FUNCTION_ARGS)
   }
   else if (bitlen > atttypmod)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_STRING_DATA_RIGHT_TRUNCATION), errmsg("bit string too long for type bit varying(%d)", atttypmod)));
   }
 
   len = VARBITTOTALLEN(bitlen);
@@ -543,7 +541,7 @@ varbit_in(PG_FUNCTION_ARGS)
       }
       else if (*sp != '0')
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("\"%c\" is not a valid binary digit", *sp)));
       }
 
       x >>= 1;
@@ -567,14 +565,14 @@ varbit_in(PG_FUNCTION_ARGS)
       {
         x = (bits8)(*sp - 'A') + 10;
       }
-
-
-
-
-
-
-
-
+      else if (*sp >= 'a' && *sp <= 'f')
+      {
+        x = (bits8)(*sp - 'a') + 10;
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("\"%c\" is not a valid hexadecimal digit", *sp)));
+      }
 
       if (bc)
       {
@@ -641,65 +639,63 @@ varbit_out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		varbit_recv			- converts external binary
- *format to varbit
+ *		varbit_recv			- converts external binary format to varbit
  *
  * External format is the bitlen as an int32, then the byte array.
  */
 Datum
 varbit_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
+#ifdef NOT_USED
+  Oid typelem = PG_GETARG_OID(1);
+#endif
+  int32 atttypmod = PG_GETARG_INT32(2);
+  VarBit *result;
+  int len, bitlen;
 
+  bitlen = pq_getmsgint(buf, sizeof(int32));
+  if (bitlen < 0 || bitlen > VARBITMAXLEN)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid length in external bit string")));
+  }
 
+  /*
+   * Sometimes atttypmod is not supplied. If it is supplied we need to make
+   * sure that the bitstring fits.
+   */
+  if (atttypmod > 0 && bitlen > atttypmod)
+  {
+    ereport(ERROR, (errcode(ERRCODE_STRING_DATA_RIGHT_TRUNCATION), errmsg("bit string too long for type bit varying(%d)", atttypmod)));
+  }
 
+  len = VARBITTOTALLEN(bitlen);
+  result = (VarBit *)palloc(len);
+  SET_VARSIZE(result, len);
+  VARBITLEN(result) = bitlen;
 
+  pq_copymsgbytes(buf, (char *)VARBITS(result), VARBITBYTES(result));
 
+  /* Make sure last byte is correctly zero-padded */
+  VARBIT_PAD(result);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_VARBIT_P(result);
 }
 
 /*
- *		varbit_send			- converts varbit to binary
- *format
+ *		varbit_send			- converts varbit to binary format
  */
 Datum
 varbit_send(PG_FUNCTION_ARGS)
 {
+  VarBit *s = PG_GETARG_VARBIT_P(0);
+  StringInfoData buf;
 
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, VARBITLEN(s));
+  pq_sendbytes(&buf, (char *)VARBITS(s), VARBITBYTES(s));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -737,7 +733,7 @@ varbit_support(PG_FUNCTION_ARGS)
       /* Note: varbit() treats typmod 0 as invalid, so we do too */
       if (new_max <= 0 || (old_max > 0 && old_max <= new_max))
       {
-
+        ret = relabel_to_typmod(source, new_typmod);
       }
     }
   }
@@ -865,7 +861,7 @@ biteq(PG_FUNCTION_ARGS)
   /* fast path for different-length inputs */
   if (bitlen1 != bitlen2)
   {
-
+    result = false;
   }
   else
   {
@@ -892,7 +888,7 @@ bitne(PG_FUNCTION_ARGS)
   /* fast path for different-length inputs */
   if (bitlen1 != bitlen2)
   {
-
+    result = true;
   }
   else
   {
@@ -1005,7 +1001,7 @@ bit_catenate(VarBit *arg1, VarBit *arg2)
 
   if (bitlen1 > VARBITMAXLEN - bitlen2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("bit string length exceeds the maximum allowed (%d)", VARBITMAXLEN)));
   }
   bytelen = VARBITTOTALLEN(bitlen1 + bitlen2);
 
@@ -1189,11 +1185,11 @@ bit_overlay(VarBit *t1, VarBit *t2, int sp, int sl)
    */
   if (sp <= 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SUBSTRING_ERROR), errmsg("negative substring length not allowed")));
   }
   if (pg_add_s32_overflow(sp, sl, &sp_pl_sl))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
   }
 
   s1 = bitsubstring(t1, 1, sp - 1, false);
@@ -1219,9 +1215,9 @@ bitlength(PG_FUNCTION_ARGS)
 Datum
 bitoctetlength(PG_FUNCTION_ARGS)
 {
+  VarBit *arg = PG_GETARG_VARBIT_P(0);
 
-
-
+  PG_RETURN_INT32(VARBITBYTES(arg));
 }
 
 /*
@@ -1382,11 +1378,11 @@ bitshiftleft(PG_FUNCTION_ARGS)
   if (shft < 0)
   {
     /* Prevent integer overflow in negation */
-
-
-
-
-
+    if (shft < -VARBITMAXLEN)
+    {
+      shft = -VARBITMAXLEN;
+    }
+    PG_RETURN_DATUM(DirectFunctionCall2(bitshiftright, VarBitPGetDatum(arg), Int32GetDatum(-shft)));
   }
 
   result = (VarBit *)palloc(VARSIZE(arg));
@@ -1424,7 +1420,7 @@ bitshiftleft(PG_FUNCTION_ARGS)
     }
     for (; r < VARBITEND(result); r++)
     {
-
+      *r = 0;
     }
   }
 
@@ -1450,11 +1446,11 @@ bitshiftright(PG_FUNCTION_ARGS)
   if (shft < 0)
   {
     /* Prevent integer overflow in negation */
-
-
-
-
-
+    if (shft < -VARBITMAXLEN)
+    {
+      shft = -VARBITMAXLEN;
+    }
+    PG_RETURN_DATUM(DirectFunctionCall2(bitshiftleft, VarBitPGetDatum(arg), Int32GetDatum(-shft)));
   }
 
   result = (VarBit *)palloc(VARSIZE(arg));
@@ -1522,7 +1518,7 @@ bitfromint4(PG_FUNCTION_ARGS)
 
   if (typmod <= 0 || typmod > VARBITMAXLEN)
   {
-
+    typmod = 1; /* default bit length */
   }
 
   rlen = VARBITTOTALLEN(typmod);
@@ -1538,8 +1534,8 @@ bitfromint4(PG_FUNCTION_ARGS)
   /* sign-fill any excess bytes in output */
   while (destbitsleft >= srcbitsleft + 8)
   {
-
-
+    *r++ = (bits8)((a < 0) ? BITMASK : 0);
+    destbitsleft -= 8;
   }
   /* store first fractional byte */
   if (destbitsleft > srcbitsleft)
@@ -1547,12 +1543,12 @@ bitfromint4(PG_FUNCTION_ARGS)
     unsigned int val = (unsigned int)(a >> (destbitsleft - 8));
 
     /* Force sign-fill in case the compiler implements >> as zero-fill */
-
-
-
-
-
-
+    if (a < 0)
+    {
+      val |= ((unsigned int)-1) << (srcbitsleft + 8 - destbitsleft);
+    }
+    *r++ = (bits8)(val & BITMASK);
+    destbitsleft -= 8;
   }
   /* Now srcbitsleft and destbitsleft are the same, need not track both */
   /* store whole bytes */
@@ -1580,7 +1576,7 @@ bittoint4(PG_FUNCTION_ARGS)
   /* Check that the bit string is not too long */
   if (VARBITLEN(arg) > sizeof(result) * BITS_PER_BYTE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("integer out of range")));
   }
 
   result = 0;
@@ -1607,7 +1603,7 @@ bitfromint8(PG_FUNCTION_ARGS)
 
   if (typmod <= 0 || typmod > VARBITMAXLEN)
   {
-
+    typmod = 1; /* default bit length */
   }
 
   rlen = VARBITTOTALLEN(typmod);
@@ -1623,8 +1619,8 @@ bitfromint8(PG_FUNCTION_ARGS)
   /* sign-fill any excess bytes in output */
   while (destbitsleft >= srcbitsleft + 8)
   {
-
-
+    *r++ = (bits8)((a < 0) ? BITMASK : 0);
+    destbitsleft -= 8;
   }
   /* store first fractional byte */
   if (destbitsleft > srcbitsleft)
@@ -1632,12 +1628,12 @@ bitfromint8(PG_FUNCTION_ARGS)
     unsigned int val = (unsigned int)(a >> (destbitsleft - 8));
 
     /* Force sign-fill in case the compiler implements >> as zero-fill */
-
-
-
-
-
-
+    if (a < 0)
+    {
+      val |= ((unsigned int)-1) << (srcbitsleft + 8 - destbitsleft);
+    }
+    *r++ = (bits8)(val & BITMASK);
+    destbitsleft -= 8;
   }
   /* Now srcbitsleft and destbitsleft are the same, need not track both */
   /* store whole bytes */
@@ -1649,7 +1645,7 @@ bitfromint8(PG_FUNCTION_ARGS)
   /* store last fractional byte */
   if (destbitsleft > 0)
   {
-
+    *r = (bits8)((a << (8 - destbitsleft)) & BITMASK);
   }
 
   PG_RETURN_VARBIT_P(result);
@@ -1665,7 +1661,7 @@ bittoint8(PG_FUNCTION_ARGS)
   /* Check that the bit string is not too long */
   if (VARBITLEN(arg) > sizeof(result) * BITS_PER_BYTE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("bigint out of range")));
   }
 
   result = 0;
@@ -1757,7 +1753,8 @@ bitposition(PG_FUNCTION_ARGS)
           mask2 = end_mask << (BITS_PER_BYTE - is);
           is_match = mask2 == 0;
 #if 0
-					elog(DEBUG4, "S. %d %d em=%2x sm=%2x r=%d",i, is, end_mask, mask2, is_match);
+					elog(DEBUG4, "S. %d %d em=%2x sm=%2x r=%d",
+						 i, is, end_mask, mask2, is_match);
 #endif
           break;
         }
@@ -1769,8 +1766,8 @@ bitposition(PG_FUNCTION_ARGS)
           {
             if (mask2 & ~str_mask)
             {
-
-
+              is_match = false;
+              break;
             }
             mask2 &= str_mask;
           }
@@ -1819,7 +1816,7 @@ bitsetbit(PG_FUNCTION_ARGS)
    */
   if (newBit != 0 && newBit != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("new bit must be 0 or 1")));
   }
 
   len = VARSIZE(arg1);
@@ -1840,7 +1837,7 @@ bitsetbit(PG_FUNCTION_ARGS)
    */
   if (newBit == 0)
   {
-
+    r[byteNo] &= (~(1 << bitNo));
   }
   else
   {
@@ -1871,7 +1868,7 @@ bitgetbit(PG_FUNCTION_ARGS)
   bitlen = VARBITLEN(arg1);
   if (n < 0 || n >= bitlen)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("bit index %d out of valid range (0..%d)", n, bitlen - 1)));
   }
 
   p = VARBITS(arg1);
@@ -1885,6 +1882,6 @@ bitgetbit(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    PG_RETURN_INT32(0);
   }
 }

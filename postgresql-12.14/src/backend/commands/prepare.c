@@ -71,7 +71,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString, int stmt_location, int 
    */
   if (!stmt->name || stmt->name[0] == '\0')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PSTATEMENT_DEFINITION), errmsg("invalid statement name: must not be empty")));
   }
 
   /*
@@ -135,7 +135,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString, int stmt_location, int 
 
     if (argtype == InvalidOid || argtype == UNKNOWNOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_DATATYPE), errmsg("could not determine data type of parameter $%d", i + 1)));
     }
   }
 
@@ -144,15 +144,15 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString, int stmt_location, int 
    */
   switch (query->commandType)
   {
-  case CMD_SELECT:;
-  case CMD_INSERT:;
-  case CMD_UPDATE:;
-  case CMD_DELETE:;
+  case CMD_SELECT:
+  case CMD_INSERT:
+  case CMD_UPDATE:
+  case CMD_DELETE:
     /* OK */
     break;
-  default:;;
-
-
+  default:
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PSTATEMENT_DEFINITION), errmsg("utility statements cannot be prepared")));
+    break;
   }
 
   /* Rewrite the query. The result could be 0, 1, or many queries. */
@@ -201,7 +201,7 @@ ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause, const char *queryString,
   /* Shouldn't find a non-fixed-result cached plan */
   if (!entry->plansource->fixed_result)
   {
-
+    elog(ERROR, "EXECUTE does not support variable-result cached plans");
   }
 
   /* Evaluate parameters, if any */
@@ -255,12 +255,12 @@ ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause, const char *queryString,
 
     if (list_length(plan_list) != 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("prepared statement is not a SELECT")));
     }
     pstmt = linitial_node(PlannedStmt, plan_list);
     if (pstmt->commandType != CMD_SELECT)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("prepared statement is not a SELECT")));
     }
 
     /* Set appropriate eflags */
@@ -332,7 +332,7 @@ EvaluateParams(PreparedStatement *pstmt, List *params, const char *queryString, 
   /* Quick exit if no parameters */
   if (num_params == 0)
   {
-
+    return NULL;
   }
 
   /*
@@ -496,7 +496,7 @@ FetchPreparedStatementResultDesc(PreparedStatement *stmt)
   }
   else
   {
-
+    return NULL;
   }
 }
 
@@ -573,7 +573,7 @@ DropAllPreparedStatements(void)
   /* nothing cached */
   if (!prepared_queries)
   {
-
+    return;
   }
 
   /* walk over cache */
@@ -618,7 +618,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es, c
   /* Shouldn't find a non-fixed-result cached plan */
   if (!entry->plansource->fixed_result)
   {
-
+    elog(ERROR, "EXPLAIN EXECUTE does not support variable-result cached plans");
   }
 
   query_string = entry->plansource->query_string;
@@ -656,7 +656,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es, c
     }
     else
     {
-
+      ExplainOneUtility(pstmt->utilityStmt, into, es, query_string, paramLI, queryEnv);
     }
 
     /* No need for CommandCounterIncrement, as ExplainOnePlan did it */
@@ -664,7 +664,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es, c
     /* Separate plans with an appropriate separator */
     if (lnext(p) != NULL)
     {
-
+      ExplainSeparatePlans(es);
     }
   }
 
@@ -692,11 +692,12 @@ pg_prepared_statement(PG_FUNCTION_ARGS)
   /* check to see if caller supports us returning a tuplestore */
   if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* need to build tuplestore in query context */

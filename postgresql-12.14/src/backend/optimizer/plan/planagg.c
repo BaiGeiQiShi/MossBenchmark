@@ -142,9 +142,7 @@ preprocess_minmax_aggregates(PlannerInfo *root)
   if (rte->rtekind == RTE_RELATION)
     /* ordinary relation, ok */;
   else if (rte->rtekind == RTE_SUBQUERY && rte->inh)
-  {
     /* flattened UNION ALL subquery, ok */;
-  }
   else
   {
     return;
@@ -181,8 +179,8 @@ preprocess_minmax_aggregates(PlannerInfo *root)
      * ordering operator.
      */
     eqop = get_equality_op_for_ordering_op(mminfo->aggsortop, &reverse);
-    if (!OidIsValid(eqop))
-    { /* shouldn't happen */
+    if (!OidIsValid(eqop)) /* shouldn't happen */
+    {
       elog(ERROR, "could not find equality operator for ordering operator %u", mminfo->aggsortop);
     }
 
@@ -243,8 +241,8 @@ preprocess_minmax_aggregates(PlannerInfo *root)
 
 /*
  * find_minmax_aggs_walker
- *		Recursively scan the Aggref nodes in an expression tree, and
- *check that each one is a MIN/MAX aggregate.  If so, build a list of the
+ *		Recursively scan the Aggref nodes in an expression tree, and check
+ *		that each one is a MIN/MAX aggregate.  If so, build a list of the
  *		distinct aggregate calls in the tree.
  *
  * Returns true if a non-MIN/MAX aggregate is found, false otherwise.
@@ -361,8 +359,8 @@ find_minmax_aggs_walker(Node *node, List **context)
 
 /*
  * build_minmax_path
- *		Given a MIN/MAX aggregate, try to build an indexscan Path it can
- *be optimized with.
+ *		Given a MIN/MAX aggregate, try to build an indexscan Path it can be
+ *		optimized with.
  *
  * If successful, stash the best path in *mminfo and return true.
  * Otherwise, return false.

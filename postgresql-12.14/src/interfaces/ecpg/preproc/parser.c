@@ -53,14 +53,17 @@ filtered_base_yylex(void)
   char *cur_yytext;
 
   /* Get next token --- we might already have it */
-  if (have_lookahead) {
+  if (have_lookahead)
+  {
     cur_token = lookahead_token;
     base_yylval = lookahead_yylval;
     base_yylloc = lookahead_yylloc;
     base_yytext = lookahead_yytext;
     *lookahead_end = lookahead_hold_char;
     have_lookahead = false;
-  } else {
+  }
+  else
+  {
     cur_token = base_yylex();
   }
 
@@ -70,7 +73,8 @@ filtered_base_yylex(void)
    * since we have such a small set of possibilities, hardwiring seems
    * feasible and more efficient.)
    */
-  switch (cur_token) {
+  switch (cur_token)
+  {
   case NOT:
     cur_token_length = 3;
     break;
@@ -80,7 +84,7 @@ filtered_base_yylex(void)
   case WITH:
     cur_token_length = 4;
     break;
-  default:;
+  default:
     return cur_token;
   }
 
@@ -116,10 +120,12 @@ filtered_base_yylex(void)
   have_lookahead = true;
 
   /* Replace cur_token if needed, based on lookahead */
-  switch (cur_token) {
+  switch (cur_token)
+  {
   case NOT:
     /* Replace NOT by NOT_LA if it's followed by BETWEEN, IN, etc */
-    switch (next_token) {
+    switch (next_token)
+    {
     case BETWEEN:
     case IN_P:
     case LIKE:
@@ -132,7 +138,8 @@ filtered_base_yylex(void)
 
   case NULLS_P:
     /* Replace NULLS_P by NULLS_LA if it's followed by FIRST or LAST */
-    switch (next_token) {
+    switch (next_token)
+    {
     case FIRST_P:
     case LAST_P:
       cur_token = NULLS_LA;
@@ -142,7 +149,8 @@ filtered_base_yylex(void)
 
   case WITH:
     /* Replace WITH by WITH_LA if it's followed by TIME or ORDINALITY */
-    switch (next_token) {
+    switch (next_token)
+    {
     case TIME:
     case ORDINALITY:
       cur_token = WITH_LA;

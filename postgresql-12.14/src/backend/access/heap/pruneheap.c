@@ -83,7 +83,7 @@ heap_page_prune_opt(Relation relation, Buffer buffer)
    */
   if (RecoveryInProgress())
   {
-
+    return;
   }
 
   /*
@@ -416,7 +416,7 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
     /* Some sanity checks */
     if (offnum < FirstOffsetNumber || offnum > maxoff)
     {
-
+      break;
     }
 
     /* If item is already processed, stop --- it must not be same chain */
@@ -430,7 +430,7 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
     /* Unused item obviously isn't part of the chain */
     if (!ItemIdIsUsed(lp))
     {
-
+      break;
     }
 
     /*
@@ -442,7 +442,7 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
     {
       if (nchain > 0)
       {
-
+        break; /* not at start of chain */
       }
       chainitems[nchain++] = offnum;
       offnum = ItemIdGetRedirect(rootlp);
@@ -456,7 +456,7 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
      */
     if (ItemIdIsDead(lp))
     {
-
+      break;
     }
 
     Assert(ItemIdIsNormal(lp));
@@ -471,7 +471,7 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
      */
     if (TransactionIdIsValid(priorXmax) && !TransactionIdEquals(HeapTupleHeaderGetXmin(htup), priorXmax))
     {
-
+      break;
     }
 
     /*
@@ -486,21 +486,12 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
 
     switch (HeapTupleSatisfiesVacuum(&tup, OldestXmin, buffer))
     {
-    case HEAPTUPLE_DEAD:;
+    case HEAPTUPLE_DEAD:
       tupdead = true;
       break;
 
-    case HEAPTUPLE_RECENTLY_DEAD:;
-
-
-      /*
-       * This tuple may soon become DEAD.  Update the hint field so
-       * that the page is reconsidered for pruning in future.
-       */
-
-
-
-    case HEAPTUPLE_DELETE_IN_PROGRESS:;
+    case HEAPTUPLE_RECENTLY_DEAD:
+      recent_dead = true;
 
       /*
        * This tuple may soon become DEAD.  Update the hint field so
@@ -509,8 +500,17 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
       heap_prune_record_prunable(prstate, HeapTupleHeaderGetUpdateXid(htup));
       break;
 
-    case HEAPTUPLE_LIVE:;
-    case HEAPTUPLE_INSERT_IN_PROGRESS:;
+    case HEAPTUPLE_DELETE_IN_PROGRESS:
+
+      /*
+       * This tuple may soon become DEAD.  Update the hint field so
+       * that the page is reconsidered for pruning in future.
+       */
+      heap_prune_record_prunable(prstate, HeapTupleHeaderGetUpdateXid(htup));
+      break;
+
+    case HEAPTUPLE_LIVE:
+    case HEAPTUPLE_INSERT_IN_PROGRESS:
 
       /*
        * If we wanted to optimize for aborts, we might consider
@@ -520,9 +520,9 @@ heap_prune_chain(Relation relation, Buffer buffer, OffsetNumber rootoffnum, Tran
        */
       break;
 
-    default:;;
-
-
+    default:
+      elog(ERROR, "unexpected HeapTupleSatisfiesVacuum result");
+      break;
     }
 
     /*
@@ -795,10 +795,10 @@ heap_get_root_tuples(Page page, OffsetNumber *root_offsets)
     else
     {
       /* Must be a redirect item. We do not set its root_offsets entry */
-
+      Assert(ItemIdIsRedirected(lp));
       /* Set up to scan the HOT-chain */
-
-
+      nextoffnum = ItemIdGetRedirect(lp);
+      priorXmax = InvalidTransactionId;
     }
 
     /*
@@ -816,14 +816,14 @@ heap_get_root_tuples(Page page, OffsetNumber *root_offsets)
       /* Check for broken chains */
       if (!ItemIdIsNormal(lp))
       {
-
+        break;
       }
 
       htup = (HeapTupleHeader)PageGetItem(page, lp);
 
       if (TransactionIdIsValid(priorXmax) && !TransactionIdEquals(priorXmax, HeapTupleHeaderGetXmin(htup)))
       {
-
+        break;
       }
 
       /* Remember the root line pointer for this item */

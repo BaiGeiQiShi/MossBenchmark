@@ -49,17 +49,19 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, "main", 0);
 #line 24 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 24 "oldexec.pgc"
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal,"create table test ( name char ( 8 ) , amount int , letter char ( 1 ) )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "create table test ( name char ( 8 ) , amount int , letter char ( 1 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 26 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -69,7 +71,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 27 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -80,7 +83,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_exec_immediate, command, ECPGt_EOIT, ECPGt_EORT);
 #line 30 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -91,7 +95,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_exec_immediate, command, ECPGt_EOIT, ECPGt_EORT);
 #line 33 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -102,7 +107,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_exec_immediate, command, ECPGt_EOIT, ECPGt_EORT);
 #line 36 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -115,7 +121,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 1, "i", command);
 #line 41 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -125,7 +132,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_execute, "i", ECPGt_int, &(increment), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 42 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -137,7 +145,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 46 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -149,7 +158,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 1, "f", command);
 #line 50 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -162,7 +172,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "declare CUR cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "f", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 53 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -172,13 +183,15 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "fetch 8 in CUR", ECPGt_EOIT, ECPGt_char, (name), (long)8, (long)8, (8) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, (amount), (long)1, (long)8, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (letter), (long)1, (long)8, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 54 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 54 "oldexec.pgc"
 
-  for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++) {
+  for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
+  {
     char n[8], l = letter[i][0];
     int a = amount[i];
 
@@ -190,7 +203,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "close CUR", ECPGt_EOIT, ECPGt_EORT);
 #line 65 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -202,7 +216,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 1, "f", command);
 #line 69 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -215,7 +230,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "declare CUR3 cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "f", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_const, "1", (long)1, (long)1, strlen("1"), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 72 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -225,13 +241,15 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "fetch in CUR3", ECPGt_EOIT, ECPGt_char, (name), (long)8, (long)8, (8) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_int, (amount), (long)1, (long)8, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (letter), (long)1, (long)8, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 73 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 73 "oldexec.pgc"
 
-  for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++) {
+  for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
+  {
     char n[8], l = letter[i][0];
     int a = amount[i];
 
@@ -243,7 +261,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "close CUR3", ECPGt_EOIT, ECPGt_EORT);
 #line 84 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -253,7 +272,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 1, ECPGst_normal, "drop table test", ECPGt_EOIT, ECPGt_EORT);
 #line 85 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -263,7 +283,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 86 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -273,7 +294,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 87 "oldexec.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

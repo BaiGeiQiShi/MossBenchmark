@@ -209,12 +209,12 @@ static ResourceOwner awaitedOwner;
 /*------
  * The following configuration options are available for lock debugging:
  *
- *	   TRACE_LOCKS		-- give a bunch of output what's going on in
- *this file TRACE_USERLOCKS	-- same but for user locks TRACE_LOCK_OIDMIN--
- *do not trace locks for tables below this oid (use to avoid output on system
- *tables) TRACE_LOCK_TABLE -- trace locks on this table (oid) unconditionally
- *	   DEBUG_DEADLOCKS	-- currently dumps locks at untimely occasions
- *;)
+ *	   TRACE_LOCKS		-- give a bunch of output what's going on in this file
+ *	   TRACE_USERLOCKS	-- same but for user locks
+ *	   TRACE_LOCK_OIDMIN-- do not trace locks for tables below this oid
+ *						   (use to avoid output on system tables)
+ *	   TRACE_LOCK_TABLE -- trace locks on this table (oid) unconditionally
+ *	   DEBUG_DEADLOCKS	-- currently dumps locks at untimely occasions ;)
  *
  * Furthermore, but in storage/lmgr/lwlock.c:
  *	   TRACE_LWLOCKS	-- trace lightweight locks (pretty useless)
@@ -240,7 +240,11 @@ LOCK_PRINT(const char *where, const LOCK *lock, LOCKMODE type)
 {
   if (LOCK_DEBUG_ENABLED(&lock->tag))
   {
-    elog(LOG, "%s: lock(%p) id(%u,%u,%u,%u,%u,%u) grantMask(%x) req(%d,%d,%d,%d,%d,%d,%d)=%d grant(%d,%d,%d,%d,%d,%d,%d)=%d wait(%d) type(%s)", where, lock, lock->tag.locktag_field1, lock->tag.locktag_field2, lock->tag.locktag_field3, lock->tag.locktag_field4, lock->tag.locktag_type, lock->tag.locktag_lockmethodid, lock->grantMask, lock->requested[1], lock->requested[2], lock->requested[3], lock->requested[4], lock->requested[5], lock->requested[6], lock->requested[7], lock->nRequested, lock->granted[1], lock->granted[2], lock->granted[3], lock->granted[4], lock->granted[5], lock->granted[6], lock->granted[7], lock->nGranted, lock->waitProcs.size, LockMethods[LOCK_LOCKMETHOD(*lock)]->lockModeNames[type]);
+    elog(LOG,
+        "%s: lock(%p) id(%u,%u,%u,%u,%u,%u) grantMask(%x) "
+        "req(%d,%d,%d,%d,%d,%d,%d)=%d "
+        "grant(%d,%d,%d,%d,%d,%d,%d)=%d wait(%d) type(%s)",
+        where, lock, lock->tag.locktag_field1, lock->tag.locktag_field2, lock->tag.locktag_field3, lock->tag.locktag_field4, lock->tag.locktag_type, lock->tag.locktag_lockmethodid, lock->grantMask, lock->requested[1], lock->requested[2], lock->requested[3], lock->requested[4], lock->requested[5], lock->requested[6], lock->requested[7], lock->nRequested, lock->granted[1], lock->granted[2], lock->granted[3], lock->granted[4], lock->granted[5], lock->granted[6], lock->granted[7], lock->nGranted, lock->waitProcs.size, LockMethods[LOCK_LOCKMETHOD(*lock)]->lockModeNames[type]);
   }
 }
 
@@ -604,11 +608,10 @@ LockHasWaiters(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
  *	dontWait: if true, don't wait to acquire lock
  *
  * Returns one of:
- *		LOCKACQUIRE_NOT_AVAIL		lock not available, and
- *dontWait=true LOCKACQUIRE_OK				lock successfully
- *acquired LOCKACQUIRE_ALREADY_HELD	incremented count for lock already held
- *		LOCKACQUIRE_ALREADY_CLEAR	incremented count for lock
- *already clear
+ *		LOCKACQUIRE_NOT_AVAIL		lock not available, and dontWait=true
+ *		LOCKACQUIRE_OK				lock successfully acquired
+ *		LOCKACQUIRE_ALREADY_HELD	incremented count for lock already held
+ *		LOCKACQUIRE_ALREADY_CLEAR	incremented count for lock already clear
  *
  * In the normal case where dontWait=false and the caller doesn't need to
  * distinguish a freshly acquired lock from one already taken earlier in
@@ -1157,7 +1160,10 @@ SetupLockInTable(LockMethod lockMethodTable, PGPROC *proc, const LOCKTAG *lockta
           {
             break; /* safe: we have a lock >= req level */
           }
-          elog(LOG, "deadlock risk: raising lock level from %s to %s on object %u/%u/%u", lockMethodTable->lockModeNames[i], lockMethodTable->lockModeNames[lockmode], lock->tag.locktag_field1, lock->tag.locktag_field2, lock->tag.locktag_field3);
+          elog(LOG,
+              "deadlock risk: raising lock level"
+              " from %s to %s on object %u/%u/%u",
+              lockMethodTable->lockModeNames[i], lockMethodTable->lockModeNames[lockmode], lock->tag.locktag_field1, lock->tag.locktag_field2, lock->tag.locktag_field3);
           break;
         }
       }
@@ -2336,8 +2342,8 @@ LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks)
 
 /*
  * ReleaseLockIfHeld
- *		Release any session-level locks on this lockable object if
- *sessionLock is true; else, release any locks held by CurrentResourceOwner.
+ *		Release any session-level locks on this lockable object if sessionLock
+ *		is true; else, release any locks held by CurrentResourceOwner.
  *
  * It is tempting to pass this a ResourceOwner pointer (or NULL for session
  * locks), but without refactoring LockRelease() we cannot support releasing
@@ -2539,8 +2545,8 @@ FastPathGrantRelationLock(Oid relid, LOCKMODE lockmode)
 
 /*
  * FastPathUnGrantRelationLock
- *		Release fast-path lock, if present.  Update backend-private
- *local use count, while we're at it.
+ *		Release fast-path lock, if present.  Update backend-private local
+ *		use count, while we're at it.
  */
 static bool
 FastPathUnGrantRelationLock(Oid relid, LOCKMODE lockmode)
@@ -2568,8 +2574,8 @@ FastPathUnGrantRelationLock(Oid relid, LOCKMODE lockmode)
 
 /*
  * FastPathTransferRelationLocks
- *		Transfer locks matching the given lock tag from per-backend
- *fast-path arrays to the shared hash table.
+ *		Transfer locks matching the given lock tag from per-backend fast-path
+ *		arrays to the shared hash table.
  *
  * Returns true if successful, false if ran out of shared memory.
  */
@@ -2656,8 +2662,8 @@ FastPathTransferRelationLocks(LockMethod lockMethodTable, const LOCKTAG *locktag
 
 /*
  * FastPathGetLockEntry
- *		Return the PROCLOCK for a lock originally taken via the
- *fast-path, transferring it to the primary lock table if necessary.
+ *		Return the PROCLOCK for a lock originally taken via the fast-path,
+ *		transferring it to the primary lock table if necessary.
  *
  * Note: caller takes care of updating the locallock object.
  */
@@ -2743,9 +2749,9 @@ FastPathGetRelationLockEntry(LOCALLOCK *locallock)
 
 /*
  * GetLockConflicts
- *		Get an array of VirtualTransactionIds of xacts currently holding
- *locks that would conflict with the specified lock/lockmode. xacts merely
- *awaiting such a lock are NOT reported.
+ *		Get an array of VirtualTransactionIds of xacts currently holding locks
+ *		that would conflict with the specified lock/lockmode.
+ *		xacts merely awaiting such a lock are NOT reported.
  *
  * The result array is palloc'd and is terminated with an invalid VXID.
  * *countp, if not null, is updated to the number of items set.
@@ -2969,8 +2975,8 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 
   LWLockRelease(partitionLock);
 
-  if (count > MaxBackends + max_prepared_xacts)
-  { /* should never happen */
+  if (count > MaxBackends + max_prepared_xacts) /* should never happen */
+  {
     elog(PANIC, "too many conflicting locks found");
   }
 
@@ -3070,8 +3076,8 @@ LockRefindAndRelease(LockMethod lockMethodTable, PGPROC *proc, LOCKTAG *locktag,
 
 /*
  * CheckForSessionAndXactLocks
- *		Check to see if transaction holds both session-level and
- *xact-level locks on the same object; if so, throw an error.
+ *		Check to see if transaction holds both session-level and xact-level
+ *		locks on the same object; if so, throw an error.
  *
  * If we have both session- and transaction-level locks on the same object,
  * PREPARE TRANSACTION must fail.  This should never happen with regular
@@ -3138,8 +3144,8 @@ CheckForSessionAndXactLocks(void)
 
     /* Otherwise, find or make an entry in lockhtab */
     hentry = (PerLockTagEntry *)hash_search(lockhtab, (void *)&locallock->tag.lock, HASH_ENTER, &found);
-    if (!found)
-    { /* initialize, if newly created */
+    if (!found) /* initialize, if newly created */
+    {
       hentry->sessLock = hentry->xactLock = false;
     }
 
@@ -3172,8 +3178,8 @@ CheckForSessionAndXactLocks(void)
 
 /*
  * AtPrepare_Locks
- *		Do the preparatory work for a PREPARE: make 2PC state file
- *records for all locks currently held.
+ *		Do the preparatory work for a PREPARE: make 2PC state file records
+ *		for all locks currently held.
  *
  * Session-level locks are ignored, as are VXID locks.
  *
@@ -4339,19 +4345,18 @@ lock_twophase_postabort(TransactionId xid, uint16 info, void *recdata, uint32 le
 /*
  *		VirtualXactLockTableInsert
  *
- *		Take vxid lock via the fast-path.  There can't be any
- *pre-existing lockers, as we haven't advertised this vxid via the ProcArray
- *yet.
+ *		Take vxid lock via the fast-path.  There can't be any pre-existing
+ *		lockers, as we haven't advertised this vxid via the ProcArray yet.
  *
- *		Since MyProc->fpLocalTransactionId will normally contain the
- *same data as MyProc->lxid, you might wonder if we really need both.  The
+ *		Since MyProc->fpLocalTransactionId will normally contain the same data
+ *		as MyProc->lxid, you might wonder if we really need both.  The
  *		difference is that MyProc->lxid is set and cleared unlocked, and
- *		examined by procarray.c, while fpLocalTransactionId is protected
- *by backendLock and is used only by the locking subsystem.  Doing it this way
- *makes it easier to verify that there are no funny race conditions.
+ *		examined by procarray.c, while fpLocalTransactionId is protected by
+ *		backendLock and is used only by the locking subsystem.  Doing it this
+ *		way makes it easier to verify that there are no funny race conditions.
  *
- *		We don't bother recording this lock in the local lock table,
- *since it's only ever released at the end of a transaction.  Instead,
+ *		We don't bother recording this lock in the local lock table, since it's
+ *		only ever released at the end of a transaction.  Instead,
  *		LockReleaseAll() calls VirtualXactLockTableCleanup().
  */
 void
@@ -4374,8 +4379,8 @@ VirtualXactLockTableInsert(VirtualTransactionId vxid)
 /*
  *		VirtualXactLockTableCleanup
  *
- *		Check whether a VXID lock has been materialized; if so, release
- *it, unblocking waiters.
+ *		Check whether a VXID lock has been materialized; if so, release it,
+ *		unblocking waiters.
  */
 void
 VirtualXactLockTableCleanup(void)

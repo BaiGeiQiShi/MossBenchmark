@@ -113,7 +113,7 @@ array_typanalyze(PG_FUNCTION_ARGS)
    */
   if (!std_typanalyze(stats))
   {
-
+    PG_RETURN_BOOL(false);
   }
 
   /*
@@ -122,7 +122,7 @@ array_typanalyze(PG_FUNCTION_ARGS)
   element_typeid = get_base_element_type(stats->attrtypid);
   if (!OidIsValid(element_typeid))
   {
-
+    elog(ERROR, "array_typanalyze was invoked for non-array type %u", stats->attrtypid);
   }
 
   /*
@@ -326,7 +326,7 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
     /* Skip too-large values. */
     if (toast_raw_datum_size(value) > ARRAY_WIDTH_THRESHOLD)
     {
-
+      continue;
     }
     else
     {
@@ -402,8 +402,8 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
       /* We prune the D structure after processing each bucket */
       if (element_no % bucket_width == 0)
       {
-
-
+        prune_element_hashtable(elements_tab, b_current);
+        b_current++;
       }
     }
 
@@ -443,7 +443,7 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
   }
   if (slot_idx > STATISTIC_NUM_SLOTS - 2)
   {
-
+    elog(ERROR, "insufficient pg_statistic slots for array stats");
   }
 
   /* We can only compute real stats if we found some non-null values. */
@@ -493,7 +493,12 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
     Assert(track_len <= i);
 
     /* emit some statistics for debug purposes */
-    elog(DEBUG3, "compute_array_stats: target # mces = %d, bucket width = %d, # elements = " INT64_FORMAT ", hashtable size = %d, usable entries = %d", num_mcelem, bucket_width, element_no, i, track_len);
+    elog(DEBUG3,
+        "compute_array_stats: target # mces = %d, "
+        "bucket width = %d, "
+        "# elements = " INT64_FORMAT ", hashtable size = %d, "
+        "usable entries = %d",
+        num_mcelem, bucket_width, element_no, i, track_len);
 
     /*
      * If we obtained more elements than we really want, get rid of those
@@ -502,9 +507,9 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
      */
     if (num_mcelem < track_len)
     {
-
+      qsort(sort_table, track_len, sizeof(TrackItem *), trackitem_compare_frequencies_desc);
       /* reset minfreq to the smallest frequency we're keeping */
-
+      minfreq = sort_table[num_mcelem - 1]->frequency;
     }
     else
     {
@@ -674,27 +679,27 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc, int sam
 static void
 prune_element_hashtable(HTAB *elements_tab, int b_current)
 {
+  HASH_SEQ_STATUS scan_status;
+  TrackItem *item;
 
+  hash_seq_init(&scan_status, elements_tab);
+  while ((item = (TrackItem *)hash_seq_search(&scan_status)) != NULL)
+  {
+    if (item->frequency + item->delta <= b_current)
+    {
+      Datum value = item->key;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (hash_search(elements_tab, (const void *)&item->key, HASH_REMOVE, NULL) == NULL)
+      {
+        elog(ERROR, "hash table corrupted");
+      }
+      /* We should free memory if element is not passed by value */
+      if (!array_extra_data->typbyval)
+      {
+        pfree(DatumGetPointer(value));
+      }
+    }
+  }
 }
 
 /*
@@ -748,10 +753,10 @@ element_compare(const void *key1, const void *key2)
 static int
 trackitem_compare_frequencies_desc(const void *e1, const void *e2)
 {
+  const TrackItem *const *t1 = (const TrackItem *const *)e1;
+  const TrackItem *const *t2 = (const TrackItem *const *)e2;
 
-
-
-
+  return (*t2)->frequency - (*t1)->frequency;
 }
 
 /*
@@ -781,7 +786,7 @@ countitem_compare_count(const void *e1, const void *e2)
   }
   else if ((*t1)->count == (*t2)->count)
   {
-
+    return 0;
   }
   else
   {

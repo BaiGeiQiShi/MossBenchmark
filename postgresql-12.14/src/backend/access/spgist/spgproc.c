@@ -32,7 +32,7 @@ point_box_distance(Point *point, BOX *box)
 
   if (isnan(point->x) || isnan(box->low.x) || isnan(point->y) || isnan(box->low.y))
   {
-
+    return get_float8_nan();
   }
 
   if (point->x < box->low.x)

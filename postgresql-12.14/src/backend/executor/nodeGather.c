@@ -422,8 +422,7 @@ ExecShutdownGatherWorkers(GatherState *node)
 /* ----------------------------------------------------------------
  *		ExecShutdownGather
  *
- *		Destroy the setup for parallel workers including parallel
- *context.
+ *		Destroy the setup for parallel workers including parallel context.
  * ----------------------------------------------------------------
  */
 void
@@ -486,6 +485,6 @@ ExecReScanGather(GatherState *node)
    */
   if (outerPlan->chgParam == NULL)
   {
-
+    ExecReScan(outerPlan);
   }
 }

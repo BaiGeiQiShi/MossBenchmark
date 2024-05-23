@@ -334,8 +334,7 @@ left4D(RectBox *rect_box, RangeBox *query)
   return lower2D(&rect_box->range_box_x, &query->left);
 }
 
-/* Can any rectangle from rect_box does not extend the right of this argument?
- */
+/* Can any rectangle from rect_box does not extend the right of this argument? */
 static bool
 overLeft4D(RectBox *rect_box, RangeBox *query)
 {
@@ -397,7 +396,7 @@ pointToRectBoxDistance(Point *point, RectBox *rect_box)
   }
   else if (point->x > rect_box->range_box_x.right.high)
   {
-
+    dx = point->x - rect_box->range_box_x.right.high;
   }
   else
   {
@@ -535,17 +534,17 @@ is_bounding_box_test_exact(StrategyNumber strategy)
 {
   switch (strategy)
   {
-  case RTLeftStrategyNumber:;
-  case RTOverLeftStrategyNumber:;
-  case RTOverRightStrategyNumber:;
-  case RTRightStrategyNumber:;
-  case RTOverBelowStrategyNumber:;
-  case RTBelowStrategyNumber:;
-  case RTAboveStrategyNumber:;
-  case RTOverAboveStrategyNumber:;
+  case RTLeftStrategyNumber:
+  case RTOverLeftStrategyNumber:
+  case RTOverRightStrategyNumber:
+  case RTRightStrategyNumber:
+  case RTOverBelowStrategyNumber:
+  case RTBelowStrategyNumber:
+  case RTAboveStrategyNumber:
+  case RTOverAboveStrategyNumber:
     return true;
 
-  default:;;
+  default:
     return false;
   }
 }
@@ -558,19 +557,19 @@ spg_box_quad_get_scankey_bbox(ScanKey sk, bool *recheck)
 {
   switch (sk->sk_subtype)
   {
-  case BOXOID:;
+  case BOXOID:
     return DatumGetBoxP(sk->sk_argument);
 
-  case POLYGONOID:;
+  case POLYGONOID:
     if (recheck && !is_bounding_box_test_exact(sk->sk_strategy))
     {
       *recheck = true;
     }
     return &DatumGetPolygonP(sk->sk_argument)->boundbox;
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized scankey subtype: %d", sk->sk_subtype);
+    return NULL;
   }
 }
 
@@ -616,21 +615,21 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
       double *distances = palloc(sizeof(double) * in->norderbys);
       int j;
 
+      for (j = 0; j < in->norderbys; j++)
+      {
+        Point *pt = DatumGetPointP(in->orderbys[j].sk_argument);
 
+        distances[j] = pointToRectBoxDistance(pt, rect_box);
+      }
 
+      out->distances = (double **)palloc(sizeof(double *) * in->nNodes);
+      out->distances[0] = distances;
 
-
-
-
-
-
-
-
-
-
-
-
-
+      for (i = 1; i < in->nNodes; i++)
+      {
+        out->distances[i] = palloc(sizeof(double) * in->norderbys);
+        memcpy(out->distances[i], distances, sizeof(double) * in->norderbys);
+      }
     }
 
     PG_RETURN_VOID();
@@ -676,53 +675,53 @@ spg_box_quad_inner_consistent(PG_FUNCTION_ARGS)
 
       switch (strategy)
       {
-      case RTOverlapStrategyNumber:;
+      case RTOverlapStrategyNumber:
         flag = overlap4D(next_rect_box, queries[i]);
         break;
 
-      case RTContainsStrategyNumber:;
+      case RTContainsStrategyNumber:
         flag = contain4D(next_rect_box, queries[i]);
         break;
 
-      case RTSameStrategyNumber:;
-      case RTContainedByStrategyNumber:;
+      case RTSameStrategyNumber:
+      case RTContainedByStrategyNumber:
         flag = contained4D(next_rect_box, queries[i]);
         break;
 
-      case RTLeftStrategyNumber:;
+      case RTLeftStrategyNumber:
         flag = left4D(next_rect_box, queries[i]);
         break;
 
-      case RTOverLeftStrategyNumber:;
+      case RTOverLeftStrategyNumber:
         flag = overLeft4D(next_rect_box, queries[i]);
         break;
 
-      case RTRightStrategyNumber:;
+      case RTRightStrategyNumber:
         flag = right4D(next_rect_box, queries[i]);
         break;
 
-      case RTOverRightStrategyNumber:;
+      case RTOverRightStrategyNumber:
         flag = overRight4D(next_rect_box, queries[i]);
         break;
 
-      case RTAboveStrategyNumber:;
+      case RTAboveStrategyNumber:
         flag = above4D(next_rect_box, queries[i]);
         break;
 
-      case RTOverAboveStrategyNumber:;
+      case RTOverAboveStrategyNumber:
         flag = overAbove4D(next_rect_box, queries[i]);
         break;
 
-      case RTBelowStrategyNumber:;
+      case RTBelowStrategyNumber:
         flag = below4D(next_rect_box, queries[i]);
         break;
 
-      case RTOverBelowStrategyNumber:;
+      case RTOverBelowStrategyNumber:
         flag = overBelow4D(next_rect_box, queries[i]);
         break;
 
-      default:;;
-
+      default:
+        elog(ERROR, "unrecognized strategy: %d", strategy);
       }
 
       /* If any check is failed, we have found our answer. */
@@ -804,56 +803,56 @@ spg_box_quad_leaf_consistent(PG_FUNCTION_ARGS)
 
     switch (strategy)
     {
-    case RTOverlapStrategyNumber:;
+    case RTOverlapStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_overlap, leaf, query));
       break;
 
-    case RTContainsStrategyNumber:;
+    case RTContainsStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_contain, leaf, query));
       break;
 
-    case RTContainedByStrategyNumber:;
+    case RTContainedByStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_contained, leaf, query));
       break;
 
-    case RTSameStrategyNumber:;
+    case RTSameStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_same, leaf, query));
       break;
 
-    case RTLeftStrategyNumber:;
+    case RTLeftStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_left, leaf, query));
       break;
 
-    case RTOverLeftStrategyNumber:;
+    case RTOverLeftStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_overleft, leaf, query));
       break;
 
-    case RTRightStrategyNumber:;
+    case RTRightStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_right, leaf, query));
       break;
 
-    case RTOverRightStrategyNumber:;
+    case RTOverRightStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_overright, leaf, query));
       break;
 
-    case RTAboveStrategyNumber:;
+    case RTAboveStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_above, leaf, query));
       break;
 
-    case RTOverAboveStrategyNumber:;
+    case RTOverAboveStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_overabove, leaf, query));
       break;
 
-    case RTBelowStrategyNumber:;
+    case RTBelowStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_below, leaf, query));
       break;
 
-    case RTOverBelowStrategyNumber:;
+    case RTOverBelowStrategyNumber:
       flag = DatumGetBool(DirectFunctionCall2(box_overbelow, leaf, query));
       break;
 
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized strategy: %d", strategy);
     }
 
     /* If any check is failed, we have found our answer. */

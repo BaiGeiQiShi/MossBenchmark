@@ -16,9 +16,9 @@
  */
 /*
  * INTERFACE ROUTINES
- *		MultiExecHash	- generate an in-memory hash table of the
- *relation ExecInitHash	- initialize node and subnodes ExecEndHash
- *- shutdown node and subnodes
+ *		MultiExecHash	- generate an in-memory hash table of the relation
+ *		ExecInitHash	- initialize node and subnodes
+ *		ExecEndHash		- shutdown node and subnodes
  */
 
 #include "postgres.h"
@@ -98,8 +98,8 @@ ExecParallelHashCloseBatchAccessors(HashJoinTable hashtable);
 static TupleTableSlot *
 ExecHash(PlanState *pstate)
 {
-
-
+  elog(ERROR, "Hash node does not support ExecProcNode call convention");
+  return NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -267,7 +267,7 @@ MultiExecParallelHash(HashState *node)
   Assert(BarrierPhase(build_barrier) >= PHJ_BUILD_ALLOCATING);
   switch (BarrierPhase(build_barrier))
   {
-  case PHJ_BUILD_ALLOCATING:;
+  case PHJ_BUILD_ALLOCATING:
 
     /*
      * Either I just allocated the initial hash table in
@@ -277,7 +277,7 @@ MultiExecParallelHash(HashState *node)
     BarrierArriveAndWait(build_barrier, WAIT_EVENT_HASH_BUILD_ALLOCATING);
     /* Fall through. */
 
-  case PHJ_BUILD_HASHING_INNER:;
+  case PHJ_BUILD_HASHING_INNER:
 
     /*
      * It's time to begin hashing, or if we just arrived here then
@@ -290,11 +290,11 @@ MultiExecParallelHash(HashState *node)
      */
     if (PHJ_GROW_BATCHES_PHASE(BarrierAttach(&pstate->grow_batches_barrier)) != PHJ_GROW_BATCHES_ELECTING)
     {
-
+      ExecParallelHashIncreaseNumBatches(hashtable);
     }
     if (PHJ_GROW_BUCKETS_PHASE(BarrierAttach(&pstate->grow_buckets_barrier)) != PHJ_GROW_BUCKETS_ELECTING)
     {
-
+      ExecParallelHashIncreaseNumBuckets(hashtable);
     }
     ExecParallelHashEnsureBatchAccessors(hashtable);
     ExecParallelHashTableSetCurrentBatch(hashtable, 0);
@@ -561,7 +561,7 @@ ExecHashTableCreate(HashState *state, List *hashOperators, List *hashCollations,
 
     if (!get_op_hash_functions(hashop, &left_hashfn, &right_hashfn))
     {
-
+      elog(ERROR, "could not find hash function for hash operator %u", hashop);
     }
     fmgr_info(left_hashfn, &hashtable->outer_hashfunctions[i]);
     fmgr_info(right_hashfn, &hashtable->inner_hashfunctions[i]);
@@ -866,11 +866,11 @@ ExecHashTableDestroy(HashJoinTable hashtable)
     {
       if (hashtable->innerBatchFile[i])
       {
-
+        BufFileClose(hashtable->innerBatchFile[i]);
       }
       if (hashtable->outerBatchFile[i])
       {
-
+        BufFileClose(hashtable->outerBatchFile[i]);
       }
     }
   }
@@ -907,7 +907,7 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
   /* safety check to avoid overflow */
   if (oldnbatch > Min(INT_MAX / 2, MaxAllocSize / (sizeof(void *) * 2)))
   {
-
+    return;
   }
 
   nbatch = oldnbatch * 2;
@@ -1045,8 +1045,7 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 /*
  * ExecParallelHashIncreaseNumBatches
  *		Every participant attached to grow_batches_barrier must run this
- *		function when it observes growth ==
- *PHJ_GROWTH_NEED_MORE_BATCHES.
+ *		function when it observes growth == PHJ_GROWTH_NEED_MORE_BATCHES.
  */
 static void
 ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
@@ -1063,7 +1062,7 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
    */
   switch (PHJ_GROW_BATCHES_PHASE(BarrierPhase(&pstate->grow_batches_barrier)))
   {
-  case PHJ_GROW_BATCHES_ELECTING:;
+  case PHJ_GROW_BATCHES_ELECTING:
 
     /*
      * Elect one participant to prepare to grow the number of batches.
@@ -1176,12 +1175,12 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
     }
     /* Fall through. */
 
-  case PHJ_GROW_BATCHES_ALLOCATING:;
+  case PHJ_GROW_BATCHES_ALLOCATING:
     /* Wait for the above to be finished. */
     BarrierArriveAndWait(&pstate->grow_batches_barrier, WAIT_EVENT_HASH_GROW_BATCHES_ALLOCATING);
     /* Fall through. */
 
-  case PHJ_GROW_BATCHES_REPARTITIONING:;
+  case PHJ_GROW_BATCHES_REPARTITIONING:
     /* Make sure that we have the current dimensions and buckets. */
     ExecParallelHashEnsureBatchAccessors(hashtable);
     ExecParallelHashTableSetCurrentBatch(hashtable, 0);
@@ -1193,7 +1192,7 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
     BarrierArriveAndWait(&pstate->grow_batches_barrier, WAIT_EVENT_HASH_GROW_BATCHES_REPARTITIONING);
     /* Fall through. */
 
-  case PHJ_GROW_BATCHES_DECIDING:;
+  case PHJ_GROW_BATCHES_DECIDING:
 
     /*
      * Elect one participant to clean up and decide whether further
@@ -1241,7 +1240,7 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
       }
       else if (space_exhausted)
       {
-
+        pstate->growth = PHJ_GROWTH_NEED_MORE_BATCHES;
       }
       else
       {
@@ -1254,7 +1253,7 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
     }
     /* Fall through. */
 
-  case PHJ_GROW_BATCHES_FINISHING:;
+  case PHJ_GROW_BATCHES_FINISHING:
     /* Wait for the above to complete. */
     BarrierArriveAndWait(&pstate->grow_batches_barrier, WAIT_EVENT_HASH_GROW_BATCHES_FINISHING);
   }
@@ -1416,7 +1415,7 @@ ExecHashIncreaseNumBuckets(HashJoinTable hashtable)
   /* do nothing if not an increase (it's called increase for a reason) */
   if (hashtable->nbuckets >= hashtable->nbuckets_optimal)
   {
-
+    return;
   }
 
 #ifdef HJDEBUG
@@ -1484,7 +1483,7 @@ ExecParallelHashIncreaseNumBuckets(HashJoinTable hashtable)
    */
   switch (PHJ_GROW_BUCKETS_PHASE(BarrierPhase(&pstate->grow_buckets_barrier)))
   {
-  case PHJ_GROW_BUCKETS_ELECTING:;
+  case PHJ_GROW_BUCKETS_ELECTING:
     /* Elect one participant to prepare to increase nbuckets. */
     if (BarrierArriveAndWait(&pstate->grow_buckets_barrier, WAIT_EVENT_HASH_GROW_BUCKETS_ELECTING))
     {
@@ -1511,12 +1510,12 @@ ExecParallelHashIncreaseNumBuckets(HashJoinTable hashtable)
     }
     /* Fall through. */
 
-  case PHJ_GROW_BUCKETS_ALLOCATING:;
+  case PHJ_GROW_BUCKETS_ALLOCATING:
     /* Wait for the above to complete. */
     BarrierArriveAndWait(&pstate->grow_buckets_barrier, WAIT_EVENT_HASH_GROW_BUCKETS_ALLOCATING);
     /* Fall through. */
 
-  case PHJ_GROW_BUCKETS_REINSERTING:;
+  case PHJ_GROW_BUCKETS_REINSERTING:
     /* Reinsert all tuples into the hash table. */
     ExecParallelHashEnsureBatchAccessors(hashtable);
     ExecParallelHashTableSetCurrentBatch(hashtable, 0);
@@ -1643,8 +1642,7 @@ ExecHashTableInsert(HashJoinTable hashtable, TupleTableSlot *slot, uint32 hashva
 
 /*
  * ExecParallelHashTableInsert
- *		insert a tuple into a shared hash table or shared batch
- *tuplestore
+ *		insert a tuple into a shared hash table or shared batch tuplestore
  */
 void
 ExecParallelHashTableInsert(HashJoinTable hashtable, TupleTableSlot *slot, uint32 hashvalue)
@@ -1655,7 +1653,7 @@ ExecParallelHashTableInsert(HashJoinTable hashtable, TupleTableSlot *slot, uint3
   int bucketno;
   int batchno;
 
-retry:;
+retry:
   ExecHashGetBucketAndBatch(hashtable, hashvalue, &bucketno, &batchno);
 
   if (batchno == 0)
@@ -1730,7 +1728,7 @@ ExecParallelHashTableInsertCurrentBatch(HashJoinTable hashtable, TupleTableSlot 
 
   if (shouldFree)
   {
-
+    heap_free_minimal_tuple(tuple);
   }
 }
 
@@ -2051,8 +2049,8 @@ ExecScanHashTableForUnmatched(HashJoinState *hjstate, ExprContext *econtext)
     {
       int j = hashtable->skewBucketNums[hjstate->hj_CurSkewBucketNo];
 
-
-
+      hashTuple = hashtable->skewBucket[j]->tuples;
+      hjstate->hj_CurSkewBucketNo++;
     }
     else
     {
@@ -2147,10 +2145,10 @@ ExecHashTableResetMatchFlags(HashJoinTable hashtable)
     int j = hashtable->skewBucketNums[i];
     HashSkewBucket *skewBucket = hashtable->skewBucket[j];
 
-
-
-
-
+    for (tuple = skewBucket->tuples; tuple != NULL; tuple = tuple->next.unshared)
+    {
+      HeapTupleHeaderClearMatch(HJTUPLE_MINTUPLE(tuple));
+    }
   }
 }
 
@@ -2163,17 +2161,17 @@ ExecReScanHash(HashState *node)
    */
   if (node->ps.lefttree->chgParam == NULL)
   {
-
+    ExecReScan(node->ps.lefttree);
   }
 }
 
 /*
  * ExecHashBuildSkewHash
  *
- *		Set up for skew optimization if we can identify the most common
- *values (MCVs) of the outer relation's join key.  We make a skew hash bucket
- *		for the hash value of each MCV, up to the number of slots
- *allowed based on available memory.
+ *		Set up for skew optimization if we can identify the most common values
+ *		(MCVs) of the outer relation's join key.  We make a skew hash bucket
+ *		for the hash value of each MCV, up to the number of slots allowed
+ *		based on available memory.
  */
 static void
 ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
@@ -2184,12 +2182,12 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
   /* Do nothing if planner didn't identify the outer relation's join key */
   if (!OidIsValid(node->skewTable))
   {
-
+    return;
   }
   /* Also, do nothing if we don't have room for at least one skew bucket */
   if (mcvsToUse <= 0)
   {
-
+    return;
   }
 
   /*
@@ -2210,7 +2208,7 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 
     if (mcvsToUse > sslot.nvalues)
     {
-
+      mcvsToUse = sslot.nvalues;
     }
 
     /*
@@ -2225,9 +2223,9 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
     }
     if (frac < SKEW_MIN_OUTER_FRACTION)
     {
-
-
-
+      free_attstatsslot(&sslot);
+      ReleaseSysCache(statsTuple);
+      return;
     }
 
     /*
@@ -2295,7 +2293,7 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
       bucket = hashvalue & (nbuckets - 1);
       while (hashtable->skewBucket[bucket] != NULL && hashtable->skewBucket[bucket]->hashvalue != hashvalue)
       {
-
+        bucket = (bucket + 1) & (nbuckets - 1);
       }
 
       /*
@@ -2304,7 +2302,7 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
        */
       if (hashtable->skewBucket[bucket] != NULL)
       {
-
+        continue;
       }
 
       /* Okay, create a new skew bucket for this hashvalue. */
@@ -2420,7 +2418,7 @@ ExecHashSkewTableInsert(HashJoinTable hashtable, TupleTableSlot *slot, uint32 ha
   /* Check we are not over the total spaceAllowed, either */
   if (hashtable->spaceUsed > hashtable->spaceAllowed)
   {
-
+    ExecHashIncreaseNumBatches(hashtable);
   }
 
   if (shouldFree)
@@ -2534,13 +2532,13 @@ ExecHashRemoveNextSkewBucket(HashJoinTable hashtable)
    */
   if (hashtable->nSkewBuckets == 0)
   {
-
-
-
-
-
-
-
+    hashtable->skewEnabled = false;
+    pfree(hashtable->skewBucket);
+    pfree(hashtable->skewBucketNums);
+    hashtable->skewBucket = NULL;
+    hashtable->skewBucketNums = NULL;
+    hashtable->spaceUsed -= hashtable->spaceUsedSkew;
+    hashtable->spaceUsedSkew = 0;
   }
 }
 
@@ -2632,7 +2630,7 @@ ExecHashRetrieveInstrumentation(HashState *node)
 
   if (shared_info == NULL)
   {
-
+    return;
   }
 
   /* Replace node->shared_info with a copy in backend-local memory. */
@@ -2673,27 +2671,27 @@ dense_alloc(HashJoinTable hashtable, Size size)
   if (size > HASH_CHUNK_THRESHOLD)
   {
     /* allocate new chunk and put it at the beginning of the list */
-
-
-
-
+    newChunk = (HashMemoryChunk)MemoryContextAlloc(hashtable->batchCxt, HASH_CHUNK_HEADER_SIZE + size);
+    newChunk->maxlen = size;
+    newChunk->used = size;
+    newChunk->ntuples = 1;
 
     /*
      * Add this chunk to the list after the first existing chunk, so that
      * we don't lose the remaining space in the "current" chunk.
      */
+    if (hashtable->chunks != NULL)
+    {
+      newChunk->next = hashtable->chunks->next;
+      hashtable->chunks->next.unshared = newChunk;
+    }
+    else
+    {
+      newChunk->next.unshared = hashtable->chunks;
+      hashtable->chunks = newChunk;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
+    return HASH_CHUNK_DATA(newChunk);
   }
 
   /*
@@ -2989,7 +2987,7 @@ ExecParallelHashEnsureBatchAccessors(HashJoinTable hashtable)
    */
   if (!DsaPointerIsValid(pstate->batches))
   {
-
+    return;
   }
 
   /* Use hash join memory context. */
@@ -3261,10 +3259,10 @@ ExecParallelHashTuplePrealloc(HashJoinTable hashtable, int batchno, size_t size)
     {
       ExecParallelHashIncreaseNumBatches(hashtable);
     }
-
-
-
-
+    else if (growth == PHJ_GROWTH_NEED_MORE_BUCKETS)
+    {
+      ExecParallelHashIncreaseNumBuckets(hashtable);
+    }
 
     return false;
   }

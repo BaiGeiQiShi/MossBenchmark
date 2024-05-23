@@ -87,7 +87,7 @@ make_expanded_record_from_typeid(Oid type_id, int32 typmod, MemoryContext parent
     }
     if (typentry->tupDesc == NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("type %s is not composite", format_type_be(type_id))));
     }
     tupdesc = typentry->tupDesc;
     tupdesc_id = typentry->tupDesc_identifier;
@@ -167,7 +167,7 @@ make_expanded_record_from_typeid(Oid type_id, int32 typmod, MemoryContext parent
      * If it's not refcounted, just assume it will outlive the expanded
      * object.  (This can happen for shared record types, for instance.)
      */
-
+    erh->er_tupdesc = tupdesc;
   }
 
   /*
@@ -214,7 +214,7 @@ make_expanded_record_from_tupdesc(TupleDesc tupdesc, MemoryContext parentcontext
     typentry = lookup_type_cache(tupdesc->tdtypeid, TYPECACHE_TUPDESC);
     if (typentry->tupDesc == NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("type %s is not composite", format_type_be(tupdesc->tdtypeid))));
     }
     tupdesc = typentry->tupDesc;
     tupdesc_id = typentry->tupDesc_identifier;
@@ -367,22 +367,22 @@ make_expanded_record_from_exprecord(ExpandedRecordHeader *olderh, MemoryContext 
     erh->er_tupdesc = tupdesc;
     tupdesc->tdrefcount++;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (olderh->flags & ER_FLAG_TUPDESC_ALLOCED)
+  {
+    /* We need to make our own copy of the tupdesc */
+    oldcxt = MemoryContextSwitchTo(objcxt);
+    erh->er_tupdesc = CreateTupleDescCopy(tupdesc);
+    erh->flags |= ER_FLAG_TUPDESC_ALLOCED;
+    MemoryContextSwitchTo(oldcxt);
+  }
+  else
+  {
+    /*
+     * Assume the tupdesc will outlive this expanded object, just like
+     * we're assuming it will outlive the source object.
+     */
+    erh->er_tupdesc = tupdesc;
+  }
 
   /*
    * We don't set ER_FLAG_DVALUES_VALID or ER_FLAG_FVALUE_VALID, so the
@@ -563,64 +563,64 @@ expanded_record_set_tuple(ExpandedRecordHeader *erh, HeapTuple tuple, bool copy,
 Datum
 make_expanded_record_from_datum(Datum recorddatum, MemoryContext parentcontext)
 {
+  ExpandedRecordHeader *erh;
+  HeapTupleHeader tuphdr;
+  HeapTupleData tmptup;
+  HeapTuple newtuple;
+  MemoryContext objcxt;
+  MemoryContext oldcxt;
 
+  /*
+   * Allocate private context for expanded object.  We use a regular-size
+   * context, not a small one, to improve the odds that we can fit a tupdesc
+   * into it without needing an extra malloc block.
+   */
+  objcxt = AllocSetContextCreate(parentcontext, "expanded record", ALLOCSET_DEFAULT_SIZES);
 
+  /* Set up expanded record header, initializing fields to 0/null */
+  erh = (ExpandedRecordHeader *)MemoryContextAllocZero(objcxt, sizeof(ExpandedRecordHeader));
 
+  EOH_init_header(&erh->hdr, &ER_methods, objcxt);
+  erh->er_magic = ER_MAGIC;
 
+  /*
+   * Detoast and copy source record into private context, as a HeapTuple.
+   * (If we actually have to detoast the source, we'll leak some memory in
+   * the caller's context, but it doesn't seem worth worrying about.)
+   */
+  tuphdr = DatumGetHeapTupleHeader(recorddatum);
 
+  tmptup.t_len = HeapTupleHeaderGetDatumLength(tuphdr);
+  ItemPointerSetInvalid(&(tmptup.t_self));
+  tmptup.t_tableOid = InvalidOid;
+  tmptup.t_data = tuphdr;
 
+  oldcxt = MemoryContextSwitchTo(objcxt);
+  newtuple = heap_copytuple(&tmptup);
+  erh->flags |= ER_FLAG_FVALUE_ALLOCED;
+  MemoryContextSwitchTo(oldcxt);
 
+  /* Fill in composite-type identification info */
+  erh->er_decltypeid = erh->er_typeid = HeapTupleHeaderGetTypeId(tuphdr);
+  erh->er_typmod = HeapTupleHeaderGetTypMod(tuphdr);
 
+  /* remember we have a flat representation */
+  erh->fvalue = newtuple;
+  erh->fstartptr = (char *)newtuple->t_data;
+  erh->fendptr = ((char *)newtuple->t_data) + newtuple->t_len;
+  erh->flags |= ER_FLAG_FVALUE_VALID;
 
+  /* Shouldn't need to set ER_FLAG_HAVE_EXTERNAL */
+  Assert(!HeapTupleHeaderHasExternal(tuphdr));
 
+  /*
+   * We won't look up the tupdesc till we have to, nor make a deconstructed
+   * representation.  We don't have enough info to fill flat_size and
+   * friends, either.
+   */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* return a R/W pointer to the expanded record */
+  return EOHPGetRWDatum(&erh->hdr);
 }
 
 /*
@@ -797,50 +797,50 @@ ER_flatten_into(ExpandedObjectHeader *eohptr, void *result, Size allocated_size)
 TupleDesc
 expanded_record_fetch_tupdesc(ExpandedRecordHeader *erh)
 {
+  TupleDesc tupdesc;
 
+  /* Easy if we already have it (but caller should have checked already) */
+  if (erh->er_tupdesc)
+  {
+    return erh->er_tupdesc;
+  }
 
+  /* Lookup the composite type's tupdesc using the typcache */
+  tupdesc = lookup_rowtype_tupdesc(erh->er_typeid, erh->er_typmod);
 
+  /*
+   * If it's a refcounted tupdesc rather than a statically allocated one, we
+   * want to manage the refcount with a memory context callback rather than
+   * assuming that the CurrentResourceOwner is longer-lived than this
+   * expanded object.
+   */
+  if (tupdesc->tdrefcount >= 0)
+  {
+    /* Register callback if we didn't already */
+    if (erh->er_mcb.arg == NULL)
+    {
+      erh->er_mcb.func = ER_mc_callback;
+      erh->er_mcb.arg = (void *)erh;
+      MemoryContextRegisterResetCallback(erh->hdr.eoh_context, &erh->er_mcb);
+    }
 
+    /* Remember our own pointer */
+    erh->er_tupdesc = tupdesc;
+    tupdesc->tdrefcount++;
 
+    /* Release the pin lookup_rowtype_tupdesc acquired */
+    DecrTupleDescRefCount(tupdesc);
+  }
+  else
+  {
+    /* Just remember the pointer */
+    erh->er_tupdesc = tupdesc;
+  }
 
+  /* In either case, fetch the process-global ID for this tupdesc */
+  erh->er_tupdesc_id = assign_record_type_identifier(tupdesc->tdtypeid, tupdesc->tdtypmod);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return tupdesc;
 }
 
 /*
@@ -870,7 +870,7 @@ expanded_record_get_tuple(ExpandedRecordHeader *erh)
   }
 
   /* Expanded record is empty */
-
+  return NULL;
 }
 
 /*
@@ -890,7 +890,7 @@ ER_mc_callback(void *arg)
     {
       if (--tupdesc->tdrefcount == 0)
       {
-
+        FreeTupleDesc(tupdesc);
       }
     }
   }
@@ -906,18 +906,18 @@ ER_mc_callback(void *arg)
 ExpandedRecordHeader *
 DatumGetExpandedRecord(Datum d)
 {
+  /* If it's a writable expanded record already, just return it */
+  if (VARATT_IS_EXTERNAL_EXPANDED_RW(DatumGetPointer(d)))
+  {
+    ExpandedRecordHeader *erh = (ExpandedRecordHeader *)DatumGetEOHP(d);
 
+    Assert(erh->er_magic == ER_MAGIC);
+    return erh;
+  }
 
-
-
-
-
-
-
-
-
-
-
+  /* Else expand the hard way */
+  d = make_expanded_record_from_datum(d, CurrentMemoryContext);
+  return (ExpandedRecordHeader *)DatumGetEOHP(d);
 }
 
 /*
@@ -959,12 +959,12 @@ deconstruct_expanded_record(ExpandedRecordHeader *erh)
      * To save a palloc cycle, we allocate both the Datum and isnull
      * arrays in one palloc chunk.
      */
-
-
-
-
-
-
+    chunk = MemoryContextAlloc(erh->hdr.eoh_context, nfields * (sizeof(Datum) + sizeof(bool)));
+    dvalues = (Datum *)chunk;
+    dnulls = (bool *)(chunk + nfields * sizeof(Datum));
+    erh->dvalues = dvalues;
+    erh->dnulls = dnulls;
+    erh->nfields = nfields;
   }
   else
   {
@@ -1054,8 +1054,8 @@ expanded_record_fetch_field(ExpandedRecordHeader *erh, int fnumber, bool *isnull
     /* Out-of-range field number reads as null */
     if (unlikely(fnumber > erh->nfields))
     {
-
-
+      *isnull = true;
+      return (Datum)0;
     }
     *isnull = erh->dnulls[fnumber - 1];
     return erh->dvalues[fnumber - 1];
@@ -1065,8 +1065,8 @@ expanded_record_fetch_field(ExpandedRecordHeader *erh, int fnumber, bool *isnull
     /* System columns read as null if we haven't got flat tuple */
     if (erh->fvalue == NULL)
     {
-
-
+      *isnull = true;
+      return (Datum)0;
     }
     /* heap_getsysattr doesn't actually use tupdesc, so just pass null */
     return heap_getsysattr(erh->fvalue, fnumber, NULL, isnull);
@@ -1120,7 +1120,7 @@ expanded_record_set_field_internal(ExpandedRecordHeader *erh, int fnumber, Datum
   /* Caller error if fnumber is system column or nonexistent column */
   if (unlikely(fnumber <= 0 || fnumber > erh->nfields))
   {
-
+    elog(ERROR, "cannot assign to field %d of expanded record", fnumber);
   }
 
   /*
@@ -1170,7 +1170,7 @@ expanded_record_set_field_internal(ExpandedRecordHeader *erh, int fnumber, Datum
      */
     if (attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(newValue)))
     {
-
+      erh->flags |= ER_FLAG_HAVE_EXTERNAL;
     }
   }
 
@@ -1302,12 +1302,12 @@ expanded_record_set_fields(ExpandedRecordHeader *erh, const Datum *newValues, co
           else
           {
             /* Just copy the value */
-
+            newValue = datumCopy(newValue, false, -1);
             /* If it's still external, remember that */
-
-
-
-
+            if (VARATT_IS_EXTERNAL(DatumGetPointer(newValue)))
+            {
+              erh->flags |= ER_FLAG_HAVE_EXTERNAL;
+            }
           }
         }
         else
@@ -1328,12 +1328,12 @@ expanded_record_set_fields(ExpandedRecordHeader *erh, const Datum *newValues, co
       {
         char *oldValue;
 
-
+        oldValue = (char *)DatumGetPointer(dvalues[fnumber]);
         /* Don't try to pfree a part of the original flat record */
-
-
-
-
+        if (oldValue < erh->fstartptr || oldValue >= erh->fendptr)
+        {
+          pfree(oldValue);
+        }
       }
     }
 
@@ -1516,7 +1516,7 @@ check_domain_for_new_field(ExpandedRecordHeader *erh, int fnumber, Datum newValu
   /* Caller error if fnumber is system column or nonexistent column */
   if (unlikely(fnumber <= 0 || fnumber > dummy_erh->nfields))
   {
-
+    elog(ERROR, "cannot assign to field %d of expanded record", fnumber);
   }
 
   /* Insert proposed new value into dummy field array */
@@ -1535,7 +1535,7 @@ check_domain_for_new_field(ExpandedRecordHeader *erh, int fnumber, Datum newValu
 
     if (!attr->attbyval && attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(newValue)))
     {
-
+      dummy_erh->flags |= ER_FLAG_HAVE_EXTERNAL;
     }
   }
 

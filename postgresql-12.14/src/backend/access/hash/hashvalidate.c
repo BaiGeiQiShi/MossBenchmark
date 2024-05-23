@@ -60,7 +60,8 @@ hashvalidate(Oid opclassoid)
 
   /* Fetch opclass information */
   classtup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassoid));
-  if (!HeapTupleIsValid(classtup)) {
+  if (!HeapTupleIsValid(classtup))
+  {
     elog(ERROR, "cache lookup failed for operator class %u", opclassoid);
   }
   classform = (Form_pg_opclass)GETSTRUCT(classtup);
@@ -71,7 +72,8 @@ hashvalidate(Oid opclassoid)
 
   /* Fetch opfamily information */
   familytup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyoid));
-  if (!HeapTupleIsValid(familytup)) {
+  if (!HeapTupleIsValid(familytup))
+  {
     elog(ERROR, "cache lookup failed for operator family %u", opfamilyoid);
   }
   familyform = (Form_pg_opfamily)GETSTRUCT(familytup);
@@ -83,7 +85,8 @@ hashvalidate(Oid opclassoid)
   proclist = SearchSysCacheList1(AMPROCNUM, ObjectIdGetDatum(opfamilyoid));
 
   /* Check individual support functions */
-  for (i = 0; i < proclist->n_members; i++) {
+  for (i = 0; i < proclist->n_members; i++)
+  {
     HeapTuple proctup = &proclist->members[i]->tuple;
     Form_pg_amproc procform = (Form_pg_amproc)GETSTRUCT(proctup);
 
@@ -91,55 +94,65 @@ hashvalidate(Oid opclassoid)
      * All hash functions should be registered with matching left/right
      * types
      */
-    if (procform->amproclefttype != procform->amprocrighttype) {
-      ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains support function %s with different left and right input types",opfamilyname, "hash", format_procedure(procform->amproc))));
+    if (procform->amproclefttype != procform->amprocrighttype)
+    {
+      ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains support function %s with different left and right input types", opfamilyname, "hash", format_procedure(procform->amproc))));
       result = false;
     }
 
     /* Check procedure numbers and function signatures */
-    switch (procform->amprocnum) {
+    switch (procform->amprocnum)
+    {
     case HASHSTANDARD_PROC:
     case HASHEXTENDED_PROC:
-      if (!check_hash_func_signature(procform->amproc, procform->amprocnum, procform->amproclefttype)) {
+      if (!check_hash_func_signature(procform->amproc, procform->amprocnum, procform->amproclefttype))
+      {
         ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains function %s with wrong signature for support number %d", opfamilyname, "hash", format_procedure(procform->amproc), procform->amprocnum)));
         result = false;
-      } else {
+      }
+      else
+      {
         /* Remember which types we can hash */
         hashabletypes = list_append_unique_oid(hashabletypes, procform->amproclefttype);
       }
       break;
-    default:;
-      ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains function %s with invalid support number %d",opfamilyname, "hash", format_procedure(procform->amproc), procform->amprocnum)));
+    default:
+      ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains function %s with invalid support number %d", opfamilyname, "hash", format_procedure(procform->amproc), procform->amprocnum)));
       result = false;
       break;
     }
   }
 
   /* Check individual operators */
-  for (i = 0; i < oprlist->n_members; i++) {
+  for (i = 0; i < oprlist->n_members; i++)
+  {
     HeapTuple oprtup = &oprlist->members[i]->tuple;
     Form_pg_amop oprform = (Form_pg_amop)GETSTRUCT(oprtup);
 
     /* Check that only allowed strategy numbers exist */
-    if (oprform->amopstrategy < 1 || oprform->amopstrategy > HTMaxStrategyNumber) {
+    if (oprform->amopstrategy < 1 || oprform->amopstrategy > HTMaxStrategyNumber)
+    {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains operator %s with invalid strategy number %d", opfamilyname, "hash", format_operator(oprform->amopopr), oprform->amopstrategy)));
       result = false;
     }
 
     /* hash doesn't support ORDER BY operators */
-    if (oprform->amoppurpose != AMOP_SEARCH || OidIsValid(oprform->amopsortfamily)) {
+    if (oprform->amoppurpose != AMOP_SEARCH || OidIsValid(oprform->amopsortfamily))
+    {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains invalid ORDER BY specification for operator %s", opfamilyname, "hash", format_operator(oprform->amopopr))));
       result = false;
     }
 
     /* Check operator signature --- same for all hash strategies */
-    if (!check_amop_signature(oprform->amopopr, BOOLOID, oprform->amoplefttype, oprform->amoprighttype)) {
+    if (!check_amop_signature(oprform->amopopr, BOOLOID, oprform->amoplefttype, oprform->amoprighttype))
+    {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains operator %s with wrong signature", opfamilyname, "hash", format_operator(oprform->amopopr))));
       result = false;
     }
 
     /* There should be relevant hash functions for each datatype */
-    if (!list_member_oid(hashabletypes, oprform->amoplefttype) || !list_member_oid(hashabletypes, oprform->amoprighttype)) {
+    if (!list_member_oid(hashabletypes, oprform->amoplefttype) || !list_member_oid(hashabletypes, oprform->amoprighttype))
+    {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s lacks support function for operator %s", opfamilyname, "hash", format_operator(oprform->amopopr))));
       result = false;
     }
@@ -148,11 +161,13 @@ hashvalidate(Oid opclassoid)
   /* Now check for inconsistent groups of operators/functions */
   grouplist = identify_opfamily_groups(oprlist, proclist);
   opclassgroup = NULL;
-  foreach (lc, grouplist) {
+  foreach (lc, grouplist)
+  {
     OpFamilyOpFuncGroup *thisgroup = (OpFamilyOpFuncGroup *)lfirst(lc);
 
     /* Remember the group exactly matching the test opclass */
-    if (thisgroup->lefttype == opcintype && thisgroup->righttype == opcintype) {
+    if (thisgroup->lefttype == opcintype && thisgroup->righttype == opcintype)
+    {
       opclassgroup = thisgroup;
     }
 
@@ -161,7 +176,8 @@ hashvalidate(Oid opclassoid)
      * this datatype pair (implying that we have a hash function but no
      * operator).
      */
-    if (thisgroup->operatorset != (1 << HTEqualStrategyNumber)) {
+    if (thisgroup->operatorset != (1 << HTEqualStrategyNumber))
+    {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s is missing operator(s) for types %s and %s", opfamilyname, "hash", format_type_be(thisgroup->lefttype), format_type_be(thisgroup->righttype))));
       result = false;
     }
@@ -169,7 +185,8 @@ hashvalidate(Oid opclassoid)
 
   /* Check that the originally-named opclass is supported */
   /* (if group is there, we already checked it adequately above) */
-  if (!opclassgroup) {
+  if (!opclassgroup)
+  {
     ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator class \"%s\" of access method %s is missing operator(s)", opclassname, "hash")));
     result = false;
   }
@@ -180,7 +197,8 @@ hashvalidate(Oid opclassoid)
    * operators are not fatal, it seems reasonable to insist that all
    * built-in hash opfamilies be complete.
    */
-  if (list_length(grouplist) != list_length(hashabletypes) * list_length(hashabletypes)) {
+  if (list_length(grouplist) != list_length(hashabletypes) * list_length(hashabletypes))
+  {
     ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s is missing cross-type operator(s)", opfamilyname, "hash")));
     result = false;
   }
@@ -206,7 +224,8 @@ check_hash_func_signature(Oid funcid, int16 amprocnum, Oid argtype)
   HeapTuple tp;
   Form_pg_proc procform;
 
-  switch (amprocnum) {
+  switch (amprocnum)
+  {
   case HASHSTANDARD_PROC:
     restype = INT4OID;
     nargs = 1;
@@ -217,21 +236,24 @@ check_hash_func_signature(Oid funcid, int16 amprocnum, Oid argtype)
     nargs = 2;
     break;
 
-  default:;
+  default:
     elog(ERROR, "invalid amprocnum");
   }
 
   tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-  if (!HeapTupleIsValid(tp)) {
+  if (!HeapTupleIsValid(tp))
+  {
     elog(ERROR, "cache lookup failed for function %u", funcid);
   }
   procform = (Form_pg_proc)GETSTRUCT(tp);
 
-  if (procform->prorettype != restype || procform->proretset || procform->pronargs != nargs) {
+  if (procform->prorettype != restype || procform->proretset || procform->pronargs != nargs)
+  {
     result = false;
   }
 
-  if (!IsBinaryCoercible(argtype, procform->proargtypes.values[0])) {
+  if (!IsBinaryCoercible(argtype, procform->proargtypes.values[0]))
+  {
     /*
      * Some of the built-in hash opclasses cheat by using hash functions
      * that are different from but physically compatible with the opclass
@@ -249,13 +271,15 @@ check_hash_func_signature(Oid funcid, int16 amprocnum, Oid argtype)
       /* okay, allowed use of hashchar() */;
     else if ((funcid == F_HASHVARLENA || funcid == F_HASHVARLENAEXTENDED) && argtype == BYTEAOID)
       /* okay, allowed use of hashvarlena() */;
-    else {
+    else
+    {
       result = false;
     }
   }
 
   /* If function takes a second argument, it must be for a 64-bit salt. */
-  if (nargs == 2 && procform->proargtypes.values[1] != INT8OID) {
+  if (nargs == 2 && procform->proargtypes.values[1] != INT8OID)
+  {
     result = false;
   }
 

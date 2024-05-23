@@ -257,8 +257,8 @@ TParserInit(char *str, int len)
        * char2wchar doesn't work for C-locale and sizeof(pg_wchar) could
        * be different from sizeof(wchar_t)
        */
-
-
+      prs->pgwstr = (pg_wchar *)palloc(sizeof(pg_wchar) * (prs->lenstr + 1));
+      pg_mb2wchar_with_len(prs->str, prs->pgwstr, prs->lenstr);
     }
     else
     {
@@ -268,7 +268,7 @@ TParserInit(char *str, int len)
   }
   else
   {
-
+    prs->usewide = false;
   }
 
   prs->state = newTParserPosition(NULL);
@@ -310,7 +310,7 @@ TParserCopyInit(const TParser *orig)
 
   if (orig->pgwstr)
   {
-
+    prs->pgwstr = orig->pgwstr + orig->state->poschar;
   }
   if (orig->wstr)
   {
@@ -345,7 +345,7 @@ TParserClose(TParser *prs)
   }
   if (prs->pgwstr)
   {
-
+    pfree(prs->pgwstr);
   }
 
 #ifdef WPARSER_TRACE
@@ -435,7 +435,7 @@ p_iseqC(TParser *prs)
 static int
 p_isneC(TParser *prs)
 {
-
+  return !p_iseq(prs, prs->c);
 }
 
 static int
@@ -458,7 +458,7 @@ p_isurlchar(TParser *prs)
   /* no non-ASCII need apply */
   if (prs->state->charlen != 1)
   {
-
+    return 0;
   }
   ch = *(prs->str + prs->state->posbyte);
   /* no spaces or control characters */
@@ -469,15 +469,15 @@ p_isurlchar(TParser *prs)
   /* reject characters disallowed by RFC 3986 */
   switch (ch)
   {
-  case '"':;
-  case '<':;
-  case '>':;
-  case '\\':;
-  case '^':;
-  case '`':;
-  case '{':;
-  case '|':;
-  case '}':;
+  case '"':
+  case '<':
+  case '>':
+  case '\\':
+  case '^':
+  case '`':
+  case '{':
+  case '|':
+  case '}':
     return 0;
   }
   return 1;
@@ -489,27 +489,27 @@ _make_compiler_happy(void);
 void
 _make_compiler_happy(void)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  p_isalnum(NULL);
+  p_isnotalnum(NULL);
+  p_isalpha(NULL);
+  p_isnotalpha(NULL);
+  p_isdigit(NULL);
+  p_isnotdigit(NULL);
+  p_islower(NULL);
+  p_isnotlower(NULL);
+  p_isprint(NULL);
+  p_isnotprint(NULL);
+  p_ispunct(NULL);
+  p_isnotpunct(NULL);
+  p_isspace(NULL);
+  p_isnotspace(NULL);
+  p_isupper(NULL);
+  p_isnotupper(NULL);
+  p_isxdigit(NULL);
+  p_isnotxdigit(NULL);
+  p_isEOF(NULL);
+  p_iseqC(NULL);
+  p_isneC(NULL);
 }
 
 static void
@@ -517,29 +517,29 @@ SpecialTags(TParser *prs)
 {
   switch (prs->state->lenchartoken)
   {
-  case 8: ;/* </script */
+  case 8: /* </script */
     if (pg_strncasecmp(prs->token, "</script", 8) == 0)
     {
       prs->ignore = false;
     }
     break;
-  case 7: ;/* <script || </style */
+  case 7: /* <script || </style */
     if (pg_strncasecmp(prs->token, "</style", 7) == 0)
     {
-
+      prs->ignore = false;
     }
     else if (pg_strncasecmp(prs->token, "<script", 7) == 0)
     {
       prs->ignore = true;
     }
     break;
-  case 6: ;/* <style */
+  case 6: /* <style */
     if (pg_strncasecmp(prs->token, "<style", 6) == 0)
     {
-
+      prs->ignore = true;
     }
     break;
-  default:;;
+  default:
     break;
   }
 }
@@ -562,10 +562,10 @@ SpecialHyphen(TParser *prs)
 static void
 SpecialVerVersion(TParser *prs)
 {
-
-
-
-
+  prs->state->posbyte -= prs->state->lenbytetoken;
+  prs->state->poschar -= prs->state->lenchartoken;
+  prs->state->lenbytetoken = 0;
+  prs->state->lenchartoken = 0;
 }
 
 static int
@@ -644,7 +644,7 @@ p_isspecial(TParser *prs)
    */
   if (pg_dsplen(prs->str + prs->state->posbyte) == 0)
   {
-
+    return 1;
   }
 
   /*
@@ -894,7 +894,7 @@ p_isspecial(TParser *prs)
 
     if (prs->pgwstr)
     {
-
+      c = *(prs->pgwstr + prs->state->poschar);
     }
     else
     {
@@ -906,11 +906,11 @@ p_isspecial(TParser *prs)
       StopMiddle = StopLow + ((StopHigh - StopLow) >> 1);
       if (*StopMiddle == c)
       {
-
+        return 1;
       }
       else if (*StopMiddle < c)
       {
-
+        StopLow = StopMiddle + 1;
       }
       else
       {
@@ -1255,15 +1255,15 @@ TParserGet(TParser *prs)
     { /* merge posinfo with current and pushed state */
       TParserPosition *ptr = prs->state;
 
+      Assert(prs->state->prev);
+      prs->state = prs->state->prev;
 
-
-
-
-
-
-
-
-
+      prs->state->posbyte = ptr->posbyte;
+      prs->state->poschar = ptr->poschar;
+      prs->state->charlen = ptr->charlen;
+      prs->state->lenbytetoken = ptr->lenbytetoken;
+      prs->state->lenchartoken = ptr->lenchartoken;
+      pfree(ptr);
     }
 
     /* set new state if pointed */
@@ -1541,11 +1541,11 @@ mark_fragment(HeadlineParsedText *prs, bool highlightall, int startpos, int endp
     {
       if (HLIDREPLACE(prs->words[i].type))
       {
-
+        prs->words[i].replace = 1;
       }
       else if (HLIDSKIP(prs->words[i].type))
       {
-
+        prs->words[i].skip = 1;
       }
     }
     else
@@ -1662,8 +1662,8 @@ mark_hl_fragments(HeadlineParsedText *prs, TSQuery query, bool highlightall, int
       get_next_fragment(prs, &startpos, &endpos, &curlen, &poslen, max_words);
       if (numcovers >= maxcovers)
       {
-
-
+        maxcovers *= 2;
+        covers = repalloc(covers, sizeof(CoverPos) * maxcovers);
       }
       covers[numcovers].startpos = startpos;
       covers[numcovers].endpos = endpos;
@@ -1770,7 +1770,7 @@ mark_hl_fragments(HeadlineParsedText *prs, TSQuery query, bool highlightall, int
       {
         if (i != minI && ((covers[i].startpos >= startpos && covers[i].startpos <= endpos) || (covers[i].endpos >= startpos && covers[i].endpos <= endpos) || (covers[i].startpos < startpos && covers[i].endpos > endpos)))
         {
-
+          covers[i].excluded = true;
         }
       }
     }
@@ -1875,30 +1875,30 @@ mark_hl_words(HeadlineParsedText *prs, TSQuery query, bool highlightall, int sho
            * Reached end of text and our headline is still shorter
            * than min_words, so try to extend it to the left.
            */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          for (i = p - 1; i >= 0; i--)
+          {
+            if (!NONWORDTOKEN(prs->words[i].type))
+            {
+              curlen++;
+            }
+            if (INTERESTINGWORD(i))
+            {
+              poslen++;
+            }
+            if (curlen >= max_words)
+            {
+              break;
+            }
+            if (BADENDPOINT(i))
+            {
+              continue;
+            }
+            if (curlen >= min_words)
+            {
+              break;
+            }
+          }
+          posb = (i >= 0) ? i : 0;
         }
       }
       else
@@ -1923,7 +1923,7 @@ mark_hl_words(HeadlineParsedText *prs, TSQuery query, bool highlightall, int sho
           }
           if (INTERESTINGWORD(i))
           {
-
+            poslen--;
           }
           pose = i - 1;
         }
@@ -2022,7 +2022,7 @@ prsd_headline(PG_FUNCTION_ARGS)
     }
     else if (pg_strcasecmp(defel->defname, "ShortWord") == 0)
     {
-
+      shortword = pg_strtoint32(val);
     }
     else if (pg_strcasecmp(defel->defname, "MaxFragments") == 0)
     {
@@ -2046,7 +2046,7 @@ prsd_headline(PG_FUNCTION_ARGS)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized headline parameter: \"%s\"", defel->defname)));
     }
   }
 
@@ -2066,19 +2066,19 @@ prsd_headline(PG_FUNCTION_ARGS)
   {
     if (min_words >= max_words)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("MinWords should be less than MaxWords")));
     }
     if (min_words <= 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("MinWords should be positive")));
     }
     if (shortword < 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ShortWord should be >= 0")));
     }
     if (max_fragments < 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("MaxFragments should be >= 0")));
     }
   }
 

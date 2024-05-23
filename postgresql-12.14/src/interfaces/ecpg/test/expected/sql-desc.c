@@ -54,7 +54,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "indesc");
 #line 22 "desc.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 22 "desc.pgc"
@@ -62,7 +63,8 @@ main(void)
   ECPGallocate_desc(__LINE__, (desc1));
 #line 23 "desc.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 23 "desc.pgc"
@@ -72,7 +74,8 @@ main(void)
 
 #line 25 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -83,7 +86,8 @@ main(void)
 
 #line 26 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -93,7 +97,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 28 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -103,7 +108,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table test1 ( a int , b text )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -113,7 +119,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "foo1", stmt1);
 #line 31 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -123,7 +130,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "Foo-1", stmt1);
 #line 32 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -133,7 +141,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "foo2", stmt2);
 #line 33 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -143,7 +152,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "foo3", stmt3);
 #line 34 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -153,7 +163,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "foo1", ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 36 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -164,7 +175,8 @@ main(void)
 
 #line 38 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -175,7 +187,8 @@ main(void)
 
 #line 39 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -185,7 +198,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "foo1", ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 41 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -196,7 +210,8 @@ main(void)
 
 #line 43 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -207,7 +222,8 @@ main(void)
 
 #line 44 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -217,7 +233,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "Foo-1", ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 46 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -227,7 +244,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "Foo-1");
 #line 48 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -238,7 +256,8 @@ main(void)
 
 #line 50 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -249,7 +268,8 @@ main(void)
 
 #line 51 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -259,7 +279,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "foo2", ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_descriptor, (desc1), 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 53 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -270,7 +291,8 @@ main(void)
 
 #line 55 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -285,7 +307,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare c1 cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "foo2", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 59 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -295,7 +318,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch next from c1", ECPGt_EOIT, ECPGt_int, &(val1output), (long)1, (long)1, sizeof(int), ECPGt_int, &(ind1), (long)1, (long)1, sizeof(int), ECPGt_char, (val2output), (long)sizeof("AAA"), (long)1, (sizeof("AAA")) * sizeof(char), ECPGt_int, &(ind2), (long)1, (long)1, sizeof(int), ECPGt_EORT);
 #line 61 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -307,7 +331,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "close c1", ECPGt_EOIT, ECPGt_EORT);
 #line 65 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -318,7 +343,8 @@ main(void)
 
 #line 67 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -329,7 +355,8 @@ main(void)
 
 #line 68 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -342,7 +369,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare c2 cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "foo3", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_descriptor, "indesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 71 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -352,7 +380,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch next from c2", ECPGt_EOIT, ECPGt_int, &(val1output), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (val2output), (long)sizeof("AAA"), (long)1, (sizeof("AAA")) * sizeof(char), ECPGt_int, &(val2i), (long)1, (long)1, sizeof(int), ECPGt_EORT);
 #line 73 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -364,7 +393,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "close c2", ECPGt_EOIT, ECPGt_EORT);
 #line 76 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -374,7 +404,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from test1 where a = 3", ECPGt_EOIT, ECPGt_int, &(val1output), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (val2output), (long)sizeof("AAA"), (long)1, (sizeof("AAA")) * sizeof(char), ECPGt_int, &(val2i), (long)1, (long)1, sizeof(int), ECPGt_EORT);
 #line 78 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -386,7 +417,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "drop table test1", ECPGt_EOIT, ECPGt_EORT);
 #line 81 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -396,7 +428,8 @@ main(void)
     ECPGdeallocate_all(__LINE__, 0, NULL);
 #line 82 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -406,7 +439,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 83 "desc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -415,7 +449,8 @@ main(void)
   ECPGdeallocate_desc(__LINE__, "indesc");
 #line 85 "desc.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 85 "desc.pgc"
@@ -423,7 +458,8 @@ main(void)
   ECPGdeallocate_desc(__LINE__, (desc1));
 #line 86 "desc.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 86 "desc.pgc"

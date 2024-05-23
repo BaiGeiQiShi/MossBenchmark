@@ -87,7 +87,7 @@ ExecRecursiveUnion(PlanState *pstate)
         /* Ignore tuple if already seen */
         if (!isnew)
         {
-
+          continue;
         }
       }
       /* Each non-duplicate tuple goes to the working table ... */
@@ -283,41 +283,41 @@ ExecEndRecursiveUnion(RecursiveUnionState *node)
 void
 ExecReScanRecursiveUnion(RecursiveUnionState *node)
 {
+  PlanState *outerPlan = outerPlanState(node);
+  PlanState *innerPlan = innerPlanState(node);
+  RecursiveUnion *plan = (RecursiveUnion *)node->ps.plan;
 
+  /*
+   * Set recursive term's chgParam to tell it that we'll modify the working
+   * table and therefore it has to rescan.
+   */
+  innerPlan->chgParam = bms_add_member(innerPlan->chgParam, plan->wtParam);
 
+  /*
+   * if chgParam of subnode is not null then plan will be re-scanned by
+   * first ExecProcNode.  Because of above, we only have to do this to the
+   * non-recursive term.
+   */
+  if (outerPlan->chgParam == NULL)
+  {
+    ExecReScan(outerPlan);
+  }
 
+  /* Release any hashtable storage */
+  if (node->tableContext)
+  {
+    MemoryContextResetAndDeleteChildren(node->tableContext);
+  }
 
+  /* Empty hashtable if needed */
+  if (plan->numCols > 0)
+  {
+    ResetTupleHashTable(node->hashtable);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* reset processing state */
+  node->recursing = false;
+  node->intermediate_empty = true;
+  tuplestore_clear(node->working_table);
+  tuplestore_clear(node->intermediate_table);
 }

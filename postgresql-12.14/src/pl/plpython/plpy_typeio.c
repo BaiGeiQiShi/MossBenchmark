@@ -92,7 +92,8 @@ PLyGenericObject_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *object
 /*
  * Perform input conversion, given correctly-set-up state information.
  *
- * This is the outer-level entry point for any input conversion.  Internally,* the conversion functions recurse directly to each other.
+ * This is the outer-level entry point for any input conversion.  Internally,
+ * the conversion functions recurse directly to each other.
  */
 PyObject *
 PLy_input_convert(PLyDatumToOb *arg, Datum val)
@@ -127,7 +128,8 @@ PLy_input_convert(PLyDatumToOb *arg, Datum val)
 /*
  * Perform output conversion, given correctly-set-up state information.
  *
- * This is the outer-level entry point for any output conversion.  Internally,* the conversion functions recurse directly to each other.
+ * This is the outer-level entry point for any output conversion.  Internally,
+ * the conversion functions recurse directly to each other.
  *
  * The result, as well as any cruft generated along the way, are in the
  * current memory context.  Caller is responsible for cleanup.
@@ -143,7 +145,8 @@ PLy_output_convert(PLyObToDatum *arg, PyObject *val, bool *isnull)
  * Transform a tuple into a Python dict object.
  *
  * Note: the tupdesc must match the one used to set up *arg.  We could
- * insist that this function lookup the tupdesc from what is in *arg,* but in practice all callers have the right tupdesc available.
+ * insist that this function lookup the tupdesc from what is in *arg,
+ * but in practice all callers have the right tupdesc available.
  */
 PyObject *
 PLy_input_from_tuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool include_generated)
@@ -185,13 +188,16 @@ PLy_input_setup_tuple(PLyDatumToOb *arg, TupleDesc desc, PLyProcedure *proc)
   Assert(arg->func == PLyDict_FromComposite);
 
   /* Save pointer to tupdesc, but only if this is an anonymous record type */
-  if (arg->typoid == RECORDOID && arg->typmod < 0) {
+  if (arg->typoid == RECORDOID && arg->typmod < 0)
+  {
     arg->u.tuple.recdesc = desc;
   }
 
   /* (Re)allocate atts array as needed */
-  if (arg->u.tuple.natts != desc->natts) {
-    if (arg->u.tuple.atts) {
+  if (arg->u.tuple.natts != desc->natts)
+  {
+    if (arg->u.tuple.atts)
+    {
       pfree(arg->u.tuple.atts);
     }
     arg->u.tuple.natts = desc->natts;
@@ -199,15 +205,18 @@ PLy_input_setup_tuple(PLyDatumToOb *arg, TupleDesc desc, PLyProcedure *proc)
   }
 
   /* Fill the atts entries, except for dropped columns */
-  for (i = 0; i < desc->natts; i++) {
+  for (i = 0; i < desc->natts; i++)
+  {
     Form_pg_attribute attr = TupleDescAttr(desc, i);
     PLyDatumToOb *att = &arg->u.tuple.atts[i];
 
-    if (attr->attisdropped) {
+    if (attr->attisdropped)
+    {
       continue;
     }
 
-    if (att->typoid == attr->atttypid && att->typmod == attr->atttypmod) {
+    if (att->typoid == attr->atttypid && att->typmod == attr->atttypmod)
+    {
       continue; /* already set up this entry */
     }
 
@@ -233,13 +242,16 @@ PLy_output_setup_tuple(PLyObToDatum *arg, TupleDesc desc, PLyProcedure *proc)
   Assert(arg->func == PLyObject_ToComposite);
 
   /* Save pointer to tupdesc, but only if this is an anonymous record type */
-  if (arg->typoid == RECORDOID && arg->typmod < 0) {
+  if (arg->typoid == RECORDOID && arg->typmod < 0)
+  {
     arg->u.tuple.recdesc = desc;
   }
 
   /* (Re)allocate atts array as needed */
-  if (arg->u.tuple.natts != desc->natts) {
-    if (arg->u.tuple.atts) {
+  if (arg->u.tuple.natts != desc->natts)
+  {
+    if (arg->u.tuple.atts)
+    {
       pfree(arg->u.tuple.atts);
     }
     arg->u.tuple.natts = desc->natts;
@@ -247,15 +259,18 @@ PLy_output_setup_tuple(PLyObToDatum *arg, TupleDesc desc, PLyProcedure *proc)
   }
 
   /* Fill the atts entries, except for dropped columns */
-  for (i = 0; i < desc->natts; i++) {
+  for (i = 0; i < desc->natts; i++)
+  {
     Form_pg_attribute attr = TupleDescAttr(desc, i);
     PLyObToDatum *att = &arg->u.tuple.atts[i];
 
-    if (attr->attisdropped) {
+    if (attr->attisdropped)
+    {
       continue;
     }
 
-    if (att->typoid == attr->atttypid && att->typmod == attr->atttypmod) {
+    if (att->typoid == attr->atttypid && att->typmod == attr->atttypmod)
+    {
       continue; /* already set up this entry */
     }
 
@@ -288,7 +303,8 @@ PLy_output_setup_record(PLyObToDatum *arg, TupleDesc desc, PLyProcedure *proc)
    * for the record type.
    */
   arg->typmod = desc->tdtypmod;
-  if (arg->u.tuple.recdesc && arg->u.tuple.recdesc->tdtypmod != arg->typmod) {
+  if (arg->u.tuple.recdesc && arg->u.tuple.recdesc->tdtypmod != arg->typmod)
+  {
     arg->u.tuple.recdesc = NULL;
   }
 
@@ -323,13 +339,16 @@ PLy_output_setup_func(PLyObToDatum *arg, MemoryContext arg_mcxt, Oid typeOid, in
    * we'll need later.  RECORD is a special case: just treat it as composite
    * without bothering with the typcache entry.
    */
-  if (typeOid != RECORDOID) {
+  if (typeOid != RECORDOID)
+  {
     typentry = lookup_type_cache(typeOid, TYPECACHE_DOMAIN_BASE_INFO);
     typtype = typentry->typtype;
     arg->typbyval = typentry->typbyval;
     arg->typlen = typentry->typlen;
     arg->typalign = typentry->typalign;
-  } else {
+  }
+  else
+  {
     typentry = NULL;
     typtype = TYPTYPE_COMPOSITE;
     /* hard-wired knowledge about type RECORD: */
@@ -341,17 +360,21 @@ PLy_output_setup_func(PLyObToDatum *arg, MemoryContext arg_mcxt, Oid typeOid, in
   /*
    * Choose conversion method.  Note that transform functions are checked
    * for composite and scalar types, but not for arrays or domains.  This is
-   * somewhat historical, but we'd have a problem allowing them on domains,* since we drill down through all levels of a domain nest without looking
+   * somewhat historical, but we'd have a problem allowing them on domains,
+   * since we drill down through all levels of a domain nest without looking
    * at the intermediate levels at all.
    */
-  if (typtype == TYPTYPE_DOMAIN) {
+  if (typtype == TYPTYPE_DOMAIN)
+  {
     /* Domain */
     arg->func = PLyObject_ToDomain;
     arg->u.domain.domain_info = NULL;
     /* Recursively set up conversion info for the element type */
     arg->u.domain.base = (PLyObToDatum *)MemoryContextAllocZero(arg_mcxt, sizeof(PLyObToDatum));
     PLy_output_setup_func(arg->u.domain.base, arg_mcxt, typentry->domainBaseType, typentry->domainBaseTypmod, proc);
-  } else if (typentry && OidIsValid(typentry->typelem) && typentry->typlen == -1) {
+  }
+  else if (typentry && OidIsValid(typentry->typelem) && typentry->typlen == -1)
+  {
     /* Standard varlena array (cf. get_element_type) */
     arg->func = PLySequence_ToArray;
     /* Get base type OID to insert into constructed array */
@@ -360,10 +383,14 @@ PLy_output_setup_func(PLyObToDatum *arg, MemoryContext arg_mcxt, Oid typeOid, in
     /* Recursively set up conversion info for the element type */
     arg->u.array.elm = (PLyObToDatum *)MemoryContextAllocZero(arg_mcxt, sizeof(PLyObToDatum));
     PLy_output_setup_func(arg->u.array.elm, arg_mcxt, typentry->typelem, typmod, proc);
-  } else if ((trfuncid = get_transform_tosql(typeOid, proc->langid, proc->trftypes))) {
+  }
+  else if ((trfuncid = get_transform_tosql(typeOid, proc->langid, proc->trftypes)))
+  {
     arg->func = PLyObject_ToTransform;
     fmgr_info_cxt(trfuncid, &arg->u.transform.typtransform, arg_mcxt);
-  } else if (typtype == TYPTYPE_COMPOSITE) {
+  }
+  else if (typtype == TYPTYPE_COMPOSITE)
+  {
     /* Named composite type, or RECORD */
     arg->func = PLyObject_ToComposite;
     /* We'll set up the per-field data later */
@@ -374,16 +401,19 @@ PLy_output_setup_func(PLyObToDatum *arg, MemoryContext arg_mcxt, Oid typeOid, in
     arg->u.tuple.natts = 0;
     /* Mark this invalid till needed, too */
     arg->u.tuple.recinfunc.fn_oid = InvalidOid;
-  } else {
+  }
+  else
+  {
     /* Scalar type, but we have a couple of special cases */
-    switch (typeOid) {
+    switch (typeOid)
+    {
     case BOOLOID:
       arg->func = PLyObject_ToBool;
       break;
     case BYTEAOID:
       arg->func = PLyObject_ToBytea;
       break;
-    default:;
+    default:
       arg->func = PLyObject_ToScalar;
       getTypeInputInfo(typeOid, &typinput, &arg->u.scalar.typioparam);
       fmgr_info_cxt(typinput, &arg->u.scalar.typfunc, arg_mcxt);
@@ -420,13 +450,16 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt, Oid typeOid, int
    * we'll need later.  RECORD is a special case: just treat it as composite
    * without bothering with the typcache entry.
    */
-  if (typeOid != RECORDOID) {
+  if (typeOid != RECORDOID)
+  {
     typentry = lookup_type_cache(typeOid, TYPECACHE_DOMAIN_BASE_INFO);
     typtype = typentry->typtype;
     arg->typbyval = typentry->typbyval;
     arg->typlen = typentry->typlen;
     arg->typalign = typentry->typalign;
-  } else {
+  }
+  else
+  {
     typentry = NULL;
     typtype = TYPTYPE_COMPOSITE;
     /* hard-wired knowledge about type RECORD: */
@@ -438,22 +471,30 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt, Oid typeOid, int
   /*
    * Choose conversion method.  Note that transform functions are checked
    * for composite and scalar types, but not for arrays or domains.  This is
-   * somewhat historical, but we'd have a problem allowing them on domains,* since we drill down through all levels of a domain nest without looking
+   * somewhat historical, but we'd have a problem allowing them on domains,
+   * since we drill down through all levels of a domain nest without looking
    * at the intermediate levels at all.
    */
-  if (typtype == TYPTYPE_DOMAIN) {
+  if (typtype == TYPTYPE_DOMAIN)
+  {
     /* Domain --- we don't care, just recurse down to the base type */
     PLy_input_setup_func(arg, arg_mcxt, typentry->domainBaseType, typentry->domainBaseTypmod, proc);
-  } else if (typentry && OidIsValid(typentry->typelem) && typentry->typlen == -1) {
+  }
+  else if (typentry && OidIsValid(typentry->typelem) && typentry->typlen == -1)
+  {
     /* Standard varlena array (cf. get_element_type) */
     arg->func = PLyList_FromArray;
     /* Recursively set up conversion info for the element type */
     arg->u.array.elm = (PLyDatumToOb *)MemoryContextAllocZero(arg_mcxt, sizeof(PLyDatumToOb));
     PLy_input_setup_func(arg->u.array.elm, arg_mcxt, typentry->typelem, typmod, proc);
-  } else if ((trfuncid = get_transform_fromsql(typeOid, proc->langid, proc->trftypes))) {
+  }
+  else if ((trfuncid = get_transform_fromsql(typeOid, proc->langid, proc->trftypes)))
+  {
     arg->func = PLyObject_FromTransform;
     fmgr_info_cxt(trfuncid, &arg->u.transform.typtransform, arg_mcxt);
-  } else if (typtype == TYPTYPE_COMPOSITE) {
+  }
+  else if (typtype == TYPTYPE_COMPOSITE)
+  {
     /* Named composite type, or RECORD */
     arg->func = PLyDict_FromComposite;
     /* We'll set up the per-field data later */
@@ -462,9 +503,12 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt, Oid typeOid, int
     arg->u.tuple.tupdescid = INVALID_TUPLEDESC_IDENTIFIER;
     arg->u.tuple.atts = NULL;
     arg->u.tuple.natts = 0;
-  } else {
+  }
+  else
+  {
     /* Scalar type, but we have a couple of special cases */
-    switch (typeOid) {
+    switch (typeOid)
+    {
     case BOOLOID:
       arg->func = PLyBool_FromBool;
       break;
@@ -492,7 +536,7 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt, Oid typeOid, int
     case BYTEAOID:
       arg->func = PLyBytes_FromBytea;
       break;
-    default:;
+    default:
       arg->func = PLyString_FromScalar;
       getTypeOutputInfo(typeOid, &typoutput, &typisvarlena);
       fmgr_info_cxt(typoutput, &arg->u.scalar.typfunc, arg_mcxt);
@@ -508,7 +552,8 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt, Oid typeOid, int
 static PyObject *
 PLyBool_FromBool(PLyDatumToOb *arg, Datum d)
 {
-  if (DatumGetBool(d)) {
+  if (DatumGetBool(d))
+  {
     Py_RETURN_TRUE;
   }
   Py_RETURN_FALSE;
@@ -534,27 +579,32 @@ PLyDecimal_FromNumeric(PLyDatumToOb *arg, Datum d)
   PyObject *pyvalue;
 
   /* Try to import cdecimal.  If it doesn't exist, fall back to decimal. */
-  if (!decimal_constructor) {
+  if (!decimal_constructor)
+  {
     PyObject *decimal_module;
 
     decimal_module = PyImport_ImportModule("cdecimal");
-    if (!decimal_module) {
+    if (!decimal_module)
+    {
       PyErr_Clear();
       decimal_module = PyImport_ImportModule("decimal");
     }
-    if (!decimal_module) {
+    if (!decimal_module)
+    {
       PLy_elog(ERROR, "could not import a module for Decimal constructor");
     }
 
     decimal_constructor = PyObject_GetAttrString(decimal_module, "Decimal");
-    if (!decimal_constructor) {
+    if (!decimal_constructor)
+    {
       PLy_elog(ERROR, "no Decimal attribute in module");
     }
   }
 
   str = DatumGetCString(DirectFunctionCall1(numeric_out, d));
   pyvalue = PyObject_CallFunction(decimal_constructor, "s", str);
-  if (!pyvalue) {
+  if (!pyvalue)
+  {
     PLy_elog(ERROR, "conversion from numeric to Decimal failed");
   }
 
@@ -634,7 +684,8 @@ PLyList_FromArray(PLyDatumToOb *arg, Datum d)
   bits8 *bitmap;
   int bitmask;
 
-  if (ARR_NDIM(array) == 0) {
+  if (ARR_NDIM(array) == 0)
+  {
     return PyList_New(0);
   }
 
@@ -670,19 +721,24 @@ PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim, char 
   PyObject *list;
 
   list = PyList_New(dims[dim]);
-  if (!list) {
+  if (!list)
+  {
     return NULL;
   }
 
-  if (dim < ndim - 1) {
+  if (dim < ndim - 1)
+  {
     /* Outer dimension. Recurse for each inner slice. */
-    for (i = 0; i < dims[dim]; i++) {
+    for (i = 0; i < dims[dim]; i++)
+    {
       PyObject *sublist;
 
       sublist = PLyList_FromArray_recurse(elm, dims, ndim, dim + 1, dataptr_p, bitmap_p, bitmask_p);
       PyList_SET_ITEM(list, i, sublist);
     }
-  } else {
+  }
+  else
+  {
     /*
      * Innermost dimension. Fill the list with the values from the array
      * for this slice.
@@ -691,12 +747,16 @@ PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim, char 
     bits8 *bitmap = *bitmap_p;
     int bitmask = *bitmask_p;
 
-    for (i = 0; i < dims[dim]; i++) {
+    for (i = 0; i < dims[dim]; i++)
+    {
       /* checking for NULL */
-      if (bitmap && (*bitmap & bitmask) == 0) {
+      if (bitmap && (*bitmap & bitmask) == 0)
+      {
         Py_INCREF(Py_None);
         PyList_SET_ITEM(list, i, Py_None);
-      } else {
+      }
+      else
+      {
         Datum itemvalue;
 
         itemvalue = fetch_att(dataptr, elm->typbyval, elm->typlen);
@@ -706,9 +766,11 @@ PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim, char 
       }
 
       /* advance bitmap pointer if any */
-      if (bitmap) {
+      if (bitmap)
+      {
         bitmask <<= 1;
-        if (bitmask == 0x100 /* (1<<8) */) {
+        if (bitmask == 0x100 /* (1<<8) */)
+        {
           bitmap++;
           bitmask = 1;
         }
@@ -768,7 +830,8 @@ PLyDict_FromTuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool inclu
   Assert(desc->natts == arg->u.tuple.natts);
 
   dict = PyDict_New();
-  if (dict == NULL) {
+  if (dict == NULL)
+  {
     return NULL;
   }
 
@@ -776,7 +839,8 @@ PLyDict_FromTuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool inclu
   {
     int i;
 
-    for (i = 0; i < arg->u.tuple.natts; i++) {
+    for (i = 0; i < arg->u.tuple.natts; i++)
+    {
       PLyDatumToOb *att = &arg->u.tuple.atts[i];
       Form_pg_attribute attr = TupleDescAttr(desc, i);
       char *key;
@@ -784,13 +848,16 @@ PLyDict_FromTuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool inclu
       bool is_null;
       PyObject *value;
 
-      if (attr->attisdropped) {
+      if (attr->attisdropped)
+      {
         continue;
       }
 
-      if (attr->attgenerated) {
+      if (attr->attgenerated)
+      {
         /* don't include unless requested */
-        if (!include_generated) {
+        if (!include_generated)
+        {
           continue;
         }
       }
@@ -798,9 +865,12 @@ PLyDict_FromTuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool inclu
       key = NameStr(attr->attname);
       vattr = heap_getattr(tuple, (i + 1), desc, &is_null);
 
-      if (is_null) {
+      if (is_null)
+      {
         PyDict_SetItemString(dict, key, Py_None);
-      } else {
+      }
+      else
+      {
         value = att->func(att, vattr);
         PyDict_SetItemString(dict, key, value);
         Py_DECREF(value);
@@ -826,7 +896,8 @@ PLyDict_FromTuple(PLyDatumToOb *arg, HeapTuple tuple, TupleDesc desc, bool inclu
 static Datum
 PLyObject_ToBool(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarray)
 {
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
@@ -845,14 +916,16 @@ PLyObject_ToBytea(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarray)
   PyObject *volatile plrv_so = NULL;
   Datum rv;
 
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
   *isnull = false;
 
   plrv_so = PyObject_Bytes(plrv);
-  if (!plrv_so) {
+  if (!plrv_so)
+  {
     PLy_elog(ERROR, "could not create bytes representation of Python object");
   }
 
@@ -890,7 +963,8 @@ PLyObject_ToComposite(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inar
   Datum rv;
   TupleDesc desc;
 
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
@@ -900,7 +974,8 @@ PLyObject_ToComposite(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inar
    * The string conversion case doesn't require a tupdesc, nor per-field
    * conversion data, so just go for it if that's the case to use.
    */
-  if (PyString_Check(plrv) || PyUnicode_Check(plrv)) {
+  if (PyString_Check(plrv) || PyUnicode_Check(plrv))
+  {
     return PLyString_ToComposite(arg, plrv, inarray);
   }
 
@@ -910,21 +985,28 @@ PLyObject_ToComposite(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inar
    * RECORD types can't change between calls; but we must still be willing
    * to set up the info the first time, if nobody did yet.
    */
-  if (arg->typoid != RECORDOID) {
+  if (arg->typoid != RECORDOID)
+  {
     desc = lookup_rowtype_tupdesc(arg->typoid, arg->typmod);
     /* We should have the descriptor of the type's typcache entry */
     Assert(desc == arg->u.tuple.typentry->tupDesc);
     /* Detect change of descriptor, update cache if needed */
-    if (arg->u.tuple.tupdescid != arg->u.tuple.typentry->tupDesc_identifier) {
+    if (arg->u.tuple.tupdescid != arg->u.tuple.typentry->tupDesc_identifier)
+    {
       PLy_output_setup_tuple(arg, desc, PLy_current_execution_context()->curr_proc);
       arg->u.tuple.tupdescid = arg->u.tuple.typentry->tupDesc_identifier;
     }
-  } else {
+  }
+  else
+  {
     desc = arg->u.tuple.recdesc;
-    if (desc == NULL) {
+    if (desc == NULL)
+    {
       desc = lookup_rowtype_tupdesc(arg->typoid, arg->typmod);
       arg->u.tuple.recdesc = desc;
-    } else {
+    }
+    else
+    {
       /* Pin descriptor to match unpin below */
       PinTupleDesc(desc);
     }
@@ -937,13 +1019,18 @@ PLyObject_ToComposite(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inar
    * Convert, using the appropriate method depending on the type of the
    * supplied Python object.
    */
-  if (PySequence_Check(plrv)) {
+  if (PySequence_Check(plrv))
+  {
     /* composite type as sequence (tuple, list etc) */
     rv = PLySequence_ToComposite(arg, desc, plrv);
-  } else if (PyMapping_Check(plrv)) {
+  }
+  else if (PyMapping_Check(plrv))
+  {
     /* composite type as mapping (currently only dict) */
     rv = PLyMapping_ToComposite(arg, desc, plrv);
-  } else {
+  }
+  else
+  {
     /* returned as smth, must provide method __getattr__(name) */
     rv = PLyGenericObject_ToComposite(arg, desc, plrv, inarray);
   }
@@ -966,9 +1053,12 @@ PLyObject_AsString(PyObject *plrv)
   size_t plen;
   size_t slen;
 
-  if (PyUnicode_Check(plrv)) {
+  if (PyUnicode_Check(plrv))
+  {
     plrv_bo = PLyUnicode_Bytes(plrv);
-  } else if (PyFloat_Check(plrv)) {
+  }
+  else if (PyFloat_Check(plrv))
+  {
     /* use repr() for floats, str() is lossy */
 #if PY_MAJOR_VERSION >= 3
     PyObject *s = PyObject_Repr(plrv);
@@ -978,7 +1068,9 @@ PLyObject_AsString(PyObject *plrv)
 #else
     plrv_bo = PyObject_Repr(plrv);
 #endif
-  } else {
+  }
+  else
+  {
 #if PY_MAJOR_VERSION >= 3
     PyObject *s = PyObject_Str(plrv);
 
@@ -988,7 +1080,8 @@ PLyObject_AsString(PyObject *plrv)
     plrv_bo = PyObject_Str(plrv);
 #endif
   }
-  if (!plrv_bo) {
+  if (!plrv_bo)
+  {
     PLy_elog(ERROR, "could not create string representation of Python object");
   }
 
@@ -998,9 +1091,12 @@ PLyObject_AsString(PyObject *plrv)
 
   Py_XDECREF(plrv_bo);
 
-  if (slen < plen) {
+  if (slen < plen)
+  {
     ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not convert Python object into cstring: Python string representation appears to contain null bytes")));
-  } else if (slen > plen) {
+  }
+  else if (slen > plen)
+  {
     elog(ERROR, "could not convert Python object into cstring: Python string longer than reported length");
   }
   pg_verifymbstr(plrv_sc, slen, false);
@@ -1017,7 +1113,8 @@ PLyObject_ToScalar(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarray
 {
   char *str;
 
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
@@ -1048,7 +1145,8 @@ PLyObject_ToDomain(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarray
 static Datum
 PLyObject_ToTransform(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarray)
 {
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
@@ -1074,7 +1172,8 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarra
   PyObject *pyptr = plrv;
   PyObject *next;
 
-  if (plrv == Py_None) {
+  if (plrv == Py_None)
+  {
     *isnull = true;
     return (Datum)0;
   }
@@ -1088,30 +1187,37 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarra
 
   Py_INCREF(plrv);
 
-  for (;;) {
-    if (!PyList_Check(pyptr)) {
+  for (;;)
+  {
+    if (!PyList_Check(pyptr))
+    {
       break;
     }
 
-    if (ndim == MAXDIM) {
+    if (ndim == MAXDIM)
+    {
       PLy_elog(ERROR, "number of array dimensions exceeds the maximum allowed (%d)", MAXDIM);
     }
 
     dims[ndim] = PySequence_Length(pyptr);
-    if (dims[ndim] < 0) {
+    if (dims[ndim] < 0)
+    {
       PLy_elog(ERROR, "could not determine sequence length for function return value");
     }
 
-    if (dims[ndim] > MaxAllocSize) {
+    if (dims[ndim] > MaxAllocSize)
+    {
       PLy_elog(ERROR, "array size exceeds the maximum allowed");
     }
 
     len *= dims[ndim];
-    if (len > MaxAllocSize) {
+    if (len > MaxAllocSize)
+    {
       PLy_elog(ERROR, "array size exceeds the maximum allowed");
     }
 
-    if (dims[ndim] == 0) {
+    if (dims[ndim] == 0)
+    {
       /* empty sequence */
       break;
     }
@@ -1131,8 +1237,10 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarra
    * lenient, for historical reasons. So if the object is a sequence of any
    * kind, treat it as a one-dimensional array.
    */
-  if (ndim == 0) {
-    if (!PySequence_Check(plrv)) {
+  if (ndim == 0)
+  {
+    if (!PySequence_Check(plrv))
+    {
       PLy_elog(ERROR, "return value of function with array return type is not a Python sequence");
     }
 
@@ -1149,7 +1257,8 @@ PLySequence_ToArray(PLyObToDatum *arg, PyObject *plrv, bool *isnull, bool inarra
   currelem = 0;
   PLySequence_ToArray_recurse(arg->u.array.elm, plrv, dims, ndim, 0, elems, nulls, &currelem);
 
-  for (i = 0; i < ndim; i++) {
+  for (i = 0; i < ndim; i++)
+  {
     lbs[i] = 1;
   }
 
@@ -1167,19 +1276,25 @@ PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list, int *dims, int nd
 {
   int i;
 
-  if (PySequence_Length(list) != dims[dim]) {
-    ereport(ERROR, (errmsg("wrong length of inner sequence: has length %d, but %d was expected",(int)PySequence_Length(list), dims[dim]),(errdetail("To construct a multidimensional array, the inner sequences must all have the same length."))));
+  if (PySequence_Length(list) != dims[dim])
+  {
+    ereport(ERROR, (errmsg("wrong length of inner sequence: has length %d, but %d was expected", (int)PySequence_Length(list), dims[dim]), (errdetail("To construct a multidimensional array, the inner sequences must all have the same length."))));
   }
 
-  if (dim < ndim - 1) {
-    for (i = 0; i < dims[dim]; i++) {
+  if (dim < ndim - 1)
+  {
+    for (i = 0; i < dims[dim]; i++)
+    {
       PyObject *sublist = PySequence_GetItem(list, i);
 
       PLySequence_ToArray_recurse(elm, sublist, dims, ndim, dim + 1, elems, nulls, currelem);
       Py_XDECREF(sublist);
     }
-  } else {
-    for (i = 0; i < dims[dim]; i++) {
+  }
+  else
+  {
+    for (i = 0; i < dims[dim]; i++)
+    {
       PyObject *obj = PySequence_GetItem(list, i);
 
       elems[*currelem] = elm->func(elm, obj, &nulls[*currelem], true);
@@ -1201,7 +1316,8 @@ PLyString_ToComposite(PLyObToDatum *arg, PyObject *string, bool inarray)
    * Set up call data for record_in, if we didn't already.  (We can't just
    * use DirectFunctionCall, because record_in needs a fn_extra field.)
    */
-  if (!OidIsValid(arg->u.tuple.recinfunc.fn_oid)) {
+  if (!OidIsValid(arg->u.tuple.recinfunc.fn_oid))
+  {
     fmgr_info_cxt(F_RECORD_IN, &arg->u.tuple.recinfunc, arg->mcxt);
   }
 
@@ -1232,15 +1348,18 @@ PLyString_ToComposite(PLyObToDatum *arg, PyObject *string, bool inarray)
    * This check better match the one in record_in(), so that we don't forbid
    * literals that are actually valid!
    */
-  if (inarray) {
+  if (inarray)
+  {
     char *ptr = str;
 
     /* Allow leading whitespace */
-    while (*ptr && isspace((unsigned char)*ptr)) {
+    while (*ptr && isspace((unsigned char)*ptr))
+    {
       ptr++;
     }
-    if (*ptr++ != '(') {
-      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed record literal: \"%s\"", str), errdetail("Missing left parenthesis."),errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g., \"[('foo',)]\".")));
+    if (*ptr++ != '(')
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed record literal: \"%s\"", str), errdetail("Missing left parenthesis."), errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g., \"[('foo',)]\".")));
     }
   }
 
@@ -1261,13 +1380,15 @@ PLyMapping_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *mapping)
   /* Build tuple */
   values = palloc(sizeof(Datum) * desc->natts);
   nulls = palloc(sizeof(bool) * desc->natts);
-  for (i = 0; i < desc->natts; ++i) {
+  for (i = 0; i < desc->natts; ++i)
+  {
     char *key;
     PyObject *volatile value;
     PLyObToDatum *att;
     Form_pg_attribute attr = TupleDescAttr(desc, i);
 
-    if (attr->attisdropped) {
+    if (attr->attisdropped)
+    {
       values[i] = (Datum)0;
       nulls[i] = true;
       continue;
@@ -1279,8 +1400,11 @@ PLyMapping_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *mapping)
     PG_TRY();
     {
       value = PyMapping_GetItemString(mapping, key);
-      if (!value) {
-        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("key \"%s\" not found in mapping", key),errhint("To return null in a column, add the value None to the mapping with the key named after the column.")));
+      if (!value)
+      {
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("key \"%s\" not found in mapping", key),
+                           errhint("To return null in a column, "
+                                   "add the value None to the mapping with the key named after the column.")));
       }
 
       values[i] = att->func(att, value, &nulls[i], false);
@@ -1324,12 +1448,15 @@ PLySequence_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *sequence)
    * plpython developer's errors we are strict here
    */
   idx = 0;
-  for (i = 0; i < desc->natts; i++) {
-    if (!TupleDescAttr(desc, i)->attisdropped) {
+  for (i = 0; i < desc->natts; i++)
+  {
+    if (!TupleDescAttr(desc, i)->attisdropped)
+    {
       idx++;
     }
   }
-  if (PySequence_Length(sequence) != idx) {
+  if (PySequence_Length(sequence) != idx)
+  {
     ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("length of returned sequence did not match number of columns in row")));
   }
 
@@ -1337,11 +1464,13 @@ PLySequence_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *sequence)
   values = palloc(sizeof(Datum) * desc->natts);
   nulls = palloc(sizeof(bool) * desc->natts);
   idx = 0;
-  for (i = 0; i < desc->natts; ++i) {
+  for (i = 0; i < desc->natts; ++i)
+  {
     PyObject *volatile value;
     PLyObToDatum *att;
 
-    if (TupleDescAttr(desc, i)->attisdropped) {
+    if (TupleDescAttr(desc, i)->attisdropped)
+    {
       values[i] = (Datum)0;
       nulls[i] = true;
       continue;
@@ -1391,13 +1520,15 @@ PLyGenericObject_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *object
   /* Build tuple */
   values = palloc(sizeof(Datum) * desc->natts);
   nulls = palloc(sizeof(bool) * desc->natts);
-  for (i = 0; i < desc->natts; ++i) {
+  for (i = 0; i < desc->natts; ++i)
+  {
     char *key;
     PyObject *volatile value;
     PLyObToDatum *att;
     Form_pg_attribute attr = TupleDescAttr(desc, i);
 
-    if (attr->attisdropped) {
+    if (attr->attisdropped)
+    {
       values[i] = (Datum)0;
       nulls[i] = true;
       continue;
@@ -1409,18 +1540,20 @@ PLyGenericObject_ToComposite(PLyObToDatum *arg, TupleDesc desc, PyObject *object
     PG_TRY();
     {
       value = PyObject_GetAttrString(object, key);
-      if (!value) {
+      if (!value)
+      {
         /*
          * No attribute for this column in the object.
          *
          * If we are parsing a composite type in an array, a likely
-         * cause is that the function contained something like "[[123,* 'foo']]". Before PostgreSQL 10, that was interpreted as an
+         * cause is that the function contained something like "[[123,
+         * 'foo']]". Before PostgreSQL 10, that was interpreted as an
          * array, with a composite type (123, 'foo') in it. But now
          * it's interpreted as a two-dimensional array, and we try to
          * interpret "123" as the composite type. See also similar
          * heuristic in PLyObject_ToScalar().
          */
-        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("attribute \"%s\" does not exist in Python object", key),inarray ? errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g., \"[('foo',)]\".") : errhint("To return null in a column, let the returned object have an attribute named after column with value None.")));
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("attribute \"%s\" does not exist in Python object", key), inarray ? errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g., \"[('foo',)]\".") : errhint("To return null in a column, let the returned object have an attribute named after column with value None.")));
       }
 
       values[i] = att->func(att, value, &nulls[i], false);

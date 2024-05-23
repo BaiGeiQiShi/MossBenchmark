@@ -46,7 +46,8 @@ identify_opfamily_groups(CatCList *oprlist, CatCList *proclist)
   int io, ip;
 
   /* We need the lists to be ordered; should be true in normal operation */
-  if (!oprlist->ordered || !proclist->ordered) {
+  if (!oprlist->ordered || !proclist->ordered)
+  {
     elog(ERROR, "cannot validate operator family without ordered data");
   }
 
@@ -57,49 +58,66 @@ identify_opfamily_groups(CatCList *oprlist, CatCList *proclist)
    */
   thisgroup = NULL;
   io = ip = 0;
-  if (io < oprlist->n_members) {
+  if (io < oprlist->n_members)
+  {
     oprform = (Form_pg_amop)GETSTRUCT(&oprlist->members[io]->tuple);
     io++;
-  } else {
+  }
+  else
+  {
     oprform = NULL;
   }
-  if (ip < proclist->n_members) {
+  if (ip < proclist->n_members)
+  {
     procform = (Form_pg_amproc)GETSTRUCT(&proclist->members[ip]->tuple);
     ip++;
-  } else {
+  }
+  else
+  {
     procform = NULL;
   }
 
-  while (oprform || procform) {
-    if (oprform && thisgroup && oprform->amoplefttype == thisgroup->lefttype && oprform->amoprighttype == thisgroup->righttype) {
+  while (oprform || procform)
+  {
+    if (oprform && thisgroup && oprform->amoplefttype == thisgroup->lefttype && oprform->amoprighttype == thisgroup->righttype)
+    {
       /* Operator belongs to current group; include it and advance */
 
       /* Ignore strategy numbers outside supported range */
-      if (oprform->amopstrategy > 0 && oprform->amopstrategy < 64) {
+      if (oprform->amopstrategy > 0 && oprform->amopstrategy < 64)
+      {
         thisgroup->operatorset |= ((uint64)1) << oprform->amopstrategy;
       }
 
-      if (io < oprlist->n_members) {
+      if (io < oprlist->n_members)
+      {
         oprform = (Form_pg_amop)GETSTRUCT(&oprlist->members[io]->tuple);
         io++;
-      } else {
+      }
+      else
+      {
         oprform = NULL;
       }
       continue;
     }
 
-    if (procform && thisgroup && procform->amproclefttype == thisgroup->lefttype && procform->amprocrighttype == thisgroup->righttype) {
+    if (procform && thisgroup && procform->amproclefttype == thisgroup->lefttype && procform->amprocrighttype == thisgroup->righttype)
+    {
       /* Procedure belongs to current group; include it and advance */
 
       /* Ignore function numbers outside supported range */
-      if (procform->amprocnum > 0 && procform->amprocnum < 64) {
+      if (procform->amprocnum > 0 && procform->amprocnum < 64)
+      {
         thisgroup->functionset |= ((uint64)1) << procform->amprocnum;
       }
 
-      if (ip < proclist->n_members) {
+      if (ip < proclist->n_members)
+      {
         procform = (Form_pg_amproc)GETSTRUCT(&proclist->members[ip]->tuple);
         ip++;
-      } else {
+      }
+      else
+      {
         procform = NULL;
       }
       continue;
@@ -107,10 +125,13 @@ identify_opfamily_groups(CatCList *oprlist, CatCList *proclist)
 
     /* Time for a new group */
     thisgroup = (OpFamilyOpFuncGroup *)palloc(sizeof(OpFamilyOpFuncGroup));
-    if (oprform && (!procform || (oprform->amoplefttype < procform->amproclefttype || (oprform->amoplefttype == procform->amproclefttype && oprform->amoprighttype < procform->amprocrighttype)))) {
+    if (oprform && (!procform || (oprform->amoplefttype < procform->amproclefttype || (oprform->amoplefttype == procform->amproclefttype && oprform->amoprighttype < procform->amprocrighttype))))
+    {
       thisgroup->lefttype = oprform->amoplefttype;
       thisgroup->righttype = oprform->amoprighttype;
-    } else {
+    }
+    else
+    {
       thisgroup->lefttype = procform->amproclefttype;
       thisgroup->righttype = procform->amprocrighttype;
     }
@@ -139,23 +160,28 @@ check_amproc_signature(Oid funcid, Oid restype, bool exact, int minargs, int max
   int i;
 
   tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-  if (!HeapTupleIsValid(tp)) {
+  if (!HeapTupleIsValid(tp))
+  {
     elog(ERROR, "cache lookup failed for function %u", funcid);
   }
   procform = (Form_pg_proc)GETSTRUCT(tp);
 
-  if (procform->prorettype != restype || procform->proretset || procform->pronargs < minargs || procform->pronargs > maxargs) {
+  if (procform->prorettype != restype || procform->proretset || procform->pronargs < minargs || procform->pronargs > maxargs)
+  {
     result = false;
   }
 
   va_start(ap, maxargs);
-  for (i = 0; i < maxargs; i++) {
+  for (i = 0; i < maxargs; i++)
+  {
     Oid argtype = va_arg(ap, Oid);
 
-    if (i >= procform->pronargs) {
+    if (i >= procform->pronargs)
+    {
       continue;
     }
-    if (exact ? (argtype != procform->proargtypes.values[i]) : !IsBinaryCoercible(argtype, procform->proargtypes.values[i])) {
+    if (exact ? (argtype != procform->proargtypes.values[i]) : !IsBinaryCoercible(argtype, procform->proargtypes.values[i]))
+    {
       result = false;
     }
   }
@@ -181,12 +207,14 @@ check_amop_signature(Oid opno, Oid restype, Oid lefttype, Oid righttype)
   Form_pg_operator opform;
 
   tp = SearchSysCache1(OPEROID, ObjectIdGetDatum(opno));
-  if (!HeapTupleIsValid(tp)) { /* shouldn't happen */
+  if (!HeapTupleIsValid(tp)) /* shouldn't happen */
+  {
     elog(ERROR, "cache lookup failed for operator %u", opno);
   }
   opform = (Form_pg_operator)GETSTRUCT(tp);
 
-  if (opform->oprresult != restype || opform->oprkind != 'b' || opform->oprleft != lefttype || opform->oprright != righttype) {
+  if (opform->oprresult != restype || opform->oprkind != 'b' || opform->oprleft != lefttype || opform->oprright != righttype)
+  {
     result = false;
   }
 
@@ -211,11 +239,13 @@ opfamily_can_sort_type(Oid opfamilyoid, Oid datatypeoid)
    */
   opclist = SearchSysCacheList1(CLAAMNAMENSP, ObjectIdGetDatum(BTREE_AM_OID));
 
-  for (i = 0; i < opclist->n_members; i++) {
+  for (i = 0; i < opclist->n_members; i++)
+  {
     HeapTuple classtup = &opclist->members[i]->tuple;
     Form_pg_opclass classform = (Form_pg_opclass)GETSTRUCT(classtup);
 
-    if (classform->opcfamily == opfamilyoid && classform->opcintype == datatypeoid) {
+    if (classform->opcfamily == opfamilyoid && classform->opcintype == datatypeoid)
+    {
       result = true;
       break;
     }

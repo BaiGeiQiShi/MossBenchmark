@@ -92,21 +92,21 @@ BlockSampler_Next(BlockSampler bs)
    * less than k, which means that we cannot fail to select enough blocks.
    *----------
    */
+  V = sampler_random_fract(bs->randstate);
+  p = 1.0 - (double)k / (double)K;
+  while (V < p)
+  {
+    /* skip */
+    bs->t++;
+    K--; /* keep K == N - t */
 
-
-
-
-
-
-
-
-
-
-
+    /* adjust p to be new cutoff point in reduced range */
+    p *= 1.0 - (double)k / (double)K;
+  }
 
   /* select */
-
-
+  bs->m++;
+  return bs->t++;
 }
 
 /*
@@ -155,9 +155,9 @@ reservoir_get_next_S(ReservoirState rs, double t, int n)
     /* Find min S satisfying (4.1) */
     while (quot > V)
     {
-
-
-
+      S += 1;
+      t += 1;
+      quot *= (t - (double)n) / t;
     }
   }
   else
@@ -166,48 +166,48 @@ reservoir_get_next_S(ReservoirState rs, double t, int n)
     double W = rs->W;
     double term = t - (double)n + 1;
 
+    for (;;)
+    {
+      double numer, numer_lim, denom;
+      double U, X, lhs, rhs, y, tmp;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /* Generate U and X */
+      U = sampler_random_fract(rs->randstate);
+      X = t * (W - 1.0);
+      S = floor(X); /* S is tentatively set to floor(X) */
+      /* Test if U <= h(S)/cg(X) in the manner of (6.3) */
+      tmp = (t + 1) / term;
+      lhs = exp(log(((U * tmp * tmp) * (term + S)) / (t + X)) / n);
+      rhs = (((t + X) / (term + S)) * term) / t;
+      if (lhs <= rhs)
+      {
+        W = rhs / lhs;
+        break;
+      }
+      /* Test if U <= f(S)/cg(X) */
+      y = (((U * (t + 1)) / term) * (t + S + 1)) / (t + X);
+      if ((double)n < S)
+      {
+        denom = t;
+        numer_lim = term + S;
+      }
+      else
+      {
+        denom = t - (double)n + S;
+        numer_lim = t + 1;
+      }
+      for (numer = t + S; numer >= numer_lim; numer -= 1)
+      {
+        y *= numer / denom;
+        denom -= 1;
+      }
+      W = exp(-log(sampler_random_fract(rs->randstate)) / n); /* Generate W in advance */
+      if (exp(log(y) / n) <= (t + X) / t)
+      {
+        break;
+      }
+    }
+    rs->W = W;
   }
   return S;
 }
@@ -251,36 +251,36 @@ static ReservoirStateData oldrs;
 double
 anl_random_fract(void)
 {
+  /* initialize if first time through */
+  if (oldrs.randstate[0] == 0)
+  {
+    sampler_random_init_state(random(), oldrs.randstate);
+  }
 
-
-
-
-
-
-
-
+  /* and compute a random fraction */
+  return sampler_random_fract(oldrs.randstate);
 }
 
 double
 anl_init_selection_state(int n)
 {
+  /* initialize if first time through */
+  if (oldrs.randstate[0] == 0)
+  {
+    sampler_random_init_state(random(), oldrs.randstate);
+  }
 
-
-
-
-
-
-
-
+  /* Initial value of W (for use when Algorithm Z is first applied) */
+  return exp(-log(sampler_random_fract(oldrs.randstate)) / n);
 }
 
 double
 anl_get_next_S(double t, int n, double *stateptr)
 {
+  double result;
 
-
-
-
-
-
+  oldrs.W = *stateptr;
+  result = reservoir_get_next_S(&oldrs, t, n);
+  *stateptr = oldrs.W;
+  return result;
 }

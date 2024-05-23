@@ -121,7 +121,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation, Index newv
       newtup = SearchSysCacheAttName(new_relid, attname);
       if (!HeapTupleIsValid(newtup))
       {
-
+        elog(ERROR, "could not find inherited attribute \"%s\" of relation \"%s\"", attname, RelationGetRelationName(newrelation));
       }
       new_attno = ((Form_pg_attribute)GETSTRUCT(newtup))->attnum - 1;
       ReleaseSysCache(newtup);
@@ -136,7 +136,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation, Index newv
     }
     if (attcollation != att->attcollation)
     {
-
+      elog(ERROR, "attribute \"%s\" of relation \"%s\" does not match parent's collation", attname, RelationGetRelationName(newrelation));
     }
 
     vars = lappend(vars, makeVar(newvarno, (AttrNumber)(new_attno + 1), atttypid, atttypmod, attcollation, 0));
@@ -148,9 +148,10 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation, Index newv
 
 /*
  * adjust_appendrel_attrs
- *	  Copy the specified query or expression and translate Vars referring to
- *a parent rel to refer to the corresponding child rel instead.  We also update
- *rtindexes appearing outside Vars, such as resultRelation and jointree relids.
+ *	  Copy the specified query or expression and translate Vars referring to a
+ *	  parent rel to refer to the corresponding child rel instead.  We also
+ *	  update rtindexes appearing outside Vars, such as resultRelation and
+ *	  jointree relids.
  *
  * Note: this is only applied after conversion of sublinks to subplans,
  * so we don't need to cope with recursion into sub-queries.
@@ -241,12 +242,12 @@ adjust_appendrel_attrs_mutator(Node *node, adjust_appendrel_attrs_context *conte
 
         if (var->varattno > list_length(appinfo->translated_vars))
         {
-
+          elog(ERROR, "attribute %d of relation \"%s\" does not exist", var->varattno, get_rel_name(appinfo->parent_reloid));
         }
         newnode = copyObject(list_nth(appinfo->translated_vars, var->varattno - 1));
         if (newnode == NULL)
         {
-
+          elog(ERROR, "attribute %d of relation \"%s\" does not exist", var->varattno, get_rel_name(appinfo->parent_reloid));
         }
         return newnode;
       }
@@ -353,8 +354,8 @@ adjust_appendrel_attrs_mutator(Node *node, adjust_appendrel_attrs_context *conte
 
       if (j->rtindex == appinfo->parent_relid)
       {
-
-
+        j->rtindex = appinfo->child_relid;
+        break;
       }
     }
     return (Node *)j;
@@ -437,8 +438,7 @@ adjust_appendrel_attrs_mutator(Node *node, adjust_appendrel_attrs_context *conte
 
 /*
  * adjust_appendrel_attrs_multilevel
- *	  Apply Var translations from a toplevel appendrel parent down to a
- *child.
+ *	  Apply Var translations from a toplevel appendrel parent down to a child.
  *
  * In some cases we need to translate expressions referencing a parent relation
  * to reference an appendrel child that's multiple levels removed from it.
@@ -536,7 +536,7 @@ adjust_child_relids_multilevel(PlannerInfo *root, Relids relids, Relids child_re
    */
   if (!bms_overlap(relids, top_parent_relids))
   {
-
+    return relids;
   }
 
   appinfos = find_appinfos_by_relids(root, child_relids, &nappinfos);
@@ -611,12 +611,12 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
     /* Look up the translation of this column: it must be a Var */
     if (tle->resno <= 0 || tle->resno > list_length(context->translated_vars))
     {
-
+      elog(ERROR, "attribute %d of relation \"%s\" does not exist", tle->resno, get_rel_name(context->parent_reloid));
     }
     childvar = (Var *)list_nth(context->translated_vars, tle->resno - 1);
     if (childvar == NULL || !IsA(childvar, Var))
     {
-
+      elog(ERROR, "attribute %d of relation \"%s\" does not exist", tle->resno, get_rel_name(context->parent_reloid));
     }
 
     if (tle->resno != childvar->varattno)
@@ -648,7 +648,7 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
 
       if (tle->resjunk)
       {
-
+        continue; /* ignore junk items */
       }
 
       if (tle->resno == attrno)
@@ -671,9 +671,9 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
       continue; /* here, ignore non-junk items */
     }
 
-
-
-
+    tle->resno = attrno;
+    new_tlist = lappend(new_tlist, tle);
+    attrno++;
   }
 
   return new_tlist;
@@ -681,8 +681,7 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
 
 /*
  * find_appinfos_by_relids
- * 		Find AppendRelInfo structures for all relations specified by
- * relids.
+ * 		Find AppendRelInfo structures for all relations specified by relids.
  *
  * The AppendRelInfos are returned in an array, which can be pfree'd by the
  * caller. *nappinfos is set to the number of entries in the array.
@@ -704,7 +703,7 @@ find_appinfos_by_relids(PlannerInfo *root, Relids relids, int *nappinfos)
 
     if (!appinfo)
     {
-
+      elog(ERROR, "child rel %d not found in append_rel_array", i);
     }
 
     appinfos[cnt++] = appinfo;

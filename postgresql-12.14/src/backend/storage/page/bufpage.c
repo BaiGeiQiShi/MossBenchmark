@@ -33,8 +33,8 @@ bool ignore_checksum_failure = false;
 /*
  * PageInit
  *		Initializes the contents of a page.
- *		Note that we don't calculate an initial checksum here; that's
- *not done until it's time to write.
+ *		Note that we don't calculate an initial checksum here; that's not done
+ *		until it's time to write.
  */
 void
 PageInit(Page page, Size pageSize, Size specialSize)
@@ -64,7 +64,7 @@ PageInit(Page page, Size pageSize, Size specialSize)
 bool
 PageIsVerified(Page page, BlockNumber blkno)
 {
-
+  return PageIsVerifiedExtended(page, blkno, PIV_LOG_WARNING | PIV_REPORT_STAT);
 }
 
 /*
@@ -109,12 +109,12 @@ PageIsVerifiedExtended(Page page, BlockNumber blkno, int flags)
   {
     if (DataChecksumsEnabled())
     {
+      checksum = pg_checksum_page((char *)page, blkno);
 
-
-
-
-
-
+      if (checksum != p->pd_checksum)
+      {
+        checksum_failure = true;
+      }
     }
 
     /*
@@ -139,47 +139,47 @@ PageIsVerifiedExtended(Page page, BlockNumber blkno, int flags)
    * multiple of size_t - and it's much faster to compare memory using the
    * native word size.
    */
+  StaticAssertStmt(BLCKSZ == (BLCKSZ / sizeof(size_t)) * sizeof(size_t), "BLCKSZ has to be a multiple of sizeof(size_t)");
 
+  all_zeroes = true;
+  pagebytes = (size_t *)page;
+  for (i = 0; i < (BLCKSZ / sizeof(size_t)); i++)
+  {
+    if (pagebytes[i] != 0)
+    {
+      all_zeroes = false;
+      break;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (all_zeroes)
+  {
+    return true;
+  }
 
   /*
    * Throw a WARNING if the checksum fails, but only after we've checked for
    * the all-zeroes case.
    */
+  if (checksum_failure)
+  {
+    if ((flags & PIV_LOG_WARNING) != 0)
+    {
+      ereport(WARNING, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("page verification failed, calculated checksum %u but expected %u", checksum, p->pd_checksum)));
+    }
 
+    if ((flags & PIV_REPORT_STAT) != 0)
+    {
+      pgstat_report_checksum_failure();
+    }
 
+    if (header_sane && ignore_checksum_failure)
+    {
+      return true;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -225,7 +225,7 @@ PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, 
    */
   if (phdr->pd_lower < SizeOfPageHeaderData || phdr->pd_lower > phdr->pd_upper || phdr->pd_upper > phdr->pd_special || phdr->pd_special > BLCKSZ)
   {
-
+    ereport(PANIC, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", phdr->pd_lower, phdr->pd_upper, phdr->pd_special)));
   }
 
   /*
@@ -241,12 +241,12 @@ PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, 
     {
       if (offsetNumber < limit)
       {
-
-
-
-
-
-
+        itemId = PageGetItemId(phdr, offsetNumber);
+        if (ItemIdIsUsed(itemId) || ItemIdHasStorage(itemId))
+        {
+          elog(WARNING, "will not overwrite a used ItemId");
+          return InvalidOffsetNumber;
+        }
       }
     }
     else
@@ -292,15 +292,15 @@ PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, 
   /* Reject placing items beyond the first unused line pointer */
   if (offsetNumber > limit)
   {
-
-
+    elog(WARNING, "specified item offset is too large");
+    return InvalidOffsetNumber;
   }
 
   /* Reject placing items beyond heap boundary, if heap */
   if ((flags & PAI_IS_HEAP) != 0 && offsetNumber > MaxHeapTuplesPerPage)
   {
-
-
+    elog(WARNING, "can't put more than MaxHeapTuplesPerPage items in a heap page");
+    return InvalidOffsetNumber;
   }
 
   /*
@@ -324,7 +324,7 @@ PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, 
 
   if (lower > upper)
   {
-
+    return InvalidOffsetNumber;
   }
 
   /*
@@ -367,8 +367,7 @@ PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, 
 /*
  * PageGetTempPage
  *		Get a temporary page in local memory for special processing.
- *		The returned page is not initialized at all; caller must do
- *that.
+ *		The returned page is not initialized at all; caller must do that.
  */
 Page
 PageGetTempPage(Page page)
@@ -385,8 +384,7 @@ PageGetTempPage(Page page)
 /*
  * PageGetTempPageCopy
  *		Get a temporary page in local memory for special processing.
- *		The page is initialized by copying the contents of the given
- *page.
+ *		The page is initialized by copying the contents of the given page.
  */
 Page
 PageGetTempPageCopy(Page page)
@@ -425,8 +423,8 @@ PageGetTempPageCopySpecial(Page page)
 
 /*
  * PageRestoreTempPage
- *		Copy temporary page back to permanent page after special
- *processing and release the temporary page.
+ *		Copy temporary page back to permanent page after special processing
+ *		and release the temporary page.
  */
 void
 PageRestoreTempPage(Page tempPage, Page oldPage)
@@ -518,7 +516,7 @@ PageRepairFragmentation(Page page)
    */
   if (pd_lower < SizeOfPageHeaderData || pd_lower > pd_upper || pd_upper > pd_special || pd_special > BLCKSZ || pd_special != MAXALIGN(pd_special))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special)));
   }
 
   /*
@@ -538,7 +536,7 @@ PageRepairFragmentation(Page page)
         itemidptr->itemoff = ItemIdGetOffset(lp);
         if (unlikely(itemidptr->itemoff < (int)pd_upper || itemidptr->itemoff >= (int)pd_special))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted line pointer: %u", itemidptr->itemoff)));
         }
         itemidptr->alignedlen = MAXALIGN(ItemIdGetLength(lp));
         totallen += itemidptr->alignedlen;
@@ -564,7 +562,7 @@ PageRepairFragmentation(Page page)
     /* Need to compact the page the hard way */
     if (totallen > (Size)(pd_special - pd_lower))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted item lengths: total %u, available space %u", (unsigned int)totallen, pd_special - pd_lower)));
     }
 
     compactify_tuples(itemidbase, nstorage, page);
@@ -630,7 +628,7 @@ PageGetFreeSpaceForMultipleTuples(Page page, int ntups)
 
   if (space < (int)(ntups * sizeof(ItemIdData)))
   {
-
+    return 0;
   }
   space -= ntups * sizeof(ItemIdData);
 
@@ -655,7 +653,7 @@ PageGetExactFreeSpace(Page page)
 
   if (space < 0)
   {
-
+    return 0;
   }
 
   return (Size)space;
@@ -753,13 +751,13 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
    */
   if (phdr->pd_lower < SizeOfPageHeaderData || phdr->pd_lower > phdr->pd_upper || phdr->pd_upper > phdr->pd_special || phdr->pd_special > BLCKSZ || phdr->pd_special != MAXALIGN(phdr->pd_special))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", phdr->pd_lower, phdr->pd_upper, phdr->pd_special)));
   }
 
   nline = PageGetMaxOffsetNumber(page);
   if ((int)offnum <= 0 || (int)offnum > nline)
   {
-
+    elog(ERROR, "invalid index offnum: %u", offnum);
   }
 
   /* change offset number to offset index */
@@ -772,7 +770,7 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
 
   if (offset < phdr->pd_upper || (offset + size) > phdr->pd_special || offset != MAXALIGN(offset))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted line pointer: offset = %u, size = %u", offset, (unsigned int)size)));
   }
 
   /* Amount of space to actually be deleted */
@@ -884,7 +882,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
    */
   if (pd_lower < SizeOfPageHeaderData || pd_lower > pd_upper || pd_upper > pd_special || pd_special > BLCKSZ || pd_special != MAXALIGN(pd_special))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special)));
   }
 
   /*
@@ -905,7 +903,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
     offset = ItemIdGetOffset(lp);
     if (offset < pd_upper || (offset + size) > pd_special || offset != MAXALIGN(offset))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted line pointer: offset = %u, size = %u", offset, (unsigned int)size)));
     }
 
     if (nextitm < nitems && offnum == itemnos[nextitm])
@@ -928,12 +926,12 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
   /* this will catch invalid or out-of-order itemnos[] */
   if (nextitm != nitems)
   {
-
+    elog(ERROR, "incorrect index offsets supplied");
   }
 
   if (totallen > (Size)(pd_special - pd_lower))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted item lengths: total %u, available space %u", (unsigned int)totallen, pd_special - pd_lower)));
   }
 
   /*
@@ -972,13 +970,13 @@ PageIndexTupleDeleteNoCompact(Page page, OffsetNumber offnum)
    */
   if (phdr->pd_lower < SizeOfPageHeaderData || phdr->pd_lower > phdr->pd_upper || phdr->pd_upper > phdr->pd_special || phdr->pd_special > BLCKSZ || phdr->pd_special != MAXALIGN(phdr->pd_special))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", phdr->pd_lower, phdr->pd_upper, phdr->pd_special)));
   }
 
   nline = PageGetMaxOffsetNumber(page);
   if ((int)offnum <= 0 || (int)offnum > nline)
   {
-
+    elog(ERROR, "invalid index offnum: %u", offnum);
   }
 
   tup = PageGetItemId(page, offnum);
@@ -988,7 +986,7 @@ PageIndexTupleDeleteNoCompact(Page page, OffsetNumber offnum)
 
   if (offset < phdr->pd_upper || (offset + size) > phdr->pd_special || offset != MAXALIGN(offset))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted line pointer: offset = %u, size = %u", offset, (unsigned int)size)));
   }
 
   /* Amount of space to actually be deleted */
@@ -1081,13 +1079,13 @@ PageIndexTupleOverwrite(Page page, OffsetNumber offnum, Item newtup, Size newsiz
    */
   if (phdr->pd_lower < SizeOfPageHeaderData || phdr->pd_lower > phdr->pd_upper || phdr->pd_upper > phdr->pd_special || phdr->pd_special > BLCKSZ || phdr->pd_special != MAXALIGN(phdr->pd_special))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u", phdr->pd_lower, phdr->pd_upper, phdr->pd_special)));
   }
 
   itemcount = PageGetMaxOffsetNumber(page);
   if ((int)offnum <= 0 || (int)offnum > itemcount)
   {
-
+    elog(ERROR, "invalid index offnum: %u", offnum);
   }
 
   tupid = PageGetItemId(page, offnum);
@@ -1097,7 +1095,7 @@ PageIndexTupleOverwrite(Page page, OffsetNumber offnum, Item newtup, Size newsiz
 
   if (offset < phdr->pd_upper || (offset + oldsize) > phdr->pd_special || offset != MAXALIGN(offset))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("corrupted line pointer: offset = %u, size = %u", offset, (unsigned int)oldsize)));
   }
 
   /*
@@ -1107,7 +1105,7 @@ PageIndexTupleOverwrite(Page page, OffsetNumber offnum, Item newtup, Size newsiz
   alignednewsize = MAXALIGN(newsize);
   if (alignednewsize > oldsize + (phdr->pd_upper - phdr->pd_lower))
   {
-
+    return false;
   }
 
   /*
@@ -1183,14 +1181,14 @@ PageSetChecksumCopy(Page page, BlockNumber blkno)
    * array, is first to ensure adequate alignment for the checksumming code
    * and second to avoid wasting space in processes that never call this.
    */
+  if (pageCopy == NULL)
+  {
+    pageCopy = MemoryContextAlloc(TopMemoryContext, BLCKSZ);
+  }
 
-
-
-
-
-
-
-
+  memcpy(pageCopy, (char *)page, BLCKSZ);
+  ((PageHeader)pageCopy)->pd_checksum = pg_checksum_page(pageCopy, blkno);
+  return pageCopy;
 }
 
 /*
@@ -1208,5 +1206,5 @@ PageSetChecksumInplace(Page page, BlockNumber blkno)
     return;
   }
 
-
+  ((PageHeader)page)->pd_checksum = pg_checksum_page((char *)page, blkno);
 }

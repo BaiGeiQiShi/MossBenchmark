@@ -67,9 +67,9 @@ makeString(char *str)
 Value *
 makeBitString(char *str)
 {
+  Value *v = makeNode(Value);
 
-
-
-
-
+  v->type = T_BitString;
+  v->val.str = str;
+  return v;
 }

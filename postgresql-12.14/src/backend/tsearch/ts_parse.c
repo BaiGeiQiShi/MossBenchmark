@@ -230,16 +230,16 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
           return LexizeExec(ld, correspondLexem);
         }
 
-        if (!res)
-        { /* dictionary doesn't know this lexeme */
+        if (!res) /* dictionary doesn't know this lexeme */
+        {
           continue;
         }
 
         if (res->flags & TSL_FILTER)
         {
-
-
-
+          curValLemm = res->lexeme;
+          curValLenLemm = strlen(res->lexeme);
+          continue;
         }
 
         RemoveHead(ld);
@@ -294,8 +294,8 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
            * Dictionary can't work with current tpe of lexeme,
            * return to basic mode and redo all stored lexemes
            */
-
-
+          ld->curDictId = InvalidOid;
+          return LexizeExec(ld, correspondLexem);
         }
       }
 
@@ -345,8 +345,8 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
        * Dict don't want next lexem and didn't recognize anything, redo
        * from ld->towork.head
        */
-
-
+      ld->curDictId = InvalidOid;
+      return LexizeExec(ld, correspondLexem);
     }
   }
 
@@ -384,8 +384,8 @@ parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
     if (type > 0 && lenlemm >= MAXSTRLEN)
     {
 #ifdef IGNORE_LONGLEXEME
-
-
+      ereport(NOTICE, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("word is too long to be indexed"), errdetail("Words longer than %d characters are ignored.", MAXSTRLEN)));
+      continue;
 #else
       ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("word is too long to be indexed"), errdetail("Words longer than %d characters are ignored.", MAXSTRLEN)));
 #endif
@@ -477,10 +477,10 @@ hlfinditem(HeadlineParsedText *prs, TSQuery query, int32 pos, char *buf, int buf
     {
       if (word->item)
       {
-
-
-
-
+        memcpy(&(prs->words[prs->curwords]), word, sizeof(HeadlineWordEntry));
+        prs->words[prs->curwords].item = &item->qoperand;
+        prs->words[prs->curwords].repeated = 1;
+        prs->curwords++;
       }
       else
       {
@@ -511,7 +511,7 @@ addHLParsedLex(HeadlineParsedText *prs, TSQuery query, ParsedLex *lexs, TSLexeme
     {
       if (ptr->flags & TSL_ADDPOS)
       {
-
+        savedpos++;
       }
       hlfinditem(prs, query, savedpos, ptr->lexeme, strlen(ptr->lexeme));
       ptr++;
@@ -529,7 +529,7 @@ addHLParsedLex(HeadlineParsedText *prs, TSQuery query, ParsedLex *lexs, TSLexeme
     {
       if (ptr->flags & TSL_ADDPOS)
       {
-
+        prs->vectorpos++;
       }
       pfree(ptr->lexeme);
       ptr++;
@@ -564,8 +564,8 @@ hlparsetext(Oid cfgId, HeadlineParsedText *prs, TSQuery query, char *buf, int bu
     if (type > 0 && lenlemm >= MAXSTRLEN)
     {
 #ifdef IGNORE_LONGLEXEME
-
-
+      ereport(NOTICE, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("word is too long to be indexed"), errdetail("Words longer than %d characters are ignored.", MAXSTRLEN)));
+      continue;
 #else
       ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("word is too long to be indexed"), errdetail("Words longer than %d characters are ignored.", MAXSTRLEN)));
 #endif
@@ -636,8 +636,8 @@ generateHeadline(HeadlineParsedText *prs)
       }
       if (wrd->replace)
       {
-
-
+        *ptr = ' ';
+        ptr++;
       }
       else if (!wrd->skip)
       {

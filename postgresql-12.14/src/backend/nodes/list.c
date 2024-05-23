@@ -238,14 +238,14 @@ lappend_cell(List *list, ListCell *prev, void *datum)
 ListCell *
 lappend_cell_int(List *list, ListCell *prev, int datum)
 {
+  ListCell *new_cell;
 
+  Assert(IsIntegerList(list));
 
-
-
-
-
-
-
+  new_cell = add_new_cell(list, prev);
+  lfirst_int(new_cell) = datum;
+  check_list_invariants(list);
+  return new_cell;
 }
 
 ListCell *
@@ -359,7 +359,7 @@ list_concat(List *list1, List *list2)
   }
   if (list1 == list2)
   {
-
+    elog(ERROR, "cannot list_concat() a list to itself");
   }
 
   Assert(list1->type == list2->type);
@@ -414,7 +414,7 @@ list_truncate(List *list, int new_size)
 
   /* keep the compiler quiet; never reached */
   Assert(false);
-
+  return list;
 }
 
 /*
@@ -621,25 +621,25 @@ list_delete_cell(List *list, ListCell *cell, ListCell *prev)
 List *
 list_delete(List *list, void *datum)
 {
+  ListCell *cell;
+  ListCell *prev;
 
+  Assert(IsPointerList(list));
+  check_list_invariants(list);
 
+  prev = NULL;
+  foreach (cell, list)
+  {
+    if (equal(lfirst(cell), datum))
+    {
+      return list_delete_cell(list, cell, prev);
+    }
 
+    prev = cell;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Didn't find a match: return the list unmodified */
+  return list;
 }
 
 /* As above, but use simple pointer equality */
@@ -710,7 +710,7 @@ list_delete_oid(List *list, Oid datum)
       return list_delete_cell(list, cell, prev);
     }
 
-
+    prev = cell;
   }
 
   /* Didn't find a match: return the list unmodified */
@@ -732,7 +732,7 @@ list_delete_first(List *list)
 
   if (list == NIL)
   {
-
+    return NIL; /* would an error be better? */
   }
 
   return list_delete_cell(list, list_head(list), NULL);
@@ -787,23 +787,23 @@ list_union(const List *list1, const List *list2)
 List *
 list_union_ptr(const List *list1, const List *list2)
 {
+  List *result;
+  const ListCell *cell;
 
+  Assert(IsPointerList(list1));
+  Assert(IsPointerList(list2));
 
+  result = list_copy(list1);
+  foreach (cell, list2)
+  {
+    if (!list_member_ptr(result, lfirst(cell)))
+    {
+      result = lappend(result, lfirst(cell));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  check_list_invariants(result);
+  return result;
 }
 
 /*
@@ -837,23 +837,23 @@ list_union_int(const List *list1, const List *list2)
 List *
 list_union_oid(const List *list1, const List *list2)
 {
+  List *result;
+  const ListCell *cell;
 
+  Assert(IsOidList(list1));
+  Assert(IsOidList(list2));
 
+  result = list_copy(list1);
+  foreach (cell, list2)
+  {
+    if (!list_member_oid(result, lfirst_oid(cell)))
+    {
+      result = lappend_oid(result, lfirst_oid(cell));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  check_list_invariants(result);
+  return result;
 }
 
 /*
@@ -907,7 +907,7 @@ list_intersection_int(const List *list1, const List *list2)
 
   if (list1 == NIL || list2 == NIL)
   {
-
+    return NIL;
   }
 
   Assert(IsIntegerList(list1));
@@ -1026,27 +1026,27 @@ list_difference_int(const List *list1, const List *list2)
 List *
 list_difference_oid(const List *list1, const List *list2)
 {
+  const ListCell *cell;
+  List *result = NIL;
 
+  Assert(IsOidList(list1));
+  Assert(IsOidList(list2));
 
+  if (list2 == NIL)
+  {
+    return list_copy(list1);
+  }
 
+  foreach (cell, list1)
+  {
+    if (!list_member_oid(list2, lfirst_oid(cell)))
+    {
+      result = lappend_oid(result, lfirst_oid(cell));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  check_list_invariants(result);
+  return result;
 }
 
 /*
@@ -1091,14 +1091,14 @@ list_append_unique_ptr(List *list, void *datum)
 List *
 list_append_unique_int(List *list, int datum)
 {
-
-
-
-
-
-
-
-
+  if (list_member_int(list, datum))
+  {
+    return list;
+  }
+  else
+  {
+    return lappend_int(list, datum);
+  }
 }
 
 /*
@@ -1157,21 +1157,21 @@ list_concat_unique(List *list1, List *list2)
 List *
 list_concat_unique_ptr(List *list1, List *list2)
 {
+  ListCell *cell;
 
+  Assert(IsPointerList(list1));
+  Assert(IsPointerList(list2));
 
+  foreach (cell, list2)
+  {
+    if (!list_member_ptr(list1, lfirst(cell)))
+    {
+      list1 = lappend(list1, lfirst(cell));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
+  check_list_invariants(list1);
+  return list1;
 }
 
 /*
@@ -1180,21 +1180,21 @@ list_concat_unique_ptr(List *list1, List *list2)
 List *
 list_concat_unique_int(List *list1, List *list2)
 {
+  ListCell *cell;
 
+  Assert(IsIntegerList(list1));
+  Assert(IsIntegerList(list2));
 
+  foreach (cell, list2)
+  {
+    if (!list_member_int(list1, lfirst_int(cell)))
+    {
+      list1 = lappend_int(list1, lfirst_int(cell));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
+  check_list_invariants(list1);
+  return list1;
 }
 
 /*
@@ -1338,7 +1338,7 @@ list_copy_tail(const List *oldlist, int nskip)
 
   if (nskip < 0)
   {
-
+    nskip = 0; /* would it be better to elog? */
   }
 
   if (oldlist == NIL || nskip >= oldlist->length)
@@ -1473,5 +1473,5 @@ length(const List *list);
 int
 length(const List *list)
 {
-
+  return list_length(list);
 }

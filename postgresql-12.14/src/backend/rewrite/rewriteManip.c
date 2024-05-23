@@ -88,18 +88,18 @@ contain_aggs_of_level_walker(Node *node, contain_aggs_of_level_context *context)
   }
   if (IsA(node, Aggref))
   {
-
-
-
-
+    if (((Aggref *)node)->agglevelsup == context->sublevels_up)
+    {
+      return true; /* abort the tree traversal and return true */
+    }
     /* else fall through to examine argument */
   }
   if (IsA(node, GroupingFunc))
   {
-
-
-
-
+    if (((GroupingFunc *)node)->agglevelsup == context->sublevels_up)
+    {
+      return true;
+    }
     /* else fall through to examine argument */
   }
   if (IsA(node, Query))
@@ -107,10 +107,10 @@ contain_aggs_of_level_walker(Node *node, contain_aggs_of_level_context *context)
     /* Recurse into subselects */
     bool result;
 
-
-
-
-
+    context->sublevels_up++;
+    result = query_tree_walker((Query *)node, contain_aggs_of_level_walker, (void *)context, 0);
+    context->sublevels_up--;
+    return result;
   }
   return expression_tree_walker(node, contain_aggs_of_level_walker, (void *)context);
 }
@@ -150,7 +150,7 @@ locate_agg_of_level_walker(Node *node, locate_agg_of_level_context *context)
 {
   if (node == NULL)
   {
-
+    return false;
   }
   if (IsA(node, Aggref))
   {
@@ -163,21 +163,21 @@ locate_agg_of_level_walker(Node *node, locate_agg_of_level_context *context)
   }
   if (IsA(node, GroupingFunc))
   {
-
-
-
-
-
+    if (((GroupingFunc *)node)->agglevelsup == context->sublevels_up && ((GroupingFunc *)node)->location >= 0)
+    {
+      context->agg_location = ((GroupingFunc *)node)->location;
+      return true; /* abort the tree traversal and return true */
+    }
   }
   if (IsA(node, Query))
   {
     /* Recurse into subselects */
     bool result;
 
-
-
-
-
+    context->sublevels_up++;
+    result = query_tree_walker((Query *)node, locate_agg_of_level_walker, (void *)context, 0);
+    context->sublevels_up--;
+    return result;
   }
   return expression_tree_walker(node, locate_agg_of_level_walker, (void *)context);
 }
@@ -246,7 +246,7 @@ locate_windowfunc_walker(Node *node, locate_windowfunc_context *context)
 {
   if (node == NULL)
   {
-
+    return false;
   }
   if (IsA(node, WindowFunc))
   {
@@ -258,7 +258,7 @@ locate_windowfunc_walker(Node *node, locate_windowfunc_context *context)
     /* else fall through to examine argument */
   }
   /* Mustn't recurse into subselects */
-
+  return expression_tree_walker(node, locate_windowfunc_walker, (void *)context);
 }
 
 /*
@@ -304,11 +304,11 @@ contains_multiexpr_param(Node *node, void *context)
   }
   if (IsA(node, Param))
   {
-
-
-
-
-
+    if (((Param *)node)->paramkind == PARAM_MULTIEXPR)
+    {
+      return true; /* abort the tree traversal and return true */
+    }
+    return false;
   }
   return expression_tree_walker(node, contains_multiexpr_param, context);
 }
@@ -354,11 +354,11 @@ OffsetVarNodes_walker(Node *node, OffsetVarNodes_context *context)
   {
     CurrentOfExpr *cexpr = (CurrentOfExpr *)node;
 
-
-
-
-
-
+    if (context->sublevels_up == 0)
+    {
+      cexpr->cvarno += context->offset;
+    }
+    return false;
   }
   if (IsA(node, RangeTblRef))
   {
@@ -530,11 +530,11 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
   {
     CurrentOfExpr *cexpr = (CurrentOfExpr *)node;
 
-
-
-
-
-
+    if (context->sublevels_up == 0 && cexpr->cvarno == context->rt_index)
+    {
+      cexpr->cvarno = context->new_index;
+    }
+    return false;
   }
   if (IsA(node, RangeTblRef))
   {
@@ -553,7 +553,7 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
 
     if (context->sublevels_up == 0 && j->rtindex == context->rt_index)
     {
-
+      j->rtindex = context->new_index;
     }
     /* fall through to examine children */
   }
@@ -561,10 +561,10 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
   {
     PlaceHolderVar *phv = (PlaceHolderVar *)node;
 
-
-
-
-
+    if (phv->phlevelsup == context->sublevels_up)
+    {
+      phv->phrels = adjust_relid_set(phv->phrels, context->rt_index, context->new_index);
+    }
     /* fall through to examine children */
   }
   if (IsA(node, PlanRowMark))
@@ -656,7 +656,7 @@ ChangeVarNodes(Node *node, int rt_index, int new_index, int sublevels_up)
       /* this is unlikely to ever be used, but ... */
       if (qry->onConflict && qry->onConflict->exclRelIndex == rt_index)
       {
-
+        qry->onConflict->exclRelIndex = new_index;
       }
 
       foreach (l, qry->rowMarks)
@@ -665,7 +665,7 @@ ChangeVarNodes(Node *node, int rt_index, int new_index, int sublevels_up)
 
         if (rc->rti == rt_index)
         {
-
+          rc->rti = new_index;
         }
       }
     }
@@ -683,15 +683,15 @@ ChangeVarNodes(Node *node, int rt_index, int new_index, int sublevels_up)
 static Relids
 adjust_relid_set(Relids relids, int oldrelid, int newrelid)
 {
-
-
-
-
-
-
-
-
-
+  if (bms_is_member(oldrelid, relids))
+  {
+    /* Ensure we have a modifiable copy */
+    relids = bms_copy(relids);
+    /* Remove old, add new */
+    relids = bms_del_member(relids, oldrelid);
+    relids = bms_add_member(relids, newrelid);
+  }
+  return relids;
 }
 
 /*
@@ -739,11 +739,11 @@ IncrementVarSublevelsUp_walker(Node *node, IncrementVarSublevelsUp_context *cont
   if (IsA(node, CurrentOfExpr))
   {
     /* this should not happen */
-
-
-
-
-
+    if (context->min_sublevels_up == 0)
+    {
+      elog(ERROR, "cannot push down CurrentOfExpr");
+    }
+    return false;
   }
   if (IsA(node, Aggref))
   {
@@ -865,7 +865,7 @@ rangeTableEntry_used_walker(Node *node, rangeTableEntry_used_context *context)
 
     if (context->sublevels_up == 0 && cexpr->cvarno == context->rt_index)
     {
-
+      return true;
     }
     return false;
   }
@@ -886,7 +886,7 @@ rangeTableEntry_used_walker(Node *node, rangeTableEntry_used_context *context)
 
     if (j->rtindex == context->rt_index && context->sublevels_up == 0)
     {
-
+      return true;
     }
     /* fall through to examine children */
   }
@@ -953,7 +953,7 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
 
   if (parsetree == NULL)
   {
-
+    return parsetree;
   }
   if (parsetree->commandType != CMD_INSERT)
   {
@@ -973,7 +973,7 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
   Assert(parsetree->jointree && IsA(parsetree->jointree, FromExpr));
   if (list_length(parsetree->jointree->fromlist) != 1)
   {
-
+    elog(ERROR, "expected to find SELECT subquery");
   }
   rtr = (RangeTblRef *)linitial(parsetree->jointree->fromlist);
   Assert(IsA(rtr, RangeTblRef));
@@ -981,7 +981,7 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
   selectquery = selectrte->subquery;
   if (!(selectquery && IsA(selectquery, Query) && selectquery->commandType == CMD_SELECT))
   {
-
+    elog(ERROR, "expected to find SELECT subquery");
   }
   if (list_length(selectquery->rtable) >= 2 && strcmp(rt_fetch(PRS2_OLD_VARNO, selectquery->rtable)->eref->aliasname, "old") == 0 && strcmp(rt_fetch(PRS2_NEW_VARNO, selectquery->rtable)->eref->aliasname, "new") == 0)
   {
@@ -991,8 +991,8 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
     }
     return selectquery;
   }
-
-
+  elog(ERROR, "could not find rule placeholders");
+  return NULL; /* not reached */
 }
 
 /*
@@ -1023,14 +1023,14 @@ AddQual(Query *parsetree, Node *qual)
      * other utility stmts is unlikely to be wanted.  (This case is not
      * currently allowed anyway, but keep the test for safety.)
      */
-
-
-
-
-
-
-
-
+    if (parsetree->utilityStmt && IsA(parsetree->utilityStmt, NotifyStmt))
+    {
+      return;
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("conditional utility statements are not implemented")));
+    }
   }
 
   if (parsetree->setOperations != NULL)
@@ -1040,7 +1040,7 @@ AddQual(Query *parsetree, Node *qual)
      * could be fixed, but right now the planner simply ignores any qual
      * condition on a setop query.)
      */
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("conditional UNION/INTERSECT/EXCEPT statements are not implemented")));
   }
 
   /* INTERSECT wants the original, but we need to copy - Jan */
@@ -1075,7 +1075,7 @@ AddInvertedQual(Query *parsetree, Node *qual)
 
   if (qual == NULL)
   {
-
+    return;
   }
 
   /* Need not copy input qual, because AddQual will... */
@@ -1134,7 +1134,7 @@ replace_rte_variables(Node *node, int target_varno, int sublevels_up, replace_rt
   }
   else
   {
-
+    context.inserted_sublink = false;
   }
 
   /*
@@ -1155,7 +1155,7 @@ replace_rte_variables(Node *node, int target_varno, int sublevels_up, replace_rt
     }
     else
     {
-
+      elog(ERROR, "replace_rte_variables inserted a SubLink, but has noplace to record it");
     }
   }
 
@@ -1280,7 +1280,7 @@ map_variable_attnos_mutator(Node *node, map_variable_attnos_context *context)
         /* user-defined column, replace attno */
         if (attno > context->map_length || context->attno_map[attno - 1] == 0)
         {
-
+          elog(ERROR, "unexpected varattno %d in expression to be mapped", attno);
         }
         newvar->varattno = newvar->varoattno = context->attno_map[attno - 1];
       }
@@ -1358,10 +1358,10 @@ map_variable_attnos_mutator(Node *node, map_variable_attnos_context *context)
     /* Recurse into RTE subquery or not-yet-planned sublink subquery */
     Query *newnode;
 
-
-
-
-
+    context->sublevels_up++;
+    newnode = query_tree_mutator((Query *)node, map_variable_attnos_mutator, (void *)context, 0);
+    context->sublevels_up--;
+    return (Node *)newnode;
   }
   return expression_tree_mutator(node, map_variable_attnos_mutator, (void *)context);
 }
@@ -1455,17 +1455,17 @@ ReplaceVarsFromTargetList_callback(Var *var, replace_rte_variables_context *cont
     /* Failed to find column in targetlist */
     switch (rcon->nomatch_option)
     {
-    case REPLACEVARS_REPORT_ERROR:;
+    case REPLACEVARS_REPORT_ERROR:
       /* fall through, throw error below */
+      break;
 
-
-    case REPLACEVARS_CHANGE_VARNO:;
+    case REPLACEVARS_CHANGE_VARNO:
       var = (Var *)copyObject(var);
       var->varno = rcon->nomatch_varno;
       var->varnoold = rcon->nomatch_varno;
       return (Node *)var;
 
-    case REPLACEVARS_SUBSTITUTE_NULL:;
+    case REPLACEVARS_SUBSTITUTE_NULL:
 
       /*
        * If Var is of domain type, we should add a CoerceToDomain
@@ -1473,8 +1473,8 @@ ReplaceVarsFromTargetList_callback(Var *var, replace_rte_variables_context *cont
        */
       return coerce_to_domain((Node *)makeNullConst(var->vartype, var->vartypmod, var->varcollid), InvalidOid, -1, var->vartype, COERCION_IMPLICIT, COERCE_IMPLICIT_CAST, -1, false);
     }
-
-
+    elog(ERROR, "could not find replacement targetlist entry for attno %d", var->varattno);
+    return NULL; /* keep compiler quiet */
   }
   else
   {
@@ -1499,7 +1499,7 @@ ReplaceVarsFromTargetList_callback(Var *var, replace_rte_variables_context *cont
      */
     if (contains_multiexpr_param((Node *)newnode, NULL))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("NEW variables in ON UPDATE rules cannot reference columns that are part of a multiple assignment in the subject UPDATE command")));
     }
 
     return (Node *)newnode;

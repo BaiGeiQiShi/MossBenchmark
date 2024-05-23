@@ -246,17 +246,17 @@ gin_extract_jsonb(PG_FUNCTION_ARGS)
   {
     switch (r)
     {
-    case WJB_KEY:;
+    case WJB_KEY:
       add_gin_entry(&entries, make_scalar_key(&v, true));
       break;
-    case WJB_ELEM:;
+    case WJB_ELEM:
       /* Pretend string array elements are keys, see jsonb.h */
       add_gin_entry(&entries, make_scalar_key(&v, v.type == jbvString));
       break;
-    case WJB_VALUE:;
+    case WJB_VALUE:
       add_gin_entry(&entries, make_scalar_key(&v, false));
       break;
-    default:;;
+    default:
       /* we can ignore structural items */
       break;
     }
@@ -276,11 +276,11 @@ jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
 
   switch (jsp->type)
   {
-  case jpiRoot:;
+  case jpiRoot:
     path->items = NULL; /* reset path */
     return true;
 
-  case jpiKey:;
+  case jpiKey:
   {
     int len;
     char *key = jspGetString(jsp, &len);
@@ -289,16 +289,16 @@ jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
     break;
   }
 
-  case jpiAny:;
-  case jpiAnyKey:;
-  case jpiAnyArray:;
-  case jpiIndexArray:;
+  case jpiAny:
+  case jpiAnyKey:
+  case jpiAnyArray:
+  case jpiIndexArray:
     keyName = PointerGetDatum(NULL);
     break;
 
-  default:;;
+  default:
     /* other path items like item methods are not supported */
-
+    return false;
   }
 
   pentry = palloc(sizeof(*pentry));
@@ -318,11 +318,11 @@ jsonb_path_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
 {
   switch (jsp->type)
   {
-  case jpiRoot:;
+  case jpiRoot:
     path->hash = 0; /* reset path hash */
     return true;
 
-  case jpiKey:;
+  case jpiKey:
   {
     JsonbValue jbv;
 
@@ -333,13 +333,13 @@ jsonb_path_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
     return true;
   }
 
-  case jpiIndexArray:;
-  case jpiAnyArray:;
+  case jpiIndexArray:
+  case jpiAnyArray:
     return true; /* path hash is unchanged */
 
-  default:;;
+  default:
     /* other items (wildcard paths, item methods) are not supported */
-
+    return false;
   }
 }
 
@@ -413,8 +413,8 @@ jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbVal
      */
     for (pentry = path.items; pentry; pentry = pentry->parent)
     {
-      if (pentry->type == jpiKey)
-      { /* only keys are indexed */
+      if (pentry->type == jpiKey) /* only keys are indexed */
+      {
         nodes = lappend(nodes, make_jsp_entry_node(pentry->keyName));
       }
     }
@@ -437,22 +437,22 @@ jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbVal
       {
         key_entry = GIN_MAYBE;
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      else if (!last) /* root ($) */
+      {
+        key_entry = GIN_FALSE;
+      }
+      else if (last->type == jpiAnyArray || last->type == jpiIndexArray)
+      {
+        key_entry = GIN_TRUE;
+      }
+      else if (last->type == jpiAny)
+      {
+        key_entry = GIN_MAYBE;
+      }
+      else
+      {
+        key_entry = GIN_FALSE;
+      }
 
       if (key_entry == GIN_MAYBE)
       {
@@ -463,7 +463,7 @@ jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbVal
       }
       else
       {
-
+        node = make_jsp_entry_node_scalar(scalar, key_entry == GIN_TRUE);
       }
     }
     else
@@ -512,10 +512,10 @@ extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonP
   {
     switch (jsp->type)
     {
-    case jpiCurrent:;
+    case jpiCurrent:
       break;
 
-    case jpiFilter:;
+    case jpiFilter:
     {
       JsonPathItem arg;
       JsonPathGinNode *filter;
@@ -532,7 +532,7 @@ extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonP
       break;
     }
 
-    default:;;
+    default:
       if (!cxt->add_path_item(&path, jsp))
       {
 
@@ -540,7 +540,7 @@ extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonP
          * Path is not supported by the index opclass, return only
          * the extracted filter nodes.
          */
-
+        return nodes;
       }
       break;
     }
@@ -596,8 +596,8 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
 
   switch (jsp->type)
   {
-  case jpiAnd: ;/* expr && expr */
-  case jpiOr:  ;/* expr || expr */
+  case jpiAnd: /* expr && expr */
+  case jpiOr:  /* expr || expr */
   {
     JsonPathItem arg;
     JsonPathGinNode *larg;
@@ -625,23 +625,23 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
     return make_jsp_expr_node_binary(type, larg, rarg);
   }
 
-  case jpiNot: ;/* !expr  */
+  case jpiNot: /* !expr  */
   {
     JsonPathItem arg;
 
-
+    jspGetArg(jsp, &arg);
 
     /* extract child expression inverting 'not' flag */
-
+    return extract_jsp_bool_expr(cxt, path, &arg, !not );
   }
 
-  case jpiExists: ;/* EXISTS(path) */
+  case jpiExists: /* EXISTS(path) */
   {
     JsonPathItem arg;
 
     if (not )
     {
-
+      return NULL; /* NOT EXISTS is not supported */
     }
 
     jspGetArg(jsp, &arg);
@@ -649,7 +649,7 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
     return extract_jsp_path_expr(cxt, path, &arg, NULL);
   }
 
-  case jpiNotEqual:;
+  case jpiNotEqual:
 
     /*
      * 'not' == true case is not supported here because '!(path !=
@@ -664,9 +664,9 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
      * contain wildcard accessors or item methods like .keyvalue()
      * etc.).
      */
+    return NULL;
 
-
-  case jpiEqual: ;/* path == scalar */
+  case jpiEqual: /* path == scalar */
   {
     JsonPathItem left_item;
     JsonPathItem right_item;
@@ -676,7 +676,7 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
 
     if (not )
     {
-
+      return NULL;
     }
 
     jspGetLeftArg(jsp, &left_item);
@@ -694,37 +694,37 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
     }
     else
     {
-
+      return NULL; /* at least one operand should be a scalar */
     }
 
     switch (scalar_item->type)
     {
-    case jpiNull:;
+    case jpiNull:
       scalar.type = jbvNull;
       break;
-    case jpiBool:;
+    case jpiBool:
       scalar.type = jbvBool;
       scalar.val.boolean = !!*scalar_item->content.value.data;
       break;
-    case jpiNumeric:;
+    case jpiNumeric:
       scalar.type = jbvNumeric;
       scalar.val.numeric = (Numeric)scalar_item->content.value.data;
       break;
-    case jpiString:;
+    case jpiString:
       scalar.type = jbvString;
       scalar.val.string.val = scalar_item->content.value.data;
       scalar.val.string.len = scalar_item->content.value.datalen;
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "invalid scalar jsonpath item type: %d", scalar_item->type);
+      return NULL;
     }
 
     return extract_jsp_path_expr(cxt, path, path_item, &scalar);
   }
 
-  default:;;
-
+  default:
+    return NULL; /* not a boolean expression */
   }
 }
 
@@ -736,13 +736,13 @@ emit_jsp_gin_entries(JsonPathGinNode *node, GinEntries *entries)
 
   switch (node->type)
   {
-  case JSP_GIN_ENTRY:;
+  case JSP_GIN_ENTRY:
     /* replace datum with its index in the array */
     node->val.entryIndex = add_gin_entry(entries, node->val.entryDatum);
     break;
 
-  case JSP_GIN_OR:;
-  case JSP_GIN_AND:;
+  case JSP_GIN_OR:
+  case JSP_GIN_AND:
   {
     int i;
 
@@ -797,7 +797,7 @@ extract_jsp_query(JsonPath *jp, StrategyNumber strat, bool pathOps, int32 *nentr
   *nentries = entries.count;
   if (!*nentries)
   {
-
+    return NULL;
   }
 
   *extra_data = palloc0(sizeof(**extra_data) * entries.count);
@@ -819,7 +819,7 @@ execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
 
   switch (node->type)
   {
-  case JSP_GIN_AND:;
+  case JSP_GIN_AND:
     res = GIN_TRUE;
     for (i = 0; i < node->val.nargs; i++)
     {
@@ -835,7 +835,7 @@ execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
     }
     return res;
 
-  case JSP_GIN_OR:;
+  case JSP_GIN_OR:
     res = GIN_FALSE;
     for (i = 0; i < node->val.nargs; i++)
     {
@@ -851,7 +851,7 @@ execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
     }
     return res;
 
-  case JSP_GIN_ENTRY:;
+  case JSP_GIN_ENTRY:
   {
     int index = node->val.entryIndex;
 
@@ -861,13 +861,13 @@ execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
     }
     else
     {
-
+      return ((bool *)check)[index] ? GIN_TRUE : GIN_FALSE;
     }
   }
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid jsonpath gin node type: %d", node->type);
+    return GIN_FALSE; /* keep compiler quiet */
   }
 }
 
@@ -916,7 +916,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
       /* Nulls in the array are ignored */
       if (key_nulls[i])
       {
-
+        continue;
       }
       entries[j++] = make_text_key(JGINFLAG_KEY, VARDATA(key_datums[i]), VARSIZE(key_datums[i]) - VARHDRSZ);
     }
@@ -925,7 +925,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
     /* ExistsAll with no keys should match everything */
     if (j == 0 && strategy == JsonbExistsAllStrategyNumber)
     {
-
+      *searchMode = GIN_SEARCH_MODE_ALL;
     }
   }
   else if (strategy == JsonbJsonpathPredicateStrategyNumber || strategy == JsonbJsonpathExistsStrategyNumber)
@@ -942,8 +942,8 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
+    entries = NULL; /* keep compiler quiet */
   }
 
   PG_RETURN_POINTER(entries);
@@ -952,85 +952,85 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
 Datum
 gin_consistent_jsonb(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  bool *check = (bool *)PG_GETARG_POINTER(0);
+  StrategyNumber strategy = PG_GETARG_UINT16(1);
+
+  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+  int32 nkeys = PG_GETARG_INT32(3);
+
+  Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
+  bool *recheck = (bool *)PG_GETARG_POINTER(5);
+  bool res = true;
+  int32 i;
+
+  if (strategy == JsonbContainsStrategyNumber)
+  {
+    /*
+     * We must always recheck, since we can't tell from the index whether
+     * the positions of the matched items match the structure of the query
+     * object.  (Even if we could, we'd also have to worry about hashed
+     * keys and the index's failure to distinguish keys from string array
+     * elements.)  However, the tuple certainly doesn't match unless it
+     * contains all the query keys.
+     */
+    *recheck = true;
+    for (i = 0; i < nkeys; i++)
+    {
+      if (!check[i])
+      {
+        res = false;
+        break;
+      }
+    }
+  }
+  else if (strategy == JsonbExistsStrategyNumber)
+  {
+    /*
+     * Although the key is certainly present in the index, we must recheck
+     * because (1) the key might be hashed, and (2) the index match might
+     * be for a key that's not at top level of the JSON object.  For (1),
+     * we could look at the query key to see if it's hashed and not
+     * recheck if not, but the index lacks enough info to tell about (2).
+     */
+    *recheck = true;
+    res = true;
+  }
+  else if (strategy == JsonbExistsAnyStrategyNumber)
+  {
+    /* As for plain exists, we must recheck */
+    *recheck = true;
+    res = true;
+  }
+  else if (strategy == JsonbExistsAllStrategyNumber)
+  {
+    /* As for plain exists, we must recheck */
+    *recheck = true;
+    /* ... but unless all the keys are present, we can say "false" */
+    for (i = 0; i < nkeys; i++)
+    {
+      if (!check[i])
+      {
+        res = false;
+        break;
+      }
+    }
+  }
+  else if (strategy == JsonbJsonpathPredicateStrategyNumber || strategy == JsonbJsonpathExistsStrategyNumber)
+  {
+    *recheck = true;
+
+    if (nkeys > 0)
+    {
+      Assert(extra_data && extra_data[0]);
+      res = execute_jsp_gin_node((JsonPathGinNode *)extra_data[0], check, false) != GIN_FALSE;
+    }
+  }
+  else
+  {
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
+  }
+
+  PG_RETURN_BOOL(res);
 }
 
 Datum
@@ -1091,7 +1091,7 @@ gin_triconsistent_jsonb(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
   }
 
   PG_RETURN_GIN_TERNARY_VALUE(res);
@@ -1145,8 +1145,8 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
 
     switch (r)
     {
-    case WJB_BEGIN_ARRAY:;
-    case WJB_BEGIN_OBJECT:;
+    case WJB_BEGIN_ARRAY:
+    case WJB_BEGIN_OBJECT:
       /* Push a stack level for this object */
       parent = stack;
       stack = (PathHashStack *)palloc(sizeof(PathHashStack));
@@ -1163,13 +1163,13 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
       stack->hash = parent->hash;
       stack->parent = parent;
       break;
-    case WJB_KEY:;
+    case WJB_KEY:
       /* mix this key into the current outer hash */
       JsonbHashScalarValue(&v, &stack->hash);
       /* hash is now ready to incorporate the value */
       break;
-    case WJB_ELEM:;
-    case WJB_VALUE:;
+    case WJB_ELEM:
+    case WJB_VALUE:
       /* mix the element or value's hash into the prepared hash */
       JsonbHashScalarValue(&v, &stack->hash);
       /* and emit an index entry */
@@ -1177,8 +1177,8 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
       /* reset hash for next key, value, or sub-object */
       stack->hash = stack->parent->hash;
       break;
-    case WJB_END_ARRAY:;
-    case WJB_END_OBJECT:;
+    case WJB_END_ARRAY:
+    case WJB_END_OBJECT:
       /* Pop the stack */
       parent = stack->parent;
       pfree(stack);
@@ -1193,8 +1193,8 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
         stack->hash = 0;
       }
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "invalid JsonbIteratorNext rc: %d", (int)r);
     }
   }
 
@@ -1236,8 +1236,8 @@ gin_extract_jsonb_query_path(PG_FUNCTION_ARGS)
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
+    entries = NULL;
   }
 
   PG_RETURN_POINTER(entries);
@@ -1246,53 +1246,53 @@ gin_extract_jsonb_query_path(PG_FUNCTION_ARGS)
 Datum
 gin_consistent_jsonb_path(PG_FUNCTION_ARGS)
 {
+  bool *check = (bool *)PG_GETARG_POINTER(0);
+  StrategyNumber strategy = PG_GETARG_UINT16(1);
 
+  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+  int32 nkeys = PG_GETARG_INT32(3);
+  Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
+  bool *recheck = (bool *)PG_GETARG_POINTER(5);
+  bool res = true;
+  int32 i;
 
+  if (strategy == JsonbContainsStrategyNumber)
+  {
+    /*
+     * jsonb_path_ops is necessarily lossy, not only because of hash
+     * collisions but also because it doesn't preserve complete
+     * information about the structure of the JSON object.  Besides, there
+     * are some special rules around the containment of raw scalars in
+     * arrays that are not handled here.  So we must always recheck a
+     * match.  However, if not all of the keys are present, the tuple
+     * certainly doesn't match.
+     */
+    *recheck = true;
+    for (i = 0; i < nkeys; i++)
+    {
+      if (!check[i])
+      {
+        res = false;
+        break;
+      }
+    }
+  }
+  else if (strategy == JsonbJsonpathPredicateStrategyNumber || strategy == JsonbJsonpathExistsStrategyNumber)
+  {
+    *recheck = true;
 
+    if (nkeys > 0)
+    {
+      Assert(extra_data && extra_data[0]);
+      res = execute_jsp_gin_node((JsonPathGinNode *)extra_data[0], check, false) != GIN_FALSE;
+    }
+  }
+  else
+  {
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(res);
 }
 
 Datum
@@ -1339,7 +1339,7 @@ gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    elog(ERROR, "unrecognized strategy number: %d", strategy);
   }
 
   PG_RETURN_GIN_TERNARY_VALUE(res);
@@ -1361,11 +1361,11 @@ make_text_key(char flag, const char *str, int len)
   {
     uint32 hashval;
 
-
-
-
-
-
+    hashval = DatumGetUInt32(hash_any((const unsigned char *)str, len));
+    snprintf(hashbuf, sizeof(hashbuf), "%08x", hashval);
+    str = hashbuf;
+    len = 8;
+    flag |= JGINFLAG_HASHED;
   }
 
   /*
@@ -1397,15 +1397,15 @@ make_scalar_key(const JsonbValue *scalarVal, bool is_key)
 
   switch (scalarVal->type)
   {
-  case jbvNull:;
+  case jbvNull:
     Assert(!is_key);
     item = make_text_key(JGINFLAG_NULL, "", 0);
     break;
-  case jbvBool:;
+  case jbvBool:
     Assert(!is_key);
     item = make_text_key(JGINFLAG_BOOL, scalarVal->val.boolean ? "t" : "f", 1);
     break;
-  case jbvNumeric:;
+  case jbvNumeric:
     Assert(!is_key);
 
     /*
@@ -1422,13 +1422,13 @@ make_scalar_key(const JsonbValue *scalarVal, bool is_key)
     item = make_text_key(JGINFLAG_NUM, cstr, strlen(cstr));
     pfree(cstr);
     break;
-  case jbvString:;
+  case jbvString:
     item = make_text_key(is_key ? JGINFLAG_KEY : JGINFLAG_STR, scalarVal->val.string.val, scalarVal->val.string.len);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized jsonb scalar type: %d", scalarVal->type);
+    item = 0; /* keep compiler quiet */
+    break;
   }
 
   return item;

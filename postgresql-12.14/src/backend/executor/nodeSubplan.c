@@ -74,11 +74,11 @@ ExecSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
   /* Sanity checks */
   if (subplan->subLinkType == CTE_SUBLINK)
   {
-
+    elog(ERROR, "CTE subplans should not be executed via ExecSubPlan");
   }
   if (subplan->setParam != NIL && subplan->subLinkType != MULTIEXPR_SUBLINK)
   {
-
+    elog(ERROR, "cannot set parent params from subquery");
   }
 
   /* Force forward-scan mode for evaluation */
@@ -113,7 +113,7 @@ ExecHashSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
   /* Shouldn't have any direct correlation Vars */
   if (subplan->parParam != NIL || node->args != NIL)
   {
-
+    elog(ERROR, "hashed subplan with direct correlation not supported");
   }
 
   /*
@@ -193,14 +193,14 @@ ExecHashSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
    */
   if (node->hashnulls == NULL)
   {
-
-
+    ExecClearTuple(slot);
+    return BoolGetDatum(false);
   }
   if (slotAllNulls(slot))
   {
-
-
-
+    ExecClearTuple(slot);
+    *isNull = true;
+    return BoolGetDatum(false);
   }
   /* Scan partly-null table first, since more likely to get a match */
   if (node->havenullrows && findPartialMatch(node->hashnulls, slot, node->cur_eq_funcs))
@@ -211,9 +211,9 @@ ExecHashSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
   }
   if (node->havehashrows && findPartialMatch(node->hashtable, slot, node->cur_eq_funcs))
   {
-
-
-
+    ExecClearTuple(slot);
+    *isNull = true;
+    return BoolGetDatum(false);
   }
   ExecClearTuple(slot);
   return BoolGetDatum(false);
@@ -355,7 +355,7 @@ ExecScanSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
       /* cannot allow multiple input tuples for EXPR sublink */
       if (found)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_CARDINALITY_VIOLATION), errmsg("more than one row returned by a subquery used as an expression")));
       }
       found = true;
 
@@ -395,7 +395,7 @@ ExecScanSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
     /* cannot allow multiple input tuples for ROWCOMPARE sublink either */
     if (subLinkType == ROWCOMPARE_SUBLINK && found)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CARDINALITY_VIOLATION), errmsg("more than one row returned by a subquery used as an expression")));
     }
 
     found = true;
@@ -438,7 +438,7 @@ ExecScanSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
       /* combine across rows per AND semantics */
       if (rownull)
       {
-
+        *isNull = true;
       }
       else if (!DatumGetBool(rowresult))
       {
@@ -450,8 +450,8 @@ ExecScanSubPlan(SubPlanState *node, ExprContext *econtext, bool *isNull)
     else
     {
       /* must be ROWCOMPARE_SUBLINK */
-
-
+      result = rowresult;
+      *isNull = rownull;
     }
   }
 
@@ -517,12 +517,12 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
   nbuckets = (long)Min(planstate->plan->plan_rows, (double)LONG_MAX);
   if (nbuckets < 1)
   {
-
+    nbuckets = 1;
   }
 
   if (node->hashtable)
   {
-
+    ResetTupleHashTable(node->hashtable);
   }
   else
   {
@@ -540,13 +540,13 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
       nbuckets /= 16;
       if (nbuckets < 1)
       {
-
+        nbuckets = 1;
       }
     }
 
     if (node->hashnulls)
     {
-
+      ResetTupleHashTable(node->hashnulls);
     }
     else
     {
@@ -630,8 +630,8 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 
 /*
  * execTuplesUnequal
- *		Return true if two tuples are definitely unequal in the
- *indicated fields.
+ *		Return true if two tuples are definitely unequal in the indicated
+ *		fields.
  *
  * Nulls are neither equal nor unequal to anything else.  A true result
  * is obtained only if there are non-null fields that compare not-equal.
@@ -800,7 +800,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
    */
   if (sstate->planstate == NULL)
   {
-
+    elog(ERROR, "subplan \"%s\" was not initialized", subplan->plan_name);
   }
 
   /* Link to parent's state, too */
@@ -902,8 +902,8 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
     else
     {
       /* shouldn't see anything else in a hashable subplan */
-
-
+      elog(ERROR, "unrecognized testexpr type: %d", (int)nodeTag(subplan->testexpr));
+      oplist = NIL; /* keep compiler quiet */
     }
     ncols = list_length(oplist);
 
@@ -949,7 +949,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
       /* Look up the equality function for the RHS type */
       if (!get_compatible_hash_operators(opexpr->opno, NULL, &rhs_eq_oper))
       {
-
+        elog(ERROR, "could not find compatible hash operator for operator %u", opexpr->opno);
       }
       sstate->tab_eq_funcoids[i - 1] = get_opcode(rhs_eq_oper);
       fmgr_info(sstate->tab_eq_funcoids[i - 1], &sstate->tab_eq_funcs[i - 1]);
@@ -957,7 +957,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
       /* Lookup the associated hash functions */
       if (!get_op_hash_functions(opexpr->opno, &left_hashfn, &right_hashfn))
       {
-
+        elog(ERROR, "could not find hash function for hash operator %u", opexpr->opno);
       }
       fmgr_info(left_hashfn, &sstate->lhs_hash_funcs[i - 1]);
       fmgr_info(right_hashfn, &sstate->tab_hash_funcs[i - 1]);
@@ -1038,11 +1038,11 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext)
 
   if (subLinkType == ANY_SUBLINK || subLinkType == ALL_SUBLINK)
   {
-
+    elog(ERROR, "ANY/ALL subselect unsupported as initplan");
   }
   if (subLinkType == CTE_SUBLINK)
   {
-
+    elog(ERROR, "CTE subplans should not be executed via ExecSetParamPlan");
   }
 
   /*
@@ -1162,7 +1162,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext)
      */
     if (node->curArray != PointerGetDatum(NULL))
     {
-
+      pfree(DatumGetPointer(node->curArray));
     }
     node->curArray = makeArrayResultAny(astate, econtext->ecxt_per_query_memory, true);
     prm->execPlan = NULL;
@@ -1247,15 +1247,15 @@ ExecReScanSetParamPlan(SubPlanState *node, PlanState *parent)
   /* sanity checks */
   if (subplan->parParam != NIL)
   {
-
+    elog(ERROR, "direct correlated subquery unsupported as initplan");
   }
   if (subplan->setParam == NIL)
   {
-
+    elog(ERROR, "setParam list of initplan is empty");
   }
   if (bms_is_empty(planstate->plan->extParam))
   {
-
+    elog(ERROR, "extParam set of initplan is empty");
   }
 
   /*

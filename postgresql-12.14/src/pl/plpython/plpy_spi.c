@@ -51,16 +51,19 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
   volatile ResourceOwner oldowner;
   volatile int nargs;
 
-  if (!PyArg_ParseTuple(args, "s|O:prepare", &query, &list)) {
+  if (!PyArg_ParseTuple(args, "s|O:prepare", &query, &list))
+  {
     return NULL;
   }
 
-  if (list && (!PySequence_Check(list))) {
+  if (list && (!PySequence_Check(list)))
+  {
     PLy_exception_set(PyExc_TypeError, "second argument of plpy.prepare must be a sequence");
     return NULL;
   }
 
-  if ((plan = (PLyPlanObject *)PLy_plan_new()) == NULL) {
+  if ((plan = (PLyPlanObject *)PLy_plan_new()) == NULL)
+  {
     return NULL;
   }
 
@@ -85,18 +88,24 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
   {
     int i;
 
-    for (i = 0; i < nargs; i++) {
+    for (i = 0; i < nargs; i++)
+    {
       char *sptr;
       Oid typeId;
       int32 typmod;
 
       optr = PySequence_GetItem(list, i);
-      if (PyString_Check(optr)) {
+      if (PyString_Check(optr))
+      {
         sptr = PyString_AsString(optr);
-      } else if (PyUnicode_Check(optr)) {
+      }
+      else if (PyUnicode_Check(optr))
+      {
         sptr = PLyUnicode_AsString(optr);
-      } else {
-        ereport(ERROR, (errmsg("plpy.prepare: type name at ordinal position %d is not a string",i)));
+      }
+      else
+      {
+        ereport(ERROR, (errmsg("plpy.prepare: type name at ordinal position %d is not a string", i)));
         sptr = NULL; /* keep compiler quiet */
       }
 
@@ -122,12 +131,14 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
 
     pg_verifymbstr(query, strlen(query), false);
     plan->plan = SPI_prepare(query, plan->nargs, plan->types);
-    if (plan->plan == NULL) {
+    if (plan->plan == NULL)
+    {
       elog(ERROR, "SPI_prepare failed: %s", SPI_result_code_string(SPI_result));
     }
 
     /* transfer plan from procCxt to topCxt */
-    if (SPI_keepplan(plan->plan)) {
+    if (SPI_keepplan(plan->plan))
+    {
       elog(ERROR, "SPI_keepplan failed");
     }
 
@@ -158,13 +169,15 @@ PLy_spi_execute(PyObject *self, PyObject *args)
   PyObject *list = NULL;
   long limit = 0;
 
-  if (PyArg_ParseTuple(args, "s|l", &query, &limit)) {
+  if (PyArg_ParseTuple(args, "s|l", &query, &limit))
+  {
     return PLy_spi_execute_query(query, limit);
   }
 
   PyErr_Clear();
 
-  if (PyArg_ParseTuple(args, "O|Ol", &plan, &list, &limit) && is_PLyPlanObject(plan)) {
+  if (PyArg_ParseTuple(args, "O|Ol", &plan, &list, &limit) && is_PLyPlanObject(plan))
+  {
     return PLy_spi_execute_plan(plan, list, limit);
   }
 
@@ -182,23 +195,29 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
   volatile ResourceOwner oldowner;
   PyObject *ret;
 
-  if (list != NULL) {
-    if (!PySequence_Check(list) || PyString_Check(list) || PyUnicode_Check(list)) {
+  if (list != NULL)
+  {
+    if (!PySequence_Check(list) || PyString_Check(list) || PyUnicode_Check(list))
+    {
       PLy_exception_set(PyExc_TypeError, "plpy.execute takes a sequence as its second argument");
       return NULL;
     }
     nargs = PySequence_Length(list);
-  } else {
+  }
+  else
+  {
     nargs = 0;
   }
 
   plan = (PLyPlanObject *)ob;
 
-  if (nargs != plan->nargs) {
+  if (nargs != plan->nargs)
+  {
     char *sv;
     PyObject *so = PyObject_Str(list);
 
-    if (!so) {
+    if (!so)
+    {
       PLy_elog(ERROR, "could not execute plan");
     }
     sv = PyString_AsString(so);
@@ -219,13 +238,17 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
     char *volatile nulls;
     volatile int j;
 
-    if (nargs > 0) {
+    if (nargs > 0)
+    {
       nulls = palloc(nargs * sizeof(char));
-    } else {
+    }
+    else
+    {
       nulls = NULL;
     }
 
-    for (j = 0; j < nargs; j++) {
+    for (j = 0; j < nargs; j++)
+    {
       PLyObToDatum *arg = &plan->args[j];
       PyObject *elem;
 
@@ -249,7 +272,8 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
     rv = SPI_execute_plan(plan->plan, plan->values, nulls, exec_ctx->curr_proc->fn_readonly, limit);
     ret = PLy_spi_execute_fetch_result(SPI_tuptable, SPI_processed, rv);
 
-    if (nargs > 0) {
+    if (nargs > 0)
+    {
       pfree(nulls);
     }
 
@@ -262,8 +286,10 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
     /*
      * cleanup plan->values array
      */
-    for (k = 0; k < nargs; k++) {
-      if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL))) {
+    for (k = 0; k < nargs; k++)
+    {
+      if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL)))
+      {
         pfree(DatumGetPointer(plan->values[k]));
         plan->values[k] = PointerGetDatum(NULL);
       }
@@ -274,14 +300,17 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
   }
   PG_END_TRY();
 
-  for (i = 0; i < nargs; i++) {
-    if (!plan->args[i].typbyval && (plan->values[i] != PointerGetDatum(NULL))) {
+  for (i = 0; i < nargs; i++)
+  {
+    if (!plan->args[i].typbyval && (plan->values[i] != PointerGetDatum(NULL)))
+    {
       pfree(DatumGetPointer(plan->values[i]));
       plan->values[i] = PointerGetDatum(NULL);
     }
   }
 
-  if (rv < 0) {
+  if (rv < 0)
+  {
     PLy_exception_set(PLy_exc_spi_error, "SPI_execute_plan failed: %s", SPI_result_code_string(rv));
     return NULL;
   }
@@ -319,7 +348,8 @@ PLy_spi_execute_query(char *query, long limit)
   }
   PG_END_TRY();
 
-  if (rv < 0) {
+  if (rv < 0)
+  {
     Py_XDECREF(ret);
     PLy_exception_set(PLy_exc_spi_error, "SPI_execute failed: %s", SPI_result_code_string(rv));
     return NULL;
@@ -336,17 +366,21 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
   volatile MemoryContext oldcontext;
 
   result = (PLyResultObject *)PLy_result_new();
-  if (!result) {
+  if (!result)
+  {
     SPI_freetuptable(tuptable);
     return NULL;
   }
   Py_DECREF(result->status);
   result->status = PyInt_FromLong(status);
 
-  if (status > 0 && tuptable == NULL) {
+  if (status > 0 && tuptable == NULL)
+  {
     Py_DECREF(result->nrows);
     result->nrows = PyLong_FromUnsignedLongLong(rows);
-  } else if (status > 0 && tuptable != NULL) {
+  }
+  else if (status > 0 && tuptable != NULL)
+  {
     PLyDatumToOb ininfo;
     MemoryContext cxt;
 
@@ -363,7 +397,8 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
     {
       MemoryContext oldcontext2;
 
-      if (rows) {
+      if (rows)
+      {
         uint64 i;
 
         /*
@@ -371,16 +406,19 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
          * size and list indices; so we cannot support a result larger
          * than PY_SSIZE_T_MAX.
          */
-        if (rows > (uint64)PY_SSIZE_T_MAX) {
+        if (rows > (uint64)PY_SSIZE_T_MAX)
+        {
           ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("query result has too many rows to fit in a Python list")));
         }
 
         Py_DECREF(result->rows);
         result->rows = PyList_New(rows);
-        if (result->rows) {
+        if (result->rows)
+        {
           PLy_input_setup_tuple(&ininfo, tuptable->tupdesc, exec_ctx->curr_proc);
 
-          for (i = 0; i < rows; i++) {
+          for (i = 0; i < rows; i++)
+          {
             PyObject *row = PLy_input_from_tuple(&ininfo, tuptable->vals[i], tuptable->tupdesc, true);
 
             PyList_SetItem(result->rows, i, row);
@@ -413,7 +451,8 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
     SPI_freetuptable(tuptable);
 
     /* in case PyList_New() failed above */
-    if (!result->rows) {
+    if (!result->rows)
+    {
       Py_DECREF(result);
       result = NULL;
     }
@@ -598,22 +637,26 @@ PLy_spi_exception_set(PyObject *excclass, ErrorData *edata)
   PyObject *spidata = NULL;
 
   args = Py_BuildValue("(s)", edata->message);
-  if (!args) {
+  if (!args)
+  {
     goto failure;
   }
 
   /* create a new SPI exception with the error message as the parameter */
   spierror = PyObject_CallObject(excclass, args);
-  if (!spierror) {
+  if (!spierror)
+  {
     goto failure;
   }
 
   spidata = Py_BuildValue("(izzzizzzzz)", edata->sqlerrcode, edata->detail, edata->hint, edata->internalquery, edata->internalpos, edata->schema_name, edata->table_name, edata->column_name, edata->datatype_name, edata->constraint_name);
-  if (!spidata) {
+  if (!spidata)
+  {
     goto failure;
   }
 
-  if (PyObject_SetAttrString(spierror, "spidata", spidata) == -1) {
+  if (PyObject_SetAttrString(spierror, "spidata", spidata) == -1)
+  {
     goto failure;
   }
 

@@ -190,7 +190,7 @@ checkcondition_gin_internal(GinChkVal *gcv, QueryOperand *val, ExecPhraseData *d
    */
   if (val->weight != 0 || data != NULL)
   {
-
+    *(gcv->need_recheck) = true;
   }
 
   /* convert item's number to corresponding entry's (operand's) number */
@@ -232,7 +232,7 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
 
   switch (curitem->qoperator.oper)
   {
-  case OP_NOT:;
+  case OP_NOT:
 
     /*
      * Below a phrase search, force NOT's result to MAYBE.  We cannot
@@ -255,7 +255,7 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
     }
     return !result;
 
-  case OP_PHRASE:;
+  case OP_PHRASE:
 
     /*
      * GIN doesn't contain any information about positions, so treat
@@ -268,7 +268,7 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
 
     /* FALL THRU */
 
-  case OP_AND:;
+  case OP_AND:
     val1 = TS_execute_ternary(gcv, curitem + curitem->qoperator.left, in_phrase);
     if (val1 == GIN_FALSE)
     {
@@ -288,7 +288,7 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
       return GIN_MAYBE;
     }
 
-  case OP_OR:;
+  case OP_OR:
     val1 = TS_execute_ternary(gcv, curitem + curitem->qoperator.left, in_phrase);
     if (val1 == GIN_TRUE)
     {
@@ -308,8 +308,8 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
       return GIN_MAYBE;
     }
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
   }
 
   /* not reachable, but keep compiler quiet */
@@ -403,11 +403,11 @@ gin_tsquery_triconsistent(PG_FUNCTION_ARGS)
 Datum
 gin_extract_tsvector_2args(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
+  if (PG_NARGS() < 3) /* should not happen */
+  {
+    elog(ERROR, "gin_extract_tsvector requires three arguments");
+  }
+  return gin_extract_tsvector(fcinfo);
 }
 
 /*
@@ -417,11 +417,11 @@ gin_extract_tsvector_2args(PG_FUNCTION_ARGS)
 Datum
 gin_extract_tsquery_5args(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
+  if (PG_NARGS() < 7) /* should not happen */
+  {
+    elog(ERROR, "gin_extract_tsquery requires seven arguments");
+  }
+  return gin_extract_tsquery(fcinfo);
 }
 
 /*
@@ -431,11 +431,11 @@ gin_extract_tsquery_5args(PG_FUNCTION_ARGS)
 Datum
 gin_tsquery_consistent_6args(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
+  if (PG_NARGS() < 8) /* should not happen */
+  {
+    elog(ERROR, "gin_tsquery_consistent requires eight arguments");
+  }
+  return gin_tsquery_consistent(fcinfo);
 }
 
 /*
@@ -445,7 +445,7 @@ gin_tsquery_consistent_6args(PG_FUNCTION_ARGS)
 Datum
 gin_extract_tsquery_oldsig(PG_FUNCTION_ARGS)
 {
-
+  return gin_extract_tsquery(fcinfo);
 }
 
 /*
@@ -455,5 +455,5 @@ gin_extract_tsquery_oldsig(PG_FUNCTION_ARGS)
 Datum
 gin_tsquery_consistent_oldsig(PG_FUNCTION_ARGS)
 {
-
+  return gin_tsquery_consistent(fcinfo);
 }

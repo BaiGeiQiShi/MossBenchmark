@@ -406,11 +406,11 @@ set_rel_size(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *rte)
   {
     switch (rel->rtekind)
     {
-    case RTE_RELATION:;
+    case RTE_RELATION:
       if (rte->relkind == RELKIND_FOREIGN_TABLE)
       {
         /* Foreign table */
-
+        set_foreign_size(root, rel, rte);
       }
       else if (rte->relkind == RELKIND_PARTITIONED_TABLE)
       {
@@ -432,7 +432,7 @@ set_rel_size(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *rte)
         set_plain_rel_size(root, rel, rte);
       }
       break;
-    case RTE_SUBQUERY:;
+    case RTE_SUBQUERY:
 
       /*
        * Subqueries don't support making a choice between
@@ -441,16 +441,16 @@ set_rel_size(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *rte)
        */
       set_subquery_pathlist(root, rel, rti, rte);
       break;
-    case RTE_FUNCTION:;
+    case RTE_FUNCTION:
       set_function_size_estimates(root, rel);
       break;
-    case RTE_TABLEFUNC:;
+    case RTE_TABLEFUNC:
       set_tablefunc_size_estimates(root, rel);
       break;
-    case RTE_VALUES:;
+    case RTE_VALUES:
       set_values_size_estimates(root, rel);
       break;
-    case RTE_CTE:;
+    case RTE_CTE:
 
       /*
        * CTEs don't support making a choice between parameterized
@@ -466,17 +466,17 @@ set_rel_size(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *rte)
         set_cte_pathlist(root, rel, rte);
       }
       break;
-    case RTE_NAMEDTUPLESTORE:;
+    case RTE_NAMEDTUPLESTORE:
       /* Might as well just build the path immediately */
       set_namedtuplestore_pathlist(root, rel, rte);
       break;
-    case RTE_RESULT:;
+    case RTE_RESULT:
       /* Might as well just build the path immediately */
       set_result_pathlist(root, rel, rte);
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unexpected rtekind: %d", (int)rel->rtekind);
+      break;
     }
   }
 
@@ -506,11 +506,11 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *r
   {
     switch (rel->rtekind)
     {
-    case RTE_RELATION:;
+    case RTE_RELATION:
       if (rte->relkind == RELKIND_FOREIGN_TABLE)
       {
         /* Foreign table */
-
+        set_foreign_pathlist(root, rel, rte);
       }
       else if (rte->tablesample != NULL)
       {
@@ -523,33 +523,33 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *r
         set_plain_rel_pathlist(root, rel, rte);
       }
       break;
-    case RTE_SUBQUERY:;
+    case RTE_SUBQUERY:
       /* Subquery --- fully handled during set_rel_size */
       break;
-    case RTE_FUNCTION:;
+    case RTE_FUNCTION:
       /* RangeFunction */
       set_function_pathlist(root, rel, rte);
       break;
-    case RTE_TABLEFUNC:;
+    case RTE_TABLEFUNC:
       /* Table Function */
       set_tablefunc_pathlist(root, rel, rte);
       break;
-    case RTE_VALUES:;
+    case RTE_VALUES:
       /* Values list */
       set_values_pathlist(root, rel, rte);
       break;
-    case RTE_CTE:;
+    case RTE_CTE:
       /* CTE reference --- fully handled during set_rel_size */
       break;
-    case RTE_NAMEDTUPLESTORE:;
+    case RTE_NAMEDTUPLESTORE:
       /* tuplestore reference --- fully handled during set_rel_size */
       break;
-    case RTE_RESULT:;
+    case RTE_RESULT:
       /* simple Result --- fully handled during set_rel_size */
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unexpected rtekind: %d", (int)rel->rtekind);
+      break;
     }
   }
 
@@ -561,7 +561,7 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblEntry *r
    */
   if (set_rel_pathlist_hook)
   {
-
+    (*set_rel_pathlist_hook)(root, rel, rti, rte);
   }
 
   /*
@@ -631,7 +631,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
   /* Assorted checks based on rtekind. */
   switch (rte->rtekind)
   {
-  case RTE_RELATION:;
+  case RTE_RELATION:
 
     /*
      * Currently, parallel workers can't access the leader's temporary
@@ -658,7 +658,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
 
       if (proparallel != PROPARALLEL_SAFE)
       {
-
+        return;
       }
       if (!is_parallel_safe(root, (Node *)rte->tablesample->args))
       {
@@ -676,15 +676,15 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
      */
     if (rte->relkind == RELKIND_FOREIGN_TABLE)
     {
-
-
-
-
-
-
-
-
-
+      Assert(rel->fdwroutine);
+      if (!rel->fdwroutine->IsForeignScanParallelSafe)
+      {
+        return;
+      }
+      if (!rel->fdwroutine->IsForeignScanParallelSafe(root, rel, rte))
+      {
+        return;
+      }
     }
 
     /*
@@ -695,7 +695,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
      */
     break;
 
-  case RTE_SUBQUERY:;
+  case RTE_SUBQUERY:
 
     /*
      * There's no intrinsic problem with scanning a subquery-in-FROM
@@ -727,12 +727,12 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
     }
     break;
 
-  case RTE_JOIN:;
+  case RTE_JOIN:
     /* Shouldn't happen; we're only considering baserels here. */
+    Assert(false);
+    return;
 
-
-
-  case RTE_FUNCTION:;
+  case RTE_FUNCTION:
     /* Check for parallel-restricted functions. */
     if (!is_parallel_safe(root, (Node *)rte->functions))
     {
@@ -740,11 +740,11 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
     }
     break;
 
-  case RTE_TABLEFUNC:;
+  case RTE_TABLEFUNC:
     /* not parallel safe */
     return;
 
-  case RTE_VALUES:;
+  case RTE_VALUES:
     /* Check for parallel-restricted functions. */
     if (!is_parallel_safe(root, (Node *)rte->values_lists))
     {
@@ -752,7 +752,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
     }
     break;
 
-  case RTE_CTE:;
+  case RTE_CTE:
 
     /*
      * CTE tuplestores aren't shared among parallel workers, so we
@@ -763,7 +763,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
      */
     return;
 
-  case RTE_NAMEDTUPLESTORE:;
+  case RTE_NAMEDTUPLESTORE:
 
     /*
      * tuplestore cannot be shared, at least without more
@@ -771,7 +771,7 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
      */
     return;
 
-  case RTE_RESULT:;
+  case RTE_RESULT:
     /* RESULT RTEs, in themselves, are no problem. */
     break;
   }
@@ -933,7 +933,7 @@ set_tablesample_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *
    */
   if ((root->query_level > 1 || bms_membership(root->all_baserels) != BMS_SINGLETON) && !(GetTsmRoutine(rte->tablesample->tsmhandler)->repeatable_across_scans))
   {
-
+    path = (Path *)create_material_path(rel, path);
   }
 
   add_path(rel, path);
@@ -948,17 +948,17 @@ set_tablesample_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *
 static void
 set_foreign_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
+  /* Mark rel with estimated output rows, width, etc */
+  set_foreign_size_estimates(root, rel);
 
+  /* Let FDW adjust the size estimates, if it can */
+  rel->fdwroutine->GetForeignRelSize(root, rel, rte->relid);
 
+  /* ... but do not let it set the rows estimate to zero */
+  rel->rows = clamp_row_est(rel->rows);
 
-
-
-
-
-
-
-
-
+  /* also, make sure rel->tuples is not insane relative to rel->rows */
+  rel->tuples = Max(rel->tuples, rel->rows);
 }
 
 /*
@@ -968,8 +968,8 @@ set_foreign_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 static void
 set_foreign_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-
-
+  /* Call the FDW's GetForeignPaths function to generate path(s) */
+  rel->fdwroutine->GetForeignPaths(root, rel, rte->relid);
 }
 
 /*
@@ -1342,8 +1342,8 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, Index rti, RangeTblE
 
 /*
  * add_paths_to_append_rel
- *		Generate paths for the given append relation given the set of
- *non-dummy child rels.
+ *		Generate paths for the given append relation given the set of non-dummy
+ *		child rels.
  *
  * The function collects all parameterizations and orderings supported by the
  * non-dummy children. For every such parameterization or ordering, it creates
@@ -1700,16 +1700,16 @@ add_paths_to_append_rel(PlannerInfo *root, RelOptInfo *rel, List *live_childrels
       if (childrel->pathlist == NIL)
       {
         /* failed to make a suitable path for this child */
-
-
+        subpaths_valid = false;
+        break;
       }
 
       subpath = get_cheapest_parameterized_child_path(root, childrel, required_outer);
       if (subpath == NULL)
       {
         /* failed to make a suitable path for this child */
-
-
+        subpaths_valid = false;
+        break;
       }
       accumulate_append_subpath(subpath, &subpaths, NULL);
     }
@@ -1864,7 +1864,7 @@ generate_orderedappend_paths(PlannerInfo *root, RelOptInfo *rel, List *live_chil
        */
       if (cheapest_startup != cheapest_total)
       {
-
+        startup_neq_total = true;
       }
 
       /*
@@ -1917,7 +1917,7 @@ generate_orderedappend_paths(PlannerInfo *root, RelOptInfo *rel, List *live_chil
       add_path(rel, (Path *)create_append_path(root, rel, startup_subpaths, NIL, pathkeys, NULL, 0, false, partitioned_rels, -1));
       if (startup_neq_total)
       {
-
+        add_path(rel, (Path *)create_append_path(root, rel, total_subpaths, NIL, pathkeys, NULL, 0, false, partitioned_rels, -1));
       }
     }
     else
@@ -1926,7 +1926,7 @@ generate_orderedappend_paths(PlannerInfo *root, RelOptInfo *rel, List *live_chil
       add_path(rel, (Path *)create_merge_append_path(root, rel, startup_subpaths, pathkeys, NULL, partitioned_rels));
       if (startup_neq_total)
       {
-
+        add_path(rel, (Path *)create_merge_append_path(root, rel, total_subpaths, pathkeys, NULL, partitioned_rels));
       }
     }
   }
@@ -1934,8 +1934,8 @@ generate_orderedappend_paths(PlannerInfo *root, RelOptInfo *rel, List *live_chil
 
 /*
  * get_cheapest_parameterized_child_path
- *		Get cheapest path for this relation that has exactly the
- *requested parameterization.
+ *		Get cheapest path for this relation that has exactly the requested
+ *		parameterization.
  *
  * Returns NULL if unable to create such a path.
  */
@@ -1991,13 +1991,13 @@ get_cheapest_parameterized_child_path(PlannerInfo *root, RelOptInfo *rel, Relids
       path = reparameterize_path(root, path, required_outer, 1.0);
       if (path == NULL)
       {
-
+        continue; /* failed to reparameterize this one */
       }
       Assert(bms_equal(PATH_REQ_OUTER(path), required_outer));
 
       if (cheapest != NULL && compare_path_costs(cheapest, path, TOTAL_COST) <= 0)
       {
-
+        continue;
       }
     }
 
@@ -2011,8 +2011,7 @@ get_cheapest_parameterized_child_path(PlannerInfo *root, RelOptInfo *rel, Relids
 
 /*
  * accumulate_append_subpath
- *		Add a subpath to the list being built for an Append or
- *MergeAppend.
+ *		Add a subpath to the list being built for an Append or MergeAppend.
  *
  * It's possible that the child is itself an Append or MergeAppend path, in
  * which case we can "cut out the middleman" and just add its child paths to
@@ -2094,7 +2093,7 @@ get_singleton_append_subpath(Path *path)
 
     if (list_length(mpath->subpaths) == 1)
     {
-
+      return (Path *)linitial(mpath->subpaths);
     }
   }
 
@@ -2483,9 +2482,9 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
   while (levelsup-- > 0)
   {
     cteroot = cteroot->parent_root;
-    if (!cteroot)
-    { /* shouldn't happen */
-
+    if (!cteroot) /* shouldn't happen */
+    {
+      elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
     }
   }
 
@@ -2505,18 +2504,18 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
     }
     ndx++;
   }
-  if (lc == NULL)
-  { /* shouldn't happen */
-
+  if (lc == NULL) /* shouldn't happen */
+  {
+    elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
   }
   if (ndx >= list_length(cteroot->cte_plan_ids))
   {
-
+    elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
   }
   plan_id = list_nth_int(cteroot->cte_plan_ids, ndx);
   if (plan_id <= 0)
   {
-
+    elog(ERROR, "no plan was made for CTE \"%s\"", rte->ctename);
   }
   cteplan = (Plan *)list_nth(root->glob->subplans, plan_id - 1);
 
@@ -2613,24 +2612,24 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
    * where the CTE comes from.
    */
   levelsup = rte->ctelevelsup;
-  if (levelsup == 0)
-  { /* shouldn't happen */
-
+  if (levelsup == 0) /* shouldn't happen */
+  {
+    elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
   }
   levelsup--;
   cteroot = root;
   while (levelsup-- > 0)
   {
     cteroot = cteroot->parent_root;
-    if (!cteroot)
-    { /* shouldn't happen */
-
+    if (!cteroot) /* shouldn't happen */
+    {
+      elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
     }
   }
   ctepath = cteroot->non_recursive_path;
-  if (!ctepath)
-  { /* shouldn't happen */
-
+  if (!ctepath) /* shouldn't happen */
+  {
+    elog(ERROR, "could not find path for CTE \"%s\"", rte->ctename);
   }
 
   /* Mark rel with estimated output rows, width, etc */
@@ -2650,8 +2649,8 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 /*
  * generate_gather_paths
- *		Generate parallel access paths for a relation by pushing a
- *Gather or Gather Merge on top of a partial path.
+ *		Generate parallel access paths for a relation by pushing a Gather or
+ *		Gather Merge on top of a partial path.
  *
  * This must not be called until after we're done creating all partial paths
  * for the specified relation.  (Otherwise, add_partial_path might delete a
@@ -2738,7 +2737,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 
   if (levels_needed <= 0)
   {
-
+    return NULL; /* nothing to do? */
   }
 
   /*
@@ -2765,8 +2764,8 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
     }
     else
     {
-
-
+      elog(ERROR, "unrecognized joinlist node type: %d", (int)nodeTag(jlnode));
+      thisrel = NULL; /* keep compiler quiet */
     }
 
     initial_rels = lappend(initial_rels, thisrel);
@@ -2792,7 +2791,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 
     if (join_search_hook)
     {
-
+      return (*join_search_hook)(root, levels_needed, initial_rels);
     }
     else if (enable_geqo && levels_needed >= geqo_threshold)
     {
@@ -2912,7 +2911,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
    */
   if (root->join_rel_level[levels_needed] == NIL)
   {
-
+    elog(ERROR, "failed to build any %d-way joins", levels_needed);
   }
   Assert(list_length(root->join_rel_level[levels_needed]) == 1);
 
@@ -3049,7 +3048,7 @@ subquery_is_pushdown_safe(Query *subquery, Query *topquery, pushdown_safety_info
     {
       if (!recurse_pushdown_safe(subquery->setOperations, topquery, safetyInfo))
       {
-
+        return false;
       }
     }
   }
@@ -3058,7 +3057,7 @@ subquery_is_pushdown_safe(Query *subquery, Query *topquery, pushdown_safety_info
     /* Setop component must not have more components (too weird) */
     if (subquery->setOperations != NULL)
     {
-
+      return false;
     }
     /* Check whether setop component output types match top level */
     topop = castNode(SetOperationStmt, topquery->setOperations);
@@ -3090,21 +3089,21 @@ recurse_pushdown_safe(Node *setOp, Query *topquery, pushdown_safety_info *safety
     /* EXCEPT is no good (point 2 for subquery_is_pushdown_safe) */
     if (op->op == SETOP_EXCEPT)
     {
-
+      return false;
     }
     /* Else recurse */
     if (!recurse_pushdown_safe(op->larg, topquery, safetyInfo))
     {
-
+      return false;
     }
     if (!recurse_pushdown_safe(op->rarg, topquery, safetyInfo))
     {
-
+      return false;
     }
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(setOp));
   }
   return true;
 }
@@ -3180,8 +3179,8 @@ check_output_expressions(Query *subquery, pushdown_safety_info *safetyInfo)
     if (subquery->hasDistinctOn && !targetIsInSortList(tle, InvalidOid, subquery->distinctClause))
     {
       /* non-DISTINCT column, so mark it unsafe */
-
-
+      safetyInfo->unsafeColumns[tle->resno] = true;
+      continue;
     }
 
     /* If subquery uses window functions, check point 4 */
@@ -3223,21 +3222,21 @@ compare_tlist_datatypes(List *tlist, List *colTypes, pushdown_safety_info *safet
 
     if (tle->resjunk)
     {
-
+      continue; /* ignore resjunk columns */
     }
     if (colType == NULL)
     {
-
+      elog(ERROR, "wrong number of tlist entries");
     }
     if (exprType((Node *)tle->expr) != lfirst_oid(colType))
     {
-
+      safetyInfo->unsafeColumns[tle->resno] = true;
     }
     colType = lnext(colType);
   }
   if (colType != NULL)
   {
-
+    elog(ERROR, "wrong number of tlist entries");
   }
 }
 
@@ -3347,8 +3346,8 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual, pushdown_safety_in
      */
     if (!IsA(var, Var))
     {
-
-
+      safe = false;
+      break;
     }
 
     /*
@@ -3369,8 +3368,8 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual, pushdown_safety_in
     /* Check point 4 */
     if (var->varattno == 0)
     {
-
-
+      safe = false;
+      break;
     }
 
     /* Check point 5 */
@@ -3456,7 +3455,7 @@ recurse_push_qual(Node *setOp, Query *topquery, RangeTblEntry *rte, Index rti, N
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(setOp));
   }
 }
 
@@ -3623,8 +3622,8 @@ create_partial_bitmap_paths(PlannerInfo *root, RelOptInfo *rel, Path *bitmapqual
  * "heap_pages" is the number of pages from the table that we expect to scan, or
  * -1 if we don't expect to scan any.
  *
- * "index_pages" is the number of pages from the index that we expect to scan,
- * or -1 if we don't expect to scan any.
+ * "index_pages" is the number of pages from the index that we expect to scan, or
+ * -1 if we don't expect to scan any.
  *
  * "max_workers" is caller's limit on the number of workers.  This typically
  * comes from a GUC.
@@ -3676,7 +3675,7 @@ compute_parallel_worker(RelOptInfo *rel, double heap_pages, double index_pages, 
         heap_parallel_threshold *= 3;
         if (heap_parallel_threshold > INT_MAX / 3)
         {
-
+          break; /* avoid overflow */
         }
       }
 
@@ -3692,12 +3691,12 @@ compute_parallel_worker(RelOptInfo *rel, double heap_pages, double index_pages, 
       index_parallel_threshold = Max(min_parallel_index_scan_size, 1);
       while (index_pages >= (BlockNumber)(index_parallel_threshold * 3))
       {
-
-
-
-
-
-
+        index_parallel_workers++;
+        index_parallel_threshold *= 3;
+        if (index_parallel_threshold > INT_MAX / 3)
+        {
+          break; /* avoid overflow */
+        }
       }
 
       if (parallel_workers > 0)
@@ -3719,8 +3718,8 @@ compute_parallel_worker(RelOptInfo *rel, double heap_pages, double index_pages, 
 
 /*
  * generate_partitionwise_join_paths
- * 		Create paths representing partitionwise join for given
- * partitioned join relation.
+ * 		Create paths representing partitionwise join for given partitioned
+ * 		join relation.
  *
  * This must not be called until after we are done adding paths for all
  * child-joins. Otherwise, add_path might delete a path to which some path
@@ -3737,7 +3736,7 @@ generate_partitionwise_join_paths(PlannerInfo *root, RelOptInfo *rel)
   /* Handle only join relations here. */
   if (!IS_JOIN_REL(rel))
   {
-
+    return;
   }
 
   /* We've nothing to do if the relation is not partitioned. */
@@ -3776,8 +3775,8 @@ generate_partitionwise_join_paths(PlannerInfo *root, RelOptInfo *rel)
        * Mark the parent joinrel as unpartitioned so that later
        * functions treat it correctly.
        */
-
-
+      rel->nparts = 0;
+      return;
     }
 
     /* Else, identify the cheapest path for it. */
@@ -3786,7 +3785,7 @@ generate_partitionwise_join_paths(PlannerInfo *root, RelOptInfo *rel)
     /* Dummy children need not be scanned, so ignore those. */
     if (IS_DUMMY_REL(child_rel))
     {
-
+      continue;
     }
 
 #ifdef OPTIMIZER_DEBUG
@@ -3799,8 +3798,8 @@ generate_partitionwise_join_paths(PlannerInfo *root, RelOptInfo *rel)
   /* If all child-joins are dummy, parent join is also dummy. */
   if (!live_children)
   {
-
-
+    mark_dummy_rel(rel);
+    return;
   }
 
   /* Build additional paths for this rel from child-join paths. */
@@ -3896,7 +3895,7 @@ print_path(PlannerInfo *root, Path *path, int indent)
     case T_WorkTableScan:
       ptype = "WorkTableScan";
       break;
-    default:;
+    default:
       ptype = "???Path";
       break;
     }
@@ -4015,7 +4014,7 @@ print_path(PlannerInfo *root, Path *path, int indent)
     ptype = "Limit";
     subpath = ((LimitPath *)path)->subpath;
     break;
-  default:;
+  default:
     ptype = "???Path";
     break;
   }

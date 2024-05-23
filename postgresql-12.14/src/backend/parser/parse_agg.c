@@ -605,7 +605,7 @@ check_agglevels_and_constraints(ParseState *pstate, Node *expr)
     break;
 
     /*
-     * There is intentionally no default:; case here, so that the
+     * There is intentionally no default: case here, so that the
      * compiler will warn if we add a new ParseExprKind without
      * extending this switch.  If we do see an unrecognized value at
      * runtime, the behavior will be the same as for EXPR_KIND_OTHER,
@@ -974,7 +974,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc, WindowDef *windef
     break;
 
     /*
-     * There is intentionally no default:; case here, so that the
+     * There is intentionally no default: case here, so that the
      * compiler will warn if we add a new ParseExprKind without
      * extending this switch.  If we do see an unrecognized value at
      * runtime, the behavior will be the same as for EXPR_KIND_OTHER,
@@ -987,7 +987,9 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc, WindowDef *windef
   }
   if (errkind)
   {
-    ereport(ERROR, (errcode(ERRCODE_WINDOWING_ERROR), errmsg("window functions are not allowed in %s", ParseExprKindName(pstate->p_expr_kind)), (pstate, wfunc->location)));
+    ereport(ERROR, (errcode(ERRCODE_WINDOWING_ERROR),
+                       /* translator: %s is name of a SQL construct, eg GROUP BY */
+                       errmsg("window functions are not allowed in %s", ParseExprKindName(pstate->p_expr_kind)), parser_errposition(pstate, wfunc->location)));
   }
 
   /*
@@ -1014,8 +1016,8 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc, WindowDef *windef
         break;
       }
     }
-    if (lc == NULL)
-    { /* didn't find it? */
+    if (lc == NULL) /* didn't find it? */
+    {
       ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("window \"%s\" does not exist", windef->name), parser_errposition(pstate, windef->location)));
     }
   }
@@ -1030,9 +1032,9 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc, WindowDef *windef
 
       winref++;
       if (refwin->refname && windef->refname && strcmp(refwin->refname, windef->refname) == 0)
-      {/* matched on refname */;}
+        /* matched on refname */;
       else if (!refwin->refname && !windef->refname)
-      {/* matched, no refname */;}
+        /* matched, no refname */;
       else
       {
         continue;
@@ -1428,7 +1430,7 @@ check_ungrouped_columns_walker(Node *node, check_ungrouped_columns_context *cont
     attname = get_rte_attribute_name(rte, var->varattno);
     if (context->sublevels_up == 0)
     {
-      ereport(ERROR, (errcode(ERRCODE_GROUPING_ERROR), errmsg("column \"%s.%s\" must appear in the GROUP BY clause or be used in an aggregate function", rte->eref->aliasname, attname), context->in_agg_direct_args ? errdetail("Direct arguments of an ordered-set aggregate must use onlycolumns.") : 0, parser_errposition(context->pstate, var->location)));
+      ereport(ERROR, (errcode(ERRCODE_GROUPING_ERROR), errmsg("column \"%s.%s\" must appear in the GROUP BY clause or be used in an aggregate function", rte->eref->aliasname, attname), context->in_agg_direct_args ? errdetail("Direct arguments of an ordered-set aggregate must use only grouped columns.") : 0, parser_errposition(context->pstate, var->location)));
     }
     else
     {

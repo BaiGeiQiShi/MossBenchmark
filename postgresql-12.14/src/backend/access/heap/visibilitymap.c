@@ -11,12 +11,13 @@
  *	  src/backend/access/heap/visibilitymap.c
  *
  * INTERFACE ROUTINES
- *		visibilitymap_clear  - clear bits for one page in the visibility
- *map visibilitymap_pin	 - pin a map page for setting a bit visibilitymap_pin_ok
- *- check whether correct map page is already pinned visibilitymap_set	 - set a
- *bit in a previously pinned page visibilitymap_get_status - get status of bits
- *		visibilitymap_count  - count number of bits set in visibility
- *map visibilitymap_truncate	- truncate the visibility map
+ *		visibilitymap_clear  - clear bits for one page in the visibility map
+ *		visibilitymap_pin	 - pin a map page for setting a bit
+ *		visibilitymap_pin_ok - check whether correct map page is already pinned
+ *		visibilitymap_set	 - set a bit in a previously pinned page
+ *		visibilitymap_get_status - get status of bits
+ *		visibilitymap_count  - count number of bits set in visibility map
+ *		visibilitymap_truncate	- truncate the visibility map
  *
  * NOTES
  *
@@ -129,8 +130,7 @@ static void
 vm_extend(Relation rel, BlockNumber nvmblocks);
 
 /*
- *	visibilitymap_clear - clear specified bits for one page in visibility
- *map
+ *	visibilitymap_clear - clear specified bits for one page in visibility map
  *
  * You must pass a buffer containing the correct map page to this function.
  * Call visibilitymap_pin first to pin the right one. This function doesn't do
@@ -154,7 +154,7 @@ visibilitymap_clear(Relation rel, BlockNumber heapBlk, Buffer buf, uint8 flags)
 
   if (!BufferIsValid(buf) || BufferGetBlockNumber(buf) != mapBlock)
   {
-
+    elog(ERROR, "wrong buffer passed to visibilitymap_clear");
   }
 
   LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
@@ -202,7 +202,7 @@ visibilitymap_pin(Relation rel, BlockNumber heapBlk, Buffer *buf)
       return;
     }
 
-
+    ReleaseBuffer(*buf);
   }
   *buf = vm_readbuf(rel, mapBlock, true);
 }
@@ -264,13 +264,13 @@ visibilitymap_set(Relation rel, BlockNumber heapBlk, Buffer heapBuf, XLogRecPtr 
   /* Check that we have the right heap page pinned, if present */
   if (BufferIsValid(heapBuf) && BufferGetBlockNumber(heapBuf) != heapBlk)
   {
-
+    elog(ERROR, "wrong heap buffer passed to visibilitymap_set");
   }
 
   /* Check that we have the right VM page pinned */
   if (!BufferIsValid(vmBuf) || BufferGetBlockNumber(vmBuf) != mapBlock)
   {
-
+    elog(ERROR, "wrong VM buffer passed to visibilitymap_set");
   }
 
   page = BufferGetPage(vmBuf);
@@ -300,8 +300,8 @@ visibilitymap_set(Relation rel, BlockNumber heapBlk, Buffer heapBuf, XLogRecPtr 
           Page heapPage = BufferGetPage(heapBuf);
 
           /* caller is expected to set PD_ALL_VISIBLE first */
-
-
+          Assert(PageIsAllVisible(heapPage));
+          PageSetLSN(heapPage, recptr);
         }
       }
       PageSetLSN(page, recptr);
@@ -350,8 +350,8 @@ visibilitymap_get_status(Relation rel, BlockNumber heapBlk, Buffer *buf)
   {
     if (BufferGetBlockNumber(*buf) != mapBlock)
     {
-
-
+      ReleaseBuffer(*buf);
+      *buf = InvalidBuffer;
     }
   }
 
@@ -380,8 +380,7 @@ visibilitymap_get_status(Relation rel, BlockNumber heapBlk, Buffer *buf)
  *
  * Note: we ignore the possibility of race conditions when the table is being
  * extended concurrently with the call.  New pages added to the table aren't
- * going to be marked all-visible or all-frozen, so they won't affect the
- *result.
+ * going to be marked all-visible or all-frozen, so they won't affect the result.
  */
 void
 visibilitymap_count(Relation rel, BlockNumber *all_visible, BlockNumber *all_frozen)
@@ -427,11 +426,11 @@ visibilitymap_count(Relation rel, BlockNumber *all_visible, BlockNumber *all_fro
     }
     else
     {
-
-
-
-
-
+      for (i = 0; i < MAPSIZE / sizeof(uint64); i++)
+      {
+        nvisible += pg_popcount64(map[i] & VISIBLE_MASK64);
+        nfrozen += pg_popcount64(map[i] & FROZEN_MASK64);
+      }
     }
 
     ReleaseBuffer(mapBuffer);
@@ -440,7 +439,7 @@ visibilitymap_count(Relation rel, BlockNumber *all_visible, BlockNumber *all_fro
   *all_visible = nvisible;
   if (all_frozen)
   {
-
+    *all_frozen = nfrozen;
   }
 }
 
@@ -473,7 +472,7 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
    */
   if (!smgrexists(RelationGetSmgr(rel), VISIBILITYMAP_FORKNUM))
   {
-
+    return;
   }
 
   /*
@@ -495,7 +494,7 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
     if (!BufferIsValid(mapBuffer))
     {
       /* nothing to do, the file was already smaller */
-
+      return;
     }
 
     page = BufferGetPage(mapBuffer);
@@ -532,7 +531,7 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
     MarkBufferDirty(mapBuffer);
     if (!InRecovery && RelationNeedsWAL(rel) && XLogHintBitIsNeeded())
     {
-
+      log_newpage_buffer(mapBuffer, false);
     }
 
     END_CRIT_SECTION();
@@ -635,12 +634,12 @@ vm_readbuf(Relation rel, BlockNumber blkno, bool extend)
   buf = ReadBufferExtended(rel, VISIBILITYMAP_FORKNUM, blkno, RBM_ZERO_ON_ERROR, NULL);
   if (PageIsNew(BufferGetPage(buf)))
   {
-
-
-
-
-
-
+    LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+    if (PageIsNew(BufferGetPage(buf)))
+    {
+      PageInit(BufferGetPage(buf), BLCKSZ, 0);
+    }
+    LockBuffer(buf, BUFFER_LOCK_UNLOCK);
   }
   return buf;
 }

@@ -133,7 +133,7 @@ GetPortalByName(const char *name)
   }
   else
   {
-
+    portal = NULL;
   }
 
   return portal;
@@ -141,8 +141,7 @@ GetPortalByName(const char *name)
 
 /*
  * PortalGetPrimaryStmt
- *		Get the "primary" stmt within a portal, ie, the one marked
- *canSetTag.
+ *		Get the "primary" stmt within a portal, ie, the one marked canSetTag.
  *
  * Returns NULL if no such stmt.  If multiple PlannedStmt structs within the
  * portal are marked canSetTag, returns the first one.  Neither of these
@@ -186,11 +185,11 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
   {
     if (!allowDup)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_CURSOR), errmsg("cursor \"%s\" already exists", name)));
     }
     if (!dupSilent)
     {
-
+      ereport(WARNING, (errcode(ERRCODE_DUPLICATE_CURSOR), errmsg("closing existing cursor \"%s\"", name)));
     }
     PortalDrop(portal, false);
   }
@@ -361,7 +360,7 @@ PinPortal(Portal portal)
 {
   if (portal->portalPinned)
   {
-
+    elog(ERROR, "portal already pinned");
   }
 
   portal->portalPinned = true;
@@ -372,7 +371,7 @@ UnpinPortal(Portal portal)
 {
   if (!portal->portalPinned)
   {
-
+    elog(ERROR, "portal not pinned");
   }
 
   portal->portalPinned = false;
@@ -468,7 +467,7 @@ PortalDrop(Portal portal, bool isTopCommit)
    */
   if (portal->portalPinned)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_STATE), errmsg("cannot drop pinned portal \"%s\"", portal->name)));
   }
 
   /*
@@ -476,7 +475,7 @@ PortalDrop(Portal portal, bool isTopCommit)
    */
   if (portal->status == PORTAL_ACTIVE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_STATE), errmsg("cannot drop active portal \"%s\"", portal->name)));
   }
 
   /*
@@ -600,7 +599,7 @@ PortalHashTableDeleteAll(void)
 
   if (PortalHashTable == NULL)
   {
-
+    return;
   }
 
   hash_seq_init(&status, PortalHashTable);
@@ -686,7 +685,7 @@ PreCommit_Portals(bool isPrepare)
      */
     if (portal->portalPinned && !portal->autoHeld)
     {
-
+      elog(ERROR, "cannot commit while a portal is pinned");
     }
 
     /*
@@ -728,7 +727,7 @@ PreCommit_Portals(bool isPrepare)
        */
       if (isPrepare)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot PREPARE a transaction that has created a cursor WITH HOLD")));
       }
 
       HoldPortal(portal);
@@ -789,7 +788,7 @@ AtAbort_Portals(void)
      */
     if (portal->status == PORTAL_ACTIVE && shmem_exit_inprogress)
     {
-
+      MarkPortalFailed(portal);
     }
 
     /*
@@ -807,7 +806,7 @@ AtAbort_Portals(void)
      */
     if (portal->autoHeld)
     {
-
+      continue;
     }
 
     /*
@@ -906,8 +905,8 @@ AtCleanup_Portals(void)
      */
     if (PointerIsValid(portal->cleanup))
     {
-
-
+      elog(WARNING, "skipping cleanup for portal \"%s\"", portal->name);
+      portal->cleanup = NULL;
     }
 
     /* Zap it. */
@@ -1023,7 +1022,7 @@ AtSubAbort_Portals(SubTransactionId mySubid, SubTransactionId parentSubid, Resou
          */
         if (portal->status == PORTAL_ACTIVE)
         {
-
+          MarkPortalFailed(portal);
         }
 
         /*
@@ -1067,8 +1066,8 @@ AtSubAbort_Portals(SubTransactionId mySubid, SubTransactionId parentSubid, Resou
      */
     if (PointerIsValid(portal->cleanup))
     {
-
-
+      portal->cleanup(portal);
+      portal->cleanup = NULL;
     }
 
     /* drop cached plan reference, if any */
@@ -1130,8 +1129,8 @@ AtSubCleanup_Portals(SubTransactionId mySubid)
      */
     if (PointerIsValid(portal->cleanup))
     {
-
-
+      elog(WARNING, "skipping cleanup for portal \"%s\"", portal->name);
+      portal->cleanup = NULL;
     }
 
     /* Zap it. */
@@ -1154,11 +1153,12 @@ pg_cursor(PG_FUNCTION_ARGS)
   /* check to see if caller supports us returning a tuplestore */
   if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* need to build tuplestore in query context */
@@ -1235,7 +1235,7 @@ ThereAreNoReadyPortals(void)
 
     if (portal->status == PORTAL_READY)
     {
-
+      return false;
     }
   }
 
@@ -1290,7 +1290,7 @@ HoldPinnedPortals(void)
       /* Verify it's in a suitable state to be held */
       if (portal->status != PORTAL_READY)
       {
-
+        elog(ERROR, "pinned portal is not ready to be auto-held");
       }
 
       HoldPortal(portal);
@@ -1347,6 +1347,6 @@ ForgetPortalSnapshots(void)
 
   if (numPortalSnaps != numActiveSnaps)
   {
-
+    elog(ERROR, "portal snapshots (%d) did not account for all active snapshots (%d)", numPortalSnaps, numActiveSnaps);
   }
 }

@@ -55,7 +55,8 @@ static void
 update_replication_progress(LogicalDecodingContext *ctx);
 
 /* Entry in the map used to remember which relation schemas we sent. */
-typedef struct RelationSyncEntry {
+typedef struct RelationSyncEntry
+{
   Oid relid;        /* relation oid */
   bool schema_sent; /* did we send the schema? */
   bool replicate_valid;
@@ -98,39 +99,50 @@ parse_output_parameters(List *options, uint32 *protocol_version, List **publicat
   bool protocol_version_given = false;
   bool publication_names_given = false;
 
-  foreach (lc, options) {
+  foreach (lc, options)
+  {
     DefElem *defel = (DefElem *)lfirst(lc);
 
     Assert(defel->arg == NULL || IsA(defel->arg, String));
 
     /* Check each param, whether or not we recognize it */
-    if (strcmp(defel->defname, "proto_version") == 0) {
+    if (strcmp(defel->defname, "proto_version") == 0)
+    {
       int64 parsed;
 
-      if (protocol_version_given) {
+      if (protocol_version_given)
+      {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       protocol_version_given = true;
 
-      if (!scanint8(strVal(defel->arg), true, &parsed)) {
+      if (!scanint8(strVal(defel->arg), true, &parsed))
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid proto_version")));
       }
 
-      if (parsed > PG_UINT32_MAX || parsed < 0) {
+      if (parsed > PG_UINT32_MAX || parsed < 0)
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("proto_version \"%s\" out of range", strVal(defel->arg))));
       }
 
       *protocol_version = (uint32)parsed;
-    } else if (strcmp(defel->defname, "publication_names") == 0) {
-      if (publication_names_given) {
+    }
+    else if (strcmp(defel->defname, "publication_names") == 0)
+    {
+      if (publication_names_given)
+      {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       publication_names_given = true;
 
-      if (!SplitIdentifierString(strVal(defel->arg), ',', publication_names)) {
+      if (!SplitIdentifierString(strVal(defel->arg), ',', publication_names))
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid publication_names syntax")));
       }
-    } else {
+    }
+    else
+    {
       elog(ERROR, "unrecognized pgoutput option: %s", defel->defname);
     }
   }
@@ -157,20 +169,24 @@ pgoutput_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_
    *
    * Parse and validate options passed by the client.
    */
-  if (!is_init) {
+  if (!is_init)
+  {
     /* Parse the params and ERROR if we see any we don't recognize */
     parse_output_parameters(ctx->output_plugin_options, &data->protocol_version, &data->publication_names);
 
     /* Check if we support requested protocol */
-    if (data->protocol_version > LOGICALREP_PROTO_VERSION_NUM) {
-      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("client sent proto_version=%d but we only support protocol %d or lower",   data->protocol_version, LOGICALREP_PROTO_VERSION_NUM)));
+    if (data->protocol_version > LOGICALREP_PROTO_VERSION_NUM)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("client sent proto_version=%d but we only support protocol %d or lower", data->protocol_version, LOGICALREP_PROTO_VERSION_NUM)));
     }
 
-    if (data->protocol_version < LOGICALREP_PROTO_MIN_VERSION_NUM) {
-      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("client sent proto_version=%d but we only support protocol %d or higher",     data->protocol_version, LOGICALREP_PROTO_MIN_VERSION_NUM)));
+    if (data->protocol_version < LOGICALREP_PROTO_MIN_VERSION_NUM)
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("client sent proto_version=%d but we only support protocol %d or higher", data->protocol_version, LOGICALREP_PROTO_MIN_VERSION_NUM)));
     }
 
-    if (list_length(data->publication_names) < 1) {
+    if (list_length(data->publication_names) < 1)
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("publication_names parameter missing")));
     }
 
@@ -195,7 +211,8 @@ pgoutput_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
   OutputPluginPrepareWrite(ctx, !send_replication_origin);
   logicalrep_write_begin(ctx->out, txn);
 
-  if (send_replication_origin) {
+  if (send_replication_origin)
+  {
     char *origin;
 
     /* Message boundary */
@@ -212,7 +229,8 @@ pgoutput_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
      *	- send some special "unknown" origin
      *----------
      */
-    if (replorigin_by_oid(txn->origin_id, true, &origin)) {
+    if (replorigin_by_oid(txn->origin_id, true, &origin))
+    {
       logicalrep_write_origin(ctx->out, origin, txn->origin_lsn);
     }
   }
@@ -239,7 +257,8 @@ pgoutput_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecP
 static void
 maybe_send_schema(LogicalDecodingContext *ctx, Relation relation, RelationSyncEntry *relentry)
 {
-  if (!relentry->schema_sent) {
+  if (!relentry->schema_sent)
+  {
     TupleDesc desc;
     int i;
 
@@ -253,14 +272,17 @@ maybe_send_schema(LogicalDecodingContext *ctx, Relation relation, RelationSyncEn
      * This is important because only hand-assigned OIDs can be expected
      * to remain stable across major versions.
      */
-    for (i = 0; i < desc->natts; i++) {
+    for (i = 0; i < desc->natts; i++)
+    {
       Form_pg_attribute att = TupleDescAttr(desc, i);
 
-      if (att->attisdropped || att->attgenerated) {
+      if (att->attisdropped || att->attgenerated)
+      {
         continue;
       }
 
-      if (att->atttypid < FirstGenbkiObjectId) {
+      if (att->atttypid < FirstGenbkiObjectId)
+      {
         continue;
       }
 
@@ -288,30 +310,35 @@ pgoutput_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation rel
 
   update_replication_progress(ctx);
 
-  if (!is_publishable_relation(relation)) {
+  if (!is_publishable_relation(relation))
+  {
     return;
   }
 
   relentry = get_rel_sync_entry(data, RelationGetRelid(relation));
 
   /* First check the table filter */
-  switch (change->action) {
+  switch (change->action)
+  {
   case REORDER_BUFFER_CHANGE_INSERT:
-    if (!relentry->pubactions.pubinsert) {
+    if (!relentry->pubactions.pubinsert)
+    {
       return;
     }
     break;
   case REORDER_BUFFER_CHANGE_UPDATE:
-    if (!relentry->pubactions.pubupdate) {
+    if (!relentry->pubactions.pubupdate)
+    {
       return;
     }
     break;
   case REORDER_BUFFER_CHANGE_DELETE:
-    if (!relentry->pubactions.pubdelete) {
+    if (!relentry->pubactions.pubdelete)
+    {
       return;
     }
     break;
-  default:;
+  default:
     Assert(false);
   }
 
@@ -321,13 +348,15 @@ pgoutput_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation rel
   maybe_send_schema(ctx, relation, relentry);
 
   /* Send the data */
-  switch (change->action) {
+  switch (change->action)
+  {
   case REORDER_BUFFER_CHANGE_INSERT:
     OutputPluginPrepareWrite(ctx, true);
     logicalrep_write_insert(ctx->out, relation, &change->data.tp.newtuple->tuple);
     OutputPluginWrite(ctx, true);
     break;
-  case REORDER_BUFFER_CHANGE_UPDATE: {
+  case REORDER_BUFFER_CHANGE_UPDATE:
+  {
     HeapTuple oldtuple = change->data.tp.oldtuple ? &change->data.tp.oldtuple->tuple : NULL;
 
     OutputPluginPrepareWrite(ctx, true);
@@ -336,15 +365,18 @@ pgoutput_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, Relation rel
     break;
   }
   case REORDER_BUFFER_CHANGE_DELETE:
-    if (change->data.tp.oldtuple) {
+    if (change->data.tp.oldtuple)
+    {
       OutputPluginPrepareWrite(ctx, true);
       logicalrep_write_delete(ctx->out, relation, &change->data.tp.oldtuple->tuple);
       OutputPluginWrite(ctx, true);
-    } else {
+    }
+    else
+    {
       elog(DEBUG1, "didn't send DELETE change because of missing oldtuple");
     }
     break;
-  default:;
+  default:
     Assert(false);
   }
 
@@ -370,17 +402,20 @@ pgoutput_truncate(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, int nrelat
   relids = palloc0(nrelations * sizeof(Oid));
   nrelids = 0;
 
-  for (i = 0; i < nrelations; i++) {
+  for (i = 0; i < nrelations; i++)
+  {
     Relation relation = relations[i];
     Oid relid = RelationGetRelid(relation);
 
-    if (!is_publishable_relation(relation)) {
+    if (!is_publishable_relation(relation))
+    {
       continue;
     }
 
     relentry = get_rel_sync_entry(data, relid);
 
-    if (!relentry->pubactions.pubtruncate) {
+    if (!relentry->pubactions.pubtruncate)
+    {
       continue;
     }
 
@@ -388,7 +423,8 @@ pgoutput_truncate(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, int nrelat
     maybe_send_schema(ctx, relation, relentry);
   }
 
-  if (nrelids > 0) {
+  if (nrelids > 0)
+  {
     OutputPluginPrepareWrite(ctx, true);
     logicalrep_write_truncate(ctx->out, nrelids, relids, change->data.truncate.cascade, change->data.truncate.restart_seqs);
     OutputPluginWrite(ctx, true);
@@ -416,7 +452,8 @@ pgoutput_origin_filter(LogicalDecodingContext *ctx, RepOriginId origin_id)
 static void
 pgoutput_shutdown(LogicalDecodingContext *ctx)
 {
-  if (RelationSyncCache) {
+  if (RelationSyncCache)
+  {
     hash_destroy(RelationSyncCache);
     RelationSyncCache = NULL;
   }
@@ -431,7 +468,8 @@ LoadPublications(List *pubnames)
   List *result = NIL;
   ListCell *lc;
 
-  foreach (lc, pubnames) {
+  foreach (lc, pubnames)
+  {
     char *pubname = (char *)lfirst(lc);
     Publication *pub = GetPublicationByName(pubname, false);
 
@@ -469,7 +507,8 @@ init_rel_sync_cache(MemoryContext cachectx)
   HASHCTL ctl;
   MemoryContext old_ctxt;
 
-  if (RelationSyncCache != NULL) {
+  if (RelationSyncCache != NULL)
+  {
     return;
   }
 
@@ -508,14 +547,17 @@ get_rel_sync_entry(PGOutputData *data, Oid relid)
   Assert(entry != NULL);
 
   /* Not found means schema wasn't sent */
-  if (!found || !entry->replicate_valid) {
+  if (!found || !entry->replicate_valid)
+  {
     List *pubids = GetRelationPublications(relid);
     ListCell *lc;
 
     /* Reload publications if needed before use. */
-    if (!publications_valid) {
+    if (!publications_valid)
+    {
       oldctx = MemoryContextSwitchTo(CacheMemoryContext);
-      if (data->publications) {
+      if (data->publications)
+      {
         list_free_deep(data->publications);
       }
 
@@ -531,17 +573,20 @@ get_rel_sync_entry(PGOutputData *data, Oid relid)
      */
     entry->pubactions.pubinsert = entry->pubactions.pubupdate = entry->pubactions.pubdelete = entry->pubactions.pubtruncate = false;
 
-    foreach (lc, data->publications) {
+    foreach (lc, data->publications)
+    {
       Publication *pub = lfirst(lc);
 
-      if (pub->alltables || list_member_oid(pubids, pub->oid)) {
+      if (pub->alltables || list_member_oid(pubids, pub->oid))
+      {
         entry->pubactions.pubinsert |= pub->pubactions.pubinsert;
         entry->pubactions.pubupdate |= pub->pubactions.pubupdate;
         entry->pubactions.pubdelete |= pub->pubactions.pubdelete;
         entry->pubactions.pubtruncate |= pub->pubactions.pubtruncate;
       }
 
-      if (entry->pubactions.pubinsert && entry->pubactions.pubupdate && entry->pubactions.pubdelete && entry->pubactions.pubtruncate) {
+      if (entry->pubactions.pubinsert && entry->pubactions.pubupdate && entry->pubactions.pubdelete && entry->pubactions.pubtruncate)
+      {
         break;
       }
     }
@@ -551,7 +596,8 @@ get_rel_sync_entry(PGOutputData *data, Oid relid)
     entry->replicate_valid = true;
   }
 
-  if (!found) {
+  if (!found)
+  {
     entry->schema_sent = false;
   }
 
@@ -571,7 +617,8 @@ rel_sync_cache_relation_cb(Datum arg, Oid relid)
    * RelSchemaSyncCache is destroyed when the decoding finishes, but there
    * is no way to unregister the relcache invalidation callback.
    */
-  if (RelationSyncCache == NULL) {
+  if (RelationSyncCache == NULL)
+  {
     return;
   }
 
@@ -592,7 +639,8 @@ rel_sync_cache_relation_cb(Datum arg, Oid relid)
   /*
    * Reset schema sent status as the relation definition may have changed.
    */
-  if (entry != NULL) {
+  if (entry != NULL)
+  {
     entry->schema_sent = false;
   }
 }
@@ -611,7 +659,8 @@ rel_sync_cache_publication_cb(Datum arg, int cacheid, uint32 hashvalue)
    * RelSchemaSyncCache is destroyed when the decoding finishes, but there
    * is no way to unregister the relcache invalidation callback.
    */
-  if (RelationSyncCache == NULL) {
+  if (RelationSyncCache == NULL)
+  {
     return;
   }
 
@@ -620,7 +669,8 @@ rel_sync_cache_publication_cb(Datum arg, int cacheid, uint32 hashvalue)
    * mark the whole cache as invalid.
    */
   hash_seq_init(&status, RelationSyncCache);
-  while ((entry = (RelationSyncEntry *)hash_seq_search(&status)) != NULL) {
+  while ((entry = (RelationSyncEntry *)hash_seq_search(&status)) != NULL)
+  {
     entry->replicate_valid = false;
   }
 }
@@ -651,7 +701,8 @@ update_replication_progress(LogicalDecodingContext *ctx)
    * Otherwise, after continuously processing CHANGES_THRESHOLD changes, we
    * try to send a keepalive message if required.
    */
-  if (ctx->end_xact || ++changes_count >= CHANGES_THRESHOLD) {
+  if (ctx->end_xact || ++changes_count >= CHANGES_THRESHOLD)
+  {
     OutputPluginUpdateProgress(ctx);
     changes_count = 0;
   }

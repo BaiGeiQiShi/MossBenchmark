@@ -258,16 +258,16 @@ ginBuildCallback(Relation index, HeapTuple htup, Datum *values, bool *isnull, bo
     uint32 nlist;
     OffsetNumber attnum;
 
+    ginBeginBAScan(&buildstate->accum);
+    while ((list = ginGetBAEntry(&buildstate->accum, &attnum, &key, &category, &nlist)) != NULL)
+    {
+      /* there could be many entries, so be willing to abort here */
+      CHECK_FOR_INTERRUPTS();
+      ginEntryInsert(&buildstate->ginstate, attnum, key, category, list, nlist, &buildstate->buildStats);
+    }
 
-
-
-
-
-
-
-
-
-
+    MemoryContextReset(buildstate->tmpCtx);
+    ginInitBA(&buildstate->accum);
   }
 
   MemoryContextSwitchTo(oldCtx);
@@ -289,7 +289,7 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 
   if (RelationGetNumberOfBlocks(index) != 0)
   {
-
+    elog(ERROR, "index \"%s\" already contains data", RelationGetRelationName(index));
   }
 
   initGinState(&buildstate.ginstate, index);
@@ -382,27 +382,27 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 void
 ginbuildempty(Relation index)
 {
+  Buffer RootBuffer, MetaBuffer;
 
+  /* An empty GIN index has two pages. */
+  MetaBuffer = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
+  LockBuffer(MetaBuffer, BUFFER_LOCK_EXCLUSIVE);
+  RootBuffer = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
+  LockBuffer(RootBuffer, BUFFER_LOCK_EXCLUSIVE);
 
+  /* Initialize and xlog metabuffer and root buffer. */
+  START_CRIT_SECTION();
+  GinInitMetabuffer(MetaBuffer);
+  MarkBufferDirty(MetaBuffer);
+  log_newpage_buffer(MetaBuffer, true);
+  GinInitBuffer(RootBuffer, GIN_LEAF);
+  MarkBufferDirty(RootBuffer);
+  log_newpage_buffer(RootBuffer, false);
+  END_CRIT_SECTION();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Unlock and release the buffers. */
+  UnlockReleaseBuffer(MetaBuffer);
+  UnlockReleaseBuffer(RootBuffer);
 }
 
 /*

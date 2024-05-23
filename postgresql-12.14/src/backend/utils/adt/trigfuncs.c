@@ -34,25 +34,25 @@ suppress_redundant_updates_trigger(PG_FUNCTION_ARGS)
   /* make sure it's called as a trigger */
   if (!CALLED_AS_TRIGGER(fcinfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("suppress_redundant_updates_trigger: must be called as trigger")));
   }
 
   /* and that it's called on update */
   if (!TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("suppress_redundant_updates_trigger: must be called on update")));
   }
 
   /* and that it's called before update */
   if (!TRIGGER_FIRED_BEFORE(trigdata->tg_event))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("suppress_redundant_updates_trigger: must be called before update")));
   }
 
   /* and that it's called for each row */
   if (!TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("suppress_redundant_updates_trigger: must be called for each row")));
   }
 
   /* get tuple data, set default result */

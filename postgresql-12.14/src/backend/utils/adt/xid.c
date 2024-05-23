@@ -52,9 +52,9 @@ xidout(PG_FUNCTION_ARGS)
 Datum
 xidrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_TRANSACTIONID((TransactionId)pq_getmsgint(buf, sizeof(TransactionId)));
 }
 
 /*
@@ -63,12 +63,12 @@ xidrecv(PG_FUNCTION_ARGS)
 Datum
 xidsend(PG_FUNCTION_ARGS)
 {
+  TransactionId arg1 = PG_GETARG_TRANSACTIONID(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -89,47 +89,45 @@ xideq(PG_FUNCTION_ARGS)
 Datum
 xidneq(PG_FUNCTION_ARGS)
 {
+  TransactionId xid1 = PG_GETARG_TRANSACTIONID(0);
+  TransactionId xid2 = PG_GETARG_TRANSACTIONID(1);
 
-
-
-
+  PG_RETURN_BOOL(!TransactionIdEquals(xid1, xid2));
 }
 
 /*
- *		xid_age			- compute age of an XID (relative to
- *latest stable xid)
+ *		xid_age			- compute age of an XID (relative to latest stable xid)
  */
 Datum
 xid_age(PG_FUNCTION_ARGS)
 {
+  TransactionId xid = PG_GETARG_TRANSACTIONID(0);
+  TransactionId now = GetStableLatestTransactionId();
 
+  /* Permanent XIDs are always infinitely old */
+  if (!TransactionIdIsNormal(xid))
+  {
+    PG_RETURN_INT32(INT_MAX);
+  }
 
-
-
-
-
-
-
-
-
+  PG_RETURN_INT32((int32)(now - xid));
 }
 
 /*
- *		mxid_age			- compute age of a multi XID
- *(relative to latest stable mxid)
+ *		mxid_age			- compute age of a multi XID (relative to latest stable mxid)
  */
 Datum
 mxid_age(PG_FUNCTION_ARGS)
 {
+  TransactionId xid = PG_GETARG_TRANSACTIONID(0);
+  MultiXactId now = ReadNextMultiXactId();
 
+  if (!MultiXactIdIsValid(xid))
+  {
+    PG_RETURN_INT32(INT_MAX);
+  }
 
-
-
-
-
-
-
-
+  PG_RETURN_INT32((int32)(now - xid));
 }
 
 /*
@@ -153,7 +151,7 @@ xidComparator(const void *arg1, const void *arg2)
   {
     return -1;
   }
-
+  return 0;
 }
 
 /*
@@ -167,28 +165,27 @@ xidComparator(const void *arg1, const void *arg2)
 int
 xidLogicalComparator(const void *arg1, const void *arg2)
 {
+  TransactionId xid1 = *(const TransactionId *)arg1;
+  TransactionId xid2 = *(const TransactionId *)arg2;
 
+  Assert(TransactionIdIsNormal(xid1));
+  Assert(TransactionIdIsNormal(xid2));
 
+  if (TransactionIdPrecedes(xid1, xid2))
+  {
+    return -1;
+  }
 
+  if (TransactionIdPrecedes(xid2, xid1))
+  {
+    return 1;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return 0;
 }
 
 /*****************************************************************************
- *	 COMMAND IDENTIFIER ROUTINES
- **
+ *	 COMMAND IDENTIFIER ROUTINES											 *
  *****************************************************************************/
 
 /*
@@ -221,9 +218,9 @@ cidout(PG_FUNCTION_ARGS)
 Datum
 cidrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_COMMANDID((CommandId)pq_getmsgint(buf, sizeof(CommandId)));
 }
 
 /*
@@ -232,19 +229,19 @@ cidrecv(PG_FUNCTION_ARGS)
 Datum
 cidsend(PG_FUNCTION_ARGS)
 {
+  CommandId arg1 = PG_GETARG_COMMANDID(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 Datum
 cideq(PG_FUNCTION_ARGS)
 {
+  CommandId arg1 = PG_GETARG_COMMANDID(0);
+  CommandId arg2 = PG_GETARG_COMMANDID(1);
 
-
-
-
+  PG_RETURN_BOOL(arg1 == arg2);
 }

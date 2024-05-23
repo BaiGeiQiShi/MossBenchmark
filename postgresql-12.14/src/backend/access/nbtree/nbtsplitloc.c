@@ -242,7 +242,7 @@ _bt_findsplitloc(Relation rel, Page page, OffsetNumber newitemoff, Size newitems
    */
   if (state.nsplits == 0)
   {
-
+    elog(ERROR, "could not find a feasible split point for index \"%s\"", RelationGetRelationName(rel));
   }
 
   /*
@@ -622,7 +622,7 @@ _bt_afternewitemoff(FindSplitData *state, OffsetNumber maxoff, int leaffillfacto
   /* Ascending insertion pattern never inferred when new item is first */
   if (state->newitemoff == P_FIRSTKEY)
   {
-
+    return false;
   }
 
   /*
@@ -653,7 +653,7 @@ _bt_afternewitemoff(FindSplitData *state, OffsetNumber maxoff, int leaffillfacto
    */
   if (state->newitemsz > MAXALIGN(sizeof(IndexTupleData) + sizeof(int64) * 2) + sizeof(ItemIdData))
   {
-
+    return false;
   }
 
   /*
@@ -822,7 +822,7 @@ _bt_bestsplitloc(FindSplitData *state, int perfectpenalty, bool *newitemonleft, 
      * Avoid the problem by peforming a 50:50 split when the new item is
      * just to the right of the would-be "many duplicates" split point.
      */
-
+    final = &state->splits[0];
   }
 
   *newitemonleft = final->newitemonleft;
@@ -1001,11 +1001,11 @@ _bt_interval_edges(FindSplitData *state, SplitPoint **leftinterval, SplitPoint *
        * to the left of "incoming tuple will become last on left page"
        * (delta-optimal)
        */
-
-
-
-
-
+      Assert(distant->firstoldonright == state->newitemoff);
+      if (*leftinterval == NULL)
+      {
+        *leftinterval = distant;
+      }
     }
     else if (distant->newitemonleft && !deltaoptimal->newitemonleft)
     {
@@ -1014,11 +1014,11 @@ _bt_interval_edges(FindSplitData *state, SplitPoint **leftinterval, SplitPoint *
        * the right of "incoming tuple will become first on right page"
        * (delta-optimal)
        */
-
-
-
-
-
+      Assert(distant->firstoldonright == state->newitemoff);
+      if (*rightinterval == NULL)
+      {
+        *rightinterval = distant;
+      }
     }
     else
     {

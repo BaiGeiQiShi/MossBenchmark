@@ -90,8 +90,7 @@ SSL_CTX_set_max_proto_version(SSL_CTX *ctx, int version);
 #endif
 
 /* ------------------------------------------------------------ */
-/*						 Public interface
- */
+/*						 Public interface						*/
 /* ------------------------------------------------------------ */
 
 int
@@ -100,7 +99,8 @@ be_tls_init(bool isServerStart)
   SSL_CTX *context;
 
   /* This stuff need be done only once. */
-  if (!SSL_initialized) {
+  if (!SSL_initialized)
+  {
 #ifdef HAVE_OPENSSL_INIT_SSL
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL);
 #else
@@ -122,7 +122,8 @@ be_tls_init(bool isServerStart)
    * actually allow SSL v2 or v3, only TLS protocols (see below).
    */
   context = SSL_CTX_new(SSLv23_method());
-  if (!context) {
+  if (!context)
+  {
     ereport(isServerStart ? FATAL : LOG, (errmsg("could not create SSL context: %s", SSLerrmessage(ERR_get_error()))));
     goto error;
   }
@@ -136,14 +137,21 @@ be_tls_init(bool isServerStart)
   /*
    * Set password callback
    */
-  if (isServerStart) {
-    if (ssl_passphrase_command[0]) {
+  if (isServerStart)
+  {
+    if (ssl_passphrase_command[0])
+    {
       SSL_CTX_set_default_passwd_cb(context, ssl_external_passwd_cb);
     }
-  } else {
-    if (ssl_passphrase_command[0] && ssl_passphrase_command_supports_reload) {
+  }
+  else
+  {
+    if (ssl_passphrase_command[0] && ssl_passphrase_command_supports_reload)
+    {
       SSL_CTX_set_default_passwd_cb(context, ssl_external_passwd_cb);
-    } else {
+    }
+    else
+    {
 
       /*
        * If reloading and no external command is configured, override
@@ -160,12 +168,14 @@ be_tls_init(bool isServerStart)
   /*
    * Load and verify server's certificate and private key
    */
-  if (SSL_CTX_use_certificate_chain_file(context, ssl_cert_file) != 1) {
+  if (SSL_CTX_use_certificate_chain_file(context, ssl_cert_file) != 1)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load server certificate file \"%s\": %s", ssl_cert_file, SSLerrmessage(ERR_get_error()))));
     goto error;
   }
 
-  if (!check_ssl_key_file_permissions(ssl_key_file, isServerStart)) {
+  if (!check_ssl_key_file_permissions(ssl_key_file, isServerStart))
+  {
     goto error;
   }
 
@@ -174,39 +184,50 @@ be_tls_init(bool isServerStart)
    */
   dummy_ssl_passwd_cb_called = false;
 
-  if (SSL_CTX_use_PrivateKey_file(context, ssl_key_file, SSL_FILETYPE_PEM) != 1) {
-    if (dummy_ssl_passwd_cb_called) {
+  if (SSL_CTX_use_PrivateKey_file(context, ssl_key_file, SSL_FILETYPE_PEM) != 1)
+  {
+    if (dummy_ssl_passwd_cb_called)
+    {
       ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("private key file \"%s\" cannot be reloaded because it requires a passphrase", ssl_key_file)));
-    } else {
+    }
+    else
+    {
       ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load private key file \"%s\": %s", ssl_key_file, SSLerrmessage(ERR_get_error()))));
     }
     goto error;
   }
 
-  if (SSL_CTX_check_private_key(context) != 1) {
+  if (SSL_CTX_check_private_key(context) != 1)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("check of private key failed: %s", SSLerrmessage(ERR_get_error()))));
     goto error;
   }
 
-  if (ssl_min_protocol_version) {
+  if (ssl_min_protocol_version)
+  {
     int ssl_ver = ssl_protocol_version_to_openssl(ssl_min_protocol_version, "ssl_min_protocol_version", isServerStart ? FATAL : LOG);
 
-    if (ssl_ver == -1) {
+    if (ssl_ver == -1)
+    {
       goto error;
     }
-    if (!SSL_CTX_set_min_proto_version(context, ssl_ver)) {
+    if (!SSL_CTX_set_min_proto_version(context, ssl_ver))
+    {
       ereport(isServerStart ? FATAL : LOG, (errmsg("could not set minimum SSL protocol version")));
       goto error;
     }
   }
 
-  if (ssl_max_protocol_version) {
+  if (ssl_max_protocol_version)
+  {
     int ssl_ver = ssl_protocol_version_to_openssl(ssl_max_protocol_version, "ssl_max_protocol_version", isServerStart ? FATAL : LOG);
 
-    if (ssl_ver == -1) {
+    if (ssl_ver == -1)
+    {
       goto error;
     }
-    if (!SSL_CTX_set_max_proto_version(context, ssl_ver)) {
+    if (!SSL_CTX_set_max_proto_version(context, ssl_ver))
+    {
       ereport(isServerStart ? FATAL : LOG, (errmsg("could not set maximum SSL protocol version")));
       goto error;
     }
@@ -231,31 +252,37 @@ be_tls_init(bool isServerStart)
 #endif
 
   /* set up ephemeral DH and ECDH keys */
-  if (!initialize_dh(context, isServerStart)) {
+  if (!initialize_dh(context, isServerStart))
+  {
     goto error;
   }
-  if (!initialize_ecdh(context, isServerStart)) {
+  if (!initialize_ecdh(context, isServerStart))
+  {
     goto error;
   }
 
   /* set up the allowed cipher list */
-  if (SSL_CTX_set_cipher_list(context, SSLCipherSuites) != 1) {
+  if (SSL_CTX_set_cipher_list(context, SSLCipherSuites) != 1)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not set the cipher list (no valid ciphers available)")));
     goto error;
   }
 
   /* Let server choose order */
-  if (SSLPreferServerCiphers) {
+  if (SSLPreferServerCiphers)
+  {
     SSL_CTX_set_options(context, SSL_OP_CIPHER_SERVER_PREFERENCE);
   }
 
   /*
    * Load CA store, so we can verify client certificates if needed.
    */
-  if (ssl_ca_file[0]) {
+  if (ssl_ca_file[0])
+  {
     STACK_OF(X509_NAME) * root_cert_list;
 
-    if (SSL_CTX_load_verify_locations(context, ssl_ca_file, NULL) != 1 || (root_cert_list = SSL_load_client_CA_file(ssl_ca_file)) == NULL) {
+    if (SSL_CTX_load_verify_locations(context, ssl_ca_file, NULL) != 1 || (root_cert_list = SSL_load_client_CA_file(ssl_ca_file)) == NULL)
+    {
       ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load root certificate file \"%s\": %s", ssl_ca_file, SSLerrmessage(ERR_get_error()))));
       goto error;
     }
@@ -282,20 +309,25 @@ be_tls_init(bool isServerStart)
    * http://searchsecurity.techtarget.com/sDefinition/0,,sid14_gci803160,00.html
    *----------
    */
-  if (ssl_crl_file[0]) {
+  if (ssl_crl_file[0])
+  {
     X509_STORE *cvstore = SSL_CTX_get_cert_store(context);
 
-    if (cvstore) {
+    if (cvstore)
+    {
       /* Set the flags to check against the complete CRL chain */
-      if (X509_STORE_load_locations(cvstore, ssl_crl_file, NULL) == 1) {
+      if (X509_STORE_load_locations(cvstore, ssl_crl_file, NULL) == 1)
+      {
         /* OpenSSL 0.96 does not support X509_V_FLAG_CRL_CHECK */
 #ifdef X509_V_FLAG_CRL_CHECK
         X509_STORE_set_flags(cvstore, X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
 #else
-        ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("SSL certificate revocation list file \"%s\" ignored", ssl_crl_file),errdetail("SSL library does not support certificate revocation lists.")));
+        ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("SSL certificate revocation list file \"%s\" ignored", ssl_crl_file), errdetail("SSL library does not support certificate revocation lists.")));
 #endif
-      } else {
-        ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load SSL certificate revocation list file \"%s\": %s",   ssl_crl_file, SSLerrmessage(ERR_get_error()))));
+      }
+      else
+      {
+        ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load SSL certificate revocation list file \"%s\": %s", ssl_crl_file, SSLerrmessage(ERR_get_error()))));
         goto error;
       }
     }
@@ -304,7 +336,8 @@ be_tls_init(bool isServerStart)
   /*
    * Success!  Replace any existing SSL_context.
    */
-  if (SSL_context) {
+  if (SSL_context)
+  {
     SSL_CTX_free(SSL_context);
   }
 
@@ -313,9 +346,12 @@ be_tls_init(bool isServerStart)
   /*
    * Set flag to remember whether CA store has been loaded into SSL_context.
    */
-  if (ssl_ca_file[0]) {
+  if (ssl_ca_file[0])
+  {
     ssl_loaded_verify_locations = true;
-  } else {
+  }
+  else
+  {
     ssl_loaded_verify_locations = false;
   }
 
@@ -323,7 +359,8 @@ be_tls_init(bool isServerStart)
 
   /* Clean up by releasing working context. */
 error:
-  if (context) {
+  if (context)
+  {
     SSL_CTX_free(context);
   }
   return -1;
@@ -332,7 +369,8 @@ error:
 void
 be_tls_destroy(void)
 {
-  if (SSL_context) {
+  if (SSL_context)
+  {
     SSL_CTX_free(SSL_context);
   }
   SSL_context = NULL;
@@ -350,16 +388,19 @@ be_tls_open_server(Port *port)
   Assert(!port->ssl);
   Assert(!port->peer);
 
-  if (!SSL_context) {
+  if (!SSL_context)
+  {
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("could not initialize SSL connection: SSL context not set up")));
     return -1;
   }
 
-  if (!(port->ssl = SSL_new(SSL_context))) {
+  if (!(port->ssl = SSL_new(SSL_context)))
+  {
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("could not initialize SSL connection: %s", SSLerrmessage(ERR_get_error()))));
     return -1;
   }
-  if (!my_SSL_set_fd(port, port->sock)) {
+  if (!my_SSL_set_fd(port, port->sock))
+  {
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("could not set SSL socket: %s", SSLerrmessage(ERR_get_error()))));
     return -1;
   }
@@ -377,7 +418,8 @@ aloop:
    */
   ERR_clear_error();
   r = SSL_accept(port->ssl);
-  if (r <= 0) {
+  if (r <= 0)
+  {
     err = SSL_get_error(port->ssl, r);
 
     /*
@@ -389,7 +431,8 @@ aloop:
      * earliest possible point ERR_get_error() may be called.
      */
     ecode = ERR_get_error();
-    switch (err) {
+    switch (err)
+    {
     case SSL_ERROR_WANT_READ:
     case SSL_ERROR_WANT_WRITE:
       /* not allowed during connection establishment */
@@ -400,18 +443,24 @@ aloop:
        * point authentication_timeout still employs
        * StartupPacketTimeoutHandler() which directly exits.
        */
-      if (err == SSL_ERROR_WANT_READ) {
+      if (err == SSL_ERROR_WANT_READ)
+      {
         waitfor = WL_SOCKET_READABLE | WL_EXIT_ON_PM_DEATH;
-      } else {
+      }
+      else
+      {
         waitfor = WL_SOCKET_WRITEABLE | WL_EXIT_ON_PM_DEATH;
       }
 
       (void)WaitLatchOrSocket(MyLatch, waitfor, port->sock, 0, WAIT_EVENT_SSL_OPEN_SERVER);
       goto aloop;
     case SSL_ERROR_SYSCALL:
-      if (r < 0) {
+      if (r < 0)
+      {
         ereport(COMMERROR, (errcode_for_socket_access(), errmsg("could not accept SSL connection: %m")));
-      } else {
+      }
+      else
+      {
         ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("could not accept SSL connection: EOF detected")));
       }
       break;
@@ -421,7 +470,7 @@ aloop:
     case SSL_ERROR_ZERO_RETURN:
       ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("could not accept SSL connection: EOF detected")));
       break;
-    default:;
+    default:
       ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unrecognized SSL error code: %d", err)));
       break;
     }
@@ -434,17 +483,20 @@ aloop:
   /* and extract the Common Name from it. */
   port->peer_cn = NULL;
   port->peer_cert_valid = false;
-  if (port->peer != NULL) {
+  if (port->peer != NULL)
+  {
     int len;
 
     len = X509_NAME_get_text_by_NID(X509_get_subject_name(port->peer), NID_commonName, NULL, 0);
-    if (len != -1) {
+    if (len != -1)
+    {
       char *peer_cn;
 
       peer_cn = MemoryContextAlloc(TopMemoryContext, len + 1);
       r = X509_NAME_get_text_by_NID(X509_get_subject_name(port->peer), NID_commonName, peer_cn, len + 1);
       peer_cn[len] = '\0';
-      if (r != len) {
+      if (r != len)
+      {
         /* shouldn't happen */
         pfree(peer_cn);
         return -1;
@@ -454,7 +506,8 @@ aloop:
        * Reject embedded NULLs in certificate common name to prevent
        * attacks like CVE-2009-4034.
        */
-      if (len != strlen(peer_cn)) {
+      if (len != strlen(peer_cn))
+      {
         ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("SSL certificate's common name contains embedded null")));
         pfree(peer_cn);
         return -1;
@@ -474,19 +527,22 @@ aloop:
 void
 be_tls_close(Port *port)
 {
-  if (port->ssl) {
+  if (port->ssl)
+  {
     SSL_shutdown(port->ssl);
     SSL_free(port->ssl);
     port->ssl = NULL;
     port->ssl_in_use = false;
   }
 
-  if (port->peer) {
+  if (port->peer)
+  {
     X509_free(port->peer);
     port->peer = NULL;
   }
 
-  if (port->peer_cn) {
+  if (port->peer_cn)
+  {
     pfree(port->peer_cn);
     port->peer_cn = NULL;
   }
@@ -504,7 +560,8 @@ be_tls_read(Port *port, void *ptr, size_t len, int *waitfor)
   n = SSL_read(port->ssl, ptr, len);
   err = SSL_get_error(port->ssl, n);
   ecode = (err != SSL_ERROR_NONE || n < 0) ? ERR_get_error() : 0;
-  switch (err) {
+  switch (err)
+  {
   case SSL_ERROR_NONE:
     /* a-ok */
     break;
@@ -520,7 +577,8 @@ be_tls_read(Port *port, void *ptr, size_t len, int *waitfor)
     break;
   case SSL_ERROR_SYSCALL:
     /* leave it to caller to ereport the value of errno */
-    if (n != -1) {
+    if (n != -1)
+    {
       errno = ECONNRESET;
       n = -1;
     }
@@ -534,7 +592,7 @@ be_tls_read(Port *port, void *ptr, size_t len, int *waitfor)
     /* connection was cleanly shut down by peer */
     n = 0;
     break;
-  default:;
+  default:
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unrecognized SSL error code: %d", err)));
     errno = ECONNRESET;
     n = -1;
@@ -556,7 +614,8 @@ be_tls_write(Port *port, void *ptr, size_t len, int *waitfor)
   n = SSL_write(port->ssl, ptr, len);
   err = SSL_get_error(port->ssl, n);
   ecode = (err != SSL_ERROR_NONE || n < 0) ? ERR_get_error() : 0;
-  switch (err) {
+  switch (err)
+  {
   case SSL_ERROR_NONE:
     /* a-ok */
     break;
@@ -572,7 +631,8 @@ be_tls_write(Port *port, void *ptr, size_t len, int *waitfor)
     break;
   case SSL_ERROR_SYSCALL:
     /* leave it to caller to ereport the value of errno */
-    if (n != -1) {
+    if (n != -1)
+    {
       errno = ECONNRESET;
       n = -1;
     }
@@ -591,7 +651,7 @@ be_tls_write(Port *port, void *ptr, size_t len, int *waitfor)
     errno = ECONNRESET;
     n = -1;
     break;
-  default:;
+  default:
     ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unrecognized SSL error code: %d", err)));
     errno = ECONNRESET;
     n = -1;
@@ -602,8 +662,7 @@ be_tls_write(Port *port, void *ptr, size_t len, int *waitfor)
 }
 
 /* ------------------------------------------------------------ */
-/*						Internal functions
- */
+/*						Internal functions						*/
 /* ------------------------------------------------------------ */
 
 /*
@@ -632,12 +691,15 @@ my_sock_read(BIO *h, char *buf, int size)
 {
   int res = 0;
 
-  if (buf != NULL) {
+  if (buf != NULL)
+  {
     res = secure_raw_read(((Port *)BIO_get_data(h)), buf, size);
     BIO_clear_retry_flags(h);
-    if (res <= 0) {
+    if (res <= 0)
+    {
       /* If we were interrupted, tell caller to retry */
-      if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) {
+      if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+      {
         BIO_set_retry_read(h);
       }
     }
@@ -653,9 +715,11 @@ my_sock_write(BIO *h, const char *buf, int size)
 
   res = secure_raw_write(((Port *)BIO_get_data(h)), buf, size);
   BIO_clear_retry_flags(h);
-  if (res <= 0) {
+  if (res <= 0)
+  {
     /* If we were interrupted, tell caller to retry */
-    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) {
+    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+    {
       BIO_set_retry_write(h);
     }
   }
@@ -666,28 +730,33 @@ my_sock_write(BIO *h, const char *buf, int size)
 static BIO_METHOD *
 my_BIO_s_socket(void)
 {
-  if (!my_bio_methods) {
+  if (!my_bio_methods)
+  {
     BIO_METHOD *biom = (BIO_METHOD *)BIO_s_socket();
 #ifdef HAVE_BIO_METH_NEW
     int my_bio_index;
 
     my_bio_index = BIO_get_new_index();
-    if (my_bio_index == -1) {
+    if (my_bio_index == -1)
+    {
       return NULL;
     }
     my_bio_index |= (BIO_TYPE_DESCRIPTOR | BIO_TYPE_SOURCE_SINK);
     my_bio_methods = BIO_meth_new(my_bio_index, "PostgreSQL backend socket");
-    if (!my_bio_methods) {
+    if (!my_bio_methods)
+    {
       return NULL;
     }
-    if (!BIO_meth_set_write(my_bio_methods, my_sock_write) || !BIO_meth_set_read(my_bio_methods, my_sock_read) || !BIO_meth_set_gets(my_bio_methods, BIO_meth_get_gets(biom)) || !BIO_meth_set_puts(my_bio_methods, BIO_meth_get_puts(biom)) || !BIO_meth_set_ctrl(my_bio_methods, BIO_meth_get_ctrl(biom)) || !BIO_meth_set_create(my_bio_methods, BIO_meth_get_create(biom)) || !BIO_meth_set_destroy(my_bio_methods, BIO_meth_get_destroy(biom)) || !BIO_meth_set_callback_ctrl(my_bio_methods, BIO_meth_get_callback_ctrl(biom))) {
+    if (!BIO_meth_set_write(my_bio_methods, my_sock_write) || !BIO_meth_set_read(my_bio_methods, my_sock_read) || !BIO_meth_set_gets(my_bio_methods, BIO_meth_get_gets(biom)) || !BIO_meth_set_puts(my_bio_methods, BIO_meth_get_puts(biom)) || !BIO_meth_set_ctrl(my_bio_methods, BIO_meth_get_ctrl(biom)) || !BIO_meth_set_create(my_bio_methods, BIO_meth_get_create(biom)) || !BIO_meth_set_destroy(my_bio_methods, BIO_meth_get_destroy(biom)) || !BIO_meth_set_callback_ctrl(my_bio_methods, BIO_meth_get_callback_ctrl(biom)))
+    {
       BIO_meth_free(my_bio_methods);
       my_bio_methods = NULL;
       return NULL;
     }
 #else
     my_bio_methods = malloc(sizeof(BIO_METHOD));
-    if (!my_bio_methods) {
+    if (!my_bio_methods)
+    {
       return NULL;
     }
     memcpy(my_bio_methods, biom, sizeof(BIO_METHOD));
@@ -707,13 +776,15 @@ my_SSL_set_fd(Port *port, int fd)
   BIO_METHOD *bio_method;
 
   bio_method = my_BIO_s_socket();
-  if (bio_method == NULL) {
+  if (bio_method == NULL)
+  {
     SSLerr(SSL_F_SSL_SET_FD, ERR_R_BUF_LIB);
     goto err;
   }
   bio = BIO_new(bio_method);
 
-  if (bio == NULL) {
+  if (bio == NULL)
+  {
     SSLerr(SSL_F_SSL_SET_FD, ERR_R_BUF_LIB);
     goto err;
   }
@@ -741,7 +812,8 @@ load_dh_file(char *filename, bool isServerStart)
   int codes;
 
   /* attempt to open file.  It's not an error if it doesn't exist. */
-  if ((fp = AllocateFile(filename, "r")) == NULL) {
+  if ((fp = AllocateFile(filename, "r")) == NULL)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode_for_file_access(), errmsg("could not open DH parameters file \"%s\": %m", filename)));
     return NULL;
   }
@@ -749,23 +821,27 @@ load_dh_file(char *filename, bool isServerStart)
   dh = PEM_read_DHparams(fp, NULL, NULL, NULL);
   FreeFile(fp);
 
-  if (dh == NULL) {
+  if (dh == NULL)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not load DH parameters file: %s", SSLerrmessage(ERR_get_error()))));
     return NULL;
   }
 
   /* make sure the DH parameters are usable */
-  if (DH_check(dh, &codes) == 0) {
+  if (DH_check(dh, &codes) == 0)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid DH parameters: %s", SSLerrmessage(ERR_get_error()))));
     DH_free(dh);
     return NULL;
   }
-  if (codes & DH_CHECK_P_NOT_PRIME) {
+  if (codes & DH_CHECK_P_NOT_PRIME)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid DH parameters: p is not prime")));
     DH_free(dh);
     return NULL;
   }
-  if ((codes & DH_NOT_SUITABLE_GENERATOR) && (codes & DH_CHECK_P_NOT_SAFE_PRIME)) {
+  if ((codes & DH_NOT_SUITABLE_GENERATOR) && (codes & DH_CHECK_P_NOT_SAFE_PRIME))
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid DH parameters: neither suitable generator or safe prime")));
     DH_free(dh);
     return NULL;
@@ -787,11 +863,13 @@ load_dh_buffer(const char *buffer, size_t len)
   DH *dh = NULL;
 
   bio = BIO_new_mem_buf(unconstify(char *, buffer), len);
-  if (bio == NULL) {
+  if (bio == NULL)
+  {
     return NULL;
   }
   dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
-  if (dh == NULL) {
+  if (dh == NULL)
+  {
     ereport(DEBUG2, (errmsg_internal("DH load buffer: %s", SSLerrmessage(ERR_get_error()))));
   }
   BIO_free(bio);
@@ -857,7 +935,8 @@ verify_cb(int ok, X509_STORE_CTX *ctx)
 static void
 info_cb(const SSL *ssl, int type, int args)
 {
-  switch (type) {
+  switch (type)
+  {
   case SSL_CB_HANDSHAKE_START:
     ereport(DEBUG4, (errmsg_internal("SSL: handshake start")));
     break;
@@ -905,18 +984,22 @@ initialize_dh(SSL_CTX *context, bool isServerStart)
 
   SSL_CTX_set_options(context, SSL_OP_SINGLE_DH_USE);
 
-  if (ssl_dh_params_file[0]) {
+  if (ssl_dh_params_file[0])
+  {
     dh = load_dh_file(ssl_dh_params_file, isServerStart);
   }
-  if (!dh) {
+  if (!dh)
+  {
     dh = load_dh_buffer(FILE_DH2048, sizeof(FILE_DH2048));
   }
-  if (!dh) {
+  if (!dh)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), (errmsg("DH: could not load DH parameters"))));
     return false;
   }
 
-  if (SSL_CTX_set_tmp_dh(context, dh) != 1) {
+  if (SSL_CTX_set_tmp_dh(context, dh) != 1)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), (errmsg("DH: could not set DH parameters: %s", SSLerrmessage(ERR_get_error())))));
     DH_free(dh);
     return false;
@@ -939,13 +1022,15 @@ initialize_ecdh(SSL_CTX *context, bool isServerStart)
   int nid;
 
   nid = OBJ_sn2nid(SSLECDHCurve);
-  if (!nid) {
+  if (!nid)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("ECDH: unrecognized curve name: %s", SSLECDHCurve)));
     return false;
   }
 
   ecdh = EC_KEY_new_by_curve_name(nid);
-  if (!ecdh) {
+  if (!ecdh)
+  {
     ereport(isServerStart ? FATAL : LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("ECDH: could not create key")));
     return false;
   }
@@ -973,11 +1058,13 @@ SSLerrmessage(unsigned long ecode)
   const char *errreason;
   static char errbuf[36];
 
-  if (ecode == 0) {
+  if (ecode == 0)
+  {
     return _("no SSL error reported");
   }
   errreason = ERR_reason_error_string(ecode);
-  if (errreason != NULL) {
+  if (errreason != NULL)
+  {
     return errreason;
   }
   snprintf(errbuf, sizeof(errbuf), _("SSL error code %lu"), ecode);
@@ -989,10 +1076,13 @@ be_tls_get_cipher_bits(Port *port)
 {
   int bits;
 
-  if (port->ssl) {
+  if (port->ssl)
+  {
     SSL_get_cipher_bits(port->ssl, &bits);
     return bits;
-  } else {
+  }
+  else
+  {
     return 0;
   }
 }
@@ -1000,9 +1090,12 @@ be_tls_get_cipher_bits(Port *port)
 bool
 be_tls_get_compression(Port *port)
 {
-  if (port->ssl) {
+  if (port->ssl)
+  {
     return (SSL_get_current_compression(port->ssl) != NULL);
-  } else {
+  }
+  else
+  {
     return false;
   }
 }
@@ -1010,9 +1103,12 @@ be_tls_get_compression(Port *port)
 const char *
 be_tls_get_version(Port *port)
 {
-  if (port->ssl) {
+  if (port->ssl)
+  {
     return SSL_get_version(port->ssl);
-  } else {
+  }
+  else
+  {
     return NULL;
   }
 }
@@ -1020,9 +1116,12 @@ be_tls_get_version(Port *port)
 const char *
 be_tls_get_cipher(Port *port)
 {
-  if (port->ssl) {
+  if (port->ssl)
+  {
     return SSL_get_cipher(port->ssl);
-  } else {
+  }
+  else
+  {
     return NULL;
   }
 }
@@ -1030,9 +1129,12 @@ be_tls_get_cipher(Port *port)
 void
 be_tls_get_peer_subject_name(Port *port, char *ptr, size_t len)
 {
-  if (port->peer) {
+  if (port->peer)
+  {
     strlcpy(ptr, X509_NAME_to_cstring(X509_get_subject_name(port->peer)), len);
-  } else {
+  }
+  else
+  {
     ptr[0] = '\0';
   }
 }
@@ -1040,9 +1142,12 @@ be_tls_get_peer_subject_name(Port *port, char *ptr, size_t len)
 void
 be_tls_get_peer_issuer_name(Port *port, char *ptr, size_t len)
 {
-  if (port->peer) {
+  if (port->peer)
+  {
     strlcpy(ptr, X509_NAME_to_cstring(X509_get_issuer_name(port->peer)), len);
-  } else {
+  }
+  else
+  {
     ptr[0] = '\0';
   }
 }
@@ -1050,7 +1155,8 @@ be_tls_get_peer_issuer_name(Port *port, char *ptr, size_t len)
 void
 be_tls_get_peer_serial(Port *port, char *ptr, size_t len)
 {
-  if (port->peer) {
+  if (port->peer)
+  {
     ASN1_INTEGER *serial;
     BIGNUM *b;
     char *decimal;
@@ -1062,7 +1168,9 @@ be_tls_get_peer_serial(Port *port, char *ptr, size_t len)
     BN_free(b);
     strlcpy(ptr, decimal, len);
     OPENSSL_free(decimal);
-  } else {
+  }
+  else
+  {
     ptr[0] = '\0';
   }
 }
@@ -1080,7 +1188,8 @@ be_tls_get_certificate_hash(Port *port, size_t *len)
 
   *len = 0;
   server_cert = SSL_get_certificate(port->ssl);
-  if (server_cert == NULL) {
+  if (server_cert == NULL)
+  {
     return NULL;
   }
 
@@ -1088,7 +1197,8 @@ be_tls_get_certificate_hash(Port *port, size_t *len)
    * Get the signature algorithm of the certificate to determine the hash
    * algorithm to use for the result.
    */
-  if (!OBJ_find_sigid_algs(X509_get_signature_nid(server_cert), &algo_nid, NULL)) {
+  if (!OBJ_find_sigid_algs(X509_get_signature_nid(server_cert), &algo_nid, NULL))
+  {
     elog(ERROR, "could not determine server certificate signature algorithm");
   }
 
@@ -1098,21 +1208,24 @@ be_tls_get_certificate_hash(Port *port, size_t *len)
    * (https://tools.ietf.org/html/rfc5929#section-4.1).  If something else
    * is used, the same hash as the signature algorithm is used.
    */
-  switch (algo_nid) {
+  switch (algo_nid)
+  {
   case NID_md5:
   case NID_sha1:
     algo_type = EVP_sha256();
     break;
-  default:;
+  default:
     algo_type = EVP_get_digestbynid(algo_nid);
-    if (algo_type == NULL) {
+    if (algo_type == NULL)
+    {
       elog(ERROR, "could not find digest for NID %s", OBJ_nid2sn(algo_nid));
     }
     break;
   }
 
   /* generate and save the certificate hash */
-  if (!X509_digest(server_cert, algo_type, hash, &hash_size)) {
+  if (!X509_digest(server_cert, algo_type, hash, &hash_size))
+  {
     elog(ERROR, "could not generate server certificate hash");
   }
 
@@ -1143,12 +1256,14 @@ X509_NAME_to_cstring(X509_NAME *name)
   char *result;
 
   (void)BIO_set_close(membuf, BIO_CLOSE);
-  for (i = 0; i < count; i++) {
+  for (i = 0; i < count; i++)
+  {
     e = X509_NAME_get_entry(name, i);
     nid = OBJ_obj2nid(X509_NAME_ENTRY_get_object(e));
     v = X509_NAME_ENTRY_get_data(e);
     field_name = OBJ_nid2sn(nid);
-    if (!field_name) {
+    if (!field_name)
+    {
       field_name = OBJ_nid2ln(nid);
     }
     BIO_printf(membuf, "/%s=", field_name);
@@ -1162,7 +1277,8 @@ X509_NAME_to_cstring(X509_NAME *name)
   dp = pg_any_to_server(sp, size - 1, PG_UTF8);
 
   result = pstrdup(dp);
-  if (dp != sp) {
+  if (dp != sp)
+  {
     pfree(dp);
   }
   BIO_free(membuf);
@@ -1184,7 +1300,8 @@ X509_NAME_to_cstring(X509_NAME *name)
 static int
 ssl_protocol_version_to_openssl(int v, const char *guc_name, int loglevel)
 {
-  switch (v) {
+  switch (v)
+  {
   case PG_TLS_ANY:
     return 0;
   case PG_TLS1_VERSION:
@@ -1233,7 +1350,8 @@ SSL_CTX_set_min_proto_version(SSL_CTX *ctx, int version)
 {
   int ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
-  if (version > TLS1_VERSION) {
+  if (version > TLS1_VERSION)
+  {
     ssl_options |= SSL_OP_NO_TLSv1;
   }
   /*
@@ -1242,7 +1360,8 @@ SSL_CTX_set_min_proto_version(SSL_CTX *ctx, int version)
    * unsuccessfully here.
    */
 #ifdef TLS1_1_VERSION
-  if (version > TLS1_1_VERSION) {
+  if (version > TLS1_1_VERSION)
+  {
 #ifdef SSL_OP_NO_TLSv1_1
     ssl_options |= SSL_OP_NO_TLSv1_1;
 #else
@@ -1251,7 +1370,8 @@ SSL_CTX_set_min_proto_version(SSL_CTX *ctx, int version)
   }
 #endif
 #ifdef TLS1_2_VERSION
-  if (version > TLS1_2_VERSION) {
+  if (version > TLS1_2_VERSION)
+  {
 #ifdef SSL_OP_NO_TLSv1_2
     ssl_options |= SSL_OP_NO_TLSv1_2;
 #else
@@ -1278,7 +1398,8 @@ SSL_CTX_set_max_proto_version(SSL_CTX *ctx, int version)
    * unsuccessfully here.
    */
 #ifdef TLS1_1_VERSION
-  if (version < TLS1_1_VERSION) {
+  if (version < TLS1_1_VERSION)
+  {
 #ifdef SSL_OP_NO_TLSv1_1
     ssl_options |= SSL_OP_NO_TLSv1_1;
 #else
@@ -1287,7 +1408,8 @@ SSL_CTX_set_max_proto_version(SSL_CTX *ctx, int version)
   }
 #endif
 #ifdef TLS1_2_VERSION
-  if (version < TLS1_2_VERSION) {
+  if (version < TLS1_2_VERSION)
+  {
 #ifdef SSL_OP_NO_TLSv1_2
     ssl_options |= SSL_OP_NO_TLSv1_2;
 #else

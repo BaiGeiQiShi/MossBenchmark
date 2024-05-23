@@ -60,15 +60,15 @@ pairingheap_SpGistSearchItem_cmp(const pairingheap_node *a, const pairingheap_no
     {
       if (isnan(sa->distances[i]) && isnan(sb->distances[i]))
       {
-
+        continue; /* NaN == NaN */
       }
       if (isnan(sa->distances[i]))
       {
-
+        return -1; /* NaN > number */
       }
       if (isnan(sb->distances[i]))
       {
-
+        return 1; /* number < NaN */
       }
       if (sa->distances[i] != sb->distances[i])
       {
@@ -297,8 +297,8 @@ spgPrepareScanKeys(IndexScanDesc scan)
     else if (skey->sk_flags & SK_ISNULL)
     {
       /* ordinary qual with null argument - unsatisfiable */
-
-
+      qual_ok = false;
+      break;
     }
     else
     {
@@ -312,7 +312,7 @@ spgPrepareScanKeys(IndexScanDesc scan)
   /* IS NULL in combination with something else is unsatisfiable */
   if (haveIsNull && haveNotNull)
   {
-
+    qual_ok = false;
   }
 
   /* Emit results */
@@ -324,9 +324,9 @@ spgPrepareScanKeys(IndexScanDesc scan)
   }
   else
   {
-
-
-
+    so->searchNulls = false;
+    so->searchNonNulls = false;
+    so->numberOfKeys = 0;
   }
 }
 
@@ -653,18 +653,18 @@ spgInnerTest(SpGistScanOpaque so, SpGistSearchItem *item, SpGistInnerTuple inner
   else
   {
     /* force all children to be visited */
-
-
-
-
-
-
+    out.nNodes = nNodes;
+    out.nodeNumbers = (int *)palloc(sizeof(int) * nNodes);
+    for (i = 0; i < nNodes; i++)
+    {
+      out.nodeNumbers[i] = i;
+    }
   }
 
   /* If allTheSame, they should all or none of them match */
   if (innerTuple->allTheSame && out.nNodes != 0 && out.nNodes != nNodes)
   {
-
+    elog(ERROR, "inconsistent inner_consistent results for allTheSame inner tuple");
   }
 
   if (out.nNodes)
@@ -734,31 +734,31 @@ spgTestLeafTuple(SpGistScanOpaque so, SpGistSearchItem *item, Page page, OffsetN
 
   if (leafTuple->tupstate != SPGIST_LIVE)
   {
+    if (!isroot) /* all tuples on root should be live */
+    {
+      if (leafTuple->tupstate == SPGIST_REDIRECT)
+      {
+        /* redirection tuple should be first in chain */
+        Assert(offset == ItemPointerGetOffsetNumber(&item->heapPtr));
+        /* transfer attention to redirect point */
+        item->heapPtr = ((SpGistDeadTuple)leafTuple)->pointer;
+        Assert(ItemPointerGetBlockNumber(&item->heapPtr) != SPGIST_METAPAGE_BLKNO);
+        return SpGistRedirectOffsetNumber;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (leafTuple->tupstate == SPGIST_DEAD)
+      {
+        /* dead tuple should be first in chain */
+        Assert(offset == ItemPointerGetOffsetNumber(&item->heapPtr));
+        /* No live entries on this page */
+        Assert(leafTuple->nextOffset == InvalidOffsetNumber);
+        return SpGistBreakOffsetNumber;
+      }
+    }
 
     /* We should not arrive at a placeholder */
-
-
+    elog(ERROR, "unexpected SPGiST tuple state: %d", leafTuple->tupstate);
+    return SpGistErrorOffsetNumber;
   }
 
   Assert(ItemPointerIsValid(&leafTuple->heapPtr));
@@ -790,7 +790,7 @@ spgWalk(Relation index, SpGistScanOpaque so, bool scanWholeIndex, storeRes_func 
       break; /* No more items in queue -> done */
     }
 
-  redirect:;
+  redirect:
     /* Check for interrupts, just in case of infinite loop */
     CHECK_FOR_INTERRUPTS();
 
@@ -849,7 +849,7 @@ spgWalk(Relation index, SpGistScanOpaque so, bool scanWholeIndex, storeRes_func 
             offset = spgTestLeafTuple(so, item, page, offset, isnull, false, &reportedSome, storeRes);
             if (offset == SpGistRedirectOffsetNumber)
             {
-
+              goto redirect;
             }
           }
         }
@@ -860,14 +860,14 @@ spgWalk(Relation index, SpGistScanOpaque so, bool scanWholeIndex, storeRes_func 
 
         if (innerTuple->tupstate != SPGIST_LIVE)
         {
-
-
-
-
-
-
-
-
+          if (innerTuple->tupstate == SPGIST_REDIRECT)
+          {
+            /* transfer attention to redirect point */
+            item->heapPtr = ((SpGistDeadTuple)innerTuple)->pointer;
+            Assert(ItemPointerGetBlockNumber(&item->heapPtr) != SPGIST_METAPAGE_BLKNO);
+            goto redirect;
+          }
+          elog(ERROR, "unexpected SPGiST tuple state: %d", innerTuple->tupstate);
         }
 
         spgInnerTest(so, item, innerTuple, isnull);
@@ -971,7 +971,7 @@ spggettuple(IndexScanDesc scan, ScanDirection dir)
 
   if (dir != ForwardScanDirection)
   {
-
+    elog(ERROR, "SP-GiST only supports forward scan direction");
   }
 
   /* Copy want_itup to *so so we don't need to pass it around separately */

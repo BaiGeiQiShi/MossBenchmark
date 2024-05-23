@@ -62,7 +62,8 @@ pgwin32_system(const char *command)
    * pair of quotes
    */
   buf = malloc(cmdlen + 2 + 1);
-  if (buf == NULL) {
+  if (buf == NULL)
+  {
     errno = ENOMEM;
     return -1;
   }
@@ -93,7 +94,8 @@ pgwin32_popen(const char *command, const char *type)
    * pair of quotes
    */
   buf = malloc(cmdlen + 2 + 1);
-  if (buf == NULL) {
+  if (buf == NULL)
+  {
     errno = ENOMEM;
     return NULL;
   }

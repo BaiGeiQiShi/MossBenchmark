@@ -27,10 +27,10 @@
  */
 /*
  * INTERFACE ROUTINES
- *		ExecBitmapHeapScan			scans a relation using
- *bitmap info ExecBitmapHeapNext			workhorse for above
- *		ExecInitBitmapHeapScan		creates and initializes state
- *info. ExecReScanBitmapHeapScan	prepares to rescan the plan.
+ *		ExecBitmapHeapScan			scans a relation using bitmap info
+ *		ExecBitmapHeapNext			workhorse for above
+ *		ExecInitBitmapHeapScan		creates and initializes state info.
+ *		ExecReScanBitmapHeapScan	prepares to rescan the plan.
  *		ExecEndBitmapHeapScan		releases all storage.
  */
 #include "postgres.h"
@@ -68,8 +68,7 @@ BitmapShouldInitializeSharedState(ParallelBitmapHeapState *pstate);
 /* ----------------------------------------------------------------
  *		BitmapHeapNext
  *
- *		Retrieve next tuple from the BitmapHeapScan node's
- *currentRelation
+ *		Retrieve next tuple from the BitmapHeapScan node's currentRelation
  * ----------------------------------------------------------------
  */
 static TupleTableSlot *
@@ -358,8 +357,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 /*
  *	BitmapDoneInitializingSharedState - Shared state is initialized
  *
- *	By this time the leader has already populated the TBM and initialized
- *the shared state so wake up other processes.
+ *	By this time the leader has already populated the TBM and initialized the
+ *	shared state so wake up other processes.
  */
 static inline void
 BitmapDoneInitializingSharedState(ParallelBitmapHeapState *pstate)
@@ -450,9 +449,7 @@ BitmapAdjustPrefetchTarget(BitmapHeapScanState *node)
   if (pstate == NULL)
   {
     if (node->prefetch_target >= node->prefetch_maximum)
-    {
       /* don't increase any further */;
-    }
     else if (node->prefetch_target >= node->prefetch_maximum / 2)
     {
       node->prefetch_target = node->prefetch_maximum;
@@ -880,10 +877,10 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 /*----------------
  *		BitmapShouldInitializeSharedState
  *
- *		The first process to come here and see the state to the
- *BM_INITIAL will become the leader for the parallel bitmap scan and will be
- *		responsible for populating the TIDBitmap.  The other processes
- *will be blocked by the condition variable until the leader wakes them up.
+ *		The first process to come here and see the state to the BM_INITIAL
+ *		will become the leader for the parallel bitmap scan and will be
+ *		responsible for populating the TIDBitmap.  The other processes will
+ *		be blocked by the condition variable until the leader wakes them up.
  * ---------------
  */
 static bool

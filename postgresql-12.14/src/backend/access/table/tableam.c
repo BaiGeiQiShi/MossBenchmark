@@ -11,10 +11,9 @@
  *	  src/backend/access/table/tableam.c
  *
  * NOTES
- *	  Note that most function in here are documented in tableam.h, rather
- *than here. That's because there's a lot of inline functions in tableam.h and
- *	  it'd be harder to understand if one constantly had to switch between
- *files.
+ *	  Note that most function in here are documented in tableam.h, rather than
+ *	  here. That's because there's a lot of inline functions in tableam.h and
+ *	  it'd be harder to understand if one constantly had to switch between files.
  *
  *----------------------------------------------------------------------
  */
@@ -52,7 +51,7 @@ table_slot_callbacks(Relation relation)
      * versions. The cost of a heap slot over a virtual slot is pretty
      * small.
      */
-
+    tts_cb = &TTSOpsHeapTuple;
   }
   else
   {
@@ -244,7 +243,7 @@ table_tuple_get_latest_tid(TableScanDesc scan, ItemPointer tid)
 void
 simple_table_tuple_insert(Relation rel, TupleTableSlot *slot)
 {
-
+  table_tuple_insert(rel, slot, GetCurrentCommandId(true), 0, NULL);
 }
 
 /*
@@ -258,34 +257,34 @@ simple_table_tuple_insert(Relation rel, TupleTableSlot *slot)
 void
 simple_table_tuple_delete(Relation rel, ItemPointer tid, Snapshot snapshot)
 {
+  TM_Result result;
+  TM_FailureData tmfd;
 
+  result = table_tuple_delete(rel, tid, GetCurrentCommandId(true), snapshot, InvalidSnapshot, true /* wait for commit */, &tmfd, false /* changingPart */);
 
+  switch (result)
+  {
+  case TM_SelfModified:
+    /* Tuple was already updated in current command? */
+    elog(ERROR, "tuple already updated by self");
+    break;
 
+  case TM_Ok:
+    /* done successfully */
+    break;
 
+  case TM_Updated:
+    elog(ERROR, "tuple concurrently updated");
+    break;
 
+  case TM_Deleted:
+    elog(ERROR, "tuple concurrently deleted");
+    break;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  default:
+    elog(ERROR, "unrecognized table_tuple_delete status: %u", result);
+    break;
+  }
 }
 
 /*
@@ -299,35 +298,35 @@ simple_table_tuple_delete(Relation rel, ItemPointer tid, Snapshot snapshot)
 void
 simple_table_tuple_update(Relation rel, ItemPointer otid, TupleTableSlot *slot, Snapshot snapshot, bool *update_indexes)
 {
+  TM_Result result;
+  TM_FailureData tmfd;
+  LockTupleMode lockmode;
 
+  result = table_tuple_update(rel, otid, slot, GetCurrentCommandId(true), snapshot, InvalidSnapshot, true /* wait for commit */, &tmfd, &lockmode, update_indexes);
 
+  switch (result)
+  {
+  case TM_SelfModified:
+    /* Tuple was already updated in current command? */
+    elog(ERROR, "tuple already updated by self");
+    break;
 
+  case TM_Ok:
+    /* done successfully */
+    break;
 
+  case TM_Updated:
+    elog(ERROR, "tuple concurrently updated");
+    break;
 
+  case TM_Deleted:
+    elog(ERROR, "tuple concurrently deleted");
+    break;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  default:
+    elog(ERROR, "unrecognized table_tuple_update status: %u", result);
+    break;
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -377,7 +376,7 @@ table_block_parallelscan_startblock_init(Relation rel, ParallelBlockTableScanDes
 {
   BlockNumber sync_startpage = InvalidBlockNumber;
 
-retry:;
+retry:
   /* Grab the spinlock. */
   SpinLockAcquire(&pbscan->phs_mutex);
 

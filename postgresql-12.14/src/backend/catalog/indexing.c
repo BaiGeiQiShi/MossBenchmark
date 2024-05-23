@@ -125,7 +125,7 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
     /* If the index is marked as read-only, ignore it */
     if (!indexInfo->ii_ReadyForInserts)
     {
-
+      continue;
     }
 
     /*

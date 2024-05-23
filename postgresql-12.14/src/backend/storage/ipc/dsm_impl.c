@@ -138,12 +138,14 @@ int dynamic_shared_memory_type;
  *	   a new handle the caller wants created.
  *	 request_size: For DSM_OP_CREATE, the requested size.  Otherwise, 0.
  *	 impl_private: Private, implementation-specific data.  Will be a pointer
- *	   to NULL for the first operation on a shared memory segment within
- *this backend; thereafter, it will point to the value to which it was set on
- *the previous call. mapped_address: Pointer to start of current mapping;
- *pointer to NULL if none.  Updated with new mapping address. mapped_size:
- *Pointer to size of current mapping; pointer to 0 if none. Updated with new
- *mapped size. elevel: Level at which to log errors.
+ *	   to NULL for the first operation on a shared memory segment within this
+ *	   backend; thereafter, it will point to the value to which it was set
+ *	   on the previous call.
+ *	 mapped_address: Pointer to start of current mapping; pointer to NULL
+ *	   if none.  Updated with new mapping address.
+ *	 mapped_size: Pointer to size of current mapping; pointer to 0 if none.
+ *	   Updated with new mapped size.
+ *	 elevel: Level at which to log errors.
  *
  * Return value: true on success, false on failure.  When false is returned,
  * a message should first be logged at the specified elevel, except in the
@@ -160,24 +162,24 @@ dsm_impl_op(dsm_op op, dsm_handle handle, Size request_size, void **impl_private
   switch (dynamic_shared_memory_type)
   {
 #ifdef USE_DSM_POSIX
-  case DSM_IMPL_POSIX:;
+  case DSM_IMPL_POSIX:
     return dsm_impl_posix(op, handle, request_size, impl_private, mapped_address, mapped_size, elevel);
 #endif
 #ifdef USE_DSM_SYSV
-  case DSM_IMPL_SYSV:;
-
+  case DSM_IMPL_SYSV:
+    return dsm_impl_sysv(op, handle, request_size, impl_private, mapped_address, mapped_size, elevel);
 #endif
 #ifdef USE_DSM_WINDOWS
   case DSM_IMPL_WINDOWS:
     return dsm_impl_windows(op, handle, request_size, impl_private, mapped_address, mapped_size, elevel);
 #endif
 #ifdef USE_DSM_MMAP
-  case DSM_IMPL_MMAP:;
-
+  case DSM_IMPL_MMAP:
+    return dsm_impl_mmap(op, handle, request_size, impl_private, mapped_address, mapped_size, elevel);
 #endif
-  default:;;
-
-
+  default:
+    elog(ERROR, "unexpected dynamic shared memory type: %d", dynamic_shared_memory_type);
+    return false;
   }
 }
 
@@ -211,15 +213,15 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size, void **impl_priv
   {
     if (*mapped_address != NULL && munmap(*mapped_address, *mapped_size) != 0)
     {
-
-
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not unmap shared memory segment \"%s\": %m", name)));
+      return false;
     }
     *mapped_address = NULL;
     *mapped_size = 0;
     if (op == DSM_OP_DESTROY && shm_unlink(name) != 0)
     {
-
-
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not remove shared memory segment \"%s\": %m", name)));
+      return false;
     }
     return true;
   }
@@ -235,11 +237,11 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size, void **impl_priv
   flags = O_RDWR | (op == DSM_OP_CREATE ? O_CREAT | O_EXCL : 0);
   if ((fd = shm_open(name, flags, PG_FILE_MODE_OWNER)) == -1)
   {
-
-
-
-
-
+    if (op == DSM_OP_ATTACH || errno != EEXIST)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not open shared memory segment \"%s\": %m", name)));
+    }
+    return false;
   }
 
   /*
@@ -255,12 +257,12 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size, void **impl_priv
       int save_errno;
 
       /* Back out what's already been done. */
+      save_errno = errno;
+      close(fd);
+      errno = save_errno;
 
-
-
-
-
-
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not stat shared memory segment \"%s\": %m", name)));
+      return false;
     }
     request_size = st.st_size;
   }
@@ -269,13 +271,13 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size, void **impl_priv
     int save_errno;
 
     /* Back out what's already been done. */
+    save_errno = errno;
+    close(fd);
+    shm_unlink(name);
+    errno = save_errno;
 
-
-
-
-
-
-
+    ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not resize shared memory segment \"%s\" to %zu bytes: %m", name, request_size)));
+    return false;
   }
 
   /* Map it. */
@@ -285,16 +287,16 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size, void **impl_priv
     int save_errno;
 
     /* Back out what's already been done. */
+    save_errno = errno;
+    close(fd);
+    if (op == DSM_OP_CREATE)
+    {
+      shm_unlink(name);
+    }
+    errno = save_errno;
 
-
-
-
-
-
-
-
-
-
+    ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not map shared memory segment \"%s\": %m", name)));
+    return false;
   }
   *mapped_address = address;
   *mapped_size = request_size;
@@ -388,163 +390,163 @@ dsm_impl_posix_resize(int fd, off_t size)
 static bool
 dsm_impl_sysv(dsm_op op, dsm_handle handle, Size request_size, void **impl_private, void **mapped_address, Size *mapped_size, int elevel)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  key_t key;
+  int ident;
+  char *address;
+  char name[64];
+  int *ident_cache;
+
+  /*
+   * POSIX shared memory and mmap-based shared memory identify segments with
+   * names.  To avoid needless error message variation, we use the handle as
+   * the name.
+   */
+  snprintf(name, 64, "%u", handle);
+
+  /*
+   * The System V shared memory namespace is very restricted; names are of
+   * type key_t, which is expected to be some sort of integer data type, but
+   * not necessarily the same one as dsm_handle.  Since we use dsm_handle to
+   * identify shared memory segments across processes, this might seem like
+   * a problem, but it's really not.  If dsm_handle is bigger than key_t,
+   * the cast below might truncate away some bits from the handle the
+   * user-provided, but it'll truncate exactly the same bits away in exactly
+   * the same fashion every time we use that handle, which is all that
+   * really matters.  Conversely, if dsm_handle is smaller than key_t, we
+   * won't use the full range of available key space, but that's no big deal
+   * either.
+   *
+   * We do make sure that the key isn't negative, because that might not be
+   * portable.
+   */
+  key = (key_t)handle;
+  if (key < 1) /* avoid compiler warning if type is unsigned */
+  {
+    key = -key;
+  }
+
+  /*
+   * There's one special key, IPC_PRIVATE, which can't be used.  If we end
+   * up with that value by chance during a create operation, just pretend it
+   * already exists, so that caller will retry.  If we run into it anywhere
+   * else, the caller has passed a handle that doesn't correspond to
+   * anything we ever created, which should not happen.
+   */
+  if (key == IPC_PRIVATE)
+  {
+    if (op != DSM_OP_CREATE)
+    {
+      elog(DEBUG4, "System V shared memory key may not be IPC_PRIVATE");
+    }
+    errno = EEXIST;
+    return false;
+  }
+
+  /*
+   * Before we can do anything with a shared memory segment, we have to map
+   * the shared memory key to a shared memory identifier using shmget(). To
+   * avoid repeated lookups, we store the key using impl_private.
+   */
+  if (*impl_private != NULL)
+  {
+    ident_cache = *impl_private;
+    ident = *ident_cache;
+  }
+  else
+  {
+    int flags = IPCProtection;
+    size_t segsize;
+
+    /*
+     * Allocate the memory BEFORE acquiring the resource, so that we don't
+     * leak the resource if memory allocation fails.
+     */
+    ident_cache = MemoryContextAlloc(TopMemoryContext, sizeof(int));
+
+    /*
+     * When using shmget to find an existing segment, we must pass the
+     * size as 0.  Passing a non-zero size which is greater than the
+     * actual size will result in EINVAL.
+     */
+    segsize = 0;
+
+    if (op == DSM_OP_CREATE)
+    {
+      flags |= IPC_CREAT | IPC_EXCL;
+      segsize = request_size;
+    }
+
+    if ((ident = shmget(key, segsize, flags)) == -1)
+    {
+      if (op == DSM_OP_ATTACH || errno != EEXIST)
+      {
+        int save_errno = errno;
+
+        pfree(ident_cache);
+        errno = save_errno;
+        ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not get shared memory segment: %m")));
+      }
+      return false;
+    }
+
+    *ident_cache = ident;
+    *impl_private = ident_cache;
+  }
+
+  /* Handle teardown cases. */
+  if (op == DSM_OP_DETACH || op == DSM_OP_DESTROY)
+  {
+    pfree(ident_cache);
+    *impl_private = NULL;
+    if (*mapped_address != NULL && shmdt(*mapped_address) != 0)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not unmap shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    *mapped_address = NULL;
+    *mapped_size = 0;
+    if (op == DSM_OP_DESTROY && shmctl(ident, IPC_RMID, NULL) < 0)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not remove shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    return true;
+  }
+
+  /* If we're attaching it, we must use IPC_STAT to determine the size. */
+  if (op == DSM_OP_ATTACH)
+  {
+    struct shmid_ds shm;
+
+    if (shmctl(ident, IPC_STAT, &shm) != 0)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not stat shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    request_size = shm.shm_segsz;
+  }
+
+  /* Map it. */
+  address = shmat(ident, NULL, PG_SHMAT_FLAGS);
+  if (address == (void *)-1)
+  {
+    int save_errno;
+
+    /* Back out what's already been done. */
+    save_errno = errno;
+    if (op == DSM_OP_CREATE)
+    {
+      shmctl(ident, IPC_RMID, NULL);
+    }
+    errno = save_errno;
+
+    ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not map shared memory segment \"%s\": %m", name)));
+    return false;
+  }
+  *mapped_address = address;
+  *mapped_size = request_size;
+
+  return true;
 }
 #endif
 
@@ -725,146 +727,146 @@ dsm_impl_windows(dsm_op op, dsm_handle handle, Size request_size, void **impl_pr
 static bool
 dsm_impl_mmap(dsm_op op, dsm_handle handle, Size request_size, void **impl_private, void **mapped_address, Size *mapped_size, int elevel)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  char name[64];
+  int flags;
+  int fd;
+  char *address;
+
+  snprintf(name, 64, PG_DYNSHMEM_DIR "/" PG_DYNSHMEM_MMAP_FILE_PREFIX "%u", handle);
+
+  /* Handle teardown cases. */
+  if (op == DSM_OP_DETACH || op == DSM_OP_DESTROY)
+  {
+    if (*mapped_address != NULL && munmap(*mapped_address, *mapped_size) != 0)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not unmap shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    *mapped_address = NULL;
+    *mapped_size = 0;
+    if (op == DSM_OP_DESTROY && unlink(name) != 0)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not remove shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    return true;
+  }
+
+  /* Create new segment or open an existing one for attach. */
+  flags = O_RDWR | (op == DSM_OP_CREATE ? O_CREAT | O_EXCL : 0);
+  if ((fd = OpenTransientFile(name, flags)) == -1)
+  {
+    if (op == DSM_OP_ATTACH || errno != EEXIST)
+    {
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not open shared memory segment \"%s\": %m", name)));
+    }
+    return false;
+  }
+
+  /*
+   * If we're attaching the segment, determine the current size; if we are
+   * creating the segment, set the size to the requested value.
+   */
+  if (op == DSM_OP_ATTACH)
+  {
+    struct stat st;
+
+    if (fstat(fd, &st) != 0)
+    {
+      int save_errno;
+
+      /* Back out what's already been done. */
+      save_errno = errno;
+      CloseTransientFile(fd);
+      errno = save_errno;
+
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not stat shared memory segment \"%s\": %m", name)));
+      return false;
+    }
+    request_size = st.st_size;
+  }
+  else
+  {
+    /*
+     * Allocate a buffer full of zeros.
+     *
+     * Note: palloc zbuffer, instead of just using a local char array, to
+     * ensure it is reasonably well-aligned; this may save a few cycles
+     * transferring data to the kernel.
+     */
+    char *zbuffer = (char *)palloc0(ZBUFFER_SIZE);
+    uint32 remaining = request_size;
+    bool success = true;
+
+    /*
+     * Zero-fill the file. We have to do this the hard way to ensure that
+     * all the file space has really been allocated, so that we don't
+     * later seg fault when accessing the memory mapping.  This is pretty
+     * pessimal.
+     */
+    while (success && remaining > 0)
+    {
+      Size goal = remaining;
+
+      if (goal > ZBUFFER_SIZE)
+      {
+        goal = ZBUFFER_SIZE;
+      }
+      pgstat_report_wait_start(WAIT_EVENT_DSM_FILL_ZERO_WRITE);
+      if (write(fd, zbuffer, goal) == goal)
+      {
+        remaining -= goal;
+      }
+      else
+      {
+        success = false;
+      }
+      pgstat_report_wait_end();
+    }
+
+    if (!success)
+    {
+      int save_errno;
+
+      /* Back out what's already been done. */
+      save_errno = errno;
+      CloseTransientFile(fd);
+      unlink(name);
+      errno = save_errno ? save_errno : ENOSPC;
+
+      ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not resize shared memory segment \"%s\" to %zu bytes: %m", name, request_size)));
+      return false;
+    }
+  }
+
+  /* Map it. */
+  address = mmap(NULL, request_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_HASSEMAPHORE | MAP_NOSYNC, fd, 0);
+  if (address == MAP_FAILED)
+  {
+    int save_errno;
+
+    /* Back out what's already been done. */
+    save_errno = errno;
+    CloseTransientFile(fd);
+    if (op == DSM_OP_CREATE)
+    {
+      unlink(name);
+    }
+    errno = save_errno;
+
+    ereport(elevel, (errcode_for_dynamic_shared_memory(), errmsg("could not map shared memory segment \"%s\": %m", name)));
+    return false;
+  }
+  *mapped_address = address;
+  *mapped_size = request_size;
+
+  if (CloseTransientFile(fd))
+  {
+    ereport(elevel, (errcode_for_file_access(), errmsg("could not close shared memory segment \"%s\": %m", name)));
+    return false;
+  }
+
+  return true;
 }
 #endif
 
@@ -907,7 +909,7 @@ dsm_impl_pin_segment(dsm_handle handle, void *impl_private, void **impl_private_
     break;
   }
 #endif
-  default:;;
+  default:
     break;
   }
 }
@@ -942,7 +944,7 @@ dsm_impl_unpin_segment(dsm_handle handle, void **impl_private)
     break;
   }
 #endif
-  default:;;
+  default:
     break;
   }
 }
@@ -950,12 +952,12 @@ dsm_impl_unpin_segment(dsm_handle handle, void **impl_private)
 static int
 errcode_for_dynamic_shared_memory(void)
 {
-
-
-
-
-
-
-
-
+  if (errno == EFBIG || errno == ENOMEM)
+  {
+    return errcode(ERRCODE_OUT_OF_MEMORY);
+  }
+  else
+  {
+    return errcode_for_file_access();
+  }
 }

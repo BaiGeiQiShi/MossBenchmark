@@ -28,46 +28,49 @@
 #define SQLERRMC_LEN 150
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-struct sqlca_t {
-  char sqlcaid[8];
-  long sqlabc;
-  long sqlcode;
-  struct {
-    int sqlerrml;
-    char sqlerrmc[SQLERRMC_LEN];
-  } sqlerrm;
-  char sqlerrp[8];
-  long sqlerrd[6];
-  /* Element 0: empty						*/
-  /* 1: OID of processed tuple if applicable			*/
-  /* 2: number of rows processed				*/
-  /* after an INSERT, UPDATE or				*/
-  /* DELETE statement					*/
-  /* 3: empty						*/
-  /* 4: empty						*/
-  /* 5: empty						*/
-  char sqlwarn[8];
-  /* Element 0: set to 'W' if at least one other is 'W'	*/
-  /* 1: if 'W' at least one character string		*/
-  /* value was truncated when it was			*/
-  /* stored into a host variable.             */
+  struct sqlca_t
+  {
+    char sqlcaid[8];
+    long sqlabc;
+    long sqlcode;
+    struct
+    {
+      int sqlerrml;
+      char sqlerrmc[SQLERRMC_LEN];
+    } sqlerrm;
+    char sqlerrp[8];
+    long sqlerrd[6];
+    /* Element 0: empty						*/
+    /* 1: OID of processed tuple if applicable			*/
+    /* 2: number of rows processed				*/
+    /* after an INSERT, UPDATE or				*/
+    /* DELETE statement					*/
+    /* 3: empty						*/
+    /* 4: empty						*/
+    /* 5: empty						*/
+    char sqlwarn[8];
+    /* Element 0: set to 'W' if at least one other is 'W'	*/
+    /* 1: if 'W' at least one character string		*/
+    /* value was truncated when it was			*/
+    /* stored into a host variable.             */
 
-  /*
-   * 2: if 'W' a (hopefully) non-fatal notice occurred
-   */	/* 3: empty */
-  /* 4: empty						*/
-  /* 5: empty						*/
-  /* 6: empty						*/
-  /* 7: empty						*/
+    /*
+     * 2: if 'W' a (hopefully) non-fatal notice occurred
+     */	/* 3: empty */
+    /* 4: empty						*/
+    /* 5: empty						*/
+    /* 6: empty						*/
+    /* 7: empty						*/
 
-  char sqlstate[5];
-};
+    char sqlstate[5];
+  };
 
-struct sqlca_t *
-ECPGget_sqlca(void);
+  struct sqlca_t *
+  ECPGget_sqlca(void);
 
 #ifndef POSTGRES_ECPG_INTERNAL
 #define sqlca (*ECPGget_sqlca())
@@ -91,10 +94,14 @@ sql_check(const char *fn, const char *caller, int ignore)
 {
   char errorstring[255];
 
-  if (SQLCODE == ignore) {
+  if (SQLCODE == ignore)
+  {
     return;
-  } else {
-    if (SQLCODE != 0) {
+  }
+  else
+  {
+    if (SQLCODE != 0)
+    {
 
       sprintf(errorstring, "**SQL error %ld doing '%s' in function '%s'. [%s]", SQLCODE, caller, fn, sqlca.sqlerrm.sqlerrmc);
       fprintf(stderr, "%s", errorstring);
@@ -106,9 +113,12 @@ sql_check(const char *fn, const char *caller, int ignore)
       }
 #line 27 "test_informix2.pgc"
 
-      if (SQLCODE == 0) {
+      if (SQLCODE == 0)
+      {
         sprintf(errorstring, "Rollback successful.\n");
-      } else {
+      }
+      else
+      {
         sprintf(errorstring, "Rollback failed with code %ld.\n", SQLCODE);
       }
 
@@ -154,7 +164,8 @@ main(void)
     ECPGconnect(__LINE__, 1, dbname, NULL, NULL, NULL, 0);
 #line 61 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -166,17 +177,19 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "set DateStyle to 'DMY'", ECPGt_EOIT, ECPGt_EORT);
 #line 64 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 64 "test_informix2.pgc"
 
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"create table history ( customerid integer , timestamp timestamp without time zone , action_taken char ( 5 ) , narrative varchar ( 100 ) )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "create table history ( customerid integer , timestamp timestamp without time zone , action_taken char ( 5 ) , narrative varchar ( 100 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 66 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -185,10 +198,11 @@ main(void)
   sql_check("main", "create", 0);
 
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"insert into history ( customerid , timestamp , action_taken , narrative ) values ( 1 , '2003-05-07 13:28:34 CEST' , 'test' , 'test' )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into history ( customerid , timestamp , action_taken , narrative ) values ( 1 , '2003-05-07 13:28:34 CEST' , 'test' , 'test' )", ECPGt_EOIT, ECPGt_EORT);
 #line 71 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -200,7 +214,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "select max ( timestamp ) from history", ECPGt_EOIT, ECPGt_timestamp, &(maxd), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 76 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -209,10 +224,11 @@ main(void)
   sql_check("main", "select max", 100);
 
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"select customerid , timestamp from history where timestamp = $1  limit 1",ECPGt_timestamp, &(maxd), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_int, &(c), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(d), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "select customerid , timestamp from history where timestamp = $1  limit 1", ECPGt_timestamp, &(maxd), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_int, &(c), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(d), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 83 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -228,10 +244,11 @@ main(void)
   c++;
 
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"insert into history ( customerid , timestamp , action_taken , narrative ) values ( $1  , $2  , 'test' , 'test' )",ECPGt_int, &(c), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(e), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into history ( customerid , timestamp , action_taken , narrative ) values ( $1  , $2  , 'test' , 'test' )", ECPGt_int, &(c), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_timestamp, &(e), (long)1, (long)1, sizeof(timestamp), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 95 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -243,7 +260,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 98 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -253,7 +271,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "drop table history", ECPGt_EOIT, ECPGt_EORT);
 #line 100 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -265,7 +284,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 103 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -275,7 +295,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 105 "test_informix2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }

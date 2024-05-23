@@ -62,7 +62,7 @@ pairingheap_allocate(pairingheap_comparator compare, void *arg)
 void
 pairingheap_free(pairingheap *heap)
 {
-
+  pfree(heap);
 }
 
 /*
@@ -84,7 +84,7 @@ merge(pairingheap *heap, pairingheap_node *a, pairingheap_node *b)
   }
   if (b == NULL)
   {
-
+    return a;
   }
 
   /* swap 'a' and 'b' so that 'a' is the one with larger value */

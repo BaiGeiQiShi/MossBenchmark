@@ -92,7 +92,8 @@ crashDumpHandler(struct _EXCEPTION_POINTERS *pExceptionInfo)
    */
   DWORD attribs = GetFileAttributesA("crashdumps");
 
-  if (attribs != INVALID_FILE_ATTRIBUTES && (attribs & FILE_ATTRIBUTE_DIRECTORY)) {
+  if (attribs != INVALID_FILE_ATTRIBUTES && (attribs & FILE_ATTRIBUTE_DIRECTORY))
+  {
     /* 'crashdumps' exists and is a directory. Try to write a dump' */
     HMODULE hDll = NULL;
     MINIDUMPWRITEDUMP pDump = NULL;
@@ -110,14 +111,16 @@ crashDumpHandler(struct _EXCEPTION_POINTERS *pExceptionInfo)
 
     /* Load the dbghelp.dll library and functions */
     hDll = LoadLibrary("dbghelp.dll");
-    if (hDll == NULL) {
+    if (hDll == NULL)
+    {
       write_stderr("could not load dbghelp.dll, cannot write crash dump\n");
       return EXCEPTION_CONTINUE_SEARCH;
     }
 
     pDump = (MINIDUMPWRITEDUMP)GetProcAddress(hDll, "MiniDumpWriteDump");
 
-    if (pDump == NULL) {
+    if (pDump == NULL)
+    {
       write_stderr("could not load required functions in dbghelp.dll, cannot write crash dump\n");
       return EXCEPTION_CONTINUE_SEARCH;
     }
@@ -130,7 +133,8 @@ crashDumpHandler(struct _EXCEPTION_POINTERS *pExceptionInfo)
      */
     dumpType = MiniDumpNormal | MiniDumpWithHandleData | MiniDumpWithDataSegs;
 
-    if (GetProcAddress(hDll, "EnumDirTree") != NULL) {
+    if (GetProcAddress(hDll, "EnumDirTree") != NULL)
+    {
       /* If this function exists, we have version 5.2 or newer */
       dumpType |= MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithPrivateReadWriteMemory;
     }
@@ -140,14 +144,18 @@ crashDumpHandler(struct _EXCEPTION_POINTERS *pExceptionInfo)
     dumpPath[_MAX_PATH - 1] = '\0';
 
     dumpFile = CreateFile(dumpPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (dumpFile == INVALID_HANDLE_VALUE) {
+    if (dumpFile == INVALID_HANDLE_VALUE)
+    {
       write_stderr("could not open crash dump file \"%s\" for writing: error code %lu\n", dumpPath, GetLastError());
       return EXCEPTION_CONTINUE_SEARCH;
     }
 
-    if ((*pDump)(selfProcHandle, selfPid, dumpFile, dumpType, &ExInfo, NULL, NULL)) {
+    if ((*pDump)(selfProcHandle, selfPid, dumpFile, dumpType, &ExInfo, NULL, NULL))
+    {
       write_stderr("wrote crash dump to file \"%s\"\n", dumpPath);
-    } else {
+    }
+    else
+    {
       write_stderr("could not write crash dump to file \"%s\": error code %lu\n", dumpPath, GetLastError());
     }
 

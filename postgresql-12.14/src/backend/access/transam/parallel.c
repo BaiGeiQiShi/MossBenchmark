@@ -230,7 +230,7 @@ InitializeParallelDSM(ParallelContext *pcxt)
      */
     if (session_dsm_handle == DSM_HANDLE_INVALID)
     {
-
+      pcxt->nworkers = 0;
     }
   }
 
@@ -294,9 +294,9 @@ InitializeParallelDSM(ParallelContext *pcxt)
   }
   else
   {
-
-
-
+    pcxt->nworkers = 0;
+    pcxt->private_memory = MemoryContextAlloc(TopMemoryContext, segsize);
+    pcxt->toc = shm_toc_create(PARALLEL_MAGIC, pcxt->private_memory, segsize);
   }
 
   /* Initialize fixed-size state in shared memory. */
@@ -492,7 +492,7 @@ LaunchParallelWorkers(ParallelContext *pcxt)
   /* Skip this if we have no workers. */
   if (pcxt->nworkers == 0)
   {
-
+    return;
   }
 
   /* We need to be a lock group leader. */
@@ -604,7 +604,7 @@ WaitForParallelWorkersToAttach(ParallelContext *pcxt)
   /* Skip this if we have no launched workers. */
   if (pcxt->nworkers_launched == 0)
   {
-
+    return;
   }
 
   for (;;)
@@ -633,9 +633,9 @@ WaitForParallelWorkersToAttach(ParallelContext *pcxt)
        */
       if (pcxt->worker[i].error_mqh == NULL)
       {
-
-
-
+        pcxt->known_attached_workers[i] = true;
+        ++pcxt->nknown_attached_workers;
+        continue;
       }
 
       status = GetBackgroundWorkerPid(pcxt->worker[i].bgwhandle, &pid);
@@ -656,14 +656,14 @@ WaitForParallelWorkersToAttach(ParallelContext *pcxt)
          * If the worker stopped without attaching to the error queue,
          * throw an error.
          */
+        mq = shm_mq_get_queue(pcxt->worker[i].error_mqh);
+        if (shm_mq_get_sender(mq) == NULL)
+        {
+          ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("parallel worker failed to initialize"), errhint("More details may be available in the server log.")));
+        }
 
-
-
-
-
-
-
-
+        pcxt->known_attached_workers[i] = true;
+        ++pcxt->nknown_attached_workers;
       }
       else
       {
@@ -752,45 +752,45 @@ WaitForParallelWorkersToFinish(ParallelContext *pcxt)
        * launched yet, or maybe some of them failed to start or
        * terminated abnormally.
        */
+      for (i = 0; i < pcxt->nworkers_launched; ++i)
+      {
+        pid_t pid;
+        shm_mq *mq;
 
+        /*
+         * If the worker is BGWH_NOT_YET_STARTED or BGWH_STARTED, we
+         * should just keep waiting.  If it is BGWH_STOPPED, then
+         * further investigation is needed.
+         */
+        if (pcxt->worker[i].error_mqh == NULL || pcxt->worker[i].bgwhandle == NULL || GetBackgroundWorkerPid(pcxt->worker[i].bgwhandle, &pid) != BGWH_STOPPED)
+        {
+          continue;
+        }
 
+        /*
+         * Check whether the worker ended up stopped without ever
+         * attaching to the error queue.  If so, the postmaster was
+         * unable to fork the worker or it exited without initializing
+         * properly.  We must throw an error, since the caller may
+         * have been expecting the worker to do some work before
+         * exiting.
+         */
+        mq = shm_mq_get_queue(pcxt->worker[i].error_mqh);
+        if (shm_mq_get_sender(mq) == NULL)
+        {
+          ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("parallel worker failed to initialize"), errhint("More details may be available in the server log.")));
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        /*
+         * The worker is stopped, but is attached to the error queue.
+         * Unless there's a bug somewhere, this will only happen when
+         * the worker writes messages and terminates after the
+         * CHECK_FOR_INTERRUPTS() near the top of this function and
+         * before the call to GetBackgroundWorkerPid().  In that case,
+         * or latch should have been set as well and the right things
+         * will happen on the next pass through the loop.
+         */
+      }
     }
 
     (void)WaitLatch(MyLatch, WL_LATCH_SET | WL_EXIT_ON_PM_DEATH, -1, WAIT_EVENT_PARALLEL_FINISH);
@@ -829,7 +829,7 @@ WaitForParallelWorkersToExit(ParallelContext *pcxt)
 
     if (pcxt->worker == NULL || pcxt->worker[i].bgwhandle == NULL)
     {
-
+      continue;
     }
 
     status = WaitForBackgroundWorkerShutdown(pcxt->worker[i].bgwhandle);
@@ -842,7 +842,7 @@ WaitForParallelWorkersToExit(ParallelContext *pcxt)
      */
     if (status == BGWH_POSTMASTER_DIED)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_ADMIN_SHUTDOWN), errmsg("postmaster exited during a parallel transaction")));
     }
 
     /* Release memory. */
@@ -904,8 +904,8 @@ DestroyParallelContext(ParallelContext *pcxt)
    */
   if (pcxt->private_memory != NULL)
   {
-
-
+    pfree(pcxt->private_memory);
+    pcxt->private_memory = NULL;
   }
 
   /*
@@ -936,7 +936,7 @@ DestroyParallelContext(ParallelContext *pcxt)
 bool
 ParallelContextActive(void)
 {
-
+  return !dlist_is_empty(&pcxt_list);
 }
 
 /*
@@ -979,8 +979,8 @@ HandleParallelMessages(void)
    * don't want to risk leaking data into long-lived contexts, so let's do
    * our work here in a private context that we can reset on each use.
    */
-  if (hpm_context == NULL)
-  { /* first time through? */
+  if (hpm_context == NULL) /* first time through? */
+  {
     hpm_context = AllocSetContextCreate(TopMemoryContext, "HandleParallelMessages", ALLOCSET_DEFAULT_SIZES);
   }
   else
@@ -1001,7 +1001,7 @@ HandleParallelMessages(void)
     pcxt = dlist_container(ParallelContext, node, iter.cur);
     if (pcxt->worker == NULL)
     {
-
+      continue;
     }
 
     for (i = 0; i < pcxt->nworkers_launched; ++i)
@@ -1034,7 +1034,7 @@ HandleParallelMessages(void)
         }
         else
         {
-
+          ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("lost connection to parallel worker")));
         }
       }
     }
@@ -1066,7 +1066,7 @@ HandleParallelMessage(ParallelContext *pcxt, int i, StringInfo msg)
 
   switch (msgtype)
   {
-  case 'K': ;/* BackendKeyData */
+  case 'K': /* BackendKeyData */
   {
     int32 pid = pq_getmsgint(msg, 4);
 
@@ -1076,8 +1076,8 @@ HandleParallelMessage(ParallelContext *pcxt, int i, StringInfo msg)
     break;
   }
 
-  case 'E': ;/* ErrorResponse */
-  case 'N': ;/* NoticeResponse */
+  case 'E': /* ErrorResponse */
+  case 'N': /* NoticeResponse */
   {
     ErrorData edata;
     ErrorContextCallback *save_error_context_stack;
@@ -1100,7 +1100,7 @@ HandleParallelMessage(ParallelContext *pcxt, int i, StringInfo msg)
     {
       if (edata.context)
       {
-
+        edata.context = psprintf("%s\n%s", edata.context, _("parallel worker"));
       }
       else
       {
@@ -1125,34 +1125,34 @@ HandleParallelMessage(ParallelContext *pcxt, int i, StringInfo msg)
     break;
   }
 
-  case 'A': ;/* NotifyResponse */
+  case 'A': /* NotifyResponse */
   {
     /* Propagate NotifyResponse. */
     int32 pid;
     const char *channel;
     const char *payload;
 
+    pid = pq_getmsgint(msg, 4);
+    channel = pq_getmsgrawstring(msg);
+    payload = pq_getmsgrawstring(msg);
+    pq_endmessage(msg);
 
+    NotifyMyFrontEnd(channel, payload, pid);
 
-
-
-
-
-
-
+    break;
   }
 
-  case 'X': ;/* Terminate, indicating clean exit */
+  case 'X': /* Terminate, indicating clean exit */
   {
     shm_mq_detach(pcxt->worker[i].error_mqh);
     pcxt->worker[i].error_mqh = NULL;
     break;
   }
 
-  default:;;
-    {
-
-    }
+  default:
+  {
+    elog(ERROR, "unrecognized message type received from parallel worker: %c (message length %d bytes)", msgtype, msg->len);
+  }
   }
 }
 
@@ -1174,11 +1174,11 @@ AtEOSubXact_Parallel(bool isCommit, SubTransactionId mySubId)
     pcxt = dlist_head_element(ParallelContext, node, &pcxt_list);
     if (pcxt->subid != mySubId)
     {
-
+      break;
     }
     if (isCommit)
     {
-
+      elog(WARNING, "leaked parallel context");
     }
     DestroyParallelContext(pcxt);
   }
@@ -1194,12 +1194,12 @@ AtEOXact_Parallel(bool isCommit)
   {
     ParallelContext *pcxt;
 
-
-
-
-
-
-
+    pcxt = dlist_head_element(ParallelContext, node, &pcxt_list);
+    if (isCommit)
+    {
+      elog(WARNING, "leaked parallel context");
+    }
+    DestroyParallelContext(pcxt);
   }
 }
 
@@ -1259,12 +1259,12 @@ ParallelWorkerMain(Datum main_arg)
   seg = dsm_attach(DatumGetUInt32(main_arg));
   if (seg == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not map dynamic shared memory segment")));
   }
   toc = shm_toc_attach(PARALLEL_MAGIC, dsm_segment_address(seg));
   if (toc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("invalid magic number in dynamic shared memory segment")));
   }
 
   /* Look up fixed parallel state. */
@@ -1317,7 +1317,7 @@ ParallelWorkerMain(Datum main_arg)
    */
   if (!BecomeLockGroupMember(fps->parallel_master_pgproc, fps->parallel_master_pid))
   {
-
+    return;
   }
 
   /*

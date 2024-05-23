@@ -261,13 +261,13 @@ BarrierPhase(Barrier *barrier)
 int
 BarrierParticipants(Barrier *barrier)
 {
+  int participants;
 
+  SpinLockAcquire(&barrier->mutex);
+  participants = barrier->participants;
+  SpinLockRelease(&barrier->mutex);
 
-
-
-
-
-
+  return participants;
 }
 
 /*

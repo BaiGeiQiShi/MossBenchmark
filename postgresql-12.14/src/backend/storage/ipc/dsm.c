@@ -157,7 +157,7 @@ dsm_postmaster_startup(PGShmemHeader *shim)
    */
   if (dynamic_shared_memory_type == DSM_IMPL_MMAP)
   {
-
+    dsm_cleanup_for_mmap();
   }
 
   /* Determine size for new control segment. */
@@ -178,7 +178,7 @@ dsm_postmaster_startup(PGShmemHeader *shim)
     dsm_control_handle = random();
     if (dsm_control_handle == DSM_HANDLE_INVALID)
     {
-
+      continue;
     }
     if (dsm_impl_op(DSM_OP_CREATE, dsm_control_handle, segsize, &dsm_control_impl_private, &dsm_control_address, &dsm_control_mapped_size, ERROR))
     {
@@ -204,66 +204,66 @@ dsm_postmaster_startup(PGShmemHeader *shim)
 void
 dsm_cleanup_using_control_segment(dsm_handle old_control_handle)
 {
+  void *mapped_address = NULL;
+  void *junk_mapped_address = NULL;
+  void *impl_private = NULL;
+  void *junk_impl_private = NULL;
+  Size mapped_size = 0;
+  Size junk_mapped_size = 0;
+  uint32 nitems;
+  uint32 i;
+  dsm_control_header *old_control;
 
+  /*
+   * Try to attach the segment.  If this fails, it probably just means that
+   * the operating system has been rebooted and the segment no longer
+   * exists, or an unrelated process has used the same shm ID.  So just fall
+   * out quietly.
+   */
+  if (!dsm_impl_op(DSM_OP_ATTACH, old_control_handle, 0, &impl_private, &mapped_address, &mapped_size, DEBUG1))
+  {
+    return;
+  }
 
+  /*
+   * We've managed to reattach it, but the contents might not be sane. If
+   * they aren't, we disregard the segment after all.
+   */
+  old_control = (dsm_control_header *)mapped_address;
+  if (!dsm_control_segment_sane(old_control, mapped_size))
+  {
+    dsm_impl_op(DSM_OP_DETACH, old_control_handle, 0, &impl_private, &mapped_address, &mapped_size, LOG);
+    return;
+  }
 
+  /*
+   * OK, the control segment looks basically valid, so we can use it to get
+   * a list of segments that need to be removed.
+   */
+  nitems = old_control->nitems;
+  for (i = 0; i < nitems; ++i)
+  {
+    dsm_handle handle;
+    uint32 refcnt;
 
+    /* If the reference count is 0, the slot is actually unused. */
+    refcnt = old_control->item[i].refcnt;
+    if (refcnt == 0)
+    {
+      continue;
+    }
 
+    /* Log debugging information. */
+    handle = old_control->item[i].handle;
+    elog(DEBUG2, "cleaning up orphaned dynamic shared memory with ID %u (reference count %u)", handle, refcnt);
 
+    /* Destroy the referenced segment. */
+    dsm_impl_op(DSM_OP_DESTROY, handle, 0, &junk_impl_private, &junk_mapped_address, &junk_mapped_size, LOG);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Destroy the old control segment, too. */
+  elog(DEBUG2, "cleaning up dynamic shared memory control segment with ID %u", old_control_handle);
+  dsm_impl_op(DSM_OP_DESTROY, old_control_handle, 0, &impl_private, &mapped_address, &mapped_size, LOG);
 }
 
 /*
@@ -279,32 +279,32 @@ dsm_cleanup_using_control_segment(dsm_handle old_control_handle)
 static void
 dsm_cleanup_for_mmap(void)
 {
+  DIR *dir;
+  struct dirent *dent;
 
+  /* Scan the directory for something with a name of the correct format. */
+  dir = AllocateDir(PG_DYNSHMEM_DIR);
 
+  while ((dent = ReadDir(dir, PG_DYNSHMEM_DIR)) != NULL)
+  {
+    if (strncmp(dent->d_name, PG_DYNSHMEM_MMAP_FILE_PREFIX, strlen(PG_DYNSHMEM_MMAP_FILE_PREFIX)) == 0)
+    {
+      char buf[MAXPGPATH + sizeof(PG_DYNSHMEM_DIR)];
 
+      snprintf(buf, sizeof(buf), PG_DYNSHMEM_DIR "/%s", dent->d_name);
 
+      elog(DEBUG2, "removing file \"%s\"", buf);
 
+      /* We found a matching file; so remove it. */
+      if (unlink(buf) != 0)
+      {
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not remove file \"%s\": %m", buf)));
+      }
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Cleanup complete. */
+  FreeDir(dir);
 }
 
 /*
@@ -334,8 +334,8 @@ dsm_postmaster_shutdown(int code, Datum arg)
   nitems = dsm_control->nitems;
   if (!dsm_control_segment_sane(dsm_control, dsm_control_mapped_size))
   {
-
-
+    ereport(LOG, (errmsg("dynamic shared memory control segment is corrupt")));
+    return;
   }
 
   /* Remove any remaining segments. */
@@ -350,11 +350,11 @@ dsm_postmaster_shutdown(int code, Datum arg)
     }
 
     /* Log debugging information. */
-
-
+    handle = dsm_control->item[i].handle;
+    elog(DEBUG2, "cleaning up orphaned dynamic shared memory with ID %u", handle);
 
     /* Destroy the segment. */
-
+    dsm_impl_op(DSM_OP_DESTROY, handle, 0, &junk_impl_private, &junk_mapped_address, &junk_mapped_size, LOG);
   }
 
   /* Remove the control segment itself. */
@@ -440,9 +440,9 @@ dsm_create(Size size, int flags)
   {
     Assert(seg->mapped_address == NULL && seg->mapped_size == 0);
     seg->handle = random();
-    if (seg->handle == DSM_HANDLE_INVALID)
-    { /* Reserve sentinel */
-
+    if (seg->handle == DSM_HANDLE_INVALID) /* Reserve sentinel */
+    {
+      continue;
     }
     if (dsm_impl_op(DSM_OP_CREATE, seg->handle, size, &seg->impl_private, &seg->mapped_address, &seg->mapped_size, ERROR))
     {
@@ -473,20 +473,20 @@ dsm_create(Size size, int flags)
   /* Verify that we can support an additional mapping. */
   if (nitems >= dsm_control->maxitems)
   {
+    LWLockRelease(DynamicSharedMemoryControlLock);
+    dsm_impl_op(DSM_OP_DESTROY, seg->handle, 0, &seg->impl_private, &seg->mapped_address, &seg->mapped_size, WARNING);
+    if (seg->resowner != NULL)
+    {
+      ResourceOwnerForgetDSM(seg->resowner, seg);
+    }
+    dlist_delete(&seg->node);
+    pfree(seg);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if ((flags & DSM_CREATE_NULL_IF_MAXSEGMENTS) != 0)
+    {
+      return NULL;
+    }
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("too many dynamic shared memory segments")));
   }
 
   /* Enter the handle into a new array slot. */
@@ -549,7 +549,7 @@ dsm_attach(dsm_handle h)
     seg = dlist_container(dsm_segment, node, iter.cur);
     if (seg->handle == h)
     {
-
+      elog(ERROR, "can't attach the same segment more than once");
     }
   }
 
@@ -571,7 +571,7 @@ dsm_attach(dsm_handle h)
      */
     if (dsm_control->item[i].refcnt <= 1)
     {
-
+      continue;
     }
 
     /* If the handle doesn't match, it's not the slot we want. */
@@ -595,8 +595,8 @@ dsm_attach(dsm_handle h)
    */
   if (seg->control_slot == INVALID_CONTROL_SLOT)
   {
-
-
+    dsm_detach(seg);
+    return NULL;
   }
 
   /* Here's where we actually try to map the segment. */
@@ -637,8 +637,8 @@ dsm_detach_all(void)
   {
     dsm_segment *seg;
 
-
-
+    seg = dlist_head_element(dsm_segment, node, &dsm_segment_list);
+    dsm_detach(seg);
   }
 
   if (control_address != NULL)
@@ -784,10 +784,10 @@ dsm_pin_mapping(dsm_segment *seg)
 void
 dsm_unpin_mapping(dsm_segment *seg)
 {
-
-
-
-
+  Assert(seg->resowner == NULL);
+  ResourceOwnerEnlargeDSMs(CurrentResourceOwner);
+  seg->resowner = CurrentResourceOwner;
+  ResourceOwnerRememberDSM(seg->resowner, seg);
 }
 
 /*
@@ -816,7 +816,7 @@ dsm_pin_segment(dsm_segment *seg)
   LWLockAcquire(DynamicSharedMemoryControlLock, LW_EXCLUSIVE);
   if (dsm_control->item[seg->control_slot].pinned)
   {
-
+    elog(ERROR, "cannot pin a segment that is already pinned");
   }
   dsm_impl_pin_segment(seg->handle, seg->impl_private, &handle);
   dsm_control->item[seg->control_slot].pinned = true;
@@ -868,11 +868,11 @@ dsm_unpin_segment(dsm_handle handle)
    */
   if (control_slot == INVALID_CONTROL_SLOT)
   {
-
+    elog(ERROR, "cannot unpin unknown segment handle");
   }
   if (!dsm_control->item[control_slot].pinned)
   {
-
+    elog(ERROR, "cannot unpin a segment that is not pinned");
   }
   Assert(dsm_control->item[control_slot].refcnt > 1);
 
@@ -927,19 +927,19 @@ dsm_unpin_segment(dsm_handle handle)
 dsm_segment *
 dsm_find_mapping(dsm_handle h)
 {
+  dlist_iter iter;
+  dsm_segment *seg;
 
+  dlist_foreach(iter, &dsm_segment_list)
+  {
+    seg = dlist_container(dsm_segment, node, iter.cur);
+    if (seg->handle == h)
+    {
+      return seg;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  return NULL;
 }
 
 /*
@@ -958,8 +958,8 @@ dsm_segment_address(dsm_segment *seg)
 Size
 dsm_segment_map_length(dsm_segment *seg)
 {
-
-
+  Assert(seg->mapped_address != NULL);
+  return seg->mapped_size;
 }
 
 /*
@@ -1028,21 +1028,21 @@ reset_on_dsm_detach(void)
     dsm_segment *seg = dlist_container(dsm_segment, node, iter.cur);
 
     /* Throw away explicit on-detach actions one by one. */
+    while (!slist_is_empty(&seg->on_detach))
+    {
+      slist_node *node;
+      dsm_segment_detach_callback *cb;
 
-
-
-
-
-
-
-
-
+      node = slist_pop_head_node(&seg->on_detach);
+      cb = slist_container(dsm_segment_detach_callback, node, node);
+      pfree(cb);
+    }
 
     /*
      * Decrementing the reference count is a sort of implicit on-detach
      * action; make sure we don't do that, either.
      */
-
+    seg->control_slot = INVALID_CONTROL_SLOT;
   }
 }
 
@@ -1094,19 +1094,19 @@ dsm_control_segment_sane(dsm_control_header *control, Size mapped_size)
 {
   if (mapped_size < offsetof(dsm_control_header, item))
   {
-
+    return false; /* Mapped size too short to read header. */
   }
   if (control->magic != PG_DYNSHMEM_CONTROL_MAGIC)
   {
-
+    return false; /* Magic number doesn't match. */
   }
   if (dsm_control_bytes_needed(control->maxitems) > mapped_size)
   {
-
+    return false; /* Max item count won't fit in map. */
   }
   if (control->nitems > control->maxitems)
   {
-
+    return false; /* Overfull. */
   }
   return true;
 }

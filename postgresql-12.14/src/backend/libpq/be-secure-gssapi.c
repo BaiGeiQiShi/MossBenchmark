@@ -108,7 +108,8 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
    * PqGSSSendConsumed.  On a retry, the caller *must* be sending that data
    * again, so if it offers a len less than that, something is wrong.
    */
-  if (len < PqGSSSendConsumed) {
+  if (len < PqGSSSendConsumed)
+  {
     elog(COMMERROR, "GSSAPI caller failed to retransmit all data needing to be retried");
     errno = ECONNRESET;
     return -1;
@@ -123,7 +124,8 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
    * is non-blocking and the requested send() would block, or there was some
    * kind of actual error).
    */
-  while (bytes_to_encrypt || PqGSSSendLength) {
+  while (bytes_to_encrypt || PqGSSSendLength)
+  {
     int conf_state = 0;
     uint32 netlen;
 
@@ -133,19 +135,22 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
      * to send it.  If we aren't able to, return that fact back up to the
      * caller.
      */
-    if (PqGSSSendLength) {
+    if (PqGSSSendLength)
+    {
       ssize_t ret;
       ssize_t amount = PqGSSSendLength - PqGSSSendNext;
 
       ret = secure_raw_write(port, PqGSSSendBuffer + PqGSSSendNext, amount);
-      if (ret <= 0) {
+      if (ret <= 0)
+      {
         /*
          * Report any previously-sent data; if there was none, reflect
          * the secure_raw_write result up to our caller.  When there
          * was some, we're effectively assuming that any interesting
          * failure condition will recur on the next try.
          */
-        if (bytes_sent) {
+        if (bytes_sent)
+        {
           return bytes_sent;
         }
         return ret;
@@ -155,7 +160,8 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
        * Check if this was a partial write, and if so, move forward that
        * far in our buffer and try again.
        */
-      if (ret != amount) {
+      if (ret != amount)
+      {
         PqGSSSendNext += ret;
         continue;
       }
@@ -170,7 +176,8 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
     /*
      * Check if there are any bytes left to encrypt.  If not, we're done.
      */
-    if (!bytes_to_encrypt) {
+    if (!bytes_to_encrypt)
+    {
       break;
     }
 
@@ -179,9 +186,12 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
      * we will have to loop and possibly be called multiple times to get
      * through all the data.
      */
-    if (bytes_to_encrypt > PqGSSMaxPktSize) {
+    if (bytes_to_encrypt > PqGSSMaxPktSize)
+    {
       input.length = PqGSSMaxPktSize;
-    } else {
+    }
+    else
+    {
       input.length = bytes_to_encrypt;
     }
 
@@ -192,17 +202,20 @@ be_gssapi_write(Port *port, void *ptr, size_t len)
 
     /* Create the next encrypted packet */
     major = gss_wrap(&minor, gctx, 1, GSS_C_QOP_DEFAULT, &input, &conf_state, &output);
-    if (major != GSS_S_COMPLETE) {
+    if (major != GSS_S_COMPLETE)
+    {
       pg_GSS_error(_("GSSAPI wrap error"), major, minor);
       errno = ECONNRESET;
       return -1;
     }
-    if (conf_state == 0) {
+    if (conf_state == 0)
+    {
       ereport(COMMERROR, (errmsg("outgoing GSSAPI message would not use confidentiality")));
       errno = ECONNRESET;
       return -1;
     }
-    if (output.length > PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32)) {
+    if (output.length > PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32))
+    {
       ereport(COMMERROR, (errmsg("server tried to send oversize GSSAPI packet (%zu > %zu)", (size_t)output.length, PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32))));
       errno = ECONNRESET;
       return -1;
@@ -259,11 +272,13 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
    * data from there to the caller.  When we exhaust the current input
    * packet, read another.
    */
-  while (bytes_returned < len) {
+  while (bytes_returned < len)
+  {
     int conf_state = 0;
 
     /* Check if we have data in our buffer that we can return immediately */
-    if (PqGSSResultNext < PqGSSResultLength) {
+    if (PqGSSResultNext < PqGSSResultLength)
+    {
       size_t bytes_in_buffer = PqGSSResultLength - PqGSSResultNext;
       size_t bytes_to_copy = Min(bytes_in_buffer, len - bytes_returned);
 
@@ -305,18 +320,21 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
      */
 
     /* Collect the length if we haven't already */
-    if (PqGSSRecvLength < sizeof(uint32)) {
+    if (PqGSSRecvLength < sizeof(uint32))
+    {
       ret = secure_raw_read(port, PqGSSRecvBuffer + PqGSSRecvLength, sizeof(uint32) - PqGSSRecvLength);
 
       /* If ret <= 0, secure_raw_read already set the correct errno */
-      if (ret <= 0) {
+      if (ret <= 0)
+      {
         return ret;
       }
 
       PqGSSRecvLength += ret;
 
       /* If we still haven't got the length, return to the caller */
-      if (PqGSSRecvLength < sizeof(uint32)) {
+      if (PqGSSRecvLength < sizeof(uint32))
+      {
         errno = EWOULDBLOCK;
         return -1;
       }
@@ -325,7 +343,8 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
     /* Decode the packet length and check for overlength packet */
     input.length = ntohl(*(uint32 *)PqGSSRecvBuffer);
 
-    if (input.length > PQ_GSS_RECV_BUFFER_SIZE - sizeof(uint32)) {
+    if (input.length > PQ_GSS_RECV_BUFFER_SIZE - sizeof(uint32))
+    {
       ereport(COMMERROR, (errmsg("oversize GSSAPI packet sent by the client (%zu > %zu)", (size_t)input.length, PQ_GSS_RECV_BUFFER_SIZE - sizeof(uint32))));
       errno = ECONNRESET;
       return -1;
@@ -337,14 +356,16 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
      */
     ret = secure_raw_read(port, PqGSSRecvBuffer + PqGSSRecvLength, input.length - (PqGSSRecvLength - sizeof(uint32)));
     /* If ret <= 0, secure_raw_read already set the correct errno */
-    if (ret <= 0) {
+    if (ret <= 0)
+    {
       return ret;
     }
 
     PqGSSRecvLength += ret;
 
     /* If we don't yet have the whole packet, return to the caller */
-    if (PqGSSRecvLength - sizeof(uint32) < input.length) {
+    if (PqGSSRecvLength - sizeof(uint32) < input.length)
+    {
       errno = EWOULDBLOCK;
       return -1;
     }
@@ -359,12 +380,14 @@ be_gssapi_read(Port *port, void *ptr, size_t len)
     input.value = PqGSSRecvBuffer + sizeof(uint32);
 
     major = gss_unwrap(&minor, gctx, &input, &output, &conf_state, NULL);
-    if (major != GSS_S_COMPLETE) {
+    if (major != GSS_S_COMPLETE)
+    {
       pg_GSS_error(_("GSSAPI unwrap error"), major, minor);
       errno = ECONNRESET;
       return -1;
     }
-    if (conf_state == 0) {
+    if (conf_state == 0)
+    {
       ereport(COMMERROR, (errmsg("incoming GSSAPI message did not use confidentiality")));
       errno = ECONNRESET;
       return -1;
@@ -400,14 +423,16 @@ read_or_wait(Port *port, ssize_t len)
    * Keep going until we either read in everything we were asked to, or we
    * error out.
    */
-  while (PqGSSRecvLength < len) {
+  while (PqGSSRecvLength < len)
+  {
     ret = secure_raw_read(port, PqGSSRecvBuffer + PqGSSRecvLength, len - PqGSSRecvLength);
 
     /*
      * If we got back an error and it wasn't just
      * EWOULDBLOCK/EAGAIN/EINTR, then give up.
      */
-    if (ret < 0 && !(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)) {
+    if (ret < 0 && !(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR))
+    {
       return -1;
     }
 
@@ -418,7 +443,8 @@ read_or_wait(Port *port, ssize_t len)
      * If it was zero or negative, then we wait on the socket to be
      * readable again.
      */
-    if (ret <= 0) {
+    if (ret <= 0)
+    {
       WaitLatchOrSocket(MyLatch, WL_SOCKET_READABLE | WL_EXIT_ON_PM_DEATH, port->sock, 0, WAIT_EVENT_GSS_OPEN_SERVER);
 
       /*
@@ -431,13 +457,16 @@ read_or_wait(Port *port, ssize_t len)
        *
        * Otherwise loop back to the top and try again.
        */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         ret = secure_raw_read(port, PqGSSRecvBuffer + PqGSSRecvLength, len - PqGSSRecvLength);
-        if (ret == 0) {
+        if (ret == 0)
+        {
           return -1;
         }
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         continue;
       }
     }
@@ -481,7 +510,8 @@ secure_open_gssapi(Port *port)
   PqGSSSendBuffer = malloc(PQ_GSS_SEND_BUFFER_SIZE);
   PqGSSRecvBuffer = malloc(PQ_GSS_RECV_BUFFER_SIZE);
   PqGSSResultBuffer = malloc(PQ_GSS_RECV_BUFFER_SIZE);
-  if (!PqGSSSendBuffer || !PqGSSRecvBuffer || !PqGSSResultBuffer) {
+  if (!PqGSSSendBuffer || !PqGSSRecvBuffer || !PqGSSResultBuffer)
+  {
     ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
   PqGSSSendLength = PqGSSSendNext = PqGSSSendConsumed = 0;
@@ -491,14 +521,17 @@ secure_open_gssapi(Port *port)
    * Use the configured keytab, if there is one.  Unfortunately, Heimdal
    * doesn't support the cred store extensions, so use the env var.
    */
-  if (pg_krb_server_keyfile != NULL && pg_krb_server_keyfile[0] != '\0') {
-    if (setenv("KRB5_KTNAME", pg_krb_server_keyfile, 1) != 0) {
+  if (pg_krb_server_keyfile != NULL && pg_krb_server_keyfile[0] != '\0')
+  {
+    if (setenv("KRB5_KTNAME", pg_krb_server_keyfile, 1) != 0)
+    {
       /* The only likely failure cause is OOM, so use that errcode */
       ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("could not set environment: %m")));
     }
   }
 
-  while (true) {
+  while (true)
+  {
     ssize_t ret;
     gss_buffer_desc input, output = GSS_C_EMPTY_BUFFER;
 
@@ -507,7 +540,8 @@ secure_open_gssapi(Port *port)
      * length and wait on the socket to be readable again if that fails.
      */
     ret = read_or_wait(port, sizeof(uint32));
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
 
@@ -525,7 +559,8 @@ secure_open_gssapi(Port *port)
      *
      * Verify on our side that the client doesn't do something funny.
      */
-    if (input.length > PQ_GSS_RECV_BUFFER_SIZE) {
+    if (input.length > PQ_GSS_RECV_BUFFER_SIZE)
+    {
       ereport(COMMERROR, (errmsg("oversize GSSAPI packet sent by the client (%zu > %d)", (size_t)input.length, PQ_GSS_RECV_BUFFER_SIZE)));
       return -1;
     }
@@ -535,7 +570,8 @@ secure_open_gssapi(Port *port)
      * the context.
      */
     ret = read_or_wait(port, input.length);
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
 
@@ -543,11 +579,14 @@ secure_open_gssapi(Port *port)
 
     /* Process incoming data.  (The client sends first.) */
     major = gss_accept_sec_context(&minor, &port->gss->ctx, GSS_C_NO_CREDENTIAL, &input, GSS_C_NO_CHANNEL_BINDINGS, &port->gss->name, NULL, &output, NULL, NULL, NULL);
-    if (GSS_ERROR(major)) {
+    if (GSS_ERROR(major))
+    {
       pg_GSS_error(_("could not accept GSSAPI security context"), major, minor);
       gss_release_buffer(&minor, &output);
       return -1;
-    } else if (!(major & GSS_S_CONTINUE_NEEDED)) {
+    }
+    else if (!(major & GSS_S_CONTINUE_NEEDED))
+    {
       /*
        * rfc2744 technically permits context negotiation to be complete
        * both with and without a packet to be sent.
@@ -562,10 +601,12 @@ secure_open_gssapi(Port *port)
      * Check if we have data to send and, if we do, make sure to send it
      * all
      */
-    if (output.length > 0) {
+    if (output.length > 0)
+    {
       uint32 netlen = htonl(output.length);
 
-      if (output.length > PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32)) {
+      if (output.length > PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32))
+      {
         ereport(COMMERROR, (errmsg("server tried to send oversize GSSAPI packet (%zu > %zu)", (size_t)output.length, PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32))));
         gss_release_buffer(&minor, &output);
         return -1;
@@ -579,20 +620,23 @@ secure_open_gssapi(Port *port)
 
       /* we don't bother with PqGSSSendConsumed here */
 
-      while (PqGSSSendNext < PqGSSSendLength) {
+      while (PqGSSSendNext < PqGSSSendLength)
+      {
         ret = secure_raw_write(port, PqGSSSendBuffer + PqGSSSendNext, PqGSSSendLength - PqGSSSendNext);
 
         /*
          * If we got back an error and it wasn't just
          * EWOULDBLOCK/EAGAIN/EINTR, then give up.
          */
-        if (ret < 0 && !(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)) {
+        if (ret < 0 && !(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR))
+        {
           gss_release_buffer(&minor, &output);
           return -1;
         }
 
         /* Wait and retry if we couldn't write yet */
-        if (ret <= 0) {
+        if (ret <= 0)
+        {
           WaitLatchOrSocket(MyLatch, WL_SOCKET_WRITEABLE | WL_EXIT_ON_PM_DEATH, port->sock, 0, WAIT_EVENT_GSS_OPEN_SERVER);
           continue;
         }
@@ -610,7 +654,8 @@ secure_open_gssapi(Port *port)
      * If we got back that the connection is finished being set up, now
      * that we've sent the last packet, exit our loop.
      */
-    if (complete_next) {
+    if (complete_next)
+    {
       break;
     }
   }
@@ -621,7 +666,8 @@ secure_open_gssapi(Port *port)
    */
   major = gss_wrap_size_limit(&minor, port->gss->ctx, 1, GSS_C_QOP_DEFAULT, PQ_GSS_SEND_BUFFER_SIZE - sizeof(uint32), &PqGSSMaxPktSize);
 
-  if (GSS_ERROR(major)) {
+  if (GSS_ERROR(major))
+  {
     pg_GSS_error(_("GSSAPI size check error"), major, minor);
     return -1;
   }
@@ -637,7 +683,8 @@ secure_open_gssapi(Port *port)
 bool
 be_gssapi_get_auth(Port *port)
 {
-  if (!port || !port->gss) {
+  if (!port || !port->gss)
+  {
     return false;
   }
 
@@ -650,7 +697,8 @@ be_gssapi_get_auth(Port *port)
 bool
 be_gssapi_get_enc(Port *port)
 {
-  if (!port || !port->gss) {
+  if (!port || !port->gss)
+  {
     return false;
   }
 
@@ -664,7 +712,8 @@ be_gssapi_get_enc(Port *port)
 const char *
 be_gssapi_get_princ(Port *port)
 {
-  if (!port || !port->gss) {
+  if (!port || !port->gss)
+  {
     return NULL;
   }
 

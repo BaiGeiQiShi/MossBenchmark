@@ -93,7 +93,7 @@ volatile sig_atomic_t postmaster_possibly_dead = false;
 static void
 postmaster_death_handler(int signo)
 {
-
+  postmaster_possibly_dead = true;
 }
 
 /*
@@ -156,7 +156,7 @@ PMSignalShmemInit(void)
     {
       if (PMChildInUse)
       {
-
+        pfree(PMChildInUse);
       }
       PMChildInUse = (bool *)MemoryContextAllocZero(PostmasterContext, num_child_inuse * sizeof(bool));
     }
@@ -173,7 +173,7 @@ SendPostmasterSignal(PMSignalReason reason)
   /* If called in a standalone backend, do nothing */
   if (!IsUnderPostmaster)
   {
-
+    return;
   }
   /* Atomically set the proper flag */
   PMSignalState->PMSignalFlags[reason] = true;
@@ -235,7 +235,7 @@ AssignPostmasterChildSlot(void)
 
   /* Out of slots ... should never happen, else postmaster.c messed up */
   elog(FATAL, "no free slots in PMChildFlags array");
-
+  return 0; /* keep compiler quiet */
 }
 
 /*
@@ -276,7 +276,7 @@ IsPostmasterChildWalSender(int slot)
 
   if (PMSignalState->PMChildFlags[slot] == PM_CHILD_WALSENDER)
   {
-
+    return true;
   }
   else
   {
@@ -307,14 +307,14 @@ MarkPostmasterChildActive(void)
 void
 MarkPostmasterChildWalSender(void)
 {
+  int slot = MyPMChildSlot;
 
+  Assert(am_walsender);
 
-
-
-
-
-
-
+  Assert(slot > 0 && slot <= PMSignalState->num_child_flags);
+  slot--;
+  Assert(PMSignalState->PMChildFlags[slot] == PM_CHILD_ACTIVE);
+  PMSignalState->PMChildFlags[slot] = PM_CHILD_WALSENDER;
 }
 
 /*
@@ -342,67 +342,67 @@ MarkPostmasterChildInactive(void)
 bool
 PostmasterIsAliveInternal(void)
 {
+#ifdef USE_POSTMASTER_DEATH_SIGNAL
+  /*
+   * Reset the flag before checking, so that we don't miss a signal if
+   * postmaster dies right after the check.  If postmaster was indeed dead,
+   * we'll re-arm it before returning to caller.
+   */
+  postmaster_possibly_dead = false;
+#endif
 
+#ifndef WIN32
+  {
+    char c;
+    ssize_t rc;
 
+    rc = read(postmaster_alive_fds[POSTMASTER_FD_WATCH], &c, 1);
 
+    /*
+     * In the usual case, the postmaster is still alive, and there is no
+     * data in the pipe.
+     */
+    if (rc < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+    {
+      return true;
+    }
+    else
+    {
+      /*
+       * Postmaster is dead, or something went wrong with the read()
+       * call.
+       */
 
+#ifdef USE_POSTMASTER_DEATH_SIGNAL
+      postmaster_possibly_dead = true;
+#endif
 
+      if (rc < 0)
+      {
+        elog(FATAL, "read on postmaster death monitoring pipe failed: %m");
+      }
+      else if (rc > 0)
+      {
+        elog(FATAL, "unexpected data in postmaster death monitoring pipe");
+      }
 
+      return false;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#else /* WIN32 */
+  if (WaitForSingleObject(PostmasterHandle, 0) == WAIT_TIMEOUT)
+  {
+    return true;
+  }
+  else
+  {
+#ifdef USE_POSTMASTER_DEATH_SIGNAL
+    postmaster_possibly_dead = true;
+#endif
+    return false;
+  }
+#endif /* WIN32 */
 }
 
 /*
@@ -421,7 +421,7 @@ PostmasterDeathSignalInit(void)
 #if defined(PR_SET_PDEATHSIG)
   if (prctl(PR_SET_PDEATHSIG, signum) < 0)
   {
-
+    elog(ERROR, "could not request parent death signal: %m");
   }
 #elif defined(PROC_PDEATHSIG_CTL)
   if (procctl(P_PID, 0, PROC_PDEATHSIG_CTL, &signum) < 0)

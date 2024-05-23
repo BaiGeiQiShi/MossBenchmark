@@ -38,67 +38,67 @@
 static void
 gistkillitems(IndexScanDesc scan)
 {
+  GISTScanOpaque so = (GISTScanOpaque)scan->opaque;
+  Buffer buffer;
+  Page page;
+  OffsetNumber offnum;
+  ItemId iid;
+  int i;
+  bool killedsomething = false;
 
+  Assert(so->curBlkno != InvalidBlockNumber);
+  Assert(!XLogRecPtrIsInvalid(so->curPageLSN));
+  Assert(so->killedItems != NULL);
 
+  buffer = ReadBuffer(scan->indexRelation, so->curBlkno);
+  if (!BufferIsValid(buffer))
+  {
+    return;
+  }
 
+  LockBuffer(buffer, GIST_SHARE);
+  gistcheckpage(scan->indexRelation, buffer);
+  page = BufferGetPage(buffer);
 
+  /*
+   * If page LSN differs it means that the page was modified since the last
+   * read. killedItems could be not valid so LP_DEAD hints applying is not
+   * safe.
+   */
+  if (BufferGetLSNAtomic(buffer) != so->curPageLSN)
+  {
+    UnlockReleaseBuffer(buffer);
+    so->numKilled = 0; /* reset counter */
+    return;
+  }
 
+  Assert(GistPageIsLeaf(page));
 
+  /*
+   * Mark all killedItems as dead. We need no additional recheck, because,
+   * if page was modified, pageLSN must have changed.
+   */
+  for (i = 0; i < so->numKilled; i++)
+  {
+    offnum = so->killedItems[i];
+    iid = PageGetItemId(page, offnum);
+    ItemIdMarkDead(iid);
+    killedsomething = true;
+  }
 
+  if (killedsomething)
+  {
+    GistMarkPageHasGarbage(page);
+    MarkBufferDirtyHint(buffer, true);
+  }
 
+  UnlockReleaseBuffer(buffer);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Always reset the scan state, so we don't look for same items on other
+   * pages.
+   */
+  so->numKilled = 0;
 }
 
 /*
@@ -146,16 +146,16 @@ gistindex_keytest(IndexScanDesc scan, IndexTuple tuple, Page page, OffsetNumber 
   {
     int i;
 
-
-
-
-
-
-
-
-
-
-
+    if (GistPageIsLeaf(page)) /* shouldn't happen */
+    {
+      elog(ERROR, "invalid GiST tuple found on leaf page");
+    }
+    for (i = 0; i < scan->numberOfOrderBys; i++)
+    {
+      so->distances[i].value = -get_float8_infinity();
+      so->distances[i].isnull = false;
+    }
+    return true;
   }
 
   /* Check whether it matches according to the Consistent functions */
@@ -343,21 +343,21 @@ gistScanPage(IndexScanDesc scan, GISTSearchItem *pageItem, IndexOrderByDistance 
     GISTSearchItem *item;
 
     /* This can't happen when starting at the root */
+    Assert(myDistances != NULL);
 
-
-
+    oldcxt = MemoryContextSwitchTo(so->queueCxt);
 
     /* Create new GISTSearchItem for the right sibling index page */
-
-
-
+    item = palloc(SizeOfGISTSearchItem(scan->numberOfOrderBys));
+    item->blkno = opaque->rightlink;
+    item->data.parentlsn = pageItem->data.parentlsn;
 
     /* Insert it into the queue using same distances as for this page */
+    memcpy(item->distances, myDistances, sizeof(item->distances[0]) * scan->numberOfOrderBys);
 
+    pairingheap_add(so->queue, &item->phNode);
 
-
-
-
+    MemoryContextSwitchTo(oldcxt);
   }
 
   /*
@@ -370,8 +370,8 @@ gistScanPage(IndexScanDesc scan, GISTSearchItem *pageItem, IndexOrderByDistance 
    */
   if (GistPageIsDeleted(page))
   {
-
-
+    UnlockReleaseBuffer(buffer);
+    return;
   }
 
   so->nPageData = so->curPageData = 0;
@@ -406,7 +406,7 @@ gistScanPage(IndexScanDesc scan, GISTSearchItem *pageItem, IndexOrderByDistance 
      */
     if (scan->ignore_killed_tuples && ItemIdIsDead(iid))
     {
-
+      continue;
     }
 
     it = (IndexTuple)PageGetItem(page, iid);
@@ -602,12 +602,12 @@ gistgettuple(IndexScanDesc scan, ScanDirection dir)
 
   if (dir != ForwardScanDirection)
   {
-
+    elog(ERROR, "GiST only supports forward scan direction");
   }
 
   if (!so->qual_ok)
   {
-
+    return false;
   }
 
   if (so->firstCall)
@@ -680,18 +680,18 @@ gistgettuple(IndexScanDesc scan, ScanDirection dir)
       if (scan->kill_prior_tuple && so->curPageData > 0 && so->curPageData == so->nPageData)
       {
 
+        if (so->killedItems == NULL)
+        {
+          MemoryContext oldCxt = MemoryContextSwitchTo(so->giststate->scanCxt);
 
+          so->killedItems = (OffsetNumber *)palloc(MaxIndexTuplesPerPage * sizeof(OffsetNumber));
 
-
-
-
-
-
-
-
-
-
-
+          MemoryContextSwitchTo(oldCxt);
+        }
+        if (so->numKilled < MaxIndexTuplesPerPage)
+        {
+          so->killedItems[so->numKilled++] = so->pageData[so->curPageData - 1].offnum;
+        }
       }
       /* find and process the next index page */
       do
@@ -700,7 +700,7 @@ gistgettuple(IndexScanDesc scan, ScanDirection dir)
 
         if ((so->curBlkno != InvalidBlockNumber) && (so->numKilled > 0))
         {
-
+          gistkillitems(scan);
         }
 
         item = getNextGISTSearchItem(so);
@@ -741,7 +741,7 @@ gistgetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
 
   if (!so->qual_ok)
   {
-
+    return 0;
   }
 
   pgstat_count_index_scan(scan->indexRelation);
@@ -751,7 +751,7 @@ gistgetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
   scan->xs_hitup = NULL;
   if (so->pageDataCxt)
   {
-
+    MemoryContextReset(so->pageDataCxt);
   }
 
   fakeItem.blkno = GIST_ROOT_BLKNO;

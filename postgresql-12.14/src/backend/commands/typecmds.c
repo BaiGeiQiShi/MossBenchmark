@@ -79,7 +79,7 @@ typedef struct
   Relation rel; /* opened and locked relation */
   int natts;    /* number of attributes of interest */
   int *atts;    /* attribute numbers */
-  /* atts[] is of allocated length RelationGetNumberOfAttributes(rel) */
+                /* atts[] is of allocated length RelationGetNumberOfAttributes(rel) */
 } RelToCheck;
 
 /* Potentially set by pg_upgrade_support functions */
@@ -127,7 +127,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
 {
   char *typeName;
   Oid typeNamespace;
-  int16 internalLength = -1; /* default:; variable-length */
+  int16 internalLength = -1; /* default: variable-length */
   List *inputName = NIL;
   List *outputName = NIL;
   List *receiveName = NIL;
@@ -189,7 +189,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
    */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create a base type")));
   }
 
   /* Convert list of names to a name and namespace */
@@ -219,7 +219,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   {
     if (moveArrayTypeName(typoid, typeName, typeNamespace))
     {
-
+      typoid = InvalidOid;
     }
   }
 
@@ -276,11 +276,11 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else if (strcmp(defel->defname, "receive") == 0)
     {
-
+      defelp = &receiveNameEl;
     }
     else if (strcmp(defel->defname, "send") == 0)
     {
-
+      defelp = &sendNameEl;
     }
     else if (strcmp(defel->defname, "typmod_in") == 0)
     {
@@ -292,7 +292,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else if (strcmp(defel->defname, "analyze") == 0 || strcmp(defel->defname, "analyse") == 0)
     {
-
+      defelp = &analyzeNameEl;
     }
     else if (strcmp(defel->defname, "category") == 0)
     {
@@ -304,7 +304,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else if (strcmp(defel->defname, "delimiter") == 0)
     {
-
+      defelp = &delimiterEl;
     }
     else if (strcmp(defel->defname, "element") == 0)
     {
@@ -324,11 +324,11 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else if (strcmp(defel->defname, "storage") == 0)
     {
-
+      defelp = &storageEl;
     }
     else if (strcmp(defel->defname, "collatable") == 0)
     {
-
+      defelp = &collatableEl;
     }
     else
     {
@@ -338,7 +338,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     if (*defelp != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
     }
     *defelp = defel;
   }
@@ -375,11 +375,11 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   }
   if (receiveNameEl)
   {
-
+    receiveName = defGetQualifiedName(receiveNameEl);
   }
   if (sendNameEl)
   {
-
+    sendName = defGetQualifiedName(sendNameEl);
   }
   if (typmodinNameEl)
   {
@@ -391,7 +391,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   }
   if (analyzeNameEl)
   {
-
+    analyzeName = defGetQualifiedName(analyzeNameEl);
   }
   if (categoryEl)
   {
@@ -401,7 +401,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     /* restrict to non-control ASCII */
     if (category < 32 || category > 126)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid type category \"%s\": must be simple ASCII", p)));
     }
   }
   if (preferredEl)
@@ -412,7 +412,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   {
     char *p = defGetString(delimiterEl);
 
-
+    delimiter = p[0];
     /* XXX shouldn't we restrict the delimiter? */
   }
   if (elemTypeEl)
@@ -421,7 +421,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     /* disallow arrays of pseudotypes */
     if (get_typtype(elemType) == TYPTYPE_PSEUDO)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("array element type cannot be %s", format_type_be(elemType))));
     }
   }
   if (defaultValueEl)
@@ -449,47 +449,47 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     {
       alignment = 'i';
     }
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (pg_strcasecmp(a, "int2") == 0 || pg_strcasecmp(a, "pg_catalog.int2") == 0)
+    {
+      alignment = 's';
+    }
+    else if (pg_strcasecmp(a, "char") == 0 || pg_strcasecmp(a, "pg_catalog.bpchar") == 0)
+    {
+      alignment = 'c';
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("alignment \"%s\" not recognized", a)));
+    }
   }
   if (storageEl)
   {
     char *a = defGetString(storageEl);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (pg_strcasecmp(a, "plain") == 0)
+    {
+      storage = 'p';
+    }
+    else if (pg_strcasecmp(a, "external") == 0)
+    {
+      storage = 'e';
+    }
+    else if (pg_strcasecmp(a, "extended") == 0)
+    {
+      storage = 'x';
+    }
+    else if (pg_strcasecmp(a, "main") == 0)
+    {
+      storage = 'm';
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("storage \"%s\" not recognized", a)));
+    }
   }
   if (collatableEl)
   {
-
+    collation = defGetBoolean(collatableEl) ? DEFAULT_COLLATION_OID : InvalidOid;
   }
 
   /*
@@ -501,12 +501,12 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   }
   if (outputName == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type output function must be specified")));
   }
 
   if (typmodinName == NIL && typmodoutName != NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type modifier output function is useless without a type modifier input function")));
   }
 
   /*
@@ -516,11 +516,11 @@ DefineType(ParseState *pstate, List *names, List *parameters)
   outputOid = findTypeOutputFunction(outputName, typoid);
   if (receiveName)
   {
-
+    receiveOid = findTypeReceiveFunction(receiveName, typoid);
   }
   if (sendName)
   {
-
+    sendOid = findTypeSendFunction(sendName, typoid);
   }
 
   /*
@@ -538,7 +538,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type input function %s must return type %s", NameListToString(inputName), typeName)));
     }
   }
   resulttype = get_func_rettype(outputOid);
@@ -552,24 +552,24 @@ DefineType(ParseState *pstate, List *names, List *parameters)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type output function %s must return type %s", NameListToString(outputName), "cstring")));
     }
   }
   if (receiveOid)
   {
-
-
-
-
-
+    resulttype = get_func_rettype(receiveOid);
+    if (resulttype != typoid)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type receive function %s must return type %s", NameListToString(receiveName), typeName)));
+    }
   }
   if (sendOid)
   {
-
-
-
-
-
+    resulttype = get_func_rettype(sendOid);
+    if (resulttype != BYTEAOID)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type send function %s must return type %s", NameListToString(sendName), "bytea")));
+    }
   }
 
   /*
@@ -590,7 +590,7 @@ DefineType(ParseState *pstate, List *names, List *parameters)
    */
   if (analyzeName)
   {
-
+    analyzeOid = findTypeAnalyzeFunction(analyzeName, typoid);
   }
 
   /*
@@ -645,27 +645,27 @@ DefineType(ParseState *pstate, List *names, List *parameters)
    */
   if (inputOid && func_volatile(inputOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type input function %s should not be volatile", NameListToString(inputName))));
   }
   if (outputOid && func_volatile(outputOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type output function %s should not be volatile", NameListToString(outputName))));
   }
   if (receiveOid && func_volatile(receiveOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type receive function %s should not be volatile", NameListToString(receiveName))));
   }
   if (sendOid && func_volatile(sendOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type send function %s should not be volatile", NameListToString(sendName))));
   }
   if (typmodinOid && func_volatile(typmodinOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type modifier input function %s should not be volatile", NameListToString(typmodinName))));
   }
   if (typmodoutOid && func_volatile(typmodoutOid) == PROVOLATILE_VOLATILE)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type modifier output function %s should not be volatile", NameListToString(typmodoutName))));
   }
 
   /*
@@ -774,7 +774,7 @@ RemoveTypeById(Oid typeOid)
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typeOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -854,7 +854,7 @@ DefineDomain(CreateDomainStmt *stmt)
   aclresult = pg_namespace_aclcheck(domainNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(domainNamespace));
   }
 
   /*
@@ -864,10 +864,10 @@ DefineDomain(CreateDomainStmt *stmt)
   old_type_oid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum(domainName), ObjectIdGetDatum(domainNamespace));
   if (OidIsValid(old_type_oid))
   {
-
-
-
-
+    if (!moveArrayTypeName(old_type_oid, domainName, domainNamespace))
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", domainName)));
+    }
   }
 
   /*
@@ -888,7 +888,7 @@ DefineDomain(CreateDomainStmt *stmt)
   typtype = baseType->typtype;
   if (typtype != TYPTYPE_BASE && typtype != TYPTYPE_COMPOSITE && typtype != TYPTYPE_DOMAIN && typtype != TYPTYPE_ENUM && typtype != TYPTYPE_RANGE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("\"%s\" is not a valid base type for a domain", TypeNameToString(stmt->typeName))));
   }
 
   aclresult = pg_type_aclcheck(basetypeoid, GetUserId(), ACL_USAGE);
@@ -949,14 +949,14 @@ DefineDomain(CreateDomainStmt *stmt)
   datum = SysCacheGetAttr(TYPEOID, typeTup, Anum_pg_type_typdefault, &isnull);
   if (!isnull)
   {
-
+    defaultValue = TextDatumGetCString(datum);
   }
 
   /* Inherited default binary value */
   datum = SysCacheGetAttr(TYPEOID, typeTup, Anum_pg_type_typdefaultbin, &isnull);
   if (!isnull)
   {
-
+    defaultValueBin = TextDatumGetCString(datum);
   }
 
   /*
@@ -969,11 +969,11 @@ DefineDomain(CreateDomainStmt *stmt)
 
     if (!IsA(constr, Constraint))
     {
-
+      elog(ERROR, "unrecognized node type: %d", (int)nodeTag(constr));
     }
     switch (constr->contype)
     {
-    case CONSTR_DEFAULT:;
+    case CONSTR_DEFAULT:
 
       /*
        * The inherited default value may be overridden by the user
@@ -981,7 +981,7 @@ DefineDomain(CreateDomainStmt *stmt)
        */
       if (saw_default)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple default expressions")));
       }
       saw_default = true;
 
@@ -1012,8 +1012,8 @@ DefineDomain(CreateDomainStmt *stmt)
          */
         if (defaultExpr == NULL || (IsA(defaultExpr, Const) && ((Const *)defaultExpr)->constisnull))
         {
-
-
+          defaultValue = NULL;
+          defaultValueBin = NULL;
         }
         else
         {
@@ -1029,30 +1029,30 @@ DefineDomain(CreateDomainStmt *stmt)
       else
       {
         /* No default (can this still happen?) */
-
-
+        defaultValue = NULL;
+        defaultValueBin = NULL;
       }
       break;
 
-    case CONSTR_NOTNULL:;
+    case CONSTR_NOTNULL:
       if (nullDefined && !typNotNull)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting NULL/NOT NULL constraints")));
       }
       typNotNull = true;
       nullDefined = true;
       break;
 
-    case CONSTR_NULL:;
+    case CONSTR_NULL:
+      if (nullDefined && typNotNull)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting NULL/NOT NULL constraints")));
+      }
+      typNotNull = false;
+      nullDefined = true;
+      break;
 
-
-
-
-
-
-
-
-    case CONSTR_CHECK:;
+    case CONSTR_CHECK:
 
       /*
        * Check constraints are handled after domain creation, as
@@ -1062,39 +1062,39 @@ DefineDomain(CreateDomainStmt *stmt)
        */
       if (constr->is_no_inherit)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("check constraints for domains cannot be marked NO INHERIT")));
       }
       break;
 
       /*
        * All else are error cases
        */
-    case CONSTR_UNIQUE:;
+    case CONSTR_UNIQUE:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unique constraints not possible for domains")));
+      break;
 
+    case CONSTR_PRIMARY:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("primary key constraints not possible for domains")));
+      break;
 
+    case CONSTR_EXCLUSION:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("exclusion constraints not possible for domains")));
+      break;
 
-    case CONSTR_PRIMARY:;
+    case CONSTR_FOREIGN:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("foreign key constraints not possible for domains")));
+      break;
 
+    case CONSTR_ATTR_DEFERRABLE:
+    case CONSTR_ATTR_NOT_DEFERRABLE:
+    case CONSTR_ATTR_DEFERRED:
+    case CONSTR_ATTR_IMMEDIATE:
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("specifying constraint deferrability not supported for domains")));
+      break;
 
-
-    case CONSTR_EXCLUSION:;
-
-
-
-    case CONSTR_FOREIGN:;
-
-
-
-    case CONSTR_ATTR_DEFERRABLE:;
-    case CONSTR_ATTR_NOT_DEFERRABLE:;
-    case CONSTR_ATTR_DEFERRED:;
-    case CONSTR_ATTR_IMMEDIATE:;
-
-
-
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized constraint subtype: %d", (int)constr->contype);
+      break;
     }
   }
 
@@ -1189,13 +1189,13 @@ DefineDomain(CreateDomainStmt *stmt)
 
     switch (constr->contype)
     {
-    case CONSTR_CHECK:;
+    case CONSTR_CHECK:
       domainAddConstraint(address.objectId, domainNamespace, basetypeoid, basetypeMod, constr, domainName, NULL);
       break;
 
       /* Other constraint types were fully processed above */
 
-    default:;;
+    default:
       break;
     }
 
@@ -1233,7 +1233,7 @@ DefineEnum(CreateEnumStmt *stmt)
   aclresult = pg_namespace_aclcheck(enumNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(enumNamespace));
   }
 
   /*
@@ -1245,7 +1245,7 @@ DefineEnum(CreateEnumStmt *stmt)
   {
     if (!moveArrayTypeName(old_type_oid, enumName, enumNamespace))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", enumName)));
     }
   }
 
@@ -1349,7 +1349,7 @@ AlterEnum(AlterEnumStmt *stmt)
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(enum_type_oid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", enum_type_oid);
   }
 
   /* Check it's an enum and check user has permission to ALTER the enum */
@@ -1389,13 +1389,13 @@ checkEnumOwner(HeapTuple tup)
   /* Check that this is actually an enum */
   if (typTup->typtype != TYPTYPE_ENUM)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is not an enum", format_type_be(typTup->oid))));
   }
 
   /* Permission check: must own type */
   if (!pg_type_ownercheck(typTup->oid, GetUserId()))
   {
-
+    aclcheck_error_type(ACLCHECK_NOT_OWNER, typTup->oid);
   }
 }
 
@@ -1435,7 +1435,7 @@ DefineRange(CreateRangeStmt *stmt)
   aclresult = pg_namespace_aclcheck(typeNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(typeNamespace));
   }
 
   /*
@@ -1449,14 +1449,14 @@ DefineRange(CreateRangeStmt *stmt)
    */
   if (OidIsValid(typoid) && get_typisdefined(typoid))
   {
-
-
-
-
-
-
-
-
+    if (moveArrayTypeName(typoid, typeName, typeNamespace))
+    {
+      typoid = InvalidOid;
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", typeName)));
+    }
   }
 
   /*
@@ -1480,58 +1480,58 @@ DefineRange(CreateRangeStmt *stmt)
     {
       if (OidIsValid(rangeSubtype))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       /* we can look up the subtype name immediately */
       rangeSubtype = typenameTypeId(NULL, defGetTypeName(defel));
     }
     else if (strcmp(defel->defname, "subtype_opclass") == 0)
     {
-
-
-
-
-
+      if (rangeSubOpclassName != NIL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
+      }
+      rangeSubOpclassName = defGetQualifiedName(defel);
     }
     else if (strcmp(defel->defname, "collation") == 0)
     {
       if (rangeCollationName != NIL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       rangeCollationName = defGetQualifiedName(defel);
     }
     else if (strcmp(defel->defname, "canonical") == 0)
     {
-
-
-
-
-
+      if (rangeCanonicalName != NIL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
+      }
+      rangeCanonicalName = defGetQualifiedName(defel);
     }
     else if (strcmp(defel->defname, "subtype_diff") == 0)
     {
       if (rangeSubtypeDiffName != NIL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       rangeSubtypeDiffName = defGetQualifiedName(defel);
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("type attribute \"%s\" not recognized", defel->defname)));
     }
   }
 
   /* Must have a subtype */
   if (!OidIsValid(rangeSubtype))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("type attribute \"subtype\" is required")));
   }
   /* disallow ranges of pseudotypes */
   if (get_typtype(rangeSubtype) == TYPTYPE_PSEUDO)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("range subtype cannot be %s", format_type_be(rangeSubtype))));
   }
 
   /* Identify subopclass */
@@ -1546,14 +1546,14 @@ DefineRange(CreateRangeStmt *stmt)
     }
     else
     {
-
+      rangeCollation = get_typcollation(rangeSubtype);
     }
   }
   else
   {
     if (rangeCollationName != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("range collation specified but subtype does not support collation")));
     }
     rangeCollation = InvalidOid;
   }
@@ -1561,7 +1561,7 @@ DefineRange(CreateRangeStmt *stmt)
   /* Identify support functions, if provided */
   if (rangeCanonicalName != NIL)
   {
-
+    rangeCanonical = findRangeCanonicalFunction(rangeCanonicalName, typoid);
   }
   else
   {
@@ -1781,17 +1781,17 @@ findTypeInputFunction(List *procname, Oid typeOid)
   procOid3 = LookupFuncName(procname, 1, argList, true);
   if (OidIsValid(procOid3))
   {
-
+    nmatches++;
   }
   procOid4 = LookupFuncName(procname, 3, argList, true);
   if (OidIsValid(procOid4))
   {
-
+    nmatches++;
   }
 
   if (nmatches > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("type input function %s has multiple matches", NameListToString(procname))));
   }
 
   if (OidIsValid(procOid))
@@ -1804,36 +1804,36 @@ findTypeInputFunction(List *procname, Oid typeOid)
   }
 
   /* Cases with OPAQUE need adjustment */
+  if (OidIsValid(procOid3))
+  {
+    procOid = procOid3;
+  }
+  else
+  {
+    procOid = procOid4;
+  }
 
+  if (OidIsValid(procOid))
+  {
+    /* Found, but must complain and fix the pg_proc entry */
+    ereport(WARNING, (errmsg("changing argument type of function %s from \"opaque\" to \"cstring\"", NameListToString(procname))));
+    SetFunctionArgType(procOid, 0, CSTRINGOID);
 
+    /*
+     * Need CommandCounterIncrement since DefineType will likely try to
+     * alter the pg_proc tuple again.
+     */
+    CommandCounterIncrement();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return procOid;
+  }
 
   /* Use CSTRING (preferred) in the error message */
+  argList[0] = CSTRINGOID;
 
+  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
 
-
-
-
+  return InvalidOid; /* keep compiler quiet */
 }
 
 static Oid
@@ -1887,60 +1887,60 @@ findTypeOutputFunction(List *procname, Oid typeOid)
 static Oid
 findTypeReceiveFunction(List *procname, Oid typeOid)
 {
+  Oid argList[3];
+  Oid procOid;
+  Oid procOid2;
 
+  /*
+   * Receive functions can take a single argument of type INTERNAL, or three
+   * arguments (internal, typioparam OID, typmod).  Whine about ambiguity if
+   * both forms exist.
+   */
+  argList[0] = INTERNALOID;
+  argList[1] = OIDOID;
+  argList[2] = INT4OID;
 
+  procOid = LookupFuncName(procname, 1, argList, true);
+  procOid2 = LookupFuncName(procname, 3, argList, true);
+  if (OidIsValid(procOid))
+  {
+    if (OidIsValid(procOid2))
+    {
+      ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_FUNCTION), errmsg("type receive function %s has multiple matches", NameListToString(procname))));
+    }
+    return procOid;
+  }
+  else if (OidIsValid(procOid2))
+  {
+    return procOid2;
+  }
 
+  /* If not found, reference the 1-argument signature in error msg */
+  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return InvalidOid; /* keep compiler quiet */
 }
 
 static Oid
 findTypeSendFunction(List *procname, Oid typeOid)
 {
+  Oid argList[1];
+  Oid procOid;
 
+  /*
+   * Send functions can take a single argument of the type.
+   */
+  argList[0] = typeOid;
 
+  procOid = LookupFuncName(procname, 1, argList, true);
+  if (OidIsValid(procOid))
+  {
+    return procOid;
+  }
 
+  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return InvalidOid; /* keep compiler quiet */
 }
 
 static Oid
@@ -1957,12 +1957,12 @@ findTypeTypmodinFunction(List *procname)
   procOid = LookupFuncName(procname, 1, argList, true);
   if (!OidIsValid(procOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
   }
 
   if (get_func_rettype(procOid) != INT4OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("typmod_in function %s must return type %s", NameListToString(procname), "integer")));
   }
 
   return procOid;
@@ -1982,12 +1982,12 @@ findTypeTypmodoutFunction(List *procname)
   procOid = LookupFuncName(procname, 1, argList, true);
   if (!OidIsValid(procOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
   }
 
   if (get_func_rettype(procOid) != CSTRINGOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("typmod_out function %s must return type %s", NameListToString(procname), "cstring")));
   }
 
   return procOid;
@@ -1996,26 +1996,26 @@ findTypeTypmodoutFunction(List *procname)
 static Oid
 findTypeAnalyzeFunction(List *procname, Oid typeOid)
 {
+  Oid argList[1];
+  Oid procOid;
 
+  /*
+   * Analyze functions always take one INTERNAL argument and return bool.
+   */
+  argList[0] = INTERNALOID;
 
+  procOid = LookupFuncName(procname, 1, argList, true);
+  if (!OidIsValid(procOid))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
+  }
 
+  if (get_func_rettype(procOid) != BOOLOID)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("type analyze function %s must return type %s", NameListToString(procname), "boolean")));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return procOid;
 }
 
 /*
@@ -2034,17 +2034,17 @@ findRangeSubOpclass(List *opcname, Oid subtype)
 
   if (opcname != NIL)
   {
-
+    opcid = get_opclass_oid(BTREE_AM_OID, opcname, false);
 
     /*
      * Verify that the operator class accepts this datatype. Note we will
      * accept binary compatibility.
      */
-
-
-
-
-
+    opInputType = get_opclass_input_type(opcid);
+    if (!IsBinaryCoercible(subtype, opInputType))
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("operator class \"%s\" does not accept data type %s", NameListToString(opcname), format_type_be(subtype))));
+    }
   }
   else
   {
@@ -2052,7 +2052,7 @@ findRangeSubOpclass(List *opcname, Oid subtype)
     if (!OidIsValid(opcid))
     {
       /* We spell the error message identically to ResolveOpClass */
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("data type %s has no default operator class for access method \"%s\"", format_type_be(subtype), "btree"), errhint("You must specify an operator class for the range type or define a default operator class for the subtype.")));
     }
   }
 
@@ -2062,41 +2062,41 @@ findRangeSubOpclass(List *opcname, Oid subtype)
 static Oid
 findRangeCanonicalFunction(List *procname, Oid typeOid)
 {
+  Oid argList[1];
+  Oid procOid;
+  AclResult aclresult;
 
+  /*
+   * Range canonical functions must take and return the range type, and must
+   * be immutable.
+   */
+  argList[0] = typeOid;
 
+  procOid = LookupFuncName(procname, 1, argList, true);
 
+  if (!OidIsValid(procOid))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procname, 1, NIL, argList))));
+  }
 
+  if (get_func_rettype(procOid) != typeOid)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("range canonical function %s must return range type", func_signature_string(procname, 1, NIL, argList))));
+  }
 
+  if (func_volatile(procOid) != PROVOLATILE_IMMUTABLE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("range canonical function %s must be immutable", func_signature_string(procname, 1, NIL, argList))));
+  }
 
+  /* Also, range type's creator must have permission to call function */
+  aclresult = pg_proc_aclcheck(procOid, GetUserId(), ACL_EXECUTE);
+  if (aclresult != ACLCHECK_OK)
+  {
+    aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(procOid));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return procOid;
 }
 
 static Oid
@@ -2122,19 +2122,19 @@ findRangeSubtypeDiffFunction(List *procname, Oid subtype)
 
   if (get_func_rettype(procOid) != FLOAT8OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("range subtype diff function %s must return type %s", func_signature_string(procname, 2, NIL, argList), "double precision")));
   }
 
   if (func_volatile(procOid) != PROVOLATILE_IMMUTABLE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("range subtype diff function %s must be immutable", func_signature_string(procname, 2, NIL, argList))));
   }
 
   /* Also, range type's creator must have permission to call function */
   aclresult = pg_proc_aclcheck(procOid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(procOid));
   }
 
   return procOid;
@@ -2153,13 +2153,13 @@ AssignTypeArrayOid(void)
   /* Use binary-upgrade override for pg_type.typarray? */
   if (IsBinaryUpgrade)
   {
+    if (!OidIsValid(binary_upgrade_next_array_pg_type_oid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_type array OID value not set when in binary upgrade mode")));
+    }
 
-
-
-
-
-
-
+    type_array_oid = binary_upgrade_next_array_pg_type_oid;
+    binary_upgrade_next_array_pg_type_oid = InvalidOid;
   }
   else
   {
@@ -2217,10 +2217,10 @@ DefineCompositeType(RangeVar *typevar, List *coldeflist)
   old_type_oid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum(createStmt->relation->relname), ObjectIdGetDatum(typeNamespace));
   if (OidIsValid(old_type_oid))
   {
-
-
-
-
+    if (!moveArrayTypeName(old_type_oid, createStmt->relation->relname, typeNamespace))
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists", createStmt->relation->relname)));
+    }
   }
 
   /*
@@ -2268,7 +2268,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(domainoid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", domainoid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
@@ -2300,10 +2300,10 @@ AlterDomainDefault(List *names, Node *defaultRaw)
     if (defaultExpr == NULL || (IsA(defaultExpr, Const) && ((Const *)defaultExpr)->constisnull))
     {
       /* Default is NULL, drop it */
-
-
-
-
+      new_record_nulls[Anum_pg_type_typdefaultbin - 1] = true;
+      new_record_repl[Anum_pg_type_typdefaultbin - 1] = true;
+      new_record_nulls[Anum_pg_type_typdefault - 1] = true;
+      new_record_repl[Anum_pg_type_typdefault - 1] = true;
     }
     else
     {
@@ -2345,7 +2345,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
   }
   else
   {
-
+    typacl = DatumGetAclPCopy(aclDatum);
   }
 
   /* Rebuild dependencies */
@@ -2392,7 +2392,7 @@ AlterDomainNotNull(List *names, bool notNull)
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(domainoid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", domainoid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
@@ -2402,8 +2402,8 @@ AlterDomainNotNull(List *names, bool notNull)
   /* Is the domain already set to the desired constraint? */
   if (typTup->typnotnull == notNull)
   {
-
-
+    table_close(typrel, RowExclusiveLock);
+    return address;
   }
 
   /* Adding a NOT NULL constraint requires checking existing columns */
@@ -2513,7 +2513,7 @@ AlterDomainDropConstraint(List *names, const char *constrName, DropBehavior beha
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(domainoid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", domainoid);
   }
 
   /* Check it's a domain and check user has permission for ALTER DOMAIN */
@@ -2600,7 +2600,7 @@ AlterDomainAddConstraint(List *names, Node *newConstraint, ObjectAddress *constr
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(domainoid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", domainoid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
@@ -2609,43 +2609,43 @@ AlterDomainAddConstraint(List *names, Node *newConstraint, ObjectAddress *constr
 
   if (!IsA(newConstraint, Constraint))
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(newConstraint));
   }
 
   constr = (Constraint *)newConstraint;
 
   switch (constr->contype)
   {
-  case CONSTR_CHECK:;
+  case CONSTR_CHECK:
     /* processed below */
     break;
 
-  case CONSTR_UNIQUE:;
+  case CONSTR_UNIQUE:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unique constraints not possible for domains")));
+    break;
 
+  case CONSTR_PRIMARY:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("primary key constraints not possible for domains")));
+    break;
 
+  case CONSTR_EXCLUSION:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("exclusion constraints not possible for domains")));
+    break;
 
-  case CONSTR_PRIMARY:;
+  case CONSTR_FOREIGN:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("foreign key constraints not possible for domains")));
+    break;
 
+  case CONSTR_ATTR_DEFERRABLE:
+  case CONSTR_ATTR_NOT_DEFERRABLE:
+  case CONSTR_ATTR_DEFERRED:
+  case CONSTR_ATTR_IMMEDIATE:
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("specifying constraint deferrability not supported for domains")));
+    break;
 
-
-  case CONSTR_EXCLUSION:;
-
-
-
-  case CONSTR_FOREIGN:;
-
-
-
-  case CONSTR_ATTR_DEFERRABLE:;
-  case CONSTR_ATTR_NOT_DEFERRABLE:;
-  case CONSTR_ATTR_DEFERRED:;
-  case CONSTR_ATTR_IMMEDIATE:;
-
-
-
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized constraint subtype: %d", (int)constr->contype);
+    break;
   }
 
   /*
@@ -2714,7 +2714,7 @@ AlterDomainValidateConstraint(List *names, const char *constrName)
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(domainoid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", domainoid);
   }
 
   /* Check it's a domain and check user has permission for ALTER DOMAIN */
@@ -2734,19 +2734,19 @@ AlterDomainValidateConstraint(List *names, const char *constrName)
   /* There can be at most one matching row */
   if (!HeapTupleIsValid(tuple = systable_getnext(scan)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("constraint \"%s\" of domain \"%s\" does not exist", constrName, TypeNameToString(typename))));
   }
 
   con = (Form_pg_constraint)GETSTRUCT(tuple);
   if (con->contype != CONSTRAINT_CHECK)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("constraint \"%s\" of domain \"%s\" is not a check constraint", constrName, TypeNameToString(typename))));
   }
 
   val = SysCacheGetAttr(CONSTROID, tuple, Anum_pg_constraint_conbin, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "null conbin for constraint %u", con->oid);
   }
   conbin = TextDatumGetCString(val);
 
@@ -3014,12 +3014,12 @@ get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
      */
     if (pg_depend->objsubid > RelationGetNumberOfAttributes(rtc->rel))
     {
-
+      continue;
     }
     pg_att = TupleDescAttr(rtc->rel->rd_att, pg_depend->objsubid - 1);
     if (pg_att->attisdropped || pg_att->atttypid != domainOid)
     {
-
+      continue;
     }
 
     /*
@@ -3032,8 +3032,8 @@ get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
     ptr = rtc->natts++;
     while (ptr > 0 && rtc->atts[ptr - 1] > pg_depend->objsubid)
     {
-
-
+      rtc->atts[ptr] = rtc->atts[ptr - 1];
+      ptr--;
     }
     rtc->atts[ptr] = pg_depend->objsubid;
   }
@@ -3059,13 +3059,13 @@ checkDomainOwner(HeapTuple tup)
   /* Check that this is actually a domain */
   if (typTup->typtype != TYPTYPE_DOMAIN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is not a domain", format_type_be(typTup->oid))));
   }
 
   /* Permission check: must own type */
   if (!pg_type_ownercheck(typTup->oid, GetUserId()))
   {
-
+    aclcheck_error_type(ACLCHECK_NOT_OWNER, typTup->oid);
   }
 }
 
@@ -3088,7 +3088,7 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid, int typ
   {
     if (ConstraintNameIsUsed(CONSTRAINT_DOMAIN, domainOid, constr->conname))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("constraint \"%s\" for domain \"%s\" already exists", constr->conname, domainName)));
     }
   }
   else
@@ -3139,7 +3139,7 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid, int typ
    */
   if (list_length(pstate->p_rtable) != 0 || contain_var_clause(expr))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_COLUMN_REFERENCE), errmsg("cannot use table references in domain check constraint")));
   }
 
   /*
@@ -3206,7 +3206,7 @@ replace_domain_constraint_value(ParseState *pstate, ColumnRef *cref)
       return (Node *)domVal;
     }
   }
-
+  return NULL;
 }
 
 /*
@@ -3234,20 +3234,20 @@ RenameType(RenameStmt *stmt)
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
   /* check permissions on type */
   if (!pg_type_ownercheck(typeOid, GetUserId()))
   {
-
+    aclcheck_error_type(ACLCHECK_NOT_OWNER, typeOid);
   }
 
   /* ALTER DOMAIN used on a non-domain? */
   if (stmt->renameType == OBJECT_DOMAIN && typTup->typtype != TYPTYPE_DOMAIN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is not a domain", format_type_be(typeOid))));
   }
 
   /*
@@ -3257,13 +3257,13 @@ RenameType(RenameStmt *stmt)
    */
   if (typTup->typtype == TYPTYPE_COMPOSITE && get_rel_relkind(typTup->typrelid) != RELKIND_COMPOSITE_TYPE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is a table's row type", format_type_be(typeOid)), errhint("Use ALTER TABLE instead.")));
   }
 
   /* don't allow direct alteration of array types, either */
   if (OidIsValid(typTup->typelem) && get_array_type(typTup->typelem) == typeOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot alter array type %s", format_type_be(typeOid)), errhint("You can alter type %s, which will alter the array type as well.", format_type_be(typTup->typelem))));
   }
 
   /*
@@ -3292,91 +3292,91 @@ RenameType(RenameStmt *stmt)
 ObjectAddress
 AlterTypeOwner(List *names, Oid newOwnerId, ObjectType objecttype)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  TypeName *typename;
+  Oid typeOid;
+  Relation rel;
+  HeapTuple tup;
+  HeapTuple newtup;
+  Form_pg_type typTup;
+  AclResult aclresult;
+  ObjectAddress address;
+
+  rel = table_open(TypeRelationId, RowExclusiveLock);
+
+  /* Make a TypeName so we can use standard type lookup machinery */
+  typename = makeTypeNameFromNameList(names);
+
+  /* Use LookupTypeName here so that shell types can be processed */
+  tup = LookupTypeName(NULL, typename, NULL, false);
+  if (tup == NULL)
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type \"%s\" does not exist", TypeNameToString(typename))));
+  }
+  typeOid = typeTypeId(tup);
+
+  /* Copy the syscache entry so we can scribble on it below */
+  newtup = heap_copytuple(tup);
+  ReleaseSysCache(tup);
+  tup = newtup;
+  typTup = (Form_pg_type)GETSTRUCT(tup);
+
+  /* Don't allow ALTER DOMAIN on a type */
+  if (objecttype == OBJECT_DOMAIN && typTup->typtype != TYPTYPE_DOMAIN)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is not a domain", format_type_be(typeOid))));
+  }
+
+  /*
+   * If it's a composite type, we need to check that it really is a
+   * free-standing composite type, and not a table's rowtype. We want people
+   * to use ALTER TABLE not ALTER TYPE for that case.
+   */
+  if (typTup->typtype == TYPTYPE_COMPOSITE && get_rel_relkind(typTup->typrelid) != RELKIND_COMPOSITE_TYPE)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is a table's row type", format_type_be(typeOid)), errhint("Use ALTER TABLE instead.")));
+  }
+
+  /* don't allow direct alteration of array types, either */
+  if (OidIsValid(typTup->typelem) && get_array_type(typTup->typelem) == typeOid)
+  {
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot alter array type %s", format_type_be(typeOid)), errhint("You can alter type %s, which will alter the array type as well.", format_type_be(typTup->typelem))));
+  }
+
+  /*
+   * If the new owner is the same as the existing owner, consider the
+   * command to have succeeded.  This is for dump restoration purposes.
+   */
+  if (typTup->typowner != newOwnerId)
+  {
+    /* Superusers can always do it */
+    if (!superuser())
+    {
+      /* Otherwise, must be owner of the existing object */
+      if (!pg_type_ownercheck(typTup->oid, GetUserId()))
+      {
+        aclcheck_error_type(ACLCHECK_NOT_OWNER, typTup->oid);
+      }
+
+      /* Must be able to become new owner */
+      check_is_member_of_role(GetUserId(), newOwnerId);
+
+      /* New owner must have CREATE privilege on namespace */
+      aclresult = pg_namespace_aclcheck(typTup->typnamespace, newOwnerId, ACL_CREATE);
+      if (aclresult != ACLCHECK_OK)
+      {
+        aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(typTup->typnamespace));
+      }
+    }
+
+    AlterTypeOwner_oid(typeOid, newOwnerId, true);
+  }
+
+  ObjectAddressSet(address, TypeRelationId, typeOid);
+
+  /* Clean up */
+  table_close(rel, RowExclusiveLock);
+
+  return address;
 }
 
 /*
@@ -3402,7 +3402,7 @@ AlterTypeOwner_oid(Oid typeOid, Oid newOwnerId, bool hasDependEntry)
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typeOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
@@ -3456,7 +3456,7 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId)
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
   typTup = (Form_pg_type)GETSTRUCT(tup);
 
@@ -3470,9 +3470,9 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId)
   /* Null ACLs do not require changes */
   if (!isNull)
   {
-
-
-
+    newAcl = aclnewowner(DatumGetAclP(aclDatum), typTup->typowner, newOwnerId);
+    repl_repl[Anum_pg_type_typacl - 1] = true;
+    repl_val[Anum_pg_type_typacl - 1] = PointerGetDatum(newAcl);
   }
 
   tup = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null, repl_repl);
@@ -3509,7 +3509,7 @@ AlterTypeNamespace(List *names, const char *newschema, ObjectType objecttype, Oi
   /* Don't allow ALTER DOMAIN on a type */
   if (objecttype == OBJECT_DOMAIN && get_typtype(typeOid) != TYPTYPE_DOMAIN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is not a domain", format_type_be(typeOid))));
   }
 
   /* get schema OID and check its permissions */
@@ -3537,14 +3537,14 @@ AlterTypeNamespace_oid(Oid typeOid, Oid nspOid, ObjectAddresses *objsMoved)
   /* check permissions on type */
   if (!pg_type_ownercheck(typeOid, GetUserId()))
   {
-
+    aclcheck_error_type(ACLCHECK_NOT_OWNER, typeOid);
   }
 
   /* don't allow direct alteration of array types */
   elemOid = get_element_type(typeOid);
   if (OidIsValid(elemOid) && get_array_type(elemOid) == typeOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot alter array type %s", format_type_be(typeOid)), errhint("You can alter type %s, which will alter the array type as well.", format_type_be(elemOid))));
   }
 
   /* and do the work */
@@ -3586,7 +3586,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid, bool isImplicitArray, bool e
 
   if (object_address_present(&thisobj, objsMoved))
   {
-
+    return InvalidOid;
   }
 
   rel = table_open(TypeRelationId, RowExclusiveLock);
@@ -3594,7 +3594,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid, bool isImplicitArray, bool e
   tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typeOid);
   }
   typform = (Form_pg_type)GETSTRUCT(tup);
 
@@ -3610,7 +3610,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid, bool isImplicitArray, bool e
     /* check for duplicate name (more friendly than unique-index failure) */
     if (SearchSysCacheExists2(TYPENAMENSP, NameGetDatum(&typform->typname), ObjectIdGetDatum(nspOid)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("type \"%s\" already exists in schema \"%s\"", NameStr(typform->typname), get_namespace_name(nspOid))));
     }
   }
 
@@ -3620,7 +3620,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid, bool isImplicitArray, bool e
   /* Enforce not-table-type if requested */
   if (typform->typtype == TYPTYPE_COMPOSITE && !isCompositeType && errorOnTableType)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("%s is a table's row type", format_type_be(typeOid)), errhint("Use ALTER TABLE instead.")));
   }
 
   if (oldNspOid != nspOid)
@@ -3672,7 +3672,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid, bool isImplicitArray, bool e
   {
     if (changeDependencyFor(TypeRelationId, typeOid, NamespaceRelationId, oldNspOid, nspOid) != 1)
     {
-
+      elog(ERROR, "failed to change schema dependency for type %s", format_type_be(typeOid));
     }
   }
 

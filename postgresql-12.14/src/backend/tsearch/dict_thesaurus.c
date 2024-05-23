@@ -80,8 +80,8 @@ newLexeme(DictThesaurus *d, char *b, char *e, uint32 idsubst, uint16 posinsubst)
     }
     else
     {
-
-
+      d->ntwrds *= 2;
+      d->wrds = (TheLexeme *)repalloc(d->wrds, sizeof(TheLexeme) * d->ntwrds);
     }
   }
 
@@ -120,8 +120,8 @@ addWrd(DictThesaurus *d, char *b, char *e, uint32 idsubst, uint16 nwrd, uint16 p
       }
       else
       {
-
-
+        d->nsubst *= 2;
+        d->subst = (TheSubstitute *)repalloc(d->subst, sizeof(TheSubstitute) * d->nsubst);
       }
     }
   }
@@ -177,7 +177,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
   filename = get_tsearch_config_filename(filename, "ths");
   if (!tsearch_readline_begin(&trst, filename))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not open thesaurus file \"%s\": %m", filename)));
   }
 
   while ((line = tsearch_readline(&trst)) != NULL)
@@ -210,7 +210,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
         {
           if (posinsubst == 0)
           {
-
+            ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unexpected delimiter")));
           }
           state = TR_WAITSUBS;
         }
@@ -224,8 +224,8 @@ thesaurusRead(const char *filename, DictThesaurus *d)
       {
         if (t_iseq(ptr, ':'))
         {
-
-
+          newLexeme(d, beginwrd, ptr, idsubst, posinsubst++);
+          state = TR_WAITSUBS;
         }
         else if (t_isspace(ptr))
         {
@@ -243,9 +243,9 @@ thesaurusRead(const char *filename, DictThesaurus *d)
         }
         else if (t_iseq(ptr, '\\'))
         {
-
-
-
+          useasis = false;
+          state = TR_INSUBS;
+          beginwrd = ptr + pg_mblen(ptr);
         }
         else if (!t_isspace(ptr))
         {
@@ -260,7 +260,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
         {
           if (ptr == beginwrd)
           {
-
+            ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unexpected end of line or lexeme")));
           }
           addWrd(d, beginwrd, ptr, idsubst, nwrd++, posinsubst, useasis);
           state = TR_WAITSUBS;
@@ -268,7 +268,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
       }
       else
       {
-
+        elog(ERROR, "unrecognized thesaurus state: %d", state);
       }
 
       ptr += pg_mblen(ptr);
@@ -276,18 +276,18 @@ thesaurusRead(const char *filename, DictThesaurus *d)
 
     if (state == TR_INSUBS)
     {
-
-
-
-
-
+      if (ptr == beginwrd)
+      {
+        ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unexpected end of line or lexeme")));
+      }
+      addWrd(d, beginwrd, ptr, idsubst, nwrd++, posinsubst, useasis);
     }
 
     idsubst++;
 
     if (!(nwrd && posinsubst))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unexpected end of line")));
     }
 
     /*
@@ -297,7 +297,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
      */
     if (nwrd != (uint16)nwrd || posinsubst != (uint16)posinsubst)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("too many lexemes in thesaurus entry")));
     }
 
     pfree(line);
@@ -313,8 +313,8 @@ addCompiledLexeme(TheLexeme *newwrds, int *nnw, int *tnm, TSLexeme *lexeme, Lexe
 {
   if (*nnw >= *tnm)
   {
-
-
+    *tnm *= 2;
+    newwrds = (TheLexeme *)repalloc(newwrds, sizeof(TheLexeme) * *tnm);
   }
 
   newwrds[*nnw].entries = (LexemeInfo *)palloc(sizeof(LexemeInfo));
@@ -344,22 +344,22 @@ cmpLexemeInfo(LexemeInfo *a, LexemeInfo *b)
 {
   if (a == NULL || b == NULL)
   {
-
+    return 0;
   }
 
   if (a->idsubst == b->idsubst)
   {
+    if (a->posinsubst == b->posinsubst)
+    {
+      if (a->tnvariant == b->tnvariant)
+      {
+        return 0;
+      }
 
+      return (a->tnvariant > b->tnvariant) ? 1 : -1;
+    }
 
-
-
-
-
-
-
-
-
-
+    return (a->posinsubst > b->posinsubst) ? 1 : -1;
   }
 
   return (a->idsubst > b->idsubst) ? 1 : -1;
@@ -418,8 +418,8 @@ compileTheLexeme(DictThesaurus *d)
   {
     TSLexeme *ptr;
 
-    if (strcmp(d->wrds[i].lexeme, "?") == 0)
-    { /* Is stop word marker? */
+    if (strcmp(d->wrds[i].lexeme, "?") == 0) /* Is stop word marker? */
+    {
       newwrds = addCompiledLexeme(newwrds, &nnw, &tnm, NULL, d->wrds[i].entries, 0);
     }
     else
@@ -428,11 +428,11 @@ compileTheLexeme(DictThesaurus *d)
 
       if (!ptr)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("thesaurus sample word \"%s\" isn't recognized by subdictionary (rule %d)", d->wrds[i].lexeme, d->wrds[i].entries->idsubst + 1)));
       }
       else if (!(ptr->lexeme))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("thesaurus sample word \"%s\" is a stop word (rule %d)", d->wrds[i].lexeme, d->wrds[i].entries->idsubst + 1), errhint("Use \"?\" to represent a stop word within a sample phrase.")));
       }
       else
       {
@@ -445,12 +445,12 @@ compileTheLexeme(DictThesaurus *d)
           /* compute n words in one variant */
           while (remptr->lexeme)
           {
-
-
-
-
-
-
+            if (remptr->nvariant != (remptr - 1)->nvariant)
+            {
+              break;
+            }
+            tnvar++;
+            remptr++;
           }
 
           remptr = ptr;
@@ -495,7 +495,7 @@ compileTheLexeme(DictThesaurus *d)
         }
         else
         {
-
+          pfree(ptrwrds->entries);
         }
 
         if (ptrwrds->lexeme)
@@ -574,14 +574,14 @@ compileTheSubstitute(DictThesaurus *d)
           d->subst[i].res[toset].flags |= TSL_ADDPOS;
         }
       }
-
-
-
-
-
-
-
-
+      else if (lexized)
+      {
+        ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("thesaurus substitute word \"%s\" is a stop word (rule %d)", inptr->lexeme, i + 1)));
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("thesaurus substitute word \"%s\" isn't recognized by subdictionary (rule %d)", inptr->lexeme, i + 1)));
+      }
 
       if (inptr->lexeme)
       {
@@ -592,7 +592,7 @@ compileTheSubstitute(DictThesaurus *d)
 
     if (outptr == d->subst[i].res)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("thesaurus substitute phrase is empty (rule %d)", i + 1)));
     }
 
     d->subst[i].reslen = outptr - d->subst[i].res;
@@ -620,7 +620,7 @@ thesaurus_init(PG_FUNCTION_ARGS)
     {
       if (fileloaded)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple DictFile parameters")));
       }
       thesaurusRead(defGetString(defel), d);
       fileloaded = true;
@@ -629,23 +629,23 @@ thesaurus_init(PG_FUNCTION_ARGS)
     {
       if (subdictname)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple Dictionary parameters")));
       }
       subdictname = pstrdup(defGetString(defel));
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized Thesaurus parameter: \"%s\"", defel->defname)));
     }
   }
 
   if (!fileloaded)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("missing DictFile parameter")));
   }
   if (!subdictname)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("missing Dictionary parameter")));
   }
 
   d->subdictOid = get_ts_dict_oid(stringToQualifiedNameList(subdictname), false);
@@ -664,7 +664,7 @@ findTheLexeme(DictThesaurus *d, char *lexeme)
 
   if (d->nwrds == 0)
   {
-
+    return NULL;
   }
 
   key.lexeme = lexeme;
@@ -713,7 +713,7 @@ findVariant(LexemeInfo *in, LexemeInfo *stored, uint16 curpos, LexemeInfo **newi
     {
       while (newin[i] && newin[i]->idsubst < ptr->idsubst)
       {
-
+        newin[i] = newin[i]->nextentry;
       }
 
       if (newin[i] == NULL)
@@ -723,9 +723,9 @@ findVariant(LexemeInfo *in, LexemeInfo *stored, uint16 curpos, LexemeInfo **newi
 
       if (newin[i]->idsubst > ptr->idsubst)
       {
-
-
-
+        ptr = newin[i];
+        i = -1;
+        continue;
       }
 
       while (newin[i]->idsubst == ptr->idsubst)
@@ -817,7 +817,7 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
 
   if (PG_NARGS() != 4 || dstate == NULL)
   {
-
+    elog(ERROR, "forbidden call of thesaurus or nested call");
   }
 
   if (dstate->isend)
@@ -833,7 +833,7 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
 
   if (!d->subdict->isvalid)
   {
-
+    d->subdict = lookup_ts_dictionary_cache(d->subdictOid);
   }
 
   res = (TSLexeme *)DatumGetPointer(FunctionCall4(&(d->subdict->lexize), PointerGetDatum(d->subdict->dictData), PG_GETARG_DATUM(1), PG_GETARG_DATUM(2), PointerGetDatum(NULL)));
@@ -882,7 +882,7 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    info = NULL; /* word isn't recognized */
   }
 
   dstate->private_state = (void *)info;

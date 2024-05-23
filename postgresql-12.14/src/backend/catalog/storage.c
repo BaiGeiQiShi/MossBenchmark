@@ -86,21 +86,21 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence)
 
   switch (relpersistence)
   {
-  case RELPERSISTENCE_TEMP:;
+  case RELPERSISTENCE_TEMP:
     backend = BackendIdForTempRelations();
     needs_wal = false;
     break;
-  case RELPERSISTENCE_UNLOGGED:;
+  case RELPERSISTENCE_UNLOGGED:
     backend = InvalidBackendId;
     needs_wal = false;
     break;
-  case RELPERSISTENCE_PERMANENT:;
+  case RELPERSISTENCE_PERMANENT:
     backend = InvalidBackendId;
     needs_wal = true;
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid relpersistence: %c", relpersistence);
+    return NULL; /* placate compiler */
   }
 
   srel = smgropen(rnode, backend);
@@ -225,8 +225,7 @@ RelationPreserveStorage(RelFileNode rnode, bool atCommit)
 
 /*
  * RelationTruncate
- *		Physically truncate a relation to the specified number of
- *blocks.
+ *		Physically truncate a relation to the specified number of blocks.
  *
  * This includes getting rid of any buffers for the blocks that are to be
  * dropped.
@@ -385,7 +384,7 @@ RelationCopyStorage(SMgrRelation src, SMgrRelation dst, ForkNumber forkNum, char
        */
       char *relpath = relpathbackend(src->smgr_rnode.node, src->smgr_rnode.backend, forkNum);
 
-
+      ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("invalid page in block %u of relation %s", blkno, relpath)));
     }
 
     /*
@@ -464,7 +463,7 @@ smgrDoPendingDeletes(bool isCommit)
       /* unlink list entry first, so we don't retry on failure */
       if (prev)
       {
-
+        prev->next = next;
       }
       else
       {
@@ -571,16 +570,16 @@ smgrGetPendingDeletes(bool forCommit, RelFileNode **ptr)
 void
 PostPrepare_smgr(void)
 {
+  PendingRelDelete *pending;
+  PendingRelDelete *next;
 
-
-
-
-
-
-
-
-
-
+  for (pending = pendingDeletes; pending != NULL; pending = next)
+  {
+    next = pending->next;
+    pendingDeletes = next;
+    /* must explicitly free the list entry */
+    pfree(pending);
+  }
 }
 
 /*
@@ -619,77 +618,77 @@ AtSubAbort_smgr(void)
 void
 smgr_redo(XLogReaderState *record)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  XLogRecPtr lsn = record->EndRecPtr;
+  uint8 info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
+
+  /* Backup blocks are not used in smgr records */
+  Assert(!XLogRecHasAnyBlockRefs(record));
+
+  if (info == XLOG_SMGR_CREATE)
+  {
+    xl_smgr_create *xlrec = (xl_smgr_create *)XLogRecGetData(record);
+    SMgrRelation reln;
+
+    reln = smgropen(xlrec->rnode, InvalidBackendId);
+    smgrcreate(reln, xlrec->forkNum, true);
+  }
+  else if (info == XLOG_SMGR_TRUNCATE)
+  {
+    xl_smgr_truncate *xlrec = (xl_smgr_truncate *)XLogRecGetData(record);
+    SMgrRelation reln;
+    Relation rel;
+
+    reln = smgropen(xlrec->rnode, InvalidBackendId);
+
+    /*
+     * Forcibly create relation if it doesn't exist (which suggests that
+     * it was dropped somewhere later in the WAL sequence).  As in
+     * XLogReadBufferForRedo, we prefer to recreate the rel and replay the
+     * log as best we can until the drop is seen.
+     */
+    smgrcreate(reln, MAIN_FORKNUM, true);
+
+    /*
+     * Before we perform the truncation, update minimum recovery point to
+     * cover this WAL record. Once the relation is truncated, there's no
+     * going back. The buffer manager enforces the WAL-first rule for
+     * normal updates to relation files, so that the minimum recovery
+     * point is always updated before the corresponding change in the data
+     * file is flushed to disk. We have to do the same manually here.
+     *
+     * Doing this before the truncation means that if the truncation fails
+     * for some reason, you cannot start up the system even after restart,
+     * until you fix the underlying situation so that the truncation will
+     * succeed. Alternatively, we could update the minimum recovery point
+     * after truncation, but that would leave a small window where the
+     * WAL-first rule could be violated.
+     */
+    XLogFlush(lsn);
+
+    if ((xlrec->flags & SMGR_TRUNCATE_HEAP) != 0)
+    {
+      smgrtruncate(reln, MAIN_FORKNUM, xlrec->blkno);
+
+      /* Also tell xlogutils.c about it */
+      XLogTruncateRelation(xlrec->rnode, MAIN_FORKNUM, xlrec->blkno);
+    }
+
+    /* Truncate FSM and VM too */
+    rel = CreateFakeRelcacheEntry(xlrec->rnode);
+
+    if ((xlrec->flags & SMGR_TRUNCATE_FSM) != 0 && smgrexists(reln, FSM_FORKNUM))
+    {
+      FreeSpaceMapTruncateRel(rel, xlrec->blkno);
+    }
+    if ((xlrec->flags & SMGR_TRUNCATE_VM) != 0 && smgrexists(reln, VISIBILITYMAP_FORKNUM))
+    {
+      visibilitymap_truncate(rel, xlrec->blkno);
+    }
+
+    FreeFakeRelcacheEntry(rel);
+  }
+  else
+  {
+    elog(PANIC, "smgr_redo: unknown op code %u", info);
+  }
 }

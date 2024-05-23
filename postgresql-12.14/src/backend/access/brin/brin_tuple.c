@@ -198,13 +198,13 @@ brin_form_tuple(BrinDesc *brdesc, BlockNumber blkno, BrinMemTuple *tuple, Size *
         if (DatumGetPointer(cvalue) != NULL)
         {
           /* successful compression */
+          if (free_value)
+          {
+            pfree(DatumGetPointer(value));
+          }
 
-
-
-
-
-
-
+          value = cvalue;
+          free_value = true;
         }
       }
 
@@ -335,7 +335,7 @@ brin_form_tuple(BrinDesc *brdesc, BlockNumber blkno, BrinMemTuple *tuple, Size *
 
   if (tuple->bt_placeholder)
   {
-
+    rettuple->bt_info |= BRIN_PLACEHOLDER_MASK;
   }
 
   *size = len;
@@ -414,11 +414,11 @@ brin_copy_tuple(BrinTuple *tuple, Size len, BrinTuple *dest, Size *destsz)
   {
     dest = palloc(len);
   }
-
-
-
-
-
+  else if (len > *destsz)
+  {
+    dest = repalloc(dest, len);
+    *destsz = len;
+  }
 
   memcpy(dest, tuple, len);
 
@@ -433,11 +433,11 @@ brin_tuples_equal(const BrinTuple *a, Size alen, const BrinTuple *b, Size blen)
 {
   if (alen != blen)
   {
-
+    return false;
   }
   if (memcmp(a, b, alen) != 0)
   {
-
+    return false;
   }
   return true;
 }
@@ -523,7 +523,7 @@ brin_deform_tuple(BrinDesc *brdesc, BrinTuple *tuple, BrinMemTuple *dMemtuple)
 
   if (BrinTupleIsPlaceholder(tuple))
   {
-
+    dtup->bt_placeholder = true;
   }
   dtup->bt_blkno = tuple->bt_blkno;
 

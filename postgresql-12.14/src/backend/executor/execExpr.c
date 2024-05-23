@@ -162,7 +162,7 @@ ExecInitExprWithParams(Expr *node, ParamListInfo ext_params)
   /* Special case: NULL expression produces a NULL ExprState pointer */
   if (node == NULL)
   {
-
+    return NULL;
   }
 
   /* Initialize ExprState with empty step list */
@@ -435,19 +435,19 @@ ExecBuildProjectionInfoExt(List *targetList, ExprContext *econtext, TupleTableSl
       /* Fast-path: just generate an EEOP_ASSIGN_*_VAR step */
       switch (variable->varno)
       {
-      case INNER_VAR:;
+      case INNER_VAR:
         /* get the tuple from the inner node */
         scratch.opcode = EEOP_ASSIGN_INNER_VAR;
         break;
 
-      case OUTER_VAR:;
+      case OUTER_VAR:
         /* get the tuple from the outer node */
         scratch.opcode = EEOP_ASSIGN_OUTER_VAR;
         break;
 
         /* INDEX_VAR is handled by default case */
 
-      default:;;
+      default:
         /* get the tuple from the relation being scanned */
         scratch.opcode = EEOP_ASSIGN_SCAN_VAR;
         break;
@@ -657,7 +657,7 @@ ExecReadyExpr(ExprState *state)
 {
   if (jit_compile_expr(state))
   {
-
+    return;
   }
 
   ExecReadyInterpretedExpr(state);
@@ -687,7 +687,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
   /* cases should be ordered as they are in enum NodeTag */
   switch (nodeTag(node))
   {
-  case T_Var:;
+  case T_Var:
   {
     Var *variable = (Var *)node;
 
@@ -703,16 +703,16 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
       scratch.d.var.vartype = variable->vartype;
       switch (variable->varno)
       {
-      case INNER_VAR:;
+      case INNER_VAR:
         scratch.opcode = EEOP_INNER_SYSVAR;
         break;
-      case OUTER_VAR:;
+      case OUTER_VAR:
         scratch.opcode = EEOP_OUTER_SYSVAR;
         break;
 
         /* INDEX_VAR is handled by default case */
 
-      default:;;
+      default:
         scratch.opcode = EEOP_SCAN_SYSVAR;
         break;
       }
@@ -724,16 +724,16 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
       scratch.d.var.vartype = variable->vartype;
       switch (variable->varno)
       {
-      case INNER_VAR:;
+      case INNER_VAR:
         scratch.opcode = EEOP_INNER_VAR;
         break;
-      case OUTER_VAR:;
+      case OUTER_VAR:
         scratch.opcode = EEOP_OUTER_VAR;
         break;
 
         /* INDEX_VAR is handled by default case */
 
-      default:;;
+      default:
         scratch.opcode = EEOP_SCAN_VAR;
         break;
       }
@@ -743,7 +743,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_Const:;
+  case T_Const:
   {
     Const *con = (Const *)node;
 
@@ -755,20 +755,20 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_Param:;
+  case T_Param:
   {
     Param *param = (Param *)node;
     ParamListInfo params;
 
     switch (param->paramkind)
     {
-    case PARAM_EXEC:;
+    case PARAM_EXEC:
       scratch.opcode = EEOP_PARAM_EXEC;
       scratch.d.param.paramid = param->paramid;
       scratch.d.param.paramtype = param->paramtype;
       ExprEvalPushStep(state, &scratch);
       break;
-    case PARAM_EXTERN:;
+    case PARAM_EXTERN:
 
       /*
        * If we have a relevant ParamCompileHook, use it;
@@ -800,14 +800,14 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
         ExprEvalPushStep(state, &scratch);
       }
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized paramkind: %d", (int)param->paramkind);
+      break;
     }
     break;
   }
 
-  case T_Aggref:;
+  case T_Aggref:
   {
     Aggref *aggref = (Aggref *)node;
     AggrefExprState *astate = makeNode(AggrefExprState);
@@ -826,21 +826,21 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     else
     {
       /* planner messed up */
-
+      elog(ERROR, "Aggref found in non-Agg plan node");
     }
 
     ExprEvalPushStep(state, &scratch);
     break;
   }
 
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
   {
     GroupingFunc *grp_node = (GroupingFunc *)node;
     Agg *agg;
 
     if (!state->parent || !IsA(state->parent, AggState) || !IsA(state->parent->plan, Agg))
     {
-
+      elog(ERROR, "GroupingFunc found in non-Agg plan node");
     }
 
     scratch.opcode = EEOP_GROUPING_FUNC;
@@ -861,7 +861,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_WindowFunc:;
+  case T_WindowFunc:
   {
     WindowFunc *wfunc = (WindowFunc *)node;
     WindowFuncExprState *wfstate = makeNode(WindowFuncExprState);
@@ -892,13 +892,13 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
        */
       if (nfuncs != winstate->numfuncs)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_WINDOWING_ERROR), errmsg("window function calls cannot be nested")));
       }
     }
     else
     {
       /* planner messed up */
-
+      elog(ERROR, "WindowFunc found in non-WindowAgg plan node");
     }
 
     scratch.opcode = EEOP_WINDOW_FUNC;
@@ -907,7 +907,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
   {
     SubscriptingRef *sbsref = (SubscriptingRef *)node;
 
@@ -915,7 +915,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     FuncExpr *func = (FuncExpr *)node;
 
@@ -924,7 +924,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_OpExpr:;
+  case T_OpExpr:
   {
     OpExpr *op = (OpExpr *)node;
 
@@ -933,7 +933,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
   {
     DistinctExpr *op = (DistinctExpr *)node;
 
@@ -953,7 +953,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
   {
     NullIfExpr *op = (NullIfExpr *)node;
 
@@ -973,7 +973,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     ScalarArrayOpExpr *opexpr = (ScalarArrayOpExpr *)node;
     Expr *scalararg;
@@ -990,7 +990,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     aclresult = pg_proc_aclcheck(opexpr->opfuncid, GetUserId(), ACL_EXECUTE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(opexpr->opfuncid));
     }
     InvokeFunctionExecuteHook(opexpr->opfuncid);
 
@@ -1023,7 +1023,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_BoolExpr:;
+  case T_BoolExpr:
   {
     BoolExpr *boolexpr = (BoolExpr *)node;
     int nargs = list_length(boolexpr->args);
@@ -1061,7 +1061,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
       /* Perform the appropriate step type */
       switch (boolexpr->boolop)
       {
-      case AND_EXPR:;
+      case AND_EXPR:
         Assert(nargs >= 2);
 
         if (off == 0)
@@ -1077,7 +1077,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
           scratch.opcode = EEOP_BOOL_AND_STEP;
         }
         break;
-      case OR_EXPR:;
+      case OR_EXPR:
         Assert(nargs >= 2);
 
         if (off == 0)
@@ -1093,14 +1093,14 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
           scratch.opcode = EEOP_BOOL_OR_STEP;
         }
         break;
-      case NOT_EXPR:;
+      case NOT_EXPR:
         Assert(nargs == 1);
 
         scratch.opcode = EEOP_BOOL_NOT_STEP;
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized boolop: %d", (int)boolexpr->boolop);
+        break;
       }
 
       scratch.d.boolexpr.jumpdone = -1;
@@ -1121,14 +1121,14 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     SubPlan *subplan = (SubPlan *)node;
     SubPlanState *sstate;
 
     if (!state->parent)
     {
-
+      elog(ERROR, "SubPlan found with no parent plan");
     }
 
     sstate = ExecInitSubPlan(subplan, state->parent);
@@ -1143,14 +1143,14 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
   {
     AlternativeSubPlan *asplan = (AlternativeSubPlan *)node;
     AlternativeSubPlanState *asstate;
 
     if (!state->parent)
     {
-
+      elog(ERROR, "AlternativeSubPlan found with no parent plan");
     }
 
     asstate = ExecInitAlternativeSubPlan(asplan, state->parent);
@@ -1162,7 +1162,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_FieldSelect:;
+  case T_FieldSelect:
   {
     FieldSelect *fselect = (FieldSelect *)node;
 
@@ -1179,7 +1179,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_FieldStore:;
+  case T_FieldStore:
   {
     FieldStore *fstore = (FieldStore *)node;
     TupleDesc tupDesc;
@@ -1224,7 +1224,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
 
       if (fieldnum <= 0 || fieldnum > ncolumns)
       {
-
+        elog(ERROR, "field number %d is out of range in FieldStore", fieldnum);
       }
 
       /*
@@ -1273,7 +1273,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_RelabelType:;
+  case T_RelabelType:
   {
     /* relabel doesn't need to do anything at runtime */
     RelabelType *relabel = (RelabelType *)node;
@@ -1282,7 +1282,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
   {
     CoerceViaIO *iocoerce = (CoerceViaIO *)node;
     Oid iofunc;
@@ -1335,7 +1335,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
   {
     ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *)node;
     Oid resultelemtype;
@@ -1347,7 +1347,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     resultelemtype = get_element_type(acoerce->resulttype);
     if (!OidIsValid(resultelemtype))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("target type is not an array")));
     }
 
     /*
@@ -1399,7 +1399,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
   {
     ConvertRowtypeExpr *convert = (ConvertRowtypeExpr *)node;
     ExprEvalRowtypeCache *rowcachep;
@@ -1425,7 +1425,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
   }
 
     /* note that CaseWhen expressions are handled within this block */
-  case T_CaseExpr:;
+  case T_CaseExpr:
   {
     CaseExpr *caseExpr = (CaseExpr *)node;
     List *adjust_jumps = NIL;
@@ -1548,7 +1548,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_CaseTestExpr:;
+  case T_CaseTestExpr:
   {
     /*
      * Read from location identified by innermost_caseval.  Note
@@ -1567,7 +1567,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
   {
     ArrayExpr *arrayexpr = (ArrayExpr *)node;
     int nelems = list_length(arrayexpr->elements);
@@ -1606,7 +1606,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_RowExpr:;
+  case T_RowExpr:
   {
     RowExpr *rowexpr = (RowExpr *)node;
     int nelems = list_length(rowexpr->args);
@@ -1694,7 +1694,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
   {
     RowCompareExpr *rcexpr = (RowCompareExpr *)node;
     int nopers = list_length(rcexpr->opnos);
@@ -1730,7 +1730,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
       proc = get_opfamily_proc(opfamily, lefttype, righttype, BTORDER_PROC);
       if (!OidIsValid(proc))
       {
-
+        elog(ERROR, "missing support function %d(%u,%u) in opfamily %u", BTORDER_PROC, lefttype, righttype, opfamily);
       }
 
       /* Set up the primary fmgr lookup information */
@@ -1769,10 +1769,10 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
      */
     if (nopers == 0)
     {
-
-
-
-
+      scratch.opcode = EEOP_CONST;
+      scratch.d.constval.value = Int32GetDatum(0);
+      scratch.d.constval.isnull = false;
+      ExprEvalPushStep(state, &scratch);
     }
 
     /* Finally, examine the last comparison result */
@@ -1798,7 +1798,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
   {
     CoalesceExpr *coalesce = (CoalesceExpr *)node;
     List *adjust_jumps = NIL;
@@ -1845,7 +1845,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
   {
     MinMaxExpr *minmaxexpr = (MinMaxExpr *)node;
     int nelems = list_length(minmaxexpr->args);
@@ -1859,7 +1859,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     typentry = lookup_type_cache(minmaxexpr->minmaxtype, TYPECACHE_CMP_PROC);
     if (!OidIsValid(typentry->cmp_proc))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify a comparison function for type %s", format_type_be(minmaxexpr->minmaxtype))));
     }
 
     /*
@@ -1901,7 +1901,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
   {
     SQLValueFunction *svf = (SQLValueFunction *)node;
 
@@ -1912,7 +1912,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_XmlExpr:;
+  case T_XmlExpr:
   {
     XmlExpr *xexpr = (XmlExpr *)node;
     int nnamed = list_length(xexpr->named_args);
@@ -1926,8 +1926,8 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     /* allocate space for storing all the arguments */
     if (nnamed)
     {
-
-
+      scratch.d.xmlexpr.named_argvalue = (Datum *)palloc(sizeof(Datum) * nnamed);
+      scratch.d.xmlexpr.named_argnull = (bool *)palloc(sizeof(bool) * nnamed);
     }
     else
     {
@@ -1942,8 +1942,8 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     }
     else
     {
-
-
+      scratch.d.xmlexpr.argvalue = NULL;
+      scratch.d.xmlexpr.argnull = NULL;
     }
 
     /* prepare argument execution */
@@ -1952,8 +1952,8 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     {
       Expr *e = (Expr *)lfirst(arg);
 
-
-
+      ExecInitExprRec(e, state, &scratch.d.xmlexpr.named_argvalue[off], &scratch.d.xmlexpr.named_argnull[off]);
+      off++;
     }
 
     off = 0;
@@ -1970,7 +1970,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_NullTest:;
+  case T_NullTest:
   {
     NullTest *ntest = (NullTest *)node;
 
@@ -1998,7 +1998,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     }
     else
     {
-
+      elog(ERROR, "unrecognized nulltesttype: %d", (int)ntest->nulltesttype);
     }
     /* initialize cache in case it's a row test */
     scratch.d.nulltest_row.rowcache.cacheptr = NULL;
@@ -2011,7 +2011,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_BooleanTest:;
+  case T_BooleanTest:
   {
     BooleanTest *btest = (BooleanTest *)node;
 
@@ -2025,35 +2025,35 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
 
     switch (btest->booltesttype)
     {
-    case IS_TRUE:;
+    case IS_TRUE:
       scratch.opcode = EEOP_BOOLTEST_IS_TRUE;
       break;
-    case IS_NOT_TRUE:;
+    case IS_NOT_TRUE:
       scratch.opcode = EEOP_BOOLTEST_IS_NOT_TRUE;
       break;
-    case IS_FALSE:;
+    case IS_FALSE:
       scratch.opcode = EEOP_BOOLTEST_IS_FALSE;
       break;
-    case IS_NOT_FALSE:;
+    case IS_NOT_FALSE:
       scratch.opcode = EEOP_BOOLTEST_IS_NOT_FALSE;
       break;
-    case IS_UNKNOWN:;
+    case IS_UNKNOWN:
       /* Same as scalar IS NULL test */
       scratch.opcode = EEOP_NULLTEST_ISNULL;
       break;
-    case IS_NOT_UNKNOWN:;
+    case IS_NOT_UNKNOWN:
       /* Same as scalar IS NOT NULL test */
       scratch.opcode = EEOP_NULLTEST_ISNOTNULL;
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized booltesttype: %d", (int)btest->booltesttype);
     }
 
     ExprEvalPushStep(state, &scratch);
     break;
   }
 
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
   {
     CoerceToDomain *ctest = (CoerceToDomain *)node;
 
@@ -2061,7 +2061,7 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_CoerceToDomainValue:;
+  case T_CoerceToDomainValue:
   {
     /*
      * Read from location identified by innermost_domainval.  Note
@@ -2080,14 +2080,14 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  case T_CurrentOfExpr:;
+  case T_CurrentOfExpr:
   {
-
-
-
+    scratch.opcode = EEOP_CURRENTOFEXPR;
+    ExprEvalPushStep(state, &scratch);
+    break;
   }
 
-  case T_NextValueExpr:;
+  case T_NextValueExpr:
   {
     NextValueExpr *nve = (NextValueExpr *)node;
 
@@ -2099,9 +2099,9 @@ ExecInitExprRec(Expr *node, ExprState *state, Datum *resv, bool *resnull)
     break;
   }
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
 }
 
@@ -2162,7 +2162,7 @@ ExecInitFunc(ExprEvalStep *scratch, Expr *node, List *args, Oid funcid, Oid inpu
    */
   if (nargs > FUNC_MAX_ARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg_plural("cannot pass more than %d argument to a function", "cannot pass more than %d arguments to a function", FUNC_MAX_ARGS, FUNC_MAX_ARGS)));
   }
 
   /* Allocate function lookup data and parameter workspace for this call */
@@ -2185,7 +2185,7 @@ ExecInitFunc(ExprEvalStep *scratch, Expr *node, List *args, Oid funcid, Oid inpu
   /* We only support non-set functions here */
   if (flinfo->fn_retset)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set"), state->parent ? executor_errposition(state->parent->state, exprLocation((Node *)node)) : 0));
   }
 
   /* Build code to evaluate arguments directly into the fcinfo struct */
@@ -2228,7 +2228,7 @@ ExecInitFunc(ExprEvalStep *scratch, Expr *node, List *args, Oid funcid, Oid inpu
   {
     if (flinfo->fn_strict && nargs > 0)
     {
-
+      scratch->opcode = EEOP_FUNCEXPR_STRICT_FUSAGE;
     }
     else
     {
@@ -2317,17 +2317,17 @@ get_last_attnums_walker(Node *node, LastAttnumInfo *info)
 
     switch (variable->varno)
     {
-    case INNER_VAR:;
+    case INNER_VAR:
       info->last_inner = Max(info->last_inner, attnum);
       break;
 
-    case OUTER_VAR:;
+    case OUTER_VAR:
       info->last_outer = Max(info->last_outer, attnum);
       break;
 
       /* INDEX_VAR is handled by default case */
 
-    default:;;
+    default:
       info->last_scan = Max(info->last_scan, attnum);
       break;
     }
@@ -2386,13 +2386,13 @@ ExecComputeSlotInfo(ExprState *state, ExprEvalStep *op)
 
     if (parent->inneropsset && !parent->inneropsfixed)
     {
-
+      isfixed = false;
     }
     else if (parent->inneropsset && parent->innerops)
     {
-
-
-
+      isfixed = true;
+      tts_ops = parent->innerops;
+      desc = ExecGetResultType(is);
     }
     else if (is)
     {
@@ -2484,13 +2484,13 @@ ExecInitWholeRowVar(ExprEvalStep *scratch, Var *variable, ExprState *state)
 
     switch (nodeTag(parent))
     {
-    case T_SubqueryScanState:;
+    case T_SubqueryScanState:
       subplan = ((SubqueryScanState *)parent)->subplan;
       break;
-    case T_CteScanState:;
+    case T_CteScanState:
       subplan = ((CteScanState *)parent)->cteplanstate;
       break;
-    default:;;
+    default:
       break;
     }
 
@@ -2567,7 +2567,7 @@ ExecInitSubscriptingRef(ExprEvalStep *scratch, SubscriptingRef *sbsref, ExprStat
 
   if (list_length(sbsref->reflowerindexpr) > MAXDIM)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("number of array dimensions (%d) exceeds the maximum allowed (%d)", list_length(sbsref->reflowerindexpr), MAXDIM)));
   }
 
   /* Evaluate upper subscripts */
@@ -2635,7 +2635,7 @@ ExecInitSubscriptingRef(ExprEvalStep *scratch, SubscriptingRef *sbsref, ExprStat
   /* Should be impossible if parser is sane, but check anyway: */
   if (sbsrefstate->numlower != 0 && sbsrefstate->numupper != sbsrefstate->numlower)
   {
-
+    elog(ERROR, "upper and lower index lists are not same length");
   }
 
   if (isAssignment)
@@ -2730,7 +2730,7 @@ isAssignmentIndirectionExpr(Expr *expr)
 {
   if (expr == NULL)
   {
-
+    return false; /* just paranoia */
   }
   if (IsA(expr, FieldStore))
   {
@@ -2747,7 +2747,7 @@ isAssignmentIndirectionExpr(Expr *expr)
 
     if (sbsRef->refexpr && IsA(sbsRef->refexpr, CaseTestExpr))
     {
-
+      return true;
     }
   }
   else if (IsA(expr, CoerceToDomain))
@@ -2818,11 +2818,11 @@ ExecInitCoerceToDomain(ExprEvalStep *scratch, CoerceToDomain *ctest, ExprState *
 
     switch (con->constrainttype)
     {
-    case DOM_CONSTRAINT_NOTNULL:;
+    case DOM_CONSTRAINT_NOTNULL:
       scratch->opcode = EEOP_DOMAIN_NOTNULL;
       ExprEvalPushStep(state, scratch);
       break;
-    case DOM_CONSTRAINT_CHECK:;
+    case DOM_CONSTRAINT_CHECK:
       /* Allocate workspace for CHECK output if we didn't yet */
       if (scratch->d.domaincheck.checkvalue == NULL)
       {
@@ -2884,9 +2884,9 @@ ExecInitCoerceToDomain(ExprEvalStep *scratch, CoerceToDomain *ctest, ExprState *
       ExprEvalPushStep(state, scratch);
 
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized constraint type: %d", (int)con->constrainttype);
+      break;
     }
   }
 }
@@ -3019,7 +3019,7 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase, bool doSort, bool 
         }
         else
         {
-
+          scratch.opcode = EEOP_AGG_DESERIALIZE;
         }
 
         scratch.d.agg_deserialize.aggstate = aggstate;
@@ -3377,7 +3377,7 @@ ExecBuildGroupingEqual(TupleDesc ldesc, TupleDesc rdesc, const TupleTableSlotOps
     aclresult = pg_proc_aclcheck(foid, GetUserId(), ACL_EXECUTE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(foid));
     }
 
     InvokeFunctionExecuteHook(foid);

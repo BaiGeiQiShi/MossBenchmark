@@ -59,27 +59,32 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
   si.cb = sizeof(si);
 
   Advapi32Handle = LoadLibrary("ADVAPI32.DLL");
-  if (Advapi32Handle != NULL) {
+  if (Advapi32Handle != NULL)
+  {
     _CreateRestrictedToken = (__CreateRestrictedToken)GetProcAddress(Advapi32Handle, "CreateRestrictedToken");
   }
 
-  if (_CreateRestrictedToken == NULL) {
+  if (_CreateRestrictedToken == NULL)
+  {
     pg_log_warning("cannot create restricted tokens on this platform");
-    if (Advapi32Handle != NULL) {
+    if (Advapi32Handle != NULL)
+    {
       FreeLibrary(Advapi32Handle);
     }
     return 0;
   }
 
   /* Open the current token to use as a base for the restricted one */
-  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken)) {
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
+  {
     pg_log_error("could not open process token: error code %lu", GetLastError());
     return 0;
   }
 
   /* Allocate list of SIDs to remove */
   ZeroMemory(&dropSids, sizeof(dropSids));
-  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &dropSids[0].Sid) || !AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid)) {
+  if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &dropSids[0].Sid) || !AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid))
+  {
     pg_log_error("could not allocate SIDs: error code %lu", GetLastError());
     return 0;
   }
@@ -91,7 +96,8 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
   CloseHandle(origToken);
   FreeLibrary(Advapi32Handle);
 
-  if (!b) {
+  if (!b)
+  {
     pg_log_error("could not create restricted token: error code %lu", GetLastError());
     return 0;
   }
@@ -113,7 +119,8 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
 #endif
 
 /*
- * On Windows make sure that we are running with a restricted token,* On other platforms do nothing.
+ * On Windows make sure that we are running with a restricted token,
+ * On other platforms do nothing.
  */
 void
 get_restricted_token(void)
@@ -126,7 +133,8 @@ get_restricted_token(void)
    * restricted token. If not, re-execute ourselves with one.
    */
 
-  if ((restrict_env = getenv("PG_RESTRICT_EXEC")) == NULL || strcmp(restrict_env, "1") != 0) {
+  if ((restrict_env = getenv("PG_RESTRICT_EXEC")) == NULL || strcmp(restrict_env, "1") != 0)
+  {
     PROCESS_INFORMATION pi;
     char *cmdline;
 
@@ -136,9 +144,12 @@ get_restricted_token(void)
 
     putenv("PG_RESTRICT_EXEC=1");
 
-    if ((restrictedToken = CreateRestrictedProcess(cmdline, &pi)) == 0) {
+    if ((restrictedToken = CreateRestrictedProcess(cmdline, &pi)) == 0)
+    {
       pg_log_error("could not re-execute with restricted token: error code %lu", GetLastError());
-    } else {
+    }
+    else
+    {
       /*
        * Successfully re-execed. Now wait for child process to capture
        * exitcode.
@@ -149,7 +160,8 @@ get_restricted_token(void)
       CloseHandle(pi.hThread);
       WaitForSingleObject(pi.hProcess, INFINITE);
 
-      if (!GetExitCodeProcess(pi.hProcess, &x)) {
+      if (!GetExitCodeProcess(pi.hProcess, &x))
+      {
         pg_log_error("could not get exit code from subprocess: error code %lu", GetLastError());
         exit(1);
       }

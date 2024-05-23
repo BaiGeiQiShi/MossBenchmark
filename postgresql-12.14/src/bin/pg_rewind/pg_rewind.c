@@ -72,14 +72,15 @@ uint64 fetch_done;
 static void
 usage(const char *progname)
 {
-  printf(_("%s resynchronizes a PostgreSQL cluster with another copy of the cluster.\n\n"),progname);
+  printf(_("%s resynchronizes a PostgreSQL cluster with another copy of the cluster.\n\n"), progname);
   printf(_("Usage:\n  %s [OPTION]...\n\n"), progname);
   printf(_("Options:\n"));
   printf(_("  -D, --target-pgdata=DIRECTORY  existing data directory to modify\n"));
   printf(_("      --source-pgdata=DIRECTORY  source data directory to synchronize with\n"));
   printf(_("      --source-server=CONNSTR    source server to synchronize with\n"));
   printf(_("  -n, --dry-run                  stop before modifying anything\n"));
-  printf(_("  -N, --no-sync                  do not wait for changes to be written\n                                 safely to disk\n"));
+  printf(_("  -N, --no-sync                  do not wait for changes to be written\n"
+           "                                 safely to disk\n"));
   printf(_("  -P, --progress                 write progress messages\n"));
   printf(_("      --debug                    write a lot of debug messages\n"));
   printf(_("  -V, --version                  output version information, then exit\n"));
@@ -111,19 +112,24 @@ main(int argc, char **argv)
   progname = get_progname(argv[0]);
 
   /* Process command-line arguments */
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage(progname);
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_rewind (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((c = getopt_long(argc, argv, "D:nNP", long_options, &option_index)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "D:nNP", long_options, &option_index)) != -1)
+  {
+    switch (c)
+    {
     case '?':
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
@@ -158,25 +164,29 @@ main(int argc, char **argv)
     }
   }
 
-  if (datadir_source == NULL && connstr_source == NULL) {
+  if (datadir_source == NULL && connstr_source == NULL)
+  {
     pg_log_error("no source specified (--source-pgdata or --source-server)");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (datadir_source != NULL && connstr_source != NULL) {
+  if (datadir_source != NULL && connstr_source != NULL)
+  {
     pg_log_error("only one of --source-pgdata or --source-server can be specified");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (datadir_target == NULL) {
+  if (datadir_target == NULL)
+  {
     pg_log_error("no target data directory specified (--target-pgdata)");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -189,7 +199,8 @@ main(int argc, char **argv)
    * the data directory.
    */
 #ifndef WIN32
-  if (geteuid() == 0) {
+  if (geteuid() == 0)
+  {
     pg_log_error("cannot be executed by \"root\"");
     fprintf(stderr, _("You must run %s as the PostgreSQL superuser.\n"), progname);
     exit(1);
@@ -199,7 +210,8 @@ main(int argc, char **argv)
   get_restricted_token();
 
   /* Set mask based on PGDATA permissions */
-  if (!GetDataDirectoryCreatePerm(datadir_target)) {
+  if (!GetDataDirectoryCreatePerm(datadir_target))
+  {
     pg_log_error("could not read permissions of directory \"%s\": %m", datadir_target);
     exit(1);
   }
@@ -207,7 +219,8 @@ main(int argc, char **argv)
   umask(pg_mode_mask);
 
   /* Connect to remote server */
-  if (connstr_source) {
+  if (connstr_source)
+  {
     libpqConnect(connstr_source);
   }
 
@@ -229,11 +242,14 @@ main(int argc, char **argv)
    * If both clusters are already on the same timeline, there's nothing to
    * do.
    */
-  if (ControlFile_target.checkPointCopy.ThisTimeLineID == ControlFile_source.checkPointCopy.ThisTimeLineID) {
+  if (ControlFile_target.checkPointCopy.ThisTimeLineID == ControlFile_source.checkPointCopy.ThisTimeLineID)
+  {
     pg_log_info("source and target cluster are on the same timeline");
     rewind_needed = false;
     target_wal_endrec = 0;
-  } else {
+  }
+  else
+  {
     XLogRecPtr chkptendrec;
 
     findCommonAncestorTimeline(&divergerec, &lastcommontliIndex);
@@ -251,9 +267,12 @@ main(int argc, char **argv)
     /* read the checkpoint record on the target to see where it ends. */
     chkptendrec = readOneRecord(datadir_target, ControlFile_target.checkPoint, targetNentries - 1);
 
-    if (ControlFile_target.minRecoveryPoint > chkptendrec) {
+    if (ControlFile_target.minRecoveryPoint > chkptendrec)
+    {
       target_wal_endrec = ControlFile_target.minRecoveryPoint;
-    } else {
+    }
+    else
+    {
       target_wal_endrec = chkptendrec;
     }
 
@@ -262,9 +281,12 @@ main(int argc, char **argv)
      * ancestor of the source. In that case, there is no divergent history
      * in the target that needs rewinding.
      */
-    if (target_wal_endrec > divergerec) {
+    if (target_wal_endrec > divergerec)
+    {
       rewind_needed = true;
-    } else {
+    }
+    else
+    {
       /* the last common checkpoint record must be part of target WAL */
       Assert(target_wal_endrec == divergerec);
 
@@ -272,7 +294,8 @@ main(int argc, char **argv)
     }
   }
 
-  if (!rewind_needed) {
+  if (!rewind_needed)
+  {
     pg_log_info("no rewind required");
     exit(0);
   }
@@ -284,11 +307,13 @@ main(int argc, char **argv)
    * Build the filemap, by comparing the source and target data directories.
    */
   filemap_create();
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("reading source file list");
   }
   fetchSourceFileList();
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("reading target file list");
   }
   traverse_datadir(datadir_target, &process_target_file);
@@ -298,25 +323,29 @@ main(int argc, char **argv)
    * extract all the pages that were modified on the target cluster after
    * the fork.
    */
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("reading WAL in target");
   }
   extractPageMap(datadir_target, chkptrec, lastcommontliIndex, target_wal_endrec);
   filemap_finalize();
 
-  if (showprogress) {
+  if (showprogress)
+  {
     calculate_totals();
   }
 
   /* this is too verbose even for verbose mode */
-  if (debug) {
+  if (debug)
+  {
     print_filemap();
   }
 
   /*
    * Ok, we're ready to start copying things over.
    */
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("need to copy %lu MB (total source directory size is %lu MB)", (unsigned long)(filemap->fetch_size / (1024 * 1024)), (unsigned long)(filemap->total_size / (1024 * 1024)));
 
     fetch_size = filemap->fetch_size;
@@ -332,7 +361,8 @@ main(int argc, char **argv)
 
   progress_report(true);
 
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("creating backup label and updating control file");
   }
   createBackupLabel(chkptredo, chkpttli, chkptrec);
@@ -347,21 +377,26 @@ main(int argc, char **argv)
    */
   memcpy(&ControlFile_new, &ControlFile_source, sizeof(ControlFileData));
 
-  if (connstr_source) {
+  if (connstr_source)
+  {
     endrec = libpqGetCurrentXlogInsertLocation();
     endtli = ControlFile_source.checkPointCopy.ThisTimeLineID;
-  } else {
+  }
+  else
+  {
     endrec = ControlFile_source.checkPoint;
     endtli = ControlFile_source.checkPointCopy.ThisTimeLineID;
   }
   ControlFile_new.minRecoveryPoint = endrec;
   ControlFile_new.minRecoveryPointTLI = endtli;
   ControlFile_new.state = DB_IN_ARCHIVE_RECOVERY;
-  if (!dry_run) {
+  if (!dry_run)
+  {
     update_controlfile(datadir_target, &ControlFile_new, do_sync);
   }
 
-  if (showprogress) {
+  if (showprogress)
+  {
     pg_log_info("syncing target data directory");
   }
   syncTargetDirectory();
@@ -377,12 +412,14 @@ sanityChecks(void)
   /* TODO Check that there's no backup_label in either cluster */
 
   /* Check system_id match */
-  if (ControlFile_target.system_identifier != ControlFile_source.system_identifier) {
+  if (ControlFile_target.system_identifier != ControlFile_source.system_identifier)
+  {
     pg_fatal("source and target clusters are from different systems");
   }
 
   /* check version */
-  if (ControlFile_target.pg_control_version != PG_CONTROL_VERSION || ControlFile_source.pg_control_version != PG_CONTROL_VERSION || ControlFile_target.catalog_version_no != CATALOG_VERSION_NO || ControlFile_source.catalog_version_no != CATALOG_VERSION_NO) {
+  if (ControlFile_target.pg_control_version != PG_CONTROL_VERSION || ControlFile_source.pg_control_version != PG_CONTROL_VERSION || ControlFile_target.catalog_version_no != CATALOG_VERSION_NO || ControlFile_source.catalog_version_no != CATALOG_VERSION_NO)
+  {
     pg_fatal("clusters are not compatible with this version of pg_rewind");
   }
 
@@ -390,7 +427,8 @@ sanityChecks(void)
    * Target cluster need to use checksums or hint bit wal-logging, this to
    * prevent from data corruption that could occur because of hint bits.
    */
-  if (ControlFile_target.data_checksum_version != PG_DATA_CHECKSUM_VERSION && !ControlFile_target.wal_log_hints) {
+  if (ControlFile_target.data_checksum_version != PG_DATA_CHECKSUM_VERSION && !ControlFile_target.wal_log_hints)
+  {
     pg_fatal("target server needs to use either data checksums or \"wal_log_hints = on\"");
   }
 
@@ -400,7 +438,8 @@ sanityChecks(void)
    * strict than necessary; it's OK if the target node was not shut down
    * cleanly, as long as it isn't running at the moment.
    */
-  if (ControlFile_target.state != DB_SHUTDOWNED && ControlFile_target.state != DB_SHUTDOWNED_IN_RECOVERY) {
+  if (ControlFile_target.state != DB_SHUTDOWNED && ControlFile_target.state != DB_SHUTDOWNED_IN_RECOVERY)
+  {
     pg_fatal("target server must be shut down cleanly");
   }
 
@@ -409,7 +448,8 @@ sanityChecks(void)
    * server is shut down. There isn't any very strong reason for this
    * limitation, but better safe than sorry.
    */
-  if (datadir_source && ControlFile_source.state != DB_SHUTDOWNED && ControlFile_source.state != DB_SHUTDOWNED_IN_RECOVERY) {
+  if (datadir_source && ControlFile_source.state != DB_SHUTDOWNED && ControlFile_source.state != DB_SHUTDOWNED_IN_RECOVERY)
+  {
     pg_fatal("source data directory must be shut down cleanly");
   }
 }
@@ -432,12 +472,14 @@ progress_report(bool finished)
   char fetch_size_str[32];
   pg_time_t now;
 
-  if (!showprogress) {
+  if (!showprogress)
+  {
     return;
   }
 
   now = time(NULL);
-  if (now == last_progress_report && !finished) {
+  if (now == last_progress_report && !finished)
+  {
     return; /* Max once per second */
   }
 
@@ -450,10 +492,12 @@ progress_report(bool finished)
    * will always be wrong if WAL is included), but that's better than having
    * the done column be bigger than the total.
    */
-  if (percent > 100) {
+  if (percent > 100)
+  {
     percent = 100;
   }
-  if (fetch_done > fetch_size) {
+  if (fetch_done > fetch_size)
+  {
     fetch_size = fetch_done;
   }
 
@@ -482,11 +526,16 @@ progress_report(bool finished)
 static XLogRecPtr
 MinXLogRecPtr(XLogRecPtr a, XLogRecPtr b)
 {
-  if (XLogRecPtrIsInvalid(a)) {
+  if (XLogRecPtrIsInvalid(a))
+  {
     return b;
-  } else if (XLogRecPtrIsInvalid(b)) {
+  }
+  else if (XLogRecPtrIsInvalid(b))
+  {
     return a;
-  } else {
+  }
+  else
+  {
     return Min(a, b);
   }
 }
@@ -507,23 +556,31 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
    * Timeline 1 does not have a history file, so there is no need to check
    * and fake an entry with infinite start and end positions.
    */
-  if (tli == 1) {
+  if (tli == 1)
+  {
     history = (TimeLineHistoryEntry *)pg_malloc(sizeof(TimeLineHistoryEntry));
     history->tli = tli;
     history->begin = history->end = InvalidXLogRecPtr;
     *nentries = 1;
-  } else {
+  }
+  else
+  {
     char path[MAXPGPATH];
     char *histfile;
 
     TLHistoryFilePath(path, tli);
 
     /* Get history file from appropriate source */
-    if (controlFile == &ControlFile_source) {
+    if (controlFile == &ControlFile_source)
+    {
       histfile = fetchFile(path, NULL);
-    } else if (controlFile == &ControlFile_target) {
+    }
+    else if (controlFile == &ControlFile_target)
+    {
       histfile = slurpFile(datadir_target, path, NULL);
-    } else {
+    }
+    else
+    {
       pg_fatal("invalid control file");
     }
 
@@ -531,21 +588,28 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
     pg_free(histfile);
   }
 
-  if (debug) {
+  if (debug)
+  {
     int i;
 
-    if (controlFile == &ControlFile_source) {
+    if (controlFile == &ControlFile_source)
+    {
       pg_log_debug("Source timeline history:");
-    } else if (controlFile == &ControlFile_target) {
+    }
+    else if (controlFile == &ControlFile_target)
+    {
       pg_log_debug("Target timeline history:");
-    } else {
+    }
+    else
+    {
       Assert(false);
     }
 
     /*
      * Print the target timeline history.
      */
-    for (i = 0; i < targetNentries; i++) {
+    for (i = 0; i < targetNentries; i++)
+    {
       TimeLineHistoryEntry *entry;
 
       entry = &history[i];
@@ -587,20 +651,25 @@ findCommonAncestorTimeline(XLogRecPtr *recptr, int *tliIndex)
    * as well and move down by one extra timeline entry if they do not match.
    */
   n = Min(sourceNentries, targetNentries);
-  for (i = 0; i < n; i++) {
-    if (sourceHistory[i].tli != targetHistory[i].tli || sourceHistory[i].begin != targetHistory[i].begin) {
+  for (i = 0; i < n; i++)
+  {
+    if (sourceHistory[i].tli != targetHistory[i].tli || sourceHistory[i].begin != targetHistory[i].begin)
+    {
       break;
     }
   }
 
-  if (i > 0) {
+  if (i > 0)
+  {
     i--;
     *recptr = MinXLogRecPtr(sourceHistory[i].end, targetHistory[i].end);
     *tliIndex = i;
 
     pg_free(sourceHistory);
     return;
-  } else {
+  }
+  else
+  {
     pg_fatal("could not find common ancestor of the source and target cluster's timelines");
   }
 }
@@ -630,9 +699,16 @@ createBackupLabel(XLogRecPtr startpoint, TimeLineID starttli, XLogRecPtr checkpo
   tmp = localtime(&stamp_time);
   strftime(strfbuf, sizeof(strfbuf), "%Y-%m-%d %H:%M:%S %Z", tmp);
 
-  len = snprintf(buf, sizeof(buf),"START WAL LOCATION: %X/%X (file %s)\nCHECKPOINT LOCATION: %X/%X\nBACKUP METHOD: pg_rewind\nBACKUP FROM: standby\nSTART TIME: %s\n",/* omit LABEL: line */
+  len = snprintf(buf, sizeof(buf),
+      "START WAL LOCATION: %X/%X (file %s)\n"
+      "CHECKPOINT LOCATION: %X/%X\n"
+      "BACKUP METHOD: pg_rewind\n"
+      "BACKUP FROM: standby\n"
+      "START TIME: %s\n",
+      /* omit LABEL: line */
       (uint32)(startpoint >> 32), (uint32)startpoint, xlogfilename, (uint32)(checkpointloc >> 32), (uint32)checkpointloc, strfbuf);
-  if (len >= sizeof(buf)) {
+  if (len >= sizeof(buf))
+  {
     pg_fatal("backup label buffer too small"); /* shouldn't happen */
   }
 
@@ -656,7 +732,8 @@ checkControlFile(ControlFileData *ControlFile)
   FIN_CRC32C(crc);
 
   /* And simply compare it */
-  if (!EQ_CRC32C(crc, ControlFile->crc)) {
+  if (!EQ_CRC32C(crc, ControlFile->crc))
+  {
     pg_fatal("unexpected control file CRC");
   }
 }
@@ -667,7 +744,8 @@ checkControlFile(ControlFileData *ControlFile)
 static void
 digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
 {
-  if (size != PG_CONTROL_FILE_SIZE) {
+  if (size != PG_CONTROL_FILE_SIZE)
+  {
     pg_fatal("unexpected control file size %d, expected %d", (int)size, PG_CONTROL_FILE_SIZE);
   }
 
@@ -676,8 +754,9 @@ digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
   /* set and validate WalSegSz */
   WalSegSz = ControlFile->xlog_seg_size;
 
-  if (!IsValidWalSegSize(WalSegSz)) {
-    pg_fatal(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d byte","WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d bytes",WalSegSz),WalSegSz);
+  if (!IsValidWalSegSize(WalSegSz))
+  {
+    pg_fatal(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d byte", "WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d bytes", WalSegSz), WalSegSz);
   }
 
   /* Additional checks on control file */
@@ -696,7 +775,8 @@ digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
 static void
 syncTargetDirectory(void)
 {
-  if (!do_sync || dry_run) {
+  if (!do_sync || dry_run)
+  {
     return;
   }
 

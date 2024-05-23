@@ -60,13 +60,13 @@ tsquery_and(PG_FUNCTION_ARGS)
 
   if (a->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(a, 1);
+    PG_RETURN_POINTER(b);
   }
   else if (b->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(b, 1);
+    PG_RETURN_POINTER(a);
   }
 
   res = join_tsqueries(a, b, OP_AND, 0);
@@ -90,13 +90,13 @@ tsquery_or(PG_FUNCTION_ARGS)
 
   if (a->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(a, 1);
+    PG_RETURN_POINTER(b);
   }
   else if (b->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(b, 1);
+    PG_RETURN_POINTER(a);
   }
 
   res = join_tsqueries(a, b, OP_OR, 0);
@@ -121,17 +121,17 @@ tsquery_phrase_distance(PG_FUNCTION_ARGS)
 
   if (distance < 0 || distance > MAXENTRYPOS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("distance in phrase operator must be an integer value between zero and %d inclusive", MAXENTRYPOS)));
   }
   if (a->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(a, 1);
+    PG_RETURN_POINTER(b);
   }
   else if (b->size == 0)
   {
-
-
+    PG_FREE_IF_COPY(b, 1);
+    PG_RETURN_POINTER(a);
   }
 
   res = join_tsqueries(a, b, OP_PHRASE, (uint16)distance);
@@ -160,7 +160,7 @@ tsquery_not(PG_FUNCTION_ARGS)
 
   if (a->size == 0)
   {
-
+    PG_RETURN_POINTER(a);
   }
 
   res = (QTNode *)palloc0(sizeof(QTNode));
@@ -206,7 +206,7 @@ CompareTSQ(TSQuery a, TSQuery b)
     return res;
   }
 
-
+  return 0;
 }
 
 Datum

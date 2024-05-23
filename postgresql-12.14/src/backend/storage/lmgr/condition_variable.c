@@ -86,7 +86,7 @@ ConditionVariablePrepareToSleep(ConditionVariable *cv)
    */
   if (cv_sleep_target != NULL)
   {
-
+    ConditionVariableCancelSleep();
   }
 
   /* Record the condition variable on which we will sleep. */
@@ -278,7 +278,7 @@ ConditionVariableBroadcast(ConditionVariable *cv)
    */
   if (cv_sleep_target != NULL)
   {
-
+    ConditionVariableCancelSleep();
   }
 
   /*

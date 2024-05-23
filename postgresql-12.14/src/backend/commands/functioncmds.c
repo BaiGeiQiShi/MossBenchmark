@@ -100,7 +100,7 @@ compute_return_type(TypeName *returnType, Oid languageOid, Oid *prorettype_p, bo
     {
       if (languageOid == SQLlanguageId)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("SQL function cannot return shell type %s", TypeNameToString(returnType))));
       }
       else
       {
@@ -126,13 +126,13 @@ compute_return_type(TypeName *returnType, Oid languageOid, Oid *prorettype_p, bo
      */
     if (languageOid != INTERNALlanguageId && languageOid != ClanguageId)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type \"%s\" does not exist", typnam)));
     }
 
     /* Reject if there's typmod decoration, too */
     if (returnType->typmods != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("type modifier cannot be specified for shell type \"%s\"", typnam)));
     }
 
     /* Otherwise, go ahead and make a shell type */
@@ -141,7 +141,7 @@ compute_return_type(TypeName *returnType, Oid languageOid, Oid *prorettype_p, bo
     aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(), ACL_CREATE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceId));
     }
     address = TypeShellMake(typname, namespaceId, GetUserId());
     rettype = address.objectId;
@@ -218,12 +218,12 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
         /* As above, hard error if language is SQL */
         if (languageOid == SQLlanguageId)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("SQL function cannot accept shell type %s", TypeNameToString(t))));
         }
         /* We don't allow creating aggregates on shell types either */
         else if (objtype == OBJECT_AGGREGATE)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate cannot accept shell type %s", TypeNameToString(t))));
         }
         else
         {
@@ -235,8 +235,8 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
     }
     else
     {
-
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("type %s does not exist", TypeNameToString(t))));
+      toid = InvalidOid; /* keep compiler quiet */
     }
 
     aclresult = pg_type_aclcheck(toid, GetUserId(), ACL_USAGE);
@@ -247,18 +247,18 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
 
     if (t->setof)
     {
-
-
-
-
-
-
-
-
-
-
-
-
+      if (objtype == OBJECT_AGGREGATE)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregates cannot accept set arguments")));
+      }
+      else if (objtype == OBJECT_PROCEDURE)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("procedures cannot accept set arguments")));
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("functions cannot accept set arguments")));
+      }
     }
 
     if (objtype == OBJECT_PROCEDURE)
@@ -275,7 +275,7 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
       /* other input parameters can't follow a VARIADIC parameter */
       if (varCount > 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("VARIADIC parameter must be the last input parameter")));
       }
       inTypes[inCount++] = toid;
       isinput = true;
@@ -288,8 +288,8 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
       {
         *requiredResultType = RECORDOID;
       }
-      else if (outCount == 0)
-      { /* save first output param's type */
+      else if (outCount == 0) /* save first output param's type */
+      {
         *requiredResultType = toid;
       }
       outCount++;
@@ -302,14 +302,14 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
       /* validate variadic parameter type */
       switch (toid)
       {
-      case ANYARRAYOID:;
-      case ANYOID:;
+      case ANYARRAYOID:
+      case ANYOID:
         /* okay */
         break;
-      default:;;
+      default:
         if (!OidIsValid(get_element_type(toid)))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("VARIADIC parameter must be an array")));
         }
         break;
       }
@@ -375,7 +375,7 @@ interpret_function_parameter_list(ParseState *pstate, List *parameters, Oid lang
        */
       if (list_length(pstate->p_rtable) != 0 || contain_var_clause(def))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_COLUMN_REFERENCE), errmsg("cannot use table references in parameter default value")));
       }
 
       /*
@@ -457,11 +457,11 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*volatility_item)
     {
-
+      goto duplicate_error;
     }
 
     *volatility_item = defel;
@@ -474,7 +474,7 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
     }
     if (*strict_item)
     {
-
+      goto duplicate_error;
     }
 
     *strict_item = defel;
@@ -483,7 +483,7 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (*security_item)
     {
-
+      goto duplicate_error;
     }
 
     *security_item = defel;
@@ -492,11 +492,11 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*leakproof_item)
     {
-
+      goto duplicate_error;
     }
 
     *leakproof_item = defel;
@@ -509,11 +509,11 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*cost_item)
     {
-
+      goto duplicate_error;
     }
 
     *cost_item = defel;
@@ -522,11 +522,11 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*rows_item)
     {
-
+      goto duplicate_error;
     }
 
     *rows_item = defel;
@@ -535,11 +535,11 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*support_item)
     {
-
+      goto duplicate_error;
     }
 
     *support_item = defel;
@@ -548,28 +548,28 @@ compute_common_attribute(ParseState *pstate, bool is_procedure, DefElem *defel, 
   {
     if (is_procedure)
     {
-
+      goto procedure_error;
     }
     if (*parallel_item)
     {
-
+      goto duplicate_error;
     }
 
     *parallel_item = defel;
   }
   else
   {
-
+    return false;
   }
 
   /* Recognized an option */
   return true;
 
-duplicate_error:;
+duplicate_error:
+  ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
+  return false; /* keep compiler quiet */
 
-
-
-procedure_error:;
+procedure_error:
   ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("invalid attribute in procedure definition"), parser_errposition(pstate, defel->location)));
   return false;
 }
@@ -593,8 +593,8 @@ interpret_func_volatility(DefElem *defel)
   }
   else
   {
-
-
+    elog(ERROR, "invalid volatility \"%s\"", str);
+    return 0; /* keep compiler quiet */
   }
 }
 
@@ -609,7 +609,7 @@ interpret_func_parallel(DefElem *defel)
   }
   else if (strcmp(str, "unsafe") == 0)
   {
-
+    return PROPARALLEL_UNSAFE;
   }
   else if (strcmp(str, "restricted") == 0)
   {
@@ -617,8 +617,8 @@ interpret_func_parallel(DefElem *defel)
   }
   else
   {
-
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("parameter \"parallel\" must be SAFE, RESTRICTED, or UNSAFE")));
+    return PROPARALLEL_UNSAFE; /* keep compiler quiet */
   }
 }
 
@@ -648,9 +648,9 @@ update_proconfig_value(ArrayType *a, List *set_items)
       {
         a = GUCArrayAdd(a, sstmt->name, valuestr);
       }
-      else
-      { /* RESET */
-
+      else /* RESET */
+      {
+        a = GUCArrayDelete(a, sstmt->name);
       }
     }
   }
@@ -674,12 +674,12 @@ interpret_func_support(DefElem *defel)
   procOid = LookupFuncName(procName, 1, argList, true);
   if (!OidIsValid(procOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function %s does not exist", func_signature_string(procName, 1, NIL, argList))));
   }
 
   if (get_func_rettype(procOid) != INTERNALOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("support function %s must return type %s", NameListToString(procName), "internal")));
   }
 
   /*
@@ -689,7 +689,7 @@ interpret_func_support(DefElem *defel)
    */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to specify a support function")));
   }
 
   return procOid;
@@ -725,7 +725,7 @@ compute_function_attributes(ParseState *pstate, bool is_procedure, List *options
     {
       if (as_item)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       as_item = defel;
     }
@@ -733,23 +733,23 @@ compute_function_attributes(ParseState *pstate, bool is_procedure, List *options
     {
       if (language_item)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       language_item = defel;
     }
     else if (strcmp(defel->defname, "transform") == 0)
     {
-
-
-
-
-
+      if (transform_item)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
+      }
+      transform_item = defel;
     }
     else if (strcmp(defel->defname, "window") == 0)
     {
       if (windowfunc_item)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       if (is_procedure)
       {
@@ -792,7 +792,7 @@ compute_function_attributes(ParseState *pstate, bool is_procedure, List *options
   /* process optional items */
   if (transform_item)
   {
-
+    *transform = transform_item->arg;
   }
   if (windowfunc_item)
   {
@@ -823,7 +823,7 @@ compute_function_attributes(ParseState *pstate, bool is_procedure, List *options
     *procost = defGetNumeric(cost_item);
     if (*procost <= 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("COST must be positive")));
     }
   }
   if (rows_item)
@@ -831,7 +831,7 @@ compute_function_attributes(ParseState *pstate, bool is_procedure, List *options
     *prorows = defGetNumeric(rows_item);
     if (*prorows <= 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ROWS must be positive")));
     }
   }
   if (support_item)
@@ -878,7 +878,7 @@ interpret_AS_clause(Oid languageOid, const char *languageName, char *funcname, L
       *prosrc_str_p = strVal(lsecond(as));
       if (strcmp(*prosrc_str_p, "-") == 0)
       {
-
+        *prosrc_str_p = funcname;
       }
     }
   }
@@ -905,7 +905,7 @@ interpret_AS_clause(Oid languageOid, const char *languageName, char *funcname, L
        */
       if (strlen(*prosrc_str_p) == 0)
       {
-
+        *prosrc_str_p = funcname;
       }
     }
   }
@@ -956,7 +956,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
   aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceId));
   }
 
   /* Set default attributes */
@@ -1000,7 +1000,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
     /* if untrusted language, must be superuser */
     if (!superuser())
     {
-
+      aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_LANGUAGE, NameStr(languageStruct->lanname));
     }
   }
 
@@ -1022,16 +1022,16 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
   {
     ListCell *lc;
 
+    foreach (lc, castNode(List, transformDefElem))
+    {
+      Oid typeid = typenameTypeId(NULL, lfirst_node(TypeName, lc));
+      Oid elt = get_base_element_type(typeid);
 
+      typeid = elt ? elt : typeid;
 
-
-
-
-
-
-
-
-
+      get_transform_oid(typeid, languageOid, false);
+      trftypes_list = lappend_oid(trftypes_list, typeid);
+    }
   }
 
   /*
@@ -1075,13 +1075,13 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
     Datum *arr;
     int i;
 
-
-
-
-
-
-
-
+    arr = palloc(list_length(trftypes_list) * sizeof(Datum));
+    i = 0;
+    foreach (lc, trftypes_list)
+    {
+      arr[i++] = ObjectIdGetDatum(lfirst_oid(lc));
+    }
+    trftypes = construct_array(arr, list_length(trftypes_list), OIDOID, sizeof(Oid), true, 'i');
   }
   else
   {
@@ -1121,7 +1121,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
   }
   else if (!returnsSet)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ROWS is not applicable when function does not return a set")));
   }
 
   /*
@@ -1152,9 +1152,9 @@ RemoveFunctionById(Oid funcOid)
   relation = table_open(ProcedureRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for function %u", funcOid);
   }
 
   prokind = ((Form_pg_proc)GETSTRUCT(tup))->prokind;
@@ -1173,9 +1173,9 @@ RemoveFunctionById(Oid funcOid)
     relation = table_open(AggregateRelationId, RowExclusiveLock);
 
     tup = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(funcOid));
-    if (!HeapTupleIsValid(tup))
-    { /* should not happen */
-
+    if (!HeapTupleIsValid(tup)) /* should not happen */
+    {
+      elog(ERROR, "cache lookup failed for pg_aggregate tuple for function %u", funcOid);
     }
 
     CatalogTupleDelete(relation, &tup->t_self);
@@ -1218,9 +1218,9 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
   ObjectAddressSet(address, ProcedureRelationId, funcOid);
 
   tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for function %u", funcOid);
   }
 
   procForm = (Form_pg_proc)GETSTRUCT(tup);
@@ -1228,12 +1228,12 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
   /* Permission check: must own function */
   if (!pg_proc_ownercheck(funcOid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, stmt->objtype, NameListToString(stmt->func->objname));
   }
 
   if (procForm->prokind == PROKIND_AGGREGATE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is an aggregate function", NameListToString(stmt->func->objname))));
   }
 
   is_procedure = (procForm->prokind == PROKIND_PROCEDURE);
@@ -1245,7 +1245,7 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 
     if (compute_common_attribute(pstate, is_procedure, defel, &volatility_item, &strict_item, &security_def_item, &leakproof_item, &set_items, &cost_item, &rows_item, &support_item, &parallel_item) == false)
     {
-
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
     }
   }
 
@@ -1274,20 +1274,20 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
     procForm->procost = defGetNumeric(cost_item);
     if (procForm->procost <= 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("COST must be positive")));
     }
   }
   if (rows_item)
   {
-
-
-
-
-
-
-
-
-
+    procForm->prorows = defGetNumeric(rows_item);
+    if (procForm->prorows <= 0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ROWS must be positive")));
+    }
+    if (!procForm->proretset)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ROWS is not applicable when function does not return a set")));
+    }
   }
   if (support_item)
   {
@@ -1297,7 +1297,7 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
     /* Add or replace dependency on support function */
     if (OidIsValid(procForm->prosupport))
     {
-
+      changeDependencyFor(ProcedureRelationId, funcOid, ProcedureRelationId, procForm->prosupport, newsupport);
     }
     else
     {
@@ -1313,7 +1313,7 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
   }
   if (parallel_item)
   {
-
+    procForm->proparallel = interpret_func_parallel(parallel_item);
   }
   if (set_items)
   {
@@ -1380,15 +1380,15 @@ SetFunctionReturnType(Oid funcOid, Oid newRetType)
   pg_proc_rel = table_open(ProcedureRelationId, RowExclusiveLock);
 
   tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for function %u", funcOid);
   }
   procForm = (Form_pg_proc)GETSTRUCT(tup);
 
-  if (procForm->prorettype != OPAQUEOID)
-  { /* caller messed up */
-
+  if (procForm->prorettype != OPAQUEOID) /* caller messed up */
+  {
+    elog(ERROR, "function %u doesn't return OPAQUE", funcOid);
   }
 
   /* okay to overwrite copied tuple */
@@ -1425,15 +1425,15 @@ SetFunctionArgType(Oid funcOid, int argIndex, Oid newArgType)
   pg_proc_rel = table_open(ProcedureRelationId, RowExclusiveLock);
 
   tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for function %u", funcOid);
   }
   procForm = (Form_pg_proc)GETSTRUCT(tup);
 
   if (argIndex < 0 || argIndex >= procForm->pronargs || procForm->proargtypes.values[argIndex] != OPAQUEOID)
   {
-
+    elog(ERROR, "function %u doesn't take OPAQUE", funcOid);
   }
 
   /* okay to overwrite copied tuple */
@@ -1483,18 +1483,18 @@ CreateCast(CreateCastStmt *stmt)
   /* No pseudo-types allowed */
   if (sourcetyptype == TYPTYPE_PSEUDO)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("source data type %s is a pseudo-type", TypeNameToString(stmt->sourcetype))));
   }
 
   if (targettyptype == TYPTYPE_PSEUDO)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("target data type %s is a pseudo-type", TypeNameToString(stmt->targettype))));
   }
 
   /* Permission check */
   if (!pg_type_ownercheck(sourcetypeid, GetUserId()) && !pg_type_ownercheck(targettypeid, GetUserId()))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be owner of type %s or type %s", format_type_be(sourcetypeid), format_type_be(targettypeid))));
   }
 
   aclresult = pg_type_aclcheck(sourcetypeid, GetUserId(), ACL_USAGE);
@@ -1506,7 +1506,7 @@ CreateCast(CreateCastStmt *stmt)
   aclresult = pg_type_aclcheck(targettypeid, GetUserId(), ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error_type(aclresult, targettypeid);
   }
 
   /* Domains are allowed for historical reasons, but we warn */
@@ -1517,7 +1517,7 @@ CreateCast(CreateCastStmt *stmt)
 
   else if (targettyptype == TYPTYPE_DOMAIN)
   {
-
+    ereport(WARNING, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cast will be ignored because the target data type is a domain")));
   }
 
   /* Determine the cast method */
@@ -1543,30 +1543,30 @@ CreateCast(CreateCastStmt *stmt)
     tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for function %u", funcid);
     }
 
     procstruct = (Form_pg_proc)GETSTRUCT(tuple);
     nargs = procstruct->pronargs;
     if (nargs < 1 || nargs > 3)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("cast function must take one to three arguments")));
     }
     if (!IsBinaryCoercible(sourcetypeid, procstruct->proargtypes.values[0]))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("argument of cast function must match or be binary-coercible from source data type")));
     }
     if (nargs > 1 && procstruct->proargtypes.values[1] != INT4OID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("second argument of cast function must be type %s", "integer")));
     }
     if (nargs > 2 && procstruct->proargtypes.values[2] != BOOLOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("third argument of cast function must be type %s", "boolean")));
     }
     if (!IsBinaryCoercible(procstruct->prorettype, targettypeid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("return data type of cast function must match or be binary-coercible to target data type")));
     }
 
     /*
@@ -1582,11 +1582,11 @@ CreateCast(CreateCastStmt *stmt)
 #endif
     if (procstruct->prokind != PROKIND_FUNCTION)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("cast function must be a normal function")));
     }
     if (procstruct->proretset)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("cast function must not return a set")));
     }
 
     ReleaseSysCache(tuple);
@@ -1612,7 +1612,7 @@ CreateCast(CreateCastStmt *stmt)
      */
     if (!superuser())
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create a cast WITHOUT FUNCTION")));
     }
 
     /*
@@ -1625,7 +1625,7 @@ CreateCast(CreateCastStmt *stmt)
     get_typlenbyvalalign(targettypeid, &typ2len, &typ2byval, &typ2align);
     if (typ1len != typ2len || typ1byval != typ2byval || typ1align != typ2align)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("source and target data types are not physically compatible")));
     }
 
     /*
@@ -1639,17 +1639,17 @@ CreateCast(CreateCastStmt *stmt)
      */
     if (sourcetyptype == TYPTYPE_COMPOSITE || targettyptype == TYPTYPE_COMPOSITE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("composite data types are not binary-compatible")));
     }
 
     if (sourcetyptype == TYPTYPE_ENUM || targettyptype == TYPTYPE_ENUM)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("enum data types are not binary-compatible")));
     }
 
     if (OidIsValid(get_element_type(sourcetypeid)) || OidIsValid(get_element_type(targettypeid)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("array data types are not binary-compatible")));
     }
 
     /*
@@ -1665,7 +1665,7 @@ CreateCast(CreateCastStmt *stmt)
      */
     if (sourcetyptype == TYPTYPE_DOMAIN || targettyptype == TYPTYPE_DOMAIN)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("domain data types must not be marked binary-compatible")));
     }
   }
 
@@ -1675,25 +1675,25 @@ CreateCast(CreateCastStmt *stmt)
    */
   if (sourcetypeid == targettypeid && nargs < 2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("source data type and target data type are the same")));
   }
 
   /* convert CoercionContext enum to char value for castcontext */
   switch (stmt->context)
   {
-  case COERCION_IMPLICIT:;
+  case COERCION_IMPLICIT:
     castcontext = COERCION_CODE_IMPLICIT;
     break;
-  case COERCION_ASSIGNMENT:;
+  case COERCION_ASSIGNMENT:
     castcontext = COERCION_CODE_ASSIGNMENT;
     break;
-  case COERCION_EXPLICIT:;
+  case COERCION_EXPLICIT:
     castcontext = COERCION_CODE_EXPLICIT;
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized CoercionContext: %d", stmt->context);
+    castcontext = 0; /* keep compiler quiet */
+    break;
   }
 
   relation = table_open(CastRelationId, RowExclusiveLock);
@@ -1706,7 +1706,7 @@ CreateCast(CreateCastStmt *stmt)
   tuple = SearchSysCache2(CASTSOURCETARGET, ObjectIdGetDatum(sourcetypeid), ObjectIdGetDatum(targettypeid));
   if (HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("cast from type %s to type %s already exists", format_type_be(sourcetypeid), format_type_be(targettypeid))));
   }
 
   /* ready to go */
@@ -1798,7 +1798,7 @@ DropCastById(Oid castOid)
   tuple = systable_getnext(scan);
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "could not find tuple for cast %u", castOid);
   }
   CatalogTupleDelete(relation, &tuple->t_self);
 
@@ -1811,23 +1811,23 @@ check_transform_function(Form_pg_proc procstruct)
 {
   if (procstruct->provolatile == PROVOLATILE_VOLATILE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("transform function must not be volatile")));
   }
   if (procstruct->prokind != PROKIND_FUNCTION)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("transform function must be a normal function")));
   }
   if (procstruct->proretset)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("transform function must not return a set")));
   }
   if (procstruct->pronargs != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("transform function must take one argument")));
   }
   if (procstruct->proargtypes.values[0] != INTERNALOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("first argument of transform function must be type %s", "internal")));
   }
 }
 
@@ -1862,23 +1862,23 @@ CreateTransform(CreateTransformStmt *stmt)
 
   if (typtype == TYPTYPE_PSEUDO)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("data type %s is a pseudo-type", TypeNameToString(stmt->type_name))));
   }
 
   if (typtype == TYPTYPE_DOMAIN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("data type %s is a domain", TypeNameToString(stmt->type_name))));
   }
 
   if (!pg_type_ownercheck(typeid, GetUserId()))
   {
-
+    aclcheck_error_type(ACLCHECK_NOT_OWNER, typeid);
   }
 
   aclresult = pg_type_aclcheck(typeid, GetUserId(), ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error_type(aclresult, typeid);
   }
 
   /*
@@ -1889,7 +1889,7 @@ CreateTransform(CreateTransformStmt *stmt)
   aclresult = pg_language_aclcheck(langid, GetUserId(), ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_LANGUAGE, stmt->lang);
   }
 
   /*
@@ -1901,31 +1901,31 @@ CreateTransform(CreateTransformStmt *stmt)
 
     if (!pg_proc_ownercheck(fromsqlfuncid, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_FUNCTION, NameListToString(stmt->fromsql->objname));
     }
 
     aclresult = pg_proc_aclcheck(fromsqlfuncid, GetUserId(), ACL_EXECUTE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_FUNCTION, NameListToString(stmt->fromsql->objname));
     }
 
     tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(fromsqlfuncid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for function %u", fromsqlfuncid);
     }
     procstruct = (Form_pg_proc)GETSTRUCT(tuple);
     if (procstruct->prorettype != INTERNALOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("return data type of FROM SQL function must be %s", "internal")));
     }
     check_transform_function(procstruct);
     ReleaseSysCache(tuple);
   }
   else
   {
-
+    fromsqlfuncid = InvalidOid;
   }
 
   if (stmt->tosql)
@@ -1934,31 +1934,31 @@ CreateTransform(CreateTransformStmt *stmt)
 
     if (!pg_proc_ownercheck(tosqlfuncid, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_FUNCTION, NameListToString(stmt->tosql->objname));
     }
 
     aclresult = pg_proc_aclcheck(tosqlfuncid, GetUserId(), ACL_EXECUTE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_FUNCTION, NameListToString(stmt->tosql->objname));
     }
 
     tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(tosqlfuncid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      elog(ERROR, "cache lookup failed for function %u", tosqlfuncid);
     }
     procstruct = (Form_pg_proc)GETSTRUCT(tuple);
     if (procstruct->prorettype != typeid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("return data type of TO SQL function must be the transform data type")));
     }
     check_transform_function(procstruct);
     ReleaseSysCache(tuple);
   }
   else
   {
-
+    tosqlfuncid = InvalidOid;
   }
 
   /*
@@ -1978,21 +1978,21 @@ CreateTransform(CreateTransformStmt *stmt)
   {
     Form_pg_transform form = (Form_pg_transform)GETSTRUCT(tuple);
 
+    if (!stmt->replace)
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("transform for type %s language \"%s\" already exists", format_type_be(typeid), stmt->lang)));
+    }
 
+    MemSet(replaces, false, sizeof(replaces));
+    replaces[Anum_pg_transform_trffromsql - 1] = true;
+    replaces[Anum_pg_transform_trftosql - 1] = true;
 
+    newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values, nulls, replaces);
+    CatalogTupleUpdate(relation, &newtuple->t_self, newtuple);
 
-
-
-
-
-
-
-
-
-
-
-
-
+    transformid = form->oid;
+    ReleaseSysCache(tuple);
+    is_replace = true;
   }
   else
   {
@@ -2005,7 +2005,7 @@ CreateTransform(CreateTransformStmt *stmt)
 
   if (is_replace)
   {
-
+    deleteDependencyRecordsFor(TransformRelationId, transformid, true);
   }
 
   /* make dependency entries */
@@ -2068,7 +2068,7 @@ get_transform_oid(Oid type_id, Oid lang_id, bool missing_ok)
   oid = GetSysCacheOid2(TRFTYPELANG, Anum_pg_transform_oid, ObjectIdGetDatum(type_id), ObjectIdGetDatum(lang_id));
   if (!OidIsValid(oid) && !missing_ok)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("transform for type %s language \"%s\" does not exist", format_type_be(type_id), get_language_name(lang_id, false))));
   }
   return oid;
 }
@@ -2076,25 +2076,25 @@ get_transform_oid(Oid type_id, Oid lang_id, bool missing_ok)
 void
 DropTransformById(Oid transformOid)
 {
+  Relation relation;
+  ScanKeyData scankey;
+  SysScanDesc scan;
+  HeapTuple tuple;
 
+  relation = table_open(TransformRelationId, RowExclusiveLock);
 
+  ScanKeyInit(&scankey, Anum_pg_transform_oid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(transformOid));
+  scan = systable_beginscan(relation, TransformOidIndexId, true, NULL, 1, &scankey);
 
+  tuple = systable_getnext(scan);
+  if (!HeapTupleIsValid(tuple))
+  {
+    elog(ERROR, "could not find tuple for transform %u", transformOid);
+  }
+  CatalogTupleDelete(relation, &tuple->t_self);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  systable_endscan(scan);
+  table_close(relation, RowExclusiveLock);
 }
 
 /*
@@ -2140,7 +2140,7 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
     {
       if (as_item)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       as_item = defel;
     }
@@ -2148,13 +2148,13 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
     {
       if (language_item)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       language_item = defel;
     }
     else
     {
-
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
     }
   }
 
@@ -2164,7 +2164,7 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
   }
   else
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("no inline code specified")));
   }
 
   /* if LANGUAGE option wasn't specified, use the default */
@@ -2197,7 +2197,7 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
     aclresult = pg_language_aclcheck(codeblock->langOid, GetUserId(), ACL_USAGE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_LANGUAGE, NameStr(languageStruct->lanname));
     }
   }
   else
@@ -2205,7 +2205,7 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
     /* if untrusted language, must be superuser */
     if (!superuser())
     {
-
+      aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_LANGUAGE, NameStr(languageStruct->lanname));
     }
   }
 
@@ -2213,7 +2213,7 @@ ExecuteDoStmt(DoStmt *stmt, bool atomic)
   laninline = languageStruct->laninline;
   if (!OidIsValid(laninline))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("language \"%s\" does not support inline code execution", NameStr(languageStruct->lanname))));
   }
 
   ReleaseSysCache(languageTuple);
@@ -2284,7 +2284,7 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
   tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(fexpr->funcid));
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", fexpr->funcid);
   }
 
   /*
@@ -2330,7 +2330,7 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
   /* safety check; see ExecInitFunc() */
   if (nargs > FUNC_MAX_ARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_ARGUMENTS), errmsg_plural("cannot pass more than %d argument to a procedure", "cannot pass more than %d arguments to a procedure", FUNC_MAX_ARGS, FUNC_MAX_ARGS)));
   }
 
   /* Initialize function call structure */
@@ -2405,7 +2405,7 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
 
     if (fcinfo->isnull)
     {
-
+      elog(ERROR, "procedure returned null record");
     }
 
     /*
@@ -2464,7 +2464,7 @@ CallStmtResultDesc(CallStmt *stmt)
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(fexpr->funcid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for procedure %u", fexpr->funcid);
   }
 
   tupdesc = build_function_result_tupdesc_t(tuple);

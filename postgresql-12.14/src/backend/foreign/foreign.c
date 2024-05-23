@@ -54,11 +54,11 @@ GetForeignDataWrapperExtended(Oid fdwid, bits16 flags)
 
   if (!HeapTupleIsValid(tp))
   {
-
-
-
-
-
+    if ((flags & FDW_MISSING_OK) == 0)
+    {
+      elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
+    }
+    return NULL;
   }
 
   fdwform = (Form_pg_foreign_data_wrapper)GETSTRUCT(tp);
@@ -130,11 +130,11 @@ GetForeignServerExtended(Oid serverid, bits16 flags)
 
   if (!HeapTupleIsValid(tp))
   {
-
-
-
-
-
+    if ((flags & FSV_MISSING_OK) == 0)
+    {
+      elog(ERROR, "cache lookup failed for foreign server %u", serverid);
+    }
+    return NULL;
   }
 
   serverform = (Form_pg_foreign_server)GETSTRUCT(tp);
@@ -194,43 +194,43 @@ GetForeignServerByName(const char *srvname, bool missing_ok)
 UserMapping *
 GetUserMapping(Oid userid, Oid serverid)
 {
+  Datum datum;
+  HeapTuple tp;
+  bool isnull;
+  UserMapping *um;
 
+  tp = SearchSysCache2(USERMAPPINGUSERSERVER, ObjectIdGetDatum(userid), ObjectIdGetDatum(serverid));
 
+  if (!HeapTupleIsValid(tp))
+  {
+    /* Not found for the specific user -- try PUBLIC */
+    tp = SearchSysCache2(USERMAPPINGUSERSERVER, ObjectIdGetDatum(InvalidOid), ObjectIdGetDatum(serverid));
+  }
 
+  if (!HeapTupleIsValid(tp))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("user mapping not found for \"%s\"", MappingUserName(userid))));
+  }
 
+  um = (UserMapping *)palloc(sizeof(UserMapping));
+  um->umid = ((Form_pg_user_mapping)GETSTRUCT(tp))->oid;
+  um->userid = userid;
+  um->serverid = serverid;
 
+  /* Extract the umoptions */
+  datum = SysCacheGetAttr(USERMAPPINGUSERSERVER, tp, Anum_pg_user_mapping_umoptions, &isnull);
+  if (isnull)
+  {
+    um->options = NIL;
+  }
+  else
+  {
+    um->options = untransformRelOptions(datum);
+  }
 
+  ReleaseSysCache(tp);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return um;
 }
 
 /*
@@ -239,37 +239,37 @@ GetUserMapping(Oid userid, Oid serverid)
 ForeignTable *
 GetForeignTable(Oid relid)
 {
+  Form_pg_foreign_table tableform;
+  ForeignTable *ft;
+  HeapTuple tp;
+  Datum datum;
+  bool isnull;
 
+  tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
+  if (!HeapTupleIsValid(tp))
+  {
+    elog(ERROR, "cache lookup failed for foreign table %u", relid);
+  }
+  tableform = (Form_pg_foreign_table)GETSTRUCT(tp);
 
+  ft = (ForeignTable *)palloc(sizeof(ForeignTable));
+  ft->relid = relid;
+  ft->serverid = tableform->ftserver;
 
+  /* Extract the ftoptions */
+  datum = SysCacheGetAttr(FOREIGNTABLEREL, tp, Anum_pg_foreign_table_ftoptions, &isnull);
+  if (isnull)
+  {
+    ft->options = NIL;
+  }
+  else
+  {
+    ft->options = untransformRelOptions(datum);
+  }
 
+  ReleaseSysCache(tp);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return ft;
 }
 
 /*
@@ -279,29 +279,29 @@ GetForeignTable(Oid relid)
 List *
 GetForeignColumnOptions(Oid relid, AttrNumber attnum)
 {
+  List *options;
+  HeapTuple tp;
+  Datum datum;
+  bool isnull;
 
+  tp = SearchSysCache2(ATTNUM, ObjectIdGetDatum(relid), Int16GetDatum(attnum));
+  if (!HeapTupleIsValid(tp))
+  {
+    elog(ERROR, "cache lookup failed for attribute %d of relation %u", attnum, relid);
+  }
+  datum = SysCacheGetAttr(ATTNUM, tp, Anum_pg_attribute_attfdwoptions, &isnull);
+  if (isnull)
+  {
+    options = NIL;
+  }
+  else
+  {
+    options = untransformRelOptions(datum);
+  }
 
+  ReleaseSysCache(tp);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return options;
 }
 
 /*
@@ -311,18 +311,18 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum)
 FdwRoutine *
 GetFdwRoutine(Oid fdwhandler)
 {
+  Datum datum;
+  FdwRoutine *routine;
 
+  datum = OidFunctionCall0(fdwhandler);
+  routine = (FdwRoutine *)DatumGetPointer(datum);
 
+  if (routine == NULL || !IsA(routine, FdwRoutine))
+  {
+    elog(ERROR, "foreign-data wrapper handler function %u did not return an FdwRoutine struct", fdwhandler);
+  }
 
-
-
-
-
-
-
-
-
-
+  return routine;
 }
 
 /*
@@ -339,7 +339,7 @@ GetForeignServerIdByRelId(Oid relid)
   tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for foreign table %u", relid);
   }
   tableform = (Form_pg_foreign_table)GETSTRUCT(tp);
   serverid = tableform->ftserver;
@@ -365,7 +365,7 @@ GetFdwRoutineByServerId(Oid serverid)
   tp = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid));
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for foreign server %u", serverid);
   }
   serverform = (Form_pg_foreign_server)GETSTRUCT(tp);
   fdwid = serverform->srvfdw;
@@ -375,7 +375,7 @@ GetFdwRoutineByServerId(Oid serverid)
   tp = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid));
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
   }
   fdwform = (Form_pg_foreign_data_wrapper)GETSTRUCT(tp);
   fdwhandler = fdwform->fdwhandler;
@@ -440,15 +440,15 @@ GetFdwRoutineForRelation(Relation relation, bool makecopy)
   }
 
   /* We have valid cached data --- does the caller want a copy? */
-
-
-
-
-
-
+  if (makecopy)
+  {
+    fdwroutine = (FdwRoutine *)palloc(sizeof(FdwRoutine));
+    memcpy(fdwroutine, relation->rd_fdwroutine, sizeof(FdwRoutine));
+    return fdwroutine;
+  }
 
   /* Only a short-lived reference is needed, so just hand back cached copy */
-
+  return relation->rd_fdwroutine;
 }
 
 /*
@@ -460,38 +460,38 @@ GetFdwRoutineForRelation(Relation relation, bool makecopy)
 bool
 IsImportableForeignTable(const char *tablename, ImportForeignSchemaStmt *stmt)
 {
+  ListCell *lc;
 
+  switch (stmt->list_type)
+  {
+  case FDW_IMPORT_SCHEMA_ALL:
+    return true;
 
+  case FDW_IMPORT_SCHEMA_LIMIT_TO:
+    foreach (lc, stmt->table_list)
+    {
+      RangeVar *rv = (RangeVar *)lfirst(lc);
 
+      if (strcmp(tablename, rv->relname) == 0)
+      {
+        return true;
+      }
+    }
+    return false;
 
+  case FDW_IMPORT_SCHEMA_EXCEPT:
+    foreach (lc, stmt->table_list)
+    {
+      RangeVar *rv = (RangeVar *)lfirst(lc);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (strcmp(tablename, rv->relname) == 0)
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false; /* shouldn't get here */
 }
 
 /*
@@ -512,11 +512,11 @@ deflist_to_tuplestore(ReturnSetInfo *rsinfo, List *options)
   /* check to see if caller supports us returning a tuplestore */
   if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize) || rsinfo->expectedDesc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
   }
 
   per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
@@ -544,8 +544,8 @@ deflist_to_tuplestore(ReturnSetInfo *rsinfo, List *options)
     }
     else
     {
-
-
+      values[1] = (Datum)0;
+      nulls[1] = true;
     }
     tuplestore_putvalues(tupstore, tupdesc, values, nulls);
   }
@@ -721,95 +721,95 @@ get_foreign_server_oid(const char *servername, bool missing_ok)
 Path *
 GetExistingLocalJoinPath(RelOptInfo *joinrel)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ListCell *lc;
+
+  Assert(IS_JOIN_REL(joinrel));
+
+  foreach (lc, joinrel->pathlist)
+  {
+    Path *path = (Path *)lfirst(lc);
+    JoinPath *joinpath = NULL;
+
+    /* Skip parameterized paths. */
+    if (path->param_info != NULL)
+    {
+      continue;
+    }
+
+    switch (path->pathtype)
+    {
+    case T_HashJoin:
+    {
+      HashPath *hash_path = makeNode(HashPath);
+
+      memcpy(hash_path, path, sizeof(HashPath));
+      joinpath = (JoinPath *)hash_path;
+    }
+    break;
+
+    case T_NestLoop:
+    {
+      NestPath *nest_path = makeNode(NestPath);
+
+      memcpy(nest_path, path, sizeof(NestPath));
+      joinpath = (JoinPath *)nest_path;
+    }
+    break;
+
+    case T_MergeJoin:
+    {
+      MergePath *merge_path = makeNode(MergePath);
+
+      memcpy(merge_path, path, sizeof(MergePath));
+      joinpath = (JoinPath *)merge_path;
+    }
+    break;
+
+    default:
+
+      /*
+       * Just skip anything else. We don't know if corresponding
+       * plan would build the output row from whole-row references
+       * of base relations and execute the EPQ checks.
+       */
+      break;
+    }
+
+    /* This path isn't good for us, check next. */
+    if (!joinpath)
+    {
+      continue;
+    }
+
+    /*
+     * If either inner or outer path is a ForeignPath corresponding to a
+     * pushed down join, replace it with the fdw_outerpath, so that we
+     * maintain path for EPQ checks built entirely of local join
+     * strategies.
+     */
+    if (IsA(joinpath->outerjoinpath, ForeignPath))
+    {
+      ForeignPath *foreign_path;
+
+      foreign_path = (ForeignPath *)joinpath->outerjoinpath;
+      if (IS_JOIN_REL(foreign_path->path.parent))
+      {
+        joinpath->outerjoinpath = foreign_path->fdw_outerpath;
+      }
+    }
+
+    if (IsA(joinpath->innerjoinpath, ForeignPath))
+    {
+      ForeignPath *foreign_path;
+
+      foreign_path = (ForeignPath *)joinpath->innerjoinpath;
+      if (IS_JOIN_REL(foreign_path->path.parent))
+      {
+        joinpath->innerjoinpath = foreign_path->fdw_outerpath;
+      }
+    }
+
+    return (Path *)joinpath;
+  }
+  return NULL;
 }

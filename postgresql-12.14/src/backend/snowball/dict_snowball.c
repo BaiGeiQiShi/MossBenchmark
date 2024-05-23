@@ -73,7 +73,8 @@ PG_FUNCTION_INFO_V1(dsnowball_init);
 PG_FUNCTION_INFO_V1(dsnowball_lexize);
 
 /* List of supported modules */
-typedef struct stemmer_module {
+typedef struct stemmer_module
+{
   const char *name;
   pg_enc enc;
   struct SN_env *(*create)(void);
@@ -103,7 +104,8 @@ static const stemmer_module stemmer_modules[] = {
     {NULL, 0, NULL, NULL, NULL} /* list end marker */
 };
 
-typedef struct DictSnowball {
+typedef struct DictSnowball
+{
   struct SN_env *z;
   StopList stoplist;
   bool needrecode; /* needs recoding before/after call stem */
@@ -126,8 +128,10 @@ locate_stem_module(DictSnowball *d, const char *lang)
    * First, try to find exact match of stemmer module. Stemmer with
    * PG_SQL_ASCII encoding is treated as working with any server encoding
    */
-  for (m = stemmer_modules; m->name; m++) {
-    if ((m->enc == PG_SQL_ASCII || m->enc == GetDatabaseEncoding()) && pg_strcasecmp(m->name, lang) == 0) {
+  for (m = stemmer_modules; m->name; m++)
+  {
+    if ((m->enc == PG_SQL_ASCII || m->enc == GetDatabaseEncoding()) && pg_strcasecmp(m->name, lang) == 0)
+    {
       d->stem = m->stem;
       d->z = m->create();
       d->needrecode = false;
@@ -138,8 +142,10 @@ locate_stem_module(DictSnowball *d, const char *lang)
   /*
    * Second, try to find stemmer for needed language for UTF8 encoding.
    */
-  for (m = stemmer_modules; m->name; m++) {
-    if (m->enc == PG_UTF8 && pg_strcasecmp(m->name, lang) == 0) {
+  for (m = stemmer_modules; m->name; m++)
+  {
+    if (m->enc == PG_UTF8 && pg_strcasecmp(m->name, lang) == 0)
+    {
       d->stem = m->stem;
       d->z = m->create();
       d->needrecode = true;
@@ -147,7 +153,7 @@ locate_stem_module(DictSnowball *d, const char *lang)
     }
   }
 
-  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("no Snowball stemmer available for language \"%s\" and encoding \"%s\"",lang, GetDatabaseEncodingName())));
+  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("no Snowball stemmer available for language \"%s\" and encoding \"%s\"", lang, GetDatabaseEncodingName())));
 }
 
 Datum
@@ -160,26 +166,35 @@ dsnowball_init(PG_FUNCTION_ARGS)
 
   d = (DictSnowball *)palloc0(sizeof(DictSnowball));
 
-  foreach (l, dictoptions) {
+  foreach (l, dictoptions)
+  {
     DefElem *defel = (DefElem *)lfirst(l);
 
-    if (strcmp(defel->defname, "stopwords") == 0) {
-      if (stoploaded) {
+    if (strcmp(defel->defname, "stopwords") == 0)
+    {
+      if (stoploaded)
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple StopWords parameters")));
       }
       readstoplist(defGetString(defel), &d->stoplist, lowerstr);
       stoploaded = true;
-    } else if (strcmp(defel->defname, "language") == 0) {
-      if (d->stem) {
+    }
+    else if (strcmp(defel->defname, "language") == 0)
+    {
+      if (d->stem)
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple Language parameters")));
       }
       locate_stem_module(d, defGetString(defel));
-    } else {
+    }
+    else
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized Snowball parameter: \"%s\"", defel->defname)));
     }
   }
 
-  if (!d->stem) {
+  if (!d->stem)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("missing Language parameter")));
   }
 
@@ -207,23 +222,30 @@ dsnowball_lexize(PG_FUNCTION_ARGS)
    * defined to recognize all strings, so we can't reject the string as an
    * unknown word.
    */
-  if (len > 1000) {
+  if (len > 1000)
+  {
     /* return the lexeme lowercased, but otherwise unmodified */
     res->lexeme = txt;
-  } else if (*txt == '\0' || searchstoplist(&(d->stoplist), txt)) {
+  }
+  else if (*txt == '\0' || searchstoplist(&(d->stoplist), txt))
+  {
     /* empty or stopword, so report as stopword */
     pfree(txt);
-  } else {
+  }
+  else
+  {
     MemoryContext saveCtx;
 
     /*
      * recode to utf8 if stemmer is utf8 and doesn't match server encoding
      */
-    if (d->needrecode) {
+    if (d->needrecode)
+    {
       char *recoded;
 
       recoded = pg_server_to_any(txt, strlen(txt), PG_UTF8);
-      if (recoded != txt) {
+      if (recoded != txt)
+      {
         pfree(txt);
         txt = recoded;
       }
@@ -235,18 +257,21 @@ dsnowball_lexize(PG_FUNCTION_ARGS)
     d->stem(d->z);
     MemoryContextSwitchTo(saveCtx);
 
-    if (d->z->p && d->z->l) {
+    if (d->z->p && d->z->l)
+    {
       txt = repalloc(txt, d->z->l + 1);
       memcpy(txt, d->z->p, d->z->l);
       txt[d->z->l] = '\0';
     }
 
     /* back recode if needed */
-    if (d->needrecode) {
+    if (d->needrecode)
+    {
       char *recoded;
 
       recoded = pg_any_to_server(txt, strlen(txt), PG_UTF8);
-      if (recoded != txt) {
+      if (recoded != txt)
+      {
         pfree(txt);
         txt = recoded;
       }

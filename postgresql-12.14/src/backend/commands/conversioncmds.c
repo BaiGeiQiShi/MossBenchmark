@@ -54,20 +54,20 @@ CreateConversionCommand(CreateConversionStmt *stmt)
   aclresult = pg_namespace_aclcheck(namespaceId, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceId));
   }
 
   /* Check the encoding names */
   from_encoding = pg_char_to_encoding(from_encoding_name);
   if (from_encoding < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("source encoding \"%s\" does not exist", from_encoding_name)));
   }
 
   to_encoding = pg_char_to_encoding(to_encoding_name);
   if (to_encoding < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("destination encoding \"%s\" does not exist", to_encoding_name)));
   }
 
   /*
@@ -79,14 +79,14 @@ CreateConversionCommand(CreateConversionStmt *stmt)
   /* Check it returns VOID, else it's probably the wrong function */
   if (get_func_rettype(funcoid) != VOIDOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("encoding conversion function %s must return type %s", NameListToString(func_name), "void")));
   }
 
   /* Check we have EXECUTE rights for the function */
   aclresult = pg_proc_aclcheck(funcoid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, NameListToString(func_name));
   }
 
   /*

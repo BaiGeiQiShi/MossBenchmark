@@ -44,16 +44,16 @@ anychar_typmodin(ArrayType *ta, const char *typename)
    */
   if (n != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid type modifier")));
   }
 
   if (*tl < 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("length for type %s must be at least 1", typename)));
   }
   if (*tl > MaxAttrSize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("length for type %s cannot exceed %d", typename, MaxAttrSize)));
   }
 
   /*
@@ -78,7 +78,7 @@ anychar_typmodout(int32 typmod)
   }
   else
   {
-
+    *res = '\0';
   }
 
   return res;
@@ -104,13 +104,11 @@ anychar_typmodout(int32 typmod)
  * types and "text" is that we truncate and possibly blank-pad the string
  * at insertion time.)
  *
- *															  -
- *ay 6/95
+ *															  - ay 6/95
  */
 
 /*****************************************************************************
- *	 bpchar - char()
- **
+ *	 bpchar - char()														 *
  *****************************************************************************/
 
 /*
@@ -226,31 +224,29 @@ bpcharout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		bpcharrecv			- converts external binary
- *format to bpchar
+ *		bpcharrecv			- converts external binary format to bpchar
  */
 Datum
 bpcharrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
+#ifdef NOT_USED
+  Oid typelem = PG_GETARG_OID(1);
+#endif
+  int32 atttypmod = PG_GETARG_INT32(2);
+  BpChar *result;
+  char *str;
+  int nbytes;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  result = bpchar_input(str, nbytes, atttypmod);
+  pfree(str);
+  PG_RETURN_BPCHAR_P(result);
 }
 
 /*
- *		bpcharsend			- converts bpchar to binary
- *format
+ *		bpcharsend			- converts bpchar to binary format
  */
 Datum
 bpcharsend(PG_FUNCTION_ARGS)
@@ -288,7 +284,7 @@ bpchar(PG_FUNCTION_ARGS)
   /* No work if typmod is invalid */
   if (maxlen < (int32)VARHDRSZ)
   {
-
+    PG_RETURN_BPCHAR_P(source);
   }
 
   maxlen -= VARHDRSZ;
@@ -362,15 +358,15 @@ bpchar(PG_FUNCTION_ARGS)
 Datum
 char_bpchar(PG_FUNCTION_ARGS)
 {
+  char c = PG_GETARG_CHAR(0);
+  BpChar *result;
 
+  result = (BpChar *)palloc(VARHDRSZ + 1);
 
+  SET_VARSIZE(result, VARHDRSZ + 1);
+  *(VARDATA(result)) = c;
 
-
-
-
-
-
-
+  PG_RETURN_BPCHAR_P(result);
 }
 
 /* bpchar_name()
@@ -379,35 +375,35 @@ char_bpchar(PG_FUNCTION_ARGS)
 Datum
 bpchar_name(PG_FUNCTION_ARGS)
 {
+  BpChar *s = PG_GETARG_BPCHAR_PP(0);
+  char *s_data;
+  Name result;
+  int len;
 
+  len = VARSIZE_ANY_EXHDR(s);
+  s_data = VARDATA_ANY(s);
 
+  /* Truncate oversize input */
+  if (len >= NAMEDATALEN)
+  {
+    len = pg_mbcliplen(s_data, len, NAMEDATALEN - 1);
+  }
 
+  /* Remove trailing blanks */
+  while (len > 0)
+  {
+    if (s_data[len - 1] != ' ')
+    {
+      break;
+    }
+    len--;
+  }
 
+  /* We use palloc0 here to ensure result is zero-padded */
+  result = (Name)palloc0(NAMEDATALEN);
+  memcpy(NameStr(*result), s_data, len);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_NAME(result);
 }
 
 /* name_bpchar()
@@ -527,37 +523,35 @@ varcharout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		varcharrecv			- converts external binary
- *format to varchar
+ *		varcharrecv			- converts external binary format to varchar
  */
 Datum
 varcharrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
+#ifdef NOT_USED
+  Oid typelem = PG_GETARG_OID(1);
+#endif
+  int32 atttypmod = PG_GETARG_INT32(2);
+  VarChar *result;
+  char *str;
+  int nbytes;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  result = varchar_input(str, nbytes, atttypmod);
+  pfree(str);
+  PG_RETURN_VARCHAR_P(result);
 }
 
 /*
- *		varcharsend			- converts varchar to binary
- *format
+ *		varcharsend			- converts varchar to binary format
  */
 Datum
 varcharsend(PG_FUNCTION_ARGS)
 {
-
-
+  /* Exactly the same as textsend, so share code */
+  return textsend(fcinfo);
 }
 
 /*
@@ -722,10 +716,10 @@ bpcharlen(PG_FUNCTION_ARGS)
 Datum
 bpcharoctetlen(PG_FUNCTION_ARGS)
 {
+  Datum arg = PG_GETARG_DATUM(0);
 
-
-
-
+  /* We need not detoast the input at all */
+  PG_RETURN_INT32(toast_raw_datum_size(arg) - VARHDRSZ);
 }
 
 /*****************************************************************************
@@ -745,7 +739,7 @@ check_collation_set(Oid collid)
      * This typically means that the parser could not resolve a conflict
      * of implicit collations, so report it that way.
      */
-
+    ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for string comparison"), errhint("Use the COLLATE clause to set the collation explicitly.")));
   }
 }
 
@@ -780,7 +774,7 @@ bpchareq(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result = (varstr_cmp(VARDATA_ANY(arg1), len1, VARDATA_ANY(arg2), len2, collid) == 0);
   }
 
   PG_FREE_IF_COPY(arg1, 0);
@@ -820,7 +814,7 @@ bpcharne(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result = (varstr_cmp(VARDATA_ANY(arg1), len1, VARDATA_ANY(arg2), len2, collid) != 0);
   }
 
   PG_FREE_IF_COPY(arg1, 0);
@@ -944,33 +938,33 @@ bpchar_sortsupport(PG_FUNCTION_ARGS)
 Datum
 bpchar_larger(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int len1, len2;
+  int cmp;
 
+  len1 = bcTruelen(arg1);
+  len2 = bcTruelen(arg2);
 
+  cmp = varstr_cmp(VARDATA_ANY(arg1), len1, VARDATA_ANY(arg2), len2, PG_GET_COLLATION());
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BPCHAR_P((cmp >= 0) ? arg1 : arg2);
 }
 
 Datum
 bpchar_smaller(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int len1, len2;
+  int cmp;
 
+  len1 = bcTruelen(arg1);
+  len2 = bcTruelen(arg2);
 
+  cmp = varstr_cmp(VARDATA_ANY(arg1), len1, VARDATA_ANY(arg2), len2, PG_GET_COLLATION());
 
-
-
-
-
-
-
-
-
+  PG_RETURN_BPCHAR_P((cmp <= 0) ? arg1 : arg2);
 }
 
 /*
@@ -989,7 +983,7 @@ hashbpchar(PG_FUNCTION_ARGS)
 
   if (!collid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for string hashing"), errhint("Use the COLLATE clause to set the collation explicitly.")));
   }
 
   keydata = VARDATA_ANY(key);
@@ -997,7 +991,7 @@ hashbpchar(PG_FUNCTION_ARGS)
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (!mylocale || mylocale->deterministic)
@@ -1028,7 +1022,7 @@ hashbpchar(PG_FUNCTION_ARGS)
     else
 #endif
       /* shouldn't happen */
-
+      elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
   /* Avoid leaking memory for toasted inputs */
@@ -1049,7 +1043,7 @@ hashbpcharextended(PG_FUNCTION_ARGS)
 
   if (!collid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for string hashing"), errhint("Use the COLLATE clause to set the collation explicitly.")));
   }
 
   keydata = VARDATA_ANY(key);
@@ -1057,7 +1051,7 @@ hashbpcharextended(PG_FUNCTION_ARGS)
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (!mylocale || mylocale->deterministic)
@@ -1088,7 +1082,7 @@ hashbpcharextended(PG_FUNCTION_ARGS)
     else
 #endif
       /* shouldn't happen */
-
+      elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
   PG_FREE_IF_COPY(key, 0);
@@ -1120,11 +1114,11 @@ internal_bpchar_pattern_compare(BpChar *arg1, BpChar *arg2)
   }
   else if (len1 < len2)
   {
-
+    return -1;
   }
   else if (len1 > len2)
   {
-
+    return 1;
   }
   else
   {
@@ -1135,61 +1129,61 @@ internal_bpchar_pattern_compare(BpChar *arg1, BpChar *arg2)
 Datum
 bpchar_pattern_lt(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int result;
 
+  result = internal_bpchar_pattern_compare(arg1, arg2);
 
+  PG_FREE_IF_COPY(arg1, 0);
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result < 0);
 }
 
 Datum
 bpchar_pattern_le(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int result;
 
+  result = internal_bpchar_pattern_compare(arg1, arg2);
 
+  PG_FREE_IF_COPY(arg1, 0);
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result <= 0);
 }
 
 Datum
 bpchar_pattern_ge(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int result;
 
+  result = internal_bpchar_pattern_compare(arg1, arg2);
 
+  PG_FREE_IF_COPY(arg1, 0);
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result >= 0);
 }
 
 Datum
 bpchar_pattern_gt(PG_FUNCTION_ARGS)
 {
+  BpChar *arg1 = PG_GETARG_BPCHAR_PP(0);
+  BpChar *arg2 = PG_GETARG_BPCHAR_PP(1);
+  int result;
 
+  result = internal_bpchar_pattern_compare(arg1, arg2);
 
+  PG_FREE_IF_COPY(arg1, 0);
+  PG_FREE_IF_COPY(arg2, 1);
 
-
-
-
-
-
-
-
+  PG_RETURN_BOOL(result > 0);
 }
 
 Datum

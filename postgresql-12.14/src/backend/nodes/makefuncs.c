@@ -125,17 +125,17 @@ makeWholeRowVar(RangeTblEntry *rte, Index varno, Index varlevelsup, bool allowSc
 
   switch (rte->rtekind)
   {
-  case RTE_RELATION:;
+  case RTE_RELATION:
     /* relation: the rowtype is a named composite type */
     toid = get_rel_type_id(rte->relid);
     if (!OidIsValid(toid))
     {
-
+      elog(ERROR, "could not find type OID for relation %u", rte->relid);
     }
     result = makeVar(varno, InvalidAttrNumber, toid, -1, InvalidOid, varlevelsup);
     break;
 
-  case RTE_FUNCTION:;
+  case RTE_FUNCTION:
 
     /*
      * If there's more than one function, or ordinality is requested,
@@ -156,19 +156,19 @@ makeWholeRowVar(RangeTblEntry *rte, Index varno, Index varlevelsup, bool allowSc
       /* func returns composite; same as relation case */
       result = makeVar(varno, InvalidAttrNumber, toid, -1, InvalidOid, varlevelsup);
     }
-
-
-
-
-
-
-
-
-
-
+    else if (allowScalar)
+    {
+      /* func returns scalar; just return its output as-is */
+      result = makeVar(varno, 1, toid, -1, exprCollation(fexpr), varlevelsup);
+    }
+    else
+    {
+      /* func returns scalar, but we want a composite result */
+      result = makeVar(varno, InvalidAttrNumber, RECORDOID, -1, InvalidOid, varlevelsup);
+    }
     break;
 
-  default:;;
+  default:
 
     /*
      * RTE is a join, subselect, tablefunc, or VALUES.  We represent
@@ -558,7 +558,7 @@ make_opclause(Oid opno, Oid opresulttype, bool opretset, Expr *leftop, Expr *rig
   }
   else
   {
-
+    expr->args = list_make1(leftop);
   }
   expr->location = -1;
   return (Expr *)expr;
@@ -631,7 +631,7 @@ make_and_qual(Node *qual1, Node *qual2)
   }
   if (qual2 == NULL)
   {
-
+    return qual1;
   }
   return (Node *)make_andclause(list_make2(qual1, qual2));
 }
@@ -650,7 +650,7 @@ make_ands_explicit(List *andclauses)
 {
   if (andclauses == NIL)
   {
-
+    return (Expr *)makeBoolConst(true, false);
   }
   else if (list_length(andclauses) == 1)
   {

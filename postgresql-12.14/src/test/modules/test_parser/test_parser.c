@@ -21,13 +21,15 @@ PG_MODULE_MAGIC;
  */
 
 /* self-defined type */
-typedef struct {
+typedef struct
+{
   char *buffer; /* text to parse */
   int len;      /* length of the text in buffer */
   int pos;      /* position of the parser */
 } ParserState;
 
-typedef struct {
+typedef struct
+{
   int lexid;
   char *alias;
   char *descr;
@@ -64,18 +66,23 @@ testprs_getlexeme(PG_FUNCTION_ARGS)
 
   *t = pst->buffer + pst->pos;
 
-  if (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ') {
+  if (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ')
+  {
     /* blank type */
     type = 12;
     /* go to the next non-space character */
-    while (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ') {
+    while (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ')
+    {
       (pst->pos)++;
     }
-  } else {
+  }
+  else
+  {
     /* word type */
     type = 3;
     /* go to the next space character */
-    while (pst->pos < pst->len && (pst->buffer)[pst->pos] != ' ') {
+    while (pst->pos < pst->len && (pst->buffer)[pst->pos] != ' ')
+    {
       (pst->pos)++;
     }
   }
@@ -83,7 +90,8 @@ testprs_getlexeme(PG_FUNCTION_ARGS)
   *tlen = pst->pos - startpos;
 
   /* we are finished if (*tlen == 0) */
-  if (*tlen == 0) {
+  if (*tlen == 0)
+  {
     type = 0;
   }
 

@@ -55,7 +55,8 @@ const uint8 pg_number_of_ones[256] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 
  * On x86_64, we can use the hardware popcount instruction, but only if
  * we can verify that the CPU supports it via the cpuid instruction.
  *
- * Otherwise, we fall back to __builtin_popcount if the compiler has that,* or a hand-rolled implementation if not.
+ * Otherwise, we fall back to __builtin_popcount if the compiler has that,
+ * or a hand-rolled implementation if not.
  */
 #ifdef HAVE_X86_64_POPCNTQ
 #if defined(HAVE__GET_CPUID) || defined(HAVE__CPUID)
@@ -117,18 +118,18 @@ pg_popcount_available(void)
 static int
 pg_popcount32_choose(uint32 word)
 {
+  if (pg_popcount_available())
+  {
+    pg_popcount32 = pg_popcount32_asm;
+    pg_popcount64 = pg_popcount64_asm;
+  }
+  else
+  {
+    pg_popcount32 = pg_popcount32_slow;
+    pg_popcount64 = pg_popcount64_slow;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  return pg_popcount32(word);
 }
 
 static int
@@ -141,8 +142,8 @@ pg_popcount64_choose(uint64 word)
   }
   else
   {
-
-
+    pg_popcount32 = pg_popcount32_slow;
+    pg_popcount64 = pg_popcount64_slow;
   }
 
   return pg_popcount64(word);
@@ -155,10 +156,10 @@ pg_popcount64_choose(uint64 word)
 static int
 pg_popcount32_asm(uint32 word)
 {
+  uint32 res;
 
-
-
-
+  __asm__ __volatile__(" popcntl %1,%0\n" : "=q"(res) : "rm"(word) : "cc");
+  return (int)res;
 }
 
 /*
@@ -183,19 +184,19 @@ pg_popcount64_asm(uint64 word)
 static int
 pg_popcount32_slow(uint32 word)
 {
+#ifdef HAVE__BUILTIN_POPCOUNT
+  return __builtin_popcount(word);
+#else  /* !HAVE__BUILTIN_POPCOUNT */
+  int result = 0;
 
+  while (word != 0)
+  {
+    result += pg_number_of_ones[word & 255];
+    word >>= 8;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  return result;
+#endif /* HAVE__BUILTIN_POPCOUNT */
 }
 
 /*
@@ -205,25 +206,25 @@ pg_popcount32_slow(uint32 word)
 static int
 pg_popcount64_slow(uint64 word)
 {
+#ifdef HAVE__BUILTIN_POPCOUNT
+#if defined(HAVE_LONG_INT_64)
+  return __builtin_popcountl(word);
+#elif defined(HAVE_LONG_LONG_INT_64)
+  return __builtin_popcountll(word);
+#else
+#error must have a working 64-bit integer datatype
+#endif
+#else  /* !HAVE__BUILTIN_POPCOUNT */
+  int result = 0;
 
+  while (word != 0)
+  {
+    result += pg_number_of_ones[word & 255];
+    word >>= 8;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
+#endif /* HAVE__BUILTIN_POPCOUNT */
 }
 
 /*
@@ -233,43 +234,43 @@ pg_popcount64_slow(uint64 word)
 uint64
 pg_popcount(const char *buf, int bytes)
 {
+  uint64 popcnt = 0;
 
+#if SIZEOF_VOID_P >= 8
+  /* Process in 64-bit chunks if the buffer is aligned. */
+  if (buf == (const char *)TYPEALIGN(8, buf))
+  {
+    const uint64 *words = (const uint64 *)buf;
 
+    while (bytes >= 8)
+    {
+      popcnt += pg_popcount64(*words++);
+      bytes -= 8;
+    }
 
+    buf = (const char *)words;
+  }
+#else
+  /* Process in 32-bit chunks if the buffer is aligned. */
+  if (buf == (const char *)TYPEALIGN(4, buf))
+  {
+    const uint32 *words = (const uint32 *)buf;
 
+    while (bytes >= 4)
+    {
+      popcnt += pg_popcount32(*words++);
+      bytes -= 4;
+    }
 
+    buf = (const char *)words;
+  }
+#endif
 
+  /* Process any remaining bytes */
+  while (bytes--)
+  {
+    popcnt += pg_number_of_ones[(unsigned char)*buf++];
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return popcnt;
 }

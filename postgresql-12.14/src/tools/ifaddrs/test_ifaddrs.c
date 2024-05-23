@@ -19,7 +19,8 @@ print_addr(struct sockaddr *addr)
   char buffer[256];
   int ret, len;
 
-  switch (addr->sa_family) {
+  switch (addr->sa_family)
+  {
   case AF_INET:
     len = sizeof(struct sockaddr_in);
     break;
@@ -28,15 +29,18 @@ print_addr(struct sockaddr *addr)
     len = sizeof(struct sockaddr_in6);
     break;
 #endif
-  default:;
+  default:
     len = sizeof(struct sockaddr_storage);
     break;
   }
 
   ret = getnameinfo(addr, len, buffer, sizeof(buffer), NULL, 0, NI_NUMERICHOST);
-  if (ret != 0) {
+  if (ret != 0)
+  {
     printf("[unknown: family %d]", addr->sa_family);
-  } else {
+  }
+  else
+  {
     printf("%s", buffer);
   }
 }
@@ -57,13 +61,15 @@ main(int argc, char *argv[])
 #ifdef WIN32
   WSADATA wsaData;
 
-  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+  {
     fprintf(stderr, "WSAStartup failed\n");
     return 1;
   }
 #endif
 
-  if (pg_foreach_ifaddr(callback, NULL) < 0) {
+  if (pg_foreach_ifaddr(callback, NULL) < 0)
+  {
     fprintf(stderr, "pg_foreach_ifaddr failed: %s\n", strerror(errno));
   }
   return 0;

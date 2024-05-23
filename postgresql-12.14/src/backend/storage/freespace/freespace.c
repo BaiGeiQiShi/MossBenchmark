@@ -208,32 +208,32 @@ RecordPageWithFreeSpace(Relation rel, BlockNumber heapBlk, Size spaceAvail)
 void
 XLogRecordPageWithFreeSpace(RelFileNode rnode, BlockNumber heapBlk, Size spaceAvail)
 {
+  int new_cat = fsm_space_avail_to_cat(spaceAvail);
+  FSMAddress addr;
+  uint16 slot;
+  BlockNumber blkno;
+  Buffer buf;
+  Page page;
 
+  /* Get the location of the FSM byte representing the heap block */
+  addr = fsm_get_location(heapBlk, &slot);
+  blkno = fsm_logical_to_physical(addr);
 
+  /* If the page doesn't exist already, extend */
+  buf = XLogReadBufferExtended(rnode, FSM_FORKNUM, blkno, RBM_ZERO_ON_ERROR);
+  LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 
+  page = BufferGetPage(buf);
+  if (PageIsNew(page))
+  {
+    PageInit(page, BLCKSZ, 0);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (fsm_set_avail(page, slot, new_cat))
+  {
+    MarkBufferDirtyHint(buf, false);
+  }
+  UnlockReleaseBuffer(buf);
 }
 
 /*
@@ -243,23 +243,23 @@ XLogRecordPageWithFreeSpace(RelFileNode rnode, BlockNumber heapBlk, Size spaceAv
 Size
 GetRecordedFreeSpace(Relation rel, BlockNumber heapBlk)
 {
+  FSMAddress addr;
+  uint16 slot;
+  Buffer buf;
+  uint8 cat;
 
+  /* Get the location of the FSM byte representing the heap block */
+  addr = fsm_get_location(heapBlk, &slot);
 
+  buf = fsm_readbuf(rel, addr, false);
+  if (!BufferIsValid(buf))
+  {
+    return 0;
+  }
+  cat = fsm_get_avail(BufferGetPage(buf), slot);
+  ReleaseBuffer(buf);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return fsm_space_cat_to_avail(cat);
 }
 
 /*
@@ -285,7 +285,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
    */
   if (!smgrexists(RelationGetSmgr(rel), FSM_FORKNUM))
   {
-
+    return;
   }
 
   /* Get the location in the FSM of the first removed heap block */
@@ -302,7 +302,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
     buf = fsm_readbuf(rel, first_removed_address, false);
     if (!BufferIsValid(buf))
     {
-
+      return; /* nothing to do; the FSM was already smaller */
     }
     LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 
@@ -322,7 +322,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
     MarkBufferDirty(buf);
     if (!InRecovery && RelationNeedsWAL(rel) && XLogHintBitIsNeeded())
     {
-
+      log_newpage_buffer(buf, false);
     }
 
     END_CRIT_SECTION();
@@ -336,7 +336,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
     new_nfsmblocks = fsm_logical_to_physical(first_removed_address);
     if (smgrnblocks(RelationGetSmgr(rel), FSM_FORKNUM) <= new_nfsmblocks)
     {
-
+      return; /* nothing to do; the FSM was already smaller */
     }
   }
 
@@ -423,7 +423,7 @@ fsm_space_avail_to_cat(Size avail)
    */
   if (cat > 254)
   {
-
+    cat = 254;
   }
 
   return (uint8)cat;
@@ -436,15 +436,15 @@ fsm_space_avail_to_cat(Size avail)
 static Size
 fsm_space_cat_to_avail(uint8 cat)
 {
-
-
-
-
-
-
-
-
-
+  /* The highest category represents exactly MaxFSMRequestSize bytes. */
+  if (cat == 255)
+  {
+    return MaxFSMRequestSize;
+  }
+  else
+  {
+    return cat * FSM_CAT_STEP;
+  }
 }
 
 /*
@@ -459,19 +459,19 @@ fsm_space_needed_to_cat(Size needed)
   /* Can't ask for more space than the highest category represents */
   if (needed > MaxFSMRequestSize)
   {
-
+    elog(ERROR, "invalid FSM request size %zu", needed);
   }
 
   if (needed == 0)
   {
-
+    return 1;
   }
 
   cat = (needed + FSM_CAT_STEP - 1) / FSM_CAT_STEP;
 
   if (cat > 255)
   {
-
+    cat = 255;
   }
 
   return (uint8)cat;
@@ -650,12 +650,12 @@ fsm_readbuf(Relation rel, FSMAddress addr, bool extend)
   buf = ReadBufferExtended(rel, FSM_FORKNUM, blkno, RBM_ZERO_ON_ERROR, NULL);
   if (PageIsNew(BufferGetPage(buf)))
   {
-
-
-
-
-
-
+    LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+    if (PageIsNew(BufferGetPage(buf)))
+    {
+      PageInit(BufferGetPage(buf), BLCKSZ, 0);
+    }
+    LockBuffer(buf, BUFFER_LOCK_UNLOCK);
   }
   return buf;
 }
@@ -837,7 +837,7 @@ fsm_search(Relation rel, uint8 min_cat)
        */
       if (restarts++ > 10000)
       {
-
+        return InvalidBlockNumber;
       }
 
       /* Start search all over from the root */
@@ -912,14 +912,14 @@ fsm_vacuum_page(Relation rel, FSMAddress addr, BlockNumber start, BlockNumber en
     {
       start_slot = fsm_start_slot;
     }
-
-
-
-
-
-
-
-
+    else if (fsm_start.logpageno > addr.logpageno)
+    {
+      start_slot = SlotsPerFSMPage; /* shouldn't get here... */
+    }
+    else
+    {
+      start_slot = 0;
+    }
 
     if (fsm_end.logpageno == addr.logpageno)
     {
@@ -931,7 +931,7 @@ fsm_vacuum_page(Relation rel, FSMAddress addr, BlockNumber start, BlockNumber en
     }
     else
     {
-
+      end_slot = -1; /* shouldn't get here... */
     }
 
     for (slot = start_slot; slot <= end_slot; slot++)

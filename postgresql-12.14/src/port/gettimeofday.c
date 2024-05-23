@@ -76,7 +76,8 @@ init_gettimeofday(LPFILETIME lpSystemTimeAsFileTime)
    * version and development SDK specific...
    */
   pg_get_system_time = (PgGetSystemTimeFn)GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetSystemTimePreciseAsFileTime");
-  if (pg_get_system_time == NULL) {
+  if (pg_get_system_time == NULL)
+  {
     /*
      * The expected error from GetLastError() is ERROR_PROC_NOT_FOUND, if
      * the function isn't present. No other error should occur.

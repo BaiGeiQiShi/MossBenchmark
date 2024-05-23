@@ -103,7 +103,7 @@ ExecInitJunkFilterInsertion(List *targetList, TupleDesc cleanTupType, TupleTable
   }
   else
   {
-
+    slot = MakeSingleTupleTableSlot(cleanTupType, &TTSOpsVirtual);
   }
 
   /*
@@ -179,7 +179,7 @@ ExecInitJunkFilterConversion(List *targetList, TupleDesc cleanTupType, TupleTabl
   }
   else
   {
-
+    slot = MakeSingleTupleTableSlot(cleanTupType, &TTSOpsVirtual);
   }
 
   /*
@@ -218,7 +218,7 @@ ExecInitJunkFilterConversion(List *targetList, TupleDesc cleanTupType, TupleTabl
   }
   else
   {
-
+    cleanMap = NULL;
   }
 
   /*

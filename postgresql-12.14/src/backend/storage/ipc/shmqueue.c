@@ -106,15 +106,15 @@ SHMQueueInsertBefore(SHM_QUEUE *queue, SHM_QUEUE *elem)
 void
 SHMQueueInsertAfter(SHM_QUEUE *queue, SHM_QUEUE *elem)
 {
+  SHM_QUEUE *nextPtr = queue->next;
 
+  Assert(ShmemAddrIsValid(queue));
+  Assert(ShmemAddrIsValid(elem));
 
-
-
-
-
-
-
-
+  elem->prev = nextPtr->prev;
+  elem->next = queue->next;
+  queue->next = elem;
+  nextPtr->prev = elem;
 }
 
 /*--------------------
@@ -147,8 +147,8 @@ SHMQueueNext(const SHM_QUEUE *queue, const SHM_QUEUE *curElem, Size linkOffset)
 
   Assert(ShmemAddrIsValid(curElem));
 
-  if (elemPtr == queue)
-  { /* back to the queue head? */
+  if (elemPtr == queue) /* back to the queue head? */
+  {
     return NULL;
   }
 
@@ -164,16 +164,16 @@ SHMQueueNext(const SHM_QUEUE *queue, const SHM_QUEUE *curElem, Size linkOffset)
 Pointer
 SHMQueuePrev(const SHM_QUEUE *queue, const SHM_QUEUE *curElem, Size linkOffset)
 {
+  SHM_QUEUE *elemPtr = curElem->prev;
 
+  Assert(ShmemAddrIsValid(curElem));
 
+  if (elemPtr == queue) /* back to the queue head? */
+  {
+    return NULL;
+  }
 
-
-
-
-
-
-
-
+  return (Pointer)(((char *)elemPtr) - linkOffset);
 }
 
 /*

@@ -24,50 +24,47 @@
 
 #include "fmgr.h"
 #include "utils/builtins.h"
-#include "utils/bytea.h"       /* for byteain & byteaout */
+#include "utils/bytea.h" /* for byteain & byteaout */
 
 /* perl stuff */
 #define PG_NEED_PERL_XSUB_H
 #include "plperl.h"
 #include "plperl_helpers.h"
 
-
 static text *
 sv2text(SV *sv)
 {
-	char	   *str = sv2cstr(sv);
-	text	   *text;
+  char *str = sv2cstr(sv);
+  text *text;
 
-	text = cstring_to_text(str);
-	pfree(str);
-	return text;
+  text = cstring_to_text(str);
+  pfree(str);
+  return text;
 }
 
 #line 47 "Util.c"
 #ifndef PERL_UNUSED_VAR
-#  define PERL_UNUSED_VAR(var) if (0) var = var
+#define PERL_UNUSED_VAR(var)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+  if (0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+  var = var
 #endif
 
 #ifndef dVAR
-#  define dVAR		dNOOP
+#define dVAR dNOOP
 #endif
-
 
 /* This stuff is not part of the API! You have been warned. */
 #ifndef PERL_VERSION_DECIMAL
-#  define PERL_VERSION_DECIMAL(r,v,s) (r*1000000 + v*1000 + s)
+#define PERL_VERSION_DECIMAL(r, v, s) (r * 1000000 + v * 1000 + s)
 #endif
 #ifndef PERL_DECIMAL_VERSION
-#  define PERL_DECIMAL_VERSION \
-	  PERL_VERSION_DECIMAL(PERL_REVISION,PERL_VERSION,PERL_SUBVERSION)
+#define PERL_DECIMAL_VERSION PERL_VERSION_DECIMAL(PERL_REVISION, PERL_VERSION, PERL_SUBVERSION)
 #endif
 #ifndef PERL_VERSION_GE
-#  define PERL_VERSION_GE(r,v,s) \
-	  (PERL_DECIMAL_VERSION >= PERL_VERSION_DECIMAL(r,v,s))
+#define PERL_VERSION_GE(r, v, s) (PERL_DECIMAL_VERSION >= PERL_VERSION_DECIMAL(r, v, s))
 #endif
 #ifndef PERL_VERSION_LE
-#  define PERL_VERSION_LE(r,v,s) \
-	  (PERL_DECIMAL_VERSION <= PERL_VERSION_DECIMAL(r,v,s))
+#define PERL_VERSION_LE(r, v, s) (PERL_DECIMAL_VERSION <= PERL_VERSION_DECIMAL(r, v, s))
 #endif
 
 /* XS_INTERNAL is the explicit static-linkage variant of the default
@@ -80,37 +77,35 @@ sv2text(SV *sv)
  * See XSUB.h in core!
  */
 
-
 /* TODO: This might be compatible further back than 5.10.0. */
 #if PERL_VERSION_GE(5, 10, 0) && PERL_VERSION_LE(5, 15, 1)
-#  undef XS_EXTERNAL
-#  undef XS_INTERNAL
-#  if defined(__CYGWIN__) && defined(USE_DYNAMIC_LOADING)
-#    define XS_EXTERNAL(name) __declspec(dllexport) XSPROTO(name)
-#    define XS_INTERNAL(name) STATIC XSPROTO(name)
-#  endif
-#  if defined(__SYMBIAN32__)
-#    define XS_EXTERNAL(name) EXPORT_C XSPROTO(name)
-#    define XS_INTERNAL(name) EXPORT_C STATIC XSPROTO(name)
-#  endif
-#  ifndef XS_EXTERNAL
-#    if defined(HASATTRIBUTE_UNUSED) && !defined(__cplusplus)
-#      define XS_EXTERNAL(name) void name(pTHX_ CV* cv __attribute__unused__)
-#      define XS_INTERNAL(name) STATIC void name(pTHX_ CV* cv __attribute__unused__)
-#    else
-#      ifdef __cplusplus
-#        define XS_EXTERNAL(name) extern "C" XSPROTO(name)
-#        define XS_INTERNAL(name) static XSPROTO(name)
-#      else
-#        define XS_EXTERNAL(name) XSPROTO(name)
-#        define XS_INTERNAL(name) STATIC XSPROTO(name)
-#      endif
-#    endif
-#  endif
+#undef XS_EXTERNAL
+#undef XS_INTERNAL
+#if defined(__CYGWIN__) && defined(USE_DYNAMIC_LOADING)
+#define XS_EXTERNAL(name) __declspec(dllexport) XSPROTO(name)
+#define XS_INTERNAL(name) STATIC XSPROTO(name)
+#endif
+#if defined(__SYMBIAN32__)
+#define XS_EXTERNAL(name) EXPORT_C XSPROTO(name)
+#define XS_INTERNAL(name) EXPORT_C STATIC XSPROTO(name)
+#endif
+#ifndef XS_EXTERNAL
+#if defined(HASATTRIBUTE_UNUSED) && !defined(__cplusplus)
+#define XS_EXTERNAL(name) void name(pTHX_ CV *cv __attribute__unused__)
+#define XS_INTERNAL(name) STATIC void name(pTHX_ CV *cv __attribute__unused__)
+#else
+#ifdef __cplusplus
+#define XS_EXTERNAL(name) extern "C" XSPROTO(name)
+#define XS_INTERNAL(name) static XSPROTO(name)
+#else
+#define XS_EXTERNAL(name) XSPROTO(name)
+#define XS_INTERNAL(name) STATIC XSPROTO(name)
+#endif
+#endif
+#endif
 #endif
 
 /* perl >= 5.10.0 && perl <= 5.15.1 */
-
 
 /* The XS_EXTERNAL macro is used for functions that must not be static
  * like the boot XSUB of a module. If perl didn't have an XS_EXTERNAL
@@ -118,10 +113,10 @@ sv2text(SV *sv)
  * Dito for XS_INTERNAL.
  */
 #ifndef XS_EXTERNAL
-#  define XS_EXTERNAL(name) XS(name)
+#define XS_EXTERNAL(name) XS(name)
 #endif
 #ifndef XS_INTERNAL
-#  define XS_INTERNAL(name) XS(name)
+#define XS_INTERNAL(name) XS(name)
 #endif
 
 /* Now, finally, after all this mess, we want an ExtUtils::ParseXS
@@ -132,14 +127,16 @@ sv2text(SV *sv)
 
 #undef XS_EUPXS
 #if defined(PERL_EUPXS_ALWAYS_EXPORT)
-#  define XS_EUPXS(name) XS_EXTERNAL(name)
+#define XS_EUPXS(name) XS_EXTERNAL(name)
 #else
-   /* default to internal */
-#  define XS_EUPXS(name) XS_INTERNAL(name)
+/* default to internal */
+#define XS_EUPXS(name) XS_INTERNAL(name)
 #endif
 
 #ifndef PERL_ARGS_ASSERT_CROAK_XS_USAGE
-#define PERL_ARGS_ASSERT_CROAK_XS_USAGE assert(cv); assert(params)
+#define PERL_ARGS_ASSERT_CROAK_XS_USAGE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+  assert(cv);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  assert(params)
 
 /* prototype to pass -Wmissing-prototypes */
 STATIC void
@@ -148,27 +145,34 @@ S_croak_xs_usage(const CV *const cv, const char *const params);
 STATIC void
 S_croak_xs_usage(const CV *const cv, const char *const params)
 {
-    const GV *const gv = CvGV(cv);
+  const GV *const gv = CvGV(cv);
 
-    PERL_ARGS_ASSERT_CROAK_XS_USAGE;
+  PERL_ARGS_ASSERT_CROAK_XS_USAGE;
 
-    if (gv) {
-        const char *const gvname = GvNAME(gv);
-        const HV *const stash = GvSTASH(gv);
-        const char *const hvname = stash ? HvNAME(stash) : NULL;
+  if (gv)
+  {
+    const char *const gvname = GvNAME(gv);
+    const HV *const stash = GvSTASH(gv);
+    const char *const hvname = stash ? HvNAME(stash) : NULL;
 
-        if (hvname)
-	    Perl_croak_nocontext("Usage: %s::%s(%s)", hvname, gvname, params);
-        else
-	    Perl_croak_nocontext("Usage: %s(%s)", gvname, params);
-    } else {
-        /* Pants. I don't think that it should be possible to get here. */
-	Perl_croak_nocontext("Usage: CODE(0x%" UVxf ")(%s)", PTR2UV(cv), params);
+    if (hvname)
+    {
+      Perl_croak_nocontext("Usage: %s::%s(%s)", hvname, gvname, params);
     }
+    else
+    {
+      Perl_croak_nocontext("Usage: %s(%s)", gvname, params);
+    }
+  }
+  else
+  {
+    /* Pants. I don't think that it should be possible to get here. */
+    Perl_croak_nocontext("Usage: CODE(0x%" UVxf ")(%s)", PTR2UV(cv), params);
+  }
 }
-#undef  PERL_ARGS_ASSERT_CROAK_XS_USAGE
+#undef PERL_ARGS_ASSERT_CROAK_XS_USAGE
 
-#define croak_xs_usage        S_croak_xs_usage
+#define croak_xs_usage S_croak_xs_usage
 
 #endif
 
@@ -178,13 +182,13 @@ S_croak_xs_usage(const CV *const cv, const char *const params)
 #ifdef newXS_flags
 #define newXSproto_portable(name, c_impl, file, proto) newXS_flags(name, c_impl, file, proto, 0)
 #else
-#define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
+#define newXSproto_portable(name, c_impl, file, proto) (PL_Sv = (SV *)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV *)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
 #if PERL_VERSION_LE(5, 21, 5)
-#  define newXS_deffile(a,b) Perl_newXS(aTHX_ a,b,file)
+#define newXS_deffile(a, b) Perl_newXS(aTHX_ a, b, file)
 #else
-#  define newXS_deffile(a,b) Perl_newXS_deffile(aTHX_ a,b)
+#define newXS_deffile(a, b) Perl_newXS_deffile(aTHX_ a, b)
 #endif
 
 #line 191 "Util.c"
@@ -192,317 +196,346 @@ S_croak_xs_usage(const CV *const cv, const char *const params)
 XS_EUPXS(XS___aliased_constants); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS___aliased_constants)
 {
-    dVAR; dXSARGS;
-    dXSI32;
-    if (items != 0)
-       croak_xs_usage(cv,  "");
-    {
-	int	RETVAL;
-	dXSTARG;
+  dVAR;
+  dXSARGS;
+  dXSI32;
+  if (items != 0)
+  {
+    croak_xs_usage(cv, "");
+  }
+  {
+    int RETVAL;
+    dXSTARG;
 #line 53 "Util.xs"
     /* uses the ALIAS value as the return value */
     RETVAL = ix;
 #line 206 "Util.c"
-	XSprePUSH; PUSHi((IV)RETVAL);
-    }
-    XSRETURN(1);
+    XSprePUSH;
+    PUSHi((IV)RETVAL);
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__elog); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__elog)
 {
-    dVAR; dXSARGS;
-    if (items != 2)
-       croak_xs_usage(cv,  "level, msg");
-    {
-	int	level = (int)SvIV(ST(0))
-;
-	SV *	msg = ST(1)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 2)
+  {
+    croak_xs_usage(cv, "level, msg");
+  }
+  {
+    int level = (int)SvIV(ST(0));
+    SV *msg = ST(1);
 #line 64 "Util.xs"
-        if (level > ERROR)      /* no PANIC allowed thanks */
-            level = ERROR;
-        if (level < DEBUG5)
-            level = DEBUG5;
-        plperl_util_elog(level, msg);
-#line 230 "Util.c"
+    if (level > ERROR) /* no PANIC allowed thanks */
+    {
+      level = ERROR;
     }
-    XSRETURN_EMPTY;
+    if (level < DEBUG5)
+    {
+      level = DEBUG5;
+    }
+    plperl_util_elog(level, msg);
+#line 230 "Util.c"
+  }
+  XSRETURN_EMPTY;
 }
-
 
 XS_EUPXS(XS__quote_literal); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__quote_literal)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 74 "Util.xs"
-    if (!sv || !SvOK(sv)) {
-        RETVAL = &PL_sv_undef;
+    if (!sv || !SvOK(sv))
+    {
+      RETVAL = &PL_sv_undef;
     }
-    else {
-        text *arg = sv2text(sv);
-		text *quoted = DatumGetTextPP(DirectFunctionCall1(quote_literal, PointerGetDatum(arg)));
-		char *str;
+    else
+    {
+      text *arg = sv2text(sv);
+      text *quoted = DatumGetTextPP(DirectFunctionCall1(quote_literal, PointerGetDatum(arg)));
+      char *str;
 
-		pfree(arg);
-		str = text_to_cstring(quoted);
-		RETVAL = cstr2sv(str);
-		pfree(str);
+      pfree(arg);
+      str = text_to_cstring(quoted);
+      RETVAL = cstr2sv(str);
+      pfree(str);
     }
 #line 260 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__quote_nullable); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__quote_nullable)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 94 "Util.xs"
     if (!sv || !SvOK(sv))
-	{
-        RETVAL = cstr2sv("NULL");
+    {
+      RETVAL = cstr2sv("NULL");
     }
     else
-	{
-        text *arg = sv2text(sv);
-		text *quoted = DatumGetTextPP(DirectFunctionCall1(quote_nullable, PointerGetDatum(arg)));
-		char *str;
+    {
+      text *arg = sv2text(sv);
+      text *quoted = DatumGetTextPP(DirectFunctionCall1(quote_nullable, PointerGetDatum(arg)));
+      char *str;
 
-		pfree(arg);
-		str = text_to_cstring(quoted);
-		RETVAL = cstr2sv(str);
-		pfree(str);
+      pfree(arg);
+      str = text_to_cstring(quoted);
+      RETVAL = cstr2sv(str);
+      pfree(str);
     }
 #line 294 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__quote_ident); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__quote_ident)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
 #line 116 "Util.xs"
-        text *arg;
-		text *quoted;
-		char *str;
+    text *arg;
+    text *quoted;
+    char *str;
 #line 315 "Util.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 120 "Util.xs"
-        arg = sv2text(sv);
-		quoted = DatumGetTextPP(DirectFunctionCall1(quote_ident, PointerGetDatum(arg)));
+    arg = sv2text(sv);
+    quoted = DatumGetTextPP(DirectFunctionCall1(quote_ident, PointerGetDatum(arg)));
 
-		pfree(arg);
-		str = text_to_cstring(quoted);
-		RETVAL = cstr2sv(str);
-		pfree(str);
+    pfree(arg);
+    str = text_to_cstring(quoted);
+    RETVAL = cstr2sv(str);
+    pfree(str);
 #line 325 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__decode_bytea); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__decode_bytea)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
 #line 134 "Util.xs"
-        char *arg;
-        text *ret;
+    char *arg;
+    text *ret;
 #line 345 "Util.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 137 "Util.xs"
-        arg = SvPVbyte_nolen(sv);
-        ret = DatumGetTextPP(DirectFunctionCall1(byteain, PointerGetDatum(arg)));
-        /* not cstr2sv because this is raw bytes not utf8'able */
-        RETVAL = newSVpvn(VARDATA_ANY(ret), VARSIZE_ANY_EXHDR(ret));
+    arg = SvPVbyte_nolen(sv);
+    ret = DatumGetTextPP(DirectFunctionCall1(byteain, PointerGetDatum(arg)));
+    /* not cstr2sv because this is raw bytes not utf8'able */
+    RETVAL = newSVpvn(VARDATA_ANY(ret), VARSIZE_ANY_EXHDR(ret));
 #line 352 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__encode_bytea); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__encode_bytea)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
 #line 148 "Util.xs"
-        text *arg;
-        char *ret;
-		STRLEN len;
+    text *arg;
+    char *ret;
+    STRLEN len;
 #line 373 "Util.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 152 "Util.xs"
-        /* not sv2text because this is raw bytes not utf8'able */
-        ret = SvPVbyte(sv, len);
-		arg = cstring_to_text_with_len(ret, len);
-        ret = DatumGetCString(DirectFunctionCall1(byteaout, PointerGetDatum(arg)));
-        RETVAL = cstr2sv(ret);
+    /* not sv2text because this is raw bytes not utf8'able */
+    ret = SvPVbyte(sv, len);
+    arg = cstring_to_text_with_len(ret, len);
+    ret = DatumGetCString(DirectFunctionCall1(byteaout, PointerGetDatum(arg)));
+    RETVAL = cstr2sv(ret);
 #line 381 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__looks_like_number); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__looks_like_number)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 164 "Util.xs"
     if (!SvOK(sv))
-        RETVAL = &PL_sv_undef;
-    else if ( looks_like_number(sv) )
-        RETVAL = &PL_sv_yes;
-    else
-        RETVAL = &PL_sv_no;
-#line 406 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    {
+      RETVAL = &PL_sv_undef;
     }
-    XSRETURN(1);
+    else if (looks_like_number(sv))
+    {
+      RETVAL = &PL_sv_yes;
+    }
+    else
+    {
+      RETVAL = &PL_sv_no;
+    }
+#line 406 "Util.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__encode_typed_literal); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__encode_typed_literal)
 {
-    dVAR; dXSARGS;
-    if (items != 2)
-       croak_xs_usage(cv,  "sv, typname");
-    {
-	SV *	sv = ST(0)
-;
-	char *	typname = (char *)SvPV_nolen(ST(1))
-;
+  dVAR;
+  dXSARGS;
+  if (items != 2)
+  {
+    croak_xs_usage(cv, "sv, typname");
+  }
+  {
+    SV *sv = ST(0);
+    char *typname = (char *)SvPV_nolen(ST(1));
 #line 178 "Util.xs"
-		char 	*outstr;
+    char *outstr;
 #line 427 "Util.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 180 "Util.xs"
-		outstr = plperl_sv_to_literal(sv, typname);
-		if (outstr == NULL)
-			RETVAL = &PL_sv_undef;
-		else
-			RETVAL = cstr2sv(outstr);
-#line 435 "Util.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    outstr = plperl_sv_to_literal(sv, typname);
+    if (outstr == NULL)
+    {
+      RETVAL = &PL_sv_undef;
     }
-    XSRETURN(1);
+    else
+    {
+      RETVAL = cstr2sv(outstr);
+    }
+#line 435 "Util.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
 
 #ifdef __cplusplus
 extern "C"
 #endif
-XS_EXTERNAL(boot_PostgreSQL__InServer__Util); /* prototype to pass -Wmissing-prototypes */
+    XS_EXTERNAL(boot_PostgreSQL__InServer__Util); /* prototype to pass -Wmissing-prototypes */
 XS_EXTERNAL(boot_PostgreSQL__InServer__Util)
 {
 #if PERL_VERSION_LE(5, 21, 5)
-    dVAR; dXSARGS;
+  dVAR;
+  dXSARGS;
 #else
-    dVAR; dXSBOOTARGSAPIVERCHK;
+  dVAR;
+  dXSBOOTARGSAPIVERCHK;
 #endif
 #if (PERL_REVISION == 5 && PERL_VERSION < 9)
-    char* file = __FILE__;
+  char *file = __FILE__;
 #else
-    const char* file = __FILE__;
+  const char *file = __FILE__;
 #endif
 
-    PERL_UNUSED_VAR(file);
+  PERL_UNUSED_VAR(file);
 
-    PERL_UNUSED_VAR(cv); /* -W */
-    PERL_UNUSED_VAR(items); /* -W */
+  PERL_UNUSED_VAR(cv);    /* -W */
+  PERL_UNUSED_VAR(items); /* -W */
 #if PERL_VERSION_LE(5, 21, 5) && defined(XS_APIVERSION_BOOTCHECK)
   XS_APIVERSION_BOOTCHECK;
 #endif
 
-        cv = newXSproto_portable("DEBUG", XS___aliased_constants, file, "");
-        XSANY.any_i32 = DEBUG2;
-        cv = newXSproto_portable("ERROR", XS___aliased_constants, file, "");
-        XSANY.any_i32 = ERROR;
-        cv = newXSproto_portable("INFO", XS___aliased_constants, file, "");
-        XSANY.any_i32 = INFO;
-        cv = newXSproto_portable("LOG", XS___aliased_constants, file, "");
-        XSANY.any_i32 = LOG;
-        cv = newXSproto_portable("NOTICE", XS___aliased_constants, file, "");
-        XSANY.any_i32 = NOTICE;
-        cv = newXSproto_portable("WARNING", XS___aliased_constants, file, "");
-        XSANY.any_i32 = WARNING;
-        cv = newXSproto_portable("_aliased_constants", XS___aliased_constants, file, "");
-        XSANY.any_i32 = 0;
-        (void)newXSproto_portable("elog", XS__elog, file, "$$");
-        (void)newXSproto_portable("quote_literal", XS__quote_literal, file, "$");
-        (void)newXSproto_portable("quote_nullable", XS__quote_nullable, file, "$");
-        (void)newXSproto_portable("quote_ident", XS__quote_ident, file, "$");
-        (void)newXSproto_portable("decode_bytea", XS__decode_bytea, file, "$");
-        (void)newXSproto_portable("encode_bytea", XS__encode_bytea, file, "$");
-        (void)newXSproto_portable("looks_like_number", XS__looks_like_number, file, "$");
-        (void)newXSproto_portable("encode_typed_literal", XS__encode_typed_literal, file, "$$");
+  cv = newXSproto_portable("DEBUG", XS___aliased_constants, file, "");
+  XSANY.any_i32 = DEBUG2;
+  cv = newXSproto_portable("ERROR", XS___aliased_constants, file, "");
+  XSANY.any_i32 = ERROR;
+  cv = newXSproto_portable("INFO", XS___aliased_constants, file, "");
+  XSANY.any_i32 = INFO;
+  cv = newXSproto_portable("LOG", XS___aliased_constants, file, "");
+  XSANY.any_i32 = LOG;
+  cv = newXSproto_portable("NOTICE", XS___aliased_constants, file, "");
+  XSANY.any_i32 = NOTICE;
+  cv = newXSproto_portable("WARNING", XS___aliased_constants, file, "");
+  XSANY.any_i32 = WARNING;
+  cv = newXSproto_portable("_aliased_constants", XS___aliased_constants, file, "");
+  XSANY.any_i32 = 0;
+  (void)newXSproto_portable("elog", XS__elog, file, "$$");
+  (void)newXSproto_portable("quote_literal", XS__quote_literal, file, "$");
+  (void)newXSproto_portable("quote_nullable", XS__quote_nullable, file, "$");
+  (void)newXSproto_portable("quote_ident", XS__quote_ident, file, "$");
+  (void)newXSproto_portable("decode_bytea", XS__decode_bytea, file, "$");
+  (void)newXSproto_portable("encode_bytea", XS__encode_bytea, file, "$");
+  (void)newXSproto_portable("looks_like_number", XS__looks_like_number, file, "$");
+  (void)newXSproto_portable("encode_typed_literal", XS__encode_typed_literal, file, "$$");
 
-    /* Initialisation Section */
+  /* Initialisation Section */
 
 #line 189 "Util.xs"
-    items = 0;  /* avoid 'unused variable' warning */
+  items = 0; /* avoid 'unused variable' warning */
 
 #line 495 "Util.c"
 
-    /* End of Initialisation Section */
+  /* End of Initialisation Section */
 
 #if PERL_VERSION_LE(5, 21, 5)
-#  if PERL_VERSION_GE(5, 9, 0)
-    if (PL_unitcheckav)
-        call_list(PL_scopestack_ix, PL_unitcheckav);
-#  endif
-    XSRETURN_YES;
+#if PERL_VERSION_GE(5, 9, 0)
+  if (PL_unitcheckav)
+  {
+    call_list(PL_scopestack_ix, PL_unitcheckav);
+  }
+#endif
+  XSRETURN_YES;
 #else
-    Perl_xs_boot_epilog(aTHX_ ax);
+  Perl_xs_boot_epilog(aTHX_ ax);
 #endif
 }
-

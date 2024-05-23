@@ -24,46 +24,49 @@
 #define SQLERRMC_LEN 150
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-struct sqlca_t {
-  char sqlcaid[8];
-  long sqlabc;
-  long sqlcode;
-  struct {
-    int sqlerrml;
-    char sqlerrmc[SQLERRMC_LEN];
-  } sqlerrm;
-  char sqlerrp[8];
-  long sqlerrd[6];
-  /* Element 0: empty						*/
-  /* 1: OID of processed tuple if applicable			*/
-  /* 2: number of rows processed				*/
-  /* after an INSERT, UPDATE or				*/
-  /* DELETE statement					*/
-  /* 3: empty						*/
-  /* 4: empty						*/
-  /* 5: empty						*/
-  char sqlwarn[8];
-  /* Element 0: set to 'W' if at least one other is 'W'	*/
-  /* 1: if 'W' at least one character string		*/
-  /* value was truncated when it was			*/
-  /* stored into a host variable.             */
+  struct sqlca_t
+  {
+    char sqlcaid[8];
+    long sqlabc;
+    long sqlcode;
+    struct
+    {
+      int sqlerrml;
+      char sqlerrmc[SQLERRMC_LEN];
+    } sqlerrm;
+    char sqlerrp[8];
+    long sqlerrd[6];
+    /* Element 0: empty						*/
+    /* 1: OID of processed tuple if applicable			*/
+    /* 2: number of rows processed				*/
+    /* after an INSERT, UPDATE or				*/
+    /* DELETE statement					*/
+    /* 3: empty						*/
+    /* 4: empty						*/
+    /* 5: empty						*/
+    char sqlwarn[8];
+    /* Element 0: set to 'W' if at least one other is 'W'	*/
+    /* 1: if 'W' at least one character string		*/
+    /* value was truncated when it was			*/
+    /* stored into a host variable.             */
 
-  /*
-   * 2: if 'W' a (hopefully) non-fatal notice occurred
-   */	/* 3: empty */
-  /* 4: empty						*/
-  /* 5: empty						*/
-  /* 6: empty						*/
-  /* 7: empty						*/
+    /*
+     * 2: if 'W' a (hopefully) non-fatal notice occurred
+     */	/* 3: empty */
+    /* 4: empty						*/
+    /* 5: empty						*/
+    /* 6: empty						*/
+    /* 7: empty						*/
 
-  char sqlstate[5];
-};
+    char sqlstate[5];
+  };
 
-struct sqlca_t *
-ECPGget_sqlca(void);
+  struct sqlca_t *
+  ECPGget_sqlca(void);
 
 #ifndef POSTGRES_ECPG_INTERNAL
 #define sqlca (*ECPGget_sqlca())
@@ -93,7 +96,8 @@ main()
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 13 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -103,7 +107,8 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table foo ( a int , b varchar )", ECPGt_EOIT, ECPGt_EORT);
 #line 14 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -113,7 +118,8 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into foo values ( 5 , 'abc' )", ECPGt_EOIT, ECPGt_EORT);
 #line 15 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -123,7 +129,8 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into foo values ( 6 , 'def' )", ECPGt_EOIT, ECPGt_EORT);
 #line 16 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -133,7 +140,8 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into foo values ( 7 , 'ghi' )", ECPGt_EOIT, ECPGt_EORT);
 #line 17 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -143,7 +151,8 @@ main()
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "copy foo to stdout with delimiter ','", ECPGt_EOIT, ECPGt_EORT);
 #line 19 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -155,7 +164,8 @@ main()
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 22 "copystdout.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

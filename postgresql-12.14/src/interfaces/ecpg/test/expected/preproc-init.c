@@ -23,46 +23,49 @@
 #define SQLERRMC_LEN 150
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-struct sqlca_t {
-  char sqlcaid[8];
-  long sqlabc;
-  long sqlcode;
-  struct {
-    int sqlerrml;
-    char sqlerrmc[SQLERRMC_LEN];
-  } sqlerrm;
-  char sqlerrp[8];
-  long sqlerrd[6];
-  /* Element 0: empty						*/
-  /* 1: OID of processed tuple if applicable			*/
-  /* 2: number of rows processed				*/
-  /* after an INSERT, UPDATE or				*/
-  /* DELETE statement					*/
-  /* 3: empty						*/
-  /* 4: empty						*/
-  /* 5: empty						*/
-  char sqlwarn[8];
-  /* Element 0: set to 'W' if at least one other is 'W'	*/
-  /* 1: if 'W' at least one character string		*/
-  /* value was truncated when it was			*/
-  /* stored into a host variable.             */
+  struct sqlca_t
+  {
+    char sqlcaid[8];
+    long sqlabc;
+    long sqlcode;
+    struct
+    {
+      int sqlerrml;
+      char sqlerrmc[SQLERRMC_LEN];
+    } sqlerrm;
+    char sqlerrp[8];
+    long sqlerrd[6];
+    /* Element 0: empty						*/
+    /* 1: OID of processed tuple if applicable			*/
+    /* 2: number of rows processed				*/
+    /* after an INSERT, UPDATE or				*/
+    /* DELETE statement					*/
+    /* 3: empty						*/
+    /* 4: empty						*/
+    /* 5: empty						*/
+    char sqlwarn[8];
+    /* Element 0: set to 'W' if at least one other is 'W'	*/
+    /* 1: if 'W' at least one character string		*/
+    /* value was truncated when it was			*/
+    /* stored into a host variable.             */
 
-  /*
-   * 2: if 'W' a (hopefully) non-fatal notice occurred
-   */	/* 3: empty */
-  /* 4: empty						*/
-  /* 5: empty						*/
-  /* 6: empty						*/
-  /* 7: empty						*/
+    /*
+     * 2: if 'W' a (hopefully) non-fatal notice occurred
+     */	/* 3: empty */
+    /* 4: empty						*/
+    /* 5: empty						*/
+    /* 6: empty						*/
+    /* 7: empty						*/
 
-  char sqlstate[5];
-};
+    char sqlstate[5];
+  };
 
-struct sqlca_t *
-ECPGget_sqlca(void);
+  struct sqlca_t *
+  ECPGget_sqlca(void);
 
 #ifndef POSTGRES_ECPG_INTERNAL
 #define sqlca (*ECPGget_sqlca())
@@ -76,8 +79,13 @@ ECPGget_sqlca(void);
 
 #line 1 "init.pgc"
 
-enum e { ENUM0, ENUM1 };
-struct sa {
+enum e
+{
+  ENUM0,
+  ENUM1
+};
+struct sa
+{
   int member;
 };
 
@@ -119,7 +127,8 @@ fe(enum e x)
 static void
 sqlnotice(const char *notice, short trans)
 {
-  if (!notice) {
+  if (!notice)
+  {
     notice = "-empty-";
   }
   printf("in sqlnotice (%s, %d)\n", notice, trans);
@@ -202,7 +211,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 88 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       fa();
     }
   }
@@ -215,7 +225,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 90 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       fb(20);
     }
   }
@@ -228,7 +239,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 92 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       fc("50");
     }
   }
@@ -241,7 +253,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 94 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       fd("50", 1);
     }
   }
@@ -254,7 +267,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 96 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       fe(ENUM0);
     }
   }
@@ -267,7 +281,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select now ( )", ECPGt_EOIT, ECPGt_EORT);
 #line 98 "init.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlnotice(NULL, 0);
     }
   }

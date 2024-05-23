@@ -241,8 +241,8 @@ GetComboCommandId(CommandId cmin, CommandId cmax)
   {
     int newsize = sizeComboCids * 2;
 
-
-
+    comboCids = (ComboCidKeyData *)repalloc(comboCids, sizeof(ComboCidKeyData) * newsize);
+    sizeComboCids = newsize;
   }
 
   /* Lookup or create a hash entry with the desired cmin/cmax */
@@ -319,7 +319,7 @@ SerializeComboCIDState(Size maxsize, char *start_address)
   endptr = start_address + sizeof(int) + (sizeof(ComboCidKeyData) * usedComboCids);
   if (endptr < start_address || endptr > start_address + maxsize)
   {
-
+    elog(ERROR, "not enough space to serialize ComboCID state");
   }
 
   /* Now, copy the actual cmin/cmax pairs. */
@@ -357,7 +357,7 @@ RestoreComboCIDState(char *comboCIDstate)
     /* Verify that we got the expected answer. */
     if (cid != i)
     {
-
+      elog(ERROR, "unexpected command ID while restoring combo CIDs");
     }
   }
 }

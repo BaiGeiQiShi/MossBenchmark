@@ -28,18 +28,18 @@
 bool
 pg_str_endswith(const char *str, const char *end)
 {
+  size_t slen = strlen(str);
+  size_t elen = strlen(end);
 
+  /* can't be a postfix if longer */
+  if (elen > slen)
+  {
+    return false;
+  }
 
-
-
-
-
-
-
-
-
-
-
+  /* compare the end of the strings */
+  str += slen - elen;
+  return strcmp(str, end) == 0;
 }
 
 /*
@@ -66,17 +66,17 @@ strtoint(const char *pg_restrict str, char **pg_restrict endptr, int base)
  * This function exists specifically to deal with filtering out
  * non-ASCII characters in a few places where the client can provide an almost
  * arbitrary string (and it isn't checked to ensure it's a valid username or
- * database name or similar) and we don't want to have control characters or
- * other things ending up in the log file where server admins might end up with
- * a messed up terminal when looking at them.
+ * database name or similar) and we don't want to have control characters or other
+ * things ending up in the log file where server admins might end up with a
+ * messed up terminal when looking at them.
  *
  * In general, this function should NOT be used- instead, consider how to handle
  * the string without needing to filter out the non-ASCII characters.
  *
  * Ultimately, we'd like to improve the situation to not require stripping out
  * all non-ASCII but perform more intelligent filtering which would allow UTF or
- * similar, but it's unclear exactly what we should allow, so stick to ASCII
- * only for now.
+ * similar, but it's unclear exactly what we should allow, so stick to ASCII only
+ * for now.
  */
 void
 pg_clean_ascii(char *str)
@@ -88,7 +88,7 @@ pg_clean_ascii(char *str)
   {
     if (*p < 32 || *p > 126)
     {
-
+      *p = '?';
     }
   }
 }

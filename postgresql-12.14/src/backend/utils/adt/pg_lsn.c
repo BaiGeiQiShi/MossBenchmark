@@ -90,22 +90,22 @@ pg_lsn_out(PG_FUNCTION_ARGS)
 Datum
 pg_lsn_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  XLogRecPtr result;
 
-
-
-
-
+  result = pq_getmsgint64(buf);
+  PG_RETURN_LSN(result);
 }
 
 Datum
 pg_lsn_send(PG_FUNCTION_ARGS)
 {
+  XLogRecPtr lsn = PG_GETARG_LSN(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint64(&buf, lsn);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*----------------------------------------------------------
@@ -179,7 +179,7 @@ pg_lsn_cmp(PG_FUNCTION_ARGS)
   }
   else if (a == b)
   {
-
+    PG_RETURN_INT32(0);
   }
   else
   {

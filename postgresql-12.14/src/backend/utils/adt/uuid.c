@@ -114,7 +114,7 @@ string_to_uuid(const char *source, pg_uuid_t *uuid)
 
     if (src[0] == '\0' || src[1] == '\0')
     {
-
+      goto syntax_error;
     }
     memcpy(str_buf, src, 2);
     if (!isxdigit((unsigned char)str_buf[0]) || !isxdigit((unsigned char)str_buf[1]))
@@ -147,30 +147,30 @@ string_to_uuid(const char *source, pg_uuid_t *uuid)
 
   return;
 
-syntax_error:;
+syntax_error:
   ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "uuid", source)));
 }
 
 Datum
 uuid_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buffer = (StringInfo)PG_GETARG_POINTER(0);
+  pg_uuid_t *uuid;
 
-
-
-
-
-
+  uuid = (pg_uuid_t *)palloc(UUID_LEN);
+  memcpy(uuid->data, pq_getmsgbytes(buffer, UUID_LEN), UUID_LEN);
+  PG_RETURN_POINTER(uuid);
 }
 
 Datum
 uuid_send(PG_FUNCTION_ARGS)
 {
+  pg_uuid_t *uuid = PG_GETARG_UUID_P(0);
+  StringInfoData buffer;
 
-
-
-
-
-
+  pq_begintypsend(&buffer);
+  pq_sendbytes(&buffer, (char *)uuid->data, UUID_LEN);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buffer));
 }
 
 /* internal uuid compare function */
@@ -286,10 +286,10 @@ uuid_sortsupport(PG_FUNCTION_ARGS)
 static int
 uuid_fast_cmp(Datum x, Datum y, SortSupport ssup)
 {
+  pg_uuid_t *arg1 = DatumGetUUIDP(x);
+  pg_uuid_t *arg2 = DatumGetUUIDP(y);
 
-
-
-
+  return uuid_internal_cmp(arg1, arg2);
 }
 
 /*
@@ -300,11 +300,11 @@ uuid_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
 {
   if (x > y)
   {
-
+    return 1;
   }
   else if (x == y)
   {
-
+    return 0;
   }
   else
   {
@@ -321,59 +321,65 @@ uuid_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
 static bool
 uuid_abbrev_abort(int memtupcount, SortSupport ssup)
 {
+  uuid_sortsupport_state *uss = ssup->ssup_extra;
+  double abbr_card;
 
+  if (memtupcount < 10000 || uss->input_count < 10000 || !uss->estimating)
+  {
+    return false;
+  }
 
+  abbr_card = estimateHyperLogLog(&uss->abbr_card);
 
+  /*
+   * If we have >100k distinct values, then even if we were sorting many
+   * billion rows we'd likely still break even, and the penalty of undoing
+   * that many rows of abbrevs would probably not be worth it.  Stop even
+   * counting at that point.
+   */
+  if (abbr_card > 100000.0)
+  {
+#ifdef TRACE_SORT
+    if (trace_sort)
+    {
+      elog(LOG,
+          "uuid_abbrev: estimation ends at cardinality %f"
+          " after " INT64_FORMAT " values (%d rows)",
+          abbr_card, uss->input_count, memtupcount);
+    }
+#endif
+    uss->estimating = false;
+    return false;
+  }
 
+  /*
+   * Target minimum cardinality is 1 per ~2k of non-null inputs.  0.5 row
+   * fudge factor allows us to abort earlier on genuinely pathological data
+   * where we've had exactly one abbreviated value in the first 2k
+   * (non-null) rows.
+   */
+  if (abbr_card < uss->input_count / 2000.0 + 0.5)
+  {
+#ifdef TRACE_SORT
+    if (trace_sort)
+    {
+      elog(LOG,
+          "uuid_abbrev: aborting abbreviation at cardinality %f"
+          " below threshold %f after " INT64_FORMAT " values (%d rows)",
+          abbr_card, uss->input_count / 2000.0 + 0.5, uss->input_count, memtupcount);
+    }
+#endif
+    return true;
+  }
 
+#ifdef TRACE_SORT
+  if (trace_sort)
+  {
+    elog(LOG, "uuid_abbrev: cardinality %f after " INT64_FORMAT " values (%d rows)", abbr_card, uss->input_count, memtupcount);
+  }
+#endif
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /*

@@ -196,7 +196,7 @@ create_ctas_nodata(List *tlist, IntoClause *into)
        */
       if (!OidIsValid(col->collOid) && type_is_collatable(col->typeName->typeOid))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("no collation was derived for column \"%s\" with collatable type %s", col->colname, format_type_be(col->typeName->typeOid)), errhint("Use the COLLATE clause to set the collation explicitly.")));
       }
 
       attrList = lappend(attrList, col);
@@ -321,7 +321,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString, ParamListInf
     /* SELECT should never rewrite to more or less than one SELECT query */
     if (list_length(rewritten) != 1)
     {
-
+      elog(ERROR, "unexpected rewrite result for %s", is_matview ? "CREATE MATERIALIZED VIEW" : "CREATE TABLE AS SELECT");
     }
     query = linitial_node(Query, rewritten);
     Assert(query->commandType == CMD_SELECT);
@@ -530,7 +530,7 @@ intorel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
    */
   if (check_enable_rls(intoRelationAddr.objectId, InvalidOid, false) == RLS_ENABLED)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), (errmsg("policies not yet implemented for this command"))));
   }
 
   /*
@@ -607,5 +607,5 @@ intorel_shutdown(DestReceiver *self)
 static void
 intorel_destroy(DestReceiver *self)
 {
-
+  pfree(self);
 }

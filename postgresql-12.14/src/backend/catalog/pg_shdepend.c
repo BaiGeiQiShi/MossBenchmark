@@ -127,7 +127,7 @@ recordSharedDependencyOn(ObjectAddress *depender, ObjectAddress *referenced, Sha
    */
   if (IsBootstrapProcessingMode())
   {
-
+    return;
   }
 
   sdepRel = table_open(SharedDependRelationId, RowExclusiveLock);
@@ -222,7 +222,7 @@ shdepChangeDep(Relation sdepRel, Oid classid, Oid objid, int32 objsubid, Oid ref
     /* Caller screwed up if multiple matches */
     if (oldtup)
     {
-
+      elog(ERROR, "multiple pg_shdepend entries for object %u/%u/%d deptype %c", classid, objid, objsubid, deptype);
     }
     oldtup = heap_copytuple(scantup);
   }
@@ -420,8 +420,7 @@ getOidListDiff(Oid *list1, int *nlist1, Oid *list2, int *nlist2)
 
 /*
  * updateAclDependencies
- *		Update the pg_shdepend info for an object's ACL during
- *GRANT/REVOKE.
+ *		Update the pg_shdepend info for an object's ACL during GRANT/REVOKE.
  *
  * classId, objectId, objsubId: identify the object whose ACL this is
  * ownerId: role owning the object
@@ -500,7 +499,7 @@ updateAclDependencies(Oid classId, Oid objectId, int32 objsubId, Oid ownerId, in
       /* Skip pinned roles */
       if (isSharedObjectPinned(AuthIdRelationId, roleid, sdepRel))
       {
-
+        continue;
       }
 
       shdepDropDependency(sdepRel, classId, objectId, objsubId, false, /* exact match on objsubId */
@@ -554,14 +553,14 @@ shared_dependency_comparator(const void *a, const void *b)
    * Next sort on catalog ID, in case identical OIDs appear in different
    * catalogs.  Sort direction is pretty arbitrary here.
    */
-
-
-
-
-
-
-
-
+  if (obja->object.classId < objb->object.classId)
+  {
+    return -1;
+  }
+  if (obja->object.classId > objb->object.classId)
+  {
+    return 1;
+  }
 
   /*
    * Sort on object subId.
@@ -569,30 +568,30 @@ shared_dependency_comparator(const void *a, const void *b)
    * We sort the subId as an unsigned int so that 0 (the whole object) will
    * come first.
    */
-
-
-
-
-
-
-
-
+  if ((unsigned int)obja->object.objectSubId < (unsigned int)objb->object.objectSubId)
+  {
+    return -1;
+  }
+  if ((unsigned int)obja->object.objectSubId > (unsigned int)objb->object.objectSubId)
+  {
+    return 1;
+  }
 
   /*
    * Last, sort on deptype, in case the same object has multiple dependency
    * types.  (Note that there's no need to consider objtype, as that's
    * determined by the catalog OID.)
    */
+  if (obja->deptype < objb->deptype)
+  {
+    return -1;
+  }
+  if (obja->deptype > objb->deptype)
+  {
+    return 1;
+  }
 
-
-
-
-
-
-
-
-
-
+  return 0;
 }
 
 /*
@@ -666,10 +665,10 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
     /* This case can be dispatched quickly */
     if (sdepForm->deptype == SHARED_DEPENDENCY_PIN)
     {
-
-
-
-
+      object.classId = classId;
+      object.objectId = objectId;
+      object.objectSubId = 0;
+      ereport(ERROR, (errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST), errmsg("cannot drop %s because it is required by the database system", getObjectDescription(&object))));
     }
 
     object.classId = sdepForm->classid;
@@ -687,8 +686,8 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
     {
       if (numobjects >= allocedobjects)
       {
-
-
+        allocedobjects *= 2;
+        objects = (ShDependObjectInfo *)repalloc(objects, allocedobjects * sizeof(ShDependObjectInfo));
       }
       objects[numobjects].object = object;
       objects[numobjects].deptype = sdepForm->deptype;
@@ -707,23 +706,23 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
        * complex.  The expected number of databases is not high anyway,
        * I suppose.
        */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      foreach (cell, remDeps)
+      {
+        dep = lfirst(cell);
+        if (dep->dbOid == sdepForm->dbid)
+        {
+          dep->count++;
+          stored = true;
+          break;
+        }
+      }
+      if (!stored)
+      {
+        dep = (remoteDep *)palloc(sizeof(remoteDep));
+        dep->dbOid = sdepForm->dbid;
+        dep->count = 1;
+        remDeps = lappend(remDeps, dep);
+      }
     }
   }
 
@@ -748,7 +747,7 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
     }
     else
     {
-
+      numNotReportedDeps++;
     }
     storeObjectDescription(&alldescs, objects[i].objtype, &objects[i].object, objects[i].deptype, 0);
   }
@@ -760,20 +759,20 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
   {
     remoteDep *dep = lfirst(cell);
 
+    object.classId = DatabaseRelationId;
+    object.objectId = dep->dbOid;
+    object.objectSubId = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (numReportedDeps < MAX_REPORTED_DEPS)
+    {
+      numReportedDeps++;
+      storeObjectDescription(&descs, REMOTE_OBJECT, &object, SHARED_DEPENDENCY_INVALID, dep->count);
+    }
+    else
+    {
+      numNotReportedDbs++;
+    }
+    storeObjectDescription(&alldescs, REMOTE_OBJECT, &object, SHARED_DEPENDENCY_INVALID, dep->count);
   }
 
   pfree(objects);
@@ -789,11 +788,23 @@ checkSharedDependencies(Oid classId, Oid objectId, char **detail_msg, char **det
 
   if (numNotReportedDeps > 0)
   {
-
+    appendStringInfo(&descs,
+        ngettext("\nand %d other object "
+                 "(see server log for list)",
+            "\nand %d other objects "
+            "(see server log for list)",
+            numNotReportedDeps),
+        numNotReportedDeps);
   }
   if (numNotReportedDbs > 0)
   {
-
+    appendStringInfo(&descs,
+        ngettext("\nand objects in %d other database "
+                 "(see server log for list)",
+            "\nand objects in %d other databases "
+            "(see server log for list)",
+            numNotReportedDbs),
+        numNotReportedDbs);
   }
 
   *detail_msg = descs.data;
@@ -849,10 +860,10 @@ copyTemplateDependencies(Oid templateDbId, Oid newDbId)
   {
     HeapTuple newtup;
 
+    newtup = heap_modify_tuple(tup, sdepDesc, values, nulls, replace);
+    CatalogTupleInsertWithInfo(sdepRel, newtup, indstate);
 
-
-
-
+    heap_freetuple(newtup);
   }
 
   systable_endscan(scan);
@@ -888,7 +899,7 @@ dropDatabaseDependencies(Oid databaseId)
 
   while (HeapTupleIsValid(tup = systable_getnext(scan)))
   {
-
+    CatalogTupleDelete(sdepRel, &tup->t_self);
   }
 
   systable_endscan(scan);
@@ -972,8 +983,7 @@ shdepAddDependency(Relation sdepRel, Oid classId, Oid objectId, int32 objsubId, 
  *	dependent object is the one identified by classId/objectId/objsubId
  *	if refclassId isn't InvalidOid, it must match the entry's refclassid
  *	if refobjId isn't InvalidOid, it must match the entry's refobjid
- *	if deptype isn't SHARED_DEPENDENCY_INVALID, it must match entry's
- *deptype
+ *	if deptype isn't SHARED_DEPENDENCY_INVALID, it must match entry's deptype
  *
  * If drop_subobjects is true, we ignore objsubId and consider all entries
  * matching classId/objectId.
@@ -1012,7 +1022,7 @@ shdepDropDependency(Relation sdepRel, Oid classId, Oid objectId, int32 objsubId,
     /* Filter entries according to additional parameters */
     if (OidIsValid(refclassId) && shdepForm->refclassid != refclassId)
     {
-
+      continue;
     }
     if (OidIsValid(refobjId) && shdepForm->refobjid != refobjId)
     {
@@ -1020,7 +1030,7 @@ shdepDropDependency(Relation sdepRel, Oid classId, Oid objectId, int32 objsubId,
     }
     if (deptype != SHARED_DEPENDENCY_INVALID && shdepForm->deptype != deptype)
     {
-
+      continue;
     }
 
     /* OK, delete it */
@@ -1070,41 +1080,41 @@ shdepLockAndCheckObject(Oid classId, Oid objectId)
 
   switch (classId)
   {
-  case AuthIdRelationId:;
+  case AuthIdRelationId:
     if (!SearchSysCacheExists1(AUTHOID, ObjectIdGetDatum(objectId)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("role %u was concurrently dropped", objectId)));
     }
     break;
 
-  case TableSpaceRelationId:;
+  case TableSpaceRelationId:
   {
     /* For lack of a syscache on pg_tablespace, do this: */
     char *tablespace = get_tablespace_name(objectId);
 
     if (tablespace == NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace %u was concurrently dropped", objectId)));
     }
     pfree(tablespace);
     break;
   }
 
-  case DatabaseRelationId:;
+  case DatabaseRelationId:
   {
     /* For lack of a syscache on pg_database, do this: */
     char *database = get_database_name(objectId);
 
     if (database == NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("database %u was concurrently dropped", objectId)));
     }
     pfree(database);
     break;
   }
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized shared classId: %u", classId);
   }
 }
 
@@ -1132,7 +1142,7 @@ storeObjectDescription(StringInfo descs, SharedDependencyObjectType type, Object
    */
   if (objdesc == NULL)
   {
-
+    return;
   }
 
   /* separate entries with a newline */
@@ -1143,8 +1153,8 @@ storeObjectDescription(StringInfo descs, SharedDependencyObjectType type, Object
 
   switch (type)
   {
-  case LOCAL_OBJECT:;
-  case SHARED_OBJECT:;
+  case LOCAL_OBJECT:
+  case SHARED_OBJECT:
     if (deptype == SHARED_DEPENDENCY_OWNER)
     {
       appendStringInfo(descs, _("owner of %s"), objdesc);
@@ -1163,17 +1173,17 @@ storeObjectDescription(StringInfo descs, SharedDependencyObjectType type, Object
     }
     else
     {
-
+      elog(ERROR, "unrecognized dependency type: %d", (int)deptype);
     }
     break;
 
-  case REMOTE_OBJECT:;
+  case REMOTE_OBJECT:
     /* translator: %s will always be "database %s" */
+    appendStringInfo(descs, ngettext("%d object in %s", "%d objects in %s", count), count, objdesc);
+    break;
 
-
-
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized object type: %d", type);
   }
 
   pfree(objdesc);
@@ -1181,8 +1191,7 @@ storeObjectDescription(StringInfo descs, SharedDependencyObjectType type, Object
 
 /*
  * isSharedObjectPinned
- *		Return whether a given shared object has a SHARED_DEPENDENCY_PIN
- *entry.
+ *		Return whether a given shared object has a SHARED_DEPENDENCY_PIN entry.
  *
  * sdepRel must be the pg_shdepend relation, already opened and suitably
  * locked.
@@ -1266,11 +1275,13 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
     {
       ObjectAddress obj;
 
+      obj.classId = AuthIdRelationId;
+      obj.objectId = roleid;
+      obj.objectSubId = 0;
 
-
-
-
-
+      ereport(ERROR, (errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST), errmsg("cannot drop objects owned by %s because they are "
+                                                                             "required by the database system",
+                                                                          getObjectDescription(&obj))));
     }
 
     ScanKeyInit(&key[0], Anum_pg_shdepend_refclassid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(AuthIdRelationId));
@@ -1289,20 +1300,20 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
        */
       if (sdepForm->dbid != MyDatabaseId && sdepForm->dbid != InvalidOid)
       {
-
+        continue;
       }
 
       switch (sdepForm->deptype)
       {
         /* Shouldn't happen */
-      case SHARED_DEPENDENCY_PIN:;
-      case SHARED_DEPENDENCY_INVALID:;
-
-
-      case SHARED_DEPENDENCY_ACL:;
+      case SHARED_DEPENDENCY_PIN:
+      case SHARED_DEPENDENCY_INVALID:
+        elog(ERROR, "unexpected dependency type");
+        break;
+      case SHARED_DEPENDENCY_ACL:
         RemoveRoleFromObjectACL(roleid, sdepForm->classid, sdepForm->objid);
         break;
-      case SHARED_DEPENDENCY_POLICY:;
+      case SHARED_DEPENDENCY_POLICY:
         /*
          * Try to remove role from policy; if unable to, remove
          * policy.
@@ -1321,13 +1332,13 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
           AcquireDeletionLock(&obj, 0);
           if (!systable_recheck_tuple(scan, tuple))
           {
-
-
+            ReleaseDeletionLock(&obj);
+            break;
           }
           add_exact_object_address(&obj, deleteobjs);
         }
         break;
-      case SHARED_DEPENDENCY_OWNER:;
+      case SHARED_DEPENDENCY_OWNER:
         /* If a local object, save it for deletion below */
         if (sdepForm->dbid == MyDatabaseId)
         {
@@ -1338,8 +1349,8 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
           AcquireDeletionLock(&obj, 0);
           if (!systable_recheck_tuple(scan, tuple))
           {
-
-
+            ReleaseDeletionLock(&obj);
+            break;
           }
           add_exact_object_address(&obj, deleteobjs);
         }
@@ -1397,11 +1408,11 @@ shdepReassignOwned(List *roleids, Oid newrole)
     {
       ObjectAddress obj;
 
+      obj.classId = AuthIdRelationId;
+      obj.objectId = roleid;
+      obj.objectSubId = 0;
 
-
-
-
-
+      ereport(ERROR, (errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST), errmsg("cannot reassign ownership of objects owned by %s because they are required by the database system", getObjectDescription(&obj))));
 
       /*
        * There's no need to tell the whole truth, which is that we
@@ -1425,13 +1436,13 @@ shdepReassignOwned(List *roleids, Oid newrole)
        */
       if (sdepForm->dbid != MyDatabaseId && sdepForm->dbid != InvalidOid)
       {
-
+        continue;
       }
 
       /* Unexpected because we checked for pins above */
       if (sdepForm->deptype == SHARED_DEPENDENCY_PIN)
       {
-
+        elog(ERROR, "unexpected shared pin");
       }
 
       /* We leave non-owner dependencies alone */
@@ -1453,15 +1464,15 @@ shdepReassignOwned(List *roleids, Oid newrole)
       /* Issue the appropriate ALTER OWNER call */
       switch (sdepForm->classid)
       {
-      case TypeRelationId:;
+      case TypeRelationId:
         AlterTypeOwner_oid(sdepForm->objid, newrole, true);
         break;
 
-      case NamespaceRelationId:;
+      case NamespaceRelationId:
         AlterSchemaOwner_oid(sdepForm->objid, newrole);
         break;
 
-      case RelationRelationId:;
+      case RelationRelationId:
 
         /*
          * Pass recursing = true so that we don't fail on indexes,
@@ -1471,7 +1482,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
         ATExecChangeOwner(sdepForm->objid, newrole, true, AccessExclusiveLock);
         break;
 
-      case DefaultAclRelationId:;
+      case DefaultAclRelationId:
 
         /*
          * Ignore default ACLs; they should be handled by DROP
@@ -1479,52 +1490,52 @@ shdepReassignOwned(List *roleids, Oid newrole)
          */
         break;
 
-      case UserMappingRelationId:;
+      case UserMappingRelationId:
         /* ditto */
         break;
 
-      case ForeignServerRelationId:;
+      case ForeignServerRelationId:
         AlterForeignServerOwner_oid(sdepForm->objid, newrole);
         break;
 
-      case ForeignDataWrapperRelationId:;
+      case ForeignDataWrapperRelationId:
+        AlterForeignDataWrapperOwner_oid(sdepForm->objid, newrole);
+        break;
 
+      case EventTriggerRelationId:
+        AlterEventTriggerOwner_oid(sdepForm->objid, newrole);
+        break;
 
+      case PublicationRelationId:
+        AlterPublicationOwner_oid(sdepForm->objid, newrole);
+        break;
 
-      case EventTriggerRelationId:;
-
-
-
-      case PublicationRelationId:;
-
-
-
-      case SubscriptionRelationId:;
-
-
+      case SubscriptionRelationId:
+        AlterSubscriptionOwner_oid(sdepForm->objid, newrole);
+        break;
 
         /* Generic alter owner cases */
-      case CollationRelationId:;
-      case ConversionRelationId:;
-      case OperatorRelationId:;
-      case ProcedureRelationId:;
-      case LanguageRelationId:;
-      case LargeObjectRelationId:;
-      case OperatorFamilyRelationId:;
-      case OperatorClassRelationId:;
-      case ExtensionRelationId:;
-      case StatisticExtRelationId:;
-      case TableSpaceRelationId:;
-      case DatabaseRelationId:;
-      case TSConfigRelationId:;
-      case TSDictionaryRelationId:;
+      case CollationRelationId:
+      case ConversionRelationId:
+      case OperatorRelationId:
+      case ProcedureRelationId:
+      case LanguageRelationId:
+      case LargeObjectRelationId:
+      case OperatorFamilyRelationId:
+      case OperatorClassRelationId:
+      case ExtensionRelationId:
+      case StatisticExtRelationId:
+      case TableSpaceRelationId:
+      case DatabaseRelationId:
+      case TSConfigRelationId:
+      case TSDictionaryRelationId:
       {
         Oid classId = sdepForm->classid;
         Relation catalog;
 
         if (classId == LargeObjectRelationId)
         {
-
+          classId = LargeObjectMetadataRelationId;
         }
 
         catalog = table_open(classId, RowExclusiveLock);
@@ -1535,9 +1546,9 @@ shdepReassignOwned(List *roleids, Oid newrole)
       }
       break;
 
-      default:;;
-
-
+      default:
+        elog(ERROR, "unexpected classid %u", sdepForm->classid);
+        break;
       }
 
       /* Clean up */

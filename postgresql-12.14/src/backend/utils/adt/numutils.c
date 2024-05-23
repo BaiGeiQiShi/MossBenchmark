@@ -46,11 +46,11 @@ pg_atoi(const char *s, int size, int c)
    */
   if (s == NULL)
   {
-
+    elog(ERROR, "NULL pointer");
   }
   if (*s == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "integer", s)));
   }
 
   errno = 0;
@@ -59,12 +59,12 @@ pg_atoi(const char *s, int size, int c)
   /* We made no progress parsing the string, so bail out */
   if (s == badp)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "integer", s)));
   }
 
   switch (size)
   {
-  case sizeof(int32):;
+  case sizeof(int32):
     if (errno == ERANGE
 #if defined(HAVE_LONG_INT_64)
         /* won't get ERANGE on these with 64-bit longs... */
@@ -73,20 +73,20 @@ pg_atoi(const char *s, int size, int c)
     )
       ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", s, "integer")));
     break;
-  case sizeof(int16):;
+  case sizeof(int16):
     if (errno == ERANGE || l < SHRT_MIN || l > SHRT_MAX)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", s, "smallint")));
     }
     break;
-  case sizeof(int8):;
-
-
-
-
-
-  default:;;
-
+  case sizeof(int8):
+    if (errno == ERANGE || l < SCHAR_MIN || l > SCHAR_MAX)
+    {
+      ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for 8-bit integer", s)));
+    }
+    break;
+  default:
+    elog(ERROR, "unsupported result size: %d", size);
   }
 
   /*
@@ -95,12 +95,12 @@ pg_atoi(const char *s, int size, int c)
    */
   while (*badp && *badp != c && isspace((unsigned char)*badp))
   {
-
+    badp++;
   }
 
   if (*badp && *badp != c)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "integer", s)));
   }
 
   return (int32)l;
@@ -137,7 +137,7 @@ pg_strtoint16(const char *s)
   }
   else if (*ptr == '+')
   {
-
+    ptr++;
   }
 
   /* require at least one digit */
@@ -173,17 +173,17 @@ pg_strtoint16(const char *s)
     /* could fail if input is most negative number */
     if (unlikely(tmp == PG_INT16_MIN))
     {
-
+      goto out_of_range;
     }
     tmp = -tmp;
   }
 
   return tmp;
 
-out_of_range:;
+out_of_range:
   ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", s, "smallint")));
 
-invalid_syntax:;
+invalid_syntax:
   ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "smallint", s)));
 
   return 0; /* keep compiler quiet */
@@ -220,7 +220,7 @@ pg_strtoint32(const char *s)
   }
   else if (*ptr == '+')
   {
-
+    ptr++;
   }
 
   /* require at least one digit */
@@ -256,17 +256,17 @@ pg_strtoint32(const char *s)
     /* could fail if input is most negative number */
     if (unlikely(tmp == PG_INT32_MIN))
     {
-
+      goto out_of_range;
     }
     tmp = -tmp;
   }
 
   return tmp;
 
-out_of_range:;
+out_of_range:
   ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", s, "integer")));
 
-invalid_syntax:;
+invalid_syntax:
   ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "integer", s)));
 
   return 0; /* keep compiler quiet */
@@ -400,8 +400,8 @@ pg_lltoa(int64 value, char *a)
 
 /*
  * pg_ltostr_zeropad
- *		Converts 'value' into a decimal string representation stored at
- *'str'. 'minwidth' specifies the minimum width of the result; any extra space
+ *		Converts 'value' into a decimal string representation stored at 'str'.
+ *		'minwidth' specifies the minimum width of the result; any extra space
  *		is filled up by prefixing the number with zeros.
  *
  * Returns the ending address of the string result (the last character written
@@ -435,23 +435,23 @@ pg_ltostr_zeropad(char *str, int32 value, int32 minwidth)
    */
   if (num < 0)
   {
-
-
+    *start++ = '-';
+    minwidth--;
 
     /*
      * Build the number starting at the last digit.  Here remainder will
      * be a negative number, so we must reverse the sign before adding '0'
      * in order to get the correct ASCII digit.
      */
+    while (minwidth--)
+    {
+      int32 oldval = num;
+      int32 remainder;
 
-
-
-
-
-
-
-
-
+      num /= 10;
+      remainder = oldval - num * 10;
+      start[minwidth] = '0' - remainder;
+    }
   }
   else
   {
@@ -483,8 +483,7 @@ pg_ltostr_zeropad(char *str, int32 value, int32 minwidth)
 
 /*
  * pg_ltostr
- *		Converts 'value' into a decimal string representation stored at
- *'str'.
+ *		Converts 'value' into a decimal string representation stored at 'str'.
  *
  * Returns the ending address of the string result (the last character written
  * plus 1).  Note that no NUL terminator is written.
@@ -512,22 +511,22 @@ pg_ltostr(char *str, int32 value)
    */
   if (value < 0)
   {
-
+    *str++ = '-';
 
     /* Mark the position we must reverse the string from. */
-
+    start = str;
 
     /* Compute the result string backwards. */
+    do
+    {
+      int32 oldval = value;
+      int32 remainder;
 
-
-
-
-
-
-
-
-
-
+      value /= 10;
+      remainder = oldval - value * 10;
+      /* As above, we expect remainder to be negative. */
+      *str++ = '0' - remainder;
+    } while (value != 0);
   }
   else
   {

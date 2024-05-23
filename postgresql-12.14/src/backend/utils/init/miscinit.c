@@ -102,20 +102,20 @@ checkDataDir(void)
 
   if (stat(DataDir, &stat_buf) != 0)
   {
-
-
-
-
-
-
-
-
+    if (errno == ENOENT)
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("data directory \"%s\" does not exist", DataDir)));
+    }
+    else
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not read permissions of directory \"%s\": %m", DataDir)));
+    }
   }
 
   /* eventual chdir would fail anyway, but let's test ... */
   if (!S_ISDIR(stat_buf.st_mode))
   {
-
+    ereport(FATAL, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("specified data directory \"%s\" is not a directory", DataDir)));
   }
 
   /*
@@ -130,7 +130,7 @@ checkDataDir(void)
 #if !defined(WIN32) && !defined(__CYGWIN__)
   if (stat_buf.st_uid != geteuid())
   {
-
+    ereport(FATAL, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("data directory \"%s\" has wrong ownership", DataDir), errhint("The server must be started by the user that owns the data directory.")));
   }
 #endif
 
@@ -148,7 +148,7 @@ checkDataDir(void)
 #if !defined(WIN32) && !defined(__CYGWIN__)
   if (stat_buf.st_mode & PG_MODE_MASK_GROUP)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("data directory \"%s\" has invalid permissions", DataDir), errdetail("Permissions should be u=rwx (0700) or u=rwx,g=rx (0750).")));
   }
 #endif
 
@@ -191,7 +191,7 @@ SetDataDir(const char *dir)
 
   if (DataDir)
   {
-
+    free(DataDir);
   }
   DataDir = new;
 }
@@ -209,7 +209,7 @@ ChangeToDataDir(void)
 
   if (chdir(DataDir) < 0)
   {
-
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not change directory to \"%s\": %m", DataDir)));
   }
 }
 
@@ -302,7 +302,7 @@ InitPostmasterChild(void)
 #ifdef HAVE_SETSID
   if (setsid() < 0)
   {
-
+    elog(FATAL, "setsid() failed: %m");
   }
 #endif
 
@@ -332,7 +332,7 @@ InitStandaloneProcess(const char *argv0)
   {
     if (find_my_exec(argv0, my_exec_path) < 0)
     {
-
+      elog(FATAL, "%s: could not locate my own executable path", argv0);
     }
   }
 
@@ -540,27 +540,27 @@ InNoForceRLSOperation(void)
 void
 GetUserIdAndContext(Oid *userid, bool *sec_def_context)
 {
-
-
+  *userid = CurrentUserId;
+  *sec_def_context = InLocalUserIdChange();
 }
 
 void
 SetUserIdAndContext(Oid userid, bool sec_def_context)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* We throw the same error SET ROLE would. */
+  if (InSecurityRestrictedOperation())
+  {
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("cannot set parameter \"%s\" within security-restricted operation", "role")));
+  }
+  CurrentUserId = userid;
+  if (sec_def_context)
+  {
+    SecurityRestrictionContext |= SECURITY_LOCAL_USERID_CHANGE;
+  }
+  else
+  {
+    SecurityRestrictionContext &= ~SECURITY_LOCAL_USERID_CHANGE;
+  }
 }
 
 /*
@@ -569,16 +569,16 @@ SetUserIdAndContext(Oid userid, bool sec_def_context)
 bool
 has_rolreplication(Oid roleid)
 {
+  bool result = false;
+  HeapTuple utup;
 
-
-
-
-
-
-
-
-
-
+  utup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
+  if (HeapTupleIsValid(utup))
+  {
+    result = ((Form_pg_authid)GETSTRUCT(utup))->rolreplication;
+    ReleaseSysCache(utup);
+  }
+  return result;
 }
 
 /*
@@ -612,7 +612,7 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
     roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(rolename));
     if (!HeapTupleIsValid(roleTup))
     {
-
+      ereport(FATAL, (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION), errmsg("role \"%s\" does not exist", rolename)));
     }
   }
   else
@@ -620,7 +620,7 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
     roleTup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
     if (!HeapTupleIsValid(roleTup))
     {
-
+      ereport(FATAL, (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION), errmsg("role with OID %u does not exist", roleid)));
     }
   }
 
@@ -650,7 +650,7 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
      */
     if (!rform->rolcanlogin)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION), errmsg("role \"%s\" is not permitted to log in", rname)));
     }
 
     /*
@@ -665,7 +665,7 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
      */
     if (rform->rolconnlimit >= 0 && !AuthenticatedUserIsSuperuser && CountUserBackends(roleid) > rform->rolconnlimit)
     {
-
+      ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("too many connections for role \"%s\"", rname)));
     }
   }
 
@@ -718,7 +718,7 @@ SetSessionAuthorization(Oid userid, bool is_superuser)
 
   if (userid != AuthenticatedUserId && !AuthenticatedUserIsSuperuser)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to set session authorization")));
   }
 
   SetSessionUserId(userid, is_superuser);
@@ -728,16 +728,16 @@ SetSessionAuthorization(Oid userid, bool is_superuser)
 
 /*
  * Report current role id
- *		This follows the semantics of SET ROLE, ie return the
- *outer-level ID not the current effective ID, and return InvalidOid when the
- *setting is logically SET ROLE NONE.
+ *		This follows the semantics of SET ROLE, ie return the outer-level ID
+ *		not the current effective ID, and return InvalidOid when the setting
+ *		is logically SET ROLE NONE.
  */
 Oid
 GetCurrentRoleId(void)
 {
   if (SetRoleIsActive)
   {
-
+    return OuterUserId;
   }
   else
   {
@@ -802,11 +802,11 @@ GetUserNameFromId(Oid roleid, bool noerr)
   tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
   if (!HeapTupleIsValid(tuple))
   {
-
-
-
-
-
+    if (!noerr)
+    {
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("invalid role OID: %u", roleid)));
+    }
+    result = NULL;
   }
   else
   {
@@ -943,47 +943,47 @@ CreateLockFile(const char *filename, bool amPostmaster, const char *socketDir, b
     /*
      * Couldn't create the pid file. Probably it already exists.
      */
-
-
-
-
+    if ((errno != EEXIST && errno != EACCES) || ntries > 100)
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not create lock file \"%s\": %m", filename)));
+    }
 
     /*
      * Read the file to get the old owner's PID.  Note race condition
      * here: file might have been deleted since we tried to create it.
      */
+    fd = open(filename, O_RDONLY, pg_file_create_mode);
+    if (fd < 0)
+    {
+      if (errno == ENOENT)
+      {
+        continue; /* race condition; try again */
+      }
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not open lock file \"%s\": %m", filename)));
+    }
+    pgstat_report_wait_start(WAIT_EVENT_LOCK_FILE_CREATE_READ);
+    if ((len = read(fd, buffer, sizeof(buffer) - 1)) < 0)
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not read lock file \"%s\": %m", filename)));
+    }
+    pgstat_report_wait_end();
+    close(fd);
 
+    if (len == 0)
+    {
+      ereport(FATAL, (errcode(ERRCODE_LOCK_FILE_EXISTS), errmsg("lock file \"%s\" is empty", filename), errhint("Either another server is starting, or the lock file is the remnant of a previous server startup crash.")));
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    buffer[len] = '\0';
+    encoded_pid = atoi(buffer);
 
     /* if pid < 0, the pid is for postgres, not postmaster */
+    other_pid = (pid_t)(encoded_pid < 0 ? -encoded_pid : encoded_pid);
 
-
-
-
-
-
+    if (other_pid <= 0)
+    {
+      elog(FATAL, "bogus data in lock file \"%s\": \"%s\"", filename, buffer);
+    }
 
     /*
      * Check to see if the other process still exists
@@ -1007,14 +1007,14 @@ CreateLockFile(const char *filename, bool amPostmaster, const char *socketDir, b
      * instance of Postgres being run by someone else, at least on
      * machines where /tmp hasn't got a stickybit.)
      */
-
-
-
-
-
-
-
-
+    if (other_pid != my_pid && other_pid != my_p_pid && other_pid != my_gp_pid)
+    {
+      if (kill(other_pid, 0) == 0 || (errno != ESRCH && errno != EPERM))
+      {
+        /* lockfile belongs to a live process */
+        ereport(FATAL, (errcode(ERRCODE_LOCK_FILE_EXISTS), errmsg("lock file \"%s\" already exists", filename), isDDLock ? (encoded_pid < 0 ? errhint("Is another postgres (PID %d) running in data directory \"%s\"?", (int)other_pid, refName) : errhint("Is another postmaster (PID %d) running in data directory \"%s\"?", (int)other_pid, refName)) : (encoded_pid < 0 ? errhint("Is another postgres (PID %d) using socket file \"%s\"?", (int)other_pid, refName) : errhint("Is another postmaster (PID %d) using socket file \"%s\"?", (int)other_pid, refName))));
+      }
+    }
 
     /*
      * No, the creating process did not exist.  However, it could be that
@@ -1027,39 +1027,42 @@ CreateLockFile(const char *filename, bool amPostmaster, const char *socketDir, b
      * not find the shmem ID values in it; we can't treat that as an
      * error.
      */
+    if (isDDLock)
+    {
+      char *ptr = buffer;
+      unsigned long id1, id2;
+      int lineno;
 
+      for (lineno = 1; lineno < LOCK_FILE_LINE_SHMEM_KEY; lineno++)
+      {
+        if ((ptr = strchr(ptr, '\n')) == NULL)
+        {
+          break;
+        }
+        ptr++;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (ptr != NULL && sscanf(ptr, "%lu %lu", &id1, &id2) == 2)
+      {
+        if (PGSharedMemoryIsInUse(id1, id2))
+        {
+          ereport(FATAL, (errcode(ERRCODE_LOCK_FILE_EXISTS), errmsg("pre-existing shared memory block (key %lu, ID %lu) is still in use", id1, id2), errhint("Terminate any old server processes associated with data directory \"%s\".", refName)));
+        }
+      }
+    }
 
     /*
      * Looks like nobody's home.  Unlink the file and try again to create
      * it.  Need a loop because of possible race condition against other
      * would-be creators.
      */
-
-
-
-
+    if (unlink(filename) < 0)
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not remove old lock file \"%s\": %m", filename),
+                         errhint("The file seems accidentally left over, but "
+                                 "it could not be removed. Please remove the file "
+                                 "by hand and try again.")));
+    }
   }
 
   /*
@@ -1085,11 +1088,11 @@ CreateLockFile(const char *filename, bool amPostmaster, const char *socketDir, b
   {
     int save_errno = errno;
 
-
-
+    close(fd);
+    unlink(filename);
     /* if write didn't set errno, assume problem is no disk space */
-
-
+    errno = save_errno ? save_errno : ENOSPC;
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not write lock file \"%s\": %m", filename)));
   }
   pgstat_report_wait_end();
 
@@ -1098,19 +1101,19 @@ CreateLockFile(const char *filename, bool amPostmaster, const char *socketDir, b
   {
     int save_errno = errno;
 
-
-
-
-
+    close(fd);
+    unlink(filename);
+    errno = save_errno;
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not write lock file \"%s\": %m", filename)));
   }
   pgstat_report_wait_end();
   if (close(fd) != 0)
   {
     int save_errno = errno;
 
-
-
-
+    unlink(filename);
+    errno = save_errno;
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not write lock file \"%s\": %m", filename)));
   }
 
   /*
@@ -1169,42 +1172,42 @@ CreateSocketLockFile(const char *socketfile, bool amPostmaster, const char *sock
 void
 TouchSocketLockFiles(void)
 {
+  ListCell *l;
 
+  foreach (l, lock_files)
+  {
+    char *socketLockFile = (char *)lfirst(l);
 
+    /* No need to touch the data directory lock file, we trust */
+    if (strcmp(socketLockFile, DIRECTORY_LOCK_FILE) == 0)
+    {
+      continue;
+    }
 
+    /*
+     * utime() is POSIX standard, utimes() is a common alternative; if we
+     * have neither, fall back to actually reading the file (which only
+     * sets the access time not mod time, but that should be enough in
+     * most cases).  In all paths, we ignore errors.
+     */
+#ifdef HAVE_UTIME
+    utime(socketLockFile, NULL);
+#else /* !HAVE_UTIME */
+#ifdef HAVE_UTIMES
+    utimes(socketLockFile, NULL);
+#else  /* !HAVE_UTIMES */
+    int fd;
+    char buffer[1];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    fd = open(socketLockFile, O_RDONLY | PG_BINARY, 0);
+    if (fd >= 0)
+    {
+      read(fd, buffer, sizeof(buffer));
+      close(fd);
+    }
+#endif /* HAVE_UTIMES */
+#endif /* HAVE_UTIME */
+  }
 }
 
 /*
@@ -1231,17 +1234,17 @@ AddToDataDirLockFile(int target_line, const char *str)
   fd = open(DIRECTORY_LOCK_FILE, O_RDWR | PG_BINARY, 0);
   if (fd < 0)
   {
-
-
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", DIRECTORY_LOCK_FILE)));
+    return;
   }
   pgstat_report_wait_start(WAIT_EVENT_LOCK_FILE_ADDTODATADIR_READ);
   len = read(fd, srcbuffer, sizeof(srcbuffer) - 1);
   pgstat_report_wait_end();
   if (len < 0)
   {
-
-
-
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not read from file \"%s\": %m", DIRECTORY_LOCK_FILE)));
+    close(fd);
+    return;
   }
   srcbuffer[len] = '\0';
 
@@ -1256,7 +1259,7 @@ AddToDataDirLockFile(int target_line, const char *str)
 
     if (eol == NULL)
     {
-
+      break; /* not enough lines in file yet */
     }
     srcptr = eol + 1;
   }
@@ -1269,10 +1272,10 @@ AddToDataDirLockFile(int target_line, const char *str)
    */
   for (; lineno < target_line; lineno++)
   {
-
-
-
-
+    if (destptr < destbuffer + sizeof(destbuffer))
+    {
+      *destptr++ = '\n';
+    }
   }
 
   /*
@@ -1299,26 +1302,26 @@ AddToDataDirLockFile(int target_line, const char *str)
   pgstat_report_wait_start(WAIT_EVENT_LOCK_FILE_ADDTODATADIR_WRITE);
   if (lseek(fd, (off_t)0, SEEK_SET) != 0 || (int)write(fd, destbuffer, len) != len)
   {
-
+    pgstat_report_wait_end();
     /* if write didn't set errno, assume problem is no disk space */
-
-
-
-
-
-
-
+    if (errno == 0)
+    {
+      errno = ENOSPC;
+    }
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not write to file \"%s\": %m", DIRECTORY_LOCK_FILE)));
+    close(fd);
+    return;
   }
   pgstat_report_wait_end();
   pgstat_report_wait_start(WAIT_EVENT_LOCK_FILE_ADDTODATADIR_SYNC);
   if (pg_fsync(fd) != 0)
   {
-
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not write to file \"%s\": %m", DIRECTORY_LOCK_FILE)));
   }
   pgstat_report_wait_end();
   if (close(fd) != 0)
   {
-
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not write to file \"%s\": %m", DIRECTORY_LOCK_FILE)));
   }
 }
 
@@ -1336,52 +1339,52 @@ AddToDataDirLockFile(int target_line, const char *str)
 bool
 RecheckDataDirLockFile(void)
 {
+  int fd;
+  int len;
+  long file_pid;
+  char buffer[BLCKSZ];
 
+  fd = open(DIRECTORY_LOCK_FILE, O_RDWR | PG_BINARY, 0);
+  if (fd < 0)
+  {
+    /*
+     * There are many foreseeable false-positive error conditions.  For
+     * safety, fail only on enumerated clearly-something-is-wrong
+     * conditions.
+     */
+    switch (errno)
+    {
+    case ENOENT:
+    case ENOTDIR:
+      /* disaster */
+      ereport(LOG, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", DIRECTORY_LOCK_FILE)));
+      return false;
+    default:
+      /* non-fatal, at least for now */
+      ereport(LOG, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m; continuing anyway", DIRECTORY_LOCK_FILE)));
+      return true;
+    }
+  }
+  pgstat_report_wait_start(WAIT_EVENT_LOCK_FILE_RECHECKDATADIR_READ);
+  len = read(fd, buffer, sizeof(buffer) - 1);
+  pgstat_report_wait_end();
+  if (len < 0)
+  {
+    ereport(LOG, (errcode_for_file_access(), errmsg("could not read from file \"%s\": %m", DIRECTORY_LOCK_FILE)));
+    close(fd);
+    return true; /* treat read failure as nonfatal */
+  }
+  buffer[len] = '\0';
+  close(fd);
+  file_pid = atol(buffer);
+  if (file_pid == getpid())
+  {
+    return true; /* all is well */
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Trouble: someone's overwritten the lock file */
+  ereport(LOG, (errmsg("lock file \"%s\" contains wrong PID: %ld instead of %ld", DIRECTORY_LOCK_FILE, file_pid, (long)getpid())));
+  return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -1414,14 +1417,14 @@ ValidatePgVersion(const char *path)
   file = AllocateFile(full_path, "r");
   if (!file)
   {
-
-
-
-
-
-
-
-
+    if (errno == ENOENT)
+    {
+      ereport(FATAL, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("\"%s\" is not a valid data directory", path), errdetail("File \"%s\" is missing.", full_path)));
+    }
+    else
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", full_path)));
+    }
   }
 
   file_version_string[0] = '\0';
@@ -1430,14 +1433,17 @@ ValidatePgVersion(const char *path)
 
   if (ret != 1 || endptr == file_version_string)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("\"%s\" is not a valid data directory", path), errdetail("File \"%s\" does not contain valid data.", full_path), errhint("You might need to initdb.")));
   }
 
   FreeFile(file);
 
   if (my_major != file_major)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("database files are incompatible with server"),
+                       errdetail("The data directory was initialized by PostgreSQL version %s, "
+                                 "which is not compatible with this version %s.",
+                           file_version_string, my_version_string)));
   }
 }
 
@@ -1476,40 +1482,40 @@ load_libraries(const char *libraries, const char *gucname, bool restricted)
   }
 
   /* Need a modifiable copy of string */
-
+  rawstring = pstrdup(libraries);
 
   /* Parse string into list of filename paths */
+  if (!SplitDirectoriesString(rawstring, ',', &elemlist))
+  {
+    /* syntax error in list */
+    list_free_deep(elemlist);
+    pfree(rawstring);
+    ereport(LOG, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid list syntax in parameter \"%s\"", gucname)));
+    return;
+  }
 
+  foreach (l, elemlist)
+  {
+    /* Note that filename was already canonicalized */
+    char *filename = (char *)lfirst(l);
+    char *expanded = NULL;
 
+    /* If restricting, insert $libdir/plugins if not mentioned already */
+    if (restricted && first_dir_separator(filename) == NULL)
+    {
+      expanded = psprintf("$libdir/plugins/%s", filename);
+      filename = expanded;
+    }
+    load_file(filename, restricted);
+    ereport(DEBUG1, (errmsg("loaded library \"%s\"", filename)));
+    if (expanded)
+    {
+      pfree(expanded);
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  list_free_deep(elemlist);
+  pfree(rawstring);
 }
 
 /*

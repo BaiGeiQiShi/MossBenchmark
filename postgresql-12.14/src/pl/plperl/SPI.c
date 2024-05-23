@@ -24,32 +24,29 @@
 #include "plperl.h"
 #include "plperl_helpers.h"
 
-
 #line 29 "SPI.c"
 #ifndef PERL_UNUSED_VAR
-#  define PERL_UNUSED_VAR(var) if (0) var = var
+#define PERL_UNUSED_VAR(var)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+  if (0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+  var = var
 #endif
 
 #ifndef dVAR
-#  define dVAR		dNOOP
+#define dVAR dNOOP
 #endif
-
 
 /* This stuff is not part of the API! You have been warned. */
 #ifndef PERL_VERSION_DECIMAL
-#  define PERL_VERSION_DECIMAL(r,v,s) (r*1000000 + v*1000 + s)
+#define PERL_VERSION_DECIMAL(r, v, s) (r * 1000000 + v * 1000 + s)
 #endif
 #ifndef PERL_DECIMAL_VERSION
-#  define PERL_DECIMAL_VERSION \
-	  PERL_VERSION_DECIMAL(PERL_REVISION,PERL_VERSION,PERL_SUBVERSION)
+#define PERL_DECIMAL_VERSION PERL_VERSION_DECIMAL(PERL_REVISION, PERL_VERSION, PERL_SUBVERSION)
 #endif
 #ifndef PERL_VERSION_GE
-#  define PERL_VERSION_GE(r,v,s) \
-	  (PERL_DECIMAL_VERSION >= PERL_VERSION_DECIMAL(r,v,s))
+#define PERL_VERSION_GE(r, v, s) (PERL_DECIMAL_VERSION >= PERL_VERSION_DECIMAL(r, v, s))
 #endif
 #ifndef PERL_VERSION_LE
-#  define PERL_VERSION_LE(r,v,s) \
-	  (PERL_DECIMAL_VERSION <= PERL_VERSION_DECIMAL(r,v,s))
+#define PERL_VERSION_LE(r, v, s) (PERL_DECIMAL_VERSION <= PERL_VERSION_DECIMAL(r, v, s))
 #endif
 
 /* XS_INTERNAL is the explicit static-linkage variant of the default
@@ -62,37 +59,35 @@
  * See XSUB.h in core!
  */
 
-
 /* TODO: This might be compatible further back than 5.10.0. */
 #if PERL_VERSION_GE(5, 10, 0) && PERL_VERSION_LE(5, 15, 1)
-#  undef XS_EXTERNAL
-#  undef XS_INTERNAL
-#  if defined(__CYGWIN__) && defined(USE_DYNAMIC_LOADING)
-#    define XS_EXTERNAL(name) __declspec(dllexport) XSPROTO(name)
-#    define XS_INTERNAL(name) STATIC XSPROTO(name)
-#  endif
-#  if defined(__SYMBIAN32__)
-#    define XS_EXTERNAL(name) EXPORT_C XSPROTO(name)
-#    define XS_INTERNAL(name) EXPORT_C STATIC XSPROTO(name)
-#  endif
-#  ifndef XS_EXTERNAL
-#    if defined(HASATTRIBUTE_UNUSED) && !defined(__cplusplus)
-#      define XS_EXTERNAL(name) void name(pTHX_ CV* cv __attribute__unused__)
-#      define XS_INTERNAL(name) STATIC void name(pTHX_ CV* cv __attribute__unused__)
-#    else
-#      ifdef __cplusplus
-#        define XS_EXTERNAL(name) extern "C" XSPROTO(name)
-#        define XS_INTERNAL(name) static XSPROTO(name)
-#      else
-#        define XS_EXTERNAL(name) XSPROTO(name)
-#        define XS_INTERNAL(name) STATIC XSPROTO(name)
-#      endif
-#    endif
-#  endif
+#undef XS_EXTERNAL
+#undef XS_INTERNAL
+#if defined(__CYGWIN__) && defined(USE_DYNAMIC_LOADING)
+#define XS_EXTERNAL(name) __declspec(dllexport) XSPROTO(name)
+#define XS_INTERNAL(name) STATIC XSPROTO(name)
+#endif
+#if defined(__SYMBIAN32__)
+#define XS_EXTERNAL(name) EXPORT_C XSPROTO(name)
+#define XS_INTERNAL(name) EXPORT_C STATIC XSPROTO(name)
+#endif
+#ifndef XS_EXTERNAL
+#if defined(HASATTRIBUTE_UNUSED) && !defined(__cplusplus)
+#define XS_EXTERNAL(name) void name(pTHX_ CV *cv __attribute__unused__)
+#define XS_INTERNAL(name) STATIC void name(pTHX_ CV *cv __attribute__unused__)
+#else
+#ifdef __cplusplus
+#define XS_EXTERNAL(name) extern "C" XSPROTO(name)
+#define XS_INTERNAL(name) static XSPROTO(name)
+#else
+#define XS_EXTERNAL(name) XSPROTO(name)
+#define XS_INTERNAL(name) STATIC XSPROTO(name)
+#endif
+#endif
+#endif
 #endif
 
 /* perl >= 5.10.0 && perl <= 5.15.1 */
-
 
 /* The XS_EXTERNAL macro is used for functions that must not be static
  * like the boot XSUB of a module. If perl didn't have an XS_EXTERNAL
@@ -100,10 +95,10 @@
  * Dito for XS_INTERNAL.
  */
 #ifndef XS_EXTERNAL
-#  define XS_EXTERNAL(name) XS(name)
+#define XS_EXTERNAL(name) XS(name)
 #endif
 #ifndef XS_INTERNAL
-#  define XS_INTERNAL(name) XS(name)
+#define XS_INTERNAL(name) XS(name)
 #endif
 
 /* Now, finally, after all this mess, we want an ExtUtils::ParseXS
@@ -114,14 +109,16 @@
 
 #undef XS_EUPXS
 #if defined(PERL_EUPXS_ALWAYS_EXPORT)
-#  define XS_EUPXS(name) XS_EXTERNAL(name)
+#define XS_EUPXS(name) XS_EXTERNAL(name)
 #else
-   /* default to internal */
-#  define XS_EUPXS(name) XS_INTERNAL(name)
+/* default to internal */
+#define XS_EUPXS(name) XS_INTERNAL(name)
 #endif
 
 #ifndef PERL_ARGS_ASSERT_CROAK_XS_USAGE
-#define PERL_ARGS_ASSERT_CROAK_XS_USAGE assert(cv); assert(params)
+#define PERL_ARGS_ASSERT_CROAK_XS_USAGE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+  assert(cv);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  assert(params)
 
 /* prototype to pass -Wmissing-prototypes */
 STATIC void
@@ -130,27 +127,34 @@ S_croak_xs_usage(const CV *const cv, const char *const params);
 STATIC void
 S_croak_xs_usage(const CV *const cv, const char *const params)
 {
-    const GV *const gv = CvGV(cv);
+  const GV *const gv = CvGV(cv);
 
-    PERL_ARGS_ASSERT_CROAK_XS_USAGE;
+  PERL_ARGS_ASSERT_CROAK_XS_USAGE;
 
-    if (gv) {
-        const char *const gvname = GvNAME(gv);
-        const HV *const stash = GvSTASH(gv);
-        const char *const hvname = stash ? HvNAME(stash) : NULL;
+  if (gv)
+  {
+    const char *const gvname = GvNAME(gv);
+    const HV *const stash = GvSTASH(gv);
+    const char *const hvname = stash ? HvNAME(stash) : NULL;
 
-        if (hvname)
-	    Perl_croak_nocontext("Usage: %s::%s(%s)", hvname, gvname, params);
-        else
-	    Perl_croak_nocontext("Usage: %s(%s)", gvname, params);
-    } else {
-        /* Pants. I don't think that it should be possible to get here. */
-	Perl_croak_nocontext("Usage: CODE(0x%" UVxf ")(%s)", PTR2UV(cv), params);
+    if (hvname)
+    {
+      Perl_croak_nocontext("Usage: %s::%s(%s)", hvname, gvname, params);
     }
+    else
+    {
+      Perl_croak_nocontext("Usage: %s(%s)", gvname, params);
+    }
+  }
+  else
+  {
+    /* Pants. I don't think that it should be possible to get here. */
+    Perl_croak_nocontext("Usage: CODE(0x%" UVxf ")(%s)", PTR2UV(cv), params);
+  }
 }
-#undef  PERL_ARGS_ASSERT_CROAK_XS_USAGE
+#undef PERL_ARGS_ASSERT_CROAK_XS_USAGE
 
-#define croak_xs_usage        S_croak_xs_usage
+#define croak_xs_usage S_croak_xs_usage
 
 #endif
 
@@ -160,13 +164,13 @@ S_croak_xs_usage(const CV *const cv, const char *const params)
 #ifdef newXS_flags
 #define newXSproto_portable(name, c_impl, file, proto) newXS_flags(name, c_impl, file, proto, 0)
 #else
-#define newXSproto_portable(name, c_impl, file, proto) (PL_Sv=(SV*)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV*)PL_Sv)
+#define newXSproto_portable(name, c_impl, file, proto) (PL_Sv = (SV *)newXS(name, c_impl, file), sv_setpv(PL_Sv, proto), (CV *)PL_Sv)
 #endif /* !defined(newXS_flags) */
 
 #if PERL_VERSION_LE(5, 21, 5)
-#  define newXS_deffile(a,b) Perl_newXS(aTHX_ a,b,file)
+#define newXS_deffile(a, b) Perl_newXS(aTHX_ a, b, file)
 #else
-#  define newXS_deffile(a,b) Perl_newXS_deffile(aTHX_ a,b)
+#define newXS_deffile(a, b) Perl_newXS_deffile(aTHX_ a, b)
 #endif
 
 #line 173 "SPI.c"
@@ -174,321 +178,354 @@ S_croak_xs_usage(const CV *const cv, const char *const params)
 XS_EUPXS(XS__spi_exec_query); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_exec_query)
 {
-    dVAR; dXSARGS;
-    if (items < 1)
-       croak_xs_usage(cv,  "sv, ...");
-    {
-	SV*	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items < 1)
+  {
+    croak_xs_usage(cv, "sv, ...");
+  }
+  {
+    SV *sv = ST(0);
 #line 28 "SPI.xs"
-		HV *ret_hash;
-		int limit = 0;
-		char *query;
+    HV *ret_hash;
+    int limit = 0;
+    char *query;
 #line 188 "SPI.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 32 "SPI.xs"
-		if (items > 2)
-			croak("Usage: spi_exec_query(query, limit) "
-				  "or spi_exec_query(query)");
-		if (items == 2)
-			limit = SvIV(ST(1));
-		query = sv2cstr(sv);
-		ret_hash = plperl_spi_exec(query, limit);
-		pfree(query);
-		RETVAL = newRV_noinc((SV*) ret_hash);
-#line 200 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    if (items > 2)
+    {
+      croak("Usage: spi_exec_query(query, limit) "
+            "or spi_exec_query(query)");
     }
-    XSRETURN(1);
+    if (items == 2)
+    {
+      limit = SvIV(ST(1));
+    }
+    query = sv2cstr(sv);
+    ret_hash = plperl_spi_exec(query, limit);
+    pfree(query);
+    RETVAL = newRV_noinc((SV *)ret_hash);
+#line 200 "SPI.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__return_next); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__return_next)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "rv");
-    {
-	SV *	rv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "rv");
+  }
+  {
+    SV *rv = ST(0);
 #line 48 "SPI.xs"
-		plperl_return_next(rv);
+    plperl_return_next(rv);
 #line 219 "SPI.c"
-    }
-    XSRETURN_EMPTY;
+  }
+  XSRETURN_EMPTY;
 }
-
 
 XS_EUPXS(XS__spi_query); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_query)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 54 "SPI.xs"
-		char* query = sv2cstr(sv);
-		RETVAL = plperl_spi_query(query);
-		pfree(query);
+    char *query = sv2cstr(sv);
+    RETVAL = plperl_spi_query(query);
+    pfree(query);
 #line 239 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__spi_fetchrow); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_fetchrow)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV*	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 64 "SPI.xs"
-		char* cursor = sv2cstr(sv);
-		RETVAL = plperl_spi_fetchrow(cursor);
-		pfree(cursor);
+    char *cursor = sv2cstr(sv);
+    RETVAL = plperl_spi_fetchrow(cursor);
+    pfree(cursor);
 #line 261 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
-    }
-    XSRETURN(1);
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__spi_prepare); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_prepare)
 {
-    dVAR; dXSARGS;
-    if (items < 1)
-       croak_xs_usage(cv,  "sv, ...");
-    {
-	SV*	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items < 1)
+  {
+    croak_xs_usage(cv, "sv, ...");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 74 "SPI.xs"
-		int i;
-		SV** argv;
-		char* query = sv2cstr(sv);
-		if (items < 1)
-			Perl_croak(aTHX_ "Usage: spi_prepare(query, ...)");
-		argv = ( SV**) palloc(( items - 1) * sizeof(SV*));
-		for ( i = 1; i < items; i++)
-			argv[i - 1] = ST(i);
-		RETVAL = plperl_spi_prepare(query, items - 1, argv);
-		pfree( argv);
-		pfree(query);
-#line 291 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    int i;
+    SV **argv;
+    char *query = sv2cstr(sv);
+    if (items < 1)
+    {
+      Perl_croak(aTHX_ "Usage: spi_prepare(query, ...)");
     }
-    XSRETURN(1);
+    argv = (SV **)palloc((items - 1) * sizeof(SV *));
+    for (i = 1; i < items; i++)
+    {
+      argv[i - 1] = ST(i);
+    }
+    RETVAL = plperl_spi_prepare(query, items - 1, argv);
+    pfree(argv);
+    pfree(query);
+#line 291 "SPI.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__spi_exec_prepared); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_exec_prepared)
 {
-    dVAR; dXSARGS;
-    if (items < 1)
-       croak_xs_usage(cv,  "sv, ...");
-    {
-	SV*	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items < 1)
+  {
+    croak_xs_usage(cv, "sv, ...");
+  }
+  {
+    SV *sv = ST(0);
 #line 92 "SPI.xs"
-		HV *ret_hash;
+    HV *ret_hash;
 #line 310 "SPI.c"
-	SV *	RETVAL;
+    SV *RETVAL;
 #line 94 "SPI.xs"
-		HV *attr = NULL;
-		int i, offset = 1, argc;
-		SV ** argv;
-		char *query = sv2cstr(sv);
-		if ( items < 1)
-			Perl_croak(aTHX_ "Usage: spi_exec_prepared(query, [\\%%attr,] "
-					   "[\\@bind_values])");
-		if ( items > 1 && SvROK( ST( 1)) && SvTYPE( SvRV( ST( 1))) == SVt_PVHV)
-		{
-			attr = ( HV*) SvRV(ST(1));
-			offset++;
-		}
-		argc = items - offset;
-		argv = ( SV**) palloc( argc * sizeof(SV*));
-		for ( i = 0; offset < items; offset++, i++)
-			argv[i] = ST(offset);
-		ret_hash = plperl_spi_exec_prepared(query, attr, argc, argv);
-		RETVAL = newRV_noinc((SV*)ret_hash);
-		pfree( argv);
-		pfree(query);
-#line 333 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    HV *attr = NULL;
+    int i, offset = 1, argc;
+    SV **argv;
+    char *query = sv2cstr(sv);
+    if (items < 1)
+    {
+      Perl_croak(aTHX_ "Usage: spi_exec_prepared(query, [\\%%attr,] "
+                       "[\\@bind_values])");
     }
-    XSRETURN(1);
+    if (items > 1 && SvROK(ST(1)) && SvTYPE(SvRV(ST(1))) == SVt_PVHV)
+    {
+      attr = (HV *)SvRV(ST(1));
+      offset++;
+    }
+    argc = items - offset;
+    argv = (SV **)palloc(argc * sizeof(SV *));
+    for (i = 0; offset < items; offset++, i++)
+    {
+      argv[i] = ST(offset);
+    }
+    ret_hash = plperl_spi_exec_prepared(query, attr, argc, argv);
+    RETVAL = newRV_noinc((SV *)ret_hash);
+    pfree(argv);
+    pfree(query);
+#line 333 "SPI.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__spi_query_prepared); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_query_prepared)
 {
-    dVAR; dXSARGS;
-    if (items < 1)
-       croak_xs_usage(cv,  "sv, ...");
-    {
-	SV *	sv = ST(0)
-;
-	SV *	RETVAL;
+  dVAR;
+  dXSARGS;
+  if (items < 1)
+  {
+    croak_xs_usage(cv, "sv, ...");
+  }
+  {
+    SV *sv = ST(0);
+    SV *RETVAL;
 #line 121 "SPI.xs"
-		int i;
-		SV ** argv;
-		char *query = sv2cstr(sv);
-		if ( items < 1)
-			Perl_croak(aTHX_ "Usage: spi_query_prepared(query, "
-					   "[\\@bind_values])");
-		argv = ( SV**) palloc(( items - 1) * sizeof(SV*));
-		for ( i = 1; i < items; i++)
-			argv[i - 1] = ST(i);
-		RETVAL = plperl_spi_query_prepared(query, items - 1, argv);
-		pfree( argv);
-		pfree(query);
-#line 364 "SPI.c"
-	RETVAL = sv_2mortal(RETVAL);
-	ST(0) = RETVAL;
+    int i;
+    SV **argv;
+    char *query = sv2cstr(sv);
+    if (items < 1)
+    {
+      Perl_croak(aTHX_ "Usage: spi_query_prepared(query, "
+                       "[\\@bind_values])");
     }
-    XSRETURN(1);
+    argv = (SV **)palloc((items - 1) * sizeof(SV *));
+    for (i = 1; i < items; i++)
+    {
+      argv[i - 1] = ST(i);
+    }
+    RETVAL = plperl_spi_query_prepared(query, items - 1, argv);
+    pfree(argv);
+    pfree(query);
+#line 364 "SPI.c"
+    RETVAL = sv_2mortal(RETVAL);
+    ST(0) = RETVAL;
+  }
+  XSRETURN(1);
 }
-
 
 XS_EUPXS(XS__spi_freeplan); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_freeplan)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
 #line 140 "SPI.xs"
-		char *query = sv2cstr(sv);
-		plperl_spi_freeplan(query);
-		pfree(query);
+    char *query = sv2cstr(sv);
+    plperl_spi_freeplan(query);
+    pfree(query);
 #line 385 "SPI.c"
-    }
-    XSRETURN_EMPTY;
+  }
+  XSRETURN_EMPTY;
 }
-
 
 XS_EUPXS(XS__spi_cursor_close); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_cursor_close)
 {
-    dVAR; dXSARGS;
-    if (items != 1)
-       croak_xs_usage(cv,  "sv");
-    {
-	SV *	sv = ST(0)
-;
+  dVAR;
+  dXSARGS;
+  if (items != 1)
+  {
+    croak_xs_usage(cv, "sv");
+  }
+  {
+    SV *sv = ST(0);
 #line 148 "SPI.xs"
-		char *cursor = sv2cstr(sv);
-		plperl_spi_cursor_close(cursor);
-		pfree(cursor);
+    char *cursor = sv2cstr(sv);
+    plperl_spi_cursor_close(cursor);
+    pfree(cursor);
 #line 404 "SPI.c"
-    }
-    XSRETURN_EMPTY;
+  }
+  XSRETURN_EMPTY;
 }
-
 
 XS_EUPXS(XS__spi_commit); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_commit)
 {
-    dVAR; dXSARGS;
-    if (items != 0)
-       croak_xs_usage(cv,  "");
-    {
+  dVAR;
+  dXSARGS;
+  if (items != 0)
+  {
+    croak_xs_usage(cv, "");
+  }
+  {
 #line 155 "SPI.xs"
-		plperl_spi_commit();
+    plperl_spi_commit();
 #line 419 "SPI.c"
-    }
-    XSRETURN_EMPTY;
+  }
+  XSRETURN_EMPTY;
 }
-
 
 XS_EUPXS(XS__spi_rollback); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS__spi_rollback)
 {
-    dVAR; dXSARGS;
-    if (items != 0)
-       croak_xs_usage(cv,  "");
-    {
+  dVAR;
+  dXSARGS;
+  if (items != 0)
+  {
+    croak_xs_usage(cv, "");
+  }
+  {
 #line 160 "SPI.xs"
-		plperl_spi_rollback();
+    plperl_spi_rollback();
 #line 434 "SPI.c"
-    }
-    XSRETURN_EMPTY;
+  }
+  XSRETURN_EMPTY;
 }
 
 #ifdef __cplusplus
 extern "C"
 #endif
-XS_EXTERNAL(boot_PostgreSQL__InServer__SPI); /* prototype to pass -Wmissing-prototypes */
+    XS_EXTERNAL(boot_PostgreSQL__InServer__SPI); /* prototype to pass -Wmissing-prototypes */
 XS_EXTERNAL(boot_PostgreSQL__InServer__SPI)
 {
 #if PERL_VERSION_LE(5, 21, 5)
-    dVAR; dXSARGS;
+  dVAR;
+  dXSARGS;
 #else
-    dVAR; dXSBOOTARGSAPIVERCHK;
+  dVAR;
+  dXSBOOTARGSAPIVERCHK;
 #endif
 #if (PERL_REVISION == 5 && PERL_VERSION < 9)
-    char* file = __FILE__;
+  char *file = __FILE__;
 #else
-    const char* file = __FILE__;
+  const char *file = __FILE__;
 #endif
 
-    PERL_UNUSED_VAR(file);
+  PERL_UNUSED_VAR(file);
 
-    PERL_UNUSED_VAR(cv); /* -W */
-    PERL_UNUSED_VAR(items); /* -W */
+  PERL_UNUSED_VAR(cv);    /* -W */
+  PERL_UNUSED_VAR(items); /* -W */
 #if PERL_VERSION_LE(5, 21, 5) && defined(XS_APIVERSION_BOOTCHECK)
   XS_APIVERSION_BOOTCHECK;
 #endif
 
-        (void)newXSproto_portable("spi_exec_query", XS__spi_exec_query, file, "$;@");
-        (void)newXSproto_portable("return_next", XS__return_next, file, "$");
-        (void)newXSproto_portable("spi_query", XS__spi_query, file, "$");
-        (void)newXSproto_portable("spi_fetchrow", XS__spi_fetchrow, file, "$");
-        (void)newXSproto_portable("spi_prepare", XS__spi_prepare, file, "$;@");
-        (void)newXSproto_portable("spi_exec_prepared", XS__spi_exec_prepared, file, "$;@");
-        (void)newXSproto_portable("spi_query_prepared", XS__spi_query_prepared, file, "$;@");
-        (void)newXSproto_portable("spi_freeplan", XS__spi_freeplan, file, "$");
-        (void)newXSproto_portable("spi_cursor_close", XS__spi_cursor_close, file, "$");
-        (void)newXSproto_portable("spi_commit", XS__spi_commit, file, "");
-        (void)newXSproto_portable("spi_rollback", XS__spi_rollback, file, "");
+  (void)newXSproto_portable("spi_exec_query", XS__spi_exec_query, file, "$;@");
+  (void)newXSproto_portable("return_next", XS__return_next, file, "$");
+  (void)newXSproto_portable("spi_query", XS__spi_query, file, "$");
+  (void)newXSproto_portable("spi_fetchrow", XS__spi_fetchrow, file, "$");
+  (void)newXSproto_portable("spi_prepare", XS__spi_prepare, file, "$;@");
+  (void)newXSproto_portable("spi_exec_prepared", XS__spi_exec_prepared, file, "$;@");
+  (void)newXSproto_portable("spi_query_prepared", XS__spi_query_prepared, file, "$;@");
+  (void)newXSproto_portable("spi_freeplan", XS__spi_freeplan, file, "$");
+  (void)newXSproto_portable("spi_cursor_close", XS__spi_cursor_close, file, "$");
+  (void)newXSproto_portable("spi_commit", XS__spi_commit, file, "");
+  (void)newXSproto_portable("spi_rollback", XS__spi_rollback, file, "");
 
-    /* Initialisation Section */
+  /* Initialisation Section */
 
 #line 163 "SPI.xs"
-    items = 0;  /* avoid 'unused variable' warning */
+  items = 0; /* avoid 'unused variable' warning */
 
 #line 481 "SPI.c"
 
-    /* End of Initialisation Section */
+  /* End of Initialisation Section */
 
 #if PERL_VERSION_LE(5, 21, 5)
-#  if PERL_VERSION_GE(5, 9, 0)
-    if (PL_unitcheckav)
-        call_list(PL_scopestack_ix, PL_unitcheckav);
-#  endif
-    XSRETURN_YES;
+#if PERL_VERSION_GE(5, 9, 0)
+  if (PL_unitcheckav)
+  {
+    call_list(PL_scopestack_ix, PL_unitcheckav);
+  }
+#endif
+  XSRETURN_YES;
 #else
-    Perl_xs_boot_epilog(aTHX_ ax);
+  Perl_xs_boot_epilog(aTHX_ ax);
 #endif
 }
-

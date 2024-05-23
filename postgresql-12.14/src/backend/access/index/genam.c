@@ -41,22 +41,22 @@
  *		general access method routines
  *
  *		All indexed access methods use an identical scan structure.
- *		We don't know how the various AMs do locking, however, so we
- *don't do anything about that here.
+ *		We don't know how the various AMs do locking, however, so we don't
+ *		do anything about that here.
  *
- *		The intent is that an AM implementor will define a beginscan
- *routine that calls RelationGetIndexScan, to fill in the scan, and then does
+ *		The intent is that an AM implementor will define a beginscan routine
+ *		that calls RelationGetIndexScan, to fill in the scan, and then does
  *		whatever kind of locking he wants.
  *
- *		At the end of a scan, the AM's endscan routine undoes the
- *locking, but does *not* call IndexScanEnd --- the higher-level index_endscan
- *		routine does that.  (We can't do it in the AM because
- *index_endscan still needs to touch the IndexScanDesc after calling the AM.)
+ *		At the end of a scan, the AM's endscan routine undoes the locking,
+ *		but does *not* call IndexScanEnd --- the higher-level index_endscan
+ *		routine does that.  (We can't do it in the AM because index_endscan
+ *		still needs to touch the IndexScanDesc after calling the AM.)
  *
  *		Because of this, the AM does not have a choice whether to call
- *		RelationGetIndexScan or not; its beginscan routine must return
- *an object made by RelationGetIndexScan.  This is kinda ugly but not worth
- *cleaning up now.
+ *		RelationGetIndexScan or not; its beginscan routine must return an
+ *		object made by RelationGetIndexScan.  This is kinda ugly but not
+ *		worth cleaning up now.
  * ----------------------------------------------------------------
  */
 
@@ -68,8 +68,8 @@
  *
  *		Parameters:
  *				indexRelation -- index relation for scan.
- *				nkeys -- count of scan keys (index qual
- *conditions). norderbys -- count of index order-by operators.
+ *				nkeys -- count of scan keys (index qual conditions).
+ *				norderbys -- count of index order-by operators.
  *
  *		Returns:
  *				An initialized IndexScanDesc.
@@ -252,7 +252,7 @@ BuildIndexValueDescription(Relation indexRelation, Datum *values, bool *isnull)
 
     if (isnull[i])
     {
-
+      val = "null";
     }
     else
     {
@@ -319,9 +319,9 @@ index_compute_xid_horizon_for_tuples(Relation irel, Relation hrel, Buffer ibuf, 
 /* ----------------------------------------------------------------
  *		heap-or-index-scan access to system catalogs
  *
- *		These functions support system catalog accesses that normally
- *use an index but need to be capable of being switched to heap scans if the
- *system indexes are unavailable.
+ *		These functions support system catalog accesses that normally use
+ *		an index but need to be capable of being switched to heap scans
+ *		if the system indexes are unavailable.
  *
  *		The specified scan keys must be compatible with the named index.
  *		Generally this means that they must constrain either all columns
@@ -406,7 +406,7 @@ systable_beginscan(Relation heapRelation, Oid indexId, bool indexOK, Snapshot sn
       }
       if (j == IndexRelationGetNumberOfAttributes(irel))
       {
-
+        elog(ERROR, "column is not in index");
       }
     }
 
@@ -466,7 +466,7 @@ systable_getnext(SysScanDesc sysscan)
        */
       if (sysscan->iscan->xs_recheck)
       {
-
+        elog(ERROR, "system catalog scans with lossy index conditions are not implemented");
       }
     }
   }
@@ -575,12 +575,12 @@ systable_beginscan_ordered(Relation heapRelation, Relation indexRelation, Snapsh
   /* REINDEX can probably be a hard error here ... */
   if (ReindexIsProcessingIndex(RelationGetRelid(indexRelation)))
   {
-
+    elog(ERROR, "cannot do ordered scan on index \"%s\", because it is being reindexed", RelationGetRelationName(indexRelation));
   }
   /* ... but we only throw a warning about violating IgnoreSystemIndexes */
   if (IgnoreSystemIndexes)
   {
-
+    elog(WARNING, "using index \"%s\" despite IgnoreSystemIndexes", RelationGetRelationName(indexRelation));
   }
 
   sysscan = (SysScanDesc)palloc(sizeof(SysScanDescData));
@@ -617,7 +617,7 @@ systable_beginscan_ordered(Relation heapRelation, Relation indexRelation, Snapsh
     }
     if (j == IndexRelationGetNumberOfAttributes(indexRelation))
     {
-
+      elog(ERROR, "column is not in index");
     }
   }
 
@@ -645,7 +645,7 @@ systable_getnext_ordered(SysScanDesc sysscan, ScanDirection direction)
   /* See notes in systable_getnext */
   if (htup && sysscan->iscan->xs_recheck)
   {
-
+    elog(ERROR, "system catalog scans with lossy index conditions are not implemented");
   }
 
   return htup;

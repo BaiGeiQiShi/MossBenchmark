@@ -63,7 +63,8 @@ initcm(struct vars *v, struct colormap *cm)
   cd->flags = 0;
 
   cm->locolormap = (color *)MALLOC((MAX_SIMPLE_CHR - CHR_MIN + 1) * sizeof(color));
-  if (cm->locolormap == NULL) {
+  if (cm->locolormap == NULL)
+  {
     CERR(REG_ESPACE);
     cm->cmranges = NULL; /* prevent failure during freecm */
     cm->hicolormap = NULL;
@@ -79,7 +80,8 @@ initcm(struct vars *v, struct colormap *cm)
   cm->hiarrayrows = 1;  /* but we have only one row/col initially */
   cm->hiarraycols = 1;
   cm->hicolormap = (color *)MALLOC(cm->maxarrayrows * sizeof(color));
-  if (cm->hicolormap == NULL) {
+  if (cm->hicolormap == NULL)
+  {
     CERR(REG_ESPACE);
     return;
   }
@@ -94,16 +96,20 @@ static void
 freecm(struct colormap *cm)
 {
   cm->magic = 0;
-  if (cm->cd != cm->cdspace) {
+  if (cm->cd != cm->cdspace)
+  {
     FREE(cm->cd);
   }
-  if (cm->locolormap != NULL) {
+  if (cm->locolormap != NULL)
+  {
     FREE(cm->locolormap);
   }
-  if (cm->cmranges != NULL) {
+  if (cm->cmranges != NULL)
+  {
     FREE(cm->cmranges);
   }
-  if (cm->hicolormap != NULL) {
+  if (cm->hicolormap != NULL)
+  {
     FREE(cm->hicolormap);
   }
 }
@@ -126,15 +132,21 @@ pg_reg_getcolor(struct colormap *cm, chr c)
   rownum = 0; /* if no match, use array row zero */
   low = 0;
   high = cm->numcmranges;
-  while (low < high) {
+  while (low < high)
+  {
     int middle = low + (high - low) / 2;
     const colormaprange *cmr = &cm->cmranges[middle];
 
-    if (c < cmr->cmin) {
+    if (c < cmr->cmin)
+    {
       high = middle;
-    } else if (c > cmr->cmax) {
+    }
+    else if (c > cmr->cmax)
+    {
       low = middle + 1;
-    } else {
+    }
+    else
+    {
       rownum = cmr->rownum; /* found a match */
       break;
     }
@@ -143,10 +155,13 @@ pg_reg_getcolor(struct colormap *cm, chr c)
   /*
    * Find which column it's in --- this is all locale-dependent.
    */
-  if (cm->hiarraycols > 1) {
+  if (cm->hiarraycols > 1)
+  {
     colnum = cclass_column_index(cm, c);
     return cm->hicolormap[rownum * cm->hiarraycols + colnum];
-  } else {
+  }
+  else
+  {
     /* fast path if no relevant cclasses */
     return cm->hicolormap[rownum];
   }
@@ -158,7 +173,8 @@ pg_reg_getcolor(struct colormap *cm, chr c)
 static color
 maxcolor(struct colormap *cm)
 {
-  if (CISERR()) {
+  if (CISERR())
+  {
     return COLORLESS;
   }
 
@@ -175,42 +191,55 @@ newcolor(struct colormap *cm)
   struct colordesc *cd;
   size_t n;
 
-  if (CISERR()) {
+  if (CISERR())
+  {
     return COLORLESS;
   }
 
-  if (cm->free != 0) {
+  if (cm->free != 0)
+  {
     assert(cm->free > 0);
     assert((size_t)cm->free < cm->ncds);
     cd = &cm->cd[cm->free];
     assert(UNUSEDCOLOR(cd));
     assert(cd->arcs == NULL);
     cm->free = cd->sub;
-  } else if (cm->max < cm->ncds - 1) {
+  }
+  else if (cm->max < cm->ncds - 1)
+  {
     cm->max++;
     cd = &cm->cd[cm->max];
-  } else {
+  }
+  else
+  {
     /* oops, must allocate more */
     struct colordesc *newCd;
 
-    if (cm->max == MAX_COLOR) {
+    if (cm->max == MAX_COLOR)
+    {
       CERR(REG_ECOLORS);
       return COLORLESS; /* too many colors */
     }
 
     n = cm->ncds * 2;
-    if (n > MAX_COLOR + 1) {
+    if (n > MAX_COLOR + 1)
+    {
       n = MAX_COLOR + 1;
     }
-    if (cm->cd == cm->cdspace) {
+    if (cm->cd == cm->cdspace)
+    {
       newCd = (struct colordesc *)MALLOC(n * sizeof(struct colordesc));
-      if (newCd != NULL) {
+      if (newCd != NULL)
+      {
         memcpy(VS(newCd), VS(cm->cdspace), cm->ncds * sizeof(struct colordesc));
       }
-    } else {
+    }
+    else
+    {
       newCd = (struct colordesc *)REALLOC(cm->cd, n * sizeof(struct colordesc));
     }
-    if (newCd == NULL) {
+    if (newCd == NULL)
+    {
       CERR(REG_ESPACE);
       return COLORLESS;
     }
@@ -241,7 +270,8 @@ freecolor(struct colormap *cm, color co)
   color pco, nco; /* for freelist scan */
 
   assert(co >= 0);
-  if (co == WHITE) {
+  if (co == WHITE)
+  {
     return;
   }
 
@@ -251,31 +281,41 @@ freecolor(struct colormap *cm, color co)
   assert(cd->nuchrs == 0);
   cd->flags = FREECOL;
 
-  if ((size_t)co == cm->max) {
-    while (cm->max > WHITE && UNUSEDCOLOR(&cm->cd[cm->max])) {
+  if ((size_t)co == cm->max)
+  {
+    while (cm->max > WHITE && UNUSEDCOLOR(&cm->cd[cm->max]))
+    {
       cm->max--;
     }
     assert(cm->free >= 0);
-    while ((size_t)cm->free > cm->max) {
+    while ((size_t)cm->free > cm->max)
+    {
       cm->free = cm->cd[cm->free].sub;
     }
-    if (cm->free > 0) {
+    if (cm->free > 0)
+    {
       assert(cm->free < cm->max);
       pco = cm->free;
       nco = cm->cd[pco].sub;
-      while (nco > 0) {
-        if ((size_t)nco > cm->max) {
+      while (nco > 0)
+      {
+        if ((size_t)nco > cm->max)
+        {
           /* take this one out of freelist */
           nco = cm->cd[nco].sub;
           cm->cd[pco].sub = nco;
-        } else {
+        }
+        else
+        {
           assert(nco < cm->max);
           pco = nco;
           nco = cm->cd[pco].sub;
         }
       }
     }
-  } else {
+  }
+  else
+  {
     cd->sub = cm->free;
     cm->free = (color)(cd - cm->cd);
   }
@@ -291,7 +331,8 @@ pseudocolor(struct colormap *cm)
   struct colordesc *cd;
 
   co = newcolor(cm);
-  if (CISERR()) {
+  if (CISERR())
+  {
     return COLORLESS;
   }
   cd = &cm->cd[co];
@@ -319,16 +360,19 @@ subcolor(struct colormap *cm, chr c)
 
   co = cm->locolormap[c - CHR_MIN];
   sco = newsub(cm, co);
-  if (CISERR()) {
+  if (CISERR())
+  {
     return COLORLESS;
   }
   assert(sco != COLORLESS);
 
-  if (co == sco) { /* already in an open subcolor */
-    return co;     /* rest is redundant */
+  if (co == sco) /* already in an open subcolor */
+  {
+    return co; /* rest is redundant */
   }
   cm->cd[co].nschrs--;
-  if (cm->cd[sco].nschrs == 0) {
+  if (cm->cd[sco].nschrs == 0)
+  {
     cm->cd[sco].firstchr = c;
   }
   cm->cd[sco].nschrs++;
@@ -350,13 +394,15 @@ subcolorhi(struct colormap *cm, color *pco)
 
   co = *pco;
   sco = newsub(cm, co);
-  if (CISERR()) {
+  if (CISERR())
+  {
     return COLORLESS;
   }
   assert(sco != COLORLESS);
 
-  if (co == sco) { /* already in an open subcolor */
-    return co;     /* rest is redundant */
+  if (co == sco) /* already in an open subcolor */
+  {
+    return co; /* rest is redundant */
   }
   cm->cd[co].nuchrs--;
   cm->cd[sco].nuchrs++;
@@ -373,13 +419,16 @@ newsub(struct colormap *cm, color co)
   color sco; /* new subcolor */
 
   sco = cm->cd[co].sub;
-  if (sco == NOSUB) { /* color has no open subcolor */
+  if (sco == NOSUB)
+  { /* color has no open subcolor */
     /* optimization: singly-referenced color need not be subcolored */
-    if ((cm->cd[co].nschrs + cm->cd[co].nuchrs) == 1) {
+    if ((cm->cd[co].nschrs + cm->cd[co].nuchrs) == 1)
+    {
       return co;
     }
     sco = newcolor(cm); /* must create subcolor */
-    if (sco == COLORLESS) {
+    if (sco == COLORLESS)
+    {
       assert(CISERR());
       return COLORLESS;
     }
@@ -404,15 +453,18 @@ newhicolorrow(struct colormap *cm, int oldrow)
   int i;
 
   /* Assign a fresh array row index, enlarging storage if needed */
-  if (newrow >= cm->maxarrayrows) {
+  if (newrow >= cm->maxarrayrows)
+  {
     color *newarray;
 
-    if (cm->maxarrayrows >= INT_MAX / (cm->hiarraycols * 2)) {
+    if (cm->maxarrayrows >= INT_MAX / (cm->hiarraycols * 2))
+    {
       CERR(REG_ESPACE);
       return 0;
     }
     newarray = (color *)REALLOC(cm->hicolormap, cm->maxarrayrows * 2 * cm->hiarraycols * sizeof(color));
-    if (newarray == NULL) {
+    if (newarray == NULL)
+    {
       CERR(REG_ESPACE);
       return 0;
     }
@@ -426,7 +478,8 @@ newhicolorrow(struct colormap *cm, int oldrow)
   memcpy(newrowptr, &cm->hicolormap[oldrow * cm->hiarraycols], cm->hiarraycols * sizeof(color));
 
   /* Increase color reference counts to reflect new colormap entries */
-  for (i = 0; i < cm->hiarraycols; i++) {
+  for (i = 0; i < cm->hiarraycols; i++)
+  {
     cm->cd[newrowptr[i]].nuchrs++;
   }
 
@@ -444,12 +497,14 @@ newhicolorcols(struct colormap *cm)
   color *newarray;
   int r, c;
 
-  if (cm->hiarraycols >= INT_MAX / (cm->maxarrayrows * 2)) {
+  if (cm->hiarraycols >= INT_MAX / (cm->maxarrayrows * 2))
+  {
     CERR(REG_ESPACE);
     return;
   }
   newarray = (color *)REALLOC(cm->hicolormap, cm->maxarrayrows * cm->hiarraycols * 2 * sizeof(color));
-  if (newarray == NULL) {
+  if (newarray == NULL)
+  {
     CERR(REG_ESPACE);
     return;
   }
@@ -457,12 +512,14 @@ newhicolorcols(struct colormap *cm)
 
   /* Duplicate existing columns to the right, and increase ref counts */
   /* Must work backwards in the array because we realloc'd in place */
-  for (r = cm->hiarrayrows - 1; r >= 0; r--) {
+  for (r = cm->hiarrayrows - 1; r >= 0; r--)
+  {
     color *oldrowptr = &newarray[r * cm->hiarraycols];
     color *newrowptr = &newarray[r * cm->hiarraycols * 2];
     color *newrowptr2 = newrowptr + cm->hiarraycols;
 
-    for (c = 0; c < cm->hiarraycols; c++) {
+    for (c = 0; c < cm->hiarraycols; c++)
+    {
       color co = oldrowptr[c];
 
       newrowptr[c] = newrowptr2[c] = co;
@@ -494,25 +551,30 @@ subcolorcvec(struct vars *v, struct cvec *cv, struct state *lp, struct state *rp
   int i;
 
   /* ordinary characters */
-  for (p = cv->chrs, i = cv->nchrs; i > 0; p++, i--) {
+  for (p = cv->chrs, i = cv->nchrs; i > 0; p++, i--)
+  {
     ch = *p;
     subcoloronechr(v, ch, lp, rp, &lastsubcolor);
     NOERR();
   }
 
   /* and the ranges */
-  for (p = cv->ranges, i = cv->nranges; i > 0; p += 2, i--) {
+  for (p = cv->ranges, i = cv->nranges; i > 0; p += 2, i--)
+  {
     from = *p;
     to = *(p + 1);
-    if (from <= MAX_SIMPLE_CHR) {
+    if (from <= MAX_SIMPLE_CHR)
+    {
       /* deal with simple chars one at a time */
       chr lim = (to <= MAX_SIMPLE_CHR) ? to : MAX_SIMPLE_CHR;
 
-      while (from <= lim) {
+      while (from <= lim)
+      {
         color sco = subcolor(cm, from);
 
         NOERR();
-        if (sco != lastsubcolor) {
+        if (sco != lastsubcolor)
+        {
           newarc(v->nfa, PLAIN, sco, lp, rp);
           NOERR();
           lastsubcolor = sco;
@@ -521,22 +583,27 @@ subcolorcvec(struct vars *v, struct cvec *cv, struct state *lp, struct state *rp
       }
     }
     /* deal with any part of the range that's above MAX_SIMPLE_CHR */
-    if (from < to) {
+    if (from < to)
+    {
       subcoloronerange(v, from, to, lp, rp, &lastsubcolor);
-    } else if (from == to) {
+    }
+    else if (from == to)
+    {
       subcoloronechr(v, from, lp, rp, &lastsubcolor);
     }
     NOERR();
   }
 
   /* and deal with cclass if any */
-  if (cv->cclasscode >= 0) {
+  if (cv->cclasscode >= 0)
+  {
     int classbit;
     color *pco;
     int r, c;
 
     /* Enlarge array if we don't have a column bit assignment for cclass */
-    if (cm->classbits[cv->cclasscode] == 0) {
+    if (cm->classbits[cv->cclasscode] == 0)
+    {
       cm->classbits[cv->cclasscode] = cm->hiarraycols;
       newhicolorcols(cm);
       NOERR();
@@ -544,14 +611,18 @@ subcolorcvec(struct vars *v, struct cvec *cv, struct state *lp, struct state *rp
     /* Apply subcolorhi() and make arc for each entry in relevant cols */
     classbit = cm->classbits[cv->cclasscode];
     pco = cm->hicolormap;
-    for (r = 0; r < cm->hiarrayrows; r++) {
-      for (c = 0; c < cm->hiarraycols; c++) {
-        if (c & classbit) {
+    for (r = 0; r < cm->hiarrayrows; r++)
+    {
+      for (c = 0; c < cm->hiarraycols; c++)
+      {
+        if (c & classbit)
+        {
           color sco = subcolorhi(cm, pco);
 
           NOERR();
           /* add the arc if needed */
-          if (sco != lastsubcolor) {
+          if (sco != lastsubcolor)
+          {
             newarc(v->nfa, PLAIN, sco, lp, rp);
             NOERR();
             lastsubcolor = sco;
@@ -581,11 +652,13 @@ subcoloronechr(struct vars *v, chr ch, struct state *lp, struct state *rp, color
   int newrow;
 
   /* Easy case for low chr codes */
-  if (ch <= MAX_SIMPLE_CHR) {
+  if (ch <= MAX_SIMPLE_CHR)
+  {
     color sco = subcolor(cm, ch);
 
     NOERR();
-    if (sco != *lastsubcolor) {
+    if (sco != *lastsubcolor)
+    {
       newarc(v->nfa, PLAIN, sco, lp, rp);
       *lastsubcolor = sco;
     }
@@ -597,37 +670,46 @@ subcoloronechr(struct vars *v, chr ch, struct state *lp, struct state *rp, color
    * the given chr is in the middle of some existing range.
    */
   newranges = (colormaprange *)MALLOC((cm->numcmranges + 2) * sizeof(colormaprange));
-  if (newranges == NULL) {
+  if (newranges == NULL)
+  {
     CERR(REG_ESPACE);
     return;
   }
   numnewranges = 0;
 
   /* Ranges before target are unchanged */
-  for (oldrange = cm->cmranges, oldrangen = 0; oldrangen < cm->numcmranges; oldrange++, oldrangen++) {
-    if (oldrange->cmax >= ch) {
+  for (oldrange = cm->cmranges, oldrangen = 0; oldrangen < cm->numcmranges; oldrange++, oldrangen++)
+  {
+    if (oldrange->cmax >= ch)
+    {
       break;
     }
     newranges[numnewranges++] = *oldrange;
   }
 
   /* Match target chr against current range */
-  if (oldrangen >= cm->numcmranges || oldrange->cmin > ch) {
+  if (oldrangen >= cm->numcmranges || oldrange->cmin > ch)
+  {
     /* chr does not belong to any existing range, make a new one */
     newranges[numnewranges].cmin = ch;
     newranges[numnewranges].cmax = ch;
     /* row state should be cloned from the "all others" row */
     newranges[numnewranges].rownum = newrow = newhicolorrow(cm, 0);
     numnewranges++;
-  } else if (oldrange->cmin == oldrange->cmax) {
+  }
+  else if (oldrange->cmin == oldrange->cmax)
+  {
     /* we have an existing singleton range matching the chr */
     newranges[numnewranges++] = *oldrange;
     newrow = oldrange->rownum;
     /* we've now fully processed this old range */
     oldrange++, oldrangen++;
-  } else {
+  }
+  else
+  {
     /* chr is a subset of this existing range, must split it */
-    if (ch > oldrange->cmin) {
+    if (ch > oldrange->cmin)
+    {
       /* emit portion of old range before chr */
       newranges[numnewranges].cmin = oldrange->cmin;
       newranges[numnewranges].cmax = ch - 1;
@@ -639,7 +721,8 @@ subcoloronechr(struct vars *v, chr ch, struct state *lp, struct state *rp, color
     newranges[numnewranges].cmax = ch;
     newranges[numnewranges].rownum = newrow = newhicolorrow(cm, oldrange->rownum);
     numnewranges++;
-    if (ch < oldrange->cmax) {
+    if (ch < oldrange->cmax)
+    {
       /* emit portion of old range after chr */
       newranges[numnewranges].cmin = ch + 1;
       newranges[numnewranges].cmax = oldrange->cmax;
@@ -655,7 +738,8 @@ subcoloronechr(struct vars *v, chr ch, struct state *lp, struct state *rp, color
   subcoloronerow(v, newrow, lp, rp, lastsubcolor);
 
   /* Ranges after target are unchanged */
-  for (; oldrangen < cm->numcmranges; oldrange++, oldrangen++) {
+  for (; oldrangen < cm->numcmranges; oldrange++, oldrangen++)
+  {
     newranges[numnewranges++] = *oldrange;
   }
 
@@ -663,7 +747,8 @@ subcoloronechr(struct vars *v, chr ch, struct state *lp, struct state *rp, color
   assert(numnewranges <= (cm->numcmranges + 2));
 
   /* And finally, store back the updated list of ranges */
-  if (cm->cmranges != NULL) {
+  if (cm->cmranges != NULL)
+  {
     FREE(cm->cmranges);
   }
   cm->cmranges = newranges;
@@ -692,15 +777,18 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
    * 2N+1 result ranges (consider case where new range spans 'em all).
    */
   newranges = (colormaprange *)MALLOC((cm->numcmranges * 2 + 1) * sizeof(colormaprange));
-  if (newranges == NULL) {
+  if (newranges == NULL)
+  {
     CERR(REG_ESPACE);
     return;
   }
   numnewranges = 0;
 
   /* Ranges before target are unchanged */
-  for (oldrange = cm->cmranges, oldrangen = 0; oldrangen < cm->numcmranges; oldrange++, oldrangen++) {
-    if (oldrange->cmax >= from) {
+  for (oldrange = cm->cmranges, oldrangen = 0; oldrangen < cm->numcmranges; oldrange++, oldrangen++)
+  {
+    if (oldrange->cmax >= from)
+    {
       break;
     }
     newranges[numnewranges++] = *oldrange;
@@ -711,8 +799,10 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
    * each such range, increase "from" to remove the dealt-with characters
    * from the target range.
    */
-  while (oldrangen < cm->numcmranges && oldrange->cmin <= to) {
-    if (from < oldrange->cmin) {
+  while (oldrangen < cm->numcmranges && oldrange->cmin <= to)
+  {
+    if (from < oldrange->cmin)
+    {
       /* Handle portion of new range that corresponds to no old range */
       newranges[numnewranges].cmin = from;
       newranges[numnewranges].cmax = oldrange->cmin - 1;
@@ -725,14 +815,18 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
       from = oldrange->cmin;
     }
 
-    if (from <= oldrange->cmin && to >= oldrange->cmax) {
+    if (from <= oldrange->cmin && to >= oldrange->cmax)
+    {
       /* old range is fully contained in new, process it in-place */
       newranges[numnewranges++] = *oldrange;
       newrow = oldrange->rownum;
       from = oldrange->cmax + 1;
-    } else {
+    }
+    else
+    {
       /* some part of old range does not overlap new range */
-      if (from > oldrange->cmin) {
+      if (from > oldrange->cmin)
+      {
         /* emit portion of old range before new range */
         newranges[numnewranges].cmin = oldrange->cmin;
         newranges[numnewranges].cmax = from - 1;
@@ -744,7 +838,8 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
       newranges[numnewranges].cmax = (to < oldrange->cmax) ? to : oldrange->cmax;
       newranges[numnewranges].rownum = newrow = newhicolorrow(cm, oldrange->rownum);
       numnewranges++;
-      if (to < oldrange->cmax) {
+      if (to < oldrange->cmax)
+      {
         /* emit portion of old range after new range */
         newranges[numnewranges].cmin = to + 1;
         newranges[numnewranges].cmax = oldrange->cmax;
@@ -760,7 +855,8 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
     oldrange++, oldrangen++;
   }
 
-  if (from <= to) {
+  if (from <= to)
+  {
     /* Handle portion of new range that corresponds to no old range */
     newranges[numnewranges].cmin = from;
     newranges[numnewranges].cmax = to;
@@ -772,7 +868,8 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
   }
 
   /* Ranges after target are unchanged */
-  for (; oldrangen < cm->numcmranges; oldrange++, oldrangen++) {
+  for (; oldrangen < cm->numcmranges; oldrange++, oldrangen++)
+  {
     newranges[numnewranges++] = *oldrange;
   }
 
@@ -780,7 +877,8 @@ subcoloronerange(struct vars *v, chr from, chr to, struct state *lp, struct stat
   assert(numnewranges <= (cm->numcmranges * 2 + 1));
 
   /* And finally, store back the updated list of ranges */
-  if (cm->cmranges != NULL) {
+  if (cm->cmranges != NULL)
+  {
     FREE(cm->cmranges);
   }
   cm->cmranges = newranges;
@@ -799,12 +897,14 @@ subcoloronerow(struct vars *v, int rownum, struct state *lp, struct state *rp, c
 
   /* Apply subcolorhi() and make arc for each entry in row */
   pco = &cm->hicolormap[rownum * cm->hiarraycols];
-  for (i = 0; i < cm->hiarraycols; pco++, i++) {
+  for (i = 0; i < cm->hiarraycols; pco++, i++)
+  {
     color sco = subcolorhi(cm, pco);
 
     NOERR();
     /* make the arc if needed */
-    if (sco != *lastsubcolor) {
+    if (sco != *lastsubcolor)
+    {
       newarc(v->nfa, PLAIN, sco, lp, rp);
       NOERR();
       *lastsubcolor = sco;
@@ -825,34 +925,44 @@ okcolors(struct nfa *nfa, struct colormap *cm)
   color co;
   color sco;
 
-  for (cd = cm->cd, co = 0; cd < end; cd++, co++) {
+  for (cd = cm->cd, co = 0; cd < end; cd++, co++)
+  {
     sco = cd->sub;
-    if (UNUSEDCOLOR(cd) || sco == NOSUB) {
+    if (UNUSEDCOLOR(cd) || sco == NOSUB)
+    {
       /* has no subcolor, no further action */
-    } else if (sco == co) {
+    }
+    else if (sco == co)
+    {
       /* is subcolor, let parent deal with it */
-    } else if (cd->nschrs == 0 && cd->nuchrs == 0) {
+    }
+    else if (cd->nschrs == 0 && cd->nuchrs == 0)
+    {
       /* parent empty, its arcs change color to subcolor */
       cd->sub = NOSUB;
       scd = &cm->cd[sco];
       assert(scd->nschrs > 0 || scd->nuchrs > 0);
       assert(scd->sub == sco);
       scd->sub = NOSUB;
-      while ((a = cd->arcs) != NULL) {
+      while ((a = cd->arcs) != NULL)
+      {
         assert(a->co == co);
         uncolorchain(cm, a);
         a->co = sco;
         colorchain(cm, a);
       }
       freecolor(cm, co);
-    } else {
+    }
+    else
+    {
       /* parent's arcs must gain parallel subcolor arcs */
       cd->sub = NOSUB;
       scd = &cm->cd[sco];
       assert(scd->nschrs > 0 || scd->nuchrs > 0);
       assert(scd->sub == sco);
       scd->sub = NOSUB;
-      for (a = cd->arcs; a != NULL; a = a->colorchain) {
+      for (a = cd->arcs; a != NULL; a = a->colorchain)
+      {
         assert(a->co == co);
         newarc(nfa, a->type, sco, a->from, a->to);
       }
@@ -868,7 +978,8 @@ colorchain(struct colormap *cm, struct arc *a)
 {
   struct colordesc *cd = &cm->cd[a->co];
 
-  if (cd->arcs != NULL) {
+  if (cd->arcs != NULL)
+  {
     cd->arcs->colorchainRev = a;
   }
   a->colorchain = cd->arcs;
@@ -885,14 +996,18 @@ uncolorchain(struct colormap *cm, struct arc *a)
   struct colordesc *cd = &cm->cd[a->co];
   struct arc *aa = a->colorchainRev;
 
-  if (aa == NULL) {
+  if (aa == NULL)
+  {
     assert(cd->arcs == a);
     cd->arcs = a->colorchain;
-  } else {
+  }
+  else
+  {
     assert(aa->colorchain == a);
     aa->colorchain = a->colorchain;
   }
-  if (a->colorchain != NULL) {
+  if (a->colorchain != NULL)
+  {
     a->colorchain->colorchainRev = aa;
   }
   a->colorchain = NULL; /* paranoia */
@@ -910,8 +1025,10 @@ rainbow(struct nfa *nfa, struct colormap *cm, int type, color but, /* COLORLESS 
   struct colordesc *end = CDEND(cm);
   color co;
 
-  for (cd = cm->cd, co = 0; cd < end && !CISERR(); cd++, co++) {
-    if (!UNUSEDCOLOR(cd) && cd->sub != co && co != but && !(cd->flags & PSEUDO)) {
+  for (cd = cm->cd, co = 0; cd < end && !CISERR(); cd++, co++)
+  {
+    if (!UNUSEDCOLOR(cd) && cd->sub != co && co != but && !(cd->flags & PSEUDO))
+    {
       newarc(nfa, type, co, from, to);
     }
   }
@@ -931,9 +1048,12 @@ colorcomplement(struct nfa *nfa, struct colormap *cm, int type, struct state *of
   color co;
 
   assert(of != from);
-  for (cd = cm->cd, co = 0; cd < end && !CISERR(); cd++, co++) {
-    if (!UNUSEDCOLOR(cd) && !(cd->flags & PSEUDO)) {
-      if (findarc(of, PLAIN, co) == NULL) {
+  for (cd = cm->cd, co = 0; cd < end && !CISERR(); cd++, co++)
+  {
+    if (!UNUSEDCOLOR(cd) && !(cd->flags & PSEUDO))
+    {
+      if (findarc(of, PLAIN, co) == NULL)
+      {
         newarc(nfa, type, co, from, to);
       }
     }
@@ -957,19 +1077,25 @@ dumpcolors(struct colormap *cm, FILE *f)
   end = CDEND(cm);
   for (cd = cm->cd + 1, co = 1; cd < end; cd++, co++) /* skip 0 */
   {
-    if (!UNUSEDCOLOR(cd)) {
+    if (!UNUSEDCOLOR(cd))
+    {
       assert(cd->nschrs > 0 || cd->nuchrs > 0);
-      if (cd->flags & PSEUDO) {
+      if (cd->flags & PSEUDO)
+      {
         fprintf(f, "#%2ld(ps): ", (long)co);
-      } else {
+      }
+      else
+      {
         fprintf(f, "#%2ld(%2d): ", (long)co, cd->nschrs + cd->nuchrs);
       }
 
       /*
        * Unfortunately, it's hard to do this next bit more efficiently.
        */
-      for (c = CHR_MIN; c <= MAX_SIMPLE_CHR; c++) {
-        if (GETCOLOR(cm, c) == co) {
+      for (c = CHR_MIN; c <= MAX_SIMPLE_CHR; c++)
+      {
+        if (GETCOLOR(cm, c) == co)
+        {
           dumpchr(c, f);
         }
       }
@@ -977,22 +1103,26 @@ dumpcolors(struct colormap *cm, FILE *f)
     }
   }
   /* dump the high colormap if it contains anything interesting */
-  if (cm->hiarrayrows > 1 || cm->hiarraycols > 1) {
+  if (cm->hiarrayrows > 1 || cm->hiarraycols > 1)
+  {
     int r, c;
     const color *rowptr;
 
     fprintf(f, "other:\t");
-    for (c = 0; c < cm->hiarraycols; c++) {
+    for (c = 0; c < cm->hiarraycols; c++)
+    {
       fprintf(f, "\t%ld", (long)cm->hicolormap[c]);
     }
     fprintf(f, "\n");
-    for (r = 0; r < cm->numcmranges; r++) {
+    for (r = 0; r < cm->numcmranges; r++)
+    {
       dumpchr(cm->cmranges[r].cmin, f);
       fprintf(f, "..");
       dumpchr(cm->cmranges[r].cmax, f);
       fprintf(f, ":");
       rowptr = &cm->hicolormap[cm->cmranges[r].rownum * cm->hiarraycols];
-      for (c = 0; c < cm->hiarraycols; c++) {
+      for (c = 0; c < cm->hiarraycols; c++)
+      {
         fprintf(f, "\t%ld", (long)rowptr[c]);
       }
       fprintf(f, "\n");
@@ -1008,11 +1138,16 @@ dumpcolors(struct colormap *cm, FILE *f)
 static void
 dumpchr(chr c, FILE *f)
 {
-  if (c == '\\') {
+  if (c == '\\')
+  {
     fprintf(f, "\\\\");
-  } else if (c > ' ' && c <= '~') {
+  }
+  else if (c > ' ' && c <= '~')
+  {
     putc((char)c, f);
-  } else {
+  }
+  else
+  {
     fprintf(f, "\\u%04lx", (long)c);
   }
 }

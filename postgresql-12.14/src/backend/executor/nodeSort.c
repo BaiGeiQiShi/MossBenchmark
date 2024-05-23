@@ -259,7 +259,7 @@ ExecSortMarkPos(SortState *node)
    */
   if (!node->sort_Done)
   {
-
+    return;
   }
 
   tuplesort_markpos((Tuplesortstate *)node->tuplesortstate);
@@ -279,7 +279,7 @@ ExecSortRestrPos(SortState *node)
    */
   if (!node->sort_Done)
   {
-
+    return;
   }
 
   /*
@@ -414,7 +414,7 @@ ExecSortRetrieveInstrumentation(SortState *node)
 
   if (node->shared_info == NULL)
   {
-
+    return;
   }
 
   size = offsetof(SharedSortInfo, sinstrument) + node->shared_info->num_workers * sizeof(TuplesortInstrumentation);

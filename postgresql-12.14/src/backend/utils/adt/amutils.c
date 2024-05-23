@@ -132,13 +132,13 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
     tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(index_oid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      PG_RETURN_NULL();
     }
     rd_rel = (Form_pg_class)GETSTRUCT(tuple);
     if (rd_rel->relkind != RELKIND_INDEX && rd_rel->relkind != RELKIND_PARTITIONED_INDEX)
     {
-
-
+      ReleaseSysCache(tuple);
+      PG_RETURN_NULL();
     }
     amoid = rd_rel->relam;
     natts = rd_rel->relnatts;
@@ -153,7 +153,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
    */
   if (attno < 0 || attno > natts)
   {
-
+    PG_RETURN_NULL();
   }
 
   /*
@@ -162,7 +162,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
   routine = GetIndexAmRoutineByAmId(amoid, true);
   if (routine == NULL)
   {
-
+    PG_RETURN_NULL();
   }
 
   /*
@@ -173,7 +173,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
   {
     if (isnull)
     {
-
+      PG_RETURN_NULL();
     }
     PG_RETURN_BOOL(res);
   }
@@ -192,7 +192,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
     tuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(index_oid));
     if (!HeapTupleIsValid(tuple))
     {
-
+      PG_RETURN_NULL();
     }
     rd_index = (Form_pg_index)GETSTRUCT(tuple);
 
@@ -213,35 +213,35 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
 
     switch (prop)
     {
-    case AMPROP_ASC:;
+    case AMPROP_ASC:
       if (iskey && test_indoption(tuple, attno, routine->amcanorder, INDOPTION_DESC, 0, &res))
       {
         isnull = false;
       }
       break;
 
-    case AMPROP_DESC:;
+    case AMPROP_DESC:
       if (iskey && test_indoption(tuple, attno, routine->amcanorder, INDOPTION_DESC, INDOPTION_DESC, &res))
       {
         isnull = false;
       }
       break;
 
-    case AMPROP_NULLS_FIRST:;
+    case AMPROP_NULLS_FIRST:
       if (iskey && test_indoption(tuple, attno, routine->amcanorder, INDOPTION_NULLS_FIRST, INDOPTION_NULLS_FIRST, &res))
       {
         isnull = false;
       }
       break;
 
-    case AMPROP_NULLS_LAST:;
+    case AMPROP_NULLS_LAST:
       if (iskey && test_indoption(tuple, attno, routine->amcanorder, INDOPTION_NULLS_FIRST, 0, &res))
       {
         isnull = false;
       }
       break;
 
-    case AMPROP_ORDERABLE:;
+    case AMPROP_ORDERABLE:
 
       /*
        * generic assumption is that nonkey columns are not orderable
@@ -250,7 +250,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
       isnull = false;
       break;
 
-    case AMPROP_DISTANCE_ORDERABLE:;
+    case AMPROP_DISTANCE_ORDERABLE:
 
       /*
        * The conditions for whether a column is distance-orderable
@@ -271,7 +271,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
       }
       break;
 
-    case AMPROP_RETURNABLE:;
+    case AMPROP_RETURNABLE:
 
       /* note that we ignore iskey for this property */
 
@@ -292,7 +292,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
       }
       break;
 
-    case AMPROP_SEARCH_ARRAY:;
+    case AMPROP_SEARCH_ARRAY:
       if (iskey)
       {
         res = routine->amsearcharray;
@@ -300,7 +300,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
       }
       break;
 
-    case AMPROP_SEARCH_NULLS:;
+    case AMPROP_SEARCH_NULLS:
       if (iskey)
       {
         res = routine->amsearchnulls;
@@ -308,7 +308,7 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
       }
       break;
 
-    default:;;
+    default:
       break;
     }
 
@@ -330,19 +330,19 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
      */
     switch (prop)
     {
-    case AMPROP_CLUSTERABLE:;
+    case AMPROP_CLUSTERABLE:
       PG_RETURN_BOOL(routine->amclusterable);
 
-    case AMPROP_INDEX_SCAN:;
+    case AMPROP_INDEX_SCAN:
       PG_RETURN_BOOL(routine->amgettuple ? true : false);
 
-    case AMPROP_BITMAP_SCAN:;
+    case AMPROP_BITMAP_SCAN:
       PG_RETURN_BOOL(routine->amgetbitmap ? true : false);
 
-    case AMPROP_BACKWARD_SCAN:;
+    case AMPROP_BACKWARD_SCAN:
       PG_RETURN_BOOL(routine->amcanbackward);
 
-    default:;;
+    default:
       PG_RETURN_NULL();
     }
   }
@@ -353,22 +353,22 @@ indexam_property(FunctionCallInfo fcinfo, const char *propname, Oid amoid, Oid i
    */
   switch (prop)
   {
-  case AMPROP_CAN_ORDER:;
+  case AMPROP_CAN_ORDER:
     PG_RETURN_BOOL(routine->amcanorder);
 
-  case AMPROP_CAN_UNIQUE:;
+  case AMPROP_CAN_UNIQUE:
     PG_RETURN_BOOL(routine->amcanunique);
 
-  case AMPROP_CAN_MULTI_COL:;
+  case AMPROP_CAN_MULTI_COL:
     PG_RETURN_BOOL(routine->amcanmulticol);
 
-  case AMPROP_CAN_EXCLUDE:;
+  case AMPROP_CAN_EXCLUDE:
     PG_RETURN_BOOL(routine->amgettuple ? true : false);
 
-  case AMPROP_CAN_INCLUDE:;
+  case AMPROP_CAN_INCLUDE:
     PG_RETURN_BOOL(routine->amcaninclude);
 
-  default:;;
+  default:
     PG_RETURN_NULL();
   }
 }
@@ -410,7 +410,7 @@ pg_index_column_has_property(PG_FUNCTION_ARGS)
   /* Reject attno 0 immediately, so that attno > 0 identifies this case */
   if (attno <= 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   return indexam_property(fcinfo, propname, InvalidOid, relid, attno);
@@ -423,22 +423,22 @@ pg_index_column_has_property(PG_FUNCTION_ARGS)
 Datum
 pg_indexam_progress_phasename(PG_FUNCTION_ARGS)
 {
+  Oid amoid = PG_GETARG_OID(0);
+  int32 phasenum = PG_GETARG_INT32(1);
+  IndexAmRoutine *routine;
+  char *name;
 
+  routine = GetIndexAmRoutineByAmId(amoid, true);
+  if (routine == NULL || !routine->ambuildphasename)
+  {
+    PG_RETURN_NULL();
+  }
 
+  name = routine->ambuildphasename(phasenum);
+  if (!name)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(CStringGetTextDatum(name));
 }

@@ -104,7 +104,7 @@ fixed_paramref_hook(ParseState *pstate, ParamRef *pref)
   /* Check parameter number is valid */
   if (paramno <= 0 || paramno > parstate->numParams || !OidIsValid(parstate->paramTypes[paramno - 1]))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("there is no parameter $%d", paramno), parser_errposition(pstate, pref->location)));
   }
 
   param = makeNode(Param);
@@ -135,7 +135,7 @@ variable_paramref_hook(ParseState *pstate, ParamRef *pref)
   /* Check parameter number is in range */
   if (paramno <= 0 || paramno > INT_MAX / sizeof(Oid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("there is no parameter $%d", paramno), parser_errposition(pstate, pref->location)));
   }
   if (paramno > *parstate->numParams)
   {
@@ -192,7 +192,7 @@ variable_coerce_param_hook(ParseState *pstate, Param *param, Oid targetTypeId, i
     if (paramno <= 0 || /* shouldn't happen, but... */
         paramno > *parstate->numParams)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("there is no parameter $%d", paramno), parser_errposition(pstate, param->location)));
     }
 
     if (paramTypes[paramno - 1] == UNKNOWNOID)
@@ -200,15 +200,15 @@ variable_coerce_param_hook(ParseState *pstate, Param *param, Oid targetTypeId, i
       /* We've successfully resolved the type */
       paramTypes[paramno - 1] = targetTypeId;
     }
-
-
-
-
-
-
-
-
-
+    else if (paramTypes[paramno - 1] == targetTypeId)
+    {
+      /* We previously resolved the type, and it matches */
+    }
+    else
+    {
+      /* Oops */
+      ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_PARAMETER), errmsg("inconsistent types deduced for parameter $%d", paramno), errdetail("%s versus %s", format_type_be(paramTypes[paramno - 1]), format_type_be(targetTypeId)), parser_errposition(pstate, param->location)));
+    }
 
     param->paramtype = targetTypeId;
 
@@ -231,7 +231,7 @@ variable_coerce_param_hook(ParseState *pstate, Param *param, Oid targetTypeId, i
     /* Use the leftmost of the param's and coercion's locations */
     if (location >= 0 && (param->location < 0 || location < param->location))
     {
-
+      param->location = location;
     }
 
     return (Node *)param;
@@ -286,12 +286,12 @@ check_parameter_resolution_walker(Node *node, ParseState *pstate)
       if (paramno <= 0 || /* shouldn't happen, but... */
           paramno > *parstate->numParams)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_PARAMETER), errmsg("there is no parameter $%d", paramno), parser_errposition(pstate, param->location)));
       }
 
       if (param->paramtype != (*parstate->paramTypes)[paramno - 1])
       {
-
+        ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_PARAMETER), errmsg("could not determine data type of parameter $%d", paramno), parser_errposition(pstate, param->location)));
       }
     }
     return false;
@@ -324,11 +324,11 @@ query_contains_extern_params_walker(Node *node, void *context)
   {
     Param *param = (Param *)node;
 
-
-
-
-
-
+    if (param->paramkind == PARAM_EXTERN)
+    {
+      return true;
+    }
+    return false;
   }
   if (IsA(node, Query))
   {

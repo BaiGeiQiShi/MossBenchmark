@@ -55,7 +55,7 @@ tt_setup_firstcall(FuncCallContext *funcctx, Oid prsid)
 
   if (!OidIsValid(prs->lextypeOid))
   {
-
+    elog(ERROR, "method lextype isn't defined for text search parser %u", prsid);
   }
 
   oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
@@ -318,7 +318,7 @@ ts_headline_byid_opt(PG_FUNCTION_ARGS)
 
   if (!OidIsValid(prsobj->headlineOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("text search parser does not support headline creation")));
   }
 
   memset(&prs, 0, sizeof(HeadlineParsedText));
@@ -362,13 +362,13 @@ ts_headline_byid(PG_FUNCTION_ARGS)
 Datum
 ts_headline(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_DATUM(DirectFunctionCall3(ts_headline_byid_opt, ObjectIdGetDatum(getTSCurrentConfig(true)), PG_GETARG_DATUM(0), PG_GETARG_DATUM(1)));
 }
 
 Datum
 ts_headline_opt(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_DATUM(DirectFunctionCall4(ts_headline_byid_opt, ObjectIdGetDatum(getTSCurrentConfig(true)), PG_GETARG_DATUM(0), PG_GETARG_DATUM(1), PG_GETARG_DATUM(2)));
 }
 
 Datum
@@ -402,7 +402,7 @@ ts_headline_jsonb_byid_opt(PG_FUNCTION_ARGS)
 
   if (!OidIsValid(state->prsobj->headlineOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("text search parser does not support headline creation")));
   }
 
   out = transform_jsonb_string_values(jb, state, action);
@@ -475,7 +475,7 @@ ts_headline_json_byid_opt(PG_FUNCTION_ARGS)
 
   if (!OidIsValid(state->prsobj->headlineOid))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("text search parser does not support headline creation")));
   }
 
   out = transform_json_string_values(json, state, action);

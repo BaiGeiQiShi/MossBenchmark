@@ -83,10 +83,10 @@ RangeCreate(Oid rangeTypeOid, Oid rangeSubType, Oid rangeCollation, Oid rangeSub
 
   if (OidIsValid(rangeCanonical))
   {
-
-
-
-
+    referenced.classId = ProcedureRelationId;
+    referenced.objectId = rangeCanonical;
+    referenced.objectSubId = 0;
+    recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
   if (OidIsValid(rangeSubDiff))

@@ -58,12 +58,12 @@ unique_key_recheck(PG_FUNCTION_ARGS)
    */
   if (!CALLED_AS_TRIGGER(fcinfo))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("function \"%s\" was not called by trigger manager", funcname)));
   }
 
   if (!TRIGGER_FIRED_AFTER(trigdata->tg_event) || !TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("function \"%s\" must be fired AFTER ROW", funcname)));
   }
 
   /*
@@ -79,8 +79,8 @@ unique_key_recheck(PG_FUNCTION_ARGS)
   }
   else
   {
-
-
+    ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("function \"%s\" must be fired for INSERT or UPDATE", funcname)));
+    ItemPointerSetInvalid(&checktid); /* keep compiler quiet */
   }
 
   slot = table_slot_create(trigdata->tg_relation, NULL);
@@ -114,9 +114,9 @@ unique_key_recheck(PG_FUNCTION_ARGS)
        * All rows referenced by the index entry are dead, so skip the
        * check.
        */
-
-
-
+      ExecDropSingleTupleTableSlot(slot);
+      table_index_fetch_end(scan);
+      return PointerGetDatum(NULL);
     }
     table_index_fetch_end(scan);
   }

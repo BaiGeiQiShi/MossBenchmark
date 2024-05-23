@@ -183,21 +183,21 @@ brininsert(Relation idxRel, Datum *values, bool *nulls, ItemPointer heaptid, Rel
       BlockNumber lastPageRange = heapBlk - 1;
       BrinTuple *lastPageTuple;
 
+      lastPageTuple = brinGetTupleForHeapBlock(revmap, lastPageRange, &buf, &off, NULL, BUFFER_LOCK_SHARE, NULL);
+      if (!lastPageTuple)
+      {
+        bool recorded;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        recorded = AutoVacuumRequestWork(AVW_BRINSummarizeRange, RelationGetRelid(idxRel), lastPageRange);
+        if (!recorded)
+        {
+          ereport(LOG, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("request for BRIN range summarization for index \"%s\" page %u was not recorded", RelationGetRelationName(idxRel), lastPageRange)));
+        }
+      }
+      else
+      {
+        LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+      }
     }
 
     brtup = brinGetTupleForHeapBlock(revmap, heapBlk, &buf, &off, NULL, BUFFER_LOCK_SHARE, NULL);
@@ -291,8 +291,8 @@ brininsert(Relation idxRel, Datum *values, bool *nulls, ItemPointer heaptid, Rel
       if (!brin_doupdate(idxRel, pagesPerRange, revmap, heapBlk, buf, off, origtup, origsz, newtup, newsz, samepage))
       {
         /* no luck; start over */
-
-
+        MemoryContextResetAndDeleteChildren(tupcxt);
+        continue;
       }
     }
 
@@ -429,7 +429,7 @@ bringetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
      */
     if (!gottuple)
     {
-
+      addrange = true;
     }
     else
     {
@@ -440,7 +440,7 @@ bringetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
          * Placeholder tuples are always returned, regardless of the
          * values stored in them.
          */
-
+        addrange = true;
       }
       else
       {
@@ -635,7 +635,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
    */
   if (RelationGetNumberOfBlocks(index) != 0)
   {
-
+    elog(ERROR, "index \"%s\" already contains data", RelationGetRelationName(index));
   }
 
   /*
@@ -705,20 +705,20 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 void
 brinbuildempty(Relation index)
 {
+  Buffer metabuf;
 
+  /* An empty BRIN index has a metapage only. */
+  metabuf = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
+  LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
 
+  /* Initialize and xlog metabuffer. */
+  START_CRIT_SECTION();
+  brin_metapage_init(BufferGetPage(metabuf), BrinGetPagesPerRange(index), BRIN_CURRENT_VERSION);
+  MarkBufferDirty(metabuf);
+  log_newpage_buffer(metabuf, true);
+  END_CRIT_SECTION();
 
-
-
-
-
-
-
-
-
-
-
-
+  UnlockReleaseBuffer(metabuf);
 }
 
 /*
@@ -754,7 +754,7 @@ brinvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   /* No-op in ANALYZE ONLY mode */
   if (info->analyze_only)
   {
-
+    return stats;
   }
 
   if (!stats)
@@ -791,7 +791,7 @@ brinoptions(Datum reloptions, bool validate)
   /* if none set, we're done */
   if (numoptions == 0)
   {
-
+    return NULL;
   }
 
   rdopts = allocateReloptStruct(sizeof(BrinOptions), options, numoptions);
@@ -836,7 +836,7 @@ brin_summarize_range(PG_FUNCTION_ARGS)
 
   if (RecoveryInProgress())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("recovery is in progress"), errhint("BRIN control functions cannot be executed during recovery.")));
   }
 
   if (heapBlk64 > BRIN_ALL_BLOCKRANGES || heapBlk64 < 0)
@@ -890,7 +890,7 @@ brin_summarize_range(PG_FUNCTION_ARGS)
   /* User must own the index (comparable to privileges needed for VACUUM) */
   if (heapRel != NULL && !pg_class_ownercheck(indexoid, save_userid))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_INDEX, RelationGetRelationName(indexRel));
   }
 
   /*
@@ -900,7 +900,7 @@ brin_summarize_range(PG_FUNCTION_ARGS)
    */
   if (heapRel == NULL || heapoid != IndexGetRelation(indexoid, false))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE), errmsg("could not open parent table of index %s", RelationGetRelationName(indexRel))));
   }
 
   /* OK, do it */
@@ -934,7 +934,7 @@ brin_desummarize_range(PG_FUNCTION_ARGS)
 
   if (RecoveryInProgress())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("recovery is in progress"), errhint("BRIN control functions cannot be executed during recovery.")));
   }
 
   if (heapBlk64 > MaxBlockNumber || heapBlk64 < 0)
@@ -969,13 +969,13 @@ brin_desummarize_range(PG_FUNCTION_ARGS)
   /* Must be a BRIN index */
   if (indexRel->rd_rel->relkind != RELKIND_INDEX || indexRel->rd_rel->relam != BRIN_AM_OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a BRIN index", RelationGetRelationName(indexRel))));
   }
 
   /* User must own the index (comparable to privileges needed for VACUUM) */
   if (!pg_class_ownercheck(indexoid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_INDEX, RelationGetRelationName(indexRel));
   }
 
   /*
@@ -985,7 +985,7 @@ brin_desummarize_range(PG_FUNCTION_ARGS)
    */
   if (heapRel == NULL || heapoid != IndexGetRelation(indexoid, false))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE), errmsg("could not open parent table of index %s", RelationGetRelationName(indexRel))));
   }
 
   /* the revmap does the hard work */
@@ -1250,17 +1250,17 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel, B
      * other reasons for the update to fail, but it's simple to treat them
      * the same.)
      */
-
+    phtup = brinGetTupleForHeapBlock(state->bs_rmAccess, heapBlk, &phbuf, &offset, &phsz, BUFFER_LOCK_SHARE, NULL);
     /* the placeholder tuple must exist */
-
-
-
-
-
-
+    if (phtup == NULL)
+    {
+      elog(ERROR, "missing placeholder tuple");
+    }
+    phtup = brin_copy_tuple(phtup, phsz, NULL, NULL);
+    LockBuffer(phbuf, BUFFER_LOCK_UNLOCK);
 
     /* merge it into the tuple from the heap scan */
-
+    union_tuples(state->bs_bdesc, state->bs_dtuple, phtup);
   }
 
   ReleaseBuffer(phbuf);
@@ -1304,8 +1304,8 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange, bool incl
   if (startBlk > heapNumBlocks)
   {
     /* Nothing to do if start point is beyond end of table */
-
-
+    brinRevmapTerminate(revmap);
+    return;
   }
 
   /*
@@ -1400,28 +1400,28 @@ form_and_insert_tuple(BrinBuildState *state)
 static void
 union_tuples(BrinDesc *bdesc, BrinMemTuple *a, BrinTuple *b)
 {
+  int keyno;
+  BrinMemTuple *db;
+  MemoryContext cxt;
+  MemoryContext oldcxt;
 
+  /* Use our own memory context to avoid retail pfree */
+  cxt = AllocSetContextCreate(CurrentMemoryContext, "brin union", ALLOCSET_DEFAULT_SIZES);
+  oldcxt = MemoryContextSwitchTo(cxt);
+  db = brin_deform_tuple(bdesc, b, NULL);
+  MemoryContextSwitchTo(oldcxt);
 
+  for (keyno = 0; keyno < bdesc->bd_tupdesc->natts; keyno++)
+  {
+    FmgrInfo *unionFn;
+    BrinValues *col_a = &a->bt_columns[keyno];
+    BrinValues *col_b = &db->bt_columns[keyno];
 
+    unionFn = index_getprocinfo(bdesc->bd_index, keyno + 1, BRIN_PROCNUM_UNION);
+    FunctionCall3Coll(unionFn, bdesc->bd_index->rd_indcollation[keyno], PointerGetDatum(bdesc), PointerGetDatum(col_a), PointerGetDatum(col_b));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  MemoryContextDelete(cxt);
 }
 
 /*

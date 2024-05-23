@@ -49,10 +49,9 @@
 #define MinSizeOfItems(ndeps) (SizeOfHeader + (ndeps) * MinSizeOfItem)
 
 /*
- * Internal state for DependencyGenerator of dependencies. Dependencies are
- * similar to k-permutations of n elements, except that the order does not
- * matter for the first (k-1) elements. That is, (a,b=>c) and (b,a=>c) are
- * equivalent.
+ * Internal state for DependencyGenerator of dependencies. Dependencies are similar to
+ * k-permutations of n elements, except that the order does not matter for the
+ * first (k-1) elements. That is, (a,b=>c) and (b,a=>c) are equivalent.
  */
 typedef struct DependencyGeneratorData
 {
@@ -270,9 +269,9 @@ dependency_degree(int numrows, HeapTuple *rows, int k, AttrNumber *dependency, V
     TypeCacheEntry *type;
 
     type = lookup_type_cache(colstat->attrtypid, TYPECACHE_LT_OPR);
-    if (type->lt_opr == InvalidOid)
-    { /* shouldn't happen */
-
+    if (type->lt_opr == InvalidOid) /* shouldn't happen */
+    {
+      elog(ERROR, "cache lookup failed for ordering operator for type %u", colstat->attrtypid);
     }
 
     /* prepare the sort function for this dimension */
@@ -517,12 +516,12 @@ statext_dependencies_deserialize(bytea *data)
 
   if (data == NULL)
   {
-
+    return NULL;
   }
 
   if (VARSIZE_ANY_EXHDR(data) < SizeOfHeader)
   {
-
+    elog(ERROR, "invalid MVDependencies size %zd (expected at least %zd)", VARSIZE_ANY_EXHDR(data), SizeOfHeader);
   }
 
   /* read the MVDependencies header */
@@ -541,17 +540,17 @@ statext_dependencies_deserialize(bytea *data)
 
   if (dependencies->magic != STATS_DEPS_MAGIC)
   {
-
+    elog(ERROR, "invalid dependency magic %d (expected %d)", dependencies->magic, STATS_DEPS_MAGIC);
   }
 
   if (dependencies->type != STATS_DEPS_TYPE_BASIC)
   {
-
+    elog(ERROR, "invalid dependency type %d (expected %d)", dependencies->type, STATS_DEPS_TYPE_BASIC);
   }
 
   if (dependencies->ndeps == 0)
   {
-
+    elog(ERROR, "invalid zero-length item array in MVDependencies");
   }
 
   /* what minimum bytea size do we expect for those parameters */
@@ -559,7 +558,7 @@ statext_dependencies_deserialize(bytea *data)
 
   if (VARSIZE_ANY_EXHDR(data) < min_expected_size)
   {
-
+    elog(ERROR, "invalid dependencies size %zd (expected at least %zd)", VARSIZE_ANY_EXHDR(data), min_expected_size);
   }
 
   /* allocate space for the MCV items */
@@ -606,8 +605,8 @@ statext_dependencies_deserialize(bytea *data)
 
 /*
  * dependency_is_fully_matched
- *		checks that a functional dependency is fully matched given
- *clauses on attributes (assuming the clauses are suitable equality clauses)
+ *		checks that a functional dependency is fully matched given clauses on
+ *		attributes (assuming the clauses are suitable equality clauses)
  */
 static bool
 dependency_is_fully_matched(MVDependency *dependency, Bitmapset *attnums)
@@ -633,8 +632,7 @@ dependency_is_fully_matched(MVDependency *dependency, Bitmapset *attnums)
 
 /*
  * dependency_implies_attribute
- *		check that the attnum matches is implied by the functional
- *dependency
+ *		check that the attnum matches is implied by the functional dependency
  */
 static bool
 dependency_implies_attribute(MVDependency *dependency, AttrNumber attnum)
@@ -649,8 +647,7 @@ dependency_implies_attribute(MVDependency *dependency, AttrNumber attnum)
 
 /*
  * statext_dependencies_load
- *		Load the functional dependencies for the indicated
- *pg_statistic_ext tuple
+ *		Load the functional dependencies for the indicated pg_statistic_ext tuple
  */
 MVDependencies *
 statext_dependencies_load(Oid mvoid)
@@ -663,13 +660,13 @@ statext_dependencies_load(Oid mvoid)
   htup = SearchSysCache1(STATEXTDATASTXOID, ObjectIdGetDatum(mvoid));
   if (!HeapTupleIsValid(htup))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", mvoid);
   }
 
   deps = SysCacheGetAttr(STATEXTDATASTXOID, htup, Anum_pg_statistic_ext_data_stxddependencies, &isnull);
   if (isnull)
   {
-
+    elog(ERROR, "requested statistics kind \"%c\" is not yet built for statistics object %u", STATS_EXT_DEPENDENCIES, mvoid);
   }
 
   result = statext_dependencies_deserialize(DatumGetByteaPP(deps));
@@ -688,13 +685,13 @@ statext_dependencies_load(Oid mvoid)
 Datum
 pg_dependencies_in(PG_FUNCTION_ARGS)
 {
+  /*
+   * pg_node_list stores the data in binary form and parsing text input is
+   * not needed, so disallow this.
+   */
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_dependencies")));
 
-
-
-
-
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -703,43 +700,43 @@ pg_dependencies_in(PG_FUNCTION_ARGS)
 Datum
 pg_dependencies_out(PG_FUNCTION_ARGS)
 {
+  bytea *data = PG_GETARG_BYTEA_PP(0);
+  MVDependencies *dependencies = statext_dependencies_deserialize(data);
+  int i, j;
+  StringInfoData str;
 
+  initStringInfo(&str);
+  appendStringInfoChar(&str, '{');
 
+  for (i = 0; i < dependencies->ndeps; i++)
+  {
+    MVDependency *dependency = dependencies->deps[i];
 
+    if (i > 0)
+    {
+      appendStringInfoString(&str, ", ");
+    }
 
+    appendStringInfoChar(&str, '"');
+    for (j = 0; j < dependency->nattributes; j++)
+    {
+      if (j == dependency->nattributes - 1)
+      {
+        appendStringInfoString(&str, " => ");
+      }
+      else if (j > 0)
+      {
+        appendStringInfoString(&str, ", ");
+      }
 
+      appendStringInfo(&str, "%d", dependency->attributes[j]);
+    }
+    appendStringInfo(&str, "\": %f", dependency->degree);
+  }
 
+  appendStringInfoChar(&str, '}');
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_CSTRING(str.data);
 }
 
 /*
@@ -748,14 +745,13 @@ pg_dependencies_out(PG_FUNCTION_ARGS)
 Datum
 pg_dependencies_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_dependencies")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
- * pg_dependencies_send		- binary output routine for type
- * pg_dependencies.
+ * pg_dependencies_send		- binary output routine for type pg_dependencies.
  *
  * Functional dependencies are serialized in a bytea value (although the type
  * is named differently), so let's just send that.
@@ -763,13 +759,12 @@ pg_dependencies_recv(PG_FUNCTION_ARGS)
 Datum
 pg_dependencies_send(PG_FUNCTION_ARGS)
 {
-
+  return byteasend(fcinfo);
 }
 
 /*
  * dependency_is_compatible_clause
- *		Determines if the clause is compatible with functional
- *dependencies
+ *		Determines if the clause is compatible with functional dependencies
  *
  * Only clauses that have the form of equality to a pseudoconstant, or can be
  * interpreted that way, are currently accepted.  Furthermore the variable
@@ -784,19 +779,19 @@ dependency_is_compatible_clause(Node *clause, Index relid, AttrNumber *attnum)
 
   if (!IsA(rinfo, RestrictInfo))
   {
-
+    return false;
   }
 
   /* Pseudoconstants are not interesting (they couldn't contain a Var) */
   if (rinfo->pseudoconstant)
   {
-
+    return false;
   }
 
   /* Clauses referencing multiple, or no, varnos are incompatible */
   if (bms_membership(rinfo->clause_relids) != BMS_SINGLETON)
   {
-
+    return false;
   }
 
   if (is_opclause(rinfo->clause))
@@ -807,7 +802,7 @@ dependency_is_compatible_clause(Node *clause, Index relid, AttrNumber *attnum)
     /* Only expressions with two arguments are candidates. */
     if (list_length(expr->args) != 2)
     {
-
+      return false;
     }
 
     /* Make sure non-selected argument is a pseudoconstant. */
@@ -815,14 +810,14 @@ dependency_is_compatible_clause(Node *clause, Index relid, AttrNumber *attnum)
     {
       var = linitial(expr->args);
     }
-
-
-
-
-
-
-
-
+    else if (is_pseudo_constant_clause(linitial(expr->args)))
+    {
+      var = lsecond(expr->args);
+    }
+    else
+    {
+      return false;
+    }
 
     /*
      * If it's not an "=" operator, just ignore the clause, as it's not
@@ -838,27 +833,27 @@ dependency_is_compatible_clause(Node *clause, Index relid, AttrNumber *attnum)
      */
     if (get_oprrest(expr->opno) != F_EQSEL)
     {
-
+      return false;
     }
 
     /* OK to proceed with checking "var" */
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (is_notclause(rinfo->clause))
+  {
+    /*
+     * "NOT x" can be interpreted as "x = false", so get the argument and
+     * proceed with seeing if it's a suitable Var.
+     */
+    var = (Var *)get_notclausearg(rinfo->clause);
+  }
+  else
+  {
+    /*
+     * A boolean expression "x" can be interpreted as "x = true", so
+     * proceed with seeing if it's a suitable Var.
+     */
+    var = (Var *)rinfo->clause;
+  }
 
   /*
    * We may ignore any RelabelType node above the operand.  (There won't be
@@ -866,31 +861,31 @@ dependency_is_compatible_clause(Node *clause, Index relid, AttrNumber *attnum)
    */
   if (IsA(var, RelabelType))
   {
-
+    var = (Var *)((RelabelType *)var)->arg;
   }
 
   /* We only support plain Vars for now */
   if (!IsA(var, Var))
   {
-
+    return false;
   }
 
   /* Ensure Var is from the correct relation */
   if (var->varno != relid)
   {
-
+    return false;
   }
 
   /* We also better ensure the Var is from the current level */
   if (var->varlevelsup != 0)
   {
-
+    return false;
   }
 
   /* Also ignore system attributes (we don't allow stats on those) */
   if (!AttrNumberIsForUserDefinedAttr(var->varattno))
   {
-
+    return false;
   }
 
   *attnum = var->varattno;
@@ -945,13 +940,13 @@ find_strongest_dependency(StatisticExtInfo *stats, MVDependencies *dependencies,
       /* skip dependencies on fewer attributes than the strongest. */
       if (dependency->nattributes < strongest->nattributes)
       {
-
+        continue;
       }
 
       /* also skip weaker dependencies when attribute count matches */
       if (strongest->nattributes == dependency->nattributes && strongest->degree > dependency->degree)
       {
-
+        continue;
       }
     }
 
@@ -971,8 +966,8 @@ find_strongest_dependency(StatisticExtInfo *stats, MVDependencies *dependencies,
 
 /*
  * dependencies_clauselist_selectivity
- *		Return the estimated selectivity of (a subset of) the given
- *clauses using functional dependency statistics, or 1.0 if no useful functional
+ *		Return the estimated selectivity of (a subset of) the given clauses
+ *		using functional dependency statistics, or 1.0 if no useful functional
  *		dependency statistic exists.
  *
  * 'estimatedclauses' is an input/output argument that gets a bit set
@@ -1016,7 +1011,7 @@ dependencies_clauselist_selectivity(PlannerInfo *root, List *clauses, int varRel
    */
   if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    return 1.0;
   }
 
   /* check if there's any stats that might be useful for us. */
@@ -1074,8 +1069,8 @@ dependencies_clauselist_selectivity(PlannerInfo *root, List *clauses, int varRel
   /* if no matching stats could be found then we've nothing to do */
   if (!stat)
   {
-
-
+    pfree(list_attnums);
+    return 1.0;
   }
 
   /* load the dependency items stored in the statistics object */
@@ -1119,7 +1114,7 @@ dependencies_clauselist_selectivity(PlannerInfo *root, List *clauses, int varRel
        */
       if (!list_attnums[listidx])
       {
-
+        continue;
       }
 
       /*

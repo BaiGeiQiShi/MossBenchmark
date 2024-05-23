@@ -453,8 +453,7 @@ sn_array_element_start(void *state, bool isnull);
 static void
 sn_scalar(void *state, char *token, JsonTokenType tokentype);
 
-/* worker functions for populate_record, to_record, populate_recordset and
- * to_recordset */
+/* worker functions for populate_record, to_record, populate_recordset and to_recordset */
 static Datum
 populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname, bool is_json, bool have_record_arg);
 static Datum
@@ -826,18 +825,18 @@ jsonb_object_field_text(PG_FUNCTION_ARGS)
 
     switch (v->type)
     {
-    case jbvNull:;
+    case jbvNull:
       break;
-    case jbvBool:;
-
-
-    case jbvString:;
+    case jbvBool:
+      result = cstring_to_text(v->val.boolean ? "true" : "false");
+      break;
+    case jbvString:
       result = cstring_to_text_with_len(v->val.string.val, v->val.string.len);
       break;
-    case jbvNumeric:;
+    case jbvNumeric:
       result = cstring_to_text(DatumGetCString(DirectFunctionCall1(numeric_out, PointerGetDatum(v->val.numeric))));
       break;
-    case jbvBinary:;
+    case jbvBinary:
     {
       StringInfo jtext = makeStringInfo();
 
@@ -845,8 +844,8 @@ jsonb_object_field_text(PG_FUNCTION_ARGS)
       result = cstring_to_text_with_len(jtext->data, jtext->len);
     }
     break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized jsonb type: %d", (int)v->type);
     }
 
     if (result)
@@ -949,14 +948,14 @@ jsonb_array_element_text(PG_FUNCTION_ARGS)
   {
     uint32 nelements = JB_ROOT_COUNT(jb);
 
-
-
-
-
-
-
-
-
+    if (-element > nelements)
+    {
+      PG_RETURN_NULL();
+    }
+    else
+    {
+      element += nelements;
+    }
   }
 
   v = getIthJsonbValueFromContainer(&jb->root, element);
@@ -966,18 +965,18 @@ jsonb_array_element_text(PG_FUNCTION_ARGS)
 
     switch (v->type)
     {
-    case jbvNull:;
+    case jbvNull:
       break;
-    case jbvBool:;
-
-
-    case jbvString:;
+    case jbvBool:
+      result = cstring_to_text(v->val.boolean ? "true" : "false");
+      break;
+    case jbvString:
       result = cstring_to_text_with_len(v->val.string.val, v->val.string.len);
       break;
-    case jbvNumeric:;
-
-
-    case jbvBinary:;
+    case jbvNumeric:
+      result = cstring_to_text(DatumGetCString(DirectFunctionCall1(numeric_out, PointerGetDatum(v->val.numeric))));
+      break;
+    case jbvBinary:
     {
       StringInfo jtext = makeStringInfo();
 
@@ -985,8 +984,8 @@ jsonb_array_element_text(PG_FUNCTION_ARGS)
       result = cstring_to_text_with_len(jtext->data, jtext->len);
     }
     break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized jsonb type: %d", (int)v->type);
     }
 
     if (result)
@@ -1569,7 +1568,7 @@ get_jsonb_path_all(FunctionCallInfo fcinfo, bool as_text)
         /* Container must be array, but make sure */
         if (!JsonContainerIsArray(container))
         {
-
+          elog(ERROR, "not a jsonb array");
         }
 
         nelements = JsonContainerSize(container);
@@ -1783,21 +1782,23 @@ each_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 
   if (!JB_ROOT_IS_OBJECT(jb))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on a non-object", funcname)));
   }
 
   rsi = (ReturnSetInfo *)fcinfo->resultinfo;
 
   if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_Materialize) == 0 || rsi->expectedDesc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that "
+                                                                   "cannot accept a set")));
   }
 
   rsi->returnMode = SFRM_Materialize;
 
   if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function returning record called in context "
+                                                                   "that cannot accept type record")));
   }
 
   old_cxt = MemoryContextSwitchTo(rsi->econtext->ecxt_per_query_memory);
@@ -1912,7 +1913,8 @@ each_worker(FunctionCallInfo fcinfo, bool as_text)
 
   if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_Materialize) == 0 || rsi->expectedDesc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that "
+                                                                   "cannot accept a set")));
   }
 
   rsi->returnMode = SFRM_Materialize;
@@ -2029,7 +2031,7 @@ each_array_start(void *state)
   /* json structure check */
   if (_state->lex->lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot deconstruct an array as an object")));
   }
 }
 
@@ -2041,7 +2043,7 @@ each_scalar(void *state, char *token, JsonTokenType tokentype)
   /* json structure check */
   if (_state->lex->lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot deconstruct a scalar")));
   }
 
   /* supply de-escaped value if required */
@@ -2087,18 +2089,19 @@ elements_worker_jsonb(FunctionCallInfo fcinfo, const char *funcname, bool as_tex
 
   if (JB_ROOT_IS_SCALAR(jb))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot extract elements from a scalar")));
   }
   else if (!JB_ROOT_IS_ARRAY(jb))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot extract elements from an object")));
   }
 
   rsi = (ReturnSetInfo *)fcinfo->resultinfo;
 
   if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_Materialize) == 0 || rsi->expectedDesc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that "
+                                                                   "cannot accept a set")));
   }
 
   rsi->returnMode = SFRM_Materialize;
@@ -2218,7 +2221,8 @@ elements_worker(FunctionCallInfo fcinfo, const char *funcname, bool as_text)
 
   if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_Materialize) == 0 || rsi->expectedDesc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that "
+                                                                   "cannot accept a set")));
   }
 
   rsi->returnMode = SFRM_Materialize;
@@ -2335,7 +2339,7 @@ elements_object_start(void *state)
   /* json structure check */
   if (_state->lex->lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on a non-array", _state->function_name)));
   }
 }
 
@@ -2347,7 +2351,7 @@ elements_scalar(void *state, char *token, JsonTokenType tokentype)
   /* json structure check */
   if (_state->lex->lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on a scalar", _state->function_name)));
   }
 
   /* supply de-escaped value if required */
@@ -2405,7 +2409,7 @@ populate_array_report_expected_array(PopulateArrayContext *ctx, int ndim)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected JSON array")));
     }
   }
   else
@@ -2428,7 +2432,7 @@ populate_array_report_expected_array(PopulateArrayContext *ctx, int ndim)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected JSON array"), errhint("See the array element %s.", indices.data)));
     }
   }
 }
@@ -2468,7 +2472,9 @@ populate_array_check_dimension(PopulateArrayContext *ctx, int ndim)
   }
   else if (ctx->dims[ndim] != dim)
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed JSON array"), errdetail("Multidimensional arrays must have sub-arrays with matching dimensions.")));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed JSON array"),
+                       errdetail("Multidimensional arrays must have "
+                                 "sub-arrays with matching dimensions.")));
   }
 
   /* reset the current array dimension size counter */
@@ -2799,7 +2805,7 @@ update_cached_tupdesc(CompositeIOData *io, MemoryContext mcxt)
 
     if (io->tupdesc)
     {
-
+      FreeTupleDesc(io->tupdesc);
     }
 
     /* copy tuple desc without constraints into cache memory context */
@@ -2822,7 +2828,7 @@ populate_composite(CompositeIOData *io, Oid typid, const char *colname, MemoryCo
 
   if (isnull)
   {
-
+    result = (Datum)0;
   }
   else
   {
@@ -2888,7 +2894,7 @@ populate_scalar(ScalarIOData *io, Oid typid, int32 typmod, JsValue *jsv)
       /* free temporary buffer */
       if (str != json)
       {
-
+        pfree(str);
       }
       str = buf.data;
     }
@@ -2914,8 +2920,8 @@ populate_scalar(ScalarIOData *io, Oid typid, int32 typmod, JsValue *jsv)
 
       str = JsonbToCString(NULL, &jsonb->root, VARSIZE(jsonb));
     }
-    else if (jbv->type == jbvString)
-    { /* quotes are stripped */
+    else if (jbv->type == jbvString) /* quotes are stripped */
+    {
       str = pnstrdup(jbv->val.string.val, jbv->val.string.len);
     }
     else if (jbv->type == jbvBool)
@@ -2932,7 +2938,7 @@ populate_scalar(ScalarIOData *io, Oid typid, int32 typmod, JsValue *jsv)
     }
     else
     {
-
+      elog(ERROR, "unrecognized jsonb type: %d", (int)jbv->type);
     }
   }
 
@@ -2980,7 +2986,7 @@ prepare_column_cache(ColumnIOData *column, Oid typid, int32 typmod, MemoryContex
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", typid);
   }
 
   type = (Form_pg_type)GETSTRUCT(tup);
@@ -3050,8 +3056,7 @@ prepare_column_cache(ColumnIOData *column, Oid typid, int32 typmod, MemoryContex
   ReleaseSysCache(tup);
 }
 
-/* recursively populate a record field or an array element from a json/jsonb
- * value */
+/* recursively populate a record field or an array element from a json/jsonb value */
 static Datum
 populate_record_field(ColumnIOData *col, Oid typid, int32 typmod, const char *colname, MemoryContext mcxt, Datum defaultval, JsValue *jsv, bool *isnull)
 {
@@ -3086,22 +3091,22 @@ populate_record_field(ColumnIOData *col, Oid typid, int32 typmod, const char *co
 
   switch (typcat)
   {
-  case TYPECAT_SCALAR:;
+  case TYPECAT_SCALAR:
     return populate_scalar(&col->scalar_io, typid, typmod, jsv);
 
-  case TYPECAT_ARRAY:;
+  case TYPECAT_ARRAY:
     return populate_array(&col->io.array, colname, mcxt, jsv);
 
-  case TYPECAT_COMPOSITE:;
-  case TYPECAT_COMPOSITE_DOMAIN:;
+  case TYPECAT_COMPOSITE:
+  case TYPECAT_COMPOSITE_DOMAIN:
     return populate_composite(&col->io.composite, typid, colname, mcxt, DatumGetPointer(defaultval) ? DatumGetHeapTupleHeader(defaultval) : NULL, jsv, *isnull);
 
-  case TYPECAT_DOMAIN:;
+  case TYPECAT_DOMAIN:
     return populate_domain(&col->io.domain, typid, colname, mcxt, jsv, *isnull);
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized type category '%c'", typcat);
+    return (Datum)0;
   }
 }
 
@@ -3212,8 +3217,8 @@ populate_record(TupleDesc tupdesc, RecordIOData **record_p, HeapTupleHeader defa
     /* Ignore dropped columns in datatype */
     if (att->attisdropped)
     {
-
-
+      nulls[i] = true;
+      continue;
     }
 
     found = JsObjectGetField(obj, colname, &field);
@@ -3254,7 +3259,9 @@ get_record_type_from_argument(FunctionCallInfo fcinfo, const char *funcname, Pop
   prepare_column_cache(&cache->c, cache->argtype, -1, cache->fn_mcxt, false);
   if (cache->c.typcat != TYPECAT_COMPOSITE && cache->c.typcat != TYPECAT_COMPOSITE_DOMAIN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
+                       /* translator: %s is a function name, eg json_to_record */
+                       errmsg("first argument of %s must be a row type", funcname)));
   }
 }
 
@@ -3274,7 +3281,12 @@ get_record_type_from_query(FunctionCallInfo fcinfo, const char *funcname, Popula
 
   if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine row type for result of %s", funcname), errhint("Provide a non-null record argument, or call the function in the FROM clause using a column definition list.")));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /* translator: %s is a function name, eg json_to_record */
+                       errmsg("could not determine row type for result of %s", funcname),
+                       errhint("Provide a non-null record argument, "
+                               "or call the function in the FROM clause "
+                               "using a column definition list.")));
   }
 
   Assert(tupdesc);
@@ -3283,7 +3295,7 @@ get_record_type_from_query(FunctionCallInfo fcinfo, const char *funcname, Popula
   /* If we go through this more than once, avoid memory leak */
   if (cache->c.io.composite.tupdesc)
   {
-
+    FreeTupleDesc(cache->c.io.composite.tupdesc);
   }
 
   /* Save identified tupdesc */
@@ -3367,14 +3379,14 @@ populate_record_worker(FunctionCallInfo fcinfo, const char *funcname, bool is_js
   /* If no JSON argument, just return the record (if any) unchanged */
   if (PG_ARGISNULL(json_arg_num))
   {
-
-
-
-
-
-
-
-
+    if (rec)
+    {
+      PG_RETURN_POINTER(rec);
+    }
+    else
+    {
+      PG_RETURN_NULL();
+    }
   }
 
   jsv.is_json = is_json;
@@ -3492,7 +3504,7 @@ hash_object_field_end(void *state, char *fname, bool isnull)
    */
   if (strlen(fname) >= NAMEDATALEN)
   {
-
+    return;
   }
 
   hashentry = hash_search(_state->hash, fname, HASH_ENTER, &found);
@@ -3630,7 +3642,8 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname, bool is
 
   if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_Materialize) == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that "
+                                                                   "cannot accept a set")));
   }
 
   rsi->returnMode = SFRM_Materialize;
@@ -3693,7 +3706,7 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname, bool is
   /* if the json is null send back an empty set */
   if (PG_ARGISNULL(json_arg_num))
   {
-
+    PG_RETURN_NULL();
   }
 
   /*
@@ -3746,7 +3759,7 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname, bool is
 
     if (JB_ROOT_IS_SCALAR(jb) || !JB_ROOT_IS_ARRAY(jb))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on a non-array", funcname)));
     }
 
     it = JsonbIteratorInit(&jb->root);
@@ -3761,7 +3774,7 @@ populate_recordset_worker(FunctionCallInfo fcinfo, const char *funcname, bool is
 
         if (v.type != jbvBinary || !JsonContainerIsObject(v.val.binary.data))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("argument of %s must be an array of objects", funcname)));
         }
 
         obj.is_json = false;
@@ -3793,7 +3806,7 @@ populate_recordset_object_start(void *state)
   /* Reject object at top level: we must have an array at level 0 */
   if (lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on an object", _state->function_name)));
   }
 
   /* Nested objects require no special processing */
@@ -3840,13 +3853,14 @@ populate_recordset_array_element_start(void *state, bool isnull)
 
   if (_state->lex->lex_level == 1 && _state->lex->token_type != JSON_TOKEN_OBJECT_START)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("argument of %s must be an array of objects", _state->function_name)));
   }
 }
 
 static void
 populate_recordset_array_start(void *state)
-{ /* nothing to do */
+{
+  /* nothing to do */
 }
 
 static void
@@ -3856,7 +3870,7 @@ populate_recordset_scalar(void *state, char *token, JsonTokenType tokentype)
 
   if (_state->lex->lex_level == 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot call %s on a scalar", _state->function_name)));
   }
 
   if (_state->lex->lex_level == 2)
@@ -3911,7 +3925,7 @@ populate_recordset_object_field_end(void *state, char *fname, bool isnull)
    */
   if (strlen(fname) >= NAMEDATALEN)
   {
-
+    return;
   }
 
   hashentry = hash_search(_state->json_hash, fname, HASH_ENTER, &found);
@@ -4184,14 +4198,14 @@ addJsonbToParseState(JsonbParseState **jbps, Jsonb *jb)
 
     switch (o->type)
     {
-    case jbvArray:;
+    case jbvArray:
       (void)pushJsonbValue(jbps, WJB_ELEM, &v);
       break;
-    case jbvObject:;
+    case jbvObject:
       (void)pushJsonbValue(jbps, WJB_VALUE, &v);
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unexpected parent of nested structure");
     }
   }
   else
@@ -4344,17 +4358,17 @@ jsonb_delete_array(PG_FUNCTION_ARGS)
 
   if (ARR_NDIM(keys) > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("wrong number of array subscripts")));
   }
 
   if (JB_ROOT_IS_SCALAR(in))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot delete from scalar")));
   }
 
   if (JB_ROOT_COUNT(in) == 0)
   {
-
+    PG_RETURN_JSONB_P(in);
   }
 
   deconstruct_array(keys, TEXTOID, -1, false, 'i', &keys_elems, &keys_nulls, &keys_len);
@@ -4382,7 +4396,7 @@ jsonb_delete_array(PG_FUNCTION_ARGS)
 
         if (keys_nulls[i])
         {
-
+          continue;
         }
 
         keyptr = VARDATA_ANY(keys_elems[i]);
@@ -4509,7 +4523,7 @@ jsonb_set(PG_FUNCTION_ARGS)
 
   if (ARR_NDIM(path) > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("wrong number of array subscripts")));
   }
 
   if (JB_ROOT_IS_SCALAR(in))
@@ -4526,7 +4540,7 @@ jsonb_set(PG_FUNCTION_ARGS)
 
   if (path_len == 0)
   {
-
+    PG_RETURN_JSONB_P(in);
   }
 
   it = JsonbIteratorInit(&in->root);
@@ -4555,7 +4569,7 @@ jsonb_delete_path(PG_FUNCTION_ARGS)
 
   if (ARR_NDIM(path) > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("wrong number of array subscripts")));
   }
 
   if (JB_ROOT_IS_SCALAR(in))
@@ -4572,7 +4586,7 @@ jsonb_delete_path(PG_FUNCTION_ARGS)
 
   if (path_len == 0)
   {
-
+    PG_RETURN_JSONB_P(in);
   }
 
   it = JsonbIteratorInit(&in->root);
@@ -4604,19 +4618,19 @@ jsonb_insert(PG_FUNCTION_ARGS)
 
   if (ARR_NDIM(path) > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("wrong number of array subscripts")));
   }
 
   if (JB_ROOT_IS_SCALAR(in))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot set path in scalar")));
   }
 
   deconstruct_array(path, TEXTOID, -1, false, 'i', &path_elems, &path_nulls, &path_len);
 
   if (path_len == 0)
   {
-
+    PG_RETURN_JSONB_P(in);
   }
 
   it = JsonbIteratorInit(&in->root);
@@ -4772,28 +4786,28 @@ setPath(JsonbIterator **it, Datum *path_elems, bool *path_nulls, int path_len, J
 
   switch (r)
   {
-  case WJB_BEGIN_ARRAY:;
+  case WJB_BEGIN_ARRAY:
     (void)pushJsonbValue(st, r, NULL);
     setPathArray(it, path_elems, path_nulls, path_len, st, level, newval, v.val.array.nElems, op_type);
     r = JsonbIteratorNext(it, &v, false);
     Assert(r == WJB_END_ARRAY);
     res = pushJsonbValue(st, r, NULL);
     break;
-  case WJB_BEGIN_OBJECT:;
+  case WJB_BEGIN_OBJECT:
     (void)pushJsonbValue(st, r, NULL);
     setPathObject(it, path_elems, path_nulls, path_len, st, level, newval, v.val.object.nPairs, op_type);
     r = JsonbIteratorNext(it, &v, true);
     Assert(r == WJB_END_OBJECT);
     res = pushJsonbValue(st, r, NULL);
     break;
-  case WJB_ELEM:;
-  case WJB_VALUE:;
-
-
-  default:;;
-
-
-
+  case WJB_ELEM:
+  case WJB_VALUE:
+    res = pushJsonbValue(st, r, &v);
+    break;
+  default:
+    elog(ERROR, "unrecognized iterator result: %d", (int)r);
+    res = NULL; /* keep compiler quiet */
+    break;
   }
 
   return res;
@@ -4812,7 +4826,7 @@ setPathObject(JsonbIterator **it, Datum *path_elems, bool *path_nulls, int path_
 
   if (level >= path_len || path_nulls[level])
   {
-
+    done = true;
   }
 
   /* empty object is a special case for create */
@@ -4844,7 +4858,9 @@ setPathObject(JsonbIterator **it, Datum *path_elems, bool *path_nulls, int path_
          */
         if (op_type & (JB_PATH_INSERT_BEFORE | JB_PATH_INSERT_AFTER))
         {
-          ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot replace existing key"), errhint("Try using the function jsonb_set to replace key value.")));
+          ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot replace existing key"),
+                             errhint("Try using the function jsonb_set "
+                                     "to replace key value.")));
         }
 
         r = JsonbIteratorNext(it, &v, true); /* skip value */
@@ -4929,7 +4945,7 @@ setPathArray(JsonbIterator **it, Datum *path_elems, bool *path_nulls, int path_l
   }
   else
   {
-
+    idx = nelems;
   }
 
   if (idx < 0)
@@ -5010,21 +5026,21 @@ setPathArray(JsonbIterator **it, Datum *path_elems, bool *path_nulls, int path_l
       {
         int walking_level = 1;
 
+        while (walking_level != 0)
+        {
+          r = JsonbIteratorNext(it, &v, false);
 
+          if (r == WJB_BEGIN_ARRAY || r == WJB_BEGIN_OBJECT)
+          {
+            ++walking_level;
+          }
+          if (r == WJB_END_ARRAY || r == WJB_END_OBJECT)
+          {
+            --walking_level;
+          }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+          (void)pushJsonbValue(st, r, r < WJB_BEGIN_ARRAY ? &v : NULL);
+        }
       }
 
       if ((op_type & JB_PATH_CREATE_OR_INSERT) && !done && level == path_len - 1 && i == nelems - 1)
@@ -5098,14 +5114,14 @@ parse_jsonb_index_flags(Jsonb *jb)
   /* expect end of array now */
   if (type != WJB_END_ARRAY)
   {
-
+    elog(ERROR, "unexpected end of flag array");
   }
 
   /* get final WJB_DONE and free iterator */
   type = JsonbIteratorNext(&it, &v, false);
   if (type != WJB_DONE)
   {
-
+    elog(ERROR, "unexpected end of flag array");
   }
 
   return flags;
@@ -5113,8 +5129,7 @@ parse_jsonb_index_flags(Jsonb *jb)
 
 /*
  * Iterate over jsonb values or elements, specified by flags, and pass them
- * together with an iteration state to a specified
- * JsonIterateStringValuesAction.
+ * together with an iteration state to a specified JsonIterateStringValuesAction.
  */
 void
 iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state, JsonIterateStringValuesAction action)
@@ -5149,13 +5164,13 @@ iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state, JsonIterateStringValu
     /* JsonbValue is a value of object or element of array */
     switch (v.type)
     {
-    case jbvString:;
+    case jbvString:
       if (flags & jtiString)
       {
         action(state, v.val.string.val, v.val.string.len);
       }
       break;
-    case jbvNumeric:;
+    case jbvNumeric:
       if (flags & jtiNumeric)
       {
         char *val;
@@ -5166,7 +5181,7 @@ iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state, JsonIterateStringValu
         pfree(val);
       }
       break;
-    case jbvBool:;
+    case jbvBool:
       if (flags & jtiBool)
       {
         if (v.val.boolean)
@@ -5179,7 +5194,7 @@ iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state, JsonIterateStringValu
         }
       }
       break;
-    default:;;
+    default:
       /* do not call callback for composite JsonbValue */
       break;
     }
@@ -5188,8 +5203,7 @@ iterate_jsonb_values(Jsonb *jb, uint32 flags, void *state, JsonIterateStringValu
 
 /*
  * Iterate over json values and elements, specified by flags, and pass them
- * together with an iteration state to a specified
- * JsonIterateStringValuesAction.
+ * together with an iteration state to a specified JsonIterateStringValuesAction.
  */
 void
 iterate_json_values(text *json, uint32 flags, void *action_state, JsonIterateStringValuesAction action)
@@ -5221,26 +5235,26 @@ iterate_values_scalar(void *state, char *token, JsonTokenType tokentype)
 
   switch (tokentype)
   {
-  case JSON_TOKEN_STRING:;
+  case JSON_TOKEN_STRING:
     if (_state->flags & jtiString)
     {
       _state->action(_state->action_state, token, strlen(token));
     }
     break;
-  case JSON_TOKEN_NUMBER:;
+  case JSON_TOKEN_NUMBER:
     if (_state->flags & jtiNumeric)
     {
       _state->action(_state->action_state, token, strlen(token));
     }
     break;
-  case JSON_TOKEN_TRUE:;
-  case JSON_TOKEN_FALSE:;
+  case JSON_TOKEN_TRUE:
+  case JSON_TOKEN_FALSE:
     if (_state->flags & jtiBool)
     {
       _state->action(_state->action_state, token, strlen(token));
     }
     break;
-  default:;;
+  default:
     /* do not call callback for any other token */
     break;
   }

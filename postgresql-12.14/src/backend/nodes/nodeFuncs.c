@@ -46,30 +46,30 @@ exprType(const Node *expr)
 
   if (!expr)
   {
-
+    return InvalidOid;
   }
 
   switch (nodeTag(expr))
   {
-  case T_Var:;
+  case T_Var:
     type = ((const Var *)expr)->vartype;
     break;
-  case T_Const:;
+  case T_Const:
     type = ((const Const *)expr)->consttype;
     break;
-  case T_Param:;
+  case T_Param:
     type = ((const Param *)expr)->paramtype;
     break;
-  case T_Aggref:;
+  case T_Aggref:
     type = ((const Aggref *)expr)->aggtype;
     break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
     type = INT4OID;
     break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
     type = ((const WindowFunc *)expr)->wintype;
     break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
   {
     const SubscriptingRef *sbsref = (const SubscriptingRef *)expr;
 
@@ -84,28 +84,28 @@ exprType(const Node *expr)
     }
   }
   break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
     type = ((const FuncExpr *)expr)->funcresulttype;
     break;
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
     type = exprType((Node *)((const NamedArgExpr *)expr)->arg);
     break;
-  case T_OpExpr:;
+  case T_OpExpr:
     type = ((const OpExpr *)expr)->opresulttype;
     break;
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
     type = ((const DistinctExpr *)expr)->opresulttype;
     break;
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
     type = ((const NullIfExpr *)expr)->opresulttype;
     break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
     type = BOOLOID;
     break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
     type = BOOLOID;
     break;
-  case T_SubLink:;
+  case T_SubLink:
   {
     const SubLink *sublink = (const SubLink *)expr;
 
@@ -117,7 +117,7 @@ exprType(const Node *expr)
 
       if (!qtree || !IsA(qtree, Query))
       {
-
+        elog(ERROR, "cannot get type for untransformed sublink");
       }
       tent = linitial_node(TargetEntry, qtree->targetList);
       Assert(!tent->resjunk);
@@ -127,7 +127,7 @@ exprType(const Node *expr)
         type = get_promoted_array_type(type);
         if (!OidIsValid(type))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find array type for data type %s", format_type_be(exprType((Node *)tent->expr)))));
         }
       }
     }
@@ -143,7 +143,7 @@ exprType(const Node *expr)
     }
   }
   break;
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     const SubPlan *subplan = (const SubPlan *)expr;
 
@@ -156,7 +156,7 @@ exprType(const Node *expr)
         type = get_promoted_array_type(type);
         if (!OidIsValid(type))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find array type for data type %s", format_type_be(subplan->firstColType))));
         }
       }
     }
@@ -172,7 +172,7 @@ exprType(const Node *expr)
     }
   }
   break;
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
   {
     const AlternativeSubPlan *asplan = (const AlternativeSubPlan *)expr;
 
@@ -180,55 +180,55 @@ exprType(const Node *expr)
     type = exprType((Node *)linitial(asplan->subplans));
   }
   break;
-  case T_FieldSelect:;
+  case T_FieldSelect:
     type = ((const FieldSelect *)expr)->resulttype;
     break;
-  case T_FieldStore:;
+  case T_FieldStore:
     type = ((const FieldStore *)expr)->resulttype;
     break;
-  case T_RelabelType:;
+  case T_RelabelType:
     type = ((const RelabelType *)expr)->resulttype;
     break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
     type = ((const CoerceViaIO *)expr)->resulttype;
     break;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
     type = ((const ArrayCoerceExpr *)expr)->resulttype;
     break;
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
     type = ((const ConvertRowtypeExpr *)expr)->resulttype;
     break;
-  case T_CollateExpr:;
+  case T_CollateExpr:
     type = exprType((Node *)((const CollateExpr *)expr)->arg);
     break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
     type = ((const CaseExpr *)expr)->casetype;
     break;
-  case T_CaseTestExpr:;
+  case T_CaseTestExpr:
     type = ((const CaseTestExpr *)expr)->typeId;
     break;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
     type = ((const ArrayExpr *)expr)->array_typeid;
     break;
-  case T_RowExpr:;
+  case T_RowExpr:
     type = ((const RowExpr *)expr)->row_typeid;
     break;
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
     type = BOOLOID;
     break;
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
     type = ((const CoalesceExpr *)expr)->coalescetype;
     break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     type = ((const MinMaxExpr *)expr)->minmaxtype;
     break;
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
     type = ((const SQLValueFunction *)expr)->type;
     break;
-  case T_XmlExpr:;
+  case T_XmlExpr:
     if (((const XmlExpr *)expr)->op == IS_DOCUMENT)
     {
-
+      type = BOOLOID;
     }
     else if (((const XmlExpr *)expr)->op == IS_XMLSERIALIZE)
     {
@@ -239,41 +239,41 @@ exprType(const Node *expr)
       type = XMLOID;
     }
     break;
-  case T_NullTest:;
+  case T_NullTest:
     type = BOOLOID;
     break;
-  case T_BooleanTest:;
+  case T_BooleanTest:
     type = BOOLOID;
     break;
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
     type = ((const CoerceToDomain *)expr)->resulttype;
     break;
-  case T_CoerceToDomainValue:;
+  case T_CoerceToDomainValue:
     type = ((const CoerceToDomainValue *)expr)->typeId;
     break;
-  case T_SetToDefault:;
+  case T_SetToDefault:
     type = ((const SetToDefault *)expr)->typeId;
     break;
-  case T_CurrentOfExpr:;
+  case T_CurrentOfExpr:
     type = BOOLOID;
     break;
-  case T_NextValueExpr:;
+  case T_NextValueExpr:
     type = ((const NextValueExpr *)expr)->typeId;
     break;
-  case T_InferenceElem:;
+  case T_InferenceElem:
   {
     const InferenceElem *n = (const InferenceElem *)expr;
 
-
+    type = exprType((Node *)n->expr);
   }
-
-  case T_PlaceHolderVar:;
+  break;
+  case T_PlaceHolderVar:
     type = exprType((Node *)((const PlaceHolderVar *)expr)->phexpr);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(expr));
+    type = InvalidOid; /* keep compiler quiet */
+    break;
   }
   return type;
 }
@@ -288,21 +288,21 @@ exprTypmod(const Node *expr)
 {
   if (!expr)
   {
-
+    return -1;
   }
 
   switch (nodeTag(expr))
   {
-  case T_Var:;
+  case T_Var:
     return ((const Var *)expr)->vartypmod;
-  case T_Const:;
+  case T_Const:
     return ((const Const *)expr)->consttypmod;
-  case T_Param:;
+  case T_Param:
     return ((const Param *)expr)->paramtypmod;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
     /* typmod is the same for container or element */
     return ((const SubscriptingRef *)expr)->reftypmod;
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     int32 coercedTypmod;
 
@@ -313,9 +313,9 @@ exprTypmod(const Node *expr)
     }
   }
   break;
-  case T_NamedArgExpr:;
-
-  case T_NullIfExpr:;
+  case T_NamedArgExpr:
+    return exprTypmod((Node *)((const NamedArgExpr *)expr)->arg);
+  case T_NullIfExpr:
   {
     /*
      * Result is either first argument or NULL, so we can report
@@ -326,7 +326,7 @@ exprTypmod(const Node *expr)
     return exprTypmod((Node *)linitial(nexpr->args));
   }
   break;
-  case T_SubLink:;
+  case T_SubLink:
   {
     const SubLink *sublink = (const SubLink *)expr;
 
@@ -338,7 +338,7 @@ exprTypmod(const Node *expr)
 
       if (!qtree || !IsA(qtree, Query))
       {
-
+        elog(ERROR, "cannot get type for untransformed sublink");
       }
       tent = linitial_node(TargetEntry, qtree->targetList);
       Assert(!tent->resjunk);
@@ -348,7 +348,7 @@ exprTypmod(const Node *expr)
     /* otherwise, result is RECORD or BOOLEAN, typmod is -1 */
   }
   break;
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     const SubPlan *subplan = (const SubPlan *)expr;
 
@@ -361,7 +361,7 @@ exprTypmod(const Node *expr)
     /* otherwise, result is RECORD or BOOLEAN, typmod is -1 */
   }
   break;
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
   {
     const AlternativeSubPlan *asplan = (const AlternativeSubPlan *)expr;
 
@@ -369,15 +369,15 @@ exprTypmod(const Node *expr)
     return exprTypmod((Node *)linitial(asplan->subplans));
   }
   break;
-  case T_FieldSelect:;
+  case T_FieldSelect:
     return ((const FieldSelect *)expr)->resulttypmod;
-  case T_RelabelType:;
+  case T_RelabelType:
     return ((const RelabelType *)expr)->resulttypmod;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
     return ((const ArrayCoerceExpr *)expr)->resulttypmod;
-  case T_CollateExpr:;
+  case T_CollateExpr:
     return exprTypmod((Node *)((const CollateExpr *)expr)->arg);
-  case T_CaseExpr:;
+  case T_CaseExpr:
   {
     /*
      * If all the alternatives agree on type/typmod, return that
@@ -390,36 +390,36 @@ exprTypmod(const Node *expr)
 
     if (!cexpr->defresult)
     {
-
+      return -1;
     }
     if (exprType((Node *)cexpr->defresult) != casetype)
     {
-
+      return -1;
     }
     typmod = exprTypmod((Node *)cexpr->defresult);
     if (typmod < 0)
     {
       return -1; /* no point in trying harder */
     }
+    foreach (arg, cexpr->args)
+    {
+      CaseWhen *w = lfirst_node(CaseWhen, arg);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (exprType((Node *)w->result) != casetype)
+      {
+        return -1;
+      }
+      if (exprTypmod((Node *)w->result) != typmod)
+      {
+        return -1;
+      }
+    }
+    return typmod;
   }
-
-  case T_CaseTestExpr:;
+  break;
+  case T_CaseTestExpr:
     return ((const CaseTestExpr *)expr)->typeMod;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
   {
     /*
      * If all the elements agree on type/typmod, return that
@@ -441,7 +441,7 @@ exprTypmod(const Node *expr)
     }
     if (arrayexpr->multidims)
     {
-
+      commontype = arrayexpr->array_typeid;
     }
     else
     {
@@ -453,17 +453,17 @@ exprTypmod(const Node *expr)
 
       if (exprType(e) != commontype)
       {
-
+        return -1;
       }
       if (exprTypmod(e) != typmod)
       {
-
+        return -1;
       }
     }
     return typmod;
   }
   break;
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
   {
     /*
      * If all the alternatives agree on type/typmod, return that
@@ -476,30 +476,30 @@ exprTypmod(const Node *expr)
 
     if (exprType((Node *)linitial(cexpr->args)) != coalescetype)
     {
-
+      return -1;
     }
     typmod = exprTypmod((Node *)linitial(cexpr->args));
     if (typmod < 0)
     {
       return -1; /* no point in trying harder */
     }
+    for_each_cell(arg, lnext(list_head(cexpr->args)))
+    {
+      Node *e = (Node *)lfirst(arg);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (exprType(e) != coalescetype)
+      {
+        return -1;
+      }
+      if (exprTypmod(e) != typmod)
+      {
+        return -1;
+      }
+    }
+    return typmod;
   }
-
-  case T_MinMaxExpr:;
+  break;
+  case T_MinMaxExpr:
   {
     /*
      * If all the alternatives agree on type/typmod, return that
@@ -512,40 +512,40 @@ exprTypmod(const Node *expr)
 
     if (exprType((Node *)linitial(mexpr->args)) != minmaxtype)
     {
-
+      return -1;
     }
     typmod = exprTypmod((Node *)linitial(mexpr->args));
     if (typmod < 0)
     {
       return -1; /* no point in trying harder */
     }
+    for_each_cell(arg, lnext(list_head(mexpr->args)))
+    {
+      Node *e = (Node *)lfirst(arg);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (exprType(e) != minmaxtype)
+      {
+        return -1;
+      }
+      if (exprTypmod(e) != typmod)
+      {
+        return -1;
+      }
+    }
+    return typmod;
   }
-
-  case T_SQLValueFunction:;
+  break;
+  case T_SQLValueFunction:
     return ((const SQLValueFunction *)expr)->typmod;
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
     return ((const CoerceToDomain *)expr)->resulttypmod;
-  case T_CoerceToDomainValue:;
+  case T_CoerceToDomainValue:
     return ((const CoerceToDomainValue *)expr)->typeMod;
-  case T_SetToDefault:;
+  case T_SetToDefault:
     return ((const SetToDefault *)expr)->typeMod;
-  case T_PlaceHolderVar:;
+  case T_PlaceHolderVar:
     return exprTypmod((Node *)((const PlaceHolderVar *)expr)->phexpr);
-  default:;;
+  default:
     break;
   }
   return -1;
@@ -553,8 +553,8 @@ exprTypmod(const Node *expr)
 
 /*
  * exprIsLengthCoercion
- *		Detect whether an expression tree is an application of a
- *datatype's typmod-coercion function.  Optionally extract the result's typmod.
+ *		Detect whether an expression tree is an application of a datatype's
+ *		typmod-coercion function.  Optionally extract the result's typmod.
  *
  * If coercedTypmod is not NULL, the typmod is stored there if the expression
  * is a length-coercion function, else -1 is stored there.
@@ -602,7 +602,7 @@ exprIsLengthCoercion(const Node *expr, int32 *coercedTypmod)
     second_arg = (Const *)lsecond(func->args);
     if (!IsA(second_arg, Const) || second_arg->consttype != INT4OID || second_arg->constisnull)
     {
-
+      return false;
     }
 
     /*
@@ -616,28 +616,28 @@ exprIsLengthCoercion(const Node *expr, int32 *coercedTypmod)
     return true;
   }
 
+  if (expr && IsA(expr, ArrayCoerceExpr))
+  {
+    const ArrayCoerceExpr *acoerce = (const ArrayCoerceExpr *)expr;
 
+    /* It's not a length coercion unless there's a nondefault typmod */
+    if (acoerce->resulttypmod < 0)
+    {
+      return false;
+    }
 
+    /*
+     * OK, it is indeed a length-coercion expression.
+     */
+    if (coercedTypmod != NULL)
+    {
+      *coercedTypmod = acoerce->resulttypmod;
+    }
 
+    return true;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 /*
@@ -702,8 +702,7 @@ applyRelabelType(Node *arg, Oid rtype, int32 rtypmod, Oid rcollid, CoercionForm 
 
 /*
  * relabel_to_typmod
- *		Add a RelabelType node that changes just the typmod of the
- *expression.
+ *		Add a RelabelType node that changes just the typmod of the expression.
  *
  * Convenience function for a common usage of applyRelabelType.
  */
@@ -753,26 +752,26 @@ strip_implicit_coercions(Node *node)
 
     if (c->coerceformat == COERCE_IMPLICIT_CAST)
     {
-
+      return strip_implicit_coercions((Node *)c->arg);
     }
   }
   else if (IsA(node, ArrayCoerceExpr))
   {
     ArrayCoerceExpr *c = (ArrayCoerceExpr *)node;
 
-
-
-
-
+    if (c->coerceformat == COERCE_IMPLICIT_CAST)
+    {
+      return strip_implicit_coercions((Node *)c->arg);
+    }
   }
   else if (IsA(node, ConvertRowtypeExpr))
   {
     ConvertRowtypeExpr *c = (ConvertRowtypeExpr *)node;
 
-
-
-
-
+    if (c->convertformat == COERCE_IMPLICIT_CAST)
+    {
+      return strip_implicit_coercions((Node *)c->arg);
+    }
   }
   else if (IsA(node, CoerceToDomain))
   {
@@ -780,7 +779,7 @@ strip_implicit_coercions(Node *node)
 
     if (c->coercionformat == COERCE_IMPLICIT_CAST)
     {
-
+      return strip_implicit_coercions((Node *)c->arg);
     }
   }
   return node;
@@ -863,54 +862,54 @@ exprCollation(const Node *expr)
 
   if (!expr)
   {
-
+    return InvalidOid;
   }
 
   switch (nodeTag(expr))
   {
-  case T_Var:;
+  case T_Var:
     coll = ((const Var *)expr)->varcollid;
     break;
-  case T_Const:;
+  case T_Const:
     coll = ((const Const *)expr)->constcollid;
     break;
-  case T_Param:;
+  case T_Param:
     coll = ((const Param *)expr)->paramcollid;
     break;
-  case T_Aggref:;
+  case T_Aggref:
     coll = ((const Aggref *)expr)->aggcollid;
     break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
     coll = InvalidOid;
     break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
     coll = ((const WindowFunc *)expr)->wincollid;
     break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
     coll = ((const SubscriptingRef *)expr)->refcollid;
     break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
     coll = ((const FuncExpr *)expr)->funccollid;
     break;
-  case T_NamedArgExpr:;
-
-
-  case T_OpExpr:;
+  case T_NamedArgExpr:
+    coll = exprCollation((Node *)((const NamedArgExpr *)expr)->arg);
+    break;
+  case T_OpExpr:
     coll = ((const OpExpr *)expr)->opcollid;
     break;
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
     coll = ((const DistinctExpr *)expr)->opcollid;
     break;
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
     coll = ((const NullIfExpr *)expr)->opcollid;
     break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_SubLink:;
+  case T_SubLink:
   {
     const SubLink *sublink = (const SubLink *)expr;
 
@@ -922,7 +921,7 @@ exprCollation(const Node *expr)
 
       if (!qtree || !IsA(qtree, Query))
       {
-
+        elog(ERROR, "cannot get collation for untransformed sublink");
       }
       tent = linitial_node(TargetEntry, qtree->targetList);
       Assert(!tent->resjunk);
@@ -936,7 +935,7 @@ exprCollation(const Node *expr)
     }
   }
   break;
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     const SubPlan *subplan = (const SubPlan *)expr;
 
@@ -953,7 +952,7 @@ exprCollation(const Node *expr)
     }
   }
   break;
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
   {
     const AlternativeSubPlan *asplan = (const AlternativeSubPlan *)expr;
 
@@ -961,49 +960,49 @@ exprCollation(const Node *expr)
     coll = exprCollation((Node *)linitial(asplan->subplans));
   }
   break;
-  case T_FieldSelect:;
+  case T_FieldSelect:
     coll = ((const FieldSelect *)expr)->resultcollid;
     break;
-  case T_FieldStore:;
+  case T_FieldStore:
     coll = InvalidOid; /* result is always composite */
     break;
-  case T_RelabelType:;
+  case T_RelabelType:
     coll = ((const RelabelType *)expr)->resultcollid;
     break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
     coll = ((const CoerceViaIO *)expr)->resultcollid;
     break;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
     coll = ((const ArrayCoerceExpr *)expr)->resultcollid;
     break;
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
     coll = InvalidOid; /* result is always composite */
     break;
-  case T_CollateExpr:;
+  case T_CollateExpr:
     coll = ((const CollateExpr *)expr)->collOid;
     break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
     coll = ((const CaseExpr *)expr)->casecollid;
     break;
-  case T_CaseTestExpr:;
+  case T_CaseTestExpr:
     coll = ((const CaseTestExpr *)expr)->collation;
     break;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
     coll = ((const ArrayExpr *)expr)->array_collid;
     break;
-  case T_RowExpr:;
+  case T_RowExpr:
     coll = InvalidOid; /* result is always composite */
     break;
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
     coll = ((const CoalesceExpr *)expr)->coalescecollid;
     break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     coll = ((const MinMaxExpr *)expr)->minmaxcollid;
     break;
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
     /* Returns either NAME or a non-collatable type */
     if (((const SQLValueFunction *)expr)->type == NAMEOID)
     {
@@ -1014,7 +1013,7 @@ exprCollation(const Node *expr)
       coll = InvalidOid;
     }
     break;
-  case T_XmlExpr:;
+  case T_XmlExpr:
 
     /*
      * XMLSERIALIZE returns text from non-collatable inputs, so its
@@ -1023,44 +1022,44 @@ exprCollation(const Node *expr)
      */
     if (((const XmlExpr *)expr)->op == IS_XMLSERIALIZE)
     {
-
+      coll = DEFAULT_COLLATION_OID;
     }
     else
     {
       coll = InvalidOid;
     }
     break;
-  case T_NullTest:;
+  case T_NullTest:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_BooleanTest:;
+  case T_BooleanTest:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
     coll = ((const CoerceToDomain *)expr)->resultcollid;
     break;
-  case T_CoerceToDomainValue:;
+  case T_CoerceToDomainValue:
     coll = ((const CoerceToDomainValue *)expr)->collation;
     break;
-  case T_SetToDefault:;
+  case T_SetToDefault:
     coll = ((const SetToDefault *)expr)->collation;
     break;
-  case T_CurrentOfExpr:;
+  case T_CurrentOfExpr:
     coll = InvalidOid; /* result is always boolean */
     break;
-  case T_NextValueExpr:;
+  case T_NextValueExpr:
     coll = InvalidOid; /* result is always an integer type */
     break;
-  case T_InferenceElem:;
-
-
-  case T_PlaceHolderVar:;
+  case T_InferenceElem:
+    coll = exprCollation((Node *)((const InferenceElem *)expr)->expr);
+    break;
+  case T_PlaceHolderVar:
     coll = exprCollation((Node *)((const PlaceHolderVar *)expr)->phexpr);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(expr));
+    coll = InvalidOid; /* keep compiler quiet */
+    break;
   }
   return coll;
 }
@@ -1078,38 +1077,38 @@ exprInputCollation(const Node *expr)
 
   if (!expr)
   {
-
+    return InvalidOid;
   }
 
   switch (nodeTag(expr))
   {
-  case T_Aggref:;
-
-
-  case T_WindowFunc:;
-
-
-  case T_FuncExpr:;
+  case T_Aggref:
+    coll = ((const Aggref *)expr)->inputcollid;
+    break;
+  case T_WindowFunc:
+    coll = ((const WindowFunc *)expr)->inputcollid;
+    break;
+  case T_FuncExpr:
     coll = ((const FuncExpr *)expr)->inputcollid;
     break;
-  case T_OpExpr:;
-
-
-  case T_DistinctExpr:;
-
-
-  case T_NullIfExpr:;
-
-
-  case T_ScalarArrayOpExpr:;
-
-
-  case T_MinMaxExpr:;
-
-
-  default:;;
-
-
+  case T_OpExpr:
+    coll = ((const OpExpr *)expr)->inputcollid;
+    break;
+  case T_DistinctExpr:
+    coll = ((const DistinctExpr *)expr)->inputcollid;
+    break;
+  case T_NullIfExpr:
+    coll = ((const NullIfExpr *)expr)->inputcollid;
+    break;
+  case T_ScalarArrayOpExpr:
+    coll = ((const ScalarArrayOpExpr *)expr)->inputcollid;
+    break;
+  case T_MinMaxExpr:
+    coll = ((const MinMaxExpr *)expr)->inputcollid;
+    break;
+  default:
+    coll = InvalidOid;
+    break;
   }
   return coll;
 }
@@ -1126,49 +1125,49 @@ exprSetCollation(Node *expr, Oid collation)
 {
   switch (nodeTag(expr))
   {
-  case T_Var:;
-
-
-  case T_Const:;
-
-
-  case T_Param:;
-
-
-  case T_Aggref:;
+  case T_Var:
+    ((Var *)expr)->varcollid = collation;
+    break;
+  case T_Const:
+    ((Const *)expr)->constcollid = collation;
+    break;
+  case T_Param:
+    ((Param *)expr)->paramcollid = collation;
+    break;
+  case T_Aggref:
     ((Aggref *)expr)->aggcollid = collation;
     break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
     Assert(!OidIsValid(collation));
     break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
     ((WindowFunc *)expr)->wincollid = collation;
     break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
     ((SubscriptingRef *)expr)->refcollid = collation;
     break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
     ((FuncExpr *)expr)->funccollid = collation;
     break;
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
     Assert(collation == exprCollation((Node *)((NamedArgExpr *)expr)->arg));
     break;
-  case T_OpExpr:;
+  case T_OpExpr:
     ((OpExpr *)expr)->opcollid = collation;
     break;
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
     ((DistinctExpr *)expr)->opcollid = collation;
     break;
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
     ((NullIfExpr *)expr)->opcollid = collation;
     break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
     Assert(!OidIsValid(collation)); /* result is always boolean */
     break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
     Assert(!OidIsValid(collation)); /* result is always boolean */
     break;
-  case T_SubLink:;
+  case T_SubLink:
 #ifdef USE_ASSERT_CHECKING
   {
     SubLink *sublink = (SubLink *)expr;
@@ -1195,72 +1194,73 @@ exprSetCollation(Node *expr, Oid collation)
   }
 #endif /* USE_ASSERT_CHECKING */
   break;
-  case T_FieldSelect:;
-
-
-  case T_FieldStore:;
+  case T_FieldSelect:
+    ((FieldSelect *)expr)->resultcollid = collation;
+    break;
+  case T_FieldStore:
     Assert(!OidIsValid(collation)); /* result is always composite */
     break;
-  case T_RelabelType:;
+  case T_RelabelType:
     ((RelabelType *)expr)->resultcollid = collation;
     break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
     ((CoerceViaIO *)expr)->resultcollid = collation;
     break;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
     ((ArrayCoerceExpr *)expr)->resultcollid = collation;
     break;
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
     Assert(!OidIsValid(collation)); /* result is always composite */
     break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
     ((CaseExpr *)expr)->casecollid = collation;
     break;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
     ((ArrayExpr *)expr)->array_collid = collation;
     break;
-  case T_RowExpr:;
-
-
-  case T_RowCompareExpr:;
-
-
-  case T_CoalesceExpr:;
+  case T_RowExpr:
+    Assert(!OidIsValid(collation)); /* result is always composite */
+    break;
+  case T_RowCompareExpr:
+    Assert(!OidIsValid(collation)); /* result is always boolean */
+    break;
+  case T_CoalesceExpr:
     ((CoalesceExpr *)expr)->coalescecollid = collation;
     break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     ((MinMaxExpr *)expr)->minmaxcollid = collation;
     break;
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
     Assert((((SQLValueFunction *)expr)->type == NAMEOID) ? (collation == C_COLLATION_OID) : (collation == InvalidOid));
     break;
-  case T_XmlExpr:;
+  case T_XmlExpr:
     Assert((((XmlExpr *)expr)->op == IS_XMLSERIALIZE) ? (collation == DEFAULT_COLLATION_OID) : (collation == InvalidOid));
     break;
-  case T_NullTest:;
+  case T_NullTest:
     Assert(!OidIsValid(collation)); /* result is always boolean */
     break;
-  case T_BooleanTest:;
+  case T_BooleanTest:
     Assert(!OidIsValid(collation)); /* result is always boolean */
     break;
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
     ((CoerceToDomain *)expr)->resultcollid = collation;
     break;
-  case T_CoerceToDomainValue:;
-
-
-  case T_SetToDefault:;
-
-
-  case T_CurrentOfExpr:;
-
-
-  case T_NextValueExpr:;
-
-
-  default:;;
-
-
+  case T_CoerceToDomainValue:
+    ((CoerceToDomainValue *)expr)->collation = collation;
+    break;
+  case T_SetToDefault:
+    ((SetToDefault *)expr)->collation = collation;
+    break;
+  case T_CurrentOfExpr:
+    Assert(!OidIsValid(collation)); /* result is always boolean */
+    break;
+  case T_NextValueExpr:
+    Assert(!OidIsValid(collation)); /* result is always an integer
+                                     * type */
+    break;
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(expr));
+    break;
   }
 }
 
@@ -1277,31 +1277,31 @@ exprSetInputCollation(Node *expr, Oid inputcollation)
 {
   switch (nodeTag(expr))
   {
-  case T_Aggref:;
+  case T_Aggref:
     ((Aggref *)expr)->inputcollid = inputcollation;
     break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
     ((WindowFunc *)expr)->inputcollid = inputcollation;
     break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
     ((FuncExpr *)expr)->inputcollid = inputcollation;
     break;
-  case T_OpExpr:;
+  case T_OpExpr:
     ((OpExpr *)expr)->inputcollid = inputcollation;
     break;
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
     ((DistinctExpr *)expr)->inputcollid = inputcollation;
     break;
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
     ((NullIfExpr *)expr)->inputcollid = inputcollation;
     break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
     ((ScalarArrayOpExpr *)expr)->inputcollid = inputcollation;
     break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     ((MinMaxExpr *)expr)->inputcollid = inputcollation;
     break;
-  default:;;
+  default:
     break;
   }
 }
@@ -1346,37 +1346,37 @@ exprLocation(const Node *expr)
   }
   switch (nodeTag(expr))
   {
-  case T_RangeVar:;
+  case T_RangeVar:
     loc = ((const RangeVar *)expr)->location;
     break;
-  case T_TableFunc:;
-
-
-  case T_Var:;
+  case T_TableFunc:
+    loc = ((const TableFunc *)expr)->location;
+    break;
+  case T_Var:
     loc = ((const Var *)expr)->location;
     break;
-  case T_Const:;
+  case T_Const:
     loc = ((const Const *)expr)->location;
     break;
-  case T_Param:;
+  case T_Param:
     loc = ((const Param *)expr)->location;
     break;
-  case T_Aggref:;
+  case T_Aggref:
     /* function name should always be the first thing */
     loc = ((const Aggref *)expr)->location;
     break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
     loc = ((const GroupingFunc *)expr)->location;
     break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
     /* function name should always be the first thing */
     loc = ((const WindowFunc *)expr)->location;
     break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
     /* just use container argument's location */
     loc = exprLocation((Node *)((const SubscriptingRef *)expr)->refexpr);
     break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     const FuncExpr *fexpr = (const FuncExpr *)expr;
 
@@ -1384,7 +1384,7 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(fexpr->location, exprLocation((Node *)fexpr->args));
   }
   break;
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
   {
     const NamedArgExpr *na = (const NamedArgExpr *)expr;
 
@@ -1392,9 +1392,9 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(na->location, exprLocation((Node *)na->arg));
   }
   break;
-  case T_OpExpr:;
-  case T_DistinctExpr: ;/* struct-equivalent to OpExpr */
-  case T_NullIfExpr:   ;/* struct-equivalent to OpExpr */
+  case T_OpExpr:
+  case T_DistinctExpr: /* struct-equivalent to OpExpr */
+  case T_NullIfExpr:   /* struct-equivalent to OpExpr */
   {
     const OpExpr *opexpr = (const OpExpr *)expr;
 
@@ -1402,15 +1402,15 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(opexpr->location, exprLocation((Node *)opexpr->args));
   }
   break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     const ScalarArrayOpExpr *saopexpr = (const ScalarArrayOpExpr *)expr;
 
     /* consider both operator name and leftmost arg */
-
+    loc = leftmostLoc(saopexpr->location, exprLocation((Node *)saopexpr->args));
   }
-
-  case T_BoolExpr:;
+  break;
+  case T_BoolExpr:
   {
     const BoolExpr *bexpr = (const BoolExpr *)expr;
 
@@ -1419,10 +1419,10 @@ exprLocation(const Node *expr)
      * special-case NOT because of the way that it's used for
      * things like IS NOT BETWEEN.
      */
-
+    loc = leftmostLoc(bexpr->location, exprLocation((Node *)bexpr->args));
   }
-
-  case T_SubLink:;
+  break;
+  case T_SubLink:
   {
     const SubLink *sublink = (const SubLink *)expr;
 
@@ -1430,15 +1430,15 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(exprLocation(sublink->testexpr), sublink->location);
   }
   break;
-  case T_FieldSelect:;
+  case T_FieldSelect:
     /* just use argument's location */
     loc = exprLocation((Node *)((const FieldSelect *)expr)->arg);
     break;
-  case T_FieldStore:;
+  case T_FieldStore:
     /* just use argument's location */
-
-
-  case T_RelabelType:;
+    loc = exprLocation((Node *)((const FieldStore *)expr)->arg);
+    break;
+  case T_RelabelType:
   {
     const RelabelType *rexpr = (const RelabelType *)expr;
 
@@ -1446,7 +1446,7 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(rexpr->location, exprLocation((Node *)rexpr->arg));
   }
   break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
   {
     const CoerceViaIO *cexpr = (const CoerceViaIO *)expr;
 
@@ -1454,15 +1454,15 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(cexpr->location, exprLocation((Node *)cexpr->arg));
   }
   break;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
   {
     const ArrayCoerceExpr *cexpr = (const ArrayCoerceExpr *)expr;
 
     /* Much as above */
-
+    loc = leftmostLoc(cexpr->location, exprLocation((Node *)cexpr->arg));
   }
-
-  case T_ConvertRowtypeExpr:;
+  break;
+  case T_ConvertRowtypeExpr:
   {
     const ConvertRowtypeExpr *cexpr = (const ConvertRowtypeExpr *)expr;
 
@@ -1470,43 +1470,43 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(cexpr->location, exprLocation((Node *)cexpr->arg));
   }
   break;
-  case T_CollateExpr:;
+  case T_CollateExpr:
     /* just use argument's location */
     loc = exprLocation((Node *)((const CollateExpr *)expr)->arg);
     break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
     /* CASE keyword should always be the first thing */
     loc = ((const CaseExpr *)expr)->location;
     break;
-  case T_CaseWhen:;
+  case T_CaseWhen:
     /* WHEN keyword should always be the first thing */
-
-
-  case T_ArrayExpr:;
+    loc = ((const CaseWhen *)expr)->location;
+    break;
+  case T_ArrayExpr:
     /* the location points at ARRAY or [, which must be leftmost */
     loc = ((const ArrayExpr *)expr)->location;
     break;
-  case T_RowExpr:;
+  case T_RowExpr:
     /* the location points at ROW or (, which must be leftmost */
     loc = ((const RowExpr *)expr)->location;
     break;
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
     /* just use leftmost argument's location */
-
-
-  case T_CoalesceExpr:;
+    loc = exprLocation((Node *)((const RowCompareExpr *)expr)->largs);
+    break;
+  case T_CoalesceExpr:
     /* COALESCE keyword should always be the first thing */
     loc = ((const CoalesceExpr *)expr)->location;
     break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     /* GREATEST/LEAST keyword should always be the first thing */
     loc = ((const MinMaxExpr *)expr)->location;
     break;
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
     /* function keyword should always be the first thing */
     loc = ((const SQLValueFunction *)expr)->location;
     break;
-  case T_XmlExpr:;
+  case T_XmlExpr:
   {
     const XmlExpr *xexpr = (const XmlExpr *)expr;
 
@@ -1514,7 +1514,7 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(xexpr->location, exprLocation((Node *)xexpr->args));
   }
   break;
-  case T_NullTest:;
+  case T_NullTest:
   {
     const NullTest *nexpr = (const NullTest *)expr;
 
@@ -1522,15 +1522,15 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(nexpr->location, exprLocation((Node *)nexpr->arg));
   }
   break;
-  case T_BooleanTest:;
+  case T_BooleanTest:
   {
     const BooleanTest *bexpr = (const BooleanTest *)expr;
 
     /* Much as above */
-
+    loc = leftmostLoc(bexpr->location, exprLocation((Node *)bexpr->arg));
   }
-
-  case T_CoerceToDomain:;
+  break;
+  case T_CoerceToDomain:
   {
     const CoerceToDomain *cexpr = (const CoerceToDomain *)expr;
 
@@ -1538,21 +1538,21 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(cexpr->location, exprLocation((Node *)cexpr->arg));
   }
   break;
-  case T_CoerceToDomainValue:;
+  case T_CoerceToDomainValue:
     loc = ((const CoerceToDomainValue *)expr)->location;
     break;
-  case T_SetToDefault:;
+  case T_SetToDefault:
     loc = ((const SetToDefault *)expr)->location;
     break;
-  case T_TargetEntry:;
+  case T_TargetEntry:
     /* just use argument's location */
-
-
-  case T_IntoClause:;
+    loc = exprLocation((Node *)((const TargetEntry *)expr)->expr);
+    break;
+  case T_IntoClause:
     /* use the contained RangeVar's location --- close enough */
     loc = exprLocation((Node *)((const IntoClause *)expr)->rel);
     break;
-  case T_List:;
+  case T_List:
   {
     /* report location of first list member that has a location */
     ListCell *lc;
@@ -1568,7 +1568,7 @@ exprLocation(const Node *expr)
     }
   }
   break;
-  case T_A_Expr:;
+  case T_A_Expr:
   {
     const A_Expr *aexpr = (const A_Expr *)expr;
 
@@ -1577,16 +1577,16 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(aexpr->location, exprLocation(aexpr->lexpr));
   }
   break;
-  case T_ColumnRef:;
+  case T_ColumnRef:
     loc = ((const ColumnRef *)expr)->location;
     break;
-  case T_ParamRef:;
-
-
-  case T_A_Const:;
+  case T_ParamRef:
+    loc = ((const ParamRef *)expr)->location;
+    break;
+  case T_A_Const:
     loc = ((const A_Const *)expr)->location;
     break;
-  case T_FuncCall:;
+  case T_FuncCall:
   {
     const FuncCall *fc = (const FuncCall *)expr;
 
@@ -1595,18 +1595,18 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(fc->location, exprLocation((Node *)fc->args));
   }
   break;
-  case T_A_ArrayExpr:;
+  case T_A_ArrayExpr:
     /* the location points at ARRAY or [, which must be leftmost */
     loc = ((const A_ArrayExpr *)expr)->location;
     break;
-  case T_ResTarget:;
+  case T_ResTarget:
     /* we need not examine the contained expression (if any) */
     loc = ((const ResTarget *)expr)->location;
     break;
-  case T_MultiAssignRef:;
-
-
-  case T_TypeCast:;
+  case T_MultiAssignRef:
+    loc = exprLocation(((const MultiAssignRef *)expr)->source);
+    break;
+  case T_TypeCast:
   {
     const TypeCast *tc = (const TypeCast *)expr;
 
@@ -1619,73 +1619,73 @@ exprLocation(const Node *expr)
     loc = leftmostLoc(loc, tc->location);
   }
   break;
-  case T_CollateClause:;
+  case T_CollateClause:
     /* just use argument's location */
     loc = exprLocation(((const CollateClause *)expr)->arg);
     break;
-  case T_SortBy:;
+  case T_SortBy:
     /* just use argument's location (ignore operator, if any) */
     loc = exprLocation(((const SortBy *)expr)->node);
     break;
-  case T_WindowDef:;
-
-
-  case T_RangeTableSample:;
-
-
-  case T_TypeName:;
-
-
-  case T_ColumnDef:;
-
-
-  case T_Constraint:;
-
-
-  case T_FunctionParameter:;
+  case T_WindowDef:
+    loc = ((const WindowDef *)expr)->location;
+    break;
+  case T_RangeTableSample:
+    loc = ((const RangeTableSample *)expr)->location;
+    break;
+  case T_TypeName:
+    loc = ((const TypeName *)expr)->location;
+    break;
+  case T_ColumnDef:
+    loc = ((const ColumnDef *)expr)->location;
+    break;
+  case T_Constraint:
+    loc = ((const Constraint *)expr)->location;
+    break;
+  case T_FunctionParameter:
     /* just use typename's location */
-
-
-  case T_XmlSerialize:;
+    loc = exprLocation((Node *)((const FunctionParameter *)expr)->argType);
+    break;
+  case T_XmlSerialize:
     /* XMLSERIALIZE keyword should always be the first thing */
-
-
-  case T_GroupingSet:;
+    loc = ((const XmlSerialize *)expr)->location;
+    break;
+  case T_GroupingSet:
     loc = ((const GroupingSet *)expr)->location;
     break;
-  case T_WithClause:;
-
-
-  case T_InferClause:;
-
-
-  case T_OnConflictClause:;
+  case T_WithClause:
+    loc = ((const WithClause *)expr)->location;
+    break;
+  case T_InferClause:
+    loc = ((const InferClause *)expr)->location;
+    break;
+  case T_OnConflictClause:
     loc = ((const OnConflictClause *)expr)->location;
     break;
-  case T_CommonTableExpr:;
-
-
-  case T_PlaceHolderVar:;
+  case T_CommonTableExpr:
+    loc = ((const CommonTableExpr *)expr)->location;
+    break;
+  case T_PlaceHolderVar:
     /* just use argument's location */
-
-
-  case T_InferenceElem:;
+    loc = exprLocation((Node *)((const PlaceHolderVar *)expr)->phexpr);
+    break;
+  case T_InferenceElem:
     /* just use nested expr's location */
-
-
-  case T_PartitionElem:;
-
-
-  case T_PartitionSpec:;
-
-
-  case T_PartitionBoundSpec:;
+    loc = exprLocation((Node *)((const InferenceElem *)expr)->expr);
+    break;
+  case T_PartitionElem:
+    loc = ((const PartitionElem *)expr)->location;
+    break;
+  case T_PartitionSpec:
+    loc = ((const PartitionSpec *)expr)->location;
+    break;
+  case T_PartitionBoundSpec:
     loc = ((const PartitionBoundSpec *)expr)->location;
     break;
-  case T_PartitionRangeDatum:;
+  case T_PartitionRangeDatum:
     loc = ((const PartitionRangeDatum *)expr)->location;
     break;
-  default:;;
+  default:
     /* for any other node type it's just unknown... */
     loc = -1;
     break;
@@ -1789,8 +1789,7 @@ set_sa_opfuncid(ScalarArrayOpExpr *opexpr)
 
 /*
  *	check_functions_in_node -
- *	  apply checker() to each function OID contained in given expression
- *node
+ *	  apply checker() to each function OID contained in given expression node
  *
  * Returns true if the checker() function does; for nodes representing more
  * than one function call, returns true if the checker() function does so
@@ -1812,7 +1811,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
 {
   switch (nodeTag(node))
   {
-  case T_Aggref:;
+  case T_Aggref:
   {
     Aggref *expr = (Aggref *)node;
 
@@ -1822,7 +1821,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     }
   }
   break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
   {
     WindowFunc *expr = (WindowFunc *)node;
 
@@ -1832,7 +1831,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     }
   }
   break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     FuncExpr *expr = (FuncExpr *)node;
 
@@ -1842,9 +1841,9 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     }
   }
   break;
-  case T_OpExpr:;
-  case T_DistinctExpr: ;/* struct-equivalent to OpExpr */
-  case T_NullIfExpr:   ;/* struct-equivalent to OpExpr */
+  case T_OpExpr:
+  case T_DistinctExpr: /* struct-equivalent to OpExpr */
+  case T_NullIfExpr:   /* struct-equivalent to OpExpr */
   {
     OpExpr *expr = (OpExpr *)node;
 
@@ -1856,7 +1855,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     }
   }
   break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *)node;
 
@@ -1867,7 +1866,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     }
   }
   break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
   {
     CoerceViaIO *expr = (CoerceViaIO *)node;
     Oid iofunc;
@@ -1884,11 +1883,11 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
     getTypeOutputInfo(exprType((Node *)expr->arg), &iofunc, &typisvarlena);
     if (checker(iofunc, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
   {
     RowCompareExpr *rcexpr = (RowCompareExpr *)node;
     ListCell *opid;
@@ -1899,12 +1898,12 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
 
       if (checker(opfuncid, context))
       {
-
+        return true;
       }
     }
   }
   break;
-  default:;;
+  default:
     break;
   }
   return false;
@@ -1944,8 +1943,7 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
  *			... do special actions for other node types
  *		}
  *		// for any node type not specially processed, do:
- *		return expression_tree_walker(node, my_walker, (void *)
- *context);
+ *		return expression_tree_walker(node, my_walker, (void *) context);
  * }
  *
  * The "context" argument points to a struct that holds whatever context
@@ -1986,9 +1984,10 @@ check_functions_in_node(Node *node, check_function_callback checker, void *conte
  *		if (IsA(node, Query))
  *		{
  *			adjust context for subquery;
- *			result = query_tree_walker((Query *) node, my_walker,
- *context, 0); // adjust flags as needed restore context if needed; return
- *result;
+ *			result = query_tree_walker((Query *) node, my_walker, context,
+ *									   0); // adjust flags as needed
+ *			restore context if needed;
+ *			return result;
  *		}
  *
  * query_tree_walker is a convenience routine (see below) that calls the
@@ -2025,29 +2024,29 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
 
   switch (nodeTag(node))
   {
-  case T_Var:;
-  case T_Const:;
-  case T_Param:;
-  case T_CaseTestExpr:;
-  case T_SQLValueFunction:;
-  case T_CoerceToDomainValue:;
-  case T_SetToDefault:;
-  case T_CurrentOfExpr:;
-  case T_NextValueExpr:;
-  case T_RangeTblRef:;
-  case T_SortGroupClause:;
+  case T_Var:
+  case T_Const:
+  case T_Param:
+  case T_CaseTestExpr:
+  case T_SQLValueFunction:
+  case T_CoerceToDomainValue:
+  case T_SetToDefault:
+  case T_CurrentOfExpr:
+  case T_NextValueExpr:
+  case T_RangeTblRef:
+  case T_SortGroupClause:
     /* primitive node types with no expression subnodes */
     break;
-  case T_WithCheckOption:;
+  case T_WithCheckOption:
     return walker(((WithCheckOption *)node)->qual, context);
-  case T_Aggref:;
+  case T_Aggref:
   {
     Aggref *expr = (Aggref *)node;
 
     /* recurse directly on List */
     if (expression_tree_walker((Node *)expr->aggdirectargs, walker, context))
     {
-
+      return true;
     }
     if (expression_tree_walker((Node *)expr->args, walker, context))
     {
@@ -2055,11 +2054,11 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
     if (expression_tree_walker((Node *)expr->aggorder, walker, context))
     {
-
+      return true;
     }
     if (expression_tree_walker((Node *)expr->aggdistinct, walker, context))
     {
-
+      return true;
     }
     if (walker((Node *)expr->aggfilter, context))
     {
@@ -2067,7 +2066,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
   {
     GroupingFunc *grouping = (GroupingFunc *)node;
 
@@ -2077,7 +2076,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
   {
     WindowFunc *expr = (WindowFunc *)node;
 
@@ -2092,7 +2091,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
   {
     SubscriptingRef *sbsref = (SubscriptingRef *)node;
 
@@ -2103,7 +2102,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
     if (expression_tree_walker((Node *)sbsref->reflowerindexpr, walker, context))
     {
-
+      return true;
     }
     /* walker must see the refexpr and refassgnexpr, however */
     if (walker(sbsref->refexpr, context))
@@ -2117,7 +2116,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     FuncExpr *expr = (FuncExpr *)node;
 
@@ -2127,11 +2126,11 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
     return walker(((NamedArgExpr *)node)->arg, context);
-  case T_OpExpr:;
-  case T_DistinctExpr: ;/* struct-equivalent to OpExpr */
-  case T_NullIfExpr:   ;/* struct-equivalent to OpExpr */
+  case T_OpExpr:
+  case T_DistinctExpr: /* struct-equivalent to OpExpr */
+  case T_NullIfExpr:   /* struct-equivalent to OpExpr */
   {
     OpExpr *expr = (OpExpr *)node;
 
@@ -2141,7 +2140,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *)node;
 
@@ -2151,7 +2150,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
   {
     BoolExpr *expr = (BoolExpr *)node;
 
@@ -2161,7 +2160,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_SubLink:;
+  case T_SubLink:
   {
     SubLink *sublink = (SubLink *)node;
 
@@ -2177,7 +2176,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     return walker(sublink->subselect, context);
   }
   break;
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     SubPlan *subplan = (SubPlan *)node;
 
@@ -2193,17 +2192,17 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
     return walker(((AlternativeSubPlan *)node)->subplans, context);
-  case T_FieldSelect:;
+  case T_FieldSelect:
     return walker(((FieldSelect *)node)->arg, context);
-  case T_FieldStore:;
+  case T_FieldStore:
   {
     FieldStore *fstore = (FieldStore *)node;
 
     if (walker(fstore->arg, context))
     {
-
+      return true;
     }
     if (walker(fstore->newvals, context))
     {
@@ -2211,11 +2210,11 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_RelabelType:;
+  case T_RelabelType:
     return walker(((RelabelType *)node)->arg, context);
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
     return walker(((CoerceViaIO *)node)->arg, context);
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
   {
     ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *)node;
 
@@ -2229,11 +2228,11 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
     return walker(((ConvertRowtypeExpr *)node)->arg, context);
-  case T_CollateExpr:;
+  case T_CollateExpr:
     return walker(((CollateExpr *)node)->arg, context);
-  case T_CaseExpr:;
+  case T_CaseExpr:
   {
     CaseExpr *caseexpr = (CaseExpr *)node;
 
@@ -2261,36 +2260,36 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
     return walker(((ArrayExpr *)node)->elements, context);
-  case T_RowExpr:;
+  case T_RowExpr:
     /* Assume colnames isn't interesting */
     return walker(((RowExpr *)node)->args, context);
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
   {
     RowCompareExpr *rcexpr = (RowCompareExpr *)node;
 
     if (walker(rcexpr->largs, context))
     {
-
+      return true;
     }
     if (walker(rcexpr->rargs, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
     return walker(((CoalesceExpr *)node)->args, context);
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     return walker(((MinMaxExpr *)node)->args, context);
-  case T_XmlExpr:;
+  case T_XmlExpr:
   {
     XmlExpr *xexpr = (XmlExpr *)node;
 
     if (walker(xexpr->named_args, context))
     {
-
+      return true;
     }
     /* we assume walker doesn't care about arg_names */
     if (walker(xexpr->args, context))
@@ -2299,40 +2298,40 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_NullTest:;
+  case T_NullTest:
     return walker(((NullTest *)node)->arg, context);
-  case T_BooleanTest:;
+  case T_BooleanTest:
     return walker(((BooleanTest *)node)->arg, context);
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
     return walker(((CoerceToDomain *)node)->arg, context);
-  case T_TargetEntry:;
+  case T_TargetEntry:
     return walker(((TargetEntry *)node)->expr, context);
-  case T_Query:;
+  case T_Query:
     /* Do nothing with a sub-Query, per discussion above */
     break;
-  case T_WindowClause:;
+  case T_WindowClause:
   {
     WindowClause *wc = (WindowClause *)node;
 
     if (walker(wc->partitionClause, context))
     {
-
+      return true;
     }
     if (walker(wc->orderClause, context))
     {
-
+      return true;
     }
     if (walker(wc->startOffset, context))
     {
-
+      return true;
     }
     if (walker(wc->endOffset, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_CommonTableExpr:;
+  case T_CommonTableExpr:
   {
     CommonTableExpr *cte = (CommonTableExpr *)node;
 
@@ -2343,7 +2342,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     return walker(cte->ctequery, context);
   }
   break;
-  case T_List:;
+  case T_List:
     foreach (temp, (List *)node)
     {
       if (walker((Node *)lfirst(temp), context))
@@ -2352,7 +2351,7 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
       }
     }
     break;
-  case T_FromExpr:;
+  case T_FromExpr:
   {
     FromExpr *from = (FromExpr *)node;
 
@@ -2366,46 +2365,46 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
     }
   }
   break;
-  case T_OnConflictExpr:;
+  case T_OnConflictExpr:
   {
     OnConflictExpr *onconflict = (OnConflictExpr *)node;
 
     if (walker((Node *)onconflict->arbiterElems, context))
     {
-
+      return true;
     }
     if (walker(onconflict->arbiterWhere, context))
     {
-
+      return true;
     }
     if (walker(onconflict->onConflictSet, context))
     {
-
+      return true;
     }
     if (walker(onconflict->onConflictWhere, context))
     {
-
+      return true;
     }
     if (walker(onconflict->exclRelTlist, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_PartitionPruneStepOp:;
+  case T_PartitionPruneStepOp:
   {
     PartitionPruneStepOp *opstep = (PartitionPruneStepOp *)node;
 
-
-
-
-
+    if (walker((Node *)opstep->exprs, context))
+    {
+      return true;
+    }
   }
-
-  case T_PartitionPruneStepCombine:;
+  break;
+  case T_PartitionPruneStepCombine:
     /* no expression subnodes */
-
-  case T_JoinExpr:;
+    break;
+  case T_JoinExpr:
   {
     JoinExpr *join = (JoinExpr *)node;
 
@@ -2427,97 +2426,97 @@ expression_tree_walker(Node *node, bool (*walker)(), void *context)
      */
   }
   break;
-  case T_SetOperationStmt:;
+  case T_SetOperationStmt:
   {
     SetOperationStmt *setop = (SetOperationStmt *)node;
 
     if (walker(setop->larg, context))
     {
-
+      return true;
     }
     if (walker(setop->rarg, context))
     {
-
+      return true;
     }
 
     /* groupClauses are deemed uninteresting */
   }
   break;
-  case T_IndexClause:;
+  case T_IndexClause:
   {
     IndexClause *iclause = (IndexClause *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(iclause->rinfo, context))
+    {
+      return true;
+    }
+    if (expression_tree_walker((Node *)iclause->indexquals, walker, context))
+    {
+      return true;
+    }
   }
-
-  case T_PlaceHolderVar:;
+  break;
+  case T_PlaceHolderVar:
     return walker(((PlaceHolderVar *)node)->phexpr, context);
-  case T_InferenceElem:;
+  case T_InferenceElem:
     return walker(((InferenceElem *)node)->expr, context);
-  case T_AppendRelInfo:;
+  case T_AppendRelInfo:
   {
     AppendRelInfo *appinfo = (AppendRelInfo *)node;
 
     if (expression_tree_walker((Node *)appinfo->translated_vars, walker, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_PlaceHolderInfo:;
-
-  case T_RangeTblFunction:;
+  case T_PlaceHolderInfo:
+    return walker(((PlaceHolderInfo *)node)->ph_var, context);
+  case T_RangeTblFunction:
     return walker(((RangeTblFunction *)node)->funcexpr, context);
-  case T_TableSampleClause:;
+  case T_TableSampleClause:
   {
     TableSampleClause *tsc = (TableSampleClause *)node;
 
     if (expression_tree_walker((Node *)tsc->args, walker, context))
     {
-
+      return true;
     }
     if (walker((Node *)tsc->repeatable, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_TableFunc:;
+  case T_TableFunc:
   {
     TableFunc *tf = (TableFunc *)node;
 
     if (walker(tf->ns_uris, context))
     {
-
+      return true;
     }
     if (walker(tf->docexpr, context))
     {
-
+      return true;
     }
     if (walker(tf->rowexpr, context))
     {
-
+      return true;
     }
     if (walker(tf->colexprs, context))
     {
-
+      return true;
     }
     if (walker(tf->coldefexprs, context))
     {
-
+      return true;
     }
   }
   break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
   return false;
 }
@@ -2555,11 +2554,11 @@ query_tree_walker(Query *query, bool (*walker)(), void *context, int flags)
   }
   if (walker((Node *)query->withCheckOptions, context))
   {
-
+    return true;
   }
   if (walker((Node *)query->onConflict, context))
   {
-
+    return true;
   }
   if (walker((Node *)query->returningList, context))
   {
@@ -2571,11 +2570,11 @@ query_tree_walker(Query *query, bool (*walker)(), void *context, int flags)
   }
   if (walker(query->setOperations, context))
   {
-
+    return true;
   }
   if (walker(query->havingQual, context))
   {
-
+    return true;
   }
   if (walker(query->limitOffset, context))
   {
@@ -2583,7 +2582,7 @@ query_tree_walker(Query *query, bool (*walker)(), void *context, int flags)
   }
   if (walker(query->limitCount, context))
   {
-
+    return true;
   }
 
   /*
@@ -2595,19 +2594,19 @@ query_tree_walker(Query *query, bool (*walker)(), void *context, int flags)
   {
     if (walker((Node *)query->groupClause, context))
     {
-
+      return true;
     }
     if (walker((Node *)query->windowClause, context))
     {
-
+      return true;
     }
     if (walker((Node *)query->sortClause, context))
     {
-
+      return true;
     }
     if (walker((Node *)query->distinctClause, context))
     {
-
+      return true;
     }
   }
   else
@@ -2624,11 +2623,11 @@ query_tree_walker(Query *query, bool (*walker)(), void *context, int flags)
 
       if (walker(wc->startOffset, context))
       {
-
+        return true;
       }
       if (walker(wc->endOffset, context))
       {
-
+        return true;
       }
     }
   }
@@ -2705,13 +2704,13 @@ range_table_entry_walker(RangeTblEntry *rte, bool (*walker)(), void *context, in
 
   switch (rte->rtekind)
   {
-  case RTE_RELATION:;
+  case RTE_RELATION:
     if (walker(rte->tablesample, context))
     {
-
+      return true;
     }
     break;
-  case RTE_SUBQUERY:;
+  case RTE_SUBQUERY:
     if (!(flags & QTW_IGNORE_RT_SUBQUERIES))
     {
       if (walker(rte->subquery, context))
@@ -2720,50 +2719,50 @@ range_table_entry_walker(RangeTblEntry *rte, bool (*walker)(), void *context, in
       }
     }
     break;
-  case RTE_JOIN:;
+  case RTE_JOIN:
     if (!(flags & QTW_IGNORE_JOINALIASES))
     {
       if (walker(rte->joinaliasvars, context))
       {
-
+        return true;
       }
     }
     break;
-  case RTE_FUNCTION:;
+  case RTE_FUNCTION:
     if (walker(rte->functions, context))
     {
       return true;
     }
     break;
-  case RTE_TABLEFUNC:;
+  case RTE_TABLEFUNC:
     if (walker(rte->tablefunc, context))
     {
-
+      return true;
     }
     break;
-  case RTE_VALUES:;
+  case RTE_VALUES:
     if (walker(rte->values_lists, context))
     {
       return true;
     }
     break;
-  case RTE_CTE:;
-  case RTE_NAMEDTUPLESTORE:;
-  case RTE_RESULT:;
+  case RTE_CTE:
+  case RTE_NAMEDTUPLESTORE:
+  case RTE_RESULT:
     /* nothing to do */
     break;
   }
 
   if (walker(rte->securityQuals, context))
   {
-
+    return true;
   }
 
   if (flags & QTW_EXAMINE_RTES_AFTER)
   {
     if (walker(rte, context))
     {
-
+      return true;
     }
   }
 
@@ -2792,8 +2791,7 @@ range_table_entry_walker(RangeTblEntry *rte, bool (*walker)(), void *context, in
  *			... do special transformations of other node types
  *		}
  *		// for any node type not specially processed, do:
- *		return expression_tree_mutator(node, my_mutator, (void *)
- *context);
+ *		return expression_tree_mutator(node, my_mutator, (void *) context);
  * }
  *
  * The "context" argument points to a struct that holds whatever context
@@ -2862,7 +2860,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
      * Const are frequent enough to deserve special cases, the others
      * we just use copyObject for.
      */
-  case T_Var:;
+  case T_Var:
   {
     Var *var = (Var *)node;
     Var *newnode;
@@ -2871,7 +2869,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_Const:;
+  case T_Const:
   {
     Const *oldnode = (Const *)node;
     Const *newnode;
@@ -2881,17 +2879,17 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_Param:;
-  case T_CaseTestExpr:;
-  case T_SQLValueFunction:;
-  case T_CoerceToDomainValue:;
-  case T_SetToDefault:;
-  case T_CurrentOfExpr:;
-  case T_NextValueExpr:;
-  case T_RangeTblRef:;
-  case T_SortGroupClause:;
+  case T_Param:
+  case T_CaseTestExpr:
+  case T_SQLValueFunction:
+  case T_CoerceToDomainValue:
+  case T_SetToDefault:
+  case T_CurrentOfExpr:
+  case T_NextValueExpr:
+  case T_RangeTblRef:
+  case T_SortGroupClause:
     return (Node *)copyObject(node);
-  case T_WithCheckOption:;
+  case T_WithCheckOption:
   {
     WithCheckOption *wco = (WithCheckOption *)node;
     WithCheckOption *newnode;
@@ -2900,7 +2898,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     MUTATE(newnode->qual, wco->qual, Node *);
     return (Node *)newnode;
   }
-  case T_Aggref:;
+  case T_Aggref:
   {
     Aggref *aggref = (Aggref *)node;
     Aggref *newnode;
@@ -2916,7 +2914,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
   {
     GroupingFunc *grouping = (GroupingFunc *)node;
     GroupingFunc *newnode;
@@ -2939,7 +2937,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_WindowFunc:;
+  case T_WindowFunc:
   {
     WindowFunc *wfunc = (WindowFunc *)node;
     WindowFunc *newnode;
@@ -2950,7 +2948,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_SubscriptingRef:;
+  case T_SubscriptingRef:
   {
     SubscriptingRef *sbsref = (SubscriptingRef *)node;
     SubscriptingRef *newnode;
@@ -2964,7 +2962,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_FuncExpr:;
+  case T_FuncExpr:
   {
     FuncExpr *expr = (FuncExpr *)node;
     FuncExpr *newnode;
@@ -2974,17 +2972,17 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
   {
     NamedArgExpr *nexpr = (NamedArgExpr *)node;
     NamedArgExpr *newnode;
 
-
-
-
+    FLATCOPY(newnode, nexpr, NamedArgExpr);
+    MUTATE(newnode->arg, nexpr->arg, Expr *);
+    return (Node *)newnode;
   }
   break;
-  case T_OpExpr:;
+  case T_OpExpr:
   {
     OpExpr *expr = (OpExpr *)node;
     OpExpr *newnode;
@@ -2994,7 +2992,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_DistinctExpr:;
+  case T_DistinctExpr:
   {
     DistinctExpr *expr = (DistinctExpr *)node;
     DistinctExpr *newnode;
@@ -3004,7 +3002,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_NullIfExpr:;
+  case T_NullIfExpr:
   {
     NullIfExpr *expr = (NullIfExpr *)node;
     NullIfExpr *newnode;
@@ -3014,7 +3012,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_ScalarArrayOpExpr:;
+  case T_ScalarArrayOpExpr:
   {
     ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *)node;
     ScalarArrayOpExpr *newnode;
@@ -3024,7 +3022,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
   {
     BoolExpr *expr = (BoolExpr *)node;
     BoolExpr *newnode;
@@ -3034,7 +3032,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_SubLink:;
+  case T_SubLink:
   {
     SubLink *sublink = (SubLink *)node;
     SubLink *newnode;
@@ -3050,7 +3048,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_SubPlan:;
+  case T_SubPlan:
   {
     SubPlan *subplan = (SubPlan *)node;
     SubPlan *newnode;
@@ -3064,7 +3062,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_AlternativeSubPlan:;
+  case T_AlternativeSubPlan:
   {
     AlternativeSubPlan *asplan = (AlternativeSubPlan *)node;
     AlternativeSubPlan *newnode;
@@ -3074,7 +3072,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_FieldSelect:;
+  case T_FieldSelect:
   {
     FieldSelect *fselect = (FieldSelect *)node;
     FieldSelect *newnode;
@@ -3084,7 +3082,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_FieldStore:;
+  case T_FieldStore:
   {
     FieldStore *fstore = (FieldStore *)node;
     FieldStore *newnode;
@@ -3096,7 +3094,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_RelabelType:;
+  case T_RelabelType:
   {
     RelabelType *relabel = (RelabelType *)node;
     RelabelType *newnode;
@@ -3106,7 +3104,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CoerceViaIO:;
+  case T_CoerceViaIO:
   {
     CoerceViaIO *iocoerce = (CoerceViaIO *)node;
     CoerceViaIO *newnode;
@@ -3116,7 +3114,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_ArrayCoerceExpr:;
+  case T_ArrayCoerceExpr:
   {
     ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *)node;
     ArrayCoerceExpr *newnode;
@@ -3127,7 +3125,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_ConvertRowtypeExpr:;
+  case T_ConvertRowtypeExpr:
   {
     ConvertRowtypeExpr *convexpr = (ConvertRowtypeExpr *)node;
     ConvertRowtypeExpr *newnode;
@@ -3137,7 +3135,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CollateExpr:;
+  case T_CollateExpr:
   {
     CollateExpr *collate = (CollateExpr *)node;
     CollateExpr *newnode;
@@ -3147,7 +3145,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
   {
     CaseExpr *caseexpr = (CaseExpr *)node;
     CaseExpr *newnode;
@@ -3159,7 +3157,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CaseWhen:;
+  case T_CaseWhen:
   {
     CaseWhen *casewhen = (CaseWhen *)node;
     CaseWhen *newnode;
@@ -3170,7 +3168,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_ArrayExpr:;
+  case T_ArrayExpr:
   {
     ArrayExpr *arrayexpr = (ArrayExpr *)node;
     ArrayExpr *newnode;
@@ -3180,7 +3178,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_RowExpr:;
+  case T_RowExpr:
   {
     RowExpr *rowexpr = (RowExpr *)node;
     RowExpr *newnode;
@@ -3191,7 +3189,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_RowCompareExpr:;
+  case T_RowCompareExpr:
   {
     RowCompareExpr *rcexpr = (RowCompareExpr *)node;
     RowCompareExpr *newnode;
@@ -3202,7 +3200,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
   {
     CoalesceExpr *coalesceexpr = (CoalesceExpr *)node;
     CoalesceExpr *newnode;
@@ -3212,7 +3210,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
   {
     MinMaxExpr *minmaxexpr = (MinMaxExpr *)node;
     MinMaxExpr *newnode;
@@ -3222,7 +3220,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_XmlExpr:;
+  case T_XmlExpr:
   {
     XmlExpr *xexpr = (XmlExpr *)node;
     XmlExpr *newnode;
@@ -3234,7 +3232,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_NullTest:;
+  case T_NullTest:
   {
     NullTest *ntest = (NullTest *)node;
     NullTest *newnode;
@@ -3244,7 +3242,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_BooleanTest:;
+  case T_BooleanTest:
   {
     BooleanTest *btest = (BooleanTest *)node;
     BooleanTest *newnode;
@@ -3254,7 +3252,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_CoerceToDomain:;
+  case T_CoerceToDomain:
   {
     CoerceToDomain *ctest = (CoerceToDomain *)node;
     CoerceToDomain *newnode;
@@ -3264,7 +3262,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_TargetEntry:;
+  case T_TargetEntry:
   {
     TargetEntry *targetentry = (TargetEntry *)node;
     TargetEntry *newnode;
@@ -3274,23 +3272,23 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_Query:;
+  case T_Query:
     /* Do nothing with a sub-Query, per discussion above */
     return node;
-  case T_WindowClause:;
+  case T_WindowClause:
   {
     WindowClause *wc = (WindowClause *)node;
     WindowClause *newnode;
 
-
-
-
-
-
-
+    FLATCOPY(newnode, wc, WindowClause);
+    MUTATE(newnode->partitionClause, wc->partitionClause, List *);
+    MUTATE(newnode->orderClause, wc->orderClause, List *);
+    MUTATE(newnode->startOffset, wc->startOffset, Node *);
+    MUTATE(newnode->endOffset, wc->endOffset, Node *);
+    return (Node *)newnode;
   }
   break;
-  case T_CommonTableExpr:;
+  case T_CommonTableExpr:
   {
     CommonTableExpr *cte = (CommonTableExpr *)node;
     CommonTableExpr *newnode;
@@ -3305,7 +3303,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_List:;
+  case T_List:
   {
     /*
      * We assume the mutator isn't interested in the list nodes
@@ -3323,7 +3321,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)resultlist;
   }
   break;
-  case T_FromExpr:;
+  case T_FromExpr:
   {
     FromExpr *from = (FromExpr *)node;
     FromExpr *newnode;
@@ -3334,7 +3332,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_OnConflictExpr:;
+  case T_OnConflictExpr:
   {
     OnConflictExpr *oc = (OnConflictExpr *)node;
     OnConflictExpr *newnode;
@@ -3349,21 +3347,21 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_PartitionPruneStepOp:;
+  case T_PartitionPruneStepOp:
   {
     PartitionPruneStepOp *opstep = (PartitionPruneStepOp *)node;
     PartitionPruneStepOp *newnode;
 
+    FLATCOPY(newnode, opstep, PartitionPruneStepOp);
+    MUTATE(newnode->exprs, opstep->exprs, List *);
 
-
-
-
+    return (Node *)newnode;
   }
   break;
-  case T_PartitionPruneStepCombine:;
+  case T_PartitionPruneStepCombine:
     /* no expression sub-nodes */
-
-  case T_JoinExpr:;
+    return (Node *)copyObject(node);
+  case T_JoinExpr:
   {
     JoinExpr *join = (JoinExpr *)node;
     JoinExpr *newnode;
@@ -3376,7 +3374,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_SetOperationStmt:;
+  case T_SetOperationStmt:
   {
     SetOperationStmt *setop = (SetOperationStmt *)node;
     SetOperationStmt *newnode;
@@ -3388,7 +3386,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_IndexClause:;
+  case T_IndexClause:
   {
     IndexClause *iclause = (IndexClause *)node;
     IndexClause *newnode;
@@ -3399,7 +3397,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_PlaceHolderVar:;
+  case T_PlaceHolderVar:
   {
     PlaceHolderVar *phv = (PlaceHolderVar *)node;
     PlaceHolderVar *newnode;
@@ -3410,7 +3408,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_InferenceElem:;
+  case T_InferenceElem:
   {
     InferenceElem *inferenceelemdexpr = (InferenceElem *)node;
     InferenceElem *newnode;
@@ -3420,7 +3418,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_AppendRelInfo:;
+  case T_AppendRelInfo:
   {
     AppendRelInfo *appinfo = (AppendRelInfo *)node;
     AppendRelInfo *newnode;
@@ -3430,18 +3428,18 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_PlaceHolderInfo:;
+  case T_PlaceHolderInfo:
   {
     PlaceHolderInfo *phinfo = (PlaceHolderInfo *)node;
     PlaceHolderInfo *newnode;
 
-
-
+    FLATCOPY(newnode, phinfo, PlaceHolderInfo);
+    MUTATE(newnode->ph_var, phinfo->ph_var, PlaceHolderVar *);
     /* Assume we need not copy the relids bitmapsets */
-
+    return (Node *)newnode;
   }
   break;
-  case T_RangeTblFunction:;
+  case T_RangeTblFunction:
   {
     RangeTblFunction *rtfunc = (RangeTblFunction *)node;
     RangeTblFunction *newnode;
@@ -3452,7 +3450,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_TableSampleClause:;
+  case T_TableSampleClause:
   {
     TableSampleClause *tsc = (TableSampleClause *)node;
     TableSampleClause *newnode;
@@ -3463,7 +3461,7 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  case T_TableFunc:;
+  case T_TableFunc:
   {
     TableFunc *tf = (TableFunc *)node;
     TableFunc *newnode;
@@ -3477,12 +3475,12 @@ expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
     return (Node *)newnode;
   }
   break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
   /* can't get here, but keep compiler happy */
-
+  return NULL;
 }
 
 /*
@@ -3535,10 +3533,10 @@ query_tree_mutator(Query *query, Node *(*mutator)(), void *context, int flags)
 
   if ((flags & QTW_EXAMINE_SORTGROUP))
   {
-
-
-
-
+    MUTATE(query->groupClause, query->groupClause, List *);
+    MUTATE(query->windowClause, query->windowClause, List *);
+    MUTATE(query->sortClause, query->sortClause, List *);
+    MUTATE(query->distinctClause, query->distinctClause, List *);
   }
   else
   {
@@ -3580,8 +3578,8 @@ query_tree_mutator(Query *query, Node *(*mutator)(), void *context, int flags)
   {
     MUTATE(query->cteList, query->cteList, List *);
   }
-  else
-  { /* else copy CTE list as-is */
+  else /* else copy CTE list as-is */
+  {
     query->cteList = copyObject(query->cteList);
   }
   query->rtable = range_table_mutator(query->rtable, mutator, context, flags);
@@ -3607,11 +3605,11 @@ range_table_mutator(List *rtable, Node *(*mutator)(), void *context, int flags)
     FLATCOPY(newrte, rte, RangeTblEntry);
     switch (rte->rtekind)
     {
-    case RTE_RELATION:;
+    case RTE_RELATION:
       MUTATE(newrte->tablesample, rte->tablesample, TableSampleClause *);
       /* we don't bother to copy eref, aliases, etc; OK? */
       break;
-    case RTE_SUBQUERY:;
+    case RTE_SUBQUERY:
       if (!(flags & QTW_IGNORE_RT_SUBQUERIES))
       {
         CHECKFLATCOPY(newrte->subquery, rte->subquery, Query);
@@ -3623,7 +3621,7 @@ range_table_mutator(List *rtable, Node *(*mutator)(), void *context, int flags)
         newrte->subquery = copyObject(rte->subquery);
       }
       break;
-    case RTE_JOIN:;
+    case RTE_JOIN:
       if (!(flags & QTW_IGNORE_JOINALIASES))
       {
         MUTATE(newrte->joinaliasvars, rte->joinaliasvars, List *);
@@ -3634,18 +3632,18 @@ range_table_mutator(List *rtable, Node *(*mutator)(), void *context, int flags)
         newrte->joinaliasvars = copyObject(rte->joinaliasvars);
       }
       break;
-    case RTE_FUNCTION:;
+    case RTE_FUNCTION:
       MUTATE(newrte->functions, rte->functions, List *);
       break;
-    case RTE_TABLEFUNC:;
-
-
-    case RTE_VALUES:;
+    case RTE_TABLEFUNC:
+      MUTATE(newrte->tablefunc, rte->tablefunc, TableFunc *);
+      break;
+    case RTE_VALUES:
       MUTATE(newrte->values_lists, rte->values_lists, List *);
       break;
-    case RTE_CTE:;
-    case RTE_NAMEDTUPLESTORE:;
-    case RTE_RESULT:;
+    case RTE_CTE:
+    case RTE_NAMEDTUPLESTORE:
+    case RTE_RESULT:
       /* nothing to do */
       break;
     }
@@ -3723,7 +3721,7 @@ raw_expression_tree_walker(Node *node, bool (*walker)(), void *context)
    */
   if (node == NULL)
   {
-
+    return false;
   }
 
   /* Guard against stack overflow due to overly complex expressions */
@@ -3731,631 +3729,631 @@ raw_expression_tree_walker(Node *node, bool (*walker)(), void *context)
 
   switch (nodeTag(node))
   {
-  case T_SetToDefault:;
-  case T_CurrentOfExpr:;
-  case T_SQLValueFunction:;
-  case T_Integer:;
-  case T_Float:;
-  case T_String:;
-  case T_BitString:;
-  case T_Null:;
-  case T_ParamRef:;
-  case T_A_Const:;
-  case T_A_Star:;
+  case T_SetToDefault:
+  case T_CurrentOfExpr:
+  case T_SQLValueFunction:
+  case T_Integer:
+  case T_Float:
+  case T_String:
+  case T_BitString:
+  case T_Null:
+  case T_ParamRef:
+  case T_A_Const:
+  case T_A_Star:
     /* primitive node types with no subnodes */
     break;
-  case T_Alias:;
+  case T_Alias:
     /* we assume the colnames list isn't interesting */
     break;
-  case T_RangeVar:;
-
-  case T_GroupingFunc:;
-
-  case T_SubLink:;
+  case T_RangeVar:
+    return walker(((RangeVar *)node)->alias, context);
+  case T_GroupingFunc:
+    return walker(((GroupingFunc *)node)->args, context);
+  case T_SubLink:
   {
     SubLink *sublink = (SubLink *)node;
 
     if (walker(sublink->testexpr, context))
     {
-
+      return true;
     }
     /* we assume the operName is not interesting */
     if (walker(sublink->subselect, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_CaseExpr:;
+  case T_CaseExpr:
   {
     CaseExpr *caseexpr = (CaseExpr *)node;
 
-
-
-
-
+    if (walker(caseexpr->arg, context))
+    {
+      return true;
+    }
     /* we assume walker doesn't care about CaseWhens, either */
+    foreach (temp, caseexpr->args)
+    {
+      CaseWhen *when = lfirst_node(CaseWhen, temp);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (walker(when->expr, context))
+      {
+        return true;
+      }
+      if (walker(when->result, context))
+      {
+        return true;
+      }
+    }
+    if (walker(caseexpr->defresult, context))
+    {
+      return true;
+    }
   }
-
-  case T_RowExpr:;
+  break;
+  case T_RowExpr:
     /* Assume colnames isn't interesting */
     return walker(((RowExpr *)node)->args, context);
-  case T_CoalesceExpr:;
-
-  case T_MinMaxExpr:;
-
-  case T_XmlExpr:;
+  case T_CoalesceExpr:
+    return walker(((CoalesceExpr *)node)->args, context);
+  case T_MinMaxExpr:
+    return walker(((MinMaxExpr *)node)->args, context);
+  case T_XmlExpr:
   {
     XmlExpr *xexpr = (XmlExpr *)node;
 
-
-
-
-
+    if (walker(xexpr->named_args, context))
+    {
+      return true;
+    }
     /* we assume walker doesn't care about arg_names */
-
-
-
-
+    if (walker(xexpr->args, context))
+    {
+      return true;
+    }
   }
-
-  case T_NullTest:;
-
-  case T_BooleanTest:;
-
-  case T_JoinExpr:;
+  break;
+  case T_NullTest:
+    return walker(((NullTest *)node)->arg, context);
+  case T_BooleanTest:
+    return walker(((BooleanTest *)node)->arg, context);
+  case T_JoinExpr:
   {
     JoinExpr *join = (JoinExpr *)node;
 
     if (walker(join->larg, context))
     {
-
+      return true;
     }
     if (walker(join->rarg, context))
     {
-
+      return true;
     }
     if (walker(join->quals, context))
     {
-
+      return true;
     }
     if (walker(join->alias, context))
     {
-
+      return true;
     }
     /* using list is deemed uninteresting */
   }
   break;
-  case T_IntoClause:;
+  case T_IntoClause:
   {
     IntoClause *into = (IntoClause *)node;
 
-
-
-
-
+    if (walker(into->rel, context))
+    {
+      return true;
+    }
     /* colNames, options are deemed uninteresting */
     /* viewQuery should be null in raw parsetree, but check it */
-
-
-
-
+    if (walker(into->viewQuery, context))
+    {
+      return true;
+    }
   }
-
-  case T_List:;
+  break;
+  case T_List:
     foreach (temp, (List *)node)
     {
       if (walker((Node *)lfirst(temp), context))
       {
-
+        return true;
       }
     }
     break;
-  case T_InsertStmt:;
+  case T_InsertStmt:
   {
     InsertStmt *stmt = (InsertStmt *)node;
 
     if (walker(stmt->relation, context))
     {
-
+      return true;
     }
     if (walker(stmt->cols, context))
     {
-
+      return true;
     }
     if (walker(stmt->selectStmt, context))
     {
-
+      return true;
     }
     if (walker(stmt->onConflictClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->returningList, context))
     {
-
+      return true;
     }
     if (walker(stmt->withClause, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_DeleteStmt:;
+  case T_DeleteStmt:
   {
     DeleteStmt *stmt = (DeleteStmt *)node;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (walker(stmt->relation, context))
+    {
+      return true;
+    }
+    if (walker(stmt->usingClause, context))
+    {
+      return true;
+    }
+    if (walker(stmt->whereClause, context))
+    {
+      return true;
+    }
+    if (walker(stmt->returningList, context))
+    {
+      return true;
+    }
+    if (walker(stmt->withClause, context))
+    {
+      return true;
+    }
   }
-
-  case T_UpdateStmt:;
+  break;
+  case T_UpdateStmt:
   {
     UpdateStmt *stmt = (UpdateStmt *)node;
 
     if (walker(stmt->relation, context))
     {
-
+      return true;
     }
     if (walker(stmt->targetList, context))
     {
-
+      return true;
     }
     if (walker(stmt->whereClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->fromClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->returningList, context))
     {
-
+      return true;
     }
     if (walker(stmt->withClause, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_SelectStmt:;
+  case T_SelectStmt:
   {
     SelectStmt *stmt = (SelectStmt *)node;
 
     if (walker(stmt->distinctClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->intoClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->targetList, context))
     {
-
+      return true;
     }
     if (walker(stmt->fromClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->whereClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->groupClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->havingClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->windowClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->valuesLists, context))
     {
-
+      return true;
     }
     if (walker(stmt->sortClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->limitOffset, context))
     {
-
+      return true;
     }
     if (walker(stmt->limitCount, context))
     {
-
+      return true;
     }
     if (walker(stmt->lockingClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->withClause, context))
     {
-
+      return true;
     }
     if (walker(stmt->larg, context))
     {
-
+      return true;
     }
     if (walker(stmt->rarg, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_A_Expr:;
+  case T_A_Expr:
   {
     A_Expr *expr = (A_Expr *)node;
 
     if (walker(expr->lexpr, context))
     {
-
+      return true;
     }
     if (walker(expr->rexpr, context))
     {
-
+      return true;
     }
     /* operator name is deemed uninteresting */
   }
   break;
-  case T_BoolExpr:;
+  case T_BoolExpr:
   {
     BoolExpr *expr = (BoolExpr *)node;
 
     if (walker(expr->args, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_ColumnRef:;
+  case T_ColumnRef:
     /* we assume the fields contain nothing interesting */
     break;
-  case T_FuncCall:;
+  case T_FuncCall:
   {
     FuncCall *fcall = (FuncCall *)node;
 
     if (walker(fcall->args, context))
     {
-
+      return true;
     }
     if (walker(fcall->agg_order, context))
     {
-
+      return true;
     }
     if (walker(fcall->agg_filter, context))
     {
-
+      return true;
     }
     if (walker(fcall->over, context))
     {
-
+      return true;
     }
     /* function name is deemed uninteresting */
   }
   break;
-  case T_NamedArgExpr:;
-
-  case T_A_Indices:;
+  case T_NamedArgExpr:
+    return walker(((NamedArgExpr *)node)->arg, context);
+  case T_A_Indices:
   {
     A_Indices *indices = (A_Indices *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(indices->lidx, context))
+    {
+      return true;
+    }
+    if (walker(indices->uidx, context))
+    {
+      return true;
+    }
   }
-
-  case T_A_Indirection:;
+  break;
+  case T_A_Indirection:
   {
     A_Indirection *indir = (A_Indirection *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(indir->arg, context))
+    {
+      return true;
+    }
+    if (walker(indir->indirection, context))
+    {
+      return true;
+    }
   }
-
-  case T_A_ArrayExpr:;
+  break;
+  case T_A_ArrayExpr:
     return walker(((A_ArrayExpr *)node)->elements, context);
-  case T_ResTarget:;
+  case T_ResTarget:
   {
     ResTarget *rt = (ResTarget *)node;
 
     if (walker(rt->indirection, context))
     {
-
+      return true;
     }
     if (walker(rt->val, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_MultiAssignRef:;
-
-  case T_TypeCast:;
+  case T_MultiAssignRef:
+    return walker(((MultiAssignRef *)node)->source, context);
+  case T_TypeCast:
   {
     TypeCast *tc = (TypeCast *)node;
 
     if (walker(tc->arg, context))
     {
-
+      return true;
     }
     if (walker(tc->typeName, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_CollateClause:;
+  case T_CollateClause:
     return walker(((CollateClause *)node)->arg, context);
-  case T_SortBy:;
+  case T_SortBy:
     return walker(((SortBy *)node)->node, context);
-  case T_WindowDef:;
+  case T_WindowDef:
   {
     WindowDef *wd = (WindowDef *)node;
 
     if (walker(wd->partitionClause, context))
     {
-
+      return true;
     }
     if (walker(wd->orderClause, context))
     {
-
+      return true;
     }
     if (walker(wd->startOffset, context))
     {
-
+      return true;
     }
     if (walker(wd->endOffset, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_RangeSubselect:;
+  case T_RangeSubselect:
   {
     RangeSubselect *rs = (RangeSubselect *)node;
 
     if (walker(rs->subquery, context))
     {
-
+      return true;
     }
     if (walker(rs->alias, context))
     {
-
+      return true;
     }
   }
   break;
-  case T_RangeFunction:;
+  case T_RangeFunction:
   {
     RangeFunction *rf = (RangeFunction *)node;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    if (walker(rf->functions, context))
+    {
+      return true;
+    }
+    if (walker(rf->alias, context))
+    {
+      return true;
+    }
+    if (walker(rf->coldeflist, context))
+    {
+      return true;
+    }
   }
-
-  case T_RangeTableSample:;
+  break;
+  case T_RangeTableSample:
   {
     RangeTableSample *rts = (RangeTableSample *)node;
 
-
-
-
-
+    if (walker(rts->relation, context))
+    {
+      return true;
+    }
     /* method name is deemed uninteresting */
-
-
-
-
-
-
-
-
+    if (walker(rts->args, context))
+    {
+      return true;
+    }
+    if (walker(rts->repeatable, context))
+    {
+      return true;
+    }
   }
-
-  case T_RangeTableFunc:;
+  break;
+  case T_RangeTableFunc:
   {
     RangeTableFunc *rtf = (RangeTableFunc *)node;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (walker(rtf->docexpr, context))
+    {
+      return true;
+    }
+    if (walker(rtf->rowexpr, context))
+    {
+      return true;
+    }
+    if (walker(rtf->namespaces, context))
+    {
+      return true;
+    }
+    if (walker(rtf->columns, context))
+    {
+      return true;
+    }
+    if (walker(rtf->alias, context))
+    {
+      return true;
+    }
   }
-
-  case T_RangeTableFuncCol:;
+  break;
+  case T_RangeTableFuncCol:
   {
     RangeTableFuncCol *rtfc = (RangeTableFuncCol *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(rtfc->colexpr, context))
+    {
+      return true;
+    }
+    if (walker(rtfc->coldefexpr, context))
+    {
+      return true;
+    }
   }
-
-  case T_TypeName:;
+  break;
+  case T_TypeName:
   {
     TypeName *tn = (TypeName *)node;
 
     if (walker(tn->typmods, context))
     {
-
+      return true;
     }
     if (walker(tn->arrayBounds, context))
     {
-
+      return true;
     }
     /* type name itself is deemed uninteresting */
   }
   break;
-  case T_ColumnDef:;
+  case T_ColumnDef:
   {
     ColumnDef *coldef = (ColumnDef *)node;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    if (walker(coldef->typeName, context))
+    {
+      return true;
+    }
+    if (walker(coldef->raw_default, context))
+    {
+      return true;
+    }
+    if (walker(coldef->collClause, context))
+    {
+      return true;
+    }
     /* for now, constraints are ignored */
   }
-
-  case T_IndexElem:;
+  break;
+  case T_IndexElem:
   {
     IndexElem *indelem = (IndexElem *)node;
 
-
-
-
-
+    if (walker(indelem->expr, context))
+    {
+      return true;
+    }
     /* collation and opclass names are deemed uninteresting */
   }
-
-  case T_GroupingSet:;
-
-  case T_LockingClause:;
+  break;
+  case T_GroupingSet:
+    return walker(((GroupingSet *)node)->content, context);
+  case T_LockingClause:
     return walker(((LockingClause *)node)->lockedRels, context);
-  case T_XmlSerialize:;
+  case T_XmlSerialize:
   {
     XmlSerialize *xs = (XmlSerialize *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(xs->expr, context))
+    {
+      return true;
+    }
+    if (walker(xs->typeName, context))
+    {
+      return true;
+    }
   }
-
-  case T_WithClause:;
-
-  case T_InferClause:;
+  break;
+  case T_WithClause:
+    return walker(((WithClause *)node)->ctes, context);
+  case T_InferClause:
   {
     InferClause *stmt = (InferClause *)node;
 
-
-
-
-
-
-
-
-
+    if (walker(stmt->indexElems, context))
+    {
+      return true;
+    }
+    if (walker(stmt->whereClause, context))
+    {
+      return true;
+    }
   }
-
-  case T_OnConflictClause:;
+  break;
+  case T_OnConflictClause:
   {
     OnConflictClause *stmt = (OnConflictClause *)node;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    if (walker(stmt->infer, context))
+    {
+      return true;
+    }
+    if (walker(stmt->targetList, context))
+    {
+      return true;
+    }
+    if (walker(stmt->whereClause, context))
+    {
+      return true;
+    }
   }
-
-  case T_CommonTableExpr:;
+  break;
+  case T_CommonTableExpr:
     return walker(((CommonTableExpr *)node)->ctequery, context);
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
+    break;
   }
   return false;
 }
@@ -4378,7 +4376,7 @@ planstate_tree_walker(PlanState *planstate, bool (*walker)(), void *context)
   /* initPlan-s */
   if (planstate_walk_subplans(planstate->initPlan, walker, context))
   {
-
+    return true;
   }
 
   /* lefttree */
@@ -4386,7 +4384,7 @@ planstate_tree_walker(PlanState *planstate, bool (*walker)(), void *context)
   {
     if (walker(outerPlanState(planstate), context))
     {
-
+      return true;
     }
   }
 
@@ -4395,66 +4393,66 @@ planstate_tree_walker(PlanState *planstate, bool (*walker)(), void *context)
   {
     if (walker(innerPlanState(planstate), context))
     {
-
+      return true;
     }
   }
 
   /* special child plans */
   switch (nodeTag(plan))
   {
-  case T_ModifyTable:;
+  case T_ModifyTable:
     if (planstate_walk_members(((ModifyTableState *)planstate)->mt_plans, ((ModifyTableState *)planstate)->mt_nplans, walker, context))
     {
-
+      return true;
     }
     break;
-  case T_Append:;
+  case T_Append:
     if (planstate_walk_members(((AppendState *)planstate)->appendplans, ((AppendState *)planstate)->as_nplans, walker, context))
     {
-
+      return true;
     }
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     if (planstate_walk_members(((MergeAppendState *)planstate)->mergeplans, ((MergeAppendState *)planstate)->ms_nplans, walker, context))
     {
-
+      return true;
     }
     break;
-  case T_BitmapAnd:;
+  case T_BitmapAnd:
     if (planstate_walk_members(((BitmapAndState *)planstate)->bitmapplans, ((BitmapAndState *)planstate)->nplans, walker, context))
     {
-
+      return true;
     }
     break;
-  case T_BitmapOr:;
+  case T_BitmapOr:
     if (planstate_walk_members(((BitmapOrState *)planstate)->bitmapplans, ((BitmapOrState *)planstate)->nplans, walker, context))
     {
-
+      return true;
     }
     break;
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
     if (walker(((SubqueryScanState *)planstate)->subplan, context))
     {
-
+      return true;
     }
     break;
-  case T_CustomScan:;
-
-
-
-
-
-
-
-
-  default:;;
+  case T_CustomScan:
+    foreach (lc, ((CustomScanState *)planstate)->custom_ps)
+    {
+      if (walker((PlanState *)lfirst(lc), context))
+      {
+        return true;
+      }
+    }
+    break;
+  default:
     break;
   }
 
   /* subPlan-s */
   if (planstate_walk_subplans(planstate->subPlan, walker, context))
   {
-
+    return true;
   }
 
   return false;
@@ -4474,7 +4472,7 @@ planstate_walk_subplans(List *plans, bool (*walker)(), void *context)
 
     if (walker(sps->planstate, context))
     {
-
+      return true;
     }
   }
 
@@ -4494,7 +4492,7 @@ planstate_walk_members(PlanState **planstates, int nplans, bool (*walker)(), voi
   {
     if (walker(planstates[j], context))
     {
-
+      return true;
     }
   }
 

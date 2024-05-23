@@ -426,8 +426,7 @@ consider_index_join_clauses(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo *in
 
 /*
  * consider_index_join_outer_rels
- *	  Generate parameterized paths based on clause relids in the clause
- *list.
+ *	  Generate parameterized paths based on clause relids in the clause list.
  *
  * Workhorse for consider_index_join_clauses; see notes therein for rationale.
  *
@@ -504,7 +503,7 @@ consider_index_join_outer_rels(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo 
        */
       if (list_length(*considered_relids) >= 10 * considered_clauses)
       {
-
+        break;
       }
 
       /* OK, try the union set */
@@ -538,7 +537,7 @@ get_join_index_paths(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo *index, In
   /* If we already considered this relids set, don't repeat the work */
   if (bms_equal_any(relids, *considered_relids))
   {
-
+    return;
   }
 
   /* Identify indexclauses usable with this relids set */
@@ -644,8 +643,7 @@ bms_equal_any(Relids relids, List *relids_list)
 
 /*
  * get_index_paths
- *	  Given an index and a set of index clauses for it, construct
- *IndexPaths.
+ *	  Given an index and a set of index clauses for it, construct IndexPaths.
  *
  * Plain indexpaths are sent directly to add_path, while potential
  * bitmap indexpaths are added to *bitindexpaths for later processing.
@@ -726,8 +724,7 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo *index, IndexCl
 /*
  * build_index_paths
  *	  Given an index and a set of index clauses for it, construct zero
- *	  or more IndexPaths. It also constructs zero or more partial
- *IndexPaths.
+ *	  or more IndexPaths. It also constructs zero or more partial IndexPaths.
  *
  * We return a list of paths because (1) this routine checks some cases
  * that should cause us to not generate any IndexPath, and (2) in some
@@ -788,19 +785,19 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo *index, Index
    */
   switch (scantype)
   {
-  case ST_INDEXSCAN:;
-
-
-
-
-
-  case ST_BITMAPSCAN:;
-    if (!index->amhasgetbitmap)
+  case ST_INDEXSCAN:
+    if (!index->amhasgettuple)
     {
-
+      return NIL;
     }
     break;
-  case ST_ANYSCAN:;
+  case ST_BITMAPSCAN:
+    if (!index->amhasgetbitmap)
+    {
+      return NIL;
+    }
+    break;
+  case ST_ANYSCAN:
     /* either or both are OK */
     break;
   }
@@ -1047,7 +1044,7 @@ build_paths_for_OR(PlannerInfo *root, RelOptInfo *rel, List *clauses, List *othe
     /* Ignore index if it doesn't support bitmap scans */
     if (!index->amhasgetbitmap)
     {
-
+      continue;
     }
 
     /*
@@ -1121,9 +1118,9 @@ build_paths_for_OR(PlannerInfo *root, RelOptInfo *rel, List *clauses, List *othe
 
 /*
  * generate_bitmap_or_paths
- *		Look through the list of clauses to find OR clauses, and
- *generate a BitmapOrPath for each one we can handle that way.  Return a list of
- *the generated BitmapOrPaths.
+ *		Look through the list of clauses to find OR clauses, and generate
+ *		a BitmapOrPath for each one we can handle that way.  Return a list
+ *		of the generated BitmapOrPaths.
  *
  * other_clauses is a list of additional clauses that can be assumed true
  * for the purpose of generating indexquals, but are not to be searched for
@@ -1314,8 +1311,8 @@ choose_bitmap_and(PlannerInfo *root, RelOptInfo *rel, List *paths)
     /* If it's unclassifiable, treat it as distinct from all others */
     if (pathinfo->unclassifiable)
     {
-
-
+      pathinfoarray[npaths++] = pathinfo;
+      continue;
     }
 
     for (i = 0; i < npaths; i++)
@@ -1535,9 +1532,9 @@ bitmap_and_cost_est(PlannerInfo *root, RelOptInfo *rel, List *paths)
 
 /*
  * classify_index_clause_usage
- *		Construct a PathClauseUsage struct describing the WHERE clauses
- *and index predicate clauses used by the given indexscan path. We consider two
- *clauses the same if they are equal().
+ *		Construct a PathClauseUsage struct describing the WHERE clauses and
+ *		index predicate clauses used by the given indexscan path.
+ *		We consider two clauses the same if they are equal().
  *
  * At some point we might want to migrate this info into the Path data
  * structure proper, but for the moment it's only needed within
@@ -1572,9 +1569,9 @@ classify_index_clause_usage(Path *path, List **clauselist)
    */
   if (list_length(result->quals) + list_length(result->preds) > 100)
   {
-
-
-
+    result->clauseids = NULL;
+    result->unclassifiable = true;
+    return result;
   }
 
   /* Build up a bitmapset representing the quals and preds */
@@ -1620,10 +1617,10 @@ find_indexpath_quals(Path *bitmapqual, List **quals, List **preds)
     BitmapAndPath *apath = (BitmapAndPath *)bitmapqual;
     ListCell *l;
 
-
-
-
-
+    foreach (l, apath->bitmapquals)
+    {
+      find_indexpath_quals((Path *)lfirst(l), quals, preds);
+    }
   }
   else if (IsA(bitmapqual, BitmapOrPath))
   {
@@ -1650,7 +1647,7 @@ find_indexpath_quals(Path *bitmapqual, List **quals, List **preds)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", nodeTag(bitmapqual));
   }
 }
 
@@ -1778,8 +1775,8 @@ check_index_only(RelOptInfo *rel, IndexOptInfo *index)
 
 /*
  * get_loop_count
- *		Choose the loop count estimate to use for costing a
- *parameterized path with the given set of outer relids.
+ *		Choose the loop count estimate to use for costing a parameterized path
+ *		with the given set of outer relids.
  *
  * Since we produce parameterized paths before we've begun to generate join
  * relations, it's impossible to predict exactly how many times a parameterized
@@ -1824,12 +1821,12 @@ get_loop_count(PlannerInfo *root, Index cur_relid, Relids outer_relids)
     /* Paranoia: ignore bogus relid indexes */
     if (outer_relid >= root->simple_rel_array_size)
     {
-
+      continue;
     }
     outer_rel = root->simple_rel_array[outer_relid];
     if (outer_rel == NULL)
     {
-
+      continue;
     }
     Assert(outer_rel->relid == outer_relid); /* sanity check on array */
 
@@ -1913,19 +1910,19 @@ approximate_joinrel_size(PlannerInfo *root, Relids relids)
     /* Paranoia: ignore bogus relid indexes */
     if (relid >= root->simple_rel_array_size)
     {
-
+      continue;
     }
     rel = root->simple_rel_array[relid];
     if (rel == NULL)
     {
-
+      continue;
     }
     Assert(rel->relid == relid); /* sanity check on array */
 
     /* Relation could be proven empty, if so ignore */
     if (IS_DUMMY_REL(rel))
     {
-
+      continue;
     }
 
     /* Otherwise, rel's rows estimate should be valid by now */
@@ -1989,8 +1986,8 @@ match_join_clauses_to_index(PlannerInfo *root, RelOptInfo *rel, IndexOptInfo *in
 
 /*
  * match_eclass_clauses_to_index
- *	  Identify EquivalenceClass join clauses for the rel that match the
- *index. Matching clauses are added to *clauseset.
+ *	  Identify EquivalenceClass join clauses for the rel that match the index.
+ *	  Matching clauses are added to *clauseset.
  */
 static void
 match_eclass_clauses_to_index(PlannerInfo *root, IndexOptInfo *index, IndexClauseSet *clauseset)
@@ -2095,7 +2092,7 @@ match_clause_to_index(PlannerInfo *root, RestrictInfo *rinfo, IndexOptInfo *inde
 
       if (iclause->rinfo == rinfo)
       {
-
+        return;
       }
     }
 
@@ -2124,23 +2121,23 @@ match_clause_to_index(PlannerInfo *root, RestrictInfo *rinfo, IndexOptInfo *inde
  *		   for this column; and
  *	  (3)  must match the collation of the index, if collation is relevant.
  *
- *	  Our definition of "const" is exceedingly liberal: we allow anything
- *that doesn't involve a volatile function or a Var of the index's relation. In
- *particular, Vars belonging to other relations of the query are accepted here,
- *since a clause of that form can be used in a parameterized indexscan.  It's
- *the responsibility of higher code levels to manage restriction and join
- *clauses appropriately.
+ *	  Our definition of "const" is exceedingly liberal: we allow anything that
+ *	  doesn't involve a volatile function or a Var of the index's relation.
+ *	  In particular, Vars belonging to other relations of the query are
+ *	  accepted here, since a clause of that form can be used in a
+ *	  parameterized indexscan.  It's the responsibility of higher code levels
+ *	  to manage restriction and join clauses appropriately.
  *
  *	  Note: we do need to check for Vars of the index's relation on the
- *	  "const" side of the clause, since clauses like (a.f1 OP (b.f2 OP
- *a.f3)) are not processable by a parameterized indexscan on a.f1, whereas
+ *	  "const" side of the clause, since clauses like (a.f1 OP (b.f2 OP a.f3))
+ *	  are not processable by a parameterized indexscan on a.f1, whereas
  *	  something like (a.f1 OP (b.f2 OP c.f3)) is.
  *
  *	  Presently, the executor can only deal with indexquals that have the
- *	  indexkey on the left, so we can only use clauses that have the
- *indexkey on the right if we can commute the clause to put the key on the left.
- *	  We handle that by generating an IndexClause with the
- *correctly-commuted opclause as a derived indexqual.
+ *	  indexkey on the left, so we can only use clauses that have the indexkey
+ *	  on the right if we can commute the clause to put the key on the left.
+ *	  We handle that by generating an IndexClause with the correctly-commuted
+ *	  opclause as a derived indexqual.
  *
  *	  If the index has a collation, the clause must have the same collation.
  *	  For collation-less indexes, we assume it doesn't matter; this is
@@ -2152,8 +2149,8 @@ match_clause_to_index(PlannerInfo *root, RestrictInfo *rinfo, IndexOptInfo *inde
  *	  It is also possible to match RowCompareExpr clauses to indexes (but
  *	  currently, only btree indexes handle this).
  *
- *	  It is also possible to match ScalarArrayOpExpr clauses to indexes,
- *when the clause is of the form "indexkey op ANY (arrayconst)".
+ *	  It is also possible to match ScalarArrayOpExpr clauses to indexes, when
+ *	  the clause is of the form "indexkey op ANY (arrayconst)".
  *
  *	  For boolean indexes, it is also possible to match the clause directly
  *	  to the indexkey; or perhaps the clause is (NOT indexkey).
@@ -2190,7 +2187,7 @@ match_clause_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexcol, I
    */
   if (clause == NULL)
   {
-
+    return NULL;
   }
 
   /* First check for boolean-index cases. */
@@ -2349,7 +2346,7 @@ match_opclause_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexcol,
    */
   if (list_length(clause->args) != 2)
   {
-
+    return NULL;
   }
 
   leftop = (Node *)linitial(clause->args);
@@ -2609,7 +2606,7 @@ match_rowcompare_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexco
   /* Forget it if we're not dealing with a btree index */
   if (index->relam != BTREE_AM_OID)
   {
-
+    return NULL;
   }
 
   index_relid = index->rel->relid;
@@ -2634,7 +2631,7 @@ match_rowcompare_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexco
   /* Collations must match, if relevant */
   if (!IndexCollMatchesExprColl(idxcollation, expr_coll))
   {
-
+    return NULL;
   }
 
   /*
@@ -2651,7 +2648,7 @@ match_rowcompare_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexco
     expr_op = get_commutator(expr_op);
     if (expr_op == InvalidOid)
     {
-
+      return NULL;
     }
     var_on_left = false;
   }
@@ -2663,14 +2660,14 @@ match_rowcompare_to_indexcol(PlannerInfo *root, RestrictInfo *rinfo, int indexco
   /* We're good if the operator is the right type of opfamily member */
   switch (get_op_opfamily_strategy(expr_op, opfamily))
   {
-  case BTLessStrategyNumber:;
-  case BTLessEqualStrategyNumber:;
-  case BTGreaterEqualStrategyNumber:;
-  case BTGreaterStrategyNumber:;
+  case BTLessStrategyNumber:
+  case BTLessEqualStrategyNumber:
+  case BTGreaterEqualStrategyNumber:
+  case BTGreaterStrategyNumber:
     return expand_indexqual_rowcompare(root, rinfo, indexcol, index, expr_op, var_on_left);
   }
 
-
+  return NULL;
 }
 
 /*
@@ -2767,16 +2764,16 @@ expand_indexqual_rowcompare(PlannerInfo *root, RestrictInfo *rinfo, int indexcol
       expr_op = get_commutator(expr_op);
       if (expr_op == InvalidOid)
       {
-
+        break; /* operator is not usable */
       }
     }
     if (bms_is_member(index->rel->relid, pull_varnos(root, constop)))
     {
-
+      break; /* no good, Var on wrong side */
     }
     if (contain_volatile_functions(constop))
     {
-
+      break; /* no good, volatile comparison value */
     }
 
     /*
@@ -2838,7 +2835,7 @@ expand_indexqual_rowcompare(PlannerInfo *root, RestrictInfo *rinfo, int indexcol
     else if (op_strategy == BTLessEqualStrategyNumber || op_strategy == BTGreaterEqualStrategyNumber)
     {
       /* easy, just use the same (possibly commuted) operators */
-
+      new_ops = list_truncate(expr_ops, matching_cols);
     }
     else
     {
@@ -2856,7 +2853,7 @@ expand_indexqual_rowcompare(PlannerInfo *root, RestrictInfo *rinfo, int indexcol
       }
       else
       {
-
+        elog(ERROR, "unexpected strategy number %d", op_strategy);
       }
       new_ops = NIL;
       forthree(opfamilies_cell, opfamilies, lefttypes_cell, lefttypes, righttypes_cell, righttypes)
@@ -2866,9 +2863,9 @@ expand_indexqual_rowcompare(PlannerInfo *root, RestrictInfo *rinfo, int indexcol
         Oid righttype = lfirst_oid(righttypes_cell);
 
         expr_op = get_opfamily_member(opfam, lefttype, righttype, op_strategy);
-        if (!OidIsValid(expr_op))
-        { /* should not happen */
-
+        if (!OidIsValid(expr_op)) /* should not happen */
+        {
+          elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", op_strategy, lefttype, righttype, opfam);
         }
         new_ops = lappend_oid(new_ops, expr_op);
       }
@@ -2903,14 +2900,13 @@ expand_indexqual_rowcompare(PlannerInfo *root, RestrictInfo *rinfo, int indexcol
 }
 
 /****************************************************************************
- *				----  ROUTINES TO CHECK ORDERING OPERATORS
- *----
+ *				----  ROUTINES TO CHECK ORDERING OPERATORS	----
  ****************************************************************************/
 
 /*
  * match_pathkeys_to_index
- *		Test whether an index can produce output ordered according to
- *the given pathkeys using "ordering operators".
+ *		Test whether an index can produce output ordered according to the
+ *		given pathkeys using "ordering operators".
  *
  * If it can, return a list of suitable ORDER BY expressions, each of the form
  * "indexedcol operator pseudoconstant", along with an integer list of the
@@ -2933,7 +2929,7 @@ match_pathkeys_to_index(IndexOptInfo *index, List *pathkeys, List **orderby_clau
   /* Only indexes with the amcanorderbyop property are interesting here */
   if (!index->amcanorderbyop)
   {
-
+    return;
   }
 
   foreach (lc1, pathkeys)
@@ -2950,13 +2946,13 @@ match_pathkeys_to_index(IndexOptInfo *index, List *pathkeys, List **orderby_clau
     /* Pathkey must request default sort order for the target opfamily */
     if (pathkey->pk_strategy != BTLessStrategyNumber || pathkey->pk_nulls_first)
     {
-
+      return;
     }
 
     /* If eclass is volatile, no hope of using an indexscan */
     if (pathkey->pk_eclass->ec_has_volatile)
     {
-
+      return;
     }
 
     /*
@@ -2975,7 +2971,7 @@ match_pathkeys_to_index(IndexOptInfo *index, List *pathkeys, List **orderby_clau
       /* No possibility of match if it references other relations */
       if (!bms_equal(member->em_relids, index->rel->relids))
       {
-
+        continue;
       }
 
       /*
@@ -3000,14 +2996,14 @@ match_pathkeys_to_index(IndexOptInfo *index, List *pathkeys, List **orderby_clau
         }
       }
 
-      if (found)
-      { /* don't want to look at remaining members */
+      if (found) /* don't want to look at remaining members */
+      {
         break;
       }
     }
 
-    if (!found)
-    { /* fail if no match for this pathkey */
+    if (!found) /* fail if no match for this pathkey */
+    {
       return;
     }
   }
@@ -3068,7 +3064,7 @@ match_clause_to_ordering_op(IndexOptInfo *index, int indexcol, Expr *clause, Oid
   rightop = get_rightop(clause);
   if (!leftop || !rightop)
   {
-
+    return NULL;
   }
   expr_op = ((OpExpr *)clause)->opno;
   expr_coll = ((OpExpr *)clause)->inputcollid;
@@ -3078,7 +3074,7 @@ match_clause_to_ordering_op(IndexOptInfo *index, int indexcol, Expr *clause, Oid
    */
   if (!IndexCollMatchesExprColl(idxcollation, expr_coll))
   {
-
+    return NULL;
   }
 
   /*
@@ -3095,13 +3091,13 @@ match_clause_to_ordering_op(IndexOptInfo *index, int indexcol, Expr *clause, Oid
     expr_op = get_commutator(expr_op);
     if (expr_op == InvalidOid)
     {
-
+      return NULL;
     }
     commuted = true;
   }
   else
   {
-
+    return NULL;
   }
 
   /*
@@ -3111,7 +3107,7 @@ match_clause_to_ordering_op(IndexOptInfo *index, int indexcol, Expr *clause, Oid
   sortfamily = get_op_opfamily_sortfamily(expr_op, opfamily);
   if (sortfamily != pk_opfamily)
   {
-
+    return NULL;
   }
 
   /* We have a match.  Return clause or a commuted version thereof. */
@@ -3134,8 +3130,7 @@ match_clause_to_ordering_op(IndexOptInfo *index, int indexcol, Expr *clause, Oid
 }
 
 /****************************************************************************
- *				----  ROUTINES TO DO PARTIAL INDEX PREDICATE
- *TESTS	----
+ *				----  ROUTINES TO DO PARTIAL INDEX PREDICATE TESTS	----
  ****************************************************************************/
 
 /*
@@ -3207,12 +3202,12 @@ check_index_predicates(PlannerInfo *root, RelOptInfo *rel)
     RestrictInfo *rinfo = (RestrictInfo *)lfirst(lc);
 
     /* Check if clause can be moved to this rel */
+    if (!join_clause_is_movable_to(rinfo, rel))
+    {
+      continue;
+    }
 
-
-
-
-
-
+    clauselist = lappend(clauselist, rinfo);
   }
 
   /*
@@ -3265,8 +3260,8 @@ check_index_predicates(PlannerInfo *root, RelOptInfo *rel)
       continue; /* ignore non-partial indexes here */
     }
 
-    if (!index->predOK)
-    { /* don't repeat work if already proven OK */
+    if (!index->predOK) /* don't repeat work if already proven OK */
+    {
       index->predOK = predicate_implied_by(index->indpred, clauselist, false);
     }
 
@@ -3292,8 +3287,7 @@ check_index_predicates(PlannerInfo *root, RelOptInfo *rel)
 }
 
 /****************************************************************************
- *				----  ROUTINES TO CHECK EXTERNALLY-VISIBLE
- *CONDITIONS  ----
+ *				----  ROUTINES TO CHECK EXTERNALLY-VISIBLE CONDITIONS  ----
  ****************************************************************************/
 
 /*
@@ -3333,7 +3327,7 @@ ec_member_matches_indexcol(PlannerInfo *root, RelOptInfo *rel, EquivalenceClass 
   /* We insist on collation match for all index types, though */
   if (!IndexCollMatchesExprColl(curCollation, ec->ec_collation))
   {
-
+    return false;
   }
 
   return match_index_to_operand((Node *)em->em_expr, indexcol, index);
@@ -3496,10 +3490,10 @@ relation_has_unique_index_for(PlannerInfo *root, RelOptInfo *rel, List *restrict
         Oid opr = lfirst_oid(lc2);
 
         /* See if the expression matches the index key */
-
-
-
-
+        if (!match_index_to_operand(expr, c, ind))
+        {
+          continue;
+        }
 
         /*
          * The equality operator must be a member of the index
@@ -3508,10 +3502,10 @@ relation_has_unique_index_for(PlannerInfo *root, RelOptInfo *rel, List *restrict
          * determined it is an equality operator, so we don't need to
          * check any more tightly than this.
          */
-
-
-
-
+        if (!op_in_opfamily(opr, ind->opfamily[c]))
+        {
+          continue;
+        }
 
         /*
          * XXX at some point we may need to check collations here too.
@@ -3519,8 +3513,8 @@ relation_has_unique_index_for(PlannerInfo *root, RelOptInfo *rel, List *restrict
          * notion of equality.
          */
 
-
-
+        matched = true; /* column is unique */
+        break;
       }
 
       if (!matched)
@@ -3578,7 +3572,7 @@ indexcol_is_bool_constant_for_query(PlannerInfo *root, IndexOptInfo *index, int 
      */
     if (rinfo->pseudoconstant)
     {
-
+      continue;
     }
 
     /* See if we can match the clause's expression to the index column */
@@ -3650,18 +3644,18 @@ match_index_to_operand(Node *operand, int indexcol, IndexOptInfo *index)
     indexpr_item = list_head(index->indexprs);
     for (i = 0; i < indexcol; i++)
     {
-
-
-
-
-
-
-
-
+      if (index->indexkeys[i] == 0)
+      {
+        if (indexpr_item == NULL)
+        {
+          elog(ERROR, "wrong number of index expressions");
+        }
+        indexpr_item = lnext(indexpr_item);
+      }
     }
     if (indexpr_item == NULL)
     {
-
+      elog(ERROR, "wrong number of index expressions");
     }
     indexkey = (Node *)lfirst(indexpr_item);
 
@@ -3670,7 +3664,7 @@ match_index_to_operand(Node *operand, int indexcol, IndexOptInfo *index)
      */
     if (indexkey && IsA(indexkey, RelabelType))
     {
-
+      indexkey = (Node *)((RelabelType *)indexkey)->arg;
     }
 
     if (equal(indexkey, operand))
@@ -3705,20 +3699,20 @@ match_index_to_operand(Node *operand, int indexcol, IndexOptInfo *index)
 bool
 is_pseudo_constant_for_index(Node *expr, IndexOptInfo *index)
 {
-
+  return is_pseudo_constant_for_index_new(NULL, expr, index);
 }
 
 bool
 is_pseudo_constant_for_index_new(PlannerInfo *root, Node *expr, IndexOptInfo *index)
 {
-
-
-
-
-
-
-
-
-
-
+  /* pull_varnos is cheaper than volatility check, so do that first */
+  if (bms_is_member(index->rel->relid, pull_varnos(root, expr)))
+  {
+    return false; /* no good, contains Var of table */
+  }
+  if (contain_volatile_functions(expr))
+  {
+    return false; /* no good, volatile comparison value */
+  }
+  return true;
 }

@@ -59,7 +59,7 @@ RemoveRewriteRuleById(Oid ruleOid)
 
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "could not find tuple for rule %u", ruleOid);
   }
 
   /*

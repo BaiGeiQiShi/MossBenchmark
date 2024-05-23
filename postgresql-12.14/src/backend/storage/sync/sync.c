@@ -193,7 +193,7 @@ SyncPostCheckpoint(void)
      */
     if (entry->cycle_ctr == checkpoint_cycle_ctr)
     {
-
+      break;
     }
 
     /* Unlink the file */
@@ -206,10 +206,10 @@ SyncPostCheckpoint(void)
        * here. rmtree() also has to ignore ENOENT errors, to deal with
        * the possibility that we delete the file first.
        */
-
-
-
-
+      if (errno != ENOENT)
+      {
+        ereport(WARNING, (errcode_for_file_access(), errmsg("could not remove file \"%s\": %m", path)));
+      }
     }
 
     /* And remove the list entry */
@@ -256,7 +256,7 @@ ProcessSyncRequests(void)
    */
   if (!pendingOps)
   {
-
+    elog(ERROR, "cannot sync without a pendingOps table");
   }
 
   /*
@@ -297,11 +297,11 @@ ProcessSyncRequests(void)
   if (sync_in_progress)
   {
     /* prior try failed, so update any stale cycle_ctr values */
-
-
-
-
-
+    hash_seq_init(&hstat, pendingOps);
+    while ((entry = (PendingFsyncEntry *)hash_seq_search(&hstat)) != NULL)
+    {
+      entry->cycle_ctr = sync_cycle_ctr;
+    }
   }
 
   /* Advance counter so that new hashtable entries are distinguishable */
@@ -324,7 +324,7 @@ ProcessSyncRequests(void)
      */
     if (entry->cycle_ctr == sync_cycle_ctr)
     {
-
+      continue;
     }
 
     /* Else assert we haven't missed it */
@@ -382,7 +382,7 @@ ProcessSyncRequests(void)
 
           if (log_checkpoints)
           {
-
+            elog(DEBUG1, "checkpoint sync: number=%d file=%s time=%.3f msec", processed, path, (double)elapsed / 1000);
           }
 
           break; /* out of retry loop */
@@ -394,28 +394,28 @@ ProcessSyncRequests(void)
          * allow ENOENT, but only if we didn't fail already on this
          * file.
          */
-
-
-
-
-
-
-
-
+        if (!FILE_POSSIBLY_DELETED(errno) || failures > 0)
+        {
+          ereport(data_sync_elevel(ERROR), (errcode_for_file_access(), errmsg("could not fsync file \"%s\": %m", path)));
+        }
+        else
+        {
+          ereport(DEBUG1, (errcode_for_file_access(), errmsg("could not fsync file \"%s\" but retrying: %m", path)));
+        }
 
         /*
          * Absorb incoming requests and check to see if a cancel
          * arrived for this relation fork.
          */
-
-
+        AbsorbSyncRequests();
+        absorb_counter = FSYNCS_PER_ABSORB; /* might as well... */
       } /* end retry loop */
     }
 
     /* We are done with this entry, remove it */
     if (hash_search(pendingOps, &entry->tag, HASH_REMOVE, NULL) == NULL)
     {
-
+      elog(ERROR, "pendingOps corrupted");
     }
   } /* end loop over hashtable entries */
 
@@ -483,7 +483,7 @@ RememberSyncRequest(const FileTag *ftag, SyncRequestType type)
       }
       else
       {
-
+        prev = cell;
       }
     }
   }
@@ -570,7 +570,7 @@ RegisterSyncRequest(const FileTag *ftag, SyncRequestType type, bool retryOnError
       break;
     }
 
-
+    WaitLatch(NULL, WL_EXIT_ON_PM_DEATH | WL_TIMEOUT, 10, WAIT_EVENT_REGISTER_SYNC_REQUEST);
   }
 
   return ret;
@@ -585,17 +585,17 @@ RegisterSyncRequest(const FileTag *ftag, SyncRequestType type, bool retryOnError
 void
 EnableSyncRequestForwarding(void)
 {
+  /* Perform any pending fsyncs we may have queued up, then drop table */
+  if (pendingOps)
+  {
+    ProcessSyncRequests();
+    hash_destroy(pendingOps);
+  }
+  pendingOps = NULL;
 
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We should not have any pending unlink requests, since mdunlink doesn't
+   * queue unlink requests when isRedo.
+   */
+  Assert(pendingUnlinks == NIL);
 }

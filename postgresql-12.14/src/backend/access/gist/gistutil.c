@@ -47,7 +47,7 @@ gistfillbuffer(Page page, IndexTuple *itup, int len, OffsetNumber off)
     l = PageAddItem(page, (Item)itup[i], sz, off, false, false);
     if (l == InvalidOffsetNumber)
     {
-
+      elog(ERROR, "failed to add item to GiST index page, item %d out of %d, size %d bytes", i, len, (int)sz);
     }
     off++;
   }
@@ -198,8 +198,8 @@ gistMakeUnionItVec(GISTSTATE *giststate, IndexTuple *itvec, int len, Datum *attr
       if (evec->n == 1)
       {
         /* unionFn may expect at least two inputs */
-
-
+        evec->n = 2;
+        evec->vector[1] = evec->vector[0];
       }
 
       /* Make union and store in attr array */
@@ -217,12 +217,12 @@ gistMakeUnionItVec(GISTSTATE *giststate, IndexTuple *itvec, int len, Datum *attr
 IndexTuple
 gistunion(Relation r, IndexTuple *itvec, int len, GISTSTATE *giststate)
 {
+  Datum attr[INDEX_MAX_KEYS];
+  bool isnull[INDEX_MAX_KEYS];
 
+  gistMakeUnionItVec(giststate, itvec, len, attr, isnull);
 
-
-
-
-
+  return gistFormTuple(giststate, r, attr, isnull, false);
 }
 
 /*
@@ -254,16 +254,16 @@ gistMakeUnionKey(GISTSTATE *giststate, int attno, GISTENTRY *entry1, bool isnull
       evec->vector[0] = *entry1;
       evec->vector[1] = *entry2;
     }
-
-
-
-
-
-
-
-
-
-
+    else if (isnull1 == false)
+    {
+      evec->vector[0] = *entry1;
+      evec->vector[1] = *entry1;
+    }
+    else
+    {
+      evec->vector[0] = *entry2;
+      evec->vector[1] = *entry2;
+    }
 
     *dstisnull = false;
     *dst = FunctionCall2Coll(&giststate->unionFn[attno], giststate->supportCollation[attno], PointerGetDatum(evec), PointerGetDatum(&dstsize));
@@ -547,7 +547,7 @@ gistdentryinit(GISTSTATE *giststate, int nkey, GISTENTRY *e, Datum k, Relation r
     /* decompressFn may just return the given pointer */
     if (dep != e)
     {
-
+      gistentryinit(*e, dep->key, dep->rel, dep->page, dep->offset, dep->leafkey);
     }
   }
   else
@@ -600,7 +600,7 @@ gistFormTuple(GISTSTATE *giststate, Relation r, Datum attdata[], bool isnull[], 
     {
       if (isnull[i])
       {
-
+        compatt[i] = (Datum)0;
       }
       else
       {
@@ -697,7 +697,7 @@ gistFetchTuple(GISTSTATE *giststate, Relation r, IndexTuple tuple)
    */
   for (; i < r->rd_att->natts; i++)
   {
-
+    fetchatt[i] = index_getattr(tuple, i + 1, giststate->leafTupdesc, &isnull[i]);
   }
   MemoryContextSwitchTo(oldcxt);
 
@@ -715,7 +715,7 @@ gistpenalty(GISTSTATE *giststate, int attno, GISTENTRY *orig, bool isNullOrig, G
     /* disallow negative or NaN penalty */
     if (isnan(penalty) || penalty < 0.0)
     {
-
+      penalty = 0.0;
     }
   }
   else if (isNullOrig && isNullAdd)
@@ -769,7 +769,7 @@ gistcheckpage(Relation rel, Buffer buf)
    */
   if (PageIsNew(page))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" contains unexpected zero page at block %u", RelationGetRelationName(rel), BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
   }
 
   /*
@@ -777,7 +777,7 @@ gistcheckpage(Relation rel, Buffer buf)
    */
   if (PageGetSpecialSize(page) != MAXALIGN(sizeof(GISTPageOpaqueData)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" contains corrupted page at block %u", RelationGetRelationName(rel), BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
   }
 }
 
@@ -804,51 +804,51 @@ gistNewBuffer(Relation r)
       break; /* nothing left in FSM */
     }
 
-
+    buffer = ReadBuffer(r, blkno);
 
     /*
      * We have to guard against the possibility that someone else already
      * recycled this page; the buffer may be locked if so.
      */
+    if (ConditionalLockBuffer(buffer))
+    {
+      Page page = BufferGetPage(buffer);
 
+      /*
+       * If the page was never initialized, it's OK to use.
+       */
+      if (PageIsNew(page))
+      {
+        return buffer;
+      }
 
+      gistcheckpage(r, buffer);
 
+      /*
+       * Otherwise, recycle it if deleted, and too old to have any
+       * processes interested in it.
+       */
+      if (gistPageRecyclable(page))
+      {
+        /*
+         * If we are generating WAL for Hot Standby then create a WAL
+         * record that will allow us to conflict with queries running
+         * on standby, in case they have snapshots older than the
+         * page's deleteXid.
+         */
+        if (XLogStandbyInfoActive() && RelationNeedsWAL(r))
+        {
+          gistXLogPageReuse(r, blkno, GistPageGetDeleteXid(page));
+        }
 
+        return buffer;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      LockBuffer(buffer, GIST_UNLOCK);
+    }
 
     /* Can't use it, so release buffer and try again */
-
+    ReleaseBuffer(buffer);
   }
 
   /* Must extend the file */
@@ -876,7 +876,7 @@ gistPageRecyclable(Page page)
 {
   if (PageIsNew(page))
   {
-
+    return true;
   }
   if (GistPageIsDeleted(page))
   {
@@ -893,10 +893,10 @@ gistPageRecyclable(Page page)
     FullTransactionId deletexid_full = GistPageGetDeleteXid(page);
     FullTransactionId recentxmin_full = GetFullRecentGlobalXmin();
 
-
-
-
-
+    if (FullTransactionIdPrecedes(deletexid_full, recentxmin_full))
+    {
+      return true;
+    }
   }
   return false;
 }
@@ -914,7 +914,7 @@ gistoptions(Datum reloptions, bool validate)
   /* if none set, we're done */
   if (numoptions == 0)
   {
-
+    return NULL;
   }
 
   rdopts = allocateReloptStruct(sizeof(GiSTOptions), options, numoptions);
@@ -958,13 +958,13 @@ gistproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propnam
 
   switch (prop)
   {
-  case AMPROP_DISTANCE_ORDERABLE:;
+  case AMPROP_DISTANCE_ORDERABLE:
     procno = GIST_DISTANCE_PROC;
     break;
-  case AMPROP_RETURNABLE:;
+  case AMPROP_RETURNABLE:
     procno = GIST_FETCH_PROC;
     break;
-  default:;;
+  default:
     return false;
   }
 
@@ -972,15 +972,15 @@ gistproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propnam
   opclass = get_index_column_opclass(index_oid, attno);
   if (!OidIsValid(opclass))
   {
-
-
+    *isnull = true;
+    return true;
   }
 
   /* Now look up the opclass family and input datatype. */
   if (!get_opclass_opfamily_and_input_type(opclass, &opfamily, &opcintype))
   {
-
-
+    *isnull = true;
+    return true;
   }
 
   /* And now we can check whether the function is provided. */
@@ -1025,7 +1025,7 @@ gistGetFakeLSN(Relation rel)
      * Unlogged relations are accessible from other backends, and survive
      * (clean) restarts. GetFakeLSNForUnloggedRel() handles that for us.
      */
-
-
+    Assert(rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED);
+    return GetFakeLSNForUnloggedRel();
   }
 }

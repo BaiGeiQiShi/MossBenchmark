@@ -106,8 +106,8 @@ get_range_nulltest(PartitionKey key);
 
 /*
  * get_qual_from_partbound
- *		Given a parser node for partition bound, return the list of
- *executable expressions as partition constraint
+ *		Given a parser node for partition bound, return the list of executable
+ *		expressions as partition constraint
  */
 List *
 get_qual_from_partbound(Relation rel, Relation parent, PartitionBoundSpec *spec)
@@ -119,23 +119,23 @@ get_qual_from_partbound(Relation rel, Relation parent, PartitionBoundSpec *spec)
 
   switch (key->strategy)
   {
-  case PARTITION_STRATEGY_HASH:;
+  case PARTITION_STRATEGY_HASH:
     Assert(spec->strategy == PARTITION_STRATEGY_HASH);
     my_qual = get_qual_for_hash(parent, spec);
     break;
 
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
     Assert(spec->strategy == PARTITION_STRATEGY_LIST);
     my_qual = get_qual_for_list(parent, spec);
     break;
 
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
     Assert(spec->strategy == PARTITION_STRATEGY_RANGE);
     my_qual = get_qual_for_range(parent, spec, false);
     break;
 
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected partition strategy: %d", (int)key->strategy);
   }
 
   return my_qual;
@@ -143,8 +143,8 @@ get_qual_from_partbound(Relation rel, Relation parent, PartitionBoundSpec *spec)
 
 /*
  *	partition_bounds_create
- *		Build a PartitionBoundInfo struct from a list of
- *PartitionBoundSpec nodes
+ *		Build a PartitionBoundInfo struct from a list of PartitionBoundSpec
+ *		nodes
  *
  * This function creates a PartitionBoundInfo and fills the values of its
  * various members based on the input list.  Importantly, 'datums' array will
@@ -193,22 +193,22 @@ partition_bounds_create(PartitionBoundSpec **boundspecs, int nparts, PartitionKe
 
   switch (key->strategy)
   {
-  case PARTITION_STRATEGY_HASH:;
+  case PARTITION_STRATEGY_HASH:
     return create_hash_bounds(boundspecs, nparts, key, mapping);
 
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
     return create_list_bounds(boundspecs, nparts, key, mapping);
 
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
     return create_range_bounds(boundspecs, nparts, key, mapping);
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unexpected partition strategy: %d", (int)key->strategy);
+    break;
   }
 
-
-
+  Assert(false);
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -240,7 +240,7 @@ create_hash_bounds(PartitionBoundSpec **boundspecs, int nparts, PartitionKey key
 
     if (spec->strategy != PARTITION_STRATEGY_HASH)
     {
-
+      elog(ERROR, "invalid strategy in partition bound spec");
     }
 
     hbounds[i] = (PartitionHashBound *)palloc(sizeof(PartitionHashBound));
@@ -325,7 +325,7 @@ create_list_bounds(PartitionBoundSpec **boundspecs, int nparts, PartitionKey key
 
     if (spec->strategy != PARTITION_STRATEGY_LIST)
     {
-
+      elog(ERROR, "invalid strategy in partition bound spec");
     }
 
     /*
@@ -358,7 +358,7 @@ create_list_bounds(PartitionBoundSpec **boundspecs, int nparts, PartitionKey key
          */
         if (null_index != -1)
         {
-
+          elog(ERROR, "found null more than once");
         }
         null_index = i;
       }
@@ -487,7 +487,7 @@ create_range_bounds(PartitionBoundSpec **boundspecs, int nparts, PartitionKey ke
 
     if (spec->strategy != PARTITION_STRATEGY_RANGE)
     {
-
+      elog(ERROR, "invalid strategy in partition bound spec");
     }
 
     /*
@@ -658,7 +658,7 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval, Par
 
   if (b1->strategy != b2->strategy)
   {
-
+    return false;
   }
 
   if (b1->ndatums != b2->ndatums)
@@ -668,17 +668,17 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval, Par
 
   if (b1->nindexes != b2->nindexes)
   {
-
+    return false;
   }
 
   if (b1->null_index != b2->null_index)
   {
-
+    return false;
   }
 
   if (b1->default_index != b2->default_index)
   {
-
+    return false;
   }
 
   /* For all partition strategies, the indexes[] arrays have to match */
@@ -686,7 +686,7 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval, Par
   {
     if (b1->indexes[i] != b2->indexes[i])
     {
-
+      return false;
     }
   }
 
@@ -729,7 +729,7 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval, Par
           /* The different kinds of bound all differ from each other */
           if (b1->kind[i][j] != b2->kind[i][j])
           {
-
+            return false;
           }
 
           /*
@@ -757,7 +757,7 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval, Par
          */
         if (!datumIsEqual(b1->datums[i][j], b2->datums[i][j], parttypbyval[j], parttyplen[j]))
         {
-
+          return false;
         }
       }
     }
@@ -852,8 +852,8 @@ partition_bounds_copy(PartitionBoundInfo src, PartitionKey key)
 
 /*
  * partitions_are_ordered
- *		Determine whether the partitions described by 'boundinfo' are
- *ordered, that is partitions appearing earlier in the PartitionDesc sequence
+ *		Determine whether the partitions described by 'boundinfo' are ordered,
+ *		that is partitions appearing earlier in the PartitionDesc sequence
  *		contain partition keys strictly less than those appearing later.
  *		Also, if NULL values are possible, they must come in the last
  *		partition defined in the PartitionDesc.
@@ -868,7 +868,7 @@ partitions_are_ordered(PartitionBoundInfo boundinfo, int nparts)
 
   switch (boundinfo->strategy)
   {
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
 
     /*
      * RANGE-type partitioning guarantees that the partitions can be
@@ -884,7 +884,7 @@ partitions_are_ordered(PartitionBoundInfo boundinfo, int nparts)
     }
     break;
 
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
 
     /*
      * LIST partitioning can also guarantee ordering, but only if the
@@ -911,7 +911,7 @@ partitions_are_ordered(PartitionBoundInfo boundinfo, int nparts)
     }
     break;
 
-  default:;;
+  default:
     /* HASH, or some other strategy */
     break;
   }
@@ -954,7 +954,7 @@ check_new_partition_bound(char *relname, Relation parent, PartitionBoundSpec *sp
 
   switch (key->strategy)
   {
-  case PARTITION_STRATEGY_HASH:;
+  case PARTITION_STRATEGY_HASH:
   {
     Assert(spec->strategy == PARTITION_STRATEGY_HASH);
     Assert(spec->remainder >= 0 && spec->remainder < spec->modulus);
@@ -1036,7 +1036,7 @@ check_new_partition_bound(char *relname, Relation parent, PartitionBoundSpec *sp
     break;
   }
 
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
   {
     Assert(spec->strategy == PARTITION_STRATEGY_LIST);
 
@@ -1075,7 +1075,7 @@ check_new_partition_bound(char *relname, Relation parent, PartitionBoundSpec *sp
     break;
   }
 
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
   {
     PartitionRangeBound *lower, *upper;
 
@@ -1162,8 +1162,8 @@ check_new_partition_bound(char *relname, Relation parent, PartitionBoundSpec *sp
     break;
   }
 
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected partition strategy: %d", (int)key->strategy);
   }
 
   if (overlap)
@@ -1273,12 +1273,12 @@ check_default_partition_contents(Relation parent, Relation default_rel, Partitio
     {
       if (part_rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
       {
-
+        ereport(WARNING, (errcode(ERRCODE_CHECK_VIOLATION), errmsg("skipped scanning foreign table \"%s\" which is a partition of default partition \"%s\"", RelationGetRelationName(part_rel), RelationGetRelationName(default_rel))));
       }
 
       if (RelationGetRelid(default_rel) != RelationGetRelid(part_rel))
       {
-
+        table_close(part_rel, NoLock);
       }
 
       continue;
@@ -1336,8 +1336,8 @@ check_default_partition_contents(Relation parent, Relation default_rel, Partitio
 int
 get_hash_partition_greatest_modulus(PartitionBoundInfo bound)
 {
-
-
+  Assert(bound && bound->strategy == PARTITION_STRATEGY_HASH);
+  return bound->nindexes;
 }
 
 /*
@@ -1376,7 +1376,7 @@ make_one_partition_rbound(PartitionKey key, int index, List *datums, bool lower)
 
       if (val->constisnull)
       {
-
+        elog(ERROR, "invalid range bound datum");
       }
       bound->datums[i] = val->constvalue;
     }
@@ -1519,13 +1519,13 @@ partition_hbound_cmp(int modulus1, int remainder1, int modulus2, int remainder2)
   {
     return (remainder1 > remainder2) ? 1 : -1;
   }
-
+  return 0;
 }
 
 /*
  * partition_list_bsearch
- *		Returns the index of the greatest bound datum that is less than
- *equal to the given value or -1 if all of the bound datums are greater
+ *		Returns the index of the greatest bound datum that is less than equal
+ * 		to the given value or -1 if all of the bound datums are greater
  *
  * *is_equal is set to true if the bound datum at the returned index is equal
  * to the input value.
@@ -1563,8 +1563,9 @@ partition_list_bsearch(FmgrInfo *partsupfunc, Oid *partcollation, PartitionBound
 
 /*
  * partition_range_bsearch
- *		Returns the index of the greatest range bound that is less than
- *or equal to the given range bound or -1 if all of the range bounds are greater
+ *		Returns the index of the greatest range bound that is less than or
+ *		equal to the given range bound or -1 if all of the range bounds are
+ *		greater
  *
  * *is_equal is set to true if the range bound at the returned index is equal
  * to the input range bound
@@ -1603,8 +1604,8 @@ partition_range_bsearch(int partnatts, FmgrInfo *partsupfunc, Oid *partcollation
 
 /*
  * partition_range_bsearch
- *		Returns the index of the greatest range bound that is less than
- *or equal to the given tuple or -1 if all of the range bounds are greater
+ *		Returns the index of the greatest range bound that is less than or
+ *		equal to the given tuple or -1 if all of the range bounds are greater
  *
  * *is_equal is set to true if the range bound at the returned index is equal
  * to the input tuple.
@@ -1643,9 +1644,9 @@ partition_range_datum_bsearch(FmgrInfo *partsupfunc, Oid *partcollation, Partiti
 
 /*
  * partition_hash_bsearch
- *		Returns the index of the greatest (modulus, remainder) pair that
- *is less than or equal to the given (modulus, remainder) pair or -1 if all of
- *them are greater
+ *		Returns the index of the greatest (modulus, remainder) pair that is
+ *		less than or equal to the given (modulus, remainder) pair or -1 if
+ *		all of them are greater
  */
 int
 partition_hash_bsearch(PartitionBoundInfo boundinfo, int modulus, int remainder)
@@ -1668,7 +1669,7 @@ partition_hash_bsearch(PartitionBoundInfo boundinfo, int modulus, int remainder)
 
       if (cmpval == 0)
       {
-
+        break;
       }
     }
     else
@@ -1745,7 +1746,7 @@ get_partition_operator(PartitionKey key, int col, StrategyNumber strategy, bool 
   operoid = get_opfamily_member(key->partopfamily[col], key->partopcintype[col], key->partopcintype[col], strategy);
   if (!OidIsValid(operoid))
   {
-
+    elog(ERROR, "missing operator %d(%u,%u) in partition opfamily %u", strategy, key->partopcintype[col], key->partopcintype[col], key->partopfamily[col]);
   }
 
   /*
@@ -1786,7 +1787,7 @@ make_partition_op_expr(PartitionKey key, int keynum, uint16 strategy, Expr *arg1
   /* Generate the actual expression */
   switch (key->strategy)
   {
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
   {
     List *elems = (List *)arg2;
     int nelems = list_length(elems);
@@ -1837,13 +1838,13 @@ make_partition_op_expr(PartitionKey key, int keynum, uint16 strategy, Expr *arg1
     break;
   }
 
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
     result = make_opclause(operoid, BOOLOID, false, arg1, arg2, InvalidOid, key->partcollation[keynum]);
     break;
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid partitioning strategy");
+    break;
   }
 
   return result;
@@ -2156,19 +2157,19 @@ get_qual_for_range(Relation parent, PartitionBoundSpec *spec, bool for_default)
       tuple = SearchSysCache1(RELOID, inhrelid);
       if (!HeapTupleIsValid(tuple))
       {
-
+        elog(ERROR, "cache lookup failed for relation %u", inhrelid);
       }
 
       datum = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_relpartbound, &isnull);
       if (isnull)
       {
-
+        elog(ERROR, "null relpartbound for relation %u", inhrelid);
       }
 
       bspec = (PartitionBoundSpec *)stringToNode(TextDatumGetCString(datum));
       if (!IsA(bspec, PartitionBoundSpec))
       {
-
+        elog(ERROR, "expected PartitionBoundSpec");
       }
 
       if (!bspec->is_default)
@@ -2287,7 +2288,7 @@ get_qual_for_range(Relation parent, PartitionBoundSpec *spec, bool for_default)
      */
     if (i == key->partnatts - 1)
     {
-
+      elog(ERROR, "invalid range bound specification");
     }
 
     /* Equal, so generate keyCol = lower_val expression */
@@ -2445,7 +2446,7 @@ get_qual_for_range(Relation parent, PartitionBoundSpec *spec, bool for_default)
    */
   if (result == NIL)
   {
-
+    result = for_default ? get_range_nulltest(key) : list_make1(makeBoolConst(true, false));
   }
 
   return result;
@@ -2478,7 +2479,7 @@ get_range_key_properties(PartitionKey key, int keynum, PartitionRangeDatum *ldat
   {
     if (*partexprs_item == NULL)
     {
-
+      elog(ERROR, "wrong number of partition key expressions");
     }
     *keyCol = copyObject(lfirst(*partexprs_item));
     *partexprs_item = lnext(*partexprs_item);
@@ -2531,7 +2532,7 @@ get_range_nulltest(PartitionKey key)
     {
       if (partexprs_item == NULL)
       {
-
+        elog(ERROR, "wrong number of partition key expressions");
       }
       keyCol = copyObject(lfirst(partexprs_item));
       partexprs_item = lnext(partexprs_item);
@@ -2743,7 +2744,7 @@ satisfies_hash_partition(PG_FUNCTION_ARGS)
 
       if (PG_ARGISNULL(argno))
       {
-
+        continue;
       }
 
       hash = FunctionCall2Coll(&my_extra->partsupfunc[i], my_extra->partcollid[i], PG_GETARG_DATUM(argno), seed);
@@ -2774,7 +2775,7 @@ satisfies_hash_partition(PG_FUNCTION_ARGS)
 
       if (isnull[i])
       {
-
+        continue;
       }
 
       hash = FunctionCall2Coll(&my_extra->partsupfunc[0], my_extra->partcollid[0], datum[i], seed);

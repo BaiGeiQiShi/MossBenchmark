@@ -61,11 +61,11 @@ pairingheap_GISTSearchItem_cmp(const pairingheap_node *a, const pairingheap_node
   /* Heap items go before inner pages, to ensure a depth-first search */
   if (GISTSearchItemIsHeap(*sa) && !GISTSearchItemIsHeap(*sb))
   {
-
+    return 1;
   }
   if (!GISTSearchItemIsHeap(*sa) && GISTSearchItemIsHeap(*sb))
   {
-
+    return -1;
   }
 
   return 0;
@@ -196,7 +196,7 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys, ScanKey orderbys, int nor
     for (; attno <= natts; attno++)
     {
       /* taking opcintype from giststate->tupdesc */
-
+      TupleDescInitEntry(so->giststate->fetchTupdesc, attno, NULL, TupleDescAttr(so->giststate->leafTupdesc, attno - 1)->atttypid, -1, 0);
     }
     scan->xs_hitupdesc = so->giststate->fetchTupdesc;
 
@@ -265,7 +265,7 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys, ScanKey orderbys, int nor
       {
         if (!(skey->sk_flags & (SK_SEARCHNULL | SK_SEARCHNOTNULL)))
         {
-
+          so->qual_ok = false;
         }
       }
     }
@@ -310,7 +310,7 @@ gistrescan(IndexScanDesc scan, ScanKey key, int nkeys, ScanKey orderbys, int nor
       /* Check we actually have a distance function ... */
       if (!OidIsValid(finfo->fn_oid))
       {
-
+        elog(ERROR, "missing support function %d for attribute %d of index \"%s\"", GIST_DISTANCE_PROC, skey->sk_attno, RelationGetRelationName(scan->indexRelation));
       }
 
       /*

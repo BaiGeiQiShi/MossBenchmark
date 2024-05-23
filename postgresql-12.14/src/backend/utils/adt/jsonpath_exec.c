@@ -34,8 +34,8 @@
  * processed not on array itself, but on all of its members one by one.
  * executeItemOptUnwrapTarget() function have 'unwrap' argument, which indicates
  * whether unwrapping of array is needed.  When unwrap == true, each of array
- * members is passed to executeItemOptUnwrapTarget() again but with unwrap ==
- *false in order to evade subsequent array unwrapping.
+ * members is passed to executeItemOptUnwrapTarget() again but with unwrap == false
+ * in order to evade subsequent array unwrapping.
  *
  * All boolean expressions (predicates) are evaluated by executeBoolItem()
  * function, which returns tri-state JsonPathBool.  When error is occurred
@@ -251,15 +251,15 @@ wrapItemsInArray(const JsonValueList *items);
 
 /*
  * jsonb_path_exists
- *		Returns true if jsonpath returns at least one item for the
- *specified jsonb value.  This function and jsonb_path_match() are used to
- *		implement @? and @@ operators, which in turn are intended to
- *have an index support.  Thus, it's desirable to make it easier to achieve
- *		consistency between index scan results and sequential scan
- *results. So, we throw as less errors as possible.  Regarding this function,
+ *		Returns true if jsonpath returns at least one item for the specified
+ *		jsonb value.  This function and jsonb_path_match() are used to
+ *		implement @? and @@ operators, which in turn are intended to have an
+ *		index support.  Thus, it's desirable to make it easier to achieve
+ *		consistency between index scan results and sequential scan results.
+ *		So, we throw as less errors as possible.  Regarding this function,
  *		such behavior also matches behavior of JSON_EXISTS() clause of
- *		SQL/JSON.  Regarding jsonb_path_match(), this function doesn't
- *have an analogy in SQL/JSON, so we define its behavior on our own.
+ *		SQL/JSON.  Regarding jsonb_path_match(), this function doesn't have
+ *		an analogy in SQL/JSON, so we define its behavior on our own.
  */
 Datum
 jsonb_path_exists(PG_FUNCTION_ARGS)
@@ -291,8 +291,8 @@ jsonb_path_exists(PG_FUNCTION_ARGS)
 
 /*
  * jsonb_path_exists_opr
- *		Implementation of operator "jsonb @? jsonpath" (2-argument
- *version of jsonb_path_exists()).
+ *		Implementation of operator "jsonb @? jsonpath" (2-argument version of
+ *		jsonb_path_exists()).
  */
 Datum
 jsonb_path_exists_opr(PG_FUNCTION_ARGS)
@@ -303,8 +303,8 @@ jsonb_path_exists_opr(PG_FUNCTION_ARGS)
 
 /*
  * jsonb_path_match
- *		Returns jsonpath predicate result item for the specified jsonb
- *value. See jsonb_path_exists() comment for details regarding error handling.
+ *		Returns jsonpath predicate result item for the specified jsonb value.
+ *		See jsonb_path_exists() comment for details regarding error handling.
  */
 Datum
 jsonb_path_match(PG_FUNCTION_ARGS)
@@ -351,8 +351,8 @@ jsonb_path_match(PG_FUNCTION_ARGS)
 
 /*
  * jsonb_path_match_opr
- *		Implementation of operator "jsonb @@ jsonpath" (2-argument
- *version of jsonb_path_match()).
+ *		Implementation of operator "jsonb @@ jsonpath" (2-argument version of
+ *		jsonb_path_match()).
  */
 Datum
 jsonb_path_match_opr(PG_FUNCTION_ARGS)
@@ -435,8 +435,8 @@ jsonb_path_query_array(PG_FUNCTION_ARGS)
 
 /*
  * jsonb_path_query_first
- *		Executes jsonpath for given jsonb document and returns first
- *result item.  If there are no items, NULL returned.
+ *		Executes jsonpath for given jsonb document and returns first result
+ *		item.  If there are no items, NULL returned.
  */
 Datum
 jsonb_path_query_first(PG_FUNCTION_ARGS)
@@ -563,19 +563,19 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   switch (jsp->type)
   {
     /* all boolean item types: */
-  case jpiAnd:;
-  case jpiOr:;
-  case jpiNot:;
-  case jpiIsUnknown:;
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
-  case jpiExists:;
-  case jpiStartsWith:;
-  case jpiLikeRegex:;
+  case jpiAnd:
+  case jpiOr:
+  case jpiNot:
+  case jpiIsUnknown:
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
+  case jpiExists:
+  case jpiStartsWith:
+  case jpiLikeRegex:
   {
     JsonPathBool st = executeBoolItem(cxt, jsp, jb, true);
 
@@ -583,7 +583,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     break;
   }
 
-  case jpiKey:;
+  case jpiKey:
     if (JsonbType(jb) == jbvObject)
     {
       JsonbValue *v;
@@ -627,18 +627,18 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     }
     break;
 
-  case jpiRoot:;
+  case jpiRoot:
     jb = cxt->root;
     baseObject = setBaseObject(cxt, jb, 0);
     res = executeNextItem(cxt, jsp, NULL, jb, found, true);
     cxt->baseObject = baseObject;
     break;
 
-  case jpiCurrent:;
+  case jpiCurrent:
     res = executeNextItem(cxt, jsp, NULL, cxt->current, found, true);
     break;
 
-  case jpiAnyArray:;
+  case jpiAnyArray:
     if (JsonbType(jb) == jbvArray)
     {
       bool hasNext = jspGetNext(jsp, &elem);
@@ -655,7 +655,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     }
     break;
 
-  case jpiIndexArray:;
+  case jpiIndexArray:
     if (JsonbType(jb) == jbvArray || jspAutoWrap(cxt))
     {
       int innermostArraySize = cxt->innermostArraySize;
@@ -693,7 +693,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
           if (jperIsError(res))
           {
-
+            break;
           }
         }
         else
@@ -734,7 +734,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
             if (v == NULL)
             {
-
+              continue;
             }
 
             copy = false;
@@ -749,7 +749,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
           if (jperIsError(res))
           {
-
+            break;
           }
 
           if (res == jperOk && !found)
@@ -760,7 +760,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
         if (jperIsError(res))
         {
-
+          break;
         }
 
         if (res == jperOk && !found)
@@ -777,7 +777,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     }
     break;
 
-  case jpiLast:;
+  case jpiLast:
   {
     JsonbValue tmpjbv;
     JsonbValue *lastjbv;
@@ -786,7 +786,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
     if (cxt->innermostArraySize < 0)
     {
-
+      elog(ERROR, "evaluating jsonpath LAST outside of array subscript");
     }
 
     if (!hasNext && !found)
@@ -806,21 +806,21 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   }
   break;
 
-  case jpiAnyKey:;
+  case jpiAnyKey:
     if (JsonbType(jb) == jbvObject)
     {
       bool hasNext = jspGetNext(jsp, &elem);
 
       if (jb->type != jbvBinary)
       {
-
+        elog(ERROR, "invalid jsonb object type: %d", jb->type);
       }
 
       return executeAnyItem(cxt, hasNext ? &elem : NULL, jb->val.binary.data, found, 1, 1, 1, false, jspAutoUnwrap(cxt));
     }
     else if (unwrap && JsonbType(jb) == jbvArray)
     {
-
+      return executeItemUnwrapTargetArray(cxt, jsp, jb, found, false);
     }
     else if (!jspIgnoreStructuralErrors(cxt))
     {
@@ -829,28 +829,28 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     }
     break;
 
-  case jpiAdd:;
+  case jpiAdd:
     return executeBinaryArithmExpr(cxt, jsp, jb, numeric_add_opt_error, found);
 
-  case jpiSub:;
+  case jpiSub:
     return executeBinaryArithmExpr(cxt, jsp, jb, numeric_sub_opt_error, found);
 
-  case jpiMul:;
+  case jpiMul:
     return executeBinaryArithmExpr(cxt, jsp, jb, numeric_mul_opt_error, found);
 
-  case jpiDiv:;
+  case jpiDiv:
     return executeBinaryArithmExpr(cxt, jsp, jb, numeric_div_opt_error, found);
 
-  case jpiMod:;
+  case jpiMod:
     return executeBinaryArithmExpr(cxt, jsp, jb, numeric_mod_opt_error, found);
 
-  case jpiPlus:;
+  case jpiPlus:
     return executeUnaryArithmExpr(cxt, jsp, jb, NULL, found);
 
-  case jpiMinus:;
+  case jpiMinus:
     return executeUnaryArithmExpr(cxt, jsp, jb, numeric_uminus, found);
 
-  case jpiFilter:;
+  case jpiFilter:
   {
     JsonPathBool st;
 
@@ -872,7 +872,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     break;
   }
 
-  case jpiAny:;
+  case jpiAny:
   {
     bool hasNext = jspGetNext(jsp, &elem);
 
@@ -899,11 +899,11 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     break;
   }
 
-  case jpiNull:;
-  case jpiBool:;
-  case jpiNumeric:;
-  case jpiString:;
-  case jpiVariable:;
+  case jpiNull:
+  case jpiBool:
+  case jpiNumeric:
+  case jpiString:
+  case jpiVariable:
   {
     JsonbValue vbuf;
     JsonbValue *v;
@@ -929,7 +929,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   }
   break;
 
-  case jpiType:;
+  case jpiType:
   {
     JsonbValue *jbv = palloc(sizeof(*jbv));
 
@@ -941,7 +941,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   }
   break;
 
-  case jpiSize:;
+  case jpiSize:
   {
     int size = JsonbArraySize(jb);
 
@@ -968,16 +968,16 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   }
   break;
 
-  case jpiAbs:;
+  case jpiAbs:
     return executeNumericItemMethod(cxt, jsp, jb, unwrap, numeric_abs, found);
 
-  case jpiFloor:;
+  case jpiFloor:
     return executeNumericItemMethod(cxt, jsp, jb, unwrap, numeric_floor, found);
 
-  case jpiCeiling:;
+  case jpiCeiling:
     return executeNumericItemMethod(cxt, jsp, jb, unwrap, numeric_ceil, found);
 
-  case jpiDouble:;
+  case jpiDouble:
   {
     JsonbValue jbv;
 
@@ -1029,7 +1029,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   }
   break;
 
-  case jpiKeyValue:;
+  case jpiKeyValue:
     if (unwrap && JsonbType(jb) == jbvArray)
     {
       return executeItemUnwrapTargetArray(cxt, jsp, jb, found, false);
@@ -1037,8 +1037,8 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
     return executeKeyValueMethod(cxt, jsp, jb, found);
 
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized jsonpath item type: %d", jsp->type);
   }
 
   return res;
@@ -1052,8 +1052,8 @@ executeItemUnwrapTargetArray(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbV
 {
   if (jb->type != jbvBinary)
   {
-
-
+    Assert(jb->type != jbvArray);
+    elog(ERROR, "invalid jsonb array value type: %d", jb->type);
   }
 
   return executeAnyItem(cxt, jsp, jb->val.binary.data, found, 1, 1, 1, false, unwrapElements);
@@ -1071,7 +1071,7 @@ executeNextItem(JsonPathExecContext *cxt, JsonPathItem *cur, JsonPathItem *next,
 
   if (!cur)
   {
-
+    hasNext = next != NULL;
   }
   else if (next)
   {
@@ -1163,12 +1163,12 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
 
   if (!canHaveNext && jspHasNext(jsp))
   {
-
+    elog(ERROR, "boolean jsonpath item cannot have next item");
   }
 
   switch (jsp->type)
   {
-  case jpiAnd:;
+  case jpiAnd:
     jspGetLeftArg(jsp, &larg);
     res = executeBoolItem(cxt, &larg, jb, false);
 
@@ -1187,7 +1187,7 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
 
     return res2 == jpbTrue ? res : res2;
 
-  case jpiOr:;
+  case jpiOr:
     jspGetLeftArg(jsp, &larg);
     res = executeBoolItem(cxt, &larg, jb, false);
 
@@ -1201,7 +1201,7 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
 
     return res2 == jpbFalse ? res : res2;
 
-  case jpiNot:;
+  case jpiNot:
     jspGetArg(jsp, &larg);
 
     res = executeBoolItem(cxt, &larg, jb, false);
@@ -1213,27 +1213,27 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
 
     return res == jpbTrue ? jpbFalse : jpbTrue;
 
-  case jpiIsUnknown:;
+  case jpiIsUnknown:
     jspGetArg(jsp, &larg);
     res = executeBoolItem(cxt, &larg, jb, false);
     return res == jpbUnknown ? jpbTrue : jpbFalse;
 
-  case jpiEqual:;
-  case jpiNotEqual:;
-  case jpiLess:;
-  case jpiGreater:;
-  case jpiLessOrEqual:;
-  case jpiGreaterOrEqual:;
+  case jpiEqual:
+  case jpiNotEqual:
+  case jpiLess:
+  case jpiGreater:
+  case jpiLessOrEqual:
+  case jpiGreaterOrEqual:
     jspGetLeftArg(jsp, &larg);
     jspGetRightArg(jsp, &rarg);
     return executePredicate(cxt, jsp, &larg, &rarg, jb, true, executeComparison, NULL);
 
-  case jpiStartsWith:           ;/* 'whole STARTS WITH initial' */
+  case jpiStartsWith:           /* 'whole STARTS WITH initial' */
     jspGetLeftArg(jsp, &larg);  /* 'whole' */
     jspGetRightArg(jsp, &rarg); /* 'initial' */
     return executePredicate(cxt, jsp, &larg, &rarg, jb, false, executeStartsWith, NULL);
 
-  case jpiLikeRegex: ;/* 'expr LIKE_REGEX pattern FLAGS flags' */
+  case jpiLikeRegex: /* 'expr LIKE_REGEX pattern FLAGS flags' */
   {
     /*
      * 'expr' is a sequence-returning expression.  'pattern' is a
@@ -1248,7 +1248,7 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
     return executePredicate(cxt, jsp, &larg, NULL, jb, false, executeLikeRegex, &lrcxt);
   }
 
-  case jpiExists:;
+  case jpiExists:
     jspGetArg(jsp, &larg);
 
     if (jspStrictAbsenseOfErrors(cxt))
@@ -1279,9 +1279,9 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
       return res == jperOk ? jpbTrue : jpbFalse;
     }
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid boolean jsonpath item type: %d", jsp->type);
+    return jpbUnknown;
   }
 }
 
@@ -1385,7 +1385,7 @@ executeAnyItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbContainer *jbc,
 
         if (jperIsError(res))
         {
-
+          break;
         }
 
         if (res == jperOk && found == NULL)
@@ -1486,13 +1486,13 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
     }
   }
 
-  if (found)
-  { /* possible only in strict mode */
+  if (found) /* possible only in strict mode */
+  {
     return jpbTrue;
   }
 
-  if (error)
-  { /* possible only in lax mode */
+  if (error) /* possible only in lax mode */
+  {
     return jpbUnknown;
   }
 
@@ -1523,7 +1523,7 @@ executeBinaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue 
   jper = executeItemOptUnwrapResult(cxt, &elem, jb, true, &lseq);
   if (jperIsError(jper))
   {
-
+    return jper;
   }
 
   jspGetRightArg(jsp, &elem);
@@ -1531,7 +1531,7 @@ executeBinaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue 
   jper = executeItemOptUnwrapResult(cxt, &elem, jb, true, &rseq);
   if (jperIsError(jper))
   {
-
+    return jper;
   }
 
   if (JsonValueListLength(&lseq) != 1 || !(lval = getScalar(JsonValueListHead(&lseq), jbvNumeric)))
@@ -1592,7 +1592,7 @@ executeUnaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *
 
   if (jperIsError(jper))
   {
-
+    return jper;
   }
 
   jper = jperNotFound;
@@ -1628,14 +1628,14 @@ executeUnaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *
 
     if (jperIsError(jper2))
     {
-
+      return jper2;
     }
 
     if (jper2 == jperOk)
     {
       if (!found)
       {
-
+        return jperOk;
       }
       jper = jperOk;
     }
@@ -1659,7 +1659,7 @@ executeStartsWith(JsonPathItem *jsp, JsonbValue *whole, JsonbValue *initial, voi
 
   if (!(initial = getScalar(initial, jbvString)))
   {
-
+    return jpbUnknown; /* error */
   }
 
   if (whole->val.string.len >= initial->val.string.len && !memcmp(whole->val.string.val, initial->val.string.val, initial->val.string.len))
@@ -1712,7 +1712,7 @@ executeNumericItemMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue
 
   if (unwrap && JsonbType(jb) == jbvArray)
   {
-
+    return executeItemUnwrapTargetArray(cxt, jsp, jb, found, false);
   }
 
   if (!(jb = getScalar(jb, jbvNumeric)))
@@ -1724,7 +1724,7 @@ executeNumericItemMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue
 
   if (!jspGetNext(jsp, &next) && !found)
   {
-
+    return jperOk;
   }
 
   jb = palloc(sizeof(*jb));
@@ -1858,7 +1858,7 @@ executeKeyValueMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *j
 
     if (jperIsError(res))
     {
-
+      return res;
     }
 
     if (res == jperOk && !found)
@@ -1908,26 +1908,26 @@ getJsonPathItem(JsonPathExecContext *cxt, JsonPathItem *item, JsonbValue *value)
 {
   switch (item->type)
   {
-  case jpiNull:;
+  case jpiNull:
     value->type = jbvNull;
     break;
-  case jpiBool:;
+  case jpiBool:
     value->type = jbvBool;
     value->val.boolean = jspGetBool(item);
     break;
-  case jpiNumeric:;
+  case jpiNumeric:
     value->type = jbvNumeric;
     value->val.numeric = jspGetNumeric(item);
     break;
-  case jpiString:;
+  case jpiString:
     value->type = jbvString;
     value->val.string.val = jspGetString(item, &value->val.string.len);
     break;
-  case jpiVariable:;
+  case jpiVariable:
     getJsonPathVariable(cxt, item, cxt->vars, value);
     return;
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected jsonpath item type");
   }
 }
 
@@ -1944,8 +1944,8 @@ getJsonPathVariable(JsonPathExecContext *cxt, JsonPathItem *variable, Jsonb *var
 
   if (!vars)
   {
-
-
+    value->type = jbvNull;
+    return;
   }
 
   Assert(variable->type == jpiVariable);
@@ -2050,31 +2050,31 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
      * return them "as is".  So, use strlen() only if there is real
      * conversion.
      */
+    utf8str1 = pg_server_to_any(mbstr1, mblen1, PG_UTF8);
+    utf8str2 = pg_server_to_any(mbstr2, mblen2, PG_UTF8);
+    utf8len1 = (mbstr1 == utf8str1) ? mblen1 : strlen(utf8str1);
+    utf8len2 = (mbstr2 == utf8str2) ? mblen2 : strlen(utf8str2);
 
-
-
-
-
-
+    cmp = binaryCompareStrings(utf8str1, utf8len1, utf8str2, utf8len2);
 
     /*
      * If pg_server_to_any() did no real conversion, then we actually
      * compared original strings.  So, we already done.
      */
-
-
-
-
+    if (mbstr1 == utf8str1 && mbstr2 == utf8str2)
+    {
+      return cmp;
+    }
 
     /* Free memory if needed */
-
-
-
-
-
-
-
-
+    if (mbstr1 != utf8str1)
+    {
+      pfree(utf8str1);
+    }
+    if (mbstr2 != utf8str2)
+    {
+      pfree(utf8str2);
+    }
 
     /*
      * When all Unicode codepoints are equal, return result of binary
@@ -2085,14 +2085,14 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
      * In future to implement strict standard conformance, we can do
      * normalization of input JSON strings.
      */
-
-
-
-
-
-
-
-
+    if (cmp == 0)
+    {
+      return binaryCompareStrings(mbstr1, mblen1, mbstr2, mblen2);
+    }
+    else
+    {
+      return cmp;
+    }
   }
 }
 
@@ -2123,16 +2123,16 @@ compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
 
   switch (jb1->type)
   {
-  case jbvNull:;
+  case jbvNull:
     cmp = 0;
     break;
-  case jbvBool:;
+  case jbvBool:
     cmp = jb1->val.boolean == jb2->val.boolean ? 0 : jb1->val.boolean ? 1 : -1;
     break;
-  case jbvNumeric:;
+  case jbvNumeric:
     cmp = compareNumeric(jb1->val.numeric, jb2->val.numeric);
     break;
-  case jbvString:;
+  case jbvString:
     if (op == jpiEqual)
     {
       return jb1->val.string.len != jb2->val.string.len || memcmp(jb1->val.string.val, jb2->val.string.val, jb1->val.string.len) ? jpbFalse : jpbTrue;
@@ -2141,38 +2141,38 @@ compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
     cmp = compareStrings(jb1->val.string.val, jb1->val.string.len, jb2->val.string.val, jb2->val.string.len);
     break;
 
-  case jbvBinary:;
-  case jbvArray:;
-  case jbvObject:;
+  case jbvBinary:
+  case jbvArray:
+  case jbvObject:
     return jpbUnknown; /* non-scalars are not comparable */
 
-  default:;;
-
+  default:
+    elog(ERROR, "invalid jsonb value type %d", jb1->type);
   }
 
   switch (op)
   {
-  case jpiEqual:;
+  case jpiEqual:
     res = (cmp == 0);
     break;
-  case jpiNotEqual:;
+  case jpiNotEqual:
     res = (cmp != 0);
     break;
-  case jpiLess:;
+  case jpiLess:
     res = (cmp < 0);
     break;
-  case jpiGreater:;
+  case jpiGreater:
     res = (cmp > 0);
     break;
-  case jpiLessOrEqual:;
+  case jpiLessOrEqual:
     res = (cmp <= 0);
     break;
-  case jpiGreaterOrEqual:;
+  case jpiGreaterOrEqual:
     res = (cmp >= 0);
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized jsonpath operation: %d", op);
+    return jpbUnknown;
   }
 
   return res ? jpbTrue : jpbFalse;
@@ -2210,7 +2210,7 @@ getArrayIndex(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, int32
 
   if (jperIsError(res))
   {
-
+    return res;
   }
 
   if (JsonValueListLength(&found) != 1 || !(jbv = getScalar(JsonValueListHead(&found), jbvNumeric)))
@@ -2368,7 +2368,7 @@ JsonbType(JsonbValue *jb)
     }
     else
     {
-
+      elog(ERROR, "invalid jsonb container type: 0x%08x", jbc->header);
     }
   }
 

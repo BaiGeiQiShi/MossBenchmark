@@ -39,7 +39,7 @@ GetIndexAmRoutine(Oid amhandler)
 
   if (routine == NULL || !IsA(routine, IndexAmRoutine))
   {
-
+    elog(ERROR, "index access method handler function %u did not return an IndexAmRoutine struct", amhandler);
   }
 
   return routine;
@@ -63,23 +63,23 @@ GetIndexAmRoutineByAmId(Oid amoid, bool noerror)
   tuple = SearchSysCache1(AMOID, ObjectIdGetDatum(amoid));
   if (!HeapTupleIsValid(tuple))
   {
-
-
-
-
-
+    if (noerror)
+    {
+      return NULL;
+    }
+    elog(ERROR, "cache lookup failed for access method %u", amoid);
   }
   amform = (Form_pg_am)GETSTRUCT(tuple);
 
   /* Check if it's an index access method as opposed to some other AM */
   if (amform->amtype != AMTYPE_INDEX)
   {
-
-
-
-
-
-
+    if (noerror)
+    {
+      ReleaseSysCache(tuple);
+      return NULL;
+    }
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("access method \"%s\" is not of type %s", NameStr(amform->amname), "INDEX")));
   }
 
   amhandler = amform->amhandler;
@@ -87,12 +87,12 @@ GetIndexAmRoutineByAmId(Oid amoid, bool noerror)
   /* Complain if handler OID is invalid */
   if (!RegProcedureIsValid(amhandler))
   {
-
-
-
-
-
-
+    if (noerror)
+    {
+      ReleaseSysCache(tuple);
+      return NULL;
+    }
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("index access method \"%s\" does not have a handler", NameStr(amform->amname))));
   }
 
   ReleaseSysCache(tuple);
@@ -117,7 +117,7 @@ amvalidate(PG_FUNCTION_ARGS)
   classtup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassoid));
   if (!HeapTupleIsValid(classtup))
   {
-
+    elog(ERROR, "cache lookup failed for operator class %u", opclassoid);
   }
   classform = (Form_pg_opclass)GETSTRUCT(classtup);
 
@@ -129,7 +129,7 @@ amvalidate(PG_FUNCTION_ARGS)
 
   if (amroutine->amvalidate == NULL)
   {
-
+    elog(ERROR, "function amvalidate is not defined for index access method %u", amoid);
   }
 
   result = amroutine->amvalidate(opclassoid);

@@ -32,8 +32,9 @@
  *				   ...
  *				   /
  *				Append -------+------+------+--- nil
- *				/	\		  |		 |
- *| nil	nil		 ...    ...    ... subplans
+ *				/	\		  |		 |		|
+ *			  nil	nil		 ...    ...    ...
+ *								 subplans
  *
  *		Append nodes are currently used for unions, and to support
  *		inheritance queries, where several relations need to be scanned.
@@ -48,9 +49,10 @@
  *
  *				  |
  *				Append -------+-------+--------+--------+
- *				/	\		  |		  |
- *|		| nil	nil		 Scan	 Scan	  Scan	   Scan |
- *|		   |		| person employee student student-emp
+ *				/	\		  |		  |		   |		|
+ *			  nil	nil		 Scan	 Scan	  Scan	   Scan
+ *							  |		  |		   |		|
+ *							person employee student student-emp
  */
 
 #include "postgres.h"
@@ -435,17 +437,17 @@ ExecAppendInitializeDSM(AppendState *node, ParallelContext *pcxt)
 void
 ExecAppendReInitializeDSM(AppendState *node, ParallelContext *pcxt)
 {
+  ParallelAppendState *pstate = node->as_pstate;
 
-
-
-
+  pstate->pa_next_plan = 0;
+  memset(pstate->pa_finished, 0, sizeof(bool) * node->as_nplans);
 }
 
 /* ----------------------------------------------------------------
  *		ExecAppendInitializeWorker
  *
- *		Copy relevant information from TOC into planstate, and
- *initialize whatever is required to choose and execute the optimal subplan.
+ *		Copy relevant information from TOC into planstate, and initialize
+ *		whatever is required to choose and execute the optimal subplan.
  * ----------------------------------------------------------------
  */
 void
@@ -701,7 +703,7 @@ choose_next_subplan_for_worker(AppendState *node)
        * non-partial plan; so flag that there's nothing more for our
        * fellow workers to do.
        */
-
+      pstate->pa_next_plan = INVALID_SUBPLAN_INDEX;
     }
   }
 
@@ -718,8 +720,8 @@ choose_next_subplan_for_worker(AppendState *node)
 
 /*
  * mark_invalid_subplans_as_finished
- *		Marks the ParallelAppendState's pa_finished as true for each
- *invalid subplan.
+ *		Marks the ParallelAppendState's pa_finished as true for each invalid
+ *		subplan.
  *
  * This function should only be called for parallel Append with run-time
  * pruning enabled.
@@ -738,7 +740,7 @@ mark_invalid_subplans_as_finished(AppendState *node)
   /* Nothing to do if all plans are valid */
   if (bms_num_members(node->as_valid_subplans) == node->as_nplans)
   {
-
+    return;
   }
 
   /* Mark all non-valid plans as finished */

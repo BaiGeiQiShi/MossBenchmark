@@ -72,10 +72,13 @@ euc_cn2mic(const unsigned char *euc, unsigned char *p, int len)
 {
   int c1;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *euc;
-    if (IS_HIGHBIT_SET(c1)) {
-      if (len < 2 || !IS_HIGHBIT_SET(euc[1])) {
+    if (IS_HIGHBIT_SET(c1))
+    {
+      if (len < 2 || !IS_HIGHBIT_SET(euc[1]))
+      {
         report_invalid_encoding(PG_EUC_CN, (const char *)euc, len);
       }
       *p++ = LC_GB2312_80;
@@ -83,8 +86,11 @@ euc_cn2mic(const unsigned char *euc, unsigned char *p, int len)
       *p++ = euc[1];
       euc += 2;
       len -= 2;
-    } else { /* should be ASCII */
-      if (c1 == 0) {
+    }
+    else
+    { /* should be ASCII */
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_EUC_CN, (const char *)euc, len);
       }
       *p++ = c1;
@@ -103,21 +109,28 @@ mic2euc_cn(const unsigned char *mic, unsigned char *p, int len)
 {
   int c1;
 
-  while (len > 0) {
+  while (len > 0)
+  {
     c1 = *mic;
-    if (IS_HIGHBIT_SET(c1)) {
-      if (c1 != LC_GB2312_80) {
+    if (IS_HIGHBIT_SET(c1))
+    {
+      if (c1 != LC_GB2312_80)
+      {
         report_untranslatable_char(PG_MULE_INTERNAL, PG_EUC_CN, (const char *)mic, len);
       }
-      if (len < 3 || !IS_HIGHBIT_SET(mic[1]) || !IS_HIGHBIT_SET(mic[2])) {
+      if (len < 3 || !IS_HIGHBIT_SET(mic[1]) || !IS_HIGHBIT_SET(mic[2]))
+      {
         report_invalid_encoding(PG_MULE_INTERNAL, (const char *)mic, len);
       }
       mic++;
       *p++ = *mic++;
       *p++ = *mic++;
       len -= 3;
-    } else { /* should be ASCII */
-      if (c1 == 0) {
+    }
+    else
+    { /* should be ASCII */
+      if (c1 == 0)
+      {
         report_invalid_encoding(PG_MULE_INTERNAL, (const char *)mic, len);
       }
       *p++ = c1;
