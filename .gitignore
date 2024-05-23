@@ -2,14 +2,15 @@
 **/domgad-out
 **/identify_path
 **/log/**
-**/output*
+**/output/**
+**/output.origin/**
 **/quantify_path
 **/tmp
 **/compare.txt
 **/Cov_info.txt
 **/debop-out*
 **/debdcetmp
-**/work*
+**/work*/**
 **/eval_rslt.txt
 **/time_info.txt
 **/*BEST.c
