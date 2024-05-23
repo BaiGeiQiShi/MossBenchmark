@@ -2,7 +2,8 @@
  *
  * fe-secure.c
  *	  functions related to setting up a secure connection to the backend.
- *	  Secure connections are expected to provide confidentiality,*	  message integrity and endpoint authentication.
+ *	  Secure connections are expected to provide confidentiality,
+ *	  message integrity and endpoint authentication.
  *
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
@@ -65,7 +66,8 @@
 
 #ifdef ENABLE_THREAD_SAFETY
 
-struct sigpipe_info {
+struct sigpipe_info
+{
   sigset_t oldsigmask;
   bool sigpipe_pending;
   bool got_epipe;
@@ -74,22 +76,26 @@ struct sigpipe_info {
 #define DECLARE_SIGPIPE_INFO(spinfo) struct sigpipe_info spinfo
 
 #define DISABLE_SIGPIPE(conn, spinfo, failaction)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     (spinfo).got_epipe = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-    if (!SIGPIPE_MASKED(conn)) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+    if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       if (pq_block_sigpipe(&(spinfo).oldsigmask, &(spinfo).sigpipe_pending) < 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
         failaction;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 
 #define REMEMBER_EPIPE(spinfo, cond)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (cond)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
       (spinfo).got_epipe = true;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   } while (0)
 
 #define RESTORE_SIGPIPE(conn, spinfo)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
       pq_reset_sigpipe(&(spinfo).oldsigmask, (spinfo).sigpipe_pending, (spinfo).got_epipe);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   } while (0)
@@ -98,7 +104,8 @@ struct sigpipe_info {
 #define DECLARE_SIGPIPE_INFO(spinfo) pqsigfunc spinfo = NULL
 
 #define DISABLE_SIGPIPE(conn, spinfo, failaction)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
       spinfo = pqsignal(SIGPIPE, SIG_IGN);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   } while (0)
@@ -106,7 +113,8 @@ struct sigpipe_info {
 #define REMEMBER_EPIPE(spinfo, cond)
 
 #define RESTORE_SIGPIPE(conn, spinfo)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
       pqsignal(SIGPIPE, spinfo);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   } while (0)
@@ -120,14 +128,14 @@ struct sigpipe_info {
 #endif /* WIN32 */
 
 /* ------------------------------------------------------------ */
-/*			 Procedures common to all secure sessions
- */
+/*			 Procedures common to all secure sessions			*/
 /* ------------------------------------------------------------ */
 
 int
 PQsslInUse(PGconn *conn)
 {
-  if (!conn) {
+  if (!conn)
+  {
     return 0;
   }
   return conn->ssl_in_use;
@@ -193,7 +201,8 @@ void
 pqsecure_close(PGconn *conn)
 {
 #ifdef USE_SSL
-  if (conn->ssl_in_use) {
+  if (conn->ssl_in_use)
+  {
     pgtls_close(conn);
   }
 #endif
@@ -212,14 +221,18 @@ pqsecure_read(PGconn *conn, void *ptr, size_t len)
   ssize_t n;
 
 #ifdef USE_SSL
-  if (conn->ssl_in_use) {
+  if (conn->ssl_in_use)
+  {
     n = pgtls_read(conn, ptr, len);
-  } else
+  }
+  else
 #endif
 #ifdef ENABLE_GSS
-      if (conn->gssenc) {
+      if (conn->gssenc)
+  {
     n = pg_GSS_read(conn, ptr, len);
-  } else
+  }
+  else
 #endif
   {
     n = pqsecure_raw_read(conn, ptr, len);
@@ -237,11 +250,13 @@ pqsecure_raw_read(PGconn *conn, void *ptr, size_t len)
 
   n = recv(conn->sock, ptr, len, 0);
 
-  if (n < 0) {
+  if (n < 0)
+  {
     result_errno = SOCK_ERRNO;
 
     /* Set error message if appropriate */
-    switch (result_errno) {
+    switch (result_errno)
+    {
 #ifdef EAGAIN
     case EAGAIN:
 #endif
@@ -254,11 +269,13 @@ pqsecure_raw_read(PGconn *conn, void *ptr, size_t len)
 
 #ifdef ECONNRESET
     case ECONNRESET:
-      printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\n"));
+      printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server closed the connection unexpectedly\n"
+                                                           "\tThis probably means the server terminated abnormally\n"
+                                                           "\tbefore or while processing the request.\n"));
       break;
 #endif
 
-    default:;
+    default:
       printfPQExpBuffer(&conn->errorMessage, libpq_gettext("could not receive data from server: %s\n"), SOCK_STRERROR(result_errno, sebuf, sizeof(sebuf)));
       break;
     }
@@ -283,14 +300,18 @@ pqsecure_write(PGconn *conn, const void *ptr, size_t len)
   ssize_t n;
 
 #ifdef USE_SSL
-  if (conn->ssl_in_use) {
+  if (conn->ssl_in_use)
+  {
     n = pgtls_write(conn, ptr, len);
-  } else
+  }
+  else
 #endif
 #ifdef ENABLE_GSS
-      if (conn->gssenc) {
+      if (conn->gssenc)
+  {
     n = pg_GSS_write(conn, ptr, len);
-  } else
+  }
+  else
 #endif
   {
     n = pqsecure_raw_write(conn, ptr, len);
@@ -310,7 +331,8 @@ pqsecure_raw_write(PGconn *conn, const void *ptr, size_t len)
   DECLARE_SIGPIPE_INFO(spinfo);
 
 #ifdef MSG_NOSIGNAL
-  if (conn->sigpipe_flag) {
+  if (conn->sigpipe_flag)
+  {
     flags |= MSG_NOSIGNAL;
   }
 
@@ -321,7 +343,8 @@ retry_masked:
 
   n = send(conn->sock, ptr, len, flags);
 
-  if (n < 0) {
+  if (n < 0)
+  {
     result_errno = SOCK_ERRNO;
 
     /*
@@ -330,7 +353,8 @@ retry_masked:
      * again, and retry the send().
      */
 #ifdef MSG_NOSIGNAL
-    if (flags != 0 && result_errno == EINVAL) {
+    if (flags != 0 && result_errno == EINVAL)
+    {
       conn->sigpipe_flag = false;
       flags = 0;
       goto retry_masked;
@@ -338,7 +362,8 @@ retry_masked:
 #endif /* MSG_NOSIGNAL */
 
     /* Set error message if appropriate */
-    switch (result_errno) {
+    switch (result_errno)
+    {
 #ifdef EAGAIN
     case EAGAIN:
 #endif
@@ -358,10 +383,12 @@ retry_masked:
 
     case ECONNRESET:
 #endif
-      printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\n"));
+      printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server closed the connection unexpectedly\n"
+                                                           "\tThis probably means the server terminated abnormally\n"
+                                                           "\tbefore or while processing the request.\n"));
       break;
 
-    default:;
+    default:
       printfPQExpBuffer(&conn->errorMessage, libpq_gettext("could not send data to server: %s\n"), SOCK_STRERROR(result_errno, sebuf, sizeof(sebuf)));
       break;
     }
@@ -405,8 +432,7 @@ PQsslAttributeNames(PGconn *conn)
 }
 #endif /* USE_SSL */
 
-/* Dummy version of GSSAPI information functions, when built without GSS support
- */
+/* Dummy version of GSSAPI information functions, when built without GSS support */
 #ifndef ENABLE_GSS
 
 void *
@@ -426,8 +452,8 @@ PQgssEncInUse(PGconn *conn)
 #if defined(ENABLE_THREAD_SAFETY) && !defined(WIN32)
 
 /*
- *	Block SIGPIPE for this thread.  This prevents send()/write() from
- *exiting the application.
+ *	Block SIGPIPE for this thread.  This prevents send()/write() from exiting
+ *	the application.
  */
 int
 pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending)
@@ -440,23 +466,31 @@ pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending)
 
   /* Block SIGPIPE and save previous mask for later reset */
   SOCK_ERRNO_SET(pthread_sigmask(SIG_BLOCK, &sigpipe_sigset, osigset));
-  if (SOCK_ERRNO) {
+  if (SOCK_ERRNO)
+  {
     return -1;
   }
 
   /* We can have a pending SIGPIPE only if it was blocked before */
-  if (sigismember(osigset, SIGPIPE)) {
+  if (sigismember(osigset, SIGPIPE))
+  {
     /* Is there a pending SIGPIPE? */
-    if (sigpending(&sigset) != 0) {
+    if (sigpending(&sigset) != 0)
+    {
       return -1;
     }
 
-    if (sigismember(&sigset, SIGPIPE)) {
+    if (sigismember(&sigset, SIGPIPE))
+    {
       *sigpipe_pending = true;
-    } else {
+    }
+    else
+    {
       *sigpipe_pending = false;
     }
-  } else {
+  }
+  else
+  {
     *sigpipe_pending = false;
   }
 
@@ -489,8 +523,10 @@ pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending, bool got_epipe)
   sigset_t sigset;
 
   /* Clear SIGPIPE only if none was pending */
-  if (got_epipe && !sigpipe_pending) {
-    if (sigpending(&sigset) == 0 && sigismember(&sigset, SIGPIPE)) {
+  if (got_epipe && !sigpipe_pending)
+  {
+    if (sigpending(&sigset) == 0 && sigismember(&sigset, SIGPIPE))
+    {
       sigset_t sigpipe_sigset;
 
       sigemptyset(&sigpipe_sigset);

@@ -708,7 +708,7 @@ CopyGetData(CopyState cstate, void *databuf, int minread, int maxread)
            * sent was COPY.
            */
           goto readmessage;
-        default:;
+        default:
           ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("unexpected message type 0x%02X during COPY from stdin", mtype)));
           break;
         }
@@ -871,19 +871,25 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt, int stmt_location, int stmt_len
     {
       if (!is_member_of_role(GetUserId(), DEFAULT_ROLE_EXECUTE_SERVER_PROGRAM))
       {
-        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_execute_server_program role to COPY to or from an external program"), errhint("Anyone can COPY to stdout or from stdin. psql's \\copy command also works for anyone.")));
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_execute_server_program role to COPY to or from an external program"),
+                           errhint("Anyone can COPY to stdout or from stdin. "
+                                   "psql's \\copy command also works for anyone.")));
       }
     }
     else
     {
       if (is_from && !is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_SERVER_FILES))
       {
-        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_read_server_files role to COPY from a file"), errhint("Anyone can COPY to stdout or from stdin. psql's \\copy command also works for anyone.")));
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_read_server_files role to COPY from a file"),
+                           errhint("Anyone can COPY to stdout or from stdin. "
+                                   "psql's \\copy command also works for anyone.")));
       }
 
       if (!is_from && !is_member_of_role(GetUserId(), DEFAULT_ROLE_WRITE_SERVER_FILES))
       {
-        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_write_server_files role to COPY to a file"), errhint("Anyone can COPY to stdout or from stdin. psql's \\copy command also works for anyone.")));
+        ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser or a member of the pg_write_server_files role to COPY to a file"),
+                           errhint("Anyone can COPY to stdout or from stdin. "
+                                   "psql's \\copy command also works for anyone.")));
       }
     }
   }
@@ -1882,7 +1888,10 @@ BeginCopyTo(ParseState *pstate, Relation rel, RawStmt *query, Oid queryRelId, co
         /* copy errno because ereport subfunctions might change it */
         int save_errno = errno;
 
-        ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\" for writing: %m", cstate->filename), (save_errno == ENOENT || save_errno == EACCES) ? errhint("COPY TO instructs the PostgreSQL server process to write a file. You may want a client-side facility such as psql's \\copy.") : 0));
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\" for writing: %m", cstate->filename),
+                           (save_errno == ENOENT || save_errno == EACCES) ? errhint("COPY TO instructs the PostgreSQL server process to write a file. "
+                                                                                    "You may want a client-side facility such as psql's \\copy.")
+                                                                          : 0));
       }
 
       if (fstat(fileno(cstate->copy_file), &st))
@@ -3201,8 +3210,8 @@ CopyFrom(CopyState cstate)
           {
             myslot = resultRelInfo->ri_FdwRoutine->ExecForeignInsert(estate, resultRelInfo, myslot, NULL);
 
-            if (myslot == NULL)
-            {           /* "do nothing" */
+            if (myslot == NULL) /* "do nothing" */
+            {
               continue; /* next tuple please */
             }
 
@@ -3477,7 +3486,10 @@ BeginCopyFrom(ParseState *pstate, Relation rel, const char *filename, bool is_pr
         /* copy errno because ereport subfunctions might change it */
         int save_errno = errno;
 
-        ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\" for reading: %m", cstate->filename), (save_errno == ENOENT || save_errno == EACCES) ? errhint("COPY FROM instructs the PostgreSQL server process to read a file. You may want a client-side facility such as psql's \\copy.") : 0));
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\" for reading: %m", cstate->filename),
+                           (save_errno == ENOENT || save_errno == EACCES) ? errhint("COPY FROM instructs the PostgreSQL server process to read a file. "
+                                                                                    "You may want a client-side facility such as psql's \\copy.")
+                                                                          : 0));
       }
 
       if (fstat(fileno(cstate->copy_file), &st))
@@ -4830,7 +4842,7 @@ CopyAttributeOutText(CopyState cstate, char *string)
         case '\v':
           c = 'v';
           break;
-        default:;
+        default:
           /* If it's the delimiter, must backslash it */
           if (c == delimc)
           {
@@ -4896,7 +4908,7 @@ CopyAttributeOutText(CopyState cstate, char *string)
         case '\v':
           c = 'v';
           break;
-        default:;
+        default:
           /* If it's the delimiter, must backslash it */
           if (c == delimc)
           {
@@ -5151,7 +5163,8 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
  */
 static void
 copy_dest_shutdown(DestReceiver *self)
-{ /* no-op */
+{
+  /* no-op */
 }
 
 /*

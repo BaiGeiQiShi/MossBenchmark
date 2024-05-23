@@ -121,8 +121,8 @@ formTextDatum(const char *data, int datalen)
   }
   else
   {
-
-
+    SET_VARSIZE(p, datalen + VARHDRSZ);
+    memcpy(p + VARHDRSZ, data, datalen);
   }
 
   return PointerGetDatum(p);
@@ -525,7 +525,7 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
         }
         else
         {
-
+          continue;
         }
       }
 
@@ -536,35 +536,35 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
 
       switch (strategy)
       {
-      case BTLessStrategyNumber:;
-      case BTLessEqualStrategyNumber:;
+      case BTLessStrategyNumber:
+      case BTLessEqualStrategyNumber:
         if (r > 0)
         {
           res = false;
         }
         break;
-      case BTEqualStrategyNumber:;
+      case BTEqualStrategyNumber:
         if (r != 0 || inSize < thisLen)
         {
           res = false;
         }
         break;
-      case BTGreaterEqualStrategyNumber:;
-      case BTGreaterStrategyNumber:;
+      case BTGreaterEqualStrategyNumber:
+      case BTGreaterStrategyNumber:
         if (r < 0)
         {
           res = false;
         }
         break;
-      case RTPrefixStrategyNumber:;
+      case RTPrefixStrategyNumber:
         if (r != 0)
         {
           res = false;
         }
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized strategy number: %d", in->scankeys[j].sk_strategy);
+        break;
       }
 
       if (!res)
@@ -652,8 +652,8 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
        */
       res = (level >= queryLen) || DatumGetBool(DirectFunctionCall2Coll(text_starts_with, PG_GET_COLLATION(), out->leafValue, PointerGetDatum(query)));
 
-      if (!res)
-      { /* no need to consider remaining conditions */
+      if (!res) /* no need to consider remaining conditions */
+      {
         break;
       }
 
@@ -683,32 +683,32 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
         }
         else if (queryLen < fullLen)
         {
-
+          r = 1;
         }
       }
     }
 
     switch (strategy)
     {
-    case BTLessStrategyNumber:;
+    case BTLessStrategyNumber:
       res = (r < 0);
       break;
-    case BTLessEqualStrategyNumber:;
+    case BTLessEqualStrategyNumber:
       res = (r <= 0);
       break;
-    case BTEqualStrategyNumber:;
+    case BTEqualStrategyNumber:
       res = (r == 0);
       break;
-    case BTGreaterEqualStrategyNumber:;
+    case BTGreaterEqualStrategyNumber:
       res = (r >= 0);
       break;
-    case BTGreaterStrategyNumber:;
+    case BTGreaterStrategyNumber:
       res = (r > 0);
       break;
-    default:;;
-
-
-
+    default:
+      elog(ERROR, "unrecognized strategy number: %d", in->scankeys[j].sk_strategy);
+      res = false;
+      break;
     }
 
     if (!res)

@@ -922,7 +922,7 @@ yydestruct(const char *yymsg, yysymbol_kind_t yykind, YYSTYPE *yyvaluep, JsonPat
   YY_USE(result);
   if (!yymsg)
   {
-
+    yymsg = "Deleting";
   }
   YY_SYMBOL_PRINT(yymsg, yykind, yyvaluep, yylocationp);
 
@@ -1800,7 +1800,7 @@ yyreduce:
 
 #line 1887 "jsonpath_gram.c"
 
-  default:;
+  default:
     break;
   }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2189,22 +2189,22 @@ makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathStri
   {
     switch (flags->val[i])
     {
-    case 'i':;
+    case 'i':
       v->value.like_regex.flags |= JSP_REGEX_ICASE;
       break;
-    case 's':;
+    case 's':
       v->value.like_regex.flags |= JSP_REGEX_DOTALL;
       break;
-    case 'm':;
+    case 'm':
       v->value.like_regex.flags |= JSP_REGEX_MLINE;
       break;
-    case 'x':;
+    case 'x':
       v->value.like_regex.flags |= JSP_REGEX_WSPACE;
       break;
-    case 'q':;
+    case 'q':
       v->value.like_regex.flags |= JSP_REGEX_QUOTE;
       break;
-    default:;;
+    default:
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid input syntax for type %s", "jsonpath"), errdetail("unrecognized flag character \"%c\" in LIKE_REGEX predicate", flags->val[i])));
       break;
     }

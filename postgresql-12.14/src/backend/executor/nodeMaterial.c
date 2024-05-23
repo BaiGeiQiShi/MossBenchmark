@@ -14,8 +14,8 @@
  */
 /*
  * INTERFACE ROUTINES
- *		ExecMaterial			- materialize the result of a
- *subplan ExecInitMaterial		- initialize node and subnodes
+ *		ExecMaterial			- materialize the result of a subplan
+ *		ExecInitMaterial		- initialize node and subnodes
  *		ExecEndMaterial			- shutdown node and subnodes
  *
  */
@@ -28,11 +28,10 @@
 /* ----------------------------------------------------------------
  *		ExecMaterial
  *
- *		As long as we are at the end of the data collected in the
- *tuplestore, we collect one new row from the subplan on each call, and stash it
+ *		As long as we are at the end of the data collected in the tuplestore,
+ *		we collect one new row from the subplan on each call, and stash it
  *		aside in the tuplestore before returning it.  The tuplestore is
- *		only read if we are asked to scan backwards, rescan, or
- *mark/restore.
+ *		only read if we are asked to scan backwards, rescan, or mark/restore.
  *
  * ----------------------------------------------------------------
  */
@@ -94,10 +93,10 @@ ExecMaterial(PlanState *pstate)
        * to return the one before that, if possible. So do an extra
        * fetch.
        */
-
-
-
-
+      if (!tuplestore_advance(tuplestorestate, forward))
+      {
+        return NULL; /* the tuplestore must be empty */
+      }
     }
     eof_tuplestore = false;
   }
@@ -269,8 +268,7 @@ ExecEndMaterial(MaterialState *node)
 /* ----------------------------------------------------------------
  *		ExecMaterialMarkPos
  *
- *		Calls tuplestore to save the current position in the stored
- *file.
+ *		Calls tuplestore to save the current position in the stored file.
  * ----------------------------------------------------------------
  */
 void
@@ -283,7 +281,7 @@ ExecMaterialMarkPos(MaterialState *node)
    */
   if (!node->tuplestorestate)
   {
-
+    return;
   }
 
   /*
@@ -313,7 +311,7 @@ ExecMaterialRestrPos(MaterialState *node)
    */
   if (!node->tuplestorestate)
   {
-
+    return;
   }
 
   /*
@@ -363,7 +361,7 @@ ExecReScanMaterial(MaterialState *node)
       node->tuplestorestate = NULL;
       if (outerPlan->chgParam == NULL)
       {
-
+        ExecReScan(outerPlan);
       }
       node->eof_underlying = false;
     }
@@ -380,10 +378,10 @@ ExecReScanMaterial(MaterialState *node)
      * if chgParam of subnode is not null then plan will be re-scanned by
      * first ExecProcNode.
      */
-
-
-
-
-
+    if (outerPlan->chgParam == NULL)
+    {
+      ExecReScan(outerPlan);
+    }
+    node->eof_underlying = false;
   }
 }

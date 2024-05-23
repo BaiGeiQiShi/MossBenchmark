@@ -49,7 +49,8 @@ newcvec(int nchrs, /* to hold this many chrs... */
   size_t n = sizeof(struct cvec) + nc * sizeof(chr);
   struct cvec *cv = (struct cvec *)MALLOC(n);
 
-  if (cv == NULL) {
+  if (cv == NULL)
+  {
     return NULL;
   }
   cv->chrspace = nchrs;
@@ -115,16 +116,19 @@ getcvec(struct vars *v, /* context */
     int nranges)        /* ... and this many ranges */
 {
   /* recycle existing transient cvec if large enough */
-  if (v->cv != NULL && nchrs <= v->cv->chrspace && nranges <= v->cv->rangespace) {
+  if (v->cv != NULL && nchrs <= v->cv->chrspace && nranges <= v->cv->rangespace)
+  {
     return clearcvec(v->cv);
   }
 
   /* nope, make a new one */
-  if (v->cv != NULL) {
+  if (v->cv != NULL)
+  {
     freecvec(v->cv);
   }
   v->cv = newcvec(nchrs, nranges);
-  if (v->cv == NULL) {
+  if (v->cv == NULL)
+  {
     ERR(REG_ESPACE);
   }
 

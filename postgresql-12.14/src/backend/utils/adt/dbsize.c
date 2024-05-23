@@ -38,47 +38,47 @@
 static int64
 db_dir_size(const char *path)
 {
+  int64 dirsize = 0;
+  struct dirent *direntry;
+  DIR *dirdesc;
+  char filename[MAXPGPATH * 2];
 
+  dirdesc = AllocateDir(path);
 
+  if (!dirdesc)
+  {
+    return 0;
+  }
 
+  while ((direntry = ReadDir(dirdesc, path)) != NULL)
+  {
+    struct stat fst;
 
+    CHECK_FOR_INTERRUPTS();
 
+    if (strcmp(direntry->d_name, ".") == 0 || strcmp(direntry->d_name, "..") == 0)
+    {
+      continue;
+    }
 
+    snprintf(filename, sizeof(filename), "%s/%s", path, direntry->d_name);
 
+    if (stat(filename, &fst) < 0)
+    {
+      if (errno == ENOENT)
+      {
+        continue;
+      }
+      else
+      {
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", filename)));
+      }
+    }
+    dirsize += fst.st_size;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  FreeDir(dirdesc);
+  return dirsize;
 }
 
 /*
@@ -87,82 +87,82 @@ db_dir_size(const char *path)
 static int64
 calculate_database_size(Oid dbOid)
 {
+  int64 totalsize;
+  DIR *dirdesc;
+  struct dirent *direntry;
+  char dirpath[MAXPGPATH];
+  char pathname[MAXPGPATH + 21 + sizeof(TABLESPACE_VERSION_DIRECTORY)];
+  AclResult aclresult;
 
+  /*
+   * User must have connect privilege for target database or be a member of
+   * pg_read_all_stats
+   */
+  aclresult = pg_database_aclcheck(dbOid, GetUserId(), ACL_CONNECT);
+  if (aclresult != ACLCHECK_OK && !is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS))
+  {
+    aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(dbOid));
+  }
 
+  /* Shared storage in pg_global is not counted */
 
+  /* Include pg_default storage */
+  snprintf(pathname, sizeof(pathname), "base/%u", dbOid);
+  totalsize = db_dir_size(pathname);
 
+  /* Scan the non-default tablespaces */
+  snprintf(dirpath, MAXPGPATH, "pg_tblspc");
+  dirdesc = AllocateDir(dirpath);
 
+  while ((direntry = ReadDir(dirdesc, dirpath)) != NULL)
+  {
+    CHECK_FOR_INTERRUPTS();
 
+    if (strcmp(direntry->d_name, ".") == 0 || strcmp(direntry->d_name, "..") == 0)
+    {
+      continue;
+    }
 
+    snprintf(pathname, sizeof(pathname), "pg_tblspc/%s/%s/%u", direntry->d_name, TABLESPACE_VERSION_DIRECTORY, dbOid);
+    totalsize += db_dir_size(pathname);
+  }
 
+  FreeDir(dirdesc);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return totalsize;
 }
 
 Datum
 pg_database_size_oid(PG_FUNCTION_ARGS)
 {
+  Oid dbOid = PG_GETARG_OID(0);
+  int64 size;
 
+  size = calculate_database_size(dbOid);
 
+  if (size == 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 Datum
 pg_database_size_name(PG_FUNCTION_ARGS)
 {
+  Name dbName = PG_GETARG_NAME(0);
+  Oid dbOid = get_database_oid(NameStr(*dbName), false);
+  int64 size;
 
+  size = calculate_database_size(dbOid);
 
+  if (size == 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 /*
@@ -172,116 +172,116 @@ pg_database_size_name(PG_FUNCTION_ARGS)
 static int64
 calculate_tablespace_size(Oid tblspcOid)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  char tblspcPath[MAXPGPATH];
+  char pathname[MAXPGPATH * 2];
+  int64 totalsize = 0;
+  DIR *dirdesc;
+  struct dirent *direntry;
+  AclResult aclresult;
+
+  /*
+   * User must be a member of pg_read_all_stats or have CREATE privilege for
+   * target tablespace, either explicitly granted or implicitly because it
+   * is default for current database.
+   */
+  if (tblspcOid != MyDatabaseTableSpace && !is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS))
+  {
+    aclresult = pg_tablespace_aclcheck(tblspcOid, GetUserId(), ACL_CREATE);
+    if (aclresult != ACLCHECK_OK)
+    {
+      aclcheck_error(aclresult, OBJECT_TABLESPACE, get_tablespace_name(tblspcOid));
+    }
+  }
+
+  if (tblspcOid == DEFAULTTABLESPACE_OID)
+  {
+    snprintf(tblspcPath, MAXPGPATH, "base");
+  }
+  else if (tblspcOid == GLOBALTABLESPACE_OID)
+  {
+    snprintf(tblspcPath, MAXPGPATH, "global");
+  }
+  else
+  {
+    snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u/%s", tblspcOid, TABLESPACE_VERSION_DIRECTORY);
+  }
+
+  dirdesc = AllocateDir(tblspcPath);
+
+  if (!dirdesc)
+  {
+    return -1;
+  }
+
+  while ((direntry = ReadDir(dirdesc, tblspcPath)) != NULL)
+  {
+    struct stat fst;
+
+    CHECK_FOR_INTERRUPTS();
+
+    if (strcmp(direntry->d_name, ".") == 0 || strcmp(direntry->d_name, "..") == 0)
+    {
+      continue;
+    }
+
+    snprintf(pathname, sizeof(pathname), "%s/%s", tblspcPath, direntry->d_name);
+
+    if (stat(pathname, &fst) < 0)
+    {
+      if (errno == ENOENT)
+      {
+        continue;
+      }
+      else
+      {
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", pathname)));
+      }
+    }
+
+    if (S_ISDIR(fst.st_mode))
+    {
+      totalsize += db_dir_size(pathname);
+    }
+
+    totalsize += fst.st_size;
+  }
+
+  FreeDir(dirdesc);
+
+  return totalsize;
 }
 
 Datum
 pg_tablespace_size_oid(PG_FUNCTION_ARGS)
 {
+  Oid tblspcOid = PG_GETARG_OID(0);
+  int64 size;
 
+  size = calculate_tablespace_size(tblspcOid);
 
+  if (size < 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 Datum
 pg_tablespace_size_name(PG_FUNCTION_ARGS)
 {
+  Name tblspcName = PG_GETARG_NAME(0);
+  Oid tblspcOid = get_tablespace_oid(NameStr(*tblspcName), false);
+  int64 size;
 
+  size = calculate_tablespace_size(tblspcOid);
 
+  if (size < 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 /*
@@ -323,7 +323,7 @@ calculate_relation_size(RelFileNode *rfn, BackendId backend, ForkNumber forknum)
       }
       else
       {
-
+        ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", pathname)));
       }
     }
     totalsize += fst.st_size;
@@ -351,7 +351,7 @@ pg_relation_size(PG_FUNCTION_ARGS)
    */
   if (rel == NULL)
   {
-
+    PG_RETURN_NULL();
   }
 
   size = calculate_relation_size(&(rel->rd_node), rel->rd_backend, forkname_to_number(text_to_cstring(forkName)));
@@ -368,40 +368,40 @@ pg_relation_size(PG_FUNCTION_ARGS)
 static int64
 calculate_toast_table_size(Oid toastrelid)
 {
+  int64 size = 0;
+  Relation toastRel;
+  ForkNumber forkNum;
+  ListCell *lc;
+  List *indexlist;
 
+  toastRel = relation_open(toastrelid, AccessShareLock);
 
+  /* toast heap size, including FSM and VM size */
+  for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+  {
+    size += calculate_relation_size(&(toastRel->rd_node), toastRel->rd_backend, forkNum);
+  }
 
+  /* toast index size, including FSM and VM size */
+  indexlist = RelationGetIndexList(toastRel);
 
+  /* Size is calculated using all the indexes available */
+  foreach (lc, indexlist)
+  {
+    Relation toastIdxRel;
 
+    toastIdxRel = relation_open(lfirst_oid(lc), AccessShareLock);
+    for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+    {
+      size += calculate_relation_size(&(toastIdxRel->rd_node), toastIdxRel->rd_backend, forkNum);
+    }
 
+    relation_close(toastIdxRel, AccessShareLock);
+  }
+  list_free(indexlist);
+  relation_close(toastRel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return size;
 }
 
 /*
@@ -415,26 +415,26 @@ calculate_toast_table_size(Oid toastrelid)
 static int64
 calculate_table_size(Relation rel)
 {
+  int64 size = 0;
+  ForkNumber forkNum;
 
+  /*
+   * heap size, including FSM and VM
+   */
+  for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+  {
+    size += calculate_relation_size(&(rel->rd_node), rel->rd_backend, forkNum);
+  }
 
+  /*
+   * Size of toast relation
+   */
+  if (OidIsValid(rel->rd_rel->reltoastrelid))
+  {
+    size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return size;
 }
 
 /*
@@ -445,78 +445,78 @@ calculate_table_size(Relation rel)
 static int64
 calculate_indexes_size(Relation rel)
 {
+  int64 size = 0;
 
+  /*
+   * Aggregate all indexes on the given relation
+   */
+  if (rel->rd_rel->relhasindex)
+  {
+    List *index_oids = RelationGetIndexList(rel);
+    ListCell *cell;
 
+    foreach (cell, index_oids)
+    {
+      Oid idxOid = lfirst_oid(cell);
+      Relation idxRel;
+      ForkNumber forkNum;
 
+      idxRel = relation_open(idxOid, AccessShareLock);
 
+      for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+      {
+        size += calculate_relation_size(&(idxRel->rd_node), idxRel->rd_backend, forkNum);
+      }
 
+      relation_close(idxRel, AccessShareLock);
+    }
 
+    list_free(index_oids);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return size;
 }
 
 Datum
 pg_table_size(PG_FUNCTION_ARGS)
 {
+  Oid relOid = PG_GETARG_OID(0);
+  Relation rel;
+  int64 size;
 
+  rel = try_relation_open(relOid, AccessShareLock);
 
+  if (rel == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  size = calculate_table_size(rel);
 
+  relation_close(rel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 Datum
 pg_indexes_size(PG_FUNCTION_ARGS)
 {
+  Oid relOid = PG_GETARG_OID(0);
+  Relation rel;
+  int64 size;
 
+  rel = try_relation_open(relOid, AccessShareLock);
 
+  if (rel == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  size = calculate_indexes_size(rel);
 
+  relation_close(rel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 /*
@@ -526,41 +526,41 @@ pg_indexes_size(PG_FUNCTION_ARGS)
 static int64
 calculate_total_relation_size(Relation rel)
 {
+  int64 size;
 
+  /*
+   * Aggregate the table size, this includes size of the heap, toast and
+   * toast index with free space and visibility map
+   */
+  size = calculate_table_size(rel);
 
+  /*
+   * Add size of all attached indexes as well
+   */
+  size += calculate_indexes_size(rel);
 
-
-
-
-
-
-
-
-
-
-
-
+  return size;
 }
 
 Datum
 pg_total_relation_size(PG_FUNCTION_ARGS)
 {
+  Oid relOid = PG_GETARG_OID(0);
+  Relation rel;
+  int64 size;
 
+  rel = try_relation_open(relOid, AccessShareLock);
 
+  if (rel == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  size = calculate_total_relation_size(rel);
 
+  relation_close(rel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT64(size);
 }
 
 /*
@@ -929,39 +929,39 @@ pg_relation_filenode(PG_FUNCTION_ARGS)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    PG_RETURN_NULL();
   }
   relform = (Form_pg_class)GETSTRUCT(tuple);
 
   switch (relform->relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_MATVIEW:;
-  case RELKIND_INDEX:;
-  case RELKIND_SEQUENCE:;
-  case RELKIND_TOASTVALUE:;
+  case RELKIND_RELATION:
+  case RELKIND_MATVIEW:
+  case RELKIND_INDEX:
+  case RELKIND_SEQUENCE:
+  case RELKIND_TOASTVALUE:
     /* okay, these have storage */
     if (relform->relfilenode)
     {
       result = relform->relfilenode;
     }
-    else
-    { /* Consult the relation mapper */
+    else /* Consult the relation mapper */
+    {
       result = RelationMapOidToFilenode(relid, relform->relisshared);
     }
     break;
 
-  default:;;
+  default:
     /* no storage, return NULL */
-
-
+    result = InvalidOid;
+    break;
   }
 
   ReleaseSysCache(tuple);
 
   if (!OidIsValid(result))
   {
-
+    PG_RETURN_NULL();
   }
 
   PG_RETURN_OID(result);
@@ -990,14 +990,14 @@ pg_filenode_relation(PG_FUNCTION_ARGS)
   /* test needed so RelidByRelfilenode doesn't misbehave */
   if (!OidIsValid(relfilenode))
   {
-
+    PG_RETURN_NULL();
   }
 
   heaprel = RelidByRelfilenode(reltablespace, relfilenode);
 
   if (!OidIsValid(heaprel))
   {
-
+    PG_RETURN_NULL();
   }
   else
   {
@@ -1013,99 +1013,99 @@ pg_filenode_relation(PG_FUNCTION_ARGS)
 Datum
 pg_relation_filepath(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Oid relid = PG_GETARG_OID(0);
+  HeapTuple tuple;
+  Form_pg_class relform;
+  RelFileNode rnode;
+  BackendId backend;
+  char *path;
+
+  tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+  if (!HeapTupleIsValid(tuple))
+  {
+    PG_RETURN_NULL();
+  }
+  relform = (Form_pg_class)GETSTRUCT(tuple);
+
+  switch (relform->relkind)
+  {
+  case RELKIND_RELATION:
+  case RELKIND_MATVIEW:
+  case RELKIND_INDEX:
+  case RELKIND_SEQUENCE:
+  case RELKIND_TOASTVALUE:
+    /* okay, these have storage */
+
+    /* This logic should match RelationInitPhysicalAddr */
+    if (relform->reltablespace)
+    {
+      rnode.spcNode = relform->reltablespace;
+    }
+    else
+    {
+      rnode.spcNode = MyDatabaseTableSpace;
+    }
+    if (rnode.spcNode == GLOBALTABLESPACE_OID)
+    {
+      rnode.dbNode = InvalidOid;
+    }
+    else
+    {
+      rnode.dbNode = MyDatabaseId;
+    }
+    if (relform->relfilenode)
+    {
+      rnode.relNode = relform->relfilenode;
+    }
+    else /* Consult the relation mapper */
+    {
+      rnode.relNode = RelationMapOidToFilenode(relid, relform->relisshared);
+    }
+    break;
+
+  default:
+    /* no storage, return NULL */
+    rnode.relNode = InvalidOid;
+    /* some compilers generate warnings without these next two lines */
+    rnode.dbNode = InvalidOid;
+    rnode.spcNode = InvalidOid;
+    break;
+  }
+
+  if (!OidIsValid(rnode.relNode))
+  {
+    ReleaseSysCache(tuple);
+    PG_RETURN_NULL();
+  }
+
+  /* Determine owning backend. */
+  switch (relform->relpersistence)
+  {
+  case RELPERSISTENCE_UNLOGGED:
+  case RELPERSISTENCE_PERMANENT:
+    backend = InvalidBackendId;
+    break;
+  case RELPERSISTENCE_TEMP:
+    if (isTempOrTempToastNamespace(relform->relnamespace))
+    {
+      backend = BackendIdForTempRelations();
+    }
+    else
+    {
+      /* Do it the hard way. */
+      backend = GetTempNamespaceBackendId(relform->relnamespace);
+      Assert(backend != InvalidBackendId);
+    }
+    break;
+  default:
+    elog(ERROR, "invalid relpersistence: %c", relform->relpersistence);
+    backend = InvalidBackendId; /* placate compiler */
+    break;
+  }
+
+  ReleaseSysCache(tuple);
+
+  path = relpathbackend(rnode, backend, MAIN_FORKNUM);
+
+  PG_RETURN_TEXT_P(cstring_to_text(path));
 }

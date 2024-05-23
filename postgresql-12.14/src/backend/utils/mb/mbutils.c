@@ -106,7 +106,7 @@ PrepareClientEncoding(int encoding)
 
   if (!PG_VALID_FE_ENCODING(encoding))
   {
-
+    return -1;
   }
 
   /* Can't do anything during startup, per notes above */
@@ -125,72 +125,72 @@ PrepareClientEncoding(int encoding)
     return 0;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (IsTransactionState())
+  {
+    /*
+     * If we're in a live transaction, it's safe to access the catalogs,
+     * so look up the functions.  We repeat the lookup even if the info is
+     * already cached, so that we can react to changes in the contents of
+     * pg_conversion.
+     */
+    Oid to_server_proc, to_client_proc;
+    ConvProcInfo *convinfo;
+    MemoryContext oldcontext;
+
+    to_server_proc = FindDefaultConversionProc(encoding, current_server_encoding);
+    if (!OidIsValid(to_server_proc))
+    {
+      return -1;
+    }
+    to_client_proc = FindDefaultConversionProc(current_server_encoding, encoding);
+    if (!OidIsValid(to_client_proc))
+    {
+      return -1;
+    }
+
+    /*
+     * Load the fmgr info into TopMemoryContext (could still fail here)
+     */
+    convinfo = (ConvProcInfo *)MemoryContextAlloc(TopMemoryContext, sizeof(ConvProcInfo));
+    convinfo->s_encoding = current_server_encoding;
+    convinfo->c_encoding = encoding;
+    fmgr_info_cxt(to_server_proc, &convinfo->to_server_info, TopMemoryContext);
+    fmgr_info_cxt(to_client_proc, &convinfo->to_client_info, TopMemoryContext);
+
+    /* Attach new info to head of list */
+    oldcontext = MemoryContextSwitchTo(TopMemoryContext);
+    ConvProcList = lcons(convinfo, ConvProcList);
+    MemoryContextSwitchTo(oldcontext);
+
+    /*
+     * We cannot yet remove any older entry for the same encoding pair,
+     * since it could still be in use.  SetClientEncoding will clean up.
+     */
+
+    return 0; /* success */
+  }
+  else
+  {
+    /*
+     * If we're not in a live transaction, the only thing we can do is
+     * restore a previous setting using the cache.  This covers all
+     * transaction-rollback cases.  The only case it might not work for is
+     * trying to change client_encoding on the fly by editing
+     * postgresql.conf and SIGHUP'ing.  Which would probably be a stupid
+     * thing to do anyway.
+     */
+    foreach (lc, ConvProcList)
+    {
+      ConvProcInfo *oldinfo = (ConvProcInfo *)lfirst(lc);
+
+      if (oldinfo->s_encoding == current_server_encoding && oldinfo->c_encoding == encoding)
+      {
+        return 0;
+      }
+    }
+
+    return -1; /* it's not cached, so fail */
+  }
 }
 
 /*
@@ -210,7 +210,7 @@ SetClientEncoding(int encoding)
 
   if (!PG_VALID_FE_ENCODING(encoding))
   {
-
+    return -1;
   }
 
   /* Can't do anything during startup, per notes above */
@@ -239,44 +239,44 @@ SetClientEncoding(int encoding)
    * release any duplicate entries so that repeated Prepare/Set cycles don't
    * leak memory.
    */
+  found = false;
+  prev = NULL;
+  for (lc = list_head(ConvProcList); lc; lc = next)
+  {
+    ConvProcInfo *convinfo = (ConvProcInfo *)lfirst(lc);
 
+    next = lnext(lc);
 
+    if (convinfo->s_encoding == current_server_encoding && convinfo->c_encoding == encoding)
+    {
+      if (!found)
+      {
+        /* Found newest entry, so set up */
+        ClientEncoding = &pg_enc2name_tbl[encoding];
+        ToServerConvProc = &convinfo->to_server_info;
+        ToClientConvProc = &convinfo->to_client_info;
+        found = true;
+      }
+      else
+      {
+        /* Duplicate entry, release it */
+        ConvProcList = list_delete_cell(ConvProcList, lc, prev);
+        pfree(convinfo);
+        continue; /* prev mustn't advance */
+      }
+    }
 
+    prev = lc;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (found)
+  {
+    return 0; /* success */
+  }
+  else
+  {
+    return -1; /* it's not cached, so fail */
+  }
 }
 
 /*
@@ -295,7 +295,7 @@ InitializeClientEncoding(void)
      * Oops, the requested conversion is not available. We couldn't fail
      * before, but we can now.
      */
-
+    ereport(FATAL, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("conversion between %s and %s is not supported", pg_enc2name_tbl[pending_client_encoding].name, GetDatabaseEncodingName())));
   }
 }
 
@@ -314,7 +314,7 @@ pg_get_client_encoding(void)
 const char *
 pg_get_client_encoding_name(void)
 {
-
+  return ClientEncoding->name;
 }
 
 /*
@@ -330,7 +330,7 @@ pg_do_encoding_conversion(unsigned char *src, int len, int src_encoding, int des
 
   if (len <= 0)
   {
-
+    return src; /* empty string is always valid */
   }
 
   if (src_encoding == dest_encoding)
@@ -350,15 +350,15 @@ pg_do_encoding_conversion(unsigned char *src, int len, int src_encoding, int des
     return src;
   }
 
-  if (!IsTransactionState())
-  { /* shouldn't happen */
-
+  if (!IsTransactionState()) /* shouldn't happen */
+  {
+    elog(ERROR, "cannot perform encoding conversion outside a transaction");
   }
 
   proc = FindDefaultConversionProc(src_encoding, dest_encoding);
   if (!OidIsValid(proc))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("default conversion function for encoding \"%s\" to \"%s\" does not exist", pg_encoding_to_char(src_encoding), pg_encoding_to_char(dest_encoding))));
   }
 
   /*
@@ -372,7 +372,7 @@ pg_do_encoding_conversion(unsigned char *src, int len, int src_encoding, int des
    */
   if ((Size)len >= (MaxAllocHugeSize / (Size)MAX_CONVERSION_GROWTH))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory"), errdetail("String of %d bytes is too long for encoding conversion.", len)));
   }
 
   result = (unsigned char *)MemoryContextAllocHuge(CurrentMemoryContext, (Size)len * MAX_CONVERSION_GROWTH + 1);
@@ -388,12 +388,12 @@ pg_do_encoding_conversion(unsigned char *src, int len, int src_encoding, int des
   {
     Size resultlen = strlen((char *)result);
 
+    if (resultlen >= MaxAllocSize)
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory"), errdetail("String of %d bytes is too long for encoding conversion.", len)));
+    }
 
-
-
-
-
-
+    result = (unsigned char *)repalloc(result, resultlen + 1);
   }
 
   return result;
@@ -407,19 +407,19 @@ pg_do_encoding_conversion(unsigned char *src, int len, int src_encoding, int des
 Datum
 pg_convert_to(PG_FUNCTION_ARGS)
 {
+  Datum string = PG_GETARG_DATUM(0);
+  Datum dest_encoding_name = PG_GETARG_DATUM(1);
+  Datum src_encoding_name = DirectFunctionCall1(namein, CStringGetDatum(DatabaseEncoding->name));
+  Datum result;
 
+  /*
+   * pg_convert expects a bytea as its first argument. We're passing it a
+   * text argument here, relying on the fact that they are both in fact
+   * varlena types, and thus structurally identical.
+   */
+  result = DirectFunctionCall3(pg_convert, string, src_encoding_name, dest_encoding_name);
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_DATUM(result);
 }
 
 /*
@@ -467,11 +467,11 @@ pg_convert(PG_FUNCTION_ARGS)
 
   if (src_encoding < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid source encoding name \"%s\"", src_encoding_name)));
   }
   if (dest_encoding < 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid destination encoding name \"%s\"", dest_encoding_name)));
   }
 
   /* make sure that source string is valid */
@@ -516,24 +516,24 @@ pg_convert(PG_FUNCTION_ARGS)
 Datum
 length_in_encoding(PG_FUNCTION_ARGS)
 {
+  bytea *string = PG_GETARG_BYTEA_PP(0);
+  char *src_encoding_name = NameStr(*PG_GETARG_NAME(1));
+  int src_encoding = pg_char_to_encoding(src_encoding_name);
+  const char *src_str;
+  int len;
+  int retval;
 
+  if (src_encoding < 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid encoding name \"%s\"", src_encoding_name)));
+  }
 
+  len = VARSIZE_ANY_EXHDR(string);
+  src_str = VARDATA_ANY(string);
 
+  retval = pg_verify_mbstr_len(src_encoding, src_str, len, false);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INT32(retval);
 }
 
 /*
@@ -544,16 +544,16 @@ length_in_encoding(PG_FUNCTION_ARGS)
 Datum
 pg_encoding_max_length_sql(PG_FUNCTION_ARGS)
 {
+  int encoding = PG_GETARG_INT32(0);
 
-
-
-
-
-
-
-
-
-
+  if (PG_VALID_ENCODING(encoding))
+  {
+    PG_RETURN_INT32(pg_wchar_table[encoding].maxmblen);
+  }
+  else
+  {
+    PG_RETURN_NULL();
+  }
 }
 
 /*
@@ -594,44 +594,44 @@ pg_any_to_server(const char *s, int len, int encoding)
     return unconstify(char *, s);
   }
 
+  if (DatabaseEncoding->encoding == PG_SQL_ASCII)
+  {
+    /*
+     * No conversion is possible, but we must still validate the data,
+     * because the client-side code might have done string escaping using
+     * the selected client_encoding.  If the client encoding is ASCII-safe
+     * then we just do a straight validation under that encoding.  For an
+     * ASCII-unsafe encoding we have a problem: we dare not pass such data
+     * to the parser but we have no way to convert it.  We compromise by
+     * rejecting the data if it contains any non-ASCII characters.
+     */
+    if (PG_VALID_BE_ENCODING(encoding))
+    {
+      (void)pg_verify_mbstr(encoding, s, len, false);
+    }
+    else
+    {
+      int i;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      for (i = 0; i < len; i++)
+      {
+        if (s[i] == '\0' || IS_HIGHBIT_SET(s[i]))
+        {
+          ereport(ERROR, (errcode(ERRCODE_CHARACTER_NOT_IN_REPERTOIRE), errmsg("invalid byte value for encoding \"%s\": 0x%02x", pg_enc2name_tbl[PG_SQL_ASCII].name, (unsigned char)s[i])));
+        }
+      }
+    }
+    return unconstify(char *, s);
+  }
 
   /* Fast path if we can use cached conversion function */
-
-
-
-
+  if (encoding == ClientEncoding->encoding)
+  {
+    return perform_default_encoding_conversion(s, len, true);
+  }
 
   /* General case ... will not work outside transactions */
-
+  return (char *)pg_do_encoding_conversion((unsigned char *)unconstify(char *, s), len, encoding, DatabaseEncoding->encoding);
 }
 
 /*
@@ -671,13 +671,13 @@ pg_server_to_any(const char *s, int len, int encoding)
   }
 
   /* Fast path if we can use cached conversion function */
-
-
-
-
+  if (encoding == ClientEncoding->encoding)
+  {
+    return perform_default_encoding_conversion(s, len, false);
+  }
 
   /* General case ... will not work outside transactions */
-
+  return (char *)pg_do_encoding_conversion((unsigned char *)unconstify(char *, s), len, DatabaseEncoding->encoding, encoding);
 }
 
 /*
@@ -689,65 +689,65 @@ pg_server_to_any(const char *s, int len, int encoding)
 static char *
 perform_default_encoding_conversion(const char *src, int len, bool is_client_to_server)
 {
+  char *result;
+  int src_encoding, dest_encoding;
+  FmgrInfo *flinfo;
 
+  if (is_client_to_server)
+  {
+    src_encoding = ClientEncoding->encoding;
+    dest_encoding = DatabaseEncoding->encoding;
+    flinfo = ToServerConvProc;
+  }
+  else
+  {
+    src_encoding = DatabaseEncoding->encoding;
+    dest_encoding = ClientEncoding->encoding;
+    flinfo = ToClientConvProc;
+  }
 
+  if (flinfo == NULL)
+  {
+    return unconstify(char *, src);
+  }
 
+  /*
+   * Allocate space for conversion result, being wary of integer overflow.
+   * See comments in pg_do_encoding_conversion.
+   */
+  if ((Size)len >= (MaxAllocHugeSize / (Size)MAX_CONVERSION_GROWTH))
+  {
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory"), errdetail("String of %d bytes is too long for encoding conversion.", len)));
+  }
 
+  result = (char *)MemoryContextAllocHuge(CurrentMemoryContext, (Size)len * MAX_CONVERSION_GROWTH + 1);
 
+  FunctionCall5(flinfo, Int32GetDatum(src_encoding), Int32GetDatum(dest_encoding), CStringGetDatum(src), CStringGetDatum(result), Int32GetDatum(len));
 
+  /*
+   * Release extra space if there might be a lot --- see comments in
+   * pg_do_encoding_conversion.
+   */
+  if (len > 1000000)
+  {
+    Size resultlen = strlen(result);
 
+    if (resultlen >= MaxAllocSize)
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of memory"), errdetail("String of %d bytes is too long for encoding conversion.", len)));
+    }
 
+    result = (char *)repalloc(result, resultlen + 1);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /* convert a multibyte string to a wchar */
 int
 pg_mb2wchar(const char *from, pg_wchar *to)
 {
-
+  return pg_wchar_table[DatabaseEncoding->encoding].mb2wchar_with_len((const unsigned char *)from, to, strlen(from));
 }
 
 /* convert a multibyte string to a wchar with a limited length */
@@ -761,14 +761,14 @@ pg_mb2wchar_with_len(const char *from, pg_wchar *to, int len)
 int
 pg_encoding_mb2wchar_with_len(int encoding, const char *from, pg_wchar *to, int len)
 {
-
+  return pg_wchar_table[encoding].mb2wchar_with_len((const unsigned char *)from, to, len);
 }
 
 /* convert a wchar string to a multibyte */
 int
 pg_wchar2mb(const pg_wchar *from, char *to)
 {
-
+  return pg_wchar_table[DatabaseEncoding->encoding].wchar2mb_with_len(from, (unsigned char *)to, pg_wchar_strlen(from));
 }
 
 /* convert a wchar string to a multibyte with a limited length */
@@ -782,7 +782,7 @@ pg_wchar2mb_with_len(const pg_wchar *from, char *to, int len)
 int
 pg_encoding_wchar2mb_with_len(int encoding, const pg_wchar *from, char *to, int len)
 {
-
+  return pg_wchar_table[encoding].wchar2mb_with_len(from, (unsigned char *)to, len);
 }
 
 /* returns the byte length of a multibyte character */
@@ -808,7 +808,7 @@ pg_mbstrlen(const char *mbstr)
   /* optimization for single byte encoding */
   if (pg_database_encoding_max_length() == 1)
   {
-
+    return strlen(mbstr);
   }
 
   while (*mbstr)
@@ -906,7 +906,7 @@ pg_mbcharcliplen(const char *mbstr, int len, int limit)
   /* optimization for single byte encoding */
   if (pg_database_encoding_max_length() == 1)
   {
-
+    return cliplen(mbstr, len, limit);
   }
 
   while (len > 0 && *mbstr)
@@ -943,7 +943,7 @@ SetDatabaseEncoding(int encoding)
 {
   if (!PG_VALID_BE_ENCODING(encoding))
   {
-
+    elog(ERROR, "invalid database encoding: %d", encoding);
   }
 
   DatabaseEncoding = &pg_enc2name_tbl[encoding];
@@ -1071,13 +1071,13 @@ GetDatabaseEncodingName(void)
 Datum
 getdatabaseencoding(PG_FUNCTION_ARGS)
 {
-
+  return DirectFunctionCall1(namein, CStringGetDatum(DatabaseEncoding->name));
 }
 
 Datum
 pg_client_encoding(PG_FUNCTION_ARGS)
 {
-
+  return DirectFunctionCall1(namein, CStringGetDatum(ClientEncoding->name));
 }
 
 /*
@@ -1089,7 +1089,7 @@ pg_client_encoding(PG_FUNCTION_ARGS)
 int
 GetMessageEncoding(void)
 {
-
+  return MessageEncoding->encoding;
 }
 
 #ifdef WIN32

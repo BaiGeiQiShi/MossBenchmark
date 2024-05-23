@@ -54,27 +54,29 @@ _bt_keep_natts(Relation rel, IndexTuple lastleft, IndexTuple firstright, BTScanI
 
 /*
  * _bt_mkscankey
- *		Build an insertion scan key that contains comparison data from
- *itup as well as comparator routines appropriate to the key datatypes.
+ *		Build an insertion scan key that contains comparison data from itup
+ *		as well as comparator routines appropriate to the key datatypes.
  *
- *		When itup is a non-pivot tuple, the returned insertion scan key
- *is suitable for finding a place for it to go on the leaf level.  Pivot tuples
- *can be used to re-find leaf page with matching high key, but then caller needs
- *to set scan key's pivotsearch field to true.  This allows caller to search for
- *a leaf page with a matching high key, which is usually to the left of the
- *first leaf page a non-pivot match might appear on.
+ *		When itup is a non-pivot tuple, the returned insertion scan key is
+ *		suitable for finding a place for it to go on the leaf level.  Pivot
+ *		tuples can be used to re-find leaf page with matching high key, but
+ *		then caller needs to set scan key's pivotsearch field to true.  This
+ *		allows caller to search for a leaf page with a matching high key,
+ *		which is usually to the left of the first leaf page a non-pivot match
+ *		might appear on.
  *
- *		The result is intended for use with _bt_compare() and
- *_bt_truncate(). Callers that don't need to fill out the insertion scankey
- *arguments (e.g. they use an ad-hoc comparison routine, or only need a scankey
- *		for _bt_truncate()) can pass a NULL index tuple.  The scankey
- *will be initialized as if an "all truncated" pivot tuple was passed instead.
+ *		The result is intended for use with _bt_compare() and _bt_truncate().
+ *		Callers that don't need to fill out the insertion scankey arguments
+ *		(e.g. they use an ad-hoc comparison routine, or only need a scankey
+ *		for _bt_truncate()) can pass a NULL index tuple.  The scankey will
+ *		be initialized as if an "all truncated" pivot tuple was passed
+ *		instead.
  *
  *		Note that we may occasionally have to share lock the metapage to
- *		determine whether or not the keys in the index are expected to
- *be unique (i.e. if this is a "heapkeyspace" index).  We assume a heapkeyspace
- *index when caller passes a NULL tuple, allowing index build callers to avoid
- *accessing the non-existent metapage.
+ *		determine whether or not the keys in the index are expected to be
+ *		unique (i.e. if this is a "heapkeyspace" index).  We assume a
+ *		heapkeyspace index when caller passes a NULL tuple, allowing index
+ *		build callers to avoid accessing the non-existent metapage.
  */
 BTScanInsert
 _bt_mkscankey(Relation rel, IndexTuple itup)
@@ -199,9 +201,9 @@ _bt_preprocess_array_keys(IndexScanDesc scan)
       /* If any arrays are null as a whole, we can quit right now. */
       if (cur->sk_flags & SK_ISNULL)
       {
-
-
-
+        so->numArrayKeys = -1;
+        so->arrayKeyData = NULL;
+        return;
       }
     }
   }
@@ -224,7 +226,7 @@ _bt_preprocess_array_keys(IndexScanDesc scan)
   }
   else
   {
-
+    MemoryContextReset(so->arrayContext);
   }
 
   oldContext = MemoryContextSwitchTo(so->arrayContext);
@@ -284,8 +286,8 @@ _bt_preprocess_array_keys(IndexScanDesc scan)
     /* If there's no non-nulls, the scan qual is unsatisfiable */
     if (num_nonnulls == 0)
     {
-
-
+      numArrayKeys = -1;
+      break;
     }
 
     /*
@@ -295,20 +297,20 @@ _bt_preprocess_array_keys(IndexScanDesc scan)
      */
     switch (cur->sk_strategy)
     {
-    case BTLessStrategyNumber:;
-    case BTLessEqualStrategyNumber:;
-
-
-    case BTEqualStrategyNumber:;
+    case BTLessStrategyNumber:
+    case BTLessEqualStrategyNumber:
+      cur->sk_argument = _bt_find_extreme_element(scan, cur, BTGreaterStrategyNumber, elem_values, num_nonnulls);
+      continue;
+    case BTEqualStrategyNumber:
       /* proceed with rest of loop */
       break;
-    case BTGreaterEqualStrategyNumber:;
-    case BTGreaterStrategyNumber:;
-
-
-    default:;;
-
-
+    case BTGreaterEqualStrategyNumber:
+    case BTGreaterStrategyNumber:
+      cur->sk_argument = _bt_find_extreme_element(scan, cur, BTLessStrategyNumber, elem_values, num_nonnulls);
+      continue;
+    default:
+      elog(ERROR, "unrecognized StrategyNumber: %d", (int)cur->sk_strategy);
+      break;
     }
 
     /*
@@ -342,56 +344,56 @@ _bt_preprocess_array_keys(IndexScanDesc scan)
 static Datum
 _bt_find_extreme_element(IndexScanDesc scan, ScanKey skey, StrategyNumber strat, Datum *elems, int nelems)
 {
+  Relation rel = scan->indexRelation;
+  Oid elemtype, cmp_op;
+  RegProcedure cmp_proc;
+  FmgrInfo flinfo;
+  Datum result;
+  int i;
 
+  /*
+   * Determine the nominal datatype of the array elements.  We have to
+   * support the convention that sk_subtype == InvalidOid means the opclass
+   * input type; this is a hack to simplify life for ScanKeyInit().
+   */
+  elemtype = skey->sk_subtype;
+  if (elemtype == InvalidOid)
+  {
+    elemtype = rel->rd_opcintype[skey->sk_attno - 1];
+  }
 
+  /*
+   * Look up the appropriate comparison operator in the opfamily.
+   *
+   * Note: it's possible that this would fail, if the opfamily is
+   * incomplete, but it seems quite unlikely that an opfamily would omit
+   * non-cross-type comparison operators for any datatype that it supports
+   * at all.
+   */
+  cmp_op = get_opfamily_member(rel->rd_opfamily[skey->sk_attno - 1], elemtype, elemtype, strat);
+  if (!OidIsValid(cmp_op))
+  {
+    elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", strat, elemtype, elemtype, rel->rd_opfamily[skey->sk_attno - 1]);
+  }
+  cmp_proc = get_opcode(cmp_op);
+  if (!RegProcedureIsValid(cmp_proc))
+  {
+    elog(ERROR, "missing oprcode for operator %u", cmp_op);
+  }
 
+  fmgr_info(cmp_proc, &flinfo);
 
+  Assert(nelems > 0);
+  result = elems[0];
+  for (i = 1; i < nelems; i++)
+  {
+    if (DatumGetBool(FunctionCall2Coll(&flinfo, skey->sk_collation, elems[i], result)))
+    {
+      result = elems[i];
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -415,7 +417,7 @@ _bt_sort_array_elements(IndexScanDesc scan, ScanKey skey, bool reverse, Datum *e
 
   if (nelems <= 1)
   {
-
+    return nelems; /* no work to do */
   }
 
   /*
@@ -426,7 +428,7 @@ _bt_sort_array_elements(IndexScanDesc scan, ScanKey skey, bool reverse, Datum *e
   elemtype = skey->sk_subtype;
   if (elemtype == InvalidOid)
   {
-
+    elemtype = rel->rd_opcintype[skey->sk_attno - 1];
   }
 
   /*
@@ -440,7 +442,7 @@ _bt_sort_array_elements(IndexScanDesc scan, ScanKey skey, bool reverse, Datum *e
   cmp_proc = get_opfamily_proc(rel->rd_opfamily[skey->sk_attno - 1], elemtype, elemtype, BTORDER_PROC);
   if (!RegProcedureIsValid(cmp_proc))
   {
-
+    elog(ERROR, "missing support function %d(%u,%u) in opfamily %u", BTORDER_PROC, elemtype, elemtype, rel->rd_opfamily[skey->sk_attno - 1]);
   }
 
   /* Sort the array elements */
@@ -479,7 +481,7 @@ _bt_compare_array_elements(const void *a, const void *b, void *arg)
   compare = DatumGetInt32(FunctionCall2Coll(&cxt->flinfo, cxt->collation, da, db));
   if (cxt->reverse)
   {
-
+    INVERT_COMPARE_RESULT(compare);
   }
   return compare;
 }
@@ -504,7 +506,7 @@ _bt_start_array_keys(IndexScanDesc scan, ScanDirection dir)
     Assert(curArrayKey->num_elems > 0);
     if (ScanDirectionIsBackward(dir))
     {
-
+      curArrayKey->cur_elem = curArrayKey->num_elems - 1;
     }
     else
     {
@@ -542,15 +544,15 @@ _bt_advance_array_keys(IndexScanDesc scan, ScanDirection dir)
 
     if (ScanDirectionIsBackward(dir))
     {
-
-
-
-
-
-
-
-
-
+      if (--cur_elem < 0)
+      {
+        cur_elem = num_elems - 1;
+        found = false; /* need to advance next array key */
+      }
+      else
+      {
+        found = true;
+      }
     }
     else
     {
@@ -576,7 +578,7 @@ _bt_advance_array_keys(IndexScanDesc scan, ScanDirection dir)
   /* advance parallel scan */
   if (scan->parallel_scan != NULL)
   {
-
+    _bt_parallel_advance_array_keys(scan);
   }
 
   return found;
@@ -590,15 +592,15 @@ _bt_advance_array_keys(IndexScanDesc scan, ScanDirection dir)
 void
 _bt_mark_array_keys(IndexScanDesc scan)
 {
+  BTScanOpaque so = (BTScanOpaque)scan->opaque;
+  int i;
 
+  for (i = 0; i < so->numArrayKeys; i++)
+  {
+    BTArrayKeyInfo *curArrayKey = &so->arrayKeys[i];
 
-
-
-
-
-
-
-
+    curArrayKey->mark_elem = curArrayKey->cur_elem;
+  }
 }
 
 /*
@@ -609,36 +611,36 @@ _bt_mark_array_keys(IndexScanDesc scan)
 void
 _bt_restore_array_keys(IndexScanDesc scan)
 {
+  BTScanOpaque so = (BTScanOpaque)scan->opaque;
+  bool changed = false;
+  int i;
 
+  /* Restore each array key to its position when the mark was set */
+  for (i = 0; i < so->numArrayKeys; i++)
+  {
+    BTArrayKeyInfo *curArrayKey = &so->arrayKeys[i];
+    ScanKey skey = &so->arrayKeyData[curArrayKey->scan_key];
+    int mark_elem = curArrayKey->mark_elem;
 
+    if (curArrayKey->cur_elem != mark_elem)
+    {
+      curArrayKey->cur_elem = mark_elem;
+      skey->sk_argument = curArrayKey->elem_values[mark_elem];
+      changed = true;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * If we changed any keys, we must redo _bt_preprocess_keys.  That might
+   * sound like overkill, but in cases with multiple keys per index column
+   * it seems necessary to do the full set of pushups.
+   */
+  if (changed)
+  {
+    _bt_preprocess_keys(scan);
+    /* The mark should have been set on a consistent set of keys... */
+    Assert(so->qual_ok);
+  }
 }
 
 /*
@@ -767,7 +769,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
   /* we check that input keys are correctly ordered */
   if (cur->sk_attno < 1)
   {
-
+    elog(ERROR, "btree index keys must be ordered by attribute");
   }
 
   /* We can short-circuit most of the work if there's just one key */
@@ -816,8 +818,8 @@ _bt_preprocess_keys(IndexScanDesc scan)
       if (!_bt_fix_scankey_strategy(cur, indoption))
       {
         /* NULL can't be matched, so give up */
-
-
+        so->qual_ok = false;
+        return;
       }
     }
 
@@ -832,7 +834,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
       /* check input keys are correctly ordered */
       if (i < numberOfKeys && cur->sk_attno < attno)
       {
-
+        elog(ERROR, "btree index keys must be ordered by attribute");
       }
 
       /*
@@ -871,8 +873,8 @@ _bt_preprocess_keys(IndexScanDesc scan)
             if (!test_result)
             {
               /* keys proven mutually contradictory */
-
-
+              so->qual_ok = false;
+              return;
             }
             /* else discard the redundant non-equality key */
             xform[j] = NULL;
@@ -889,17 +891,17 @@ _bt_preprocess_keys(IndexScanDesc scan)
         ScanKey lt = xform[BTLessStrategyNumber - 1];
         ScanKey le = xform[BTLessEqualStrategyNumber - 1];
 
-
-
-
-
-
-
-
-
-
-
-
+        if (_bt_compare_scankey_args(scan, le, lt, le, &test_result))
+        {
+          if (test_result)
+          {
+            xform[BTLessEqualStrategyNumber - 1] = NULL;
+          }
+          else
+          {
+            xform[BTLessStrategyNumber - 1] = NULL;
+          }
+        }
       }
 
       /* try to keep only one of >, >= */
@@ -908,17 +910,17 @@ _bt_preprocess_keys(IndexScanDesc scan)
         ScanKey gt = xform[BTGreaterStrategyNumber - 1];
         ScanKey ge = xform[BTGreaterEqualStrategyNumber - 1];
 
-
-
-
-
-
-
-
-
-
-
-
+        if (_bt_compare_scankey_args(scan, ge, gt, ge, &test_result))
+        {
+          if (test_result)
+          {
+            xform[BTGreaterEqualStrategyNumber - 1] = NULL;
+          }
+          else
+          {
+            xform[BTGreaterStrategyNumber - 1] = NULL;
+          }
+        }
       }
 
       /*
@@ -961,18 +963,18 @@ _bt_preprocess_keys(IndexScanDesc scan)
     {
       ScanKey outkey = &outkeys[new_numberOfKeys++];
 
-
-
-
-
-
+      memcpy(outkey, cur, sizeof(ScanKeyData));
+      if (numberOfEqualCols == attno - 1)
+      {
+        _bt_mark_scankey_required(outkey);
+      }
 
       /*
        * We don't support RowCompare using equality; such a qual would
        * mess up the numberOfEqualCols tracking.
        */
-
-
+      Assert(j != (BTEqualStrategyNumber - 1));
+      continue;
     }
 
     /* have we seen one of these before? */
@@ -993,8 +995,8 @@ _bt_preprocess_keys(IndexScanDesc scan)
         else if (j == (BTEqualStrategyNumber - 1))
         {
           /* key == a && key == b, but a != b */
-
-
+          so->qual_ok = false;
+          return;
         }
         /* else old key is more restrictive, keep it */
       }
@@ -1007,11 +1009,11 @@ _bt_preprocess_keys(IndexScanDesc scan)
          */
         ScanKey outkey = &outkeys[new_numberOfKeys++];
 
-
-
-
-
-
+        memcpy(outkey, cur, sizeof(ScanKeyData));
+        if (numberOfEqualCols == attno - 1)
+        {
+          _bt_mark_scankey_required(outkey);
+        }
       }
     }
   }
@@ -1084,30 +1086,30 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op, ScanKey leftarg, ScanKe
     strat = op->sk_strategy;
     if (op->sk_flags & SK_BT_NULLS_FIRST)
     {
-
+      strat = BTCommuteStrategyNumber(strat);
     }
 
     switch (strat)
     {
-    case BTLessStrategyNumber:;
+    case BTLessStrategyNumber:
       *result = (leftnull < rightnull);
       break;
-    case BTLessEqualStrategyNumber:;
-
-
-    case BTEqualStrategyNumber:;
-
-
-    case BTGreaterEqualStrategyNumber:;
-
-
-    case BTGreaterStrategyNumber:;
-
-
-    default:;;
-
-
-
+    case BTLessEqualStrategyNumber:
+      *result = (leftnull <= rightnull);
+      break;
+    case BTEqualStrategyNumber:
+      *result = (leftnull == rightnull);
+      break;
+    case BTGreaterEqualStrategyNumber:
+      *result = (leftnull >= rightnull);
+      break;
+    case BTGreaterStrategyNumber:
+      *result = (leftnull > rightnull);
+      break;
+    default:
+      elog(ERROR, "unrecognized StrategyNumber: %d", (int)strat);
+      *result = false; /* keep compiler quiet */
+      break;
     }
     return true;
   }
@@ -1127,17 +1129,17 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op, ScanKey leftarg, ScanKe
   lefttype = leftarg->sk_subtype;
   if (lefttype == InvalidOid)
   {
-
+    lefttype = opcintype;
   }
   righttype = rightarg->sk_subtype;
   if (righttype == InvalidOid)
   {
-
+    righttype = opcintype;
   }
   optype = op->sk_subtype;
   if (optype == InvalidOid)
   {
-
+    optype = opcintype;
   }
 
   /*
@@ -1159,27 +1161,27 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op, ScanKey leftarg, ScanKe
    * If the sk_strategy was flipped by _bt_fix_scankey_strategy, we have to
    * un-flip it to get the correct opfamily member.
    */
+  strat = op->sk_strategy;
+  if (op->sk_flags & SK_BT_DESC)
+  {
+    strat = BTCommuteStrategyNumber(strat);
+  }
 
+  cmp_op = get_opfamily_member(rel->rd_opfamily[leftarg->sk_attno - 1], lefttype, righttype, strat);
+  if (OidIsValid(cmp_op))
+  {
+    RegProcedure cmp_proc = get_opcode(cmp_op);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (RegProcedureIsValid(cmp_proc))
+    {
+      *result = DatumGetBool(OidFunctionCall2Coll(cmp_proc, op->sk_collation, leftarg->sk_argument, rightarg->sk_argument));
+      return true;
+    }
+  }
 
   /* Can't make the comparison */
-
-
+  *result = false; /* suppress compiler warnings */
+  return false;
 }
 
 /*
@@ -1272,7 +1274,7 @@ _bt_fix_scankey_strategy(ScanKey skey, int16 *indoption)
   /* Adjust strategy for DESC, if we didn't already */
   if ((addflags & SK_BT_DESC) && !(skey->sk_flags & SK_BT_DESC))
   {
-
+    skey->sk_strategy = BTCommuteStrategyNumber(skey->sk_strategy);
   }
   skey->sk_flags |= addflags;
 
@@ -1287,7 +1289,7 @@ _bt_fix_scankey_strategy(ScanKey skey, int16 *indoption)
       addflags = indoption[subkey->sk_attno - 1] << SK_BT_INDOPTION_SHIFT;
       if ((addflags & SK_BT_DESC) && !(subkey->sk_flags & SK_BT_DESC))
       {
-
+        subkey->sk_strategy = BTCommuteStrategyNumber(subkey->sk_strategy);
       }
       subkey->sk_flags |= addflags;
       if (subkey->sk_flags & SK_ROW_END)
@@ -1323,21 +1325,21 @@ _bt_mark_scankey_required(ScanKey skey)
 
   switch (skey->sk_strategy)
   {
-  case BTLessStrategyNumber:;
-  case BTLessEqualStrategyNumber:;
+  case BTLessStrategyNumber:
+  case BTLessEqualStrategyNumber:
     addflags = SK_BT_REQFWD;
     break;
-  case BTEqualStrategyNumber:;
+  case BTEqualStrategyNumber:
     addflags = SK_BT_REQFWD | SK_BT_REQBKWD;
     break;
-  case BTGreaterEqualStrategyNumber:;
-  case BTGreaterStrategyNumber:;
+  case BTGreaterEqualStrategyNumber:
+  case BTGreaterStrategyNumber:
     addflags = SK_BT_REQBKWD;
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized StrategyNumber: %d", (int)skey->sk_strategy);
+    addflags = 0; /* keep compiler quiet */
+    break;
   }
 
   skey->sk_flags |= addflags;
@@ -1449,7 +1451,7 @@ _bt_checkkeys(IndexScanDesc scan, IndexTuple tuple, int tupnatts, ScanDirection 
       }
       else if ((key->sk_flags & SK_BT_REQBKWD) && ScanDirectionIsBackward(dir))
       {
-
+        *continuescan = false;
       }
 
       /*
@@ -1472,10 +1474,10 @@ _bt_checkkeys(IndexScanDesc scan, IndexTuple tuple, int tupnatts, ScanDirection 
          * a forward scan, however, we must keep going, because we may
          * have initially positioned to the start of the index.
          */
-
-
-
-
+        if ((key->sk_flags & (SK_BT_REQFWD | SK_BT_REQBKWD)) && ScanDirectionIsBackward(dir))
+        {
+          *continuescan = false;
+        }
       }
       else
       {
@@ -1576,8 +1578,8 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
       {
         break;
       }
-
-
+      subkey++;
+      continue;
     }
 
     datum = index_getattr(tuple, subkey->sk_attno, tupdesc, &isNull);
@@ -1596,10 +1598,10 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
          * a forward scan, however, we must keep going, because we may
          * have initially positioned to the start of the index.
          */
-
-
-
-
+        if ((subkey->sk_flags & (SK_BT_REQFWD | SK_BT_REQBKWD)) && ScanDirectionIsBackward(dir))
+        {
+          *continuescan = false;
+        }
       }
       else
       {
@@ -1615,7 +1617,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
          */
         if ((subkey->sk_flags & (SK_BT_REQFWD | SK_BT_REQBKWD)) && ScanDirectionIsForward(dir))
         {
-
+          *continuescan = false;
         }
       }
 
@@ -1633,19 +1635,19 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
        * columns are required for the scan direction, we can stop the
        * scan, because there can't be another tuple that will succeed.
        */
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (subkey != (ScanKey)DatumGetPointer(skey->sk_argument))
+      {
+        subkey--;
+      }
+      if ((subkey->sk_flags & SK_BT_REQFWD) && ScanDirectionIsForward(dir))
+      {
+        *continuescan = false;
+      }
+      else if ((subkey->sk_flags & SK_BT_REQBKWD) && ScanDirectionIsBackward(dir))
+      {
+        *continuescan = false;
+      }
+      return false;
     }
 
     /* Perform the test --- three-way comparison not bool operator */
@@ -1653,7 +1655,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
 
     if (subkey->sk_flags & SK_BT_DESC)
     {
-
+      INVERT_COMPARE_RESULT(cmpresult);
     }
 
     /* Done comparing if unequal, else advance to next column */
@@ -1664,7 +1666,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
 
     if (subkey->sk_flags & SK_ROW_END)
     {
-
+      break;
     }
     subkey++;
   }
@@ -1677,22 +1679,22 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
   switch (subkey->sk_strategy)
   {
     /* EQ and NE cases aren't allowed here */
-  case BTLessStrategyNumber:;
-
-
-  case BTLessEqualStrategyNumber:;
+  case BTLessStrategyNumber:
+    result = (cmpresult < 0);
+    break;
+  case BTLessEqualStrategyNumber:
     result = (cmpresult <= 0);
     break;
-  case BTGreaterEqualStrategyNumber:;
+  case BTGreaterEqualStrategyNumber:
     result = (cmpresult >= 0);
     break;
-  case BTGreaterStrategyNumber:;
+  case BTGreaterStrategyNumber:
     result = (cmpresult > 0);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized RowCompareType: %d", (int)subkey->sk_strategy);
+    result = 0; /* keep compiler quiet */
+    break;
   }
 
   if (!result)
@@ -1707,10 +1709,10 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
     {
       *continuescan = false;
     }
-
-
-
-
+    else if ((subkey->sk_flags & SK_BT_REQBKWD) && ScanDirectionIsBackward(dir))
+    {
+      *continuescan = false;
+    }
   }
 
   return result;
@@ -1739,8 +1741,8 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, int tupnatts, TupleDesc tup
  * any items from the page, and so there is no need to search left from the
  * recorded offset.  (This observation also guarantees that the item is still
  * the right one to delete, which might otherwise be questionable since heap
- * TIDs can get recycled.)	This holds true even if the page has been
- * modified by inserts and page splits, so there is no need to consult the LSN.
+ * TIDs can get recycled.)	This holds true even if the page has been modified
+ * by inserts and page splits, so there is no need to consult the LSN.
  *
  * If the pin was released after reading the page, then we re-read it.  If it
  * has been modified since we read it (as determined by the LSN), we dare not
@@ -1789,7 +1791,7 @@ _bt_killitems(IndexScanDesc scan)
     /* It might not exist anymore; in which case we can't hint it. */
     if (!BufferIsValid(buf))
     {
-
+      return;
     }
 
     page = BufferGetPage(buf);
@@ -1818,7 +1820,7 @@ _bt_killitems(IndexScanDesc scan)
     Assert(itemIndex >= so->currPos.firstItem && itemIndex <= so->currPos.lastItem);
     if (offnum < minoff)
     {
-
+      continue; /* pure paranoia */
     }
     while (offnum <= maxoff)
     {
@@ -1842,7 +1844,7 @@ _bt_killitems(IndexScanDesc scan)
         }
         break; /* out of inner search loop */
       }
-
+      offnum = OffsetNumberNext(offnum);
     }
   }
 
@@ -1914,11 +1916,11 @@ _bt_vacuum_cycleid(Relation rel)
   {
     BTOneVacInfo *vac = &btvacinfo->vacuums[i];
 
-
-
-
-
-
+    if (vac->relid.relId == rel->rd_lockInfo.lockRelId.relId && vac->relid.dbId == rel->rd_lockInfo.lockRelId.dbId)
+    {
+      result = vac->cycleid;
+      break;
+    }
   }
 
   LWLockRelease(BtreeVacuumLock);
@@ -1932,8 +1934,7 @@ _bt_vacuum_cycleid(Relation rel)
  * _bt_end_vacuum, else we'll permanently leak an array slot.  To ensure
  * that this happens even in elog(FATAL) scenarios, the appropriate coding
  * is not just a PG_TRY, but
- *		PG_ENSURE_ERROR_CLEANUP(_bt_end_vacuum_callback,
- *PointerGetDatum(rel))
+ *		PG_ENSURE_ERROR_CLEANUP(_bt_end_vacuum_callback, PointerGetDatum(rel))
  */
 BTCycleId
 _bt_start_vacuum(Relation rel)
@@ -1957,25 +1958,25 @@ _bt_start_vacuum(Relation rel)
   /* Let's just make sure there's no entry already for this index */
   for (i = 0; i < btvacinfo->num_vacuums; i++)
   {
-
-
-
-
-
-
-
-
-
-
-
-
+    vac = &btvacinfo->vacuums[i];
+    if (vac->relid.relId == rel->rd_lockInfo.lockRelId.relId && vac->relid.dbId == rel->rd_lockInfo.lockRelId.dbId)
+    {
+      /*
+       * Unlike most places in the backend, we have to explicitly
+       * release our LWLock before throwing an error.  This is because
+       * we expect _bt_end_vacuum() to be called before transaction
+       * abort cleanup can run to release LWLocks.
+       */
+      LWLockRelease(BtreeVacuumLock);
+      elog(ERROR, "multiple active vacuums for index \"%s\"", RelationGetRelationName(rel));
+    }
   }
 
   /* OK, add an entry */
   if (btvacinfo->num_vacuums >= btvacinfo->max_vacuums)
   {
-
-
+    LWLockRelease(BtreeVacuumLock);
+    elog(ERROR, "out of btvacinfo slots");
   }
   vac = &btvacinfo->vacuums[btvacinfo->num_vacuums];
   vac->relid = rel->rd_lockInfo.lockRelId;
@@ -2022,7 +2023,7 @@ _bt_end_vacuum(Relation rel)
 void
 _bt_end_vacuum_callback(int code, Datum arg)
 {
-
+  _bt_end_vacuum((Relation)DatumGetPointer(arg));
 }
 
 /*
@@ -2065,7 +2066,7 @@ BTreeShmemInit(void)
   }
   else
   {
-
+    Assert(found);
   }
 }
 
@@ -2086,7 +2087,7 @@ btproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propname,
 {
   switch (prop)
   {
-  case AMPROP_RETURNABLE:;
+  case AMPROP_RETURNABLE:
     /* answer only for columns, not AM or whole index */
     if (attno == 0)
     {
@@ -2096,7 +2097,7 @@ btproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propname,
     *res = true;
     return true;
 
-  default:;;
+  default:
     return false; /* punt to generic code */
   }
 }
@@ -2107,21 +2108,21 @@ btproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propname,
 char *
 btbuildphasename(int64 phasenum)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  switch (phasenum)
+  {
+  case PROGRESS_CREATEIDX_SUBPHASE_INITIALIZE:
+    return "initializing";
+  case PROGRESS_BTREE_PHASE_INDEXBUILD_TABLESCAN:
+    return "scanning table";
+  case PROGRESS_BTREE_PHASE_PERFORMSORT_1:
+    return "sorting live tuples";
+  case PROGRESS_BTREE_PHASE_PERFORMSORT_2:
+    return "sorting dead tuples";
+  case PROGRESS_BTREE_PHASE_LEAF_LOAD:
+    return "loading tuples in tree";
+  default:
+    return NULL;
+  }
 }
 
 /*
@@ -2204,13 +2205,13 @@ _bt_truncate(Relation rel, IndexTuple lastleft, IndexTuple firstright, BTScanIns
      * attributes are all equal.  It's necessary to add a heap TID
      * attribute to the new pivot tuple.
      */
-
-
-
-
+    Assert(natts != nkeyatts);
+    newsize = IndexTupleSize(pivot) + MAXALIGN(sizeof(ItemPointerData));
+    tidpivot = palloc0(newsize);
+    memcpy(tidpivot, pivot, IndexTupleSize(pivot));
     /* cannot leak memory here */
-
-
+    pfree(pivot);
+    pivot = tidpivot;
   }
   else
   {
@@ -2323,8 +2324,8 @@ _bt_keep_natts(Relation rel, IndexTuple lastleft, IndexTuple firstright, BTScanI
    */
   if (!itup_key->heapkeyspace)
   {
-
-
+    Assert(nkeyatts != IndexRelationGetNumberOfAttributes(rel));
+    return nkeyatts;
   }
 
   scankey = itup_key->scankeys;
@@ -2339,7 +2340,7 @@ _bt_keep_natts(Relation rel, IndexTuple lastleft, IndexTuple firstright, BTScanI
 
     if (isNull1 != isNull2)
     {
-
+      break;
     }
 
     if (!isNull1 && DatumGetInt32(FunctionCall2Coll(&scankey->sk_func, scankey->sk_collation, datum1, datum2)) != 0)
@@ -2394,7 +2395,7 @@ _bt_keep_natts_fast(Relation rel, IndexTuple lastleft, IndexTuple firstright)
 
     if (isNull1 != isNull2)
     {
-
+      break;
     }
 
     if (!isNull1 && !datumIsEqual(datum1, datum2, att->attbyval, att->attlen))
@@ -2425,148 +2426,148 @@ _bt_keep_natts_fast(Relation rel, IndexTuple lastleft, IndexTuple firstright)
 bool
 _bt_check_natts(Relation rel, bool heapkeyspace, Page page, OffsetNumber offnum)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  int16 natts = IndexRelationGetNumberOfAttributes(rel);
+  int16 nkeyatts = IndexRelationGetNumberOfKeyAttributes(rel);
+  BTPageOpaque opaque = (BTPageOpaque)PageGetSpecialPointer(page);
+  IndexTuple itup;
+  int tupnatts;
+
+  /*
+   * We cannot reliably test a deleted or half-deleted page, since they have
+   * dummy high keys
+   */
+  if (P_IGNORE(opaque))
+  {
+    return true;
+  }
+
+  Assert(offnum >= FirstOffsetNumber && offnum <= PageGetMaxOffsetNumber(page));
+
+  /*
+   * Mask allocated for number of keys in index tuple must be able to fit
+   * maximum possible number of index attributes
+   */
+  StaticAssertStmt(BT_N_KEYS_OFFSET_MASK >= INDEX_MAX_KEYS, "BT_N_KEYS_OFFSET_MASK can't fit INDEX_MAX_KEYS");
+
+  itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, offnum));
+  tupnatts = BTreeTupleGetNAtts(itup, rel);
+
+  if (P_ISLEAF(opaque))
+  {
+    if (offnum >= P_FIRSTDATAKEY(opaque))
+    {
+      /*
+       * Non-pivot tuples currently never use alternative heap TID
+       * representation -- even those within heapkeyspace indexes
+       */
+      if ((itup->t_info & INDEX_ALT_TID_MASK) != 0)
+      {
+        return false;
+      }
+
+      /*
+       * Leaf tuples that are not the page high key (non-pivot tuples)
+       * should never be truncated.  (Note that tupnatts must have been
+       * inferred, rather than coming from an explicit on-disk
+       * representation.)
+       */
+      return tupnatts == natts;
+    }
+    else
+    {
+      /*
+       * Rightmost page doesn't contain a page high key, so tuple was
+       * checked above as ordinary leaf tuple
+       */
+      Assert(!P_RIGHTMOST(opaque));
+
+      /*
+       * !heapkeyspace high key tuple contains only key attributes. Note
+       * that tupnatts will only have been explicitly represented in
+       * !heapkeyspace indexes that happen to have non-key attributes.
+       */
+      if (!heapkeyspace)
+      {
+        return tupnatts == nkeyatts;
+      }
+
+      /* Use generic heapkeyspace pivot tuple handling */
+    }
+  }
+  else /* !P_ISLEAF(opaque) */
+  {
+    if (offnum == P_FIRSTDATAKEY(opaque))
+    {
+      /*
+       * The first tuple on any internal page (possibly the first after
+       * its high key) is its negative infinity tuple.  Negative
+       * infinity tuples are always truncated to zero attributes.  They
+       * are a particular kind of pivot tuple.
+       */
+      if (heapkeyspace)
+      {
+        return tupnatts == 0;
+      }
+
+      /*
+       * The number of attributes won't be explicitly represented if the
+       * negative infinity tuple was generated during a page split that
+       * occurred with a version of Postgres before v11.  There must be
+       * a problem when there is an explicit representation that is
+       * non-zero, or when there is no explicit representation and the
+       * tuple is evidently not a pre-pg_upgrade tuple.
+       *
+       * Prior to v11, downlinks always had P_HIKEY as their offset. Use
+       * that to decide if the tuple is a pre-v11 tuple.
+       */
+      return tupnatts == 0 || ((itup->t_info & INDEX_ALT_TID_MASK) == 0 && ItemPointerGetOffsetNumber(&(itup->t_tid)) == P_HIKEY);
+    }
+    else
+    {
+      /*
+       * !heapkeyspace downlink tuple with separator key contains only
+       * key attributes.  Note that tupnatts will only have been
+       * explicitly represented in !heapkeyspace indexes that happen to
+       * have non-key attributes.
+       */
+      if (!heapkeyspace)
+      {
+        return tupnatts == nkeyatts;
+      }
+
+      /* Use generic heapkeyspace pivot tuple handling */
+    }
+  }
+
+  /* Handle heapkeyspace pivot tuples (excluding minus infinity items) */
+  Assert(heapkeyspace);
+
+  /*
+   * Explicit representation of the number of attributes is mandatory with
+   * heapkeyspace index pivot tuples, regardless of whether or not there are
+   * non-key attributes.
+   */
+  if ((itup->t_info & INDEX_ALT_TID_MASK) == 0)
+  {
+    return false;
+  }
+
+  /*
+   * Heap TID is a tiebreaker key attribute, so it cannot be untruncated
+   * when any other key attribute is truncated
+   */
+  if (BTreeTupleGetHeapTID(itup) != NULL && tupnatts != nkeyatts)
+  {
+    return false;
+  }
+
+  /*
+   * Pivot tuple must have at least one untruncated key attribute (minus
+   * infinity pivot tuples are the only exception).  Pivot tuples can never
+   * represent that there is a value present for a key attribute that
+   * exceeds pg_index.indnkeyatts for the index.
+   */
+  return tupnatts > 0 && tupnatts <= nkeyatts;
 }
 
 /*
@@ -2592,7 +2593,7 @@ _bt_check_third_page(Relation rel, Relation heap, bool needheaptidspace, Page pa
   /* Double check item size against limit */
   if (itemsz <= BTMaxItemSize(page))
   {
-
+    return;
   }
 
   /*
@@ -2609,11 +2610,15 @@ _bt_check_third_page(Relation rel, Relation heap, bool needheaptidspace, Page pa
    * Internal page insertions cannot fail here, because that would mean that
    * an earlier leaf level insertion that should have failed didn't
    */
+  opaque = (BTPageOpaque)PageGetSpecialPointer(page);
+  if (!P_ISLEAF(opaque))
+  {
+    elog(ERROR, "cannot insert oversized tuple of size %zu on internal page of index \"%s\"", itemsz, RelationGetRelationName(rel));
+  }
 
-
-
-
-
-
-
+  ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds btree version %u maximum %zu for index \"%s\"", itemsz, needheaptidspace ? BTREE_VERSION : BTREE_NOVAC_VERSION, needheaptidspace ? BTMaxItemSize(page) : BTMaxItemSizeNoHeapTid(page), RelationGetRelationName(rel)), errdetail("Index row references tuple (%u,%u) in relation \"%s\".", ItemPointerGetBlockNumber(&newtup->t_tid), ItemPointerGetOffsetNumber(&newtup->t_tid), RelationGetRelationName(heap)),
+                     errhint("Values larger than 1/3 of a buffer page cannot be indexed.\n"
+                             "Consider a function index of an MD5 hash of the value, "
+                             "or use full text indexing."),
+                     errtableconstraint(heap, RelationGetRelationName(rel))));
 }

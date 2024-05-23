@@ -163,10 +163,10 @@ assign_param_for_placeholdervar(PlannerInfo *root, PlaceHolderVar *phv)
       PlaceHolderVar *pphv = (PlaceHolderVar *)pitem->item;
 
       /* We assume comparing the PHIDs is sufficient */
-
-
-
-
+      if (pphv->phid == phv->phid)
+      {
+        return pitem->paramId;
+      }
     }
   }
 
@@ -438,7 +438,7 @@ process_subquery_nestloop_params(PlannerInfo *root, List *subplan_params)
       /* If not from a nestloop outer rel, complain */
       if (!bms_is_member(var->varno, root->curOuterRels))
       {
-
+        elog(ERROR, "non-LATERAL parameter required by subquery");
       }
 
       /* Is this param already listed in root->curOuterParams? */
@@ -447,9 +447,9 @@ process_subquery_nestloop_params(PlannerInfo *root, List *subplan_params)
         nlp = (NestLoopParam *)lfirst(lc);
         if (nlp->paramno == pitem->paramId)
         {
-
+          Assert(equal(var, nlp->paramval));
           /* Present, so nothing to do */
-
+          break;
         }
       }
       if (lc == NULL)
@@ -470,7 +470,7 @@ process_subquery_nestloop_params(PlannerInfo *root, List *subplan_params)
       /* If not from a nestloop outer rel, complain */
       if (!bms_is_subset(find_placeholder_info(root, phv, false)->ph_eval_at, root->curOuterRels))
       {
-
+        elog(ERROR, "non-LATERAL parameter required by subquery");
       }
 
       /* Is this param already listed in root->curOuterParams? */
@@ -479,9 +479,9 @@ process_subquery_nestloop_params(PlannerInfo *root, List *subplan_params)
         nlp = (NestLoopParam *)lfirst(lc);
         if (nlp->paramno == pitem->paramId)
         {
-
+          Assert(equal(phv, nlp->paramval));
           /* Present, so nothing to do */
-
+          break;
         }
       }
       if (lc == NULL)
@@ -495,7 +495,7 @@ process_subquery_nestloop_params(PlannerInfo *root, List *subplan_params)
     }
     else
     {
-
+      elog(ERROR, "unexpected type of subquery parameter");
     }
   }
 }

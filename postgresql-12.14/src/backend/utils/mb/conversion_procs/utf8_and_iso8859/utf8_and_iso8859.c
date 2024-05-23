@@ -57,7 +57,8 @@ PG_FUNCTION_INFO_V1(utf8_to_iso8859);
  * ----------
  */
 
-typedef struct {
+typedef struct
+{
   pg_enc encoding;
   const pg_mb_radix_tree *map1; /* to UTF8 map name */
   const pg_mb_radix_tree *map2; /* from UTF8 map name */
@@ -90,8 +91,10 @@ iso8859_to_utf8(PG_FUNCTION_ARGS)
 
   CHECK_ENCODING_CONVERSION_ARGS(-1, PG_UTF8);
 
-  for (i = 0; i < lengthof(maps); i++) {
-    if (encoding == maps[i].encoding) {
+  for (i = 0; i < lengthof(maps); i++)
+  {
+    if (encoding == maps[i].encoding)
+    {
       LocalToUtf(src, len, dest, maps[i].map1, NULL, 0, NULL, encoding);
       PG_RETURN_VOID();
     }
@@ -113,8 +116,10 @@ utf8_to_iso8859(PG_FUNCTION_ARGS)
 
   CHECK_ENCODING_CONVERSION_ARGS(PG_UTF8, -1);
 
-  for (i = 0; i < lengthof(maps); i++) {
-    if (encoding == maps[i].encoding) {
+  for (i = 0; i < lengthof(maps); i++)
+  {
+    if (encoding == maps[i].encoding)
+    {
       UtfToLocal(src, len, dest, maps[i].map2, NULL, 0, NULL, encoding);
       PG_RETURN_VOID();
     }

@@ -45,9 +45,9 @@ t_isdigit(const char *ptr)
     return isdigit(TOUCHAR(ptr));
   }
 
+  char2wchar(character, WC_BUF_LEN, ptr, clen, mylocale);
 
-
-
+  return iswdigit((wint_t)character[0]);
 }
 
 int
@@ -63,9 +63,9 @@ t_isspace(const char *ptr)
     return isspace(TOUCHAR(ptr));
   }
 
+  char2wchar(character, WC_BUF_LEN, ptr, clen, mylocale);
 
-
-
+  return iswspace((wint_t)character[0]);
 }
 
 int
@@ -81,9 +81,9 @@ t_isalpha(const char *ptr)
     return isalpha(TOUCHAR(ptr));
   }
 
+  char2wchar(character, WC_BUF_LEN, ptr, clen, mylocale);
 
-
-
+  return iswalpha((wint_t)character[0]);
 }
 
 int
@@ -99,9 +99,9 @@ t_isprint(const char *ptr)
     return isprint(TOUCHAR(ptr));
   }
 
+  char2wchar(character, WC_BUF_LEN, ptr, clen, mylocale);
 
-
-
+  return iswprint((wint_t)character[0]);
 }
 
 /*
@@ -116,8 +116,9 @@ t_isprint(const char *ptr)
  *		if (!tsearch_readline_begin(&trst, filename))
  *			ereport(ERROR,
  *					(errcode(ERRCODE_CONFIG_FILE_ERROR),
- *					 errmsg("could not open stop-word file
- *\"%s\": %m", filename))); while ((line = tsearch_readline(&trst)) != NULL)
+ *					 errmsg("could not open stop-word file \"%s\": %m",
+ *							filename)));
+ *		while ((line = tsearch_readline(&trst)) != NULL)
  *			process line;
  *		tsearch_readline_end(&trst);
  *
@@ -131,7 +132,7 @@ tsearch_readline_begin(tsearch_readline_state *stp, const char *filename)
 {
   if ((stp->fp = AllocateFile(filename, "r")) == NULL)
   {
-
+    return false;
   }
   stp->filename = filename;
   stp->lineno = 0;
@@ -208,23 +209,23 @@ tsearch_readline_end(tsearch_readline_state *stp)
 static void
 tsearch_readline_callback(void *arg)
 {
+  tsearch_readline_state *stp = (tsearch_readline_state *)arg;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We can't include the text of the config line for errors that occur
+   * during t_readline() itself.  This is only partly a consequence of our
+   * arms-length use of that routine: the major cause of such errors is
+   * encoding violations, and we daren't try to print error messages
+   * containing badly-encoded data.
+   */
+  if (stp->curline)
+  {
+    errcontext("line %d of configuration file \"%s\": \"%s\"", stp->lineno, stp->filename, stp->curline);
+  }
+  else
+  {
+    errcontext("line %d of configuration file \"%s\"", stp->lineno, stp->filename);
+  }
 }
 
 /*
@@ -293,7 +294,7 @@ lowerstr_with_len(const char *str, int len)
 
   if (len == 0)
   {
-
+    return pstrdup("");
   }
 
   /*
@@ -335,7 +336,7 @@ lowerstr_with_len(const char *str, int len)
 
     if (wlen < 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_CHARACTER_NOT_IN_REPERTOIRE), errmsg("conversion from wchar_t to server encoding failed: %m")));
     }
     Assert(wlen < len);
   }
@@ -344,13 +345,13 @@ lowerstr_with_len(const char *str, int len)
     const char *ptr = str;
     char *outptr;
 
-
-
-
-
-
-
-
+    outptr = out = (char *)palloc(sizeof(char) * (len + 1));
+    while ((ptr - str) < len && *ptr)
+    {
+      *outptr++ = tolower(TOUCHAR(ptr));
+      ptr++;
+    }
+    *outptr = '\0';
   }
 
   return out;

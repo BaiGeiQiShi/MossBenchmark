@@ -38,7 +38,7 @@ ginCombineData(RBTNode *existing, const RBTNode *newdata, void *arg)
   {
     if (eo->maxcount > INT_MAX)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("posting list is too long"), errhint("Reduce maintenance_work_mem.")));
     }
 
     accum->allocatedMemory -= GetMemoryChunkSpace(eo->list);
@@ -57,7 +57,7 @@ ginCombineData(RBTNode *existing, const RBTNode *newdata, void *arg)
 
     if (res > 0)
     {
-
+      eo->shouldSort = true;
     }
   }
 
@@ -205,7 +205,7 @@ ginInsertBAEntries(BuildAccumulator *accum, ItemPointer heapptr, OffsetNumber at
 
   if (nentries <= 0)
   {
-
+    return;
   }
 
   Assert(ItemPointerIsValid(heapptr) && attnum >= FirstOffsetNumber);
@@ -237,11 +237,11 @@ ginInsertBAEntries(BuildAccumulator *accum, ItemPointer heapptr, OffsetNumber at
 static int
 qsortCompareItemPointers(const void *a, const void *b)
 {
+  int res = ginCompareItemPointers((ItemPointer)a, (ItemPointer)b);
 
-
-
-
-
+  /* Assert that there are no equal item pointers being sorted */
+  Assert(res != 0);
+  return res;
 }
 
 /* Prepare to read out the rbtree contents using ginGetBAEntry */
@@ -279,7 +279,7 @@ ginGetBAEntry(BuildAccumulator *accum, OffsetNumber *attnum, Datum *key, GinNull
 
   if (entry->shouldSort && entry->count > 1)
   {
-
+    qsort(list, entry->count, sizeof(ItemPointerData), qsortCompareItemPointers);
   }
 
   return list;

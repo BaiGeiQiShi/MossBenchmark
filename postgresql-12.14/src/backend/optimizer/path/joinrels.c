@@ -95,12 +95,12 @@ join_search_one_level(PlannerInfo *root, int level)
        */
       ListCell *other_rels;
 
-      if (level == 2)
-      { /* consider remaining initial rels */
+      if (level == 2) /* consider remaining initial rels */
+      {
         other_rels = lnext(r);
       }
-      else
-      { /* consider all initial rels */
+      else /* consider all initial rels */
+      {
         other_rels = list_head(joinrels[1]);
       }
 
@@ -242,7 +242,7 @@ join_search_one_level(PlannerInfo *root, int level)
      */
     if (joinrels[level] == NIL && root->join_info_list == NIL && !root->hasLateralRTEs)
     {
-
+      elog(ERROR, "failed to build any %d-way joins", level);
     }
   }
 }
@@ -417,7 +417,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, Relids join
     {
       if (match_sjinfo)
       {
-
+        return false; /* invalid join path */
       }
       match_sjinfo = sjinfo;
       reversed = false;
@@ -426,7 +426,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, Relids join
     {
       if (match_sjinfo)
       {
-
+        return false; /* invalid join path */
       }
       match_sjinfo = sjinfo;
       reversed = true;
@@ -586,12 +586,12 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, Relids join
       /* has to be implemented as nestloop with rel2 on left */
       if (match_sjinfo && (!reversed || unique_ified || match_sjinfo->jointype == JOIN_FULL))
       {
-
+        return false; /* not implementable as nestloop */
       }
       /* check there is a direct reference from rel1 to rel2 */
       if (!bms_overlap(rel2->relids, rel1->direct_lateral_relids))
       {
-
+        return false; /* only indirect refs, so reject */
       }
       /* check we won't have a dangerous PHV */
       if (have_dangerous_phv(root, rel2->relids, rel1->lateral_relids))
@@ -746,10 +746,10 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 
 /*
  * populate_joinrel_with_paths
- *	  Add paths to the given joinrel for given pair of joining relations.
- *The SpecialJoinInfo provides details about the join and the restrictlist
- *	  contains the join clauses and the other clauses applicable for given
- *pair of the joining relations.
+ *	  Add paths to the given joinrel for given pair of joining relations. The
+ *	  SpecialJoinInfo provides details about the join and the restrictlist
+ *	  contains the join clauses and the other clauses applicable for given pair
+ *	  of the joining relations.
  */
 static void
 populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, RelOptInfo *joinrel, SpecialJoinInfo *sjinfo, List *restrictlist)
@@ -774,7 +774,7 @@ populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
    */
   switch (sjinfo->jointype)
   {
-  case JOIN_INNER:;
+  case JOIN_INNER:
     if (is_dummy_rel(rel1) || is_dummy_rel(rel2) || restriction_is_constant_false(restrictlist, joinrel, false))
     {
       mark_dummy_rel(joinrel);
@@ -783,7 +783,7 @@ populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
     add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_INNER, sjinfo, restrictlist);
     add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_INNER, sjinfo, restrictlist);
     break;
-  case JOIN_LEFT:;
+  case JOIN_LEFT:
     if (is_dummy_rel(rel1) || restriction_is_constant_false(restrictlist, joinrel, true))
     {
       mark_dummy_rel(joinrel);
@@ -796,11 +796,11 @@ populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
     add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_LEFT, sjinfo, restrictlist);
     add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_RIGHT, sjinfo, restrictlist);
     break;
-  case JOIN_FULL:;
+  case JOIN_FULL:
     if ((is_dummy_rel(rel1) && is_dummy_rel(rel2)) || restriction_is_constant_false(restrictlist, joinrel, true))
     {
-
-
+      mark_dummy_rel(joinrel);
+      break;
     }
     add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_FULL, sjinfo, restrictlist);
     add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_FULL, sjinfo, restrictlist);
@@ -814,10 +814,10 @@ populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
      */
     if (joinrel->pathlist == NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("FULL JOIN is only supported with merge-joinable or hash-joinable join conditions")));
     }
     break;
-  case JOIN_SEMI:;
+  case JOIN_SEMI:
 
     /*
      * We might have a normal semijoin, or a case where we don't have
@@ -847,29 +847,29 @@ populate_joinrel_with_paths(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
     {
       if (is_dummy_rel(rel1) || is_dummy_rel(rel2) || restriction_is_constant_false(restrictlist, joinrel, false))
       {
-
-
+        mark_dummy_rel(joinrel);
+        break;
       }
       add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_INNER, sjinfo, restrictlist);
       add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_OUTER, sjinfo, restrictlist);
     }
     break;
-  case JOIN_ANTI:;
+  case JOIN_ANTI:
     if (is_dummy_rel(rel1) || restriction_is_constant_false(restrictlist, joinrel, true))
     {
-
-
+      mark_dummy_rel(joinrel);
+      break;
     }
     if (restriction_is_constant_false(restrictlist, joinrel, false) && bms_is_subset(rel2->relids, sjinfo->syn_righthand))
     {
-
+      mark_dummy_rel(rel2);
     }
     add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_ANTI, sjinfo, restrictlist);
     break;
-  default:;;
+  default:
     /* other values not expected here */
-
-
+    elog(ERROR, "unrecognized join type: %d", (int)sjinfo->jointype);
+    break;
   }
 
   /* Apply partitionwise join technique, if possible. */
@@ -999,9 +999,9 @@ have_join_order_restriction(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel
 
 /*
  * has_join_restriction
- *		Detect whether the specified relation has join-order
- *restrictions, due to being inside an outer join or an IN (sub-SELECT), or
- *participating in any LATERAL references or multi-rel PHVs.
+ *		Detect whether the specified relation has join-order restrictions,
+ *		due to being inside an outer join or an IN (sub-SELECT),
+ *		or participating in any LATERAL references or multi-rel PHVs.
  *
  * Essentially, this tests whether have_join_order_restriction() could
  * succeed with this rel and some other one.  It's OK if we sometimes
@@ -1233,7 +1233,7 @@ mark_dummy_rel(RelOptInfo *rel)
   /* Already marked? */
   if (is_dummy_rel(rel))
   {
-
+    return;
   }
 
   /* No, so choose correct context to make the dummy path in */
@@ -1294,7 +1294,7 @@ restriction_is_constant_false(List *restrictlist, RelOptInfo *joinrel, bool only
       /* constant NULL is as good as constant FALSE for our purposes */
       if (con->constisnull)
       {
-
+        return true;
       }
       if (!DatumGetBool(con->constvalue))
       {
@@ -1399,30 +1399,30 @@ try_partitionwise_join(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, Re
      */
     switch (parent_sjinfo->jointype)
     {
-    case JOIN_INNER:;
-    case JOIN_SEMI:;
+    case JOIN_INNER:
+    case JOIN_SEMI:
       if (rel1_empty || rel2_empty)
       {
         continue; /* ignore this join segment */
       }
       break;
-    case JOIN_LEFT:;
-    case JOIN_ANTI:;
+    case JOIN_LEFT:
+    case JOIN_ANTI:
       if (rel1_empty)
       {
         continue; /* ignore this join segment */
       }
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       if (rel1_empty && rel2_empty)
       {
-
+        continue; /* ignore this join segment */
       }
       break;
-    default:;;
+    default:
       /* other values not expected here */
-
-
+      elog(ERROR, "unrecognized join type: %d", (int)parent_sjinfo->jointype);
+      break;
     }
 
     /*
@@ -1448,17 +1448,17 @@ try_partitionwise_join(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2, Re
      */
     if (rel1_is_simple && !child_rel1->consider_partitionwise_join)
     {
-
-
-
-
+      Assert(child_rel1->reloptkind == RELOPT_OTHER_MEMBER_REL);
+      Assert(IS_DUMMY_REL(child_rel1));
+      joinrel->nparts = 0;
+      return;
     }
     if (rel2_is_simple && !child_rel2->consider_partitionwise_join)
     {
-
-
-
-
+      Assert(child_rel2->reloptkind == RELOPT_OTHER_MEMBER_REL);
+      Assert(IS_DUMMY_REL(child_rel2));
+      joinrel->nparts = 0;
+      return;
     }
 
     /* We should never try to join two overlapping sets of rels. */
@@ -1593,7 +1593,7 @@ have_partkey_equi_join(RelOptInfo *joinrel, RelOptInfo *rel1, RelOptInfo *rel2, 
     }
     else
     {
-
+      continue;
     }
 
     /*
@@ -1608,7 +1608,7 @@ have_partkey_equi_join(RelOptInfo *joinrel, RelOptInfo *rel1, RelOptInfo *rel2, 
     ipk2 = match_expr_to_partition_keys(expr2, rel2, strict_op);
     if (ipk2 < 0)
     {
-
+      continue;
     }
 
     /*
@@ -1628,12 +1628,12 @@ have_partkey_equi_join(RelOptInfo *joinrel, RelOptInfo *rel1, RelOptInfo *rel2, 
     {
       if (!op_in_opfamily(rinfo->hashjoinoperator, part_scheme->partopfamily[ipk1]))
       {
-
+        continue;
       }
     }
     else if (!list_member_oid(rinfo->mergeopfamilies, part_scheme->partopfamily[ipk1]))
     {
-
+      continue;
     }
 
     /* Mark the partition key as having an equi-join clause. */
@@ -1685,7 +1685,7 @@ match_expr_to_partition_keys(Expr *expr, RelOptInfo *rel, bool strict_op)
 
     if (!strict_op)
     {
-
+      continue;
     }
 
     /*

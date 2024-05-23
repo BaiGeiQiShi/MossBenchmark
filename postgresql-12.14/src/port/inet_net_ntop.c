@@ -83,16 +83,16 @@ inet_net_ntop(int af, const void *src, int bits, char *dst, size_t size)
    */
   switch (af)
   {
-  case PGSQL_AF_INET:;
+  case PGSQL_AF_INET:
     return (inet_net_ntop_ipv4(src, bits, dst, size));
-  case PGSQL_AF_INET6:;
+  case PGSQL_AF_INET6:
 #if defined(AF_INET6) && AF_INET6 != PGSQL_AF_INET6
-  case AF_INET6:;
+  case AF_INET6:
 #endif
     return (inet_net_ntop_ipv6(src, bits, dst, size));
-  default:;;
-
-
+  default:
+    errno = EAFNOSUPPORT;
+    return (NULL);
   }
 }
 
@@ -119,8 +119,8 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
 
   if (bits < 0 || bits > 32)
   {
-
-
+    errno = EINVAL;
+    return (NULL);
   }
 
   /* Always format all four octets, regardless of mask length. */
@@ -128,7 +128,7 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
   {
     if (size <= sizeof ".255")
     {
-
+      goto emsgsize;
     }
     t = dst;
     if (dst != odst)
@@ -144,16 +144,16 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
   {
     if (size <= sizeof "/32")
     {
-
+      goto emsgsize;
     }
     dst += SPRINTF((dst, "/%u", bits));
   }
 
   return (odst);
 
-emsgsize:;
-
-
+emsgsize:
+  errno = EMSGSIZE;
+  return (NULL);
 }
 
 static int
@@ -167,7 +167,7 @@ decoct(const u_char *src, int bytes, char *dst, size_t size)
   {
     if (size <= sizeof "255.")
     {
-
+      return (0);
     }
     t = dst;
     dst += SPRINTF((dst, "%u", *src++));
@@ -186,7 +186,8 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
 {
   /*
    * Note that int32_t and int16_t need only be "at least" large enough to
-   * contain a value of the specified size.  On some systems, like Crays,* there is no such thing as an integer variable with 16 bits. Keep this
+   * contain a value of the specified size.  On some systems, like Crays,
+   * there is no such thing as an integer variable with 16 bits. Keep this
    * in mind if you think this function should have been coded to use
    * pointer overlays.  All the world's not a VAX.
    */
@@ -201,8 +202,8 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
 
   if ((bits < -1) || (bits > 128))
   {
-
-
+    errno = EINVAL;
+    return (NULL);
   }
 
   /*
@@ -283,8 +284,8 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
       n = decoct(src + 12, 4, tp, sizeof tmp - (tp - tmp));
       if (n == 0)
       {
-
-
+        errno = EMSGSIZE;
+        return (NULL);
       }
       tp += strlen(tp);
       break;
@@ -309,8 +310,8 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
    */
   if ((size_t)(tp - tmp) > size)
   {
-
-
+    errno = EMSGSIZE;
+    return (NULL);
   }
   strcpy(dst, tmp);
   return (dst);

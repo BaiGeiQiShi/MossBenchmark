@@ -24,12 +24,13 @@
  * Generalized function especially intended for reading in usernames and
  * passwords interactively.  Reads from /dev/tty or stdin/stderr.
  *
- * prompt:		The prompt to print, or NULL if none (automatically
- * localized) destination: buffer in which to store result destlen:
- * allocated length of destination echo:		Set to false if you want
- * to hide what is entered (for passwords)
+ * prompt:		The prompt to print, or NULL if none (automatically localized)
+ * destination: buffer in which to store result
+ * destlen:		allocated length of destination
+ * echo:		Set to false if you want to hide what is entered (for passwords)
  *
- * The input (without trailing newline) is returned in the destination buffer,* with a '\0' appended.
+ * The input (without trailing newline) is returned in the destination buffer,
+ * with a '\0' appended.
  */
 void
 simple_prompt(const char *prompt, char *destination, size_t destlen, bool echo)
@@ -87,18 +88,22 @@ simple_prompt(const char *prompt, char *destination, size_t destlen, bool echo)
        */
       || (getenv("OSTYPE") && strcmp(getenv("OSTYPE"), "msys") == 0)
 #endif
-  ) {
-    if (termin) {
+  )
+  {
+    if (termin)
+    {
       fclose(termin);
     }
-    if (termout) {
+    if (termout)
+    {
       fclose(termout);
     }
     termin = stdin;
     termout = stderr;
   }
 
-  if (!echo) {
+  if (!echo)
+  {
 #if defined(HAVE_TERMIOS_H)
     /* disable echo via tcgetattr/tcsetattr */
     tcgetattr(fileno(termin), &t);
@@ -117,35 +122,42 @@ simple_prompt(const char *prompt, char *destination, size_t destlen, bool echo)
 #endif
   }
 
-  if (prompt) {
+  if (prompt)
+  {
     fputs(_(prompt), termout);
     fflush(termout);
   }
 
-  if (fgets(destination, destlen, termin) == NULL) {
+  if (fgets(destination, destlen, termin) == NULL)
+  {
     destination[0] = '\0';
   }
 
   length = strlen(destination);
-  if (length > 0 && destination[length - 1] != '\n') {
+  if (length > 0 && destination[length - 1] != '\n')
+  {
     /* eat rest of the line */
     char buf[128];
     int buflen;
 
-    do {
-      if (fgets(buf, sizeof(buf), termin) == NULL) {
+    do
+    {
+      if (fgets(buf, sizeof(buf), termin) == NULL)
+      {
         break;
       }
       buflen = strlen(buf);
     } while (buflen > 0 && buf[buflen - 1] != '\n');
   }
 
-  if (length > 0 && destination[length - 1] == '\n') {
+  if (length > 0 && destination[length - 1] == '\n')
+  {
     /* remove trailing newline */
     destination[length - 1] = '\0';
   }
 
-  if (!echo) {
+  if (!echo)
+  {
     /* restore previous echo behavior, then echo \n */
 #if defined(HAVE_TERMIOS_H)
     tcsetattr(fileno(termin), TCSAFLUSH, &t_orig);
@@ -158,7 +170,8 @@ simple_prompt(const char *prompt, char *destination, size_t destlen, bool echo)
 #endif
   }
 
-  if (termin != stdin) {
+  if (termin != stdin)
+  {
     fclose(termin);
     fclose(termout);
   }

@@ -67,7 +67,7 @@ check_enable_rls(Oid relid, Oid checkAsUser, bool noError)
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    return RLS_NONE;
   }
   classform = (Form_pg_class)GETSTRUCT(tuple);
 

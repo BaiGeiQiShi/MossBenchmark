@@ -56,7 +56,8 @@
 #define MAX_LINE 8192
 
 /* callback data for check_network_callback */
-typedef struct check_network_data {
+typedef struct check_network_data
+{
   IPCompareMethod method; /* test method */
   SockAddr *raddr;        /* client's actual address */
   bool result;            /* set to true if match */
@@ -69,7 +70,8 @@ typedef struct check_network_data {
  * A single string token lexed from a config file, together with whether
  * the token had been quoted.
  */
-typedef struct HbaToken {
+typedef struct HbaToken
+{
   char *string;
   bool quoted;
 } HbaToken;
@@ -77,11 +79,13 @@ typedef struct HbaToken {
 /*
  * TokenizedLine represents one line lexed from a config file.
  * Each item in the "fields" list is a sub-list of HbaTokens.
- * We don't emit a TokenizedLine for empty or all-comment lines, * so "fields" is never NIL (nor are any of its sub-lists).
+ * We don't emit a TokenizedLine for empty or all-comment lines,
+ * so "fields" is never NIL (nor are any of its sub-lists).
  * Exception: if an error occurs during tokenization, we might
  * have fields == NIL, in which case err_msg != NULL.
  */
-typedef struct TokenizedLine {
+typedef struct TokenizedLine
+{
   List *fields;   /* List of lists of HbaTokens */
   int line_num;   /* Line number */
   char *raw_line; /* Raw line text */
@@ -131,7 +135,8 @@ static void
 fill_hba_view(Tuplestorestate *tuple_store, TupleDesc tupdesc);
 
 /*
- * isblank() exists in the ISO C99 spec, but it's not very portable yet, * so provide our own version.
+ * isblank() exists in the ISO C99 spec, but it's not very portable yet,
+ * so provide our own version.
  */
 bool
 pg_isblank(const char c)
@@ -190,15 +195,18 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote, bool *term
    * Build a token in buf of next characters up to EOL, unquoted comma, or
    * unquoted whitespace.
    */
-  while (c != '\0' && (!pg_isblank(c) || in_quote)) {
+  while (c != '\0' && (!pg_isblank(c) || in_quote))
+  {
     /* skip comments to EOL */
-    if (c == '#' && !in_quote) {
+    if (c == '#' && !in_quote)
+    {
       while ((c = (*(*lineptr)++)) != '\0')
         ;
       break;
     }
 
-    if (buf >= end_buf) {
+    if (buf >= end_buf)
+    {
       *buf = '\0';
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("authentication file token too long, skipping: \"%s\"", start_buf)));
       *err_msg = "authentication file token too long";
@@ -211,26 +219,33 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote, bool *term
     }
 
     /* we do not pass back a terminating comma in the token */
-    if (c == ',' && !in_quote) {
+    if (c == ',' && !in_quote)
+    {
       *terminating_comma = true;
       break;
     }
 
-    if (c != '"' || was_quote) {
+    if (c != '"' || was_quote)
+    {
       *buf++ = c;
     }
 
     /* Literal double-quote is two double-quotes */
-    if (in_quote && c == '"') {
+    if (in_quote && c == '"')
+    {
       was_quote = !was_quote;
-    } else {
+    }
+    else
+    {
       was_quote = false;
     }
 
-    if (c == '"') {
+    if (c == '"')
+    {
       in_quote = !in_quote;
       saw_quote = true;
-      if (buf == start_buf) {
+      if (buf == start_buf)
+      {
         *initial_quote = true;
       }
     }
@@ -239,7 +254,8 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote, bool *term
   }
 
   /*
-   * Un-eat the char right after the token (critical in case it is '\0',   * else next call will read past end of string).
+   * Un-eat the char right after the token (critical in case it is '\0',
+   * else next call will read past end of string).
    */
   (*lineptr)--;
 
@@ -289,7 +305,8 @@ copy_hba_token(HbaToken *in)
  * may be non-NIL anyway, so *err_msg must be tested to determine whether
  * there was an error.
  *
- * The result is a List of HbaToken structs, one for each token in the field, * or NIL if we reached EOL.
+ * The result is a List of HbaToken structs, one for each token in the field,
+ * or NIL if we reached EOL.
  */
 static List *
 next_field_expand(const char *filename, char **lineptr, int elevel, char **err_msg)
@@ -299,15 +316,20 @@ next_field_expand(const char *filename, char **lineptr, int elevel, char **err_m
   bool initial_quote;
   List *tokens = NIL;
 
-  do {
-    if (!next_token(lineptr, buf, sizeof(buf), &initial_quote, &trailing_comma, elevel, err_msg)) {
+  do
+  {
+    if (!next_token(lineptr, buf, sizeof(buf), &initial_quote, &trailing_comma, elevel, err_msg))
+    {
       break;
     }
 
     /* Is this referencing a file? */
-    if (!initial_quote && buf[0] == '@' && buf[1] != '\0') {
+    if (!initial_quote && buf[0] == '@' && buf[1] != '\0')
+    {
       tokens = tokenize_inc_file(tokens, filename, buf + 1, elevel, err_msg);
-    } else {
+    }
+    else
+    {
       tokens = lappend(tokens, make_hba_token(buf, initial_quote));
     }
   } while (trailing_comma && (*err_msg == NULL));
@@ -319,7 +341,8 @@ next_field_expand(const char *filename, char **lineptr, int elevel, char **err_m
  * tokenize_inc_file
  *		Expand a file included from another file into an hba "field"
  *
- * Opens and tokenises a file included from another HBA config file with @, * and returns all values found therein as a flat list of HbaTokens.  If a
+ * Opens and tokenises a file included from another HBA config file with @,
+ * and returns all values found therein as a flat list of HbaTokens.  If a
  * @-token is found, recursively expand it.  The newly read tokens are
  * appended to "tokens" (so that foo,bar,@baz does what you expect).
  * All new tokens are allocated in caller's memory context.
@@ -338,10 +361,13 @@ tokenize_inc_file(List *tokens, const char *outer_filename, const char *inc_file
   ListCell *inc_line;
   MemoryContext linecxt;
 
-  if (is_absolute_path(inc_filename)) {
+  if (is_absolute_path(inc_filename))
+  {
     /* absolute path is taken as-is */
     inc_fullname = pstrdup(inc_filename);
-  } else {
+  }
+  else
+  {
     /* relative path is relative to dir of calling file */
     inc_fullname = (char *)palloc(strlen(outer_filename) + 1 + strlen(inc_filename) + 1);
     strcpy(inc_fullname, outer_filename);
@@ -351,10 +377,11 @@ tokenize_inc_file(List *tokens, const char *outer_filename, const char *inc_file
   }
 
   inc_file = AllocateFile(inc_fullname, "r");
-  if (inc_file == NULL) {
+  if (inc_file == NULL)
+  {
     int save_errno = errno;
 
-    ereport(elevel, (errcode_for_file_access(), errmsg("could not open secondary authentication file \"@%s\" as \"%s\": %m",                                                    inc_filename, inc_fullname)));
+    ereport(elevel, (errcode_for_file_access(), errmsg("could not open secondary authentication file \"@%s\" as \"%s\": %m", inc_filename, inc_fullname)));
     *err_msg = psprintf("could not open secondary authentication file \"@%s\" as \"%s\": %s", inc_filename, inc_fullname, strerror(save_errno));
     pfree(inc_fullname);
     return tokens;
@@ -367,21 +394,25 @@ tokenize_inc_file(List *tokens, const char *outer_filename, const char *inc_file
   pfree(inc_fullname);
 
   /* Copy all tokens found in the file and append to the tokens list */
-  foreach (inc_line, inc_lines) {
+  foreach (inc_line, inc_lines)
+  {
     TokenizedLine *tok_line = (TokenizedLine *)lfirst(inc_line);
     ListCell *inc_field;
 
     /* If any line has an error, propagate that up to caller */
-    if (tok_line->err_msg) {
+    if (tok_line->err_msg)
+    {
       *err_msg = pstrdup(tok_line->err_msg);
       break;
     }
 
-    foreach (inc_field, tok_line->fields) {
+    foreach (inc_field, tok_line->fields)
+    {
       List *inc_tokens = lfirst(inc_field);
       ListCell *inc_token;
 
-      foreach (inc_token, inc_tokens) {
+      foreach (inc_token, inc_tokens)
+      {
         HbaToken *token = lfirst(inc_token);
 
         tokens = lappend(tokens, copy_hba_token(token));
@@ -422,16 +453,19 @@ tokenize_file(const char *filename, FILE *file, List **tok_lines, int elevel)
 
   *tok_lines = NIL;
 
-  while (!feof(file) && !ferror(file)) {
+  while (!feof(file) && !ferror(file))
+  {
     char rawline[MAX_LINE];
     char *lineptr;
     List *current_line = NIL;
     char *err_msg = NULL;
 
-    if (!fgets(rawline, sizeof(rawline), file)) {
+    if (!fgets(rawline, sizeof(rawline), file))
+    {
       int save_errno = errno;
 
-      if (!ferror(file)) {
+      if (!ferror(file))
+      {
         break; /* normal EOF */
       }
       /* I/O error! */
@@ -439,7 +473,8 @@ tokenize_file(const char *filename, FILE *file, List **tok_lines, int elevel)
       err_msg = psprintf("could not read file \"%s\": %s", filename, strerror(save_errno));
       rawline[0] = '\0';
     }
-    if (strlen(rawline) == MAX_LINE - 1) {
+    if (strlen(rawline) == MAX_LINE - 1)
+    {
       /* Line too long! */
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("authentication file line too long"), errcontext("line %d of configuration file \"%s\"", line_number, filename)));
       err_msg = "authentication file line too long";
@@ -447,24 +482,28 @@ tokenize_file(const char *filename, FILE *file, List **tok_lines, int elevel)
 
     /* Strip trailing linebreak from rawline */
     lineptr = rawline + strlen(rawline) - 1;
-    while (lineptr >= rawline && (*lineptr == '\n' || *lineptr == '\r')) {
+    while (lineptr >= rawline && (*lineptr == '\n' || *lineptr == '\r'))
+    {
       *lineptr-- = '\0';
     }
 
     /* Parse fields */
     lineptr = rawline;
-    while (*lineptr && err_msg == NULL) {
+    while (*lineptr && err_msg == NULL)
+    {
       List *current_field;
 
       current_field = next_field_expand(filename, &lineptr, elevel, &err_msg);
       /* add field to line, unless we are at EOL or comment start */
-      if (current_field != NIL) {
+      if (current_field != NIL)
+      {
         current_line = lappend(current_line, current_field);
       }
     }
 
     /* Reached EOL; emit line to TokenizedLine list unless it's boring */
-    if (current_line != NIL || err_msg != NULL) {
+    if (current_line != NIL || err_msg != NULL)
+    {
       TokenizedLine *tok_line;
 
       tok_line = (TokenizedLine *)palloc(sizeof(TokenizedLine));
@@ -494,13 +533,15 @@ is_member(Oid userid, const char *role)
 {
   Oid roleid;
 
-  if (!OidIsValid(userid)) {
+  if (!OidIsValid(userid))
+  {
     return false; /* if user not exist, say "no" */
   }
 
   roleid = get_role_oid(role, true);
 
-  if (!OidIsValid(roleid)) {
+  if (!OidIsValid(roleid))
+  {
     return false; /* if target role not exist, say "no" */
   }
 
@@ -521,13 +562,18 @@ check_role(const char *role, Oid roleid, List *tokens)
   ListCell *cell;
   HbaToken *tok;
 
-  foreach (cell, tokens) {
+  foreach (cell, tokens)
+  {
     tok = lfirst(cell);
-    if (!tok->quoted && tok->string[0] == '+') {
-      if (is_member(roleid, tok->string + 1)) {
+    if (!tok->quoted && tok->string[0] == '+')
+    {
+      if (is_member(roleid, tok->string + 1))
+      {
         return true;
       }
-    } else if (token_matches(tok, role) || token_is_keyword(tok, "all")) {
+    }
+    else if (token_matches(tok, role) || token_is_keyword(tok, "all"))
+    {
       return true;
     }
   }
@@ -543,29 +589,44 @@ check_db(const char *dbname, const char *role, Oid roleid, List *tokens)
   ListCell *cell;
   HbaToken *tok;
 
-  foreach (cell, tokens) {
+  foreach (cell, tokens)
+  {
     tok = lfirst(cell);
-    if (am_walsender && !am_db_walsender) {
+    if (am_walsender && !am_db_walsender)
+    {
       /*
        * physical replication walsender connections can only match
        * replication keyword
        */
-      if (token_is_keyword(tok, "replication")) {
+      if (token_is_keyword(tok, "replication"))
+      {
         return true;
       }
-    } else if (token_is_keyword(tok, "all")) {
+    }
+    else if (token_is_keyword(tok, "all"))
+    {
       return true;
-    } else if (token_is_keyword(tok, "sameuser")) {
-      if (strcmp(dbname, role) == 0) {
+    }
+    else if (token_is_keyword(tok, "sameuser"))
+    {
+      if (strcmp(dbname, role) == 0)
+      {
         return true;
       }
-    } else if (token_is_keyword(tok, "samegroup") || token_is_keyword(tok, "samerole")) {
-      if (is_member(roleid, dbname)) {
+    }
+    else if (token_is_keyword(tok, "samegroup") || token_is_keyword(tok, "samerole"))
+    {
+      if (is_member(roleid, dbname))
+      {
         return true;
       }
-    } else if (token_is_keyword(tok, "replication")) {
+    }
+    else if (token_is_keyword(tok, "replication"))
+    {
       continue; /* never match this if not walsender */
-    } else if (token_matches(tok, dbname)) {
+    }
+    else if (token_matches(tok, dbname))
+    {
       return true;
     }
   }
@@ -585,8 +646,10 @@ ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 {
   int i;
 
-  for (i = 0; i < 16; i++) {
-    if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i]) {
+  for (i = 0; i < 16; i++)
+  {
+    if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i])
+    {
       return false;
     }
   }
@@ -606,12 +669,15 @@ hostname_match(const char *pattern, const char *actual_hostname)
     size_t plen = strlen(pattern);
     size_t hlen = strlen(actual_hostname);
 
-    if (hlen < plen) {
+    if (hlen < plen)
+    {
       return false;
     }
 
     return (pg_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
-  } else {
+  }
+  else
+  {
     return (pg_strcasecmp(pattern, actual_hostname) == 0);
   }
 }
@@ -627,16 +693,19 @@ check_hostname(hbaPort *port, const char *hostname)
   bool found;
 
   /* Quick out if remote host name already known bad */
-  if (port->remote_hostname_resolv < 0) {
+  if (port->remote_hostname_resolv < 0)
+  {
     return false;
   }
 
   /* Lookup remote host name if not already done */
-  if (!port->remote_hostname) {
+  if (!port->remote_hostname)
+  {
     char remote_hostname[NI_MAXHOST];
 
     ret = pg_getnameinfo_all(&port->raddr.addr, port->raddr.salen, remote_hostname, sizeof(remote_hostname), NULL, 0, NI_NAMEREQD);
-    if (ret != 0) {
+    if (ret != 0)
+    {
       /* remember failure; don't complain in the postmaster log yet */
       port->remote_hostname_resolv = -2;
       port->remote_hostname_errcode = ret;
@@ -647,18 +716,21 @@ check_hostname(hbaPort *port, const char *hostname)
   }
 
   /* Now see if remote host name matches this pg_hba line */
-  if (!hostname_match(hostname, port->remote_hostname)) {
+  if (!hostname_match(hostname, port->remote_hostname))
+  {
     return false;
   }
 
   /* If we already verified the forward lookup, we're done */
-  if (port->remote_hostname_resolv == +1) {
+  if (port->remote_hostname_resolv == +1)
+  {
     return true;
   }
 
   /* Lookup IP from host name and check against original IP */
   ret = getaddrinfo(port->remote_hostname, NULL, NULL, &gai_result);
-  if (ret != 0) {
+  if (ret != 0)
+  {
     /* remember failure; don't complain in the postmaster log yet */
     port->remote_hostname_resolv = -2;
     port->remote_hostname_errcode = ret;
@@ -666,17 +738,23 @@ check_hostname(hbaPort *port, const char *hostname)
   }
 
   found = false;
-  for (gai = gai_result; gai; gai = gai->ai_next) {
-    if (gai->ai_addr->sa_family == port->raddr.addr.ss_family) {
-      if (gai->ai_addr->sa_family == AF_INET) {
-        if (ipv4eq((struct sockaddr_in *)gai->ai_addr, (struct sockaddr_in *)&port->raddr.addr)) {
+  for (gai = gai_result; gai; gai = gai->ai_next)
+  {
+    if (gai->ai_addr->sa_family == port->raddr.addr.ss_family)
+    {
+      if (gai->ai_addr->sa_family == AF_INET)
+      {
+        if (ipv4eq((struct sockaddr_in *)gai->ai_addr, (struct sockaddr_in *)&port->raddr.addr))
+        {
           found = true;
           break;
         }
       }
 #ifdef HAVE_IPV6
-      else if (gai->ai_addr->sa_family == AF_INET6) {
-        if (ipv6eq((struct sockaddr_in6 *)gai->ai_addr, (struct sockaddr_in6 *)&port->raddr.addr)) {
+      else if (gai->ai_addr->sa_family == AF_INET6)
+      {
+        if (ipv6eq((struct sockaddr_in6 *)gai->ai_addr, (struct sockaddr_in6 *)&port->raddr.addr))
+        {
           found = true;
           break;
         }
@@ -685,11 +763,13 @@ check_hostname(hbaPort *port, const char *hostname)
     }
   }
 
-  if (gai_result) {
+  if (gai_result)
+  {
     freeaddrinfo(gai_result);
   }
 
-  if (!found) {
+  if (!found)
+  {
     elog(DEBUG2, "pg_hba.conf host name \"%s\" rejected because address resolution did not return a match with IP address of client", hostname);
   }
 
@@ -704,7 +784,8 @@ check_hostname(hbaPort *port, const char *hostname)
 static bool
 check_ip(SockAddr *raddr, struct sockaddr *addr, struct sockaddr *mask)
 {
-  if (raddr->addr.ss_family == addr->sa_family && pg_range_sockaddr(&raddr->addr, (struct sockaddr_storage *)addr, (struct sockaddr_storage *)mask)) {
+  if (raddr->addr.ss_family == addr->sa_family && pg_range_sockaddr(&raddr->addr, (struct sockaddr_storage *)addr, (struct sockaddr_storage *)mask))
+  {
     return true;
   }
   return false;
@@ -720,15 +801,19 @@ check_network_callback(struct sockaddr *addr, struct sockaddr *netmask, void *cb
   struct sockaddr_storage mask;
 
   /* Already found a match? */
-  if (cn->result) {
+  if (cn->result)
+  {
     return;
   }
 
-  if (cn->method == ipCmpSameHost) {
+  if (cn->method == ipCmpSameHost)
+  {
     /* Make an all-ones netmask of appropriate length for family */
     pg_sockaddr_cidr_mask(&mask, NULL, addr->sa_family);
     cn->result = check_ip(cn->raddr, addr, (struct sockaddr *)&mask);
-  } else {
+  }
+  else
+  {
     /* Use the netmask of the interface itself */
     cn->result = check_ip(cn->raddr, addr, netmask);
   }
@@ -747,7 +832,8 @@ check_same_host_or_net(SockAddr *raddr, IPCompareMethod method)
   cn.result = false;
 
   errno = 0;
-  if (pg_foreach_ifaddr(check_network_callback, &cn) < 0) {
+  if (pg_foreach_ifaddr(check_network_callback, &cn) < 0)
+  {
     elog(LOG, "error enumerating network interfaces: %m");
     return false;
   }
@@ -761,41 +847,36 @@ check_same_host_or_net(SockAddr *raddr, IPCompareMethod method)
  * These macros are not as general-purpose as they look, because they know
  * what the calling function's error-exit value is.
  *
- * INVALID_AUTH_OPTION = reports when an option is specified for a method where
- *it's not supported. REQUIRE_AUTH_OPTION = same as INVALID_AUTH_OPTION, except
- *it also checks if the method is actually the one specified. Used as a shortcut
- *when the option is only valid for one authentication method.
- * MANDATORY_AUTH_ARG  = check if a required option is set for an authentication
- *method, reporting error if it's not.
+ * INVALID_AUTH_OPTION = reports when an option is specified for a method where it's
+ *						 not supported.
+ * REQUIRE_AUTH_OPTION = same as INVALID_AUTH_OPTION, except it also checks if the
+ *						 method is actually the one specified. Used as a shortcut when
+ *						 the option is only valid for one authentication method.
+ * MANDATORY_AUTH_ARG  = check if a required option is set for an authentication method,
+ *						 reporting error if it's not.
  */
 #define INVALID_AUTH_OPTION(optname, validmethods)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), /* translator: the second %s is a                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-                                                            list of auth methods */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-                        errmsg("authentication option \"%s\" is only valid for "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-                               "authentication methods %s",                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-                            optname, _(validmethods)),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-                        errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-    *err_msg = psprintf("authentication option \"%s\" is only valid for "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-                        "authentication methods %s",                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-        optname, validmethods);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), /* translator: the second %s is a list of auth methods */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+                        errmsg("authentication option \"%s\" is only valid for authentication methods %s", optname, _(validmethods)), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+    *err_msg = psprintf("authentication option \"%s\" is only valid for authentication methods %s", optname, validmethods);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
     return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define REQUIRE_AUTH_OPTION(methodval, optname, validmethods)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (hbaline->auth_method != methodval)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
       INVALID_AUTH_OPTION(optname, validmethods);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define MANDATORY_AUTH_ARG(argvar, argname, authname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if (argvar == NULL) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-                          errmsg("authentication method \"%s\" requires "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-                                 "argument \"%s\" to be set",                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-                              authname, argname),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-                          errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if (argvar == NULL)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("authentication method \"%s\" requires argument \"%s\" to be set", authname, argname), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       *err_msg = psprintf("authentication method \"%s\" requires argument \"%s\" to be set", authname, argname);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       return NULL;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
@@ -815,16 +896,20 @@ check_same_host_or_net(SockAddr *raddr, IPCompareMethod method)
  * than one element.
  */
 #define IDENT_FIELD_ABSENT(field)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if (!field) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if (!field)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("missing entry in file \"%s\" at end of line %d", IdentFileName, line_num)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
       return NULL;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 
 #define IDENT_MULTI_VALUE(tokens)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if (tokens->length > 1) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if (tokens->length > 1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("multiple values in ident field"), errcontext("line %d of configuration file \"%s\"", line_num, IdentFileName)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       return NULL;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
@@ -867,13 +952,15 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
   Assert(tok_line->fields != NIL);
   field = list_head(tok_line->fields);
   tokens = lfirst(field);
-  if (tokens->length > 1) {
+  if (tokens->length > 1)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("multiple values specified for connection type"), errhint("Specify exactly one connection type per line."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "multiple values specified for connection type";
     return NULL;
   }
   token = linitial(tokens);
-  if (strcmp(token->string, "local") == 0) {
+  if (strcmp(token->string, "local") == 0)
+  {
 #ifdef HAVE_UNIX_SOCKETS
     parsedline->conntype = ctLocal;
 #else
@@ -881,38 +968,49 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
     *err_msg = "local connections are not supported by this build";
     return NULL;
 #endif
-  } else if (strcmp(token->string, "host") == 0 || strcmp(token->string, "hostssl") == 0 || strcmp(token->string, "hostnossl") == 0 || strcmp(token->string, "hostgssenc") == 0 || strcmp(token->string, "hostnogssenc") == 0) {
+  }
+  else if (strcmp(token->string, "host") == 0 || strcmp(token->string, "hostssl") == 0 || strcmp(token->string, "hostnossl") == 0 || strcmp(token->string, "hostgssenc") == 0 || strcmp(token->string, "hostnogssenc") == 0)
+  {
 
     if (token->string[4] == 's') /* "hostssl" */
     {
       parsedline->conntype = ctHostSSL;
       /* Log a warning if SSL support is not active */
 #ifdef USE_SSL
-      if (!EnableSSL) {
+      if (!EnableSSL)
+      {
         ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("hostssl record cannot match because SSL is disabled"), errhint("Set ssl = on in postgresql.conf."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
         *err_msg = "hostssl record cannot match because SSL is disabled";
       }
 #else
-      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                          errmsg("hostssl record cannot match because SSL is not supported by this build"),                          errhint("Compile with --with-openssl to use SSL connections."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("hostssl record cannot match because SSL is not supported by this build"), errhint("Compile with --with-openssl to use SSL connections."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "hostssl record cannot match because SSL is not supported by this build";
 #endif
-    } else if (token->string[4] == 'g') /* "hostgssenc" */
+    }
+    else if (token->string[4] == 'g') /* "hostgssenc" */
     {
       parsedline->conntype = ctHostGSS;
 #ifndef ENABLE_GSS
-      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                          errmsg("hostgssenc record cannot match because GSSAPI is not supported by this build"),                          errhint("Compile with --with-gssapi to use GSSAPI connections."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("hostgssenc record cannot match because GSSAPI is not supported by this build"), errhint("Compile with --with-gssapi to use GSSAPI connections."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "hostgssenc record cannot match because GSSAPI is not supported by this build";
 #endif
-    } else if (token->string[4] == 'n' && token->string[6] == 's') {
+    }
+    else if (token->string[4] == 'n' && token->string[6] == 's')
+    {
       parsedline->conntype = ctHostNoSSL;
-    } else if (token->string[4] == 'n' && token->string[6] == 'g') {
+    }
+    else if (token->string[4] == 'n' && token->string[6] == 'g')
+    {
       parsedline->conntype = ctHostNoGSS;
-    } else {
+    }
+    else
+    {
       /* "host" */
       parsedline->conntype = ctHost;
     }
   } /* record type */
-  else {
+  else
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid connection type \"%s\"", token->string), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = psprintf("invalid connection type \"%s\"", token->string);
     return NULL;
@@ -920,55 +1018,69 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 
   /* Get the databases. */
   field = lnext(field);
-  if (!field) {
+  if (!field)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before database specification"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "end-of-line before database specification";
     return NULL;
   }
   parsedline->databases = NIL;
   tokens = lfirst(field);
-  foreach (tokencell, tokens) {
+  foreach (tokencell, tokens)
+  {
     parsedline->databases = lappend(parsedline->databases, copy_hba_token(lfirst(tokencell)));
   }
 
   /* Get the roles. */
   field = lnext(field);
-  if (!field) {
+  if (!field)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before role specification"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "end-of-line before role specification";
     return NULL;
   }
   parsedline->roles = NIL;
   tokens = lfirst(field);
-  foreach (tokencell, tokens) {
+  foreach (tokencell, tokens)
+  {
     parsedline->roles = lappend(parsedline->roles, copy_hba_token(lfirst(tokencell)));
   }
 
-  if (parsedline->conntype != ctLocal) {
+  if (parsedline->conntype != ctLocal)
+  {
     /* Read the IP address field. (with or without CIDR netmask) */
     field = lnext(field);
-    if (!field) {
+    if (!field)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before IP address specification"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "end-of-line before IP address specification";
       return NULL;
     }
     tokens = lfirst(field);
-    if (tokens->length > 1) {
+    if (tokens->length > 1)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("multiple values specified for host address"), errhint("Specify one address range per line."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "multiple values specified for host address";
       return NULL;
     }
     token = linitial(tokens);
 
-    if (token_is_keyword(token, "all")) {
+    if (token_is_keyword(token, "all"))
+    {
       parsedline->ip_cmp_method = ipCmpAll;
-    } else if (token_is_keyword(token, "samehost")) {
+    }
+    else if (token_is_keyword(token, "samehost"))
+    {
       /* Any IP on this host is allowed to connect */
       parsedline->ip_cmp_method = ipCmpSameHost;
-    } else if (token_is_keyword(token, "samenet")) {
+    }
+    else if (token_is_keyword(token, "samenet"))
+    {
       /* Any IP on the host's subnets is allowed to connect */
       parsedline->ip_cmp_method = ipCmpSameNet;
-    } else {
+    }
+    else
+    {
       /* IP and netmask are specified */
       parsedline->ip_cmp_method = ipCmpMask;
 
@@ -977,7 +1089,8 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 
       /* Check if it has a CIDR suffix and if so isolate it */
       cidr_slash = strchr(str, '/');
-      if (cidr_slash) {
+      if (cidr_slash)
+      {
         *cidr_slash = '\0';
       }
 
@@ -992,15 +1105,21 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
       hints.ai_next = NULL;
 
       ret = pg_getaddrinfo_all(str, NULL, &hints, &gai_result);
-      if (ret == 0 && gai_result) {
+      if (ret == 0 && gai_result)
+      {
         memcpy(&parsedline->addr, gai_result->ai_addr, gai_result->ai_addrlen);
         parsedline->addrlen = gai_result->ai_addrlen;
-      } else if (ret == EAI_NONAME) {
+      }
+      else if (ret == EAI_NONAME)
+      {
         parsedline->hostname = str;
-      } else {
+      }
+      else
+      {
         ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid IP address \"%s\": %s", str, gai_strerror(ret)), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
         *err_msg = psprintf("invalid IP address \"%s\": %s", str, gai_strerror(ret));
-        if (gai_result) {
+        if (gai_result)
+        {
           pg_freeaddrinfo_all(hints.ai_family, gai_result);
         }
         return NULL;
@@ -1009,31 +1128,38 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
       pg_freeaddrinfo_all(hints.ai_family, gai_result);
 
       /* Get the netmask */
-      if (cidr_slash) {
-        if (parsedline->hostname) {
+      if (cidr_slash)
+      {
+        if (parsedline->hostname)
+        {
           ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("specifying both host name and CIDR mask is invalid: \"%s\"", token->string), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = psprintf("specifying both host name and CIDR mask is invalid: \"%s\"", token->string);
           return NULL;
         }
 
-        if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1, parsedline->addr.ss_family) < 0) {
+        if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1, parsedline->addr.ss_family) < 0)
+        {
           ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid CIDR mask in address \"%s\"", token->string), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = psprintf("invalid CIDR mask in address \"%s\"", token->string);
           return NULL;
         }
         parsedline->masklen = parsedline->addrlen;
         pfree(str);
-      } else if (!parsedline->hostname) {
+      }
+      else if (!parsedline->hostname)
+      {
         /* Read the mask field. */
         pfree(str);
         field = lnext(field);
-        if (!field) {
-          ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before netmask specification"),                              errhint("Specify an address range in CIDR notation, or provide a separate netmask."),                              errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+        if (!field)
+        {
+          ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before netmask specification"), errhint("Specify an address range in CIDR notation, or provide a separate netmask."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = "end-of-line before netmask specification";
           return NULL;
         }
         tokens = lfirst(field);
-        if (tokens->length > 1) {
+        if (tokens->length > 1)
+        {
           ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("multiple values specified for netmask"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = "multiple values specified for netmask";
           return NULL;
@@ -1041,10 +1167,12 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
         token = linitial(tokens);
 
         ret = pg_getaddrinfo_all(token->string, NULL, &hints, &gai_result);
-        if (ret || !gai_result) {
+        if (ret || !gai_result)
+        {
           ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid IP mask \"%s\": %s", token->string, gai_strerror(ret)), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = psprintf("invalid IP mask \"%s\": %s", token->string, gai_strerror(ret));
-          if (gai_result) {
+          if (gai_result)
+          {
             pg_freeaddrinfo_all(hints.ai_family, gai_result);
           }
           return NULL;
@@ -1054,7 +1182,8 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
         parsedline->masklen = gai_result->ai_addrlen;
         pg_freeaddrinfo_all(hints.ai_family, gai_result);
 
-        if (parsedline->addr.ss_family != parsedline->mask.ss_family) {
+        if (parsedline->addr.ss_family != parsedline->mask.ss_family)
+        {
           ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("IP address and mask do not match"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
           *err_msg = "IP address and mask do not match";
           return NULL;
@@ -1065,13 +1194,15 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 
   /* Get the authentication method */
   field = lnext(field);
-  if (!field) {
+  if (!field)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("end-of-line before authentication method"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "end-of-line before authentication method";
     return NULL;
   }
   tokens = lfirst(field);
-  if (tokens->length > 1) {
+  if (tokens->length > 1)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("multiple values specified for authentication type"), errhint("Specify exactly one authentication type per line."), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "multiple values specified for authentication type";
     return NULL;
@@ -1079,15 +1210,23 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
   token = linitial(tokens);
 
   unsupauth = NULL;
-  if (strcmp(token->string, "trust") == 0) {
+  if (strcmp(token->string, "trust") == 0)
+  {
     parsedline->auth_method = uaTrust;
-  } else if (strcmp(token->string, "ident") == 0) {
+  }
+  else if (strcmp(token->string, "ident") == 0)
+  {
     parsedline->auth_method = uaIdent;
-  } else if (strcmp(token->string, "peer") == 0) {
+  }
+  else if (strcmp(token->string, "peer") == 0)
+  {
     parsedline->auth_method = uaPeer;
-  } else if (strcmp(token->string, "password") == 0) {
+  }
+  else if (strcmp(token->string, "password") == 0)
+  {
     parsedline->auth_method = uaPassword;
-  } else if (strcmp(token->string, "gss") == 0)
+  }
+  else if (strcmp(token->string, "gss") == 0)
 #ifdef ENABLE_GSS
     parsedline->auth_method = uaGSS;
 #else
@@ -1099,18 +1238,25 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 #else
     unsupauth = "sspi";
 #endif
-  else if (strcmp(token->string, "reject") == 0) {
+  else if (strcmp(token->string, "reject") == 0)
+  {
     parsedline->auth_method = uaReject;
-  } else if (strcmp(token->string, "md5") == 0) {
-    if (Db_user_namespace) {
-      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                          errmsg("MD5 authentication is not supported when \"db_user_namespace\" is enabled"),                          errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+  }
+  else if (strcmp(token->string, "md5") == 0)
+  {
+    if (Db_user_namespace)
+    {
+      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("MD5 authentication is not supported when \"db_user_namespace\" is enabled"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "MD5 authentication is not supported when \"db_user_namespace\" is enabled";
       return NULL;
     }
     parsedline->auth_method = uaMD5;
-  } else if (strcmp(token->string, "scram-sha-256") == 0) {
+  }
+  else if (strcmp(token->string, "scram-sha-256") == 0)
+  {
     parsedline->auth_method = uaSCRAM;
-  } else if (strcmp(token->string, "pam") == 0)
+  }
+  else if (strcmp(token->string, "pam") == 0)
 #ifdef USE_PAM
     parsedline->auth_method = uaPAM;
 #else
@@ -1134,16 +1280,20 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 #else
     unsupauth = "cert";
 #endif
-  else if (strcmp(token->string, "radius") == 0) {
+  else if (strcmp(token->string, "radius") == 0)
+  {
     parsedline->auth_method = uaRADIUS;
-  } else {
+  }
+  else
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid authentication method \"%s\"", token->string), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = psprintf("invalid authentication method \"%s\"", token->string);
     return NULL;
   }
 
-  if (unsupauth) {
-    ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                        errmsg("invalid authentication method \"%s\": not supported by this build",                            token->string),                        errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+  if (unsupauth)
+  {
+    ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid authentication method \"%s\": not supported by this build", token->string), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = psprintf("invalid authentication method \"%s\": not supported by this build", token->string);
     return NULL;
   }
@@ -1152,28 +1302,33 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
    * XXX: When using ident on local connections, change it to peer, for
    * backwards compatibility.
    */
-  if (parsedline->conntype == ctLocal && parsedline->auth_method == uaIdent) {
+  if (parsedline->conntype == ctLocal && parsedline->auth_method == uaIdent)
+  {
     parsedline->auth_method = uaPeer;
   }
 
   /* Invalid authentication combinations */
-  if (parsedline->conntype == ctLocal && parsedline->auth_method == uaGSS) {
+  if (parsedline->conntype == ctLocal && parsedline->auth_method == uaGSS)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("gssapi authentication is not supported on local sockets"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "gssapi authentication is not supported on local sockets";
     return NULL;
   }
 
-  if (parsedline->conntype != ctLocal && parsedline->auth_method == uaPeer) {
+  if (parsedline->conntype != ctLocal && parsedline->auth_method == uaPeer)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("peer authentication is only supported on local sockets"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "peer authentication is only supported on local sockets";
     return NULL;
   }
 
   /*
-   * SSPI authentication can never be enabled on ctLocal connections,   * because it's only supported on Windows, where ctLocal isn't supported.
+   * SSPI authentication can never be enabled on ctLocal connections,
+   * because it's only supported on Windows, where ctLocal isn't supported.
    */
 
-  if (parsedline->conntype != ctHostSSL && parsedline->auth_method == uaCert) {
+  if (parsedline->conntype != ctHostSSL && parsedline->auth_method == uaCert)
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("cert authentication is only supported on hostssl connections"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = "cert authentication is only supported on hostssl connections";
     return NULL;
@@ -1188,7 +1343,8 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
    * the realm off would be better served by using an appropriate regex in a
    * pg_ident.conf mapping.
    */
-  if (parsedline->auth_method == uaGSS || parsedline->auth_method == uaSSPI) {
+  if (parsedline->auth_method == uaGSS || parsedline->auth_method == uaSSPI)
+  {
     parsedline->include_realm = true;
   }
 
@@ -1197,22 +1353,26 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
    * NetBIOS name) and user names instead of the Kerberos principal name for
    * compatibility.
    */
-  if (parsedline->auth_method == uaSSPI) {
+  if (parsedline->auth_method == uaSSPI)
+  {
     parsedline->compat_realm = true;
     parsedline->upn_username = false;
   }
 
   /* Parse remaining arguments */
-  while ((field = lnext(field)) != NULL) {
+  while ((field = lnext(field)) != NULL)
+  {
     tokens = lfirst(field);
-    foreach (tokencell, tokens) {
+    foreach (tokencell, tokens)
+    {
       char *val;
 
       token = lfirst(tokencell);
 
       str = pstrdup(token->string);
       val = strchr(str, '=');
-      if (val == NULL) {
+      if (val == NULL)
+      {
         /*
          * Got something that's not a name=value pair.
          */
@@ -1222,7 +1382,8 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
       }
 
       *val++ = '\0'; /* str now holds "name", val holds "value" */
-      if (!parse_hba_auth_opt(str, val, parsedline, elevel, err_msg)) {
+      if (!parse_hba_auth_opt(str, val, parsedline, elevel, err_msg))
+      {
         /* parse_hba_auth_opt already logged the error message */
         return NULL;
       }
@@ -1234,7 +1395,8 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
    * Check if the selected authentication method has any mandatory arguments
    * that are not set.
    */
-  if (parsedline->auth_method == uaLDAP) {
+  if (parsedline->auth_method == uaLDAP)
+  {
 #ifndef HAVE_LDAP_INITIALIZE
     /* Not mandatory for OpenLDAP, because it can use DNS SRV records */
     MANDATORY_AUTH_ARG(parsedline->ldapserver, "ldapserver", "ldap");
@@ -1247,14 +1409,18 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
      * ldapsearchattribute or ldapsearchfilter.  Disallow mixing these
      * parameters.
      */
-    if (parsedline->ldapprefix || parsedline->ldapsuffix) {
-      if (parsedline->ldapbasedn || parsedline->ldapbinddn || parsedline->ldapbindpasswd || parsedline->ldapsearchattribute || parsedline->ldapsearchfilter) {
-        ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                            errmsg("cannot use ldapbasedn, ldapbinddn, ldapbindpasswd, ldapsearchattribute, ldapsearchfilter, or ldapurl together with ldapprefix"),                            errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+    if (parsedline->ldapprefix || parsedline->ldapsuffix)
+    {
+      if (parsedline->ldapbasedn || parsedline->ldapbinddn || parsedline->ldapbindpasswd || parsedline->ldapsearchattribute || parsedline->ldapsearchfilter)
+      {
+        ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("cannot use ldapbasedn, ldapbinddn, ldapbindpasswd, ldapsearchattribute, ldapsearchfilter, or ldapurl together with ldapprefix"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
         *err_msg = "cannot use ldapbasedn, ldapbinddn, ldapbindpasswd, ldapsearchattribute, ldapsearchfilter, or ldapurl together with ldapprefix";
         return NULL;
       }
-    } else if (!parsedline->ldapbasedn) {
-      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                          errmsg("authentication method \"ldap\" requires argument \"ldapbasedn\", \"ldapprefix\", or \"ldapsuffix\" to be set"),                          errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+    }
+    else if (!parsedline->ldapbasedn)
+    {
+      ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("authentication method \"ldap\" requires argument \"ldapbasedn\", \"ldapprefix\", or \"ldapsuffix\" to be set"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "authentication method \"ldap\" requires argument \"ldapbasedn\", \"ldapprefix\", or \"ldapsuffix\" to be set";
       return NULL;
     }
@@ -1264,38 +1430,46 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
      * (defaulting to "uid") or a fully custom search filter.  You can't
      * do both.
      */
-    if (parsedline->ldapsearchattribute && parsedline->ldapsearchfilter) {
+    if (parsedline->ldapsearchattribute && parsedline->ldapsearchfilter)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("cannot use ldapsearchattribute together with ldapsearchfilter"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "cannot use ldapsearchattribute together with ldapsearchfilter";
       return NULL;
     }
   }
 
-  if (parsedline->auth_method == uaRADIUS) {
+  if (parsedline->auth_method == uaRADIUS)
+  {
     MANDATORY_AUTH_ARG(parsedline->radiusservers, "radiusservers", "radius");
     MANDATORY_AUTH_ARG(parsedline->radiussecrets, "radiussecrets", "radius");
 
-    if (list_length(parsedline->radiusservers) < 1) {
+    if (list_length(parsedline->radiusservers) < 1)
+    {
       ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("list of RADIUS servers cannot be empty"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return NULL;
     }
 
-    if (list_length(parsedline->radiussecrets) < 1) {
+    if (list_length(parsedline->radiussecrets) < 1)
+    {
       ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("list of RADIUS secrets cannot be empty"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return NULL;
     }
 
     /*
-     * Verify length of option lists - each can be 0 (except for secrets,     * but that's already checked above), 1 (use the same value
+     * Verify length of option lists - each can be 0 (except for secrets,
+     * but that's already checked above), 1 (use the same value
      * everywhere) or the same as the number of servers.
      */
-    if (!verify_option_list_length(parsedline->radiussecrets, "RADIUS secrets", parsedline->radiusservers, "RADIUS servers", line_num)) {
+    if (!verify_option_list_length(parsedline->radiussecrets, "RADIUS secrets", parsedline->radiusservers, "RADIUS servers", line_num))
+    {
       return NULL;
     }
-    if (!verify_option_list_length(parsedline->radiusports, "RADIUS ports", parsedline->radiusservers, "RADIUS servers", line_num)) {
+    if (!verify_option_list_length(parsedline->radiusports, "RADIUS ports", parsedline->radiusservers, "RADIUS servers", line_num))
+    {
       return NULL;
     }
-    if (!verify_option_list_length(parsedline->radiusidentifiers, "RADIUS identifiers", parsedline->radiusservers, "RADIUS servers", line_num)) {
+    if (!verify_option_list_length(parsedline->radiusidentifiers, "RADIUS identifiers", parsedline->radiusservers, "RADIUS servers", line_num))
+    {
       return NULL;
     }
   }
@@ -1303,10 +1477,11 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
   /*
    * Enforce any parameters implied by other settings.
    */
-  if (parsedline->auth_method == uaCert) {
+  if (parsedline->auth_method == uaCert)
+  {
     /*
-     * For auth method cert, client certificate validation is mandatory, and it
-     * implies the level of verify-full.
+     * For auth method cert, client certificate validation is mandatory, and it implies
+     * the level of verify-full.
      */
     parsedline->clientcert = clientCertFull;
   }
@@ -1317,11 +1492,12 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 static bool
 verify_option_list_length(List *options, const char *optionname, List *masters, const char *mastername, int line_num)
 {
-  if (list_length(options) == 0 || list_length(options) == 1 || list_length(options) == list_length(masters)) {
+  if (list_length(options) == 0 || list_length(options) == 1 || list_length(options) == list_length(masters))
+  {
     return true;
   }
 
-  ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR),                   errmsg("the number of %s (%d) must be 1 or the same as the number of %s (%d)",                       optionname, list_length(options), mastername, list_length(masters)),                   errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+  ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("the number of %s (%d) must be 1 or the same as the number of %s (%d)", optionname, list_length(options), mastername, list_length(masters)), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
   return false;
 }
 
@@ -1340,44 +1516,65 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
   hbaline->ldapscope = LDAP_SCOPE_SUBTREE;
 #endif
 
-  if (strcmp(name, "map") == 0) {
-    if (hbaline->auth_method != uaIdent && hbaline->auth_method != uaPeer && hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI && hbaline->auth_method != uaCert) {
+  if (strcmp(name, "map") == 0)
+  {
+    if (hbaline->auth_method != uaIdent && hbaline->auth_method != uaPeer && hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI && hbaline->auth_method != uaCert)
+    {
       INVALID_AUTH_OPTION("map", gettext_noop("ident, peer, gssapi, sspi, and cert"));
     }
     hbaline->usermap = pstrdup(val);
-  } else if (strcmp(name, "clientcert") == 0) {
-    if (hbaline->conntype != ctHostSSL) {
+  }
+  else if (strcmp(name, "clientcert") == 0)
+  {
+    if (hbaline->conntype != ctHostSSL)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("clientcert can only be configured for \"hostssl\" rows"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = "clientcert can only be configured for \"hostssl\" rows";
       return false;
     }
-    if (strcmp(val, "1") == 0 || strcmp(val, "verify-ca") == 0) {
+    if (strcmp(val, "1") == 0 || strcmp(val, "verify-ca") == 0)
+    {
       hbaline->clientcert = clientCertCA;
-    } else if (strcmp(val, "verify-full") == 0) {
+    }
+    else if (strcmp(val, "verify-full") == 0)
+    {
       hbaline->clientcert = clientCertFull;
-    } else if (strcmp(val, "0") == 0 || strcmp(val, "no-verify") == 0) {
-      if (hbaline->auth_method == uaCert) {
-        ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR),                            errmsg("clientcert can not be set to \"no-verify\" when using \"cert\" authentication"),                            errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
+    }
+    else if (strcmp(val, "0") == 0 || strcmp(val, "no-verify") == 0)
+    {
+      if (hbaline->auth_method == uaCert)
+      {
+        ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("clientcert can not be set to \"no-verify\" when using \"cert\" authentication"), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
         *err_msg = "clientcert can not be set to \"no-verify\" when using \"cert\" authentication";
         return false;
       }
       hbaline->clientcert = clientCertOff;
-    } else {
+    }
+    else
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid value for clientcert: \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return false;
     }
-  } else if (strcmp(name, "pamservice") == 0) {
+  }
+  else if (strcmp(name, "pamservice") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaPAM, "pamservice", "pam");
     hbaline->pamservice = pstrdup(val);
-  } else if (strcmp(name, "pam_use_hostname") == 0) {
+  }
+  else if (strcmp(name, "pam_use_hostname") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaPAM, "pam_use_hostname", "pam");
-    if (strcmp(val, "1") == 0) {
+    if (strcmp(val, "1") == 0)
+    {
       hbaline->pam_use_hostname = true;
-    } else {
+    }
+    else
+    {
       hbaline->pam_use_hostname = false;
     }
-
-  } else if (strcmp(name, "ldapurl") == 0) {
+  }
+  else if (strcmp(name, "ldapurl") == 0)
+  {
 #ifdef LDAP_API_FEATURE_X_OPENLDAP
     LDAPURLDesc *urldata;
     int rc;
@@ -1386,35 +1583,42 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapurl", "ldap");
 #ifdef LDAP_API_FEATURE_X_OPENLDAP
     rc = ldap_url_parse(val, &urldata);
-    if (rc != LDAP_SUCCESS) {
+    if (rc != LDAP_SUCCESS)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not parse LDAP URL \"%s\": %s", val, ldap_err2string(rc))));
       *err_msg = psprintf("could not parse LDAP URL \"%s\": %s", val, ldap_err2string(rc));
       return false;
     }
 
-    if (strcmp(urldata->lud_scheme, "ldap") != 0 && strcmp(urldata->lud_scheme, "ldaps") != 0) {
+    if (strcmp(urldata->lud_scheme, "ldap") != 0 && strcmp(urldata->lud_scheme, "ldaps") != 0)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unsupported LDAP URL scheme: %s", urldata->lud_scheme)));
       *err_msg = psprintf("unsupported LDAP URL scheme: %s", urldata->lud_scheme);
       ldap_free_urldesc(urldata);
       return false;
     }
 
-    if (urldata->lud_scheme) {
+    if (urldata->lud_scheme)
+    {
       hbaline->ldapscheme = pstrdup(urldata->lud_scheme);
     }
-    if (urldata->lud_host) {
+    if (urldata->lud_host)
+    {
       hbaline->ldapserver = pstrdup(urldata->lud_host);
     }
     hbaline->ldapport = urldata->lud_port;
-    if (urldata->lud_dn) {
+    if (urldata->lud_dn)
+    {
       hbaline->ldapbasedn = pstrdup(urldata->lud_dn);
     }
 
-    if (urldata->lud_attrs) {
+    if (urldata->lud_attrs)
+    {
       hbaline->ldapsearchattribute = pstrdup(urldata->lud_attrs[0]); /* only use first one */
     }
     hbaline->ldapscope = urldata->lud_scope;
-    if (urldata->lud_filter) {
+    if (urldata->lud_filter)
+    {
       hbaline->ldapsearchfilter = pstrdup(urldata->lud_filter);
     }
     ldap_free_urldesc(urldata);
@@ -1422,84 +1626,134 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
     ereport(elevel, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("LDAP URLs not supported on this platform")));
     *err_msg = "LDAP URLs not supported on this platform";
 #endif /* not OpenLDAP */
-  } else if (strcmp(name, "ldaptls") == 0) {
+  }
+  else if (strcmp(name, "ldaptls") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldaptls", "ldap");
-    if (strcmp(val, "1") == 0) {
+    if (strcmp(val, "1") == 0)
+    {
       hbaline->ldaptls = true;
-    } else {
+    }
+    else
+    {
       hbaline->ldaptls = false;
     }
-  } else if (strcmp(name, "ldapscheme") == 0) {
+  }
+  else if (strcmp(name, "ldapscheme") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapscheme", "ldap");
-    if (strcmp(val, "ldap") != 0 && strcmp(val, "ldaps") != 0) {
+    if (strcmp(val, "ldap") != 0 && strcmp(val, "ldaps") != 0)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid ldapscheme value: \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     }
     hbaline->ldapscheme = pstrdup(val);
-  } else if (strcmp(name, "ldapserver") == 0) {
+  }
+  else if (strcmp(name, "ldapserver") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapserver", "ldap");
     hbaline->ldapserver = pstrdup(val);
-  } else if (strcmp(name, "ldapport") == 0) {
+  }
+  else if (strcmp(name, "ldapport") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapport", "ldap");
     hbaline->ldapport = atoi(val);
-    if (hbaline->ldapport == 0) {
+    if (hbaline->ldapport == 0)
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid LDAP port number: \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = psprintf("invalid LDAP port number: \"%s\"", val);
       return false;
     }
-  } else if (strcmp(name, "ldapbinddn") == 0) {
+  }
+  else if (strcmp(name, "ldapbinddn") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapbinddn", "ldap");
     hbaline->ldapbinddn = pstrdup(val);
-  } else if (strcmp(name, "ldapbindpasswd") == 0) {
+  }
+  else if (strcmp(name, "ldapbindpasswd") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapbindpasswd", "ldap");
     hbaline->ldapbindpasswd = pstrdup(val);
-  } else if (strcmp(name, "ldapsearchattribute") == 0) {
+  }
+  else if (strcmp(name, "ldapsearchattribute") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapsearchattribute", "ldap");
     hbaline->ldapsearchattribute = pstrdup(val);
-  } else if (strcmp(name, "ldapsearchfilter") == 0) {
+  }
+  else if (strcmp(name, "ldapsearchfilter") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapsearchfilter", "ldap");
     hbaline->ldapsearchfilter = pstrdup(val);
-  } else if (strcmp(name, "ldapbasedn") == 0) {
+  }
+  else if (strcmp(name, "ldapbasedn") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapbasedn", "ldap");
     hbaline->ldapbasedn = pstrdup(val);
-  } else if (strcmp(name, "ldapprefix") == 0) {
+  }
+  else if (strcmp(name, "ldapprefix") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapprefix", "ldap");
     hbaline->ldapprefix = pstrdup(val);
-  } else if (strcmp(name, "ldapsuffix") == 0) {
+  }
+  else if (strcmp(name, "ldapsuffix") == 0)
+  {
     REQUIRE_AUTH_OPTION(uaLDAP, "ldapsuffix", "ldap");
     hbaline->ldapsuffix = pstrdup(val);
-  } else if (strcmp(name, "krb_realm") == 0) {
-    if (hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI) {
+  }
+  else if (strcmp(name, "krb_realm") == 0)
+  {
+    if (hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI)
+    {
       INVALID_AUTH_OPTION("krb_realm", gettext_noop("gssapi and sspi"));
     }
     hbaline->krb_realm = pstrdup(val);
-  } else if (strcmp(name, "include_realm") == 0) {
-    if (hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI) {
+  }
+  else if (strcmp(name, "include_realm") == 0)
+  {
+    if (hbaline->auth_method != uaGSS && hbaline->auth_method != uaSSPI)
+    {
       INVALID_AUTH_OPTION("include_realm", gettext_noop("gssapi and sspi"));
     }
-    if (strcmp(val, "1") == 0) {
+    if (strcmp(val, "1") == 0)
+    {
       hbaline->include_realm = true;
-    } else {
+    }
+    else
+    {
       hbaline->include_realm = false;
     }
-  } else if (strcmp(name, "compat_realm") == 0) {
-    if (hbaline->auth_method != uaSSPI) {
+  }
+  else if (strcmp(name, "compat_realm") == 0)
+  {
+    if (hbaline->auth_method != uaSSPI)
+    {
       INVALID_AUTH_OPTION("compat_realm", gettext_noop("sspi"));
     }
-    if (strcmp(val, "1") == 0) {
+    if (strcmp(val, "1") == 0)
+    {
       hbaline->compat_realm = true;
-    } else {
+    }
+    else
+    {
       hbaline->compat_realm = false;
     }
-  } else if (strcmp(name, "upn_username") == 0) {
-    if (hbaline->auth_method != uaSSPI) {
+  }
+  else if (strcmp(name, "upn_username") == 0)
+  {
+    if (hbaline->auth_method != uaSSPI)
+    {
       INVALID_AUTH_OPTION("upn_username", gettext_noop("sspi"));
     }
-    if (strcmp(val, "1") == 0) {
+    if (strcmp(val, "1") == 0)
+    {
       hbaline->upn_username = true;
-    } else {
+    }
+    else
+    {
       hbaline->upn_username = false;
     }
-  } else if (strcmp(name, "radiusservers") == 0) {
+  }
+  else if (strcmp(name, "radiusservers") == 0)
+  {
     struct addrinfo *gai_result;
     struct addrinfo hints;
     int ret;
@@ -1509,22 +1763,26 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
 
     REQUIRE_AUTH_OPTION(uaRADIUS, "radiusservers", "radius");
 
-    if (!SplitGUCList(dupval, ',', &parsed_servers)) {
+    if (!SplitGUCList(dupval, ',', &parsed_servers))
+    {
       /* syntax error in list */
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not parse RADIUS server list \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return false;
     }
 
     /* For each entry in the list, translate it */
-    foreach (l, parsed_servers) {
+    foreach (l, parsed_servers)
+    {
       MemSet(&hints, 0, sizeof(hints));
       hints.ai_socktype = SOCK_DGRAM;
       hints.ai_family = AF_UNSPEC;
 
       ret = pg_getaddrinfo_all((char *)lfirst(l), NULL, &hints, &gai_result);
-      if (ret || !gai_result) {
+      if (ret || !gai_result)
+      {
         ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not translate RADIUS server name \"%s\" to address: %s", (char *)lfirst(l), gai_strerror(ret)), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
-        if (gai_result) {
+        if (gai_result)
+        {
           pg_freeaddrinfo_all(hints.ai_family, gai_result);
         }
 
@@ -1537,21 +1795,26 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
     /* All entries are OK, so store them */
     hbaline->radiusservers = parsed_servers;
     hbaline->radiusservers_s = pstrdup(val);
-  } else if (strcmp(name, "radiusports") == 0) {
+  }
+  else if (strcmp(name, "radiusports") == 0)
+  {
     List *parsed_ports;
     ListCell *l;
     char *dupval = pstrdup(val);
 
     REQUIRE_AUTH_OPTION(uaRADIUS, "radiusports", "radius");
 
-    if (!SplitGUCList(dupval, ',', &parsed_ports)) {
+    if (!SplitGUCList(dupval, ',', &parsed_ports))
+    {
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not parse RADIUS port list \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       *err_msg = psprintf("invalid RADIUS port number: \"%s\"", val);
       return false;
     }
 
-    foreach (l, parsed_ports) {
-      if (atoi(lfirst(l)) == 0) {
+    foreach (l, parsed_ports)
+    {
+      if (atoi(lfirst(l)) == 0)
+      {
         ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("invalid RADIUS port number: \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
 
         return false;
@@ -1559,13 +1822,16 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
     }
     hbaline->radiusports = parsed_ports;
     hbaline->radiusports_s = pstrdup(val);
-  } else if (strcmp(name, "radiussecrets") == 0) {
+  }
+  else if (strcmp(name, "radiussecrets") == 0)
+  {
     List *parsed_secrets;
     char *dupval = pstrdup(val);
 
     REQUIRE_AUTH_OPTION(uaRADIUS, "radiussecrets", "radius");
 
-    if (!SplitGUCList(dupval, ',', &parsed_secrets)) {
+    if (!SplitGUCList(dupval, ',', &parsed_secrets))
+    {
       /* syntax error in list */
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not parse RADIUS secret list \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return false;
@@ -1573,13 +1839,16 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
 
     hbaline->radiussecrets = parsed_secrets;
     hbaline->radiussecrets_s = pstrdup(val);
-  } else if (strcmp(name, "radiusidentifiers") == 0) {
+  }
+  else if (strcmp(name, "radiusidentifiers") == 0)
+  {
     List *parsed_identifiers;
     char *dupval = pstrdup(val);
 
     REQUIRE_AUTH_OPTION(uaRADIUS, "radiusidentifiers", "radius");
 
-    if (!SplitGUCList(dupval, ',', &parsed_identifiers)) {
+    if (!SplitGUCList(dupval, ',', &parsed_identifiers))
+    {
       /* syntax error in list */
       ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not parse RADIUS identifiers list \"%s\"", val), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
       return false;
@@ -1587,7 +1856,9 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
 
     hbaline->radiusidentifiers = parsed_identifiers;
     hbaline->radiusidentifiers_s = pstrdup(val);
-  } else {
+  }
+  else
+  {
     ereport(elevel, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unrecognized authentication option name: \"%s\"", name), errcontext("line %d of configuration file \"%s\"", line_num, HbaFileName)));
     *err_msg = psprintf("unrecognized authentication option name: \"%s\"", name);
     return false;
@@ -1596,8 +1867,8 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int elevel, char **e
 }
 
 /*
- *	Scan the pre-parsed hba file, looking for a match to the port's
- *connection request.
+ *	Scan the pre-parsed hba file, looking for a match to the port's connection
+ *	request.
  */
 static void
 check_hba(hbaPort *port)
@@ -1609,54 +1880,75 @@ check_hba(hbaPort *port)
   /* Get the target role's OID.  Note we do not error out for bad role. */
   roleid = get_role_oid(port->user_name, true);
 
-  foreach (line, parsed_hba_lines) {
+  foreach (line, parsed_hba_lines)
+  {
     hba = (HbaLine *)lfirst(line);
 
     /* Check connection type */
-    if (hba->conntype == ctLocal) {
-      if (!IS_AF_UNIX(port->raddr.addr.ss_family)) {
+    if (hba->conntype == ctLocal)
+    {
+      if (!IS_AF_UNIX(port->raddr.addr.ss_family))
+      {
         continue;
       }
-    } else {
-      if (IS_AF_UNIX(port->raddr.addr.ss_family)) {
+    }
+    else
+    {
+      if (IS_AF_UNIX(port->raddr.addr.ss_family))
+      {
         continue;
       }
 
       /* Check SSL state */
-      if (port->ssl_in_use) {
+      if (port->ssl_in_use)
+      {
         /* Connection is SSL, match both "host" and "hostssl" */
-        if (hba->conntype == ctHostNoSSL) {
+        if (hba->conntype == ctHostNoSSL)
+        {
           continue;
         }
-      } else {
+      }
+      else
+      {
         /* Connection is not SSL, match both "host" and "hostnossl" */
-        if (hba->conntype == ctHostSSL) {
+        if (hba->conntype == ctHostSSL)
+        {
           continue;
         }
       }
 
       /* Check GSSAPI state */
 #ifdef ENABLE_GSS
-      if (port->gss && port->gss->enc && hba->conntype == ctHostNoGSS) {
+      if (port->gss && port->gss->enc && hba->conntype == ctHostNoGSS)
+      {
         continue;
-      } else if (!(port->gss && port->gss->enc) && hba->conntype == ctHostGSS) {
+      }
+      else if (!(port->gss && port->gss->enc) && hba->conntype == ctHostGSS)
+      {
         continue;
       }
 #else
-      if (hba->conntype == ctHostGSS) {
+      if (hba->conntype == ctHostGSS)
+      {
         continue;
       }
 #endif
 
       /* Check IP address */
-      switch (hba->ip_cmp_method) {
+      switch (hba->ip_cmp_method)
+      {
       case ipCmpMask:
-        if (hba->hostname) {
-          if (!check_hostname(port, hba->hostname)) {
+        if (hba->hostname)
+        {
+          if (!check_hostname(port, hba->hostname))
+          {
             continue;
           }
-        } else {
-          if (!check_ip(&port->raddr, (struct sockaddr *)&hba->addr, (struct sockaddr *)&hba->mask)) {
+        }
+        else
+        {
+          if (!check_ip(&port->raddr, (struct sockaddr *)&hba->addr, (struct sockaddr *)&hba->mask))
+          {
             continue;
           }
         }
@@ -1665,22 +1957,25 @@ check_hba(hbaPort *port)
         break;
       case ipCmpSameHost:
       case ipCmpSameNet:
-        if (!check_same_host_or_net(&port->raddr, hba->ip_cmp_method)) {
+        if (!check_same_host_or_net(&port->raddr, hba->ip_cmp_method))
+        {
           continue;
         }
         break;
-      default:;
+      default:
         /* shouldn't get here, but deem it no-match if so */
         continue;
       }
     } /* != ctLocal */
 
     /* Check database and role */
-    if (!check_db(port->database_name, port->user_name, roleid, hba->databases)) {
+    if (!check_db(port->database_name, port->user_name, roleid, hba->databases))
+    {
       continue;
     }
 
-    if (!check_role(port->user_name, roleid, hba->roles)) {
+    if (!check_role(port->user_name, roleid, hba->roles))
+    {
       continue;
     }
 
@@ -1719,7 +2014,8 @@ load_hba(void)
   MemoryContext hbacxt;
 
   file = AllocateFile(HbaFileName, "r");
-  if (file == NULL) {
+  if (file == NULL)
+  {
     ereport(LOG, (errcode_for_file_access(), errmsg("could not open configuration file \"%s\": %m", HbaFileName)));
     return false;
   }
@@ -1731,17 +2027,20 @@ load_hba(void)
   Assert(PostmasterContext);
   hbacxt = AllocSetContextCreate(PostmasterContext, "hba parser context", ALLOCSET_SMALL_SIZES);
   oldcxt = MemoryContextSwitchTo(hbacxt);
-  foreach (line, hba_lines) {
+  foreach (line, hba_lines)
+  {
     TokenizedLine *tok_line = (TokenizedLine *)lfirst(line);
     HbaLine *newline;
 
     /* don't parse lines that already have errors */
-    if (tok_line->err_msg != NULL) {
+    if (tok_line->err_msg != NULL)
+    {
       ok = false;
       continue;
     }
 
-    if ((newline = parse_hba_line(tok_line, LOG)) == NULL) {
+    if ((newline = parse_hba_line(tok_line, LOG)) == NULL)
+    {
       /* Parse error; remember there's trouble */
       ok = false;
 
@@ -1761,7 +2060,8 @@ load_hba(void)
    * connect to the postmaster.  But only complain about this if we didn't
    * already have parsing errors.
    */
-  if (ok && new_parsed_lines == NIL) {
+  if (ok && new_parsed_lines == NIL)
+  {
     ereport(LOG, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("configuration file \"%s\" contains no entries", HbaFileName)));
     ok = false;
   }
@@ -1770,14 +2070,16 @@ load_hba(void)
   MemoryContextDelete(linecxt);
   MemoryContextSwitchTo(oldcxt);
 
-  if (!ok) {
+  if (!ok)
+  {
     /* File contained one or more errors, so bail out */
     MemoryContextDelete(hbacxt);
     return false;
   }
 
   /* Loaded new file successfully, replace the one we use */
-  if (parsed_hba_context != NULL) {
+  if (parsed_hba_context != NULL)
+  {
     MemoryContextDelete(parsed_hba_context);
   }
   parsed_hba_context = hbacxt;
@@ -1808,88 +2110,111 @@ gethba_options(HbaLine *hba)
 
   noptions = 0;
 
-  if (hba->auth_method == uaGSS || hba->auth_method == uaSSPI) {
-    if (hba->include_realm) {
+  if (hba->auth_method == uaGSS || hba->auth_method == uaSSPI)
+  {
+    if (hba->include_realm)
+    {
       options[noptions++] = CStringGetTextDatum("include_realm=true");
     }
 
-    if (hba->krb_realm) {
+    if (hba->krb_realm)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("krb_realm=%s", hba->krb_realm));
     }
   }
 
-  if (hba->usermap) {
+  if (hba->usermap)
+  {
     options[noptions++] = CStringGetTextDatum(psprintf("map=%s", hba->usermap));
   }
 
-  if (hba->clientcert != clientCertOff) {
+  if (hba->clientcert != clientCertOff)
+  {
     options[noptions++] = CStringGetTextDatum(psprintf("clientcert=%s", (hba->clientcert == clientCertCA) ? "verify-ca" : "verify-full"));
   }
 
-  if (hba->pamservice) {
+  if (hba->pamservice)
+  {
     options[noptions++] = CStringGetTextDatum(psprintf("pamservice=%s", hba->pamservice));
   }
 
-  if (hba->auth_method == uaLDAP) {
-    if (hba->ldapserver) {
+  if (hba->auth_method == uaLDAP)
+  {
+    if (hba->ldapserver)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapserver=%s", hba->ldapserver));
     }
 
-    if (hba->ldapport) {
+    if (hba->ldapport)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapport=%d", hba->ldapport));
     }
 
-    if (hba->ldaptls) {
+    if (hba->ldaptls)
+    {
       options[noptions++] = CStringGetTextDatum("ldaptls=true");
     }
 
-    if (hba->ldapprefix) {
+    if (hba->ldapprefix)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapprefix=%s", hba->ldapprefix));
     }
 
-    if (hba->ldapsuffix) {
+    if (hba->ldapsuffix)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapsuffix=%s", hba->ldapsuffix));
     }
 
-    if (hba->ldapbasedn) {
+    if (hba->ldapbasedn)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapbasedn=%s", hba->ldapbasedn));
     }
 
-    if (hba->ldapbinddn) {
+    if (hba->ldapbinddn)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapbinddn=%s", hba->ldapbinddn));
     }
 
-    if (hba->ldapbindpasswd) {
+    if (hba->ldapbindpasswd)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapbindpasswd=%s", hba->ldapbindpasswd));
     }
 
-    if (hba->ldapsearchattribute) {
+    if (hba->ldapsearchattribute)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapsearchattribute=%s", hba->ldapsearchattribute));
     }
 
-    if (hba->ldapsearchfilter) {
+    if (hba->ldapsearchfilter)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapsearchfilter=%s", hba->ldapsearchfilter));
     }
 
-    if (hba->ldapscope) {
+    if (hba->ldapscope)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("ldapscope=%d", hba->ldapscope));
     }
   }
 
-  if (hba->auth_method == uaRADIUS) {
-    if (hba->radiusservers_s) {
+  if (hba->auth_method == uaRADIUS)
+  {
+    if (hba->radiusservers_s)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("radiusservers=%s", hba->radiusservers_s));
     }
 
-    if (hba->radiussecrets_s) {
+    if (hba->radiussecrets_s)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("radiussecrets=%s", hba->radiussecrets_s));
     }
 
-    if (hba->radiusidentifiers_s) {
+    if (hba->radiusidentifiers_s)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("radiusidentifiers=%s", hba->radiusidentifiers_s));
     }
 
-    if (hba->radiusports_s) {
+    if (hba->radiusports_s)
+    {
       options[noptions++] = CStringGetTextDatum(psprintf("radiusports=%s", hba->radiusports_s));
     }
   }
@@ -1897,9 +2222,12 @@ gethba_options(HbaLine *hba)
   /* If you add more options, consider increasing MAX_HBA_OPTIONS. */
   Assert(noptions <= MAX_HBA_OPTIONS);
 
-  if (noptions > 0) {
+  if (noptions > 0)
+  {
     return construct_array(options, noptions, TEXTOID, -1, false, 'i');
-  } else {
+  }
+  else
+  {
     return NULL;
   }
 }
@@ -1942,11 +2270,13 @@ fill_hba_line(Tuplestorestate *tuple_store, TupleDesc tupdesc, int lineno, HbaLi
   /* line_number */
   values[index++] = Int32GetDatum(lineno);
 
-  if (hba != NULL) {
+  if (hba != NULL)
+  {
     /* type */
-    /* Avoid a default:; case so compiler will warn about missing cases */
+    /* Avoid a default: case so compiler will warn about missing cases */
     typestr = NULL;
-    switch (hba->conntype) {
+    switch (hba->conntype)
+    {
     case ctLocal:
       typestr = "local";
       break;
@@ -1966,14 +2296,18 @@ fill_hba_line(Tuplestorestate *tuple_store, TupleDesc tupdesc, int lineno, HbaLi
       typestr = "hostnogssenc";
       break;
     }
-    if (typestr) {
+    if (typestr)
+    {
       values[index++] = CStringGetTextDatum(typestr);
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
 
     /* database */
-    if (hba->databases) {
+    if (hba->databases)
+    {
       /*
        * Flatten HbaToken list to string list.  It might seem that we
        * should re-quote any quoted tokens, but that has been rejected
@@ -1984,51 +2318,66 @@ fill_hba_line(Tuplestorestate *tuple_store, TupleDesc tupdesc, int lineno, HbaLi
        */
       List *names = NIL;
 
-      foreach (lc, hba->databases) {
+      foreach (lc, hba->databases)
+      {
         HbaToken *tok = lfirst(lc);
 
         names = lappend(names, tok->string);
       }
       values[index++] = PointerGetDatum(strlist_to_textarray(names));
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
 
     /* user */
-    if (hba->roles) {
+    if (hba->roles)
+    {
       /* Flatten HbaToken list to string list; see comment above */
       List *roles = NIL;
 
-      foreach (lc, hba->roles) {
+      foreach (lc, hba->roles)
+      {
         HbaToken *tok = lfirst(lc);
 
         roles = lappend(roles, tok->string);
       }
       values[index++] = PointerGetDatum(strlist_to_textarray(roles));
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
 
     /* address and netmask */
-    /* Avoid a default:; case so compiler will warn about missing cases */
+    /* Avoid a default: case so compiler will warn about missing cases */
     addrstr = maskstr = NULL;
-    switch (hba->ip_cmp_method) {
+    switch (hba->ip_cmp_method)
+    {
     case ipCmpMask:
-      if (hba->hostname) {
+      if (hba->hostname)
+      {
         addrstr = hba->hostname;
-      } else {
+      }
+      else
+      {
         /*
          * Note: if pg_getnameinfo_all fails, it'll set buffer to
          * "???", which we want to return.
          */
-        if (hba->addrlen > 0) {
-          if (pg_getnameinfo_all(&hba->addr, hba->addrlen, buffer, sizeof(buffer), NULL, 0, NI_NUMERICHOST) == 0) {
+        if (hba->addrlen > 0)
+        {
+          if (pg_getnameinfo_all(&hba->addr, hba->addrlen, buffer, sizeof(buffer), NULL, 0, NI_NUMERICHOST) == 0)
+          {
             clean_ipv6_addr(hba->addr.ss_family, buffer);
           }
           addrstr = pstrdup(buffer);
         }
-        if (hba->masklen > 0) {
-          if (pg_getnameinfo_all(&hba->mask, hba->masklen, buffer, sizeof(buffer), NULL, 0, NI_NUMERICHOST) == 0) {
+        if (hba->masklen > 0)
+        {
+          if (pg_getnameinfo_all(&hba->mask, hba->masklen, buffer, sizeof(buffer), NULL, 0, NI_NUMERICHOST) == 0)
+          {
             clean_ipv6_addr(hba->mask.ss_family, buffer);
           }
           maskstr = pstrdup(buffer);
@@ -2045,14 +2394,20 @@ fill_hba_line(Tuplestorestate *tuple_store, TupleDesc tupdesc, int lineno, HbaLi
       addrstr = "samenet";
       break;
     }
-    if (addrstr) {
+    if (addrstr)
+    {
       values[index++] = CStringGetTextDatum(addrstr);
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
-    if (maskstr) {
+    if (maskstr)
+    {
       values[index++] = CStringGetTextDatum(maskstr);
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
 
@@ -2066,20 +2421,28 @@ fill_hba_line(Tuplestorestate *tuple_store, TupleDesc tupdesc, int lineno, HbaLi
 
     /* options */
     options = gethba_options(hba);
-    if (options) {
+    if (options)
+    {
       values[index++] = PointerGetDatum(options);
-    } else {
+    }
+    else
+    {
       nulls[index++] = true;
     }
-  } else {
+  }
+  else
+  {
     /* no parsing result, so set relevant fields to nulls */
     memset(&nulls[1], true, (NUM_PG_HBA_FILE_RULES_ATTS - 2) * sizeof(bool));
   }
 
   /* error */
-  if (err_msg) {
+  if (err_msg)
+  {
     values[NUM_PG_HBA_FILE_RULES_ATTS - 1] = CStringGetTextDatum(err_msg);
-  } else {
+  }
+  else
+  {
     nulls[NUM_PG_HBA_FILE_RULES_ATTS - 1] = true;
   }
 
@@ -2107,7 +2470,8 @@ fill_hba_view(Tuplestorestate *tuple_store, TupleDesc tupdesc)
    * entry.)
    */
   file = AllocateFile(HbaFileName, "r");
-  if (file == NULL) {
+  if (file == NULL)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not open configuration file \"%s\": %m", HbaFileName)));
   }
 
@@ -2117,12 +2481,14 @@ fill_hba_view(Tuplestorestate *tuple_store, TupleDesc tupdesc)
   /* Now parse all the lines */
   hbacxt = AllocSetContextCreate(CurrentMemoryContext, "hba parser context", ALLOCSET_SMALL_SIZES);
   oldcxt = MemoryContextSwitchTo(hbacxt);
-  foreach (line, hba_lines) {
+  foreach (line, hba_lines)
+  {
     TokenizedLine *tok_line = (TokenizedLine *)lfirst(line);
     HbaLine *hbaline = NULL;
 
     /* don't parse lines that already have errors */
-    if (tok_line->err_msg == NULL) {
+    if (tok_line->err_msg == NULL)
+    {
       hbaline = parse_hba_line(tok_line, DEBUG3);
     }
 
@@ -2155,17 +2521,21 @@ pg_hba_file_rules(PG_FUNCTION_ARGS)
   rsi = (ReturnSetInfo *)fcinfo->resultinfo;
 
   /* Check to see if caller supports us returning a tuplestore */
-  if (rsi == NULL || !IsA(rsi, ReturnSetInfo)) {
+  if (rsi == NULL || !IsA(rsi, ReturnSetInfo))
+  {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
   }
-  if (!(rsi->allowedModes & SFRM_Materialize)) {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
+  if (!(rsi->allowedModes & SFRM_Materialize))
+  {
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   rsi->returnMode = SFRM_Materialize;
 
   /* Build a tuple descriptor for our result type */
-  if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE) {
+  if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+  {
     elog(ERROR, "return type must be a row type");
   }
 
@@ -2234,7 +2604,8 @@ parse_ident_line(TokenizedLine *tok_line)
   token = linitial(tokens);
   parsedline->pg_role = pstrdup(token->string);
 
-  if (parsedline->ident_user[0] == '/') {
+  if (parsedline->ident_user[0] == '/')
+  {
     /*
      * When system username starts with a slash, treat it as a regular
      * expression. Pre-compile it.
@@ -2247,7 +2618,8 @@ parse_ident_line(TokenizedLine *tok_line)
     wlen = pg_mb2wchar_with_len(parsedline->ident_user + 1, wstr, strlen(parsedline->ident_user + 1));
 
     r = pg_regcomp(&parsedline->re, wstr, wlen, REG_ADVANCED, C_COLLATION_OID);
-    if (r) {
+    if (r)
+    {
       char errstr[100];
 
       pg_regerror(r, &parsedline->re, errstr, sizeof(errstr));
@@ -2265,8 +2637,8 @@ parse_ident_line(TokenizedLine *tok_line)
 /*
  *	Process one line from the parsed ident config lines.
  *
- *	Compare input parsed ident line to the needed map, pg_role and
- *ident_user. *found_p and *error_p are set according to our results.
+ *	Compare input parsed ident line to the needed map, pg_role and ident_user.
+ *	*found_p and *error_p are set according to our results.
  */
 static void
 check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *pg_role, const char *ident_user, bool case_insensitive, bool *found_p, bool *error_p)
@@ -2274,13 +2646,15 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
   *found_p = false;
   *error_p = false;
 
-  if (strcmp(identLine->usermap, usermap_name) != 0) {
+  if (strcmp(identLine->usermap, usermap_name) != 0)
+  {
     /* Line does not match the map name we're looking for, so just abort */
     return;
   }
 
   /* Match? */
-  if (identLine->ident_user[0] == '/') {
+  if (identLine->ident_user[0] == '/')
+  {
     /*
      * When system username starts with a slash, treat it as a regular
      * expression. In this case, we process the system username as a
@@ -2298,10 +2672,12 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
     wlen = pg_mb2wchar_with_len(ident_user, wstr, strlen(ident_user));
 
     r = pg_regexec(&identLine->re, wstr, wlen, 0, NULL, 2, matches, 0);
-    if (r) {
+    if (r)
+    {
       char errstr[100];
 
-      if (r != REG_NOMATCH) {
+      if (r != REG_NOMATCH)
+      {
         /* REG_NOMATCH is not an error, everything else is */
         pg_regerror(r, &identLine->re, errstr, sizeof(errstr));
         ereport(LOG, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression match for \"%s\" failed: %s", identLine->ident_user + 1, errstr)));
@@ -2313,12 +2689,14 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
     }
     pfree(wstr);
 
-    if ((ofs = strstr(identLine->pg_role, "\\1")) != NULL) {
+    if ((ofs = strstr(identLine->pg_role, "\\1")) != NULL)
+    {
       int offset;
 
       /* substitution of the first argument requested */
-      if (matches[1].rm_so < 0) {
-        ereport(LOG, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression \"%s\" has no subexpressions as requested by backreference in \"%s\"",                                                                       identLine->ident_user + 1, identLine->pg_role)));
+      if (matches[1].rm_so < 0)
+      {
+        ereport(LOG, (errcode(ERRCODE_INVALID_REGULAR_EXPRESSION), errmsg("regular expression \"%s\" has no subexpressions as requested by backreference in \"%s\"", identLine->ident_user + 1, identLine->pg_role)));
         *error_p = true;
         return;
       }
@@ -2332,7 +2710,9 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
       memcpy(regexp_pgrole, identLine->pg_role, offset);
       memcpy(regexp_pgrole + offset, ident_user + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
       strcat(regexp_pgrole, ofs + 2);
-    } else {
+    }
+    else
+    {
       /* no substitution, so copy the match */
       regexp_pgrole = pstrdup(identLine->pg_role);
     }
@@ -2341,26 +2721,38 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
      * now check if the username actually matched what the user is trying
      * to connect as
      */
-    if (case_insensitive) {
-      if (pg_strcasecmp(regexp_pgrole, pg_role) == 0) {
+    if (case_insensitive)
+    {
+      if (pg_strcasecmp(regexp_pgrole, pg_role) == 0)
+      {
         *found_p = true;
       }
-    } else {
-      if (strcmp(regexp_pgrole, pg_role) == 0) {
+    }
+    else
+    {
+      if (strcmp(regexp_pgrole, pg_role) == 0)
+      {
         *found_p = true;
       }
     }
     pfree(regexp_pgrole);
 
     return;
-  } else {
+  }
+  else
+  {
     /* Not regular expression, so make complete match */
-    if (case_insensitive) {
-      if (pg_strcasecmp(identLine->pg_role, pg_role) == 0 && pg_strcasecmp(identLine->ident_user, ident_user) == 0) {
+    if (case_insensitive)
+    {
+      if (pg_strcasecmp(identLine->pg_role, pg_role) == 0 && pg_strcasecmp(identLine->ident_user, ident_user) == 0)
+      {
         *found_p = true;
       }
-    } else {
-      if (strcmp(identLine->pg_role, pg_role) == 0 && strcmp(identLine->ident_user, ident_user) == 0) {
+    }
+    else
+    {
+      if (strcmp(identLine->pg_role, pg_role) == 0 && strcmp(identLine->ident_user, ident_user) == 0)
+      {
         *found_p = true;
       }
     }
@@ -2369,8 +2761,7 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name, const char *
 }
 
 /*
- *	Scan the (pre-parsed) ident usermap file line by line, looking for a
- *match
+ *	Scan the (pre-parsed) ident usermap file line by line, looking for a match
  *
  *	See if the user with ident username "auth_user" is allowed to act
  *	as Postgres user "pg_role" according to usermap "usermap_name".
@@ -2387,30 +2778,41 @@ check_usermap(const char *usermap_name, const char *pg_role, const char *auth_us
 {
   bool found_entry = false, error = false;
 
-  if (usermap_name == NULL || usermap_name[0] == '\0') {
-    if (case_insensitive) {
-      if (pg_strcasecmp(pg_role, auth_user) == 0) {
-        return STATUS_OK;
-      }
-    } else {
-      if (strcmp(pg_role, auth_user) == 0) {
+  if (usermap_name == NULL || usermap_name[0] == '\0')
+  {
+    if (case_insensitive)
+    {
+      if (pg_strcasecmp(pg_role, auth_user) == 0)
+      {
         return STATUS_OK;
       }
     }
-    ereport(LOG, (errmsg("provided user name (%s) and authenticated user name (%s) do not match",                     pg_role, auth_user)));
+    else
+    {
+      if (strcmp(pg_role, auth_user) == 0)
+      {
+        return STATUS_OK;
+      }
+    }
+    ereport(LOG, (errmsg("provided user name (%s) and authenticated user name (%s) do not match", pg_role, auth_user)));
     return STATUS_ERROR;
-  } else {
+  }
+  else
+  {
     ListCell *line_cell;
 
-    foreach (line_cell, parsed_ident_lines) {
+    foreach (line_cell, parsed_ident_lines)
+    {
       check_ident_usermap(lfirst(line_cell), usermap_name, pg_role, auth_user, case_insensitive, &found_entry, &error);
-      if (found_entry || error) {
+      if (found_entry || error)
+      {
         break;
       }
     }
   }
-  if (!found_entry && !error) {
-    ereport(LOG, (errmsg("no match in usermap \"%s\" for user \"%s\" authenticated as \"%s\"",                     usermap_name, pg_role, auth_user)));
+  if (!found_entry && !error)
+  {
+    ereport(LOG, (errmsg("no match in usermap \"%s\" for user \"%s\" authenticated as \"%s\"", usermap_name, pg_role, auth_user)));
   }
   return found_entry ? STATUS_OK : STATUS_ERROR;
 }
@@ -2435,7 +2837,8 @@ load_ident(void)
   IdentLine *newline;
 
   file = AllocateFile(IdentFileName, "r");
-  if (file == NULL) {
+  if (file == NULL)
+  {
     /* not fatal ... we just won't do any special ident maps */
     ereport(LOG, (errcode_for_file_access(), errmsg("could not open usermap file \"%s\": %m", IdentFileName)));
     return false;
@@ -2448,16 +2851,19 @@ load_ident(void)
   Assert(PostmasterContext);
   ident_context = AllocSetContextCreate(PostmasterContext, "ident parser context", ALLOCSET_SMALL_SIZES);
   oldcxt = MemoryContextSwitchTo(ident_context);
-  foreach (line_cell, ident_lines) {
+  foreach (line_cell, ident_lines)
+  {
     TokenizedLine *tok_line = (TokenizedLine *)lfirst(line_cell);
 
     /* don't parse lines that already have errors */
-    if (tok_line->err_msg != NULL) {
+    if (tok_line->err_msg != NULL)
+    {
       ok = false;
       continue;
     }
 
-    if ((newline = parse_ident_line(tok_line)) == NULL) {
+    if ((newline = parse_ident_line(tok_line)) == NULL)
+    {
       /* Parse error; remember there's trouble */
       ok = false;
 
@@ -2476,15 +2882,18 @@ load_ident(void)
   MemoryContextDelete(linecxt);
   MemoryContextSwitchTo(oldcxt);
 
-  if (!ok) {
+  if (!ok)
+  {
     /*
      * File contained one or more errors, so bail out, first being careful
      * to clean up whatever we allocated.  Most stuff will go away via
      * MemoryContextDelete, but we have to clean up regexes explicitly.
      */
-    foreach (parsed_line_cell, new_parsed_lines) {
+    foreach (parsed_line_cell, new_parsed_lines)
+    {
       newline = (IdentLine *)lfirst(parsed_line_cell);
-      if (newline->ident_user[0] == '/') {
+      if (newline->ident_user[0] == '/')
+      {
         pg_regfree(&newline->re);
       }
     }
@@ -2493,15 +2902,19 @@ load_ident(void)
   }
 
   /* Loaded new file successfully, replace the one we use */
-  if (parsed_ident_lines != NIL) {
-    foreach (parsed_line_cell, parsed_ident_lines) {
+  if (parsed_ident_lines != NIL)
+  {
+    foreach (parsed_line_cell, parsed_ident_lines)
+    {
       newline = (IdentLine *)lfirst(parsed_line_cell);
-      if (newline->ident_user[0] == '/') {
+      if (newline->ident_user[0] == '/')
+      {
         pg_regfree(&newline->re);
       }
     }
   }
-  if (parsed_ident_context != NULL) {
+  if (parsed_ident_context != NULL)
+  {
     MemoryContextDelete(parsed_ident_context);
   }
 
@@ -2512,8 +2925,8 @@ load_ident(void)
 }
 
 /*
- *	Determine what authentication method should be used when accessing
- *database "database" from frontend "raddr", user "user".  Return the method and
+ *	Determine what authentication method should be used when accessing database
+ *	"database" from frontend "raddr", user "user".  Return the method and
  *	an optional argument (stored in fields of *port), and STATUS_OK.
  *
  *	If the file does not contain any entry matching the request, we return

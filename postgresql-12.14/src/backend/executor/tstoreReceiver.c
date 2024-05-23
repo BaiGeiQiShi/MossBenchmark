@@ -60,7 +60,7 @@ tstoreStartupReceiver(DestReceiver *self, int operation, TupleDesc typeinfo)
 
       if (attr->attisdropped)
       {
-
+        continue;
       }
       if (attr->attlen == -1)
       {

@@ -130,12 +130,12 @@ spgGetCache(Relation index)
 
     if (OidIsValid(cache->config.leafType) && cache->config.leafType != atttype)
     {
+      if (!OidIsValid(index_getprocid(index, 1, SPGIST_COMPRESS_PROC)))
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("compress method must be defined when leaf type is different from input type")));
+      }
 
-
-
-
-
-
+      fillTypeDesc(&cache->attLeafType, cache->config.leafType);
     }
     else
     {
@@ -153,7 +153,7 @@ spgGetCache(Relation index)
 
     if (metadata->magicNumber != SPGIST_MAGIC_NUMBER)
     {
-
+      elog(ERROR, "index \"%s\" is not an SP-GiST index", RelationGetRelationName(index));
     }
 
     cache->lastUsedPages = metadata->lastUsedPages;
@@ -222,36 +222,36 @@ SpGistNewBuffer(Relation index)
      * The fixed pages shouldn't ever be listed in FSM, but just in case
      * one is, ignore it.
      */
+    if (SpGistBlockIsFixed(blkno))
+    {
+      continue;
+    }
 
-
-
-
-
-
+    buffer = ReadBuffer(index, blkno);
 
     /*
      * We have to guard against the possibility that someone else already
      * recycled this page; the buffer may be locked if so.
      */
+    if (ConditionalLockBuffer(buffer))
+    {
+      Page page = BufferGetPage(buffer);
 
+      if (PageIsNew(page))
+      {
+        return buffer; /* OK to use, if never initialized */
+      }
 
+      if (SpGistPageIsDeleted(page) || PageIsEmpty(page))
+      {
+        return buffer; /* OK to use */
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
+    }
 
     /* Can't use it, so release buffer and try again */
-
+    ReleaseBuffer(buffer);
   }
 
   /* Must extend the file */
@@ -312,7 +312,7 @@ SpGistUpdateMetaPage(Relation index)
     }
     else
     {
-
+      ReleaseBuffer(metabuffer);
     }
   }
 }
@@ -353,7 +353,7 @@ allocNewBuffer(Relation index, int flags)
   }
   if (GBUF_REQ_NULLS(flags))
   {
-
+    pageflags |= SPGIST_NULLS;
   }
 
   for (;;)
@@ -383,7 +383,7 @@ allocNewBuffer(Relation index, int flags)
         /* Page has wrong parity, record it in cache and try again */
         if (pageflags & SPGIST_NULLS)
         {
-
+          blkFlags |= GBUF_NULLS;
         }
         cache->lastUsedPages.cachedPage[blkFlags].blkno = blkno;
         cache->lastUsedPages.cachedPage[blkFlags].freeSpace = PageGetExactFreeSpace(BufferGetPage(buffer));
@@ -411,7 +411,7 @@ SpGistGetBuffer(Relation index, int flags, int needSpace, bool *isNew)
   /* Bail out if even an empty page wouldn't meet the demand */
   if (needSpace > SPGIST_PAGE_CAPACITY)
   {
-
+    elog(ERROR, "desired SPGiST tuple size is too big");
   }
 
   /*
@@ -450,9 +450,9 @@ SpGistGetBuffer(Relation index, int flags, int needSpace, bool *isNew)
       /*
        * buffer is locked by another process, so return a new buffer
        */
-
-
-
+      ReleaseBuffer(buffer);
+      *isNew = true;
+      return allocNewBuffer(index, flags);
     }
 
     page = BufferGetPage(buffer);
@@ -468,7 +468,7 @@ SpGistGetBuffer(Relation index, int flags, int needSpace, bool *isNew)
       }
       if (GBUF_REQ_NULLS(flags))
       {
-
+        pageflags |= SPGIST_NULLS;
       }
       SpGistInitBuffer(buffer, pageflags);
       lup->freeSpace = PageGetExactFreeSpace(page) - needSpace;
@@ -496,7 +496,7 @@ SpGistGetBuffer(Relation index, int flags, int needSpace, bool *isNew)
     /*
      * fallback to allocation of new buffer
      */
-
+    UnlockReleaseBuffer(buffer);
   }
 
   /* No success with cache, so return a new buffer */
@@ -537,7 +537,7 @@ SpGistSetLastUsedPage(Relation index, Buffer buffer)
   }
   if (SpGistPageStoresNulls(page))
   {
-
+    flags |= GBUF_NULLS;
   }
 
   lup = GET_LUP(cache, flags);
@@ -680,7 +680,7 @@ spgFormLeafTuple(SpGistState *state, ItemPointer heapPtr, Datum datum, bool isnu
    */
   if (size < SGDTSIZE)
   {
-
+    size = SGDTSIZE;
   }
 
   /* OK, form the tuple */
@@ -723,7 +723,7 @@ spgFormNodeTuple(SpGistState *state, Datum label, bool isnull)
    */
   if ((size & INDEX_SIZE_MASK) != size)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row requires %zu bytes, maximum size is %zu", (Size)size, (Size)INDEX_SIZE_MASK)));
   }
 
   tup = (SpGistNodeTuple)palloc0(size);
@@ -783,7 +783,7 @@ spgFormInnerTuple(SpGistState *state, bool hasPrefix, Datum prefix, int nNodes, 
    */
   if (size < SGDTSIZE)
   {
-
+    size = SGDTSIZE;
   }
 
   /*
@@ -791,7 +791,7 @@ spgFormInnerTuple(SpGistState *state, bool hasPrefix, Datum prefix, int nNodes, 
    */
   if (size > SPGIST_PAGE_CAPACITY - sizeof(ItemIdData))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("SP-GiST inner tuple size %zu exceeds maximum %zu", (Size)size, SPGIST_PAGE_CAPACITY - sizeof(ItemIdData)), errhint("Values larger than a buffer page cannot be indexed.")));
   }
 
   /*
@@ -800,7 +800,7 @@ spgFormInnerTuple(SpGistState *state, bool hasPrefix, Datum prefix, int nNodes, 
    */
   if (size > SGITMAXSIZE || prefixSize > SGITMAXPREFIXSIZE || nNodes > SGITMAXNNODES)
   {
-
+    elog(ERROR, "SPGiST inner tuple header field is too small");
   }
 
   /* OK, form the tuple */
@@ -883,7 +883,7 @@ spgExtractNodeLabels(SpGistState *state, SpGistInnerTuple innerTuple)
     {
       if (!IndexTupleHasNulls(node))
       {
-
+        elog(ERROR, "some but not all node labels are null in SPGiST inner tuple");
       }
     }
     /* They're all null, so just return NULL */
@@ -896,7 +896,7 @@ spgExtractNodeLabels(SpGistState *state, SpGistInnerTuple innerTuple)
     {
       if (IndexTupleHasNulls(node))
       {
-
+        elog(ERROR, "some but not all node labels are null in SPGiST inner tuple");
       }
       nodeLabels[i] = SGNTDATUM(node, state);
     }
@@ -954,16 +954,16 @@ SpGistPageAddNewItem(SpGistState *state, Page page, Item item, Size size, Offset
         break;
       }
 
-
-
-
-
-
-
+      if (startOffset && *startOffset != InvalidOffsetNumber)
+      {
+        /* Hint was no good, re-search from beginning */
+        *startOffset = InvalidOffsetNumber;
+        continue;
+      }
 
       /* Hmm, no placeholder found? */
-
-
+      opaque->nPlaceholder = 0;
+      break;
     }
 
     if (offnum != InvalidOffsetNumber)
@@ -990,7 +990,7 @@ SpGistPageAddNewItem(SpGistState *state, Page page, Item item, Size size, Offset
       }
       else
       {
-
+        elog(PANIC, "failed to add item of size %u to SPGiST index page", (int)size);
       }
 
       return offnum;
@@ -1002,7 +1002,7 @@ SpGistPageAddNewItem(SpGistState *state, Page page, Item item, Size size, Offset
 
   if (offnum == InvalidOffsetNumber && !errorOK)
   {
-
+    elog(ERROR, "failed to add item of size %u to SPGiST index page", (int)size);
   }
 
   return offnum;
@@ -1029,9 +1029,9 @@ spgproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propname
 
   switch (prop)
   {
-  case AMPROP_DISTANCE_ORDERABLE:;
+  case AMPROP_DISTANCE_ORDERABLE:
     break;
-  default:;;
+  default:
     return false;
   }
 
@@ -1045,15 +1045,15 @@ spgproperty(Oid index_oid, int attno, IndexAMProperty prop, const char *propname
   opclass = get_index_column_opclass(index_oid, attno);
   if (!OidIsValid(opclass))
   {
-
-
+    *isnull = true;
+    return true;
   }
 
   /* Now look up the opclass family and input datatype. */
   if (!get_opclass_opfamily_and_input_type(opclass, &opfamily, &opcintype))
   {
-
-
+    *isnull = true;
+    return true;
   }
 
   /* And now we can check whether the operator is provided. */

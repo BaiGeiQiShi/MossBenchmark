@@ -26,8 +26,7 @@
 
 /*
  * raw_parser
- *		Given a query in string form, do lexical and grammatical
- *analysis.
+ *		Given a query in string form, do lexical and grammatical analysis.
  *
  * Returns a list of raw (un-analyzed) parse trees.  The immediate elements
  * of the list are always RawStmt nodes.
@@ -54,9 +53,9 @@ raw_parser(const char *str)
   /* Clean up (release memory) */
   scanner_finish(yyscanner);
 
-  if (yyresult)
-  { /* error */
-
+  if (yyresult) /* error */
+  {
+    return NIL;
   }
 
   return yyextra.parsetree;
@@ -110,16 +109,16 @@ base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
    */
   switch (cur_token)
   {
-  case NOT:;
+  case NOT:
     cur_token_length = 3;
     break;
-  case NULLS_P:;
+  case NULLS_P:
     cur_token_length = 5;
     break;
-  case WITH:;
+  case WITH:
     cur_token_length = 4;
     break;
-  default:;;
+  default:
     return cur_token;
   }
 
@@ -156,37 +155,37 @@ base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
   /* Replace cur_token if needed, based on lookahead */
   switch (cur_token)
   {
-  case NOT:;
+  case NOT:
     /* Replace NOT by NOT_LA if it's followed by BETWEEN, IN, etc */
     switch (next_token)
     {
-    case BETWEEN:;
-    case IN_P:;
-    case LIKE:;
-    case ILIKE:;
-    case SIMILAR:;
+    case BETWEEN:
+    case IN_P:
+    case LIKE:
+    case ILIKE:
+    case SIMILAR:
       cur_token = NOT_LA;
       break;
     }
     break;
 
-  case NULLS_P:;
+  case NULLS_P:
     /* Replace NULLS_P by NULLS_LA if it's followed by FIRST or LAST */
     switch (next_token)
     {
-    case FIRST_P:;
-    case LAST_P:;
+    case FIRST_P:
+    case LAST_P:
       cur_token = NULLS_LA;
       break;
     }
     break;
 
-  case WITH:;
+  case WITH:
     /* Replace WITH by WITH_LA if it's followed by TIME or ORDINALITY */
     switch (next_token)
     {
-    case TIME:;
-    case ORDINALITY:;
+    case TIME:
+    case ORDINALITY:
       cur_token = WITH_LA;
       break;
     }

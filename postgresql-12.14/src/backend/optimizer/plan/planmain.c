@@ -268,7 +268,7 @@ query_planner(PlannerInfo *root, query_pathkeys_callback qp_callback, void *qp_e
   /* Check that we got at least one usable path */
   if (!final_rel || !final_rel->cheapest_total_path || final_rel->cheapest_total_path->param_info != NULL)
   {
-
+    elog(ERROR, "failed to construct the join relation");
   }
 
   return final_rel;

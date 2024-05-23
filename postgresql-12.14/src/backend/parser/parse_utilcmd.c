@@ -286,21 +286,21 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString)
 
     switch (nodeTag(element))
     {
-    case T_ColumnDef:;
+    case T_ColumnDef:
       transformColumnDefinition(&cxt, (ColumnDef *)element);
       break;
 
-    case T_Constraint:;
+    case T_Constraint:
       transformTableConstraint(&cxt, (Constraint *)element);
       break;
 
-    case T_TableLikeClause:;
+    case T_TableLikeClause:
       transformTableLikeClause(&cxt, (TableLikeClause *)element);
       break;
 
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized node type: %d", (int)nodeTag(element));
+      break;
     }
   }
 
@@ -364,8 +364,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString)
 
 /*
  * generateSerialExtraStmts
- *		Generate CREATE SEQUENCE and ALTER SEQUENCE ... OWNED BY
- *statements to create the sequence for a serial or identity column.
+ *		Generate CREATE SEQUENCE and ALTER SEQUENCE ... OWNED BY statements
+ *		to create the sequence for a serial or identity column.
  *
  * This includes determining the name the sequence will have.  The caller
  * can ask to get back the name components by passing non-null pointers
@@ -403,11 +403,11 @@ generateSerialExtraStmts(CreateStmtContext *cxt, ColumnDef *column, Oid seqtypid
 
     if (strcmp(defel->defname, "sequence_name") == 0)
     {
-
-
-
-
-
+      if (nameEl)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
+      }
+      nameEl = defel;
     }
   }
 
@@ -415,23 +415,23 @@ generateSerialExtraStmts(CreateStmtContext *cxt, ColumnDef *column, Oid seqtypid
   {
     RangeVar *rv = makeRangeVarFromNameList(castNode(List, nameEl->arg));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    snamespace = rv->schemaname;
+    if (!snamespace)
+    {
+      /* Given unqualified SEQUENCE NAME, select namespace */
+      if (cxt->rel)
+      {
+        snamespaceid = RelationGetNamespace(cxt->rel);
+      }
+      else
+      {
+        snamespaceid = RangeVarGetCreationNamespace(cxt->relation);
+      }
+      snamespace = get_namespace_name(snamespaceid);
+    }
+    sname = rv->relname;
     /* Remove the SEQUENCE NAME item from seqoptions */
-
+    seqoptions = list_delete_ptr(seqoptions, nameEl);
   }
   else
   {
@@ -568,7 +568,7 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
      */
     if (is_serial && column->typeName->arrayBounds != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("array of serial is not implemented"), parser_errposition(cxt->pstate, column->typeName->location)));
     }
   }
 
@@ -638,7 +638,7 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
 
     switch (constraint->contype)
     {
-    case CONSTR_NULL:;
+    case CONSTR_NULL:
       if (saw_nullable && column->is_not_null)
       {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting NULL/NOT NULL declarations for column \"%s\" of table \"%s\"", column->colname, cxt->relation->relname), parser_errposition(cxt->pstate, constraint->location)));
@@ -647,26 +647,26 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
       saw_nullable = true;
       break;
 
-    case CONSTR_NOTNULL:;
+    case CONSTR_NOTNULL:
       if (saw_nullable && !column->is_not_null)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting NULL/NOT NULL declarations for column \"%s\" of table \"%s\"", column->colname, cxt->relation->relname), parser_errposition(cxt->pstate, constraint->location)));
       }
       column->is_not_null = true;
       saw_nullable = true;
       break;
 
-    case CONSTR_DEFAULT:;
+    case CONSTR_DEFAULT:
       if (saw_default)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple default values specified for column \"%s\" of table \"%s\"", column->colname, cxt->relation->relname), parser_errposition(cxt->pstate, constraint->location)));
       }
       column->raw_default = constraint->raw_expr;
       Assert(constraint->cooked_expr == NULL);
       saw_default = true;
       break;
 
-    case CONSTR_IDENTITY:;
+    case CONSTR_IDENTITY:
     {
       Type ctype;
       Oid typeOid;
@@ -704,7 +704,7 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
       break;
     }
 
-    case CONSTR_GENERATED:;
+    case CONSTR_GENERATED:
       if (cxt->ofType)
       {
         ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("generated columns are not supported on typed tables")));
@@ -724,21 +724,21 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
       saw_generated = true;
       break;
 
-    case CONSTR_CHECK:;
+    case CONSTR_CHECK:
       cxt->ckconstraints = lappend(cxt->ckconstraints, constraint);
       break;
 
-    case CONSTR_PRIMARY:;
+    case CONSTR_PRIMARY:
       if (cxt->isforeign)
       {
         ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("primary key constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
       }
       /* FALL THRU */
 
-    case CONSTR_UNIQUE:;
+    case CONSTR_UNIQUE:
       if (cxt->isforeign)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("unique constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
       }
       if (constraint->keys == NIL)
       {
@@ -747,12 +747,12 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
       cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
       break;
 
-    case CONSTR_EXCLUSION:;
+    case CONSTR_EXCLUSION:
       /* grammar does not allow EXCLUDE as a column constraint */
+      elog(ERROR, "column exclusion constraints are not supported");
+      break;
 
-
-
-    case CONSTR_FOREIGN:;
+    case CONSTR_FOREIGN:
       if (cxt->isforeign)
       {
         ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("foreign key constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
@@ -766,16 +766,16 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
       cxt->fkconstraints = lappend(cxt->fkconstraints, constraint);
       break;
 
-    case CONSTR_ATTR_DEFERRABLE:;
-    case CONSTR_ATTR_NOT_DEFERRABLE:;
-    case CONSTR_ATTR_DEFERRED:;
-    case CONSTR_ATTR_IMMEDIATE:;
+    case CONSTR_ATTR_DEFERRABLE:
+    case CONSTR_ATTR_NOT_DEFERRABLE:
+    case CONSTR_ATTR_DEFERRED:
+    case CONSTR_ATTR_IMMEDIATE:
       /* transformConstraintAttrs took care of these */
       break;
 
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized constraint type: %d", constraint->contype);
+      break;
     }
 
     if (saw_default && saw_identity)
@@ -829,7 +829,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
 {
   switch (constraint->contype)
   {
-  case CONSTR_PRIMARY:;
+  case CONSTR_PRIMARY:
     if (cxt->isforeign)
     {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("primary key constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
@@ -837,7 +837,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
     cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
     break;
 
-  case CONSTR_UNIQUE:;
+  case CONSTR_UNIQUE:
     if (cxt->isforeign)
     {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("unique constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
@@ -845,10 +845,10 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
     cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
     break;
 
-  case CONSTR_EXCLUSION:;
+  case CONSTR_EXCLUSION:
     if (cxt->isforeign)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("exclusion constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
     }
     if (cxt->ispartitioned)
     {
@@ -857,31 +857,31 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
     cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
     break;
 
-  case CONSTR_CHECK:;
+  case CONSTR_CHECK:
     cxt->ckconstraints = lappend(cxt->ckconstraints, constraint);
     break;
 
-  case CONSTR_FOREIGN:;
+  case CONSTR_FOREIGN:
     if (cxt->isforeign)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("foreign key constraints are not supported on foreign tables"), parser_errposition(cxt->pstate, constraint->location)));
     }
     cxt->fkconstraints = lappend(cxt->fkconstraints, constraint);
     break;
 
-  case CONSTR_NULL:;
-  case CONSTR_NOTNULL:;
-  case CONSTR_DEFAULT:;
-  case CONSTR_ATTR_DEFERRABLE:;
-  case CONSTR_ATTR_NOT_DEFERRABLE:;
-  case CONSTR_ATTR_DEFERRED:;
-  case CONSTR_ATTR_IMMEDIATE:;
+  case CONSTR_NULL:
+  case CONSTR_NOTNULL:
+  case CONSTR_DEFAULT:
+  case CONSTR_ATTR_DEFERRABLE:
+  case CONSTR_ATTR_NOT_DEFERRABLE:
+  case CONSTR_ATTR_DEFERRED:
+  case CONSTR_ATTR_IMMEDIATE:
+    elog(ERROR, "invalid context for constraint type %d", constraint->contype);
+    break;
 
-
-
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized constraint type: %d", constraint->contype);
+    break;
   }
 }
 
@@ -910,7 +910,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
   /* we could support LIKE in many cases, but worry about it another day */
   if (cxt->isforeign)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("LIKE is not supported for creating foreign tables")));
   }
 
   /* Open the relation referenced by the LIKE clause */
@@ -931,7 +931,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
     aclresult = pg_type_aclcheck(relation->rd_rel->reltype, GetUserId(), ACL_USAGE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_TYPE, RelationGetRelationName(relation));
     }
   }
   else
@@ -939,7 +939,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
     aclresult = pg_class_aclcheck(RelationGetRelid(relation), GetUserId(), ACL_SELECT);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, get_relkind_objtype(relation->rd_rel->relkind), RelationGetRelationName(relation));
     }
   }
 
@@ -1128,7 +1128,7 @@ expandTableLikeClause(RangeVar *heapRel, TableLikeClause *table_like_clause)
    */
   if (!OidIsValid(table_like_clause->relationOid))
   {
-
+    elog(ERROR, "expandTableLikeClause called on untransformed LIKE clause");
   }
 
   relation = relation_open(table_like_clause->relationOid, NoLock);
@@ -1201,7 +1201,7 @@ expandTableLikeClause(RangeVar *heapRel, TableLikeClause *table_like_clause)
          */
         if (found_whole_row)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot convert whole-row table reference"), errdetail("Generation expression for column \"%s\" contains a whole-row reference to table \"%s\".", NameStr(attribute->attname), RelationGetRelationName(relation))));
         }
 
         atsubcmds = lappend(atsubcmds, atsubcmd);
@@ -1236,7 +1236,7 @@ expandTableLikeClause(RangeVar *heapRel, TableLikeClause *table_like_clause)
        */
       if (found_whole_row)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot convert whole-row table reference"), errdetail("Constraint \"%s\" contains a whole-row reference to table \"%s\".", ccname, RelationGetRelationName(relation))));
       }
 
       n = makeNode(Constraint);
@@ -1360,7 +1360,7 @@ transformOfType(CreateStmtContext *cxt, TypeName *ofTypename)
 
     if (attr->attisdropped)
     {
-
+      continue;
     }
 
     n = makeNode(ColumnDef);
@@ -1435,7 +1435,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
   ht_idxrel = SearchSysCache1(RELOID, ObjectIdGetDatum(source_relid));
   if (!HeapTupleIsValid(ht_idxrel))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", source_relid);
   }
   idxrelrec = (Form_pg_class)GETSTRUCT(ht_idxrel);
 
@@ -1448,7 +1448,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
   ht_am = SearchSysCache1(AMOID, ObjectIdGetDatum(idxrelrec->relam));
   if (!HeapTupleIsValid(ht_am))
   {
-
+    elog(ERROR, "cache lookup failed for access method %u", idxrelrec->relam);
   }
   amrec = (Form_pg_am)GETSTRUCT(ht_am);
 
@@ -1516,7 +1516,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
       ht_constr = SearchSysCache1(CONSTROID, ObjectIdGetDatum(constraintId));
       if (!HeapTupleIsValid(ht_constr))
       {
-
+        elog(ERROR, "cache lookup failed for constraint %u", constraintId);
       }
       conrec = (Form_pg_constraint)GETSTRUCT(ht_constr);
 
@@ -1531,38 +1531,38 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
         int nElems;
         int i;
 
-
+        Assert(conrec->contype == CONSTRAINT_EXCLUSION);
         /* Extract operator OIDs from the pg_constraint tuple */
+        datum = SysCacheGetAttr(CONSTROID, ht_constr, Anum_pg_constraint_conexclop, &isnull);
+        if (isnull)
+        {
+          elog(ERROR, "null conexclop for constraint %u", constraintId);
+        }
 
+        deconstruct_array(DatumGetArrayTypeP(datum), OIDOID, sizeof(Oid), true, 'i', &elems, NULL, &nElems);
 
+        for (i = 0; i < nElems; i++)
+        {
+          Oid operid = DatumGetObjectId(elems[i]);
+          HeapTuple opertup;
+          Form_pg_operator operform;
+          char *oprname;
+          char *nspname;
+          List *namelist;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operid));
+          if (!HeapTupleIsValid(opertup))
+          {
+            elog(ERROR, "cache lookup failed for operator %u", operid);
+          }
+          operform = (Form_pg_operator)GETSTRUCT(opertup);
+          oprname = pstrdup(NameStr(operform->oprname));
+          /* For simplicity we always schema-qualify the op name */
+          nspname = get_namespace_name(operform->oprnamespace);
+          namelist = list_make2(makeString(nspname), makeString(oprname));
+          index->excludeOpNames = lappend(index->excludeOpNames, namelist);
+          ReleaseSysCache(opertup);
+        }
       }
 
       ReleaseSysCache(ht_constr);
@@ -1624,7 +1624,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
 
       if (indexpr_item == NULL)
       {
-
+        elog(ERROR, "too few entries in indexprs list");
       }
       indexkey = (Node *)lfirst(indexpr_item);
       indexpr_item = lnext(indexpr_item);
@@ -1635,7 +1635,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
       /* As in expandTableLikeClause, reject whole-row variables */
       if (found_whole_row)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot convert whole-row table reference"), errdetail("Index \"%s\" contains a whole-row table reference.", RelationGetRelationName(source_idx))));
       }
 
       iparam->name = NULL;
@@ -1667,17 +1667,17 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
        */
       if (opt & INDOPTION_DESC)
       {
-
-
-
-
-
+        iparam->ordering = SORTBY_DESC;
+        if ((opt & INDOPTION_NULLS_FIRST) == 0)
+        {
+          iparam->nulls_ordering = SORTBY_NULLS_LAST;
+        }
       }
       else
       {
         if (opt & INDOPTION_NULLS_FIRST)
         {
-
+          iparam->nulls_ordering = SORTBY_NULLS_FIRST;
         }
       }
     }
@@ -1707,7 +1707,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("expressions are not supported in included columns")));
     }
 
     /* Copy the original index column name */
@@ -1719,7 +1719,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
   datum = SysCacheGetAttr(RELOID, ht_idxrel, Anum_pg_class_reloptions, &isnull);
   if (!isnull)
   {
-
+    index->options = untransformRelOptions(datum);
   }
 
   /* If it's a partial index, decompile and append the predicate */
@@ -1740,7 +1740,7 @@ generateClonedIndexStmt(RangeVar *heapRel, Relation source_idx, const AttrNumber
     /* As in expandTableLikeClause, reject whole-row variables */
     if (found_whole_row)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot convert whole-row table reference"), errdetail("Index \"%s\" contains a whole-row table reference.", RelationGetRelationName(source_idx))));
     }
 
     index->whereClause = pred_tree;
@@ -1781,7 +1781,7 @@ generateClonedExtStatsStmt(RangeVar *heapRel, Oid heapRelid, Oid source_statsid)
   ht_stats = SearchSysCache1(STATEXTOID, ObjectIdGetDatum(source_statsid));
   if (!HeapTupleIsValid(ht_stats))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", source_statsid);
   }
   statsrec = (Form_pg_statistic_ext)GETSTRUCT(ht_stats);
 
@@ -1791,7 +1791,7 @@ generateClonedExtStatsStmt(RangeVar *heapRel, Oid heapRelid, Oid source_statsid)
   arr = DatumGetArrayTypeP(datum);
   if (ARR_NDIM(arr) != 1 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
   {
-
+    elog(ERROR, "stxkind is not a 1-D char array");
   }
   enabled = (char *)ARR_DATA_PTR(arr);
   for (i = 0; i < ARR_DIMS(arr)[0]; i++)
@@ -1810,7 +1810,7 @@ generateClonedExtStatsStmt(RangeVar *heapRel, Oid heapRelid, Oid source_statsid)
     }
     else
     {
-
+      elog(ERROR, "unrecognized statistics kind %c", enabled[i]);
     }
   }
 
@@ -1868,7 +1868,7 @@ get_collation(Oid collation, Oid actual_datatype)
   ht_coll = SearchSysCache1(COLLOID, ObjectIdGetDatum(collation));
   if (!HeapTupleIsValid(ht_coll))
   {
-
+    elog(ERROR, "cache lookup failed for collation %u", collation);
   }
   coll_rec = (Form_pg_collation)GETSTRUCT(ht_coll);
 
@@ -1882,8 +1882,7 @@ get_collation(Oid collation, Oid actual_datatype)
 }
 
 /*
- * get_opclass			- fetch qualified name of an index operator
- * class
+ * get_opclass			- fetch qualified name of an index operator class
  *
  * If the opclass is the default for the given actual_datatype, then
  * the return value is NIL.
@@ -1898,7 +1897,7 @@ get_opclass(Oid opclass, Oid actual_datatype)
   ht_opc = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclass));
   if (!HeapTupleIsValid(ht_opc))
   {
-
+    elog(ERROR, "cache lookup failed for opclass %u", opclass);
   }
   opc_rec = (Form_pg_opclass)GETSTRUCT(ht_opc);
 
@@ -1917,9 +1916,9 @@ get_opclass(Oid opclass, Oid actual_datatype)
 
 /*
  * transformIndexConstraints
- *		Handle UNIQUE, PRIMARY KEY, EXCLUDE constraints, which create
- *indexes. We also merge in any index definitions arising from LIKE ...
- *INCLUDING INDEXES.
+ *		Handle UNIQUE, PRIMARY KEY, EXCLUDE constraints, which create indexes.
+ *		We also merge in any index definitions arising from
+ *		LIKE ... INCLUDING INDEXES.
  */
 static void
 transformIndexConstraints(CreateStmtContext *cxt)
@@ -1980,7 +1979,7 @@ transformIndexConstraints(CreateStmtContext *cxt)
 
       if (equal(index->indexParams, priorindex->indexParams) && equal(index->indexIncludingParams, priorindex->indexIncludingParams) && equal(index->whereClause, priorindex->whereClause) && equal(index->excludeOpNames, priorindex->excludeOpNames) && strcmp(index->accessMethod, priorindex->accessMethod) == 0 && index->deferrable == priorindex->deferrable && index->initdeferred == priorindex->initdeferred)
       {
-
+        priorindex->unique |= index->unique;
 
         /*
          * If the prior index is as yet unnamed, and this one is
@@ -1988,12 +1987,12 @@ transformIndexConstraints(CreateStmtContext *cxt)
          * ensures that if we have named and unnamed constraints,
          * we'll use (at least one of) the names for the index.
          */
-
-
-
-
-
-
+        if (priorindex->idxname == NULL)
+        {
+          priorindex->idxname = index->idxname;
+        }
+        keep = false;
+        break;
       }
     }
 
@@ -2036,7 +2035,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
   {
     if (cxt->pkey != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION), errmsg("multiple primary keys for table \"%s\" are not allowed", cxt->relation->relname), parser_errposition(cxt->pstate, constraint->location)));
     }
     cxt->pkey = index;
 
@@ -2101,7 +2100,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
     /* Must be ALTER, not CREATE, but grammar doesn't enforce that */
     if (!cxt->isalter)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot use an existing index in CREATE TABLE"), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /* Look for the index in the same schema as the table */
@@ -2109,7 +2108,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 
     if (!OidIsValid(index_oid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("index \"%s\" does not exist", index_name), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /* Open the index (this will throw an error if it is not an index) */
@@ -2119,33 +2118,33 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
     /* Check that it does not have an associated constraint already */
     if (OidIsValid(get_index_constraint(index_oid)))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("index \"%s\" is already associated with a constraint", index_name), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /* Perform validity checks on the index */
     if (index_form->indrelid != RelationGetRelid(heap_rel))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("index \"%s\" does not belong to table \"%s\"", index_name, RelationGetRelationName(heap_rel)), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     if (!index_form->indisvalid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("index \"%s\" is not valid", index_name), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     if (!index_form->indisunique)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a unique index", index_name), errdetail("Cannot create a primary key or unique constraint using such an index."), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     if (RelationGetIndexExpressions(index_rel) != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("index \"%s\" contains expressions", index_name), errdetail("Cannot create a primary key or unique constraint using such an index."), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     if (RelationGetIndexPredicate(index_rel) != NIL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a partial index", index_name), errdetail("Cannot create a primary key or unique constraint using such an index."), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /*
@@ -2155,7 +2154,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
      */
     if (!index_form->indimmediate && !constraint->deferrable)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a deferrable index", index_name), errdetail("Cannot create a non-deferrable constraint using a deferrable index."), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /*
@@ -2167,7 +2166,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
      */
     if (index_rel->rd_rel->relam != get_index_am_oid(DEFAULT_INDEX_TYPE, false))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("index \"%s\" is not a btree", index_name), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /* Must get indclass the hard way */
@@ -2194,7 +2193,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
       }
       else
       {
-
+        attform = SystemAttributeDefinition(attnum);
       }
       attname = pstrdup(NameStr(attform->attname));
 
@@ -2210,7 +2209,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
         defopclass = GetDefaultOpClass(attform->atttypid, index_rel->rd_rel->relam);
         if (indclass->values[i] != defopclass || index_rel->rd_indoption[i] != 0)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("index \"%s\" column number %d does not have default sorting behavior", index_name, i + 1), errdetail("Cannot create a primary key or unique constraint using such an index."), parser_errposition(cxt->pstate, constraint->location)));
         }
 
         constraint->keys = lappend(constraint->keys, makeString(attname));
@@ -2297,7 +2296,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
          * it. System columns can't ever be null, so no need to worry
          * about PRIMARY/NOT NULL constraint.
          */
-
+        found = true;
       }
       else if (cxt->inhRelations)
       {
@@ -2314,7 +2313,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
           /* check user requested inheritance from valid relkind */
           if (rel->rd_rel->relkind != RELKIND_RELATION && rel->rd_rel->relkind != RELKIND_FOREIGN_TABLE && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
           {
-
+            ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("inherited relation \"%s\" is not a table or foreign table", inh->relname)));
           }
           for (count = 0; count < rel->rd_att->natts; count++)
           {
@@ -2323,7 +2322,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 
             if (inhattr->attisdropped)
             {
-
+              continue;
             }
             if (strcmp(key, inhname) == 0)
             {
@@ -2354,7 +2353,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
        */
       if (!found && !cxt->isalter)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column \"%s\" named in key does not exist", key), parser_errposition(cxt->pstate, constraint->location)));
       }
 
       /* Check for PRIMARY KEY(foo, foo) */
@@ -2363,14 +2362,14 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
         iparam = (IndexElem *)lfirst(columns);
         if (iparam->name && strcmp(key, iparam->name) == 0)
         {
-
-
-
-
-
-
-
-
+          if (index->primary)
+          {
+            ereport(ERROR, (errcode(ERRCODE_DUPLICATE_COLUMN), errmsg("column \"%s\" appears twice in primary key constraint", key), parser_errposition(cxt->pstate, constraint->location)));
+          }
+          else
+          {
+            ereport(ERROR, (errcode(ERRCODE_DUPLICATE_COLUMN), errmsg("column \"%s\" appears twice in unique constraint", key), parser_errposition(cxt->pstate, constraint->location)));
+          }
         }
       }
 
@@ -2433,46 +2432,46 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
          * column will be a system column in the new table, so accept
          * it.
          */
-
+        found = true;
       }
       else if (cxt->inhRelations)
       {
         /* try inherited tables */
         ListCell *inher;
 
+        foreach (inher, cxt->inhRelations)
+        {
+          RangeVar *inh = lfirst_node(RangeVar, inher);
+          Relation rel;
+          int count;
 
+          rel = table_openrv(inh, AccessShareLock);
+          /* check user requested inheritance from valid relkind */
+          if (rel->rd_rel->relkind != RELKIND_RELATION && rel->rd_rel->relkind != RELKIND_FOREIGN_TABLE && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+          {
+            ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("inherited relation \"%s\" is not a table or foreign table", inh->relname)));
+          }
+          for (count = 0; count < rel->rd_att->natts; count++)
+          {
+            Form_pg_attribute inhattr = TupleDescAttr(rel->rd_att, count);
+            char *inhname = NameStr(inhattr->attname);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            if (inhattr->attisdropped)
+            {
+              continue;
+            }
+            if (strcmp(key, inhname) == 0)
+            {
+              found = true;
+              break;
+            }
+          }
+          table_close(rel, NoLock);
+          if (found)
+          {
+            break;
+          }
+        }
       }
     }
 
@@ -2483,7 +2482,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
      */
     if (!found && !cxt->isalter)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column \"%s\" named in key does not exist", key), parser_errposition(cxt->pstate, constraint->location)));
     }
 
     /* OK, add it to the index definition */
@@ -2718,7 +2717,7 @@ transformIndexStmt(Oid relid, IndexStmt *stmt, const char *queryString)
    */
   if (list_length(pstate->p_rtable) != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_COLUMN_REFERENCE), errmsg("index expressions and predicates can refer only to the table being indexed")));
   }
 
   free_parsestate(pstate);
@@ -2762,7 +2761,7 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
 
   if (rel->rd_rel->relkind == RELKIND_MATVIEW)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("rules on materialized views are not supported")));
   }
 
   /* Set up pstate */
@@ -2789,22 +2788,22 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
    */
   switch (stmt->event)
   {
-  case CMD_SELECT:;
+  case CMD_SELECT:
     addRTEtoQuery(pstate, oldrte, false, true, true);
     break;
-  case CMD_UPDATE:;
+  case CMD_UPDATE:
     addRTEtoQuery(pstate, oldrte, false, true, true);
     addRTEtoQuery(pstate, newrte, false, true, true);
     break;
-  case CMD_INSERT:;
+  case CMD_INSERT:
     addRTEtoQuery(pstate, newrte, false, true, true);
     break;
-  case CMD_DELETE:;
+  case CMD_DELETE:
     addRTEtoQuery(pstate, oldrte, false, true, true);
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized event type: %d", (int)stmt->event);
+    break;
   }
 
   /* take care of the where clause */
@@ -2813,9 +2812,9 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
   assign_expr_collations(pstate, *whereClause);
 
   /* this is probably dead code without add_missing_from: */
-  if (list_length(pstate->p_rtable) != 2)
-  { /* naughty, naughty... */
-
+  if (list_length(pstate->p_rtable) != 2) /* naughty, naughty... */
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("rule WHERE condition cannot contain references to other relations")));
   }
 
   /*
@@ -2879,7 +2878,7 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
        */
       if (top_subqry->commandType == CMD_UTILITY && *whereClause != NULL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("rules with WHERE conditions can only have SELECT, INSERT, UPDATE, or DELETE actions")));
       }
 
       /*
@@ -2897,7 +2896,7 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
        */
       if (sub_qry->setOperations != NULL && *whereClause != NULL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("conditional UNION/INTERSECT/EXCEPT statements are not implemented")));
       }
 
       /*
@@ -2908,34 +2907,34 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
 
       switch (stmt->event)
       {
-      case CMD_SELECT:;
+      case CMD_SELECT:
         if (has_old)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("ON SELECT rule cannot use OLD")));
         }
         if (has_new)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("ON SELECT rule cannot use NEW")));
         }
         break;
-      case CMD_UPDATE:;
+      case CMD_UPDATE:
         /* both are OK */
         break;
-      case CMD_INSERT:;
+      case CMD_INSERT:
         if (has_old)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("ON INSERT rule cannot use OLD")));
         }
         break;
-      case CMD_DELETE:;
+      case CMD_DELETE:
         if (has_new)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("ON DELETE rule cannot use NEW")));
         }
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized event type: %d", (int)stmt->event);
+        break;
       }
 
       /*
@@ -2958,7 +2957,7 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
       }
       if (rangeTableEntry_used((Node *)top_subqry->cteList, PRS2_NEW_VARNO, 0) || rangeTableEntry_used((Node *)sub_qry->cteList, PRS2_NEW_VARNO, 0))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot refer to NEW within WITH query")));
       }
 
       /*
@@ -2985,7 +2984,7 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString, List **actions, Node 
          */
         if (sub_qry->setOperations != NULL)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("conditional UNION/INTERSECT/EXCEPT statements are not implemented")));
         }
         /* hack so we can use addRTEtoQuery() */
         sub_pstate->p_rtable = sub_qry->rtable;
@@ -3091,8 +3090,8 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
 
     switch (cmd->subtype)
     {
-    case AT_AddColumn:;
-    case AT_AddColumnToView:;
+    case AT_AddColumn:
+    case AT_AddColumnToView:
     {
       ColumnDef *def = castNode(ColumnDef, cmd->def);
 
@@ -3117,7 +3116,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       break;
     }
 
-    case AT_AddConstraint:;
+    case AT_AddConstraint:
 
       /*
        * The original AddConstraint cmd node doesn't go to newcmds
@@ -3132,11 +3131,11 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       }
       else
       {
-
+        elog(ERROR, "unrecognized node type: %d", (int)nodeTag(cmd->def));
       }
       break;
 
-    case AT_ProcessedConstraint:;
+    case AT_ProcessedConstraint:
 
       /*
        * Already-transformed ADD CONSTRAINT, so just make it look
@@ -3146,7 +3145,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       newcmds = lappend(newcmds, cmd);
       break;
 
-    case AT_AlterColumnType:;
+    case AT_AlterColumnType:
     {
       ColumnDef *def = (ColumnDef *)cmd->def;
       AttrNumber attnum;
@@ -3186,7 +3185,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       break;
     }
 
-    case AT_AddIdentity:;
+    case AT_AddIdentity:
     {
       Constraint *def = castNode(Constraint, cmd->def);
       ColumnDef *newdef = makeNode(ColumnDef);
@@ -3211,7 +3210,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       break;
     }
 
-    case AT_SetIdentity:;
+    case AT_SetIdentity:
     {
       /*
        * Create an ALTER SEQUENCE statement for the internal
@@ -3272,8 +3271,8 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       break;
     }
 
-    case AT_AttachPartition:;
-    case AT_DetachPartition:;
+    case AT_AttachPartition:
+    case AT_DetachPartition:
     {
       PartitionCmd *partcmd = (PartitionCmd *)cmd->def;
 
@@ -3285,7 +3284,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
       newcmds = lappend(newcmds, cmd);
       break;
 
-    default:;;
+    default:
       newcmds = lappend(newcmds, cmd);
       break;
     }
@@ -3336,7 +3335,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt, const char *queryString
     }
     else
     {
-
+      elog(ERROR, "unexpected stmt type %d", (int)nodeTag(istmt));
     }
   }
   cxt.alist = NIL;
@@ -3400,48 +3399,48 @@ transformConstraintAttrs(CreateStmtContext *cxt, List *constraintList)
 
     if (!IsA(con, Constraint))
     {
-
+      elog(ERROR, "unrecognized node type: %d", (int)nodeTag(con));
     }
     switch (con->contype)
     {
-    case CONSTR_ATTR_DEFERRABLE:;
+    case CONSTR_ATTR_DEFERRABLE:
       if (!SUPPORTS_ATTRS(lastprimarycon))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("misplaced DEFERRABLE clause"), parser_errposition(cxt->pstate, con->location)));
       }
       if (saw_deferrability)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed"), parser_errposition(cxt->pstate, con->location)));
       }
       saw_deferrability = true;
       lastprimarycon->deferrable = true;
       break;
 
-    case CONSTR_ATTR_NOT_DEFERRABLE:;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    case CONSTR_ATTR_DEFERRED:;
+    case CONSTR_ATTR_NOT_DEFERRABLE:
       if (!SUPPORTS_ATTRS(lastprimarycon))
       {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("misplaced NOT DEFERRABLE clause"), parser_errposition(cxt->pstate, con->location)));
+      }
+      if (saw_deferrability)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed"), parser_errposition(cxt->pstate, con->location)));
+      }
+      saw_deferrability = true;
+      lastprimarycon->deferrable = false;
+      if (saw_initially && lastprimarycon->initdeferred)
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE"), parser_errposition(cxt->pstate, con->location)));
+      }
+      break;
 
+    case CONSTR_ATTR_DEFERRED:
+      if (!SUPPORTS_ATTRS(lastprimarycon))
+      {
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("misplaced INITIALLY DEFERRED clause"), parser_errposition(cxt->pstate, con->location)));
       }
       if (saw_initially)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed"), parser_errposition(cxt->pstate, con->location)));
       }
       saw_initially = true;
       lastprimarycon->initdeferred = true;
@@ -3451,28 +3450,28 @@ transformConstraintAttrs(CreateStmtContext *cxt, List *constraintList)
        */
       if (!saw_deferrability)
       {
-
+        lastprimarycon->deferrable = true;
       }
       else if (!lastprimarycon->deferrable)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE"), parser_errposition(cxt->pstate, con->location)));
       }
       break;
 
-    case CONSTR_ATTR_IMMEDIATE:;
+    case CONSTR_ATTR_IMMEDIATE:
       if (!SUPPORTS_ATTRS(lastprimarycon))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("misplaced INITIALLY IMMEDIATE clause"), parser_errposition(cxt->pstate, con->location)));
       }
       if (saw_initially)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed"), parser_errposition(cxt->pstate, con->location)));
       }
       saw_initially = true;
       lastprimarycon->initdeferred = false;
       break;
 
-    default:;;
+    default:
       /* Otherwise it's not an attribute */
       lastprimarycon = con;
       /* reset flags for new primary node */
@@ -3560,16 +3559,16 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
 
     switch (nodeTag(element))
     {
-    case T_CreateSeqStmt:;
+    case T_CreateSeqStmt:
     {
       CreateSeqStmt *elp = (CreateSeqStmt *)element;
 
-
-
+      setSchemaName(cxt.schemaname, &elp->sequence->schemaname);
+      cxt.sequences = lappend(cxt.sequences, element);
     }
+    break;
 
-
-    case T_CreateStmt:;
+    case T_CreateStmt:
     {
       CreateStmt *elp = (CreateStmt *)element;
 
@@ -3582,7 +3581,7 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
     }
     break;
 
-    case T_ViewStmt:;
+    case T_ViewStmt:
     {
       ViewStmt *elp = (ViewStmt *)element;
 
@@ -3595,7 +3594,7 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
     }
     break;
 
-    case T_IndexStmt:;
+    case T_IndexStmt:
     {
       IndexStmt *elp = (IndexStmt *)element;
 
@@ -3604,21 +3603,21 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
     }
     break;
 
-    case T_CreateTrigStmt:;
+    case T_CreateTrigStmt:
     {
       CreateTrigStmt *elp = (CreateTrigStmt *)element;
 
-
-
+      setSchemaName(cxt.schemaname, &elp->relation->schemaname);
+      cxt.triggers = lappend(cxt.triggers, element);
     }
+    break;
 
+    case T_GrantStmt:
+      cxt.grants = lappend(cxt.grants, element);
+      break;
 
-    case T_GrantStmt:;
-
-
-
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized node type: %d", (int)nodeTag(element));
     }
   }
 
@@ -3635,8 +3634,7 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
 
 /*
  * setSchemaName
- *		Set or check schema name in an element of a CREATE SCHEMA
- *command
+ *		Set or check schema name in an element of a CREATE SCHEMA command
  */
 static void
 setSchemaName(char *context_schema, char **stmt_schema_name)
@@ -3645,10 +3643,12 @@ setSchemaName(char *context_schema, char **stmt_schema_name)
   {
     *stmt_schema_name = context_schema;
   }
-
-
-
-
+  else if (strcmp(context_schema, *stmt_schema_name) != 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_SCHEMA_DEFINITION), errmsg("CREATE specifies a schema (%s) "
+                                                                       "different from the one being created (%s)",
+                                                                    *stmt_schema_name, context_schema)));
+  }
 }
 
 /*
@@ -3665,7 +3665,7 @@ transformPartitionCmd(CreateStmtContext *cxt, PartitionCmd *cmd)
 
   switch (parentRel->rd_rel->relkind)
   {
-  case RELKIND_PARTITIONED_TABLE:;
+  case RELKIND_PARTITIONED_TABLE:
     /* transform the partition bound, if any */
     Assert(RelationGetPartitionKey(parentRel) != NULL);
     if (cmd->bound != NULL)
@@ -3673,18 +3673,18 @@ transformPartitionCmd(CreateStmtContext *cxt, PartitionCmd *cmd)
       cxt->partbound = transformPartitionBound(cxt->pstate, parentRel, cmd->bound);
     }
     break;
-  case RELKIND_PARTITIONED_INDEX:;
+  case RELKIND_PARTITIONED_INDEX:
     /* nothing to check */
     break;
-  case RELKIND_RELATION:;
+  case RELKIND_RELATION:
     /* the table must be partitioned */
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("table \"%s\" is not partitioned", RelationGetRelationName(parentRel))));
     break;
-  case RELKIND_INDEX:;
+  case RELKIND_INDEX:
     /* the index must be partitioned */
-
-
-  default:;;
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("index \"%s\" is not partitioned", RelationGetRelationName(parentRel))));
+    break;
+  default:
     /* parser shouldn't let this case through */
     elog(ERROR, "\"%s\" is not a partitioned table or index", RelationGetRelationName(parentRel));
     break;
@@ -3789,13 +3789,13 @@ transformPartitionBound(ParseState *pstate, Relation parent, PartitionBoundSpec 
 
         if (equal(value, value2))
         {
-
-
+          duplicate = true;
+          break;
         }
       }
       if (duplicate)
       {
-
+        continue;
       }
 
       result_spec->listdatums = lappend(result_spec->listdatums, value);
@@ -3826,7 +3826,7 @@ transformPartitionBound(ParseState *pstate, Relation parent, PartitionBoundSpec 
   }
   else
   {
-
+    elog(ERROR, "unexpected partition strategy: %d", (int)strategy);
   }
 
   return result_spec;
@@ -3834,8 +3834,8 @@ transformPartitionBound(ParseState *pstate, Relation parent, PartitionBoundSpec 
 
 /*
  * transformPartitionRangeBounds
- *		This converts the expressions for range partition bounds from
- *the raw grammar representation to PartitionRangeDatum structs
+ *		This converts the expressions for range partition bounds from the raw
+ *		grammar representation to PartitionRangeDatum structs
  */
 static List *
 transformPartitionRangeBounds(ParseState *pstate, List *blist, Relation parent)
@@ -3965,15 +3965,15 @@ validateInfiniteBounds(ParseState *pstate, List *blist)
 
     switch (kind)
     {
-    case PARTITION_RANGE_DATUM_VALUE:;
+    case PARTITION_RANGE_DATUM_VALUE:
       kind = prd->kind;
       break;
 
-    case PARTITION_RANGE_DATUM_MAXVALUE:;
+    case PARTITION_RANGE_DATUM_MAXVALUE:
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("every bound following MAXVALUE must also be MAXVALUE"), parser_errposition(pstate, exprLocation((Node *)prd))));
       break;
 
-    case PARTITION_RANGE_DATUM_MINVALUE:;
+    case PARTITION_RANGE_DATUM_MINVALUE:
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("every bound following MINVALUE must also be MINVALUE"), parser_errposition(pstate, exprLocation((Node *)prd))));
       break;
     }
@@ -4012,7 +4012,7 @@ transformPartitionBoundValue(ParseState *pstate, Node *val, const char *colName,
     {
       if (!OidIsValid(exprCollOid))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for partition bound expression"), errhint("Use the COLLATE clause to set the collation explicitly.")));
       }
     }
     else
@@ -4058,7 +4058,7 @@ transformPartitionBoundValue(ParseState *pstate, Node *val, const char *colName,
   value = (Node *)evaluate_expr((Expr *)value, colType, colTypmod, partCollation);
   if (!IsA(value, Const))
   {
-
+    elog(ERROR, "could not evaluate partition bound expression");
   }
 
   return (Const *)value;

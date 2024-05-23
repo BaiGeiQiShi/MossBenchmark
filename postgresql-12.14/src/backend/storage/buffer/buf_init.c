@@ -49,10 +49,10 @@ CkptSortItem *CkptBufferIds;
  *		faulting it in.  see WaitIO and related routines.
  *
  * refcount --	Counts the number of processes holding pins on a buffer.
- *		A buffer is pinned during IO and immediately after a
- *BufferAlloc(). Pins must be released before end of transaction.  For
- *efficiency the shared refcount isn't increased if an individual backend pins a
- *buffer multiple times. Check the PrivateRefCount infrastructure in bufmgr.c.
+ *		A buffer is pinned during IO and immediately after a BufferAlloc().
+ *		Pins must be released before end of transaction.  For efficiency the
+ *		shared refcount isn't increased if an individual backend pins a buffer
+ *		multiple times. Check the PrivateRefCount infrastructure in bufmgr.c.
  */
 
 /*
@@ -89,7 +89,7 @@ InitBufferPool(void)
   if (foundDescs || foundBufs || foundIOLocks || foundBufCkpt)
   {
     /* should find all of these, or none of them */
-
+    Assert(foundDescs && foundBufs && foundIOLocks && foundBufCkpt);
     /* note: this path is only taken in EXEC_BACKEND case */
   }
   else

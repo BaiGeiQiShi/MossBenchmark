@@ -56,20 +56,20 @@ CteScanNext(CteScanState *node)
 
   if (!forward && eof_tuplestore)
   {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (!node->leader->eof_cte)
+    {
+      /*
+       * When reversing direction at tuplestore EOF, the first
+       * gettupleslot call will fetch the last-added tuple; but we want
+       * to return the one before that, if possible. So do an extra
+       * fetch.
+       */
+      if (!tuplestore_advance(tuplestorestate, forward))
+      {
+        return NULL; /* the tuplestore must be empty */
+      }
+    }
+    eof_tuplestore = false;
   }
 
   /*
@@ -151,16 +151,16 @@ CteScanNext(CteScanState *node)
 static bool
 CteScanRecheck(CteScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------
  *		ExecCteScan(node)
  *
- *		Scans the CTE sequentially and returns the next qualifying
- *tuple. We call the ExecScan() routine and pass it the appropriate access
- *method functions.
+ *		Scans the CTE sequentially and returns the next qualifying tuple.
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
  * ----------------------------------------------------------------
  */
 static TupleTableSlot *

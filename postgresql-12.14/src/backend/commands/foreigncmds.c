@@ -143,7 +143,7 @@ transformGenericOptions(Oid catalogId, Datum oldOptions, List *options, Oid fdwv
      */
     switch (od->defaction)
     {
-    case DEFELEM_DROP:;
+    case DEFELEM_DROP:
       if (!cell)
       {
         ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("option \"%s\" not found", od->defname)));
@@ -151,7 +151,7 @@ transformGenericOptions(Oid catalogId, Datum oldOptions, List *options, Oid fdwv
       resultOptions = list_delete_cell(resultOptions, cell, prev);
       break;
 
-    case DEFELEM_SET:;
+    case DEFELEM_SET:
       if (!cell)
       {
         ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("option \"%s\" not found", od->defname)));
@@ -159,8 +159,8 @@ transformGenericOptions(Oid catalogId, Datum oldOptions, List *options, Oid fdwv
       lfirst(cell) = od;
       break;
 
-    case DEFELEM_ADD:;
-    case DEFELEM_UNSPEC:;
+    case DEFELEM_ADD:
+    case DEFELEM_UNSPEC:
       if (cell)
       {
         ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("option \"%s\" provided more than once", od->defname)));
@@ -168,9 +168,9 @@ transformGenericOptions(Oid catalogId, Datum oldOptions, List *options, Oid fdwv
       resultOptions = lappend(resultOptions, od);
       break;
 
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized action %d on option \"%s\"", (int)od->defaction, od->defname);
+      break;
     }
   }
 
@@ -237,9 +237,9 @@ AlterForeignDataWrapperOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerI
     /* Null ACLs do not require changes */
     if (!isNull)
     {
-
-
-
+      newAcl = aclnewowner(DatumGetAclP(aclDatum), form->fdwowner, newOwnerId);
+      repl_repl[Anum_pg_foreign_data_wrapper_fdwacl - 1] = true;
+      repl_val[Anum_pg_foreign_data_wrapper_fdwacl - 1] = PointerGetDatum(newAcl);
     }
 
     tup = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null, repl_repl);
@@ -273,7 +273,7 @@ AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign-data wrapper \"%s\" does not exist", name)));
   }
 
   form = (Form_pg_foreign_data_wrapper)GETSTRUCT(tup);
@@ -298,23 +298,23 @@ AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId)
 void
 AlterForeignDataWrapperOwner_oid(Oid fwdId, Oid newOwnerId)
 {
+  HeapTuple tup;
+  Relation rel;
 
+  rel = table_open(ForeignDataWrapperRelationId, RowExclusiveLock);
 
+  tup = SearchSysCacheCopy1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fwdId));
 
+  if (!HeapTupleIsValid(tup))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign-data wrapper with OID %u does not exist", fwdId)));
+  }
 
+  AlterForeignDataWrapperOwner_internal(rel, tup, newOwnerId);
 
+  heap_freetuple(tup);
 
-
-
-
-
-
-
-
-
-
-
-
+  table_close(rel, RowExclusiveLock);
 }
 
 /*
@@ -406,7 +406,7 @@ AlterForeignServerOwner(const char *name, Oid newOwnerId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("server \"%s\" does not exist", name)));
   }
 
   form = (Form_pg_foreign_server)GETSTRUCT(tup);
@@ -438,7 +438,7 @@ AlterForeignServerOwner_oid(Oid srvId, Oid newOwnerId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign server with OID %u does not exist", srvId)));
   }
 
   AlterForeignServerOwner_internal(rel, tup, newOwnerId);
@@ -459,7 +459,7 @@ lookup_fdw_handler_func(DefElem *handler)
 
   if (handler == NULL || handler->arg == NULL)
   {
-
+    return InvalidOid;
   }
 
   /* handlers have no arguments */
@@ -526,14 +526,14 @@ parse_func_options(List *func_options, bool *handler_given, Oid *fdwhandler, boo
     {
       if (*validator_given)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
       *validator_given = true;
       *fdwvalidator = lookup_fdw_validator_func(def);
     }
     else
     {
-
+      elog(ERROR, "option \"%s\" not recognized", def->defname);
     }
   }
 }
@@ -680,7 +680,7 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 
   if (!HeapTupleIsValid(tp))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("foreign-data wrapper \"%s\" does not exist", stmt->fdwname)));
   }
 
   fdwForm = (Form_pg_foreign_data_wrapper)GETSTRUCT(tp);
@@ -716,7 +716,8 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
      */
     if (OidIsValid(fdwvalidator))
     {
-      ereport(WARNING, (errmsg("changing the foreign-data wrapper validator can cause the options for dependent objects to become invalid")));
+      ereport(WARNING, (errmsg("changing the foreign-data wrapper validator can cause "
+                               "the options for dependent objects to become invalid")));
     }
   }
   else
@@ -815,7 +816,7 @@ RemoveForeignDataWrapperById(Oid fdwId)
 
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwId);
   }
 
   CatalogTupleDelete(rel, &tp->t_self);
@@ -1013,7 +1014,7 @@ AlterForeignServer(AlterForeignServerStmt *stmt)
     }
     else
     {
-
+      repl_null[Anum_pg_foreign_server_srvversion - 1] = true;
     }
 
     repl_repl[Anum_pg_foreign_server_srvversion - 1] = true;
@@ -1078,7 +1079,7 @@ RemoveForeignServerById(Oid srvId)
 
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for foreign server %u", srvId);
   }
 
   CatalogTupleDelete(rel, &tp->t_self);
@@ -1280,7 +1281,7 @@ AlterUserMapping(AlterUserMappingStmt *stmt)
 
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for user mapping %u", umId);
   }
 
   memset(repl_val, 0, sizeof(repl_val));
@@ -1420,7 +1421,7 @@ RemoveUserMappingById(Oid umId)
 
   if (!HeapTupleIsValid(tp))
   {
-
+    elog(ERROR, "cache lookup failed for user mapping %u", umId);
   }
 
   CatalogTupleDelete(rel, &tp->t_self);
@@ -1470,7 +1471,7 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid)
   aclresult = pg_foreign_server_aclcheck(server->serverid, ownerId, ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FOREIGN_SERVER, server->servername);
   }
 
   fdw = GetForeignDataWrapper(server->fdwid);
@@ -1532,7 +1533,7 @@ ImportForeignSchema(ImportForeignSchemaStmt *stmt)
   aclresult = pg_foreign_server_aclcheck(server->serverid, GetUserId(), ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FOREIGN_SERVER, server->servername);
   }
 
   /* Check that the schema exists and we have CREATE permissions on it */
@@ -1547,7 +1548,7 @@ ImportForeignSchema(ImportForeignSchemaStmt *stmt)
   fdw_routine = GetFdwRoutine(fdw->fdwhandler);
   if (fdw_routine->ImportForeignSchema == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FDW_NO_SCHEMAS), errmsg("foreign-data wrapper \"%s\" does not support IMPORT FOREIGN SCHEMA", fdw->fdwname)));
   }
 
   /* Call FDW to get a list of commands */
@@ -1566,67 +1567,67 @@ ImportForeignSchema(ImportForeignSchemaStmt *stmt)
      * Setup error traceback support for ereport().  This is so that any
      * error in the generated SQL will be displayed nicely.
      */
-
-
-
-
-
-
+    callback_arg.tablename = NULL; /* not known yet */
+    callback_arg.cmd = cmd;
+    sqlerrcontext.callback = import_error_callback;
+    sqlerrcontext.arg = (void *)&callback_arg;
+    sqlerrcontext.previous = error_context_stack;
+    error_context_stack = &sqlerrcontext;
 
     /*
      * Parse the SQL string into a list of raw parse trees.
      */
-
+    raw_parsetree_list = pg_parse_query(cmd);
 
     /*
      * Process each parse tree (we allow the FDW to put more than one
      * command per string, though this isn't really advised).
      */
+    foreach (lc2, raw_parsetree_list)
+    {
+      RawStmt *rs = lfirst_node(RawStmt, lc2);
+      CreateForeignTableStmt *cstmt = (CreateForeignTableStmt *)rs->stmt;
+      PlannedStmt *pstmt;
 
+      /*
+       * Because we only allow CreateForeignTableStmt, we can skip parse
+       * analysis, rewrite, and planning steps here.
+       */
+      if (!IsA(cstmt, CreateForeignTableStmt))
+      {
+        elog(ERROR, "foreign-data wrapper \"%s\" returned incorrect statement type %d", fdw->fdwname, (int)nodeTag(cstmt));
+      }
 
+      /* Ignore commands for tables excluded by filter options */
+      if (!IsImportableForeignTable(cstmt->base.relation->relname, stmt))
+      {
+        continue;
+      }
 
+      /* Enable reporting of current table's name on error */
+      callback_arg.tablename = cstmt->base.relation->relname;
 
+      /* Ensure creation schema is the one given in IMPORT statement */
+      cstmt->base.relation->schemaname = pstrdup(stmt->local_schema);
 
+      /* No planning needed, just make a wrapper PlannedStmt */
+      pstmt = makeNode(PlannedStmt);
+      pstmt->commandType = CMD_UTILITY;
+      pstmt->canSetTag = false;
+      pstmt->utilityStmt = (Node *)cstmt;
+      pstmt->stmt_location = rs->stmt_location;
+      pstmt->stmt_len = rs->stmt_len;
 
+      /* Execute statement */
+      ProcessUtility(pstmt, cmd, PROCESS_UTILITY_SUBCOMMAND, NULL, NULL, None_Receiver, NULL);
 
+      /* Be sure to advance the command counter between subcommands */
+      CommandCounterIncrement();
 
+      callback_arg.tablename = NULL;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    error_context_stack = sqlerrcontext.previous;
   }
 }
 
@@ -1636,20 +1637,20 @@ ImportForeignSchema(ImportForeignSchemaStmt *stmt)
 static void
 import_error_callback(void *arg)
 {
+  import_error_callback_arg *callback_arg = (import_error_callback_arg *)arg;
+  int syntaxerrposition;
 
+  /* If it's a syntax error, convert to internal syntax error report */
+  syntaxerrposition = geterrposition();
+  if (syntaxerrposition > 0)
+  {
+    errposition(0);
+    internalerrposition(syntaxerrposition);
+    internalerrquery(callback_arg->cmd);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (callback_arg->tablename)
+  {
+    errcontext("importing foreign table \"%s\"", callback_arg->tablename);
+  }
 }

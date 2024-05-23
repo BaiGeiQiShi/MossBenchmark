@@ -98,7 +98,7 @@ xlogVacuumPage(Relation index, Buffer buffer)
 
   if (!RelationNeedsWAL(index))
   {
-
+    return;
   }
 
   /*
@@ -494,9 +494,9 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
       }
       else
       {
-
-
-
+        items_orig = (ItemPointer)GinGetPosting(itup);
+        nitems = GinGetNPosting(itup);
+        free_items_orig = false;
       }
 
       /* Remove any items from the list that need to be vacuumed. */
@@ -554,7 +554,7 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 
         if (PageAddItem(tmppage, (Item)itup, IndexTupleSize(itup), i, false, false) != i)
         {
-
+          elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(gvs->index));
         }
 
         pfree(itup);
@@ -618,8 +618,8 @@ ginbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats, IndexBulkDele
 
       if (blkno == GIN_ROOT_BLKNO && !GinPageIsLeaf(page))
       {
-
-
+        LockBuffer(buffer, GIN_UNLOCK);
+        continue; /* check it one more */
       }
       break;
     }
@@ -670,8 +670,8 @@ ginbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats, IndexBulkDele
       vacuum_delay_point();
     }
 
-    if (blkno == InvalidBlockNumber)
-    { /* rightmost page */
+    if (blkno == InvalidBlockNumber) /* rightmost page */
+    {
       break;
     }
 
@@ -700,12 +700,12 @@ ginvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
    */
   if (info->analyze_only)
   {
-
-
-
-
-
-
+    if (IsAutoVacuumWorkerProcess())
+    {
+      initGinState(&ginstate, index);
+      ginInsertCleanup(&ginstate, false, true, true, stats);
+    }
+    return stats;
   }
 
   /*

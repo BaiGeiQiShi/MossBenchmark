@@ -21,10 +21,10 @@
 #include "utils/builtins.h"
 
 #define CHECK_IS_BINARY_UPGRADE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!IsBinaryUpgrade)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-      ereport(ERROR, (errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM), (errmsg("function can only be called when server is in "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-                                                                          "binary upgrade mode"))));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+      ereport(ERROR, (errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM), (errmsg("function can only be called when server is in binary upgrade mode"))));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
   } while (0)
 
 Datum
@@ -128,7 +128,8 @@ binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS)
   CHECK_IS_BINARY_UPGRADE;
 
   /* We must check these things before dereferencing the arguments */
-  if (PG_ARGISNULL(0) || PG_ARGISNULL(1) || PG_ARGISNULL(2) || PG_ARGISNULL(3)) {
+  if (PG_ARGISNULL(0) || PG_ARGISNULL(1) || PG_ARGISNULL(2) || PG_ARGISNULL(3))
+  {
     elog(ERROR, "null argument to binary_upgrade_create_empty_extension is not allowed");
   }
 
@@ -137,27 +138,35 @@ binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS)
   relocatable = PG_GETARG_BOOL(2);
   extVersion = PG_GETARG_TEXT_PP(3);
 
-  if (PG_ARGISNULL(4)) {
+  if (PG_ARGISNULL(4))
+  {
     extConfig = PointerGetDatum(NULL);
-  } else {
+  }
+  else
+  {
     extConfig = PG_GETARG_DATUM(4);
   }
 
-  if (PG_ARGISNULL(5)) {
+  if (PG_ARGISNULL(5))
+  {
     extCondition = PointerGetDatum(NULL);
-  } else {
+  }
+  else
+  {
     extCondition = PG_GETARG_DATUM(5);
   }
 
   requiredExtensions = NIL;
-  if (!PG_ARGISNULL(6)) {
+  if (!PG_ARGISNULL(6))
+  {
     ArrayType *textArray = PG_GETARG_ARRAYTYPE_P(6);
     Datum *textDatums;
     int ndatums;
     int i;
 
     deconstruct_array(textArray, TEXTOID, -1, false, 'i', &textDatums, NULL, &ndatums);
-    for (i = 0; i < ndatums; i++) {
+    for (i = 0; i < ndatums; i++)
+    {
       char *extName = TextDatumGetCString(textDatums[i]);
       Oid extOid = get_extension_oid(extName, false);
 

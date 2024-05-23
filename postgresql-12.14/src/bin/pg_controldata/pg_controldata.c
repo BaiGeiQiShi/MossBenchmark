@@ -32,21 +32,23 @@
 static void
 usage(const char *progname)
 {
-  printf(_("%s displays control information of a PostgreSQL database cluster.\n\n"),progname);
+  printf(_("%s displays control information of a PostgreSQL database cluster.\n\n"), progname);
   printf(_("Usage:\n"));
   printf(_("  %s [OPTION] [DATADIR]\n"), progname);
   printf(_("\nOptions:\n"));
   printf(_(" [-D, --pgdata=]DATADIR  data directory\n"));
   printf(_("  -V, --version          output version information, then exit\n"));
   printf(_("  -?, --help             show this help, then exit\n"));
-  printf(_("\nIf no data directory (DATADIR) is specified, the environment variable PGDATA\nis used.\n\n"));
+  printf(_("\nIf no data directory (DATADIR) is specified, "
+           "the environment variable PGDATA\nis used.\n\n"));
   printf(_("Report bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
 static const char *
 dbState(DBState state)
 {
-  switch (state) {
+  switch (state)
+  {
   case DB_STARTUP:
     return _("starting up");
   case DB_SHUTDOWNED:
@@ -68,7 +70,8 @@ dbState(DBState state)
 static const char *
 wal_level_str(WalLevel wal_level)
 {
-  switch (wal_level) {
+  switch (wal_level)
+  {
   case WAL_LEVEL_MINIMAL:
     return "minimal";
   case WAL_LEVEL_REPLICA:
@@ -103,45 +106,56 @@ main(int argc, char *argv[])
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_controldata"));
   progname = get_progname(argv[0]);
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage(progname);
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_controldata (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((c = getopt_long(argc, argv, "D:", long_options, NULL)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "D:", long_options, NULL)) != -1)
+  {
+    switch (c)
+    {
     case 'D':
       DataDir = optarg;
       break;
 
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  if (DataDir == NULL) {
-    if (optind < argc) {
+  if (DataDir == NULL)
+  {
+    if (optind < argc)
+    {
       DataDir = argv[optind++];
-    } else {
+    }
+    else
+    {
       DataDir = getenv("PGDATA");
     }
   }
 
   /* Complain if any arguments remain */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (DataDir == NULL) {
+  if (DataDir == NULL)
+  {
     pg_log_error("no data directory specified");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -149,16 +163,27 @@ main(int argc, char *argv[])
 
   /* get a copy of the control file */
   ControlFile = get_controlfile(DataDir, &crc_ok);
-  if (!crc_ok) {
-    printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\nEither the file is corrupt, or it has a different layout than this program\nis expecting.  The results below are untrustworthy.\n\n"));
+  if (!crc_ok)
+  {
+    printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
+             "Either the file is corrupt, or it has a different layout than this program\n"
+             "is expecting.  The results below are untrustworthy.\n\n"));
   }
 
   /* set wal segment size */
   WalSegSz = ControlFile->xlog_seg_size;
 
-  if (!IsValidWalSegSize(WalSegSz)) {
+  if (!IsValidWalSegSize(WalSegSz))
+  {
     printf(_("WARNING: invalid WAL segment size\n"));
-    printf(ngettext("The WAL segment size stored in the file, %d byte, is not a power of two\nbetween 1 MB and 1 GB.  The file is corrupt and the results below are\nuntrustworthy.\n\n","The WAL segment size stored in the file, %d bytes, is not a power of two\nbetween 1 MB and 1 GB.  The file is corrupt and the results below are\nuntrustworthy.\n\n",WalSegSz),WalSegSz);
+    printf(ngettext("The WAL segment size stored in the file, %d byte, is not a power of two\n"
+                    "between 1 MB and 1 GB.  The file is corrupt and the results below are\n"
+                    "untrustworthy.\n\n",
+               "The WAL segment size stored in the file, %d bytes, is not a power of two\n"
+               "between 1 MB and 1 GB.  The file is corrupt and the results below are\n"
+               "untrustworthy.\n\n",
+               WalSegSz),
+        WalSegSz);
   }
 
   /*
@@ -182,12 +207,15 @@ main(int argc, char *argv[])
    * A corrupted control file could report a WAL segment size of 0, and to
    * guard against division by zero, we need to treat that specially.
    */
-  if (WalSegSz != 0) {
+  if (WalSegSz != 0)
+  {
     XLogSegNo segno;
 
     XLByteToSeg(ControlFile->checkPointCopy.redo, segno, WalSegSz);
     XLogFileName(xlogfilename, ControlFile->checkPointCopy.ThisTimeLineID, segno, WalSegSz);
-  } else {
+  }
+  else
+  {
     strcpy(xlogfilename, _("???"));
   }
 
@@ -197,7 +225,8 @@ main(int argc, char *argv[])
    * string.
    */
   snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, ControlFile->system_identifier);
-  for (i = 0; i < MOCK_AUTH_NONCE_LEN; i++) {
+  for (i = 0; i < MOCK_AUTH_NONCE_LEN; i++)
+  {
     snprintf(&mock_auth_nonce_str[i * 2], 3, "%02x", (unsigned char)ControlFile->mock_authentication_nonce[i]);
   }
 

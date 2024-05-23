@@ -160,9 +160,9 @@ pg_strtok(int *length)
 
   if (*local_str == '\0')
   {
-
-
-
+    *length = 0;
+    pg_strtok_ptr = local_str;
+    return NULL; /* no more tokens */
   }
 
   /*
@@ -257,7 +257,7 @@ nodeTokenType(const char *token, int length)
   numlen = length;
   if (*numptr == '+' || *numptr == '-')
   {
-
+    numptr++, numlen--;
   }
   if ((numlen > 0 && isdigit((unsigned char)*numptr)) || (numlen > 1 && *numptr == '.' && isdigit((unsigned char)numptr[1])))
   {
@@ -269,13 +269,13 @@ nodeTokenType(const char *token, int length)
      */
     char *endptr;
 
-
-
-
-
-
-
-
+    errno = 0;
+    (void)strtoint(token, &endptr, 10);
+    if (endptr != token + length || errno == ERANGE)
+    {
+      return T_Float;
+    }
+    return T_Integer;
   }
 
   /*
@@ -288,7 +288,7 @@ nodeTokenType(const char *token, int length)
   }
   else if (*token == ')')
   {
-
+    retval = RIGHT_PAREN;
   }
   else if (*token == '{')
   {
@@ -300,7 +300,7 @@ nodeTokenType(const char *token, int length)
   }
   else if (*token == 'b')
   {
-
+    retval = T_BitString;
   }
   else
   {
@@ -339,9 +339,9 @@ nodeRead(const char *token, int tok_len)
   {
     token = pg_strtok(&tok_len);
 
-    if (token == NULL)
-    { /* end of input */
-
+    if (token == NULL) /* end of input */
+    {
+      return NULL;
     }
   }
 
@@ -349,15 +349,15 @@ nodeRead(const char *token, int tok_len)
 
   switch ((int)type)
   {
-  case LEFT_BRACE:;
+  case LEFT_BRACE:
     result = parseNodeString();
     token = pg_strtok(&tok_len);
     if (token == NULL || token[0] != '}')
     {
-
+      elog(ERROR, "did not find '}' at end of input node");
     }
     break;
-  case LEFT_PAREN:;
+  case LEFT_PAREN:
   {
     List *l = NIL;
 
@@ -370,7 +370,7 @@ nodeRead(const char *token, int tok_len)
     token = pg_strtok(&tok_len);
     if (token == NULL)
     {
-
+      elog(ERROR, "unterminated List structure");
     }
     if (tok_len == 1 && token[0] == 'i')
     {
@@ -383,7 +383,7 @@ nodeRead(const char *token, int tok_len)
         token = pg_strtok(&tok_len);
         if (token == NULL)
         {
-
+          elog(ERROR, "unterminated List structure");
         }
         if (token[0] == ')')
         {
@@ -392,7 +392,7 @@ nodeRead(const char *token, int tok_len)
         val = (int)strtol(token, &endptr, 10);
         if (endptr != token + tok_len)
         {
-
+          elog(ERROR, "unrecognized integer: \"%.*s\"", tok_len, token);
         }
         l = lappend_int(l, val);
       }
@@ -408,7 +408,7 @@ nodeRead(const char *token, int tok_len)
         token = pg_strtok(&tok_len);
         if (token == NULL)
         {
-
+          elog(ERROR, "unterminated List structure");
         }
         if (token[0] == ')')
         {
@@ -417,7 +417,7 @@ nodeRead(const char *token, int tok_len)
         val = (Oid)strtoul(token, &endptr, 10);
         if (endptr != token + tok_len)
         {
-
+          elog(ERROR, "unrecognized OID: \"%.*s\"", tok_len, token);
         }
         l = lappend_oid(l, val);
       }
@@ -436,18 +436,18 @@ nodeRead(const char *token, int tok_len)
         token = pg_strtok(&tok_len);
         if (token == NULL)
         {
-
+          elog(ERROR, "unterminated List structure");
         }
       }
     }
     result = (Node *)l;
     break;
   }
-  case RIGHT_PAREN:;
-
-
-
-  case OTHER_TOKEN:;
+  case RIGHT_PAREN:
+    elog(ERROR, "unexpected right parenthesis");
+    result = NULL; /* keep compiler happy */
+    break;
+  case OTHER_TOKEN:
     if (tok_len == 0)
     {
       /* must be "<>" --- represents a null pointer */
@@ -455,44 +455,44 @@ nodeRead(const char *token, int tok_len)
     }
     else
     {
-
-
+      elog(ERROR, "unrecognized token: \"%.*s\"", tok_len, token);
+      result = NULL; /* keep compiler happy */
     }
     break;
-  case T_Integer:;
+  case T_Integer:
 
     /*
      * we know that the token terminates on a char atoi will stop at
      */
-
-
-  case T_Float:;
+    result = (Node *)makeInteger(atoi(token));
+    break;
+  case T_Float:
   {
     char *fval = (char *)palloc(tok_len + 1);
 
-
-
-
+    memcpy(fval, token, tok_len);
+    fval[tok_len] = '\0';
+    result = (Node *)makeFloat(fval);
   }
-
-  case T_String:;
+  break;
+  case T_String:
     /* need to remove leading and trailing quotes, and backslashes */
     result = (Node *)makeString(debackslash(token + 1, tok_len - 2));
     break;
-  case T_BitString:;
+  case T_BitString:
   {
     char *val = palloc(tok_len);
 
     /* skip leading 'b' */
-
-
-
-
+    memcpy(val, token + 1, tok_len - 1);
+    val[tok_len - 1] = '\0';
+    result = (Node *)makeBitString(val);
+    break;
   }
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)type);
+    result = NULL; /* keep compiler happy */
+    break;
   }
 
   return (void *)result;

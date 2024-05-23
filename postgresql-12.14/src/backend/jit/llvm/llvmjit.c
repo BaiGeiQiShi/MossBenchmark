@@ -45,7 +45,8 @@
 #endif
 
 /* Handle of a module emitted via ORC JIT */
-typedef struct LLVMJitHandle {
+typedef struct LLVMJitHandle
+{
 #if LLVM_VERSION_MAJOR > 11
   LLVMOrcLLJITRef lljit;
   LLVMOrcResourceTrackerRef resource_tracker;
@@ -189,18 +190,21 @@ llvm_release_context(JitContext *context)
    * have occurred from within LLVM, we do not want to risk reentering. All
    * resource cleanup is going to happen through process exit.
    */
-  if (proc_exit_inprogress) {
+  if (proc_exit_inprogress)
+  {
     return;
   }
 
   llvm_enter_fatal_on_oom();
 
-  if (llvm_context->module) {
+  if (llvm_context->module)
+  {
     LLVMDisposeModule(llvm_context->module);
     llvm_context->module = NULL;
   }
 
-  while (llvm_context->handles != NIL) {
+  while (llvm_context->handles != NIL)
+  {
     LLVMJitHandle *jit_handle;
 
     jit_handle = (LLVMJitHandle *)linitial(llvm_context->handles);
@@ -245,7 +249,8 @@ llvm_mutable_module(LLVMJitContext *context)
   /*
    * If there's no in-progress module, create a new one.
    */
-  if (!context->module) {
+  if (!context->module)
+  {
     context->compiled = false;
     context->module_generation = llvm_generation++;
     context->module = LLVMModuleCreateWithName("pg");
@@ -292,7 +297,8 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
    * If there is a pending / not emitted module, compile and emit now.
    * Otherwise we might not find the [correct] function.
    */
-  if (!context->compiled) {
+  if (!context->compiled)
+  {
     llvm_compile_module(context);
   }
 
@@ -302,7 +308,8 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
    */
 
 #if LLVM_VERSION_MAJOR > 11
-  foreach (lc, context->handles) {
+  foreach (lc, context->handles)
+  {
     LLVMJitHandle *handle = (LLVMJitHandle *)lfirst(lc);
     instr_time starttime;
     instr_time endtime;
@@ -313,7 +320,8 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
 
     addr = 0;
     error = LLVMOrcLLJITLookup(handle->lljit, &addr, funcname);
-    if (error) {
+    if (error)
+    {
       elog(ERROR, "failed to look up symbol \"%s\": %s", funcname, llvm_error_message(error));
     }
 
@@ -326,20 +334,24 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
     INSTR_TIME_SET_CURRENT(endtime);
     INSTR_TIME_ACCUM_DIFF(context->base.instr.emission_counter, endtime, starttime);
 
-    if (addr) {
+    if (addr)
+    {
       return (void *)(uintptr_t)addr;
     }
   }
 #elif defined(HAVE_DECL_LLVMORCGETSYMBOLADDRESSIN) && HAVE_DECL_LLVMORCGETSYMBOLADDRESSIN
-  foreach (lc, context->handles) {
+  foreach (lc, context->handles)
+  {
     LLVMOrcTargetAddress addr;
     LLVMJitHandle *handle = (LLVMJitHandle *)lfirst(lc);
 
     addr = 0;
-    if (LLVMOrcGetSymbolAddressIn(handle->stack, &addr, handle->orc_handle, funcname)) {
+    if (LLVMOrcGetSymbolAddressIn(handle->stack, &addr, handle->orc_handle, funcname))
+    {
       elog(ERROR, "failed to look up symbol \"%s\"", funcname);
     }
-    if (addr) {
+    if (addr)
+    {
       return (void *)(uintptr_t)addr;
     }
   }
@@ -347,10 +359,12 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
   {
     LLVMOrcTargetAddress addr;
 
-    if ((addr = LLVMOrcGetSymbolAddress(llvm_opt0_orc, funcname))) {
+    if ((addr = LLVMOrcGetSymbolAddress(llvm_opt0_orc, funcname)))
+    {
       return (void *)(uintptr_t)addr;
     }
-    if ((addr = LLVMOrcGetSymbolAddress(llvm_opt3_orc, funcname))) {
+    if ((addr = LLVMOrcGetSymbolAddress(llvm_opt3_orc, funcname)))
+    {
       return (void *)(uintptr_t)addr;
     }
   }
@@ -358,16 +372,20 @@ llvm_get_function(LLVMJitContext *context, const char *funcname)
   {
     LLVMOrcTargetAddress addr;
 
-    if (LLVMOrcGetSymbolAddress(llvm_opt0_orc, &addr, funcname)) {
+    if (LLVMOrcGetSymbolAddress(llvm_opt0_orc, &addr, funcname))
+    {
       elog(ERROR, "failed to look up symbol \"%s\"", funcname);
     }
-    if (addr) {
+    if (addr)
+    {
       return (void *)(uintptr_t)addr;
     }
-    if (LLVMOrcGetSymbolAddress(llvm_opt3_orc, &addr, funcname)) {
+    if (LLVMOrcGetSymbolAddress(llvm_opt3_orc, &addr, funcname))
+    {
       elog(ERROR, "failed to look up symbol \"%s\"", funcname);
     }
-    if (addr) {
+    if (addr)
+    {
       return (void *)(uintptr_t)addr;
     }
   }
@@ -392,7 +410,8 @@ llvm_get_decl(LLVMModuleRef mod, LLVMValueRef v_src)
 
   /* don't repeatedly add function */
   v_fn = LLVMGetNamedFunction(mod, LLVMGetValueName(v_src));
-  if (v_fn) {
+  if (v_fn)
+  {
     return v_fn;
   }
 
@@ -418,14 +437,16 @@ llvm_copy_attributes_at_index(LLVMValueRef v_from, LLVMValueRef v_to, uint32 ind
    * Not just for efficiency: LLVM <= 3.9 crashes when
    * LLVMGetAttributesAtIndex() is called for an index with 0 attributes.
    */
-  if (num_attributes == 0) {
+  if (num_attributes == 0)
+  {
     return;
   }
 
   attrs = palloc(sizeof(LLVMAttributeRef) * num_attributes);
   LLVMGetAttributesAtIndex(v_from, index, attrs);
 
-  for (int attno = 0; attno < num_attributes; attno++) {
+  for (int attno = 0; attno < num_attributes; attno++)
+  {
     LLVMAddAttributeAtIndex(v_to, index, attrs[attno]);
   }
 
@@ -450,7 +471,8 @@ llvm_copy_attributes(LLVMValueRef v_from, LLVMValueRef v_to)
   /* and each function parameter's attribute */
   param_count = LLVMCountParams(v_from);
 
-  for (int paramidx = 1; paramidx <= param_count; paramidx++) {
+  for (int paramidx = 1; paramidx <= param_count; paramidx++)
+  {
     llvm_copy_attributes_at_index(v_from, v_to, paramidx);
   }
 }
@@ -469,13 +491,18 @@ llvm_function_reference(LLVMJitContext *context, LLVMBuilderRef builder, LLVMMod
 
   fmgr_symbol(fcinfo->flinfo->fn_oid, &modname, &basename);
 
-  if (modname != NULL && basename != NULL) {
+  if (modname != NULL && basename != NULL)
+  {
     /* external function in loadable library */
     funcname = psprintf("pgextern.%s.%s", modname, basename);
-  } else if (basename != NULL) {
+  }
+  else if (basename != NULL)
+  {
     /* internal function */
     funcname = psprintf("%s", basename);
-  } else {
+  }
+  else
+  {
     /*
      * Function we don't know to handle, return pointer. We do so by
      * creating a global constant containing a pointer to the function.
@@ -485,7 +512,8 @@ llvm_function_reference(LLVMJitContext *context, LLVMBuilderRef builder, LLVMMod
 
     funcname = psprintf("pgoidextern.%u", fcinfo->flinfo->fn_oid);
     v_fn = LLVMGetNamedGlobal(mod, funcname);
-    if (v_fn != 0) {
+    if (v_fn != 0)
+    {
       return LLVMBuildLoad(builder, v_fn, "");
     }
 
@@ -502,7 +530,8 @@ llvm_function_reference(LLVMJitContext *context, LLVMBuilderRef builder, LLVMMod
 
   /* check if function already has been added */
   v_fn = LLVMGetNamedFunction(mod, funcname);
-  if (v_fn != 0) {
+  if (v_fn != 0)
+  {
     return v_fn;
   }
 
@@ -523,9 +552,12 @@ llvm_optimize_module(LLVMJitContext *context, LLVMModuleRef module)
   LLVMValueRef func;
   int compile_optlevel;
 
-  if (context->base.flags & PGJIT_OPT3) {
+  if (context->base.flags & PGJIT_OPT3)
+  {
     compile_optlevel = 3;
-  } else {
+  }
+  else
+  {
     compile_optlevel = 0;
   }
 
@@ -538,10 +570,13 @@ llvm_optimize_module(LLVMJitContext *context, LLVMModuleRef module)
   LLVMPassManagerBuilderSetOptLevel(llvm_pmb, compile_optlevel);
   llvm_fpm = LLVMCreateFunctionPassManagerForModule(module);
 
-  if (context->base.flags & PGJIT_OPT3) {
+  if (context->base.flags & PGJIT_OPT3)
+  {
     /* TODO: Unscientifically determined threshold */
     LLVMPassManagerBuilderUseInlinerWithThreshold(llvm_pmb, 512);
-  } else {
+  }
+  else
+  {
     /* we rely on mem2reg heavily, so emit even in the O0 case */
     LLVMAddPromoteMemoryToRegisterPass(llvm_fpm);
   }
@@ -553,7 +588,8 @@ llvm_optimize_module(LLVMJitContext *context, LLVMModuleRef module)
    * functions are emitted, to reduce memory usage a bit.
    */
   LLVMInitializeFunctionPassManager(llvm_fpm);
-  for (func = LLVMGetFirstFunction(context->module); func != NULL; func = LLVMGetNextFunction(func)) {
+  for (func = LLVMGetFirstFunction(context->module); func != NULL; func = LLVMGetNextFunction(func))
+  {
     LLVMRunFunctionPassManager(llvm_fpm, func);
   }
   LLVMFinalizeFunctionPassManager(llvm_fpm);
@@ -566,11 +602,13 @@ llvm_optimize_module(LLVMJitContext *context, LLVMModuleRef module)
   llvm_mpm = LLVMCreatePassManager();
   LLVMPassManagerBuilderPopulateModulePassManager(llvm_pmb, llvm_mpm);
   /* always use always-inliner pass */
-  if (!(context->base.flags & PGJIT_OPT3)) {
+  if (!(context->base.flags & PGJIT_OPT3))
+  {
     LLVMAddAlwaysInlinerPass(llvm_mpm);
   }
   /* if doing inlining, but no expensive optimization, add inlining pass */
-  if (context->base.flags & PGJIT_INLINE && !(context->base.flags & PGJIT_OPT3)) {
+  if (context->base.flags & PGJIT_INLINE && !(context->base.flags & PGJIT_OPT3))
+  {
     LLVMAddFunctionInliningPass(llvm_mpm);
   }
   LLVMRunPassManager(llvm_mpm, context->module);
@@ -595,21 +633,26 @@ llvm_compile_module(LLVMJitContext *context)
   LLVMOrcJITStackRef compile_orc;
 #endif
 
-  if (context->base.flags & PGJIT_OPT3) {
+  if (context->base.flags & PGJIT_OPT3)
+  {
     compile_orc = llvm_opt3_orc;
-  } else {
+  }
+  else
+  {
     compile_orc = llvm_opt0_orc;
   }
 
   /* perform inlining */
-  if (context->base.flags & PGJIT_INLINE) {
+  if (context->base.flags & PGJIT_INLINE)
+  {
     INSTR_TIME_SET_CURRENT(starttime);
     llvm_inline(context->module);
     INSTR_TIME_SET_CURRENT(endtime);
     INSTR_TIME_ACCUM_DIFF(context->base.instr.inlining_counter, endtime, starttime);
   }
 
-  if (jit_dump_bitcode) {
+  if (jit_dump_bitcode)
+  {
     char *filename;
 
     filename = psprintf("%u.%zu.bc", MyProcPid, context->module_generation);
@@ -623,7 +666,8 @@ llvm_compile_module(LLVMJitContext *context)
   INSTR_TIME_SET_CURRENT(endtime);
   INSTR_TIME_ACCUM_DIFF(context->base.instr.optimization_counter, endtime, starttime);
 
-  if (jit_dump_bitcode) {
+  if (jit_dump_bitcode)
+  {
     char *filename;
 
     filename = psprintf("%u.%zu.optimized.bc", MyProcPid, context->module_generation);
@@ -660,7 +704,8 @@ llvm_compile_module(LLVMJitContext *context)
     context->module = NULL; /* will be owned by LLJIT */
     error = LLVMOrcLLJITAddLLVMIRModuleWithRT(compile_orc, handle->resource_tracker, ts_module);
 
-    if (error) {
+    if (error)
+    {
       elog(ERROR, "failed to JIT module: %s", llvm_error_message(error));
     }
 
@@ -671,7 +716,8 @@ llvm_compile_module(LLVMJitContext *context)
 #elif LLVM_VERSION_MAJOR > 6
   {
     handle->stack = compile_orc;
-    if (LLVMOrcAddEagerlyCompiledIR(compile_orc, &handle->orc_handle, context->module, llvm_resolve_symbol, NULL)) {
+    if (LLVMOrcAddEagerlyCompiledIR(compile_orc, &handle->orc_handle, context->module, llvm_resolve_symbol, NULL))
+    {
       elog(ERROR, "failed to JIT module");
     }
 
@@ -683,7 +729,8 @@ llvm_compile_module(LLVMJitContext *context)
 
     smod = LLVMOrcMakeSharedModule(context->module);
     handle->stack = compile_orc;
-    if (LLVMOrcAddEagerlyCompiledIR(compile_orc, &handle->orc_handle, smod, llvm_resolve_symbol, NULL)) {
+    if (LLVMOrcAddEagerlyCompiledIR(compile_orc, &handle->orc_handle, smod, llvm_resolve_symbol, NULL))
+    {
       elog(ERROR, "failed to JIT module");
     }
 
@@ -725,7 +772,8 @@ llvm_session_initialize(void)
   LLVMTargetMachineRef opt0_tm;
   LLVMTargetMachineRef opt3_tm;
 
-  if (llvm_session_initialized) {
+  if (llvm_session_initialized)
+  {
     return;
   }
 
@@ -751,7 +799,8 @@ llvm_session_initialize(void)
    */
   llvm_create_types();
 
-  if (LLVMGetTargetFromTriple(llvm_triple, &llvm_targetref, &error) != 0) {
+  if (LLVMGetTargetFromTriple(llvm_triple, &llvm_targetref, &error) != 0)
+  {
     elog(FATAL, "failed to query triple %s", error);
   }
 
@@ -792,7 +841,8 @@ llvm_session_initialize(void)
     llvm_opt3_orc = LLVMOrcCreateInstance(opt3_tm);
 
 #if defined(HAVE_DECL_LLVMCREATEGDBREGISTRATIONLISTENER) && HAVE_DECL_LLVMCREATEGDBREGISTRATIONLISTENER
-    if (jit_debugging_support) {
+    if (jit_debugging_support)
+    {
       LLVMJITEventListenerRef l = LLVMCreateGDBRegistrationListener();
 
       LLVMOrcRegisterJITEventListener(llvm_opt0_orc, l);
@@ -800,7 +850,8 @@ llvm_session_initialize(void)
     }
 #endif
 #if defined(HAVE_DECL_LLVMCREATEPERFJITEVENTLISTENER) && HAVE_DECL_LLVMCREATEPERFJITEVENTLISTENER
-    if (jit_profiling_support) {
+    if (jit_profiling_support)
+    {
       LLVMJITEventListenerRef l = LLVMCreatePerfJITEventListener();
 
       LLVMOrcRegisterJITEventListener(llvm_opt0_orc, l);
@@ -828,22 +879,26 @@ llvm_shutdown(int code, Datum arg)
    * We do need to shutdown LLVM in other shutdown cases, otherwise
    * e.g. profiling data won't be written out.
    */
-  if (llvm_in_fatal_on_oom()) {
+  if (llvm_in_fatal_on_oom())
+  {
     Assert(proc_exit_inprogress);
     return;
   }
 
 #if LLVM_VERSION_MAJOR > 11
   {
-    if (llvm_opt3_orc) {
+    if (llvm_opt3_orc)
+    {
       LLVMOrcDisposeLLJIT(llvm_opt3_orc);
       llvm_opt3_orc = NULL;
     }
-    if (llvm_opt0_orc) {
+    if (llvm_opt0_orc)
+    {
       LLVMOrcDisposeLLJIT(llvm_opt0_orc);
       llvm_opt0_orc = NULL;
     }
-    if (llvm_ts_context) {
+    if (llvm_ts_context)
+    {
       LLVMOrcDisposeThreadSafeContext(llvm_ts_context);
       llvm_ts_context = NULL;
     }
@@ -852,9 +907,11 @@ llvm_shutdown(int code, Datum arg)
   {
     /* unregister profiling support, needs to be flushed to be useful */
 
-    if (llvm_opt3_orc) {
+    if (llvm_opt3_orc)
+    {
 #if defined(HAVE_DECL_LLVMORCREGISTERPERF) && HAVE_DECL_LLVMORCREGISTERPERF
-      if (jit_profiling_support) {
+      if (jit_profiling_support)
+      {
         LLVMOrcUnregisterPerf(llvm_opt3_orc);
       }
 #endif
@@ -862,9 +919,11 @@ llvm_shutdown(int code, Datum arg)
       llvm_opt3_orc = NULL;
     }
 
-    if (llvm_opt0_orc) {
+    if (llvm_opt0_orc)
+    {
 #if defined(HAVE_DECL_LLVMORCREGISTERPERF) && HAVE_DECL_LLVMORCREGISTERPERF
-      if (jit_profiling_support) {
+      if (jit_profiling_support)
+      {
         LLVMOrcUnregisterPerf(llvm_opt0_orc);
       }
 #endif
@@ -884,7 +943,8 @@ load_type(LLVMModuleRef mod, const char *name)
 
   /* this'll return a *pointer* to the global */
   value = LLVMGetNamedGlobal(mod, name);
-  if (!value) {
+  if (!value)
+  {
     elog(ERROR, "type %s is unknown", name);
   }
 
@@ -905,7 +965,8 @@ load_return_type(LLVMModuleRef mod, const char *name)
 
   /* this'll return a *pointer* to the function */
   value = LLVMGetNamedFunction(mod, name);
-  if (!value) {
+  if (!value)
+  {
     elog(ERROR, "function %s is unknown", name);
   }
 
@@ -939,12 +1000,14 @@ llvm_create_types(void)
   snprintf(path, MAXPGPATH, "%s/%s", pkglib_path, "llvmjit_types.bc");
 
   /* open file */
-  if (LLVMCreateMemoryBufferWithContentsOfFile(path, &buf, &msg)) {
+  if (LLVMCreateMemoryBufferWithContentsOfFile(path, &buf, &msg))
+  {
     elog(ERROR, "LLVMCreateMemoryBufferWithContentsOfFile(%s) failed: %s", path, msg);
   }
 
   /* eagerly load contents, going to need it all */
-  if (LLVMParseBitcode2(buf, &mod)) {
+  if (LLVMParseBitcode2(buf, &mod))
+  {
     elog(ERROR, "LLVMParseBitcode2 of %s failed", path);
   }
   LLVMDisposeMemoryBuffer(buf);
@@ -1007,7 +1070,8 @@ llvm_split_symbol_name(const char *name, char **modname, char **funcname)
   /*
    * Module function names are pgextern.$module.$funcname
    */
-  if (strncmp(name, "pgextern.", strlen("pgextern.")) == 0) {
+  if (strncmp(name, "pgextern.", strlen("pgextern.")) == 0)
+  {
     /*
      * Symbol names cannot contain a ., therefore we can split based on
      * first and last occurrence of one.
@@ -1019,7 +1083,9 @@ llvm_split_symbol_name(const char *name, char **modname, char **funcname)
     Assert(funcname);
 
     *funcname = pstrdup(*funcname);
-  } else {
+  }
+  else
+  {
     *modname = NULL;
     *funcname = pstrdup(name);
   }
@@ -1040,7 +1106,8 @@ llvm_resolve_symbol(const char *symname, void *ctx)
    * dlsym() nor PG's inliner expect that. So undo.
    */
 #if defined(__darwin__)
-  if (symname[0] != '_') {
+  if (symname[0] != '_')
+  {
     elog(ERROR, "expected prefixed symbol name, but got \"%s\"", symname);
   }
   symname++;
@@ -1051,19 +1118,24 @@ llvm_resolve_symbol(const char *symname, void *ctx)
   /* functions that aren't resolved to names shouldn't ever get here */
   Assert(funcname);
 
-  if (modname) {
+  if (modname)
+  {
     addr = (uintptr_t)load_external_function(modname, funcname, true, NULL);
-  } else {
+  }
+  else
+  {
     addr = (uintptr_t)LLVMSearchForAddressOfSymbol(symname);
   }
 
   pfree(funcname);
-  if (modname) {
+  if (modname)
+  {
     pfree(modname);
   }
 
   /* let LLVM will error out - should never happen */
-  if (!addr) {
+  if (!addr)
+  {
     elog(WARNING, "failed to resolve name %s", symname);
   }
 
@@ -1083,7 +1155,8 @@ llvm_resolve_symbols(LLVMOrcDefinitionGeneratorRef GeneratorObj, void *Ctx, LLVM
   LLVMErrorRef error;
   LLVMOrcMaterializationUnitRef mu;
 
-  for (int i = 0; i < LookupSetSize; i++) {
+  for (int i = 0; i < LookupSetSize; i++)
+  {
     const char *name = LLVMOrcSymbolStringPoolEntryStr(LookupSet[i].Name);
 
 #if LLVM_VERSION_MAJOR > 12
@@ -1096,7 +1169,8 @@ llvm_resolve_symbols(LLVMOrcDefinitionGeneratorRef GeneratorObj, void *Ctx, LLVM
 
   mu = LLVMOrcAbsoluteSymbols(symbols, LookupSetSize);
   error = LLVMOrcJITDylibDefine(JD, mu);
-  if (error != LLVMErrorSuccess) {
+  if (error != LLVMErrorSuccess)
+  {
     LLVMOrcDisposeMaterializationUnit(mu);
   }
 
@@ -1129,7 +1203,8 @@ llvm_create_object_layer(void *Ctx, LLVMOrcExecutionSessionRef ES, const char *T
   LLVMOrcObjectLayerRef objlayer = LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(ES);
 
 #if defined(HAVE_DECL_LLVMCREATEGDBREGISTRATIONLISTENER) && HAVE_DECL_LLVMCREATEGDBREGISTRATIONLISTENER
-  if (jit_debugging_support) {
+  if (jit_debugging_support)
+  {
     LLVMJITEventListenerRef l = LLVMCreateGDBRegistrationListener();
 
     LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(objlayer, l);
@@ -1137,7 +1212,8 @@ llvm_create_object_layer(void *Ctx, LLVMOrcExecutionSessionRef ES, const char *T
 #endif
 
 #if defined(HAVE_DECL_LLVMCREATEPERFJITEVENTLISTENER) && HAVE_DECL_LLVMCREATEPERFJITEVENTLISTENER
-  if (jit_profiling_support) {
+  if (jit_profiling_support)
+  {
     LLVMJITEventListenerRef l = LLVMCreatePerfJITEventListener();
 
     LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(objlayer, l);
@@ -1168,7 +1244,8 @@ llvm_create_jit_instance(LLVMTargetMachineRef tm)
   LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(lljit_builder, llvm_create_object_layer, NULL);
 
   error = LLVMOrcCreateLLJIT(&lljit, lljit_builder);
-  if (error) {
+  if (error)
+  {
     elog(ERROR, "failed to create lljit instance: %s", llvm_error_message(error));
   }
 
@@ -1179,7 +1256,8 @@ llvm_create_jit_instance(LLVMTargetMachineRef tm)
    * libraries already loaded.
    */
   error = LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(&main_gen, LLVMOrcLLJITGetGlobalPrefix(lljit), 0, NULL);
-  if (error) {
+  if (error)
+  {
     elog(ERROR, "failed to create generator: %s", llvm_error_message(error));
   }
   LLVMOrcJITDylibAddGenerator(LLVMOrcLLJITGetMainJITDylib(lljit), main_gen);

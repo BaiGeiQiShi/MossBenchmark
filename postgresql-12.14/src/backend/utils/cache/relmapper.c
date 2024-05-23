@@ -226,10 +226,10 @@ RelationMapFilenodeToOid(Oid filenode, bool shared)
     map = &active_shared_updates;
     for (i = 0; i < map->num_mappings; i++)
     {
-
-
-
-
+      if (filenode == map->mappings[i].mapfilenode)
+      {
+        return map->mappings[i].mapoid;
+      }
     }
     map = &shared_map;
     for (i = 0; i < map->num_mappings; i++)
@@ -245,10 +245,10 @@ RelationMapFilenodeToOid(Oid filenode, bool shared)
     map = &active_local_updates;
     for (i = 0; i < map->num_mappings; i++)
     {
-
-
-
-
+      if (filenode == map->mappings[i].mapfilenode)
+      {
+        return map->mappings[i].mapoid;
+      }
     }
     map = &local_map;
     for (i = 0; i < map->num_mappings; i++)
@@ -299,12 +299,12 @@ RelationMapUpdateMap(Oid relationId, Oid fileNode, bool shared, bool immediate)
      */
     if (GetCurrentTransactionNestLevel() > 1)
     {
-
+      elog(ERROR, "cannot change relation mapping within subtransaction");
     }
 
     if (IsInParallelMode())
     {
-
+      elog(ERROR, "cannot change relation mapping in parallel mode");
     }
 
     if (immediate)
@@ -312,7 +312,7 @@ RelationMapUpdateMap(Oid relationId, Oid fileNode, bool shared, bool immediate)
       /* Make it active, but only locally */
       if (shared)
       {
-
+        map = &active_shared_updates;
       }
       else
       {
@@ -362,11 +362,11 @@ apply_map_update(RelMapFile *map, Oid relationId, Oid fileNode, bool add_okay)
   /* Nope, need to add a new mapping */
   if (!add_okay)
   {
-
+    elog(ERROR, "attempt to apply a mapping to unmapped relation %u", relationId);
   }
   if (map->num_mappings >= MAX_MAPPINGS)
   {
-
+    elog(ERROR, "ran out of space in relation map");
   }
   map->mappings[map->num_mappings].mapoid = relationId;
   map->mappings[map->num_mappings].mapfilenode = fileNode;
@@ -554,10 +554,10 @@ AtEOXact_RelationMap(bool isCommit, bool isParallelWorker)
 void
 AtPrepare_RelationMap(void)
 {
-
-
-
-
+  if (active_shared_updates.num_mappings != 0 || active_local_updates.num_mappings != 0 || pending_shared_updates.num_mappings != 0 || pending_local_updates.num_mappings != 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot PREPARE a transaction that modified relation mapping")));
+  }
 }
 
 /*
@@ -708,7 +708,7 @@ RestoreRelationMap(char *startAddress)
 
   if (active_shared_updates.num_mappings != 0 || active_local_updates.num_mappings != 0 || pending_shared_updates.num_mappings != 0 || pending_local_updates.num_mappings != 0)
   {
-
+    elog(ERROR, "parallel worker has existing mappings");
   }
 
   relmaps = (SerializedActiveRelMaps *)startAddress;
@@ -748,7 +748,7 @@ load_relmap_file(bool shared, bool lock_held)
   fd = OpenTransientFile(mapfilename, O_RDONLY | PG_BINARY);
   if (fd < 0)
   {
-
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", mapfilename)));
   }
 
   /*
@@ -767,14 +767,14 @@ load_relmap_file(bool shared, bool lock_held)
   r = read(fd, map, sizeof(RelMapFile));
   if (r != sizeof(RelMapFile))
   {
-
-
-
-
-
-
-
-
+    if (r < 0)
+    {
+      ereport(FATAL, (errcode_for_file_access(), errmsg("could not read file \"%s\": %m", mapfilename)));
+    }
+    else
+    {
+      ereport(FATAL, (errcode(ERRCODE_DATA_CORRUPTED), errmsg("could not read file \"%s\": read %d of %zu", mapfilename, r, sizeof(RelMapFile))));
+    }
   }
   pgstat_report_wait_end();
 
@@ -785,13 +785,13 @@ load_relmap_file(bool shared, bool lock_held)
 
   if (CloseTransientFile(fd))
   {
-
+    ereport(FATAL, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", mapfilename)));
   }
 
   /* check for correct magic number, etc */
   if (map->magic != RELMAPPER_FILEMAGIC || map->num_mappings < 0 || map->num_mappings > MAX_MAPPINGS)
   {
-
+    ereport(FATAL, (errmsg("relation mapping file \"%s\" contains invalid data", mapfilename)));
   }
 
   /* verify the CRC */
@@ -801,7 +801,7 @@ load_relmap_file(bool shared, bool lock_held)
 
   if (!EQ_CRC32C(crc, map->crc))
   {
-
+    ereport(FATAL, (errmsg("relation mapping file \"%s\" contains incorrect checksum", mapfilename)));
   }
 }
 
@@ -838,7 +838,7 @@ write_relmap_file(bool shared, RelMapFile *newmap, bool write_wal, bool send_sin
   newmap->magic = RELMAPPER_FILEMAGIC;
   if (newmap->num_mappings < 0 || newmap->num_mappings > MAX_MAPPINGS)
   {
-
+    elog(ERROR, "attempt to write bogus relation mapping");
   }
 
   INIT_CRC32C(newmap->crc);
@@ -863,7 +863,7 @@ write_relmap_file(bool shared, RelMapFile *newmap, bool write_wal, bool send_sin
   fd = OpenTransientFile(mapfilename, O_WRONLY | O_CREAT | PG_BINARY);
   if (fd < 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", mapfilename)));
   }
 
   if (write_wal)
@@ -893,11 +893,11 @@ write_relmap_file(bool shared, RelMapFile *newmap, bool write_wal, bool send_sin
   if (write(fd, newmap, sizeof(RelMapFile)) != sizeof(RelMapFile))
   {
     /* if write didn't set errno, assume problem is no disk space */
-
-
-
-
-
+    if (errno == 0)
+    {
+      errno = ENOSPC;
+    }
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not write file \"%s\": %m", mapfilename)));
   }
   pgstat_report_wait_end();
 
@@ -910,13 +910,13 @@ write_relmap_file(bool shared, RelMapFile *newmap, bool write_wal, bool send_sin
   pgstat_report_wait_start(WAIT_EVENT_RELATION_MAP_SYNC);
   if (pg_fsync(fd) != 0)
   {
-
+    ereport(data_sync_elevel(ERROR), (errcode_for_file_access(), errmsg("could not fsync file \"%s\": %m", mapfilename)));
   }
   pgstat_report_wait_end();
 
   if (CloseTransientFile(fd))
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", mapfilename)));
   }
 
   /*
@@ -1035,42 +1035,42 @@ perform_relmap_update(bool shared, const RelMapFile *updates)
 void
 relmap_redo(XLogReaderState *record)
 {
+  uint8 info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
+  /* Backup blocks are not used in relmap records */
+  Assert(!XLogRecHasAnyBlockRefs(record));
 
+  if (info == XLOG_RELMAP_UPDATE)
+  {
+    xl_relmap_update *xlrec = (xl_relmap_update *)XLogRecGetData(record);
+    RelMapFile newmap;
+    char *dbpath;
 
+    if (xlrec->nbytes != sizeof(RelMapFile))
+    {
+      elog(PANIC, "relmap_redo: wrong size %u in relmap update record", xlrec->nbytes);
+    }
+    memcpy(&newmap, xlrec->data, sizeof(newmap));
 
+    /* We need to construct the pathname for this database */
+    dbpath = GetDatabasePath(xlrec->dbid, xlrec->tsid);
 
+    /*
+     * Write out the new map and send sinval, but of course don't write a
+     * new WAL entry.  There's no surrounding transaction to tell to
+     * preserve files, either.
+     *
+     * There shouldn't be anyone else updating relmaps during WAL replay,
+     * but grab the lock to interlock against load_relmap_file().
+     */
+    LWLockAcquire(RelationMappingLock, LW_EXCLUSIVE);
+    write_relmap_file((xlrec->dbid == InvalidOid), &newmap, false, true, false, xlrec->dbid, xlrec->tsid, dbpath);
+    LWLockRelease(RelationMappingLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    pfree(dbpath);
+  }
+  else
+  {
+    elog(PANIC, "relmap_redo: unknown op code %u", info);
+  }
 }

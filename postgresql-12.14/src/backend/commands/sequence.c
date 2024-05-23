@@ -80,7 +80,7 @@ typedef struct SeqTableData
   int64 cached;            /* last value already cached for nextval */
   /* if last != cached, we have not used up all the cached values */
   int64 increment; /* copy of sequence's increment field */
-  /* note that increment is zero until we first do nextval_internal() */
+                   /* note that increment is zero until we first do nextval_internal() */
 } SeqTableData;
 
 typedef SeqTableData *SeqTable;
@@ -189,17 +189,17 @@ DefineSequence(ParseState *pstate, CreateSeqStmt *seq)
 
     switch (i)
     {
-    case SEQ_COL_LASTVAL:;
+    case SEQ_COL_LASTVAL:
       coldef->typeName = makeTypeNameFromOid(INT8OID, -1);
       coldef->colname = "last_value";
       value[i - 1] = Int64GetDatumFast(seqdataform.last_value);
       break;
-    case SEQ_COL_LOG:;
+    case SEQ_COL_LOG:
       coldef->typeName = makeTypeNameFromOid(INT8OID, -1);
       coldef->colname = "log_cnt";
       value[i - 1] = Int64GetDatum((int64)0);
       break;
-    case SEQ_COL_CALLED:;
+    case SEQ_COL_CALLED:
       coldef->typeName = makeTypeNameFromOid(BOOLOID, -1);
       coldef->colname = "is_called";
       value[i - 1] = BoolGetDatum(false);
@@ -295,7 +295,7 @@ ResetSequence(Oid seq_relid)
   pgstuple = SearchSysCache1(SEQRELID, ObjectIdGetDatum(seq_relid));
   if (!HeapTupleIsValid(pgstuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", seq_relid);
   }
   pgsform = (Form_pg_sequence)GETSTRUCT(pgstuple);
   startv = pgsform->seqstart;
@@ -396,7 +396,7 @@ fill_seq_with_data(Relation rel, HeapTuple tuple)
   offnum = PageAddItem(page, (Item)tuple->t_data, tuple->t_len, InvalidOffsetNumber, false, false);
   if (offnum != FirstOffsetNumber)
   {
-
+    elog(ERROR, "failed to add sequence tuple to page");
   }
 
   /* XLOG stuff */
@@ -459,7 +459,7 @@ AlterSequence(ParseState *pstate, AlterSeqStmt *stmt)
   seqtuple = SearchSysCacheCopy1(SEQRELID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(seqtuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
 
   seqform = (Form_pg_sequence)GETSTRUCT(seqtuple);
@@ -539,7 +539,7 @@ DeleteSequenceTuple(Oid relid)
   tuple = SearchSysCache1(SEQRELID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
 
   CatalogTupleDelete(rel, &tuple->t_self);
@@ -633,7 +633,7 @@ nextval_internal(Oid relid, bool check_permissions)
   pgstuple = SearchSysCache1(SEQRELID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(pgstuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
   pgsform = (Form_pg_sequence)GETSTRUCT(pgstuple);
   incby = pgsform->seqincrement;
@@ -744,8 +744,8 @@ nextval_internal(Oid relid, bool check_permissions)
       log--;
       rescnt++;
       last = next;
-      if (rescnt == 1)
-      {                /* if it's first result - */
+      if (rescnt == 1) /* if it's first result - */
+      {
         result = next; /* it's what to return */
       }
     }
@@ -928,7 +928,7 @@ do_setval(Oid relid, int64 next, bool iscalled)
   pgstuple = SearchSysCache1(SEQRELID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(pgstuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
   pgsform = (Form_pg_sequence)GETSTRUCT(pgstuple);
   maxv = pgsform->seqmax;
@@ -1158,8 +1158,7 @@ init_sequence(Oid relid, SeqTable *p_elm, Relation *p_rel)
  *
  * *buf receives the reference to the pinned-and-ex-locked buffer
  * *seqdatatuple receives the reference to the sequence tuple proper
- *		(this arg should point to a local variable of type
- *HeapTupleData)
+ *		(this arg should point to a local variable of type HeapTupleData)
  *
  * Function's return value points to the data payload of the tuple
  */
@@ -1179,7 +1178,7 @@ read_seq_tuple(Relation rel, Buffer *buf, HeapTuple seqdatatuple)
 
   if (sm->magic != SEQ_MAGIC)
   {
-
+    elog(ERROR, "bad magic number in sequence \"%s\": %08X", RelationGetRelationName(rel), sm->magic);
   }
 
   lp = PageGetItemId(page, FirstOffsetNumber);
@@ -1200,10 +1199,10 @@ read_seq_tuple(Relation rel, Buffer *buf, HeapTuple seqdatatuple)
   Assert(!(seqdatatuple->t_data->t_infomask & HEAP_XMAX_IS_MULTI));
   if (HeapTupleHeaderGetRawXmax(seqdatatuple->t_data) != InvalidTransactionId)
   {
-
-
-
-
+    HeapTupleHeaderSetXmax(seqdatatuple->t_data, InvalidTransactionId);
+    seqdatatuple->t_data->t_infomask &= ~HEAP_XMAX_COMMITTED;
+    seqdatatuple->t_data->t_infomask |= HEAP_XMAX_INVALID;
+    MarkBufferDirtyHint(*buf, true);
   }
 
   seq = (Form_pg_sequence_data)GETSTRUCT(seqdatatuple);
@@ -1256,7 +1255,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (as_type)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       as_type = defel;
       *need_seq_rewrite = true;
@@ -1265,7 +1264,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (increment_by)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       increment_by = defel;
       *need_seq_rewrite = true;
@@ -1274,7 +1273,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (start_value)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       start_value = defel;
       *need_seq_rewrite = true;
@@ -1283,7 +1282,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (restart_value)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       restart_value = defel;
       *need_seq_rewrite = true;
@@ -1292,7 +1291,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (max_value)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       max_value = defel;
       *need_seq_rewrite = true;
@@ -1301,7 +1300,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (min_value)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       min_value = defel;
       *need_seq_rewrite = true;
@@ -1310,7 +1309,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (cache_value)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       cache_value = defel;
       *need_seq_rewrite = true;
@@ -1319,7 +1318,7 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (is_cycled)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       is_cycled = defel;
       *need_seq_rewrite = true;
@@ -1328,23 +1327,23 @@ init_params(ParseState *pstate, List *options, bool for_identity, bool isInit, F
     {
       if (*owned_by)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options"), parser_errposition(pstate, defel->location)));
       }
       *owned_by = defGetQualifiedName(defel);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (strcmp(defel->defname, "sequence_name") == 0)
+    {
+      /*
+       * The parser allows this, but it is only for identity columns, in
+       * which case it is filtered out in parse_utilcmd.c.  We only get
+       * here if someone puts it into a CREATE SEQUENCE.
+       */
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid sequence option SEQUENCE NAME"), parser_errposition(pstate, defel->location)));
+    }
+    else
+    {
+      elog(ERROR, "option \"%s\" not recognized", defel->defname);
+    }
   }
 
   /*
@@ -1653,7 +1652,7 @@ process_owned_by(Relation seqrel, List *owned_by, bool for_identity)
     /* We insist on same owner and schema */
     if (seqrel->rd_rel->relowner != tablerel->rd_rel->relowner)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("sequence must have same owner as table it is linked to")));
     }
     if (RelationGetNamespace(seqrel) != RelationGetNamespace(tablerel))
     {
@@ -1721,7 +1720,7 @@ sequence_options(Oid relid)
   pgstuple = SearchSysCache1(SEQRELID, relid);
   if (!HeapTupleIsValid(pgstuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
   pgsform = (Form_pg_sequence)GETSTRUCT(pgstuple);
 
@@ -1753,7 +1752,7 @@ pg_sequence_parameters(PG_FUNCTION_ARGS)
 
   if (pg_class_aclcheck(relid, GetUserId(), ACL_SELECT | ACL_UPDATE | ACL_USAGE) != ACLCHECK_OK)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for sequence %s", get_rel_name(relid))));
   }
 
   tupdesc = CreateTemplateTupleDesc(7);
@@ -1772,7 +1771,7 @@ pg_sequence_parameters(PG_FUNCTION_ARGS)
   pgstuple = SearchSysCache1(SEQRELID, relid);
   if (!HeapTupleIsValid(pgstuple))
   {
-
+    elog(ERROR, "cache lookup failed for sequence %u", relid);
   }
   pgsform = (Form_pg_sequence)GETSTRUCT(pgstuple);
 
@@ -1811,7 +1810,7 @@ pg_sequence_last_value(PG_FUNCTION_ARGS)
 
   if (pg_class_aclcheck(relid, GetUserId(), ACL_SELECT | ACL_USAGE) != ACLCHECK_OK)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied for sequence %s", RelationGetRelationName(seqrel))));
   }
 
   seq = read_seq_tuple(seqrel, &buf, &seqtuple);
@@ -1835,54 +1834,54 @@ pg_sequence_last_value(PG_FUNCTION_ARGS)
 void
 seq_redo(XLogReaderState *record)
 {
+  XLogRecPtr lsn = record->EndRecPtr;
+  uint8 info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
+  Buffer buffer;
+  Page page;
+  Page localpage;
+  char *item;
+  Size itemsz;
+  xl_seq_rec *xlrec = (xl_seq_rec *)XLogRecGetData(record);
+  sequence_magic *sm;
 
+  if (info != XLOG_SEQ_LOG)
+  {
+    elog(PANIC, "seq_redo: unknown op code %u", info);
+  }
 
+  buffer = XLogInitBufferForRedo(record, 0);
+  page = (Page)BufferGetPage(buffer);
 
+  /*
+   * We always reinit the page.  However, since this WAL record type is also
+   * used for updating sequences, it's possible that a hot-standby backend
+   * is examining the page concurrently; so we mustn't transiently trash the
+   * buffer.  The solution is to build the correct new page contents in
+   * local workspace and then memcpy into the buffer.  Then only bytes that
+   * are supposed to change will change, even transiently. We must palloc
+   * the local page for alignment reasons.
+   */
+  localpage = (Page)palloc(BufferGetPageSize(buffer));
 
+  PageInit(localpage, BufferGetPageSize(buffer), sizeof(sequence_magic));
+  sm = (sequence_magic *)PageGetSpecialPointer(localpage);
+  sm->magic = SEQ_MAGIC;
 
+  item = (char *)xlrec + sizeof(xl_seq_rec);
+  itemsz = XLogRecGetDataLen(record) - sizeof(xl_seq_rec);
 
+  if (PageAddItem(localpage, (Item)item, itemsz, FirstOffsetNumber, false, false) == InvalidOffsetNumber)
+  {
+    elog(PANIC, "seq_redo: failed to add item to page");
+  }
 
+  PageSetLSN(localpage, lsn);
 
+  memcpy(page, localpage, BufferGetPageSize(buffer));
+  MarkBufferDirty(buffer);
+  UnlockReleaseBuffer(buffer);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  pfree(localpage);
 }
 
 /*
@@ -1906,7 +1905,7 @@ ResetSequenceCaches(void)
 void
 seq_mask(char *page, BlockNumber blkno)
 {
+  mask_page_lsn_and_checksum(page);
 
-
-
+  mask_unused_space(page);
 }

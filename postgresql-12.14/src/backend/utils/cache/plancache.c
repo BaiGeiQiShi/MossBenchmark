@@ -327,8 +327,8 @@ CreateOneShotCachedPlan(RawStmt *raw_parse_tree, const char *query_string, const
  * plansource: structure returned by CreateCachedPlan
  * querytree_list: analyzed-and-rewritten form of query (list of Query nodes)
  * querytree_context: memory context containing querytree_list,
- *					  or NULL to copy querytree_list into a
- *fresh context param_types: array of fixed parameter type OIDs, or NULL if none
+ *					  or NULL to copy querytree_list into a fresh context
+ * param_types: array of fixed parameter type OIDs, or NULL if none
  * num_params: number of fixed parameters
  * parserSetup: alternate method for handling query parameters
  * parserSetupArg: data to pass to parserSetup
@@ -451,7 +451,7 @@ SaveCachedPlan(CachedPlanSource *plansource)
   /* This seems worth a real test, though */
   if (plansource->is_oneshot)
   {
-
+    elog(ERROR, "cannot save one-shot cached plan");
   }
 
   /*
@@ -617,7 +617,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, QueryEnvironment *queryEnv)
     }
 
     /* Oops, the race case happened.  Release useless locks. */
-
+    AcquirePlannerLocks(plansource->query_list, false);
   }
 
   /*
@@ -676,7 +676,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, QueryEnvironment *queryEnv)
   rawtree = copyObject(plansource->raw_parse_tree);
   if (rawtree == NULL)
   {
-
+    tlist = NIL;
   }
   else if (plansource->parserSetup != NULL)
   {
@@ -807,7 +807,7 @@ CheckCachedPlan(CachedPlanSource *plansource)
    */
   if (plan->is_valid && plan->dependsOnRole && plan->planRoleId != GetUserId())
   {
-
+    plan->is_valid = false;
   }
 
   /*
@@ -830,7 +830,7 @@ CheckCachedPlan(CachedPlanSource *plansource)
      */
     if (plan->is_valid && TransactionIdIsValid(plan->saved_xmin) && !TransactionIdEquals(plan->saved_xmin, TransactionXmin))
     {
-
+      plan->is_valid = false;
     }
 
     /*
@@ -844,7 +844,7 @@ CheckCachedPlan(CachedPlanSource *plansource)
     }
 
     /* Oops, the race case happened.  Release useless locks. */
-
+    AcquireExecutorLocks(plan->stmt_list, false);
   }
 
   /*
@@ -897,7 +897,7 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist, ParamListInfo boundPa
    */
   if (!plansource->is_valid)
   {
-
+    qlist = RevalidateCachedQuery(plansource, queryEnv);
   }
 
   /*
@@ -988,17 +988,17 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist, ParamListInfo boundPa
 
     if (plannedstmt->transientPlan)
     {
-
+      is_transient = true;
     }
     if (plannedstmt->dependsOnRole)
     {
-
+      plan->dependsOnRole = true;
     }
   }
   if (is_transient)
   {
-
-
+    Assert(TransactionIdIsNormal(TransactionXmin));
+    plan->saved_xmin = TransactionXmin;
   }
   else
   {
@@ -1042,7 +1042,7 @@ choose_custom_plan(CachedPlanSource *plansource, ParamListInfo boundParams)
   /* ... nor for transaction control statements */
   if (IsTransactionStmtPlan(plansource))
   {
-
+    return false;
   }
 
   /* Let settings force the decision */
@@ -1058,11 +1058,11 @@ choose_custom_plan(CachedPlanSource *plansource, ParamListInfo boundParams)
   /* See if caller wants to force the decision */
   if (plansource->cursor_options & CURSOR_OPT_GENERIC_PLAN)
   {
-
+    return false;
   }
   if (plansource->cursor_options & CURSOR_OPT_CUSTOM_PLAN)
   {
-
+    return true;
   }
 
   /* Generate custom plans until we have done at least 5 (arbitrary) */
@@ -1178,7 +1178,7 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams, bool useR
   /* This seems worth a real test, though */
   if (useResOwner && !plansource->is_saved)
   {
-
+    elog(ERROR, "cannot apply ResourceOwner to non-saved cached plan");
   }
 
   /* Make sure the querytree list is valid and we have parse-time locks */
@@ -1330,11 +1330,11 @@ CachedPlanSetParentContext(CachedPlanSource *plansource, MemoryContext newcontex
   /* These seem worth real tests, though */
   if (plansource->is_saved)
   {
-
+    elog(ERROR, "cannot move a saved cached plan to another context");
   }
   if (plansource->is_oneshot)
   {
-
+    elog(ERROR, "cannot move a one-shot cached plan to another context");
   }
 
   /* OK, let the caller keep the plan where he wishes */
@@ -1347,8 +1347,8 @@ CachedPlanSetParentContext(CachedPlanSource *plansource, MemoryContext newcontex
    */
   if (plansource->gplan)
   {
-
-
+    Assert(plansource->gplan->magic == CACHEDPLAN_MAGIC);
+    MemoryContextSetParent(plansource->gplan->context, newcontext);
   }
 }
 
@@ -1364,87 +1364,87 @@ CachedPlanSetParentContext(CachedPlanSource *plansource, MemoryContext newcontex
 CachedPlanSource *
 CopyCachedPlan(CachedPlanSource *plansource)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  CachedPlanSource *newsource;
+  MemoryContext source_context;
+  MemoryContext querytree_context;
+  MemoryContext oldcxt;
+
+  Assert(plansource->magic == CACHEDPLANSOURCE_MAGIC);
+  Assert(plansource->is_complete);
+
+  /*
+   * One-shot plans can't be copied, because we haven't taken care that
+   * parsing/planning didn't scribble on the raw parse tree or querytrees.
+   */
+  if (plansource->is_oneshot)
+  {
+    elog(ERROR, "cannot copy a one-shot cached plan");
+  }
+
+  source_context = AllocSetContextCreate(CurrentMemoryContext, "CachedPlanSource", ALLOCSET_START_SMALL_SIZES);
+
+  oldcxt = MemoryContextSwitchTo(source_context);
+
+  newsource = (CachedPlanSource *)palloc0(sizeof(CachedPlanSource));
+  newsource->magic = CACHEDPLANSOURCE_MAGIC;
+  newsource->raw_parse_tree = copyObject(plansource->raw_parse_tree);
+  newsource->query_string = pstrdup(plansource->query_string);
+  MemoryContextSetIdentifier(source_context, newsource->query_string);
+  newsource->commandTag = plansource->commandTag;
+  if (plansource->num_params > 0)
+  {
+    newsource->param_types = (Oid *)palloc(plansource->num_params * sizeof(Oid));
+    memcpy(newsource->param_types, plansource->param_types, plansource->num_params * sizeof(Oid));
+  }
+  else
+  {
+    newsource->param_types = NULL;
+  }
+  newsource->num_params = plansource->num_params;
+  newsource->parserSetup = plansource->parserSetup;
+  newsource->parserSetupArg = plansource->parserSetupArg;
+  newsource->cursor_options = plansource->cursor_options;
+  newsource->fixed_result = plansource->fixed_result;
+  if (plansource->resultDesc)
+  {
+    newsource->resultDesc = CreateTupleDescCopy(plansource->resultDesc);
+  }
+  else
+  {
+    newsource->resultDesc = NULL;
+  }
+  newsource->context = source_context;
+
+  querytree_context = AllocSetContextCreate(source_context, "CachedPlanQuery", ALLOCSET_START_SMALL_SIZES);
+  MemoryContextSwitchTo(querytree_context);
+  newsource->query_list = copyObject(plansource->query_list);
+  newsource->relationOids = copyObject(plansource->relationOids);
+  newsource->invalItems = copyObject(plansource->invalItems);
+  if (plansource->search_path)
+  {
+    newsource->search_path = CopyOverrideSearchPath(plansource->search_path);
+  }
+  newsource->query_context = querytree_context;
+  newsource->rewriteRoleId = plansource->rewriteRoleId;
+  newsource->rewriteRowSecurity = plansource->rewriteRowSecurity;
+  newsource->dependsOnRLS = plansource->dependsOnRLS;
+
+  newsource->gplan = NULL;
+
+  newsource->is_oneshot = false;
+  newsource->is_complete = true;
+  newsource->is_saved = false;
+  newsource->is_valid = plansource->is_valid;
+  newsource->generation = plansource->generation;
+
+  /* We may as well copy any acquired cost knowledge */
+  newsource->generic_cost = plansource->generic_cost;
+  newsource->total_custom_cost = plansource->total_custom_cost;
+  newsource->num_custom_plans = plansource->num_custom_plans;
+
+  MemoryContextSwitchTo(oldcxt);
+
+  return newsource;
 }
 
 /*
@@ -1483,7 +1483,7 @@ CachedPlanGetTargetList(CachedPlanSource *plansource, QueryEnvironment *queryEnv
    */
   if (plansource->resultDesc == NULL)
   {
-
+    return NIL;
   }
 
   /* Make sure the querytree list is valid and we have parse-time locks */
@@ -1572,8 +1572,7 @@ FreeCachedExpression(CachedExpression *cexpr)
 
 /*
  * QueryListGetPrimaryStmt
- *		Get the "primary" stmt within a list, ie, the one marked
- *canSetTag.
+ *		Get the "primary" stmt within a list, ie, the one marked canSetTag.
  *
  * Returns NULL if no such stmt.  If multiple queries within the list are
  * marked canSetTag, returns the first one.  Neither of these cases should
@@ -1649,7 +1648,7 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
       }
       else
       {
-
+        UnlockRelationOid(rte->relid, rte->rellockmode);
       }
     }
   }
@@ -1707,7 +1706,7 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 
     switch (rte->rtekind)
     {
-    case RTE_RELATION:;
+    case RTE_RELATION:
       /* Acquire or release the appropriate type of lock */
       if (acquire)
       {
@@ -1715,16 +1714,16 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
       }
       else
       {
-
+        UnlockRelationOid(rte->relid, rte->rellockmode);
       }
       break;
 
-    case RTE_SUBQUERY:;
+    case RTE_SUBQUERY:
       /* Recurse into subquery-in-FROM */
       ScanQueryForLocks(rte->subquery, acquire);
       break;
 
-    default:;;
+    default:
       /* ignore other types of RTEs */
       break;
     }
@@ -1788,22 +1787,22 @@ PlanCacheComputeResultDesc(List *stmt_list)
 
   switch (ChoosePortalStrategy(stmt_list))
   {
-  case PORTAL_ONE_SELECT:;
-  case PORTAL_ONE_MOD_WITH:;
+  case PORTAL_ONE_SELECT:
+  case PORTAL_ONE_MOD_WITH:
     query = linitial_node(Query, stmt_list);
     return ExecCleanTypeFromTL(query->targetList);
 
-  case PORTAL_ONE_RETURNING:;
+  case PORTAL_ONE_RETURNING:
     query = QueryListGetPrimaryStmt(stmt_list);
     Assert(query->returningList);
     return ExecCleanTypeFromTL(query->returningList);
 
-  case PORTAL_UTIL_SELECT:;
+  case PORTAL_UTIL_SELECT:
     query = linitial_node(Query, stmt_list);
     Assert(query->utilityStmt);
     return UtilityTupleDescriptor(query->utilityStmt);
 
-  case PORTAL_MULTI_QUERY:;
+  case PORTAL_MULTI_QUERY:
     /* will not return tuples */
     break;
   }
@@ -1837,7 +1836,7 @@ PlanCacheRelCallback(Datum arg, Oid relid)
     /* Never invalidate transaction control commands */
     if (IsTransactionStmtPlan(plansource))
     {
-
+      continue;
     }
 
     /*
@@ -1894,7 +1893,7 @@ PlanCacheRelCallback(Datum arg, Oid relid)
 
     if ((relid == InvalidOid) ? cexpr->relationOids != NIL : list_member_oid(cexpr->relationOids, relid))
     {
-
+      cexpr->is_valid = false;
     }
   }
 }
@@ -1927,7 +1926,7 @@ PlanCacheObjectCallback(Datum arg, int cacheid, uint32 hashvalue)
     /* Never invalidate transaction control commands */
     if (IsTransactionStmtPlan(plansource))
     {
-
+      continue;
     }
 
     /*
@@ -2062,7 +2061,7 @@ ResetPlanCache(void)
      */
     if (IsTransactionStmtPlan(plansource))
     {
-
+      continue;
     }
 
     /*

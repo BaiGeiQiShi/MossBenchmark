@@ -44,47 +44,46 @@
  *
  * partition_dispatch_info
  *		Array of 'max_dispatch' elements containing a pointer to a
- *		PartitionDispatch object for every partitioned table touched by
- *tuple routing.  The entry for the target partitioned table is *always* present
- *in the 0th element of this array.  See comment for
+ *		PartitionDispatch object for every partitioned table touched by tuple
+ *		routing.  The entry for the target partitioned table is *always*
+ *		present in the 0th element of this array.  See comment for
  *		PartitionDispatchData->indexes for details on how this array is
  *		indexed.
  *
  * nonleaf_partitions
  *		Array of 'max_dispatch' elements containing pointers to fake
- *		ResultRelInfo objects for nonleaf partitions, useful for
- *checking the partition constraint.
+ *		ResultRelInfo objects for nonleaf partitions, useful for checking
+ *		the partition constraint.
  *
  * num_dispatch
- *		The current number of items stored in the
- *'partition_dispatch_info' array.  Also serves as the index of the next free
- *array element for new PartitionDispatch objects that need to be stored.
+ *		The current number of items stored in the 'partition_dispatch_info'
+ *		array.  Also serves as the index of the next free array element for
+ *		new PartitionDispatch objects that need to be stored.
  *
  * max_dispatch
- *		The current allocated size of the 'partition_dispatch_info'
- *array.
+ *		The current allocated size of the 'partition_dispatch_info' array.
  *
  * partitions
  *		Array of 'max_partitions' elements containing a pointer to a
- *		ResultRelInfo for every leaf partitions touched by tuple
- *routing. Some of these are pointers to ResultRelInfos which are borrowed out
- *of 'subplan_resultrel_htab'.  The remainder have been built especially for
- *tuple routing.  See comment for PartitionDispatchData->indexes for details on
- *how this array is indexed.
+ *		ResultRelInfo for every leaf partitions touched by tuple routing.
+ *		Some of these are pointers to ResultRelInfos which are borrowed out of
+ *		'subplan_resultrel_htab'.  The remainder have been built especially
+ *		for tuple routing.  See comment for PartitionDispatchData->indexes for
+ *		details on how this array is indexed.
  *
  * num_partitions
- *		The current number of items stored in the 'partitions' array.
- *Also serves as the index of the next free array element for new ResultRelInfo
- *objects that need to be stored.
+ *		The current number of items stored in the 'partitions' array.  Also
+ *		serves as the index of the next free array element for new
+ *		ResultRelInfo objects that need to be stored.
  *
  * max_partitions
  *		The current allocated size of the 'partitions' array.
  *
  * subplan_resultrel_htab
- *		Hash table to store subplan ResultRelInfos by Oid.  This is used
- *to cache ResultRelInfos from subplans of an UPDATE ModifyTable node; NULL in
- *other cases.  Some of these may be useful for tuple routing to save having to
- *build duplicates.
+ *		Hash table to store subplan ResultRelInfos by Oid.  This is used to
+ *		cache ResultRelInfos from subplans of an UPDATE ModifyTable node;
+ *		NULL in other cases.  Some of these may be useful for tuple routing
+ *		to save having to build duplicates.
  *
  * memcxt
  *		Memory context used to allocate subsidiary structs.
@@ -128,18 +127,18 @@ struct PartitionTupleRouting
  *		required.
  *
  * tupmap
- *		TupleConversionMap to convert from the parent's rowtype to this
- *table's rowtype  (when extracting the partition key of a tuple just before
- *		routing it through this table). A NULL value is stored if no
- *tuple conversion is required.
+ *		TupleConversionMap to convert from the parent's rowtype to this table's
+ *		rowtype  (when extracting the partition key of a tuple just before
+ *		routing it through this table). A NULL value is stored if no tuple
+ *		conversion is required.
  *
  * indexes
- *		Array of partdesc->nparts elements.  For leaf partitions the
- *index corresponds to the partition's ResultRelInfo in the encapsulating
- *		PartitionTupleRouting's partitions array.  For partitioned
- *partitions, the index corresponds to the PartitionDispatch for it in its
- *		partition_dispatch_info array.  -1 indicates we've not yet
- *allocated anything in PartitionTupleRouting for the partition.
+ *		Array of partdesc->nparts elements.  For leaf partitions the index
+ *		corresponds to the partition's ResultRelInfo in the encapsulating
+ *		PartitionTupleRouting's partitions array.  For partitioned partitions,
+ *		the index corresponds to the PartitionDispatch for it in its
+ *		partition_dispatch_info array.  -1 indicates we've not yet allocated
+ *		anything in PartitionTupleRouting for the partition.
  *-----------------------
  */
 typedef struct PartitionDispatchData
@@ -477,9 +476,9 @@ ExecFindPartition(ModifyTableState *mtstate, ResultRelInfo *rootResultRelInfo, P
 
 /*
  * ExecHashSubPlanResultRelsByOid
- *		Build a hash table to allow fast lookups of subplan
- *ResultRelInfos by partition Oid.  We also populate the subplan ResultRelInfo
- *with an ri_PartitionRoot.
+ *		Build a hash table to allow fast lookups of subplan ResultRelInfos by
+ *		partition Oid.  We also populate the subplan ResultRelInfo with an
+ *		ri_PartitionRoot.
  */
 static void
 ExecHashSubPlanResultRelsByOid(ModifyTableState *mtstate, PartitionTupleRouting *proute)
@@ -519,9 +518,9 @@ ExecHashSubPlanResultRelsByOid(ModifyTableState *mtstate, PartitionTupleRouting 
 
 /*
  * ExecInitPartitionInfo
- *		Lock the partition and initialize ResultRelInfo.  Also setup
- *other information for the partition and store it in the next empty slot in the
- *proute->partitions array.
+ *		Lock the partition and initialize ResultRelInfo.  Also setup other
+ *		information for the partition and store it in the next empty slot in
+ *		the proute->partitions array.
  *
  * Returns the ResultRelInfo
  */
@@ -711,7 +710,7 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate, PartitionTupleR
      */
     if (list_length(rootResultRelInfo->ri_onConflictArbiterIndexes) != list_length(arbiterIndexes))
     {
-
+      elog(ERROR, "invalid arbiter index list");
     }
     leaf_part_rri->ri_onConflictArbiterIndexes = arbiterIndexes;
 
@@ -828,8 +827,8 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate, PartitionTupleR
 /*
  * ExecInitRoutingInfo
  *		Set up information needed for translating tuples between root
- *		partitioned table format and partition format, and keep track of
- *it in PartitionTupleRouting.
+ *		partitioned table format and partition format, and keep track of it
+ *		in PartitionTupleRouting.
  */
 static void
 ExecInitRoutingInfo(ModifyTableState *mtstate, EState *estate, PartitionTupleRouting *proute, PartitionDispatch dispatch, ResultRelInfo *partRelInfo, int partidx)
@@ -890,7 +889,7 @@ ExecInitRoutingInfo(ModifyTableState *mtstate, EState *estate, PartitionTupleRou
    */
   if (partRelInfo->ri_FdwRoutine != NULL && partRelInfo->ri_FdwRoutine->BeginForeignInsert != NULL)
   {
-
+    partRelInfo->ri_FdwRoutine->BeginForeignInsert(mtstate, partRelInfo);
   }
 
   partRelInfo->ri_PartitionInfo = partrouteinfo;
@@ -926,12 +925,12 @@ ExecInitRoutingInfo(ModifyTableState *mtstate, EState *estate, PartitionTupleRou
 
 /*
  * ExecInitPartitionDispatchInfo
- *		Lock the partitioned table (if not locked already) and
- *initialize PartitionDispatch for a partitioned table and store it in the next
- *		available slot in the proute->partition_dispatch_info array.
- *Also, record the index into this array in the parent_pd->indexes[] array in
- *		the partidx element so that we can properly retrieve the newly
- *created PartitionDispatch later.
+ *		Lock the partitioned table (if not locked already) and initialize
+ *		PartitionDispatch for a partitioned table and store it in the next
+ *		available slot in the proute->partition_dispatch_info array.  Also,
+ *		record the index into this array in the parent_pd->indexes[] array in
+ *		the partidx element so that we can properly retrieve the newly created
+ *		PartitionDispatch later.
  */
 static PartitionDispatch
 ExecInitPartitionDispatchInfo(EState *estate, PartitionTupleRouting *proute, Oid partoid, PartitionDispatch parent_pd, int partidx, ResultRelInfo *rootResultRelInfo)
@@ -1012,9 +1011,9 @@ ExecInitPartitionDispatchInfo(EState *estate, PartitionTupleRouting *proute, Oid
     }
     else
     {
-
-
-
+      proute->max_dispatch *= 2;
+      proute->partition_dispatch_info = (PartitionDispatch *)repalloc(proute->partition_dispatch_info, sizeof(PartitionDispatch) * proute->max_dispatch);
+      proute->nonleaf_partitions = (ResultRelInfo **)repalloc(proute->nonleaf_partitions, sizeof(ResultRelInfo *) * proute->max_dispatch);
     }
   }
   proute->partition_dispatch_info[dispatchidx] = pd;
@@ -1089,7 +1088,7 @@ ExecCleanupTupleRouting(ModifyTableState *mtstate, PartitionTupleRouting *proute
     /* Allow any FDWs to shut down */
     if (resultRelInfo->ri_FdwRoutine != NULL && resultRelInfo->ri_FdwRoutine->EndForeignInsert != NULL)
     {
-
+      resultRelInfo->ri_FdwRoutine->EndForeignInsert(mtstate->ps.state, resultRelInfo);
     }
 
     /*
@@ -1117,15 +1116,15 @@ ExecCleanupTupleRouting(ModifyTableState *mtstate, PartitionTupleRouting *proute
 
 /* ----------------
  *		FormPartitionKeyDatum
- *			Construct values[] and isnull[] arrays for the partition
- *key of a tuple.
+ *			Construct values[] and isnull[] arrays for the partition key
+ *			of a tuple.
  *
- *	pd				Partition dispatch object of the
- *partitioned table slot			Heap tuple from which to extract
- *partition key estate			executor state for evaluating any
- *partition key expressions (must be non-NULL) values			Array of
- *partition key Datums (output area) isnull			Array of is-null
- *indicators (output area)
+ *	pd				Partition dispatch object of the partitioned table
+ *	slot			Heap tuple from which to extract partition key
+ *	estate			executor state for evaluating any partition key
+ *					expressions (must be non-NULL)
+ *	values			Array of partition key Datums (output area)
+ *	isnull			Array of is-null indicators (output area)
  *
  * the ecxt_scantuple slot of estate's per-tuple expr context must point to
  * the heap tuple passed in.
@@ -1163,7 +1162,7 @@ FormPartitionKeyDatum(PartitionDispatch pd, TupleTableSlot *slot, EState *estate
       /* Expression; need to evaluate it */
       if (partexpr_item == NULL)
       {
-
+        elog(ERROR, "wrong number of partition key expressions");
       }
       datum = ExecEvalExprSwitchContext((ExprState *)lfirst(partexpr_item), GetPerTupleExprContext(estate), &isNull);
       partexpr_item = lnext(partexpr_item);
@@ -1174,14 +1173,14 @@ FormPartitionKeyDatum(PartitionDispatch pd, TupleTableSlot *slot, EState *estate
 
   if (partexpr_item != NULL)
   {
-
+    elog(ERROR, "wrong number of partition key expressions");
   }
 }
 
 /*
  * get_partition_for_tuple
- *		Finds partition of relation which accepts the partition key
- *specified in values and isnull
+ *		Finds partition of relation which accepts the partition key specified
+ *		in values and isnull
  *
  * Return value is index of the partition (>= 0 and < partdesc->nparts) if one
  * found or -1 if none found.
@@ -1198,7 +1197,7 @@ get_partition_for_tuple(PartitionDispatch pd, Datum *values, bool *isnull)
   /* Route as appropriate based on partitioning strategy. */
   switch (key->strategy)
   {
-  case PARTITION_STRATEGY_HASH:;
+  case PARTITION_STRATEGY_HASH:
   {
     uint64 rowHash;
 
@@ -1208,7 +1207,7 @@ get_partition_for_tuple(PartitionDispatch pd, Datum *values, bool *isnull)
   }
   break;
 
-  case PARTITION_STRATEGY_LIST:;
+  case PARTITION_STRATEGY_LIST:
     if (isnull[0])
     {
       if (partition_bound_accepts_nulls(boundinfo))
@@ -1228,7 +1227,7 @@ get_partition_for_tuple(PartitionDispatch pd, Datum *values, bool *isnull)
     }
     break;
 
-  case PARTITION_STRATEGY_RANGE:;
+  case PARTITION_STRATEGY_RANGE:
   {
     bool equal = false, range_partkey_has_null = false;
     int i;
@@ -1261,8 +1260,8 @@ get_partition_for_tuple(PartitionDispatch pd, Datum *values, bool *isnull)
   }
   break;
 
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected partition strategy: %d", (int)key->strategy);
   }
 
   /*
@@ -1296,7 +1295,7 @@ ExecBuildSlotPartitionKeyDescription(Relation rel, Datum *values, bool *isnull, 
 
   if (check_enable_rls(relid, InvalidOid, true) == RLS_ENABLED)
   {
-
+    return NULL;
   }
 
   /* If the user has table-level access, just go build the description. */
@@ -1357,9 +1356,9 @@ ExecBuildSlotPartitionKeyDescription(Relation rel, Datum *values, bool *isnull, 
     }
     else
     {
-
-
-
+      vallen = pg_mbcliplen(val, vallen, maxfieldlen);
+      appendBinaryStringInfo(&buf, val, vallen);
+      appendStringInfoString(&buf, "...");
     }
   }
 
@@ -1370,8 +1369,8 @@ ExecBuildSlotPartitionKeyDescription(Relation rel, Datum *values, bool *isnull, 
 
 /*
  * adjust_partition_tlist
- *		Re-order the targetlist entries for a given partition to account
- *for column position differences between the parent and the partition.
+ *		Re-order the targetlist entries for a given partition to account for
+ *		column position differences between the parent and the partition.
  *
  * The expressions have already been fixed, but we must now re-order the
  * entries in case the partition has different column order, and possibly
@@ -1469,24 +1468,24 @@ adjust_partition_tlist(List *tlist, TupleConversionMap *map)
  * Functions:
  *
  * ExecCreatePartitionPruneState:
- *		Creates the PartitionPruneState required by each of the two
- *pruning functions.  Details stored include how to map the partition index
+ *		Creates the PartitionPruneState required by each of the two pruning
+ *		functions.  Details stored include how to map the partition index
  *		returned by the partition pruning code into subplan indexes.
  *
  * ExecFindInitialMatchingSubPlans:
- *		Returns indexes of matching subplans.  Partition pruning is
- *attempted without any evaluation of expressions containing PARAM_EXEC Params.
- *		This function must be called during executor startup for the
- *parent plan before the subplans themselves are initialized.  Subplans which
+ *		Returns indexes of matching subplans.  Partition pruning is attempted
+ *		without any evaluation of expressions containing PARAM_EXEC Params.
+ *		This function must be called during executor startup for the parent
+ *		plan before the subplans themselves are initialized.  Subplans which
  *		are found not to match by this function must be removed from the
- *		plan's list of subplans during execution, as this function
- *performs a remap of the partition index to subplan index map and the newly
- *		created map provides indexes only for subplans which remain
- *after calling this function.
+ *		plan's list of subplans during execution, as this function performs a
+ *		remap of the partition index to subplan index map and the newly
+ *		created map provides indexes only for subplans which remain after
+ *		calling this function.
  *
  * ExecFindMatchingSubPlans:
- *		Returns indexes of matching subplans after evaluating all
- *available expressions.  This function can only be called during execution and
+ *		Returns indexes of matching subplans after evaluating all available
+ *		expressions.  This function can only be called during execution and
  *		must be called again each time the value of a Param listed in
  *		PartitionPruneState's 'execparamids' changes.
  *-------------------------------------------------------------------------
@@ -1630,29 +1629,29 @@ ExecCreatePartitionPruneState(PlanState *planstate, PartitionPruneInfo *partitio
          * relid_map entries, however, had better be a subset of the
          * partdesc entries and in the same order.
          */
+        pprune->subpart_map = palloc(sizeof(int) * partdesc->nparts);
+        for (pp_idx = 0; pp_idx < partdesc->nparts; pp_idx++)
+        {
+          /* Skip any InvalidOid relid_map entries */
+          while (pd_idx < pinfo->nparts && !OidIsValid(pinfo->relid_map[pd_idx]))
+          {
+            pd_idx++;
+          }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          if (pd_idx < pinfo->nparts && pinfo->relid_map[pd_idx] == partdesc->oids[pp_idx])
+          {
+            /* match... */
+            pprune->subplan_map[pp_idx] = pinfo->subplan_map[pd_idx];
+            pprune->subpart_map[pp_idx] = pinfo->subpart_map[pd_idx];
+            pd_idx++;
+          }
+          else
+          {
+            /* this partdesc entry is not in the plan */
+            pprune->subplan_map[pp_idx] = -1;
+            pprune->subpart_map[pp_idx] = -1;
+          }
+        }
 
         /*
          * It might seem that we need to skip any trailing InvalidOid
@@ -1661,10 +1660,10 @@ ExecCreatePartitionPruneState(PlanState *planstate, PartitionPruneInfo *partitio
          * because they must correspond to some partdesc->oids
          * entries; we just couldn't tell which.
          */
-
-
-
-
+        if (pd_idx != pinfo->nparts)
+        {
+          elog(ERROR, "could not match partition child tables to plan elements");
+        }
       }
 
       /* present_parts is also subject to later modification */
@@ -1762,8 +1761,8 @@ ExecInitPruningContext(PartitionPruneContext *context, List *pruning_steps, Part
 
 /*
  * ExecFindInitialMatchingSubPlans
- *		Identify the set of subplans that cannot be eliminated by
- *initial pruning, disregarding any pruning constraints involving PARAM_EXEC
+ *		Identify the set of subplans that cannot be eliminated by initial
+ *		pruning, disregarding any pruning constraints involving PARAM_EXEC
  *		Params.
  *
  * If additional pruning passes will be required (because of PARAM_EXEC

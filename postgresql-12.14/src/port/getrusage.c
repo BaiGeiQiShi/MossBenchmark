@@ -37,18 +37,21 @@ getrusage(int who, struct rusage *rusage)
   FILETIME usertime;
   ULARGE_INTEGER li;
 
-  if (who != RUSAGE_SELF) {
+  if (who != RUSAGE_SELF)
+  {
     /* Only RUSAGE_SELF is supported in this implementation for now */
     errno = EINVAL;
     return -1;
   }
 
-  if (rusage == (struct rusage *)NULL) {
+  if (rusage == (struct rusage *)NULL)
+  {
     errno = EFAULT;
     return -1;
   }
   memset(rusage, 0, sizeof(struct rusage));
-  if (GetProcessTimes(GetCurrentProcess(), &starttime, &exittime, &kerneltime, &usertime) == 0) {
+  if (GetProcessTimes(GetCurrentProcess(), &starttime, &exittime, &kerneltime, &usertime) == 0)
+  {
     _dosmaperr(GetLastError());
     return -1;
   }
@@ -69,15 +72,18 @@ getrusage(int who, struct rusage *rusage)
   int tick_rate = CLK_TCK; /* ticks per second */
   clock_t u, s;
 
-  if (rusage == (struct rusage *)NULL) {
+  if (rusage == (struct rusage *)NULL)
+  {
     errno = EFAULT;
     return -1;
   }
-  if (times(&tms) < 0) {
+  if (times(&tms) < 0)
+  {
     /* errno set by times */
     return -1;
   }
-  switch (who) {
+  switch (who)
+  {
   case RUSAGE_SELF:
     u = tms.tms_utime;
     s = tms.tms_stime;
@@ -86,7 +92,7 @@ getrusage(int who, struct rusage *rusage)
     u = tms.tms_cutime;
     s = tms.tms_cstime;
     break;
-  default:;
+  default:
     errno = EINVAL;
     return -1;
   }

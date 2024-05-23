@@ -67,11 +67,11 @@ SampleNext(SampleScanState *node)
 static bool
 SampleRecheck(SampleScanState *node, TupleTableSlot *slot)
 {
-
-
-
-
-
+  /*
+   * No need to recheck for SampleScan, since like SeqScan we don't pass any
+   * checkable keys to heap_beginscan.
+   */
+  return true;
 }
 
 /* ----------------------------------------------------------------
@@ -186,7 +186,7 @@ ExecEndSampleScan(SampleScanState *node)
    */
   if (node->tsmroutine->EndSampleScan)
   {
-
+    node->tsmroutine->EndSampleScan(node);
   }
 
   /*
@@ -330,7 +330,7 @@ tablesample_getnext(SampleScanState *scanstate)
 
   if (scanstate->done)
   {
-
+    return NULL;
   }
 
   for (;;)

@@ -56,7 +56,8 @@ WalRcvShmemInit(void)
 
   WalRcv = (WalRcvData *)ShmemInitStruct("Wal Receiver Ctl", WalRcvShmemSize(), &found);
 
-  if (!found) {
+  if (!found)
+  {
     /* First time through, so initialize */
     MemSet(WalRcv, 0, WalRcvShmemSize());
     WalRcv->walRcvState = WALRCV_STOPPED;
@@ -86,13 +87,16 @@ WalRcvRunning(void)
    * after all, it will see that it's not supposed to be running and die
    * without doing anything.
    */
-  if (state == WALRCV_STARTING) {
+  if (state == WALRCV_STARTING)
+  {
     pg_time_t now = (pg_time_t)time(NULL);
 
-    if ((now - startTime) > WALRCV_STARTUP_TIMEOUT) {
+    if ((now - startTime) > WALRCV_STARTUP_TIMEOUT)
+    {
       SpinLockAcquire(&walrcv->mutex);
 
-      if (walrcv->walRcvState == WALRCV_STARTING) {
+      if (walrcv->walRcvState == WALRCV_STARTING)
+      {
         state = walrcv->walRcvState = WALRCV_STOPPED;
       }
 
@@ -100,9 +104,12 @@ WalRcvRunning(void)
     }
   }
 
-  if (state != WALRCV_STOPPED) {
+  if (state != WALRCV_STOPPED)
+  {
     return true;
-  } else {
+  }
+  else
+  {
     return false;
   }
 }
@@ -131,13 +138,16 @@ WalRcvStreaming(void)
    * after all, it will see that it's not supposed to be running and die
    * without doing anything.
    */
-  if (state == WALRCV_STARTING) {
+  if (state == WALRCV_STARTING)
+  {
     pg_time_t now = (pg_time_t)time(NULL);
 
-    if ((now - startTime) > WALRCV_STARTUP_TIMEOUT) {
+    if ((now - startTime) > WALRCV_STARTUP_TIMEOUT)
+    {
       SpinLockAcquire(&walrcv->mutex);
 
-      if (walrcv->walRcvState == WALRCV_STARTING) {
+      if (walrcv->walRcvState == WALRCV_STARTING)
+      {
         state = walrcv->walRcvState = WALRCV_STOPPED;
       }
 
@@ -145,9 +155,12 @@ WalRcvStreaming(void)
     }
   }
 
-  if (state == WALRCV_STREAMING || state == WALRCV_STARTING || state == WALRCV_RESTARTING) {
+  if (state == WALRCV_STREAMING || state == WALRCV_STARTING || state == WALRCV_RESTARTING)
+  {
     return true;
-  } else {
+  }
+  else
+  {
     return false;
   }
 }
@@ -168,7 +181,8 @@ ShutdownWalRcv(void)
    * restart itself.
    */
   SpinLockAcquire(&walrcv->mutex);
-  switch (walrcv->walRcvState) {
+  switch (walrcv->walRcvState)
+  {
   case WALRCV_STOPPED:
     break;
   case WALRCV_STARTING:
@@ -189,7 +203,8 @@ ShutdownWalRcv(void)
   /*
    * Signal walreceiver process if it was still running.
    */
-  if (walrcvpid != 0) {
+  if (walrcvpid != 0)
+  {
     kill(walrcvpid, SIGTERM);
   }
 
@@ -197,7 +212,8 @@ ShutdownWalRcv(void)
    * Wait for walreceiver to acknowledge its death by setting state to
    * WALRCV_STOPPED.
    */
-  while (WalRcvRunning()) {
+  while (WalRcvRunning())
+  {
     /*
      * This possibly-long loop needs to handle interrupts of startup
      * process.
@@ -229,7 +245,8 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
    * being created by XLOG streaming, which might cause trouble later on if
    * the segment is e.g archived.
    */
-  if (XLogSegmentOffset(recptr, wal_segment_size) != 0) {
+  if (XLogSegmentOffset(recptr, wal_segment_size) != 0)
+  {
     recptr -= XLogSegmentOffset(recptr, wal_segment_size);
   }
 
@@ -238,22 +255,31 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
   /* It better be stopped if we try to restart it */
   Assert(walrcv->walRcvState == WALRCV_STOPPED || walrcv->walRcvState == WALRCV_WAITING);
 
-  if (conninfo != NULL) {
+  if (conninfo != NULL)
+  {
     strlcpy((char *)walrcv->conninfo, conninfo, MAXCONNINFO);
-  } else {
+  }
+  else
+  {
     walrcv->conninfo[0] = '\0';
   }
 
-  if (slotname != NULL) {
+  if (slotname != NULL)
+  {
     strlcpy((char *)walrcv->slotname, slotname, NAMEDATALEN);
-  } else {
+  }
+  else
+  {
     walrcv->slotname[0] = '\0';
   }
 
-  if (walrcv->walRcvState == WALRCV_STOPPED) {
+  if (walrcv->walRcvState == WALRCV_STOPPED)
+  {
     launch = true;
     walrcv->walRcvState = WALRCV_STARTING;
-  } else {
+  }
+  else
+  {
     walrcv->walRcvState = WALRCV_RESTARTING;
   }
   walrcv->startTime = now;
@@ -262,7 +288,8 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
    * If this is the first startup of walreceiver (on this timeline),
    * initialize receivedUpto and latestChunkStart to the starting point.
    */
-  if (walrcv->receiveStart == 0 || walrcv->receivedTLI != tli) {
+  if (walrcv->receiveStart == 0 || walrcv->receivedTLI != tli)
+  {
     walrcv->receivedUpto = recptr;
     walrcv->receivedTLI = tli;
     walrcv->latestChunkStart = recptr;
@@ -274,9 +301,12 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
 
   SpinLockRelease(&walrcv->mutex);
 
-  if (launch) {
+  if (launch)
+  {
     SendPostmasterSignal(PMSIGNAL_START_WALRECEIVER);
-  } else if (latch) {
+  }
+  else if (latch)
+  {
     SetLatch(latch);
   }
 }
@@ -297,10 +327,12 @@ GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID *receiveTLI)
 
   SpinLockAcquire(&walrcv->mutex);
   recptr = walrcv->receivedUpto;
-  if (latestChunkStart) {
+  if (latestChunkStart)
+  {
     *latestChunkStart = walrcv->latestChunkStart;
   }
-  if (receiveTLI) {
+  if (receiveTLI)
+  {
     *receiveTLI = walrcv->receivedTLI;
   }
   SpinLockRelease(&walrcv->mutex);
@@ -326,13 +358,15 @@ GetReplicationApplyDelay(void)
 
   replayPtr = GetXLogReplayRecPtr(NULL);
 
-  if (receivePtr == replayPtr) {
+  if (receivePtr == replayPtr)
+  {
     return 0;
   }
 
   chunkReplayStartTime = GetCurrentChunkReplayStartTime();
 
-  if (chunkReplayStartTime == 0) {
+  if (chunkReplayStartTime == 0)
+  {
     return -1;
   }
 

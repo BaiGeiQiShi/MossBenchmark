@@ -42,7 +42,8 @@ check_file_excluded(const char *path, bool is_source);
  * check for exclusion.  If "match_prefix" is true, any items matching
  * the name as prefix are excluded.
  */
-struct exclude_list_item {
+struct exclude_list_item
+{
   const char *name;
   bool match_prefix;
 };
@@ -69,17 +70,27 @@ static const char *excludeDirContents[] = {
      * even if the intention is to restore to another master. See backup.sgml
      * for a more detailed description.
      */
-    "pg_replslot",/* Contents removed on startup, see dsm_cleanup_for_mmap(). */
+    "pg_replslot",
+
+    /* Contents removed on startup, see dsm_cleanup_for_mmap(). */
     "pg_dynshmem", /* defined as PG_DYNSHMEM_DIR */
 
     /* Contents removed on startup, see AsyncShmemInit(). */
-    "pg_notify",/*
+    "pg_notify",
+
+    /*
      * Old contents are loaded for possible debugging but are not required for
      * normal operation, see OldSerXidInit().
      */
-    "pg_serial",/* Contents removed on startup, see DeleteAllExportedSnapshotFiles(). */
-    "pg_snapshots",/* Contents zeroed on startup, see StartupSUBTRANS(). */
-    "pg_subtrans",/* end of list */
+    "pg_serial",
+
+    /* Contents removed on startup, see DeleteAllExportedSnapshotFiles(). */
+    "pg_snapshots",
+
+    /* Contents zeroed on startup, see StartupSUBTRANS(). */
+    "pg_subtrans",
+
+    /* end of list */
     NULL};
 
 /*
@@ -105,7 +116,9 @@ static const struct exclude_list_item excludeFiles[] = {
     {"backup_label", false},   /* defined as BACKUP_LABEL_FILE */
     {"tablespace_map", false}, /* defined as TABLESPACE_MAP */
 
-    {"postmaster.pid", false}, {"postmaster.opts", false},/* end of list */
+    {"postmaster.pid", false}, {"postmaster.opts", false},
+
+    /* end of list */
     {NULL, false}};
 
 /*
@@ -150,7 +163,8 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
    * Skip any files matching the exclusion filters. This has the effect to
    * remove all those files on the target.
    */
-  if (check_file_excluded(path, true)) {
+  if (check_file_excluded(path, true))
+  {
     return;
   }
 
@@ -159,7 +173,8 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
    * don't want to mess with the symlink itself, nor complain if it's a
    * symlink in source but not in target or vice versa.
    */
-  if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK) {
+  if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK)
+  {
     type = FILE_TYPE_DIRECTORY;
   }
 
@@ -168,10 +183,12 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
    * This has the effect that all temporary files in the destination will be
    * removed.
    */
-  if (strstr(path, "/" PG_TEMP_FILE_PREFIX) != NULL) {
+  if (strstr(path, "/" PG_TEMP_FILE_PREFIX) != NULL)
+  {
     return;
   }
-  if (strstr(path, "/" PG_TEMP_FILES_DIR "/") != NULL) {
+  if (strstr(path, "/" PG_TEMP_FILES_DIR "/") != NULL)
+  {
     return;
   }
 
@@ -179,33 +196,43 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
    * sanity check: a filename that looks like a data file better be a
    * regular file
    */
-  if (type != FILE_TYPE_REGULAR && isRelDataFile(path)) {
+  if (type != FILE_TYPE_REGULAR && isRelDataFile(path))
+  {
     pg_fatal("data file \"%s\" in source is not a regular file", path);
   }
 
   snprintf(localpath, sizeof(localpath), "%s/%s", datadir_target, path);
 
   /* Does the corresponding file exist in the target data dir? */
-  if (lstat(localpath, &statbuf) < 0) {
-    if (errno != ENOENT) {
+  if (lstat(localpath, &statbuf) < 0)
+  {
+    if (errno != ENOENT)
+    {
       pg_fatal("could not stat file \"%s\": %m", localpath);
     }
 
     exists = false;
-  } else {
+  }
+  else
+  {
     exists = true;
   }
 
-  switch (type) {
+  switch (type)
+  {
   case FILE_TYPE_DIRECTORY:
-    if (exists && !S_ISDIR(statbuf.st_mode) && strcmp(path, "pg_wal") != 0) {
+    if (exists && !S_ISDIR(statbuf.st_mode) && strcmp(path, "pg_wal") != 0)
+    {
       /* it's a directory in source, but not in target. Strange.. */
       pg_fatal("\"%s\" is not a directory", localpath);
     }
 
-    if (!exists) {
+    if (!exists)
+    {
       action = FILE_ACTION_CREATE;
-    } else {
+    }
+    else
+    {
       action = FILE_ACTION_NONE;
     }
     oldsize = 0;
@@ -218,7 +245,8 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
 #else
         !pgwin32_is_junction(localpath)
 #endif
-    ) {
+    )
+    {
       /*
        * It's a symbolic link in source, but not in target.
        * Strange..
@@ -226,20 +254,25 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
       pg_fatal("\"%s\" is not a symbolic link", localpath);
     }
 
-    if (!exists) {
+    if (!exists)
+    {
       action = FILE_ACTION_CREATE;
-    } else {
+    }
+    else
+    {
       action = FILE_ACTION_NONE;
     }
     oldsize = 0;
     break;
 
   case FILE_TYPE_REGULAR:
-    if (exists && !S_ISREG(statbuf.st_mode)) {
+    if (exists && !S_ISREG(statbuf.st_mode))
+    {
       pg_fatal("\"%s\" is not a regular file", localpath);
     }
 
-    if (!exists || !isRelDataFile(path)) {
+    if (!exists || !isRelDataFile(path))
+    {
       /*
        * File exists in source, but not in target. Or it's a
        * non-data file that we have no special processing for. Copy
@@ -248,14 +281,19 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
        * An exception: PG_VERSIONs should be identical, but avoid
        * overwriting it for paranoia.
        */
-      if (pg_str_endswith(path, "PG_VERSION")) {
+      if (pg_str_endswith(path, "PG_VERSION"))
+      {
         action = FILE_ACTION_NONE;
         oldsize = statbuf.st_size;
-      } else {
+      }
+      else
+      {
         action = FILE_ACTION_COPY;
         oldsize = 0;
       }
-    } else {
+    }
+    else
+    {
       /*
        * It's a data file that exists in both.
        *
@@ -281,11 +319,16 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
        * replayed.
        */
       oldsize = statbuf.st_size;
-      if (oldsize < newsize) {
+      if (oldsize < newsize)
+      {
         action = FILE_ACTION_COPY_TAIL;
-      } else if (oldsize > newsize) {
+      }
+      else if (oldsize > newsize)
+      {
         action = FILE_ACTION_TRUNCATE;
-      } else {
+      }
+      else
+      {
         action = FILE_ACTION_NONE;
       }
     }
@@ -305,10 +348,13 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
   entry->pagemap.bitmapsize = 0;
   entry->isrelfile = isRelDataFile(path);
 
-  if (map->last) {
+  if (map->last)
+  {
     map->last->next = entry;
     map->last = entry;
-  } else {
+  }
+  else
+  {
     map->first = map->last = entry;
   }
   map->nlist++;
@@ -336,9 +382,11 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
    * the source data folder when processing the source files.
    */
 
-  if (map->array == NULL) {
+  if (map->array == NULL)
+  {
     /* on first call, initialize lookup array */
-    if (map->nlist == 0) {
+    if (map->nlist == 0)
+    {
       /* should not happen */
       pg_fatal("source file list is empty");
     }
@@ -353,7 +401,8 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
   /*
    * Like in process_source_file, pretend that xlog is always a  directory.
    */
-  if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK) {
+  if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK)
+  {
     type = FILE_TYPE_DIRECTORY;
   }
 
@@ -362,7 +411,8 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
   exists = (bsearch(&key_ptr, map->array, map->narray, sizeof(file_entry_t *), path_cmp) != NULL);
 
   /* Remove any file or folder that doesn't exist in the source system. */
-  if (!exists) {
+  if (!exists)
+  {
     entry = pg_malloc(sizeof(file_entry_t));
     entry->path = pg_strdup(path);
     entry->type = type;
@@ -375,14 +425,19 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
     entry->pagemap.bitmapsize = 0;
     entry->isrelfile = isRelDataFile(path);
 
-    if (map->last == NULL) {
+    if (map->last == NULL)
+    {
       map->first = entry;
-    } else {
+    }
+    else
+    {
       map->last->next = entry;
     }
     map->last = entry;
     map->nlist++;
-  } else {
+  }
+  else
+  {
     /*
      * We already handled all files that exist in the source system in
      * process_source_file().
@@ -418,21 +473,27 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
   key_ptr = &key;
 
   e = bsearch(&key_ptr, map->array, map->narray, sizeof(file_entry_t *), path_cmp);
-  if (e) {
+  if (e)
+  {
     entry = *e;
-  } else {
+  }
+  else
+  {
     entry = NULL;
   }
   pfree(path);
 
-  if (entry) {
+  if (entry)
+  {
     Assert(entry->isrelfile);
 
-    switch (entry->action) {
+    switch (entry->action)
+    {
     case FILE_ACTION_NONE:
     case FILE_ACTION_TRUNCATE:
       /* skip if we're truncating away the modified block anyway */
-      if ((blkno_inseg + 1) * BLCKSZ <= entry->newsize) {
+      if ((blkno_inseg + 1) * BLCKSZ <= entry->newsize)
+      {
         datapagemap_add(&entry->pagemap, blkno_inseg);
       }
       break;
@@ -443,7 +504,8 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
        * skip the modified block if it is part of the "tail" that
        * we're copying anyway.
        */
-      if ((blkno_inseg + 1) * BLCKSZ <= entry->oldsize) {
+      if ((blkno_inseg + 1) * BLCKSZ <= entry->oldsize)
+      {
         datapagemap_add(&entry->pagemap, blkno_inseg);
       }
       break;
@@ -455,7 +517,9 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
     case FILE_ACTION_CREATE:
       pg_fatal("unexpected page modification for directory or symbolic link \"%s\"", entry->path);
     }
-  } else {
+  }
+  else
+  {
     /*
      * If we don't have any record of this file in the file map, it means
      * that it's a relation that doesn't exist in the source system, and
@@ -476,23 +540,32 @@ check_file_excluded(const char *path, bool is_source)
   const char *filename;
 
   /* check individual files... */
-  for (excludeIdx = 0; excludeFiles[excludeIdx].name != NULL; excludeIdx++) {
+  for (excludeIdx = 0; excludeFiles[excludeIdx].name != NULL; excludeIdx++)
+  {
     int cmplen = strlen(excludeFiles[excludeIdx].name);
 
     filename = last_dir_separator(path);
-    if (filename == NULL) {
+    if (filename == NULL)
+    {
       filename = path;
-    } else {
+    }
+    else
+    {
       filename++;
     }
 
-    if (!excludeFiles[excludeIdx].match_prefix) {
+    if (!excludeFiles[excludeIdx].match_prefix)
+    {
       cmplen++;
     }
-    if (strncmp(filename, excludeFiles[excludeIdx].name, cmplen) == 0) {
-      if (is_source) {
+    if (strncmp(filename, excludeFiles[excludeIdx].name, cmplen) == 0)
+    {
+      if (is_source)
+      {
         pg_log_debug("entry \"%s\" excluded from source file list", path);
-      } else {
+      }
+      else
+      {
         pg_log_debug("entry \"%s\" excluded from target file list", path);
       }
       return true;
@@ -503,12 +576,17 @@ check_file_excluded(const char *path, bool is_source)
    * ... And check some directories.  Note that this includes any contents
    * within the directories themselves.
    */
-  for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++) {
+  for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++)
+  {
     snprintf(localpath, sizeof(localpath), "%s/", excludeDirContents[excludeIdx]);
-    if (strstr(path, localpath) == path) {
-      if (is_source) {
+    if (strstr(path, localpath) == path)
+    {
+      if (is_source)
+      {
         pg_log_debug("entry \"%s\" excluded from source file list", path);
-      } else {
+      }
+      else
+      {
         pg_log_debug("entry \"%s\" excluded from target file list", path);
       }
       return true;
@@ -519,7 +597,8 @@ check_file_excluded(const char *path, bool is_source)
 }
 
 /*
- * Convert the linked list of entries in map->first/last to the array,* map->array.
+ * Convert the linked list of entries in map->first/last to the array,
+ * map->array.
  */
 static void
 filemap_list_to_array(filemap_t *map)
@@ -530,7 +609,8 @@ filemap_list_to_array(filemap_t *map)
   map->array = (file_entry_t **)pg_realloc(map->array, (map->nlist + map->narray) * sizeof(file_entry_t *));
 
   narray = map->narray;
-  for (entry = map->first; entry != NULL; entry = next) {
+  for (entry = map->first; entry != NULL; entry = next)
+  {
     map->array[narray++] = entry;
     next = entry->next;
     entry->next = NULL;
@@ -553,7 +633,8 @@ filemap_finalize(void)
 static const char *
 action_to_str(file_action_t action)
 {
-  switch (action) {
+  switch (action)
+  {
   case FILE_ACTION_NONE:
     return "NONE";
   case FILE_ACTION_COPY:
@@ -567,7 +648,7 @@ action_to_str(file_action_t action)
   case FILE_ACTION_REMOVE:
     return "REMOVE";
 
-  default:;
+  default:
     return "unknown";
   }
 }
@@ -585,30 +666,36 @@ calculate_totals(void)
   map->total_size = 0;
   map->fetch_size = 0;
 
-  for (i = 0; i < map->narray; i++) {
+  for (i = 0; i < map->narray; i++)
+  {
     entry = map->array[i];
 
-    if (entry->type != FILE_TYPE_REGULAR) {
+    if (entry->type != FILE_TYPE_REGULAR)
+    {
       continue;
     }
 
     map->total_size += entry->newsize;
 
-    if (entry->action == FILE_ACTION_COPY) {
+    if (entry->action == FILE_ACTION_COPY)
+    {
       map->fetch_size += entry->newsize;
       continue;
     }
 
-    if (entry->action == FILE_ACTION_COPY_TAIL) {
+    if (entry->action == FILE_ACTION_COPY_TAIL)
+    {
       map->fetch_size += (entry->newsize - entry->oldsize);
     }
 
-    if (entry->pagemap.bitmapsize > 0) {
+    if (entry->pagemap.bitmapsize > 0)
+    {
       datapagemap_iterator_t *iter;
       BlockNumber blk;
 
       iter = datapagemap_iterate(&entry->pagemap);
-      while (datapagemap_next(iter, &blk)) {
+      while (datapagemap_next(iter, &blk))
+      {
         map->fetch_size += BLCKSZ;
       }
 
@@ -624,12 +711,15 @@ print_filemap(void)
   file_entry_t *entry;
   int i;
 
-  for (i = 0; i < map->narray; i++) {
+  for (i = 0; i < map->narray; i++)
+  {
     entry = map->array[i];
-    if (entry->action != FILE_ACTION_NONE || entry->pagemap.bitmapsize > 0) {
+    if (entry->action != FILE_ACTION_NONE || entry->pagemap.bitmapsize > 0)
+    {
       pg_log_debug("%s (%s)", entry->path, action_to_str(entry->action));
 
-      if (entry->pagemap.bitmapsize > 0) {
+      if (entry->pagemap.bitmapsize > 0)
+      {
         datapagemap_print(&entry->pagemap);
       }
     }
@@ -679,18 +769,25 @@ isRelDataFile(const char *path)
   matched = false;
 
   nmatch = sscanf(path, "global/%u.%u", &rnode.relNode, &segNo);
-  if (nmatch == 1 || nmatch == 2) {
+  if (nmatch == 1 || nmatch == 2)
+  {
     rnode.spcNode = GLOBALTABLESPACE_OID;
     rnode.dbNode = 0;
     matched = true;
-  } else {
+  }
+  else
+  {
     nmatch = sscanf(path, "base/%u/%u.%u", &rnode.dbNode, &rnode.relNode, &segNo);
-    if (nmatch == 2 || nmatch == 3) {
+    if (nmatch == 2 || nmatch == 3)
+    {
       rnode.spcNode = DEFAULTTABLESPACE_OID;
       matched = true;
-    } else {
+    }
+    else
+    {
       nmatch = sscanf(path, "pg_tblspc/%u/" TABLESPACE_VERSION_DIRECTORY "/%u/%u.%u", &rnode.spcNode, &rnode.dbNode, &rnode.relNode, &segNo);
-      if (nmatch == 3 || nmatch == 4) {
+      if (nmatch == 3 || nmatch == 4)
+      {
         matched = true;
       }
     }
@@ -702,10 +799,12 @@ isRelDataFile(const char *path)
    * creates the exact same filename, when passed the RelFileNode
    * information we extracted from the filename.
    */
-  if (matched) {
+  if (matched)
+  {
     char *check_path = datasegpath(rnode, MAIN_FORKNUM, segNo);
 
-    if (strcmp(check_path, path) != 0) {
+    if (strcmp(check_path, path) != 0)
+    {
       matched = false;
     }
 
@@ -727,11 +826,14 @@ datasegpath(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
   char *segpath;
 
   path = relpathperm(rnode, forknum);
-  if (segno > 0) {
+  if (segno > 0)
+  {
     segpath = psprintf("%s.%u", path, segno);
     pfree(path);
     return segpath;
-  } else {
+  }
+  else
+  {
     return path;
   }
 }
@@ -749,7 +851,8 @@ path_cmp(const void *a, const void *b)
  * In the final stage, the filemap is sorted so that removals come last.
  * From disk space usage point of view, it would be better to do removals
  * first, but for now, safety first. If a whole directory is deleted, all
- * files and subdirectories inside it need to removed first. On creation,* parent directory needs to be created before files and directories inside
+ * files and subdirectories inside it need to removed first. On creation,
+ * parent directory needs to be created before files and directories inside
  * it. To achieve that, the file_action_t enum is ordered so that we can
  * just sort on that first. Furthermore, sort REMOVE entries in reverse
  * path order, so that "foo/bar" subdirectory is removed before "foo".
@@ -760,16 +863,21 @@ final_filemap_cmp(const void *a, const void *b)
   file_entry_t *fa = *((file_entry_t **)a);
   file_entry_t *fb = *((file_entry_t **)b);
 
-  if (fa->action > fb->action) {
+  if (fa->action > fb->action)
+  {
     return 1;
   }
-  if (fa->action < fb->action) {
+  if (fa->action < fb->action)
+  {
     return -1;
   }
 
-  if (fa->action == FILE_ACTION_REMOVE) {
+  if (fa->action == FILE_ACTION_REMOVE)
+  {
     return strcmp(fb->path, fa->path);
-  } else {
+  }
+  else
+  {
     return strcmp(fa->path, fb->path);
   }
 }

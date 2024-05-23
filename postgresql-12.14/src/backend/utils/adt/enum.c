@@ -82,7 +82,7 @@ check_safe_enum_use(HeapTuple enumval_tup)
   xmin = HeapTupleHeaderGetXmin(enumval_tup->t_data);
   if (!TransactionIdIsInProgress(xmin) && TransactionIdDidCommit(xmin))
   {
-
+    return;
   }
 
   /*
@@ -116,7 +116,7 @@ enum_in(PG_FUNCTION_ARGS)
   /* must check length to prevent Assert failure within SearchSysCache */
   if (strlen(name) >= NAMEDATALEN)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input value for enum %s: \"%s\"", format_type_be(enumtypoid), name)));
   }
 
   tup = SearchSysCache2(ENUMTYPOIDNAME, ObjectIdGetDatum(enumtypoid), CStringGetDatum(name));
@@ -150,7 +150,7 @@ enum_out(PG_FUNCTION_ARGS)
   tup = SearchSysCache1(ENUMOID, ObjectIdGetDatum(enumval));
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid internal value for enum: %u", enumval)));
   }
   en = (Form_pg_enum)GETSTRUCT(tup);
 
@@ -165,60 +165,60 @@ enum_out(PG_FUNCTION_ARGS)
 Datum
 enum_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  Oid enumtypoid = PG_GETARG_OID(1);
+  Oid enumoid;
+  HeapTuple tup;
+  char *name;
+  int nbytes;
 
+  name = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
 
+  /* must check length to prevent Assert failure within SearchSysCache */
+  if (strlen(name) >= NAMEDATALEN)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input value for enum %s: \"%s\"", format_type_be(enumtypoid), name)));
+  }
 
+  tup = SearchSysCache2(ENUMTYPOIDNAME, ObjectIdGetDatum(enumtypoid), CStringGetDatum(name));
+  if (!HeapTupleIsValid(tup))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input value for enum %s: \"%s\"", format_type_be(enumtypoid), name)));
+  }
 
+  /* check it's safe to use in SQL */
+  check_safe_enum_use(tup);
 
+  enumoid = ((Form_pg_enum)GETSTRUCT(tup))->oid;
 
+  ReleaseSysCache(tup);
 
+  pfree(name);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_OID(enumoid);
 }
 
 Datum
 enum_send(PG_FUNCTION_ARGS)
 {
+  Oid enumval = PG_GETARG_OID(0);
+  StringInfoData buf;
+  HeapTuple tup;
+  Form_pg_enum en;
 
+  tup = SearchSysCache1(ENUMOID, ObjectIdGetDatum(enumval));
+  if (!HeapTupleIsValid(tup))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid internal value for enum: %u", enumval)));
+  }
+  en = (Form_pg_enum)GETSTRUCT(tup);
 
+  pq_begintypsend(&buf);
+  pq_sendtext(&buf, NameStr(en->enumlabel), strlen(NameStr(en->enumlabel)));
 
+  ReleaseSysCache(tup);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /* Comparison functions and related */
@@ -273,7 +273,7 @@ enum_cmp_internal(Oid arg1, Oid arg2, FunctionCallInfo fcinfo)
     enum_tup = SearchSysCache1(ENUMOID, ObjectIdGetDatum(arg1));
     if (!HeapTupleIsValid(enum_tup))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid internal value for enum: %u", arg1)));
     }
     en = (Form_pg_enum)GETSTRUCT(enum_tup);
     typeoid = en->enumtypid;
@@ -404,7 +404,7 @@ enum_endpoint(Oid enumtypoid, ScanDirection direction)
   else
   {
     /* should only happen with an empty enum */
-
+    minmax = InvalidOid;
   }
 
   systable_endscan_ordered(enum_scan);
@@ -428,7 +428,7 @@ enum_first(PG_FUNCTION_ARGS)
   enumtypoid = get_fn_expr_argtype(fcinfo->flinfo, 0);
   if (enumtypoid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine actual enum type")));
   }
 
   /* Get the OID using the index */
@@ -436,7 +436,7 @@ enum_first(PG_FUNCTION_ARGS)
 
   if (!OidIsValid(min))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("enum %s contains no values", format_type_be(enumtypoid))));
   }
 
   PG_RETURN_OID(min);
@@ -456,7 +456,7 @@ enum_last(PG_FUNCTION_ARGS)
   enumtypoid = get_fn_expr_argtype(fcinfo->flinfo, 0);
   if (enumtypoid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine actual enum type")));
   }
 
   /* Get the OID using the index */
@@ -464,7 +464,7 @@ enum_last(PG_FUNCTION_ARGS)
 
   if (!OidIsValid(max))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("enum %s contains no values", format_type_be(enumtypoid))));
   }
 
   PG_RETURN_OID(max);
@@ -503,7 +503,7 @@ enum_range_bounds(PG_FUNCTION_ARGS)
   enumtypoid = get_fn_expr_argtype(fcinfo->flinfo, 0);
   if (enumtypoid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine actual enum type")));
   }
 
   PG_RETURN_ARRAYTYPE_P(enum_range_internal(enumtypoid, lower, upper));
@@ -523,7 +523,7 @@ enum_range_all(PG_FUNCTION_ARGS)
   enumtypoid = get_fn_expr_argtype(fcinfo->flinfo, 0);
   if (enumtypoid == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine actual enum type")));
   }
 
   PG_RETURN_ARRAYTYPE_P(enum_range_internal(enumtypoid, InvalidOid, InvalidOid));
@@ -574,8 +574,8 @@ enum_range_internal(Oid enumtypoid, Oid lower, Oid upper)
 
       if (cnt >= max)
       {
-
-
+        max *= 2;
+        elems = (Datum *)repalloc(elems, max * sizeof(Datum));
       }
 
       elems[cnt++] = ObjectIdGetDatum(enum_oid);

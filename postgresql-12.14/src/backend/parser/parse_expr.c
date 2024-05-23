@@ -193,15 +193,15 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 
   switch (nodeTag(expr))
   {
-  case T_ColumnRef:;
+  case T_ColumnRef:
     result = transformColumnRef(pstate, (ColumnRef *)expr);
     break;
 
-  case T_ParamRef:;
+  case T_ParamRef:
     result = transformParamRef(pstate, (ParamRef *)expr);
     break;
 
-  case T_A_Const:;
+  case T_A_Const:
   {
     A_Const *con = (A_Const *)expr;
     Value *val = &con->val;
@@ -210,90 +210,90 @@ transformExprRecurse(ParseState *pstate, Node *expr)
     break;
   }
 
-  case T_A_Indirection:;
+  case T_A_Indirection:
     result = transformIndirection(pstate, (A_Indirection *)expr);
     break;
 
-  case T_A_ArrayExpr:;
+  case T_A_ArrayExpr:
     result = transformArrayExpr(pstate, (A_ArrayExpr *)expr, InvalidOid, InvalidOid, -1);
     break;
 
-  case T_TypeCast:;
+  case T_TypeCast:
     result = transformTypeCast(pstate, (TypeCast *)expr);
     break;
 
-  case T_CollateClause:;
+  case T_CollateClause:
     result = transformCollateClause(pstate, (CollateClause *)expr);
     break;
 
-  case T_A_Expr:;
+  case T_A_Expr:
   {
     A_Expr *a = (A_Expr *)expr;
 
     switch (a->kind)
     {
-    case AEXPR_OP:;
+    case AEXPR_OP:
       result = transformAExprOp(pstate, a);
       break;
-    case AEXPR_OP_ANY:;
+    case AEXPR_OP_ANY:
       result = transformAExprOpAny(pstate, a);
       break;
-    case AEXPR_OP_ALL:;
+    case AEXPR_OP_ALL:
       result = transformAExprOpAll(pstate, a);
       break;
-    case AEXPR_DISTINCT:;
-    case AEXPR_NOT_DISTINCT:;
+    case AEXPR_DISTINCT:
+    case AEXPR_NOT_DISTINCT:
       result = transformAExprDistinct(pstate, a);
       break;
-    case AEXPR_NULLIF:;
+    case AEXPR_NULLIF:
       result = transformAExprNullIf(pstate, a);
       break;
-    case AEXPR_OF:;
+    case AEXPR_OF:
       result = transformAExprOf(pstate, a);
       break;
-    case AEXPR_IN:;
+    case AEXPR_IN:
       result = transformAExprIn(pstate, a);
       break;
-    case AEXPR_LIKE:;
-    case AEXPR_ILIKE:;
-    case AEXPR_SIMILAR:;
+    case AEXPR_LIKE:
+    case AEXPR_ILIKE:
+    case AEXPR_SIMILAR:
       /* we can transform these just like AEXPR_OP */
       result = transformAExprOp(pstate, a);
       break;
-    case AEXPR_BETWEEN:;
-    case AEXPR_NOT_BETWEEN:;
-    case AEXPR_BETWEEN_SYM:;
-    case AEXPR_NOT_BETWEEN_SYM:;
+    case AEXPR_BETWEEN:
+    case AEXPR_NOT_BETWEEN:
+    case AEXPR_BETWEEN_SYM:
+    case AEXPR_NOT_BETWEEN_SYM:
       result = transformAExprBetween(pstate, a);
       break;
-    case AEXPR_PAREN:;
-
-
-    default:;;
-
-
-
+    case AEXPR_PAREN:
+      result = transformExprRecurse(pstate, a->lexpr);
+      break;
+    default:
+      elog(ERROR, "unrecognized A_Expr kind: %d", a->kind);
+      result = NULL; /* keep compiler quiet */
+      break;
     }
     break;
   }
 
-  case T_BoolExpr:;
+  case T_BoolExpr:
     result = transformBoolExpr(pstate, (BoolExpr *)expr);
     break;
 
-  case T_FuncCall:;
+  case T_FuncCall:
     result = transformFuncCall(pstate, (FuncCall *)expr);
     break;
 
-  case T_MultiAssignRef:;
+  case T_MultiAssignRef:
     result = transformMultiAssignRef(pstate, (MultiAssignRef *)expr);
     break;
 
-  case T_GroupingFunc:;
+  case T_GroupingFunc:
     result = transformGroupingFunc(pstate, (GroupingFunc *)expr);
     break;
 
-  case T_NamedArgExpr:;
+  case T_NamedArgExpr:
   {
     NamedArgExpr *na = (NamedArgExpr *)expr;
 
@@ -302,45 +302,45 @@ transformExprRecurse(ParseState *pstate, Node *expr)
     break;
   }
 
-  case T_SubLink:;
+  case T_SubLink:
     result = transformSubLink(pstate, (SubLink *)expr);
     break;
 
-  case T_CaseExpr:;
+  case T_CaseExpr:
     result = transformCaseExpr(pstate, (CaseExpr *)expr);
     break;
 
-  case T_RowExpr:;
+  case T_RowExpr:
     result = transformRowExpr(pstate, (RowExpr *)expr, false);
     break;
 
-  case T_CoalesceExpr:;
+  case T_CoalesceExpr:
     result = transformCoalesceExpr(pstate, (CoalesceExpr *)expr);
     break;
 
-  case T_MinMaxExpr:;
+  case T_MinMaxExpr:
     result = transformMinMaxExpr(pstate, (MinMaxExpr *)expr);
     break;
 
-  case T_SQLValueFunction:;
+  case T_SQLValueFunction:
     result = transformSQLValueFunction(pstate, (SQLValueFunction *)expr);
     break;
 
-  case T_XmlExpr:;
+  case T_XmlExpr:
     result = transformXmlExpr(pstate, (XmlExpr *)expr);
     break;
 
-  case T_XmlSerialize:;
+  case T_XmlSerialize:
     result = transformXmlSerialize(pstate, (XmlSerialize *)expr);
     break;
 
-  case T_NullTest:;
+  case T_NullTest:
   {
     NullTest *n = (NullTest *)expr;
 
     if (operator_precedence_warning)
     {
-
+      emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS", (Node *)n->arg, NULL, n->location);
     }
 
     n->arg = (Expr *)transformExprRecurse(pstate, (Node *)n->arg);
@@ -350,11 +350,11 @@ transformExprRecurse(ParseState *pstate, Node *expr)
     break;
   }
 
-  case T_BooleanTest:;
+  case T_BooleanTest:
     result = transformBooleanTest(pstate, (BooleanTest *)expr);
     break;
 
-  case T_CurrentOfExpr:;
+  case T_CurrentOfExpr:
     result = transformCurrentOfExpr(pstate, (CurrentOfExpr *)expr);
     break;
 
@@ -362,9 +362,9 @@ transformExprRecurse(ParseState *pstate, Node *expr)
      * In all places where DEFAULT is legal, the caller should have
      * processed it rather than passing it to transformExpr().
      */
-  case T_SetToDefault:;
-
-
+  case T_SetToDefault:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("DEFAULT is not allowed in this context"), parser_errposition(pstate, ((SetToDefault *)expr)->location)));
+    break;
 
     /*
      * CaseTestExpr doesn't require any processing; it is only
@@ -376,18 +376,18 @@ transformExprRecurse(ParseState *pstate, Node *expr)
      * alternative would be to deconstruct and reconstruct column
      * references, which seems expensively pointless.  So allow it.
      */
-  case T_CaseTestExpr:;
-  case T_Var:;
+  case T_CaseTestExpr:
+  case T_Var:
   {
     result = (Node *)expr;
     break;
   }
 
-  default:;;
+  default:
     /* should not reach here */
-
-
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(expr));
+    result = NULL; /* keep compiler quiet */
+    break;
   }
 
   return result;
@@ -407,8 +407,8 @@ unknown_attribute(ParseState *pstate, Node *relref, const char *attname, int loc
   if (IsA(relref, Var) && ((Var *)relref)->varattno == InvalidAttrNumber)
   {
     /* Reference the RTE by alias not by actual table name */
-
-
+    rte = GetRTEByRangeTablePosn(pstate, ((Var *)relref)->varno, ((Var *)relref)->varlevelsup);
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("column %s.%s does not exist", rte->eref->aliasname, attname), parser_errposition(pstate, location)));
   }
   else
   {
@@ -425,7 +425,11 @@ unknown_attribute(ParseState *pstate, Node *relref, const char *attname, int loc
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE),
+                         errmsg("column notation .%s applied to type %s, "
+                                "which is not a composite type",
+                             attname, format_type_be(relTypeId)),
+                         parser_errposition(pstate, location)));
     }
   }
 }
@@ -454,7 +458,7 @@ transformIndirection(ParseState *pstate, A_Indirection *ind)
     }
     else if (IsA(n, A_Star))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("row expansion via \"*\" is not supported here"), parser_errposition(pstate, location)));
     }
     else
     {
@@ -517,59 +521,59 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
   err = NULL;
   switch (pstate->p_expr_kind)
   {
-  case EXPR_KIND_NONE:;
-
-
-  case EXPR_KIND_OTHER:;
-  case EXPR_KIND_JOIN_ON:;
-  case EXPR_KIND_JOIN_USING:;
-  case EXPR_KIND_FROM_SUBSELECT:;
-  case EXPR_KIND_FROM_FUNCTION:;
-  case EXPR_KIND_WHERE:;
-  case EXPR_KIND_POLICY:;
-  case EXPR_KIND_HAVING:;
-  case EXPR_KIND_FILTER:;
-  case EXPR_KIND_WINDOW_PARTITION:;
-  case EXPR_KIND_WINDOW_ORDER:;
-  case EXPR_KIND_WINDOW_FRAME_RANGE:;
-  case EXPR_KIND_WINDOW_FRAME_ROWS:;
-  case EXPR_KIND_WINDOW_FRAME_GROUPS:;
-  case EXPR_KIND_SELECT_TARGET:;
-  case EXPR_KIND_INSERT_TARGET:;
-  case EXPR_KIND_UPDATE_SOURCE:;
-  case EXPR_KIND_UPDATE_TARGET:;
-  case EXPR_KIND_GROUP_BY:;
-  case EXPR_KIND_ORDER_BY:;
-  case EXPR_KIND_DISTINCT_ON:;
-  case EXPR_KIND_LIMIT:;
-  case EXPR_KIND_OFFSET:;
-  case EXPR_KIND_RETURNING:;
-  case EXPR_KIND_VALUES:;
-  case EXPR_KIND_VALUES_SINGLE:;
-  case EXPR_KIND_CHECK_CONSTRAINT:;
-  case EXPR_KIND_DOMAIN_CHECK:;
-  case EXPR_KIND_FUNCTION_DEFAULT:;
-  case EXPR_KIND_INDEX_EXPRESSION:;
-  case EXPR_KIND_INDEX_PREDICATE:;
-  case EXPR_KIND_ALTER_COL_TRANSFORM:;
-  case EXPR_KIND_EXECUTE_PARAMETER:;
-  case EXPR_KIND_TRIGGER_WHEN:;
-  case EXPR_KIND_PARTITION_EXPRESSION:;
-  case EXPR_KIND_CALL_ARGUMENT:;
-  case EXPR_KIND_COPY_WHERE:;
-  case EXPR_KIND_GENERATED_COLUMN:;
+  case EXPR_KIND_NONE:
+    Assert(false); /* can't happen */
+    break;
+  case EXPR_KIND_OTHER:
+  case EXPR_KIND_JOIN_ON:
+  case EXPR_KIND_JOIN_USING:
+  case EXPR_KIND_FROM_SUBSELECT:
+  case EXPR_KIND_FROM_FUNCTION:
+  case EXPR_KIND_WHERE:
+  case EXPR_KIND_POLICY:
+  case EXPR_KIND_HAVING:
+  case EXPR_KIND_FILTER:
+  case EXPR_KIND_WINDOW_PARTITION:
+  case EXPR_KIND_WINDOW_ORDER:
+  case EXPR_KIND_WINDOW_FRAME_RANGE:
+  case EXPR_KIND_WINDOW_FRAME_ROWS:
+  case EXPR_KIND_WINDOW_FRAME_GROUPS:
+  case EXPR_KIND_SELECT_TARGET:
+  case EXPR_KIND_INSERT_TARGET:
+  case EXPR_KIND_UPDATE_SOURCE:
+  case EXPR_KIND_UPDATE_TARGET:
+  case EXPR_KIND_GROUP_BY:
+  case EXPR_KIND_ORDER_BY:
+  case EXPR_KIND_DISTINCT_ON:
+  case EXPR_KIND_LIMIT:
+  case EXPR_KIND_OFFSET:
+  case EXPR_KIND_RETURNING:
+  case EXPR_KIND_VALUES:
+  case EXPR_KIND_VALUES_SINGLE:
+  case EXPR_KIND_CHECK_CONSTRAINT:
+  case EXPR_KIND_DOMAIN_CHECK:
+  case EXPR_KIND_FUNCTION_DEFAULT:
+  case EXPR_KIND_INDEX_EXPRESSION:
+  case EXPR_KIND_INDEX_PREDICATE:
+  case EXPR_KIND_ALTER_COL_TRANSFORM:
+  case EXPR_KIND_EXECUTE_PARAMETER:
+  case EXPR_KIND_TRIGGER_WHEN:
+  case EXPR_KIND_PARTITION_EXPRESSION:
+  case EXPR_KIND_CALL_ARGUMENT:
+  case EXPR_KIND_COPY_WHERE:
+  case EXPR_KIND_GENERATED_COLUMN:
     /* okay */
     break;
 
-  case EXPR_KIND_COLUMN_DEFAULT:;
+  case EXPR_KIND_COLUMN_DEFAULT:
     err = _("cannot use column reference in DEFAULT expression");
     break;
-  case EXPR_KIND_PARTITION_BOUND:;
+  case EXPR_KIND_PARTITION_BOUND:
     err = _("cannot use column reference in partition bound expression");
     break;
 
     /*
-     * There is intentionally no default:; case here, so that the
+     * There is intentionally no default: case here, so that the
      * compiler will warn if we add a new ParseExprKind without
      * extending this switch.  If we do see an unrecognized value at
      * runtime, the behavior will be the same as for EXPR_KIND_OTHER,
@@ -598,13 +602,14 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
    * The allowed syntaxes are:
    *
    * A		First try to resolve as unqualified column name;
-   *			if no luck, try to resolve as unqualified table name
-   *(A.*). A.B		A is an unqualified table name; B is either a column or
-   *function name (trying column name first). A.B.C	schema A, table B, col
-   *or func name C. A.B.C.D	catalog A, schema B, table C, col or func D. A.*
-   *A is an unqualified table name; means whole-row value. A.B.*
-   *whole-row value of table B in schema A. A.B.C.*	whole-row value of table
-   *C in schema B in catalog A.
+   *			if no luck, try to resolve as unqualified table name (A.*).
+   * A.B		A is an unqualified table name; B is either a
+   *			column or function name (trying column name first).
+   * A.B.C	schema A, table B, col or func name C.
+   * A.B.C.D	catalog A, schema B, table C, col or func D.
+   * A.*		A is an unqualified table name; means whole-row value.
+   * A.B.*	whole-row value of table B in schema A.
+   * A.B.C.*	whole-row value of table C in schema B in catalog A.
    *
    * We do not need to cope with bare "*"; that will only be accepted by
    * the grammar at the top level of a SELECT list, and transformTargetList
@@ -618,7 +623,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
    */
   switch (list_length(cref->fields))
   {
-  case 1:;
+  case 1:
   {
     Node *field1 = (Node *)linitial(cref->fields);
 
@@ -649,7 +654,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     }
     break;
   }
-  case 2:;
+  case 2:
   {
     Node *field1 = (Node *)linitial(cref->fields);
     Node *field2 = (Node *)lsecond(cref->fields);
@@ -685,7 +690,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     }
     break;
   }
-  case 3:;
+  case 3:
   {
     Node *field1 = (Node *)linitial(cref->fields);
     Node *field2 = (Node *)lsecond(cref->fields);
@@ -707,8 +712,8 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     /* Whole-row reference? */
     if (IsA(field3, A_Star))
     {
-
-
+      node = transformWholeRowRef(pstate, rte, cref->location);
+      break;
     }
 
     Assert(IsA(field3, String));
@@ -719,12 +724,12 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     if (node == NULL)
     {
       /* Try it as a function call on the whole row */
-
-
+      node = transformWholeRowRef(pstate, rte, cref->location);
+      node = ParseFuncOrColumn(pstate, list_make1(makeString(colname)), list_make1(node), pstate->p_last_srf, NULL, false, cref->location);
     }
     break;
   }
-  case 4:;
+  case 4:
   {
     Node *field1 = (Node *)linitial(cref->fields);
     Node *field2 = (Node *)lsecond(cref->fields);
@@ -732,53 +737,53 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     Node *field4 = (Node *)lfourth(cref->fields);
     char *catname;
 
-
-
-
-
-
-
+    Assert(IsA(field1, String));
+    catname = strVal(field1);
+    Assert(IsA(field2, String));
+    nspname = strVal(field2);
+    Assert(IsA(field3, String));
+    relname = strVal(field3);
 
     /*
      * We check the catalog name and then ignore it.
      */
-
-
-
-
-
+    if (strcmp(catname, get_database_name(MyDatabaseId)) != 0)
+    {
+      crerr = CRERR_WRONG_DB;
+      break;
+    }
 
     /* Locate the referenced RTE */
-
-
-
-
-
-
+    rte = refnameRangeTblEntry(pstate, nspname, relname, cref->location, &levels_up);
+    if (rte == NULL)
+    {
+      crerr = CRERR_NO_RTE;
+      break;
+    }
 
     /* Whole-row reference? */
+    if (IsA(field4, A_Star))
+    {
+      node = transformWholeRowRef(pstate, rte, cref->location);
+      break;
+    }
 
-
-
-
-
-
-
-
+    Assert(IsA(field4, String));
+    colname = strVal(field4);
 
     /* Try to identify as a column of the RTE */
-
-
-
-
-
-
-
-
+    node = scanRTEForColumn(pstate, rte, colname, cref->location, 0, NULL);
+    if (node == NULL)
+    {
+      /* Try it as a function call on the whole row */
+      node = transformWholeRowRef(pstate, rte, cref->location);
+      node = ParseFuncOrColumn(pstate, list_make1(makeString(colname)), list_make1(node), pstate->p_last_srf, NULL, false, cref->location);
+    }
+    break;
   }
-  default:;;
-
-
+  default:
+    crerr = CRERR_TOO_MANY; /* too many dotted names */
+    break;
   }
 
   /*
@@ -801,7 +806,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
     }
     else if (hookresult != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_AMBIGUOUS_COLUMN), errmsg("column reference \"%s\" is ambiguous", NameListToString(cref->fields)), parser_errposition(pstate, cref->location)));
     }
   }
 
@@ -812,18 +817,18 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
   {
     switch (crerr)
     {
-    case CRERR_NO_COLUMN:;
+    case CRERR_NO_COLUMN:
       errorMissingColumn(pstate, relname, colname, cref->location);
       break;
-    case CRERR_NO_RTE:;
+    case CRERR_NO_RTE:
       errorMissingRTE(pstate, makeRangeVar(nspname, relname, cref->location));
       break;
-    case CRERR_WRONG_DB:;
-
-
-    case CRERR_TOO_MANY:;
-
-
+    case CRERR_WRONG_DB:
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cross-database references are not implemented: %s", NameListToString(cref->fields)), parser_errposition(pstate, cref->location)));
+      break;
+    case CRERR_TOO_MANY:
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("improper qualified name (too many dotted names): %s", NameListToString(cref->fields)), parser_errposition(pstate, cref->location)));
+      break;
     }
   }
 
@@ -845,7 +850,7 @@ transformParamRef(ParseState *pstate, ParamRef *pref)
   }
   else
   {
-
+    result = NULL;
   }
 
   if (result == NULL)
@@ -884,21 +889,21 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
     int opgroup;
     const char *opname;
 
-
-
-
-
-
+    opgroup = operator_precedence_group((Node *)a, &opname);
+    if (opgroup > 0)
+    {
+      emit_precedence_warnings(pstate, opgroup, opname, lexpr, rexpr, a->location);
+    }
 
     /* Look through AEXPR_PAREN nodes so they don't affect tests below */
-
-
-
-
-
-
-
-
+    while (lexpr && IsA(lexpr, A_Expr) && ((A_Expr *)lexpr)->kind == AEXPR_PAREN)
+    {
+      lexpr = ((A_Expr *)lexpr)->lexpr;
+    }
+    while (rexpr && IsA(rexpr, A_Expr) && ((A_Expr *)rexpr)->kind == AEXPR_PAREN)
+    {
+      rexpr = ((A_Expr *)rexpr)->lexpr;
+    }
   }
 
   /*
@@ -912,19 +917,19 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
   {
     NullTest *n = makeNode(NullTest);
 
+    n->nulltesttype = IS_NULL;
+    n->location = a->location;
 
+    if (exprIsNullConstant(lexpr))
+    {
+      n->arg = (Expr *)rexpr;
+    }
+    else
+    {
+      n->arg = (Expr *)lexpr;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
+    result = transformExprRecurse(pstate, (Node *)n);
   }
   else if (lexpr && IsA(lexpr, RowExpr) && rexpr && IsA(rexpr, SubLink) && ((SubLink *)rexpr)->subLinkType == EXPR_SUBLINK)
   {
@@ -935,11 +940,11 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
      */
     SubLink *s = (SubLink *)rexpr;
 
-
-
-
-
-
+    s->subLinkType = ROWCOMPARE_SUBLINK;
+    s->testexpr = lexpr;
+    s->operName = a->name;
+    s->location = a->location;
+    result = transformExprRecurse(pstate, (Node *)s);
   }
   else if (lexpr && IsA(lexpr, RowExpr) && rexpr && IsA(rexpr, RowExpr))
   {
@@ -971,7 +976,7 @@ transformAExprOpAny(ParseState *pstate, A_Expr *a)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP, strVal(llast(a->name)), lexpr, NULL, a->location);
   }
 
   lexpr = transformExprRecurse(pstate, lexpr);
@@ -988,7 +993,7 @@ transformAExprOpAll(ParseState *pstate, A_Expr *a)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP, strVal(llast(a->name)), lexpr, NULL, a->location);
   }
 
   lexpr = transformExprRecurse(pstate, lexpr);
@@ -1006,7 +1011,7 @@ transformAExprDistinct(ParseState *pstate, A_Expr *a)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_INFIX_IS, "IS", lexpr, rexpr, a->location);
   }
 
   /*
@@ -1020,7 +1025,7 @@ transformAExprDistinct(ParseState *pstate, A_Expr *a)
   }
   if (exprIsNullConstant(lexpr))
   {
-
+    return make_nulltest_from_distinct(pstate, a, rexpr);
   }
 
   lexpr = transformExprRecurse(pstate, lexpr);
@@ -1063,11 +1068,13 @@ transformAExprNullIf(ParseState *pstate, A_Expr *a)
    */
   if (result->opresulttype != BOOLOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("NULLIF requires = operator to yield boolean"), parser_errposition(pstate, a->location)));
   }
   if (result->opretset)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
+                       /* translator: %s is name of a SQL construct, eg NULLIF */
+                       errmsg("%s must not return a set", "NULLIF"), parser_errposition(pstate, a->location)));
   }
 
   /*
@@ -1098,7 +1105,7 @@ transformAExprOf(ParseState *pstate, A_Expr *a)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS", lexpr, NULL, a->location);
   }
 
   lexpr = transformExprRecurse(pstate, lexpr);
@@ -1120,7 +1127,7 @@ transformAExprOf(ParseState *pstate, A_Expr *a)
    */
   if (strcmp(strVal(linitial(a->name)), "<>") == 0)
   {
-
+    matched = (!matched);
   }
 
   result = (Const *)makeBoolConst(matched, false);
@@ -1156,7 +1163,7 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, useOr ? PREC_GROUP_IN : PREC_GROUP_NOT_IN, "IN", a->lexpr, NULL, a->location);
   }
 
   /*
@@ -1179,7 +1186,7 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
     rexprs = lappend(rexprs, rexpr);
     if (contain_vars_of_level(rexpr, 0))
     {
-
+      rvars = lappend(rvars, rexpr);
     }
     else
     {
@@ -1309,13 +1316,13 @@ transformAExprBetween(ParseState *pstate, A_Expr *a)
     int opgroup;
     const char *opname;
 
-
-
+    opgroup = operator_precedence_group((Node *)a, &opname);
+    emit_precedence_warnings(pstate, opgroup, opname, aexpr, cexpr, a->location);
     /* We can ignore bexpr thanks to syntactic restrictions */
     /* Wrap subexpressions to prevent extra warnings */
-
-
-
+    aexpr = (Node *)makeA_Expr(AEXPR_PAREN, NIL, aexpr, NULL, -1);
+    bexpr = (Node *)makeA_Expr(AEXPR_PAREN, NIL, bexpr, NULL, -1);
+    cexpr = (Node *)makeA_Expr(AEXPR_PAREN, NIL, cexpr, NULL, -1);
   }
 
   /*
@@ -1331,34 +1338,34 @@ transformAExprBetween(ParseState *pstate, A_Expr *a)
    */
   switch (a->kind)
   {
-  case AEXPR_BETWEEN:;
+  case AEXPR_BETWEEN:
     args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=", aexpr, bexpr, a->location), makeSimpleA_Expr(AEXPR_OP, "<=", copyObject(aexpr), cexpr, a->location));
     result = (Node *)makeBoolExpr(AND_EXPR, args, a->location);
     break;
-  case AEXPR_NOT_BETWEEN:;
+  case AEXPR_NOT_BETWEEN:
     args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<", aexpr, bexpr, a->location), makeSimpleA_Expr(AEXPR_OP, ">", copyObject(aexpr), cexpr, a->location));
     result = (Node *)makeBoolExpr(OR_EXPR, args, a->location);
     break;
-  case AEXPR_BETWEEN_SYM:;
-
-
-
-
-
-
-
-  case AEXPR_NOT_BETWEEN_SYM:;
-
-
-
-
-
-
-
-  default:;;
-
-
-
+  case AEXPR_BETWEEN_SYM:
+    args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=", aexpr, bexpr, a->location), makeSimpleA_Expr(AEXPR_OP, "<=", copyObject(aexpr), cexpr, a->location));
+    sub1 = (Node *)makeBoolExpr(AND_EXPR, args, a->location);
+    args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=", copyObject(aexpr), copyObject(cexpr), a->location), makeSimpleA_Expr(AEXPR_OP, "<=", copyObject(aexpr), copyObject(bexpr), a->location));
+    sub2 = (Node *)makeBoolExpr(AND_EXPR, args, a->location);
+    args = list_make2(sub1, sub2);
+    result = (Node *)makeBoolExpr(OR_EXPR, args, a->location);
+    break;
+  case AEXPR_NOT_BETWEEN_SYM:
+    args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<", aexpr, bexpr, a->location), makeSimpleA_Expr(AEXPR_OP, ">", copyObject(aexpr), cexpr, a->location));
+    sub1 = (Node *)makeBoolExpr(OR_EXPR, args, a->location);
+    args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<", copyObject(aexpr), copyObject(cexpr), a->location), makeSimpleA_Expr(AEXPR_OP, ">", copyObject(aexpr), copyObject(bexpr), a->location));
+    sub2 = (Node *)makeBoolExpr(OR_EXPR, args, a->location);
+    args = list_make2(sub1, sub2);
+    result = (Node *)makeBoolExpr(AND_EXPR, args, a->location);
+    break;
+  default:
+    elog(ERROR, "unrecognized A_Expr kind: %d", a->kind);
+    result = NULL; /* keep compiler quiet */
+    break;
   }
 
   return transformExprRecurse(pstate, result);
@@ -1373,19 +1380,19 @@ transformBoolExpr(ParseState *pstate, BoolExpr *a)
 
   switch (a->boolop)
   {
-  case AND_EXPR:;
+  case AND_EXPR:
     opname = "AND";
     break;
-  case OR_EXPR:;
+  case OR_EXPR:
     opname = "OR";
     break;
-  case NOT_EXPR:;
+  case NOT_EXPR:
     opname = "NOT";
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized boolop: %d", (int)a->boolop);
+    opname = NULL; /* keep compiler quiet */
+    break;
   }
 
   foreach (lc, a->args)
@@ -1470,7 +1477,7 @@ transformMultiAssignRef(ParseState *pstate, MultiAssignRef *maref)
       /* Check subquery returns required number of columns */
       if (count_nonjunk_tlist_entries(qtree->targetList) != maref->ncolumns)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("number of columns does not match number of values"), parser_errposition(pstate, sublink->location)));
       }
 
       /*
@@ -1498,7 +1505,7 @@ transformMultiAssignRef(ParseState *pstate, MultiAssignRef *maref)
       /* Check it returns required number of columns */
       if (list_length(rexpr->args) != maref->ncolumns)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("number of columns does not match number of values"), parser_errposition(pstate, rexpr->location)));
       }
 
       /*
@@ -1694,7 +1701,9 @@ transformCaseExpr(ParseState *pstate, CaseExpr *c)
   /* if any subexpression contained a SRF, complain */
   if (pstate->p_last_srf != last_srf)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-returning functions are not allowed in %s", "CASE"), errhint("You might be able to move the set-returning function into a LATERAL FROM item."), parser_errposition(pstate, exprLocation(pstate->p_last_srf))));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /* translator: %s is name of a SQL construct, eg GROUP BY */
+                       errmsg("set-returning functions are not allowed in %s", "CASE"), errhint("You might be able to move the set-returning function into a LATERAL FROM item."), parser_errposition(pstate, exprLocation(pstate->p_last_srf))));
   }
 
   newc->location = c->location;
@@ -1717,80 +1726,80 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
   err = NULL;
   switch (pstate->p_expr_kind)
   {
-  case EXPR_KIND_NONE:;
-
-
-  case EXPR_KIND_OTHER:;
+  case EXPR_KIND_NONE:
+    Assert(false); /* can't happen */
+    break;
+  case EXPR_KIND_OTHER:
     /* Accept sublink here; caller must throw error if wanted */
-
-  case EXPR_KIND_JOIN_ON:;
-  case EXPR_KIND_JOIN_USING:;
-  case EXPR_KIND_FROM_SUBSELECT:;
-  case EXPR_KIND_FROM_FUNCTION:;
-  case EXPR_KIND_WHERE:;
-  case EXPR_KIND_POLICY:;
-  case EXPR_KIND_HAVING:;
-  case EXPR_KIND_FILTER:;
-  case EXPR_KIND_WINDOW_PARTITION:;
-  case EXPR_KIND_WINDOW_ORDER:;
-  case EXPR_KIND_WINDOW_FRAME_RANGE:;
-  case EXPR_KIND_WINDOW_FRAME_ROWS:;
-  case EXPR_KIND_WINDOW_FRAME_GROUPS:;
-  case EXPR_KIND_SELECT_TARGET:;
-  case EXPR_KIND_INSERT_TARGET:;
-  case EXPR_KIND_UPDATE_SOURCE:;
-  case EXPR_KIND_UPDATE_TARGET:;
-  case EXPR_KIND_GROUP_BY:;
-  case EXPR_KIND_ORDER_BY:;
-  case EXPR_KIND_DISTINCT_ON:;
-  case EXPR_KIND_LIMIT:;
-  case EXPR_KIND_OFFSET:;
-  case EXPR_KIND_RETURNING:;
-  case EXPR_KIND_VALUES:;
-  case EXPR_KIND_VALUES_SINGLE:;
+    break;
+  case EXPR_KIND_JOIN_ON:
+  case EXPR_KIND_JOIN_USING:
+  case EXPR_KIND_FROM_SUBSELECT:
+  case EXPR_KIND_FROM_FUNCTION:
+  case EXPR_KIND_WHERE:
+  case EXPR_KIND_POLICY:
+  case EXPR_KIND_HAVING:
+  case EXPR_KIND_FILTER:
+  case EXPR_KIND_WINDOW_PARTITION:
+  case EXPR_KIND_WINDOW_ORDER:
+  case EXPR_KIND_WINDOW_FRAME_RANGE:
+  case EXPR_KIND_WINDOW_FRAME_ROWS:
+  case EXPR_KIND_WINDOW_FRAME_GROUPS:
+  case EXPR_KIND_SELECT_TARGET:
+  case EXPR_KIND_INSERT_TARGET:
+  case EXPR_KIND_UPDATE_SOURCE:
+  case EXPR_KIND_UPDATE_TARGET:
+  case EXPR_KIND_GROUP_BY:
+  case EXPR_KIND_ORDER_BY:
+  case EXPR_KIND_DISTINCT_ON:
+  case EXPR_KIND_LIMIT:
+  case EXPR_KIND_OFFSET:
+  case EXPR_KIND_RETURNING:
+  case EXPR_KIND_VALUES:
+  case EXPR_KIND_VALUES_SINGLE:
     /* okay */
     break;
-  case EXPR_KIND_CHECK_CONSTRAINT:;
-  case EXPR_KIND_DOMAIN_CHECK:;
-
-
-  case EXPR_KIND_COLUMN_DEFAULT:;
-  case EXPR_KIND_FUNCTION_DEFAULT:;
+  case EXPR_KIND_CHECK_CONSTRAINT:
+  case EXPR_KIND_DOMAIN_CHECK:
+    err = _("cannot use subquery in check constraint");
+    break;
+  case EXPR_KIND_COLUMN_DEFAULT:
+  case EXPR_KIND_FUNCTION_DEFAULT:
     err = _("cannot use subquery in DEFAULT expression");
     break;
-  case EXPR_KIND_INDEX_EXPRESSION:;
-
-
-  case EXPR_KIND_INDEX_PREDICATE:;
-
-
-  case EXPR_KIND_ALTER_COL_TRANSFORM:;
-
-
-  case EXPR_KIND_EXECUTE_PARAMETER:;
-
-
-  case EXPR_KIND_TRIGGER_WHEN:;
-
-
-  case EXPR_KIND_PARTITION_BOUND:;
+  case EXPR_KIND_INDEX_EXPRESSION:
+    err = _("cannot use subquery in index expression");
+    break;
+  case EXPR_KIND_INDEX_PREDICATE:
+    err = _("cannot use subquery in index predicate");
+    break;
+  case EXPR_KIND_ALTER_COL_TRANSFORM:
+    err = _("cannot use subquery in transform expression");
+    break;
+  case EXPR_KIND_EXECUTE_PARAMETER:
+    err = _("cannot use subquery in EXECUTE parameter");
+    break;
+  case EXPR_KIND_TRIGGER_WHEN:
+    err = _("cannot use subquery in trigger WHEN condition");
+    break;
+  case EXPR_KIND_PARTITION_BOUND:
     err = _("cannot use subquery in partition bound");
     break;
-  case EXPR_KIND_PARTITION_EXPRESSION:;
+  case EXPR_KIND_PARTITION_EXPRESSION:
     err = _("cannot use subquery in partition key expression");
     break;
-  case EXPR_KIND_CALL_ARGUMENT:;
-
-
-  case EXPR_KIND_COPY_WHERE:;
+  case EXPR_KIND_CALL_ARGUMENT:
+    err = _("cannot use subquery in CALL argument");
+    break;
+  case EXPR_KIND_COPY_WHERE:
     err = _("cannot use subquery in COPY FROM WHERE condition");
     break;
-  case EXPR_KIND_GENERATED_COLUMN:;
+  case EXPR_KIND_GENERATED_COLUMN:
     err = _("cannot use subquery in column generation expression");
     break;
 
     /*
-     * There is intentionally no default:; case here, so that the
+     * There is intentionally no default: case here, so that the
      * compiler will warn if we add a new ParseExprKind without
      * extending this switch.  If we do see an unrecognized value at
      * runtime, the behavior will be the same as for EXPR_KIND_OTHER,
@@ -1815,7 +1824,7 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
    */
   if (!IsA(qtree, Query) || qtree->commandType != CMD_SELECT)
   {
-
+    elog(ERROR, "unexpected non-SELECT command in SubLink");
   }
 
   sublink->subselect = (Node *)qtree;
@@ -1837,7 +1846,7 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
      */
     if (count_nonjunk_tlist_entries(qtree->targetList) != 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("subquery must return only one column"), parser_errposition(pstate, sublink->location)));
     }
 
     /*
@@ -1863,14 +1872,14 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 
     if (operator_precedence_warning)
     {
-
-
-
-
-
-
-
-
+      if (sublink->operName == NIL)
+      {
+        emit_precedence_warnings(pstate, PREC_GROUP_IN, "IN", sublink->testexpr, NULL, sublink->location);
+      }
+      else
+      {
+        emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP, strVal(llast(sublink->operName)), sublink->testexpr, NULL, sublink->location);
+      }
     }
 
     /*
@@ -1927,11 +1936,11 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
      */
     if (list_length(left_list) < list_length(right_list))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("subquery has too many columns"), parser_errposition(pstate, sublink->location)));
     }
     if (list_length(left_list) > list_length(right_list))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("subquery has too few columns"), parser_errposition(pstate, sublink->location)));
     }
 
     /*
@@ -1976,7 +1985,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a, Oid array_type, Oid eleme
     /* Look through AEXPR_PAREN nodes so they don't affect test below */
     while (e && IsA(e, A_Expr) && ((A_Expr *)e)->kind == AEXPR_PAREN)
     {
-
+      e = ((A_Expr *)e)->lexpr;
     }
 
     /*
@@ -2025,7 +2034,10 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a, Oid array_type, Oid eleme
     /* Can't handle an empty array without a target type */
     if (newelems == NIL)
     {
-      ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_DATATYPE), errmsg("cannot determine type of empty array"), errhint("Explicitly cast to the desired type, for example ARRAY[]::integer[]."), parser_errposition(pstate, a->location)));
+      ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_DATATYPE), errmsg("cannot determine type of empty array"),
+                         errhint("Explicitly cast to the desired type, "
+                                 "for example ARRAY[]::integer[]."),
+                         parser_errposition(pstate, a->location)));
     }
 
     /* Select a common type for the elements */
@@ -2037,7 +2049,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a, Oid array_type, Oid eleme
       element_type = get_element_type(array_type);
       if (!OidIsValid(element_type))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find element type for data type %s", format_type_be(array_type)), parser_errposition(pstate, a->location)));
       }
     }
     else
@@ -2046,7 +2058,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a, Oid array_type, Oid eleme
       array_type = get_array_type(element_type);
       if (!OidIsValid(array_type))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("could not find array type for data type %s", format_type_be(element_type)), parser_errposition(pstate, a->location)));
       }
     }
     coerce_hard = false;
@@ -2072,7 +2084,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a, Oid array_type, Oid eleme
       newe = coerce_to_target_type(pstate, e, exprType(e), coerce_type, typmod, COERCION_EXPLICIT, COERCE_EXPLICIT_CAST, -1);
       if (newe == NULL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_CANNOT_COERCE), errmsg("cannot cast type %s to %s", format_type_be(exprType(e)), format_type_be(coerce_type)), parser_errposition(pstate, exprLocation(e))));
       }
     }
     else
@@ -2107,7 +2119,7 @@ transformRowExpr(ParseState *pstate, RowExpr *r, bool allowDefault)
   /* Disallow more columns than will fit in a tuple */
   if (list_length(newr->args) > MaxTupleAttributeNumber)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("ROW expressions can have at most %d entries", MaxTupleAttributeNumber), parser_errposition(pstate, r->location)));
   }
 
   /* Barring later casting, we consider the type RECORD */
@@ -2162,7 +2174,9 @@ transformCoalesceExpr(ParseState *pstate, CoalesceExpr *c)
   /* if any subexpression contained a SRF, complain */
   if (pstate->p_last_srf != last_srf)
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-returning functions are not allowed in %s", "COALESCE"), errhint("You might be able to move the set-returning function into a LATERAL FROM item."), parser_errposition(pstate, exprLocation(pstate->p_last_srf))));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                       /* translator: %s is name of a SQL construct, eg GROUP BY */
+                       errmsg("set-returning functions are not allowed in %s", "COALESCE"), errhint("You might be able to move the set-returning function into a LATERAL FROM item."), parser_errposition(pstate, exprLocation(pstate->p_last_srf))));
   }
 
   newc->args = newcoercedargs;
@@ -2216,43 +2230,43 @@ transformSQLValueFunction(ParseState *pstate, SQLValueFunction *svf)
    */
   switch (svf->op)
   {
-  case SVFOP_CURRENT_DATE:;
+  case SVFOP_CURRENT_DATE:
     svf->type = DATEOID;
     break;
-  case SVFOP_CURRENT_TIME:;
+  case SVFOP_CURRENT_TIME:
     svf->type = TIMETZOID;
     break;
-  case SVFOP_CURRENT_TIME_N:;
-
-
-
-  case SVFOP_CURRENT_TIMESTAMP:;
+  case SVFOP_CURRENT_TIME_N:
+    svf->type = TIMETZOID;
+    svf->typmod = anytime_typmod_check(true, svf->typmod);
+    break;
+  case SVFOP_CURRENT_TIMESTAMP:
     svf->type = TIMESTAMPTZOID;
     break;
-  case SVFOP_CURRENT_TIMESTAMP_N:;
+  case SVFOP_CURRENT_TIMESTAMP_N:
     svf->type = TIMESTAMPTZOID;
     svf->typmod = anytimestamp_typmod_check(true, svf->typmod);
     break;
-  case SVFOP_LOCALTIME:;
+  case SVFOP_LOCALTIME:
     svf->type = TIMEOID;
     break;
-  case SVFOP_LOCALTIME_N:;
-
-
-
-  case SVFOP_LOCALTIMESTAMP:;
+  case SVFOP_LOCALTIME_N:
+    svf->type = TIMEOID;
+    svf->typmod = anytime_typmod_check(false, svf->typmod);
+    break;
+  case SVFOP_LOCALTIMESTAMP:
     svf->type = TIMESTAMPOID;
     break;
-  case SVFOP_LOCALTIMESTAMP_N:;
+  case SVFOP_LOCALTIMESTAMP_N:
     svf->type = TIMESTAMPOID;
     svf->typmod = anytimestamp_typmod_check(false, svf->typmod);
     break;
-  case SVFOP_CURRENT_ROLE:;
-  case SVFOP_CURRENT_USER:;
-  case SVFOP_USER:;
-  case SVFOP_SESSION_USER:;
-  case SVFOP_CURRENT_CATALOG:;
-  case SVFOP_CURRENT_SCHEMA:;
+  case SVFOP_CURRENT_ROLE:
+  case SVFOP_CURRENT_USER:
+  case SVFOP_USER:
+  case SVFOP_SESSION_USER:
+  case SVFOP_CURRENT_CATALOG:
+  case SVFOP_CURRENT_SCHEMA:
     svf->type = NAMEOID;
     break;
   }
@@ -2269,7 +2283,7 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
 
   if (operator_precedence_warning && x->op == IS_DOCUMENT)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS", (Node *)linitial(x->args), NULL, x->location);
   }
 
   newx = makeNode(XmlExpr);
@@ -2304,7 +2318,7 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
 
     if (r->name)
     {
-
+      argname = map_sql_identifier_to_xml_name(r->name, false, false);
     }
     else if (IsA(r->val, ColumnRef))
     {
@@ -2312,8 +2326,8 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
     }
     else
     {
-
-
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), x->op == IS_XMLELEMENT ? errmsg("unnamed XML attribute value must be a column reference") : errmsg("unnamed XML element value must be a column reference"), parser_errposition(pstate, r->location)));
+      argname = NULL; /* keep compiler quiet */
     }
 
     /* reject duplicate argnames in XMLELEMENT only */
@@ -2321,13 +2335,13 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
     {
       ListCell *lc2;
 
-
-
-
-
-
-
-
+      foreach (lc2, newx->arg_names)
+      {
+        if (strcmp(argname, strVal(lfirst(lc2))) == 0)
+        {
+          ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("XML attribute name \"%s\" appears more than once", argname), parser_errposition(pstate, r->location)));
+        }
+      }
     }
 
     newx->named_args = lappend(newx->named_args, expr);
@@ -2345,16 +2359,16 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
     newe = transformExprRecurse(pstate, e);
     switch (x->op)
     {
-    case IS_XMLCONCAT:;
+    case IS_XMLCONCAT:
       newe = coerce_to_specific_type(pstate, newe, XMLOID, "XMLCONCAT");
       break;
-    case IS_XMLELEMENT:;
+    case IS_XMLELEMENT:
       /* no coercion necessary */
-
-    case IS_XMLFOREST:;
-
-
-    case IS_XMLPARSE:;
+      break;
+    case IS_XMLFOREST:
+      newe = coerce_to_specific_type(pstate, newe, XMLOID, "XMLFOREST");
+      break;
+    case IS_XMLPARSE:
       if (i == 0)
       {
         newe = coerce_to_specific_type(pstate, newe, TEXTOID, "XMLPARSE");
@@ -2364,28 +2378,28 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
         newe = coerce_to_boolean(pstate, newe, "XMLPARSE");
       }
       break;
-    case IS_XMLPI:;
-
-
-    case IS_XMLROOT:;
+    case IS_XMLPI:
+      newe = coerce_to_specific_type(pstate, newe, TEXTOID, "XMLPI");
+      break;
+    case IS_XMLROOT:
       if (i == 0)
       {
         newe = coerce_to_specific_type(pstate, newe, XMLOID, "XMLROOT");
       }
-
-
-
-
-
-
-
-
+      else if (i == 1)
+      {
+        newe = coerce_to_specific_type(pstate, newe, TEXTOID, "XMLROOT");
+      }
+      else
+      {
+        newe = coerce_to_specific_type(pstate, newe, INT4OID, "XMLROOT");
+      }
       break;
-    case IS_XMLSERIALIZE:;
+    case IS_XMLSERIALIZE:
       /* not handled here */
-
-
-    case IS_DOCUMENT:;
+      Assert(false);
+      break;
+    case IS_DOCUMENT:
       newe = coerce_to_specific_type(pstate, newe, XMLOID, "IS DOCUMENT");
       break;
     }
@@ -2425,7 +2439,7 @@ transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
   result = coerce_to_target_type(pstate, (Node *)xexpr, TEXTOID, targetType, targetTypmod, COERCION_IMPLICIT, COERCE_IMPLICIT_CAST, -1);
   if (result == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_CANNOT_COERCE), errmsg("cannot cast XMLSERIALIZE result to %s", format_type_be(targetType)), parser_errposition(pstate, xexpr->location)));
   }
   return result;
 }
@@ -2437,32 +2451,32 @@ transformBooleanTest(ParseState *pstate, BooleanTest *b)
 
   if (operator_precedence_warning)
   {
-
+    emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS", (Node *)b->arg, NULL, b->location);
   }
 
   switch (b->booltesttype)
   {
-  case IS_TRUE:;
+  case IS_TRUE:
     clausename = "IS TRUE";
     break;
-  case IS_NOT_TRUE:;
+  case IS_NOT_TRUE:
     clausename = "IS NOT TRUE";
     break;
-  case IS_FALSE:;
+  case IS_FALSE:
     clausename = "IS FALSE";
     break;
-  case IS_NOT_FALSE:;
+  case IS_NOT_FALSE:
     clausename = "IS NOT FALSE";
     break;
-  case IS_UNKNOWN:;
+  case IS_UNKNOWN:
     clausename = "IS UNKNOWN";
     break;
-  case IS_NOT_UNKNOWN:;
+  case IS_NOT_UNKNOWN:
     clausename = "IS NOT UNKNOWN";
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized booltesttype: %d", (int)b->booltesttype);
+    clausename = NULL; /* keep compiler quiet */
   }
 
   b->arg = (Expr *)transformExprRecurse(pstate, (Node *)b->arg);
@@ -2586,7 +2600,7 @@ transformTypeCast(ParseState *pstate, TypeCast *tc)
    */
   while (arg && IsA(arg, A_Expr) && ((A_Expr *)arg)->kind == AEXPR_PAREN)
   {
-
+    arg = ((A_Expr *)arg)->lexpr;
   }
 
   /*
@@ -2617,7 +2631,7 @@ transformTypeCast(ParseState *pstate, TypeCast *tc)
     }
     else
     {
-
+      expr = transformExprRecurse(pstate, arg);
     }
   }
   else
@@ -2628,7 +2642,7 @@ transformTypeCast(ParseState *pstate, TypeCast *tc)
   inputType = exprType(expr);
   if (inputType == InvalidOid)
   {
-
+    return expr; /* do nothing if NULL input */
   }
 
   /*
@@ -2711,7 +2725,7 @@ make_row_comparison_op(ParseState *pstate, List *opname, List *largs, List *rarg
   nopers = list_length(largs);
   if (nopers != list_length(rargs))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unequal number of entries in row expressions"), parser_errposition(pstate, location)));
   }
 
   /*
@@ -2743,11 +2757,15 @@ make_row_comparison_op(ParseState *pstate, List *opname, List *largs, List *rarg
      */
     if (cmp->opresulttype != BOOLOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
+                         errmsg("row comparison operator must yield type boolean, "
+                                "not type %s",
+                             format_type_be(cmp->opresulttype)),
+                         parser_errposition(pstate, location)));
     }
     if (expression_returns_set((Node *)cmp))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("row comparison operator must not return a set"), parser_errposition(pstate, location)));
     }
     opexprs = lappend(opexprs, cmp);
   }
@@ -2851,9 +2869,9 @@ make_row_comparison_op(ParseState *pstate, List *opname, List *largs, List *rarg
     {
       opfamilies = lappend_oid(opfamilies, opfamily);
     }
-    else
-    { /* should not happen */
-
+    else /* should not happen */
+    {
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not determine interpretation of row comparison operator %s", strVal(llast(opname))), errdetail("There are multiple equally-plausible candidates."), parser_errposition(pstate, location)));
     }
   }
 
@@ -2901,7 +2919,7 @@ make_row_distinct_op(ParseState *pstate, List *opname, RowExpr *lrow, RowExpr *r
 
   if (list_length(largs) != list_length(rargs))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("unequal number of entries in row expressions"), parser_errposition(pstate, location)));
   }
 
   forboth(l, largs, r, rargs)
@@ -2924,7 +2942,7 @@ make_row_distinct_op(ParseState *pstate, List *opname, RowExpr *lrow, RowExpr *r
   if (result == NULL)
   {
     /* zero-length rows?  Generate constant FALSE */
-
+    result = makeBoolConst(false, false);
   }
 
   return result;
@@ -2941,11 +2959,13 @@ make_distinct_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree, int
   result = make_op(pstate, opname, ltree, rtree, pstate->p_last_srf, location);
   if (((OpExpr *)result)->opresulttype != BOOLOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("IS DISTINCT FROM requires = operator to yield boolean"), parser_errposition(pstate, location)));
   }
   if (((OpExpr *)result)->opretset)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
+                       /* translator: %s is name of a SQL construct, eg NULLIF */
+                       errmsg("%s must not return a set", "IS DISTINCT FROM"), parser_errposition(pstate, location)));
   }
 
   /*
@@ -2994,241 +3014,241 @@ make_nulltest_from_distinct(ParseState *pstate, A_Expr *distincta, Node *arg)
 static int
 operator_precedence_group(Node *node, const char **nodename)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  int group = 0;
+
+  *nodename = NULL;
+  if (node == NULL)
+  {
+    return 0;
+  }
+
+  if (IsA(node, A_Expr))
+  {
+    A_Expr *aexpr = (A_Expr *)node;
+
+    if (aexpr->kind == AEXPR_OP && aexpr->lexpr != NULL && aexpr->rexpr != NULL)
+    {
+      /* binary operator */
+      if (list_length(aexpr->name) == 1)
+      {
+        *nodename = strVal(linitial(aexpr->name));
+        /* Ignore if op was always higher priority than IS-tests */
+        if (strcmp(*nodename, "+") == 0 || strcmp(*nodename, "-") == 0 || strcmp(*nodename, "*") == 0 || strcmp(*nodename, "/") == 0 || strcmp(*nodename, "%") == 0 || strcmp(*nodename, "^") == 0)
+        {
+          group = 0;
+        }
+        else if (strcmp(*nodename, "<") == 0 || strcmp(*nodename, ">") == 0)
+        {
+          group = PREC_GROUP_LESS;
+        }
+        else if (strcmp(*nodename, "=") == 0)
+        {
+          group = PREC_GROUP_EQUAL;
+        }
+        else if (strcmp(*nodename, "<=") == 0 || strcmp(*nodename, ">=") == 0 || strcmp(*nodename, "<>") == 0)
+        {
+          group = PREC_GROUP_LESS_EQUAL;
+        }
+        else
+        {
+          group = PREC_GROUP_INFIX_OP;
+        }
+      }
+      else
+      {
+        /* schema-qualified operator syntax */
+        *nodename = "OPERATOR()";
+        group = PREC_GROUP_INFIX_OP;
+      }
+    }
+    else if (aexpr->kind == AEXPR_OP && aexpr->lexpr == NULL && aexpr->rexpr != NULL)
+    {
+      /* prefix operator */
+      if (list_length(aexpr->name) == 1)
+      {
+        *nodename = strVal(linitial(aexpr->name));
+        /* Ignore if op was always higher priority than IS-tests */
+        if (strcmp(*nodename, "+") == 0 || strcmp(*nodename, "-") == 0)
+        {
+          group = 0;
+        }
+        else
+        {
+          group = PREC_GROUP_PREFIX_OP;
+        }
+      }
+      else
+      {
+        /* schema-qualified operator syntax */
+        *nodename = "OPERATOR()";
+        group = PREC_GROUP_PREFIX_OP;
+      }
+    }
+    else if (aexpr->kind == AEXPR_OP && aexpr->lexpr != NULL && aexpr->rexpr == NULL)
+    {
+      /* postfix operator */
+      if (list_length(aexpr->name) == 1)
+      {
+        *nodename = strVal(linitial(aexpr->name));
+        group = PREC_GROUP_POSTFIX_OP;
+      }
+      else
+      {
+        /* schema-qualified operator syntax */
+        *nodename = "OPERATOR()";
+        group = PREC_GROUP_POSTFIX_OP;
+      }
+    }
+    else if (aexpr->kind == AEXPR_OP_ANY || aexpr->kind == AEXPR_OP_ALL)
+    {
+      *nodename = strVal(llast(aexpr->name));
+      group = PREC_GROUP_POSTFIX_OP;
+    }
+    else if (aexpr->kind == AEXPR_DISTINCT || aexpr->kind == AEXPR_NOT_DISTINCT)
+    {
+      *nodename = "IS";
+      group = PREC_GROUP_INFIX_IS;
+    }
+    else if (aexpr->kind == AEXPR_OF)
+    {
+      *nodename = "IS";
+      group = PREC_GROUP_POSTFIX_IS;
+    }
+    else if (aexpr->kind == AEXPR_IN)
+    {
+      *nodename = "IN";
+      if (strcmp(strVal(linitial(aexpr->name)), "=") == 0)
+      {
+        group = PREC_GROUP_IN;
+      }
+      else
+      {
+        group = PREC_GROUP_NOT_IN;
+      }
+    }
+    else if (aexpr->kind == AEXPR_LIKE)
+    {
+      *nodename = "LIKE";
+      if (strcmp(strVal(linitial(aexpr->name)), "~~") == 0)
+      {
+        group = PREC_GROUP_LIKE;
+      }
+      else
+      {
+        group = PREC_GROUP_NOT_LIKE;
+      }
+    }
+    else if (aexpr->kind == AEXPR_ILIKE)
+    {
+      *nodename = "ILIKE";
+      if (strcmp(strVal(linitial(aexpr->name)), "~~*") == 0)
+      {
+        group = PREC_GROUP_LIKE;
+      }
+      else
+      {
+        group = PREC_GROUP_NOT_LIKE;
+      }
+    }
+    else if (aexpr->kind == AEXPR_SIMILAR)
+    {
+      *nodename = "SIMILAR";
+      if (strcmp(strVal(linitial(aexpr->name)), "~") == 0)
+      {
+        group = PREC_GROUP_LIKE;
+      }
+      else
+      {
+        group = PREC_GROUP_NOT_LIKE;
+      }
+    }
+    else if (aexpr->kind == AEXPR_BETWEEN || aexpr->kind == AEXPR_BETWEEN_SYM)
+    {
+      Assert(list_length(aexpr->name) == 1);
+      *nodename = strVal(linitial(aexpr->name));
+      group = PREC_GROUP_BETWEEN;
+    }
+    else if (aexpr->kind == AEXPR_NOT_BETWEEN || aexpr->kind == AEXPR_NOT_BETWEEN_SYM)
+    {
+      Assert(list_length(aexpr->name) == 1);
+      *nodename = strVal(linitial(aexpr->name));
+      group = PREC_GROUP_NOT_BETWEEN;
+    }
+  }
+  else if (IsA(node, NullTest) || IsA(node, BooleanTest))
+  {
+    *nodename = "IS";
+    group = PREC_GROUP_POSTFIX_IS;
+  }
+  else if (IsA(node, XmlExpr))
+  {
+    XmlExpr *x = (XmlExpr *)node;
+
+    if (x->op == IS_DOCUMENT)
+    {
+      *nodename = "IS";
+      group = PREC_GROUP_POSTFIX_IS;
+    }
+  }
+  else if (IsA(node, SubLink))
+  {
+    SubLink *s = (SubLink *)node;
+
+    if (s->subLinkType == ANY_SUBLINK || s->subLinkType == ALL_SUBLINK)
+    {
+      if (s->operName == NIL)
+      {
+        *nodename = "IN";
+        group = PREC_GROUP_IN;
+      }
+      else
+      {
+        *nodename = strVal(llast(s->operName));
+        group = PREC_GROUP_POSTFIX_OP;
+      }
+    }
+  }
+  else if (IsA(node, BoolExpr))
+  {
+    /*
+     * Must dig into NOTs to see if it's IS NOT DOCUMENT or NOT IN.  This
+     * opens us to possibly misrecognizing, eg, NOT (x IS DOCUMENT) as a
+     * problematic construct.  We can tell the difference by checking
+     * whether the parse locations of the two nodes are identical.
+     *
+     * Note that when we are comparing the child node to its own children,
+     * we will not know that it was a NOT.  Fortunately, that doesn't
+     * matter for these cases.
+     */
+    BoolExpr *b = (BoolExpr *)node;
+
+    if (b->boolop == NOT_EXPR)
+    {
+      Node *child = (Node *)linitial(b->args);
+
+      if (IsA(child, XmlExpr))
+      {
+        XmlExpr *x = (XmlExpr *)child;
+
+        if (x->op == IS_DOCUMENT && x->location == b->location)
+        {
+          *nodename = "IS";
+          group = PREC_GROUP_POSTFIX_IS;
+        }
+      }
+      else if (IsA(child, SubLink))
+      {
+        SubLink *s = (SubLink *)child;
+
+        if (s->subLinkType == ANY_SUBLINK && s->operName == NIL && s->location == b->location)
+        {
+          *nodename = "IN";
+          group = PREC_GROUP_NOT_IN;
+        }
+      }
+    }
+  }
+  return group;
 }
 
 /*
@@ -3246,43 +3266,43 @@ operator_precedence_group(Node *node, const char **nodename)
 static void
 emit_precedence_warnings(ParseState *pstate, int opgroup, const char *opname, Node *lchild, Node *rchild, int location)
 {
+  int cgroup;
+  const char *copname;
 
+  Assert(opgroup > 0);
 
+  /*
+   * Complain if left child, which should be same or higher precedence
+   * according to current rules, used to be lower precedence.
+   *
+   * Exception to precedence rules: if left child is IN or NOT IN or a
+   * postfix operator, the grouping is syntactically forced regardless of
+   * precedence.
+   */
+  cgroup = operator_precedence_group(lchild, &copname);
+  if (cgroup > 0)
+  {
+    if (oldprecedence_l[cgroup] < oldprecedence_r[opgroup] && cgroup != PREC_GROUP_IN && cgroup != PREC_GROUP_NOT_IN && cgroup != PREC_GROUP_POSTFIX_OP && cgroup != PREC_GROUP_POSTFIX_IS)
+    {
+      ereport(WARNING, (errmsg("operator precedence change: %s is now lower precedence than %s", opname, copname), parser_errposition(pstate, location)));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Complain if right child, which should be higher precedence according to
+   * current rules, used to be same or lower precedence.
+   *
+   * Exception to precedence rules: if right child is a prefix operator, the
+   * grouping is syntactically forced regardless of precedence.
+   */
+  cgroup = operator_precedence_group(rchild, &copname);
+  if (cgroup > 0)
+  {
+    if (oldprecedence_r[cgroup] <= oldprecedence_l[opgroup] && cgroup != PREC_GROUP_PREFIX_OP)
+    {
+      ereport(WARNING, (errmsg("operator precedence change: %s is now lower precedence than %s", opname, copname), parser_errposition(pstate, location)));
+    }
+  }
 }
 
 /*
@@ -3297,91 +3317,91 @@ ParseExprKindName(ParseExprKind exprKind)
 {
   switch (exprKind)
   {
-  case EXPR_KIND_NONE:;
-
-  case EXPR_KIND_OTHER:;
-
-  case EXPR_KIND_JOIN_ON:;
-
-  case EXPR_KIND_JOIN_USING:;
-
-  case EXPR_KIND_FROM_SUBSELECT:;
-
-  case EXPR_KIND_FROM_FUNCTION:;
-
-  case EXPR_KIND_WHERE:;
+  case EXPR_KIND_NONE:
+    return "invalid expression context";
+  case EXPR_KIND_OTHER:
+    return "extension expression";
+  case EXPR_KIND_JOIN_ON:
+    return "JOIN/ON";
+  case EXPR_KIND_JOIN_USING:
+    return "JOIN/USING";
+  case EXPR_KIND_FROM_SUBSELECT:
+    return "sub-SELECT in FROM";
+  case EXPR_KIND_FROM_FUNCTION:
+    return "function in FROM";
+  case EXPR_KIND_WHERE:
     return "WHERE";
-  case EXPR_KIND_POLICY:;
-
-  case EXPR_KIND_HAVING:;
-
-  case EXPR_KIND_FILTER:;
+  case EXPR_KIND_POLICY:
+    return "POLICY";
+  case EXPR_KIND_HAVING:
+    return "HAVING";
+  case EXPR_KIND_FILTER:
     return "FILTER";
-  case EXPR_KIND_WINDOW_PARTITION:;
-
-  case EXPR_KIND_WINDOW_ORDER:;
-
-  case EXPR_KIND_WINDOW_FRAME_RANGE:;
-
-  case EXPR_KIND_WINDOW_FRAME_ROWS:;
-
-  case EXPR_KIND_WINDOW_FRAME_GROUPS:;
-
-  case EXPR_KIND_SELECT_TARGET:;
-
-  case EXPR_KIND_INSERT_TARGET:;
-
-  case EXPR_KIND_UPDATE_SOURCE:;
-  case EXPR_KIND_UPDATE_TARGET:;
+  case EXPR_KIND_WINDOW_PARTITION:
+    return "window PARTITION BY";
+  case EXPR_KIND_WINDOW_ORDER:
+    return "window ORDER BY";
+  case EXPR_KIND_WINDOW_FRAME_RANGE:
+    return "window RANGE";
+  case EXPR_KIND_WINDOW_FRAME_ROWS:
+    return "window ROWS";
+  case EXPR_KIND_WINDOW_FRAME_GROUPS:
+    return "window GROUPS";
+  case EXPR_KIND_SELECT_TARGET:
+    return "SELECT";
+  case EXPR_KIND_INSERT_TARGET:
+    return "INSERT";
+  case EXPR_KIND_UPDATE_SOURCE:
+  case EXPR_KIND_UPDATE_TARGET:
     return "UPDATE";
-  case EXPR_KIND_GROUP_BY:;
+  case EXPR_KIND_GROUP_BY:
     return "GROUP BY";
-  case EXPR_KIND_ORDER_BY:;
-
-  case EXPR_KIND_DISTINCT_ON:;
-
-  case EXPR_KIND_LIMIT:;
+  case EXPR_KIND_ORDER_BY:
+    return "ORDER BY";
+  case EXPR_KIND_DISTINCT_ON:
+    return "DISTINCT ON";
+  case EXPR_KIND_LIMIT:
     return "LIMIT";
-  case EXPR_KIND_OFFSET:;
-
-  case EXPR_KIND_RETURNING:;
+  case EXPR_KIND_OFFSET:
+    return "OFFSET";
+  case EXPR_KIND_RETURNING:
     return "RETURNING";
-  case EXPR_KIND_VALUES:;
-  case EXPR_KIND_VALUES_SINGLE:;
+  case EXPR_KIND_VALUES:
+  case EXPR_KIND_VALUES_SINGLE:
     return "VALUES";
-  case EXPR_KIND_CHECK_CONSTRAINT:;
-  case EXPR_KIND_DOMAIN_CHECK:;
-
-  case EXPR_KIND_COLUMN_DEFAULT:;
-  case EXPR_KIND_FUNCTION_DEFAULT:;
-
-  case EXPR_KIND_INDEX_EXPRESSION:;
-
-  case EXPR_KIND_INDEX_PREDICATE:;
-
-  case EXPR_KIND_ALTER_COL_TRANSFORM:;
-
-  case EXPR_KIND_EXECUTE_PARAMETER:;
-
-  case EXPR_KIND_TRIGGER_WHEN:;
-
-  case EXPR_KIND_PARTITION_BOUND:;
-
-  case EXPR_KIND_PARTITION_EXPRESSION:;
-
-  case EXPR_KIND_CALL_ARGUMENT:;
-
-  case EXPR_KIND_COPY_WHERE:;
-
-  case EXPR_KIND_GENERATED_COLUMN:;
-
+  case EXPR_KIND_CHECK_CONSTRAINT:
+  case EXPR_KIND_DOMAIN_CHECK:
+    return "CHECK";
+  case EXPR_KIND_COLUMN_DEFAULT:
+  case EXPR_KIND_FUNCTION_DEFAULT:
+    return "DEFAULT";
+  case EXPR_KIND_INDEX_EXPRESSION:
+    return "index expression";
+  case EXPR_KIND_INDEX_PREDICATE:
+    return "index predicate";
+  case EXPR_KIND_ALTER_COL_TRANSFORM:
+    return "USING";
+  case EXPR_KIND_EXECUTE_PARAMETER:
+    return "EXECUTE";
+  case EXPR_KIND_TRIGGER_WHEN:
+    return "WHEN";
+  case EXPR_KIND_PARTITION_BOUND:
+    return "partition bound";
+  case EXPR_KIND_PARTITION_EXPRESSION:
+    return "PARTITION BY";
+  case EXPR_KIND_CALL_ARGUMENT:
+    return "CALL";
+  case EXPR_KIND_COPY_WHERE:
+    return "WHERE";
+  case EXPR_KIND_GENERATED_COLUMN:
+    return "GENERATED AS";
 
     /*
-     * There is intentionally no default:; case here, so that the
+     * There is intentionally no default: case here, so that the
      * compiler will warn if we add a new ParseExprKind without
      * extending this switch.  If we do see an unrecognized value at
      * runtime, we'll fall through to the "unrecognized" return.
      */
   }
-
+  return "unrecognized expression kind";
 }

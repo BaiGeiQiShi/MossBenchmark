@@ -35,8 +35,7 @@ static HTAB *SharedBufHash;
 
 /*
  * Estimate space needed for mapping hashtable
- *		size is the desired hash table size (possibly more than
- *NBuffers)
+ *		size is the desired hash table size (possibly more than NBuffers)
  */
 Size
 BufTableShmemSize(int size)
@@ -46,8 +45,7 @@ BufTableShmemSize(int size)
 
 /*
  * Initialize shmem hash table for mapping buffers
- *		size is the desired hash table size (possibly more than
- *NBuffers)
+ *		size is the desired hash table size (possibly more than NBuffers)
  */
 void
 InitBufTable(int size)
@@ -121,8 +119,8 @@ BufTableInsert(BufferTag *tagPtr, uint32 hashcode, int buf_id)
 
   result = (BufferLookupEnt *)hash_search_with_hash_value(SharedBufHash, (void *)tagPtr, hashcode, HASH_ENTER, &found);
 
-  if (found)
-  { /* found something already in the table */
+  if (found) /* found something already in the table */
+  {
     return result->id;
   }
 
@@ -144,8 +142,8 @@ BufTableDelete(BufferTag *tagPtr, uint32 hashcode)
 
   result = (BufferLookupEnt *)hash_search_with_hash_value(SharedBufHash, (void *)tagPtr, hashcode, HASH_REMOVE, NULL);
 
-  if (!result)
-  { /* shouldn't happen */
-
+  if (!result) /* shouldn't happen */
+  {
+    elog(ERROR, "shared buffer hash table corrupted");
   }
 }

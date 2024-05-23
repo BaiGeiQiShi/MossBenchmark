@@ -210,7 +210,7 @@ shm_mq_set_receiver(shm_mq *mq, PGPROC *proc)
 
   if (sender != NULL)
   {
-
+    SetLatch(&sender->procLatch);
   }
 }
 
@@ -240,13 +240,13 @@ shm_mq_set_sender(shm_mq *mq, PGPROC *proc)
 PGPROC *
 shm_mq_get_receiver(shm_mq *mq)
 {
+  PGPROC *receiver;
 
+  SpinLockAcquire(&mq->mq_mutex);
+  receiver = mq->mq_receiver;
+  SpinLockRelease(&mq->mq_mutex);
 
-
-
-
-
-
+  return receiver;
 }
 
 /*
@@ -374,7 +374,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
   /* Prevent writing messages overwhelming the receiver. */
   if (nbytes > MaxAllocSize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("cannot send a message of size %zu via shared memory queue", nbytes)));
   }
 
   /* Try to write, or finish writing, the length word into the buffer. */
@@ -386,9 +386,9 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
     if (res == SHM_MQ_DETACHED)
     {
       /* Reset state in case caller tries to send another message. */
-
-
-
+      mqh->mqh_partial_bytes = 0;
+      mqh->mqh_length_word_complete = false;
+      return res;
     }
     mqh->mqh_partial_bytes += bytes_written;
 
@@ -402,7 +402,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
 
     if (res != SHM_MQ_SUCCESS)
     {
-
+      return res;
     }
 
     /* Length word can't be split unless bigger than required alignment. */
@@ -423,7 +423,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
       ++which_iov;
       if (which_iov >= iovcnt)
       {
-
+        break;
       }
       continue;
     }
@@ -470,15 +470,15 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
       if (res == SHM_MQ_DETACHED)
       {
         /* Reset state in case caller tries to send another message. */
-
-
-
+        mqh->mqh_partial_bytes = 0;
+        mqh->mqh_length_word_complete = false;
+        return res;
       }
 
       mqh->mqh_partial_bytes += bytes_written;
       if (res != SHM_MQ_SUCCESS)
       {
-
+        return res;
       }
       continue;
     }
@@ -491,16 +491,16 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
     chunksize = iov[which_iov].len - offset;
     if (which_iov + 1 < iovcnt)
     {
-
+      chunksize = MAXALIGN_DOWN(chunksize);
     }
     res = shm_mq_send_bytes(mqh, chunksize, &iov[which_iov].data[offset], nowait, &bytes_written);
 
     if (res == SHM_MQ_DETACHED)
     {
       /* Reset state in case caller tries to send another message. */
-
-
-
+      mqh->mqh_length_word_complete = false;
+      mqh->mqh_partial_bytes = 0;
+      return res;
     }
 
     mqh->mqh_partial_bytes += bytes_written;
@@ -518,7 +518,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
   /* If queue has been detached, let caller know. */
   if (mq->mq_detached)
   {
-
+    return SHM_MQ_DETACHED;
   }
 
   /*
@@ -537,7 +537,7 @@ shm_mq_sendv(shm_mq_handle *mqh, shm_mq_iovec *iov, int iovcnt, bool nowait)
     SpinLockRelease(&mq->mq_mutex);
     if (receiver == NULL)
     {
-
+      return SHM_MQ_SUCCESS;
     }
     mqh->mqh_counterparty_attached = true;
   }
@@ -603,7 +603,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
       {
         if (counterparty_gone)
         {
-
+          return SHM_MQ_DETACHED;
         }
         else
         {
@@ -613,8 +613,8 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
     }
     else if (!shm_mq_wait_internal(mq, &mq->mq_sender, mqh->mqh_handle) && shm_mq_get_sender(mq) == NULL)
     {
-
-
+      mq->mq_detached = true;
+      return SHM_MQ_DETACHED;
     }
     mqh->mqh_counterparty_attached = true;
   }
@@ -678,38 +678,38 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
       Size lengthbytes;
 
       /* Can't be split unless bigger than required alignment. */
-
+      Assert(sizeof(Size) > MAXIMUM_ALIGNOF);
 
       /* Message word is split; need buffer to reassemble. */
-
-
-
-
-
-
+      if (mqh->mqh_buffer == NULL)
+      {
+        mqh->mqh_buffer = MemoryContextAlloc(mqh->mqh_context, MQH_INITIAL_BUFSIZE);
+        mqh->mqh_buflen = MQH_INITIAL_BUFSIZE;
+      }
+      Assert(mqh->mqh_buflen >= sizeof(Size));
 
       /* Copy partial length word; remember to consume it. */
-
-
-
-
-
-
-
-
-
-
-
-
+      if (mqh->mqh_partial_bytes + rb > sizeof(Size))
+      {
+        lengthbytes = sizeof(Size) - mqh->mqh_partial_bytes;
+      }
+      else
+      {
+        lengthbytes = rb;
+      }
+      memcpy(&mqh->mqh_buffer[mqh->mqh_partial_bytes], rawdata, lengthbytes);
+      mqh->mqh_partial_bytes += lengthbytes;
+      mqh->mqh_consume_pending += MAXALIGN(lengthbytes);
+      rb -= lengthbytes;
 
       /* If we now have the whole word, we're ready to read payload. */
-
-
-
-
-
-
-
+      if (mqh->mqh_partial_bytes >= sizeof(Size))
+      {
+        Assert(mqh->mqh_partial_bytes == sizeof(Size));
+        mqh->mqh_expected_bytes = *(Size *)mqh->mqh_buffer;
+        mqh->mqh_length_word_complete = true;
+        mqh->mqh_partial_bytes = 0;
+      }
     }
   }
   nbytes = mqh->mqh_expected_bytes;
@@ -721,7 +721,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
    */
   if (nbytes > MaxAllocSize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("invalid message size %zu in shared memory queue", nbytes)));
   }
 
   if (mqh->mqh_partial_bytes == 0)
@@ -766,9 +766,9 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 
       if (mqh->mqh_buffer != NULL)
       {
-
-
-
+        pfree(mqh->mqh_buffer);
+        mqh->mqh_buffer = NULL;
+        mqh->mqh_buflen = 0;
       }
       mqh->mqh_buffer = MemoryContextAlloc(mqh->mqh_context, newbuflen);
       mqh->mqh_buflen = newbuflen;
@@ -836,27 +836,27 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 shm_mq_result
 shm_mq_wait_for_attach(shm_mq_handle *mqh)
 {
+  shm_mq *mq = mqh->mqh_queue;
+  PGPROC **victim;
 
+  if (shm_mq_get_receiver(mq) == MyProc)
+  {
+    victim = &mq->mq_sender;
+  }
+  else
+  {
+    Assert(shm_mq_get_sender(mq) == MyProc);
+    victim = &mq->mq_receiver;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (shm_mq_wait_internal(mq, victim, mqh->mqh_handle))
+  {
+    return SHM_MQ_SUCCESS;
+  }
+  else
+  {
+    return SHM_MQ_DETACHED;
+  }
 }
 
 /*
@@ -966,8 +966,8 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data, bool nowait
     pg_compiler_barrier();
     if (mq->mq_detached)
     {
-
-
+      *bytes_written = sent;
+      return SHM_MQ_DETACHED;
     }
 
     if (available == 0 && !mqh->mqh_counterparty_attached)
@@ -976,26 +976,26 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, const void *data, bool nowait
        * The queue is full, so if the receiver isn't yet known to be
        * attached, we must wait for that to happen.
        */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (nowait)
+      {
+        if (shm_mq_counterparty_gone(mq, mqh->mqh_handle))
+        {
+          *bytes_written = sent;
+          return SHM_MQ_DETACHED;
+        }
+        if (shm_mq_get_receiver(mq) == NULL)
+        {
+          *bytes_written = sent;
+          return SHM_MQ_WOULD_BLOCK;
+        }
+      }
+      else if (!shm_mq_wait_internal(mq, &mq->mq_receiver, mqh->mqh_handle))
+      {
+        mq->mq_detached = true;
+        *bytes_written = sent;
+        return SHM_MQ_DETACHED;
+      }
+      mqh->mqh_counterparty_attached = true;
 
       /*
        * The receiver may have read some data after attaching, so we
@@ -1142,7 +1142,7 @@ shm_mq_receive_bytes(shm_mq_handle *mqh, Size bytes_needed, bool nowait, Size *n
       pg_read_barrier();
       if (written != pg_atomic_read_u64(&mq->mq_bytes_written))
       {
-
+        continue;
       }
 
       return SHM_MQ_DETACHED;
@@ -1205,8 +1205,8 @@ shm_mq_counterparty_gone(shm_mq *mq, BackgroundWorkerHandle *handle)
     if (status != BGWH_STARTED && status != BGWH_NOT_YET_STARTED)
     {
       /* Mark it detached, just to make it official. */
-
-
+      mq->mq_detached = true;
+      return true;
     }
   }
 
@@ -1257,8 +1257,8 @@ shm_mq_wait_internal(shm_mq *mq, PGPROC **ptr, BackgroundWorkerHandle *handle)
       status = GetBackgroundWorkerPid(handle, &pid);
       if (status != BGWH_STARTED && status != BGWH_NOT_YET_STARTED)
       {
-
-
+        result = false;
+        break;
       }
     }
 

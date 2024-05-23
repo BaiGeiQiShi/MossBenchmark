@@ -31,14 +31,17 @@ pg_pread(int fd, void *buf, size_t size, off_t offset)
   DWORD result;
 
   handle = (HANDLE)_get_osfhandle(fd);
-  if (handle == INVALID_HANDLE_VALUE) {
+  if (handle == INVALID_HANDLE_VALUE)
+  {
     errno = EBADF;
     return -1;
   }
 
   overlapped.Offset = offset;
-  if (!ReadFile(handle, buf, size, &result, &overlapped)) {
-    if (GetLastError() == ERROR_HANDLE_EOF) {
+  if (!ReadFile(handle, buf, size, &result, &overlapped))
+  {
+    if (GetLastError() == ERROR_HANDLE_EOF)
+    {
       return 0;
     }
 
@@ -48,7 +51,8 @@ pg_pread(int fd, void *buf, size_t size, off_t offset)
 
   return result;
 #else
-  if (lseek(fd, offset, SEEK_SET) < 0) {
+  if (lseek(fd, offset, SEEK_SET) < 0)
+  {
     return -1;
   }
 

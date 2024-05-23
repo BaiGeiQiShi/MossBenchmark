@@ -47,7 +47,7 @@ word_distance(int32 w)
 {
   if (w > 100)
   {
-
+    return 1e-30f;
   }
 
   return 1.0 / (1.005 + 0.05 * exp(((float4)w) / 1.5 - 2));
@@ -56,26 +56,26 @@ word_distance(int32 w)
 static int
 cnt_length(TSVector t)
 {
+  WordEntry *ptr = ARRPTR(t), *end = (WordEntry *)STRPTR(t);
+  int len = 0;
 
+  while (ptr < end)
+  {
+    int clen = POSDATALEN(t, ptr);
 
+    if (clen == 0)
+    {
+      len += 1;
+    }
+    else
+    {
+      len += clen;
+    }
 
+    ptr++;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return len;
 }
 
 #define WordECompareQueryItem(e, q, p, i, m) tsCompareString((q) + (i)->distance, (i)->length, (e) + (p)->pos, (p)->len, (m))
@@ -178,7 +178,7 @@ SortAndUniqItems(TSQuery q, int *size)
   *size = ptr - res;
   if (*size < 2)
   {
-
+    return res;
   }
 
   qsort_arg(res, *size, sizeof(QueryOperand *), compareQueryOperand, (void *)operand);
@@ -218,8 +218,8 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
   item = SortAndUniqItems(q, &size);
   if (size < 2)
   {
-
-
+    pfree(item);
+    return calc_rank_or(w, t, q);
   }
   pos = (WordEntryPosVector **)palloc0(sizeof(WordEntryPosVector *) * q->size);
 
@@ -234,7 +234,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
     firstentry = entry = find_wordentry(t, q, item[i], &nitem);
     if (!entry)
     {
-
+      continue;
     }
 
     while (entry - firstentry < nitem)
@@ -245,7 +245,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
       }
       else
       {
-
+        pos[i] = POSNULL;
       }
 
       dimt = pos[i]->npos;
@@ -254,7 +254,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
       {
         if (!pos[k])
         {
-
+          continue;
         }
         lenct = pos[k]->npos;
         ct = pos[k]->pos;
@@ -269,7 +269,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
 
               if (!dist)
               {
-
+                dist = MAXENTRYPOS;
               }
               curw = sqrt(wpos(post[l]) * wpos(ct[p]) * word_distance(dist));
               res = (res < 0) ? curw : 1.0 - (1.0 - res) * (1.0 - curw);
@@ -323,8 +323,8 @@ calc_rank_or(const float *w, TSVector t, TSQuery q)
       }
       else
       {
-
-
+        dimt = posnull.npos;
+        post = posnull.pos;
       }
 
       resj = 0.0;
@@ -343,8 +343,8 @@ calc_rank_or(const float *w, TSVector t, TSQuery q)
                               limit (sum(i/i^2),i->inf) = pi^2/6
                               resj = sum(wi/i^2),i=1,noccurence,
                               wi - should be sorted desc,
-                              don't sort for now, just choose maximum weight.
-         This should be corrected Oleg Bartunov
+                              don't sort for now, just choose maximum weight. This should be corrected
+                              Oleg Bartunov
       */
       res = res + (wjm + resj - wjm / ((jm + 1) * (jm + 1))) / 1.64493406685;
 
@@ -368,7 +368,7 @@ calc_rank(const float *w, TSVector t, TSQuery q, int32 method)
 
   if (!t->size || !q->size)
   {
-
+    return 0.0;
   }
 
   /* XXX: What about NOT? */
@@ -376,38 +376,38 @@ calc_rank(const float *w, TSVector t, TSQuery q, int32 method)
 
   if (res < 0)
   {
-
+    res = 1e-20f;
   }
 
   if ((method & RANK_NORM_LOGLENGTH) && t->size > 0)
   {
-
+    res /= log((double)(cnt_length(t) + 1)) / log(2.0);
   }
 
   if (method & RANK_NORM_LENGTH)
   {
-
-
-
-
-
+    len = cnt_length(t);
+    if (len > 0)
+    {
+      res /= (float)len;
+    }
   }
 
   /* RANK_NORM_EXTDIST not applicable */
 
   if ((method & RANK_NORM_UNIQ) && t->size > 0)
   {
-
+    res /= (float)(t->size);
   }
 
   if ((method & RANK_NORM_LOGUNIQ) && t->size > 0)
   {
-
+    res /= log((double)(t->size + 1)) / log(2.0);
   }
 
   if (method & RANK_NORM_RDIVRPLUS1)
   {
-
+    res /= (res + 1);
   }
 
   return res;
@@ -425,80 +425,80 @@ getWeights(ArrayType *win)
     return weights;
   }
 
+  if (ARR_NDIM(win) != 1)
+  {
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("array of weight must be one-dimensional")));
+  }
 
+  if (ArrayGetNItems(ARR_NDIM(win), ARR_DIMS(win)) < lengthof(weights))
+  {
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("array of weight is too short")));
+  }
 
+  if (array_contains_nulls(win))
+  {
+    ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("array of weight must not contain nulls")));
+  }
 
+  arrdata = (float4 *)ARR_DATA_PTR(win);
+  for (i = 0; i < lengthof(weights); i++)
+  {
+    ws[i] = (arrdata[i] >= 0) ? arrdata[i] : weights[i];
+    if (ws[i] > 1.0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("weight out of range")));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return ws;
 }
 
 Datum
 ts_rank_wttf(PG_FUNCTION_ARGS)
 {
+  ArrayType *win = (ArrayType *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+  TSVector txt = PG_GETARG_TSVECTOR(1);
+  TSQuery query = PG_GETARG_TSQUERY(2);
+  int method = PG_GETARG_INT32(3);
+  float res;
 
+  res = calc_rank(getWeights(win), txt, query, method);
 
-
-
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(win, 0);
+  PG_FREE_IF_COPY(txt, 1);
+  PG_FREE_IF_COPY(query, 2);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum
 ts_rank_wtt(PG_FUNCTION_ARGS)
 {
+  ArrayType *win = (ArrayType *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+  TSVector txt = PG_GETARG_TSVECTOR(1);
+  TSQuery query = PG_GETARG_TSQUERY(2);
+  float res;
 
+  res = calc_rank(getWeights(win), txt, query, DEF_NORM_METHOD);
 
-
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(win, 0);
+  PG_FREE_IF_COPY(txt, 1);
+  PG_FREE_IF_COPY(query, 2);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum
 ts_rank_ttf(PG_FUNCTION_ARGS)
 {
+  TSVector txt = PG_GETARG_TSVECTOR(0);
+  TSQuery query = PG_GETARG_TSQUERY(1);
+  int method = PG_GETARG_INT32(2);
+  float res;
 
+  res = calc_rank(getWeights(NULL), txt, query, method);
 
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(txt, 0);
+  PG_FREE_IF_COPY(query, 1);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum
@@ -549,7 +549,7 @@ compareDocR(const void *va, const void *vb)
         return 0;
       }
 
-
+      return (a->data.map.entry > b->data.map.entry) ? 1 : -1;
     }
 
     return (WEP_GETWEIGHT(a->pos) > WEP_GETWEIGHT(b->pos)) ? 1 : -1;
@@ -633,7 +633,7 @@ fillQueryRepresentationData(QueryRepresentation *qr, DocRepresentation *entry)
   {
     if (entry->data.query.items[i]->type != QI_VAL)
     {
-
+      continue;
     }
 
     opData = QR_GET_OPERAND_DATA(qr, entry->data.query.items[i]);
@@ -737,8 +737,8 @@ Cover(DocRepresentation *doc, int len, QueryRepresentation *qr, CoverExt *ext)
     return true;
   }
 
-
-
+  ext->pos++;
+  return Cover(doc, len, qr, ext);
 }
 
 static DocRepresentation *
@@ -792,8 +792,8 @@ get_docrep(TSVector txt, QueryRepresentation *qr, int *doclen)
 
       while (cur + dimt >= len)
       {
-
-
+        len *= 2;
+        doc = (DocRepresentation *)repalloc(doc, sizeof(DocRepresentation) * len);
       }
 
       /* iterations over entry's positions */
@@ -877,7 +877,7 @@ calc_rank_cd(const float4 *arrdata, TSVector txt, TSQuery query, int method)
     invws[i] = ((double)((arrdata[i] >= 0) ? arrdata[i] : weights[i]));
     if (invws[i] > 1.0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("weight out of range")));
     }
     invws[i] = 1.0 / invws[i];
   }
@@ -916,7 +916,7 @@ calc_rank_cd(const float4 *arrdata, TSVector txt, TSQuery query, int method)
     nNoise = (ext.q - ext.p) - (ext.end - ext.begin);
     if (nNoise < 0)
     {
-
+      nNoise = (ext.end - ext.begin) / 2;
     }
     Wdoc += Cpos / ((double)(1 + nNoise));
 
@@ -934,36 +934,36 @@ calc_rank_cd(const float4 *arrdata, TSVector txt, TSQuery query, int method)
 
   if ((method & RANK_NORM_LOGLENGTH) && txt->size > 0)
   {
-
+    Wdoc /= log((double)(cnt_length(txt) + 1));
   }
 
   if (method & RANK_NORM_LENGTH)
   {
-
-
-
-
-
+    len = cnt_length(txt);
+    if (len > 0)
+    {
+      Wdoc /= (double)len;
+    }
   }
 
   if ((method & RANK_NORM_EXTDIST) && NExtent > 0 && SumDist > 0)
   {
-
+    Wdoc /= ((double)NExtent) / SumDist;
   }
 
   if ((method & RANK_NORM_UNIQ) && txt->size > 0)
   {
-
+    Wdoc /= (double)(txt->size);
   }
 
   if ((method & RANK_NORM_LOGUNIQ) && txt->size > 0)
   {
-
+    Wdoc /= log((double)(txt->size + 1)) / log(2.0);
   }
 
   if (method & RANK_NORM_RDIVRPLUS1)
   {
-
+    Wdoc /= (Wdoc + 1);
   }
 
   pfree(doc);
@@ -976,49 +976,49 @@ calc_rank_cd(const float4 *arrdata, TSVector txt, TSQuery query, int method)
 Datum
 ts_rankcd_wttf(PG_FUNCTION_ARGS)
 {
+  ArrayType *win = (ArrayType *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+  TSVector txt = PG_GETARG_TSVECTOR(1);
+  TSQuery query = PG_GETARG_TSQUERY(2);
+  int method = PG_GETARG_INT32(3);
+  float res;
 
+  res = calc_rank_cd(getWeights(win), txt, query, method);
 
-
-
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(win, 0);
+  PG_FREE_IF_COPY(txt, 1);
+  PG_FREE_IF_COPY(query, 2);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum
 ts_rankcd_wtt(PG_FUNCTION_ARGS)
 {
+  ArrayType *win = (ArrayType *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+  TSVector txt = PG_GETARG_TSVECTOR(1);
+  TSQuery query = PG_GETARG_TSQUERY(2);
+  float res;
 
+  res = calc_rank_cd(getWeights(win), txt, query, DEF_NORM_METHOD);
 
-
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(win, 0);
+  PG_FREE_IF_COPY(txt, 1);
+  PG_FREE_IF_COPY(query, 2);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum
 ts_rankcd_ttf(PG_FUNCTION_ARGS)
 {
+  TSVector txt = PG_GETARG_TSVECTOR(0);
+  TSQuery query = PG_GETARG_TSQUERY(1);
+  int method = PG_GETARG_INT32(2);
+  float res;
 
+  res = calc_rank_cd(getWeights(NULL), txt, query, method);
 
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(txt, 0);
+  PG_FREE_IF_COPY(query, 1);
+  PG_RETURN_FLOAT4(res);
 }
 
 Datum

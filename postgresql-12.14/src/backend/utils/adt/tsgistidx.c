@@ -76,8 +76,8 @@ sizebitvec(BITVECP sign);
 Datum
 gtsvectorin(PG_FUNCTION_ARGS)
 {
-
-
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("gtsvector_in not implemented")));
+  PG_RETURN_DATUM(0);
 }
 
 #define SINGOUTSTR "%d true bits, %d false bits"
@@ -89,28 +89,28 @@ static int outbuf_maxlen = 0;
 Datum
 gtsvectorout(PG_FUNCTION_ARGS)
 {
+  SignTSVector *key = (SignTSVector *)PG_DETOAST_DATUM(PG_GETARG_POINTER(0));
+  char *outbuf;
 
+  if (outbuf_maxlen == 0)
+  {
+    outbuf_maxlen = 2 * EXTRALEN + Max(strlen(SINGOUTSTR), strlen(ARROUTSTR)) + 1;
+  }
+  outbuf = palloc(outbuf_maxlen);
 
+  if (ISARRKEY(key))
+  {
+    sprintf(outbuf, ARROUTSTR, (int)ARRNELEM(key));
+  }
+  else
+  {
+    int cnttrue = (ISALLTRUE(key)) ? SIGLENBIT : sizebitvec(GETSIGN(key));
 
+    sprintf(outbuf, SINGOUTSTR, cnttrue, (int)SIGLENBIT - cnttrue);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(key, 0);
+  PG_RETURN_POINTER(outbuf);
 }
 
 static int
@@ -121,7 +121,7 @@ compareint(const void *va, const void *vb)
 
   if (a == b)
   {
-
+    return 0;
   }
   return (a > b) ? 1 : -1;
 }
@@ -212,9 +212,9 @@ gtsvector_compress(PG_FUNCTION_ARGS)
        * there is a collision of hash-function; len is always less than
        * val->size
        */
-
-
-
+      len = CALCGTSIZE(ARRKEY, len);
+      res = (SignTSVector *)repalloc((void *)res, len);
+      SET_VARSIZE(res, len);
     }
 
     /* make signature, if array is too long */
@@ -222,12 +222,12 @@ gtsvector_compress(PG_FUNCTION_ARGS)
     {
       SignTSVector *ressign;
 
-
-
-
-
-
-
+      len = CALCGTSIZE(SIGNKEY, 0);
+      ressign = (SignTSVector *)palloc(len);
+      SET_VARSIZE(ressign, len);
+      ressign->flag = SIGNKEY;
+      makesign(GETSIGN(ressign), res);
+      res = ressign;
     }
 
     retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
@@ -248,12 +248,12 @@ gtsvector_compress(PG_FUNCTION_ARGS)
     }
 
     len = CALCGTSIZE(SIGNKEY | ALLISTRUE, 0);
+    res = (SignTSVector *)palloc(len);
+    SET_VARSIZE(res, len);
+    res->flag = SIGNKEY | ALLISTRUE;
 
-
-
-
-
-
+    retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
+    gistentryinit(*retval, PointerGetDatum(res), entry->rel, entry->page, entry->offset, false);
   }
   PG_RETURN_POINTER(retval);
 }
@@ -272,9 +272,9 @@ gtsvector_decompress(PG_FUNCTION_ARGS)
   {
     GISTENTRY *retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
 
+    gistentryinit(*retval, PointerGetDatum(key), entry->rel, entry->page, entry->offset, false);
 
-
-
+    PG_RETURN_POINTER(retval);
   }
 
   PG_RETURN_POINTER(entry);
@@ -355,14 +355,14 @@ gtsvector_consistent(PG_FUNCTION_ARGS)
 
   if (!query->size)
   {
-
+    PG_RETURN_BOOL(false);
   }
 
   if (ISSIGNKEY(key))
   {
     if (ISALLTRUE(key))
     {
-
+      PG_RETURN_BOOL(true);
     }
 
     /* since signature is lossy, cannot specify CALC_NOT here */
@@ -389,7 +389,7 @@ unionkey(BITVECP sbase, SignTSVector *add)
 
     if (ISALLTRUE(add))
     {
-
+      return 1;
     }
 
     LOOPBYTE
@@ -422,8 +422,8 @@ gtsvector_union(PG_FUNCTION_ARGS)
   {
     if (unionkey(base, GETENTRY(entryvec, i)))
     {
-
-
+      flag = ALLISTRUE;
+      break;
     }
   }
 
@@ -452,15 +452,15 @@ gtsvector_same(PG_FUNCTION_ARGS)
   { /* then b also ISSIGNKEY */
     if (ISALLTRUE(a) && ISALLTRUE(b))
     {
-
+      *result = true;
     }
     else if (ISALLTRUE(a))
     {
-
+      *result = false;
     }
     else if (ISALLTRUE(b))
     {
-
+      *result = false;
     }
     else
     {
@@ -482,25 +482,25 @@ gtsvector_same(PG_FUNCTION_ARGS)
   { /* a and b ISARRKEY */
     int32 lena = ARRNELEM(a), lenb = ARRNELEM(b);
 
+    if (lena != lenb)
+    {
+      *result = false;
+    }
+    else
+    {
+      int32 *ptra = GETARR(a), *ptrb = GETARR(b);
+      int32 i;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      *result = true;
+      for (i = 0; i < lena; i++)
+      {
+        if (ptra[i] != ptrb[i])
+        {
+          *result = false;
+          break;
+        }
+      }
+    }
   }
 
   PG_RETURN_POINTER(result);
@@ -509,7 +509,7 @@ gtsvector_same(PG_FUNCTION_ARGS)
 static int32
 sizebitvec(BITVECP sign)
 {
-
+  return pg_popcount(sign, SIGLEN);
 }
 
 static int
@@ -529,23 +529,23 @@ hemdistsign(BITVECP a, BITVECP b)
 static int
 hemdist(SignTSVector *a, SignTSVector *b)
 {
+  if (ISALLTRUE(a))
+  {
+    if (ISALLTRUE(b))
+    {
+      return 0;
+    }
+    else
+    {
+      return SIGLENBIT - sizebitvec(GETSIGN(b));
+    }
+  }
+  else if (ISALLTRUE(b))
+  {
+    return SIGLENBIT - sizebitvec(GETSIGN(a));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return hemdistsign(GETSIGN(a), GETSIGN(b));
 }
 
 Datum
@@ -568,7 +568,7 @@ gtsvector_penalty(PG_FUNCTION_ARGS)
 
     if (ISALLTRUE(origval))
     {
-
+      *penalty = ((float)(SIGLENBIT - sizebitvec(sign))) / (float)(SIGLENBIT + 1);
     }
     else
     {
@@ -577,7 +577,7 @@ gtsvector_penalty(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    *penalty = hemdist(origval, newval);
   }
   PG_RETURN_POINTER(penalty);
 }
@@ -596,14 +596,14 @@ fillcache(CACHESIGN *item, SignTSVector *key)
   {
     makesign(item->sign, key);
   }
-
-
-
-
-
-
-
-
+  else if (ISALLTRUE(key))
+  {
+    item->allistrue = true;
+  }
+  else
+  {
+    memcpy((void *)item->sign, (void *)GETSIGN(key), sizeof(BITVEC));
+  }
 }
 
 #define WISH_F(a, b, c) (double)(-(double)(((a) - (b)) * ((a) - (b)) * ((a) - (b))) * (c))
@@ -634,18 +634,18 @@ hemdistcache(CACHESIGN *a, CACHESIGN *b)
 {
   if (a->allistrue)
   {
-
-
-
-
-
-
-
-
+    if (b->allistrue)
+    {
+      return 0;
+    }
+    else
+    {
+      return SIGLENBIT - sizebitvec(b->sign);
+    }
   }
   else if (b->allistrue)
   {
-
+    return SIGLENBIT - sizebitvec(a->sign);
   }
 
   return hemdistsign(a->sign, b->sign);
@@ -704,16 +704,16 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
 
   if (seed_1 == 0 || seed_2 == 0)
   {
-
-
+    seed_1 = 1;
+    seed_2 = 2;
   }
 
   /* form initial .. */
   if (cache[seed_1].allistrue)
   {
-
-
-
+    datum_l = (SignTSVector *)palloc(CALCGTSIZE(SIGNKEY | ALLISTRUE, 0));
+    SET_VARSIZE(datum_l, CALCGTSIZE(SIGNKEY | ALLISTRUE, 0));
+    datum_l->flag = SIGNKEY | ALLISTRUE;
   }
   else
   {
@@ -724,9 +724,9 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
   }
   if (cache[seed_2].allistrue)
   {
-
-
-
+    datum_r = (SignTSVector *)palloc(CALCGTSIZE(SIGNKEY | ALLISTRUE, 0));
+    SET_VARSIZE(datum_r, CALCGTSIZE(SIGNKEY | ALLISTRUE, 0));
+    datum_r->flag = SIGNKEY | ALLISTRUE;
   }
   else
   {
@@ -769,14 +769,14 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
 
     if (ISALLTRUE(datum_l) || cache[j].allistrue)
     {
-
-
-
-
-
-
-
-
+      if (ISALLTRUE(datum_l) && cache[j].allistrue)
+      {
+        size_alpha = 0;
+      }
+      else
+      {
+        size_alpha = SIGLENBIT - sizebitvec((cache[j].allistrue) ? GETSIGN(datum_l) : GETSIGN(cache[j].sign));
+      }
     }
     else
     {
@@ -785,14 +785,14 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
 
     if (ISALLTRUE(datum_r) || cache[j].allistrue)
     {
-
-
-
-
-
-
-
-
+      if (ISALLTRUE(datum_r) && cache[j].allistrue)
+      {
+        size_beta = 0;
+      }
+      else
+      {
+        size_beta = SIGLENBIT - sizebitvec((cache[j].allistrue) ? GETSIGN(datum_r) : GETSIGN(cache[j].sign));
+      }
     }
     else
     {
@@ -803,10 +803,10 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
     {
       if (ISALLTRUE(datum_l) || cache[j].allistrue)
       {
-
-
-
-
+        if (!ISALLTRUE(datum_l))
+        {
+          MemSet((void *)GETSIGN(datum_l), 0xff, sizeof(BITVEC));
+        }
       }
       else
       {
@@ -821,10 +821,10 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
     {
       if (ISALLTRUE(datum_r) || cache[j].allistrue)
       {
-
-
-
-
+        if (!ISALLTRUE(datum_r))
+        {
+          MemSet((void *)GETSIGN(datum_r), 0xff, sizeof(BITVEC));
+        }
       }
       else
       {
@@ -854,5 +854,5 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
 Datum
 gtsvector_consistent_oldsig(PG_FUNCTION_ARGS)
 {
-
+  return gtsvector_consistent(fcinfo);
 }

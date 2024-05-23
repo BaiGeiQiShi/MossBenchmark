@@ -161,8 +161,8 @@ do_end(void)
   CHECK_FOR_INTERRUPTS(); /* allow SIGINT to kill bootstrap run */
   if (isatty(0))
   {
-
-
+    printf("bootstrap> ");
+    fflush(stdout);
   }
 }
 
@@ -902,7 +902,7 @@ yydestruct(const char *yymsg, yysymbol_kind_t yykind, YYSTYPE *yyvaluep)
   YY_USE(yyvaluep);
   if (!yymsg)
   {
-
+    yymsg = "Deleting";
   }
   YY_SYMBOL_PRINT(yymsg, yykind, yyvaluep, yylocationp);
 
@@ -1209,9 +1209,7 @@ yyreduce:
 #line 1419 "bootparse.c"
   break;
 
-  case 18: /* Boot_CreateStmt: XCREATE boot_ident oidspec optbootstrap
-              optsharedrelation optrowtypeoid LPAREN $@1 boot_column_list $@2
-              RPAREN  */
+  case 18: /* Boot_CreateStmt: XCREATE boot_ident oidspec optbootstrap optsharedrelation optrowtypeoid LPAREN $@1 boot_column_list $@2 RPAREN  */
 #line 188 "bootparse.y"
   {
     TupleDesc tupdesc;
@@ -1271,8 +1269,7 @@ yyreduce:
 #line 1512 "bootparse.c"
   break;
 
-  case 20: /* Boot_InsertStmt: INSERT_TUPLE $@3 LPAREN boot_column_val_list
-              RPAREN  */
+  case 20: /* Boot_InsertStmt: INSERT_TUPLE $@3 LPAREN boot_column_val_list RPAREN  */
 #line 276 "bootparse.y"
   {
     if (num_columns_read != numattr)
@@ -1289,8 +1286,7 @@ yyreduce:
 #line 1526 "bootparse.c"
   break;
 
-  case 21: /* Boot_DeclareIndexStmt: XDECLARE INDEX boot_ident oidspec ON
-              boot_ident USING boot_ident LPAREN boot_index_params RPAREN  */
+  case 21: /* Boot_DeclareIndexStmt: XDECLARE INDEX boot_ident oidspec ON boot_ident USING boot_ident LPAREN boot_index_params RPAREN  */
 #line 289 "bootparse.y"
   {
     IndexStmt *stmt = makeNode(IndexStmt);
@@ -1332,9 +1328,7 @@ yyreduce:
 #line 1577 "bootparse.c"
   break;
 
-  case 22: /* Boot_DeclareUniqueIndexStmt: XDECLARE UNIQUE INDEX boot_ident
-              oidspec ON boot_ident USING boot_ident LPAREN boot_index_params
-              RPAREN  */
+  case 22: /* Boot_DeclareUniqueIndexStmt: XDECLARE UNIQUE INDEX boot_ident oidspec ON boot_ident USING boot_ident LPAREN boot_index_params RPAREN  */
 #line 339 "bootparse.y"
   {
     IndexStmt *stmt = makeNode(IndexStmt);
@@ -1376,8 +1370,7 @@ yyreduce:
 #line 1628 "bootparse.c"
   break;
 
-  case 23: /* Boot_DeclareToastStmt: XDECLARE XTOAST oidspec oidspec ON
-              boot_ident  */
+  case 23: /* Boot_DeclareToastStmt: XDECLARE XTOAST oidspec oidspec ON boot_ident  */
 #line 389 "bootparse.y"
   {
     elog(DEBUG4, "creating toast table for table \"%s\"", (yyvsp[0].str));
@@ -1480,8 +1473,7 @@ yyreduce:
 #line 1715 "bootparse.c"
   break;
 
-  case 36: /* boot_column_def: boot_ident EQUALS boot_ident boot_column_nullness
-            */
+  case 36: /* boot_column_def: boot_ident EQUALS boot_ident boot_column_nullness  */
 #line 451 "bootparse.y"
   {
     if (++numattr > MAXATTR)
@@ -1703,7 +1695,7 @@ yyreduce:
 
 #line 1885 "bootparse.c"
 
-  default:;
+  default:
     break;
   }
   /* User semantic actions sometimes alter yychar, and that requires

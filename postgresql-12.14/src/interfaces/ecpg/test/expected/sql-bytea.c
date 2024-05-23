@@ -25,7 +25,8 @@ dump_binary(char *buf, int len, int ind)
   int i;
 
   printf("len=%d, ind=%d, data=0x", len, ind);
-  for (i = 0; i < len; ++i) {
+  for (i = 0; i < len; ++i)
+  {
     printf("%02x", 0xff & buf[i]);
   }
   printf("\n");
@@ -40,25 +41,29 @@ main(void)
   /* exec sql begin declare section */
 
 #line 27 "bytea.pgc"
-  struct bytea_1 {
+  struct bytea_1
+  {
     int len;
     char arr[512];
   } send_buf[2];
 
 #line 28 "bytea.pgc"
-  struct bytea_2 {
+  struct bytea_2
+  {
     int len;
     char arr[DATA_SIZE];
   } recv_buf[2];
 
 #line 29 "bytea.pgc"
-  struct bytea_3 {
+  struct bytea_3
+  {
     int len;
     char arr[DATA_SIZE];
   } *recv_vlen_buf;
 
 #line 30 "bytea.pgc"
-  struct bytea_4 {
+  struct bytea_4
+  {
     int len;
     char arr[DATA_SIZE - LACK_SIZE];
   } recv_short_buf;
@@ -72,7 +77,8 @@ main(void)
 
 #define init()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-    for (i = 0; i < 2; ++i) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+    for (i = 0; i < 2; ++i)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       memset(recv_buf[i].arr, 0x0, sizeof(recv_buf[i].arr));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
       recv_buf[i].len = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
       ind[i] = 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
@@ -83,8 +89,10 @@ main(void)
 
   ECPGdebug(1, stderr);
 
-  for (i = 0; i < 2; ++i) {
-    for (j = 0, c = 0xff; (c == -1 ? c = 0xff : 1), j < DATA_SIZE; ++j, --c) {
+  for (i = 0; i < 2; ++i)
+  {
+    for (j = 0, c = 0xff; (c == -1 ? c = 0xff : 1), j < DATA_SIZE; ++j, --c)
+    {
       send_buf[i].arr[j] = c;
     }
 
@@ -95,7 +103,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 57 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -105,7 +114,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table if not exists test ( data1 bytea , data2 bytea )", ECPGt_EOIT, ECPGt_EORT);
 #line 59 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -115,7 +125,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "ins_stmt", "insert into test values(?,?)");
 #line 61 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -125,7 +136,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "sel_stmt", "select data1,data2 from test");
 #line 62 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -134,7 +146,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "idesc");
 #line 63 "bytea.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 63 "bytea.pgc"
@@ -142,7 +155,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "odesc");
 #line 64 "bytea.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 64 "bytea.pgc"
@@ -153,7 +167,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 68 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -163,7 +178,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( $1  , $2  )", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bytea, &(send_buf[1]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 69 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -173,7 +189,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select data1 , data2 from test", ECPGt_EOIT, ECPGt_bytea, &(recv_buf[0]), (long)DATA_SIZE, (long)1, sizeof(struct bytea_2), ECPGt_int, &(ind[0]), (long)1, (long)1, sizeof(int), ECPGt_bytea, &(recv_short_buf), (long)DATA_SIZE - LACK_SIZE, (long)1, sizeof(struct bytea_4), ECPGt_int, &(ind[1]), (long)1, (long)1, sizeof(int), ECPGt_EORT);
 #line 70 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -188,7 +205,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 76 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -198,17 +216,18 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( $1  , $2  )", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bytea, &(send_buf[1]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 77 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 77 "bytea.pgc"
 
-  ECPGset_var(0, &(send_buf[0]), __LINE__); /* declare cursor1 cursor for select data1 from test
-                                               where data1 = $1  */
+  ECPGset_var(0, &(send_buf[0]), __LINE__); /* declare cursor1 cursor for select data1 from test where data1 = $1  */
 #line 78 "bytea.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 78 "bytea.pgc"
@@ -219,7 +238,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare cursor1 cursor for select data1 from test where data1 = $1 ", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 79 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -229,7 +249,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch from cursor1", ECPGt_EOIT, ECPGt_bytea, &(recv_buf[0]), (long)DATA_SIZE, (long)1, sizeof(struct bytea_2), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 80 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -239,7 +260,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "close cursor1", ECPGt_EOIT, ECPGt_EORT);
 #line 81 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -249,7 +271,8 @@ main(void)
     ECPGdeallocate(__LINE__, 0, NULL, "cursor1");
 #line 82 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -263,7 +286,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 87 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -273,7 +297,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( $1  , $2  )", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bytea, &(send_buf[1]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 88 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -283,7 +308,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( $1  , $2  )", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bytea, &(send_buf[1]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 89 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -293,7 +319,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select data1 from test", ECPGt_EOIT, ECPGt_bytea, &(recv_vlen_buf), (long)DATA_SIZE, (long)0, sizeof(struct bytea_3), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 90 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -309,7 +336,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 97 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -319,7 +347,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "ins_stmt", ECPGt_bytea, &(send_buf[0]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_bytea, &(send_buf[1]), (long)512, (long)1, sizeof(struct bytea_1), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 98 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -329,7 +358,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "sel_stmt", ECPGt_EOIT, ECPGt_bytea, &(recv_buf[0]), (long)DATA_SIZE, (long)1, sizeof(struct bytea_2), ECPGt_int, &(ind[0]), (long)1, (long)1, sizeof(int), ECPGt_bytea, &(recv_short_buf), (long)DATA_SIZE - LACK_SIZE, (long)1, sizeof(struct bytea_4), ECPGt_int, &(ind[1]), (long)1, (long)1, sizeof(int), ECPGt_EORT);
 #line 99 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -344,7 +374,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 105 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -355,7 +386,8 @@ main(void)
 
 #line 106 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -366,7 +398,8 @@ main(void)
 
 #line 107 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -376,7 +409,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "ins_stmt", ECPGt_descriptor, "idesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 108 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -386,7 +420,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_execute, "sel_stmt", ECPGt_EOIT, ECPGt_descriptor, "odesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 109 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -397,7 +432,8 @@ main(void)
 
 #line 110 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -408,7 +444,8 @@ main(void)
 
 #line 111 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -421,7 +458,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "drop table test", ECPGt_EOIT, ECPGt_EORT);
 #line 115 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -431,7 +469,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 116 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -441,7 +480,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 117 "bytea.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

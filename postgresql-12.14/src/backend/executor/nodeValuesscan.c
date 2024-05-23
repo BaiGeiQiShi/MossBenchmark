@@ -16,9 +16,9 @@
 /*
  * INTERFACE ROUTINES
  *		ExecValuesScan			scans a values list.
- *		ExecValuesNext			retrieve next tuple in
- *sequential order. ExecInitValuesScan		creates and initializes a
- *valuesscan node. ExecEndValuesScan		releases any storage allocated.
+ *		ExecValuesNext			retrieve next tuple in sequential order.
+ *		ExecInitValuesScan		creates and initializes a valuesscan node.
+ *		ExecEndValuesScan		releases any storage allocated.
  *		ExecReScanValuesScan	rescans the values list
  */
 #include "postgres.h"
@@ -72,10 +72,10 @@ ValuesNext(ValuesScanState *node)
   }
   else
   {
-
-
-
-
+    if (node->curr_idx >= 0)
+    {
+      node->curr_idx--;
+    }
   }
 
   /*
@@ -178,15 +178,16 @@ ValuesNext(ValuesScanState *node)
 static bool
 ValuesRecheck(ValuesScanState *node, TupleTableSlot *slot)
 {
-
-
+  /* nothing to check */
+  return true;
 }
 
 /* ----------------------------------------------------------------
  *		ExecValuesScan(node)
  *
- *		Scans the values lists sequentially and returns the next
- *qualifying tuple. We call the ExecScan() routine and pass it the appropriate
+ *		Scans the values lists sequentially and returns the next qualifying
+ *		tuple.
+ *		We call the ExecScan() routine and pass it the appropriate
  *		access method functions.
  * ----------------------------------------------------------------
  */
@@ -346,7 +347,7 @@ ExecReScanValuesScan(ValuesScanState *node)
 {
   if (node->ss.ps.ps_ResultTupleSlot)
   {
-
+    ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
   }
 
   ExecScanReScan(&node->ss);

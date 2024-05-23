@@ -41,7 +41,8 @@ DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved);
 HRESULT
 DllInstall(BOOL bInstall, LPCWSTR pszCmdLine)
 {
-  if (pszCmdLine && *pszCmdLine != '\0') {
+  if (pszCmdLine && *pszCmdLine != '\0')
+  {
     wcstombs(event_source, pszCmdLine, sizeof(event_source));
   }
 
@@ -56,7 +57,8 @@ DllInstall(BOOL bInstall, LPCWSTR pszCmdLine)
    * Without -n, DllRegisterServer called before DllInstall would mistakenly
    * overwrite the default "PostgreSQL" event source registration.
    */
-  if (bInstall) {
+  if (bInstall)
+  {
     DllRegisterServer();
   }
   return S_OK;
@@ -75,7 +77,8 @@ DllRegisterServer(void)
   char key_name[400];
 
   /* Set the name of DLL full path name. */
-  if (!GetModuleFileName((HMODULE)g_module, buffer, sizeof(buffer))) {
+  if (!GetModuleFileName((HMODULE)g_module, buffer, sizeof(buffer)))
+  {
     MessageBox(NULL, "Could not retrieve DLL filename", "PostgreSQL error", MB_OK | MB_ICONSTOP);
     return SELFREG_E_TYPELIB;
   }
@@ -85,13 +88,15 @@ DllRegisterServer(void)
    * EventLog registry key.
    */
   _snprintf(key_name, sizeof(key_name), "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s", event_source);
-  if (RegCreateKey(HKEY_LOCAL_MACHINE, key_name, &key)) {
+  if (RegCreateKey(HKEY_LOCAL_MACHINE, key_name, &key))
+  {
     MessageBox(NULL, "Could not create the registry key.", "PostgreSQL error", MB_OK | MB_ICONSTOP);
     return SELFREG_E_TYPELIB;
   }
 
   /* Add the name to the EventMessageFile subkey. */
-  if (RegSetValueEx(key, "EventMessageFile", 0, REG_EXPAND_SZ, (LPBYTE)buffer, strlen(buffer) + 1)) {
+  if (RegSetValueEx(key, "EventMessageFile", 0, REG_EXPAND_SZ, (LPBYTE)buffer, strlen(buffer) + 1))
+  {
     MessageBox(NULL, "Could not set the event message file.", "PostgreSQL error", MB_OK | MB_ICONSTOP);
     return SELFREG_E_TYPELIB;
   }
@@ -99,7 +104,8 @@ DllRegisterServer(void)
   /* Set the supported event types in the TypesSupported subkey. */
   data = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE | EVENTLOG_INFORMATION_TYPE;
 
-  if (RegSetValueEx(key, "TypesSupported", 0, REG_DWORD, (LPBYTE)&data, sizeof(DWORD))) {
+  if (RegSetValueEx(key, "TypesSupported", 0, REG_DWORD, (LPBYTE)&data, sizeof(DWORD)))
+  {
     MessageBox(NULL, "Could not set the supported types.", "PostgreSQL error", MB_OK | MB_ICONSTOP);
     return SELFREG_E_TYPELIB;
   }
@@ -109,8 +115,7 @@ DllRegisterServer(void)
 }
 
 /*
- * DllUnregisterServer --- Instructs DLL to remove only those entries created
- * through DllRegisterServer
+ * DllUnregisterServer --- Instructs DLL to remove only those entries created through DllRegisterServer
  */
 
 STDAPI
@@ -124,7 +129,8 @@ DllUnregisterServer(void)
    */
 
   _snprintf(key_name, sizeof(key_name), "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s", event_source);
-  if (RegDeleteKey(HKEY_LOCAL_MACHINE, key_name)) {
+  if (RegDeleteKey(HKEY_LOCAL_MACHINE, key_name))
+  {
     MessageBox(NULL, "Could not delete the registry key.", "PostgreSQL error", MB_OK | MB_ICONSTOP);
     return SELFREG_E_TYPELIB;
   }
@@ -138,7 +144,8 @@ DllUnregisterServer(void)
 BOOL WINAPI
 DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
-  if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+  if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+  {
     g_module = hModule;
   }
   return TRUE;

@@ -59,7 +59,7 @@ get_partition_parent(Oid relid)
 
   if (!OidIsValid(result))
   {
-
+    elog(ERROR, "could not find tuple for parent of relation %u", relid);
   }
 
   table_close(catalogRelation, AccessShareLock);
@@ -69,8 +69,8 @@ get_partition_parent(Oid relid)
 
 /*
  * get_partition_parent_worker
- *		Scan the pg_inherits relation to return the OID of the parent of
- *the given relation
+ *		Scan the pg_inherits relation to return the OID of the parent of the
+ *		given relation
  */
 static Oid
 get_partition_parent_worker(Relation inhRel, Oid relid)
@@ -163,7 +163,7 @@ index_get_partition(Relation partition, Oid indexId)
     tup = SearchSysCache1(RELOID, ObjectIdGetDatum(partIdx));
     if (!HeapTupleIsValid(tup))
     {
-
+      elog(ERROR, "cache lookup failed for relation %u", partIdx);
     }
     classForm = (Form_pg_class)GETSTRUCT(tup);
     ispartition = classForm->relispartition;
@@ -334,7 +334,7 @@ update_default_partition_oid(Oid parentId, Oid defaultPartId)
 
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for partition key of relation %u", parentId);
   }
 
   part_table_form = (Form_pg_partitioned_table)GETSTRUCT(tuple);

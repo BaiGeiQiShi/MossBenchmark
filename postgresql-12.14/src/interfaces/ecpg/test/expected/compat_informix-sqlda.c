@@ -111,16 +111,22 @@ dump_sqlda(sqlda_t *sqlda)
 {
   int i;
 
-  if (sqlda == NULL) {
+  if (sqlda == NULL)
+  {
     printf("dump_sqlda called with NULL sqlda\n");
     return;
   }
 
-  for (i = 0; i < sqlda->sqld; i++) {
-    if (sqlda->sqlvar[i].sqlind && *(sqlda->sqlvar[i].sqlind) == -1) {
+  for (i = 0; i < sqlda->sqld; i++)
+  {
+    if (sqlda->sqlvar[i].sqlind && *(sqlda->sqlvar[i].sqlind) == -1)
+    {
       printf("name sqlda descriptor: '%s' value NULL'\n", sqlda->sqlvar[i].sqlname);
-    } else {
-      switch (sqlda->sqlvar[i].sqltype) {
+    }
+    else
+    {
+      switch (sqlda->sqlvar[i].sqltype)
+      {
       case SQLCHAR:
         printf("name sqlda descriptor: '%s' value '%s'\n", sqlda->sqlvar[i].sqlname, sqlda->sqlvar[i].sqldata);
         break;
@@ -130,7 +136,8 @@ dump_sqlda(sqlda_t *sqlda)
       case SQLFLOAT:
         printf("name sqlda descriptor: '%s' value %f\n", sqlda->sqlvar[i].sqlname, *(double *)sqlda->sqlvar[i].sqldata);
         break;
-      case SQLDECIMAL: {
+      case SQLDECIMAL:
+      {
         char val[64];
         dectoasc((decimal *)sqlda->sqlvar[i].sqldata, val, 64, -1);
         printf("name sqlda descriptor: '%s' value DECIMAL '%s'\n", sqlda->sqlvar[i].sqlname, val);
@@ -169,7 +176,8 @@ main(void)
     ECPGconnect(__LINE__, 1, "ecpg1_regression", NULL, NULL, "regress1", 0);
 #line 68 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -180,7 +188,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "set datestyle to iso", ECPGt_EOIT, ECPGt_EORT);
 #line 71 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -188,10 +197,11 @@ main(void)
 
   strcpy(msg, "create");
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"create table t1 ( id integer , t text , d1 numeric , d2 float8 , c char ( 10 ) )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "create table t1 ( id integer , t text , d1 numeric , d2 float8 , c char ( 10 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 79 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -199,10 +209,11 @@ main(void)
 
   strcpy(msg, "insert");
   {
-    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal,"insert into t1 values ( 1 , 'a' , 1.0 , 1 , 'a' ) , ( 2 , null , null , null , null ) , ( 4 , 'd' , 4.0 , 4 , 'd' )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into t1 values ( 1 , 'a' , 1.0 , 1 , 'a' ) , ( 2 , null , null , null , null ) , ( 4 , 'd' , 4.0 , 4 , 'd' )", ECPGt_EOIT, ECPGt_EORT);
 #line 85 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -213,7 +224,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 88 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -228,7 +240,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "st_id1", stmt1);
 #line 95 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -243,7 +256,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur1 cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "st_id1", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 101 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -253,18 +267,21 @@ main(void)
 #line 103 "sqlda.pgc"
 
   rec = 0;
-  while (1) {
+  while (1)
+  {
     strcpy(msg, "fetch");
     {
       ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch 1 from mycur1", ECPGt_EOIT, ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 109 "sqlda.pgc"
 
-      if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+      if (sqlca.sqlcode == ECPG_NOT_FOUND)
+      {
         break;
       }
 #line 109 "sqlda.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
@@ -282,7 +299,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur1", ECPGt_EOIT, ECPGt_EORT);
 #line 118 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -293,7 +311,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id1");
 #line 121 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -312,7 +331,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "st_id2", stmt1);
 #line 132 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -327,7 +347,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "declare mycur2 cursor for $1", ECPGt_char_variable, (ECPGprepared_statement(NULL, "st_id2", __LINE__)), (long)1, (long)1, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
 #line 138 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -337,18 +358,21 @@ main(void)
 #line 140 "sqlda.pgc"
 
   rec = 0;
-  while (1) {
+  while (1)
+  {
     strcpy(msg, "fetch");
     {
       ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "fetch from mycur2", ECPGt_EOIT, ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 146 "sqlda.pgc"
 
-      if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+      if (sqlca.sqlcode == ECPG_NOT_FOUND)
+      {
         break;
       }
 #line 146 "sqlda.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         exit(1);
       }
     }
@@ -366,7 +390,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "close mycur2", ECPGt_EOIT, ECPGt_EORT);
 #line 155 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -377,7 +402,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id2");
 #line 158 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -408,7 +434,8 @@ main(void)
     ECPGprepare(__LINE__, NULL, 0, "st_id3", stmt2);
 #line 181 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -419,7 +446,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_execute, "st_id3", ECPGt_sqlda, &inp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 184 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -432,7 +460,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id3");
 #line 189 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -450,7 +479,8 @@ main(void)
     ECPGconnect(__LINE__, 1, "ecpg1_regression", NULL, NULL, "con2", 0);
 #line 199 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -477,7 +507,8 @@ main(void)
     ECPGprepare(__LINE__, "con2", 0, "st_id4", stmt2);
 #line 218 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -488,7 +519,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, "con2", 0, ECPGst_execute, "st_id4", ECPGt_sqlda, &inp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_sqlda, &outp_sqlda, 0L, 0L, 0L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 221 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -501,7 +533,8 @@ main(void)
     ECPGtrans(__LINE__, "con2", "commit");
 #line 226 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -512,7 +545,8 @@ main(void)
     ECPGdeallocate(__LINE__, 1, NULL, "st_id4");
 #line 229 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -527,7 +561,8 @@ main(void)
     ECPGdisconnect(__LINE__, "con2");
 #line 236 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -540,7 +575,8 @@ main(void)
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "drop table t1", ECPGt_EOIT, ECPGt_EORT);
 #line 241 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -551,7 +587,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 244 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -562,7 +599,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 247 "sqlda.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }

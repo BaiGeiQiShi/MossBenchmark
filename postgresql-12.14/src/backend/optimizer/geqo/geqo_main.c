@@ -14,10 +14,9 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
@@ -260,7 +259,7 @@ geqo(PlannerInfo *root, int number_of_rels, List *initial_rels)
 
   if (best_rel == NULL)
   {
-
+    elog(ERROR, "geqo failed to make a valid plan");
   }
 
   /* DBG: show the query plan */
@@ -314,7 +313,7 @@ gimme_pool_size(int nr_rel)
   /* Legal pool size *must* be at least 2, so ignore attempt to select 1 */
   if (Geqo_pool_size >= 2)
   {
-
+    return Geqo_pool_size;
   }
 
   size = pow(2.0, nr_rel + 1.0);
@@ -322,13 +321,13 @@ gimme_pool_size(int nr_rel)
   maxsize = 50 * Geqo_effort; /* 50 to 500 individuals */
   if (size > maxsize)
   {
-
+    return maxsize;
   }
 
   minsize = 10 * Geqo_effort; /* 10 to 100 individuals */
   if (size < minsize)
   {
-
+    return minsize;
   }
 
   return (int)ceil(size);
@@ -346,7 +345,7 @@ gimme_number_generations(int pool_size)
 {
   if (Geqo_generations > 0)
   {
-
+    return Geqo_generations;
   }
 
   return pool_size;

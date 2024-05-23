@@ -192,7 +192,7 @@ hashfloat4extended(PG_FUNCTION_ARGS)
   key8 = key;
   if (isnan(key8))
   {
-
+    key8 = get_float8_nan();
   }
 
   return hash_any_extended((unsigned char *)&key8, sizeof(key8), seed);
@@ -239,7 +239,7 @@ hashfloat8extended(PG_FUNCTION_ARGS)
   }
   if (isnan(key))
   {
-
+    key = get_float8_nan();
   }
 
   return hash_any_extended((unsigned char *)&key, sizeof(key), seed);
@@ -292,7 +292,7 @@ hashtext(PG_FUNCTION_ARGS)
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (!mylocale || mylocale->deterministic)
@@ -342,12 +342,12 @@ hashtextextended(PG_FUNCTION_ARGS)
 
   if (!collid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for string hashing"), errhint("Use the COLLATE clause to set the collation explicitly.")));
   }
 
   if (!lc_collate_is_c(collid) && collid != DEFAULT_COLLATION_OID)
   {
-
+    mylocale = pg_newlocale_from_collation(collid);
   }
 
   if (!mylocale || mylocale->deterministic)
@@ -378,7 +378,7 @@ hashtextextended(PG_FUNCTION_ARGS)
     else
 #endif
       /* shouldn't happen */
-
+      elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
   PG_FREE_IF_COPY(key, 0);
@@ -407,12 +407,12 @@ hashvarlena(PG_FUNCTION_ARGS)
 Datum
 hashvarlenaextended(PG_FUNCTION_ARGS)
 {
+  struct varlena *key = PG_GETARG_VARLENA_PP(0);
+  Datum result;
 
+  result = hash_any_extended((unsigned char *)VARDATA_ANY(key), VARSIZE_ANY_EXHDR(key), PG_GETARG_INT64(1));
 
+  PG_FREE_IF_COPY(key, 0);
 
-
-
-
-
-
+  return result;
 }

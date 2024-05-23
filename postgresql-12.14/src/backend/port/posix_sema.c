@@ -40,13 +40,15 @@
 #error cannot use named POSIX semaphores with EXEC_BACKEND
 #endif
 
-typedef union SemTPadded {
+typedef union SemTPadded
+{
   sem_t pgsem;
   char pad[PG_CACHE_LINE_SIZE];
 } SemTPadded;
 
 /* typedef PGSemaphore is equivalent to pointer to sem_t */
-typedef struct PGSemaphoreData {
+typedef struct PGSemaphoreData
+{
   SemTPadded sem_padded;
 } PGSemaphoreData;
 
@@ -84,7 +86,8 @@ PosixSemaphoreCreate(void)
   char semname[64];
   sem_t *mySem;
 
-  for (;;) {
+  for (;;)
+  {
     semKey = nextSemKey++;
 
     snprintf(semname, sizeof(semname), "/pgsql-%d", semKey);
@@ -92,17 +95,20 @@ PosixSemaphoreCreate(void)
     mySem = sem_open(semname, O_CREAT | O_EXCL, (mode_t)IPCProtection, (unsigned)1);
 
 #ifdef SEM_FAILED
-    if (mySem != (sem_t *)SEM_FAILED) {
+    if (mySem != (sem_t *)SEM_FAILED)
+    {
       break;
     }
 #else
-    if (mySem != (sem_t *)(-1)) {
+    if (mySem != (sem_t *)(-1))
+    {
       break;
     }
 #endif
 
     /* Loop if error indicates a collision */
-    if (errno == EEXIST || errno == EACCES || errno == EINTR) {
+    if (errno == EEXIST || errno == EACCES || errno == EINTR)
+    {
       continue;
     }
 
@@ -130,7 +136,8 @@ PosixSemaphoreCreate(void)
 static void
 PosixSemaphoreCreate(sem_t *sem)
 {
-  if (sem_init(sem, 1, 1) < 0) {
+  if (sem_init(sem, 1, 1) < 0)
+  {
     elog(FATAL, "sem_init failed: %m");
   }
 }
@@ -144,12 +151,14 @@ PosixSemaphoreKill(sem_t *sem)
 {
 #ifdef USE_NAMED_POSIX_SEMAPHORES
   /* Got to use sem_close for named semaphores */
-  if (sem_close(sem) < 0) {
+  if (sem_close(sem) < 0)
+  {
     elog(LOG, "sem_close failed: %m");
   }
 #else
   /* Got to use sem_destroy for unnamed semaphores */
-  if (sem_destroy(sem) < 0) {
+  if (sem_destroy(sem) < 0)
+  {
     elog(LOG, "sem_destroy failed: %m");
   }
 #endif
@@ -198,7 +207,8 @@ PGReserveSemaphores(int maxSemas, int port)
 {
 #ifdef USE_NAMED_POSIX_SEMAPHORES
   mySemPointers = (sem_t **)malloc(maxSemas * sizeof(sem_t *));
-  if (mySemPointers == NULL) {
+  if (mySemPointers == NULL)
+  {
     elog(PANIC, "out of memory");
   }
 #else
@@ -229,14 +239,16 @@ ReleaseSemaphores(int status, Datum arg)
   int i;
 
 #ifdef USE_NAMED_POSIX_SEMAPHORES
-  for (i = 0; i < numSems; i++) {
+  for (i = 0; i < numSems; i++)
+  {
     PosixSemaphoreKill(mySemPointers[i]);
   }
   free(mySemPointers);
 #endif
 
 #ifdef USE_UNNAMED_POSIX_SEMAPHORES
-  for (i = 0; i < numSems; i++) {
+  for (i = 0; i < numSems; i++)
+  {
     PosixSemaphoreKill(PG_SEM_REF(sharedSemas + i));
   }
 #endif
@@ -256,7 +268,8 @@ PGSemaphoreCreate(void)
   /* Can't do this in a backend, because static state is postmaster's */
   Assert(!IsUnderPostmaster);
 
-  if (numSems >= maxSems) {
+  if (numSems >= maxSems)
+  {
     elog(PANIC, "too many semaphores created");
   }
 
@@ -288,12 +301,16 @@ PGSemaphoreReset(PGSemaphore sema)
    * There's no direct API for this in POSIX, so we have to ratchet the
    * semaphore down to 0 with repeated trywait's.
    */
-  for (;;) {
-    if (sem_trywait(PG_SEM_REF(sema)) < 0) {
-      if (errno == EAGAIN || errno == EDEADLK) {
+  for (;;)
+  {
+    if (sem_trywait(PG_SEM_REF(sema)) < 0)
+    {
+      if (errno == EAGAIN || errno == EDEADLK)
+      {
         break; /* got it down to 0 */
       }
-      if (errno == EINTR) {
+      if (errno == EINTR)
+      {
         continue; /* can this happen? */
       }
       elog(FATAL, "sem_trywait failed: %m");
@@ -312,11 +329,13 @@ PGSemaphoreLock(PGSemaphore sema)
   int errStatus;
 
   /* See notes in sysv_sema.c's implementation of PGSemaphoreLock. */
-  do {
+  do
+  {
     errStatus = sem_wait(PG_SEM_REF(sema));
   } while (errStatus < 0 && errno == EINTR);
 
-  if (errStatus < 0) {
+  if (errStatus < 0)
+  {
     elog(FATAL, "sem_wait failed: %m");
   }
 }
@@ -337,11 +356,13 @@ PGSemaphoreUnlock(PGSemaphore sema)
    * try and unlock the semaphore again. Not clear this can really happen,
    * but might as well cope.
    */
-  do {
+  do
+  {
     errStatus = sem_post(PG_SEM_REF(sema));
   } while (errStatus < 0 && errno == EINTR);
 
-  if (errStatus < 0) {
+  if (errStatus < 0)
+  {
     elog(FATAL, "sem_post failed: %m");
   }
 }
@@ -361,12 +382,15 @@ PGSemaphoreTryLock(PGSemaphore sema)
    * from the operation prematurely because we were sent a signal.  So we
    * try and lock the semaphore again.
    */
-  do {
+  do
+  {
     errStatus = sem_trywait(PG_SEM_REF(sema));
   } while (errStatus < 0 && errno == EINTR);
 
-  if (errStatus < 0) {
-    if (errno == EAGAIN || errno == EDEADLK) {
+  if (errStatus < 0)
+  {
+    if (errno == EAGAIN || errno == EDEADLK)
+    {
       return false; /* failed to lock it */
     }
     /* Otherwise we got trouble */

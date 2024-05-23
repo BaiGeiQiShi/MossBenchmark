@@ -148,9 +148,9 @@ save_ps_display_args(int argc, char **argv)
 
     if (end_of_area == NULL) /* probably can't happen? */
     {
-
-
-
+      ps_buffer = NULL;
+      ps_buffer_size = 0;
+      return argv;
     }
 
     /*
@@ -173,16 +173,16 @@ save_ps_display_args(int argc, char **argv)
     new_environ = (char **)malloc((i + 1) * sizeof(char *));
     if (!new_environ)
     {
-
-
+      write_stderr("out of memory\n");
+      exit(1);
     }
     for (i = 0; environ[i] != NULL; i++)
     {
       new_environ[i] = strdup(environ[i]);
       if (!new_environ[i])
       {
-
-
+        write_stderr("out of memory\n");
+        exit(1);
       }
     }
     new_environ[i] = NULL;
@@ -211,16 +211,16 @@ save_ps_display_args(int argc, char **argv)
     new_argv = (char **)malloc((argc + 1) * sizeof(char *));
     if (!new_argv)
     {
-
-
+      write_stderr("out of memory\n");
+      exit(1);
     }
     for (i = 0; i < argc; i++)
     {
       new_argv[i] = strdup(argv[i]);
       if (!new_argv[i])
       {
-
-
+        write_stderr("out of memory\n");
+        exit(1);
       }
     }
     new_argv[argc] = NULL;
@@ -256,20 +256,20 @@ init_ps_display(const char *username, const char *dbname, const char *host_info,
   /* no ps display for stand-alone backend */
   if (!IsUnderPostmaster)
   {
-
+    return;
   }
 
   /* no ps display if you didn't call save_ps_display_args() */
   if (!save_argv)
   {
-
+    return;
   }
 
 #ifdef PS_USE_CLOBBER_ARGV
   /* If ps_buffer is a pointer, it might still be null */
   if (!ps_buffer)
   {
-
+    return;
   }
 #endif
 
@@ -315,7 +315,7 @@ init_ps_display(const char *username, const char *dbname, const char *host_info,
   }
   else
   {
-
+    snprintf(ps_buffer, ps_buffer_size, PROGRAM_NAME_PREFIX "%s: %s %s %s ", cluster_name, username, dbname, host_info);
   }
 
   ps_buffer_cur_len = ps_buffer_fixed_size = strlen(ps_buffer);
@@ -335,7 +335,7 @@ set_ps_display(const char *activity, bool force)
   /* update_process_title=off disables updates, unless force = true */
   if (!force && !update_process_title)
   {
-
+    return;
   }
 
   /* no ps display for stand-alone backend */
@@ -348,7 +348,7 @@ set_ps_display(const char *activity, bool force)
   /* If ps_buffer is a pointer, it might still be null */
   if (!ps_buffer)
   {
-
+    return;
   }
 #endif
 
@@ -423,8 +423,8 @@ get_ps_display(int *displen)
   /* If ps_buffer is a pointer, it might still be null */
   if (!ps_buffer)
   {
-
-
+    *displen = 0;
+    return "";
   }
 #endif
 

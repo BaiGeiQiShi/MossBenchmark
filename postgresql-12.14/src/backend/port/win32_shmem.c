@@ -51,17 +51,15 @@ pgwin32_SharedMemoryDelete(int status, Datum shmId);
 /*
  * Generate shared memory segment name. Expand the data directory, to generate
  * an identifier unique for this data directory. Then replace all backslashes
- * with forward slashes, since backslashes aren't permitted in global object
- *names.
+ * with forward slashes, since backslashes aren't permitted in global object names.
  *
  * Store the shared memory segment in the Global\ namespace (requires NT2 TSE or
- * 2000, but that's all we support for other reasons as well), to make sure you
- *can't open two postmasters in different sessions against the same data
- *directory.
+ * 2000, but that's all we support for other reasons as well), to make sure you can't
+ * open two postmasters in different sessions against the same data directory.
  *
- * XXX: What happens with junctions? It's only someone breaking things on
- *purpose, and this is still better than before, but we might want to do
- *something about that sometime in the future.
+ * XXX: What happens with junctions? It's only someone breaking things on purpose,
+ *		and this is still better than before, but we might want to do something about
+ *		that sometime in the future.
  */
 static char *
 GetSharedMemName(void)
@@ -72,18 +70,21 @@ GetSharedMemName(void)
   char *cp;
 
   bufsize = GetFullPathName(DataDir, 0, NULL, NULL);
-  if (bufsize == 0) {
+  if (bufsize == 0)
+  {
     elog(FATAL, "could not get size for full pathname of datadir %s: error code %lu", DataDir, GetLastError());
   }
 
   retptr = malloc(bufsize + 18); /* 18 for Global\PostgreSQL: */
-  if (retptr == NULL) {
+  if (retptr == NULL)
+  {
     elog(FATAL, "could not allocate memory for shared memory name");
   }
 
   strcpy(retptr, "Global\\PostgreSQL:");
   r = GetFullPathName(DataDir, bufsize, retptr + 18, NULL);
-  if (r == 0 || r > bufsize) {
+  if (r == 0 || r > bufsize)
+  {
     elog(FATAL, "could not generate full pathname for datadir %s: error code %lu", DataDir, GetLastError());
   }
 
@@ -93,8 +94,10 @@ GetSharedMemName(void)
    * causes permission errors in a lot of cases, so we leave it in the
    * default namespace for now.
    */
-  for (cp = retptr; *cp; cp++) {
-    if (*cp == '\\') {
+  for (cp = retptr; *cp; cp++)
+  {
+    if (*cp == '\\')
+    {
       *cp = '/';
     }
   }
@@ -125,7 +128,8 @@ PGSharedMemoryIsInUse(unsigned long id1, unsigned long id2)
 
   free(szShareMem);
 
-  if (hmap == NULL) {
+  if (hmap == NULL)
+  {
     return false;
   }
 
@@ -145,12 +149,14 @@ EnableLockPagesPrivilege(int elevel)
   TOKEN_PRIVILEGES tp;
   LUID luid;
 
-  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+  {
     ereport(elevel, (errmsg("could not enable Lock Pages in Memory user right: error code %lu", GetLastError()), errdetail("Failed system call was %s.", "OpenProcessToken")));
     return FALSE;
   }
 
-  if (!LookupPrivilegeValue(NULL, SE_LOCK_MEMORY_NAME, &luid)) {
+  if (!LookupPrivilegeValue(NULL, SE_LOCK_MEMORY_NAME, &luid))
+  {
     ereport(elevel, (errmsg("could not enable Lock Pages in Memory user right: error code %lu", GetLastError()), errdetail("Failed system call was %s.", "LookupPrivilegeValue")));
     CloseHandle(hToken);
     return FALSE;
@@ -159,17 +165,22 @@ EnableLockPagesPrivilege(int elevel)
   tp.Privileges[0].Luid = luid;
   tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-  if (!AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL)) {
+  if (!AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL))
+  {
     ereport(elevel, (errmsg("could not enable Lock Pages in Memory user right: error code %lu", GetLastError()), errdetail("Failed system call was %s.", "AdjustTokenPrivileges")));
     CloseHandle(hToken);
     return FALSE;
   }
 
-  if (GetLastError() != ERROR_SUCCESS) {
-    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED) {
-      ereport(elevel, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("could not enable Lock Pages in Memory user right"),  errhint("Assign Lock Pages in Memory user right to the Windows user account which runs PostgreSQL.")));
-    } else {
-      ereport(elevel, (errmsg("could not enable Lock Pages in Memory user right: error code %lu",  GetLastError()), errdetail("Failed system call was %s.", "AdjustTokenPrivileges")));
+  if (GetLastError() != ERROR_SUCCESS)
+  {
+    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
+    {
+      ereport(elevel, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("could not enable Lock Pages in Memory user right"), errhint("Assign Lock Pages in Memory user right to the Windows user account which runs PostgreSQL.")));
+    }
+    else
+    {
+      ereport(elevel, (errmsg("could not enable Lock Pages in Memory user right: error code %lu", GetLastError()), errdetail("Failed system call was %s.", "AdjustTokenPrivileges")));
     }
     CloseHandle(hToken);
     return FALSE;
@@ -201,7 +212,8 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
   DWORD flProtect = PAGE_READWRITE;
 
   ShmemProtectiveRegion = VirtualAlloc(NULL, PROTECTIVE_REGION_SIZE, MEM_RESERVE, PAGE_NOACCESS);
-  if (ShmemProtectiveRegion == NULL) {
+  if (ShmemProtectiveRegion == NULL)
+  {
     elog(FATAL, "could not reserve memory region: error code %lu", GetLastError());
   }
 
@@ -212,20 +224,27 @@ PGSharedMemoryCreate(Size size, int port, PGShmemHeader **shim)
 
   UsedShmemSegAddr = NULL;
 
-  if (huge_pages == HUGE_PAGES_ON || huge_pages == HUGE_PAGES_TRY) {
+  if (huge_pages == HUGE_PAGES_ON || huge_pages == HUGE_PAGES_TRY)
+  {
     /* Does the processor support large pages? */
     largePageSize = GetLargePageMinimum();
-    if (largePageSize == 0) {
+    if (largePageSize == 0)
+    {
       ereport(huge_pages == HUGE_PAGES_ON ? FATAL : DEBUG1, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("the processor does not support large pages")));
       ereport(DEBUG1, (errmsg("disabling huge pages")));
-    } else if (!EnableLockPagesPrivilege(huge_pages == HUGE_PAGES_ON ? FATAL : DEBUG1)) {
+    }
+    else if (!EnableLockPagesPrivilege(huge_pages == HUGE_PAGES_ON ? FATAL : DEBUG1))
+    {
       ereport(DEBUG1, (errmsg("disabling huge pages")));
-    } else {
+    }
+    else
+    {
       /* Huge pages available and privilege enabled, so turn on */
       flProtect = PAGE_READWRITE | SEC_COMMIT | SEC_LARGE_PAGES;
 
       /* Round size up as appropriate. */
-      if (size % largePageSize != 0) {
+      if (size % largePageSize != 0)
+      {
         size += largePageSize - (size % largePageSize);
       }
     }
@@ -245,7 +264,8 @@ retry:
    * sleeping for a second, and continue retrying 10 times. (both the 1
    * second time and the 10 retries are completely arbitrary)
    */
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < 10; i++)
+  {
     /*
      * In case CreateFileMapping() doesn't set the error code to 0 on
      * success
@@ -258,9 +278,14 @@ retry:
         size_low,                                  /* Size Lower 32 bits */
         szShareMem);
 
-    if (!hmap) {
-      if (GetLastError() == ERROR_NO_SYSTEM_RESOURCES && huge_pages == HUGE_PAGES_TRY && (flProtect & SEC_LARGE_PAGES) != 0) {
-        elog(DEBUG1, "CreateFileMapping(%zu) with SEC_LARGE_PAGES failed, huge pages disabled", size);
+    if (!hmap)
+    {
+      if (GetLastError() == ERROR_NO_SYSTEM_RESOURCES && huge_pages == HUGE_PAGES_TRY && (flProtect & SEC_LARGE_PAGES) != 0)
+      {
+        elog(DEBUG1,
+            "CreateFileMapping(%zu) with SEC_LARGE_PAGES failed, "
+            "huge pages disabled",
+            size);
 
         /*
          * Use the original size, not the rounded-up value, when
@@ -269,7 +294,9 @@ retry:
         size = orig_size;
         flProtect = PAGE_READWRITE;
         goto retry;
-      } else {
+      }
+      else
+      {
         ereport(FATAL, (errmsg("could not create shared memory segment: error code %lu", GetLastError()), errdetail("Failed system call was CreateFileMapping(size=%zu, name=%s).", size, szShareMem)));
       }
     }
@@ -278,7 +305,8 @@ retry:
      * If the segment already existed, CreateFileMapping() will return a
      * handle to the existing one and set ERROR_ALREADY_EXISTS.
      */
-    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
       CloseHandle(hmap); /* Close the handle, since we got a valid one
                           * to the previous segment. */
       hmap = NULL;
@@ -292,7 +320,8 @@ retry:
    * If the last call in the loop still returned ERROR_ALREADY_EXISTS, this
    * shared memory segment exists and we assume it belongs to somebody else.
    */
-  if (!hmap) {
+  if (!hmap)
+  {
     ereport(FATAL, (errmsg("pre-existing shared memory block is still in use"), errhint("Check if there are any old server processes still running, and terminate them.")));
   }
 
@@ -301,7 +330,8 @@ retry:
   /*
    * Make the handle inheritable
    */
-  if (!DuplicateHandle(GetCurrentProcess(), hmap, GetCurrentProcess(), &hmap2, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+  if (!DuplicateHandle(GetCurrentProcess(), hmap, GetCurrentProcess(), &hmap2, 0, TRUE, DUPLICATE_SAME_ACCESS))
+  {
     ereport(FATAL, (errmsg("could not create shared memory segment: error code %lu", GetLastError()), errdetail("Failed system call was DuplicateHandle.")));
   }
 
@@ -309,7 +339,8 @@ retry:
    * Close the old, non-inheritable handle. If this fails we don't really
    * care.
    */
-  if (!CloseHandle(hmap)) {
+  if (!CloseHandle(hmap))
+  {
     elog(LOG, "could not close handle to shared memory: error code %lu", GetLastError());
   }
 
@@ -318,7 +349,8 @@ retry:
    * at once, and let the system decide on the initial address.
    */
   memAddress = MapViewOfFileEx(hmap2, FILE_MAP_WRITE | FILE_MAP_READ, 0, 0, 0, NULL);
-  if (!memAddress) {
+  if (!memAddress)
+  {
     ereport(FATAL, (errmsg("could not create shared memory segment: error code %lu", GetLastError()), errdetail("Failed system call was MapViewOfFileEx.")));
   }
 
@@ -374,21 +406,26 @@ PGSharedMemoryReAttach(void)
   /*
    * Release memory region reservations made by the postmaster
    */
-  if (VirtualFree(ShmemProtectiveRegion, 0, MEM_RELEASE) == 0) {
+  if (VirtualFree(ShmemProtectiveRegion, 0, MEM_RELEASE) == 0)
+  {
     elog(FATAL, "failed to release reserved memory region (addr=%p): error code %lu", ShmemProtectiveRegion, GetLastError());
   }
-  if (VirtualFree(UsedShmemSegAddr, 0, MEM_RELEASE) == 0) {
+  if (VirtualFree(UsedShmemSegAddr, 0, MEM_RELEASE) == 0)
+  {
     elog(FATAL, "failed to release reserved memory region (addr=%p): error code %lu", UsedShmemSegAddr, GetLastError());
   }
 
   hdr = (PGShmemHeader *)MapViewOfFileEx(UsedShmemSegID, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0, UsedShmemSegAddr);
-  if (!hdr) {
+  if (!hdr)
+  {
     elog(FATAL, "could not reattach to shared memory (key=%p, addr=%p): error code %lu", UsedShmemSegID, UsedShmemSegAddr, GetLastError());
   }
-  if (hdr != origUsedShmemSegAddr) {
+  if (hdr != origUsedShmemSegAddr)
+  {
     elog(FATAL, "reattaching to shared memory returned unexpected address (got %p, expected %p)", hdr, origUsedShmemSegAddr);
   }
-  if (hdr->magic != PGShmemMagic) {
+  if (hdr->magic != PGShmemMagic)
+  {
     elog(FATAL, "reattaching to shared memory returned non-PostgreSQL memory");
   }
   dsm_set_control_handle(hdr->dsm_control);
@@ -450,8 +487,10 @@ PGSharedMemoryDetach(void)
    * Releasing the protective region liberates an unimportant quantity of
    * address space, but be tidy.
    */
-  if (ShmemProtectiveRegion != NULL) {
-    if (VirtualFree(ShmemProtectiveRegion, 0, MEM_RELEASE) == 0) {
+  if (ShmemProtectiveRegion != NULL)
+  {
+    if (VirtualFree(ShmemProtectiveRegion, 0, MEM_RELEASE) == 0)
+    {
       elog(LOG, "failed to release reserved memory region (addr=%p): error code %lu", ShmemProtectiveRegion, GetLastError());
     }
 
@@ -459,8 +498,10 @@ PGSharedMemoryDetach(void)
   }
 
   /* Unmap the view, if it's mapped */
-  if (UsedShmemSegAddr != NULL) {
-    if (!UnmapViewOfFile(UsedShmemSegAddr)) {
+  if (UsedShmemSegAddr != NULL)
+  {
+    if (!UnmapViewOfFile(UsedShmemSegAddr))
+    {
       elog(LOG, "could not unmap view of shared memory: error code %lu", GetLastError());
     }
 
@@ -468,8 +509,10 @@ PGSharedMemoryDetach(void)
   }
 
   /* And close the shmem handle, if we have one */
-  if (UsedShmemSegID != INVALID_HANDLE_VALUE) {
-    if (!CloseHandle(UsedShmemSegID)) {
+  if (UsedShmemSegID != INVALID_HANDLE_VALUE)
+  {
+    if (!CloseHandle(UsedShmemSegID))
+    {
       elog(LOG, "could not close handle to shared memory: error code %lu", GetLastError());
     }
 
@@ -518,12 +561,14 @@ pgwin32_ReserveSharedMemoryRegion(HANDLE hChild)
 
   /* ShmemProtectiveRegion */
   address = VirtualAllocEx(hChild, ShmemProtectiveRegion, PROTECTIVE_REGION_SIZE, MEM_RESERVE, PAGE_NOACCESS);
-  if (address == NULL) {
+  if (address == NULL)
+  {
     /* Don't use FATAL since we're running in the postmaster */
     elog(LOG, "could not reserve shared memory region (addr=%p) for child %p: error code %lu", ShmemProtectiveRegion, hChild, GetLastError());
     return false;
   }
-  if (address != ShmemProtectiveRegion) {
+  if (address != ShmemProtectiveRegion)
+  {
     /*
      * Should never happen - in theory if allocation granularity causes
      * strange effects it could, so check just in case.
@@ -536,11 +581,13 @@ pgwin32_ReserveSharedMemoryRegion(HANDLE hChild)
 
   /* UsedShmemSegAddr */
   address = VirtualAllocEx(hChild, UsedShmemSegAddr, UsedShmemSegSize, MEM_RESERVE, PAGE_READWRITE);
-  if (address == NULL) {
+  if (address == NULL)
+  {
     elog(LOG, "could not reserve shared memory region (addr=%p) for child %p: error code %lu", UsedShmemSegAddr, hChild, GetLastError());
     return false;
   }
-  if (address != UsedShmemSegAddr) {
+  if (address != UsedShmemSegAddr)
+  {
     elog(LOG, "reserved shared memory region got incorrect address %p, expected %p", address, UsedShmemSegAddr);
     return false;
   }

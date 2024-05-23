@@ -69,27 +69,27 @@ CollationCreate(const char *collname, Oid collnamespace, Oid collowner, char col
   oid = GetSysCacheOid3(COLLNAMEENCNSP, Anum_pg_collation_oid, PointerGetDatum(collname), Int32GetDatum(collencoding), ObjectIdGetDatum(collnamespace));
   if (OidIsValid(oid))
   {
+    if (quiet)
+    {
+      return InvalidOid;
+    }
+    else if (if_not_exists)
+    {
+      /*
+       * If we are in an extension script, insist that the pre-existing
+       * object be a member of the extension, to avoid security risks.
+       */
+      ObjectAddressSet(myself, CollationRelationId, oid);
+      checkMembershipInCurrentExtension(&myself);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /* OK to skip */
+      ereport(NOTICE, (errcode(ERRCODE_DUPLICATE_OBJECT), collencoding == -1 ? errmsg("collation \"%s\" already exists, skipping", collname) : errmsg("collation \"%s\" for encoding \"%s\" already exists, skipping", collname, pg_encoding_to_char(collencoding))));
+      return InvalidOid;
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), collencoding == -1 ? errmsg("collation \"%s\" already exists", collname) : errmsg("collation \"%s\" for encoding \"%s\" already exists", collname, pg_encoding_to_char(collencoding))));
+    }
   }
 
   /* open pg_collation; see below about the lock level */
@@ -117,24 +117,24 @@ CollationCreate(const char *collname, Oid collnamespace, Oid collowner, char col
       table_close(rel, NoLock);
       return InvalidOid;
     }
+    else if (if_not_exists)
+    {
+      /*
+       * If we are in an extension script, insist that the pre-existing
+       * object be a member of the extension, to avoid security risks.
+       */
+      ObjectAddressSet(myself, CollationRelationId, oid);
+      checkMembershipInCurrentExtension(&myself);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /* OK to skip */
+      table_close(rel, NoLock);
+      ereport(NOTICE, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("collation \"%s\" already exists, skipping", collname)));
+      return InvalidOid;
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("collation \"%s\" already exists", collname)));
+    }
   }
 
   tupDesc = RelationGetDescr(rel);
@@ -157,7 +157,7 @@ CollationCreate(const char *collname, Oid collnamespace, Oid collowner, char col
   values[Anum_pg_collation_collctype - 1] = NameGetDatum(&name_ctype);
   if (collversion)
   {
-
+    values[Anum_pg_collation_collversion - 1] = CStringGetTextDatum(collversion);
   }
   else
   {
@@ -224,7 +224,7 @@ RemoveCollationById(Oid collationOid)
   }
   else
   {
-
+    elog(ERROR, "could not find tuple for collation %u", collationOid);
   }
 
   systable_endscan(scandesc);

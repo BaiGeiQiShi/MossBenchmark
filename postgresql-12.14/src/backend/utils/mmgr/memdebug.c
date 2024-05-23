@@ -35,17 +35,17 @@
  *	the host Valgrind (if any).  Under !USE_VALGRIND, memdebug.h stubs out
  *	currently-used macros.
  *
- *	When running under Valgrind, we want a NOACCESS memory region both
- *before and after the allocation.  The chunk header is tempting as the
- *preceding region, but mcxt.c expects to able to examine the standard chunk
- *header fields.  Therefore, we use, when available, the requested_size field
- *and any subsequent padding.  requested_size is made NOACCESS before returning
+ *	When running under Valgrind, we want a NOACCESS memory region both before
+ *	and after the allocation.  The chunk header is tempting as the preceding
+ *	region, but mcxt.c expects to able to examine the standard chunk header
+ *	fields.  Therefore, we use, when available, the requested_size field and
+ *	any subsequent padding.  requested_size is made NOACCESS before returning
  *	a chunk pointer to a caller.  However, to reduce client request traffic,
  *	it is kept DEFINED in chunks on the free list.
  *
  *	The rounded-up capacity of the chunk usually acts as a post-allocation
  *	NOACCESS region.  If the request consumes precisely the entire chunk,
- *	there is no such region; another chunk header may immediately follow. In
+ *	there is no such region; another chunk header may immediately follow.  In
  *	that case, Valgrind will not detect access beyond the end of the chunk.
  *
  *	See also the cooperating Valgrind client requests in mcxt.c.
@@ -80,9 +80,11 @@ randomize_mem(char *ptr, size_t size)
 
   ctr = save_ctr;
   VALGRIND_MAKE_MEM_UNDEFINED(ptr, size);
-  while (remaining-- > 0) {
+  while (remaining-- > 0)
+  {
     *ptr++ = ctr;
-    if (++ctr > 251) {
+    if (++ctr > 251)
+    {
       ctr = 1;
     }
   }

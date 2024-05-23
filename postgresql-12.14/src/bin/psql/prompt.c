@@ -39,7 +39,8 @@
  * %/ - current database
  * %~ - like %/ but "~" when database name equals user name
  * %# - "#" if superuser, ">" otherwise
- * %R - in prompt1 normally =, or ^ if single line mode,*			or a ! if session is not connected to a database;
+ * %R - in prompt1 normally =, or ^ if single line mode,
+ *			or a ! if session is not connected to a database;
  *		in prompt2 -, *, ', or ";
  *		in prompt3 nothing
  * %x - transaction status: empty, *, !, ? (unknown or no connection)
@@ -73,7 +74,8 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
   const char *p;
   const char *prompt_string = "? ";
 
-  switch (status) {
+  switch (status)
+  {
   case PROMPT_READY:
     prompt_string = pset.prompt1;
     break;
@@ -94,23 +96,31 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
 
   destination[0] = '\0';
 
-  for (p = prompt_string; *p && strlen(destination) < sizeof(destination) - 1; p++) {
+  for (p = prompt_string; *p && strlen(destination) < sizeof(destination) - 1; p++)
+  {
     memset(buf, 0, sizeof(buf));
-    if (esc) {
-      switch (*p) {
+    if (esc)
+    {
+      switch (*p)
+      {
         /* Current database */
       case '/':
-        if (pset.db) {
+        if (pset.db)
+        {
           strlcpy(buf, PQdb(pset.db), sizeof(buf));
         }
         break;
       case '~':
-        if (pset.db) {
+        if (pset.db)
+        {
           const char *var;
 
-          if (strcmp(PQdb(pset.db), PQuser(pset.db)) == 0 || ((var = getenv("PGDATABASE")) && strcmp(var, PQdb(pset.db)) == 0)) {
+          if (strcmp(PQdb(pset.db), PQuser(pset.db)) == 0 || ((var = getenv("PGDATABASE")) && strcmp(var, PQdb(pset.db)) == 0))
+          {
             strlcpy(buf, "~", sizeof(buf));
-          } else {
+          }
+          else
+          {
             strlcpy(buf, PQdb(pset.db), sizeof(buf));
           }
         }
@@ -119,22 +129,29 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         /* DB server hostname (long/short) */
       case 'M':
       case 'm':
-        if (pset.db) {
+        if (pset.db)
+        {
           const char *host = PQhost(pset.db);
 
           /* INET socket */
-          if (host && host[0] && !is_absolute_path(host)) {
+          if (host && host[0] && !is_absolute_path(host))
+          {
             strlcpy(buf, host, sizeof(buf));
-            if (*p == 'm') {
+            if (*p == 'm')
+            {
               buf[strcspn(buf, ".")] = '\0';
             }
           }
 #ifdef HAVE_UNIX_SOCKETS
           /* UNIX socket */
-          else {
-            if (!host || strcmp(host, DEFAULT_PGSOCKET_DIR) == 0 || *p == 'm') {
+          else
+          {
+            if (!host || strcmp(host, DEFAULT_PGSOCKET_DIR) == 0 || *p == 'm')
+            {
               strlcpy(buf, "[local]", sizeof(buf));
-            } else {
+            }
+            else
+            {
               snprintf(buf, sizeof(buf), "[local:%s]", host);
             }
           }
@@ -143,22 +160,26 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         break;
         /* DB server port number */
       case '>':
-        if (pset.db && PQport(pset.db)) {
+        if (pset.db && PQport(pset.db))
+        {
           strlcpy(buf, PQport(pset.db), sizeof(buf));
         }
         break;
         /* DB server user name */
       case 'n':
-        if (pset.db) {
+        if (pset.db)
+        {
           strlcpy(buf, session_username(), sizeof(buf));
         }
         break;
         /* backend pid */
       case 'p':
-        if (pset.db) {
+        if (pset.db)
+        {
           int pid = PQbackendPID(pset.db);
 
-          if (pid) {
+          if (pid)
+          {
             snprintf(buf, sizeof(buf), "%d", pid);
           }
         }
@@ -176,15 +197,23 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         --p;
         break;
       case 'R':
-        switch (status) {
+        switch (status)
+        {
         case PROMPT_READY:
-          if (cstack != NULL && !conditional_active(cstack)) {
+          if (cstack != NULL && !conditional_active(cstack))
+          {
             buf[0] = '@';
-          } else if (!pset.db) {
+          }
+          else if (!pset.db)
+          {
             buf[0] = '!';
-          } else if (!pset.singleline) {
+          }
+          else if (!pset.singleline)
+          {
             buf[0] = '=';
-          } else {
+          }
+          else
+          {
             buf[0] = '^';
           }
           break;
@@ -206,17 +235,21 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         case PROMPT_PAREN:
           buf[0] = '(';
           break;
-        default:;
+        default:
           buf[0] = '\0';
           break;
         }
         break;
 
       case 'x':
-        if (!pset.db) {
+        if (!pset.db)
+        {
           buf[0] = '?';
-        } else {
-          switch (PQtransactionStatus(pset.db)) {
+        }
+        else
+        {
+          switch (PQtransactionStatus(pset.db))
+          {
           case PQTRANS_IDLE:
             buf[0] = '\0';
             break;
@@ -227,7 +260,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
           case PQTRANS_INERROR:
             buf[0] = '!';
             break;
-          default:;
+          default:
             buf[0] = '?';
             break;
           }
@@ -243,15 +276,19 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         break;
 
       case '#':
-        if (is_superuser()) {
+        if (is_superuser())
+        {
           buf[0] = '#';
-        } else {
+        }
+        else
+        {
           buf[0] = '>';
         }
         break;
 
         /* execute command */
-      case '`': {
+      case '`':
+      {
         FILE *fd;
         char *file = pg_strdup(p + 1);
         int cmdend;
@@ -259,13 +296,16 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         cmdend = strcspn(file, "`");
         file[cmdend] = '\0';
         fd = popen(file, "r");
-        if (fd) {
-          if (fgets(buf, sizeof(buf), fd) == NULL) {
+        if (fd)
+        {
+          if (fgets(buf, sizeof(buf), fd) == NULL)
+          {
             buf[0] = '\0';
           }
           pclose(fd);
         }
-        if (strlen(buf) > 0 && buf[strlen(buf) - 1] == '\n') {
+        if (strlen(buf) > 0 && buf[strlen(buf) - 1] == '\n')
+        {
           buf[strlen(buf) - 1] = '\0';
         }
         free(file);
@@ -274,7 +314,8 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
       }
 
         /* interpolate variable */
-      case ':': {
+      case ':':
+      {
         char *name;
         const char *val;
         int nameend;
@@ -283,7 +324,8 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         nameend = strcspn(name, ":");
         name[nameend] = '\0';
         val = GetVariable(pset.vars, name);
-        if (val) {
+        if (val)
+        {
           strlcpy(buf, val, sizeof(buf));
         }
         free(name);
@@ -305,21 +347,26 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
 #endif /* USE_READLINE */
         break;
 
-      default:;
+      default:
         buf[0] = *p;
         buf[1] = '\0';
         break;
       }
       esc = false;
-    } else if (*p == '%') {
+    }
+    else if (*p == '%')
+    {
       esc = true;
-    } else {
+    }
+    else
+    {
       buf[0] = *p;
       buf[1] = '\0';
       esc = false;
     }
 
-    if (!esc) {
+    if (!esc)
+    {
       strlcat(destination, buf, sizeof(destination));
     }
   }

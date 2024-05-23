@@ -79,7 +79,8 @@ _EndBlobs(ArchiveHandle *AH, TocEntry *te);
 
 #define K_STD_BUF_SIZE 1024
 
-typedef struct {
+typedef struct
+{
 #ifdef HAVE_LIBZ
   gzFile zFH;
 #else
@@ -95,7 +96,8 @@ typedef struct {
   ArchiveHandle *AH;
 } TAR_MEMBER;
 
-typedef struct {
+typedef struct
+{
   int hasSeek;
   pgoff_t filePos;
   TAR_MEMBER *blobToc;
@@ -107,7 +109,8 @@ typedef struct {
   TAR_MEMBER *scriptTH;
 } lclContext;
 
-typedef struct {
+typedef struct
+{
   TAR_MEMBER *TH;
   char *filename;
 } lclTocEntry;
@@ -194,15 +197,21 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
   /*
    * Now open the tar file, and load the TOC if we're in read mode.
    */
-  if (AH->mode == archModeWrite) {
-    if (AH->fSpec && strcmp(AH->fSpec, "") != 0) {
+  if (AH->mode == archModeWrite)
+  {
+    if (AH->fSpec && strcmp(AH->fSpec, "") != 0)
+    {
       ctx->tarFH = fopen(AH->fSpec, PG_BINARY_W);
-      if (ctx->tarFH == NULL) {
+      if (ctx->tarFH == NULL)
+      {
         fatal("could not open TOC file \"%s\" for output: %m", AH->fSpec);
       }
-    } else {
+    }
+    else
+    {
       ctx->tarFH = stdout;
-      if (ctx->tarFH == NULL) {
+      if (ctx->tarFH == NULL)
+      {
         fatal("could not open TOC file for output: %m");
       }
     }
@@ -222,18 +231,26 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
      * possible since gzdopen uses buffered IO which totally screws file
      * positioning.
      */
-    if (AH->compression != 0) {
+    if (AH->compression != 0)
+    {
       fatal("compression is not supported by tar archive format");
     }
-  } else { /* Read Mode */
-    if (AH->fSpec && strcmp(AH->fSpec, "") != 0) {
+  }
+  else
+  { /* Read Mode */
+    if (AH->fSpec && strcmp(AH->fSpec, "") != 0)
+    {
       ctx->tarFH = fopen(AH->fSpec, PG_BINARY_R);
-      if (ctx->tarFH == NULL) {
+      if (ctx->tarFH == NULL)
+      {
         fatal("could not open TOC file \"%s\" for input: %m", AH->fSpec);
       }
-    } else {
+    }
+    else
+    {
       ctx->tarFH = stdin;
-      if (ctx->tarFH == NULL) {
+      if (ctx->tarFH == NULL)
+      {
         fatal("could not open TOC file for input: %m");
       }
     }
@@ -266,18 +283,24 @@ _ArchiveEntry(ArchiveHandle *AH, TocEntry *te)
   char fn[K_STD_BUF_SIZE];
 
   ctx = (lclTocEntry *)pg_malloc0(sizeof(lclTocEntry));
-  if (te->dataDumper != NULL) {
+  if (te->dataDumper != NULL)
+  {
 #ifdef HAVE_LIBZ
-    if (AH->compression == 0) {
+    if (AH->compression == 0)
+    {
       sprintf(fn, "%d.dat", te->dumpId);
-    } else {
+    }
+    else
+    {
       sprintf(fn, "%d.dat.gz", te->dumpId);
     }
 #else
     sprintf(fn, "%d.dat", te->dumpId);
 #endif
     ctx->filename = pg_strdup(fn);
-  } else {
+  }
+  else
+  {
     ctx->filename = NULL;
     ctx->TH = NULL;
   }
@@ -289,9 +312,12 @@ _WriteExtraToc(ArchiveHandle *AH, TocEntry *te)
 {
   lclTocEntry *ctx = (lclTocEntry *)te->formatData;
 
-  if (ctx->filename) {
+  if (ctx->filename)
+  {
     WriteStr(AH, ctx->filename);
-  } else {
+  }
+  else
+  {
     WriteStr(AH, "");
   }
 }
@@ -301,13 +327,15 @@ _ReadExtraToc(ArchiveHandle *AH, TocEntry *te)
 {
   lclTocEntry *ctx = (lclTocEntry *)te->formatData;
 
-  if (ctx == NULL) {
+  if (ctx == NULL)
+  {
     ctx = (lclTocEntry *)pg_malloc0(sizeof(lclTocEntry));
     te->formatData = (void *)ctx;
   }
 
   ctx->filename = ReadStr(AH);
-  if (strlen(ctx->filename) == 0) {
+  if (strlen(ctx->filename) == 0)
+  {
     free(ctx->filename);
     ctx->filename = NULL;
   }
@@ -319,7 +347,8 @@ _PrintExtraToc(ArchiveHandle *AH, TocEntry *te)
 {
   lclTocEntry *ctx = (lclTocEntry *)te->formatData;
 
-  if (AH->public.verbose && ctx->filename != NULL) {
+  if (AH->public.verbose && ctx->filename != NULL)
+  {
     ahprintf(AH, "-- File: %s\n", ctx->filename);
   }
 }
@@ -342,17 +371,21 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
   char fmode[14];
 #endif
 
-  if (mode == 'r') {
+  if (mode == 'r')
+  {
     tm = _tarPositionTo(AH, filename);
     if (!tm) /* Not found */
     {
-      if (filename) {
+      if (filename)
+      {
         /*
          * Couldn't find the requested file. Future: do SEEK(0) and
          * retry.
          */
         fatal("could not find file \"%s\" in archive", filename);
-      } else {
+      }
+      else
+      {
         /* Any file OK, none left, so return NULL */
         return NULL;
       }
@@ -360,16 +393,21 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 
 #ifdef HAVE_LIBZ
 
-    if (AH->compression == 0) {
+    if (AH->compression == 0)
+    {
       tm->nFH = ctx->tarFH;
-    } else {
+    }
+    else
+    {
       fatal("compression is not supported by tar archive format");
     }
     /* tm->zFH = gzdopen(dup(fileno(ctx->tarFH)), "rb"); */
 #else
     tm->nFH = ctx->tarFH;
 #endif
-  } else {
+  }
+  else
+  {
     int old_umask;
 
     tm = pg_malloc0(sizeof(TAR_MEMBER));
@@ -387,15 +425,18 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 #else
 
     /*
-     * On WIN32, tmpfile() generates a filename in the root directory,* which requires administrative permissions on certain systems. Loop
+     * On WIN32, tmpfile() generates a filename in the root directory,
+     * which requires administrative permissions on certain systems. Loop
      * until we find a unique file name we can create.
      */
-    while (1) {
+    while (1)
+    {
       char *name;
       int fd;
 
       name = _tempnam(NULL, "pg_temp_");
-      if (name == NULL) {
+      if (name == NULL)
+      {
         break;
       }
       fd = open(name, O_RDWR | O_CREAT | O_EXCL | O_BINARY | O_TEMPORARY, S_IRUSR | S_IWUSR);
@@ -405,13 +446,16 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
       {
         tm->tmpFH = fdopen(fd, "w+b");
         break;
-      } else if (errno != EEXIST) { /* failure other than file exists */
+      }
+      else if (errno != EEXIST) /* failure other than file exists */
+      {
         break;
       }
     }
 #endif
 
-    if (tm->tmpFH == NULL) {
+    if (tm->tmpFH == NULL)
+    {
       fatal("could not generate temporary file name: %m");
     }
 
@@ -419,13 +463,17 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 
 #ifdef HAVE_LIBZ
 
-    if (AH->compression != 0) {
+    if (AH->compression != 0)
+    {
       sprintf(fmode, "wb%d", AH->compression);
       tm->zFH = gzdopen(dup(fileno(tm->tmpFH)), fmode);
-      if (tm->zFH == NULL) {
+      if (tm->zFH == NULL)
+      {
         fatal("could not open temporary file");
       }
-    } else {
+    }
+    else
+    {
       tm->nFH = tm->tmpFH;
     }
 #else
@@ -449,14 +497,17 @@ tarClose(ArchiveHandle *AH, TAR_MEMBER *th)
   /*
    * Close the GZ file since we dup'd. This will flush the buffers.
    */
-  if (AH->compression != 0) {
+  if (AH->compression != 0)
+  {
     errno = 0; /* in case gzclose() doesn't set it */
-    if (GZCLOSE(th->zFH) != 0) {
+    if (GZCLOSE(th->zFH) != 0)
+    {
       fatal("could not close tar member: %m");
     }
   }
 
-  if (th->mode == 'w') {
+  if (th->mode == 'w')
+  {
     _tarAddFile(AH, th); /* This will close the temp file */
   }
 
@@ -465,7 +516,8 @@ tarClose(ArchiveHandle *AH, TAR_MEMBER *th)
    * handle, and we don't use temp files.
    */
 
-  if (th->targetFile) {
+  if (th->targetFile)
+  {
     free(th->targetFile);
   }
 
@@ -483,26 +535,33 @@ tarGets(char *buf, size_t len, TAR_MEMBER *th)
   int eof = 0;
 
   /* Can't read past logical EOF */
-  if (len > (th->fileLen - th->pos)) {
+  if (len > (th->fileLen - th->pos))
+  {
     len = th->fileLen - th->pos;
   }
 
-  while (cnt < len && c != '\n') {
-    if (_tarReadRaw(th->AH, &c, 1, th, NULL) <= 0) {
+  while (cnt < len && c != '\n')
+  {
+    if (_tarReadRaw(th->AH, &c, 1, th, NULL) <= 0)
+    {
       eof = 1;
       break;
     }
     buf[cnt++] = c;
   }
 
-  if (eof && cnt == 0) {
+  if (eof && cnt == 0)
+  {
     s = NULL;
-  } else {
+  }
+  else
+  {
     buf[cnt++] = '\0';
     s = buf;
   }
 
-  if (s) {
+  if (s)
+  {
     len = strlen(s);
     th->pos += len;
   }
@@ -524,11 +583,15 @@ _tarReadRaw(ArchiveHandle *AH, void *buf, size_t len, TAR_MEMBER *th, FILE *fh)
   size_t res = 0;
 
   avail = AH->lookaheadLen - AH->lookaheadPos;
-  if (avail > 0) {
+  if (avail > 0)
+  {
     /* We have some lookahead bytes to use */
-    if (avail >= len) { /* Just use the lookahead buffer */
+    if (avail >= len) /* Just use the lookahead buffer */
+    {
       used = len;
-    } else {
+    }
+    else
+    {
       used = avail;
     }
 
@@ -541,16 +604,23 @@ _tarReadRaw(ArchiveHandle *AH, void *buf, size_t len, TAR_MEMBER *th, FILE *fh)
   }
 
   /* Read the file if len > 0 */
-  if (len > 0) {
-    if (fh) {
+  if (len > 0)
+  {
+    if (fh)
+    {
       res = fread(&((char *)buf)[used], 1, len, fh);
-      if (res != len && !feof(fh)) {
+      if (res != len && !feof(fh))
+      {
         READ_ERROR_EXIT(fh);
       }
-    } else if (th) {
-      if (th->zFH) {
+    }
+    else if (th)
+    {
+      if (th->zFH)
+      {
         res = GZREAD(&((char *)buf)[used], 1, len, th->zFH);
-        if (res != len && !GZEOF(th->zFH)) {
+        if (res != len && !GZEOF(th->zFH))
+        {
 #ifdef HAVE_LIBZ
           int errnum;
           const char *errmsg = gzerror(th->zFH, &errnum);
@@ -560,13 +630,18 @@ _tarReadRaw(ArchiveHandle *AH, void *buf, size_t len, TAR_MEMBER *th, FILE *fh)
           fatal("could not read from input file: %s", strerror(errno));
 #endif
         }
-      } else {
+      }
+      else
+      {
         res = fread(&((char *)buf)[used], 1, len, th->nFH);
-        if (res != len && !feof(th->nFH)) {
+        if (res != len && !feof(th->nFH))
+        {
           READ_ERROR_EXIT(th->nFH);
         }
       }
-    } else {
+    }
+    else
+    {
       fatal("internal error -- neither th nor fh specified in tarReadRaw()");
     }
   }
@@ -581,11 +656,13 @@ tarRead(void *buf, size_t len, TAR_MEMBER *th)
 {
   size_t res;
 
-  if (th->pos + len > th->fileLen) {
+  if (th->pos + len > th->fileLen)
+  {
     len = th->fileLen - th->pos;
   }
 
-  if (len <= 0) {
+  if (len <= 0)
+  {
     return 0;
   }
 
@@ -601,9 +678,12 @@ tarWrite(const void *buf, size_t len, TAR_MEMBER *th)
 {
   size_t res;
 
-  if (th->zFH != NULL) {
+  if (th->zFH != NULL)
+  {
     res = GZWRITE(buf, 1, len, th->zFH);
-  } else {
+  }
+  else
+  {
     res = fwrite(buf, 1, len, th->nFH);
   }
 
@@ -616,7 +696,8 @@ _WriteData(ArchiveHandle *AH, const void *data, size_t dLen)
 {
   lclTocEntry *tctx = (lclTocEntry *)AH->currToc->formatData;
 
-  if (tarWrite(data, dLen, tctx->TH) != dLen) {
+  if (tarWrite(data, dLen, tctx->TH) != dLen)
+  {
     WRITE_ERROR_EXIT;
   }
 
@@ -644,14 +725,16 @@ _PrintFileData(ArchiveHandle *AH, char *filename)
   size_t cnt;
   TAR_MEMBER *th;
 
-  if (!filename) {
+  if (!filename)
+  {
     return;
   }
 
   th = tarOpen(AH, filename, 'r');
   ctx->FH = th;
 
-  while ((cnt = tarRead(buf, 4095, th)) > 0) {
+  while ((cnt = tarRead(buf, 4095, th)) > 0)
+  {
     buf[cnt] = '\0';
     ahwrite(buf, 1, cnt, AH);
   }
@@ -669,7 +752,8 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
   lclTocEntry *tctx = (lclTocEntry *)te->formatData;
   int pos1;
 
-  if (!tctx->filename) {
+  if (!tctx->filename)
+  {
     return;
   }
 
@@ -680,16 +764,20 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
    * In the COPY case this is a bit klugy because the regular COPY command
    * was already printed before we get control.
    */
-  if (ctx->isSpecialScript) {
-    if (te->copyStmt) {
+  if (ctx->isSpecialScript)
+  {
+    if (te->copyStmt)
+    {
       /* Abort the COPY FROM stdin */
       ahprintf(AH, "\\.\n");
 
       /*
-       * The COPY statement should look like "COPY ... FROM stdin;\n",* see dumpTableData().
+       * The COPY statement should look like "COPY ... FROM stdin;\n",
+       * see dumpTableData().
        */
       pos1 = (int)strlen(te->copyStmt) - 13;
-      if (pos1 < 6 || strncmp(te->copyStmt, "COPY ", 5) != 0 || strcmp(te->copyStmt + pos1, " FROM stdin;\n") != 0) {
+      if (pos1 < 6 || strncmp(te->copyStmt, "COPY ", 5) != 0 || strcmp(te->copyStmt + pos1, " FROM stdin;\n") != 0)
+      {
         fatal("unexpected COPY statement syntax: \"%s\"", te->copyStmt);
       }
 
@@ -697,7 +785,9 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
       ahwrite(te->copyStmt, 1, pos1, AH);
       /* ... and insert modified FROM */
       ahprintf(AH, " FROM '$$PATH$$/%s';\n\n", tctx->filename);
-    } else {
+    }
+    else
+    {
       /* --inserts mode, no worries, just include the data file */
       ahprintf(AH, "\\i $$PATH$$/%s\n\n", tctx->filename);
     }
@@ -705,9 +795,12 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
     return;
   }
 
-  if (strcmp(te->desc, "BLOBS") == 0) {
+  if (strcmp(te->desc, "BLOBS") == 0)
+  {
     _LoadBlobs(AH);
-  } else {
+  }
+  else
+  {
     _PrintFileData(AH, tctx->filename);
   }
 }
@@ -725,17 +818,21 @@ _LoadBlobs(ArchiveHandle *AH)
   StartRestoreBlobs(AH);
 
   th = tarOpen(AH, NULL, 'r'); /* Open next file */
-  while (th != NULL) {
+  while (th != NULL)
+  {
     ctx->FH = th;
 
-    if (strncmp(th->targetFile, "blob_", 5) == 0) {
+    if (strncmp(th->targetFile, "blob_", 5) == 0)
+    {
       oid = atooid(&th->targetFile[5]);
-      if (oid != 0) {
+      if (oid != 0)
+      {
         pg_log_info("restoring large object with OID %u", oid);
 
         StartRestoreBlob(AH, oid, AH->public.ropt->dropSchema);
 
-        while ((cnt = tarRead(buf, 4095, th)) > 0) {
+        while ((cnt = tarRead(buf, 4095, th)) > 0)
+        {
           buf[cnt] = '\0';
           ahwrite(buf, 1, cnt, AH);
         }
@@ -743,7 +840,9 @@ _LoadBlobs(ArchiveHandle *AH)
         foundBlob = true;
       }
       tarClose(AH, th);
-    } else {
+    }
+    else
+    {
       tarClose(AH, th);
 
       /*
@@ -752,7 +851,8 @@ _LoadBlobs(ArchiveHandle *AH)
        * the rest of the archive if there are no blobs ... but this
        * function shouldn't be called at all in that case.
        */
-      if (foundBlob) {
+      if (foundBlob)
+      {
         break;
       }
     }
@@ -768,7 +868,8 @@ _WriteByte(ArchiveHandle *AH, const int i)
   lclContext *ctx = (lclContext *)AH->formatData;
   char b = i; /* Avoid endian problems */
 
-  if (tarWrite(&b, 1, ctx->FH) != 1) {
+  if (tarWrite(&b, 1, ctx->FH) != 1)
+  {
     WRITE_ERROR_EXIT;
   }
 
@@ -784,7 +885,8 @@ _ReadByte(ArchiveHandle *AH)
   unsigned char c;
 
   res = tarRead(&c, 1, ctx->FH);
-  if (res != 1) {
+  if (res != 1)
+  {
     /* We already would have exited for errors on reads, must be EOF */
     fatal("could not read from input file: end of file");
   }
@@ -797,7 +899,8 @@ _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 {
   lclContext *ctx = (lclContext *)AH->formatData;
 
-  if (tarWrite(buf, len, ctx->FH) != len) {
+  if (tarWrite(buf, len, ctx->FH) != len)
+  {
     WRITE_ERROR_EXIT;
   }
 
@@ -809,7 +912,8 @@ _ReadBuf(ArchiveHandle *AH, void *buf, size_t len)
 {
   lclContext *ctx = (lclContext *)AH->formatData;
 
-  if (tarRead(buf, len, ctx->FH) != len) {
+  if (tarRead(buf, len, ctx->FH) != len)
+  {
     /* We already would have exited for errors on reads, must be EOF */
     fatal("could not read from input file: end of file");
   }
@@ -828,7 +932,8 @@ _CloseArchive(ArchiveHandle *AH)
   DumpOptions *savDopt;
   int savVerbose, i;
 
-  if (AH->mode == archModeWrite) {
+  if (AH->mode == archModeWrite)
+  {
     /*
      * Write the Header & TOC to the archive FIRST
      */
@@ -849,7 +954,14 @@ _CloseArchive(ArchiveHandle *AH)
      */
     th = tarOpen(AH, "restore.sql", 'w');
 
-    tarPrintf(AH, th,"--\n-- NOTE:\n--\n-- File paths need to be edited. Search for $$PATH$$ and\n-- replace it with the path to the directory containing\n-- the extracted data files.\n--\n");
+    tarPrintf(AH, th,
+        "--\n"
+        "-- NOTE:\n"
+        "--\n"
+        "-- File paths need to be edited. Search for $$PATH$$ and\n"
+        "-- replace it with the path to the directory containing\n"
+        "-- the extracted data files.\n"
+        "--\n");
 
     AH->CustomOutPtr = _scriptOut;
 
@@ -885,14 +997,17 @@ _CloseArchive(ArchiveHandle *AH)
     /*
      * EOF marker for tar files is two blocks of NULLs.
      */
-    for (i = 0; i < 512 * 2; i++) {
-      if (fputc(0, ctx->tarFH) == EOF) {
+    for (i = 0; i < 512 * 2; i++)
+    {
+      if (fputc(0, ctx->tarFH) == EOF)
+      {
         WRITE_ERROR_EXIT;
       }
     }
 
     /* Sync the output file if one is defined */
-    if (AH->dosync && AH->fSpec) {
+    if (AH->dosync && AH->fSpec)
+    {
       (void)fsync_fname(AH->fSpec, false);
     }
   }
@@ -947,13 +1062,17 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
   char fname[255];
   char *sfx;
 
-  if (oid == 0) {
+  if (oid == 0)
+  {
     fatal("invalid OID for large object (%u)", oid);
   }
 
-  if (AH->compression != 0) {
+  if (AH->compression != 0)
+  {
     sfx = ".gz";
-  } else {
+  }
+  else
+  {
     sfx = "";
   }
 
@@ -1008,7 +1127,8 @@ tarPrintf(ArchiveHandle *AH, TAR_MEMBER *th, const char *fmt, ...)
   size_t len = 128; /* initial assumption about buffer size */
   size_t cnt;
 
-  for (;;) {
+  for (;;)
+  {
     va_list args;
 
     /* Allocate work buffer. */
@@ -1020,7 +1140,8 @@ tarPrintf(ArchiveHandle *AH, TAR_MEMBER *th, const char *fmt, ...)
     cnt = pvsnprintf(p, len, fmt, args);
     va_end(args);
 
-    if (cnt < len) {
+    if (cnt < len)
+    {
       break; /* success */
     }
 
@@ -1042,20 +1163,24 @@ isValidTarHeader(char *header)
 
   sum = read_tar_number(&header[148], 8);
 
-  if (sum != chk) {
+  if (sum != chk)
+  {
     return false;
   }
 
   /* POSIX tar format */
-  if (memcmp(&header[257], "ustar\0", 6) == 0 && memcmp(&header[263], "00", 2) == 0) {
+  if (memcmp(&header[257], "ustar\0", 6) == 0 && memcmp(&header[263], "00", 2) == 0)
+  {
     return true;
   }
   /* GNU tar format */
-  if (memcmp(&header[257], "ustar  \0", 8) == 0) {
+  if (memcmp(&header[257], "ustar  \0", 8) == 0)
+  {
     return true;
   }
   /* not-quite-POSIX format written by pre-9.3 pg_dump */
-  if (memcmp(&header[257], "ustar00\0", 8) == 0) {
+  if (memcmp(&header[257], "ustar00\0", 8) == 0)
+  {
     return true;
   }
 
@@ -1077,34 +1202,42 @@ _tarAddFile(ArchiveHandle *AH, TAR_MEMBER *th)
   /*
    * Find file len & go back to start.
    */
-  if (fseeko(tmp, 0, SEEK_END) != 0) {
+  if (fseeko(tmp, 0, SEEK_END) != 0)
+  {
     fatal("error during file seek: %m");
   }
   th->fileLen = ftello(tmp);
-  if (th->fileLen < 0) {
+  if (th->fileLen < 0)
+  {
     fatal("could not determine seek position in archive file: %m");
   }
-  if (fseeko(tmp, 0, SEEK_SET) != 0) {
+  if (fseeko(tmp, 0, SEEK_SET) != 0)
+  {
     fatal("error during file seek: %m");
   }
 
   _tarWriteHeader(th);
 
-  while ((cnt = fread(buf, 1, sizeof(buf), tmp)) > 0) {
-    if ((res = fwrite(buf, 1, cnt, th->tarFH)) != cnt) {
+  while ((cnt = fread(buf, 1, sizeof(buf), tmp)) > 0)
+  {
+    if ((res = fwrite(buf, 1, cnt, th->tarFH)) != cnt)
+    {
       WRITE_ERROR_EXIT;
     }
     len += res;
   }
-  if (!feof(tmp)) {
+  if (!feof(tmp))
+  {
     READ_ERROR_EXIT(tmp);
   }
 
-  if (fclose(tmp) != 0) { /* This *should* delete it... */
+  if (fclose(tmp) != 0) /* This *should* delete it... */
+  {
     fatal("could not close temporary file: %m");
   }
 
-  if (len != th->fileLen) {
+  if (len != th->fileLen)
+  {
     char buf1[32], buf2[32];
 
     snprintf(buf1, sizeof(buf1), INT64_FORMAT, (int64)len);
@@ -1113,8 +1246,10 @@ _tarAddFile(ArchiveHandle *AH, TAR_MEMBER *th)
   }
 
   pad = ((len + 511) & ~511) - len;
-  for (i = 0; i < pad; i++) {
-    if (fputc('\0', th->tarFH) == EOF) {
+  for (i = 0; i < pad; i++)
+  {
+    if (fputc('\0', th->tarFH) == EOF)
+    {
       WRITE_ERROR_EXIT;
     }
   }
@@ -1136,14 +1271,16 @@ _tarPositionTo(ArchiveHandle *AH, const char *filename)
   th->AH = AH;
 
   /* Go to end of current file, if any */
-  if (ctx->tarFHpos != 0) {
+  if (ctx->tarFHpos != 0)
+  {
     char buf1[100], buf2[100];
 
     snprintf(buf1, sizeof(buf1), INT64_FORMAT, (int64)ctx->tarFHpos);
     snprintf(buf2, sizeof(buf2), INT64_FORMAT, (int64)ctx->tarNextMember);
     pg_log_debug("moving from position %s to next member at file position %s", buf1, buf2);
 
-    while (ctx->tarFHpos < ctx->tarNextMember) {
+    while (ctx->tarFHpos < ctx->tarNextMember)
+    {
       _tarReadRaw(AH, &c, 1, NULL, ctx->tarFH);
     }
   }
@@ -1158,10 +1295,14 @@ _tarPositionTo(ArchiveHandle *AH, const char *filename)
   /* We are at the start of the file, or at the next member */
 
   /* Get the header */
-  if (!_tarGetHeader(AH, th)) {
-    if (filename) {
+  if (!_tarGetHeader(AH, th))
+  {
+    if (filename)
+    {
       fatal("could not find header for file \"%s\" in tar archive", filename);
-    } else {
+    }
+    else
+    {
       /*
        * We're just scanning the archive for the next file, so return
        * null
@@ -1171,23 +1312,29 @@ _tarPositionTo(ArchiveHandle *AH, const char *filename)
     }
   }
 
-  while (filename != NULL && strcmp(th->targetFile, filename) != 0) {
+  while (filename != NULL && strcmp(th->targetFile, filename) != 0)
+  {
     pg_log_debug("skipping tar member %s", th->targetFile);
 
     id = atoi(th->targetFile);
-    if ((TocIDRequired(AH, id) & REQ_DATA) != 0) {
-      fatal("restoring data out of order is not supported in this archive format: \"%s\" is required, but comes before \"%s\" in the archive file.",th->targetFile, filename);
+    if ((TocIDRequired(AH, id) & REQ_DATA) != 0)
+    {
+      fatal("restoring data out of order is not supported in this archive format: "
+            "\"%s\" is required, but comes before \"%s\" in the archive file.",
+          th->targetFile, filename);
     }
 
     /* Header doesn't match, so read to next header */
     len = ((th->fileLen + 511) & ~511); /* Padded length */
     blks = len >> 9;                    /* # of 512 byte blocks */
 
-    for (i = 0; i < blks; i++) {
+    for (i = 0; i < blks; i++)
+    {
       _tarReadRaw(AH, &header[0], 512, NULL, ctx->tarFH);
     }
 
-    if (!_tarGetHeader(AH, th)) {
+    if (!_tarGetHeader(AH, th))
+    {
       fatal("could not find header for file \"%s\" in tar archive", filename);
     }
   }
@@ -1210,17 +1357,20 @@ _tarGetHeader(ArchiveHandle *AH, TAR_MEMBER *th)
   pgoff_t hPos;
   bool gotBlock = false;
 
-  while (!gotBlock) {
+  while (!gotBlock)
+  {
     /* Save the pos for reporting purposes */
     hPos = ctx->tarFHpos;
 
     /* Read a 512 byte block, return EOF, exit if short */
     len = _tarReadRaw(AH, h, 512, NULL, ctx->tarFH);
-    if (len == 0) { /* EOF */
+    if (len == 0) /* EOF */
+    {
       return 0;
     }
 
-    if (len != 512) {
+    if (len != 512)
+    {
       fatal(ngettext("incomplete tar header found (%lu byte)", "incomplete tar header found (%lu bytes)", len), (unsigned long)len);
     }
 
@@ -1232,13 +1382,18 @@ _tarGetHeader(ArchiveHandle *AH, TAR_MEMBER *th)
      * If the checksum failed, see if it is a null block. If so, silently
      * continue to the next block.
      */
-    if (chk == sum) {
+    if (chk == sum)
+    {
       gotBlock = true;
-    } else {
+    }
+    else
+    {
       int i;
 
-      for (i = 0; i < 512; i++) {
-        if (h[i] != 0) {
+      for (i = 0; i < 512; i++)
+      {
+        if (h[i] != 0)
+        {
           gotBlock = true;
           break;
         }
@@ -1260,11 +1415,12 @@ _tarGetHeader(ArchiveHandle *AH, TAR_MEMBER *th)
     pg_log_debug("TOC Entry %s at %s (length %s, checksum %d)", tag, posbuf, lenbuf, sum);
   }
 
-  if (chk != sum) {
+  if (chk != sum)
+  {
     char posbuf[32];
 
     snprintf(posbuf, sizeof(posbuf), UINT64_FORMAT, (uint64)ftello(ctx->tarFH));
-    fatal("corrupt tar header found in %s (expected %d, computed %d) file position %s",tag, sum, chk, posbuf);
+    fatal("corrupt tar header found in %s (expected %d, computed %d) file position %s", tag, sum, chk, posbuf);
   }
 
   th->targetFile = pg_strdup(tag);
@@ -1281,7 +1437,8 @@ _tarWriteHeader(TAR_MEMBER *th)
   tarCreateHeader(h, th->targetFile, NULL, th->fileLen, 0600, 04000, 02000, time(NULL));
 
   /* Now write the completed header. */
-  if (fwrite(h, 1, 512, th->tarFH) != 512) {
+  if (fwrite(h, 1, 512, th->tarFH) != 512)
+  {
     WRITE_ERROR_EXIT;
   }
 }

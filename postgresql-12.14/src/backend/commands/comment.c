@@ -55,8 +55,8 @@ CommentObject(CommentStmt *stmt)
 
     if (!OidIsValid(get_database_oid(database, true)))
     {
-
-
+      ereport(WARNING, (errcode(ERRCODE_UNDEFINED_DATABASE), errmsg("database \"%s\" does not exist", database)));
+      return address;
     }
   }
 
@@ -74,7 +74,7 @@ CommentObject(CommentStmt *stmt)
   /* Perform other integrity checks as needed. */
   switch (stmt->objtype)
   {
-  case OBJECT_COLUMN:;
+  case OBJECT_COLUMN:
 
     /*
      * Allow comments only on columns of tables, views, materialized
@@ -87,10 +87,10 @@ CommentObject(CommentStmt *stmt)
      */
     if (relation->rd_rel->relkind != RELKIND_RELATION && relation->rd_rel->relkind != RELKIND_VIEW && relation->rd_rel->relkind != RELKIND_MATVIEW && relation->rd_rel->relkind != RELKIND_COMPOSITE_TYPE && relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE && relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table, view, materialized view, composite type, or foreign table", RelationGetRelationName(relation))));
     }
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -147,7 +147,7 @@ CreateComments(Oid oid, Oid classoid, int32 subid, const char *comment)
   /* Reduce empty-string to NULL case */
   if (comment != NULL && strlen(comment) == 0)
   {
-
+    comment = NULL;
   }
 
   /* Prepare to form or update a tuple, if necessary */
@@ -236,7 +236,7 @@ CreateSharedComments(Oid oid, Oid classoid, const char *comment)
   /* Reduce empty-string to NULL case */
   if (comment != NULL && strlen(comment) == 0)
   {
-
+    comment = NULL;
   }
 
   /* Prepare to form or update a tuple, if necessary */
@@ -265,17 +265,17 @@ CreateSharedComments(Oid oid, Oid classoid, const char *comment)
   {
     /* Found the old tuple, so delete or update it */
 
+    if (comment == NULL)
+    {
+      CatalogTupleDelete(shdescription, &oldtuple->t_self);
+    }
+    else
+    {
+      newtuple = heap_modify_tuple(oldtuple, RelationGetDescr(shdescription), values, nulls, replaces);
+      CatalogTupleUpdate(shdescription, &oldtuple->t_self, newtuple);
+    }
 
-
-
-
-
-
-
-
-
-
-
+    break; /* Assume there can be only one match */
   }
 
   systable_endscan(sd);
@@ -366,7 +366,7 @@ DeleteSharedComments(Oid oid, Oid classoid)
 
   while ((oldtuple = systable_getnext(sd)) != NULL)
   {
-
+    CatalogTupleDelete(shdescription, &oldtuple->t_self);
   }
 
   /* Done */

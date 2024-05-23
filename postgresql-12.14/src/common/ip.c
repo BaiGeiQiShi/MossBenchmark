@@ -128,14 +128,14 @@ pg_getnameinfo_all(const struct sockaddr_storage *addr, int salen, char *node, i
 
   if (rc != 0)
   {
-
-
-
-
-
-
-
-
+    if (node)
+    {
+      strlcpy(node, "???", nodelen);
+    }
+    if (service)
+    {
+      strlcpy(service, "???", servicelen);
+    }
   }
 
   return rc;
@@ -164,13 +164,13 @@ getaddrinfo_unix(const char *path, const struct addrinfo *hintsp, struct addrinf
 
   if (strlen(path) >= sizeof(unp->sun_path))
   {
-
+    return EAI_FAIL;
   }
 
   if (hintsp == NULL)
   {
-
-
+    hints.ai_family = AF_UNIX;
+    hints.ai_socktype = SOCK_STREAM;
   }
   else
   {
@@ -179,26 +179,26 @@ getaddrinfo_unix(const char *path, const struct addrinfo *hintsp, struct addrinf
 
   if (hints.ai_socktype == 0)
   {
-
+    hints.ai_socktype = SOCK_STREAM;
   }
 
   if (hints.ai_family != AF_UNIX)
   {
     /* shouldn't have been called */
-
+    return EAI_FAIL;
   }
 
   aip = calloc(1, sizeof(struct addrinfo));
   if (aip == NULL)
   {
-
+    return EAI_MEMORY;
   }
 
   unp = calloc(1, sizeof(struct sockaddr_un));
   if (unp == NULL)
   {
-
-
+    free(aip);
+    return EAI_MEMORY;
   }
 
   aip->ai_family = AF_UNIX;
@@ -232,7 +232,7 @@ getnameinfo_unix(const struct sockaddr_un *sa, int salen, char *node, int nodele
   /* Invalid arguments. */
   if (sa == NULL || sa->sun_family != AF_UNIX || (node == NULL && service == NULL))
   {
-
+    return EAI_FAIL;
   }
 
   if (node)
@@ -240,7 +240,7 @@ getnameinfo_unix(const struct sockaddr_un *sa, int salen, char *node, int nodele
     ret = snprintf(node, nodelen, "%s", "[local]");
     if (ret < 0 || ret >= nodelen)
     {
-
+      return EAI_MEMORY;
     }
   }
 
@@ -249,7 +249,7 @@ getnameinfo_unix(const struct sockaddr_un *sa, int salen, char *node, int nodele
     ret = snprintf(service, servicelen, "%s", sa->sun_path);
     if (ret < 0 || ret >= servicelen)
     {
-
+      return EAI_MEMORY;
     }
   }
 

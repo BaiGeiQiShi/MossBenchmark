@@ -61,7 +61,8 @@ char *optarg;   /* argument associated with option */
  *	Parse argc/argv argument vector.
  *
  * This implementation does not use optreset.  Instead, we guarantee that
- * it can be restarted on a new argv array after a previous call returned -1,* if the caller resets optind to 1 before the first call of the new series.
+ * it can be restarted on a new argv array after a previous call returned -1,
+ * if the caller resets optind to 1 before the first call of the new series.
  * (Internally, this means we must be sure to reset "place" to EMSG before
  * returning -1.)
  */
@@ -71,51 +72,69 @@ getopt(int nargc, char *const *nargv, const char *ostr)
   static char *place = EMSG; /* option letter processing */
   char *oli;                 /* option letter list index */
 
-  if (!*place) { /* update scanning pointer */
-    if (optind >= nargc || *(place = nargv[optind]) != '-') {
+  if (!*place)
+  { /* update scanning pointer */
+    if (optind >= nargc || *(place = nargv[optind]) != '-')
+    {
       place = EMSG;
       return -1;
     }
-    if (place[1] && *++place == '-' && place[1] == '\0') { /* found "--" */
+    if (place[1] && *++place == '-' && place[1] == '\0')
+    { /* found "--" */
       ++optind;
       place = EMSG;
       return -1;
     }
   } /* option letter okay? */
-  if ((optopt = (int)*place++) == (int)':' || !(oli = strchr(ostr, optopt))) {
+  if ((optopt = (int)*place++) == (int)':' || !(oli = strchr(ostr, optopt)))
+  {
     /*
      * if the user didn't specify '-' as an option, assume it means -1.
      */
-    if (optopt == (int)'-') {
+    if (optopt == (int)'-')
+    {
       place = EMSG;
       return -1;
     }
-    if (!*place) {
+    if (!*place)
+    {
       ++optind;
     }
-    if (opterr && *ostr != ':') {
+    if (opterr && *ostr != ':')
+    {
       (void)fprintf(stderr, "illegal option -- %c\n", optopt);
     }
     return BADCH;
   }
-  if (*++oli != ':') { /* don't need argument */
+  if (*++oli != ':')
+  { /* don't need argument */
     optarg = NULL;
-    if (!*place) {
+    if (!*place)
+    {
       ++optind;
     }
-  } else {        /* need an argument */
-    if (*place) { /* no white space */
+  }
+  else
+  {             /* need an argument */
+    if (*place) /* no white space */
+    {
       optarg = place;
-    } else if (nargc <= ++optind) { /* no arg */
+    }
+    else if (nargc <= ++optind)
+    { /* no arg */
       place = EMSG;
-      if (*ostr == ':') {
+      if (*ostr == ':')
+      {
         return BADARG;
       }
-      if (opterr) {
+      if (opterr)
+      {
         (void)fprintf(stderr, "option requires an argument -- %c\n", optopt);
       }
       return BADCH;
-    } else {
+    }
+    else
+    {
       /* white space */
       optarg = nargv[optind];
     }

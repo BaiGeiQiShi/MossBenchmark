@@ -115,7 +115,7 @@ hashbuild(Relation heap, Relation index, IndexInfo *indexInfo)
    */
   if (RelationGetNumberOfBlocks(index) != 0)
   {
-
+    elog(ERROR, "index \"%s\" already contains data", RelationGetRelationName(index));
   }
 
   /* Estimate the number of rows currently present in the table */
@@ -210,7 +210,7 @@ hashbuildCallback(Relation index, HeapTuple htup, Datum *values, bool *isnull, b
   /* convert data to a hash key; on failure, do not insert anything */
   if (!_hash_convert_tuple(index, values, isnull, index_values, index_isnull))
   {
-
+    return;
   }
 
   /* Either spool the tuple for sorting, or just put it into the index */
@@ -246,7 +246,7 @@ hashinsert(Relation rel, Datum *values, bool *isnull, ItemPointer ht_ctid, Relat
   /* convert data to a hash key; on failure, do not insert anything */
   if (!_hash_convert_tuple(rel, values, isnull, index_values, index_isnull))
   {
-
+    return false;
   }
 
   /* form an index tuple and point it at the heap tuple */
@@ -391,7 +391,7 @@ hashrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys, ScanKey orderbys,
     /* Before leaving current page, deal with any killed items */
     if (so->numKilled > 0)
     {
-
+      _hash_kill_items(scan);
     }
   }
 
@@ -424,7 +424,7 @@ hashendscan(IndexScanDesc scan)
     /* Before leaving current page, deal with any killed items */
     if (so->numKilled > 0)
     {
-
+      _hash_kill_items(scan);
     }
   }
 
@@ -481,7 +481,7 @@ hashbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats, IndexBulkDel
   cur_bucket = 0;
   cur_maxbucket = orig_maxbucket;
 
-loop_top:;
+loop_top:
   while (cur_bucket <= cur_maxbucket)
   {
     BlockNumber bucket_blkno;
@@ -515,7 +515,7 @@ loop_top:;
      */
     if (!H_BUCKET_BEING_SPLIT(bucket_opaque) && H_NEEDS_SPLIT_CLEANUP(bucket_opaque))
     {
-
+      split_cleanup = true;
 
       /*
        * This bucket might have been split since we last held a lock on
@@ -526,12 +526,12 @@ loop_top:;
        * (and thus can't be further split), check whether we need to
        * update our cached metapage data.
        */
-
-
-
-
-
-
+      Assert(bucket_opaque->hasho_prevblkno != InvalidBlockNumber);
+      if (bucket_opaque->hasho_prevblkno > cachedmetap->hashm_maxbucket)
+      {
+        cachedmetap = _hash_getcachedmetap(rel, &metabuf, true);
+        Assert(cachedmetap != NULL);
+      }
     }
 
     bucket_buf = buf;
@@ -572,7 +572,7 @@ loop_top:;
      * No one has split or inserted anything since start of scan, so
      * believe our count as gospel.
      */
-
+    metap->hashm_ntuples = num_index_tuples;
   }
   else
   {
@@ -588,7 +588,7 @@ loop_top:;
     }
     else
     {
-
+      metap->hashm_ntuples = 0;
     }
     num_index_tuples = metap->hashm_ntuples;
   }
@@ -796,8 +796,8 @@ hashbucketcleanup(Relation rel, Bucket cur_bucket, Buffer bucket_buf, BlockNumbe
        */
       if (tuples_removed && *tuples_removed > 0 && H_HAS_DEAD_TUPLES(opaque))
       {
-
-
+        opaque->hasho_flag &= ~LH_PAGE_HAS_DEAD_TUPLES;
+        clear_dead_marking = true;
       }
 
       MarkBufferDirty(buf);

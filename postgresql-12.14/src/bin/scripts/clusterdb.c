@@ -50,8 +50,10 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "clusterdb", help);
 
-  while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:at:v", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:at:v", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -88,7 +90,7 @@ main(int argc, char *argv[])
     case 2:
       maintenance_db = pg_strdup(optarg);
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
@@ -98,12 +100,14 @@ main(int argc, char *argv[])
    * Non-option argument specifies database name as long as it wasn't
    * already specified with -d / --dbname
    */
-  if (optind < argc && dbname == NULL) {
+  if (optind < argc && dbname == NULL)
+  {
     dbname = argv[optind];
     optind++;
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -118,13 +122,16 @@ main(int argc, char *argv[])
 
   setup_cancel_handler();
 
-  if (alldb) {
-    if (dbname) {
+  if (alldb)
+  {
+    if (dbname)
+    {
       pg_log_error("cannot cluster all databases and a specific one at the same time");
       exit(1);
     }
 
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       pg_log_error("cannot cluster specific table(s) in all databases");
       exit(1);
     }
@@ -132,26 +139,38 @@ main(int argc, char *argv[])
     cparams.dbname = maintenance_db;
 
     cluster_all_databases(&cparams, progname, verbose, echo, quiet);
-  } else {
-    if (dbname == NULL) {
-      if (getenv("PGDATABASE")) {
+  }
+  else
+  {
+    if (dbname == NULL)
+    {
+      if (getenv("PGDATABASE"))
+      {
         dbname = getenv("PGDATABASE");
-      } else if (getenv("PGUSER")) {
+      }
+      else if (getenv("PGUSER"))
+      {
         dbname = getenv("PGUSER");
-      } else {
+      }
+      else
+      {
         dbname = get_user_name_or_exit(progname);
       }
     }
 
     cparams.dbname = dbname;
 
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       SimpleStringListCell *cell;
 
-      for (cell = tables.head; cell; cell = cell->next) {
+      for (cell = tables.head; cell; cell = cell->next)
+      {
         cluster_one_database(&cparams, cell->val, progname, verbose, echo);
       }
-    } else {
+    }
+    else
+    {
       cluster_one_database(&cparams, NULL, progname, verbose, echo);
     }
   }
@@ -171,19 +190,25 @@ cluster_one_database(const ConnParams *cparams, const char *table, const char *p
   initPQExpBuffer(&sql);
 
   appendPQExpBufferStr(&sql, "CLUSTER");
-  if (verbose) {
+  if (verbose)
+  {
     appendPQExpBufferStr(&sql, " VERBOSE");
   }
-  if (table) {
+  if (table)
+  {
     appendPQExpBufferChar(&sql, ' ');
     appendQualifiedRelation(&sql, table, conn, progname, echo);
   }
   appendPQExpBufferChar(&sql, ';');
 
-  if (!executeMaintenanceCommand(conn, sql.data, echo)) {
-    if (table) {
+  if (!executeMaintenanceCommand(conn, sql.data, echo))
+  {
+    if (table)
+    {
       pg_log_error("clustering of table \"%s\" in database \"%s\" failed: %s", table, PQdb(conn), PQerrorMessage(conn));
-    } else {
+    }
+    else
+    {
       pg_log_error("clustering of database \"%s\" failed: %s", PQdb(conn), PQerrorMessage(conn));
     }
     PQfinish(conn);
@@ -204,10 +229,12 @@ cluster_all_databases(ConnParams *cparams, const char *progname, bool verbose, b
   result = executeQuery(conn, "SELECT datname FROM pg_database WHERE datallowconn ORDER BY 1;", progname, echo);
   PQfinish(conn);
 
-  for (i = 0; i < PQntuples(result); i++) {
+  for (i = 0; i < PQntuples(result); i++)
+  {
     char *dbname = PQgetvalue(result, i, 0);
 
-    if (!quiet) {
+    if (!quiet)
+    {
       printf(_("%s: clustering database \"%s\"\n"), progname, dbname);
       fflush(stdout);
     }

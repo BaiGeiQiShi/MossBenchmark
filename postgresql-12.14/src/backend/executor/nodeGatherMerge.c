@@ -284,8 +284,8 @@ ExecGatherMerge(PlanState *pstate)
   /*
    * Form the result tuple using ExecProject(), and return it.
    */
-
-
+  econtext->ecxt_outertuple = slot;
+  return ExecProject(node->ps.ps_ProjInfo);
 }
 
 /* ----------------------------------------------------------------
@@ -302,15 +302,14 @@ ExecEndGatherMerge(GatherMergeState *node)
   ExecFreeExprContext(&node->ps);
   if (node->ps.ps_ResultTupleSlot)
   {
-
+    ExecClearTuple(node->ps.ps_ResultTupleSlot);
   }
 }
 
 /* ----------------------------------------------------------------
  *		ExecShutdownGatherMerge
  *
- *		Destroy the setup for parallel workers including parallel
- *context.
+ *		Destroy the setup for parallel workers including parallel context.
  * ----------------------------------------------------------------
  */
 void
@@ -394,7 +393,7 @@ ExecReScanGatherMerge(GatherMergeState *node)
    */
   if (outerPlan->chgParam == NULL)
   {
-
+    ExecReScan(outerPlan);
   }
 }
 
@@ -487,7 +486,7 @@ gather_merge_init(GatherMergeState *gm_state)
    * this time using wait mode.  Add all live readers (those producing at
    * least one tuple) to the heap.
    */
-reread:;
+reread:
   for (i = 0; i <= nreaders; i++)
   {
     CHECK_FOR_INTERRUPTS();

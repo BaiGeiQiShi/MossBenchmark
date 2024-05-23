@@ -153,29 +153,29 @@ makeBufFile(File firstfile)
 static void
 extendBufFile(BufFile *file)
 {
+  File pfile;
+  ResourceOwner oldowner;
 
+  /* Be sure to associate the file with the BufFile's resource owner */
+  oldowner = CurrentResourceOwner;
+  CurrentResourceOwner = file->resowner;
 
+  if (file->fileset == NULL)
+  {
+    pfile = OpenTemporaryFile(file->isInterXact);
+  }
+  else
+  {
+    pfile = MakeNewSharedSegment(file, file->numFiles);
+  }
 
+  Assert(pfile >= 0);
 
+  CurrentResourceOwner = oldowner;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  file->files = (File *)repalloc(file->files, (file->numFiles + 1) * sizeof(File));
+  file->files[file->numFiles] = pfile;
+  file->numFiles++;
 }
 
 /*
@@ -306,8 +306,8 @@ BufFileOpenShared(SharedFileSet *fileset, const char *name)
     /* See if we need to expand our file segment array. */
     if (nfiles + 1 > capacity)
     {
-
-
+      capacity *= 2;
+      files = repalloc(files, sizeof(File) * capacity);
     }
     /* Try to load a segment. */
     SharedSegmentName(segment_name, name, nfiles);
@@ -327,7 +327,7 @@ BufFileOpenShared(SharedFileSet *fileset, const char *name)
    */
   if (nfiles == 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not open temporary file \"%s\" from BufFile \"%s\": %m", segment_name, name)));
   }
 
   file = makeBufFileCommon(nfiles);
@@ -353,32 +353,32 @@ BufFileOpenShared(SharedFileSet *fileset, const char *name)
 void
 BufFileDeleteShared(SharedFileSet *fileset, const char *name)
 {
+  char segment_name[MAXPGPATH];
+  int segment = 0;
+  bool found = false;
 
+  /*
+   * We don't know how many segments the file has.  We'll keep deleting
+   * until we run out.  If we don't manage to find even an initial segment,
+   * raise an error.
+   */
+  for (;;)
+  {
+    SharedSegmentName(segment_name, name, segment);
+    if (!SharedFileSetDelete(fileset, segment_name, true))
+    {
+      break;
+    }
+    found = true;
+    ++segment;
 
+    CHECK_FOR_INTERRUPTS();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (!found)
+  {
+    elog(ERROR, "could not delete unknown shared BufFile \"%s\"", name);
+  }
 }
 
 /*
@@ -436,8 +436,8 @@ BufFileLoadBuffer(BufFile *file)
    */
   if (file->curOffset >= MAX_PHYSICAL_FILESIZE && file->curFile + 1 < file->numFiles)
   {
-
-
+    file->curFile++;
+    file->curOffset = 0L;
   }
 
   /*
@@ -447,8 +447,8 @@ BufFileLoadBuffer(BufFile *file)
   file->nbytes = FileRead(thisfile, file->buffer.data, sizeof(file->buffer), file->curOffset, WAIT_EVENT_BUFFILE_READ);
   if (file->nbytes < 0)
   {
-
-
+    file->nbytes = 0;
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not read file \"%s\": %m", FilePathName(thisfile))));
   }
 
   /* we choose not to advance curOffset here */
@@ -486,12 +486,12 @@ BufFileDumpBuffer(BufFile *file)
      */
     if (file->curOffset >= MAX_PHYSICAL_FILESIZE)
     {
-
-
-
-
-
-
+      while (file->curFile + 1 >= file->numFiles)
+      {
+        extendBufFile(file);
+      }
+      file->curFile++;
+      file->curOffset = 0L;
     }
 
     /*
@@ -502,14 +502,14 @@ BufFileDumpBuffer(BufFile *file)
 
     if ((off_t)bytestowrite > availbytes)
     {
-
+      bytestowrite = (int)availbytes;
     }
 
     thisfile = file->files[file->curFile];
     bytestowrite = FileWrite(thisfile, file->buffer.data + wpos, bytestowrite, file->curOffset, WAIT_EVENT_BUFFILE_WRITE);
     if (bytestowrite <= 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not write to file \"%s\": %m", FilePathName(thisfile))));
     }
     file->curOffset += bytestowrite;
     wpos += bytestowrite;
@@ -527,9 +527,9 @@ BufFileDumpBuffer(BufFile *file)
   file->curOffset -= (file->nbytes - file->pos);
   if (file->curOffset < 0) /* handle possible segment crossing */
   {
-
-
-
+    file->curFile--;
+    Assert(file->curFile >= 0);
+    file->curOffset += MAX_PHYSICAL_FILESIZE;
   }
 
   /*
@@ -612,9 +612,9 @@ BufFileWrite(BufFile *file, void *ptr, size_t size)
       else
       {
         /* Hmm, went directly from reading to writing? */
-
-
-
+        file->curOffset += file->pos;
+        file->pos = 0;
+        file->nbytes = 0;
       }
     }
 
@@ -676,15 +676,15 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
 
   switch (whence)
   {
-  case SEEK_SET:;
+  case SEEK_SET:
     if (fileno < 0)
     {
-
+      return EOF;
     }
     newFile = fileno;
     newOffset = offset;
     break;
-  case SEEK_CUR:;
+  case SEEK_CUR:
 
     /*
      * Relative seek considers only the signed offset, ignoring
@@ -699,17 +699,17 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
     /* could be implemented, not needed currently */
     break;
 #endif
-  default:;;
-
-
+  default:
+    elog(ERROR, "invalid whence: %d", whence);
+    return EOF;
   }
   while (newOffset < 0)
   {
-
-
-
-
-
+    if (--newFile < 0)
+    {
+      return EOF;
+    }
+    newOffset += MAX_PHYSICAL_FILESIZE;
   }
   if (newFile == file->curFile && newOffset >= file->curOffset && newOffset <= file->curOffset + file->nbytes)
   {
@@ -734,20 +734,20 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
   /* convert seek to "start of next seg" to "end of last seg" */
   if (newFile == file->numFiles && newOffset == 0)
   {
-
-
+    newFile--;
+    newOffset = MAX_PHYSICAL_FILESIZE;
   }
   while (newOffset > MAX_PHYSICAL_FILESIZE)
   {
-
-
-
-
-
+    if (++newFile >= file->numFiles)
+    {
+      return EOF;
+    }
+    newOffset -= MAX_PHYSICAL_FILESIZE;
   }
   if (newFile >= file->numFiles)
   {
-
+    return EOF;
   }
   /* Seek is OK! */
   file->curFile = newFile;
@@ -816,7 +816,7 @@ BufFileSize(BufFile *file)
   lastFileSize = FileSize(file->files[file->numFiles - 1]);
   if (lastFileSize < 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not determine size of temporary file \"%s\" from BufFile \"%s\": %m", FilePathName(file->files[file->numFiles - 1]), file->name)));
   }
 
   return ((file->numFiles - 1) * (int64)MAX_PHYSICAL_FILESIZE) + lastFileSize;
@@ -855,7 +855,7 @@ BufFileAppend(BufFile *target, BufFile *source)
 
   if (target->resowner != source->resowner)
   {
-
+    elog(ERROR, "could not append BufFile with non-matching resource owner");
   }
 
   target->files = (File *)repalloc(target->files, sizeof(File) * newNumFiles);

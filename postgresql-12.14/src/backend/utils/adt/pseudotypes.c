@@ -35,9 +35,9 @@
 Datum
 cstring_in(PG_FUNCTION_ARGS)
 {
+  char *str = PG_GETARG_CSTRING(0);
 
-
-
+  PG_RETURN_CSTRING(pstrdup(str));
 }
 
 /*
@@ -60,12 +60,12 @@ cstring_out(PG_FUNCTION_ARGS)
 Datum
 cstring_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  char *str;
+  int nbytes;
 
-
-
-
-
-
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  PG_RETURN_CSTRING(str);
 }
 
 /*
@@ -74,12 +74,12 @@ cstring_recv(PG_FUNCTION_ARGS)
 Datum
 cstring_send(PG_FUNCTION_ARGS)
 {
+  char *str = PG_GETARG_CSTRING(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendtext(&buf, str, strlen(str));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -88,9 +88,9 @@ cstring_send(PG_FUNCTION_ARGS)
 Datum
 anyarray_in(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "anyarray")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -114,21 +114,20 @@ anyarray_out(PG_FUNCTION_ARGS)
 Datum
 anyarray_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "anyarray")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
- * anyarray_send		- binary output routine for pseudo-type
- * ANYARRAY.
+ * anyarray_send		- binary output routine for pseudo-type ANYARRAY.
  *
  * We may as well allow this, since array_send will in fact work.
  */
 Datum
 anyarray_send(PG_FUNCTION_ARGS)
 {
-
+  return array_send(fcinfo);
 }
 
 /*
@@ -137,9 +136,9 @@ anyarray_send(PG_FUNCTION_ARGS)
 Datum
 anyenum_in(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "anyenum")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -150,7 +149,7 @@ anyenum_in(PG_FUNCTION_ARGS)
 Datum
 anyenum_out(PG_FUNCTION_ARGS)
 {
-
+  return enum_out(fcinfo);
 }
 
 /*
@@ -159,9 +158,9 @@ anyenum_out(PG_FUNCTION_ARGS)
 Datum
 anyrange_in(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "anyrange")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -208,7 +207,7 @@ void_out(PG_FUNCTION_ARGS)
 Datum
 void_recv(PG_FUNCTION_ARGS)
 {
-
+  PG_RETURN_VOID();
 }
 
 /*
@@ -220,23 +219,22 @@ void_recv(PG_FUNCTION_ARGS)
 Datum
 void_send(PG_FUNCTION_ARGS)
 {
+  StringInfoData buf;
 
-
-
-
-
+  /* send an empty string */
+  pq_begintypsend(&buf);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
- * shell_in		- input routine for "shell" types (those not yet filled
- * in).
+ * shell_in		- input routine for "shell" types (those not yet filled in).
  */
 Datum
 shell_in(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of a shell type")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -245,9 +243,9 @@ shell_in(PG_FUNCTION_ARGS)
 Datum
 shell_out(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot display a value of a shell type")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -260,13 +258,13 @@ shell_out(PG_FUNCTION_ARGS)
 Datum
 pg_node_tree_in(PG_FUNCTION_ARGS)
 {
+  /*
+   * We disallow input of pg_node_tree values because the SQL functions that
+   * operate on the type are not secure against malformed input.
+   */
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_node_tree")));
 
-
-
-
-
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -286,9 +284,9 @@ pg_node_tree_out(PG_FUNCTION_ARGS)
 Datum
 pg_node_tree_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_node_tree")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -297,7 +295,7 @@ pg_node_tree_recv(PG_FUNCTION_ARGS)
 Datum
 pg_node_tree_send(PG_FUNCTION_ARGS)
 {
-
+  return textsend(fcinfo);
 }
 
 /*
@@ -309,12 +307,12 @@ pg_node_tree_send(PG_FUNCTION_ARGS)
 Datum
 pg_ddl_command_in(PG_FUNCTION_ARGS)
 {
+  /*
+   * Disallow input of pg_ddl_command value.
+   */
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_ddl_command")));
 
-
-
-
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -325,9 +323,9 @@ pg_ddl_command_in(PG_FUNCTION_ARGS)
 Datum
 pg_ddl_command_out(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot output a value of type %s", "pg_ddl_command")));
 
-
-
+  PG_RETURN_VOID();
 }
 
 /*
@@ -336,9 +334,9 @@ pg_ddl_command_out(PG_FUNCTION_ARGS)
 Datum
 pg_ddl_command_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_ddl_command")));
 
-
-
+  PG_RETURN_VOID();
 }
 
 /*
@@ -347,9 +345,9 @@ pg_ddl_command_recv(PG_FUNCTION_ARGS)
 Datum
 pg_ddl_command_send(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot output a value of type %s", "pg_ddl_command")));
 
-
-
+  PG_RETURN_VOID();
 }
 
 /*

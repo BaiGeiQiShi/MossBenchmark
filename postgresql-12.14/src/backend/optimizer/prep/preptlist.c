@@ -91,7 +91,7 @@ preprocess_targetlist(PlannerInfo *root)
      */
     if (target_rte->rtekind != RTE_RELATION)
     {
-
+      elog(ERROR, "result relation must be a regular relation");
     }
 
     target_relation = table_open(target_rte->relid, NoLock);
@@ -140,7 +140,7 @@ preprocess_targetlist(PlannerInfo *root)
     /* child rels use the same junk attrs as their parents */
     if (rc->rti != rc->prti)
     {
-
+      continue;
     }
 
     if (rc->allMarkTypes & ~(1 << ROW_MARK_COPY))
@@ -163,10 +163,10 @@ preprocess_targetlist(PlannerInfo *root)
     /* If parent of inheritance tree, always fetch the tableoid too. */
     if (rc->isParent)
     {
-
-
-
-
+      var = makeVar(rc->rti, TableOidAttributeNumber, OIDOID, -1, InvalidOid, 0);
+      snprintf(resname, sizeof(resname), "tableoid%u", rc->rowmarkId);
+      tle = makeTargetEntry((Expr *)var, list_length(tlist) + 1, pstrdup(resname), true);
+      tlist = lappend(tlist, tle);
     }
   }
 
@@ -299,7 +299,7 @@ expand_targetlist(List *tlist, int command_type, Index result_relation, Relation
 
       switch (command_type)
       {
-      case CMD_INSERT:;
+      case CMD_INSERT:
         if (!att_tup->attisdropped)
         {
           new_expr = (Node *)makeConst(atttype, -1, attcollation, att_tup->attlen, (Datum)0, true, /* isnull */
@@ -313,7 +313,7 @@ expand_targetlist(List *tlist, int command_type, Index result_relation, Relation
               true /* byval */);
         }
         break;
-      case CMD_UPDATE:;
+      case CMD_UPDATE:
         if (!att_tup->attisdropped)
         {
           new_expr = (Node *)makeVar(result_relation, attrno, atttype, atttypmod, attcollation, 0);
@@ -325,10 +325,10 @@ expand_targetlist(List *tlist, int command_type, Index result_relation, Relation
               true /* byval */);
         }
         break;
-      default:;;
-
-
-
+      default:
+        elog(ERROR, "unrecognized command_type: %d", (int)command_type);
+        new_expr = NULL; /* keep compiler quiet */
+        break;
       }
 
       new_tle = makeTargetEntry((Expr *)new_expr, attrno, pstrdup(NameStr(att_tup->attname)), false);
@@ -351,7 +351,7 @@ expand_targetlist(List *tlist, int command_type, Index result_relation, Relation
 
     if (!old_tle->resjunk)
     {
-
+      elog(ERROR, "targetlist is not sorted correctly");
     }
     /* Get the resno right, but don't copy unnecessarily */
     if (old_tle->resno != attrno)

@@ -59,7 +59,7 @@ jsonb_exists_any(PG_FUNCTION_ARGS)
 
     if (key_nulls[i])
     {
-
+      continue;
     }
 
     strVal.type = jbvString;
@@ -93,7 +93,7 @@ jsonb_exists_all(PG_FUNCTION_ARGS)
 
     if (key_nulls[i])
     {
-
+      continue;
     }
 
     strVal.type = jbvString;
@@ -139,7 +139,7 @@ jsonb_contained(PG_FUNCTION_ARGS)
 
   if (JB_ROOT_IS_OBJECT(val) != JB_ROOT_IS_OBJECT(tmpl))
   {
-
+    PG_RETURN_BOOL(false);
   }
 
   it1 = JsonbIteratorInit(&val->root);
@@ -168,15 +168,15 @@ jsonb_ne(PG_FUNCTION_ARGS)
 Datum
 jsonb_lt(PG_FUNCTION_ARGS)
 {
+  Jsonb *jba = PG_GETARG_JSONB_P(0);
+  Jsonb *jbb = PG_GETARG_JSONB_P(1);
+  bool res;
 
+  res = (compareJsonbContainers(&jba->root, &jbb->root) < 0);
 
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(jba, 0);
+  PG_FREE_IF_COPY(jbb, 1);
+  PG_RETURN_BOOL(res);
 }
 
 Datum
@@ -196,29 +196,29 @@ jsonb_gt(PG_FUNCTION_ARGS)
 Datum
 jsonb_le(PG_FUNCTION_ARGS)
 {
+  Jsonb *jba = PG_GETARG_JSONB_P(0);
+  Jsonb *jbb = PG_GETARG_JSONB_P(1);
+  bool res;
 
+  res = (compareJsonbContainers(&jba->root, &jbb->root) <= 0);
 
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(jba, 0);
+  PG_FREE_IF_COPY(jbb, 1);
+  PG_RETURN_BOOL(res);
 }
 
 Datum
 jsonb_ge(PG_FUNCTION_ARGS)
 {
+  Jsonb *jba = PG_GETARG_JSONB_P(0);
+  Jsonb *jbb = PG_GETARG_JSONB_P(1);
+  bool res;
 
+  res = (compareJsonbContainers(&jba->root, &jbb->root) >= 0);
 
-
-
-
-
-
-
-
+  PG_FREE_IF_COPY(jba, 0);
+  PG_FREE_IF_COPY(jbb, 1);
+  PG_RETURN_BOOL(res);
 }
 
 Datum
@@ -273,22 +273,22 @@ jsonb_hash(PG_FUNCTION_ARGS)
     switch (r)
     {
       /* Rotation is left to JsonbHashScalarValue() */
-    case WJB_BEGIN_ARRAY:;
+    case WJB_BEGIN_ARRAY:
       hash ^= JB_FARRAY;
       break;
-    case WJB_BEGIN_OBJECT:;
+    case WJB_BEGIN_OBJECT:
       hash ^= JB_FOBJECT;
       break;
-    case WJB_KEY:;
-    case WJB_VALUE:;
-    case WJB_ELEM:;
+    case WJB_KEY:
+    case WJB_VALUE:
+    case WJB_ELEM:
       JsonbHashScalarValue(&v, &hash);
       break;
-    case WJB_END_ARRAY:;
-    case WJB_END_OBJECT:;
+    case WJB_END_ARRAY:
+    case WJB_END_OBJECT:
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "invalid JsonbIteratorNext rc: %d", (int)r);
     }
   }
 
@@ -308,7 +308,7 @@ jsonb_hash_extended(PG_FUNCTION_ARGS)
 
   if (JB_ROOT_COUNT(jb) == 0)
   {
-
+    PG_RETURN_UINT64(seed);
   }
 
   it = JsonbIteratorInit(&jb->root);
@@ -318,22 +318,22 @@ jsonb_hash_extended(PG_FUNCTION_ARGS)
     switch (r)
     {
       /* Rotation is left to JsonbHashScalarValueExtended() */
-    case WJB_BEGIN_ARRAY:;
+    case WJB_BEGIN_ARRAY:
       hash ^= ((uint64)JB_FARRAY) << 32 | JB_FARRAY;
       break;
-    case WJB_BEGIN_OBJECT:;
+    case WJB_BEGIN_OBJECT:
       hash ^= ((uint64)JB_FOBJECT) << 32 | JB_FOBJECT;
       break;
-    case WJB_KEY:;
-    case WJB_VALUE:;
-    case WJB_ELEM:;
+    case WJB_KEY:
+    case WJB_VALUE:
+    case WJB_ELEM:
       JsonbHashScalarValueExtended(&v, &hash, seed);
       break;
-    case WJB_END_ARRAY:;
-    case WJB_END_OBJECT:;
+    case WJB_END_ARRAY:
+    case WJB_END_OBJECT:
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "invalid JsonbIteratorNext rc: %d", (int)r);
     }
   }
 

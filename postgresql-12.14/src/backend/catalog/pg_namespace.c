@@ -55,7 +55,7 @@ NamespaceCreate(const char *nspName, Oid ownerId, bool isTemp)
   /* sanity checks */
   if (!nspName)
   {
-
+    elog(ERROR, "no namespace name supplied");
   }
 
   /* make sure there is no existing namespace of same name */

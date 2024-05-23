@@ -26,8 +26,7 @@
 #define OidVectorSize(n) (offsetof(oidvector, values) + (n) * sizeof(Oid))
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 static Oid
@@ -52,7 +51,7 @@ oidin_subr(const char *s, char **endloc)
    */
   if (errno && errno != ERANGE && errno != EINVAL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "oid", s)));
   }
 
   if (endptr == s && *s != '\0')
@@ -100,7 +99,7 @@ oidin_subr(const char *s, char **endloc)
 #if OID_MAX != ULONG_MAX
   if (cvt != (unsigned long)result && cvt != (unsigned long)((int)result))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("value \"%s\" is out of range for type %s", s, "oid")));
   }
 #endif
 
@@ -144,12 +143,12 @@ oidrecv(PG_FUNCTION_ARGS)
 Datum
 oidsend(PG_FUNCTION_ARGS)
 {
+  Oid arg1 = PG_GETARG_OID(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendint32(&buf, arg1);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -184,8 +183,7 @@ buildoidvector(const Oid *oids, int n)
 }
 
 /*
- *		oidvectorin			- converts "num num ..." to
- *internal form
+ *		oidvectorin			- converts "num num ..." to internal form
  */
 Datum
 oidvectorin(PG_FUNCTION_ARGS)
@@ -210,11 +208,11 @@ oidvectorin(PG_FUNCTION_ARGS)
   }
   while (*oidString && isspace((unsigned char)*oidString))
   {
-
+    oidString++;
   }
   if (*oidString)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("oidvector has too many elements")));
   }
 
   SET_VARSIZE(result, OidVectorSize(n));
@@ -255,72 +253,69 @@ oidvectorout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		oidvectorrecv			- converts external binary
- *format to oidvector
+ *		oidvectorrecv			- converts external binary format to oidvector
  */
 Datum
 oidvectorrecv(PG_FUNCTION_ARGS)
 {
+  LOCAL_FCINFO(locfcinfo, 3);
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  oidvector *result;
 
+  /*
+   * Normally one would call array_recv() using DirectFunctionCall3, but
+   * that does not work since array_recv wants to cache some data using
+   * fcinfo->flinfo->fn_extra.  So we need to pass it our own flinfo
+   * parameter.
+   */
+  InitFunctionCallInfoData(*locfcinfo, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
 
+  locfcinfo->args[0].value = PointerGetDatum(buf);
+  locfcinfo->args[0].isnull = false;
+  locfcinfo->args[1].value = ObjectIdGetDatum(OIDOID);
+  locfcinfo->args[1].isnull = false;
+  locfcinfo->args[2].value = Int32GetDatum(-1);
+  locfcinfo->args[2].isnull = false;
 
+  result = (oidvector *)DatumGetPointer(array_recv(locfcinfo));
 
+  Assert(!locfcinfo->isnull);
 
+  /* sanity checks: oidvector must be 1-D, 0-based, no nulls */
+  if (ARR_NDIM(result) != 1 || ARR_HASNULL(result) || ARR_ELEMTYPE(result) != OIDOID || ARR_LBOUND(result)[0] != 0)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid oidvector data")));
+  }
 
+  /* check length for consistency with oidvectorin() */
+  if (ARR_DIMS(result)[0] > FUNC_MAX_ARGS)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("oidvector has too many elements")));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_POINTER(result);
 }
 
 /*
- *		oidvectorsend			- converts oidvector to binary
- *format
+ *		oidvectorsend			- converts oidvector to binary format
  */
 Datum
 oidvectorsend(PG_FUNCTION_ARGS)
 {
-
+  return array_send(fcinfo);
 }
 
 /*
- *		oidparse				- get OID from
- *IConst/FConst node
+ *		oidparse				- get OID from IConst/FConst node
  */
 Oid
 oidparse(Node *node)
 {
   switch (nodeTag(node))
   {
-  case T_Integer:;
+  case T_Integer:
     return intVal(node);
-  case T_Float:;
+  case T_Float:
 
     /*
      * Values too large for int4 will be represented as Float
@@ -328,8 +323,8 @@ oidparse(Node *node)
      * strings.
      */
     return oidin_subr(strVal(node), NULL);
-  default:;;
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(node));
   }
   return InvalidOid; /* keep compiler quiet */
 }
@@ -353,8 +348,7 @@ oid_cmp(const void *p1, const void *p2)
 }
 
 /*****************************************************************************
- *	 PUBLIC ROUTINES
- **
+ *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
 
 Datum
@@ -414,10 +408,10 @@ oidgt(PG_FUNCTION_ARGS)
 Datum
 oidlarger(PG_FUNCTION_ARGS)
 {
+  Oid arg1 = PG_GETARG_OID(0);
+  Oid arg2 = PG_GETARG_OID(1);
 
-
-
-
+  PG_RETURN_OID((arg1 > arg2) ? arg1 : arg2);
 }
 
 Datum
@@ -440,9 +434,9 @@ oidvectoreq(PG_FUNCTION_ARGS)
 Datum
 oidvectorne(PG_FUNCTION_ARGS)
 {
+  int32 cmp = DatumGetInt32(btoidvectorcmp(fcinfo));
 
-
-
+  PG_RETURN_BOOL(cmp != 0);
 }
 
 Datum
@@ -464,15 +458,15 @@ oidvectorle(PG_FUNCTION_ARGS)
 Datum
 oidvectorge(PG_FUNCTION_ARGS)
 {
+  int32 cmp = DatumGetInt32(btoidvectorcmp(fcinfo));
 
-
-
+  PG_RETURN_BOOL(cmp >= 0);
 }
 
 Datum
 oidvectorgt(PG_FUNCTION_ARGS)
 {
+  int32 cmp = DatumGetInt32(btoidvectorcmp(fcinfo));
 
-
-
+  PG_RETURN_BOOL(cmp > 0);
 }

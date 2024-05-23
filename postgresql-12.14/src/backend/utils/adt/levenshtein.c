@@ -32,10 +32,10 @@
  * source: source string, of length slen bytes.
  * target: target string, of length tlen bytes.
  * ins_c, del_c, sub_c: costs to charge for character insertion, deletion,
- *		and substitution respectively; (1, 1, 1) costs suffice for
- *common cases, but your mileage may vary. max_d: if provided and >= 0, maximum
- *distance we care about; see below. trusted: caller is trusted and need not
- *obey MAX_LEVENSHTEIN_STRLEN.
+ *		and substitution respectively; (1, 1, 1) costs suffice for common
+ *		cases, but your mileage may vary.
+ * max_d: if provided and >= 0, maximum distance we care about; see below.
+ * trusted: caller is trusted and need not obey MAX_LEVENSHTEIN_STRLEN.
  *
  * One way to compute Levenshtein distance is to incrementally construct
  * an (m+1)x(n+1) matrix where cell (i, j) represents the minimum number
@@ -104,10 +104,12 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
    * We can transform an empty s into t with n insertions, or a non-empty t
    * into an empty s with m deletions.
    */
-  if (!m) {
+  if (!m)
+  {
     return n * ins_c;
   }
-  if (!n) {
+  if (!n)
+  {
     return m * del_c;
   }
 
@@ -118,7 +120,8 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
    * requests, typically by using a small max_d along with strings that are
    * bounded, though not necessarily to MAX_LEVENSHTEIN_STRLEN exactly.
    */
-  if (!trusted && (m > MAX_LEVENSHTEIN_STRLEN || n > MAX_LEVENSHTEIN_STRLEN)) {
+  if (!trusted && (m > MAX_LEVENSHTEIN_STRLEN || n > MAX_LEVENSHTEIN_STRLEN))
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("levenshtein argument exceeds maximum length of %d characters", MAX_LEVENSHTEIN_STRLEN)));
   }
 
@@ -133,22 +136,28 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
    * enough to limit the computation we must perform.  If so, figure out
    * initial stop column.
    */
-  if (max_d >= 0) {
+  if (max_d >= 0)
+  {
     int min_theo_d; /* Theoretical minimum distance. */
     int max_theo_d; /* Theoretical maximum distance. */
     int net_inserts = n - m;
 
     min_theo_d = net_inserts < 0 ? -net_inserts * del_c : net_inserts * ins_c;
-    if (min_theo_d > max_d) {
+    if (min_theo_d > max_d)
+    {
       return max_d + 1;
     }
-    if (ins_c + del_c < sub_c) {
+    if (ins_c + del_c < sub_c)
+    {
       sub_c = ins_c + del_c;
     }
     max_theo_d = min_theo_d + sub_c * Min(m, n);
-    if (max_d >= max_theo_d) {
+    if (max_d >= max_theo_d)
+    {
       max_d = -1;
-    } else if (ins_c + del_c > 0) {
+    }
+    else if (ins_c + del_c > 0)
+    {
       /*
        * Figure out how much of the first row of the notional matrix we
        * need to fill in.  If the string is growing, the theoretical
@@ -165,7 +174,8 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
       int best_column = net_inserts < 0 ? -net_inserts : 0;
 
       stop_column = best_column + (slack_d / (ins_c + del_c)) + 1;
-      if (stop_column > m) {
+      if (stop_column > m)
+      {
         stop_column = m + 1;
       }
     }
@@ -180,12 +190,14 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
    * multi-byte characters, we still build the array, so that the fast-path
    * needn't deal with the case where the array hasn't been initialized.
    */
-  if (m != slen || n != tlen) {
+  if (m != slen || n != tlen)
+  {
     int i;
     const char *cp = source;
 
     s_char_len = (int *)palloc((m + 1) * sizeof(int));
-    for (i = 0; i < m; ++i) {
+    for (i = 0; i < m; ++i)
+    {
       s_char_len[i] = pg_mblen(cp);
       cp += s_char_len[i];
     }
@@ -204,12 +216,14 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
    * To transform the first i characters of s into the first 0 characters of
    * t, we must perform i deletions.
    */
-  for (i = START_COLUMN; i < STOP_COLUMN; i++) {
+  for (i = START_COLUMN; i < STOP_COLUMN; i++)
+  {
     prev[i] = i * del_c;
   }
 
   /* Loop through rows of the notional array */
-  for (y = target, j = 1; j < n; j++) {
+  for (y = target, j = 1; j < n; j++)
+  {
     int *temp;
     const char *x = source;
     int y_char_len = n != tlen + 1 ? pg_mblen(y) : 1;
@@ -222,7 +236,8 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
      * of the array.  The inner loop will read prev[stop_column], so we
      * have to initialize it even though it shouldn't affect the result.
      */
-    if (stop_column < m) {
+    if (stop_column < m)
+    {
       prev[stop_column] = max_d + 1;
       ++stop_column;
     }
@@ -233,10 +248,13 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
      * of t, we must perform j insertions.  However, if start_column > 0,
      * this special case does not apply.
      */
-    if (start_column == 0) {
+    if (start_column == 0)
+    {
       curr[0] = j * ins_c;
       i = 1;
-    } else {
+    }
+    else
+    {
       i = start_column;
     }
 #else
@@ -251,8 +269,10 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
      * that if s_char_len is not initialized then BOTH strings contain
      * only single-byte characters.
      */
-    if (s_char_len != NULL) {
-      for (; i < STOP_COLUMN; i++) {
+    if (s_char_len != NULL)
+    {
+      for (; i < STOP_COLUMN; i++)
+      {
         int ins;
         int del;
         int sub;
@@ -269,9 +289,12 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
          */
         ins = prev[i] + ins_c;
         del = curr[i - 1] + del_c;
-        if (x[x_char_len - 1] == y[y_char_len - 1] && x_char_len == y_char_len && (x_char_len == 1 || rest_of_char_same(x, y, x_char_len))) {
+        if (x[x_char_len - 1] == y[y_char_len - 1] && x_char_len == y_char_len && (x_char_len == 1 || rest_of_char_same(x, y, x_char_len)))
+        {
           sub = prev[i - 1];
-        } else {
+        }
+        else
+        {
           sub = prev[i - 1] + sub_c;
         }
 
@@ -282,8 +305,11 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
         /* Point to next character. */
         x += x_char_len;
       }
-    } else {
-      for (; i < STOP_COLUMN; i++) {
+    }
+    else
+    {
+      for (; i < STOP_COLUMN; i++)
+      {
         int ins;
         int del;
         int sub;
@@ -319,7 +345,8 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
      * the possibility of needing to execute this code prevents tight
      * optimization of the loop as a whole.
      */
-    if (max_d >= 0) {
+    if (max_d >= 0)
+    {
       /*
        * The "zero point" is the column of the current row where the
        * remaining portions of the strings are of equal length.  There
@@ -331,21 +358,25 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
       int zp = j - (n - m);
 
       /* Check whether the stop column can slide left. */
-      while (stop_column > 0) {
+      while (stop_column > 0)
+      {
         int ii = stop_column - 1;
         int net_inserts = ii - zp;
 
-        if (prev[ii] + (net_inserts > 0 ? net_inserts * ins_c : -net_inserts * del_c) <= max_d) {
+        if (prev[ii] + (net_inserts > 0 ? net_inserts * ins_c : -net_inserts * del_c) <= max_d)
+        {
           break;
         }
         stop_column--;
       }
 
       /* Check whether the start column can slide right. */
-      while (start_column < stop_column) {
+      while (start_column < stop_column)
+      {
         int net_inserts = start_column - zp;
 
-        if (prev[start_column] + (net_inserts > 0 ? net_inserts * ins_c : -net_inserts * del_c) <= max_d) {
+        if (prev[start_column] + (net_inserts > 0 ? net_inserts * ins_c : -net_inserts * del_c) <= max_d)
+        {
           break;
         }
 
@@ -356,14 +387,16 @@ varstr_levenshtein(const char *source, int slen, const char *target, int tlen, i
          */
         prev[start_column] = max_d + 1;
         curr[start_column] = max_d + 1;
-        if (start_column != 0) {
+        if (start_column != 0)
+        {
           source += (s_char_len != NULL) ? s_char_len[start_column - 1] : 1;
         }
         start_column++;
       }
 
       /* If they cross, we're going to exceed the bound. */
-      if (start_column >= stop_column) {
+      if (start_column >= stop_column)
+      {
         return max_d + 1;
       }
     }

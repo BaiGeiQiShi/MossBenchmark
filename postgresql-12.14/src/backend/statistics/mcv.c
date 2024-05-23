@@ -195,7 +195,7 @@ statext_mcv_build(int numrows, HeapTuple *rows, Bitmapset *attrs, VacAttrStats *
 
   if (!items)
   {
-
+    return NULL;
   }
 
   /* transform the sorted rows into groups (sorted by frequency) */
@@ -210,7 +210,7 @@ statext_mcv_build(int numrows, HeapTuple *rows, Bitmapset *attrs, VacAttrStats *
   {
     if (stats[i]->attr->attstattarget > nitems)
     {
-
+      nitems = stats[i]->attr->attstattarget;
     }
   }
   if (nitems > ngroups)
@@ -246,8 +246,8 @@ statext_mcv_build(int numrows, HeapTuple *rows, Bitmapset *attrs, VacAttrStats *
   {
     if (groups[i].count < mincount)
     {
-
-
+      nitems = i;
+      break;
     }
   }
 
@@ -357,9 +357,9 @@ build_mss(VacAttrStats **stats, int numattrs)
     TypeCacheEntry *type;
 
     type = lookup_type_cache(colstat->attrtypid, TYPECACHE_LT_OPR);
-    if (type->lt_opr == InvalidOid)
-    { /* shouldn't happen */
-
+    if (type->lt_opr == InvalidOid) /* shouldn't happen */
+    {
+      elog(ERROR, "cache lookup failed for ordering operator for type %u", colstat->attrtypid);
     }
 
     multi_sort_add_dimension(mss, i, type->lt_opr, colstat->attrcollid);
@@ -419,8 +419,7 @@ compare_sort_item_count(const void *a, const void *b)
 
 /*
  * build_distinct_groups
- *	build an array of SortItems for distinct groups and counts matching
- *items
+ *	build an array of SortItems for distinct groups and counts matching items
  *
  * The input array is assumed to be sorted
  */
@@ -559,14 +558,14 @@ statext_mcv_load(Oid mvoid)
 
   if (!HeapTupleIsValid(htup))
   {
-
+    elog(ERROR, "cache lookup failed for statistics object %u", mvoid);
   }
 
   mcvlist = SysCacheGetAttr(STATEXTDATASTXOID, htup, Anum_pg_statistic_ext_data_stxdmcv, &isnull);
 
   if (isnull)
   {
-
+    elog(ERROR, "requested statistics kind \"%c\" is not yet built for statistics object %u", STATS_EXT_DEPENDENCIES, mvoid);
   }
 
   result = statext_mcv_deserialize(DatumGetByteaP(mcvlist));
@@ -599,9 +598,9 @@ statext_mcv_load(Oid mvoid)
  * When serializing the items, we use uint16 indexes. The number of MCV items
  * is limited by the statistics target (which is capped to 10k at the moment).
  * We might increase this to 65k and still fit into uint16, so there's a bit of
- * slack. Furthermore, this limit is on the number of distinct values per
- *column, and we usually have few of those (and various combinations of them for
- *the those MCV list). So uint16 seems fine for now.
+ * slack. Furthermore, this limit is on the number of distinct values per column,
+ * and we usually have few of those (and various combinations of them for the
+ * those MCV list). So uint16 seems fine for now.
  *
  * We don't really expect the serialization to save as much space as for
  * histograms, as we are not doing any bucket splits (which is the source
@@ -679,7 +678,7 @@ statext_mcv_serialize(MCVList *mcvlist, VacAttrStats **stats)
     /* if there are just NULL values in this dimension, we're done */
     if (counts[dim] == 0)
     {
-
+      continue;
     }
 
     /* sort and deduplicate the data */
@@ -745,8 +744,8 @@ statext_mcv_serialize(MCVList *mcvlist, VacAttrStats **stats)
        * Note: As the items are fixed-length, we could easily compute
        * this during deserialization, but we do it here anyway.
        */
-
-
+      info[dim].nbytes = info[dim].nvalues * info[dim].typlen;
+      info[dim].nbytes_aligned = info[dim].nvalues * MAXALIGN(info[dim].typlen);
     }
     else if (info[dim].typlen == -1) /* varlena */
     {
@@ -776,30 +775,30 @@ statext_mcv_serialize(MCVList *mcvlist, VacAttrStats **stats)
         info[dim].nbytes_aligned += MAXALIGN(VARHDRSZ + len);
       }
     }
+    else if (info[dim].typlen == -2) /* cstring */
+    {
+      info[dim].nbytes = 0;
+      info[dim].nbytes_aligned = 0;
+      for (i = 0; i < info[dim].nvalues; i++)
+      {
+        Size len;
 
+        /*
+         * For cstring, we do similar thing as for varlena - first we
+         * store the length as uint32 and then the data. We don't care
+         * about alignment, which means that during deserialization we
+         * need to copy the fields and only access the copies.
+         */
 
+        /* c-strings include terminator, so +1 byte */
+        len = strlen(DatumGetCString(values[dim][i])) + 1;
+        info[dim].nbytes += sizeof(uint32); /* length */
+        info[dim].nbytes += len;            /* value */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        /* space needed for properly aligned deserialized copies */
+        info[dim].nbytes_aligned += MAXALIGN(len);
+      }
+    }
 
     /* we know (count>0) so there must be some data */
     Assert(info[dim].nbytes > 0);
@@ -890,8 +889,8 @@ statext_mcv_serialize(MCVList *mcvlist, VacAttrStats **stats)
       else if (info[dim].typlen > 0) /* passed by reference */
       {
         /* no special alignment needed, treated as char array */
-
-
+        memcpy(ptr, DatumGetPointer(value), info[dim].typlen);
+        ptr += info[dim].typlen;
       }
       else if (info[dim].typlen == -1) /* varlena */
       {
@@ -905,18 +904,18 @@ statext_mcv_serialize(MCVList *mcvlist, VacAttrStats **stats)
         memcpy(ptr, VARDATA_ANY(DatumGetPointer(value)), len);
         ptr += len;
       }
+      else if (info[dim].typlen == -2) /* cstring */
+      {
+        uint32 len = (uint32)strlen(DatumGetCString(value)) + 1;
 
+        /* copy the length */
+        memcpy(ptr, &len, sizeof(uint32));
+        ptr += sizeof(uint32);
 
-
-
-
-
-
-
-
-
-
-
+        /* value */
+        memcpy(ptr, DatumGetCString(value), len);
+        ptr += len;
+      }
 
       /* no underflows or overflows */
       Assert((ptr > start) && ((ptr - start) <= info[dim].nbytes));
@@ -1016,7 +1015,7 @@ statext_mcv_deserialize(bytea *data)
 
   if (data == NULL)
   {
-
+    return NULL;
   }
 
   /*
@@ -1026,7 +1025,7 @@ statext_mcv_deserialize(bytea *data)
    */
   if (VARSIZE_ANY(data) < MinSizeOfMCVList)
   {
-
+    elog(ERROR, "invalid MCV size %zd (expected at least %zu)", VARSIZE_ANY(data), MinSizeOfMCVList);
   }
 
   /* read the MCV list header */
@@ -1052,30 +1051,30 @@ statext_mcv_deserialize(bytea *data)
 
   if (mcvlist->magic != STATS_MCV_MAGIC)
   {
-
+    elog(ERROR, "invalid MCV magic %u (expected %u)", mcvlist->magic, STATS_MCV_MAGIC);
   }
 
   if (mcvlist->type != STATS_MCV_TYPE_BASIC)
   {
-
+    elog(ERROR, "invalid MCV type %u (expected %u)", mcvlist->type, STATS_MCV_TYPE_BASIC);
   }
 
   if (mcvlist->ndimensions == 0)
   {
-
+    elog(ERROR, "invalid zero-length dimension array in MCVList");
   }
   else if ((mcvlist->ndimensions > STATS_MAX_DIMENSIONS) || (mcvlist->ndimensions < 0))
   {
-
+    elog(ERROR, "invalid length (%d) dimension array in MCVList", mcvlist->ndimensions);
   }
 
   if (mcvlist->nitems == 0)
   {
-
+    elog(ERROR, "invalid zero-length item array in MCVList");
   }
   else if (mcvlist->nitems > STATS_MCVLIST_MAX_ITEMS)
   {
-
+    elog(ERROR, "invalid length (%u) item array in MCVList", mcvlist->nitems);
   }
 
   nitems = mcvlist->nitems;
@@ -1095,7 +1094,7 @@ statext_mcv_deserialize(bytea *data)
    */
   if (VARSIZE_ANY(data) < expected_size)
   {
-
+    elog(ERROR, "invalid MCV size %zd (expected %zu)", VARSIZE_ANY(data), expected_size);
   }
 
   /* Now copy the array of type Oids. */
@@ -1128,7 +1127,7 @@ statext_mcv_deserialize(bytea *data)
    */
   if (VARSIZE_ANY(data) != expected_size)
   {
-
+    elog(ERROR, "invalid MCV size %zd (expected %zu)", VARSIZE_ANY(data), expected_size);
   }
 
   /*
@@ -1212,15 +1211,15 @@ statext_mcv_deserialize(bytea *data)
       /* passed by reference, but fixed length (name, tid, ...) */
       if (info[dim].typlen > 0)
       {
+        for (i = 0; i < info[dim].nvalues; i++)
+        {
+          memcpy(dataptr, ptr, info[dim].typlen);
+          ptr += info[dim].typlen;
 
-
-
-
-
-
-
-
-
+          /* just point into the array */
+          map[dim][i] = PointerGetDatum(dataptr);
+          dataptr += MAXALIGN(info[dim].typlen);
+        }
       }
       else if (info[dim].typlen == -1)
       {
@@ -1245,24 +1244,24 @@ statext_mcv_deserialize(bytea *data)
           dataptr += MAXALIGN(len + VARHDRSZ);
         }
       }
+      else if (info[dim].typlen == -2)
+      {
+        /* cstring */
+        for (i = 0; i < info[dim].nvalues; i++)
+        {
+          uint32 len;
 
+          memcpy(&len, ptr, sizeof(uint32));
+          ptr += sizeof(uint32);
 
+          memcpy(dataptr, ptr, len);
+          ptr += len;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          /* just point into the array */
+          map[dim][i] = PointerGetDatum(dataptr);
+          dataptr += MAXALIGN(len);
+        }
+      }
 
       /* no under/overflow of input array */
       Assert(ptr <= (start + info[dim].nbytes));
@@ -1376,7 +1375,8 @@ pg_stats_ext_mcvlist_items(PG_FUNCTION_ARGS)
     /* Build a tuple descriptor for our result type */
     if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function returning record called in context "
+                                                                     "that cannot accept type record")));
     }
     tupdesc = BlessTupleDesc(tupdesc);
 
@@ -1435,7 +1435,7 @@ pg_stats_ext_mcvlist_items(PG_FUNCTION_ARGS)
       }
       else
       {
-
+        astate_values = accumArrayResult(astate_values, (Datum)0, true, TEXTOID, CurrentMemoryContext);
       }
     }
 
@@ -1471,13 +1471,13 @@ pg_stats_ext_mcvlist_items(PG_FUNCTION_ARGS)
 Datum
 pg_mcv_list_in(PG_FUNCTION_ARGS)
 {
+  /*
+   * pg_mcv_list stores the data in binary form and parsing text input is
+   * not needed, so disallow this.
+   */
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_mcv_list")));
 
-
-
-
-
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -1494,7 +1494,7 @@ pg_mcv_list_in(PG_FUNCTION_ARGS)
 Datum
 pg_mcv_list_out(PG_FUNCTION_ARGS)
 {
-
+  return byteaout(fcinfo);
 }
 
 /*
@@ -1503,9 +1503,9 @@ pg_mcv_list_out(PG_FUNCTION_ARGS)
 Datum
 pg_mcv_list_recv(PG_FUNCTION_ARGS)
 {
+  ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot accept a value of type %s", "pg_mcv_list")));
 
-
-
+  PG_RETURN_VOID(); /* keep compiler quiet */
 }
 
 /*
@@ -1517,7 +1517,7 @@ pg_mcv_list_recv(PG_FUNCTION_ARGS)
 Datum
 pg_mcv_list_send(PG_FUNCTION_ARGS)
 {
-
+  return byteasend(fcinfo);
 }
 
 /*
@@ -1644,7 +1644,7 @@ mcv_get_match_bitmap(PlannerInfo *root, List *clauses, Bitmapset *keys, MCVList 
           }
           else
           {
-
+            match = DatumGetBool(FunctionCall2Coll(&opproc, var->varcollid, cst->constvalue, item->values[idx]));
           }
 
           /* update the match bitmap with the result */
@@ -1673,13 +1673,13 @@ mcv_get_match_bitmap(PlannerInfo *root, List *clauses, Bitmapset *keys, MCVList 
         /* if the clause mismatches the MCV item, update the bitmap */
         switch (expr->nulltesttype)
         {
-        case IS_NULL:;
+        case IS_NULL:
           match = (item->isnull[idx]) ? true : match;
           break;
 
-        case IS_NOT_NULL:;
-
-
+        case IS_NOT_NULL:
+          match = (!item->isnull[idx]) ? true : match;
+          break;
         }
 
         /* now, update the match bitmap, depending on OR/AND type */
@@ -1777,7 +1777,7 @@ mcv_get_match_bitmap(PlannerInfo *root, List *clauses, Bitmapset *keys, MCVList 
     }
     else
     {
-
+      elog(ERROR, "unknown clause type: %d", clause->type);
     }
   }
 

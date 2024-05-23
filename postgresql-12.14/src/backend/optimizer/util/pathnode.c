@@ -115,7 +115,7 @@ compare_path_costs(Path *path1, Path *path2, CostSelector criterion)
     }
     if (path1->startup_cost > path2->startup_cost)
     {
-
+      return +1;
     }
   }
   return 0;
@@ -149,7 +149,7 @@ compare_fractional_path_costs(Path *path1, Path *path2, double fraction)
   {
     return +1;
   }
-
+  return 0;
 }
 
 /*
@@ -269,7 +269,7 @@ set_cheapest(RelOptInfo *parent_rel)
 
   if (parent_rel->pathlist == NIL)
   {
-
+    elog(ERROR, "could not devise a query plan for the given query");
   }
 
   cheapest_startup_path = cheapest_total_path = best_param_path = NULL;
@@ -307,21 +307,21 @@ set_cheapest(RelOptInfo *parent_rel)
       {
         switch (bms_subset_compare(PATH_REQ_OUTER(path), PATH_REQ_OUTER(best_param_path)))
         {
-        case BMS_EQUAL:;
+        case BMS_EQUAL:
           /* keep the cheaper one */
           if (compare_path_costs(path, best_param_path, TOTAL_COST) < 0)
           {
-
+            best_param_path = path;
           }
           break;
-        case BMS_SUBSET1:;
+        case BMS_SUBSET1:
           /* new path is less-parameterized */
           best_param_path = path;
           break;
-        case BMS_SUBSET2:;
+        case BMS_SUBSET2:
           /* old path is less-parameterized, keep it */
-
-        case BMS_DIFFERENT:;
+          break;
+        case BMS_DIFFERENT:
 
           /*
            * This means that neither path has the least possible
@@ -357,7 +357,7 @@ set_cheapest(RelOptInfo *parent_rel)
       cmp = compare_path_costs(cheapest_total_path, path, TOTAL_COST);
       if (cmp > 0 || (cmp == 0 && compare_pathkeys(cheapest_total_path->pathkeys, path->pathkeys) == PATHKEYS_BETTER2))
       {
-
+        cheapest_total_path = path;
       }
     }
   }
@@ -393,22 +393,22 @@ set_cheapest(RelOptInfo *parent_rel)
  *	  existing path that has the same or superset parameterization rels.
  *	  We also consider parallel-safe paths more worthy than others.
  *
- *	  We also remove from the rel's pathlist any old paths that are
- *dominated by new_path --- that is, new_path is cheaper, at least as well
- *ordered, generates no more rows, requires no outer rels not required by the
- *old path, and is no less parallel-safe.
+ *	  We also remove from the rel's pathlist any old paths that are dominated
+ *	  by new_path --- that is, new_path is cheaper, at least as well ordered,
+ *	  generates no more rows, requires no outer rels not required by the old
+ *	  path, and is no less parallel-safe.
  *
  *	  In most cases, a path with a superset parameterization will generate
- *	  fewer rows (since it has more join clauses to apply), so that those
- *two figures of merit move in opposite directions; this means that a path of
+ *	  fewer rows (since it has more join clauses to apply), so that those two
+ *	  figures of merit move in opposite directions; this means that a path of
  *	  one parameterization can seldom dominate a path of another.  But such
  *	  cases do arise, so we make the full set of checks anyway.
  *
  *	  There are two policy decisions embedded in this function, along with
- *	  its sibling add_path_precheck.  First, we treat all parameterized
- *paths as having NIL pathkeys, so that they cannot win comparisons on the basis
- *of sort order.  This is to reduce the number of parameterized paths that are
- *kept; see discussion in src/backend/optimizer/README.
+ *	  its sibling add_path_precheck.  First, we treat all parameterized paths
+ *	  as having NIL pathkeys, so that they cannot win comparisons on the
+ *	  basis of sort order.  This is to reduce the number of parameterized
+ *	  paths that are kept; see discussion in src/backend/optimizer/README.
  *
  *	  Second, we only consider cheap startup cost to be interesting if
  *	  parent_rel->consider_startup is true for an unparameterized path, or
@@ -423,20 +423,19 @@ set_cheapest(RelOptInfo *parent_rel)
  *	  when possible.
  *
  *	  NOTE: discarded Path objects are immediately pfree'd to reduce planner
- *	  memory consumption.  We dare not try to free the substructure of a
- *Path, since much of it may be shared with other Paths or the query tree
- *itself; but just recycling discarded Path nodes is a very useful savings in a
- *large join tree.  We can recycle the List nodes of pathlist, too.
+ *	  memory consumption.  We dare not try to free the substructure of a Path,
+ *	  since much of it may be shared with other Paths or the query tree itself;
+ *	  but just recycling discarded Path nodes is a very useful savings in
+ *	  a large join tree.  We can recycle the List nodes of pathlist, too.
  *
  *	  As noted in optimizer/README, deleting a previously-accepted Path is
  *	  safe because we know that Paths of this rel cannot yet be referenced
- *	  from any other rel, such as a higher-level join.  However, in some
- *cases it is possible that a Path is referenced by another Path for its own
- *	  rel; we must not delete such a Path, even if it is dominated by the
- *new Path.  Currently this occurs only for IndexPath objects, which may be
+ *	  from any other rel, such as a higher-level join.  However, in some cases
+ *	  it is possible that a Path is referenced by another Path for its own
+ *	  rel; we must not delete such a Path, even if it is dominated by the new
+ *	  Path.  Currently this occurs only for IndexPath objects, which may be
  *	  referenced as children of BitmapHeapPaths as well as being paths in
- *	  their own right.  Hence, we don't pfree IndexPaths when rejecting
- *them.
+ *	  their own right.  Hence, we don't pfree IndexPaths when rejecting them.
  *
  * 'parent_rel' is the relation entry to which the path corresponds.
  * 'new_path' is a potential path for parent_rel.
@@ -508,7 +507,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
       {
         switch (costcmp)
         {
-        case COSTS_EQUAL:;
+        case COSTS_EQUAL:
           outercmp = bms_subset_compare(PATH_REQ_OUTER(new_path), PATH_REQ_OUTER(old_path));
           if (keyscmp == PATHKEYS_BETTER1)
           {
@@ -553,7 +552,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
               }
               else if (new_path->rows < old_path->rows)
               {
-
+                remove_old = true; /* new dominates old */
               }
               else if (new_path->rows > old_path->rows)
               {
@@ -571,7 +570,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
             }
             else if (outercmp == BMS_SUBSET1 && new_path->rows <= old_path->rows && new_path->parallel_safe >= old_path->parallel_safe)
             {
-
+              remove_old = true; /* new dominates old */
             }
             else if (outercmp == BMS_SUBSET2 && new_path->rows >= old_path->rows && new_path->parallel_safe <= old_path->parallel_safe)
             {
@@ -580,7 +579,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
             /* else different parameterizations, keep both */
           }
           break;
-        case COSTS_BETTER1:;
+        case COSTS_BETTER1:
           if (keyscmp != PATHKEYS_BETTER2)
           {
             outercmp = bms_subset_compare(PATH_REQ_OUTER(new_path), PATH_REQ_OUTER(old_path));
@@ -590,7 +589,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
             }
           }
           break;
-        case COSTS_BETTER2:;
+        case COSTS_BETTER2:
           if (keyscmp != PATHKEYS_BETTER1)
           {
             outercmp = bms_subset_compare(PATH_REQ_OUTER(new_path), PATH_REQ_OUTER(old_path));
@@ -600,13 +599,13 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
             }
           }
           break;
-        case COSTS_DIFFERENT:;
+        case COSTS_DIFFERENT:
 
           /*
            * can't get here, but keep this case to keep compiler
            * quiet
            */
-
+          break;
         }
       }
     }
@@ -753,39 +752,39 @@ add_path_precheck(RelOptInfo *parent_rel, Cost startup_cost, Cost total_cost, Li
  * add_partial_path
  *	  Like add_path, our goal here is to consider whether a path is worthy
  *	  of being kept around, but the considerations here are a bit different.
- *	  A partial path is one which can be executed in any number of workers
- *in parallel such that each worker will generate a subset of the path's overall
- *result.
+ *	  A partial path is one which can be executed in any number of workers in
+ *	  parallel such that each worker will generate a subset of the path's
+ *	  overall result.
  *
  *	  As in add_path, the partial_pathlist is kept sorted with the cheapest
  *	  total path in front.  This is depended on by multiple places, which
  *	  just take the front entry as the cheapest path without searching.
  *
- *	  We don't generate parameterized partial paths for several reasons.
- *Most importantly, they're not safe to execute, because there's nothing to make
- *sure that a parallel scan within the parameterized portion of the plan is
- *running with the same value in every worker at the same time. Fortunately, it
- *seems unlikely to be worthwhile anyway, because having each worker scan the
- *entire outer relation and a subset of the inner relation will generally be a
- *terrible plan.  The inner (parameterized) side of the plan will be small
- *anyway.  There could be rare cases where this wins big - e.g. if join order
- *constraints put a 1-row relation on the outer side of the topmost join with a
- *parameterized plan on the inner side - but we'll have to be content not to
- *handle such cases until somebody builds an executor infrastructure that can
- *cope with them.
+ *	  We don't generate parameterized partial paths for several reasons.  Most
+ *	  importantly, they're not safe to execute, because there's nothing to
+ *	  make sure that a parallel scan within the parameterized portion of the
+ *	  plan is running with the same value in every worker at the same time.
+ *	  Fortunately, it seems unlikely to be worthwhile anyway, because having
+ *	  each worker scan the entire outer relation and a subset of the inner
+ *	  relation will generally be a terrible plan.  The inner (parameterized)
+ *	  side of the plan will be small anyway.  There could be rare cases where
+ *	  this wins big - e.g. if join order constraints put a 1-row relation on
+ *	  the outer side of the topmost join with a parameterized plan on the inner
+ *	  side - but we'll have to be content not to handle such cases until
+ *	  somebody builds an executor infrastructure that can cope with them.
  *
  *	  Because we don't consider parameterized paths here, we also don't
- *	  need to consider the row counts as a measure of quality: every path
- *will produce the same number of rows.  Neither do we need to consider startup
- *	  costs: parallelism is only used for plans that will be run to
- *completion. Therefore, this routine is much simpler than add_path: it needs to
+ *	  need to consider the row counts as a measure of quality: every path will
+ *	  produce the same number of rows.  Neither do we need to consider startup
+ *	  costs: parallelism is only used for plans that will be run to completion.
+ *	  Therefore, this routine is much simpler than add_path: it needs to
  *	  consider only pathkeys and total cost.
  *
  *	  As with add_path, we pfree paths that are found to be dominated by
- *	  another partial path; this requires that there be no other references
- *to such paths yet.  Hence, GatherPaths must not be created for a rel until
- *	  we're done creating all partial paths for it.  Unlike add_path, we
- *don't take an exception for IndexPaths as partial index paths won't be
+ *	  another partial path; this requires that there be no other references to
+ *	  such paths yet.  Hence, GatherPaths must not be created for a rel until
+ *	  we're done creating all partial paths for it.  Unlike add_path, we don't
+ *	  take an exception for IndexPaths as partial index paths won't be
  *	  referenced by partial BitmapHeapPaths.
  */
 void
@@ -844,7 +843,7 @@ add_partial_path(RelOptInfo *parent_rel, Path *new_path)
       else if (keyscmp == PATHKEYS_BETTER1)
       {
         /* Costs are about the same, new path has better pathkeys. */
-
+        remove_old = true;
       }
       else if (keyscmp == PATHKEYS_BETTER2)
       {
@@ -1360,8 +1359,7 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths, List *par
 
 /*
  * append_total_cost_compare
- *	  qsort comparator for sorting append child paths by total_cost
- *descending
+ *	  qsort comparator for sorting append child paths by total_cost descending
  *
  * For equal total costs, we fall back to comparing startup costs; if those
  * are equal too, break ties using bms_compare on the paths' relids.
@@ -1384,8 +1382,7 @@ append_total_cost_compare(const void *a, const void *b)
 
 /*
  * append_startup_cost_compare
- *	  qsort comparator for sorting append child paths by startup_cost
- *descending
+ *	  qsort comparator for sorting append child paths by startup_cost descending
  *
  * For equal startup costs, we fall back to comparing total costs; if those
  * are equal too, break ties using bms_compare on the paths' relids.
@@ -1649,17 +1646,17 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, SpecialJoi
    */
   if (rel->rtekind == RTE_RELATION && sjinfo->semi_can_btree && relation_has_unique_index_for(root, rel, NIL, sjinfo->semi_rhs_exprs, sjinfo->semi_operators))
   {
+    pathnode->umethod = UNIQUE_PATH_NOOP;
+    pathnode->path.rows = rel->rows;
+    pathnode->path.startup_cost = subpath->startup_cost;
+    pathnode->path.total_cost = subpath->total_cost;
+    pathnode->path.pathkeys = subpath->pathkeys;
 
+    rel->cheapest_unique_path = (Path *)pathnode;
 
+    MemoryContextSwitchTo(oldcontext);
 
-
-
-
-
-
-
-
-
+    return pathnode;
   }
 
   /*
@@ -1683,17 +1680,17 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, SpecialJoi
 
       if (sub_tlist_colnos && query_is_distinct_for(rte->subquery, sub_tlist_colnos, sjinfo->semi_operators))
       {
+        pathnode->umethod = UNIQUE_PATH_NOOP;
+        pathnode->path.rows = rel->rows;
+        pathnode->path.startup_cost = subpath->startup_cost;
+        pathnode->path.total_cost = subpath->total_cost;
+        pathnode->path.pathkeys = subpath->pathkeys;
 
+        rel->cheapest_unique_path = (Path *)pathnode;
 
+        MemoryContextSwitchTo(oldcontext);
 
-
-
-
-
-
-
-
-
+        return pathnode;
       }
     }
   }
@@ -1732,7 +1729,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, SpecialJoi
        * We should not try to hash.  Hack the SpecialJoinInfo to
        * remember this, in case we come through here again.
        */
-
+      sjinfo->semi_can_hash = false;
     }
     else
     {
@@ -1751,20 +1748,20 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, SpecialJoi
       pathnode->umethod = UNIQUE_PATH_SORT;
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (sjinfo->semi_can_btree)
+  {
+    pathnode->umethod = UNIQUE_PATH_SORT;
+  }
+  else if (sjinfo->semi_can_hash)
+  {
+    pathnode->umethod = UNIQUE_PATH_HASH;
+  }
+  else
+  {
+    /* we can get here only if we abandoned hashing above */
+    MemoryContextSwitchTo(oldcontext);
+    return NULL;
+  }
 
   if (pathnode->umethod == UNIQUE_PATH_HASH)
   {
@@ -1822,9 +1819,9 @@ create_gather_merge_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, Path
     /* We'll need to insert a Sort node, so include cost for that */
     Path sort_path; /* dummy for result of cost_sort */
 
-
-
-
+    cost_sort(&sort_path, root, pathkeys, subpath->total_cost, subpath->rows, subpath->pathtarget->width, 0.0, work_mem, -1);
+    input_startup_cost += sort_path.startup_cost;
+    input_total_cost += sort_path.total_cost;
   }
 
   cost_gather_merge(pathnode, root, rel, pathnode->path.param_info, input_startup_cost, input_total_cost, rows);
@@ -1892,9 +1889,9 @@ create_gather_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, PathTarget
 
   if (pathnode->num_workers == 0)
   {
-
-
-
+    pathnode->path.pathkeys = subpath->pathkeys;
+    pathnode->num_workers = 1;
+    pathnode->single_copy = true;
   }
 
   cost_gather(pathnode, root, rel, pathnode->path.param_info, rows);
@@ -2025,8 +2022,8 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel, Relids required_outer)
 
 /*
  * create_namedtuplestorescan_path
- *	  Creates a path corresponding to a scan of a named tuplestore,
- *returning the pathnode.
+ *	  Creates a path corresponding to a scan of a named tuplestore, returning
+ *	  the pathnode.
  */
 Path *
 create_namedtuplestorescan_path(PlannerInfo *root, RelOptInfo *rel, Relids required_outer)
@@ -2110,27 +2107,27 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, Relids required_ou
 ForeignPath *
 create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target, double rows, Cost startup_cost, Cost total_cost, List *pathkeys, Relids required_outer, Path *fdw_outerpath, List *fdw_private)
 {
+  ForeignPath *pathnode = makeNode(ForeignPath);
 
+  /* Historically some FDWs were confused about when to use this */
+  Assert(IS_SIMPLE_REL(rel));
 
+  pathnode->path.pathtype = T_ForeignScan;
+  pathnode->path.parent = rel;
+  pathnode->path.pathtarget = target ? target : rel->reltarget;
+  pathnode->path.param_info = get_baserel_parampathinfo(root, rel, required_outer);
+  pathnode->path.parallel_aware = false;
+  pathnode->path.parallel_safe = rel->consider_parallel;
+  pathnode->path.parallel_workers = 0;
+  pathnode->path.rows = rows;
+  pathnode->path.startup_cost = startup_cost;
+  pathnode->path.total_cost = total_cost;
+  pathnode->path.pathkeys = pathkeys;
 
+  pathnode->fdw_outerpath = fdw_outerpath;
+  pathnode->fdw_private = fdw_private;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return pathnode;
 }
 
 /*
@@ -2147,36 +2144,36 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target, 
 ForeignPath *
 create_foreign_join_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target, double rows, Cost startup_cost, Cost total_cost, List *pathkeys, Relids required_outer, Path *fdw_outerpath, List *fdw_private)
 {
+  ForeignPath *pathnode = makeNode(ForeignPath);
 
+  /*
+   * We should use get_joinrel_parampathinfo to handle parameterized paths,
+   * but the API of this function doesn't support it, and existing
+   * extensions aren't yet trying to build such paths anyway.  For the
+   * moment just throw an error if someone tries it; eventually we should
+   * revisit this.
+   */
+  if (!bms_is_empty(required_outer) || !bms_is_empty(rel->lateral_relids))
+  {
+    elog(ERROR, "parameterized foreign joins are not supported yet");
+  }
 
+  pathnode->path.pathtype = T_ForeignScan;
+  pathnode->path.parent = rel;
+  pathnode->path.pathtarget = target ? target : rel->reltarget;
+  pathnode->path.param_info = NULL; /* XXX see above */
+  pathnode->path.parallel_aware = false;
+  pathnode->path.parallel_safe = rel->consider_parallel;
+  pathnode->path.parallel_workers = 0;
+  pathnode->path.rows = rows;
+  pathnode->path.startup_cost = startup_cost;
+  pathnode->path.total_cost = total_cost;
+  pathnode->path.pathkeys = pathkeys;
 
+  pathnode->fdw_outerpath = fdw_outerpath;
+  pathnode->fdw_private = fdw_private;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return pathnode;
 }
 
 /*
@@ -2193,30 +2190,30 @@ create_foreign_join_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target,
 ForeignPath *
 create_foreign_upper_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target, double rows, Cost startup_cost, Cost total_cost, List *pathkeys, Path *fdw_outerpath, List *fdw_private)
 {
+  ForeignPath *pathnode = makeNode(ForeignPath);
 
+  /*
+   * Upper relations should never have any lateral references, since joining
+   * is complete.
+   */
+  Assert(bms_is_empty(rel->lateral_relids));
 
+  pathnode->path.pathtype = T_ForeignScan;
+  pathnode->path.parent = rel;
+  pathnode->path.pathtarget = target ? target : rel->reltarget;
+  pathnode->path.param_info = NULL;
+  pathnode->path.parallel_aware = false;
+  pathnode->path.parallel_safe = rel->consider_parallel;
+  pathnode->path.parallel_workers = 0;
+  pathnode->path.rows = rows;
+  pathnode->path.startup_cost = startup_cost;
+  pathnode->path.total_cost = total_cost;
+  pathnode->path.pathkeys = pathkeys;
 
+  pathnode->fdw_outerpath = fdw_outerpath;
+  pathnode->fdw_private = fdw_private;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return pathnode;
 }
 
 /*
@@ -2528,8 +2525,7 @@ create_projection_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, PathTa
 
 /*
  * apply_projection_to_path
- *	  Add a projection step, or just apply the target directly to given
- *path.
+ *	  Add a projection step, or just apply the target directly to given path.
  *
  * This has the same net effect as create_projection_path(), except that if
  * a separate Result plan node isn't needed, we just replace the given path's
@@ -2595,7 +2591,7 @@ apply_projection_to_path(PlannerInfo *root, RelOptInfo *rel, Path *path, PathTar
     {
       GatherPath *gpath = (GatherPath *)path;
 
-
+      gpath->subpath = (Path *)create_projection_path(root, gpath->subpath->parent, gpath->subpath, target);
     }
     else
     {
@@ -2712,8 +2708,7 @@ create_sort_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, List *pathke
 
 /*
  * create_group_path
- *	  Creates a pathnode that represents performing grouping of presorted
- *input
+ *	  Creates a pathnode that represents performing grouping of presorted input
  *
  * 'rel' is the parent relation associated with the result
  * 'subpath' is the path representing the source of data
@@ -2855,8 +2850,7 @@ create_agg_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, PathTarget *t
 
 /*
  * create_groupingsets_path
- *	  Creates a pathnode that represents performing GROUPING SETS
- *aggregation
+ *	  Creates a pathnode that represents performing GROUPING SETS aggregation
  *
  * GroupingSetsPath represents sorted grouping with one or more grouping sets.
  * The input path's result must be sorted to match the last entry in
@@ -2900,7 +2894,7 @@ create_groupingsets_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, List
 
   if (aggstrategy == AGG_MIXED && list_length(rollups) == 1)
   {
-
+    aggstrategy = AGG_HASHED;
   }
 
   /*
@@ -3043,9 +3037,9 @@ create_minmaxagg_path(PlannerInfo *root, RelOptInfo *rel, PathTarget *target, Li
   {
     QualCost qual_cost;
 
-
-
-
+    cost_qual_eval(&qual_cost, quals, root);
+    pathnode->path.startup_cost += qual_cost.startup;
+    pathnode->path.total_cost += qual_cost.startup + qual_cost.per_tuple;
   }
 
   return pathnode;
@@ -3239,8 +3233,7 @@ create_lockrows_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, List *ro
 
 /*
  * create_modifytable_path
- *	  Creates a pathnode that represents performing INSERT/UPDATE/DELETE
- *mods
+ *	  Creates a pathnode that represents performing INSERT/UPDATE/DELETE mods
  *
  * 'rel' is the parent relation associated with the result
  * 'operation' is the operation type
@@ -3248,9 +3241,9 @@ create_lockrows_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, List *ro
  * 'nominalRelation' is the parent RT index for use of EXPLAIN
  * 'rootRelation' is the partitioned table root RT index, or 0 if none
  * 'partColsUpdated' is true if any partitioning columns are being updated,
- *		either from the target relation or a descendent partitioned
- *table. 'resultRelations' is an integer list of actual RT indexes of target
- *rel(s) 'subpaths' is a list of Path(s) producing source data (one per rel)
+ *		either from the target relation or a descendent partitioned table.
+ * 'resultRelations' is an integer list of actual RT indexes of target rel(s)
+ * 'subpaths' is a list of Path(s) producing source data (one per rel)
  * 'subroots' is a list of PlannerInfo structs (one per rel)
  * 'withCheckOptionLists' is a list of WCO lists (one per rel)
  * 'returningLists' is a list of RETURNING tlists (one per rel)
@@ -3299,8 +3292,8 @@ create_modifytable_path(PlannerInfo *root, RelOptInfo *rel, CmdType operation, b
   {
     Path *subpath = (Path *)lfirst(lc);
 
-    if (lc == list_head(subpaths))
-    { /* first node? */
+    if (lc == list_head(subpaths)) /* first node? */
+    {
       pathnode->path.startup_cost = subpath->startup_cost;
     }
     pathnode->path.total_cost += subpath->total_cost;
@@ -3386,8 +3379,8 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath, Node *limit
 
 /*
  * adjust_limit_rows_costs
- *	  Adjust the size and cost estimates for a LimitPath node according to
- *the offset/limit.
+ *	  Adjust the size and cost estimates for a LimitPath node according to the
+ *	  offset/limit.
  *
  * This is only a cosmetic issue if we are at top level, but if we are
  * building a subquery then it's important to report correct info to the outer
@@ -3460,7 +3453,7 @@ adjust_limit_rows_costs(double *rows, /* in/out parameter */
     *rows = count_rows;
     if (*rows < 1)
     {
-
+      *rows = 1;
     }
   }
 }
@@ -3490,16 +3483,16 @@ reparameterize_path(PlannerInfo *root, Path *path, Relids required_outer, double
   /* Can only increase, not decrease, path's parameterization */
   if (!bms_is_subset(PATH_REQ_OUTER(path), required_outer))
   {
-
+    return NULL;
   }
   switch (path->pathtype)
   {
-  case T_SeqScan:;
+  case T_SeqScan:
     return create_seqscan_path(root, rel, required_outer, 0);
-  case T_SampleScan:;
-
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
+  case T_SampleScan:
+    return (Path *)create_samplescan_path(root, rel, required_outer);
+  case T_IndexScan:
+  case T_IndexOnlyScan:
   {
     IndexPath *ipath = (IndexPath *)path;
     IndexPath *newpath = makeNode(IndexPath);
@@ -3511,31 +3504,31 @@ reparameterize_path(PlannerInfo *root, Path *path, Relids required_outer, double
      * flat-copy the path node, revise its param_info, and redo
      * the cost estimate.
      */
-
-
-
-
+    memcpy(newpath, ipath, sizeof(IndexPath));
+    newpath->path.param_info = get_baserel_parampathinfo(root, rel, required_outer);
+    cost_index(newpath, root, loop_count, false);
+    return (Path *)newpath;
   }
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
   {
     BitmapHeapPath *bpath = (BitmapHeapPath *)path;
 
-
+    return (Path *)create_bitmap_heap_path(root, rel, bpath->bitmapqual, required_outer, loop_count, 0);
   }
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
   {
     SubqueryScanPath *spath = (SubqueryScanPath *)path;
 
-
+    return (Path *)create_subqueryscan_path(root, rel, spath->subpath, spath->path.pathkeys, required_outer);
   }
-  case T_Result:;
+  case T_Result:
     /* Supported only for RTE_RESULT scan paths */
     if (IsA(path, Path))
     {
       return create_resultscan_path(root, rel, required_outer);
     }
-
-  case T_Append:;
+    break;
+  case T_Append:
   {
     AppendPath *apath = (AppendPath *)path;
     List *childpaths = NIL;
@@ -3544,39 +3537,39 @@ reparameterize_path(PlannerInfo *root, Path *path, Relids required_outer, double
     ListCell *lc;
 
     /* Reparameterize the children */
+    i = 0;
+    foreach (lc, apath->subpaths)
+    {
+      Path *spath = (Path *)lfirst(lc);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      spath = reparameterize_path(root, spath, required_outer, loop_count);
+      if (spath == NULL)
+      {
+        return NULL;
+      }
+      /* We have to re-split the regular and partial paths */
+      if (i < apath->first_partial_path)
+      {
+        childpaths = lappend(childpaths, spath);
+      }
+      else
+      {
+        partialpaths = lappend(partialpaths, spath);
+      }
+      i++;
+    }
+    return (Path *)create_append_path(root, rel, childpaths, partialpaths, apath->path.pathkeys, required_outer, apath->path.parallel_workers, apath->path.parallel_aware, apath->partitioned_rels, -1);
   }
-  default:;;
-
+  default:
+    break;
   }
-
+  return NULL;
 }
 
 /*
  * reparameterize_path_by_child
- * 		Given a path parameterized by the parent of the given child
- * relation, translate the path to be parameterized by the given child relation.
+ * 		Given a path parameterized by the parent of the given child relation,
+ * 		translate the path to be parameterized by the given child relation.
  *
  * The function creates a new path of the same type as the given path, but
  * parameterized by the given child relation.  Most fields from the original
@@ -3646,11 +3639,11 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
    */
   switch (nodeTag(path))
   {
-  case T_Path:;
+  case T_Path:
     FLAT_COPY_PATH(new_path, path, Path);
     break;
 
-  case T_IndexPath:;
+  case T_IndexPath:
   {
     IndexPath *ipath;
 
@@ -3660,7 +3653,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_BitmapHeapPath:;
+  case T_BitmapHeapPath:
   {
     BitmapHeapPath *bhpath;
 
@@ -3670,7 +3663,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_BitmapAndPath:;
+  case T_BitmapAndPath:
   {
     BitmapAndPath *bapath;
 
@@ -3680,7 +3673,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_BitmapOrPath:;
+  case T_BitmapOrPath:
   {
     BitmapOrPath *bopath;
 
@@ -3690,42 +3683,42 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_ForeignPath:;
+  case T_ForeignPath:
   {
     ForeignPath *fpath;
     ReparameterizeForeignPathByChild_function rfpc_func;
 
-
-
-
-
-
+    FLAT_COPY_PATH(fpath, path, ForeignPath);
+    if (fpath->fdw_outerpath)
+    {
+      REPARAMETERIZE_CHILD_PATH(fpath->fdw_outerpath);
+    }
 
     /* Hand over to FDW if needed. */
-
-
-
-
-
-
+    rfpc_func = path->parent->fdwroutine->ReparameterizeForeignPathByChild;
+    if (rfpc_func)
+    {
+      fpath->fdw_private = rfpc_func(root, fpath->fdw_private, child_rel);
+    }
+    new_path = (Path *)fpath;
   }
+  break;
 
-
-  case T_CustomPath:;
+  case T_CustomPath:
   {
     CustomPath *cpath;
 
-
-
-
-
-
-
-
+    FLAT_COPY_PATH(cpath, path, CustomPath);
+    REPARAMETERIZE_CHILD_PATH_LIST(cpath->custom_paths);
+    if (cpath->methods && cpath->methods->ReparameterizeCustomPathByChild)
+    {
+      cpath->custom_private = cpath->methods->ReparameterizeCustomPathByChild(root, cpath->custom_private, child_rel);
+    }
+    new_path = (Path *)cpath;
   }
+  break;
 
-
-  case T_NestPath:;
+  case T_NestPath:
   {
     JoinPath *jpath;
 
@@ -3738,7 +3731,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_MergePath:;
+  case T_MergePath:
   {
     JoinPath *jpath;
     MergePath *mpath;
@@ -3754,7 +3747,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_HashPath:;
+  case T_HashPath:
   {
     JoinPath *jpath;
     HashPath *hpath;
@@ -3770,7 +3763,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_AppendPath:;
+  case T_AppendPath:
   {
     AppendPath *apath;
 
@@ -3780,20 +3773,20 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
   }
   break;
 
-  case T_GatherPath:;
+  case T_GatherPath:
   {
     GatherPath *gpath;
 
-
-
-
+    FLAT_COPY_PATH(gpath, path, GatherPath);
+    REPARAMETERIZE_CHILD_PATH(gpath->subpath);
+    new_path = (Path *)gpath;
   }
+  break;
 
-
-  default:;;
+  default:
 
     /* We don't know how to reparameterize this path. */
-
+    return NULL;
   }
 
   /*
@@ -3848,8 +3841,7 @@ reparameterize_path_by_child(PlannerInfo *root, Path *path, RelOptInfo *child_re
 
 /*
  * reparameterize_pathlist_by_child
- * 		Helper function to reparameterize a list of paths by given child
- * rel.
+ * 		Helper function to reparameterize a list of paths by given child rel.
  */
 static List *
 reparameterize_pathlist_by_child(PlannerInfo *root, List *pathlist, RelOptInfo *child_rel)
@@ -3863,8 +3855,8 @@ reparameterize_pathlist_by_child(PlannerInfo *root, List *pathlist, RelOptInfo *
 
     if (path == NULL)
     {
-
-
+      list_free(result);
+      return NIL;
     }
 
     result = lappend(result, path);

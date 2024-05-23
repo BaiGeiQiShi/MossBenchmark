@@ -63,8 +63,7 @@ int ssl_min_protocol_version;
 int ssl_max_protocol_version;
 
 /* ------------------------------------------------------------ */
-/*			 Procedures common to all secure sessions
- */
+/*			 Procedures common to all secure sessions			*/
 /* ------------------------------------------------------------ */
 
 /*
@@ -132,7 +131,8 @@ void
 secure_close(Port *port)
 {
 #ifdef USE_SSL
-  if (port->ssl_in_use) {
+  if (port->ssl_in_use)
+  {
     be_tls_close(port);
   }
 #endif
@@ -153,15 +153,19 @@ secure_read(Port *port, void *ptr, size_t len)
 retry:
 #ifdef USE_SSL
   waitfor = 0;
-  if (port->ssl_in_use) {
+  if (port->ssl_in_use)
+  {
     n = be_tls_read(port, ptr, len, &waitfor);
-  } else
+  }
+  else
 #endif
 #ifdef ENABLE_GSS
-      if (port->gss && port->gss->enc) {
+      if (port->gss && port->gss->enc)
+  {
     n = be_gssapi_read(port, ptr, len);
     waitfor = WL_SOCKET_READABLE;
-  } else
+  }
+  else
 #endif
   {
     n = secure_raw_read(port, ptr, len);
@@ -169,7 +173,8 @@ retry:
   }
 
   /* In blocking mode, wait until the socket is ready */
-  if (n < 0 && !port->noblock && (errno == EWOULDBLOCK || errno == EAGAIN)) {
+  if (n < 0 && !port->noblock && (errno == EWOULDBLOCK || errno == EAGAIN))
+  {
     WaitEvent event;
 
     Assert(waitfor);
@@ -195,12 +200,14 @@ retry:
      * cycles checking for this very rare condition, and this should cause
      * us to exit quickly in most cases.)
      */
-    if (event.events & WL_POSTMASTER_DEATH) {
+    if (event.events & WL_POSTMASTER_DEATH)
+    {
       ereport(FATAL, (errcode(ERRCODE_ADMIN_SHUTDOWN), errmsg("terminating connection due to unexpected postmaster exit")));
     }
 
     /* Handle interrupt. */
-    if (event.events & WL_LATCH_SET) {
+    if (event.events & WL_LATCH_SET)
+    {
       ResetLatch(MyLatch);
       ProcessClientReadInterrupt(true);
 
@@ -257,22 +264,27 @@ secure_write(Port *port, void *ptr, size_t len)
 retry:
   waitfor = 0;
 #ifdef USE_SSL
-  if (port->ssl_in_use) {
+  if (port->ssl_in_use)
+  {
     n = be_tls_write(port, ptr, len, &waitfor);
-  } else
+  }
+  else
 #endif
 #ifdef ENABLE_GSS
-      if (port->gss && port->gss->enc) {
+      if (port->gss && port->gss->enc)
+  {
     n = be_gssapi_write(port, ptr, len);
     waitfor = WL_SOCKET_WRITEABLE;
-  } else
+  }
+  else
 #endif
   {
     n = secure_raw_write(port, ptr, len);
     waitfor = WL_SOCKET_WRITEABLE;
   }
 
-  if (n < 0 && !port->noblock && (errno == EWOULDBLOCK || errno == EAGAIN)) {
+  if (n < 0 && !port->noblock && (errno == EWOULDBLOCK || errno == EAGAIN))
+  {
     WaitEvent event;
 
     Assert(waitfor);
@@ -282,12 +294,14 @@ retry:
     WaitEventSetWait(FeBeWaitSet, -1 /* no timeout */, &event, 1, WAIT_EVENT_CLIENT_WRITE);
 
     /* See comments in secure_read. */
-    if (event.events & WL_POSTMASTER_DEATH) {
+    if (event.events & WL_POSTMASTER_DEATH)
+    {
       ereport(FATAL, (errcode(ERRCODE_ADMIN_SHUTDOWN), errmsg("terminating connection due to unexpected postmaster exit")));
     }
 
     /* Handle interrupt. */
-    if (event.events & WL_LATCH_SET) {
+    if (event.events & WL_LATCH_SET)
+    {
       ResetLatch(MyLatch);
       ProcessClientWriteInterrupt(true);
 

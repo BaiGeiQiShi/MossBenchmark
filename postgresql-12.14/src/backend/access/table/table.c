@@ -30,8 +30,8 @@
  *
  *		This is essentially relation_open plus check that the relation
  *		is not an index nor a composite type.  (The caller should also
- *		check that it's not a view or foreign table before assuming it
- *has storage.)
+ *		check that it's not a view or foreign table before assuming it has
+ *		storage.)
  * ----------------
  */
 Relation
@@ -47,7 +47,7 @@ table_open(Oid relationId, LOCKMODE lockmode)
   }
   else if (r->rd_rel->relkind == RELKIND_COMPOSITE_TYPE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a composite type", RelationGetRelationName(r))));
   }
 
   return r;
@@ -73,7 +73,7 @@ table_openrv(const RangeVar *relation, LOCKMODE lockmode)
   }
   else if (r->rd_rel->relkind == RELKIND_COMPOSITE_TYPE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a composite type", RelationGetRelationName(r))));
   }
 
   return r;
@@ -98,11 +98,11 @@ table_openrv_extended(const RangeVar *relation, LOCKMODE lockmode, bool missing_
   {
     if (r->rd_rel->relkind == RELKIND_INDEX || r->rd_rel->relkind == RELKIND_PARTITIONED_INDEX)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is an index", RelationGetRelationName(r))));
     }
     else if (r->rd_rel->relkind == RELKIND_COMPOSITE_TYPE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is a composite type", RelationGetRelationName(r))));
     }
   }
 
@@ -114,8 +114,8 @@ table_openrv_extended(const RangeVar *relation, LOCKMODE lockmode, bool missing_
  *
  *		If lockmode is not "NoLock", we then release the specified lock.
  *
- *		Note that it is often sensible to hold a lock beyond
- *relation_close; in that case, the lock is released automatically at xact end.
+ *		Note that it is often sensible to hold a lock beyond relation_close;
+ *		in that case, the lock is released automatically at xact end.
  *		----------------
  */
 void

@@ -14,7 +14,8 @@
 
 PG_MODULE_MAGIC;
 
-typedef struct Complex {
+typedef struct Complex
+{
   double x;
   double y;
 } Complex;
@@ -32,7 +33,8 @@ complex_in(PG_FUNCTION_ARGS)
   double x, y;
   Complex *result;
 
-  if (sscanf(str, " ( %lf , %lf )", &x, &y) != 2) {
+  if (sscanf(str, " ( %lf , %lf )", &x, &y) != 2)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "complex", str)));
   }
 
@@ -127,10 +129,12 @@ complex_abs_cmp_internal(Complex *a, Complex *b)
 {
   double amag = Mag(a), bmag = Mag(b);
 
-  if (amag < bmag) {
+  if (amag < bmag)
+  {
     return -1;
   }
-  if (amag > bmag) {
+  if (amag > bmag)
+  {
     return 1;
   }
   return 0;

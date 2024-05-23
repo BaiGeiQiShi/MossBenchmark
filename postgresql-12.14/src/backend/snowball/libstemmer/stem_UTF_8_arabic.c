@@ -4,10 +4,11 @@
 #include "header.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-extern int
-arabic_UTF_8_stem(struct SN_env *z);
+  extern int
+  arabic_UTF_8_stem(struct SN_env *z);
 #ifdef __cplusplus
 }
 #endif
@@ -54,13 +55,14 @@ r_Prefix_Step2(struct SN_env *z);
 static int
 r_Prefix_Step1(struct SN_env *z);
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-extern struct SN_env *
-arabic_UTF_8_create_env(void);
-extern void
-arabic_UTF_8_close_env(struct SN_env *z);
+  extern struct SN_env *
+  arabic_UTF_8_create_env(void);
+  extern void
+  arabic_UTF_8_close_env(struct SN_env *z);
 
 #ifdef __cplusplus
 }
@@ -657,330 +659,487 @@ r_Normalize_pre(struct SN_env *z)
   int among_var;
   {
     int c1 = z->c; /* do, line 247 */
-    while (1) {    /* repeat, line 247 */
+    while (1)
+    { /* repeat, line 247 */
       int c2 = z->c;
       {
         int c3 = z->c;                       /* or, line 311 */
         z->bra = z->c;                       /* [, line 249 */
         among_var = find_among(z, a_0, 144); /* substring, line 249 */
-        if (!(among_var)) {
+        if (!(among_var))
+        {
           goto lab3;
         }
-        z->ket = z->c;       /* ], line 249 */
-        switch (among_var) { /* among, line 249 */
-        case 1: {
+        z->ket = z->c; /* ], line 249 */
+        switch (among_var)
+        { /* among, line 249 */
+        case 1:
+        {
           int ret = slice_del(z); /* delete, line 250 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 2: {
+        }
+        break;
+        case 2:
+        {
           int ret = slice_from_s(z, 1, s_0); /* <-, line 254 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 3: {
+        }
+        break;
+        case 3:
+        {
           int ret = slice_from_s(z, 1, s_1); /* <-, line 255 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 4: {
+        }
+        break;
+        case 4:
+        {
           int ret = slice_from_s(z, 1, s_2); /* <-, line 256 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 5: {
+        }
+        break;
+        case 5:
+        {
           int ret = slice_from_s(z, 1, s_3); /* <-, line 257 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 6: {
+        }
+        break;
+        case 6:
+        {
           int ret = slice_from_s(z, 1, s_4); /* <-, line 258 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 7: {
+        }
+        break;
+        case 7:
+        {
           int ret = slice_from_s(z, 1, s_5); /* <-, line 259 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 8: {
+        }
+        break;
+        case 8:
+        {
           int ret = slice_from_s(z, 1, s_6); /* <-, line 260 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 9: {
+        }
+        break;
+        case 9:
+        {
           int ret = slice_from_s(z, 1, s_7); /* <-, line 261 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 10: {
+        }
+        break;
+        case 10:
+        {
           int ret = slice_from_s(z, 1, s_8); /* <-, line 262 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 11: {
+        }
+        break;
+        case 11:
+        {
           int ret = slice_from_s(z, 1, s_9); /* <-, line 263 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 12: {
+        }
+        break;
+        case 12:
+        {
           int ret = slice_from_s(z, 2, s_10); /* <-, line 266 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 13: {
+        }
+        break;
+        case 13:
+        {
           int ret = slice_from_s(z, 2, s_11); /* <-, line 267 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 14: {
+        }
+        break;
+        case 14:
+        {
           int ret = slice_from_s(z, 2, s_12); /* <-, line 268 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 15: {
+        }
+        break;
+        case 15:
+        {
           int ret = slice_from_s(z, 2, s_13); /* <-, line 269 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 16: {
+        }
+        break;
+        case 16:
+        {
           int ret = slice_from_s(z, 2, s_14); /* <-, line 270 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 17: {
+        }
+        break;
+        case 17:
+        {
           int ret = slice_from_s(z, 2, s_15); /* <-, line 271 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 18: {
+        }
+        break;
+        case 18:
+        {
           int ret = slice_from_s(z, 2, s_16); /* <-, line 272 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 19: {
+        }
+        break;
+        case 19:
+        {
           int ret = slice_from_s(z, 2, s_17); /* <-, line 273 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 20: {
+        }
+        break;
+        case 20:
+        {
           int ret = slice_from_s(z, 2, s_18); /* <-, line 274 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 21: {
+        }
+        break;
+        case 21:
+        {
           int ret = slice_from_s(z, 2, s_19); /* <-, line 275 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 22: {
+        }
+        break;
+        case 22:
+        {
           int ret = slice_from_s(z, 2, s_20); /* <-, line 276 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 23: {
+        }
+        break;
+        case 23:
+        {
           int ret = slice_from_s(z, 2, s_21); /* <-, line 277 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 24: {
+        }
+        break;
+        case 24:
+        {
           int ret = slice_from_s(z, 2, s_22); /* <-, line 278 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 25: {
+        }
+        break;
+        case 25:
+        {
           int ret = slice_from_s(z, 2, s_23); /* <-, line 279 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 26: {
+        }
+        break;
+        case 26:
+        {
           int ret = slice_from_s(z, 2, s_24); /* <-, line 280 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 27: {
+        }
+        break;
+        case 27:
+        {
           int ret = slice_from_s(z, 2, s_25); /* <-, line 281 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 28: {
+        }
+        break;
+        case 28:
+        {
           int ret = slice_from_s(z, 2, s_26); /* <-, line 282 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 29: {
+        }
+        break;
+        case 29:
+        {
           int ret = slice_from_s(z, 2, s_27); /* <-, line 283 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 30: {
+        }
+        break;
+        case 30:
+        {
           int ret = slice_from_s(z, 2, s_28); /* <-, line 284 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 31: {
+        }
+        break;
+        case 31:
+        {
           int ret = slice_from_s(z, 2, s_29); /* <-, line 285 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 32: {
+        }
+        break;
+        case 32:
+        {
           int ret = slice_from_s(z, 2, s_30); /* <-, line 286 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 33: {
+        }
+        break;
+        case 33:
+        {
           int ret = slice_from_s(z, 2, s_31); /* <-, line 287 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 34: {
+        }
+        break;
+        case 34:
+        {
           int ret = slice_from_s(z, 2, s_32); /* <-, line 288 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 35: {
+        }
+        break;
+        case 35:
+        {
           int ret = slice_from_s(z, 2, s_33); /* <-, line 289 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 36: {
+        }
+        break;
+        case 36:
+        {
           int ret = slice_from_s(z, 2, s_34); /* <-, line 290 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 37: {
+        }
+        break;
+        case 37:
+        {
           int ret = slice_from_s(z, 2, s_35); /* <-, line 291 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 38: {
+        }
+        break;
+        case 38:
+        {
           int ret = slice_from_s(z, 2, s_36); /* <-, line 292 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 39: {
+        }
+        break;
+        case 39:
+        {
           int ret = slice_from_s(z, 2, s_37); /* <-, line 293 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 40: {
+        }
+        break;
+        case 40:
+        {
           int ret = slice_from_s(z, 2, s_38); /* <-, line 294 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 41: {
+        }
+        break;
+        case 41:
+        {
           int ret = slice_from_s(z, 2, s_39); /* <-, line 295 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 42: {
+        }
+        break;
+        case 42:
+        {
           int ret = slice_from_s(z, 2, s_40); /* <-, line 296 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 43: {
+        }
+        break;
+        case 43:
+        {
           int ret = slice_from_s(z, 2, s_41); /* <-, line 297 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 44: {
+        }
+        break;
+        case 44:
+        {
           int ret = slice_from_s(z, 2, s_42); /* <-, line 298 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 45: {
+        }
+        break;
+        case 45:
+        {
           int ret = slice_from_s(z, 2, s_43); /* <-, line 299 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 46: {
+        }
+        break;
+        case 46:
+        {
           int ret = slice_from_s(z, 2, s_44); /* <-, line 300 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 47: {
+        }
+        break;
+        case 47:
+        {
           int ret = slice_from_s(z, 2, s_45); /* <-, line 301 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 48: {
+        }
+        break;
+        case 48:
+        {
           int ret = slice_from_s(z, 4, s_46); /* <-, line 304 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 49: {
+        }
+        break;
+        case 49:
+        {
           int ret = slice_from_s(z, 4, s_47); /* <-, line 305 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 50: {
+        }
+        break;
+        case 50:
+        {
           int ret = slice_from_s(z, 4, s_48); /* <-, line 306 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 51: {
+        }
+        break;
+        case 51:
+        {
           int ret = slice_from_s(z, 4, s_49); /* <-, line 307 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
+        }
+        break;
         }
         goto lab2;
       lab3:
         z->c = c3;
         {
           int ret = skip_utf8(z->p, z->c, 0, z->l, 1);
-          if (ret < 0) {
+          if (ret < 0)
+          {
             goto lab1;
           }
           z->c = ret; /* next, line 312 */
@@ -1007,16 +1166,19 @@ r_Normalize_post(struct SN_env *z)
     z->c = z->l; /* backwards, line 320 */
 
     z->ket = z->c; /* [, line 321 */
-    if (z->c - 1 <= z->lb || z->p[z->c - 1] >> 5 != 5 || !((124 >> (z->p[z->c - 1] & 0x1f)) & 1)) {
+    if (z->c - 1 <= z->lb || z->p[z->c - 1] >> 5 != 5 || !((124 >> (z->p[z->c - 1] & 0x1f)) & 1))
+    {
       goto lab0; /* substring, line 321 */
     }
-    if (!(find_among_b(z, a_1, 5))) {
+    if (!(find_among_b(z, a_1, 5)))
+    {
       goto lab0;
     }
     z->bra = z->c; /* ], line 321 */
     {
       int ret = slice_from_s(z, 2, s_50); /* <-, line 322 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1026,45 +1188,59 @@ r_Normalize_post(struct SN_env *z)
   }
   {
     int c2 = z->c; /* do, line 329 */
-    while (1) {    /* repeat, line 329 */
+    while (1)
+    { /* repeat, line 329 */
       int c3 = z->c;
       {
         int c4 = z->c; /* or, line 338 */
         z->bra = z->c; /* [, line 332 */
-        if (z->c + 1 >= z->l || z->p[z->c + 1] >> 5 != 5 || !((124 >> (z->p[z->c + 1] & 0x1f)) & 1)) {
+        if (z->c + 1 >= z->l || z->p[z->c + 1] >> 5 != 5 || !((124 >> (z->p[z->c + 1] & 0x1f)) & 1))
+        {
           goto lab4; /* substring, line 332 */
         }
         among_var = find_among(z, a_2, 5);
-        if (!(among_var)) {
+        if (!(among_var))
+        {
           goto lab4;
         }
-        z->ket = z->c;       /* ], line 332 */
-        switch (among_var) { /* among, line 332 */
-        case 1: {
+        z->ket = z->c; /* ], line 332 */
+        switch (among_var)
+        { /* among, line 332 */
+        case 1:
+        {
           int ret = slice_from_s(z, 2, s_51); /* <-, line 333 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 2: {
+        }
+        break;
+        case 2:
+        {
           int ret = slice_from_s(z, 2, s_52); /* <-, line 334 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
-        case 3: {
+        }
+        break;
+        case 3:
+        {
           int ret = slice_from_s(z, 2, s_53); /* <-, line 335 */
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
-        } break;
+        }
+        break;
         }
         goto lab3;
       lab4:
         z->c = c4;
         {
           int ret = skip_utf8(z->p, z->c, 0, z->l, 1);
-          if (ret < 0) {
+          if (ret < 0)
+          {
             goto lab2;
           }
           z->c = ret; /* next, line 339 */
@@ -1086,17 +1262,21 @@ r_Checks1(struct SN_env *z)
 { /* forwardmode */
   int among_var;
   z->bra = z->c; /* [, line 345 */
-  if (z->c + 3 >= z->l || (z->p[z->c + 3] != 132 && z->p[z->c + 3] != 167)) {
+  if (z->c + 3 >= z->l || (z->p[z->c + 3] != 132 && z->p[z->c + 3] != 167))
+  {
     return 0; /* substring, line 345 */
   }
   among_var = find_among(z, a_3, 4);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->ket = z->c;       /* ], line 345 */
-  switch (among_var) { /* among, line 345 */
+  z->ket = z->c; /* ], line 345 */
+  switch (among_var)
+  { /* among, line 345 */
   case 1:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 346 */
     }
     z->B[0] = 1; /* set is_noun, line 346 */
@@ -1104,7 +1284,8 @@ r_Checks1(struct SN_env *z)
     z->B[2] = 1; /* set is_defined, line 346 */
     break;
   case 2:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 347 */
     }
     z->B[0] = 1; /* set is_noun, line 347 */
@@ -1120,55 +1301,66 @@ r_Prefix_Step1(struct SN_env *z)
 { /* forwardmode */
   int among_var;
   z->bra = z->c; /* [, line 354 */
-  if (z->c + 3 >= z->l || z->p[z->c + 3] >> 5 != 5 || !((188 >> (z->p[z->c + 3] & 0x1f)) & 1)) {
+  if (z->c + 3 >= z->l || z->p[z->c + 3] >> 5 != 5 || !((188 >> (z->p[z->c + 3] & 0x1f)) & 1))
+  {
     return 0; /* substring, line 354 */
   }
   among_var = find_among(z, a_4, 5);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->ket = z->c;       /* ], line 354 */
-  switch (among_var) { /* among, line 354 */
+  z->ket = z->c; /* ], line 354 */
+  switch (among_var)
+  { /* among, line 354 */
   case 1:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 355 */
     }
     {
       int ret = slice_from_s(z, 2, s_54); /* <-, line 355 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 356 */
     }
     {
       int ret = slice_from_s(z, 2, s_55); /* <-, line 356 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 358 */
     }
     {
       int ret = slice_from_s(z, 2, s_56); /* <-, line 358 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 4:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 359 */
     }
     {
       int ret = slice_from_s(z, 2, s_57); /* <-, line 359 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1182,7 +1374,8 @@ r_Prefix_Step2(struct SN_env *z)
 { /* forwardmode */
   {
     int c1 = z->c; /* not, line 365 */
-    if (!(eq_s(z, 4, s_58))) {
+    if (!(eq_s(z, 4, s_58)))
+    {
       goto lab0; /* literal, line 365 */
     }
     return 0;
@@ -1191,7 +1384,8 @@ r_Prefix_Step2(struct SN_env *z)
   }
   {
     int c2 = z->c; /* not, line 366 */
-    if (!(eq_s(z, 4, s_59))) {
+    if (!(eq_s(z, 4, s_59)))
+    {
       goto lab1; /* literal, line 366 */
     }
     return 0;
@@ -1199,19 +1393,23 @@ r_Prefix_Step2(struct SN_env *z)
     z->c = c2;
   }
   z->bra = z->c; /* [, line 367 */
-  if (z->c + 1 >= z->l || (z->p[z->c + 1] != 129 && z->p[z->c + 1] != 136)) {
+  if (z->c + 1 >= z->l || (z->p[z->c + 1] != 129 && z->p[z->c + 1] != 136))
+  {
     return 0; /* substring, line 367 */
   }
-  if (!(find_among(z, a_5, 2))) {
+  if (!(find_among(z, a_5, 2)))
+  {
     return 0;
   }
   z->ket = z->c; /* ], line 367 */
-  if (!(len_utf8(z->p) > 3)) {
+  if (!(len_utf8(z->p) > 3))
+  {
     return 0; /* $(<integer expression> > <integer expression>), line 368 */
   }
   {
     int ret = slice_del(z); /* delete, line 368 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1223,33 +1421,40 @@ r_Prefix_Step3a_Noun(struct SN_env *z)
 { /* forwardmode */
   int among_var;
   z->bra = z->c; /* [, line 374 */
-  if (z->c + 3 >= z->l || (z->p[z->c + 3] != 132 && z->p[z->c + 3] != 167)) {
+  if (z->c + 3 >= z->l || (z->p[z->c + 3] != 132 && z->p[z->c + 3] != 167))
+  {
     return 0; /* substring, line 374 */
   }
   among_var = find_among(z, a_6, 4);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->ket = z->c;       /* ], line 374 */
-  switch (among_var) { /* among, line 374 */
+  z->ket = z->c; /* ], line 374 */
+  switch (among_var)
+  { /* among, line 374 */
   case 1:
-    if (!(len_utf8(z->p) > 5)) {
+    if (!(len_utf8(z->p) > 5))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 375 */
     }
     {
       int ret = slice_del(z); /* delete, line 375 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 376 */
     }
     {
       int ret = slice_del(z); /* delete, line 376 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1264,7 +1469,8 @@ r_Prefix_Step3b_Noun(struct SN_env *z)
   int among_var;
   {
     int c1 = z->c; /* not, line 381 */
-    if (!(eq_s(z, 4, s_60))) {
+    if (!(eq_s(z, 4, s_60)))
+    {
       goto lab0; /* literal, line 381 */
     }
     return 0;
@@ -1272,44 +1478,53 @@ r_Prefix_Step3b_Noun(struct SN_env *z)
     z->c = c1;
   }
   z->bra = z->c; /* [, line 382 */
-  if (z->c + 1 >= z->l || (z->p[z->c + 1] != 168 && z->p[z->c + 1] != 131)) {
+  if (z->c + 1 >= z->l || (z->p[z->c + 1] != 168 && z->p[z->c + 1] != 131))
+  {
     return 0; /* substring, line 382 */
   }
   among_var = find_among(z, a_7, 3);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->ket = z->c;       /* ], line 382 */
-  switch (among_var) { /* among, line 382 */
+  z->ket = z->c; /* ], line 382 */
+  switch (among_var)
+  { /* among, line 382 */
   case 1:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 383 */
     }
     {
       int ret = slice_del(z); /* delete, line 383 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 385 */
     }
     {
       int ret = slice_from_s(z, 2, s_61); /* <-, line 385 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) > 3)) {
+    if (!(len_utf8(z->p) > 3))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 386 */
     }
     {
       int ret = slice_from_s(z, 2, s_62); /* <-, line 386 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1324,51 +1539,61 @@ r_Prefix_Step3_Verb(struct SN_env *z)
   int among_var;
   z->bra = z->c;                     /* [, line 392 */
   among_var = find_among(z, a_8, 4); /* substring, line 392 */
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->ket = z->c;       /* ], line 392 */
-  switch (among_var) { /* among, line 392 */
+  z->ket = z->c; /* ], line 392 */
+  switch (among_var)
+  { /* among, line 392 */
   case 1:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 394 */
     }
     {
       int ret = slice_from_s(z, 2, s_63); /* <-, line 394 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 395 */
     }
     {
       int ret = slice_from_s(z, 2, s_64); /* <-, line 395 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 396 */
     }
     {
       int ret = slice_from_s(z, 2, s_65); /* <-, line 396 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 4:
-    if (!(len_utf8(z->p) > 4)) {
+    if (!(len_utf8(z->p) > 4))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 397 */
     }
     {
       int ret = slice_from_s(z, 2, s_66); /* <-, line 397 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1381,21 +1606,25 @@ static int
 r_Prefix_Step4_Verb(struct SN_env *z)
 {                /* forwardmode */
   z->bra = z->c; /* [, line 402 */
-  if (z->c + 5 >= z->l || z->p[z->c + 5] != 170) {
+  if (z->c + 5 >= z->l || z->p[z->c + 5] != 170)
+  {
     return 0; /* substring, line 402 */
   }
-  if (!(find_among(z, a_9, 3))) {
+  if (!(find_among(z, a_9, 3)))
+  {
     return 0;
   }
   z->ket = z->c; /* ], line 402 */
-  if (!(len_utf8(z->p) > 4)) {
+  if (!(len_utf8(z->p) > 4))
+  {
     return 0; /* $(<integer expression> > <integer expression>), line 403 */
   }
   z->B[1] = 1; /* set is_verb, line 403 */
   z->B[0] = 0; /* unset is_noun, line 403 */
   {
     int ret = slice_from_s(z, 6, s_67); /* <-, line 403 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1408,40 +1637,48 @@ r_Suffix_Noun_Step1a(struct SN_env *z)
   int among_var;
   z->ket = z->c;                         /* [, line 411 */
   among_var = find_among_b(z, a_10, 10); /* substring, line 411 */
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 411 */
-  switch (among_var) { /* among, line 411 */
+  z->bra = z->c; /* ], line 411 */
+  switch (among_var)
+  { /* among, line 411 */
   case 1:
-    if (!(len_utf8(z->p) >= 4)) {
+    if (!(len_utf8(z->p) >= 4))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 412 */
     }
     {
       int ret = slice_del(z); /* delete, line 412 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) >= 5)) {
+    if (!(len_utf8(z->p) >= 5))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 413 */
     }
     {
       int ret = slice_del(z); /* delete, line 413 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) >= 6)) {
+    if (!(len_utf8(z->p) >= 6))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 414 */
     }
     {
       int ret = slice_del(z); /* delete, line 414 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1454,19 +1691,23 @@ static int
 r_Suffix_Noun_Step1b(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 418 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 134) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 134)
+  {
     return 0; /* substring, line 418 */
   }
-  if (!(find_among_b(z, a_11, 1))) {
+  if (!(find_among_b(z, a_11, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 418 */
-  if (!(len_utf8(z->p) > 5)) {
+  if (!(len_utf8(z->p) > 5))
+  {
     return 0; /* $(<integer expression> > <integer expression>), line 419 */
   }
   {
     int ret = slice_del(z); /* delete, line 419 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1477,16 +1718,19 @@ static int
 r_Suffix_Noun_Step2a(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 424 */
-  if (!(find_among_b(z, a_12, 3))) {
+  if (!(find_among_b(z, a_12, 3)))
+  {
     return 0; /* substring, line 424 */
   }
   z->bra = z->c; /* ], line 424 */
-  if (!(len_utf8(z->p) > 4)) {
+  if (!(len_utf8(z->p) > 4))
+  {
     return 0; /* $(<integer expression> > <integer expression>), line 425 */
   }
   {
     int ret = slice_del(z); /* delete, line 425 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1497,19 +1741,23 @@ static int
 r_Suffix_Noun_Step2b(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 430 */
-  if (z->c - 3 <= z->lb || z->p[z->c - 1] != 170) {
+  if (z->c - 3 <= z->lb || z->p[z->c - 1] != 170)
+  {
     return 0; /* substring, line 430 */
   }
-  if (!(find_among_b(z, a_13, 1))) {
+  if (!(find_among_b(z, a_13, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 430 */
-  if (!(len_utf8(z->p) >= 5)) {
+  if (!(len_utf8(z->p) >= 5))
+  {
     return 0; /* $(<integer expression> >= <integer expression>), line 431 */
   }
   {
     int ret = slice_del(z); /* delete, line 431 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1520,19 +1768,23 @@ static int
 r_Suffix_Noun_Step2c1(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 436 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 170) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 170)
+  {
     return 0; /* substring, line 436 */
   }
-  if (!(find_among_b(z, a_14, 1))) {
+  if (!(find_among_b(z, a_14, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 436 */
-  if (!(len_utf8(z->p) >= 4)) {
+  if (!(len_utf8(z->p) >= 4))
+  {
     return 0; /* $(<integer expression> >= <integer expression>), line 437 */
   }
   {
     int ret = slice_del(z); /* delete, line 437 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1543,19 +1795,23 @@ static int
 r_Suffix_Noun_Step2c2(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 441 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 169) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 169)
+  {
     return 0; /* substring, line 441 */
   }
-  if (!(find_among_b(z, a_15, 1))) {
+  if (!(find_among_b(z, a_15, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 441 */
-  if (!(len_utf8(z->p) >= 4)) {
+  if (!(len_utf8(z->p) >= 4))
+  {
     return 0; /* $(<integer expression> >= <integer expression>), line 442 */
   }
   {
     int ret = slice_del(z); /* delete, line 442 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1566,19 +1822,23 @@ static int
 r_Suffix_Noun_Step3(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 446 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 138) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 138)
+  {
     return 0; /* substring, line 446 */
   }
-  if (!(find_among_b(z, a_16, 1))) {
+  if (!(find_among_b(z, a_16, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 446 */
-  if (!(len_utf8(z->p) >= 3)) {
+  if (!(len_utf8(z->p) >= 3))
+  {
     return 0; /* $(<integer expression> >= <integer expression>), line 447 */
   }
   {
     int ret = slice_del(z); /* delete, line 447 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1591,40 +1851,48 @@ r_Suffix_Verb_Step1(struct SN_env *z)
   int among_var;
   z->ket = z->c;                         /* [, line 452 */
   among_var = find_among_b(z, a_17, 12); /* substring, line 452 */
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 452 */
-  switch (among_var) { /* among, line 452 */
+  z->bra = z->c; /* ], line 452 */
+  switch (among_var)
+  { /* among, line 452 */
   case 1:
-    if (!(len_utf8(z->p) >= 4)) {
+    if (!(len_utf8(z->p) >= 4))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 453 */
     }
     {
       int ret = slice_del(z); /* delete, line 453 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) >= 5)) {
+    if (!(len_utf8(z->p) >= 5))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 454 */
     }
     {
       int ret = slice_del(z); /* delete, line 454 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) >= 6)) {
+    if (!(len_utf8(z->p) >= 6))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 455 */
     }
     {
       int ret = slice_del(z); /* delete, line 455 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1639,51 +1907,61 @@ r_Suffix_Verb_Step2a(struct SN_env *z)
   int among_var;
   z->ket = z->c;                         /* [, line 459 */
   among_var = find_among_b(z, a_18, 11); /* substring, line 459 */
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 459 */
-  switch (among_var) { /* among, line 459 */
+  z->bra = z->c; /* ], line 459 */
+  switch (among_var)
+  { /* among, line 459 */
   case 1:
-    if (!(len_utf8(z->p) >= 4)) {
+    if (!(len_utf8(z->p) >= 4))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 460 */
     }
     {
       int ret = slice_del(z); /* delete, line 460 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) >= 5)) {
+    if (!(len_utf8(z->p) >= 5))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 462 */
     }
     {
       int ret = slice_del(z); /* delete, line 462 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 3:
-    if (!(len_utf8(z->p) > 5)) {
+    if (!(len_utf8(z->p) > 5))
+    {
       return 0; /* $(<integer expression> > <integer expression>), line 463 */
     }
     {
       int ret = slice_del(z); /* delete, line 463 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 4:
-    if (!(len_utf8(z->p) >= 6)) {
+    if (!(len_utf8(z->p) >= 6))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 464 */
     }
     {
       int ret = slice_del(z); /* delete, line 464 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1696,19 +1974,23 @@ static int
 r_Suffix_Verb_Step2b(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 469 */
-  if (z->c - 3 <= z->lb || (z->p[z->c - 1] != 133 && z->p[z->c - 1] != 167)) {
+  if (z->c - 3 <= z->lb || (z->p[z->c - 1] != 133 && z->p[z->c - 1] != 167))
+  {
     return 0; /* substring, line 469 */
   }
-  if (!(find_among_b(z, a_19, 2))) {
+  if (!(find_among_b(z, a_19, 2)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 469 */
-  if (!(len_utf8(z->p) >= 5)) {
+  if (!(len_utf8(z->p) >= 5))
+  {
     return 0; /* $(<integer expression> >= <integer expression>), line 470 */
   }
   {
     int ret = slice_del(z); /* delete, line 470 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1720,33 +2002,40 @@ r_Suffix_Verb_Step2c(struct SN_env *z)
 { /* backwardmode */
   int among_var;
   z->ket = z->c; /* [, line 476 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 136) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 136)
+  {
     return 0; /* substring, line 476 */
   }
   among_var = find_among_b(z, a_20, 2);
-  if (!(among_var)) {
+  if (!(among_var))
+  {
     return 0;
   }
-  z->bra = z->c;       /* ], line 476 */
-  switch (among_var) { /* among, line 476 */
+  z->bra = z->c; /* ], line 476 */
+  switch (among_var)
+  { /* among, line 476 */
   case 1:
-    if (!(len_utf8(z->p) >= 4)) {
+    if (!(len_utf8(z->p) >= 4))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 477 */
     }
     {
       int ret = slice_del(z); /* delete, line 477 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
     break;
   case 2:
-    if (!(len_utf8(z->p) >= 6)) {
+    if (!(len_utf8(z->p) >= 6))
+    {
       return 0; /* $(<integer expression> >= <integer expression>), line 478 */
     }
     {
       int ret = slice_del(z); /* delete, line 478 */
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1759,16 +2048,19 @@ static int
 r_Suffix_All_alef_maqsura(struct SN_env *z)
 {                /* backwardmode */
   z->ket = z->c; /* [, line 483 */
-  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 137) {
+  if (z->c - 1 <= z->lb || z->p[z->c - 1] != 137)
+  {
     return 0; /* substring, line 483 */
   }
-  if (!(find_among_b(z, a_21, 1))) {
+  if (!(find_among_b(z, a_21, 1)))
+  {
     return 0;
   }
   z->bra = z->c; /* ], line 483 */
   {
     int ret = slice_from_s(z, 2, s_68); /* <-, line 484 */
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1785,10 +2077,12 @@ arabic_UTF_8_stem(struct SN_env *z)
     int c1 = z->c; /* do, line 498 */
     {
       int ret = r_Checks1(z); /* call Checks1, line 498 */
-      if (ret == 0) {
+      if (ret == 0)
+      {
         goto lab0;
       }
-      if (ret < 0) {
+      if (ret < 0)
+      {
         return ret;
       }
     }
@@ -1798,10 +2092,12 @@ arabic_UTF_8_stem(struct SN_env *z)
   /* do, line 501 */
   {
     int ret = r_Normalize_pre(z); /* call Normalize_pre, line 501 */
-    if (ret == 0) {
+    if (ret == 0)
+    {
       goto lab1;
     }
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }
@@ -1815,7 +2111,8 @@ lab1:
     {
       int m3 = z->l - z->c;
       (void)m3; /* or, line 520 */
-      if (!(z->B[1])) {
+      if (!(z->B[1]))
+      {
         goto lab4; /* Boolean test is_verb, line 509 */
       }
       {
@@ -1823,15 +2120,18 @@ lab1:
         (void)m4; /* or, line 515 */
         {
           int i = 1;
-          while (1) { /* atleast, line 512 */
+          while (1)
+          { /* atleast, line 512 */
             int m5 = z->l - z->c;
             (void)m5;
             {
               int ret = r_Suffix_Verb_Step1(z); /* call Suffix_Verb_Step1, line 512 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab7;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -1841,7 +2141,8 @@ lab1:
             z->c = z->l - m5;
             break;
           }
-          if (i > 0) {
+          if (i > 0)
+          {
             goto lab6;
           }
         }
@@ -1850,10 +2151,12 @@ lab1:
           (void)m6; /* or, line 513 */
           {
             int ret = r_Suffix_Verb_Step2a(z); /* call Suffix_Verb_Step2a, line 513 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab9;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -1862,10 +2165,12 @@ lab1:
           z->c = z->l - m6;
           {
             int ret = r_Suffix_Verb_Step2c(z); /* call Suffix_Verb_Step2c, line 513 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab10;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -1874,7 +2179,8 @@ lab1:
           z->c = z->l - m6;
           {
             int ret = skip_utf8(z->p, z->c, z->lb, 0, -1);
-            if (ret < 0) {
+            if (ret < 0)
+            {
               goto lab6;
             }
             z->c = ret; /* next, line 513 */
@@ -1886,10 +2192,12 @@ lab1:
         z->c = z->l - m4;
         {
           int ret = r_Suffix_Verb_Step2b(z); /* call Suffix_Verb_Step2b, line 515 */
-          if (ret == 0) {
+          if (ret == 0)
+          {
             goto lab11;
           }
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
         }
@@ -1898,10 +2206,12 @@ lab1:
         z->c = z->l - m4;
         {
           int ret = r_Suffix_Verb_Step2a(z); /* call Suffix_Verb_Step2a, line 516 */
-          if (ret == 0) {
+          if (ret == 0)
+          {
             goto lab4;
           }
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
         }
@@ -1910,7 +2220,8 @@ lab1:
       goto lab3;
     lab4:
       z->c = z->l - m3;
-      if (!(z->B[0])) {
+      if (!(z->B[0]))
+      {
         goto lab12; /* Boolean test is_noun, line 521 */
       }
       {
@@ -1921,10 +2232,12 @@ lab1:
           (void)m8; /* or, line 526 */
           {
             int ret = r_Suffix_Noun_Step2c2(z); /* call Suffix_Noun_Step2c2, line 525 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab15;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -1932,16 +2245,20 @@ lab1:
         lab15:
           z->c = z->l - m8;
           /* not, line 526 */
-          if (!(z->B[2])) {
+          if (!(z->B[2]))
+          {
             goto lab17; /* Boolean test is_defined, line 526 */
           }
           goto lab16;
-        lab17: {
+        lab17:
+        {
           int ret = r_Suffix_Noun_Step1a(z); /* call Suffix_Noun_Step1a, line 526 */
-          if (ret == 0) {
+          if (ret == 0)
+          {
             goto lab16;
           }
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
         }
@@ -1950,10 +2267,12 @@ lab1:
             (void)m9; /* or, line 528 */
             {
               int ret = r_Suffix_Noun_Step2a(z); /* call Suffix_Noun_Step2a, line 527 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab19;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -1962,10 +2281,12 @@ lab1:
             z->c = z->l - m9;
             {
               int ret = r_Suffix_Noun_Step2b(z); /* call Suffix_Noun_Step2b, line 528 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab20;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -1974,10 +2295,12 @@ lab1:
             z->c = z->l - m9;
             {
               int ret = r_Suffix_Noun_Step2c1(z); /* call Suffix_Noun_Step2c1, line 529 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab21;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -1986,7 +2309,8 @@ lab1:
             z->c = z->l - m9;
             {
               int ret = skip_utf8(z->p, z->c, z->lb, 0, -1);
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 goto lab16;
               }
               z->c = ret; /* next, line 530 */
@@ -1998,10 +2322,12 @@ lab1:
           z->c = z->l - m8;
           {
             int ret = r_Suffix_Noun_Step1b(z); /* call Suffix_Noun_Step1b, line 531 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               goto lab22;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -2010,10 +2336,12 @@ lab1:
             (void)m10; /* or, line 533 */
             {
               int ret = r_Suffix_Noun_Step2a(z); /* call Suffix_Noun_Step2a, line 532 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab24;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -2022,10 +2350,12 @@ lab1:
             z->c = z->l - m10;
             {
               int ret = r_Suffix_Noun_Step2b(z); /* call Suffix_Noun_Step2b, line 533 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab25;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -2034,10 +2364,12 @@ lab1:
             z->c = z->l - m10;
             {
               int ret = r_Suffix_Noun_Step2c1(z); /* call Suffix_Noun_Step2c1, line 534 */
-              if (ret == 0) {
+              if (ret == 0)
+              {
                 goto lab22;
               }
-              if (ret < 0) {
+              if (ret < 0)
+              {
                 return ret;
               }
             }
@@ -2047,16 +2379,20 @@ lab1:
         lab22:
           z->c = z->l - m8;
           /* not, line 535 */
-          if (!(z->B[2])) {
+          if (!(z->B[2]))
+          {
             goto lab27; /* Boolean test is_defined, line 535 */
           }
           goto lab26;
-        lab27: {
+        lab27:
+        {
           int ret = r_Suffix_Noun_Step2a(z); /* call Suffix_Noun_Step2a, line 535 */
-          if (ret == 0) {
+          if (ret == 0)
+          {
             goto lab26;
           }
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
         }
@@ -2065,11 +2401,13 @@ lab1:
           z->c = z->l - m8;
           {
             int ret = r_Suffix_Noun_Step2b(z); /* call Suffix_Noun_Step2b, line 536 */
-            if (ret == 0) {
+            if (ret == 0)
+            {
               z->c = z->l - m7;
               goto lab13;
             }
-            if (ret < 0) {
+            if (ret < 0)
+            {
               return ret;
             }
           }
@@ -2079,10 +2417,12 @@ lab1:
       }
       {
         int ret = r_Suffix_Noun_Step3(z); /* call Suffix_Noun_Step3, line 538 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab12;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -2091,10 +2431,12 @@ lab1:
       z->c = z->l - m3;
       {
         int ret = r_Suffix_All_alef_maqsura(z); /* call Suffix_All_alef_maqsura, line 544 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab2;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -2110,11 +2452,13 @@ lab1:
       int c12 = z->c; /* try, line 550 */
       {
         int ret = r_Prefix_Step1(z); /* call Prefix_Step1, line 550 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           z->c = c12;
           goto lab29;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -2124,11 +2468,13 @@ lab1:
       int c13 = z->c; /* try, line 551 */
       {
         int ret = r_Prefix_Step2(z); /* call Prefix_Step2, line 551 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           z->c = c13;
           goto lab30;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -2138,43 +2484,51 @@ lab1:
       int c14 = z->c; /* or, line 553 */
       {
         int ret = r_Prefix_Step3a_Noun(z); /* call Prefix_Step3a_Noun, line 552 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab32;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
       goto lab31;
     lab32:
       z->c = c14;
-      if (!(z->B[0])) {
+      if (!(z->B[0]))
+      {
         goto lab33; /* Boolean test is_noun, line 553 */
       }
       {
         int ret = r_Prefix_Step3b_Noun(z); /* call Prefix_Step3b_Noun, line 553 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab33;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
       goto lab31;
     lab33:
       z->c = c14;
-      if (!(z->B[1])) {
+      if (!(z->B[1]))
+      {
         goto lab28; /* Boolean test is_verb, line 554 */
       }
       {
         int c15 = z->c; /* try, line 554 */
         {
           int ret = r_Prefix_Step3_Verb(z); /* call Prefix_Step3_Verb, line 554 */
-          if (ret == 0) {
+          if (ret == 0)
+          {
             z->c = c15;
             goto lab34;
           }
-          if (ret < 0) {
+          if (ret < 0)
+          {
             return ret;
           }
         }
@@ -2182,10 +2536,12 @@ lab1:
       }
       {
         int ret = r_Prefix_Step4_Verb(z); /* call Prefix_Step4_Verb, line 554 */
-        if (ret == 0) {
+        if (ret == 0)
+        {
           goto lab28;
         }
-        if (ret < 0) {
+        if (ret < 0)
+        {
           return ret;
         }
       }
@@ -2197,10 +2553,12 @@ lab1:
   /* do, line 559 */
   {
     int ret = r_Normalize_post(z); /* call Normalize_post, line 559 */
-    if (ret == 0) {
+    if (ret == 0)
+    {
       goto lab35;
     }
-    if (ret < 0) {
+    if (ret < 0)
+    {
       return ret;
     }
   }

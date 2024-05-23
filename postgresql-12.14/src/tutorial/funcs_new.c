@@ -117,7 +117,8 @@ c_overpaid(PG_FUNCTION_ARGS)
   int32 salary;
 
   salary = DatumGetInt32(GetAttributeByName(t, "salary", &isnull));
-  if (isnull) {
+  if (isnull)
+  {
     PG_RETURN_BOOL(false);
   }
 

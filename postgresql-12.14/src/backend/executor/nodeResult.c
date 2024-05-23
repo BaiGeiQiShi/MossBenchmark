@@ -16,8 +16,8 @@
  *		generates the new rows.)
  *
  *		Result nodes are also used to optimise queries with constant
- *		qualifications (ie, quals that do not depend on the scanned
- *data), such as:
+ *		qualifications (ie, quals that do not depend on the scanned data),
+ *		such as:
  *
  *				select * from emp where 2 > 1
  *
@@ -147,16 +147,16 @@ ExecResult(PlanState *pstate)
 void
 ExecResultMarkPos(ResultState *node)
 {
+  PlanState *outerPlan = outerPlanState(node);
 
-
-
-
-
-
-
-
-
-
+  if (outerPlan != NULL)
+  {
+    ExecMarkPos(outerPlan);
+  }
+  else
+  {
+    elog(DEBUG2, "Result nodes do not support mark/restore");
+  }
 }
 
 /* ----------------------------------------------------------------
@@ -166,16 +166,16 @@ ExecResultMarkPos(ResultState *node)
 void
 ExecResultRestrPos(ResultState *node)
 {
+  PlanState *outerPlan = outerPlanState(node);
 
-
-
-
-
-
-
-
-
-
+  if (outerPlan != NULL)
+  {
+    ExecRestrPos(outerPlan);
+  }
+  else
+  {
+    elog(ERROR, "Result nodes do not support mark/restore");
+  }
 }
 
 /* ----------------------------------------------------------------

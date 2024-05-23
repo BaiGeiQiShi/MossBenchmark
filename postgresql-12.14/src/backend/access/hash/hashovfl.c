@@ -66,7 +66,7 @@ _hash_ovflblkno_to_bitno(HashMetaPage metap, BlockNumber ovflblkno)
   {
     if (ovflblkno <= (BlockNumber)_hash_get_totalbuckets(i))
     {
-
+      break; /* oops */
     }
     bitnum = ovflblkno - _hash_get_totalbuckets(i);
 
@@ -83,14 +83,13 @@ _hash_ovflblkno_to_bitno(HashMetaPage metap, BlockNumber ovflblkno)
   }
 
   ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid overflow block number %u", ovflblkno)));
-
+  return 0; /* keep compiler quiet */
 }
 
 /*
  *	_hash_addovflpage
  *
- *	Add an overflow page to the bucket whose last page is pointed to by
- *'buf'.
+ *	Add an overflow page to the bucket whose last page is pointed to by 'buf'.
  *
  *	On entry, the caller must hold a pin but no lock on 'buf'.  The pin is
  *	dropped before exiting (we assume the caller is not interested in 'buf'
@@ -165,20 +164,20 @@ _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf, bool retain_pin)
     }
 
     /* we assume we do not need to write the unmodified page */
+    if (retain_pin)
+    {
+      /* pin will be retained only for the primary bucket page */
+      Assert((pageopaque->hasho_flag & LH_PAGE_TYPE) == LH_BUCKET_PAGE);
+      LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+    }
+    else
+    {
+      _hash_relbuf(rel, buf);
+    }
 
+    retain_pin = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    buf = _hash_getbuf(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
   }
 
   /* Get exclusive lock on the meta page */
@@ -222,7 +221,7 @@ _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf, bool retain_pin)
     }
     else
     {
-
+      last_inpage = BMPGSZ_BIT(metap) - 1;
     }
 
     /* Release exclusive lock on metapage while reading bitmap page */
@@ -282,15 +281,15 @@ _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf, bool retain_pin)
      * marked "in use".  Subsequent pages do not exist yet, but it is
      * convenient to pre-mark them as "in use" too.
      */
-
+    bit = metap->hashm_spares[splitnum];
 
     /* metapage already has a write lock */
+    if (metap->hashm_nmaps >= HASH_MAX_BITMAPS)
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("out of overflow pages in hash index \"%s\"", RelationGetRelationName(rel))));
+    }
 
-
-
-
-
-
+    newmapbuf = _hash_getnewbuf(rel, bitno_to_blkno(metap, bit), MAIN_FORKNUM);
   }
   else
   {
@@ -316,7 +315,7 @@ _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf, bool retain_pin)
    */
   ovflbuf = _hash_getnewbuf(rel, blkno, MAIN_FORKNUM);
 
-found:;
+found:
 
   /*
    * Do the update.  No ereport(ERROR) until changes are logged. We want to
@@ -340,13 +339,13 @@ found:;
 
     if (BufferIsValid(newmapbuf))
     {
-
-
+      _hash_initbitmapbuffer(newmapbuf, metap->hashm_bmsize, false);
+      MarkBufferDirty(newmapbuf);
 
       /* add the new bitmap page to the metapage's list of bitmaps */
-
-
-
+      metap->hashm_mapp[metap->hashm_nmaps] = BufferGetBlockNumber(newmapbuf);
+      metap->hashm_nmaps++;
+      metap->hashm_spares[splitnum]++;
     }
 
     MarkBufferDirty(metabuf);
@@ -408,7 +407,7 @@ found:;
 
     if (BufferIsValid(newmapbuf))
     {
-
+      XLogRegisterBuffer(3, newmapbuf, REGBUF_WILL_INIT);
     }
 
     XLogRegisterBuffer(4, metabuf, REGBUF_STANDARD);
@@ -426,7 +425,7 @@ found:;
 
     if (BufferIsValid(newmapbuf))
     {
-
+      PageSetLSN(BufferGetPage(newmapbuf), recptr);
     }
 
     PageSetLSN(BufferGetPage(metabuf), recptr);
@@ -452,7 +451,7 @@ found:;
 
   if (BufferIsValid(newmapbuf))
   {
-
+    _hash_relbuf(rel, newmapbuf);
   }
 
   return ovflbuf;
@@ -480,7 +479,7 @@ _hash_firstfreebit(uint32 map)
 
   elog(ERROR, "firstfreebit found no free bit");
 
-
+  return 0; /* keep compiler quiet */
 }
 
 /*
@@ -489,8 +488,8 @@ _hash_firstfreebit(uint32 map)
  *	Remove this overflow page from its bucket's chain, and mark the page as
  *	free.  On entry, ovflbuf is write-locked; it is released before exiting.
  *
- *	Add the tuples (itups) to wbuf in this function.  We could do that in
- *the caller as well, but the advantage of doing it here is we can easily write
+ *	Add the tuples (itups) to wbuf in this function.  We could do that in the
+ *	caller as well, but the advantage of doing it here is we can easily write
  *	the WAL for XLOG_HASH_SQUEEZE_PAGE operation.  Addition of tuples and
  *	removal of overflow page has to done as an atomic operation, otherwise
  *	during replay on standby users might find duplicate records.
@@ -503,8 +502,8 @@ _hash_firstfreebit(uint32 map)
  *
  *	NB: caller must not hold lock on metapage, nor on page, that's next to
  *	ovflbuf in the bucket chain.  We don't acquire the lock on page that's
- *	prior to ovflbuf in chain if it is same as wbuf because the caller
- *already has a lock on same.
+ *	prior to ovflbuf in chain if it is same as wbuf because the caller already
+ *	has a lock on same.
  */
 BlockNumber
 _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, IndexTuple *itups, OffsetNumber *itup_offsets, Size *tups_size, uint16 nitups, BufferAccessStrategy bstrategy)
@@ -557,7 +556,7 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
   }
   if (BlockNumberIsValid(nextblkno))
   {
-
+    nextbuf = _hash_getbuf_with_strategy(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE, bstrategy);
   }
 
   /* Note: bstrategy is intentionally not used for metapage and bitmap */
@@ -574,7 +573,7 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
 
   if (bitmappage >= metap->hashm_nmaps)
   {
-
+    elog(ERROR, "invalid overflow bit number %u", ovflbitno);
   }
   blkno = metap->hashm_mapp[bitmappage];
 
@@ -642,9 +641,9 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
     Page nextpage = BufferGetPage(nextbuf);
     HashPageOpaque nextopaque = (HashPageOpaque)PageGetSpecialPointer(nextpage);
 
-
-
-
+    Assert(nextopaque->hasho_bucket == bucket);
+    nextopaque->hasho_prevblkno = prevblkno;
+    MarkBufferDirty(nextbuf);
   }
 
   /* Clear the bitmap bit to indicate that this overflow page is free */
@@ -709,7 +708,7 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
 
     if (BufferIsValid(nextbuf))
     {
-
+      XLogRegisterBuffer(4, nextbuf, REGBUF_STANDARD);
     }
 
     XLogRegisterBuffer(5, mapbuf, REGBUF_STANDARD);
@@ -732,7 +731,7 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
     }
     if (BufferIsValid(nextbuf))
     {
-
+      PageSetLSN(BufferGetPage(nextbuf), recptr);
     }
 
     PageSetLSN(BufferGetPage(mapbuf), recptr);
@@ -758,7 +757,7 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
 
   if (BufferIsValid(nextbuf))
   {
-
+    _hash_relbuf(rel, nextbuf);
   }
 
   _hash_relbuf(rel, mapbuf);
@@ -770,8 +769,8 @@ _hash_freeovflpage(Relation rel, Buffer bucketbuf, Buffer ovflbuf, Buffer wbuf, 
 /*
  *	_hash_initbitmapbuffer()
  *
- *	 Initialize a new bitmap page.  All bits in the new bitmap page are set
- *to "1", indicating "in use".
+ *	 Initialize a new bitmap page.  All bits in the new bitmap page are set to
+ *	 "1", indicating "in use".
  */
 void
 _hash_initbitmapbuffer(Buffer buf, uint16 bmsize, bool initpage)
@@ -785,7 +784,7 @@ _hash_initbitmapbuffer(Buffer buf, uint16 bmsize, bool initpage)
   /* initialize the page */
   if (initpage)
   {
-
+    _hash_pageinit(pg, BufferGetPageSize(buf));
   }
 
   /* initialize the page's special space */
@@ -822,9 +821,9 @@ _hash_initbitmapbuffer(Buffer buf, uint16 bmsize, bool initpage)
  *
  *	At completion of this procedure, it is guaranteed that all pages in
  *	the bucket are nonempty, unless the bucket is totally empty (in
- *	which case all overflow pages will be freed).  The original
- *implementation required that to be true on entry as well, but it's a lot
- *easier for callers to leave empty overflow pages and let this guy clean it up.
+ *	which case all overflow pages will be freed).  The original implementation
+ *	required that to be true on entry as well, but it's a lot easier for
+ *	callers to leave empty overflow pages and let this guy clean it up.
  *
  *	Caller must acquire cleanup lock on the primary page of the target
  *	bucket to exclude any scans that are in progress, which could easily
@@ -833,8 +832,8 @@ _hash_initbitmapbuffer(Buffer buf, uint16 bmsize, bool initpage)
  *	any concurrent scan to cross the squeeze scan we use lock chaining
  *	similar to hasbucketcleanup.  Refer comments atop hashbucketcleanup.
  *
- *	We need to retain a pin on the primary bucket to ensure that no
- *concurrent split can start.
+ *	We need to retain a pin on the primary bucket to ensure that no concurrent
+ *	split can start.
  *
  *	Since this function is invoked in VACUUM, we provide an access strategy
  *	parameter that controls fetches of the bucket pages.
@@ -907,7 +906,7 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
     int i;
     bool retain_pin = false;
 
-  readpage:;
+  readpage:
     /* Scan each tuple in "read" page */
     maxroffnum = PageGetMaxOffsetNumber(rpage);
     for (roffnum = FirstOffsetNumber; roffnum <= maxroffnum; roffnum = OffsetNumberNext(roffnum))
@@ -918,7 +917,7 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
       /* skip dead tuples */
       if (ItemIdIsDead(PageGetItemId(rpage, roffnum)))
       {
-
+        continue;
       }
 
       itup = (IndexTuple)PageGetItem(rpage, PageGetItemId(rpage, roffnum));
@@ -953,18 +952,18 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
 
         if (nitups > 0)
         {
-
+          Assert(nitups == ndeletable);
 
           /*
            * This operation needs to log multiple tuples, prepare
            * WAL for that.
            */
+          if (RelationNeedsWAL(rel))
+          {
+            XLogEnsureRecordSpace(0, 3 + nitups);
+          }
 
-
-
-
-
-
+          START_CRIT_SECTION();
 
           /*
            * we have to insert tuples on the "write" page, being
@@ -972,53 +971,53 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
            * many tuples into the same "write" page it would be
            * worth qsort'ing them).
            */
-
-
+          _hash_pgaddmultitup(rel, wbuf, itups, itup_offsets, nitups);
+          MarkBufferDirty(wbuf);
 
           /* Delete tuples we already moved off read page */
-
-
+          PageIndexMultiDelete(rpage, deletable, ndeletable);
+          MarkBufferDirty(rbuf);
 
           /* XLOG stuff */
+          if (RelationNeedsWAL(rel))
+          {
+            XLogRecPtr recptr;
+            xl_hash_move_page_contents xlrec;
 
+            xlrec.ntups = nitups;
+            xlrec.is_prim_bucket_same_wrt = (wbuf == bucket_buf) ? true : false;
 
+            XLogBeginInsert();
+            XLogRegisterData((char *)&xlrec, SizeOfHashMovePageContents);
 
+            /*
+             * bucket buffer needs to be registered to ensure that
+             * we can acquire a cleanup lock on it during replay.
+             */
+            if (!xlrec.is_prim_bucket_same_wrt)
+            {
+              XLogRegisterBuffer(0, bucket_buf, REGBUF_STANDARD | REGBUF_NO_IMAGE);
+            }
 
+            XLogRegisterBuffer(1, wbuf, REGBUF_STANDARD);
+            XLogRegisterBufData(1, (char *)itup_offsets, nitups * sizeof(OffsetNumber));
+            for (i = 0; i < nitups; i++)
+            {
+              XLogRegisterBufData(1, (char *)itups[i], tups_size[i]);
+            }
 
+            XLogRegisterBuffer(2, rbuf, REGBUF_STANDARD);
+            XLogRegisterBufData(2, (char *)deletable, ndeletable * sizeof(OffsetNumber));
 
+            recptr = XLogInsert(RM_HASH_ID, XLOG_HASH_MOVE_PAGE_CONTENTS);
 
+            PageSetLSN(BufferGetPage(wbuf), recptr);
+            PageSetLSN(BufferGetPage(rbuf), recptr);
+          }
 
+          END_CRIT_SECTION();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          tups_moved = true;
         }
 
         /*
@@ -1050,7 +1049,7 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
         /* be tidy */
         for (i = 0; i < nitups; i++)
         {
-
+          pfree(itups[i]);
         }
         nitups = 0;
         all_tups_size = 0;
@@ -1062,7 +1061,7 @@ _hash_squeezebucket(Relation rel, Bucket bucket, BlockNumber bucket_blkno, Buffe
          */
         if (tups_moved)
         {
-
+          goto readpage;
         }
       }
 

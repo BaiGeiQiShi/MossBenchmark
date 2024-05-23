@@ -64,13 +64,13 @@ InstrStartNode(Instrumentation *instr)
 {
   if (instr->need_timer && !INSTR_TIME_SET_CURRENT_LAZY(instr->starttime))
   {
-
+    elog(ERROR, "InstrStartNode called twice in a row");
   }
 
   /* save buffer usage totals at node entry, if needed */
   if (instr->need_bufusage)
   {
-
+    instr->bufusage_start = pgBufferUsage;
   }
 }
 
@@ -88,7 +88,7 @@ InstrStopNode(Instrumentation *instr, double nTuples)
   {
     if (INSTR_TIME_IS_ZERO(instr->starttime))
     {
-
+      elog(ERROR, "InstrStopNode called without start");
     }
 
     INSTR_TIME_SET_CURRENT(endtime);
@@ -100,7 +100,7 @@ InstrStopNode(Instrumentation *instr, double nTuples)
   /* Add delta of buffer usage since entry to node's totals */
   if (instr->need_bufusage)
   {
-
+    BufferUsageAccumDiff(&instr->bufusage, &pgBufferUsage, &instr->bufusage_start);
   }
 
   /* Is this the first tuple of this cycle? */
@@ -125,7 +125,7 @@ InstrEndLoop(Instrumentation *instr)
 
   if (!INSTR_TIME_IS_ZERO(instr->starttime))
   {
-
+    elog(ERROR, "InstrEndLoop called on running node");
   }
 
   /* Accumulate per-cycle statistics into totals */
@@ -150,12 +150,12 @@ InstrAggNode(Instrumentation *dst, Instrumentation *add)
 {
   if (!dst->running && add->running)
   {
-
-
+    dst->running = true;
+    dst->firsttuple = add->firsttuple;
   }
   else if (dst->running && add->running && dst->firsttuple > add->firsttuple)
   {
-
+    dst->firsttuple = add->firsttuple;
   }
 
   INSTR_TIME_ADD(dst->counter, add->counter);
@@ -172,7 +172,7 @@ InstrAggNode(Instrumentation *dst, Instrumentation *add)
   /* Add delta of buffer usage since entry to node's totals */
   if (dst->need_bufusage)
   {
-
+    BufferUsageAdd(&dst->bufusage, &add->bufusage);
   }
 }
 

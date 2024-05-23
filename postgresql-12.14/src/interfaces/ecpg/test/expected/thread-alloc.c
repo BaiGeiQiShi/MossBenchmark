@@ -46,46 +46,49 @@ main(void)
 #define SQLERRMC_LEN 150
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-struct sqlca_t {
-  char sqlcaid[8];
-  long sqlabc;
-  long sqlcode;
-  struct {
-    int sqlerrml;
-    char sqlerrmc[SQLERRMC_LEN];
-  } sqlerrm;
-  char sqlerrp[8];
-  long sqlerrd[6];
-  /* Element 0: empty						*/
-  /* 1: OID of processed tuple if applicable			*/
-  /* 2: number of rows processed				*/
-  /* after an INSERT, UPDATE or				*/
-  /* DELETE statement					*/
-  /* 3: empty						*/
-  /* 4: empty						*/
-  /* 5: empty						*/
-  char sqlwarn[8];
-  /* Element 0: set to 'W' if at least one other is 'W'	*/
-  /* 1: if 'W' at least one character string		*/
-  /* value was truncated when it was			*/
-  /* stored into a host variable.             */
+  struct sqlca_t
+  {
+    char sqlcaid[8];
+    long sqlabc;
+    long sqlcode;
+    struct
+    {
+      int sqlerrml;
+      char sqlerrmc[SQLERRMC_LEN];
+    } sqlerrm;
+    char sqlerrp[8];
+    long sqlerrd[6];
+    /* Element 0: empty						*/
+    /* 1: OID of processed tuple if applicable			*/
+    /* 2: number of rows processed				*/
+    /* after an INSERT, UPDATE or				*/
+    /* DELETE statement					*/
+    /* 3: empty						*/
+    /* 4: empty						*/
+    /* 5: empty						*/
+    char sqlwarn[8];
+    /* Element 0: set to 'W' if at least one other is 'W'	*/
+    /* 1: if 'W' at least one character string		*/
+    /* value was truncated when it was			*/
+    /* stored into a host variable.             */
 
-  /*
-   * 2: if 'W' a (hopefully) non-fatal notice occurred
-   */	/* 3: empty */
-  /* 4: empty						*/
-  /* 5: empty						*/
-  /* 6: empty						*/
-  /* 7: empty						*/
+    /*
+     * 2: if 'W' a (hopefully) non-fatal notice occurred
+     */	/* 3: empty */
+    /* 4: empty						*/
+    /* 5: empty						*/
+    /* 6: empty						*/
+    /* 7: empty						*/
 
-  char sqlstate[5];
-};
+    char sqlstate[5];
+  };
 
-struct sqlca_t *
-ECPGget_sqlca(void);
+  struct sqlca_t *
+  ECPGget_sqlca(void);
 
 #ifndef POSTGRES_ECPG_INTERNAL
 #define sqlca (*ECPGget_sqlca())
@@ -138,7 +141,8 @@ fn(void *arg)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, name, 0);
 #line 48 "alloc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -148,23 +152,27 @@ fn(void *arg)
     ECPGsetcommit(__LINE__, "on", NULL);
 #line 49 "alloc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 49 "alloc.pgc"
 
-  for (i = 1; i <= REPEATS; ++i) {
+  for (i = 1; i <= REPEATS; ++i)
+  {
     {
       ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select relname from pg_class where relname = 'pg_class'", ECPGt_EOIT, ECPGt_char, &(r), (long)0, (long)0, (1) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 52 "alloc.pgc"
 
-      if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+      if (sqlca.sqlcode == ECPG_NOT_FOUND)
+      {
         sqlprint();
       }
 #line 52 "alloc.pgc"
 
-      if (sqlca.sqlcode < 0) {
+      if (sqlca.sqlcode < 0)
+      {
         sqlprint();
       }
     }
@@ -177,7 +185,8 @@ fn(void *arg)
     ECPGdisconnect(__LINE__, name);
 #line 56 "alloc.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -197,20 +206,24 @@ main()
 #endif
 
 #ifdef WIN32
-  for (i = 0; i < THREADS; ++i) {
+  for (i = 0; i < THREADS; ++i)
+  {
     unsigned id;
     threads[i] = (HANDLE)_beginthreadex(NULL, 0, fn, (void *)i, 0, &id);
   }
 
   WaitForMultipleObjects(THREADS, threads, TRUE, INFINITE);
-  for (i = 0; i < THREADS; ++i) {
+  for (i = 0; i < THREADS; ++i)
+  {
     CloseHandle(threads[i]);
   }
 #else
-  for (i = 0; i < THREADS; ++i) {
+  for (i = 0; i < THREADS; ++i)
+  {
     pthread_create(&threads[i], NULL, fn, (void *)(long)i);
   }
-  for (i = 0; i < THREADS; ++i) {
+  for (i = 0; i < THREADS; ++i)
+  {
     pthread_join(threads[i], NULL);
   }
 #endif

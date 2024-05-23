@@ -52,8 +52,7 @@ typedef struct
 } generate_series_fctx;
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -81,8 +80,7 @@ int2out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int2recv			- converts external binary
- *format to int2
+ *		int2recv			- converts external binary format to int2
  */
 Datum
 int2recv(PG_FUNCTION_ARGS)
@@ -138,8 +136,7 @@ buildint2vector(const int16 *int2s, int n)
 }
 
 /*
- *		int2vectorin			- converts "num num ..." to
- *internal form
+ *		int2vectorin			- converts "num num ..." to internal form
  */
 Datum
 int2vectorin(PG_FUNCTION_ARGS)
@@ -186,8 +183,7 @@ int2vectorin(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int2vectorout		- converts internal form to "num num
- *..."
+ *		int2vectorout		- converts internal form to "num num ..."
  */
 Datum
 int2vectorout(PG_FUNCTION_ARGS)
@@ -207,15 +203,14 @@ int2vectorout(PG_FUNCTION_ARGS)
     }
     pg_itoa(int2Array->values[num], rp);
     while (*++rp != '\0')
-    {;}
+      ;
   }
   *rp = '\0';
   PG_RETURN_CSTRING(result);
 }
 
 /*
- *		int2vectorrecv			- converts external binary
- *format to int2vector
+ *		int2vectorrecv			- converts external binary format to int2vector
  */
 Datum
 int2vectorrecv(PG_FUNCTION_ARGS)
@@ -259,8 +254,7 @@ int2vectorrecv(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int2vectorsend			- converts int2vector to binary
- *format
+ *		int2vectorsend			- converts int2vector to binary format
  */
 Datum
 int2vectorsend(PG_FUNCTION_ARGS)
@@ -269,8 +263,7 @@ int2vectorsend(PG_FUNCTION_ARGS)
 }
 
 /*****************************************************************************
- *	 PUBLIC ROUTINES
- **
+ *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -298,8 +291,7 @@ int4out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		int4recv			- converts external binary
- *format to int4
+ *		int4recv			- converts external binary format to int4
  */
 Datum
 int4recv(PG_FUNCTION_ARGS)

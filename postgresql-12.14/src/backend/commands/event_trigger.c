@@ -228,7 +228,9 @@ validate_ddl_tags(const char *filtervar, List *taglist)
     }
     if (result == EVENT_TRIGGER_COMMAND_TAG_NOT_SUPPORTED)
     {
-      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("event triggers are not supported for %s", tag)));
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                         /* translator: %s represents an SQL statement name */
+                         errmsg("event triggers are not supported for %s", tag)));
     }
   }
 }
@@ -304,7 +306,9 @@ validate_table_rewrite_tags(const char *filtervar, List *taglist)
     result = check_table_rewrite_ddl_tag(tag);
     if (result == EVENT_TRIGGER_COMMAND_TAG_NOT_SUPPORTED)
     {
-      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("event triggers are not supported for %s", tag)));
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                         /* translator: %s represents an SQL statement name */
+                         errmsg("event triggers are not supported for %s", tag)));
     }
   }
 }
@@ -1129,7 +1133,7 @@ EventTriggerSupportsObjectType(ObjectType obtype)
     return true;
 
     /*
-     * There's intentionally no default:; case here; we want the
+     * There's intentionally no default: case here; we want the
      * compiler to warn if a new ObjectType hasn't been handled above.
      */
   }
@@ -1191,7 +1195,7 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
     return true;
 
     /*
-     * There's intentionally no default:; case here; we want the
+     * There's intentionally no default: case here; we want the
      * compiler to warn if a new OCLASS hasn't been handled above.
      */
   }
@@ -1682,8 +1686,7 @@ EventTriggerCollectSimpleCommand(ObjectAddress address, ObjectAddress secondaryO
 
 /*
  * EventTriggerAlterTableStart
- *		Prepare to receive data on an ALTER TABLE command about to be
- *executed
+ *		Prepare to receive data on an ALTER TABLE command about to be executed
  *
  * Note we don't collect the command immediately; instead we keep it in
  * currentCommand, and only when we're done processing the subcommands we will
@@ -1772,8 +1775,7 @@ EventTriggerCollectAlterTableSubcmd(Node *subcmd, ObjectAddress address)
 
 /*
  * EventTriggerAlterTableEnd
- *		Finish up saving an ALTER TABLE command, and add it to command
- *list.
+ *		Finish up saving an ALTER TABLE command, and add it to command list.
  *
  * FIXME this API isn't considering the possibility that an xact/subxact is
  * aborted partway through.  Probably it's best to add an

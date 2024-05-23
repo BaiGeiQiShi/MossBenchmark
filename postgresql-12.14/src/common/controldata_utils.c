@@ -62,18 +62,21 @@ get_controlfile(const char *DataDir, bool *crc_ok_p)
   snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", DataDir);
 
 #ifndef FRONTEND
-  if ((fd = OpenTransientFile(ControlFilePath, O_RDONLY | PG_BINARY)) == -1) {
+  if ((fd = OpenTransientFile(ControlFilePath, O_RDONLY | PG_BINARY)) == -1)
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not open file \"%s\" for reading: %m", ControlFilePath)));
   }
 #else
-  if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1) {
+  if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1)
+  {
     pg_log_fatal("could not open file \"%s\" for reading: %m", ControlFilePath);
     exit(EXIT_FAILURE);
   }
 #endif
 
   r = read(fd, ControlFile, sizeof(ControlFileData));
-  if (r != sizeof(ControlFileData)) {
+  if (r != sizeof(ControlFileData))
+  {
     if (r < 0)
 #ifndef FRONTEND
       ereport(ERROR, (errcode_for_file_access(), errmsg("could not read file \"%s\": %m", ControlFilePath)));
@@ -95,11 +98,13 @@ get_controlfile(const char *DataDir, bool *crc_ok_p)
   }
 
 #ifndef FRONTEND
-  if (CloseTransientFile(fd)) {
+  if (CloseTransientFile(fd))
+  {
     ereport(ERROR, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", ControlFilePath)));
   }
 #else
-  if (close(fd)) {
+  if (close(fd))
+  {
     pg_log_fatal("could not close file \"%s\": %m", ControlFilePath);
     exit(EXIT_FAILURE);
   }
@@ -117,7 +122,10 @@ get_controlfile(const char *DataDir, bool *crc_ok_p)
 #ifndef FRONTEND
     elog(ERROR, _("byte ordering mismatch"));
 #else
-    pg_log_warning("possible byte ordering mismatch\nThe byte ordering used to store the pg_control file might not match the one\nused by this program.  In that case the results below would be incorrect, and\nthe PostgreSQL installation would be incompatible with this data directory.");
+    pg_log_warning("possible byte ordering mismatch\n"
+                   "The byte ordering used to store the pg_control file might not match the one\n"
+                   "used by this program.  In that case the results below would be incorrect, and\n"
+                   "the PostgreSQL installation would be incompatible with this data directory.");
 #endif
 
   return ControlFile;
@@ -166,11 +174,13 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
    * All errors issue a PANIC, so no need to use OpenTransientFile() and to
    * worry about file descriptor leaks.
    */
-  if ((fd = BasicOpenFile(ControlFilePath, O_RDWR | PG_BINARY)) < 0) {
+  if ((fd = BasicOpenFile(ControlFilePath, O_RDWR | PG_BINARY)) < 0)
+  {
     ereport(PANIC, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", ControlFilePath)));
   }
 #else
-  if ((fd = open(ControlFilePath, O_WRONLY | PG_BINARY, pg_file_create_mode)) == -1) {
+  if ((fd = open(ControlFilePath, O_WRONLY | PG_BINARY, pg_file_create_mode)) == -1)
+  {
     pg_log_fatal("could not open file \"%s\": %m", ControlFilePath);
     exit(EXIT_FAILURE);
   }
@@ -180,9 +190,11 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
 #ifndef FRONTEND
   pgstat_report_wait_start(WAIT_EVENT_CONTROL_FILE_WRITE_UPDATE);
 #endif
-  if (write(fd, buffer, PG_CONTROL_FILE_SIZE) != PG_CONTROL_FILE_SIZE) {
+  if (write(fd, buffer, PG_CONTROL_FILE_SIZE) != PG_CONTROL_FILE_SIZE)
+  {
     /* if write didn't set errno, assume problem is no disk space */
-    if (errno == 0) {
+    if (errno == 0)
+    {
       errno = ENOSPC;
     }
 
@@ -197,22 +209,26 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
   pgstat_report_wait_end();
 #endif
 
-  if (do_sync) {
+  if (do_sync)
+  {
 #ifndef FRONTEND
     pgstat_report_wait_start(WAIT_EVENT_CONTROL_FILE_SYNC_UPDATE);
-    if (pg_fsync(fd) != 0) {
+    if (pg_fsync(fd) != 0)
+    {
       ereport(PANIC, (errcode_for_file_access(), errmsg("could not fsync file \"%s\": %m", ControlFilePath)));
     }
     pgstat_report_wait_end();
 #else
-    if (fsync(fd) != 0) {
+    if (fsync(fd) != 0)
+    {
       pg_log_fatal("could not fsync file \"%s\": %m", ControlFilePath);
       exit(EXIT_FAILURE);
     }
 #endif
   }
 
-  if (close(fd) < 0) {
+  if (close(fd) < 0)
+  {
 #ifndef FRONTEND
     ereport(PANIC, (errcode_for_file_access(), errmsg("could not close file \"%s\": %m", ControlFilePath)));
 #else

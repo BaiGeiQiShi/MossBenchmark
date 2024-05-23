@@ -31,9 +31,12 @@ fmtlong(long lng, const char *fmt)
 
   r = rfmtlong(lng, fmt, buf);
   printf("r: %d ", r);
-  if (r == 0) {
+  if (r == 0)
+  {
     printf("%d: %s (fmt was: %s)\n", i++, buf, fmt);
-  } else {
+  }
+  else
+  {
     check_return(r);
   }
 }
@@ -60,7 +63,8 @@ main(void)
 static void
 check_return(int ret)
 {
-  switch (ret) {
+  switch (ret)
+  {
   case ECPG_INFORMIX_ENOTDMY:
     printf("(ECPG_INFORMIX_ENOTDMY)");
     break;
@@ -73,7 +77,7 @@ check_return(int ret)
   case ECPG_INFORMIX_BAD_MONTH:
     printf("(ECPG_INFORMIX_BAD_MONTH)");
     break;
-  default:;
+  default:
     printf("(unknown ret: %d)", ret);
     break;
   }

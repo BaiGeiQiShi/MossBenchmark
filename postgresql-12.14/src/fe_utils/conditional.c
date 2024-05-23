@@ -29,7 +29,8 @@ conditional_stack_create(void)
 void
 conditional_stack_destroy(ConditionalStack cstack)
 {
-  while (conditional_stack_pop(cstack)) {
+  while (conditional_stack_pop(cstack))
+  {
     continue;
   }
   free(cstack);
@@ -59,7 +60,8 @@ conditional_stack_pop(ConditionalStack cstack)
 {
   IfStackElem *p = cstack->head;
 
-  if (!p) {
+  if (!p)
+  {
     return false;
   }
   cstack->head = cstack->head->next;
@@ -73,13 +75,17 @@ conditional_stack_pop(ConditionalStack cstack)
 int
 conditional_stack_depth(ConditionalStack cstack)
 {
-  if (cstack == NULL) {
+  if (cstack == NULL)
+  {
     return -1;
-  } else {
+  }
+  else
+  {
     IfStackElem *p = cstack->head;
     int depth = 0;
 
-    while (p != NULL) {
+    while (p != NULL)
+    {
       depth++;
       p = p->next;
     }
@@ -93,7 +99,8 @@ conditional_stack_depth(ConditionalStack cstack)
 ifState
 conditional_stack_peek(ConditionalStack cstack)
 {
-  if (conditional_stack_empty(cstack)) {
+  if (conditional_stack_empty(cstack))
+  {
     return IFSTATE_NONE;
   }
   return cstack->head->if_state;
@@ -106,7 +113,8 @@ conditional_stack_peek(ConditionalStack cstack)
 bool
 conditional_stack_poke(ConditionalStack cstack, ifState new_state)
 {
-  if (conditional_stack_empty(cstack)) {
+  if (conditional_stack_empty(cstack))
+  {
     return false;
   }
   cstack->head->if_state = new_state;
@@ -151,7 +159,8 @@ conditional_stack_set_query_len(ConditionalStack cstack, int len)
 int
 conditional_stack_get_query_len(ConditionalStack cstack)
 {
-  if (conditional_stack_empty(cstack)) {
+  if (conditional_stack_empty(cstack))
+  {
     return -1;
   }
   return cstack->head->query_len;
@@ -174,7 +183,8 @@ conditional_stack_set_paren_depth(ConditionalStack cstack, int depth)
 int
 conditional_stack_get_paren_depth(ConditionalStack cstack)
 {
-  if (conditional_stack_empty(cstack)) {
+  if (conditional_stack_empty(cstack))
+  {
     return -1;
   }
   return cstack->head->paren_depth;

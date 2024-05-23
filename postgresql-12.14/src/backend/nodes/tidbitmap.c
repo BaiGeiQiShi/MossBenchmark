@@ -371,11 +371,11 @@ tbm_free_shared_area(dsa_area *dsa, dsa_pointer dp)
   }
   if (DsaPointerIsValid(istate->schunks))
   {
-
-
-
-
-
+    ptchunks = dsa_get_address(dsa, istate->schunks);
+    if (pg_atomic_sub_fetch_u32(&ptchunks->refcount, 1) == 0)
+    {
+      dsa_free(dsa, istate->schunks);
+    }
   }
 
   dsa_free(dsa, dp);
@@ -404,7 +404,7 @@ tbm_add_tuples(TIDBitmap *tbm, const ItemPointer tids, int ntids, bool recheck)
     /* safety check to ensure we don't overrun bit array bounds */
     if (off < 1 || off > MAX_TUPLES_PER_PAGE)
     {
-
+      elog(ERROR, "tuple offset out of range: %u", off);
     }
 
     /*
@@ -433,7 +433,7 @@ tbm_add_tuples(TIDBitmap *tbm, const ItemPointer tids, int ntids, bool recheck)
     if (page->ischunk)
     {
       /* The page is a lossy chunk header, set bit for itself */
-
+      wordnum = bitnum = 0;
     }
     else
     {
@@ -467,7 +467,7 @@ tbm_add_page(TIDBitmap *tbm, BlockNumber pageno)
   /* If we went over the memory limit, lossify some more pages */
   if (tbm->nentries > tbm->maxentries)
   {
-
+    tbm_lossify(tbm);
   }
 }
 
@@ -479,90 +479,90 @@ tbm_add_page(TIDBitmap *tbm, BlockNumber pageno)
 void
 tbm_union(TIDBitmap *a, const TIDBitmap *b)
 {
+  Assert(!a->iterating);
+  /* Nothing to do if b is empty */
+  if (b->nentries == 0)
+  {
+    return;
+  }
+  /* Scan through chunks and pages in b, merge into a */
+  if (b->status == TBM_ONE_PAGE)
+  {
+    tbm_union_page(a, &b->entry1);
+  }
+  else
+  {
+    pagetable_iterator i;
+    PagetableEntry *bpage;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    Assert(b->status == TBM_HASH);
+    pagetable_start_iterate(b->pagetable, &i);
+    while ((bpage = pagetable_iterate(b->pagetable, &i)) != NULL)
+    {
+      tbm_union_page(a, bpage);
+    }
+  }
 }
 
 /* Process one page of b during a union op */
 static void
 tbm_union_page(TIDBitmap *a, const PagetableEntry *bpage)
 {
+  PagetableEntry *apage;
+  int wordnum;
 
+  if (bpage->ischunk)
+  {
+    /* Scan b's chunk, mark each indicated page lossy in a */
+    for (wordnum = 0; wordnum < WORDS_PER_CHUNK; wordnum++)
+    {
+      bitmapword w = bpage->words[wordnum];
 
+      if (w != 0)
+      {
+        BlockNumber pg;
 
+        pg = bpage->blockno + (wordnum * BITS_PER_BITMAPWORD);
+        while (w != 0)
+        {
+          if (w & 1)
+          {
+            tbm_mark_page_lossy(a, pg);
+          }
+          pg++;
+          w >>= 1;
+        }
+      }
+    }
+  }
+  else if (tbm_page_is_lossy(a, bpage->blockno))
+  {
+    /* page is already lossy in a, nothing to do */
+    return;
+  }
+  else
+  {
+    apage = tbm_get_pageentry(a, bpage->blockno);
+    if (apage->ischunk)
+    {
+      /* The page is a lossy chunk header, set bit for itself */
+      apage->words[0] |= ((bitmapword)1 << 0);
+    }
+    else
+    {
+      /* Both pages are exact, merge at the bit level */
+      for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
+      {
+        apage->words[wordnum] |= bpage->words[wordnum];
+      }
+      apage->recheck |= bpage->recheck;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (a->nentries > a->maxentries)
+  {
+    tbm_lossify(a);
+  }
 }
 
 /*
@@ -577,20 +577,20 @@ tbm_intersect(TIDBitmap *a, const TIDBitmap *b)
   /* Nothing to do if a is empty */
   if (a->nentries == 0)
   {
-
+    return;
   }
   /* Scan through chunks and pages in a, try to match to b */
   if (a->status == TBM_ONE_PAGE)
   {
-
-
-
-
-
-
-
-
-
+    if (tbm_intersect_page(a, &a->entry1, b))
+    {
+      /* Page is now empty, remove it from a */
+      Assert(!a->entry1.ischunk);
+      a->npages--;
+      a->nentries--;
+      Assert(a->nentries == 0);
+      a->status = TBM_EMPTY;
+    }
   }
   else
   {
@@ -606,7 +606,7 @@ tbm_intersect(TIDBitmap *a, const TIDBitmap *b)
         /* Page or chunk is now empty, remove it from a */
         if (apage->ischunk)
         {
-
+          a->nchunks--;
         }
         else
         {
@@ -615,7 +615,7 @@ tbm_intersect(TIDBitmap *a, const TIDBitmap *b)
         a->nentries--;
         if (!pagetable_delete(a->pagetable, apage->blockno))
         {
-
+          elog(ERROR, "hash table corrupted");
         }
       }
     }
@@ -657,7 +657,7 @@ tbm_intersect_page(TIDBitmap *a, PagetableEntry *apage, const TIDBitmap *b)
             if (!tbm_page_is_lossy(b, pg) && tbm_find_pageentry(b, pg) == NULL)
             {
               /* Page is not in b at all, lose lossy bit */
-
+              neww &= ~((bitmapword)1 << bitnum);
             }
           }
           pg++;
@@ -681,8 +681,8 @@ tbm_intersect_page(TIDBitmap *a, PagetableEntry *apage, const TIDBitmap *b)
      * we mark 'a' as requiring rechecks, to indicate that at most those
      * tuples set in 'a' are matches.
      */
-
-
+    apage->recheck = true;
+    return false;
   }
   else
   {
@@ -889,18 +889,18 @@ tbm_prepare_shared_iterate(TIDBitmap *tbm)
       Assert(npages == tbm->npages);
       Assert(nchunks == tbm->nchunks);
     }
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (tbm->status == TBM_ONE_PAGE)
+    {
+      /*
+       * In one page mode allocate the space for one pagetable entry,
+       * initialize it, and directly store its index (i.e. 0) in the
+       * page array.
+       */
+      tbm->dsapagetable = dsa_allocate(tbm->dsa, sizeof(PTEntryArray) + sizeof(PagetableEntry));
+      ptbase = dsa_get_address(tbm->dsa, tbm->dsapagetable);
+      memcpy(ptbase->ptentry, &tbm->entry1, sizeof(PagetableEntry));
+      ptpages->index[0] = 0;
+    }
 
     if (ptbase != NULL)
     {
@@ -1243,20 +1243,20 @@ tbm_find_pageentry(const TIDBitmap *tbm, BlockNumber pageno)
 {
   const PagetableEntry *page;
 
-  if (tbm->nentries == 0)
-  { /* in case pagetable doesn't exist */
-
+  if (tbm->nentries == 0) /* in case pagetable doesn't exist */
+  {
+    return NULL;
   }
 
   if (tbm->status == TBM_ONE_PAGE)
   {
-
-
-
-
-
-
-
+    page = &tbm->entry1;
+    if (page->blockno != pageno)
+    {
+      return NULL;
+    }
+    Assert(!page->ischunk);
+    return page;
   }
 
   page = pagetable_lookup(tbm->pagetable, pageno);
@@ -1266,7 +1266,7 @@ tbm_find_pageentry(const TIDBitmap *tbm, BlockNumber pageno)
   }
   if (page->ischunk)
   {
-
+    return NULL; /* don't want a lossy chunk header */
   }
   return page;
 }
@@ -1463,7 +1463,7 @@ tbm_lossify(TIDBitmap *tbm)
   {
     if (page->ischunk)
     {
-
+      continue; /* already a chunk header */
     }
 
     /*
@@ -1508,7 +1508,7 @@ tbm_lossify(TIDBitmap *tbm)
    */
   if (tbm->nentries > tbm->maxentries / 2)
   {
-
+    tbm->maxentries = Min(tbm->nentries, (INT_MAX - 1) / 2) * 2;
   }
 }
 
@@ -1529,7 +1529,7 @@ tbm_comparator(const void *left, const void *right)
   {
     return 1;
   }
-
+  return 0;
 }
 
 /*
@@ -1552,7 +1552,7 @@ tbm_shared_comparator(const void *left, const void *right, void *arg)
   {
     return 1;
   }
-
+  return 0;
 }
 
 /*

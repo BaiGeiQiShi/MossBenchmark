@@ -248,7 +248,7 @@ ltsWriteBlock(LogicalTapeSet *lts, long blocknum, void *buffer)
   /* Write the requested block */
   if (BufFileSeekBlock(lts->pfile, blocknum) != 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not seek to block %ld of temporary file", blocknum)));
   }
   BufFileWrite(lts->pfile, buffer, BLCKSZ);
 
@@ -272,12 +272,12 @@ ltsReadBlock(LogicalTapeSet *lts, long blocknum, void *buffer)
 
   if (BufFileSeekBlock(lts->pfile, blocknum) != 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not seek to block %ld of temporary file", blocknum)));
   }
   nread = BufFileRead(lts->pfile, buffer, BLCKSZ);
   if (nread != BLCKSZ)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not read block %ld of temporary file: read only %zu of %zu bytes", blocknum, nread, (size_t)BLCKSZ)));
   }
 }
 
@@ -300,7 +300,7 @@ ltsReadFillBuffer(LogicalTapeSet *lts, LogicalTape *lt)
     /* Fetch next block number */
     if (datablocknum == -1L)
     {
-
+      break; /* EOF */
     }
     /* Apply worker offset, needed for leader tapesets */
     datablocknum += lt->offsetBlockNumber;
@@ -337,19 +337,19 @@ ltsReadFillBuffer(LogicalTapeSet *lts, LogicalTape *lt)
 static int
 freeBlocks_cmp(const void *a, const void *b)
 {
+  long ablk = *((const long *)a);
+  long bblk = *((const long *)b);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  /* can't just subtract because long might be wider than int */
+  if (ablk < bblk)
+  {
+    return 1;
+  }
+  if (ablk > bblk)
+  {
+    return -1;
+  }
+  return 0;
 }
 
 /*
@@ -365,12 +365,12 @@ ltsGetFreeBlock(LogicalTapeSet *lts)
    */
   if (lts->nFreeBlocks > 0)
   {
-
-
-
-
-
-
+    if (!lts->blocksSorted)
+    {
+      qsort((void *)lts->freeBlocks, lts->nFreeBlocks, sizeof(long), freeBlocks_cmp);
+      lts->blocksSorted = true;
+    }
+    return lts->freeBlocks[--lts->nFreeBlocks];
   }
   else
   {
@@ -677,7 +677,7 @@ LogicalTapeWrite(LogicalTapeSet *lts, int tapenum, void *ptr, size_t size)
       if (!lt->dirty)
       {
         /* Hmm, went directly from reading to writing? */
-
+        elog(ERROR, "invalid logtape state: should be dirty");
       }
 
       /*
@@ -742,14 +742,14 @@ LogicalTapeRewindForRead(LogicalTapeSet *lts, int tapenum, size_t buffer_size)
    */
   if (lt->frozen)
   {
-
+    buffer_size = BLCKSZ;
   }
   else
   {
     /* need at least one block */
     if (buffer_size < BLCKSZ)
     {
-
+      buffer_size = BLCKSZ;
     }
 
     /* palloc() larger than max_size is unlikely to be helpful */
@@ -792,7 +792,7 @@ LogicalTapeRewindForRead(LogicalTapeSet *lts, int tapenum, size_t buffer_size)
      * This is only OK if tape is frozen; we rewind for (another) read
      * pass.
      */
-
+    Assert(lt->frozen);
   }
 
   /* Allocate a read buffer (unless the tape is empty) */
@@ -869,7 +869,7 @@ LogicalTapeRead(LogicalTapeSet *lts, int tapenum, void *ptr, size_t size)
       /* Try to load more data into buffer. */
       if (!ltsReadFillBuffer(lts, lt))
       {
-
+        break; /* EOF */
       }
     }
 
@@ -950,12 +950,12 @@ LogicalTapeFreeze(LogicalTapeSet *lts, int tapenum, TapeShare *share)
    */
   if (!lt->buffer || lt->buffer_size != BLCKSZ)
   {
-
-
-
-
-
-
+    if (lt->buffer)
+    {
+      pfree(lt->buffer);
+    }
+    lt->buffer = palloc(BLCKSZ);
+    lt->buffer_size = BLCKSZ;
   }
 
   /* Read the first block, or reset if tape is empty */
@@ -965,7 +965,7 @@ LogicalTapeFreeze(LogicalTapeSet *lts, int tapenum, TapeShare *share)
 
   if (lt->firstBlockNumber == -1L)
   {
-
+    lt->nextBlockNumber = -1L;
   }
   ltsReadBlock(lts, lt->curBlockNumber, (void *)lt->buffer);
   if (TapeBlockIsLast(lt->buffer))
@@ -1002,65 +1002,65 @@ LogicalTapeFreeze(LogicalTapeSet *lts, int tapenum, TapeShare *share)
 size_t
 LogicalTapeBackspace(LogicalTapeSet *lts, int tapenum, size_t size)
 {
+  LogicalTape *lt;
+  size_t seekpos = 0;
 
+  Assert(tapenum >= 0 && tapenum < lts->nTapes);
+  lt = &lts->tapes[tapenum];
+  Assert(lt->frozen);
+  Assert(lt->buffer_size == BLCKSZ);
 
+  /*
+   * Easy case for seek within current block.
+   */
+  if (size <= (size_t)lt->pos)
+  {
+    lt->pos -= (int)size;
+    return size;
+  }
 
+  /*
+   * Not-so-easy case, have to walk back the chain of blocks.  This
+   * implementation would be pretty inefficient for long seeks, but we
+   * really aren't doing that (a seek over one tuple is typical).
+   */
+  seekpos = (size_t)lt->pos; /* part within this block */
+  while (size > seekpos)
+  {
+    long prev = TapeBlockGetTrailer(lt->buffer)->prev;
 
+    if (prev == -1L)
+    {
+      /* Tried to back up beyond the beginning of tape. */
+      if (lt->curBlockNumber != lt->firstBlockNumber)
+      {
+        elog(ERROR, "unexpected end of tape");
+      }
+      lt->pos = 0;
+      return seekpos;
+    }
 
+    ltsReadBlock(lts, prev, (void *)lt->buffer);
 
+    if (TapeBlockGetTrailer(lt->buffer)->next != lt->curBlockNumber)
+    {
+      elog(ERROR, "broken tape, next of block %ld is %ld, expected %ld", prev, TapeBlockGetTrailer(lt->buffer)->next, lt->curBlockNumber);
+    }
 
+    lt->nbytes = TapeBlockPayloadSize;
+    lt->curBlockNumber = prev;
+    lt->nextBlockNumber = TapeBlockGetTrailer(lt->buffer)->next;
 
+    seekpos += TapeBlockPayloadSize;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * 'seekpos' can now be greater than 'size', because it points to the
+   * beginning the target block.  The difference is the position within the
+   * page.
+   */
+  lt->pos = seekpos - size;
+  return size;
 }
 
 /*
@@ -1074,27 +1074,27 @@ LogicalTapeBackspace(LogicalTapeSet *lts, int tapenum, size_t size)
 void
 LogicalTapeSeek(LogicalTapeSet *lts, int tapenum, long blocknum, int offset)
 {
+  LogicalTape *lt;
 
+  Assert(tapenum >= 0 && tapenum < lts->nTapes);
+  lt = &lts->tapes[tapenum];
+  Assert(lt->frozen);
+  Assert(offset >= 0 && offset <= TapeBlockPayloadSize);
+  Assert(lt->buffer_size == BLCKSZ);
 
+  if (blocknum != lt->curBlockNumber)
+  {
+    ltsReadBlock(lts, blocknum, (void *)lt->buffer);
+    lt->curBlockNumber = blocknum;
+    lt->nbytes = TapeBlockPayloadSize;
+    lt->nextBlockNumber = TapeBlockGetTrailer(lt->buffer)->next;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (offset > lt->nbytes)
+  {
+    elog(ERROR, "invalid tape seek position");
+  }
+  lt->pos = offset;
 }
 
 /*
@@ -1106,17 +1106,17 @@ LogicalTapeSeek(LogicalTapeSet *lts, int tapenum, long blocknum, int offset)
 void
 LogicalTapeTell(LogicalTapeSet *lts, int tapenum, long *blocknum, int *offset)
 {
+  LogicalTape *lt;
 
+  Assert(tapenum >= 0 && tapenum < lts->nTapes);
+  lt = &lts->tapes[tapenum];
+  Assert(lt->offsetBlockNumber == 0L);
 
+  /* With a larger buffer, 'pos' wouldn't be the same as offset within page */
+  Assert(lt->buffer_size == BLCKSZ);
 
-
-
-
-
-
-
-
-
+  *blocknum = lt->curBlockNumber;
+  *offset = lt->pos;
 }
 
 /*

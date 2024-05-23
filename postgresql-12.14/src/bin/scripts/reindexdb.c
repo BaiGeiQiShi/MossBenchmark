@@ -57,8 +57,10 @@ main(int argc, char *argv[])
   handle_help_version_opts(argc, argv, "reindexdb", help);
 
   /* process command-line options */
-  while ((c = getopt_long(argc, argv, "h:p:U:wWeqS:d:ast:i:v", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "h:p:U:wWeqS:d:ast:i:v", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       host = pg_strdup(optarg);
       break;
@@ -107,7 +109,7 @@ main(int argc, char *argv[])
     case 2:
       maintenance_db = pg_strdup(optarg);
       break;
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
@@ -117,12 +119,14 @@ main(int argc, char *argv[])
    * Non-option argument specifies database name as long as it wasn't
    * already specified with -d / --dbname
    */
-  if (optind < argc && dbname == NULL) {
+  if (optind < argc && dbname == NULL)
+  {
     dbname = argv[optind];
     optind++;
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -137,24 +141,30 @@ main(int argc, char *argv[])
 
   setup_cancel_handler();
 
-  if (alldb) {
-    if (dbname) {
+  if (alldb)
+  {
+    if (dbname)
+    {
       pg_log_error("cannot reindex all databases and a specific one at the same time");
       exit(1);
     }
-    if (syscatalog) {
+    if (syscatalog)
+    {
       pg_log_error("cannot reindex all databases and system catalogs at the same time");
       exit(1);
     }
-    if (schemas.head != NULL) {
+    if (schemas.head != NULL)
+    {
       pg_log_error("cannot reindex specific schema(s) in all databases");
       exit(1);
     }
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       pg_log_error("cannot reindex specific table(s) in all databases");
       exit(1);
     }
-    if (indexes.head != NULL) {
+    if (indexes.head != NULL)
+    {
       pg_log_error("cannot reindex specific index(es) in all databases");
       exit(1);
     }
@@ -162,26 +172,37 @@ main(int argc, char *argv[])
     cparams.dbname = maintenance_db;
 
     reindex_all_databases(&cparams, progname, echo, quiet, verbose, concurrently);
-  } else if (syscatalog) {
-    if (schemas.head != NULL) {
+  }
+  else if (syscatalog)
+  {
+    if (schemas.head != NULL)
+    {
       pg_log_error("cannot reindex specific schema(s) and system catalogs at the same time");
       exit(1);
     }
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       pg_log_error("cannot reindex specific table(s) and system catalogs at the same time");
       exit(1);
     }
-    if (indexes.head != NULL) {
+    if (indexes.head != NULL)
+    {
       pg_log_error("cannot reindex specific index(es) and system catalogs at the same time");
       exit(1);
     }
 
-    if (dbname == NULL) {
-      if (getenv("PGDATABASE")) {
+    if (dbname == NULL)
+    {
+      if (getenv("PGDATABASE"))
+      {
         dbname = getenv("PGDATABASE");
-      } else if (getenv("PGUSER")) {
+      }
+      else if (getenv("PGUSER"))
+      {
         dbname = getenv("PGUSER");
-      } else {
+      }
+      else
+      {
         dbname = get_user_name_or_exit(progname);
       }
     }
@@ -189,38 +210,52 @@ main(int argc, char *argv[])
     cparams.dbname = dbname;
 
     reindex_system_catalogs(&cparams, progname, echo, verbose, concurrently);
-  } else {
-    if (dbname == NULL) {
-      if (getenv("PGDATABASE")) {
+  }
+  else
+  {
+    if (dbname == NULL)
+    {
+      if (getenv("PGDATABASE"))
+      {
         dbname = getenv("PGDATABASE");
-      } else if (getenv("PGUSER")) {
+      }
+      else if (getenv("PGUSER"))
+      {
         dbname = getenv("PGUSER");
-      } else {
+      }
+      else
+      {
         dbname = get_user_name_or_exit(progname);
       }
     }
 
     cparams.dbname = dbname;
 
-    if (schemas.head != NULL) {
+    if (schemas.head != NULL)
+    {
       SimpleStringListCell *cell;
 
-      for (cell = schemas.head; cell; cell = cell->next) {
+      for (cell = schemas.head; cell; cell = cell->next)
+      {
         reindex_one_database(&cparams, "SCHEMA", cell->val, progname, echo, verbose, concurrently);
       }
     }
 
-    if (indexes.head != NULL) {
+    if (indexes.head != NULL)
+    {
       SimpleStringListCell *cell;
 
-      for (cell = indexes.head; cell; cell = cell->next) {
+      for (cell = indexes.head; cell; cell = cell->next)
+      {
         reindex_one_database(&cparams, "INDEX", cell->val, progname, echo, verbose, concurrently);
       }
     }
-    if (tables.head != NULL) {
+    if (tables.head != NULL)
+    {
       SimpleStringListCell *cell;
 
-      for (cell = tables.head; cell; cell = cell->next) {
+      for (cell = tables.head; cell; cell = cell->next)
+      {
         reindex_one_database(&cparams, "TABLE", cell->val, progname, echo, verbose, concurrently);
       }
     }
@@ -229,7 +264,8 @@ main(int argc, char *argv[])
      * reindex database only if neither index nor table nor schema is
      * specified
      */
-    if (indexes.head == NULL && tables.head == NULL && schemas.head == NULL) {
+    if (indexes.head == NULL && tables.head == NULL && schemas.head == NULL)
+    {
       reindex_one_database(&cparams, "DATABASE", NULL, progname, echo, verbose, concurrently);
     }
   }
@@ -246,9 +282,10 @@ reindex_one_database(const ConnParams *cparams, const char *type, const char *na
 
   conn = connectDatabase(cparams, progname, echo, false, false);
 
-  if (concurrently && PQserverVersion(conn) < 120000) {
+  if (concurrently && PQserverVersion(conn) < 120000)
+  {
     PQfinish(conn);
-    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s","concurrently", "12");
+    pg_log_error("cannot use the \"%s\" option on server versions older than PostgreSQL %s", "concurrently", "12");
     exit(1);
   }
 
@@ -256,32 +293,47 @@ reindex_one_database(const ConnParams *cparams, const char *type, const char *na
 
   appendPQExpBufferStr(&sql, "REINDEX ");
 
-  if (verbose) {
+  if (verbose)
+  {
     appendPQExpBufferStr(&sql, "(VERBOSE) ");
   }
 
   appendPQExpBufferStr(&sql, type);
   appendPQExpBufferChar(&sql, ' ');
-  if (concurrently) {
+  if (concurrently)
+  {
     appendPQExpBufferStr(&sql, "CONCURRENTLY ");
   }
-  if (strcmp(type, "TABLE") == 0 || strcmp(type, "INDEX") == 0) {
+  if (strcmp(type, "TABLE") == 0 || strcmp(type, "INDEX") == 0)
+  {
     appendQualifiedRelation(&sql, name, conn, progname, echo);
-  } else if (strcmp(type, "SCHEMA") == 0) {
+  }
+  else if (strcmp(type, "SCHEMA") == 0)
+  {
     appendPQExpBufferStr(&sql, name);
-  } else if (strcmp(type, "DATABASE") == 0) {
+  }
+  else if (strcmp(type, "DATABASE") == 0)
+  {
     appendPQExpBufferStr(&sql, fmtId(PQdb(conn)));
   }
   appendPQExpBufferChar(&sql, ';');
 
-  if (!executeMaintenanceCommand(conn, sql.data, echo)) {
-    if (strcmp(type, "TABLE") == 0) {
+  if (!executeMaintenanceCommand(conn, sql.data, echo))
+  {
+    if (strcmp(type, "TABLE") == 0)
+    {
       pg_log_error("reindexing of table \"%s\" in database \"%s\" failed: %s", name, PQdb(conn), PQerrorMessage(conn));
-    } else if (strcmp(type, "INDEX") == 0) {
+    }
+    else if (strcmp(type, "INDEX") == 0)
+    {
       pg_log_error("reindexing of index \"%s\" in database \"%s\" failed: %s", name, PQdb(conn), PQerrorMessage(conn));
-    } else if (strcmp(type, "SCHEMA") == 0) {
+    }
+    else if (strcmp(type, "SCHEMA") == 0)
+    {
       pg_log_error("reindexing of schema \"%s\" in database \"%s\" failed: %s", name, PQdb(conn), PQerrorMessage(conn));
-    } else {
+    }
+    else
+    {
       pg_log_error("reindexing of database \"%s\" failed: %s", PQdb(conn), PQerrorMessage(conn));
     }
     PQfinish(conn);
@@ -303,10 +355,12 @@ reindex_all_databases(ConnParams *cparams, const char *progname, bool echo, bool
   result = executeQuery(conn, "SELECT datname FROM pg_database WHERE datallowconn ORDER BY 1;", progname, echo);
   PQfinish(conn);
 
-  for (i = 0; i < PQntuples(result); i++) {
+  for (i = 0; i < PQntuples(result); i++)
+  {
     char *dbname = PQgetvalue(result, i, 0);
 
-    if (!quiet) {
+    if (!quiet)
+    {
       printf(_("%s: reindexing database \"%s\"\n"), progname, dbname);
       fflush(stdout);
     }
@@ -331,18 +385,21 @@ reindex_system_catalogs(const ConnParams *cparams, const char *progname, bool ec
 
   appendPQExpBuffer(&sql, "REINDEX");
 
-  if (verbose) {
+  if (verbose)
+  {
     appendPQExpBuffer(&sql, " (VERBOSE)");
   }
 
   appendPQExpBufferStr(&sql, " SYSTEM ");
-  if (concurrently) {
+  if (concurrently)
+  {
     appendPQExpBuffer(&sql, "CONCURRENTLY ");
   }
   appendPQExpBufferStr(&sql, fmtId(PQdb(conn)));
   appendPQExpBufferChar(&sql, ';');
 
-  if (!executeMaintenanceCommand(conn, sql.data, echo)) {
+  if (!executeMaintenanceCommand(conn, sql.data, echo))
+  {
     pg_log_error("reindexing of system catalogs failed: %s", PQerrorMessage(conn));
     PQfinish(conn);
     exit(1);

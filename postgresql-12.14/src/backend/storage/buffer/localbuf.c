@@ -70,7 +70,7 @@ LocalPrefetchBuffer(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum)
   /* Initialize local buffers if first request in this session */
   if (LocalBufHash == NULL)
   {
-
+    InitLocalBuffers();
   }
 
   /* See if the desired buffer already exists */
@@ -83,14 +83,13 @@ LocalPrefetchBuffer(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum)
   }
 
   /* Not in buffers, so initiate prefetch */
-
+  smgrprefetch(smgr, forkNum, blockNum);
 #endif /* USE_PREFETCH */
 }
 
 /*
  * LocalBufferAlloc -
- *	  Find or create a local buffer for the given page of the given
- *relation.
+ *	  Find or create a local buffer for the given page of the given relation.
  *
  * API is similar to bufmgr.c's BufferAlloc, except that we do not need
  * to do any locking since this is all local.   Also, IO_IN_PROGRESS
@@ -147,7 +146,7 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
     else
     {
       /* Previous read attempt must have failed; try again */
-
+      *foundPtr = false;
     }
     return bufHdr;
   }
@@ -167,7 +166,7 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
 
     if (++nextFreeLocalBuf >= NLocBuffer)
     {
-
+      nextFreeLocalBuf = 0;
     }
 
     bufHdr = GetLocalBufferDescriptor(b);
@@ -178,9 +177,9 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
 
       if (BUF_STATE_GET_USAGECOUNT(buf_state) > 0)
       {
-
-
-
+        buf_state -= BUF_USAGECOUNT_ONE;
+        pg_atomic_unlocked_write_u32(&bufHdr->state, buf_state);
+        trycounter = NLocBuffer;
       }
       else
       {
@@ -190,10 +189,10 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
         break;
       }
     }
-
-
-
-
+    else if (--trycounter == 0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("no empty local buffer available")));
+    }
   }
 
   /*
@@ -206,18 +205,18 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
     Page localpage = (char *)LocalBufHdrGetBlock(bufHdr);
 
     /* Find smgr relation for buffer */
+    oreln = smgropen(bufHdr->tag.rnode, MyBackendId);
 
-
-
+    PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 
     /* And write... */
-
+    smgrwrite(oreln, bufHdr->tag.forkNum, bufHdr->tag.blockNum, localpage, false);
 
     /* Mark not-dirty now in case we error out below */
+    buf_state &= ~BM_DIRTY;
+    pg_atomic_unlocked_write_u32(&bufHdr->state, buf_state);
 
-
-
-
+    pgBufferUsage.local_blks_written++;
   }
 
   /*
@@ -234,21 +233,21 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum, bo
    */
   if (buf_state & BM_TAG_VALID)
   {
-
-
-
-
-
+    hresult = (LocalBufferLookupEnt *)hash_search(LocalBufHash, (void *)&bufHdr->tag, HASH_REMOVE, NULL);
+    if (!hresult) /* shouldn't happen */
+    {
+      elog(ERROR, "local buffer hash table corrupted");
+    }
     /* mark buffer invalid just in case hash insert fails */
-
-
-
+    CLEAR_BUFFERTAG(bufHdr->tag);
+    buf_state &= ~(BM_VALID | BM_TAG_VALID);
+    pg_atomic_unlocked_write_u32(&bufHdr->state, buf_state);
   }
 
   hresult = (LocalBufferLookupEnt *)hash_search(LocalBufHash, (void *)&newTag, HASH_ENTER, &found);
-  if (found)
-  { /* shouldn't happen */
-
+  if (found) /* shouldn't happen */
+  {
+    elog(ERROR, "local buffer hash table corrupted");
   }
   hresult->id = b;
 
@@ -307,8 +306,8 @@ MarkLocalBufferDirty(Buffer buffer)
  *		specified relation that have block numbers >= firstDelBlock.
  *		(In particular, with firstDelBlock = 0, all pages are removed.)
  *		Dirty pages are simply dropped, without bothering to write them
- *		out first.  Therefore, this is NOT rollback-able, and so should
- *be used only with extreme caution!
+ *		out first.  Therefore, this is NOT rollback-able, and so should be
+ *		used only with extreme caution!
  *
  *		See DropRelFileNodeBuffers in bufmgr.c for more notes.
  */
@@ -329,13 +328,13 @@ DropRelFileNodeLocalBuffers(RelFileNode rnode, ForkNumber forkNum, BlockNumber f
     {
       if (LocalRefCount[i] != 0)
       {
-
+        elog(ERROR, "block %u of %s is still referenced (local %u)", bufHdr->tag.blockNum, relpathbackend(bufHdr->tag.rnode, MyBackendId, bufHdr->tag.forkNum), LocalRefCount[i]);
       }
       /* Remove entry from hashtable */
       hresult = (LocalBufferLookupEnt *)hash_search(LocalBufHash, (void *)&bufHdr->tag, HASH_REMOVE, NULL);
-      if (!hresult)
-      { /* shouldn't happen */
-
+      if (!hresult) /* shouldn't happen */
+      {
+        elog(ERROR, "local buffer hash table corrupted");
       }
       /* Mark buffer invalid */
       CLEAR_BUFFERTAG(bufHdr->tag);
@@ -348,8 +347,8 @@ DropRelFileNodeLocalBuffers(RelFileNode rnode, ForkNumber forkNum, BlockNumber f
 
 /*
  * DropRelFileNodeAllLocalBuffers
- *		This function removes from the buffer pool all pages of all
- *forks of the specified relation.
+ *		This function removes from the buffer pool all pages of all forks
+ *		of the specified relation.
  *
  *		See DropRelFileNodeAllBuffers in bufmgr.c for more notes.
  */
@@ -370,13 +369,13 @@ DropRelFileNodeAllLocalBuffers(RelFileNode rnode)
     {
       if (LocalRefCount[i] != 0)
       {
-
+        elog(ERROR, "block %u of %s is still referenced (local %u)", bufHdr->tag.blockNum, relpathbackend(bufHdr->tag.rnode, MyBackendId, bufHdr->tag.forkNum), LocalRefCount[i]);
       }
       /* Remove entry from hashtable */
       hresult = (LocalBufferLookupEnt *)hash_search(LocalBufHash, (void *)&bufHdr->tag, HASH_REMOVE, NULL);
-      if (!hresult)
-      { /* shouldn't happen */
-
+      if (!hresult) /* shouldn't happen */
+      {
+        elog(ERROR, "local buffer hash table corrupted");
       }
       /* Mark buffer invalid */
       CLEAR_BUFFERTAG(bufHdr->tag);
@@ -410,7 +409,7 @@ InitLocalBuffers(void)
    */
   if (IsParallelWorker())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE), errmsg("cannot access temporary tables during a parallel operation")));
   }
 
   /* Allocate and zero buffer headers and auxiliary arrays */
@@ -419,7 +418,7 @@ InitLocalBuffers(void)
   LocalRefCount = (int32 *)calloc(nbufs, sizeof(int32));
   if (!LocalBufferDescriptors || !LocalBufferBlockPointers || !LocalRefCount)
   {
-
+    ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
   nextFreeLocalBuf = 0;
@@ -454,7 +453,7 @@ InitLocalBuffers(void)
 
   if (!LocalBufHash)
   {
-
+    elog(ERROR, "could not initialize local buffer hash table");
   }
 
   /* Initialization done, mark buffers allocated */

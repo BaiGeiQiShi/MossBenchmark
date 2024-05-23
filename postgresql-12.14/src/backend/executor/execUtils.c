@@ -14,8 +14,10 @@
  */
 /*
  * INTERFACE ROUTINES
- *		CreateExecutorState		Create/delete executor working
- *state FreeExecutorState CreateExprContext CreateStandaloneExprContext
+ *		CreateExecutorState		Create/delete executor working state
+ *		FreeExecutorState
+ *		CreateExprContext
+ *		CreateStandaloneExprContext
  *		FreeExprContext
  *		ReScanExprContext
  *
@@ -24,19 +26,17 @@
  *
  *		ExecOpenScanRelation	Common code for scan node init routines.
  *
- *		ExecInitRangeTable		Set up executor's
- *range-table-related data.
+ *		ExecInitRangeTable		Set up executor's range-table-related data.
  *
- *		ExecGetRangeTableRelation		Fetch Relation for a
- *rangetable entry.
+ *		ExecGetRangeTableRelation		Fetch Relation for a rangetable entry.
  *
  *		executor_errposition	Report syntactic position of an error.
  *
- *		RegisterExprContextCallback    Register function shutdown
- *callback UnregisterExprContextCallback  Deregister function shutdown callback
+ *		RegisterExprContextCallback    Register function shutdown callback
+ *		UnregisterExprContextCallback  Deregister function shutdown callback
  *
- *		GetAttributeByName		Runtime extraction of columns
- *from tuples. GetAttributeByNum
+ *		GetAttributeByName		Runtime extraction of columns from tuples.
+ *		GetAttributeByNum
  *
  *	 NOTES
  *		This file has traditionally been the place to stick misc.
@@ -208,8 +208,8 @@ FreeExecutorState(EState *estate)
   /* release JIT context, if allocated */
   if (estate->es_jit)
   {
-
-
+    jit_release_context(estate->es_jit);
+    estate->es_jit = NULL;
   }
 
   /* release partition directory, if allocated */
@@ -387,9 +387,8 @@ FreeExprContext(ExprContext *econtext, bool isCommit)
  * ReScanExprContext
  *
  *		Reset an expression context in preparation for a rescan of its
- *		plan node.  This requires calling any registered shutdown
- *callbacks, since any partially complete set-returning-functions must be
- *canceled.
+ *		plan node.  This requires calling any registered shutdown callbacks,
+ *		since any partially complete set-returning-functions must be canceled.
  *
  * Note we make no assumption about the caller's memory context.
  */
@@ -473,14 +472,14 @@ ExecGetResultSlotOps(PlanState *planstate, bool *isfixed)
     {
       *isfixed = planstate->resultopsfixed;
     }
-
-
-
-
-
-
-
-
+    else if (planstate->ps_ResultTupleSlot)
+    {
+      *isfixed = TTS_FIXED(planstate->ps_ResultTupleSlot);
+    }
+    else
+    {
+      *isfixed = false;
+    }
   }
 
   if (!planstate->ps_ResultTupleSlot)
@@ -488,7 +487,7 @@ ExecGetResultSlotOps(PlanState *planstate, bool *isfixed)
     return &TTSOpsVirtual;
   }
 
-
+  return planstate->ps_ResultTupleSlot->tts_ops;
 }
 
 /* ----------------
@@ -567,7 +566,7 @@ tlist_matches_tupdesc(PlanState *ps, List *tlist, Index varno, TupleDesc tupdesc
     }
     if (att_tup->attisdropped)
     {
-
+      return false; /* table contains dropped columns */
     }
     if (att_tup->atthasmissing)
     {
@@ -673,25 +672,25 @@ ExecCreateScanSlotFromOuterPlan(EState *estate, ScanState *scanstate, const Tupl
 bool
 ExecRelationIsTargetRelation(EState *estate, Index scanrelid)
 {
+  ResultRelInfo *resultRelInfos;
+  int i;
 
-
-
-
-
-
-
-
-
-
-
-
+  resultRelInfos = estate->es_result_relations;
+  for (i = 0; i < estate->es_num_result_relations; i++)
+  {
+    if (resultRelInfos[i].ri_RangeTableIndex == scanrelid)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 /* ----------------------------------------------------------------
  *		ExecOpenScanRelation
  *
- *		Open the heap relation to be scanned by a base-level scan plan
- *node. This should be called during the node's ExecInit routine.
+ *		Open the heap relation to be scanned by a base-level scan plan node.
+ *		This should be called during the node's ExecInit routine.
  * ----------------------------------------------------------------
  */
 Relation
@@ -850,22 +849,22 @@ UpdateChangedParamSet(PlanState *node, Bitmapset *newchg)
 int
 executor_errposition(EState *estate, int location)
 {
+  int pos;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* No-op if location was not provided */
+  if (location < 0)
+  {
+    return 0;
+  }
+  /* Can't do anything if source text is not available */
+  if (estate == NULL || estate->es_sourceText == NULL)
+  {
+    return 0;
+  }
+  /* Convert offset to character number */
+  pos = pg_mbstrlen_with_len(estate->es_sourceText, location) + 1;
+  /* And pass it to the ereport mechanism */
+  return errposition(pos);
 }
 
 /*
@@ -989,19 +988,19 @@ GetAttributeByName(HeapTupleHeader tuple, const char *attname, bool *isNull)
 
   if (attname == NULL)
   {
-
+    elog(ERROR, "invalid attribute name");
   }
 
   if (isNull == NULL)
   {
-
+    elog(ERROR, "a NULL isNull pointer was passed");
   }
 
   if (tuple == NULL)
   {
     /* Kinda bogus but compatible with old behavior... */
-
-
+    *isNull = true;
+    return (Datum)0;
   }
 
   tupType = HeapTupleHeaderGetTypeId(tuple);
@@ -1022,7 +1021,7 @@ GetAttributeByName(HeapTupleHeader tuple, const char *attname, bool *isNull)
 
   if (attrno == InvalidAttrNumber)
   {
-
+    elog(ERROR, "attribute \"%s\" does not exist", attname);
   }
 
   /*
@@ -1045,48 +1044,48 @@ GetAttributeByName(HeapTupleHeader tuple, const char *attname, bool *isNull)
 Datum
 GetAttributeByNum(HeapTupleHeader tuple, AttrNumber attrno, bool *isNull)
 {
+  Datum result;
+  Oid tupType;
+  int32 tupTypmod;
+  TupleDesc tupDesc;
+  HeapTupleData tmptup;
 
+  if (!AttributeNumberIsValid(attrno))
+  {
+    elog(ERROR, "invalid attribute number %d", attrno);
+  }
 
+  if (isNull == NULL)
+  {
+    elog(ERROR, "a NULL isNull pointer was passed");
+  }
 
+  if (tuple == NULL)
+  {
+    /* Kinda bogus but compatible with old behavior... */
+    *isNull = true;
+    return (Datum)0;
+  }
 
+  tupType = HeapTupleHeaderGetTypeId(tuple);
+  tupTypmod = HeapTupleHeaderGetTypMod(tuple);
+  tupDesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
 
+  /*
+   * heap_getattr needs a HeapTuple not a bare HeapTupleHeader.  We set all
+   * the fields in the struct just in case user tries to inspect system
+   * columns.
+   */
+  tmptup.t_len = HeapTupleHeaderGetDatumLength(tuple);
+  ItemPointerSetInvalid(&(tmptup.t_self));
+  tmptup.t_tableOid = InvalidOid;
+  tmptup.t_data = tuple;
 
+  result = heap_getattr(&tmptup, attrno, tupDesc, isNull);
 
+  ReleaseTupleDesc(tupDesc);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -1193,31 +1192,31 @@ ExecGetInsertedCols(ResultRelInfo *relinfo, EState *estate)
 
     return rte->insertedCols;
   }
+  else if (relinfo->ri_RootResultRelInfo)
+  {
+    ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+    RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
+    PartitionRoutingInfo *partrouteinfo = relinfo->ri_PartitionInfo;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (partrouteinfo->pi_RootToPartitionMap != NULL)
+    {
+      return execute_attr_map_cols(rte->insertedCols, partrouteinfo->pi_RootToPartitionMap);
+    }
+    else
+    {
+      return rte->insertedCols;
+    }
+  }
+  else
+  {
+    /*
+     * The relation isn't in the range table and it isn't a partition
+     * routing target.  This ResultRelInfo must've been created only for
+     * firing triggers and the relation is not being inserted into.  (See
+     * ExecGetTriggerResultRel.)
+     */
+    return NULL;
+  }
 }
 
 /* Return a bitmap representing columns being updated */
@@ -1248,7 +1247,7 @@ ExecGetUpdatedCols(ResultRelInfo *relinfo, EState *estate)
   }
   else
   {
-
+    return NULL;
   }
 }
 
@@ -1280,7 +1279,7 @@ ExecGetExtraUpdatedCols(ResultRelInfo *relinfo, EState *estate)
   }
   else
   {
-
+    return NULL;
   }
 }
 

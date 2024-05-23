@@ -123,14 +123,14 @@ SetRemoteDestReceiverParams(DestReceiver *self, Portal portal)
      * for the columns to have different print formats; it's sufficient to
      * look at the first one.
      */
-
-
-
-
-
-
-
-
+    if (portal->formats && portal->formats[0] != 0)
+    {
+      myState->pub.receiveSlot = printtup_internal_20;
+    }
+    else
+    {
+      myState->pub.receiveSlot = printtup_20;
+    }
   }
 }
 
@@ -163,12 +163,12 @@ printtup_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
      */
     const char *portalName = portal->name;
 
+    if (portalName == NULL || portalName[0] == '\0')
+    {
+      portalName = "blank";
+    }
 
-
-
-
-
-
+    pq_puttextmessage('P', portalName);
   }
 
   /*
@@ -220,7 +220,7 @@ SendRowDescriptionMessage(StringInfo buf, TupleDesc typeinfo, List *targetlist, 
   }
   else
   {
-
+    SendRowDescriptionCols_2(buf, typeinfo, targetlist, formats);
   }
 
   pq_endmessage_reuse(buf);
@@ -272,7 +272,7 @@ SendRowDescriptionCols_3(StringInfo buf, TupleDesc typeinfo, List *targetlist, i
     /* Do we have a non-resjunk tlist item? */
     while (tlist_item && ((TargetEntry *)lfirst(tlist_item))->resjunk)
     {
-
+      tlist_item = lnext(tlist_item);
     }
     if (tlist_item)
     {
@@ -314,25 +314,25 @@ SendRowDescriptionCols_3(StringInfo buf, TupleDesc typeinfo, List *targetlist, i
 static void
 SendRowDescriptionCols_2(StringInfo buf, TupleDesc typeinfo, List *targetlist, int16 *formats)
 {
+  int natts = typeinfo->natts;
+  int i;
 
+  for (i = 0; i < natts; ++i)
+  {
+    Form_pg_attribute att = TupleDescAttr(typeinfo, i);
+    Oid atttypid = att->atttypid;
+    int32 atttypmod = att->atttypmod;
 
+    /* If column is a domain, send the base type and typmod instead */
+    atttypid = getBaseTypeAndTypmod(atttypid, &atttypmod);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    pq_sendstring(buf, NameStr(att->attname));
+    /* column ID only info appears in protocol 3.0 and up */
+    pq_sendint32(buf, atttypid);
+    pq_sendint16(buf, att->attlen);
+    pq_sendint32(buf, atttypmod);
+    /* format info only appears in protocol 3.0 and up */
+  }
 }
 
 /*
@@ -379,7 +379,7 @@ printtup_prepare_info(DR_printtup *myState, TupleDesc typeinfo, int numAttrs)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unsupported format code: %d", format)));
     }
   }
 }
@@ -478,81 +478,81 @@ printtup(TupleTableSlot *slot, DestReceiver *self)
 static bool
 printtup_20(TupleTableSlot *slot, DestReceiver *self)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  TupleDesc typeinfo = slot->tts_tupleDescriptor;
+  DR_printtup *myState = (DR_printtup *)self;
+  MemoryContext oldcontext;
+  StringInfo buf = &myState->buf;
+  int natts = typeinfo->natts;
+  int i, j, k;
+
+  /* Set or update my derived attribute info, if needed */
+  if (myState->attrinfo != typeinfo || myState->nattrs != natts)
+  {
+    printtup_prepare_info(myState, typeinfo, natts);
+  }
+
+  /* Make sure the tuple is fully deconstructed */
+  slot_getallattrs(slot);
+
+  /* Switch into per-row context so we can recover memory below */
+  oldcontext = MemoryContextSwitchTo(myState->tmpcontext);
+
+  /*
+   * tell the frontend to expect new tuple data (in ASCII style)
+   */
+  pq_beginmessage_reuse(buf, 'D');
+
+  /*
+   * send a bitmap of which attributes are not null
+   */
+  j = 0;
+  k = 1 << 7;
+  for (i = 0; i < natts; ++i)
+  {
+    if (!slot->tts_isnull[i])
+    {
+      j |= k; /* set bit if not null */
+    }
+    k >>= 1;
+    if (k == 0) /* end of byte? */
+    {
+      pq_sendint8(buf, j);
+      j = 0;
+      k = 1 << 7;
+    }
+  }
+  if (k != (1 << 7)) /* flush last partial byte */
+  {
+    pq_sendint8(buf, j);
+  }
+
+  /*
+   * send the attributes of this tuple
+   */
+  for (i = 0; i < natts; ++i)
+  {
+    PrinttupAttrInfo *thisState = myState->myinfo + i;
+    Datum attr = slot->tts_values[i];
+    char *outputstr;
+
+    if (slot->tts_isnull[i])
+    {
+      continue;
+    }
+
+    Assert(thisState->format == 0);
+
+    outputstr = OutputFunctionCall(&thisState->finfo, attr);
+    pq_sendcountedtext(buf, outputstr, strlen(outputstr), true);
+  }
+
+  pq_endmessage_reuse(buf);
+
+  /* Return to caller's context, and flush row's temporary memory */
+  MemoryContextSwitchTo(oldcontext);
+  MemoryContextReset(myState->tmpcontext);
+
+  return true;
 }
 
 /* ----------------
@@ -606,8 +606,7 @@ printatt(unsigned attributeId, Form_pg_attribute attributeP, char *value)
 }
 
 /* ----------------
- *		debugStartup - prepare to print tuples for an interactive
- *backend
+ *		debugStartup - prepare to print tuples for an interactive backend
  * ----------------
  */
 void
@@ -647,7 +646,7 @@ debugtup(TupleTableSlot *slot, DestReceiver *self)
     attr = slot_getattr(slot, i + 1, &isnull);
     if (isnull)
     {
-
+      continue;
     }
     getTypeOutputInfo(TupleDescAttr(typeinfo, i)->atttypid, &typoutput, &typisvarlena);
 
@@ -672,80 +671,80 @@ debugtup(TupleTableSlot *slot, DestReceiver *self)
 static bool
 printtup_internal_20(TupleTableSlot *slot, DestReceiver *self)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  TupleDesc typeinfo = slot->tts_tupleDescriptor;
+  DR_printtup *myState = (DR_printtup *)self;
+  MemoryContext oldcontext;
+  StringInfo buf = &myState->buf;
+  int natts = typeinfo->natts;
+  int i, j, k;
+
+  /* Set or update my derived attribute info, if needed */
+  if (myState->attrinfo != typeinfo || myState->nattrs != natts)
+  {
+    printtup_prepare_info(myState, typeinfo, natts);
+  }
+
+  /* Make sure the tuple is fully deconstructed */
+  slot_getallattrs(slot);
+
+  /* Switch into per-row context so we can recover memory below */
+  oldcontext = MemoryContextSwitchTo(myState->tmpcontext);
+
+  /*
+   * tell the frontend to expect new tuple data (in binary style)
+   */
+  pq_beginmessage_reuse(buf, 'B');
+
+  /*
+   * send a bitmap of which attributes are not null
+   */
+  j = 0;
+  k = 1 << 7;
+  for (i = 0; i < natts; ++i)
+  {
+    if (!slot->tts_isnull[i])
+    {
+      j |= k; /* set bit if not null */
+    }
+    k >>= 1;
+    if (k == 0) /* end of byte? */
+    {
+      pq_sendint8(buf, j);
+      j = 0;
+      k = 1 << 7;
+    }
+  }
+  if (k != (1 << 7)) /* flush last partial byte */
+  {
+    pq_sendint8(buf, j);
+  }
+
+  /*
+   * send the attributes of this tuple
+   */
+  for (i = 0; i < natts; ++i)
+  {
+    PrinttupAttrInfo *thisState = myState->myinfo + i;
+    Datum attr = slot->tts_values[i];
+    bytea *outputbytes;
+
+    if (slot->tts_isnull[i])
+    {
+      continue;
+    }
+
+    Assert(thisState->format == 1);
+
+    outputbytes = SendFunctionCall(&thisState->finfo, attr);
+    pq_sendint32(buf, VARSIZE(outputbytes) - VARHDRSZ);
+    pq_sendbytes(buf, VARDATA(outputbytes), VARSIZE(outputbytes) - VARHDRSZ);
+  }
+
+  pq_endmessage_reuse(buf);
+
+  /* Return to caller's context, and flush row's temporary memory */
+  MemoryContextSwitchTo(oldcontext);
+  MemoryContextReset(myState->tmpcontext);
+
+  return true;
 }

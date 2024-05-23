@@ -25,14 +25,22 @@ valid_variable_name(const char *name)
   const unsigned char *ptr = (const unsigned char *)name;
 
   /* Mustn't be zero-length */
-  if (*ptr == '\0') {
+  if (*ptr == '\0')
+  {
     return false;
   }
 
-  while (*ptr) {
-    if (IS_HIGHBIT_SET(*ptr) || strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789",*ptr) != NULL) {
+  while (*ptr)
+  {
+    if (IS_HIGHBIT_SET(*ptr) || strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                       "abcdefghijklmnopqrstuvwxyz"
+                                       "_0123456789",
+                                    *ptr) != NULL)
+    {
       ptr++;
-    } else {
+    }
+    else
+    {
       return false;
     }
   }
@@ -72,18 +80,22 @@ GetVariable(VariableSpace space, const char *name)
 {
   struct _variable *current;
 
-  if (!space) {
+  if (!space)
+  {
     return NULL;
   }
 
-  for (current = space->next; current; current = current->next) {
+  for (current = space->next; current; current = current->next)
+  {
     int cmp = strcmp(current->name, name);
 
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
       /* this is correct answer when value is NULL, too */
       return current->value;
     }
-    if (cmp > 0) {
+    if (cmp > 0)
+    {
       break; /* it's not there */
     }
   }
@@ -92,7 +104,8 @@ GetVariable(VariableSpace space, const char *name)
 }
 
 /*
- * Try to interpret "value" as a boolean value, and if successful,* store it in *result.  Otherwise don't clobber *result.
+ * Try to interpret "value" as a boolean value, and if successful,
+ * store it in *result.  Otherwise don't clobber *result.
  *
  * Valid values are: true, false, yes, no, on, off, 1, 0; as well as unique
  * prefixes thereof.
@@ -109,33 +122,51 @@ ParseVariableBool(const char *value, const char *name, bool *result)
   bool valid = true;
 
   /* Treat "unset" as an empty string, which will lead to error below */
-  if (value == NULL) {
+  if (value == NULL)
+  {
     value = "";
   }
 
   len = strlen(value);
 
-  if (len > 0 && pg_strncasecmp(value, "true", len) == 0) {
+  if (len > 0 && pg_strncasecmp(value, "true", len) == 0)
+  {
     *result = true;
-  } else if (len > 0 && pg_strncasecmp(value, "false", len) == 0) {
+  }
+  else if (len > 0 && pg_strncasecmp(value, "false", len) == 0)
+  {
     *result = false;
-  } else if (len > 0 && pg_strncasecmp(value, "yes", len) == 0) {
+  }
+  else if (len > 0 && pg_strncasecmp(value, "yes", len) == 0)
+  {
     *result = true;
-  } else if (len > 0 && pg_strncasecmp(value, "no", len) == 0) {
+  }
+  else if (len > 0 && pg_strncasecmp(value, "no", len) == 0)
+  {
     *result = false;
   }
   /* 'o' is not unique enough */
-  else if (pg_strncasecmp(value, "on", (len > 2 ? len : 2)) == 0) {
+  else if (pg_strncasecmp(value, "on", (len > 2 ? len : 2)) == 0)
+  {
     *result = true;
-  } else if (pg_strncasecmp(value, "off", (len > 2 ? len : 2)) == 0) {
+  }
+  else if (pg_strncasecmp(value, "off", (len > 2 ? len : 2)) == 0)
+  {
     *result = false;
-  } else if (pg_strcasecmp(value, "1") == 0) {
+  }
+  else if (pg_strcasecmp(value, "1") == 0)
+  {
     *result = true;
-  } else if (pg_strcasecmp(value, "0") == 0) {
+  }
+  else if (pg_strcasecmp(value, "0") == 0)
+  {
     *result = false;
-  } else {
+  }
+  else
+  {
     /* string is not recognized; don't clobber *result */
-    if (name) {
+    if (name)
+    {
       pg_log_error("unrecognized value \"%s\" for \"%s\": Boolean expected", value, name);
     }
     valid = false;
@@ -144,7 +175,8 @@ ParseVariableBool(const char *value, const char *name, bool *result)
 }
 
 /*
- * Try to interpret "value" as an integer value, and if successful,* store it in *result.  Otherwise don't clobber *result.
+ * Try to interpret "value" as an integer value, and if successful,
+ * store it in *result.  Otherwise don't clobber *result.
  *
  * "name" is the name of the variable we're assigning to, to use in error
  * report if any.  Pass name == NULL to suppress the error report.
@@ -158,18 +190,23 @@ ParseVariableNum(const char *value, const char *name, int *result)
   long numval;
 
   /* Treat "unset" as an empty string, which will lead to error below */
-  if (value == NULL) {
+  if (value == NULL)
+  {
     value = "";
   }
 
   errno = 0;
   numval = strtol(value, &end, 0);
-  if (errno == 0 && *end == '\0' && end != value && numval == (int)numval) {
+  if (errno == 0 && *end == '\0' && end != value && numval == (int)numval)
+  {
     *result = (int)numval;
     return true;
-  } else {
+  }
+  else
+  {
     /* string is not recognized; don't clobber *result */
-    if (name) {
+    if (name)
+    {
       pg_log_error("invalid value \"%s\" for \"%s\": integer expected", value, name);
     }
     return false;
@@ -184,22 +221,27 @@ PrintVariables(VariableSpace space)
 {
   struct _variable *ptr;
 
-  if (!space) {
+  if (!space)
+  {
     return;
   }
 
-  for (ptr = space->next; ptr; ptr = ptr->next) {
-    if (ptr->value) {
+  for (ptr = space->next; ptr; ptr = ptr->next)
+  {
+    if (ptr->value)
+    {
       printf("%s = '%s'\n", ptr->name, ptr->value);
     }
-    if (cancel_pressed) {
+    if (cancel_pressed)
+    {
       break;
     }
   }
 }
 
 /*
- * Set the variable named "name" to value "value",* or delete it if "value" is NULL.
+ * Set the variable named "name" to value "value",
+ * or delete it if "value" is NULL.
  *
  * Returns true if successful, false if not; in the latter case a suitable
  * error message has been printed, except for the unexpected case of
@@ -210,23 +252,28 @@ SetVariable(VariableSpace space, const char *name, const char *value)
 {
   struct _variable *current, *previous;
 
-  if (!space || !name) {
+  if (!space || !name)
+  {
     return false;
   }
 
-  if (!valid_variable_name(name)) {
+  if (!valid_variable_name(name))
+  {
     /* Deletion of non-existent variable is not an error */
-    if (!value) {
+    if (!value)
+    {
       return true;
     }
     pg_log_error("invalid variable name: \"%s\"", name);
     return false;
   }
 
-  for (previous = space, current = space->next; current; previous = current, current = current->next) {
+  for (previous = space, current = space->next; current; previous = current, current = current->next)
+  {
     int cmp = strcmp(current->name, name);
 
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
       /*
        * Found entry, so update, unless assign hook returns false.
        *
@@ -239,18 +286,24 @@ SetVariable(VariableSpace space, const char *name, const char *value)
       char *new_value = value ? pg_strdup(value) : NULL;
       bool confirmed;
 
-      if (current->substitute_hook) {
+      if (current->substitute_hook)
+      {
         new_value = current->substitute_hook(new_value);
       }
 
-      if (current->assign_hook) {
+      if (current->assign_hook)
+      {
         confirmed = current->assign_hook(new_value);
-      } else {
+      }
+      else
+      {
         confirmed = true;
       }
 
-      if (confirmed) {
-        if (current->value) {
+      if (confirmed)
+      {
+        if (current->value)
+        {
           pg_free(current->value);
         }
         current->value = new_value;
@@ -259,24 +312,29 @@ SetVariable(VariableSpace space, const char *name, const char *value)
          * If we deleted the value, and there are no hooks to
          * remember, we can discard the variable altogether.
          */
-        if (new_value == NULL && current->substitute_hook == NULL && current->assign_hook == NULL) {
+        if (new_value == NULL && current->substitute_hook == NULL && current->assign_hook == NULL)
+        {
           previous->next = current->next;
           free(current->name);
           free(current);
         }
-      } else if (new_value) {
+      }
+      else if (new_value)
+      {
         pg_free(new_value); /* current->value is left unchanged */
       }
 
       return confirmed;
     }
-    if (cmp > 0) {
+    if (cmp > 0)
+    {
       break; /* it's not there */
     }
   }
 
   /* not present, make new entry ... unless we were asked to delete */
-  if (value) {
+  if (value)
+  {
     current = pg_malloc(sizeof *current);
     current->name = pg_strdup(name);
     current->value = pg_strdup(value);
@@ -300,37 +358,46 @@ SetVariable(VariableSpace space, const char *name, const char *value)
  * The substitute hook, if given, is immediately called on the variable's
  * value.  Then the assign hook, if given, is called on the variable's value.
  * This is meant to let it update any derived psql state.  If the assign hook
- * doesn't like the current value, it will print a message to that effect,* but we'll ignore it.  Generally we do not expect any such failure here,* because this should get called before any user-supplied value is assigned.
+ * doesn't like the current value, it will print a message to that effect,
+ * but we'll ignore it.  Generally we do not expect any such failure here,
+ * because this should get called before any user-supplied value is assigned.
  */
 void
 SetVariableHooks(VariableSpace space, const char *name, VariableSubstituteHook shook, VariableAssignHook ahook)
 {
   struct _variable *current, *previous;
 
-  if (!space || !name) {
+  if (!space || !name)
+  {
     return;
   }
 
-  if (!valid_variable_name(name)) {
+  if (!valid_variable_name(name))
+  {
     return;
   }
 
-  for (previous = space, current = space->next; current; previous = current, current = current->next) {
+  for (previous = space, current = space->next; current; previous = current, current = current->next)
+  {
     int cmp = strcmp(current->name, name);
 
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
       /* found entry, so update */
       current->substitute_hook = shook;
       current->assign_hook = ahook;
-      if (shook) {
+      if (shook)
+      {
         current->value = (*shook)(current->value);
       }
-      if (ahook) {
+      if (ahook)
+      {
         (void)(*ahook)(current->value);
       }
       return;
     }
-    if (cmp > 0) {
+    if (cmp > 0)
+    {
       break; /* it's not there */
     }
   }
@@ -343,10 +410,12 @@ SetVariableHooks(VariableSpace space, const char *name, VariableSubstituteHook s
   current->assign_hook = ahook;
   current->next = previous->next;
   previous->next = current;
-  if (shook) {
+  if (shook)
+  {
     current->value = (*shook)(current->value);
   }
-  if (ahook) {
+  if (ahook)
+  {
     (void)(*ahook)(current->value);
   }
 }
@@ -363,13 +432,16 @@ VariableHasHook(VariableSpace space, const char *name)
   Assert(space);
   Assert(name);
 
-  for (current = space->next; current; current = current->next) {
+  for (current = space->next; current; current = current->next)
+  {
     int cmp = strcmp(current->name, name);
 
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
       return (current->substitute_hook != NULL || current->assign_hook != NULL);
     }
-    if (cmp > 0) {
+    if (cmp > 0)
+    {
       break; /* it's not there */
     }
   }
@@ -407,5 +479,7 @@ DeleteVariable(VariableSpace space, const char *name)
 void
 PsqlVarEnumError(const char *name, const char *value, const char *suggestions)
 {
-  pg_log_error("unrecognized value \"%s\" for \"%s\"\nAvailable values are: %s.",value, name, suggestions);
+  pg_log_error("unrecognized value \"%s\" for \"%s\"\n"
+               "Available values are: %s.",
+      value, name, suggestions);
 }

@@ -68,7 +68,9 @@ network_in(char *src, bool is_cidr)
   bits = inet_net_pton(ip_family(dst), src, ip_addr(dst), is_cidr ? ip_addrsize(dst) : -1);
   if ((bits < 0) || (bits > ip_maxbits(dst)))
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", is_cidr ? "cidr" : "inet", src)));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+                       /* translator: first %s is inet or cidr */
+                       errmsg("invalid input syntax for type %s: \"%s\"", is_cidr ? "cidr" : "inet", src)));
   }
 
   /*
@@ -117,7 +119,7 @@ network_out(inet *src, bool is_cidr)
   dst = inet_net_ntop(ip_family(src), ip_addr(src), ip_bits(src), tmp, sizeof(tmp));
   if (dst == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("could not format inet value: %m")));
   }
 
   /* For CIDR, add /n if not present */
@@ -147,8 +149,7 @@ cidr_out(PG_FUNCTION_ARGS)
 }
 
 /*
- *		network_recv		- converts external binary format to
- *inet
+ *		network_recv		- converts external binary format to inet
  *
  * The external representation is (one byte apiece for)
  * family, bits, is_cidr, address length, address in network byte order.
@@ -160,68 +161,74 @@ cidr_out(PG_FUNCTION_ARGS)
 static inet *
 network_recv(StringInfo buf, bool is_cidr)
 {
+  inet *addr;
+  char *addrptr;
+  int bits;
+  int nb, i;
 
+  /* make sure any unused bits in a CIDR value are zeroed */
+  addr = (inet *)palloc0(sizeof(inet));
 
+  ip_family(addr) = pq_getmsgbyte(buf);
+  if (ip_family(addr) != PGSQL_AF_INET && ip_family(addr) != PGSQL_AF_INET6)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+                       /* translator: %s is inet or cidr */
+                       errmsg("invalid address family in external \"%s\" value", is_cidr ? "cidr" : "inet")));
+  }
+  bits = pq_getmsgbyte(buf);
+  if (bits < 0 || bits > ip_maxbits(addr))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+                       /* translator: %s is inet or cidr */
+                       errmsg("invalid bits in external \"%s\" value", is_cidr ? "cidr" : "inet")));
+  }
+  ip_bits(addr) = bits;
+  i = pq_getmsgbyte(buf); /* ignore is_cidr */
+  nb = pq_getmsgbyte(buf);
+  if (nb != ip_addrsize(addr))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+                       /* translator: %s is inet or cidr */
+                       errmsg("invalid length in external \"%s\" value", is_cidr ? "cidr" : "inet")));
+  }
 
+  addrptr = (char *)ip_addr(addr);
+  for (i = 0; i < nb; i++)
+  {
+    addrptr[i] = pq_getmsgbyte(buf);
+  }
 
+  /*
+   * Error check: CIDR values must not have any bits set beyond the masklen.
+   */
+  if (is_cidr)
+  {
+    if (!addressOK(ip_addr(addr), bits, ip_family(addr)))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid external \"cidr\" value"), errdetail("Value has bits set to right of mask.")));
+    }
+  }
 
+  SET_INET_VARSIZE(addr);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return addr;
 }
 
 Datum
 inet_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_INET_P(network_recv(buf, false));
 }
 
 Datum
 cidr_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
 
-
-
+  PG_RETURN_INET_P(network_recv(buf, true));
 }
 
 /*
@@ -230,42 +237,42 @@ cidr_recv(PG_FUNCTION_ARGS)
 static bytea *
 network_send(inet *addr, bool is_cidr)
 {
+  StringInfoData buf;
+  char *addrptr;
+  int nb, i;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendbyte(&buf, ip_family(addr));
+  pq_sendbyte(&buf, ip_bits(addr));
+  pq_sendbyte(&buf, is_cidr);
+  nb = ip_addrsize(addr);
+  if (nb < 0)
+  {
+    nb = 0;
+  }
+  pq_sendbyte(&buf, nb);
+  addrptr = (char *)ip_addr(addr);
+  for (i = 0; i < nb; i++)
+  {
+    pq_sendbyte(&buf, addrptr[i]);
+  }
+  return pq_endtypsend(&buf);
 }
 
 Datum
 inet_send(PG_FUNCTION_ARGS)
 {
+  inet *addr = PG_GETARG_INET_PP(0);
 
-
-
+  PG_RETURN_BYTEA_P(network_send(addr, false));
 }
 
 Datum
 cidr_send(PG_FUNCTION_ARGS)
 {
+  inet *addr = PG_GETARG_INET_PP(0);
 
-
-
+  PG_RETURN_BYTEA_P(network_send(addr, true));
 }
 
 Datum
@@ -279,7 +286,7 @@ inet_to_cidr(PG_FUNCTION_ARGS)
   /* safety check */
   if ((bits < 0) || (bits > ip_maxbits(src)))
   {
-
+    elog(ERROR, "invalid inet bit length: %d", bits);
   }
 
   PG_RETURN_INET_P(cidr_set_masklen_internal(src, bits));
@@ -299,7 +306,7 @@ inet_set_masklen(PG_FUNCTION_ARGS)
 
   if ((bits < 0) || (bits > ip_maxbits(src)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid mask length: %d", bits)));
   }
 
   /* clone the original data */
@@ -314,20 +321,20 @@ inet_set_masklen(PG_FUNCTION_ARGS)
 Datum
 cidr_set_masklen(PG_FUNCTION_ARGS)
 {
+  inet *src = PG_GETARG_INET_PP(0);
+  int bits = PG_GETARG_INT32(1);
 
+  if (bits == -1)
+  {
+    bits = ip_maxbits(src);
+  }
 
+  if ((bits < 0) || (bits > ip_maxbits(src)))
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid mask length: %d", bits)));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INET_P(cidr_set_masklen_internal(src, bits));
 }
 
 /*
@@ -612,13 +619,13 @@ network_subset_support(PG_FUNCTION_ARGS)
       Assert(list_length(clause->args) == 2);
       ret = (Node *)match_network_function((Node *)linitial(clause->args), (Node *)lsecond(clause->args), req->indexarg, req->funcid, req->opfamily);
     }
+    else if (is_funcclause(req->node)) /* be paranoid */
+    {
+      FuncExpr *clause = (FuncExpr *)req->node;
 
-
-
-
-
-
-
+      Assert(list_length(clause->args) == 2);
+      ret = (Node *)match_network_function((Node *)linitial(clause->args), (Node *)lsecond(clause->args), req->indexarg, req->funcid, req->opfamily);
+    }
   }
 
   PG_RETURN_POINTER(ret);
@@ -636,46 +643,46 @@ match_network_function(Node *leftop, Node *rightop, int indexarg, Oid funcid, Oi
 {
   switch (funcid)
   {
-  case F_NETWORK_SUB:;
+  case F_NETWORK_SUB:
     /* indexkey must be on the left */
     if (indexarg != 0)
     {
-
+      return NIL;
     }
     return match_network_subset(leftop, rightop, false, opfamily);
 
-  case F_NETWORK_SUBEQ:;
+  case F_NETWORK_SUBEQ:
     /* indexkey must be on the left */
     if (indexarg != 0)
     {
-
+      return NIL;
     }
     return match_network_subset(leftop, rightop, true, opfamily);
 
-  case F_NETWORK_SUP:;
+  case F_NETWORK_SUP:
     /* indexkey must be on the right */
     if (indexarg != 1)
     {
-
+      return NIL;
     }
     return match_network_subset(rightop, leftop, false, opfamily);
 
-  case F_NETWORK_SUPEQ:;
+  case F_NETWORK_SUPEQ:
     /* indexkey must be on the right */
     if (indexarg != 1)
     {
-
+      return NIL;
     }
     return match_network_subset(rightop, leftop, true, opfamily);
 
-  default:;;
+  default:
 
     /*
      * We'd only get here if somebody attached this support function
      * to an unexpected function.  Maybe we should complain, but for
      * now, do nothing.
      */
-
+    return NIL;
   }
 }
 
@@ -704,7 +711,7 @@ match_network_subset(Node *leftop, Node *rightop, bool is_eq, Oid opfamily)
    */
   if (!IsA(rightop, Const) || ((Const *)rightop)->constisnull)
   {
-
+    return NIL;
   }
   rightopval = ((Const *)rightop)->constvalue;
 
@@ -718,7 +725,7 @@ match_network_subset(Node *leftop, Node *rightop, bool is_eq, Oid opfamily)
    */
   if (opfamily != NETWORK_BTREE_FAM_OID)
   {
-
+    return NIL;
   }
 
   /*
@@ -734,7 +741,7 @@ match_network_subset(Node *leftop, Node *rightop, bool is_eq, Oid opfamily)
     opr1oid = get_opfamily_member(opfamily, datatype, datatype, BTGreaterEqualStrategyNumber);
     if (opr1oid == InvalidOid)
     {
-
+      elog(ERROR, "no >= operator for opfamily %u", opfamily);
     }
   }
   else
@@ -742,7 +749,7 @@ match_network_subset(Node *leftop, Node *rightop, bool is_eq, Oid opfamily)
     opr1oid = get_opfamily_member(opfamily, datatype, datatype, BTGreaterStrategyNumber);
     if (opr1oid == InvalidOid)
     {
-
+      elog(ERROR, "no > operator for opfamily %u", opfamily);
     }
   }
 
@@ -759,7 +766,7 @@ match_network_subset(Node *leftop, Node *rightop, bool is_eq, Oid opfamily)
   opr2oid = get_opfamily_member(opfamily, datatype, datatype, BTLessEqualStrategyNumber);
   if (opr2oid == InvalidOid)
   {
-
+    elog(ERROR, "no <= operator for opfamily %u", opfamily);
   }
 
   opr2right = network_scan_last(rightopval);
@@ -786,13 +793,13 @@ network_host(PG_FUNCTION_ARGS)
   /* force display of max bits, regardless of masklen... */
   if (inet_net_ntop(ip_family(ip), ip_addr(ip), ip_maxbits(ip), tmp, sizeof(tmp)) == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("could not format inet value: %m")));
   }
 
   /* Suppress /n if present (shouldn't happen now) */
   if ((ptr = strchr(tmp, '/')) != NULL)
   {
-
+    *ptr = '\0';
   }
 
   PG_RETURN_TEXT_P(cstring_to_text(tmp));
@@ -812,7 +819,7 @@ network_show(PG_FUNCTION_ARGS)
 
   if (inet_net_ntop(ip_family(ip), ip_addr(ip), ip_maxbits(ip), tmp, sizeof(tmp)) == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("could not format inet value: %m")));
   }
 
   /* Add /n if not present (which it won't be) */
@@ -828,35 +835,35 @@ network_show(PG_FUNCTION_ARGS)
 Datum
 inet_abbrev(PG_FUNCTION_ARGS)
 {
+  inet *ip = PG_GETARG_INET_PP(0);
+  char *dst;
+  char tmp[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255.255.255.255/128")];
 
+  dst = inet_net_ntop(ip_family(ip), ip_addr(ip), ip_bits(ip), tmp, sizeof(tmp));
 
+  if (dst == NULL)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("could not format inet value: %m")));
+  }
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(cstring_to_text(tmp));
 }
 
 Datum
 cidr_abbrev(PG_FUNCTION_ARGS)
 {
+  inet *ip = PG_GETARG_INET_PP(0);
+  char *dst;
+  char tmp[sizeof("xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:255.255.255.255/128")];
 
+  dst = inet_cidr_ntop(ip_family(ip), ip_addr(ip), ip_bits(ip), tmp, sizeof(tmp));
 
+  if (dst == NULL)
+  {
+    ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("could not format cidr value: %m")));
+  }
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(cstring_to_text(tmp));
 }
 
 Datum
@@ -874,14 +881,14 @@ network_family(PG_FUNCTION_ARGS)
 
   switch (ip_family(ip))
   {
-  case PGSQL_AF_INET:;
+  case PGSQL_AF_INET:
     PG_RETURN_INT32(4);
     break;
-  case PGSQL_AF_INET6:;
+  case PGSQL_AF_INET6:
     PG_RETURN_INT32(6);
     break;
-  default:;;
-
+  default:
+    PG_RETURN_INT32(0);
     break;
   }
 }
@@ -978,87 +985,87 @@ network_network(PG_FUNCTION_ARGS)
 Datum
 network_netmask(PG_FUNCTION_ARGS)
 {
+  inet *ip = PG_GETARG_INET_PP(0);
+  inet *dst;
+  int byte;
+  int bits;
+  unsigned char mask;
+  unsigned char *b;
 
+  /* make sure any unused bits are zeroed */
+  dst = (inet *)palloc0(sizeof(inet));
 
+  bits = ip_bits(ip);
+  b = ip_addr(dst);
 
+  byte = 0;
 
+  while (bits)
+  {
+    if (bits >= 8)
+    {
+      mask = 0xff;
+      bits -= 8;
+    }
+    else
+    {
+      mask = 0xff << (8 - bits);
+      bits = 0;
+    }
 
+    b[byte] = mask;
+    byte++;
+  }
 
+  ip_family(dst) = ip_family(ip);
+  ip_bits(dst) = ip_maxbits(ip);
+  SET_INET_VARSIZE(dst);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INET_P(dst);
 }
 
 Datum
 network_hostmask(PG_FUNCTION_ARGS)
 {
+  inet *ip = PG_GETARG_INET_PP(0);
+  inet *dst;
+  int byte;
+  int bits;
+  int maxbytes;
+  unsigned char mask;
+  unsigned char *b;
 
+  /* make sure any unused bits are zeroed */
+  dst = (inet *)palloc0(sizeof(inet));
 
+  maxbytes = ip_addrsize(ip);
+  bits = ip_maxbits(ip) - ip_bits(ip);
+  b = ip_addr(dst);
 
+  byte = maxbytes - 1;
 
+  while (bits)
+  {
+    if (bits >= 8)
+    {
+      mask = 0xff;
+      bits -= 8;
+    }
+    else
+    {
+      mask = 0xff >> (8 - bits);
+      bits = 0;
+    }
 
+    b[byte] = mask;
+    byte--;
+  }
 
+  ip_family(dst) = ip_family(ip);
+  ip_bits(dst) = ip_maxbits(ip);
+  SET_INET_VARSIZE(dst);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INET_P(dst);
 }
 
 /*
@@ -1104,60 +1111,60 @@ inet_merge(PG_FUNCTION_ARGS)
 double
 convert_network_to_scalar(Datum value, Oid typid, bool *failure)
 {
+  switch (typid)
+  {
+  case INETOID:
+  case CIDROID:
+  {
+    inet *ip = DatumGetInetPP(value);
+    int len;
+    double res;
+    int i;
 
+    /*
+     * Note that we don't use the full address for IPv6.
+     */
+    if (ip_family(ip) == PGSQL_AF_INET)
+    {
+      len = 4;
+    }
+    else
+    {
+      len = 5;
+    }
 
+    res = ip_family(ip);
+    for (i = 0; i < len; i++)
+    {
+      res *= 256;
+      res += ip_addr(ip)[i];
+    }
+    return res;
+  }
+  case MACADDROID:
+  {
+    macaddr *mac = DatumGetMacaddrP(value);
+    double res;
 
+    res = (mac->a << 16) | (mac->b << 8) | (mac->c);
+    res *= 256 * 256 * 256;
+    res += (mac->d << 16) | (mac->e << 8) | (mac->f);
+    return res;
+  }
+  case MACADDR8OID:
+  {
+    macaddr8 *mac = DatumGetMacaddr8P(value);
+    double res;
 
+    res = (mac->a << 24) | (mac->b << 16) | (mac->c << 8) | (mac->d);
+    res *= ((double)256) * 256 * 256 * 256;
+    res += (mac->e << 24) | (mac->f << 16) | (mac->g << 8) | (mac->h);
+    return res;
+  }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  *failure = true;
+  return 0;
 }
 
 /*
@@ -1326,37 +1333,37 @@ network_scan_last(Datum in)
 Datum
 inet_client_addr(PG_FUNCTION_ARGS)
 {
+  Port *port = MyProcPort;
+  char remote_host[NI_MAXHOST];
+  int ret;
 
+  if (port == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  switch (port->raddr.addr.ss_family)
+  {
+  case AF_INET:
+#ifdef HAVE_IPV6
+  case AF_INET6:
+#endif
+    break;
+  default:
+    PG_RETURN_NULL();
+  }
 
+  remote_host[0] = '\0';
 
+  ret = pg_getnameinfo_all(&port->raddr.addr, port->raddr.salen, remote_host, sizeof(remote_host), NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
+  if (ret != 0)
+  {
+    PG_RETURN_NULL();
+  }
 
+  clean_ipv6_addr(port->raddr.addr.ss_family, remote_host);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INET_P(network_in(remote_host, false));
 }
 
 /*
@@ -1365,35 +1372,35 @@ inet_client_addr(PG_FUNCTION_ARGS)
 Datum
 inet_client_port(PG_FUNCTION_ARGS)
 {
+  Port *port = MyProcPort;
+  char remote_port[NI_MAXSERV];
+  int ret;
 
+  if (port == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  switch (port->raddr.addr.ss_family)
+  {
+  case AF_INET:
+#ifdef HAVE_IPV6
+  case AF_INET6:
+#endif
+    break;
+  default:
+    PG_RETURN_NULL();
+  }
 
+  remote_port[0] = '\0';
 
+  ret = pg_getnameinfo_all(&port->raddr.addr, port->raddr.salen, NULL, 0, remote_port, sizeof(remote_port), NI_NUMERICHOST | NI_NUMERICSERV);
+  if (ret != 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_DATUM(DirectFunctionCall1(int4in, CStringGetDatum(remote_port)));
 }
 
 /*
@@ -1402,37 +1409,37 @@ inet_client_port(PG_FUNCTION_ARGS)
 Datum
 inet_server_addr(PG_FUNCTION_ARGS)
 {
+  Port *port = MyProcPort;
+  char local_host[NI_MAXHOST];
+  int ret;
 
+  if (port == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  switch (port->laddr.addr.ss_family)
+  {
+  case AF_INET:
+#ifdef HAVE_IPV6
+  case AF_INET6:
+#endif
+    break;
+  default:
+    PG_RETURN_NULL();
+  }
 
+  local_host[0] = '\0';
 
+  ret = pg_getnameinfo_all(&port->laddr.addr, port->laddr.salen, local_host, sizeof(local_host), NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
+  if (ret != 0)
+  {
+    PG_RETURN_NULL();
+  }
 
+  clean_ipv6_addr(port->laddr.addr.ss_family, local_host);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_INET_P(network_in(local_host, false));
 }
 
 /*
@@ -1441,35 +1448,35 @@ inet_server_addr(PG_FUNCTION_ARGS)
 Datum
 inet_server_port(PG_FUNCTION_ARGS)
 {
+  Port *port = MyProcPort;
+  char local_port[NI_MAXSERV];
+  int ret;
 
+  if (port == NULL)
+  {
+    PG_RETURN_NULL();
+  }
 
+  switch (port->laddr.addr.ss_family)
+  {
+  case AF_INET:
+#ifdef HAVE_IPV6
+  case AF_INET6:
+#endif
+    break;
+  default:
+    PG_RETURN_NULL();
+  }
 
+  local_port[0] = '\0';
 
+  ret = pg_getnameinfo_all(&port->laddr.addr, port->laddr.salen, NULL, 0, local_port, sizeof(local_port), NI_NUMERICHOST | NI_NUMERICSERV);
+  if (ret != 0)
+  {
+    PG_RETURN_NULL();
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_DATUM(DirectFunctionCall1(int4in, CStringGetDatum(local_port)));
 }
 
 Datum
@@ -1509,7 +1516,7 @@ inetand(PG_FUNCTION_ARGS)
 
   if (ip_family(ip) != ip_family(ip2))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot AND inet values of different sizes")));
   }
   else
   {
@@ -1542,7 +1549,7 @@ inetor(PG_FUNCTION_ARGS)
 
   if (ip_family(ip) != ip_family(ip2))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot OR inet values of different sizes")));
   }
   else
   {
@@ -1641,7 +1648,7 @@ inetmi(PG_FUNCTION_ARGS)
 
   if (ip_family(ip) != ip_family(ip2))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("cannot subtract inet values of different sizes")));
   }
   else
   {
@@ -1720,7 +1727,7 @@ clean_ipv6_addr(int addr_family, char *addr)
 
     if (pct)
     {
-
+      *pct = '\0';
     }
   }
 #endif

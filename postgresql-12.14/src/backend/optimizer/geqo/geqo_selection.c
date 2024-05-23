@@ -13,10 +13,9 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
@@ -24,14 +23,10 @@
 
 /*************************************************************/
 /*															 */
-/*	Copyright (c) 1990
- */
-/*	Darrell L. Whitley
- */
-/*	Computer Science Department
- */
-/*	Colorado State University
- */
+/*	Copyright (c) 1990										 */
+/*	Darrell L. Whitley										 */
+/*	Computer Science Department								 */
+/*	Colorado State University								 */
 /*															 */
 /*	Permission is hereby granted to copy all or any part of  */
 /*	this program for free distribution.   The author's name  */
@@ -75,7 +70,7 @@ geqo_selection(PlannerInfo *root, Chromosome *momma, Chromosome *daddy, Pool *po
   {
     while (first == second)
     {
-
+      second = linear_rand(root, pool->size, bias);
     }
   }
 

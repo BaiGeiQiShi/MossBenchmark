@@ -223,7 +223,7 @@ prepare_sql_fn_parse_info(HeapTuple procedureTuple, Node *call_expr, Oid inputCo
         argtype = get_call_expr_argtype(call_expr, argnum);
         if (argtype == InvalidOid)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine actual type of argument declared %s", format_type_be(argOidVect[argnum]))));
         }
         argOidVect[argnum] = argtype;
       }
@@ -327,7 +327,7 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
 
   if (nnames > 3)
   {
-
+    return NULL;
   }
 
   if (IsA(llast(cref->fields), A_Star))
@@ -354,7 +354,7 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
      */
     if (strcmp(name1, pinfo->fname) != 0)
     {
-
+      return NULL;
     }
 
     param = sql_fn_resolve_param_name(pinfo, name2, cref->location);
@@ -378,7 +378,7 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
     else
     {
       /* No, so try to match as parameter name and subfield */
-
+      param = sql_fn_resolve_param_name(pinfo, name1, cref->location);
     }
   }
   else
@@ -389,7 +389,7 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
 
   if (!param)
   {
-
+    return NULL; /* No match */
   }
 
   if (subfield)
@@ -464,7 +464,7 @@ sql_fn_resolve_param_name(SQLFunctionParseInfoPtr pinfo, const char *paramname, 
 
   if (pinfo->argnames == NULL)
   {
-
+    return NULL;
   }
 
   for (i = 0; i < pinfo->nargs; i++)
@@ -528,23 +528,27 @@ init_execution_state(List *queryTree_list, SQLFunctionCachePtr fcache, bool lazy
       {
         if (IsA(stmt->utilityStmt, CopyStmt) && ((CopyStmt *)stmt->utilityStmt)->filename == NULL)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot COPY to/from client in a SQL function")));
         }
 
         if (IsA(stmt->utilityStmt, TransactionStmt))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                             /* translator: %s is a SQL statement name */
+                             errmsg("%s is not allowed in a SQL function", CreateCommandTag(stmt->utilityStmt))));
         }
       }
 
       if (fcache->readonly_func && !CommandIsReadOnly(stmt))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                           /* translator: %s is a SQL statement name */
+                           errmsg("%s is not allowed in a non-volatile function", CreateCommandTag((Node *)stmt))));
       }
 
       if (IsInParallelMode() && !CommandIsReadOnly(stmt))
       {
-
+        PreventCommandIfParallelMode(CreateCommandTag((Node *)stmt));
       }
 
       /* OK, build the execution_state for this query */
@@ -645,7 +649,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
   procedureTuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(foid));
   if (!HeapTupleIsValid(procedureTuple))
   {
-
+    elog(ERROR, "cache lookup failed for function %u", foid);
   }
   procedureStruct = (Form_pg_proc)GETSTRUCT(procedureTuple);
 
@@ -665,9 +669,9 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
   if (IsPolymorphicType(rettype))
   {
     rettype = get_fn_expr_rettype(finfo);
-    if (rettype == InvalidOid)
-    { /* this probably should not happen */
-
+    if (rettype == InvalidOid) /* this probably should not happen */
+    {
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine actual result type for function declared to return type %s", format_type_be(procedureStruct->prorettype))));
     }
   }
 
@@ -695,7 +699,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
   tmp = SysCacheGetAttr(PROCOID, procedureTuple, Anum_pg_proc_prosrc, &isNull);
   if (isNull)
   {
-
+    elog(ERROR, "null prosrc for function %u", foid);
   }
   fcache->src = TextDatumGetCString(tmp);
 
@@ -764,7 +768,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
      * materialize mode, but to add more smarts in init_execution_state
      * about this, we'd probably need a three-way flag instead of bool.
      */
-
+    lazyEvalOK = true;
   }
 
   /* Finally, plan the queries */
@@ -1022,7 +1026,7 @@ fmgr_sql(PG_FUNCTION_ARGS)
      */
     if (!rsi || !IsA(rsi, ReturnSetInfo) || (rsi->allowedModes & SFRM_ValuePerCall) == 0 || (rsi->allowedModes & SFRM_Materialize) == 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
     }
     randomAccess = rsi->allowedModes & SFRM_Materialize_Random;
     lazyEvalOK = !(rsi->allowedModes & SFRM_Materialize_Preferred);
@@ -1078,8 +1082,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
 
     while (es && es->status == F_EXEC_DONE)
     {
-
-
+      is_first = false;
+      es = es->next;
     }
 
     if (es)
@@ -1236,7 +1240,7 @@ fmgr_sql(PG_FUNCTION_ARGS)
       slot = fcache->junkFilter->jf_resultSlot;
       if (!tuplestore_gettupleslot(fcache->tstore, true, false, slot))
       {
-
+        elog(ERROR, "failed to fetch lazy-eval tuple");
       }
       /* Extract the result as a datum, and copy out from the slot */
       result = postquel_get_single_result(slot, fcinfo, fcache, oldcontext);
@@ -1303,8 +1307,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
       /* Deregister shutdown callback, if we made one */
       if (fcache->shutdown_reg)
       {
-
-
+        UnregisterExprContextCallback(rsi->econtext, ShutdownSQLFunction, PointerGetDatum(fcache));
+        fcache->shutdown_reg = false;
       }
     }
   }
@@ -1385,7 +1389,7 @@ sql_exec_error_callback(void *arg)
    */
   if (fcache == NULL || fcache->fname == NULL)
   {
-
+    return;
   }
 
   /*
@@ -1394,9 +1398,9 @@ sql_exec_error_callback(void *arg)
   syntaxerrposition = geterrposition();
   if (syntaxerrposition > 0 && fcache->src != NULL)
   {
-
-
-
+    errposition(0);
+    internalerrposition(syntaxerrposition);
+    internalerrquery(fcache->src);
   }
 
   /*
@@ -1424,13 +1428,13 @@ sql_exec_error_callback(void *arg)
           errcontext("SQL function \"%s\" statement %d", fcache->fname, query_num);
           break;
         }
-
+        es = es->next;
       }
       if (es)
       {
         break;
       }
-
+      query_num++;
     }
     if (es == NULL)
     {
@@ -1438,7 +1442,7 @@ sql_exec_error_callback(void *arg)
        * couldn't identify a running query; might be function entry,
        * function exit, or between queries.
        */
-
+      errcontext("SQL function \"%s\"", fcache->fname);
     }
   }
   else
@@ -1459,47 +1463,47 @@ sql_exec_error_callback(void *arg)
 static void
 ShutdownSQLFunction(Datum arg)
 {
+  SQLFunctionCachePtr fcache = (SQLFunctionCachePtr)DatumGetPointer(arg);
+  execution_state *es;
+  ListCell *lc;
 
+  foreach (lc, fcache->func_state)
+  {
+    es = (execution_state *)lfirst(lc);
+    while (es)
+    {
+      /* Shut down anything still running */
+      if (es->status == F_EXEC_RUN)
+      {
+        /* Re-establish active snapshot for any called functions */
+        if (!fcache->readonly_func)
+        {
+          PushActiveSnapshot(es->qd->snapshot);
+        }
 
+        postquel_end(es);
 
+        if (!fcache->readonly_func)
+        {
+          PopActiveSnapshot();
+        }
+      }
 
+      /* Reset states to START in case we're called again */
+      es->status = F_EXEC_START;
+      es = es->next;
+    }
+  }
 
+  /* Release tuplestore if we have one */
+  if (fcache->tstore)
+  {
+    tuplestore_end(fcache->tstore);
+  }
+  fcache->tstore = NULL;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* execUtils will deregister the callback... */
+  fcache->shutdown_reg = false;
 }
 
 /*
@@ -1537,7 +1541,7 @@ check_sql_fn_statements(List *queryTreeList)
       tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(stmt->funcexpr->funcid));
       if (!HeapTupleIsValid(tuple))
       {
-
+        elog(ERROR, "cache lookup failed for function %u", stmt->funcexpr->funcid);
       }
       numargs = get_func_arg_info(tuple, &argtypes, &argnames, &argmodes);
       ReleaseSysCache(tuple);
@@ -1647,9 +1651,9 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
    * Otherwise, if it's INSERT/UPDATE/DELETE with RETURNING, it returns
    * that. Otherwise, the function return type must be VOID.
    *
-   * Note: eventually replace this test with QueryReturnsTuples?	We'd
-   * need a more general method of determining the output type, though.  Also,
-   * it seems too dangerous to consider FETCH or EXECUTE as returning a
+   * Note: eventually replace this test with QueryReturnsTuples?	We'd need
+   * a more general method of determining the output type, though.  Also, it
+   * seems too dangerous to consider FETCH or EXECUTE as returning a
    * determinable rowtype, since they depend on relatively short-lived
    * entities.
    */
@@ -1666,8 +1670,8 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
   else
   {
     /* Empty function body, or last statement is a utility command */
-
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("return type mismatch in function declared to return %s", format_type_be(rettype)), errdetail("Function's final statement must be SELECT or INSERT/UPDATE/DELETE RETURNING.")));
+    return false; /* keep compiler quiet */
   }
 
   /*
@@ -1761,12 +1765,12 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
       {
         if (modifyTargetList && restype != rettype)
         {
-
+          tle->expr = (Expr *)makeRelabelType(tle->expr, rettype, -1, get_typcollation(rettype), COERCE_IMPLICIT_CAST);
           /* Relabel is dangerous if sort/group or setop column */
-
-
-
-
+          if (tle->ressortgroupref != 0 || parse->setOperations)
+          {
+            *modifyTargetList = true;
+          }
         }
         /* Set up junk filter if needed */
         if (junkFilter)
@@ -1821,11 +1825,11 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
 
       if (tle->resjunk)
       {
-
-
-
-
-
+        if (modifyTargetList)
+        {
+          junkattrs = lappend(junkattrs, tle);
+        }
+        continue;
       }
 
       do
@@ -1833,7 +1837,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
         colindex++;
         if (colindex > tupnatts)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("return type mismatch in function declared to return %s", format_type_be(rettype)), errdetail("Final statement returns too many columns.")));
         }
         attr = TupleDescAttr(tupdesc, colindex - 1);
         if (attr->attisdropped && modifyTargetList)
@@ -1847,7 +1851,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
           /* NULL insertion is dangerous in a setop */
           if (parse->setOperations)
           {
-
+            *modifyTargetList = true;
           }
         }
       } while (attr->attisdropped);
@@ -1857,18 +1861,18 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
       atttype = attr->atttypid;
       if (!IsBinaryCoercible(tletype, atttype))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("return type mismatch in function declared to return %s", format_type_be(rettype)), errdetail("Final statement returns %s instead of %s at column %d.", format_type_be(tletype), format_type_be(atttype), tuplogcols)));
       }
       if (modifyTargetList)
       {
         if (tletype != atttype)
         {
-
+          tle->expr = (Expr *)makeRelabelType(tle->expr, atttype, -1, get_typcollation(atttype), COERCE_IMPLICIT_CAST);
           /* Relabel is dangerous if sort/group or setop column */
-
-
-
-
+          if (tle->ressortgroupref != 0 || parse->setOperations)
+          {
+            *modifyTargetList = true;
+          }
         }
         tle->resno = colindex;
         newtlist = lappend(newtlist, tle);
@@ -1878,24 +1882,24 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
     /* remaining columns in tupdesc had better all be dropped */
     for (colindex++; colindex <= tupnatts; colindex++)
     {
+      if (!TupleDescAttr(tupdesc, colindex - 1)->attisdropped)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("return type mismatch in function declared to return %s", format_type_be(rettype)), errdetail("Final statement returns too few columns.")));
+      }
+      if (modifyTargetList)
+      {
+        Expr *null_expr;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        /* The type of the null we insert isn't important */
+        null_expr = (Expr *)makeConst(INT4OID, -1, InvalidOid, sizeof(int32), (Datum)0, true, /* isnull */
+            true /* byval */);
+        newtlist = lappend(newtlist, makeTargetEntry(null_expr, colindex, NULL, false));
+        /* NULL insertion is dangerous in a setop */
+        if (parse->setOperations)
+        {
+          *modifyTargetList = true;
+        }
+      }
     }
 
     if (modifyTargetList)
@@ -1905,7 +1909,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
       {
         TargetEntry *tle = (TargetEntry *)lfirst(lc);
 
-
+        tle->resno = colindex++;
       }
       /* replace the tlist with the modified one */
       *tlist_ptr = list_concat(newtlist, junkattrs);
@@ -1924,7 +1928,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList, bool *modifyT
   }
   else
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("return type %s is not supported for SQL functions", format_type_be(rettype))));
   }
 
   return false;
@@ -1980,7 +1984,8 @@ sqlfunction_receive(TupleTableSlot *slot, DestReceiver *self)
  */
 static void
 sqlfunction_shutdown(DestReceiver *self)
-{ /* no-op */
+{
+  /* no-op */
 }
 
 /*

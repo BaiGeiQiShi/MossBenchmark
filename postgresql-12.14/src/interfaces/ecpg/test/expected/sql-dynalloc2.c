@@ -24,46 +24,49 @@
 #define SQLERRMC_LEN 150
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-struct sqlca_t {
-  char sqlcaid[8];
-  long sqlabc;
-  long sqlcode;
-  struct {
-    int sqlerrml;
-    char sqlerrmc[SQLERRMC_LEN];
-  } sqlerrm;
-  char sqlerrp[8];
-  long sqlerrd[6];
-  /* Element 0: empty						*/
-  /* 1: OID of processed tuple if applicable			*/
-  /* 2: number of rows processed				*/
-  /* after an INSERT, UPDATE or				*/
-  /* DELETE statement					*/
-  /* 3: empty						*/
-  /* 4: empty						*/
-  /* 5: empty						*/
-  char sqlwarn[8];
-  /* Element 0: set to 'W' if at least one other is 'W'	*/
-  /* 1: if 'W' at least one character string		*/
-  /* value was truncated when it was			*/
-  /* stored into a host variable.             */
+  struct sqlca_t
+  {
+    char sqlcaid[8];
+    long sqlabc;
+    long sqlcode;
+    struct
+    {
+      int sqlerrml;
+      char sqlerrmc[SQLERRMC_LEN];
+    } sqlerrm;
+    char sqlerrp[8];
+    long sqlerrd[6];
+    /* Element 0: empty						*/
+    /* 1: OID of processed tuple if applicable			*/
+    /* 2: number of rows processed				*/
+    /* after an INSERT, UPDATE or				*/
+    /* DELETE statement					*/
+    /* 3: empty						*/
+    /* 4: empty						*/
+    /* 5: empty						*/
+    char sqlwarn[8];
+    /* Element 0: set to 'W' if at least one other is 'W'	*/
+    /* 1: if 'W' at least one character string		*/
+    /* value was truncated when it was			*/
+    /* stored into a host variable.             */
 
-  /*
-   * 2: if 'W' a (hopefully) non-fatal notice occurred
-   */	/* 3: empty */
-  /* 4: empty						*/
-  /* 5: empty						*/
-  /* 6: empty						*/
-  /* 7: empty						*/
+    /*
+     * 2: if 'W' a (hopefully) non-fatal notice occurred
+     */	/* 3: empty */
+    /* 4: empty						*/
+    /* 5: empty						*/
+    /* 6: empty						*/
+    /* 7: empty						*/
 
-  char sqlstate[5];
-};
+    char sqlstate[5];
+  };
 
-struct sqlca_t *
-ECPGget_sqlca(void);
+  struct sqlca_t *
+  ECPGget_sqlca(void);
 
 #ifndef POSTGRES_ECPG_INTERNAL
 #define sqlca (*ECPGget_sqlca())
@@ -116,7 +119,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 20 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -126,7 +130,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "set datestyle to postgres", ECPGt_EOIT, ECPGt_EORT);
 #line 22 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -136,7 +141,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table test ( a int , b text )", ECPGt_EOIT, ECPGt_EORT);
 #line 24 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -146,7 +152,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( 1 , 'one' )", ECPGt_EOIT, ECPGt_EORT);
 #line 25 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -156,7 +163,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( 2 , 'two' )", ECPGt_EOIT, ECPGt_EORT);
 #line 26 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -166,7 +174,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( null , 'three' )", ECPGt_EOIT, ECPGt_EORT);
 #line 27 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -176,7 +185,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( 4 , 'four' )", ECPGt_EOIT, ECPGt_EORT);
 #line 28 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -186,7 +196,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( 5 , null )", ECPGt_EOIT, ECPGt_EORT);
 #line 29 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -196,7 +207,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( null , null )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -205,7 +217,8 @@ main(void)
   ECPGallocate_desc(__LINE__, "mydesc");
 #line 32 "dynalloc2.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 32 "dynalloc2.pgc"
@@ -214,7 +227,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from test", ECPGt_EOIT, ECPGt_descriptor, "mydesc", 1L, 1L, 1L, ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 33 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -225,7 +239,8 @@ main(void)
 
 #line 34 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -236,7 +251,8 @@ main(void)
 
 #line 35 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -247,23 +263,31 @@ main(void)
 
 #line 36 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
 #line 36 "dynalloc2.pgc"
 
   printf("Result (%d columns):\n", colnum);
-  for (i = 0; i < sqlca.sqlerrd[2]; ++i) {
-    if (ipointer1[i]) {
+  for (i = 0; i < sqlca.sqlerrd[2]; ++i)
+  {
+    if (ipointer1[i])
+    {
       printf("NULL, ");
-    } else {
+    }
+    else
+    {
       printf("%d, ", ip1[i]);
     }
 
-    if (ipointer2[i]) {
+    if (ipointer2[i])
+    {
       printf("NULL, ");
-    } else {
+    }
+    else
+    {
       printf("'%s', ", cp2[i]);
     }
     printf("\n");
@@ -274,7 +298,8 @@ main(void)
   ECPGdeallocate_desc(__LINE__, "mydesc");
 #line 51 "dynalloc2.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     sqlprint();
   }
 #line 51 "dynalloc2.pgc"
@@ -283,7 +308,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 52 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -293,7 +319,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 53 "dynalloc2.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }

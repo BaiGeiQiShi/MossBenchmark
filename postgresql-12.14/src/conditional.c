@@ -14,7 +14,9 @@
 /*
  * create stack
  */
-ConditionalStack conditional_stack_create(void) {
+ConditionalStack
+conditional_stack_create(void)
+{
   ConditionalStack cstack = pg_malloc(sizeof(ConditionalStackData));
 
   cstack->head = NULL;
@@ -24,8 +26,11 @@ ConditionalStack conditional_stack_create(void) {
 /*
  * destroy stack
  */
-void conditional_stack_destroy(ConditionalStack cstack) {
-  while (conditional_stack_pop(cstack)) {
+void
+conditional_stack_destroy(ConditionalStack cstack)
+{
+  while (conditional_stack_pop(cstack))
+  {
     continue;
   }
   free(cstack);
@@ -34,7 +39,9 @@ void conditional_stack_destroy(ConditionalStack cstack) {
 /*
  * Create a new conditional branch.
  */
-void conditional_stack_push(ConditionalStack cstack, ifState new_state) {
+void
+conditional_stack_push(ConditionalStack cstack, ifState new_state)
+{
   IfStackElem *p = (IfStackElem *)pg_malloc(sizeof(IfStackElem));
 
   p->if_state = new_state;
@@ -48,10 +55,13 @@ void conditional_stack_push(ConditionalStack cstack, ifState new_state) {
  * Destroy the topmost conditional branch.
  * Returns false if there was no branch to end.
  */
-bool conditional_stack_pop(ConditionalStack cstack) {
+bool
+conditional_stack_pop(ConditionalStack cstack)
+{
   IfStackElem *p = cstack->head;
 
-  if (!p) {
+  if (!p)
+  {
     return false;
   }
   cstack->head = cstack->head->next;
@@ -62,14 +72,20 @@ bool conditional_stack_pop(ConditionalStack cstack) {
 /*
  * Returns current stack depth, for debugging purposes.
  */
-int conditional_stack_depth(ConditionalStack cstack) {
-  if (cstack == NULL) {
+int
+conditional_stack_depth(ConditionalStack cstack)
+{
+  if (cstack == NULL)
+  {
     return -1;
-  } else {
+  }
+  else
+  {
     IfStackElem *p = cstack->head;
     int depth = 0;
 
-    while (p != NULL) {
+    while (p != NULL)
+    {
       depth++;
       p = p->next;
     }
@@ -80,8 +96,11 @@ int conditional_stack_depth(ConditionalStack cstack) {
 /*
  * Fetch the current state of the top of the stack.
  */
-ifState conditional_stack_peek(ConditionalStack cstack) {
-  if (conditional_stack_empty(cstack)) {
+ifState
+conditional_stack_peek(ConditionalStack cstack)
+{
+  if (conditional_stack_empty(cstack))
+  {
     return IFSTATE_NONE;
   }
   return cstack->head->if_state;
@@ -91,8 +110,11 @@ ifState conditional_stack_peek(ConditionalStack cstack) {
  * Change the state of the topmost branch.
  * Returns false if there was no branch state to set.
  */
-bool conditional_stack_poke(ConditionalStack cstack, ifState new_state) {
-  if (conditional_stack_empty(cstack)) {
+bool
+conditional_stack_poke(ConditionalStack cstack, ifState new_state)
+{
+  if (conditional_stack_empty(cstack))
+  {
     return false;
   }
   cstack->head->if_state = new_state;
@@ -102,7 +124,9 @@ bool conditional_stack_poke(ConditionalStack cstack, ifState new_state) {
 /*
  * True if there are no active \if-blocks.
  */
-bool conditional_stack_empty(ConditionalStack cstack) {
+bool
+conditional_stack_empty(ConditionalStack cstack)
+{
   return cstack->head == NULL;
 }
 
@@ -110,7 +134,9 @@ bool conditional_stack_empty(ConditionalStack cstack) {
  * True if we should execute commands normally; that is, the current
  * conditional branch is active, or there is no open \if block.
  */
-bool conditional_active(ConditionalStack cstack) {
+bool
+conditional_active(ConditionalStack cstack)
+{
   ifState s = conditional_stack_peek(cstack);
 
   return s == IFSTATE_NONE || s == IFSTATE_TRUE || s == IFSTATE_ELSE_TRUE;
@@ -119,7 +145,9 @@ bool conditional_active(ConditionalStack cstack) {
 /*
  * Save current query buffer length in topmost stack entry.
  */
-void conditional_stack_set_query_len(ConditionalStack cstack, int len) {
+void
+conditional_stack_set_query_len(ConditionalStack cstack, int len)
+{
   Assert(!conditional_stack_empty(cstack));
   cstack->head->query_len = len;
 }
@@ -128,8 +156,11 @@ void conditional_stack_set_query_len(ConditionalStack cstack, int len) {
  * Fetch last-recorded query buffer length from topmost stack entry.
  * Will return -1 if no stack or it was never saved.
  */
-int conditional_stack_get_query_len(ConditionalStack cstack) {
-  if (conditional_stack_empty(cstack)) {
+int
+conditional_stack_get_query_len(ConditionalStack cstack)
+{
+  if (conditional_stack_empty(cstack))
+  {
     return -1;
   }
   return cstack->head->query_len;
@@ -138,7 +169,9 @@ int conditional_stack_get_query_len(ConditionalStack cstack) {
 /*
  * Save current parenthesis nesting depth in topmost stack entry.
  */
-void conditional_stack_set_paren_depth(ConditionalStack cstack, int depth) {
+void
+conditional_stack_set_paren_depth(ConditionalStack cstack, int depth)
+{
   Assert(!conditional_stack_empty(cstack));
   cstack->head->paren_depth = depth;
 }
@@ -147,8 +180,11 @@ void conditional_stack_set_paren_depth(ConditionalStack cstack, int depth) {
  * Fetch last-recorded parenthesis nesting depth from topmost stack entry.
  * Will return -1 if no stack or it was never saved.
  */
-int conditional_stack_get_paren_depth(ConditionalStack cstack) {
-  if (conditional_stack_empty(cstack)) {
+int
+conditional_stack_get_paren_depth(ConditionalStack cstack)
+{
+  if (conditional_stack_empty(cstack))
+  {
     return -1;
   }
   return cstack->head->paren_depth;

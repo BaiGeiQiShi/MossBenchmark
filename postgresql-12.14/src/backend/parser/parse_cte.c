@@ -131,7 +131,7 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 
       if (strcmp(cte->ctename, cte2->ctename) == 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DUPLICATE_ALIAS), errmsg("WITH query name \"%s\" specified more than once", cte2->ctename), parser_errposition(pstate, cte2->location)));
       }
     }
 
@@ -248,11 +248,11 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
    */
   if (!IsA(query, Query))
   {
-
+    elog(ERROR, "unexpected non-Query statement in WITH");
   }
   if (query->utilityStmt != NULL)
   {
-
+    elog(ERROR, "unexpected utility statement in WITH");
   }
 
   /*
@@ -298,13 +298,13 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 
       if (te->resjunk)
       {
-
+        continue;
       }
       varattno++;
       Assert(varattno == te->resno);
-      if (lctyp == NULL || lctypmod == NULL || lccoll == NULL)
-      { /* shouldn't happen */
-
+      if (lctyp == NULL || lctypmod == NULL || lccoll == NULL) /* shouldn't happen */
+      {
+        elog(ERROR, "wrong number of output columns in WITH");
       }
       texpr = (Node *)te->expr;
       if (exprType(texpr) != lfirst_oid(lctyp) || exprTypmod(texpr) != lfirst_int(lctypmod))
@@ -313,15 +313,15 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
       }
       if (exprCollation(texpr) != lfirst_oid(lccoll))
       {
-        ereport(ERROR, (errcode(ERRCODE_COLLATION_MISMATCH), errmsg("recursive query \"%s\" column %d has collation \"%s\" in non-recursive term but collation \"%overall", cte->ctename, varattno, get_collation_name(lfirst_oid(lccoll)), get_collation_name(exprCollation(texpr))), errhint("Use the COLLATE clause to set the collation of the non-recursive term."), parser_errposition(pstate, exprLocation(texpr))));
+        ereport(ERROR, (errcode(ERRCODE_COLLATION_MISMATCH), errmsg("recursive query \"%s\" column %d has collation \"%s\" in non-recursive term but collation \"%s\" overall", cte->ctename, varattno, get_collation_name(lfirst_oid(lccoll)), get_collation_name(exprCollation(texpr))), errhint("Use the COLLATE clause to set the collation of the non-recursive term."), parser_errposition(pstate, exprLocation(texpr))));
       }
       lctyp = lnext(lctyp);
       lctypmod = lnext(lctypmod);
       lccoll = lnext(lccoll);
     }
-    if (lctyp != NULL || lctypmod != NULL || lccoll != NULL)
-    { /* shouldn't happen */
-
+    if (lctyp != NULL || lctypmod != NULL || lccoll != NULL) /* shouldn't happen */
+    {
+      elog(ERROR, "wrong number of output columns in WITH");
     }
   }
 }
@@ -656,9 +656,9 @@ checkWellFormedRecursion(CteState *cstate)
     cstate->context = RECURSION_OK;
     checkWellFormedRecursionWalker((Node *)stmt->rarg, cstate);
     Assert(cstate->innerwiths == NIL);
-    if (cstate->selfrefcount != 1)
-    { /* shouldn't happen */
-
+    if (cstate->selfrefcount != 1) /* shouldn't happen */
+    {
+      elog(ERROR, "missing recursive reference");
     }
 
     /* WITH mustn't contain self-reference, either */
@@ -689,7 +689,7 @@ checkWellFormedRecursion(CteState *cstate)
     }
     if (stmt->limitCount)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("LIMIT in a recursive query is not implemented"), parser_errposition(cstate->pstate, exprLocation(stmt->limitCount))));
     }
     if (stmt->lockingClause)
     {
@@ -822,12 +822,12 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
 
     switch (j->jointype)
     {
-    case JOIN_INNER:;
+    case JOIN_INNER:
       checkWellFormedRecursionWalker(j->larg, cstate);
       checkWellFormedRecursionWalker(j->rarg, cstate);
       checkWellFormedRecursionWalker(j->quals, cstate);
       break;
-    case JOIN_LEFT:;
+    case JOIN_LEFT:
       checkWellFormedRecursionWalker(j->larg, cstate);
       if (save_context == RECURSION_OK)
       {
@@ -837,7 +837,7 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
       cstate->context = save_context;
       checkWellFormedRecursionWalker(j->quals, cstate);
       break;
-    case JOIN_FULL:;
+    case JOIN_FULL:
       if (save_context == RECURSION_OK)
       {
         cstate->context = RECURSION_OUTERJOIN;
@@ -847,7 +847,7 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
       cstate->context = save_context;
       checkWellFormedRecursionWalker(j->quals, cstate);
       break;
-    case JOIN_RIGHT:;
+    case JOIN_RIGHT:
       if (save_context == RECURSION_OK)
       {
         cstate->context = RECURSION_OUTERJOIN;
@@ -857,8 +857,8 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
       checkWellFormedRecursionWalker(j->rarg, cstate);
       checkWellFormedRecursionWalker(j->quals, cstate);
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized join type: %d", (int)j->jointype);
     }
     return false;
   }
@@ -897,14 +897,14 @@ checkWellFormedSelectStmt(SelectStmt *stmt, CteState *cstate)
   {
     switch (stmt->op)
     {
-    case SETOP_NONE:;
-    case SETOP_UNION:;
+    case SETOP_NONE:
+    case SETOP_UNION:
       raw_expression_tree_walker((Node *)stmt, checkWellFormedRecursionWalker, (void *)cstate);
       break;
-    case SETOP_INTERSECT:;
+    case SETOP_INTERSECT:
       if (stmt->all)
       {
-
+        cstate->context = RECURSION_INTERSECT;
       }
       checkWellFormedRecursionWalker((Node *)stmt->larg, cstate);
       checkWellFormedRecursionWalker((Node *)stmt->rarg, cstate);
@@ -915,10 +915,10 @@ checkWellFormedSelectStmt(SelectStmt *stmt, CteState *cstate)
       checkWellFormedRecursionWalker((Node *)stmt->lockingClause, cstate);
       /* stmt->withClause is intentionally ignored here */
       break;
-    case SETOP_EXCEPT:;
+    case SETOP_EXCEPT:
       if (stmt->all)
       {
-
+        cstate->context = RECURSION_EXCEPT;
       }
       checkWellFormedRecursionWalker((Node *)stmt->larg, cstate);
       cstate->context = RECURSION_EXCEPT;
@@ -930,8 +930,8 @@ checkWellFormedSelectStmt(SelectStmt *stmt, CteState *cstate)
       checkWellFormedRecursionWalker((Node *)stmt->lockingClause, cstate);
       /* stmt->withClause is intentionally ignored here */
       break;
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized set op: %d", (int)stmt->op);
     }
   }
 }

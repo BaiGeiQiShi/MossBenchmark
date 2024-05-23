@@ -39,7 +39,8 @@ pg_config(PG_FUNCTION_ARGS)
   /* check to see if caller supports us returning a tuplestore */
   if (!rsinfo || !(rsinfo->allowedModes & SFRM_Materialize))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("materialize mode required, but it is not "
+                                                          "allowed in this context")));
   }
 
   per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
@@ -53,7 +54,8 @@ pg_config(PG_FUNCTION_ARGS)
    */
   if (tupdesc->natts != 2 || TupleDescAttr(tupdesc, 0)->atttypid != TEXTOID || TupleDescAttr(tupdesc, 1)->atttypid != TEXTOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("query-specified return tuple and "
+                                                          "function return type are not compatible")));
   }
 
   /* OK to use it */

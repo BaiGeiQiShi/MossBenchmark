@@ -208,7 +208,9 @@ parse_subscription_options(List *options, bool *connect, bool *enabled_given, bo
     /* Check for incompatible options from the user. */
     if (enabled && *enabled_given && *enabled)
     {
-      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("%s and %s are mutually exclusive options", "connect = false", "enabled = true")));
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                         /*- translator: both %s are strings of the form "option = value" */
+                         errmsg("%s and %s are mutually exclusive options", "connect = false", "enabled = true")));
     }
 
     if (create_slot && create_slot_given && *create_slot)
@@ -235,7 +237,9 @@ parse_subscription_options(List *options, bool *connect, bool *enabled_given, bo
   {
     if (enabled && *enabled_given && *enabled)
     {
-      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("%s and %s are mutually exclusive options", "slot_name = NONE", "enabled = true")));
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                         /*- translator: both %s are strings of the form "option = value" */
+                         errmsg("%s and %s are mutually exclusive options", "slot_name = NONE", "enabled = true")));
     }
 
     if (create_slot && create_slot_given && *create_slot)
@@ -245,7 +249,9 @@ parse_subscription_options(List *options, bool *connect, bool *enabled_given, bo
 
     if (enabled && !*enabled_given && *enabled)
     {
-      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("subscription with %s must also set %s", "slot_name = NONE", "enabled = false")));
+      ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                         /*- translator: both %s are strings of the form "option = value" */
+                         errmsg("subscription with %s must also set %s", "slot_name = NONE", "enabled = false")));
     }
 
     if (create_slot && !create_slot_given && *create_slot)
@@ -500,7 +506,9 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
   }
   else
   {
-    ereport(WARNING, (errmsg("tables were not subscribed, you will have to run %s to subscribe the tables", "ALTER SUBSCRIPTION ... REFRESH PUBLICATION")));
+    ereport(WARNING,
+        /* translator: %s is an SQL ALTER statement */
+        (errmsg("tables were not subscribed, you will have to run %s to subscribe the tables", "ALTER SUBSCRIPTION ... REFRESH PUBLICATION")));
   }
 
   table_close(rel, RowExclusiveLock);
@@ -776,7 +784,7 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
     break;
   }
 
-  default:;
+  default:
     elog(ERROR, "unrecognized ALTER SUBSCRIPTION kind %d", stmt->kind);
   }
 
@@ -972,7 +980,12 @@ DropSubscription(DropSubscriptionStmt *stmt, bool isTopLevel)
   wrconn = walrcv_connect(conninfo, true, subname, &err);
   if (wrconn == NULL)
   {
-    ereport(ERROR, (errmsg("could not connect to publisher when attempting to drop the replication slot \"%s\"", slotname), errdetail("The error was: %s", err), errhint("Use %s to disassociate the subscription from the slot.", "ALTER SUBSCRIPTION ... SET (slot_name = NONE)")));
+    ereport(ERROR, (errmsg("could not connect to publisher when attempting to "
+                           "drop the replication slot \"%s\"",
+                        slotname),
+                       errdetail("The error was: %s", err),
+                       /* translator: %s is an SQL ALTER command */
+                       errhint("Use %s to disassociate the subscription from the slot.", "ALTER SUBSCRIPTION ... SET (slot_name = NONE)")));
   }
 
   PG_TRY();
@@ -1120,7 +1133,9 @@ fetch_table_list(WalReceiverConn *wrconn, List *publications)
   Assert(list_length(publications) > 0);
 
   initStringInfo(&cmd);
-  appendStringInfoString(&cmd, "SELECT DISTINCT t.schemaname, t.tablename\n  FROM pg_catalog.pg_publication_tables t\n WHERE t.pubname IN (");
+  appendStringInfoString(&cmd, "SELECT DISTINCT t.schemaname, t.tablename\n"
+                               "  FROM pg_catalog.pg_publication_tables t\n"
+                               " WHERE t.pubname IN (");
   first = true;
   foreach (lc, publications)
   {

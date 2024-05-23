@@ -165,19 +165,19 @@ recordDependencyOnCurrentExtension(const ObjectAddress *object, bool isReplace)
        * caller has most likely not yet done a CommandCounterIncrement
        * that would make the new object visible.
        */
-
-
-
-
-
-
-
-
-
-
-
+      oldext = getExtensionOfObject(object->classId, object->objectId);
+      if (OidIsValid(oldext))
+      {
+        /* If already a member of this extension, nothing to do */
+        if (oldext == CurrentExtensionObject)
+        {
+          return;
+        }
+        /* Already a member of some other extension, so reject */
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("%s is already a member of extension \"%s\"", getObjectDescription(object), get_extension_name(oldext))));
+      }
       /* It's a free-standing object, so reject */
-
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("%s is not a member of extension \"%s\"", getObjectDescription(object), get_extension_name(CurrentExtensionObject)), errdetail("An extension is not allowed to replace an object that it does not own.")));
     }
 
     /* OK, record it as a member of CurrentExtensionObject */
@@ -218,14 +218,14 @@ checkMembershipInCurrentExtension(const ObjectAddress *object)
   {
     Oid oldext;
 
-
+    oldext = getExtensionOfObject(object->classId, object->objectId);
     /* If already a member of this extension, OK */
-
-
-
-
+    if (oldext == CurrentExtensionObject)
+    {
+      return;
+    }
     /* Else complain */
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("%s is not a member of extension \"%s\"", getObjectDescription(object), get_extension_name(CurrentExtensionObject)), errdetail("An extension may only use CREATE ... IF NOT EXISTS to skip object creation if the conflicting object is one that it already owns.")));
   }
 }
 
@@ -261,7 +261,7 @@ deleteDependencyRecordsFor(Oid classId, Oid objectId, bool skipExtensionDeps)
   {
     if (skipExtensionDeps && ((Form_pg_depend)GETSTRUCT(tup))->deptype == DEPENDENCY_EXTENSION)
     {
-
+      continue;
     }
 
     CatalogTupleDelete(depRel, &tup->t_self);
@@ -374,7 +374,7 @@ changeDependencyFor(Oid classId, Oid objectId, Oid refClassId, Oid oldRefObjectI
      */
     if (newIsPinned)
     {
-
+      return 1;
     }
 
     /*
@@ -430,8 +430,7 @@ changeDependencyFor(Oid classId, Oid objectId, Oid refClassId, Oid oldRefObjectI
 }
 
 /*
- * Adjust all dependency records to come from a different object of the same
- * type
+ * Adjust all dependency records to come from a different object of the same type
  *
  * classId/oldObjectId specify the old referencing object.
  * newObjectId is the new referencing object (must be of class classId).
@@ -511,7 +510,7 @@ changeDependenciesOn(Oid refClassId, Oid oldRefObjectId, Oid newRefObjectId)
 
   if (isObjectPinned(&objAddr, depRel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot remove dependency on %s because it is a system object", getObjectDescription(&objAddr))));
   }
 
   /*
@@ -534,7 +533,7 @@ changeDependenciesOn(Oid refClassId, Oid oldRefObjectId, Oid newRefObjectId)
 
     if (newIsPinned)
     {
-
+      CatalogTupleDelete(depRel, &tup->t_self);
     }
     else
     {
@@ -622,35 +621,35 @@ isObjectPinned(const ObjectAddress *object, Relation rel)
 Oid
 getExtensionOfObject(Oid classId, Oid objectId)
 {
+  Oid result = InvalidOid;
+  Relation depRel;
+  ScanKeyData key[2];
+  SysScanDesc scan;
+  HeapTuple tup;
 
+  depRel = table_open(DependRelationId, AccessShareLock);
 
+  ScanKeyInit(&key[0], Anum_pg_depend_classid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(classId));
+  ScanKeyInit(&key[1], Anum_pg_depend_objid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(objectId));
 
+  scan = systable_beginscan(depRel, DependDependerIndexId, true, NULL, 2, key);
 
+  while (HeapTupleIsValid((tup = systable_getnext(scan))))
+  {
+    Form_pg_depend depform = (Form_pg_depend)GETSTRUCT(tup);
 
+    if (depform->refclassid == ExtensionRelationId && depform->deptype == DEPENDENCY_EXTENSION)
+    {
+      result = depform->refobjid;
+      break; /* no need to keep scanning */
+    }
+  }
 
+  systable_endscan(scan);
 
+  table_close(depRel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
@@ -660,42 +659,42 @@ getExtensionOfObject(Oid classId, Oid objectId)
 List *
 getAutoExtensionsOfObject(Oid classId, Oid objectId)
 {
+  List *result = NIL;
+  Relation depRel;
+  ScanKeyData key[2];
+  SysScanDesc scan;
+  HeapTuple tup;
 
+  depRel = table_open(DependRelationId, AccessShareLock);
 
+  ScanKeyInit(&key[0], Anum_pg_depend_classid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(classId));
+  ScanKeyInit(&key[1], Anum_pg_depend_objid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(objectId));
 
+  scan = systable_beginscan(depRel, DependDependerIndexId, true, NULL, 2, key);
 
+  while (HeapTupleIsValid((tup = systable_getnext(scan))))
+  {
+    Form_pg_depend depform = (Form_pg_depend)GETSTRUCT(tup);
 
+    if (depform->refclassid == ExtensionRelationId && depform->deptype == DEPENDENCY_AUTO_EXTENSION)
+    {
+      result = lappend_oid(result, depform->refobjid);
+    }
+  }
 
+  systable_endscan(scan);
 
+  table_close(depRel, AccessShareLock);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return result;
 }
 
 /*
  * Detect whether a sequence is marked as "owned" by a column
  *
- * An ownership marker is an AUTO or INTERNAL dependency from the sequence to
- * the column.  If we find one, store the identity of the owning column into
- * *tableId and *colId and return true; else return false.
+ * An ownership marker is an AUTO or INTERNAL dependency from the sequence to the
+ * column.  If we find one, store the identity of the owning column
+ * into *tableId and *colId and return true; else return false.
  *
  * Note: if there's more than one such pg_depend entry then you get
  * a random one of them returned into the out parameters.  This should
@@ -793,11 +792,11 @@ getOwnedSequence(Oid relid, AttrNumber attnum)
 
   if (list_length(seqlist) > 1)
   {
-
+    elog(ERROR, "more than one owned sequence found");
   }
   else if (list_length(seqlist) < 1)
   {
-
+    elog(ERROR, "no owned sequence found");
   }
 
   return linitial_oid(seqlist);
@@ -847,7 +846,7 @@ get_constraint_index(Oid constraintId)
        */
       if (relkind != RELKIND_INDEX && relkind != RELKIND_PARTITIONED_INDEX)
       {
-
+        continue;
       }
 
       indexId = deprec->objid;

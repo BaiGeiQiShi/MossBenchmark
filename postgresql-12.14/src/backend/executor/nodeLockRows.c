@@ -54,7 +54,7 @@ ExecLockRows(PlanState *pstate)
   /*
    * Get next tuple from subplan, if any.
    */
-lnext:;
+lnext:
   slot = ExecProcNode(outerPlan);
 
   if (TupIsNull(slot))
@@ -95,7 +95,7 @@ lnext:;
       /* shouldn't ever get a null result... */
       if (isNull)
       {
-
+        elog(ERROR, "tableoid is NULL");
       }
       tableoid = DatumGetObjectId(datum);
 
@@ -116,7 +116,7 @@ lnext:;
     /* shouldn't ever get a null result... */
     if (isNull)
     {
-
+      elog(ERROR, "ctid is NULL");
     }
 
     /* requests for foreign tables must be passed to their FDW */
@@ -125,52 +125,52 @@ lnext:;
       FdwRoutine *fdwroutine;
       bool updated = false;
 
-
+      fdwroutine = GetFdwRoutineForRelation(erm->relation, false);
       /* this should have been checked already, but let's be safe */
+      if (fdwroutine->RefetchForeignRow == NULL)
+      {
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot lock rows in foreign table \"%s\"", RelationGetRelationName(erm->relation))));
+      }
 
-
-
-
-
-
-
-
-
-
-
+      fdwroutine->RefetchForeignRow(estate, erm, datum, markSlot, &updated);
+      if (TupIsNull(markSlot))
+      {
+        /* couldn't get the lock, so skip this row */
+        goto lnext;
+      }
 
       /*
        * if FDW says tuple was updated before getting locked, we need to
        * perform EPQ testing to see if quals are still satisfied
        */
+      if (updated)
+      {
+        epq_needed = true;
+      }
 
-
-
-
-
-
+      continue;
     }
 
     /* okay, try to lock (and fetch) the tuple */
     tid = *((ItemPointer)DatumGetPointer(datum));
     switch (erm->markType)
     {
-    case ROW_MARK_EXCLUSIVE:;
+    case ROW_MARK_EXCLUSIVE:
       lockmode = LockTupleExclusive;
       break;
-    case ROW_MARK_NOKEYEXCLUSIVE:;
-
-
-    case ROW_MARK_SHARE:;
+    case ROW_MARK_NOKEYEXCLUSIVE:
+      lockmode = LockTupleNoKeyExclusive;
+      break;
+    case ROW_MARK_SHARE:
       lockmode = LockTupleShare;
       break;
-    case ROW_MARK_KEYSHARE:;
+    case ROW_MARK_KEYSHARE:
       lockmode = LockTupleKeyShare;
       break;
-    default:;;
-
-
-
+    default:
+      elog(ERROR, "unsupported rowmark type");
+      lockmode = LockTupleNoKeyExclusive; /* keep compiler quiet */
+      break;
     }
 
     lockflags = TUPLE_LOCK_FLAG_LOCK_UPDATE_IN_PROGRESS;
@@ -183,11 +183,11 @@ lnext:;
 
     switch (test)
     {
-    case TM_WouldBlock:;
+    case TM_WouldBlock:
       /* couldn't lock tuple in SKIP LOCKED mode */
       goto lnext;
 
-    case TM_SelfModified:;
+    case TM_SelfModified:
 
       /*
        * The target tuple was already updated or deleted by the
@@ -204,7 +204,7 @@ lnext:;
        */
       goto lnext;
 
-    case TM_Ok:;
+    case TM_Ok:
 
       /*
        * Got the lock successfully, the locked tuple saved in
@@ -212,19 +212,19 @@ lnext:;
        */
       if (tmfd.traversed)
       {
-
+        epq_needed = true;
       }
       break;
 
-    case TM_Updated:;
+    case TM_Updated:
+      if (IsolationUsesXactSnapshot())
+      {
+        ereport(ERROR, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("could not serialize access due to concurrent update")));
+      }
+      elog(ERROR, "unexpected table_tuple_lock status: %u", test);
+      break;
 
-
-
-
-
-
-
-    case TM_Deleted:;
+    case TM_Deleted:
       if (IsolationUsesXactSnapshot())
       {
         ereport(ERROR, (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE), errmsg("could not serialize access due to concurrent update")));
@@ -232,12 +232,12 @@ lnext:;
       /* tuple was deleted so don't return it */
       goto lnext;
 
-    case TM_Invisible:;
+    case TM_Invisible:
+      elog(ERROR, "attempted to lock invisible tuple");
+      break;
 
-
-
-    default:;;
-
+    default:
+      elog(ERROR, "unrecognized table_tuple_lock status: %u", test);
     }
 
     /* Remember locked tuple's TID for EPQ testing and WHERE CURRENT OF */
@@ -250,23 +250,23 @@ lnext:;
   if (epq_needed)
   {
     /* Initialize EPQ machinery */
-
+    EvalPlanQualBegin(&node->lr_epqstate);
 
     /*
      * To fetch non-locked source rows the EPQ logic needs to access junk
      * columns from the tuple being tested.
      */
-
+    EvalPlanQualSetSlot(&node->lr_epqstate, slot);
 
     /*
      * And finally we can re-evaluate the tuple.
      */
-
-
-
-
-
-
+    slot = EvalPlanQualNext(&node->lr_epqstate);
+    if (TupIsNull(slot))
+    {
+      /* Updated tuple fails qual, so ignore it and go on */
+      goto lnext;
+    }
   }
 
   /* Got all locks, so return the current tuple */
@@ -388,12 +388,12 @@ ExecEndLockRows(LockRowsState *node)
 void
 ExecReScanLockRows(LockRowsState *node)
 {
-
-
-
-
-
-
-
-
+  /*
+   * if chgParam of subnode is not null then plan will be re-scanned by
+   * first ExecProcNode.
+   */
+  if (node->ps.lefttree->chgParam == NULL)
+  {
+    ExecReScan(node->ps.lefttree);
+  }
 }

@@ -107,9 +107,9 @@ GetSessionDsmHandle(void)
   seg = dsm_create(size, DSM_CREATE_NULL_IF_MAXSEGMENTS);
   if (seg == NULL)
   {
+    MemoryContextSwitchTo(old_context);
 
-
-
+    return DSM_HANDLE_INVALID;
   }
   toc = shm_toc_create(SESSION_MAGIC, dsm_segment_address(seg), size);
 
@@ -161,7 +161,7 @@ AttachSession(dsm_handle handle)
   seg = dsm_attach(handle);
   if (seg == NULL)
   {
-
+    elog(ERROR, "could not attach to per-session DSM segment");
   }
   toc = shm_toc_attach(SESSION_MAGIC, dsm_segment_address(seg));
 

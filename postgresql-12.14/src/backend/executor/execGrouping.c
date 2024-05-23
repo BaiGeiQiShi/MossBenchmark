@@ -53,8 +53,8 @@ TupleHashTableMatch(struct tuplehash_hash *tb, const MinimalTuple tuple1, const 
 
 /*
  * execTuplesMatchPrepare
- *		Build expression that can be evaluated using ExecQual(),
- *returning whether an ExprContext's inner/outer tuples are NOT DISTINCT
+ *		Build expression that can be evaluated using ExecQual(), returning
+ *		whether an ExprContext's inner/outer tuples are NOT DISTINCT
  */
 ExprState *
 execTuplesMatchPrepare(TupleDesc desc, int numCols, const AttrNumber *keyColIdx, const Oid *eqOperators, const Oid *collations, PlanState *parent)
@@ -82,8 +82,7 @@ execTuplesMatchPrepare(TupleDesc desc, int numCols, const AttrNumber *keyColIdx,
 
 /*
  * execTuplesHashPrepare
- *		Look up the equality and hashing functions needed for a
- *TupleHashTable.
+ *		Look up the equality and hashing functions needed for a TupleHashTable.
  *
  * This is similar to execTuplesMatchPrepare, but we also need to find the
  * hash functions associated with the equality operators.  *eqFunctions and
@@ -109,7 +108,7 @@ execTuplesHashPrepare(int numCols, const Oid *eqOperators, Oid **eqFuncOids, Fmg
     eq_function = get_opcode(eq_opr);
     if (!get_op_hash_functions(eq_opr, &left_hash_function, &right_hash_function))
     {
-
+      elog(ERROR, "could not find hash function for hash operator %u", eq_opr);
     }
     /* We're not supporting cross-type cases here */
     Assert(left_hash_function == right_hash_function);
@@ -134,9 +133,9 @@ execTuplesHashPrepare(int numCols, const Oid *eqOperators, Oid **eqFuncOids, Fmg
  *	hashfunctions: datatype-specific hashing functions to use
  *	nbuckets: initial estimate of hashtable size
  *	additionalsize: size of data stored in ->additional
- *	metacxt: memory context for long-lived allocation, but not per-entry
- *data tablecxt: memory context in which to store table entries tempcxt:
- *short-lived context for evaluation hash and comparison functions
+ *	metacxt: memory context for long-lived allocation, but not per-entry data
+ *	tablecxt: memory context in which to store table entries
+ *	tempcxt: short-lived context for evaluation hash and comparison functions
  *
  * The function arrays may be made with execTuplesHashPrepare().  Note they
  * are not cross-type functions, but expect to see the table datatype(s)
@@ -235,7 +234,7 @@ BuildTupleHashTableExt(PlanState *parent, TupleDesc inputDesc, int numCols, Attr
 TupleHashTable
 BuildTupleHashTable(PlanState *parent, TupleDesc inputDesc, int numCols, AttrNumber *keyColIdx, const Oid *eqfuncoids, FmgrInfo *hashfunctions, Oid *collations, long nbuckets, Size additionalsize, MemoryContext tablecxt, MemoryContext tempcxt, bool use_variable_hash_iv)
 {
-
+  return BuildTupleHashTableExt(parent, inputDesc, numCols, keyColIdx, eqfuncoids, hashfunctions, collations, nbuckets, additionalsize, tablecxt, tablecxt, tempcxt, use_variable_hash_iv);
 }
 
 /*
@@ -379,9 +378,9 @@ TupleHashTableHash(struct tuplehash_hash *tb, const MinimalTuple tuple)
      * (this case never actually occurs due to the way simplehash.h is
      * used, as the hash-value is stored in the entries)
      */
-
-
-
+    slot = hashtable->tableslot;
+    ExecStoreMinimalTuple(tuple, slot, false);
+    hashfunctions = hashtable->tab_hash_funcs;
   }
 
   for (i = 0; i < numCols; i++)

@@ -78,13 +78,13 @@ SharedFileSetInit(SharedFileSet *fileset, dsm_segment *seg)
      * current database.  Replace that now, to be sure that all users of
      * the SharedFileSet agree on what to do.
      */
-
-
-
-
-
-
-
+    for (i = 0; i < fileset->ntablespaces; i++)
+    {
+      if (fileset->tablespaces[i] == InvalidOid)
+      {
+        fileset->tablespaces[i] = MyDatabaseTableSpace;
+      }
+    }
   }
 
   /* Register our cleanup callback. */
@@ -102,7 +102,7 @@ SharedFileSetAttach(SharedFileSet *fileset, dsm_segment *seg)
   SpinLockAcquire(&fileset->mutex);
   if (fileset->refcnt == 0)
   {
-
+    success = false;
   }
   else
   {
@@ -113,7 +113,7 @@ SharedFileSetAttach(SharedFileSet *fileset, dsm_segment *seg)
 
   if (!success)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not attach to a SharedFileSet that is already destroyed")));
   }
 
   /* Register our cleanup callback. */

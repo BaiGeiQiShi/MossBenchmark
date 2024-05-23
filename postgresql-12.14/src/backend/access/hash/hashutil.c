@@ -102,18 +102,18 @@ _hash_datum2hashkey(Relation rel, Datum key)
 uint32
 _hash_datum2hashkey_type(Relation rel, Datum key, Oid keytype)
 {
+  RegProcedure hash_proc;
+  Oid collation;
 
+  /* XXX assumes index has only one attribute */
+  hash_proc = get_opfamily_proc(rel->rd_opfamily[0], keytype, keytype, HASHSTANDARD_PROC);
+  if (!RegProcedureIsValid(hash_proc))
+  {
+    elog(ERROR, "missing support function %d(%u,%u) for index \"%s\"", HASHSTANDARD_PROC, keytype, keytype, RelationGetRelationName(rel));
+  }
+  collation = rel->rd_indcollation[0];
 
-
-
-
-
-
-
-
-
-
-
+  return DatumGetUInt32(OidFunctionCall1Coll(hash_proc, collation, key));
 }
 
 /*
@@ -178,8 +178,7 @@ _hash_spareindex(uint32 num_bucket)
 
 /*
  *	_hash_get_totalbuckets -- returns total number of buckets allocated till
- *							the given splitpoint
- *phase.
+ *							the given splitpoint phase.
  */
 uint32
 _hash_get_totalbuckets(uint32 splitpoint_phase)
@@ -226,7 +225,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
    */
   if (PageIsNew(page))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" contains unexpected zero page at block %u", RelationGetRelationName(rel), BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
   }
 
   /*
@@ -234,7 +233,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
    */
   if (PageGetSpecialSize(page) != MAXALIGN(sizeof(HashPageOpaqueData)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" contains corrupted page at block %u", RelationGetRelationName(rel), BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
   }
 
   if (flags)
@@ -243,7 +242,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 
     if ((opaque->hasho_flag & flags) == 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" contains corrupted page at block %u", RelationGetRelationName(rel), BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
     }
   }
 
@@ -256,12 +255,12 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 
     if (metap->hashm_magic != HASH_MAGIC)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" is not a hash index", RelationGetRelationName(rel))));
     }
 
     if (metap->hashm_version != HASH_VERSION)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\" has wrong hash version", RelationGetRelationName(rel)), errhint("Please REINDEX it.")));
     }
   }
 }
@@ -313,7 +312,7 @@ _hash_convert_tuple(Relation index, Datum *user_values, bool *user_isnull, Datum
    */
   if (user_isnull[0])
   {
-
+    return false;
   }
 
   hashkey = _hash_datum2hashkey(index, user_values[0]);
@@ -324,8 +323,7 @@ _hash_convert_tuple(Relation index, Datum *user_values, bool *user_isnull, Datum
 
 /*
  * _hash_binsearch - Return the offset number in the page where the
- *					 specified hash value should be sought
- *or inserted.
+ *					 specified hash value should be sought or inserted.
  *
  * We use binary search, relying on the assumption that the existing entries
  * are ordered by hash key.
@@ -400,7 +398,7 @@ _hash_binsearch_last(Page page, uint32 hash_value)
     hashkey = _hash_get_indextuple_hashkey(itup);
     if (hashkey > hash_value)
     {
-
+      upper = off - 1;
     }
     else
     {
@@ -418,31 +416,31 @@ _hash_binsearch_last(Page page, uint32 hash_value)
 BlockNumber
 _hash_get_oldblock_from_newbucket(Relation rel, Bucket new_bucket)
 {
+  Bucket old_bucket;
+  uint32 mask;
+  Buffer metabuf;
+  HashMetaPage metap;
+  BlockNumber blkno;
 
+  /*
+   * To get the old bucket from the current bucket, we need a mask to modulo
+   * into lower half of table.  This mask is stored in meta page as
+   * hashm_lowmask, but here we can't rely on the same, because we need a
+   * value of lowmask that was prevalent at the time when bucket split was
+   * started.  Masking the most significant bit of new bucket would give us
+   * old bucket.
+   */
+  mask = (((uint32)1) << (fls(new_bucket) - 1)) - 1;
+  old_bucket = new_bucket & mask;
 
+  metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
+  metap = HashPageGetMeta(BufferGetPage(metabuf));
 
+  blkno = BUCKET_TO_BLKNO(metap, old_bucket);
 
+  _hash_relbuf(rel, metabuf);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return blkno;
 }
 
 /*
@@ -457,20 +455,20 @@ _hash_get_oldblock_from_newbucket(Relation rel, Bucket new_bucket)
 BlockNumber
 _hash_get_newblock_from_oldbucket(Relation rel, Bucket old_bucket)
 {
+  Bucket new_bucket;
+  Buffer metabuf;
+  HashMetaPage metap;
+  BlockNumber blkno;
 
+  metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
+  metap = HashPageGetMeta(BufferGetPage(metabuf));
 
+  new_bucket = _hash_get_newbucket_from_oldbucket(rel, old_bucket, metap->hashm_lowmask, metap->hashm_maxbucket);
+  blkno = BUCKET_TO_BLKNO(metap, new_bucket);
 
+  _hash_relbuf(rel, metabuf);
 
-
-
-
-
-
-
-
-
-
-
+  return blkno;
 }
 
 /*
@@ -493,8 +491,8 @@ _hash_get_newbucket_from_oldbucket(Relation rel, Bucket old_bucket, uint32 lowma
   new_bucket = CALC_NEW_BUCKET(old_bucket, lowmask);
   if (new_bucket > maxbucket)
   {
-
-
+    lowmask = lowmask >> 1;
+    new_bucket = CALC_NEW_BUCKET(old_bucket, lowmask);
   }
 
   return new_bucket;
@@ -564,7 +562,7 @@ _hash_kill_items(IndexScanDesc scan)
   }
   else
   {
-
+    buf = _hash_getbuf(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
   }
 
   page = BufferGetPage(buf);
@@ -592,7 +590,7 @@ _hash_kill_items(IndexScanDesc scan)
         killedsomething = true;
         break; /* out of inner search loop */
       }
-
+      offnum = OffsetNumberNext(offnum);
     }
   }
 
@@ -613,6 +611,6 @@ _hash_kill_items(IndexScanDesc scan)
   }
   else
   {
-
+    _hash_relbuf(rel, buf);
   }
 }

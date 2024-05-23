@@ -24,7 +24,8 @@
 
 #include "test_shm_mq.h"
 
-typedef struct {
+typedef struct
+{
   int nworkers;
   BackgroundWorkerHandle *handle[FLEXIBLE_ARRAY_MEMBER];
 } worker_state;
@@ -94,10 +95,12 @@ setup_dynamic_shared_memory(int64 queue_size, int nworkers, dsm_segment **segp, 
   test_shm_mq_header *hdr;
 
   /* Ensure a valid queue size. */
-  if (queue_size < 0 || ((uint64)queue_size) < shm_mq_minimum_size) {
+  if (queue_size < 0 || ((uint64)queue_size) < shm_mq_minimum_size)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("queue size must be at least %zu bytes", shm_mq_minimum_size)));
   }
-  if (queue_size != ((Size)queue_size)) {
+  if (queue_size != ((Size)queue_size))
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("queue size overflows size_t")));
   }
 
@@ -112,7 +115,8 @@ setup_dynamic_shared_memory(int64 queue_size, int nworkers, dsm_segment **segp, 
    */
   shm_toc_initialize_estimator(&e);
   shm_toc_estimate_chunk(&e, sizeof(test_shm_mq_header));
-  for (i = 0; i <= nworkers; ++i) {
+  for (i = 0; i <= nworkers; ++i)
+  {
     shm_toc_estimate_chunk(&e, (Size)queue_size);
   }
   shm_toc_estimate_keys(&e, 2 + nworkers);
@@ -131,18 +135,21 @@ setup_dynamic_shared_memory(int64 queue_size, int nworkers, dsm_segment **segp, 
   shm_toc_insert(toc, 0, hdr);
 
   /* Set up one message queue per worker, plus one. */
-  for (i = 0; i <= nworkers; ++i) {
+  for (i = 0; i <= nworkers; ++i)
+  {
     shm_mq *mq;
 
     mq = shm_mq_create(shm_toc_allocate(toc, (Size)queue_size), (Size)queue_size);
     shm_toc_insert(toc, i + 1, mq);
 
-    if (i == 0) {
+    if (i == 0)
+    {
       /* We send messages to the first queue. */
       shm_mq_set_sender(mq, MyProc);
       *outp = mq;
     }
-    if (i == nworkers) {
+    if (i == nworkers)
+    {
       /* We receive messages from the last queue. */
       shm_mq_set_receiver(mq, MyProc);
       *inp = mq;
@@ -210,8 +217,10 @@ setup_background_workers(int nworkers, dsm_segment *seg)
   worker.bgw_notify_pid = MyProcPid;
 
   /* Register the workers. */
-  for (i = 0; i < nworkers; ++i) {
-    if (!RegisterDynamicBackgroundWorker(&worker, &wstate->handle[i])) {
+  for (i = 0; i < nworkers; ++i)
+  {
+    if (!RegisterDynamicBackgroundWorker(&worker, &wstate->handle[i]))
+    {
       ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("could not register background process"), errhint("You may need to increase max_worker_processes.")));
     }
     ++wstate->nworkers;
@@ -227,7 +236,8 @@ cleanup_background_workers(dsm_segment *seg, Datum arg)
 {
   worker_state *wstate = (worker_state *)DatumGetPointer(arg);
 
-  while (wstate->nworkers > 0) {
+  while (wstate->nworkers > 0)
+  {
     --wstate->nworkers;
     TerminateBackgroundWorker(wstate->handle[wstate->nworkers]);
   }
@@ -238,20 +248,23 @@ wait_for_workers_to_become_ready(worker_state *wstate, volatile test_shm_mq_head
 {
   bool result = false;
 
-  for (;;) {
+  for (;;)
+  {
     int workers_ready;
 
     /* If all the workers are ready, we have succeeded. */
     SpinLockAcquire(&hdr->mutex);
     workers_ready = hdr->workers_ready;
     SpinLockRelease(&hdr->mutex);
-    if (workers_ready >= wstate->nworkers) {
+    if (workers_ready >= wstate->nworkers)
+    {
       result = true;
       break;
     }
 
     /* If any workers (or the postmaster) have died, we have failed. */
-    if (!check_worker_status(wstate)) {
+    if (!check_worker_status(wstate))
+    {
       result = false;
       break;
     }
@@ -266,7 +279,8 @@ wait_for_workers_to_become_ready(worker_state *wstate, volatile test_shm_mq_head
     CHECK_FOR_INTERRUPTS();
   }
 
-  if (!result) {
+  if (!result)
+  {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_RESOURCES), errmsg("one or more background workers failed to start")));
   }
 }
@@ -277,12 +291,14 @@ check_worker_status(worker_state *wstate)
   int n;
 
   /* If any workers (or the postmaster) have died, we have failed. */
-  for (n = 0; n < wstate->nworkers; ++n) {
+  for (n = 0; n < wstate->nworkers; ++n)
+  {
     BgwHandleStatus status;
     pid_t pid;
 
     status = GetBackgroundWorkerPid(wstate->handle[n], &pid);
-    if (status == BGWH_STOPPED || status == BGWH_POSTMASTER_DIED) {
+    if (status == BGWH_STOPPED || status == BGWH_POSTMASTER_DIED)
+    {
       return false;
     }
   }

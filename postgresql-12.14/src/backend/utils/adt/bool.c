@@ -37,8 +37,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 {
   switch (*value)
   {
-  case 't':;
-  case 'T':;
+  case 't':
+  case 'T':
     if (pg_strncasecmp(value, "true", len) == 0)
     {
       if (result)
@@ -48,8 +48,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case 'f':;
-  case 'F':;
+  case 'f':
+  case 'F':
     if (pg_strncasecmp(value, "false", len) == 0)
     {
       if (result)
@@ -59,8 +59,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case 'y':;
-  case 'Y':;
+  case 'y':
+  case 'Y':
     if (pg_strncasecmp(value, "yes", len) == 0)
     {
       if (result)
@@ -70,8 +70,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case 'n':;
-  case 'N':;
+  case 'n':
+  case 'N':
     if (pg_strncasecmp(value, "no", len) == 0)
     {
       if (result)
@@ -81,8 +81,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case 'o':;
-  case 'O':;
+  case 'o':
+  case 'O':
     /* 'o' is not unique enough */
     if (pg_strncasecmp(value, "on", (len > 2 ? len : 2)) == 0)
     {
@@ -101,7 +101,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case '1':;
+  case '1':
     if (len == 1)
     {
       if (result)
@@ -111,7 +111,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  case '0':;
+  case '0':
     if (len == 1)
     {
       if (result)
@@ -121,7 +121,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
       return true;
     }
     break;
-  default:;;
+  default:
     break;
   }
 
@@ -133,8 +133,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 }
 
 /*****************************************************************************
- *	 USER I/O ROUTINES
- **
+ *	 USER I/O ROUTINES														 *
  *****************************************************************************/
 
 /*
@@ -194,8 +193,7 @@ boolout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		boolrecv			- converts external binary
- *format to bool
+ *		boolrecv			- converts external binary format to bool
  *
  * The external representation is one byte.  Any nonzero value is taken
  * as "true".
@@ -203,11 +201,11 @@ boolout(PG_FUNCTION_ARGS)
 Datum
 boolrecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  int ext;
 
-
-
-
-
+  ext = pq_getmsgbyte(buf);
+  PG_RETURN_BOOL((ext != 0) ? true : false);
 }
 
 /*
@@ -216,12 +214,12 @@ boolrecv(PG_FUNCTION_ARGS)
 Datum
 boolsend(PG_FUNCTION_ARGS)
 {
+  bool arg1 = PG_GETARG_BOOL(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendbyte(&buf, arg1 ? 1 : 0);
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -249,8 +247,7 @@ booltext(PG_FUNCTION_ARGS)
 }
 
 /*****************************************************************************
- *	 PUBLIC ROUTINES
- **
+ *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
 
 Datum
@@ -349,7 +346,7 @@ makeBoolAggState(FunctionCallInfo fcinfo)
 
   if (!AggCheckCallContext(fcinfo, &agg_context))
   {
-
+    elog(ERROR, "aggregate function called in non-aggregate context");
   }
 
   state = (BoolAggState *)MemoryContextAlloc(agg_context, sizeof(BoolAggState));
@@ -394,7 +391,7 @@ bool_accum_inv(PG_FUNCTION_ARGS)
   /* bool_accum should have created the state data */
   if (state == NULL)
   {
-
+    elog(ERROR, "bool_accum_inv called with NULL state");
   }
 
   if (!PG_ARGISNULL(1))
@@ -419,7 +416,7 @@ bool_alltrue(PG_FUNCTION_ARGS)
   /* if there were no non-null values, return NULL */
   if (state == NULL || state->aggcount == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* true if all non-null values are true */
@@ -436,7 +433,7 @@ bool_anytrue(PG_FUNCTION_ARGS)
   /* if there were no non-null values, return NULL */
   if (state == NULL || state->aggcount == 0)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* true if any non-null value is true */

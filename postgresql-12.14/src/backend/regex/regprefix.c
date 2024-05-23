@@ -50,17 +50,17 @@ pg_regprefix(regex_t *re, chr **string, size_t *slength)
   /* sanity checks */
   if (string == NULL || slength == NULL)
   {
-
+    return REG_INVARG;
   }
   *string = NULL; /* initialize for failure cases */
   *slength = 0;
   if (re == NULL || re->re_magic != REMAGIC)
   {
-
+    return REG_INVARG;
   }
   if (re->re_csize != sizeof(chr))
   {
-
+    return REG_MIXED;
   }
 
   /* Initialize locale-dependent support */
@@ -70,7 +70,7 @@ pg_regprefix(regex_t *re, chr **string, size_t *slength)
   g = (struct guts *)re->re_guts;
   if (g->info & REG_UIMPOSSIBLE)
   {
-
+    return REG_NOMATCH;
   }
 
   /*
@@ -89,7 +89,7 @@ pg_regprefix(regex_t *re, chr **string, size_t *slength)
   *string = (chr *)MALLOC(cnfa->nstates * sizeof(chr));
   if (*string == NULL)
   {
-
+    return REG_ESPACE;
   }
 
   /* do it */
@@ -150,7 +150,7 @@ findprefix(struct cnfa *cnfa, struct colormap *cm, chr *string, size_t *slength)
   }
   if (nextst == -1)
   {
-
+    return REG_NOMATCH;
   }
 
   /*
@@ -176,7 +176,7 @@ findprefix(struct cnfa *cnfa, struct colormap *cm, chr *string, size_t *slength)
       /* We can ignore BOS/BOL arcs */
       if (ca->co == cnfa->bos[0] || ca->co == cnfa->bos[1])
       {
-
+        continue;
       }
       /* ... but EOS/EOL arcs terminate the search, as do LACONs */
       if (ca->co == cnfa->eos[0] || ca->co == cnfa->eos[1] || ca->co >= cnfa->ncolors)
@@ -215,7 +215,7 @@ findprefix(struct cnfa *cnfa, struct colormap *cm, chr *string, size_t *slength)
     /* Must not have any high-color-map entries */
     if (cm->cd[thiscolor].nuchrs != 0)
     {
-
+      break;
     }
 
     /*
@@ -233,7 +233,7 @@ findprefix(struct cnfa *cnfa, struct colormap *cm, chr *string, size_t *slength)
     c = cm->cd[thiscolor].firstchr;
     if (GETCOLOR(cm, c) != thiscolor)
     {
-
+      break;
     }
 
     string[(*slength)++] = c;
@@ -255,11 +255,11 @@ findprefix(struct cnfa *cnfa, struct colormap *cm, chr *string, size_t *slength)
       {
         nextst = ca->to;
       }
-
-
-
-
-
+      else if (nextst != ca->to)
+      {
+        nextst = -1;
+        break;
+      }
     }
     else
     {

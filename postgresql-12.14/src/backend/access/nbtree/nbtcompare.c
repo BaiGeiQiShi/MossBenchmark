@@ -290,11 +290,11 @@ btint28cmp(PG_FUNCTION_ARGS)
 
   if (a > b)
   {
-
+    PG_RETURN_INT32(A_GREATER_THAN_B);
   }
   else if (a == b)
   {
-
+    PG_RETURN_INT32(0);
   }
   else
   {
@@ -305,21 +305,21 @@ btint28cmp(PG_FUNCTION_ARGS)
 Datum
 btint82cmp(PG_FUNCTION_ARGS)
 {
+  int64 a = PG_GETARG_INT64(0);
+  int16 b = PG_GETARG_INT16(1);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (a > b)
+  {
+    PG_RETURN_INT32(A_GREATER_THAN_B);
+  }
+  else if (a == b)
+  {
+    PG_RETURN_INT32(0);
+  }
+  else
+  {
+    PG_RETURN_INT32(A_LESS_THAN_B);
+  }
 }
 
 Datum

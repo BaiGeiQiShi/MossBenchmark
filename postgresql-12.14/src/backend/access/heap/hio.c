@@ -50,7 +50,7 @@ RelationPutHeapTuple(Relation relation, Buffer buffer, HeapTuple tuple, bool tok
 
   if (offnum == InvalidOffsetNumber)
   {
-
+    elog(PANIC, "failed to add tuple to page");
   }
 
   /* Update tuple->t_self to the actual position where it was stored */
@@ -141,28 +141,28 @@ GetVisibilityMapPins(Relation relation, Buffer buffer1, Buffer buffer2, BlockNum
     }
 
     /* We must unlock both buffers before doing any I/O. */
-
-
-
-
-
+    LockBuffer(buffer1, BUFFER_LOCK_UNLOCK);
+    if (buffer2 != InvalidBuffer && buffer2 != buffer1)
+    {
+      LockBuffer(buffer2, BUFFER_LOCK_UNLOCK);
+    }
 
     /* Get pins. */
-
-
-
-
-
-
-
-
+    if (need_to_pin_buffer1)
+    {
+      visibilitymap_pin(relation, block1, vmbuffer1);
+    }
+    if (need_to_pin_buffer2)
+    {
+      visibilitymap_pin(relation, block2, vmbuffer2);
+    }
 
     /* Relock buffers. */
-
-
-
-
-
+    LockBuffer(buffer1, BUFFER_LOCK_EXCLUSIVE);
+    if (buffer2 != InvalidBuffer && buffer2 != buffer1)
+    {
+      LockBuffer(buffer2, BUFFER_LOCK_EXCLUSIVE);
+    }
 
     /*
      * If there are two buffers involved and we pinned just one of them,
@@ -170,10 +170,10 @@ GetVisibilityMapPins(Relation relation, Buffer buffer1, Buffer buffer2, BlockNum
      * busy pinning the first one.  If it looks like that's a possible
      * scenario, we'll need to make a second pass through this loop.
      */
-
-
-
-
+    if (buffer2 == InvalidBuffer || buffer1 == buffer2 || (need_to_pin_buffer1 && need_to_pin_buffer2))
+    {
+      break;
+    }
   }
 }
 
@@ -194,7 +194,7 @@ RelationAddExtraBlocks(Relation relation, BulkInsertState bistate)
   lockWaiters = RelationExtensionLockWaiterCount(relation);
   if (lockWaiters <= 0)
   {
-
+    return;
   }
 
   /*
@@ -222,7 +222,7 @@ RelationAddExtraBlocks(Relation relation, BulkInsertState bistate)
 
     if (!PageIsNew(page))
     {
-
+      elog(ERROR, "page %u of relation \"%s\" should be empty but is not", BufferGetBlockNumber(buffer), RelationGetRelationName(relation));
     }
 
     /*
@@ -271,8 +271,8 @@ RelationAddExtraBlocks(Relation relation, BulkInsertState bistate)
  *
  *	If otherBuffer is not InvalidBuffer, then it references a previously
  *	pinned buffer of another page in the same relation; on return, this
- *	buffer will also be exclusive-locked.  (This case is used by
- *heap_update; the otherBuffer contains the tuple being updated.)
+ *	buffer will also be exclusive-locked.  (This case is used by heap_update;
+ *	the otherBuffer contains the tuple being updated.)
  *
  *	The reason for passing otherBuffer is that if two backends are doing
  *	concurrent heap_update operations, a deadlock could occur if they try
@@ -282,32 +282,31 @@ RelationAddExtraBlocks(Relation relation, BulkInsertState bistate)
  *	by having RelationGetBufferForTuple lock them both, with suitable care
  *	for ordering.
  *
- *	NOTE: it is unlikely, but not quite impossible, for otherBuffer to be
- *the same buffer we select for insertion of the new tuple (this could only
- *	happen if space is freed in that page after heap_update finds there's
- *not enough there).  In that case, the page will be pinned and locked only
- *once.
+ *	NOTE: it is unlikely, but not quite impossible, for otherBuffer to be the
+ *	same buffer we select for insertion of the new tuple (this could only
+ *	happen if space is freed in that page after heap_update finds there's not
+ *	enough there).  In that case, the page will be pinned and locked only once.
  *
  *	We also handle the possibility that the all-visible flag will need to be
- *	cleared on one or both pages.  If so, pin on the associated visibility
- *map page must be acquired before acquiring buffer lock(s), to avoid possibly
+ *	cleared on one or both pages.  If so, pin on the associated visibility map
+ *	page must be acquired before acquiring buffer lock(s), to avoid possibly
  *	doing I/O while holding buffer locks.  The pins are passed back to the
  *	caller using the input-output arguments vmbuffer and vmbuffer_other.
- *	Note that in some cases the caller might have already acquired such
- *pins, which is indicated by these arguments not being InvalidBuffer on entry.
+ *	Note that in some cases the caller might have already acquired such pins,
+ *	which is indicated by these arguments not being InvalidBuffer on entry.
  *
  *	We normally use FSM to help us find free space.  However,
  *	if HEAP_INSERT_SKIP_FSM is specified, we just append a new empty page to
- *	the end of the relation if the tuple won't fit on the current target
- *page. This can save some cycles when we know the relation is new and doesn't
+ *	the end of the relation if the tuple won't fit on the current target page.
+ *	This can save some cycles when we know the relation is new and doesn't
  *	contain useful amounts of free space.
  *
  *	HEAP_INSERT_SKIP_FSM is also useful for non-WAL-logged additions to a
- *	relation, if the caller holds exclusive lock and is careful to
- *invalidate relation's smgr_targblock before the first insertion --- that
- *ensures that all insertions will occur into newly added pages and not be
- *intermixed with tuples from other transactions.  That way, a crash can't risk
- *losing any committed data of other transactions.  (See heap_insert's comments
+ *	relation, if the caller holds exclusive lock and is careful to invalidate
+ *	relation's smgr_targblock before the first insertion --- that ensures that
+ *	all insertions will occur into newly added pages and not be intermixed
+ *	with tuples from other transactions.  That way, a crash can't risk losing
+ *	any committed data of other transactions.  (See heap_insert's comments
  *	for additional constraints needed for safe usage of this behavior.)
  *
  *	The caller can also provide a BulkInsertState object to optimize many
@@ -316,10 +315,10 @@ RelationAddExtraBlocks(Relation relation, BulkInsertState bistate)
  *	BULKWRITE buffer selection strategy object to the buffer manager.
  *	Passing NULL for bistate selects the default behavior.
  *
- *	We always try to avoid filling existing pages further than the
- *fillfactor. This is OK since this routine is not consulted when updating a
- *tuple and keeping it on the same page, which is the scenario fillfactor is
- *meant to reserve space for.
+ *	We always try to avoid filling existing pages further than the fillfactor.
+ *	This is OK since this routine is not consulted when updating a tuple and
+ *	keeping it on the same page, which is the scenario fillfactor is meant
+ *	to reserve space for.
  *
  *	ereport(ERROR) is allowed here, so this routine *must* be called
  *	before any (unlogged) changes are made in buffer pool.
@@ -344,7 +343,7 @@ RelationGetBufferForTuple(Relation relation, Size len, Buffer otherBuffer, int o
    */
   if (len > MaxHeapTupleSize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("row is too big: size %zu, maximum size %zu", len, MaxHeapTupleSize)));
   }
 
   /* Compute desired extra freespace due to fillfactor option */
@@ -411,7 +410,7 @@ RelationGetBufferForTuple(Relation relation, Size len, Buffer otherBuffer, int o
     }
   }
 
-loop:;
+loop:
   while (targetBlock != InvalidBlockNumber)
   {
     /*
@@ -443,7 +442,7 @@ loop:;
       buffer = otherBuffer;
       if (PageIsAllVisible(BufferGetPage(buffer)))
       {
-
+        visibilitymap_pin(relation, targetBlock, vmbuffer);
       }
       LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
     }
@@ -624,7 +623,7 @@ loop:;
 
   if (!PageIsNew(page))
   {
-
+    elog(ERROR, "page %u of relation \"%s\" should be empty but is not", BufferGetBlockNumber(buffer), RelationGetRelationName(relation));
   }
 
   PageInit(page, BufferGetPageSize(buffer), 0);
@@ -660,9 +659,9 @@ loop:;
 
     if (unlikely(!ConditionalLockBuffer(otherBuffer)))
     {
-
-
-
+      LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
+      LockBuffer(otherBuffer, BUFFER_LOCK_EXCLUSIVE);
+      LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
     }
 
     /*
@@ -682,16 +681,16 @@ loop:;
      */
     if (len > PageGetHeapFreeSpace(page))
     {
+      LockBuffer(otherBuffer, BUFFER_LOCK_UNLOCK);
+      UnlockReleaseBuffer(buffer);
 
-
-
-
+      goto loop;
     }
   }
   else if (len > PageGetHeapFreeSpace(page))
   {
     /* We should not get here given the test at the top */
-
+    elog(PANIC, "tuple is too big: size %zu", len);
   }
 
   /*

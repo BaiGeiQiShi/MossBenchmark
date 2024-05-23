@@ -25,9 +25,9 @@
  */
 
 /*
- *	Originally written by Rich $alz, mirror!rs, Wed Nov 26 19:03:17 EST
- *1986. Rich $alz is now <rsalz@bbn.com>. Special thanks to Lars Mathiesen
- *<thorinn@diku.dk> for the LABORT code.
+ *	Originally written by Rich $alz, mirror!rs, Wed Nov 26 19:03:17 EST 1986.
+ *	Rich $alz is now <rsalz@bbn.com>.
+ *	Special thanks to Lars Mathiesen <thorinn@diku.dk> for the LABORT code.
  *
  *	This code was shamelessly stolen from the "pql" code by myself and
  *	slightly modified :)
@@ -78,7 +78,8 @@ static int
 MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, bool locale_is_c)
 {
   /* Fast path for match-everything pattern */
-  if (plen == 1 && *p == '%') {
+  if (plen == 1 && *p == '%')
+  {
     return LIKE_TRUE;
   }
 
@@ -93,18 +94,24 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
    * text and pattern on a byte by byte basis, even for multi-byte
    * encodings.
    */
-  while (tlen > 0 && plen > 0) {
-    if (*p == '\\') {
+  while (tlen > 0 && plen > 0)
+  {
+    if (*p == '\\')
+    {
       /* Next pattern byte must match literally, whatever it is */
       NextByte(p, plen);
       /* ... and there had better be one, per SQL standard */
-      if (plen <= 0) {
+      if (plen <= 0)
+      {
         ereport(ERROR, (errcode(ERRCODE_INVALID_ESCAPE_SEQUENCE), errmsg("LIKE pattern must not end with escape character")));
       }
-      if (GETCHAR(*p) != GETCHAR(*t)) {
+      if (GETCHAR(*p) != GETCHAR(*t))
+      {
         return LIKE_FALSE;
       }
-    } else if (*p == '%') {
+    }
+    else if (*p == '%')
+    {
       char firstpat;
 
       /*
@@ -122,17 +129,24 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
        */
       NextByte(p, plen);
 
-      while (plen > 0) {
-        if (*p == '%') {
+      while (plen > 0)
+      {
+        if (*p == '%')
+        {
           NextByte(p, plen);
-        } else if (*p == '_') {
+        }
+        else if (*p == '_')
+        {
           /* If not enough text left to match the pattern, ABORT */
-          if (tlen <= 0) {
+          if (tlen <= 0)
+          {
             return LIKE_ABORT;
           }
           NextChar(t, tlen);
           NextByte(p, plen);
-        } else {
+        }
+        else
+        {
           break; /* Reached a non-wildcard pattern char */
         }
       }
@@ -141,7 +155,8 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
        * If we're at end of pattern, match: we have a trailing % which
        * matches any remaining text string.
        */
-      if (plen <= 0) {
+      if (plen <= 0)
+      {
         return LIKE_TRUE;
       }
 
@@ -154,20 +169,27 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
        * have to consider a match to the zero-length substring at the
        * end of the text.
        */
-      if (*p == '\\') {
-        if (plen < 2) {
+      if (*p == '\\')
+      {
+        if (plen < 2)
+        {
           ereport(ERROR, (errcode(ERRCODE_INVALID_ESCAPE_SEQUENCE), errmsg("LIKE pattern must not end with escape character")));
         }
         firstpat = GETCHAR(p[1]);
-      } else {
+      }
+      else
+      {
         firstpat = GETCHAR(*p);
       }
 
-      while (tlen > 0) {
-        if (GETCHAR(*t) == firstpat) {
+      while (tlen > 0)
+      {
+        if (GETCHAR(*t) == firstpat)
+        {
           int matched = MatchText(t, tlen, p, plen, locale, locale_is_c);
 
-          if (matched != LIKE_FALSE) {
+          if (matched != LIKE_FALSE)
+          {
             return matched; /* TRUE or ABORT */
           }
         }
@@ -180,12 +202,16 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
        * to start matching this pattern.
        */
       return LIKE_ABORT;
-    } else if (*p == '_') {
+    }
+    else if (*p == '_')
+    {
       /* _ matches any single character, and we know there is one */
       NextChar(t, tlen);
       NextByte(p, plen);
       continue;
-    } else if (GETCHAR(*p) != GETCHAR(*t)) {
+    }
+    else if (GETCHAR(*p) != GETCHAR(*t))
+    {
       /* non-wildcard pattern char fails to match text char */
       return LIKE_FALSE;
     }
@@ -206,7 +232,8 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
     NextByte(p, plen);
   }
 
-  if (tlen > 0) {
+  if (tlen > 0)
+  {
     return LIKE_FALSE; /* end of pattern, but not of text */
   }
 
@@ -214,10 +241,12 @@ MatchText(const char *t, int tlen, const char *p, int plen, pg_locale_t locale, 
    * End of text, but perhaps not of pattern.  Match iff the remaining
    * pattern can match a zero-length string, ie, it's zero or more %'s.
    */
-  while (plen > 0 && *p == '%') {
+  while (plen > 0 && *p == '%')
+  {
     NextByte(p, plen);
   }
-  if (plen <= 0) {
+  if (plen <= 0)
+  {
     return LIKE_TRUE;
   }
 
@@ -254,23 +283,29 @@ do_like_escape(text *pat, text *esc)
   result = (text *)palloc(plen * 2 + VARHDRSZ);
   r = VARDATA(result);
 
-  if (elen == 0) {
+  if (elen == 0)
+  {
     /*
      * No escape character is wanted.  Double any backslashes in the
      * pattern to make them act like ordinary characters.
      */
-    while (plen > 0) {
-      if (*p == '\\') {
+    while (plen > 0)
+    {
+      if (*p == '\\')
+      {
         *r++ = '\\';
       }
       CopyAdvChar(r, p, plen);
     }
-  } else {
+  }
+  else
+  {
     /*
      * The specified escape must be only a single character.
      */
     NextChar(e, elen);
-    if (elen != 0) {
+    if (elen != 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_INVALID_ESCAPE_SEQUENCE), errmsg("invalid escape string"), errhint("Escape string must be empty or one character.")));
     }
 
@@ -279,7 +314,8 @@ do_like_escape(text *pat, text *esc)
     /*
      * If specified escape is '\', just copy the pattern as-is.
      */
-    if (*e == '\\') {
+    if (*e == '\\')
+    {
       memcpy(result, pat, VARSIZE_ANY(pat));
       return result;
     }
@@ -290,19 +326,26 @@ do_like_escape(text *pat, text *esc)
      * follow an escape character!
      */
     afterescape = false;
-    while (plen > 0) {
-      if (CHAREQ(p, e) && !afterescape) {
+    while (plen > 0)
+    {
+      if (CHAREQ(p, e) && !afterescape)
+      {
         *r++ = '\\';
         NextChar(p, plen);
         afterescape = true;
-      } else if (*p == '\\') {
+      }
+      else if (*p == '\\')
+      {
         *r++ = '\\';
-        if (!afterescape) {
+        if (!afterescape)
+        {
           *r++ = '\\';
         }
         NextChar(p, plen);
         afterescape = false;
-      } else {
+      }
+      else
+      {
         CopyAdvChar(r, p, plen);
         afterescape = false;
       }

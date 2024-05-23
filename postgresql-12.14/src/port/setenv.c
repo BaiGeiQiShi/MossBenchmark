@@ -21,13 +21,15 @@ setenv(const char *name, const char *value, int overwrite)
   char *envstr;
 
   /* Error conditions, per POSIX */
-  if (name == NULL || name[0] == '\0' || strchr(name, '=') != NULL || value == NULL) {
+  if (name == NULL || name[0] == '\0' || strchr(name, '=') != NULL || value == NULL)
+  {
     errno = EINVAL;
     return -1;
   }
 
   /* No work if variable exists and we're not to replace it */
-  if (overwrite == 0 && getenv(name) != NULL) {
+  if (overwrite == 0 && getenv(name) != NULL)
+  {
     return 0;
   }
 
@@ -37,7 +39,8 @@ setenv(const char *name, const char *value, int overwrite)
    * about that when sitting atop putenv().
    */
   envstr = (char *)malloc(strlen(name) + strlen(value) + 2);
-  if (!envstr) { /* not much we can do if no memory */
+  if (!envstr) /* not much we can do if no memory */
+  {
     return -1;
   }
 

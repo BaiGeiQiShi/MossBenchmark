@@ -46,19 +46,22 @@ wildcard_certificate_match(const char *pattern, const char *string)
   int lenstr = strlen(string);
 
   /* If we don't start with a wildcard, it's not a match (rule 1 & 2) */
-  if (lenpat < 3 || pattern[0] != '*' || pattern[1] != '.') {
+  if (lenpat < 3 || pattern[0] != '*' || pattern[1] != '.')
+  {
     return false;
   }
 
   /* If pattern is longer than the string, we can never match */
-  if (lenpat > lenstr) {
+  if (lenpat > lenstr)
+  {
     return false;
   }
 
   /*
    * If string does not end in pattern (minus the wildcard), we don't match
    */
-  if (pg_strcasecmp(pattern + 1, string + lenstr - lenpat + 1) != 0) {
+  if (pg_strcasecmp(pattern + 1, string + lenstr - lenpat + 1) != 0)
+  {
     return false;
   }
 
@@ -66,7 +69,8 @@ wildcard_certificate_match(const char *pattern, const char *string)
    * If there is a dot left of where the pattern started to match, we don't
    * match (rule 3)
    */
-  if (strchr(string, '.') < string + lenstr - lenpat) {
+  if (strchr(string, '.') < string + lenstr - lenpat)
+  {
     return false;
   }
 
@@ -92,7 +96,8 @@ pq_verify_peer_name_matches_certificate_name(PGconn *conn, const char *namedata,
 
   *store_name = NULL;
 
-  if (!(host && host[0] != '\0')) {
+  if (!(host && host[0] != '\0'))
+  {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("host name must be specified\n"));
     return -1;
   }
@@ -102,7 +107,8 @@ pq_verify_peer_name_matches_certificate_name(PGconn *conn, const char *namedata,
    * NULL-terminated, so make a copy that is.
    */
   name = malloc(namelen + 1);
-  if (name == NULL) {
+  if (name == NULL)
+  {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("out of memory\n"));
     return -1;
   }
@@ -113,19 +119,25 @@ pq_verify_peer_name_matches_certificate_name(PGconn *conn, const char *namedata,
    * Reject embedded NULLs in certificate common or alternative name to
    * prevent attacks like CVE-2009-4034.
    */
-  if (namelen != strlen(name)) {
+  if (namelen != strlen(name))
+  {
     free(name);
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("SSL certificate's name contains embedded null\n"));
     return -1;
   }
 
-  if (pg_strcasecmp(name, host) == 0) {
+  if (pg_strcasecmp(name, host) == 0)
+  {
     /* Exact name match */
     result = 1;
-  } else if (wildcard_certificate_match(name, host)) {
+  }
+  else if (wildcard_certificate_match(name, host))
+  {
     /* Matched wildcard name */
     result = 1;
-  } else {
+  }
+  else
+  {
     result = 0;
   }
 
@@ -150,36 +162,45 @@ pq_verify_peer_name_matches_certificate(PGconn *conn)
    * If told not to verify the peer name, don't do it. Return true
    * indicating that the verification was successful.
    */
-  if (strcmp(conn->sslmode, "verify-full") != 0) {
+  if (strcmp(conn->sslmode, "verify-full") != 0)
+  {
     return true;
   }
 
   /* Check that we have a hostname to compare with. */
-  if (!(host && host[0] != '\0')) {
+  if (!(host && host[0] != '\0'))
+  {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("host name must be specified for a verified SSL connection\n"));
     return false;
   }
 
   rc = pgtls_verify_peer_name_matches_certificate_guts(conn, &names_examined, &first_name);
 
-  if (rc == 0) {
+  if (rc == 0)
+  {
     /*
      * No match. Include the name from the server certificate in the error
      * message, to aid debugging broken configurations. If there are
      * multiple names, only print the first one to avoid an overly long
      * error message.
      */
-    if (names_examined > 1) {
-      printfPQExpBuffer(&conn->errorMessage,libpq_ngettext("server certificate for \"%s\" (and %d other name) does not match host name \"%s\"\n","server certificate for \"%s\" (and %d other names) does not match host name \"%s\"\n",names_examined - 1),first_name, names_examined - 1, host);
-    } else if (names_examined == 1) {
-      printfPQExpBuffer(&conn->errorMessage,libpq_gettext("server certificate for \"%s\" does not match host name \"%s\"\n"),first_name, host);
-    } else {
+    if (names_examined > 1)
+    {
+      printfPQExpBuffer(&conn->errorMessage, libpq_ngettext("server certificate for \"%s\" (and %d other name) does not match host name \"%s\"\n", "server certificate for \"%s\" (and %d other names) does not match host name \"%s\"\n", names_examined - 1), first_name, names_examined - 1, host);
+    }
+    else if (names_examined == 1)
+    {
+      printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server certificate for \"%s\" does not match host name \"%s\"\n"), first_name, host);
+    }
+    else
+    {
       printfPQExpBuffer(&conn->errorMessage, libpq_gettext("could not get server's host name from server certificate\n"));
     }
   }
 
   /* clean up */
-  if (first_name) {
+  if (first_name)
+  {
     free(first_name);
   }
 

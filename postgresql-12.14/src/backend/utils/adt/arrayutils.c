@@ -90,7 +90,7 @@ ArrayGetNItems(int ndim, const int *dims)
     /* A negative dimension implies that UB-LB overflowed ... */
     if (dims[i] < 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("array size exceeds the maximum allowed (%d)", (int)MaxArraySize)));
     }
 
     prod = (int64)ret * (int64)dims[i];
@@ -98,13 +98,13 @@ ArrayGetNItems(int ndim, const int *dims)
     ret = (int32)prod;
     if ((int64)ret != prod)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("array size exceeds the maximum allowed (%d)", (int)MaxArraySize)));
     }
   }
   Assert(ret >= 0);
   if ((Size)ret > MaxArraySize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("array size exceeds the maximum allowed (%d)", (int)MaxArraySize)));
   }
   return (int)ret;
 }
@@ -133,7 +133,7 @@ ArrayCheckBounds(int ndim, const int *dims, const int *lb)
 
     if (pg_add_s32_overflow(dims[i], lb[i], &sum))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("array lower bound is too large: %d", lb[i])));
     }
   }
 }
@@ -210,7 +210,7 @@ mda_next_tuple(int n, int *curr, const int *span)
 
   if (n <= 0)
   {
-
+    return -1;
   }
 
   curr[n - 1] = (curr[n - 1] + 1) % span[n - 1];
@@ -245,17 +245,17 @@ ArrayGetIntegerTypmods(ArrayType *arr, int *n)
 
   if (ARR_ELEMTYPE(arr) != CSTRINGOID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_ELEMENT_ERROR), errmsg("typmod array must be type cstring[]")));
   }
 
   if (ARR_NDIM(arr) != 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("typmod array must be one-dimensional")));
   }
 
   if (array_contains_nulls(arr))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("typmod array must not contain nulls")));
   }
 
   /* hardwired knowledge about cstring's representation details here */

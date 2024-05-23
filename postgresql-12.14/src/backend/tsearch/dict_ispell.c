@@ -45,7 +45,7 @@ dispell_init(PG_FUNCTION_ARGS)
     {
       if (dictloaded)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple DictFile parameters")));
       }
       NIImportDictionary(&(d->obj), get_tsearch_config_filename(defGetString(defel), "dict"));
       dictloaded = true;
@@ -54,19 +54,19 @@ dispell_init(PG_FUNCTION_ARGS)
     {
       if (affloaded)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple AffFile parameters")));
       }
       NIImportAffixes(&(d->obj), get_tsearch_config_filename(defGetString(defel), "affix"));
       affloaded = true;
     }
     else if (strcmp(defel->defname, "stopwords") == 0)
     {
-
-
-
-
-
-
+      if (stoploaded)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("multiple StopWords parameters")));
+      }
+      readstoplist(defGetString(defel), &(d->stoplist), lowerstr);
+      stoploaded = true;
     }
     else
     {
@@ -81,7 +81,7 @@ dispell_init(PG_FUNCTION_ARGS)
   }
   else if (!affloaded)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("missing AffFile parameter")));
   }
   else
   {
@@ -105,7 +105,7 @@ dispell_lexize(PG_FUNCTION_ARGS)
 
   if (len <= 0)
   {
-
+    PG_RETURN_POINTER(NULL);
   }
 
   txt = lowerstr_with_len(in, len);
@@ -121,14 +121,14 @@ dispell_lexize(PG_FUNCTION_ARGS)
   {
     if (searchstoplist(&(d->stoplist), ptr->lexeme))
     {
-
-
+      pfree(ptr->lexeme);
+      ptr->lexeme = NULL;
     }
     else
     {
       if (cptr != ptr)
       {
-
+        memcpy(cptr, ptr, sizeof(TSLexeme));
       }
       cptr++;
     }

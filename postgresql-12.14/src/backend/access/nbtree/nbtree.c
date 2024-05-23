@@ -180,8 +180,8 @@ btbuildempty(Relation index)
 /*
  *	btinsert() -- insert an index tuple into a btree.
  *
- *		Descend the tree recursively, find the appropriate location for
- *our new tuple, and put it there.
+ *		Descend the tree recursively, find the appropriate location for our
+ *		new tuple, and put it there.
  */
 bool
 btinsert(Relation rel, Datum *values, bool *isnull, ItemPointer ht_ctid, Relation heapRel, IndexUniqueCheck checkUnique, IndexInfo *indexInfo)
@@ -222,7 +222,7 @@ btgettuple(IndexScanDesc scan, ScanDirection dir)
     /* punt if we have any unsatisfiable array keys */
     if (so->numArrayKeys < 0)
     {
-
+      return false;
     }
 
     _bt_start_array_keys(scan, dir);
@@ -301,7 +301,7 @@ btgetbitmap(IndexScanDesc scan, TIDBitmap *tbm)
     /* punt if we have any unsatisfiable array keys */
     if (so->numArrayKeys < 0)
     {
-
+      return ntids;
     }
 
     _bt_start_array_keys(scan, ForwardScanDirection);
@@ -525,14 +525,14 @@ btmarkpos(IndexScanDesc scan)
   }
   else
   {
-
-
+    BTScanPosInvalidate(so->markPos);
+    so->markItemIndex = -1;
   }
 
   /* Also record the current positions of any array keys */
   if (so->numArrayKeys)
   {
-
+    _bt_mark_array_keys(scan);
   }
 }
 
@@ -547,7 +547,7 @@ btrestrpos(IndexScanDesc scan)
   /* Restore the marked positions of any array keys */
   if (so->numArrayKeys)
   {
-
+    _bt_restore_array_keys(scan);
   }
 
   if (so->markItemIndex >= 0)
@@ -574,7 +574,7 @@ btrestrpos(IndexScanDesc scan)
       /* Before leaving current page, deal with any killed items */
       if (so->numKilled > 0)
       {
-
+        _bt_killitems(scan);
       }
       BTScanPosUnpinIfPinned(so->currPos);
     }
@@ -584,17 +584,17 @@ btrestrpos(IndexScanDesc scan)
       /* bump pin on mark buffer for assignment to current buffer */
       if (BTScanPosIsPinned(so->markPos))
       {
-
+        IncrBufferRefCount(so->markPos.buf);
       }
       memcpy(&so->currPos, &so->markPos, offsetof(BTScanPosData, items[1]) + so->markPos.lastItem * sizeof(BTScanPosItem));
       if (so->currTuples)
       {
-
+        memcpy(so->currTuples, so->markTuples, so->markPos.nextTupleOffset);
       }
     }
     else
     {
-
+      BTScanPosInvalidate(so->currPos);
     }
   }
 }
@@ -650,8 +650,8 @@ btparallelrescan(IndexScanDesc scan)
 
 /*
  * _bt_parallel_seize() -- Begin the process of advancing the scan to a new
- *		page.  Other scans must wait until we call
- *_bt_parallel_release() or _bt_parallel_done().
+ *		page.  Other scans must wait until we call _bt_parallel_release()
+ *		or _bt_parallel_done().
  *
  * The return value is true if we successfully seized the scan and false
  * if we did not.  The latter case occurs if no pages remain for the current
@@ -688,7 +688,7 @@ _bt_parallel_seize(IndexScanDesc scan, BlockNumber *pageno)
     if (so->arrayKeyCount < btscan->btps_arrayKeyCount)
     {
       /* Parallel scan has already advanced to a new set of scankeys. */
-
+      status = false;
     }
     else if (pageStatus == BTPARALLEL_DONE)
     {
@@ -722,8 +722,8 @@ _bt_parallel_seize(IndexScanDesc scan, BlockNumber *pageno)
 
 /*
  * _bt_parallel_release() -- Complete the process of advancing the scan to a
- *		new page.  We now have the new value btps_scanPage; some other
- *backend can now begin advancing the scan.
+ *		new page.  We now have the new value btps_scanPage; some other backend
+ *		can now begin advancing the scan.
  */
 void
 _bt_parallel_release(IndexScanDesc scan, BlockNumber scan_page)
@@ -793,21 +793,21 @@ _bt_parallel_done(IndexScanDesc scan)
 void
 _bt_parallel_advance_array_keys(IndexScanDesc scan)
 {
+  BTScanOpaque so = (BTScanOpaque)scan->opaque;
+  ParallelIndexScanDesc parallel_scan = scan->parallel_scan;
+  BTParallelScanDesc btscan;
 
+  btscan = (BTParallelScanDesc)OffsetToPointer((void *)parallel_scan, parallel_scan->ps_offset);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  so->arrayKeyCount++;
+  SpinLockAcquire(&btscan->btps_mutex);
+  if (btscan->btps_pageStatus == BTPARALLEL_DONE)
+  {
+    btscan->btps_scanPage = InvalidBlockNumber;
+    btscan->btps_pageStatus = BTPARALLEL_NOT_INITIALIZED;
+    btscan->btps_arrayKeyCount++;
+  }
+  SpinLockRelease(&btscan->btps_mutex);
 }
 
 /*
@@ -838,7 +838,7 @@ _bt_vacuum_needs_cleanup(IndexVacuumInfo *info)
      * Do cleanup if metapage needs upgrade, because we don't have
      * cleanup-related meta-information yet.
      */
-
+    result = true;
   }
   else if (TransactionIdIsValid(metad->btm_oldest_btpo_xact) && TransactionIdPrecedes(metad->btm_oldest_btpo_xact, RecentGlobalXmin))
   {
@@ -847,7 +847,7 @@ _bt_vacuum_needs_cleanup(IndexVacuumInfo *info)
      * is older than RecentGlobalXmin, then at least one deleted page can
      * be recycled -- don't skip cleanup.
      */
-
+    result = true;
   }
   else
   {
@@ -955,7 +955,7 @@ btvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
   {
     if (stats->num_index_tuples > info->num_heap_tuples)
     {
-
+      stats->num_index_tuples = info->num_heap_tuples;
     }
   }
 
@@ -1161,7 +1161,7 @@ btvacuumpage(BTVacState *vstate, BlockNumber blkno, BlockNumber orig_blkno)
   Page page;
   BTPageOpaque opaque = NULL;
 
-restart:;
+restart:
   delete_now = false;
   recurse_to = P_NONE;
 
@@ -1190,11 +1190,11 @@ restart:;
    */
   if (blkno != orig_blkno)
   {
-
-
-
-
-
+    if (_bt_page_recyclable(page) || P_IGNORE(opaque) || !P_ISLEAF(opaque) || opaque->btpo_cycleid != vstate->cycleid)
+    {
+      _bt_relbuf(rel, buf);
+      return;
+    }
   }
 
   /* Page is valid, see what to do with it */
@@ -1216,7 +1216,7 @@ restart:;
     /* Maintain the oldest btpo.xact */
     if (!TransactionIdIsValid(vstate->oldestBtpoXact) || TransactionIdPrecedes(opaque->btpo.xact, vstate->oldestBtpoXact))
     {
-
+      vstate->oldestBtpoXact = opaque->btpo.xact;
     }
   }
   else if (P_ISHALFDEAD(opaque))
@@ -1225,7 +1225,7 @@ restart:;
      * Half-dead leaf page.  Try to delete now.  Might update
      * oldestBtpoXact and pages_deleted below.
      */
-
+    delete_now = true;
   }
   else if (P_ISLEAF(opaque))
   {
@@ -1260,7 +1260,7 @@ restart:;
      */
     if (vstate->cycleid != 0 && opaque->btpo_cycleid == vstate->cycleid && !(opaque->btpo_flags & BTP_SPLIT_END) && !P_RIGHTMOST(opaque) && opaque->btpo_next < orig_blkno)
     {
-
+      recurse_to = opaque->btpo_next;
     }
 
     /*
@@ -1357,8 +1357,8 @@ restart:;
        */
       if (vstate->cycleid != 0 && opaque->btpo_cycleid == vstate->cycleid)
       {
-
-
+        opaque->btpo_cycleid = 0;
+        MarkBufferDirtyHint(buf, true);
       }
     }
 
@@ -1410,8 +1410,8 @@ restart:;
    */
   if (recurse_to != P_NONE)
   {
-
-
+    blkno = recurse_to;
+    goto restart;
   }
 }
 

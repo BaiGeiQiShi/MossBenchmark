@@ -40,7 +40,7 @@ GetTableAmRoutine(Oid amhandler)
 
   if (routine == NULL || !IsA(routine, TableAmRoutine))
   {
-
+    elog(ERROR, "table access method handler %u did not return a TableAmRoutine struct", amhandler);
   }
 
   /*
@@ -117,8 +117,8 @@ check_default_table_access_method(char **newval, void **extra, GucSource source)
 
   if (strlen(*newval) >= NAMEDATALEN)
   {
-
-
+    GUC_check_errdetail("%s is too long (maximum %d characters).", "default_table_access_method", NAMEDATALEN - 1);
+    return false;
   }
 
   /*
@@ -137,7 +137,7 @@ check_default_table_access_method(char **newval, void **extra, GucSource source)
        */
       if (source == PGC_S_TEST)
       {
-
+        ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("table access method \"%s\" does not exist", *newval)));
       }
       else
       {

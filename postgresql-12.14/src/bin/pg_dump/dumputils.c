@@ -29,15 +29,17 @@ AddAcl(PQExpBuffer aclbuf, const char *keyword, const char *subname);
 /*
  * Build GRANT/REVOKE command(s) for an object.
  *
- *	name: the object name, in the form to use in the commands (already
- *quoted) subname: the sub-object name, if any (already quoted); NULL if none
+ *	name: the object name, in the form to use in the commands (already quoted)
+ *	subname: the sub-object name, if any (already quoted); NULL if none
  *	nspname: the namespace the object is in (NULL if none); not pre-quoted
  *	type: the object type (as seen in GRANT command: must be one of
- *		TABLE, SEQUENCE, FUNCTION, PROCEDURE, LANGUAGE, SCHEMA,*DATABASE, TABLESPACE, FOREIGN DATA WRAPPER, SERVER, or LARGE OBJECT) acls: the
- *ACL string fetched from the database racls: the ACL string of any
- *initial-but-now-revoked privileges owner: username of object owner (will be
- *passed through fmtId); can be NULL or empty string to indicate "no owner
- *known" prefix: string to prefix to each generated command; typically empty
+ *		TABLE, SEQUENCE, FUNCTION, PROCEDURE, LANGUAGE, SCHEMA, DATABASE, TABLESPACE,
+ *		FOREIGN DATA WRAPPER, SERVER, or LARGE OBJECT)
+ *	acls: the ACL string fetched from the database
+ *	racls: the ACL string of any initial-but-now-revoked privileges
+ *	owner: username of object owner (will be passed through fmtId); can be
+ *		NULL or empty string to indicate "no owner known"
+ *	prefix: string to prefix to each generated command; typically empty
  *	remoteVersion: version of database
  *
  * Returns true if okay, false if could not parse the acl string.
@@ -46,7 +48,8 @@ AddAcl(PQExpBuffer aclbuf, const char *keyword, const char *subname);
  * Note: when processing a default ACL, prefix is "ALTER DEFAULT PRIVILEGES "
  * or something similar, and name is an empty string.
  *
- * Note: beware of passing a fmtId() result directly as 'name' or 'subname',* since this routine uses fmtId() internally.
+ * Note: beware of passing a fmtId() result directly as 'name' or 'subname',
+ * since this routine uses fmtId() internally.
  */
 bool
 buildACLCommands(const char *name, const char *subname, const char *nspname, const char *type, const char *acls, const char *racls, const char *owner, const char *prefix, int remoteVersion, PQExpBuffer sql)
@@ -61,30 +64,39 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
   PQExpBuffer firstsql, secondsql;
   bool found_owner_privs = false;
 
-  if (strlen(acls) == 0 && strlen(racls) == 0) {
+  if (strlen(acls) == 0 && strlen(racls) == 0)
+  {
     return true; /* object has default permissions */
   }
 
   /* treat empty-string owner same as NULL */
-  if (owner && *owner == '\0') {
+  if (owner && *owner == '\0')
+  {
     owner = NULL;
   }
 
-  if (strlen(acls) != 0) {
-    if (!parsePGArray(acls, &aclitems, &naclitems)) {
-      if (aclitems) {
+  if (strlen(acls) != 0)
+  {
+    if (!parsePGArray(acls, &aclitems, &naclitems))
+    {
+      if (aclitems)
+      {
         free(aclitems);
       }
       return false;
     }
   }
 
-  if (strlen(racls) != 0) {
-    if (!parsePGArray(racls, &raclitems, &nraclitems)) {
-      if (aclitems) {
+  if (strlen(racls) != 0)
+  {
+    if (!parsePGArray(racls, &raclitems, &nraclitems))
+    {
+      if (aclitems)
+      {
         free(aclitems);
       }
-      if (raclitems) {
+      if (raclitems)
+      {
         free(raclitems);
       }
       return false;
@@ -138,37 +150,51 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
    * privileges, in the same way we track initdb initial privileges, see
    * pg_init_privs.
    */
-  if (remoteVersion < 90600) {
+  if (remoteVersion < 90600)
+  {
     Assert(nraclitems == 0);
 
     appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
-    if (subname) {
+    if (subname)
+    {
       appendPQExpBuffer(firstsql, "(%s)", subname);
     }
     appendPQExpBuffer(firstsql, " ON %s ", type);
-    if (nspname && *nspname) {
+    if (nspname && *nspname)
+    {
       appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
     }
     appendPQExpBuffer(firstsql, "%s FROM PUBLIC;\n", name);
-  } else {
+  }
+  else
+  {
     /* Scan individual REVOKE ACL items */
-    for (i = 0; i < nraclitems; i++) {
-      if (!parseAclItem(raclitems[i], type, name, subname, remoteVersion, grantee, grantor, privs, NULL)) {
+    for (i = 0; i < nraclitems; i++)
+    {
+      if (!parseAclItem(raclitems[i], type, name, subname, remoteVersion, grantee, grantor, privs, NULL))
+      {
         ok = false;
         break;
       }
 
-      if (privs->len > 0) {
+      if (privs->len > 0)
+      {
         appendPQExpBuffer(firstsql, "%sREVOKE %s ON %s ", prefix, privs->data, type);
-        if (nspname && *nspname) {
+        if (nspname && *nspname)
+        {
           appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
         }
         appendPQExpBuffer(firstsql, "%s FROM ", name);
-        if (grantee->len == 0) {
+        if (grantee->len == 0)
+        {
           appendPQExpBufferStr(firstsql, "PUBLIC;\n");
-        } else if (strncmp(grantee->data, "group ", strlen("group ")) == 0) {
+        }
+        else if (strncmp(grantee->data, "group ", strlen("group ")) == 0)
+        {
           appendPQExpBuffer(firstsql, "GROUP %s;\n", fmtId(grantee->data + strlen("group ")));
-        } else {
+        }
+        else
+        {
           appendPQExpBuffer(firstsql, "%s;\n", fmtId(grantee->data));
         }
       }
@@ -178,26 +204,32 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
   /*
    * We still need some hacking though to cover the case where new default
    * public privileges are added in new versions: the REVOKE ALL will revoke
-   * them, leading to behavior different from what the old version had,* which is generally not what's wanted.  So add back default privs if the
+   * them, leading to behavior different from what the old version had,
+   * which is generally not what's wanted.  So add back default privs if the
    * source database is too old to have had that particular priv.
    */
-  if (remoteVersion < 80200 && strcmp(type, "DATABASE") == 0) {
+  if (remoteVersion < 80200 && strcmp(type, "DATABASE") == 0)
+  {
     /* database CONNECT priv didn't exist before 8.2 */
     appendPQExpBuffer(firstsql, "%sGRANT CONNECT ON %s %s TO PUBLIC;\n", prefix, type, name);
   }
 
   /* Scan individual ACL items */
-  for (i = 0; i < naclitems; i++) {
-    if (!parseAclItem(aclitems[i], type, name, subname, remoteVersion, grantee, grantor, privs, privswgo)) {
+  for (i = 0; i < naclitems; i++)
+  {
+    if (!parseAclItem(aclitems[i], type, name, subname, remoteVersion, grantee, grantor, privs, privswgo))
+    {
       ok = false;
       break;
     }
 
-    if (grantor->len == 0 && owner) {
+    if (grantor->len == 0 && owner)
+    {
       printfPQExpBuffer(grantor, "%s", owner);
     }
 
-    if (privs->len > 0 || privswgo->len > 0) {
+    if (privs->len > 0 || privswgo->len > 0)
+    {
       /*
        * Prior to 9.6, we had to handle owner privileges in a special
        * manner by first REVOKE'ing the rights and then GRANT'ing them
@@ -205,39 +237,49 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
        * need to GRANT is figured out when we dump and stashed into
        * "racls" and "acls", respectively.  See above.
        */
-      if (remoteVersion < 90600 && owner && strcmp(grantee->data, owner) == 0 && strcmp(grantor->data, owner) == 0) {
+      if (remoteVersion < 90600 && owner && strcmp(grantee->data, owner) == 0 && strcmp(grantor->data, owner) == 0)
+      {
         found_owner_privs = true;
 
         /*
          * For the owner, the default privilege level is ALL WITH
          * GRANT OPTION.
          */
-        if (strcmp(privswgo->data, "ALL") != 0) {
+        if (strcmp(privswgo->data, "ALL") != 0)
+        {
           appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
-          if (subname) {
+          if (subname)
+          {
             appendPQExpBuffer(firstsql, "(%s)", subname);
           }
           appendPQExpBuffer(firstsql, " ON %s ", type);
-          if (nspname && *nspname) {
+          if (nspname && *nspname)
+          {
             appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
           }
           appendPQExpBuffer(firstsql, "%s FROM %s;\n", name, fmtId(grantee->data));
-          if (privs->len > 0) {
+          if (privs->len > 0)
+          {
             appendPQExpBuffer(firstsql, "%sGRANT %s ON %s ", prefix, privs->data, type);
-            if (nspname && *nspname) {
+            if (nspname && *nspname)
+            {
               appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
             }
             appendPQExpBuffer(firstsql, "%s TO %s;\n", name, fmtId(grantee->data));
           }
-          if (privswgo->len > 0) {
+          if (privswgo->len > 0)
+          {
             appendPQExpBuffer(firstsql, "%sGRANT %s ON %s ", prefix, privswgo->data, type);
-            if (nspname && *nspname) {
+            if (nspname && *nspname)
+            {
               appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
             }
             appendPQExpBuffer(firstsql, "%s TO %s WITH GRANT OPTION;\n", name, fmtId(grantee->data));
           }
         }
-      } else {
+      }
+      else
+      {
         /*
          * For systems prior to 9.6, we can assume we are starting
          * from no privs at this point.
@@ -248,41 +290,57 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
          * 'racls') and we can simply GRANT the rights which are in
          * 'acls'.
          */
-        if (grantor->len > 0 && (!owner || strcmp(owner, grantor->data) != 0)) {
+        if (grantor->len > 0 && (!owner || strcmp(owner, grantor->data) != 0))
+        {
           appendPQExpBuffer(secondsql, "SET SESSION AUTHORIZATION %s;\n", fmtId(grantor->data));
         }
 
-        if (privs->len > 0) {
+        if (privs->len > 0)
+        {
           appendPQExpBuffer(secondsql, "%sGRANT %s ON %s ", prefix, privs->data, type);
-          if (nspname && *nspname) {
+          if (nspname && *nspname)
+          {
             appendPQExpBuffer(secondsql, "%s.", fmtId(nspname));
           }
           appendPQExpBuffer(secondsql, "%s TO ", name);
-          if (grantee->len == 0) {
+          if (grantee->len == 0)
+          {
             appendPQExpBufferStr(secondsql, "PUBLIC;\n");
-          } else if (strncmp(grantee->data, "group ", strlen("group ")) == 0) {
+          }
+          else if (strncmp(grantee->data, "group ", strlen("group ")) == 0)
+          {
             appendPQExpBuffer(secondsql, "GROUP %s;\n", fmtId(grantee->data + strlen("group ")));
-          } else {
+          }
+          else
+          {
             appendPQExpBuffer(secondsql, "%s;\n", fmtId(grantee->data));
           }
         }
-        if (privswgo->len > 0) {
+        if (privswgo->len > 0)
+        {
           appendPQExpBuffer(secondsql, "%sGRANT %s ON %s ", prefix, privswgo->data, type);
-          if (nspname && *nspname) {
+          if (nspname && *nspname)
+          {
             appendPQExpBuffer(secondsql, "%s.", fmtId(nspname));
           }
           appendPQExpBuffer(secondsql, "%s TO ", name);
-          if (grantee->len == 0) {
+          if (grantee->len == 0)
+          {
             appendPQExpBufferStr(secondsql, "PUBLIC");
-          } else if (strncmp(grantee->data, "group ", strlen("group ")) == 0) {
+          }
+          else if (strncmp(grantee->data, "group ", strlen("group ")) == 0)
+          {
             appendPQExpBuffer(secondsql, "GROUP %s", fmtId(grantee->data + strlen("group ")));
-          } else {
+          }
+          else
+          {
             appendPQExpBufferStr(secondsql, fmtId(grantee->data));
           }
           appendPQExpBufferStr(secondsql, " WITH GRANT OPTION;\n");
         }
 
-        if (grantor->len > 0 && (!owner || strcmp(owner, grantor->data) != 0)) {
+        if (grantor->len > 0 && (!owner || strcmp(owner, grantor->data) != 0))
+        {
           appendPQExpBufferStr(secondsql, "RESET SESSION AUTHORIZATION;\n");
         }
       }
@@ -295,13 +353,16 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
    *
    * For 9.6 and above, we handle this through the 'racls'.  See above.
    */
-  if (remoteVersion < 90600 && !found_owner_privs && owner) {
+  if (remoteVersion < 90600 && !found_owner_privs && owner)
+  {
     appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
-    if (subname) {
+    if (subname)
+    {
       appendPQExpBuffer(firstsql, "(%s)", subname);
     }
     appendPQExpBuffer(firstsql, " ON %s ", type);
-    if (nspname && *nspname) {
+    if (nspname && *nspname)
+    {
       appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
     }
     appendPQExpBuffer(firstsql, "%s FROM %s;\n", name, fmtId(owner));
@@ -316,11 +377,13 @@ buildACLCommands(const char *name, const char *subname, const char *nspname, con
   destroyPQExpBuffer(firstsql);
   destroyPQExpBuffer(secondsql);
 
-  if (aclitems) {
+  if (aclitems)
+  {
     free(aclitems);
   }
 
-  if (raclitems) {
+  if (raclitems)
+  {
     free(raclitems);
   }
 
@@ -353,20 +416,24 @@ buildDefaultACLCommands(const char *type, const char *nspname, const char *acls,
    * default privileges for the wrong user.
    */
   appendPQExpBuffer(prefix, "ALTER DEFAULT PRIVILEGES FOR ROLE %s ", fmtId(owner));
-  if (nspname) {
+  if (nspname)
+  {
     appendPQExpBuffer(prefix, "IN SCHEMA %s ", fmtId(nspname));
   }
 
-  if (strlen(initacls) != 0 || strlen(initracls) != 0) {
+  if (strlen(initacls) != 0 || strlen(initracls) != 0)
+  {
     appendPQExpBuffer(sql, "SELECT pg_catalog.binary_upgrade_set_record_init_privs(true);\n");
-    if (!buildACLCommands("", NULL, NULL, type, initacls, initracls, owner, prefix->data, remoteVersion, sql)) {
+    if (!buildACLCommands("", NULL, NULL, type, initacls, initracls, owner, prefix->data, remoteVersion, sql))
+    {
       destroyPQExpBuffer(prefix);
       return false;
     }
     appendPQExpBuffer(sql, "SELECT pg_catalog.binary_upgrade_set_record_init_privs(false);\n");
   }
 
-  if (!buildACLCommands("", NULL, NULL, type, acls, racls, owner, prefix->data, remoteVersion, sql)) {
+  if (!buildACLCommands("", NULL, NULL, type, acls, racls, owner, prefix->data, remoteVersion, sql))
+  {
     destroyPQExpBuffer(prefix);
     return false;
   }
@@ -412,58 +479,75 @@ parseAclItem(const char *item, const char *type, const char *name, const char *s
 
   /* user or group name is string up to = */
   eqpos = copyAclUserName(grantee, buf);
-  if (*eqpos != '=') {
+  if (*eqpos != '=')
+  {
     pg_free(buf);
     return false;
   }
 
   /* grantor should appear after / */
   slpos = strchr(eqpos + 1, '/');
-  if (slpos) {
+  if (slpos)
+  {
     *slpos++ = '\0';
     slpos = copyAclUserName(grantor, slpos);
-    if (*slpos != '\0') {
+    if (*slpos != '\0')
+    {
       pg_free(buf);
       return false;
     }
-  } else {
+  }
+  else
+  {
     pg_free(buf);
     return false;
   }
 
   /* privilege codes */
 #define CONVERT_PRIV(code, keywd)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if ((pos = strchr(eqpos + 1, code))) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-      if (*(pos + 1) == '*' && privswgo != NULL) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if ((pos = strchr(eqpos + 1, code)))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+      if (*(pos + 1) == '*' && privswgo != NULL)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+      {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
         AddAcl(privswgo, keywd, subname);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
         all_without_go = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-      } else {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
+      }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+      else                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
+      {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
         AddAcl(privs, keywd, subname);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
         all_with_go = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
       }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-    } else                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
+    else                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
       all_with_go = all_without_go = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   } while (0)
 
   resetPQExpBuffer(privs);
   resetPQExpBuffer(privswgo);
 
-  if (strcmp(type, "TABLE") == 0 || strcmp(type, "SEQUENCE") == 0 || strcmp(type, "TABLES") == 0 || strcmp(type, "SEQUENCES") == 0) {
+  if (strcmp(type, "TABLE") == 0 || strcmp(type, "SEQUENCE") == 0 || strcmp(type, "TABLES") == 0 || strcmp(type, "SEQUENCES") == 0)
+  {
     CONVERT_PRIV('r', "SELECT");
 
-    if (strcmp(type, "SEQUENCE") == 0 || strcmp(type, "SEQUENCES") == 0) {
+    if (strcmp(type, "SEQUENCE") == 0 || strcmp(type, "SEQUENCES") == 0)
+    {
       /* sequence only */
       CONVERT_PRIV('U', "USAGE");
-    } else {
+    }
+    else
+    {
       /* table only */
       CONVERT_PRIV('a', "INSERT");
       CONVERT_PRIV('x', "REFERENCES");
       /* rest are not applicable to columns */
-      if (subname == NULL) {
+      if (subname == NULL)
+      {
         CONVERT_PRIV('d', "DELETE");
         CONVERT_PRIV('t', "TRIGGER");
-        if (remoteVersion >= 80400) {
+        if (remoteVersion >= 80400)
+        {
           CONVERT_PRIV('D', "TRUNCATE");
         }
       }
@@ -471,48 +555,77 @@ parseAclItem(const char *item, const char *type, const char *name, const char *s
 
     /* UPDATE */
     CONVERT_PRIV('w', "UPDATE");
-  } else if (strcmp(type, "FUNCTION") == 0 || strcmp(type, "FUNCTIONS") == 0) {
+  }
+  else if (strcmp(type, "FUNCTION") == 0 || strcmp(type, "FUNCTIONS") == 0)
+  {
     CONVERT_PRIV('X', "EXECUTE");
-  } else if (strcmp(type, "PROCEDURE") == 0 || strcmp(type, "PROCEDURES") == 0) {
+  }
+  else if (strcmp(type, "PROCEDURE") == 0 || strcmp(type, "PROCEDURES") == 0)
+  {
     CONVERT_PRIV('X', "EXECUTE");
-  } else if (strcmp(type, "LANGUAGE") == 0) {
+  }
+  else if (strcmp(type, "LANGUAGE") == 0)
+  {
     CONVERT_PRIV('U', "USAGE");
-  } else if (strcmp(type, "SCHEMA") == 0 || strcmp(type, "SCHEMAS") == 0) {
+  }
+  else if (strcmp(type, "SCHEMA") == 0 || strcmp(type, "SCHEMAS") == 0)
+  {
     CONVERT_PRIV('C', "CREATE");
     CONVERT_PRIV('U', "USAGE");
-  } else if (strcmp(type, "DATABASE") == 0) {
+  }
+  else if (strcmp(type, "DATABASE") == 0)
+  {
     CONVERT_PRIV('C', "CREATE");
     CONVERT_PRIV('c', "CONNECT");
     CONVERT_PRIV('T', "TEMPORARY");
-  } else if (strcmp(type, "TABLESPACE") == 0) {
+  }
+  else if (strcmp(type, "TABLESPACE") == 0)
+  {
     CONVERT_PRIV('C', "CREATE");
-  } else if (strcmp(type, "TYPE") == 0 || strcmp(type, "TYPES") == 0) {
+  }
+  else if (strcmp(type, "TYPE") == 0 || strcmp(type, "TYPES") == 0)
+  {
     CONVERT_PRIV('U', "USAGE");
-  } else if (strcmp(type, "FOREIGN DATA WRAPPER") == 0) {
+  }
+  else if (strcmp(type, "FOREIGN DATA WRAPPER") == 0)
+  {
     CONVERT_PRIV('U', "USAGE");
-  } else if (strcmp(type, "FOREIGN SERVER") == 0) {
+  }
+  else if (strcmp(type, "FOREIGN SERVER") == 0)
+  {
     CONVERT_PRIV('U', "USAGE");
-  } else if (strcmp(type, "FOREIGN TABLE") == 0) {
+  }
+  else if (strcmp(type, "FOREIGN TABLE") == 0)
+  {
     CONVERT_PRIV('r', "SELECT");
-  } else if (strcmp(type, "LARGE OBJECT") == 0) {
+  }
+  else if (strcmp(type, "LARGE OBJECT") == 0)
+  {
     CONVERT_PRIV('r', "SELECT");
     CONVERT_PRIV('w', "UPDATE");
-  } else {
+  }
+  else
+  {
     abort();
   }
 
 #undef CONVERT_PRIV
 
-  if (all_with_go) {
+  if (all_with_go)
+  {
     resetPQExpBuffer(privs);
     printfPQExpBuffer(privswgo, "ALL");
-    if (subname) {
+    if (subname)
+    {
       appendPQExpBuffer(privswgo, "(%s)", subname);
     }
-  } else if (all_without_go) {
+  }
+  else if (all_without_go)
+  {
     resetPQExpBuffer(privswgo);
     printfPQExpBuffer(privs, "ALL");
-    if (subname) {
+    if (subname)
+    {
       appendPQExpBuffer(privs, "(%s)", subname);
     }
   }
@@ -523,7 +636,8 @@ parseAclItem(const char *item, const char *type, const char *name, const char *s
 }
 
 /*
- * Transfer a user or group name starting at *input into the output buffer,* dequoting if needed.  Returns a pointer to just past the input name.
+ * Transfer a user or group name starting at *input into the output buffer,
+ * dequoting if needed.  Returns a pointer to just past the input name.
  * The name is taken to end at an unquoted '=' or end of string.
  */
 static char *
@@ -531,18 +645,24 @@ copyAclUserName(PQExpBuffer output, char *input)
 {
   resetPQExpBuffer(output);
 
-  while (*input && *input != '=') {
+  while (*input && *input != '=')
+  {
     /*
      * If user name isn't quoted, then just add it to the output buffer
      */
-    if (*input != '"') {
+    if (*input != '"')
+    {
       appendPQExpBufferChar(output, *input++);
-    } else {
+    }
+    else
+    {
       /* Otherwise, it's a quoted username */
       input++;
       /* Loop until we come across an unescaped quote */
-      while (!(*input == '"' && *(input + 1) != '"')) {
-        if (*input == '\0') {
+      while (!(*input == '"' && *(input + 1) != '"'))
+      {
+        if (*input == '\0')
+        {
           return input; /* really a syntax error... */
         }
 
@@ -550,7 +670,8 @@ copyAclUserName(PQExpBuffer output, char *input)
          * Quoting convention is to escape " as "".  Keep this code in
          * sync with putid() in backend's acl.c.
          */
-        if (*input == '"' && *(input + 1) == '"') {
+        if (*input == '"' && *(input + 1) == '"')
+        {
           input++;
         }
         appendPQExpBufferChar(output, *input++);
@@ -567,11 +688,13 @@ copyAclUserName(PQExpBuffer output, char *input)
 static void
 AddAcl(PQExpBuffer aclbuf, const char *keyword, const char *subname)
 {
-  if (aclbuf->len > 0) {
+  if (aclbuf->len > 0)
+  {
     appendPQExpBufferChar(aclbuf, ',');
   }
   appendPQExpBufferStr(aclbuf, keyword);
-  if (subname) {
+  if (subname)
+  {
     appendPQExpBuffer(aclbuf, "(%s)", subname);
   }
 }
@@ -588,7 +711,11 @@ AddAcl(PQExpBuffer aclbuf, const char *keyword, const char *subname)
 void
 buildShSecLabelQuery(PGconn *conn, const char *catalog_name, Oid objectId, PQExpBuffer sql)
 {
-  appendPQExpBuffer(sql,"SELECT provider, label FROM pg_catalog.pg_shseclabel WHERE classoid = 'pg_catalog.%s'::pg_catalog.regclass AND objoid = '%u'",catalog_name, objectId);
+  appendPQExpBuffer(sql,
+      "SELECT provider, label FROM pg_catalog.pg_shseclabel "
+      "WHERE classoid = 'pg_catalog.%s'::pg_catalog.regclass "
+      "AND objoid = '%u'",
+      catalog_name, objectId);
 }
 
 /*
@@ -604,7 +731,8 @@ emitShSecLabels(PGconn *conn, PGresult *res, PQExpBuffer buffer, const char *obj
 {
   int i;
 
-  for (i = 0; i < PQntuples(res); i++) {
+  for (i = 0; i < PQntuples(res); i++)
+  {
     char *provider = PQgetvalue(res, i, 0);
     char *label = PQgetvalue(res, i, 1);
 
@@ -663,9 +791,27 @@ buildACLQueries(PQExpBuffer acl_subquery, PQExpBuffer racl_subquery, PQExpBuffer
    * ensure that GRANTs WITH GRANT OPTION and subsequent GRANTs based on
    * those are dumped in the correct order.
    */
-  printfPQExpBuffer(acl_subquery,"(SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM (SELECT acl, row_n FROM pg_catalog.unnest(coalesce(%s,pg_catalog.acldefault(%s,%s))) WITH ORDINALITY AS perm(acl,row_n) WHERE NOT EXISTS ( SELECT 1 FROM pg_catalog.unnest(coalesce(pip.initprivs,pg_catalog.acldefault(%s,%s))) AS init(init_acl) WHERE acl = init_acl)) as foo)",acl_column, obj_kind, acl_owner, obj_kind, acl_owner);
+  printfPQExpBuffer(acl_subquery,
+      "(SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM "
+      "(SELECT acl, row_n FROM "
+      "pg_catalog.unnest(coalesce(%s,pg_catalog.acldefault(%s,%s))) "
+      "WITH ORDINALITY AS perm(acl,row_n) "
+      "WHERE NOT EXISTS ( "
+      "SELECT 1 FROM "
+      "pg_catalog.unnest(coalesce(pip.initprivs,pg_catalog.acldefault(%s,%s))) "
+      "AS init(init_acl) WHERE acl = init_acl)) as foo)",
+      acl_column, obj_kind, acl_owner, obj_kind, acl_owner);
 
-  printfPQExpBuffer(racl_subquery,"(SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM (SELECT acl, row_n FROM pg_catalog.unnest(coalesce(pip.initprivs,pg_catalog.acldefault(%s,%s))) WITH ORDINALITY AS initp(acl,row_n) WHERE NOT EXISTS ( SELECT 1 FROM pg_catalog.unnest(coalesce(%s,pg_catalog.acldefault(%s,%s))) AS permp(orig_acl) WHERE acl = orig_acl)) as foo)",obj_kind, acl_owner, acl_column, obj_kind, acl_owner);
+  printfPQExpBuffer(racl_subquery,
+      "(SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM "
+      "(SELECT acl, row_n FROM "
+      "pg_catalog.unnest(coalesce(pip.initprivs,pg_catalog.acldefault(%s,%s))) "
+      "WITH ORDINALITY AS initp(acl,row_n) "
+      "WHERE NOT EXISTS ( "
+      "SELECT 1 FROM "
+      "pg_catalog.unnest(coalesce(%s,pg_catalog.acldefault(%s,%s))) "
+      "AS permp(orig_acl) WHERE acl = orig_acl)) as foo)",
+      obj_kind, acl_owner, acl_column, obj_kind, acl_owner);
 
   /*
    * In binary upgrade mode we don't run the extension script but instead
@@ -681,11 +827,32 @@ buildACLQueries(PQExpBuffer acl_subquery, PQExpBuffer racl_subquery, PQExpBuffer
    * and REVOKE statements into pg_init_privs.  This is how we preserve the
    * contents of that catalog across binary upgrades.
    */
-  if (binary_upgrade) {
-    printfPQExpBuffer(init_acl_subquery,"CASE WHEN privtype = 'e' THEN (SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM (SELECT acl, row_n FROM pg_catalog.unnest(pip.initprivs) WITH ORDINALITY AS initp(acl,row_n) WHERE NOT EXISTS ( SELECT 1 FROM pg_catalog.unnest(pg_catalog.acldefault(%s,%s)) AS privm(orig_acl) WHERE acl = orig_acl)) as foo) END",obj_kind, acl_owner);
+  if (binary_upgrade)
+  {
+    printfPQExpBuffer(init_acl_subquery,
+        "CASE WHEN privtype = 'e' THEN "
+        "(SELECT pg_catalog.array_agg(acl ORDER BY row_n) FROM "
+        "(SELECT acl, row_n FROM pg_catalog.unnest(pip.initprivs) "
+        "WITH ORDINALITY AS initp(acl,row_n) "
+        "WHERE NOT EXISTS ( "
+        "SELECT 1 FROM "
+        "pg_catalog.unnest(pg_catalog.acldefault(%s,%s)) "
+        "AS privm(orig_acl) WHERE acl = orig_acl)) as foo) END",
+        obj_kind, acl_owner);
 
-    printfPQExpBuffer(init_racl_subquery,"CASE WHEN privtype = 'e' THEN (SELECT pg_catalog.array_agg(acl) FROM (SELECT acl, row_n FROM pg_catalog.unnest(pg_catalog.acldefault(%s,%s)) WITH ORDINALITY AS privp(acl,row_n) WHERE NOT EXISTS ( SELECT 1 FROM pg_catalog.unnest(pip.initprivs) AS initp(init_acl) WHERE acl = init_acl)) as foo) END",obj_kind, acl_owner);
-  } else {
+    printfPQExpBuffer(init_racl_subquery,
+        "CASE WHEN privtype = 'e' THEN "
+        "(SELECT pg_catalog.array_agg(acl) FROM "
+        "(SELECT acl, row_n FROM "
+        "pg_catalog.unnest(pg_catalog.acldefault(%s,%s)) "
+        "WITH ORDINALITY AS privp(acl,row_n) "
+        "WHERE NOT EXISTS ( "
+        "SELECT 1 FROM pg_catalog.unnest(pip.initprivs) "
+        "AS initp(init_acl) WHERE acl = init_acl)) as foo) END",
+        obj_kind, acl_owner);
+  }
+  else
+  {
     printfPQExpBuffer(init_acl_subquery, "NULL");
     printfPQExpBuffer(init_racl_subquery, "NULL");
   }
@@ -704,9 +871,12 @@ buildACLQueries(PQExpBuffer acl_subquery, PQExpBuffer racl_subquery, PQExpBuffer
 bool
 variable_is_guc_list_quote(const char *name)
 {
-  if (pg_strcasecmp(name, "temp_tablespaces") == 0 || pg_strcasecmp(name, "session_preload_libraries") == 0 || pg_strcasecmp(name, "shared_preload_libraries") == 0 || pg_strcasecmp(name, "local_preload_libraries") == 0 || pg_strcasecmp(name, "search_path") == 0) {
+  if (pg_strcasecmp(name, "temp_tablespaces") == 0 || pg_strcasecmp(name, "session_preload_libraries") == 0 || pg_strcasecmp(name, "shared_preload_libraries") == 0 || pg_strcasecmp(name, "local_preload_libraries") == 0 || pg_strcasecmp(name, "search_path") == 0)
+  {
     return true;
-  } else {
+  }
+  else
+  {
     return false;
   }
 }
@@ -722,9 +892,11 @@ variable_is_guc_list_quote(const char *name)
  *	rawstring: the input string; must be overwritable!	On return, it's
  *			   been modified to contain the separated identifiers.
  *	separator: the separator punctuation expected between identifiers
- *			   (typically '.' or ',').  Whitespace may also appear
- *around identifiers. Outputs: namelist: receives a malloc'd, null-terminated
- *array of pointers to identifiers within rawstring.  Caller should free this
+ *			   (typically '.' or ',').  Whitespace may also appear around
+ *			   identifiers.
+ * Outputs:
+ *	namelist: receives a malloc'd, null-terminated array of pointers to
+ *			  identifiers within rawstring.  Caller should free this
  *			  even on error return.
  *
  * Returns true if okay, false if there is a syntax error in the string.
@@ -744,28 +916,35 @@ SplitGUCList(char *rawstring, char separator, char ***namelist)
   *namelist = nextptr = (char **)pg_malloc((strlen(rawstring) / 2 + 2) * sizeof(char *));
   *nextptr = NULL;
 
-  while (isspace((unsigned char)*nextp)) {
+  while (isspace((unsigned char)*nextp))
+  {
     nextp++; /* skip leading whitespace */
   }
 
-  if (*nextp == '\0') {
+  if (*nextp == '\0')
+  {
     return true; /* allow empty string */
   }
 
   /* At the top of the loop, we are at start of a new identifier. */
-  do {
+  do
+  {
     char *curname;
     char *endp;
 
-    if (*nextp == '"') {
+    if (*nextp == '"')
+    {
       /* Quoted name --- collapse quote-quote pairs */
       curname = nextp + 1;
-      for (;;) {
+      for (;;)
+      {
         endp = strchr(nextp + 1, '"');
-        if (endp == NULL) {
+        if (endp == NULL)
+        {
           return false; /* mismatched quotes */
         }
-        if (endp[1] != '"') {
+        if (endp[1] != '"')
+        {
           break; /* found end of quoted name */
         }
         /* Collapse adjacent quotes into one quote, and look again */
@@ -774,31 +953,42 @@ SplitGUCList(char *rawstring, char separator, char ***namelist)
       }
       /* endp now points at the terminating quote */
       nextp = endp + 1;
-    } else {
+    }
+    else
+    {
       /* Unquoted name --- extends to separator or whitespace */
       curname = nextp;
-      while (*nextp && *nextp != separator && !isspace((unsigned char)*nextp)) {
+      while (*nextp && *nextp != separator && !isspace((unsigned char)*nextp))
+      {
         nextp++;
       }
       endp = nextp;
-      if (curname == nextp) {
+      if (curname == nextp)
+      {
         return false; /* empty unquoted name not allowed */
       }
     }
 
-    while (isspace((unsigned char)*nextp)) {
+    while (isspace((unsigned char)*nextp))
+    {
       nextp++; /* skip trailing whitespace */
     }
 
-    if (*nextp == separator) {
+    if (*nextp == separator)
+    {
       nextp++;
-      while (isspace((unsigned char)*nextp)) {
+      while (isspace((unsigned char)*nextp))
+      {
         nextp++; /* skip leading whitespace for next */
       }
       /* we expect another name, so done remains false */
-    } else if (*nextp == '\0') {
+    }
+    else if (*nextp == '\0')
+    {
       done = true;
-    } else {
+    }
+    else
+    {
       return false; /* invalid syntax */
     }
 
@@ -837,7 +1027,8 @@ makeAlterConfigCommand(PGconn *conn, const char *configitem, const char *type, c
   /* Parse the configitem.  If we can't find an "=", silently do nothing. */
   mine = pg_strdup(configitem);
   pos = strchr(mine, '=');
-  if (pos == NULL) {
+  if (pos == NULL)
+  {
     pg_free(mine);
     return;
   }
@@ -845,7 +1036,8 @@ makeAlterConfigCommand(PGconn *conn, const char *configitem, const char *type, c
 
   /* Build the command, with suitable quoting for everything. */
   appendPQExpBuffer(buf, "ALTER %s %s ", type, fmtId(name));
-  if (type2 != NULL && name2 != NULL) {
+  if (type2 != NULL && name2 != NULL)
+  {
     appendPQExpBuffer(buf, "IN %s %s ", type2, fmtId(name2));
   }
   appendPQExpBuffer(buf, "SET %s TO ", fmtId(mine));
@@ -855,7 +1047,8 @@ makeAlterConfigCommand(PGconn *conn, const char *configitem, const char *type, c
    * flatten_set_variable_args() before they were put into the setconfig
    * array.  However, because the quoting rules used there aren't exactly
    * like SQL's, we have to break the list value apart and then quote the
-   * elements as string literals.  (The elements may be double-quoted as-is,* but we can't just feed them to the SQL parser; it would do the wrong
+   * elements as string literals.  (The elements may be double-quoted as-is,
+   * but we can't just feed them to the SQL parser; it would do the wrong
    * thing with elements that are zero-length or longer than NAMEDATALEN.)
    *
    * Variables that are not so marked should just be emitted as simple
@@ -863,22 +1056,28 @@ makeAlterConfigCommand(PGconn *conn, const char *configitem, const char *type, c
    * variable_is_guc_list_quote(), we'll do that; this makes it unsafe to
    * use GUC_LIST_QUOTE for extension variables.
    */
-  if (variable_is_guc_list_quote(mine)) {
+  if (variable_is_guc_list_quote(mine))
+  {
     char **namelist;
     char **nameptr;
 
     /* Parse string into list of identifiers */
     /* this shouldn't fail really */
-    if (SplitGUCList(pos, ',', &namelist)) {
-      for (nameptr = namelist; *nameptr; nameptr++) {
-        if (nameptr != namelist) {
+    if (SplitGUCList(pos, ',', &namelist))
+    {
+      for (nameptr = namelist; *nameptr; nameptr++)
+      {
+        if (nameptr != namelist)
+        {
           appendPQExpBufferStr(buf, ", ");
         }
         appendStringLiteralConn(buf, *nameptr, conn);
       }
     }
     pg_free(namelist);
-  } else {
+  }
+  else
+  {
     appendStringLiteralConn(buf, pos, conn);
   }
 

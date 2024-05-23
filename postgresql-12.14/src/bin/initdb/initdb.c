@@ -2,7 +2,8 @@
  *
  * initdb --- initialize a PostgreSQL installation
  *
- * initdb creates (initializes) a PostgreSQL database cluster (site,* instance, installation, whatever).  A database cluster is a
+ * initdb creates (initializes) a PostgreSQL database cluster (site,
+ * instance, installation, whatever).  A database cluster is a
  * collection of PostgreSQL databases all managed by the same server.
  *
  * To create the database cluster, we create the directory that contains
@@ -77,7 +78,7 @@
 extern const char *
 select_default_timezone(const char *share_path);
 
-static const char *const auth_methods_host[] = {"trust", "reject", "scram-sha-256", "md5", "password", "ident", "radius", 
+static const char *const auth_methods_host[] = {"trust", "reject", "scram-sha-256", "md5", "password", "ident", "radius",
 #ifdef ENABLE_GSS
     "gss",
 #endif
@@ -94,9 +95,9 @@ static const char *const auth_methods_host[] = {"trust", "reject", "scram-sha-25
     "ldap",
 #endif
 #ifdef USE_SSL
-    "cert", 
+    "cert",
 #endif
-NULL};
+    NULL};
 static const char *const auth_methods_local[] = {"trust", "reject", "scram-sha-256", "md5", "password", "peer", "radius",
 #ifdef USE_PAM
     "pam", "pam ",
@@ -107,7 +108,7 @@ static const char *const auth_methods_local[] = {"trust", "reject", "scram-sha-2
 #ifdef USE_LDAP
     "ldap",
 #endif
-NULL};
+    NULL};
 
 /*
  * these values are passed in by makefile defines
@@ -187,7 +188,8 @@ static bool authwarning = false;
  * Note: we run the backend with -F (fsync disabled) and then do a single
  * pass of fsync'ing at the end.  This is faster than fsync'ing each step.
  *
- * Note: in the shell-script version, we also passed PGDATA as a -D switch,* but here it is more convenient to pass it as an environment variable
+ * Note: in the shell-script version, we also passed PGDATA as a -D switch,
+ * but here it is more convenient to pass it as an environment variable
  * (no quoting to worry about).
  */
 static const char *boot_options = "-F";
@@ -305,38 +307,44 @@ initialize_data_directory(void);
   FILE *cmdfd
 
 #define PG_CMD_OPEN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     cmdfd = popen_check(cmd, "w");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     if (cmdfd == NULL)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
       exit(1); /* message already printed by popen_check */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   } while (0)
 
 #define PG_CMD_CLOSE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (pclose_check(cmdfd))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
       exit(1); /* message already printed by pclose_check */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
   } while (0)
 
 #define PG_CMD_PUTS(line)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (fputs(line, cmdfd) < 0 || fflush(cmdfd) < 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
       output_failed = true, output_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define PG_CMD_PRINTF1(fmt, arg1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (fprintf(cmdfd, fmt, arg1) < 0 || fflush(cmdfd) < 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
       output_failed = true, output_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define PG_CMD_PRINTF2(fmt, arg1, arg2)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (fprintf(cmdfd, fmt, arg1, arg2) < 0 || fflush(cmdfd) < 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
       output_failed = true, output_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
 #define PG_CMD_PRINTF3(fmt, arg1, arg2, arg3)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (fprintf(cmdfd, fmt, arg1, arg2, arg3) < 0 || fflush(cmdfd) < 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       output_failed = true, output_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
@@ -350,7 +358,8 @@ escape_quotes(const char *src)
 {
   char *result = escape_single_quotes_ascii(src);
 
-  if (!result) {
+  if (!result)
+  {
     pg_log_error("out of memory");
     exit(1);
   }
@@ -377,7 +386,8 @@ escape_quotes_bki(const char *src)
 
   /* count double quotes in data */
   datap = data;
-  while ((datap = strchr(datap, '"')) != NULL) {
+  while ((datap = strchr(datap, '"')) != NULL)
+  {
     nquotes++;
     datap++;
   }
@@ -385,11 +395,15 @@ escape_quotes_bki(const char *src)
   result = (char *)pg_malloc(strlen(data) + 3 + nquotes * 3);
   resultp = result;
   *resultp++ = '"';
-  for (datap = data; *datap; datap++) {
-    if (*datap == '"') {
+  for (datap = data; *datap; datap++)
+  {
+    if (*datap == '"')
+    {
       strcpy(resultp, "\\042");
       resultp += 4;
-    } else {
+    }
+    else
+    {
       *resultp++ = *datap;
     }
   }
@@ -415,7 +429,8 @@ replace_token(char **lines, const char *token, const char *replacement)
   char **result;
   int toklen, replen, diff;
 
-  for (i = 0; lines[i]; i++) {
+  for (i = 0; lines[i]; i++)
+  {
     numlines++;
   }
 
@@ -425,13 +440,15 @@ replace_token(char **lines, const char *token, const char *replacement)
   replen = strlen(replacement);
   diff = replen - toklen;
 
-  for (i = 0; i < numlines; i++) {
+  for (i = 0; i < numlines; i++)
+  {
     char *where;
     char *newline;
     int pre;
 
     /* just copy pointer if NULL or no change needed */
-    if (lines[i] == NULL || (where = strstr(lines[i], token)) == NULL) {
+    if (lines[i] == NULL || (where = strstr(lines[i], token)) == NULL)
+    {
       result[i] = lines[i];
       continue;
     }
@@ -467,14 +484,17 @@ filter_lines_with_token(char **lines, const char *token)
   int i, src, dst;
   char **result;
 
-  for (i = 0; lines[i]; i++) {
+  for (i = 0; lines[i]; i++)
+  {
     numlines++;
   }
 
   result = (char **)pg_malloc(numlines * sizeof(char *));
 
-  for (src = 0, dst = 0; src < numlines; src++) {
-    if (lines[src] == NULL || strstr(lines[src], token) == NULL) {
+  for (src = 0, dst = 0; src < numlines; src++)
+  {
+    if (lines[src] == NULL || strstr(lines[src], token) == NULL)
+    {
       result[dst++] = lines[src];
     }
   }
@@ -497,18 +517,22 @@ readfile(const char *path)
   char *buffer;
   int c;
 
-  if ((infile = fopen(path, "r")) == NULL) {
+  if ((infile = fopen(path, "r")) == NULL)
+  {
     pg_log_error("could not open file \"%s\" for reading: %m", path);
     exit(1);
   }
 
   /* pass over the file twice - the first time to size the result */
 
-  while ((c = fgetc(infile)) != EOF) {
+  while ((c = fgetc(infile)) != EOF)
+  {
     linelen++;
-    if (c == '\n') {
+    if (c == '\n')
+    {
       nlines++;
-      if (linelen > maxlength) {
+      if (linelen > maxlength)
+      {
         maxlength = linelen;
       }
       linelen = 0;
@@ -516,10 +540,12 @@ readfile(const char *path)
   }
 
   /* handle last line without a terminating newline (yuck) */
-  if (linelen) {
+  if (linelen)
+  {
     nlines++;
   }
-  if (linelen > maxlength) {
+  if (linelen > maxlength)
+  {
     maxlength = linelen;
   }
 
@@ -530,7 +556,8 @@ readfile(const char *path)
   /* now reprocess the file and store the lines */
   rewind(infile);
   n = 0;
-  while (fgets(buffer, maxlength + 1, infile) != NULL && n < nlines) {
+  while (fgets(buffer, maxlength + 1, infile) != NULL && n < nlines)
+  {
     result[n++] = pg_strdup(buffer);
   }
 
@@ -553,18 +580,22 @@ writefile(char *path, char **lines)
   FILE *out_file;
   char **line;
 
-  if ((out_file = fopen(path, "w")) == NULL) {
+  if ((out_file = fopen(path, "w")) == NULL)
+  {
     pg_log_error("could not open file \"%s\" for writing: %m", path);
     exit(1);
   }
-  for (line = lines; *line != NULL; line++) {
-    if (fputs(*line, out_file) < 0) {
+  for (line = lines; *line != NULL; line++)
+  {
+    if (fputs(*line, out_file) < 0)
+    {
       pg_log_error("could not write file \"%s\": %m", path);
       exit(1);
     }
     free(*line);
   }
-  if (fclose(out_file)) {
+  if (fclose(out_file))
+  {
     pg_log_error("could not write file \"%s\": %m", path);
     exit(1);
   }
@@ -582,7 +613,8 @@ popen_check(const char *command, const char *mode)
   fflush(stderr);
   errno = 0;
   cmdfd = popen(command, mode);
-  if (cmdfd == NULL) {
+  if (cmdfd == NULL)
+  {
     pg_log_error("could not execute command \"%s\": %m", command);
   }
   return cmdfd;
@@ -595,41 +627,57 @@ popen_check(const char *command, const char *mode)
 static void
 cleanup_directories_atexit(void)
 {
-  if (success) {
+  if (success)
+  {
     return;
   }
 
-  if (!noclean) {
-    if (made_new_pgdata) {
+  if (!noclean)
+  {
+    if (made_new_pgdata)
+    {
       pg_log_info("removing data directory \"%s\"", pg_data);
-      if (!rmtree(pg_data, true)) {
+      if (!rmtree(pg_data, true))
+      {
         pg_log_error("failed to remove data directory");
       }
-    } else if (found_existing_pgdata) {
+    }
+    else if (found_existing_pgdata)
+    {
       pg_log_info("removing contents of data directory \"%s\"", pg_data);
-      if (!rmtree(pg_data, false)) {
+      if (!rmtree(pg_data, false))
+      {
         pg_log_error("failed to remove contents of data directory");
       }
     }
 
-    if (made_new_xlogdir) {
+    if (made_new_xlogdir)
+    {
       pg_log_info("removing WAL directory \"%s\"", xlog_dir);
-      if (!rmtree(xlog_dir, true)) {
+      if (!rmtree(xlog_dir, true))
+      {
         pg_log_error("failed to remove WAL directory");
       }
-    } else if (found_existing_xlogdir) {
+    }
+    else if (found_existing_xlogdir)
+    {
       pg_log_info("removing contents of WAL directory \"%s\"", xlog_dir);
-      if (!rmtree(xlog_dir, false)) {
+      if (!rmtree(xlog_dir, false))
+      {
         pg_log_error("failed to remove contents of WAL directory");
       }
     }
     /* otherwise died during startup, do nothing! */
-  } else {
-    if (made_new_pgdata || found_existing_pgdata) {
+  }
+  else
+  {
+    if (made_new_pgdata || found_existing_pgdata)
+    {
       pg_log_info("data directory \"%s\" not removed at user's request", pg_data);
     }
 
-    if (made_new_xlogdir || found_existing_xlogdir) {
+    if (made_new_xlogdir || found_existing_xlogdir)
+    {
       pg_log_info("WAL directory \"%s\" not removed at user's request", xlog_dir);
     }
   }
@@ -649,7 +697,8 @@ get_id(void)
   if (geteuid() == 0) /* 0 is root's uid */
   {
     pg_log_error("cannot be run as root");
-    fprintf(stderr, _("Please log in (using, e.g., \"su\") as the (unprivileged) user that will\nown the server process.\n"));
+    fprintf(stderr, _("Please log in (using, e.g., \"su\") as the (unprivileged) user that will\n"
+                      "own the server process.\n"));
     exit(1);
   }
 #endif
@@ -676,8 +725,10 @@ get_encoding_id(const char *encoding_name)
 {
   int enc;
 
-  if (encoding_name && *encoding_name) {
-    if ((enc = pg_valid_server_encoding(encoding_name)) >= 0) {
+  if (encoding_name && *encoding_name)
+  {
+    if ((enc = pg_valid_server_encoding(encoding_name)) >= 0)
+    {
       return enc;
     }
   }
@@ -689,7 +740,8 @@ get_encoding_id(const char *encoding_name)
  * Support for determining the best default text search configuration.
  * We key this off the first part of LC_CTYPE (ie, the language name).
  */
-struct tsearch_config_match {
+struct tsearch_config_match
+{
   const char *tsconfname;
   const char *langname;
 };
@@ -713,24 +765,30 @@ find_matching_ts_config(const char *lc_type)
    * underscore (usual case) or a hyphen (Windows "locale name"; see
    * comments at IsoLocaleName()).
    *
-   * XXX Should ' ' be a stop character?	This would select "norwegian"
-   * for the Windows locale "Norwegian (Nynorsk)_Norway.1252".  If we do so, we
+   * XXX Should ' ' be a stop character?	This would select "norwegian" for
+   * the Windows locale "Norwegian (Nynorsk)_Norway.1252".  If we do so, we
    * should also accept the "nn" and "nb" Unix locales.
    *
    * Just for paranoia, we also stop at '.' or '@'.
    */
-  if (lc_type == NULL) {
+  if (lc_type == NULL)
+  {
     langname = pg_strdup("");
-  } else {
+  }
+  else
+  {
     ptr = langname = pg_strdup(lc_type);
-    while (*ptr && *ptr != '_' && *ptr != '-' && *ptr != '.' && *ptr != '@') {
+    while (*ptr && *ptr != '_' && *ptr != '-' && *ptr != '.' && *ptr != '@')
+    {
       ptr++;
     }
     *ptr = '\0';
   }
 
-  for (i = 0; tsearch_config_languages[i].tsconfname; i++) {
-    if (pg_strcasecmp(tsearch_config_languages[i].langname, langname) == 0) {
+  for (i = 0; tsearch_config_languages[i].tsconfname; i++)
+  {
+    if (pg_strcasecmp(tsearch_config_languages[i].langname, langname) == 0)
+    {
       free(langname);
       return tsearch_config_languages[i].tsconfname;
     }
@@ -757,19 +815,27 @@ check_input(char *path)
 {
   struct stat statbuf;
 
-  if (stat(path, &statbuf) != 0) {
-    if (errno == ENOENT) {
+  if (stat(path, &statbuf) != 0)
+  {
+    if (errno == ENOENT)
+    {
       pg_log_error("file \"%s\" does not exist", path);
-      fprintf(stderr, _("This might mean you have a corrupted installation or identified\nthe wrong directory with the invocation option -L.\n"));
-    } else {
+      fprintf(stderr, _("This might mean you have a corrupted installation or identified\n"
+                        "the wrong directory with the invocation option -L.\n"));
+    }
+    else
+    {
       pg_log_error("could not access file \"%s\": %m", path);
-      fprintf(stderr, _("This might mean you have a corrupted installation or identified\nthe wrong directory with the invocation option -L.\n"));
+      fprintf(stderr, _("This might mean you have a corrupted installation or identified\n"
+                        "the wrong directory with the invocation option -L.\n"));
     }
     exit(1);
   }
-  if (!S_ISREG(statbuf.st_mode)) {
+  if (!S_ISREG(statbuf.st_mode))
+  {
     pg_log_error("file \"%s\" is not a regular file", path);
-    fprintf(stderr, _("This might mean you have a corrupted installation or identified\nthe wrong directory with the invocation option -L.\n"));
+    fprintf(stderr, _("This might mean you have a corrupted installation or identified\n"
+                      "the wrong directory with the invocation option -L.\n"));
     exit(1);
   }
 }
@@ -784,17 +850,22 @@ write_version_file(const char *extrapath)
   FILE *version_file;
   char *path;
 
-  if (extrapath == NULL) {
+  if (extrapath == NULL)
+  {
     path = psprintf("%s/PG_VERSION", pg_data);
-  } else {
+  }
+  else
+  {
     path = psprintf("%s/%s/PG_VERSION", pg_data, extrapath);
   }
 
-  if ((version_file = fopen(path, PG_BINARY_W)) == NULL) {
+  if ((version_file = fopen(path, PG_BINARY_W)) == NULL)
+  {
     pg_log_error("could not open file \"%s\" for writing: %m", path);
     exit(1);
   }
-  if (fprintf(version_file, "%s\n", PG_MAJORVERSION) < 0 || fclose(version_file)) {
+  if (fprintf(version_file, "%s\n", PG_MAJORVERSION) < 0 || fclose(version_file))
+  {
     pg_log_error("could not write file \"%s\": %m", path);
     exit(1);
   }
@@ -813,11 +884,13 @@ set_null_conf(void)
 
   path = psprintf("%s/postgresql.conf", pg_data);
   conf_file = fopen(path, PG_BINARY_W);
-  if (conf_file == NULL) {
+  if (conf_file == NULL)
+  {
     pg_log_error("could not open file \"%s\" for writing: %m", path);
     exit(1);
   }
-  if (fclose(conf_file)) {
+  if (fclose(conf_file))
+  {
     pg_log_error("could not write file \"%s\": %m", path);
     exit(1);
   }
@@ -844,19 +917,22 @@ choose_dsm_implementation(void)
   /* Initialize random(); this function is its only user in this program. */
   srandom((unsigned int)(getpid() ^ time(NULL)));
 
-  while (ntries > 0) {
+  while (ntries > 0)
+  {
     uint32 handle;
     char name[64];
     int fd;
 
     handle = random();
     snprintf(name, 64, "/PostgreSQL.%u", handle);
-    if ((fd = shm_open(name, O_CREAT | O_RDWR | O_EXCL, 0600)) != -1) {
+    if ((fd = shm_open(name, O_CREAT | O_RDWR | O_EXCL, 0600)) != -1)
+    {
       close(fd);
       shm_unlink(name);
       return "posix";
     }
-    if (errno != EEXIST) {
+    if (errno != EEXIST)
+    {
       break;
     }
     --ntries;
@@ -908,18 +984,27 @@ test_config_settings(void)
   printf(_("selecting default max_connections ... "));
   fflush(stdout);
 
-  for (i = 0; i < connslen; i++) {
+  for (i = 0; i < connslen; i++)
+  {
     test_conns = trial_conns[i];
     test_buffs = MIN_BUFS_FOR_CONNS(test_conns);
 
-    snprintf(cmd, sizeof(cmd),"\"%s\" --boot -x0 %s -c max_connections=%d -c shared_buffers=%d -c dynamic_shared_memory_type=%s < \"%s\" > \"%s\" 2>&1",backend_exec, boot_options, test_conns, test_buffs, dynamic_shared_memory_type, DEVNULL, DEVNULL);
+    snprintf(cmd, sizeof(cmd),
+        "\"%s\" --boot -x0 %s "
+        "-c max_connections=%d "
+        "-c shared_buffers=%d "
+        "-c dynamic_shared_memory_type=%s "
+        "< \"%s\" > \"%s\" 2>&1",
+        backend_exec, boot_options, test_conns, test_buffs, dynamic_shared_memory_type, DEVNULL, DEVNULL);
     status = system(cmd);
-    if (status == 0) {
+    if (status == 0)
+    {
       ok_buffers = test_buffs;
       break;
     }
   }
-  if (i >= connslen) {
+  if (i >= connslen)
+  {
     i = connslen - 1;
   }
   n_connections = trial_conns[i];
@@ -929,25 +1014,37 @@ test_config_settings(void)
   printf(_("selecting default shared_buffers ... "));
   fflush(stdout);
 
-  for (i = 0; i < bufslen; i++) {
+  for (i = 0; i < bufslen; i++)
+  {
     /* Use same amount of memory, independent of BLCKSZ */
     test_buffs = (trial_bufs[i] * 8192) / BLCKSZ;
-    if (test_buffs <= ok_buffers) {
+    if (test_buffs <= ok_buffers)
+    {
       test_buffs = ok_buffers;
       break;
     }
 
-    snprintf(cmd, sizeof(cmd),"\"%s\" --boot -x0 %s -c max_connections=%d -c shared_buffers=%d -c dynamic_shared_memory_type=%s < \"%s\" > \"%s\" 2>&1",backend_exec, boot_options, n_connections, test_buffs, dynamic_shared_memory_type, DEVNULL, DEVNULL);
+    snprintf(cmd, sizeof(cmd),
+        "\"%s\" --boot -x0 %s "
+        "-c max_connections=%d "
+        "-c shared_buffers=%d "
+        "-c dynamic_shared_memory_type=%s "
+        "< \"%s\" > \"%s\" 2>&1",
+        backend_exec, boot_options, n_connections, test_buffs, dynamic_shared_memory_type, DEVNULL, DEVNULL);
     status = system(cmd);
-    if (status == 0) {
+    if (status == 0)
+    {
       break;
     }
   }
   n_buffers = test_buffs;
 
-  if ((n_buffers * (BLCKSZ / 1024)) % 1024 == 0) {
+  if ((n_buffers * (BLCKSZ / 1024)) % 1024 == 0)
+  {
     printf("%dMB\n", (n_buffers * (BLCKSZ / 1024)) / 1024);
-  } else {
+  }
+  else
+  {
     printf("%dkB\n", n_buffers * (BLCKSZ / 1024));
   }
 
@@ -966,9 +1063,12 @@ pretty_wal_size(int segment_count)
   int sz = wal_segment_size_mb * segment_count;
   char *result = pg_malloc(14);
 
-  if ((sz % 1024) == 0) {
+  if ((sz % 1024) == 0)
+  {
     snprintf(result, 14, "%dGB", sz / 1024);
-  } else {
+  }
+  else
+  {
     snprintf(result, 14, "%dMB", sz);
   }
 
@@ -996,9 +1096,12 @@ setup_config(void)
   snprintf(repltok, sizeof(repltok), "max_connections = %d", n_connections);
   conflines = replace_token(conflines, "#max_connections = 100", repltok);
 
-  if ((n_buffers * (BLCKSZ / 1024)) % 1024 == 0) {
+  if ((n_buffers * (BLCKSZ / 1024)) % 1024 == 0)
+  {
     snprintf(repltok, sizeof(repltok), "shared_buffers = %dMB", (n_buffers * (BLCKSZ / 1024)) / 1024);
-  } else {
+  }
+  else
+  {
     snprintf(repltok, sizeof(repltok), "shared_buffers = %dkB", n_buffers * (BLCKSZ / 1024));
   }
   conflines = replace_token(conflines, "#shared_buffers = 32MB", repltok);
@@ -1034,7 +1137,8 @@ setup_config(void)
   snprintf(repltok, sizeof(repltok), "lc_time = '%s'", escape_quotes(lc_time));
   conflines = replace_token(conflines, "#lc_time = 'C'", repltok);
 
-  switch (locale_date_order(lc_time)) {
+  switch (locale_date_order(lc_time))
+  {
   case DATEORDER_YMD:
     strcpy(repltok, "datestyle = 'iso, ymd'");
     break;
@@ -1042,7 +1146,7 @@ setup_config(void)
     strcpy(repltok, "datestyle = 'iso, dmy'");
     break;
   case DATEORDER_MDY:
-  default:;
+  default:
     strcpy(repltok, "datestyle = 'iso, mdy'");
     break;
   }
@@ -1051,7 +1155,8 @@ setup_config(void)
   snprintf(repltok, sizeof(repltok), "default_text_search_config = 'pg_catalog.%s'", escape_quotes(default_text_search_config));
   conflines = replace_token(conflines, "#default_text_search_config = 'pg_catalog.simple'", repltok);
 
-  if (default_timezone) {
+  if (default_timezone)
+  {
     snprintf(repltok, sizeof(repltok), "timezone = '%s'", escape_quotes(default_timezone));
     conflines = replace_token(conflines, "#timezone = 'GMT'", repltok);
     snprintf(repltok, sizeof(repltok), "log_timezone = '%s'", escape_quotes(default_timezone));
@@ -1084,7 +1189,8 @@ setup_config(void)
   conflines = replace_token(conflines, "#update_process_title = on", "#update_process_title = off");
 #endif
 
-  if (strcmp(authmethodlocal, "scram-sha-256") == 0 || strcmp(authmethodhost, "scram-sha-256") == 0) {
+  if (strcmp(authmethodlocal, "scram-sha-256") == 0 || strcmp(authmethodhost, "scram-sha-256") == 0)
+  {
     conflines = replace_token(conflines, "#password_encryption = md5", "password_encryption = scram-sha-256");
   }
 
@@ -1094,14 +1200,16 @@ setup_config(void)
    * from a user in the group would fail if the log files were not
    * relocated.
    */
-  if (pg_dir_create_mode == PG_DIR_MODE_GROUP) {
+  if (pg_dir_create_mode == PG_DIR_MODE_GROUP)
+  {
     conflines = replace_token(conflines, "#log_file_mode = 0600", "log_file_mode = 0640");
   }
 
   snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
   writefile(path, conflines);
-  if (chmod(path, pg_file_create_mode) != 0) {
+  if (chmod(path, pg_file_create_mode) != 0)
+  {
     pg_log_error("could not change permissions of \"%s\": %m", path);
     exit(1);
   }
@@ -1119,7 +1227,8 @@ setup_config(void)
   sprintf(path, "%s/postgresql.auto.conf", pg_data);
 
   writefile(path, autoconflines);
-  if (chmod(path, pg_file_create_mode) != 0) {
+  if (chmod(path, pg_file_create_mode) != 0)
+  {
     pg_log_error("could not change permissions of \"%s\": %m", path);
     exit(1);
   }
@@ -1167,7 +1276,8 @@ setup_config(void)
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
 
-    if (err != 0 || getaddrinfo("::1", NULL, &hints, &gai_result) != 0) {
+    if (err != 0 || getaddrinfo("::1", NULL, &hints, &gai_result) != 0)
+    {
       conflines = replace_token(conflines, "host    all             all             ::1", "#host    all             all             ::1");
       conflines = replace_token(conflines, "host    replication     all             ::1", "#host    replication     all             ::1");
     }
@@ -1187,7 +1297,8 @@ setup_config(void)
   snprintf(path, sizeof(path), "%s/pg_hba.conf", pg_data);
 
   writefile(path, conflines);
-  if (chmod(path, pg_file_create_mode) != 0) {
+  if (chmod(path, pg_file_create_mode) != 0)
+  {
     pg_log_error("could not change permissions of \"%s\": %m", path);
     exit(1);
   }
@@ -1201,7 +1312,8 @@ setup_config(void)
   snprintf(path, sizeof(path), "%s/pg_ident.conf", pg_data);
 
   writefile(path, conflines);
-  if (chmod(path, pg_file_create_mode) != 0) {
+  if (chmod(path, pg_file_create_mode) != 0)
+  {
     pg_log_error("could not change permissions of \"%s\": %m", path);
     exit(1);
   }
@@ -1232,9 +1344,11 @@ bootstrap_template1(void)
 
   snprintf(headerline, sizeof(headerline), "# PostgreSQL %s\n", PG_MAJORVERSION);
 
-  if (strcmp(headerline, *bki_lines) != 0) {
+  if (strcmp(headerline, *bki_lines) != 0)
+  {
     pg_log_error("input file \"%s\" does not belong to PostgreSQL %s", bki_file, PG_VERSION);
-    fprintf(stderr, _("Check your installation or specify the correct path using the option -L.\n"));
+    fprintf(stderr, _("Check your installation or specify the correct path "
+                      "using the option -L.\n"));
     exit(1);
   }
 
@@ -1281,7 +1395,8 @@ bootstrap_template1(void)
 
   PG_CMD_OPEN;
 
-  for (line = bki_lines; *line != NULL; line++) {
+  for (line = bki_lines; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
     free(*line);
   }
@@ -1306,11 +1421,13 @@ setup_auth(FILE *cmdfd)
                                                  */
       "REVOKE ALL on pg_authid FROM public;\n\n", NULL};
 
-  for (line = pg_authid_setup; *line != NULL; line++) {
+  for (line = pg_authid_setup; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
   }
 
-  if (superuser_password) {
+  if (superuser_password)
+  {
     PG_CMD_PRINTF2("ALTER USER \"%s\" WITH PASSWORD E'%s';\n\n", username, escape_quotes(superuser_password));
   }
 }
@@ -1324,7 +1441,8 @@ get_su_pwd(void)
   char pwd1[100];
   char pwd2[100];
 
-  if (pwprompt) {
+  if (pwprompt)
+  {
     /*
      * Read password from terminal
      */
@@ -1332,11 +1450,14 @@ get_su_pwd(void)
     fflush(stdout);
     simple_prompt("Enter new superuser password: ", pwd1, sizeof(pwd1), false);
     simple_prompt("Enter it again: ", pwd2, sizeof(pwd2), false);
-    if (strcmp(pwd1, pwd2) != 0) {
+    if (strcmp(pwd1, pwd2) != 0)
+    {
       fprintf(stderr, _("Passwords didn't match.\n"));
       exit(1);
     }
-  } else {
+  }
+  else
+  {
     /*
      * Read password from file
      *
@@ -1348,14 +1469,19 @@ get_su_pwd(void)
     FILE *pwf = fopen(pwfilename, "r");
     int i;
 
-    if (!pwf) {
+    if (!pwf)
+    {
       pg_log_error("could not open file \"%s\" for reading: %m", pwfilename);
       exit(1);
     }
-    if (!fgets(pwd1, sizeof(pwd1), pwf)) {
-      if (ferror(pwf)) {
+    if (!fgets(pwd1, sizeof(pwd1), pwf))
+    {
+      if (ferror(pwf))
+      {
         pg_log_error("could not read password from file \"%s\": %m", pwfilename);
-      } else {
+      }
+      else
+      {
         pg_log_error("password file \"%s\" is empty", pwfilename);
       }
       exit(1);
@@ -1363,7 +1489,8 @@ get_su_pwd(void)
     fclose(pwf);
 
     i = strlen(pwd1);
-    while (i > 0 && (pwd1[i - 1] == '\r' || pwd1[i - 1] == '\n')) {
+    while (i > 0 && (pwd1[i - 1] == '\r' || pwd1[i - 1] == '\n'))
+    {
       pwd1[--i] = '\0';
     }
   }
@@ -1381,7 +1508,8 @@ setup_depend(FILE *cmdfd)
   static const char *const pg_depend_setup[] = {/*
                                                  * Make PIN entries in pg_depend for all objects made so far in the
                                                  * tables that the dependency code handles.  This is overkill (the
-                                                 * system doesn't really depend on having every last weird datatype,* for instance) but generating only the minimum required set of
+                                                 * system doesn't really depend on having every last weird datatype,
+                                                 * for instance) but generating only the minimum required set of
                                                  * dependencies seems hard.
                                                  *
                                                  * Catalogs that are intentionally not scanned here are:
@@ -1398,12 +1526,64 @@ setup_depend(FILE *cmdfd)
                                                  * First delete any already-made entries; PINs override all else, and
                                                  * must be the only entries for their objects.
                                                  */
-      "DELETE FROM pg_depend;\n\n", "VACUUM pg_depend;\n\n", "DELETE FROM pg_shdepend;\n\n", "VACUUM pg_shdepend;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_class;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_proc;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_type;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_cast;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_constraint;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_conversion;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_attrdef;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_language;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_operator;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_opclass;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_opfamily;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_am;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_amop;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_amproc;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_rewrite;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_trigger;\n\n",/*
+      "DELETE FROM pg_depend;\n\n", "VACUUM pg_depend;\n\n", "DELETE FROM pg_shdepend;\n\n", "VACUUM pg_shdepend;\n\n",
+
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_class;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_proc;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_type;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_cast;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_constraint;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_conversion;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_attrdef;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_language;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_operator;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_opclass;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_opfamily;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_am;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_amop;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_amproc;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_rewrite;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_trigger;\n\n",
+
+      /*
        * restriction here to avoid pinning the public namespace
        */
-      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_namespace     WHERE nspname LIKE 'pg%';\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_ts_parser;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_ts_dict;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_ts_template;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_ts_config;\n\n","INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p'  FROM pg_collation;\n\n","INSERT INTO pg_shdepend SELECT 0,0,0,0, tableoid,oid, 'p'  FROM pg_authid;\n\n",NULL};
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_namespace "
+      "    WHERE nspname LIKE 'pg%';\n\n",
 
-  for (line = pg_depend_setup; *line != NULL; line++) {
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_ts_parser;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_ts_dict;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_ts_template;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_ts_config;\n\n",
+      "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
+      " FROM pg_collation;\n\n",
+      "INSERT INTO pg_shdepend SELECT 0,0,0,0, tableoid,oid, 'p' "
+      " FROM pg_authid;\n\n",
+      NULL};
+
+  for (line = pg_depend_setup; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
   }
 }
@@ -1419,7 +1599,8 @@ setup_sysviews(FILE *cmdfd)
 
   sysviews_setup = readfile(system_views_file);
 
-  for (line = sysviews_setup; *line != NULL; line++) {
+  for (line = sysviews_setup; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
     free(*line);
   }
@@ -1435,20 +1616,44 @@ setup_sysviews(FILE *cmdfd)
 static void
 setup_description(FILE *cmdfd)
 {
-  PG_CMD_PUTS("CREATE TEMP TABLE tmp_pg_description ( 	objoid oid, 	classname name, 	objsubid int4, 	description text);\n\n");
+  PG_CMD_PUTS("CREATE TEMP TABLE tmp_pg_description ( "
+              "	objoid oid, "
+              "	classname name, "
+              "	objsubid int4, "
+              "	description text);\n\n");
 
   PG_CMD_PRINTF1("COPY tmp_pg_description FROM E'%s';\n\n", escape_quotes(desc_file));
 
-  PG_CMD_PUTS("INSERT INTO pg_description  SELECT t.objoid, c.oid, t.objsubid, t.description   FROM tmp_pg_description t, pg_class c     WHERE c.relname = t.classname;\n\n");
+  PG_CMD_PUTS("INSERT INTO pg_description "
+              " SELECT t.objoid, c.oid, t.objsubid, t.description "
+              "  FROM tmp_pg_description t, pg_class c "
+              "    WHERE c.relname = t.classname;\n\n");
 
-  PG_CMD_PUTS("CREATE TEMP TABLE tmp_pg_shdescription (  objoid oid,  classname name,  description text);\n\n");
+  PG_CMD_PUTS("CREATE TEMP TABLE tmp_pg_shdescription ( "
+              " objoid oid, "
+              " classname name, "
+              " description text);\n\n");
 
   PG_CMD_PRINTF1("COPY tmp_pg_shdescription FROM E'%s';\n\n", escape_quotes(shdesc_file));
 
-  PG_CMD_PUTS("INSERT INTO pg_shdescription  SELECT t.objoid, c.oid, t.description   FROM tmp_pg_shdescription t, pg_class c    WHERE c.relname = t.classname;\n\n");
+  PG_CMD_PUTS("INSERT INTO pg_shdescription "
+              " SELECT t.objoid, c.oid, t.description "
+              "  FROM tmp_pg_shdescription t, pg_class c "
+              "   WHERE c.relname = t.classname;\n\n");
 
   /* Create default descriptions for operator implementation functions */
-  PG_CMD_PUTS("WITH funcdescs AS ( SELECT p.oid as p_oid, o.oid as o_oid, oprname FROM pg_proc p JOIN pg_operator o ON oprcode = p.oid ) INSERT INTO pg_description   SELECT p_oid, 'pg_proc'::regclass, 0,     'implementation of ' || oprname || ' operator'   FROM funcdescs   WHERE NOT EXISTS (SELECT 1 FROM pg_description    WHERE objoid = p_oid AND classoid = 'pg_proc'::regclass)   AND NOT EXISTS (SELECT 1 FROM pg_description    WHERE objoid = o_oid AND classoid = 'pg_operator'::regclass         AND description LIKE 'deprecated%');\n\n");
+  PG_CMD_PUTS("WITH funcdescs AS ( "
+              "SELECT p.oid as p_oid, o.oid as o_oid, oprname "
+              "FROM pg_proc p JOIN pg_operator o ON oprcode = p.oid ) "
+              "INSERT INTO pg_description "
+              "  SELECT p_oid, 'pg_proc'::regclass, 0, "
+              "    'implementation of ' || oprname || ' operator' "
+              "  FROM funcdescs "
+              "  WHERE NOT EXISTS (SELECT 1 FROM pg_description "
+              "   WHERE objoid = p_oid AND classoid = 'pg_proc'::regclass) "
+              "  AND NOT EXISTS (SELECT 1 FROM pg_description "
+              "   WHERE objoid = o_oid AND classoid = 'pg_operator'::regclass"
+              "         AND description LIKE 'deprecated%');\n\n");
 
   /*
    * Even though the tables are temp, drop them explicitly so they don't get
@@ -1469,7 +1674,9 @@ setup_collation(FILE *cmdfd)
    * in pg_collation.h.  But add it before reading system collations, so
    * that it wins if libc defines a locale named ucs_basic.
    */
-  PG_CMD_PRINTF3("INSERT INTO pg_collation (oid, collname, collnamespace, collowner, collprovider, collisdeterministic, collencoding, collcollate, collctype)VALUES (pg_nextoid('pg_catalog.pg_collation', 'oid', 'pg_catalog.pg_collation_oid_index'), 'ucs_basic', 'pg_catalog'::regnamespace, %u, '%c', true, %d, 'C', 'C');\n\n",BOOTSTRAP_SUPERUSERID, COLLPROVIDER_LIBC, PG_UTF8);
+  PG_CMD_PRINTF3("INSERT INTO pg_collation (oid, collname, collnamespace, collowner, collprovider, collisdeterministic, collencoding, collcollate, collctype)"
+                 "VALUES (pg_nextoid('pg_catalog.pg_collation', 'oid', 'pg_catalog.pg_collation_oid_index'), 'ucs_basic', 'pg_catalog'::regnamespace, %u, '%c', true, %d, 'C', 'C');\n\n",
+      BOOTSTRAP_SUPERUSERID, COLLPROVIDER_LIBC, PG_UTF8);
 
   /* Now import all collations we can find in the operating system */
   PG_CMD_PUTS("SELECT pg_import_system_collations('pg_catalog');\n\n");
@@ -1485,7 +1692,8 @@ setup_dictionary(FILE *cmdfd)
   char **conv_lines;
 
   conv_lines = readfile(dictionary_file);
-  for (line = conv_lines; *line != NULL; line++) {
+  for (line = conv_lines; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
     free(*line);
   }
@@ -1519,10 +1727,135 @@ setup_privileges(FILE *cmdfd)
 {
   char **line;
   char **priv_lines;
-  static char *privileges_setup[] = {"UPDATE pg_class   SET relacl = (SELECT array_agg(a.acl) FROM  (SELECT E'=r/\"$POSTGRES_SUPERUSERNAME\"' as acl   UNION SELECT unnest(pg_catalog.acldefault(    CASE WHEN relkind = " CppAsString2(RELKIND_SEQUENCE) " THEN 's'          ELSE 'r' END::\"char\"," CppAsString2(BOOTSTRAP_SUPERUSERID) "::oid)) ) as a)   WHERE relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ")  AND relacl IS NULL;\n\n","GRANT USAGE ON SCHEMA pg_catalog TO PUBLIC;\n\n", "GRANT CREATE, USAGE ON SCHEMA public TO PUBLIC;\n\n", "REVOKE ALL ON pg_largeobject FROM PUBLIC;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_class'),        0,        relacl,        'i'    FROM        pg_class    WHERE        relacl IS NOT NULL        AND relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ");\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        pg_class.oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_class'),        pg_attribute.attnum,        pg_attribute.attacl,        'i'    FROM        pg_class        JOIN pg_attribute ON (pg_class.oid = pg_attribute.attrelid)    WHERE        pg_attribute.attacl IS NOT NULL        AND pg_class.relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ");\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_proc'),        0,        proacl,        'i'    FROM        pg_proc    WHERE        proacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_type'),        0,        typacl,        'i'    FROM        pg_type    WHERE        typacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_language'),        0,        lanacl,        'i'    FROM        pg_language    WHERE        lanacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE 		  relname = 'pg_largeobject_metadata'),        0,        lomacl,        'i'    FROM        pg_largeobject_metadata    WHERE        lomacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE relname = 'pg_namespace'),        0,        nspacl,        'i'    FROM        pg_namespace    WHERE        nspacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class WHERE 		  relname = 'pg_foreign_data_wrapper'),        0,        fdwacl,        'i'    FROM        pg_foreign_data_wrapper    WHERE        fdwacl IS NOT NULL;\n\n","INSERT INTO pg_init_privs   (objoid, classoid, objsubid, initprivs, privtype)    SELECT        oid,        (SELECT oid FROM pg_class 		  WHERE relname = 'pg_foreign_server'),        0,        srvacl,        'i'    FROM        pg_foreign_server    WHERE        srvacl IS NOT NULL;\n\n",NULL};
+  static char *privileges_setup[] = {"UPDATE pg_class "
+                                     "  SET relacl = (SELECT array_agg(a.acl) FROM "
+                                     " (SELECT E'=r/\"$POSTGRES_SUPERUSERNAME\"' as acl "
+                                     "  UNION SELECT unnest(pg_catalog.acldefault("
+                                     "    CASE WHEN relkind = " CppAsString2(RELKIND_SEQUENCE) " THEN 's' "
+                                                                                               "         ELSE 'r' END::\"char\"," CppAsString2(BOOTSTRAP_SUPERUSERID) "::oid))"
+                                                                                                                                                                      " ) as a) "
+                                                                                                                                                                      "  WHERE relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ")"
+                                                                                                                                                                                                                                                                                                                                   "  AND relacl IS NULL;\n\n",
+      "GRANT USAGE ON SCHEMA pg_catalog TO PUBLIC;\n\n", "GRANT CREATE, USAGE ON SCHEMA public TO PUBLIC;\n\n", "REVOKE ALL ON pg_largeobject FROM PUBLIC;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_class'),"
+      "        0,"
+      "        relacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_class"
+      "    WHERE"
+      "        relacl IS NOT NULL"
+      "        AND relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ");\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        pg_class.oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_class'),"
+      "        pg_attribute.attnum,"
+      "        pg_attribute.attacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_class"
+      "        JOIN pg_attribute ON (pg_class.oid = pg_attribute.attrelid)"
+      "    WHERE"
+      "        pg_attribute.attacl IS NOT NULL"
+      "        AND pg_class.relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_VIEW) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_SEQUENCE) ");\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_proc'),"
+      "        0,"
+      "        proacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_proc"
+      "    WHERE"
+      "        proacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_type'),"
+      "        0,"
+      "        typacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_type"
+      "    WHERE"
+      "        typacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_language'),"
+      "        0,"
+      "        lanacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_language"
+      "    WHERE"
+      "        lanacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE "
+      "		  relname = 'pg_largeobject_metadata'),"
+      "        0,"
+      "        lomacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_largeobject_metadata"
+      "    WHERE"
+      "        lomacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE relname = 'pg_namespace'),"
+      "        0,"
+      "        nspacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_namespace"
+      "    WHERE"
+      "        nspacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class WHERE "
+      "		  relname = 'pg_foreign_data_wrapper'),"
+      "        0,"
+      "        fdwacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_foreign_data_wrapper"
+      "    WHERE"
+      "        fdwacl IS NOT NULL;\n\n",
+      "INSERT INTO pg_init_privs "
+      "  (objoid, classoid, objsubid, initprivs, privtype)"
+      "    SELECT"
+      "        oid,"
+      "        (SELECT oid FROM pg_class "
+      "		  WHERE relname = 'pg_foreign_server'),"
+      "        0,"
+      "        srvacl,"
+      "        'i'"
+      "    FROM"
+      "        pg_foreign_server"
+      "    WHERE"
+      "        srvacl IS NOT NULL;\n\n",
+      NULL};
 
   priv_lines = replace_token(privileges_setup, "$POSTGRES_SUPERUSERNAME", escape_quotes(username));
-  for (line = priv_lines; *line != NULL; line++) {
+  for (line = priv_lines; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
   }
 }
@@ -1541,15 +1874,18 @@ set_info_version(void)
   char *ptr;
 
   ptr = vstr + (strlen(vstr) - 1);
-  while (ptr != vstr && (*ptr < '0' || *ptr > '9')) {
+  while (ptr != vstr && (*ptr < '0' || *ptr > '9'))
+  {
     ptr--;
   }
   letterversion = ptr + 1;
   major = strtol(vstr, &endptr, 10);
-  if (*endptr) {
+  if (*endptr)
+  {
     minor = strtol(endptr + 1, &endptr, 10);
   }
-  if (*endptr) {
+  if (*endptr)
+  {
     micro = strtol(endptr + 1, &endptr, 10);
   }
   snprintf(infoversion, sizeof(infoversion), "%02ld.%02ld.%04ld%s", major, minor, micro, letterversion);
@@ -1566,7 +1902,8 @@ setup_schema(FILE *cmdfd)
 
   lines = readfile(info_schema_file);
 
-  for (line = lines; *line != NULL; line++) {
+  for (line = lines; *line != NULL; line++)
+  {
     PG_CMD_PUTS(*line);
     free(*line);
   }
@@ -1575,9 +1912,16 @@ setup_schema(FILE *cmdfd)
 
   free(lines);
 
-  PG_CMD_PRINTF1("UPDATE information_schema.sql_implementation_info   SET character_value = '%s'   WHERE implementation_info_name = 'DBMS VERSION';\n\n",infoversion);
+  PG_CMD_PRINTF1("UPDATE information_schema.sql_implementation_info "
+                 "  SET character_value = '%s' "
+                 "  WHERE implementation_info_name = 'DBMS VERSION';\n\n",
+      infoversion);
 
-  PG_CMD_PRINTF1("COPY information_schema.sql_features   (feature_id, feature_name, sub_feature_id,   sub_feature_name, is_supported, comments)  FROM E'%s';\n\n",escape_quotes(features_file));
+  PG_CMD_PRINTF1("COPY information_schema.sql_features "
+                 "  (feature_id, feature_name, sub_feature_id, "
+                 "  sub_feature_name, is_supported, comments) "
+                 " FROM E'%s';\n\n",
+      escape_quotes(features_file));
 }
 
 /*
@@ -1606,20 +1950,31 @@ static void
 make_template0(FILE *cmdfd)
 {
   const char *const *line;
-  static const char *const template0_setup[] = {"CREATE DATABASE template0 IS_TEMPLATE = true ALLOW_CONNECTIONS = false;\n\n",/*
+  static const char *const template0_setup[] = {"CREATE DATABASE template0 IS_TEMPLATE = true ALLOW_CONNECTIONS = false;\n\n",
+
+      /*
        * We use the OID of template0 to determine lastsysoid
        */
-      "UPDATE pg_database SET datlastsysoid =     (SELECT oid FROM pg_database     WHERE datname = 'template0');\n\n",/*
+      "UPDATE pg_database SET datlastsysoid = "
+      "    (SELECT oid FROM pg_database "
+      "    WHERE datname = 'template0');\n\n",
+
+      /*
        * Explicitly revoke public create-schema and create-temp-table
        * privileges in template1 and template0; else the latter would be on
        * by default
        */
-      "REVOKE CREATE,TEMPORARY ON DATABASE template1 FROM public;\n\n", "REVOKE CREATE,TEMPORARY ON DATABASE template0 FROM public;\n\n","COMMENT ON DATABASE template0 IS 'unmodifiable empty database';\n\n",/*
+      "REVOKE CREATE,TEMPORARY ON DATABASE template1 FROM public;\n\n", "REVOKE CREATE,TEMPORARY ON DATABASE template0 FROM public;\n\n",
+
+      "COMMENT ON DATABASE template0 IS 'unmodifiable empty database';\n\n",
+
+      /*
        * Finally vacuum to clean up dead rows in pg_database
        */
       "VACUUM pg_database;\n\n", NULL};
 
-  for (line = template0_setup; *line; line++) {
+  for (line = template0_setup; *line; line++)
+  {
     PG_CMD_PUTS(*line);
   }
 }
@@ -1631,9 +1986,10 @@ static void
 make_postgres(FILE *cmdfd)
 {
   const char *const *line;
-  static const char *const postgres_setup[] = {"CREATE DATABASE postgres;\n\n","COMMENT ON DATABASE postgres IS 'default administrative connection database';\n\n",NULL};
+  static const char *const postgres_setup[] = {"CREATE DATABASE postgres;\n\n", "COMMENT ON DATABASE postgres IS 'default administrative connection database';\n\n", NULL};
 
-  for (line = postgres_setup; *line; line++) {
+  for (line = postgres_setup; *line; line++)
+  {
     PG_CMD_PUTS(*line);
   }
 }
@@ -1643,7 +1999,8 @@ make_postgres(FILE *cmdfd)
  *
  * The Windows runtime docs at
  * http://msdn.microsoft.com/library/en-us/vclib/html/_crt_signal.asp
- * specifically forbid a number of things being done from a signal handler,* including IO, memory allocation and system calls, and only allow jmpbuf
+ * specifically forbid a number of things being done from a signal handler,
+ * including IO, memory allocation and system calls, and only allow jmpbuf
  * if you are handling SIGFPE.
  *
  * I avoided doing the forbidden things by setting a flag instead of calling
@@ -1651,9 +2008,10 @@ make_postgres(FILE *cmdfd)
  *
  * Also note the behaviour of Windows with SIGINT, which says this:
  *	 Note	SIGINT is not supported for any Win32 application, including
- *	 Windows 98/Me and Windows NT/2000/XP. When a CTRL+C interrupt occurs,*	 Win32 operating systems generate a new thread to specifically handle
- *	 that interrupt. This can cause a single-thread application such as
- *UNIX, to become multithreaded, resulting in unexpected behavior.
+ *	 Windows 98/Me and Windows NT/2000/XP. When a CTRL+C interrupt occurs,
+ *	 Win32 operating systems generate a new thread to specifically handle
+ *	 that interrupt. This can cause a single-thread application such as UNIX,
+ *	 to become multithreaded, resulting in unexpected behavior.
  *
  * I have no idea how to handle this. (Strange they call UNIX an application!)
  * So this will need some testing on Windows.
@@ -1672,15 +2030,20 @@ trapsig(int signum)
 static void
 check_ok(void)
 {
-  if (caught_signal) {
+  if (caught_signal)
+  {
     printf(_("caught signal\n"));
     fflush(stdout);
     exit(1);
-  } else if (output_failed) {
+  }
+  else if (output_failed)
+  {
     printf(_("could not write to child process: %s\n"), strerror(output_errno));
     fflush(stdout);
     exit(1);
-  } else {
+  }
+  else
+  {
     /* all seems well */
     printf(_("ok\n"));
     fflush(stdout);
@@ -1712,7 +2075,8 @@ locale_date_order(const char *locale)
   result = DATEORDER_MDY; /* default */
 
   save = setlocale(LC_TIME, NULL);
-  if (!save) {
+  if (!save)
+  {
     return result;
   }
   save = pg_strdup(save);
@@ -1729,7 +2093,8 @@ locale_date_order(const char *locale)
   setlocale(LC_TIME, save);
   free(save);
 
-  if (res == 0) {
+  if (res == 0)
+  {
     return result;
   }
 
@@ -1737,15 +2102,21 @@ locale_date_order(const char *locale)
   posD = strstr(buf, "22");
   posY = strstr(buf, "33");
 
-  if (!posM || !posD || !posY) {
+  if (!posM || !posD || !posY)
+  {
     return result;
   }
 
-  if (posY < posM && posM < posD) {
+  if (posY < posM && posM < posD)
+  {
     result = DATEORDER_YMD;
-  } else if (posD < posM) {
+  }
+  else if (posD < posM)
+  {
     result = DATEORDER_DMY;
-  } else {
+  }
+  else
+  {
     result = DATEORDER_MDY;
   }
 
@@ -1757,7 +2128,8 @@ locale_date_order(const char *locale)
  *
  * If successful, and canonname isn't NULL, a malloc'd copy of the locale's
  * canonical name is stored there.  This is especially useful for figuring out
- * what locale name "" means (ie, the environment value).  (Actually,* it seems that on most implementations that's the only thing it's good for;
+ * what locale name "" means (ie, the environment value).  (Actually,
+ * it seems that on most implementations that's the only thing it's good for;
  * we could wish that setlocale gave back a canonically spelled version of
  * the locale name, but typically it doesn't.)
  *
@@ -1769,12 +2141,14 @@ check_locale_name(int category, const char *locale, char **canonname)
   char *save;
   char *res;
 
-  if (canonname) {
+  if (canonname)
+  {
     *canonname = NULL; /* in case of failure */
   }
 
   save = setlocale(category, NULL);
-  if (!save) {
+  if (!save)
+  {
     pg_log_error("setlocale() failed");
     exit(1);
   }
@@ -1783,7 +2157,8 @@ check_locale_name(int category, const char *locale, char **canonname)
   save = pg_strdup(save);
 
   /* for setlocale() call */
-  if (!locale) {
+  if (!locale)
+  {
     locale = "";
   }
 
@@ -1791,22 +2166,28 @@ check_locale_name(int category, const char *locale, char **canonname)
   res = setlocale(category, locale);
 
   /* save canonical name if requested. */
-  if (res && canonname) {
+  if (res && canonname)
+  {
     *canonname = pg_strdup(res);
   }
 
   /* restore old value. */
-  if (!setlocale(category, save)) {
+  if (!setlocale(category, save))
+  {
     pg_log_error("failed to restore old locale \"%s\"", save);
     exit(1);
   }
   free(save);
 
   /* complain if locale wasn't valid */
-  if (res == NULL) {
-    if (*locale) {
+  if (res == NULL)
+  {
+    if (*locale)
+    {
       pg_log_error("invalid locale name \"%s\"", locale);
-    } else {
+    }
+    else
+    {
       /*
        * If no relevant switch was given on command line, locale is an
        * empty string, which is not too helpful to report.  Presumably
@@ -1838,9 +2219,16 @@ check_locale_encoding(const char *locale, int user_enc)
 #ifdef WIN32
           user_enc == PG_UTF8 ||
 #endif
-          user_enc == PG_SQL_ASCII)) {
+          user_enc == PG_SQL_ASCII))
+  {
     pg_log_error("encoding mismatch");
-    fprintf(stderr,_("The encoding you selected (%s) and the encoding that the\nselected locale uses (%s) do not match.  This would lead to\nmisbehavior in various character string processing functions.\nRerun %s and either do not specify an encoding explicitly,\nor choose a matching combination.\n"),pg_encoding_to_char(user_enc), pg_encoding_to_char(locale_enc), progname);
+    fprintf(stderr,
+        _("The encoding you selected (%s) and the encoding that the\n"
+          "selected locale uses (%s) do not match.  This would lead to\n"
+          "misbehavior in various character string processing functions.\n"
+          "Rerun %s and either do not specify an encoding explicitly,\n"
+          "or choose a matching combination.\n"),
+        pg_encoding_to_char(user_enc), pg_encoding_to_char(locale_enc), progname);
     return false;
   }
   return true;
@@ -1858,23 +2246,30 @@ setlocales(void)
 
   /* set empty lc_* values to locale config if set */
 
-  if (locale) {
-    if (!lc_ctype) {
+  if (locale)
+  {
+    if (!lc_ctype)
+    {
       lc_ctype = locale;
     }
-    if (!lc_collate) {
+    if (!lc_collate)
+    {
       lc_collate = locale;
     }
-    if (!lc_numeric) {
+    if (!lc_numeric)
+    {
       lc_numeric = locale;
     }
-    if (!lc_time) {
+    if (!lc_time)
+    {
       lc_time = locale;
     }
-    if (!lc_monetary) {
+    if (!lc_monetary)
+    {
       lc_monetary = locale;
     }
-    if (!lc_messages) {
+    if (!lc_messages)
+    {
       lc_messages = locale;
     }
   }
@@ -1921,10 +2316,14 @@ usage(const char *progname)
   printf(_("  -E, --encoding=ENCODING   set default encoding for new databases\n"));
   printf(_("  -g, --allow-group-access  allow group read/execute on data directory\n"));
   printf(_("      --locale=LOCALE       set default locale for new databases\n"));
-  printf(_("      --lc-collate=, --lc-ctype=, --lc-messages=LOCALE\n      --lc-monetary=, --lc-numeric=, --lc-time=LOCALE\n                            set default locale in the respective category for\n                            new databases (default taken from environment)\n"));
+  printf(_("      --lc-collate=, --lc-ctype=, --lc-messages=LOCALE\n"
+           "      --lc-monetary=, --lc-numeric=, --lc-time=LOCALE\n"
+           "                            set default locale in the respective category for\n"
+           "                            new databases (default taken from environment)\n"));
   printf(_("      --no-locale           equivalent to --locale=C\n"));
   printf(_("      --pwfile=FILE         read password for the new superuser from file\n"));
-  printf(_("  -T, --text-search-config=CFG\n                            default text search configuration\n"));
+  printf(_("  -T, --text-search-config=CFG\n"
+           "                            default text search configuration\n"));
   printf(_("  -U, --username=NAME       database superuser name\n"));
   printf(_("  -W, --pwprompt            prompt for a password for the new superuser\n"));
   printf(_("  -X, --waldir=WALDIR       location for the write-ahead log directory\n"));
@@ -1940,14 +2339,16 @@ usage(const char *progname)
   printf(_("\nOther options:\n"));
   printf(_("  -V, --version             output version information, then exit\n"));
   printf(_("  -?, --help                show this help, then exit\n"));
-  printf(_("\nIf the data directory is not specified, the environment variable PGDATA\nis used.\n"));
+  printf(_("\nIf the data directory is not specified, the environment variable PGDATA\n"
+           "is used.\n"));
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
 static void
 check_authmethod_unspecified(const char **authmethod)
 {
-  if (*authmethod == NULL) {
+  if (*authmethod == NULL)
+  {
     authwarning = true;
     *authmethod = "trust";
   }
@@ -1958,13 +2359,17 @@ check_authmethod_valid(const char *authmethod, const char *const *valid_methods,
 {
   const char *const *p;
 
-  for (p = valid_methods; *p; p++) {
-    if (strcmp(authmethod, *p) == 0) {
+  for (p = valid_methods; *p; p++)
+  {
+    if (strcmp(authmethod, *p) == 0)
+    {
       return;
     }
     /* with space = param */
-    if (strchr(authmethod, ' ')) {
-      if (strncmp(authmethod, *p, (authmethod - strchr(authmethod, ' '))) == 0) {
+    if (strchr(authmethod, ' '))
+    {
+      if (strncmp(authmethod, *p, (authmethod - strchr(authmethod, ' '))) == 0)
+      {
         return;
       }
     }
@@ -1977,7 +2382,8 @@ check_authmethod_valid(const char *authmethod, const char *const *valid_methods,
 static void
 check_need_password(const char *authmethodlocal, const char *authmethodhost)
 {
-  if ((strcmp(authmethodlocal, "md5") == 0 || strcmp(authmethodlocal, "password") == 0 || strcmp(authmethodlocal, "scram-sha-256") == 0) && (strcmp(authmethodhost, "md5") == 0 || strcmp(authmethodhost, "password") == 0 || strcmp(authmethodhost, "scram-sha-256") == 0) && !(pwprompt || pwfilename)) {
+  if ((strcmp(authmethodlocal, "md5") == 0 || strcmp(authmethodlocal, "password") == 0 || strcmp(authmethodlocal, "scram-sha-256") == 0) && (strcmp(authmethodhost, "md5") == 0 || strcmp(authmethodhost, "password") == 0 || strcmp(authmethodhost, "scram-sha-256") == 0) && !(pwprompt || pwfilename))
+  {
     pg_log_error("must specify a password for the superuser to enable %s authentication", (strcmp(authmethodlocal, "md5") == 0 || strcmp(authmethodlocal, "password") == 0 || strcmp(authmethodlocal, "scram-sha-256") == 0) ? authmethodlocal : authmethodhost);
     exit(1);
   }
@@ -1988,14 +2394,20 @@ setup_pgdata(void)
 {
   char *pgdata_get_env, *pgdata_set_env;
 
-  if (!pg_data) {
+  if (!pg_data)
+  {
     pgdata_get_env = getenv("PGDATA");
-    if (pgdata_get_env && strlen(pgdata_get_env)) {
+    if (pgdata_get_env && strlen(pgdata_get_env))
+    {
       /* PGDATA found */
       pg_data = pg_strdup(pgdata_get_env);
-    } else {
+    }
+    else
+    {
       pg_log_error("no data directory specified");
-      fprintf(stderr, _("You must identify the directory where the data for this database system\nwill reside.  Do this with either the invocation option -D or the\nenvironment variable PGDATA.\n"));
+      fprintf(stderr, _("You must identify the directory where the data for this database system\n"
+                        "will reside.  Do this with either the invocation option -D or the\n"
+                        "environment variable PGDATA.\n"));
       exit(1);
     }
   }
@@ -2018,17 +2430,28 @@ setup_bin_paths(const char *argv0)
 {
   int ret;
 
-  if ((ret = find_other_exec(argv0, "postgres", PG_BACKEND_VERSIONSTR, backend_exec)) < 0) {
+  if ((ret = find_other_exec(argv0, "postgres", PG_BACKEND_VERSIONSTR, backend_exec)) < 0)
+  {
     char full_path[MAXPGPATH];
 
-    if (find_my_exec(argv0, full_path) < 0) {
+    if (find_my_exec(argv0, full_path) < 0)
+    {
       strlcpy(full_path, progname, sizeof(full_path));
     }
 
-    if (ret == -1) {
-      pg_log_error("The program \"postgres\" is needed by %s but was not found in the\nsame directory as \"%s\".\nCheck your installation.",progname, full_path);
-    } else {
-      pg_log_error("The program \"postgres\" was found by \"%s\"\nbut was not the same version as %s.\nCheck your installation.",full_path, progname);
+    if (ret == -1)
+    {
+      pg_log_error("The program \"postgres\" is needed by %s but was not found in the\n"
+                   "same directory as \"%s\".\n"
+                   "Check your installation.",
+          progname, full_path);
+    }
+    else
+    {
+      pg_log_error("The program \"postgres\" was found by \"%s\"\n"
+                   "but was not the same version as %s.\n"
+                   "Check your installation.",
+          full_path, progname);
     }
     exit(1);
   }
@@ -2038,10 +2461,13 @@ setup_bin_paths(const char *argv0)
   *last_dir_separator(bin_path) = '\0';
   canonicalize_path(bin_path);
 
-  if (!share_path) {
+  if (!share_path)
+  {
     share_path = pg_malloc(MAXPGPATH);
     get_share_path(backend_exec, share_path);
-  } else if (!is_absolute_path(share_path)) {
+  }
+  else if (!is_absolute_path(share_path))
+  {
     pg_log_error("input file location must be an absolute path");
     exit(1);
   }
@@ -2054,24 +2480,38 @@ setup_locale_encoding(void)
 {
   setlocales();
 
-  if (strcmp(lc_ctype, lc_collate) == 0 && strcmp(lc_ctype, lc_time) == 0 && strcmp(lc_ctype, lc_numeric) == 0 && strcmp(lc_ctype, lc_monetary) == 0 && strcmp(lc_ctype, lc_messages) == 0) {
+  if (strcmp(lc_ctype, lc_collate) == 0 && strcmp(lc_ctype, lc_time) == 0 && strcmp(lc_ctype, lc_numeric) == 0 && strcmp(lc_ctype, lc_monetary) == 0 && strcmp(lc_ctype, lc_messages) == 0)
+  {
     printf(_("The database cluster will be initialized with locale \"%s\".\n"), lc_ctype);
-  } else {
-    printf(_("The database cluster will be initialized with locales\n  COLLATE:  %s\n  CTYPE:    %s\n  MESSAGES: %s\n  MONETARY: %s\n  NUMERIC:  %s\n  TIME:     %s\n"),lc_collate, lc_ctype, lc_messages, lc_monetary, lc_numeric, lc_time);
+  }
+  else
+  {
+    printf(_("The database cluster will be initialized with locales\n"
+             "  COLLATE:  %s\n"
+             "  CTYPE:    %s\n"
+             "  MESSAGES: %s\n"
+             "  MONETARY: %s\n"
+             "  NUMERIC:  %s\n"
+             "  TIME:     %s\n"),
+        lc_collate, lc_ctype, lc_messages, lc_monetary, lc_numeric, lc_time);
   }
 
-  if (!encoding) {
+  if (!encoding)
+  {
     int ctype_enc;
 
     ctype_enc = pg_get_encoding_from_locale(lc_ctype, true);
 
-    if (ctype_enc == -1) {
+    if (ctype_enc == -1)
+    {
       /* Couldn't recognize the locale's codeset */
       pg_log_error("could not find suitable encoding for locale \"%s\"", lc_ctype);
       fprintf(stderr, _("Rerun %s with the -E option.\n"), progname);
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
-    } else if (!pg_valid_server_encoding_id(ctype_enc)) {
+    }
+    else if (!pg_valid_server_encoding_id(ctype_enc))
+    {
       /*
        * We recognized it, but it's not a legal server encoding. On
        * Windows, UTF-8 works with any locale, so we can fall back to
@@ -2079,21 +2519,31 @@ setup_locale_encoding(void)
        */
 #ifdef WIN32
       encodingid = PG_UTF8;
-      printf(_("Encoding \"%s\" implied by locale is not allowed as a server-side encoding.\nThe default database encoding will be set to \"%s\" instead.\n"),pg_encoding_to_char(ctype_enc), pg_encoding_to_char(encodingid));
+      printf(_("Encoding \"%s\" implied by locale is not allowed as a server-side encoding.\n"
+               "The default database encoding will be set to \"%s\" instead.\n"),
+          pg_encoding_to_char(ctype_enc), pg_encoding_to_char(encodingid));
 #else
       pg_log_error("locale \"%s\" requires unsupported encoding \"%s\"", lc_ctype, pg_encoding_to_char(ctype_enc));
-      fprintf(stderr,_("Encoding \"%s\" is not allowed as a server-side encoding.\nRerun %s with a different locale selection.\n"),pg_encoding_to_char(ctype_enc), progname);
+      fprintf(stderr,
+          _("Encoding \"%s\" is not allowed as a server-side encoding.\n"
+            "Rerun %s with a different locale selection.\n"),
+          pg_encoding_to_char(ctype_enc), progname);
       exit(1);
 #endif
-    } else {
-      encodingid = ctype_enc;
-      printf(_("The default database encoding has accordingly been set to \"%s\".\n"),pg_encoding_to_char(encodingid));
     }
-  } else {
+    else
+    {
+      encodingid = ctype_enc;
+      printf(_("The default database encoding has accordingly been set to \"%s\".\n"), pg_encoding_to_char(encodingid));
+    }
+  }
+  else
+  {
     encodingid = get_encoding_id(encoding);
   }
 
-  if (!check_locale_encoding(lc_ctype, encodingid) || !check_locale_encoding(lc_collate, encodingid)) {
+  if (!check_locale_encoding(lc_ctype, encodingid) || !check_locale_encoding(lc_collate, encodingid))
+  {
     exit(1); /* check_locale_encoding printed the error */
   }
 }
@@ -2112,9 +2562,18 @@ setup_data_file_paths(void)
   set_input(&features_file, "sql_features.txt");
   set_input(&system_views_file, "system_views.sql");
 
-  if (show_setting || debug) {
-    fprintf(stderr,"VERSION=%s\nPGDATA=%s\nshare_path=%s\nPGPATH=%s\nPOSTGRES_SUPERUSERNAME=%s\nPOSTGRES_BKI=%s\nPOSTGRES_DESCR=%s\nPOSTGRES_SHDESCR=%s\nPOSTGRESQL_CONF_SAMPLE=%s\nPG_HBA_SAMPLE=%s\nPG_IDENT_SAMPLE=%s\n",PG_VERSION, pg_data, share_path, bin_path, username, bki_file, desc_file, shdesc_file, conf_file, hba_file, ident_file);
-    if (show_setting) {
+  if (show_setting || debug)
+  {
+    fprintf(stderr,
+        "VERSION=%s\n"
+        "PGDATA=%s\nshare_path=%s\nPGPATH=%s\n"
+        "POSTGRES_SUPERUSERNAME=%s\nPOSTGRES_BKI=%s\n"
+        "POSTGRES_DESCR=%s\nPOSTGRES_SHDESCR=%s\n"
+        "POSTGRESQL_CONF_SAMPLE=%s\n"
+        "PG_HBA_SAMPLE=%s\nPG_IDENT_SAMPLE=%s\n",
+        PG_VERSION, pg_data, share_path, bin_path, username, bki_file, desc_file, shdesc_file, conf_file, hba_file, ident_file);
+    if (show_setting)
+    {
       exit(0);
     }
   }
@@ -2134,19 +2593,26 @@ setup_data_file_paths(void)
 void
 setup_text_search(void)
 {
-  if (!default_text_search_config) {
+  if (!default_text_search_config)
+  {
     default_text_search_config = find_matching_ts_config(lc_ctype);
-    if (!default_text_search_config) {
+    if (!default_text_search_config)
+    {
       pg_log_info("could not find suitable text search configuration for locale \"%s\"", lc_ctype);
       default_text_search_config = "simple";
     }
-  } else {
+  }
+  else
+  {
     const char *checkmatch = find_matching_ts_config(lc_ctype);
 
-    if (checkmatch == NULL) {
+    if (checkmatch == NULL)
+    {
       pg_log_warning("suitable text search configuration for locale \"%s\" is unknown", lc_ctype);
-    } else if (strcmp(checkmatch, default_text_search_config) != 0) {
-      pg_log_warning("specified text search configuration \"%s\" might not match locale \"%s\"",default_text_search_config, lc_ctype);
+    }
+    else if (strcmp(checkmatch, default_text_search_config) != 0)
+    {
+      pg_log_warning("specified text search configuration \"%s\" might not match locale \"%s\"", default_text_search_config, lc_ctype);
     }
   }
 
@@ -2186,16 +2652,20 @@ create_data_directory(void)
 {
   int ret;
 
-  switch ((ret = pg_check_dir(pg_data))) {
+  switch ((ret = pg_check_dir(pg_data)))
+  {
   case 0:
     /* PGDATA not there, must create it */
     printf(_("creating directory %s ... "), pg_data);
     fflush(stdout);
 
-    if (pg_mkdir_p(pg_data, pg_dir_create_mode) != 0) {
+    if (pg_mkdir_p(pg_data, pg_dir_create_mode) != 0)
+    {
       pg_log_error("could not create directory \"%s\": %m", pg_data);
       exit(1);
-    } else {
+    }
+    else
+    {
       check_ok();
     }
 
@@ -2207,10 +2677,13 @@ create_data_directory(void)
     printf(_("fixing permissions on existing directory %s ... "), pg_data);
     fflush(stdout);
 
-    if (chmod(pg_data, pg_dir_create_mode) != 0) {
+    if (chmod(pg_data, pg_dir_create_mode) != 0)
+    {
       pg_log_error("could not change permissions of directory \"%s\": %m", pg_data);
       exit(1);
-    } else {
+    }
+    else
+    {
       check_ok();
     }
 
@@ -2222,14 +2695,21 @@ create_data_directory(void)
   case 4:
     /* Present and not empty */
     pg_log_error("directory \"%s\" exists but is not empty", pg_data);
-    if (ret != 4) {
+    if (ret != 4)
+    {
       warn_on_mount_point(ret);
-    } else {
-      fprintf(stderr,_("If you want to create a new database system, either remove or empty\nthe directory \"%s\" or run %s\nwith an argument other than \"%s\".\n"),pg_data, progname, pg_data);
+    }
+    else
+    {
+      fprintf(stderr,
+          _("If you want to create a new database system, either remove or empty\n"
+            "the directory \"%s\" or run %s\n"
+            "with an argument other than \"%s\".\n"),
+          pg_data, progname, pg_data);
     }
     exit(1); /* no further message needed */
 
-  default:;
+  default:
     /* Trouble accessing directory */
     pg_log_error("could not access directory \"%s\": %m", pg_data);
     exit(1);
@@ -2245,27 +2725,33 @@ create_xlog_or_symlink(void)
   /* form name of the place for the subdirectory or symlink */
   subdirloc = psprintf("%s/pg_wal", pg_data);
 
-  if (xlog_dir) {
+  if (xlog_dir)
+  {
     int ret;
 
     /* clean up xlog directory name, check it's absolute */
     canonicalize_path(xlog_dir);
-    if (!is_absolute_path(xlog_dir)) {
+    if (!is_absolute_path(xlog_dir))
+    {
       pg_log_error("WAL directory location must be an absolute path");
       exit(1);
     }
 
     /* check if the specified xlog directory exists/is empty */
-    switch ((ret = pg_check_dir(xlog_dir))) {
+    switch ((ret = pg_check_dir(xlog_dir)))
+    {
     case 0:
       /* xlog directory not there, must create it */
       printf(_("creating directory %s ... "), xlog_dir);
       fflush(stdout);
 
-      if (pg_mkdir_p(xlog_dir, pg_dir_create_mode) != 0) {
+      if (pg_mkdir_p(xlog_dir, pg_dir_create_mode) != 0)
+      {
         pg_log_error("could not create directory \"%s\": %m", xlog_dir);
         exit(1);
-      } else {
+      }
+      else
+      {
         check_ok();
       }
 
@@ -2277,10 +2763,13 @@ create_xlog_or_symlink(void)
       printf(_("fixing permissions on existing directory %s ... "), xlog_dir);
       fflush(stdout);
 
-      if (chmod(xlog_dir, pg_dir_create_mode) != 0) {
+      if (chmod(xlog_dir, pg_dir_create_mode) != 0)
+      {
         pg_log_error("could not change permissions of directory \"%s\": %m", xlog_dir);
         exit(1);
-      } else {
+      }
+      else
+      {
         check_ok();
       }
 
@@ -2292,21 +2781,28 @@ create_xlog_or_symlink(void)
     case 4:
       /* Present and not empty */
       pg_log_error("directory \"%s\" exists but is not empty", xlog_dir);
-      if (ret != 4) {
+      if (ret != 4)
+      {
         warn_on_mount_point(ret);
-      } else {
-        fprintf(stderr,_("If you want to store the WAL there, either remove or empty the directory\n\"%s\".\n"),xlog_dir);
+      }
+      else
+      {
+        fprintf(stderr,
+            _("If you want to store the WAL there, either remove or empty the directory\n"
+              "\"%s\".\n"),
+            xlog_dir);
       }
       exit(1);
 
-    default:;
+    default:
       /* Trouble accessing directory */
       pg_log_error("could not access directory \"%s\": %m", xlog_dir);
       exit(1);
     }
 
 #ifdef HAVE_SYMLINK
-    if (symlink(xlog_dir, subdirloc) != 0) {
+    if (symlink(xlog_dir, subdirloc) != 0)
+    {
       pg_log_error("could not create symbolic link \"%s\": %m", subdirloc);
       exit(1);
     }
@@ -2314,9 +2810,12 @@ create_xlog_or_symlink(void)
     pg_log_error("symlinks are not supported on this platform");
     exit(1);
 #endif
-  } else {
+  }
+  else
+  {
     /* Without -X option, just make the subdirectory normally */
-    if (mkdir(subdirloc, pg_dir_create_mode) < 0) {
+    if (mkdir(subdirloc, pg_dir_create_mode) < 0)
+    {
       pg_log_error("could not create directory \"%s\": %m", subdirloc);
       exit(1);
     }
@@ -2328,13 +2827,17 @@ create_xlog_or_symlink(void)
 void
 warn_on_mount_point(int error)
 {
-  if (error == 2) {
+  if (error == 2)
+  {
     fprintf(stderr, _("It contains a dot-prefixed/invisible file, perhaps due to it being a mount point.\n"));
-  } else if (error == 3) {
+  }
+  else if (error == 3)
+  {
     fprintf(stderr, _("It contains a lost+found directory, perhaps due to it being a mount point.\n"));
   }
 
-  fprintf(stderr, _("Using a mount point directly as the data directory is not recommended.\nCreate a subdirectory under the mount point.\n"));
+  fprintf(stderr, _("Using a mount point directly as the data directory is not recommended.\n"
+                    "Create a subdirectory under the mount point.\n"));
 }
 
 void
@@ -2361,7 +2864,8 @@ initialize_data_directory(void)
   printf(_("creating subdirectories ... "));
   fflush(stdout);
 
-  for (i = 0; i < lengthof(subdirs); i++) {
+  for (i = 0; i < lengthof(subdirs); i++)
+  {
     char *path;
 
     path = psprintf("%s/%s", pg_data, subdirs[i]);
@@ -2370,7 +2874,8 @@ initialize_data_directory(void)
      * The parent directory already exists, so we only need mkdir() not
      * pg_mkdir_p() here, which avoids some failure modes; cf bug #13853.
      */
-    if (mkdir(path, pg_dir_create_mode) < 0) {
+    if (mkdir(path, pg_dir_create_mode) < 0)
+    {
       pg_log_error("could not create directory \"%s\": %m", path);
       exit(1);
     }
@@ -2472,12 +2977,15 @@ main(int argc, char *argv[])
   progname = get_progname(argv[0]);
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("initdb"));
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage(progname);
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("initdb (PostgreSQL) " PG_VERSION);
       exit(0);
     }
@@ -2485,8 +2993,10 @@ main(int argc, char *argv[])
 
   /* process command-line options */
 
-  while ((c = getopt_long(argc, argv, "A:dD:E:gkL:nNsST:U:WX:", long_options, &option_index)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "A:dD:E:gkL:nNsST:U:WX:", long_options, &option_index)) != -1)
+  {
+    switch (c)
+    {
     case 'A':
       authmethodlocal = authmethodhost = pg_strdup(optarg);
 
@@ -2495,9 +3005,12 @@ main(int argc, char *argv[])
        * Mirrored, when peer is specified, use ident for TCP/IP
        * connections.
        */
-      if (strcmp(authmethodhost, "ident") == 0) {
+      if (strcmp(authmethodhost, "ident") == 0)
+      {
         authmethodlocal = "peer";
-      } else if (strcmp(authmethodlocal, "peer") == 0) {
+      }
+      else if (strcmp(authmethodlocal, "peer") == 0)
+      {
         authmethodhost = "ident";
       }
       break;
@@ -2581,7 +3094,7 @@ main(int argc, char *argv[])
     case 'g':
       SetDataDirectoryCreatePerm(PG_DIR_MODE_GROUP);
       break;
-    default:;
+    default:
       /* getopt_long already emitted a complaint */
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
@@ -2592,12 +3105,14 @@ main(int argc, char *argv[])
    * Non-option argument specifies data directory as long as it wasn't
    * already specified with -D / --pgdata
    */
-  if (optind < argc && !pg_data) {
+  if (optind < argc && !pg_data)
+  {
     pg_data = pg_strdup(argv[optind]);
     optind++;
   }
 
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -2606,11 +3121,13 @@ main(int argc, char *argv[])
   atexit(cleanup_directories_atexit);
 
   /* If we only need to fsync, just do it and exit */
-  if (sync_only) {
+  if (sync_only)
+  {
     setup_pgdata();
 
     /* must check that directory is readable */
-    if (pg_check_dir(pg_data) <= 0) {
+    if (pg_check_dir(pg_data) <= 0)
+    {
       pg_log_error("could not access directory \"%s\": %m", pg_data);
       exit(1);
     }
@@ -2622,7 +3139,8 @@ main(int argc, char *argv[])
     return 0;
   }
 
-  if (pwprompt && pwfilename) {
+  if (pwprompt && pwfilename)
+  {
     pg_log_error("password prompt and password file cannot be specified together");
     exit(1);
   }
@@ -2636,20 +3154,25 @@ main(int argc, char *argv[])
   check_need_password(authmethodlocal, authmethodhost);
 
   /* set wal segment size */
-  if (str_wal_segment_size_mb == NULL) {
+  if (str_wal_segment_size_mb == NULL)
+  {
     wal_segment_size_mb = (DEFAULT_XLOG_SEG_SIZE) / (1024 * 1024);
-  } else {
+  }
+  else
+  {
     char *endptr;
 
     /* check that the argument is a number */
     wal_segment_size_mb = strtol(str_wal_segment_size_mb, &endptr, 10);
 
     /* verify that wal segment size is valid */
-    if (endptr == str_wal_segment_size_mb || *endptr != '\0') {
+    if (endptr == str_wal_segment_size_mb || *endptr != '\0')
+    {
       pg_log_error("argument of --wal-segsize must be a number");
       exit(1);
     }
-    if (!IsValidWalSegSize(wal_segment_size_mb * 1024 * 1024)) {
+    if (!IsValidWalSegSize(wal_segment_size_mb * 1024 * 1024))
+    {
       pg_log_error("argument of --wal-segsize must be a power of 2 between 1 and 1024");
       exit(1);
     }
@@ -2662,16 +3185,21 @@ main(int argc, char *argv[])
   setup_bin_paths(argv[0]);
 
   effective_user = get_id();
-  if (!username) {
+  if (!username)
+  {
     username = effective_user;
   }
 
-  if (strncmp(username, "pg_", 3) == 0) {
-    pg_log_error("superuser name \"%s\" is disallowed; role names cannot begin with \"pg_\"",username);
+  if (strncmp(username, "pg_", 3) == 0)
+  {
+    pg_log_error("superuser name \"%s\" is disallowed; role names cannot begin with \"pg_\"", username);
     exit(1);
   }
 
-  printf(_("The files belonging to this database system will be owned by user \"%s\".\nThis user must also own the server process.\n\n"),effective_user);
+  printf(_("The files belonging to this database system will be owned "
+           "by user \"%s\".\n"
+           "This user must also own the server process.\n\n"),
+      effective_user);
 
   set_info_version();
 
@@ -2683,13 +3211,17 @@ main(int argc, char *argv[])
 
   printf("\n");
 
-  if (data_checksums) {
+  if (data_checksums)
+  {
     printf(_("Data page checksums are enabled.\n"));
-  } else {
+  }
+  else
+  {
     printf(_("Data page checksums are disabled.\n"));
   }
 
-  if (pwprompt || pwfilename) {
+  if (pwprompt || pwfilename)
+  {
     get_su_pwd();
   }
 
@@ -2697,19 +3229,24 @@ main(int argc, char *argv[])
 
   initialize_data_directory();
 
-  if (do_sync) {
+  if (do_sync)
+  {
     fputs(_("syncing data to disk ... "), stdout);
     fflush(stdout);
     fsync_pgdata(pg_data, PG_VERSION_NUM);
     check_ok();
-  } else {
+  }
+  else
+  {
     printf(_("\nSync to disk skipped.\nThe data directory might become corrupt if the operating system crashes.\n"));
   }
 
-  if (authwarning) {
+  if (authwarning)
+  {
     printf("\n");
     pg_log_warning("enabling \"trust\" authentication for local connections");
-    fprintf(stderr, _("You can change this by editing pg_hba.conf or using the option -A, or\n--auth-local and --auth-host, the next time you run initdb.\n"));
+    fprintf(stderr, _("You can change this by editing pg_hba.conf or using the option -A, or\n"
+                      "--auth-local and --auth-host, the next time you run initdb.\n"));
   }
 
   /*
@@ -2738,7 +3275,9 @@ main(int argc, char *argv[])
   /* translator: This is a placeholder in a shell command. */
   appendPQExpBuffer(start_db_cmd, " -l %s start", _("logfile"));
 
-  printf(_("\nSuccess. You can now start the database server using:\n\n    %s\n\n"),start_db_cmd->data);
+  printf(_("\nSuccess. You can now start the database server using:\n\n"
+           "    %s\n\n"),
+      start_db_cmd->data);
 
   destroyPQExpBuffer(start_db_cmd);
 

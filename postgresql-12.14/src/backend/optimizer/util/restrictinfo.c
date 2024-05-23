@@ -46,7 +46,7 @@ make_sub_restrictinfos(PlannerInfo *root, Expr *clause, bool is_pushed_down, boo
 RestrictInfo *
 make_restrictinfo(Expr *clause, bool is_pushed_down, bool outerjoin_delayed, bool pseudoconstant, Index security_level, Relids required_relids, Relids outer_relids, Relids nullable_relids)
 {
-
+  return make_restrictinfo_new(NULL, clause, is_pushed_down, outerjoin_delayed, pseudoconstant, security_level, required_relids, outer_relids, nullable_relids);
 }
 
 RestrictInfo *
@@ -422,8 +422,8 @@ extract_actual_join_clauses(List *restrictinfo_list, Relids joinrelids, List **j
 
 /*
  * join_clause_is_movable_to
- *		Test whether a join clause is a safe candidate for
- *parameterization of a scan on the specified base relation.
+ *		Test whether a join clause is a safe candidate for parameterization
+ *		of a scan on the specified base relation.
  *
  * A movable join clause is one that can safely be evaluated at a rel below
  * its normal semantic level (ie, its required_relids), if the values of
@@ -477,8 +477,8 @@ join_clause_is_movable_to(RestrictInfo *rinfo, RelOptInfo *baserel)
 
 /*
  * join_clause_is_movable_into
- *		Test whether a join clause is movable and can be evaluated
- *within the current join context.
+ *		Test whether a join clause is movable and can be evaluated within
+ *		the current join context.
  *
  * currentrelids: the relids of the proposed evaluation location
  * current_and_outer: the union of currentrelids and the required_outer

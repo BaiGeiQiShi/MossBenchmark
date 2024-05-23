@@ -26,16 +26,24 @@ PLy_subtransaction_exit(PyObject *self, PyObject *args);
 
 static char PLy_subtransaction_doc[] = {"PostgreSQL subtransaction context manager"};
 
-static PyMethodDef PLy_subtransaction_methods[] = {{"__enter__", PLy_subtransaction_enter, METH_VARARGS, NULL}, {"__exit__", PLy_subtransaction_exit, METH_VARARGS, NULL},/* user-friendly names for Python <2.6 */
+static PyMethodDef PLy_subtransaction_methods[] = {{"__enter__", PLy_subtransaction_enter, METH_VARARGS, NULL}, {"__exit__", PLy_subtransaction_exit, METH_VARARGS, NULL},
+    /* user-friendly names for Python <2.6 */
     {"enter", PLy_subtransaction_enter, METH_VARARGS, NULL}, {"exit", PLy_subtransaction_exit, METH_VARARGS, NULL}, {NULL, NULL, 0, NULL}};
 
 static PyTypeObject PLy_SubtransactionType = {
-    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLySubtransaction",.tp_basicsize = sizeof(PLySubtransactionObject),.tp_dealloc = PLy_subtransaction_dealloc,.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,.tp_doc = PLy_subtransaction_doc,.tp_methods = PLy_subtransaction_methods,};
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLySubtransaction",
+    .tp_basicsize = sizeof(PLySubtransactionObject),
+    .tp_dealloc = PLy_subtransaction_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_doc = PLy_subtransaction_doc,
+    .tp_methods = PLy_subtransaction_methods,
+};
 
 void
 PLy_subtransaction_init_type(void)
 {
-  if (PyType_Ready(&PLy_SubtransactionType) < 0) {
+  if (PyType_Ready(&PLy_SubtransactionType) < 0)
+  {
     elog(ERROR, "could not initialize PLy_SubtransactionType");
   }
 }
@@ -48,7 +56,8 @@ PLy_subtransaction_new(PyObject *self, PyObject *unused)
 
   ob = PyObject_New(PLySubtransactionObject, &PLy_SubtransactionType);
 
-  if (ob == NULL) {
+  if (ob == NULL)
+  {
     return NULL;
   }
 
@@ -79,12 +88,14 @@ PLy_subtransaction_enter(PyObject *self, PyObject *unused)
   MemoryContext oldcontext;
   PLySubtransactionObject *subxact = (PLySubtransactionObject *)self;
 
-  if (subxact->started) {
+  if (subxact->started)
+  {
     PLy_exception_set(PyExc_ValueError, "this subtransaction has already been entered");
     return NULL;
   }
 
-  if (subxact->exited) {
+  if (subxact->exited)
+  {
     PLy_exception_set(PyExc_ValueError, "this subtransaction has already been exited");
     return NULL;
   }
@@ -114,7 +125,8 @@ PLy_subtransaction_enter(PyObject *self, PyObject *unused)
  * subxact.__exit__(exc_type, exc, tb) or subxact.exit(exc_type, exc, tb)
  *
  * Exit an explicit subtransaction. exc_type is an exception type, exc
- * is the exception object, tb is the traceback.  If exc_type is None,* commit the subtransactiony, if not abort it.
+ * is the exception object, tb is the traceback.  If exc_type is None,
+ * commit the subtransactiony, if not abort it.
  *
  * The method signature is chosen to allow subtransaction objects to
  * be used as context managers as described in
@@ -129,31 +141,38 @@ PLy_subtransaction_exit(PyObject *self, PyObject *args)
   PLySubtransactionData *subxactdata;
   PLySubtransactionObject *subxact = (PLySubtransactionObject *)self;
 
-  if (!PyArg_ParseTuple(args, "OOO", &type, &value, &traceback)) {
+  if (!PyArg_ParseTuple(args, "OOO", &type, &value, &traceback))
+  {
     return NULL;
   }
 
-  if (!subxact->started) {
+  if (!subxact->started)
+  {
     PLy_exception_set(PyExc_ValueError, "this subtransaction has not been entered");
     return NULL;
   }
 
-  if (subxact->exited) {
+  if (subxact->exited)
+  {
     PLy_exception_set(PyExc_ValueError, "this subtransaction has already been exited");
     return NULL;
   }
 
-  if (explicit_subtransactions == NIL) {
+  if (explicit_subtransactions == NIL)
+  {
     PLy_exception_set(PyExc_ValueError, "there is no subtransaction to exit from");
     return NULL;
   }
 
   subxact->exited = true;
 
-  if (type != Py_None) {
+  if (type != Py_None)
+  {
     /* Abort the inner transaction */
     RollbackAndReleaseCurrentSubTransaction();
-  } else {
+  }
+  else
+  {
     ReleaseCurrentSubTransaction();
   }
 

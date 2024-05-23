@@ -68,37 +68,37 @@ pg_regerror(int errcode, /* error code, or REG_ATOI or REG_ITOA */
 
   switch (errcode)
   {
-  case REG_ATOI: ;/* convert name to number */
-
-
-
-
-
-
-
-
-
-
-  case REG_ITOA:          ;/* convert number to name */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  default:; ;/* a real, normal error code */
+  case REG_ATOI: /* convert name to number */
+    for (r = rerrs; r->code >= 0; r++)
+    {
+      if (strcmp(r->name, errbuf) == 0)
+      {
+        break;
+      }
+    }
+    sprintf(convbuf, "%d", r->code); /* -1 for unknown */
+    msg = convbuf;
+    break;
+  case REG_ITOA:          /* convert number to name */
+    icode = atoi(errbuf); /* not our problem if this fails */
+    for (r = rerrs; r->code >= 0; r++)
+    {
+      if (r->code == icode)
+      {
+        break;
+      }
+    }
+    if (r->code >= 0)
+    {
+      msg = r->name;
+    }
+    else
+    { /* unknown; tell him the number */
+      sprintf(convbuf, "REG_%u", (unsigned)icode);
+      msg = convbuf;
+    }
+    break;
+  default: /* a real, normal error code */
     for (r = rerrs; r->code >= 0; r++)
     {
       if (r->code == errcode)
@@ -112,8 +112,8 @@ pg_regerror(int errcode, /* error code, or REG_ATOI or REG_ITOA */
     }
     else
     { /* unknown; say so */
-
-
+      sprintf(convbuf, unk, errcode);
+      msg = convbuf;
     }
     break;
   }
@@ -127,8 +127,8 @@ pg_regerror(int errcode, /* error code, or REG_ATOI or REG_ITOA */
     }
     else
     { /* truncate to fit */
-
-
+      memcpy(errbuf, msg, errbuf_size - 1);
+      errbuf[errbuf_size - 1] = '\0';
     }
   }
 

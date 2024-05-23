@@ -65,7 +65,7 @@ spg_kd_choose(PG_FUNCTION_ARGS)
 
   if (in->allTheSame)
   {
-
+    elog(ERROR, "allTheSame should not occur for k-d trees");
   }
 
   Assert(in->hasPrefix);
@@ -179,7 +179,7 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
   if (in->allTheSame)
   {
-
+    elog(ERROR, "allTheSame should not occur for k-d trees");
   }
 
   Assert(in->nNodes == 2);
@@ -194,29 +194,29 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
     switch (in->scankeys[i].sk_strategy)
     {
-    case RTLeftStrategyNumber:;
+    case RTLeftStrategyNumber:
       if ((in->level % 2) != 0 && FPlt(query->x, coord))
       {
         which &= (1 << 1);
       }
       break;
-    case RTRightStrategyNumber:;
+    case RTRightStrategyNumber:
       if ((in->level % 2) != 0 && FPgt(query->x, coord))
       {
         which &= (1 << 2);
       }
       break;
-    case RTSameStrategyNumber:;
+    case RTSameStrategyNumber:
       if ((in->level % 2) != 0)
       {
         if (FPlt(query->x, coord))
         {
           which &= (1 << 1);
         }
-
-
-
-
+        else if (FPgt(query->x, coord))
+        {
+          which &= (1 << 2);
+        }
       }
       else
       {
@@ -230,19 +230,19 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
         }
       }
       break;
-    case RTBelowStrategyNumber:;
+    case RTBelowStrategyNumber:
       if ((in->level % 2) == 0 && FPlt(query->y, coord))
       {
         which &= (1 << 1);
       }
       break;
-    case RTAboveStrategyNumber:;
+    case RTAboveStrategyNumber:
       if ((in->level % 2) == 0 && FPgt(query->y, coord))
       {
         which &= (1 << 2);
       }
       break;
-    case RTContainedByStrategyNumber:;
+    case RTContainedByStrategyNumber:
 
       /*
        * For this operator, the query is a box not a point.  We
@@ -259,7 +259,7 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
         }
         else if (FPgt(boxQuery->low.x, coord))
         {
-
+          which &= (1 << 2);
         }
       }
       else
@@ -274,14 +274,14 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
         }
       }
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized strategy number: %d", in->scankeys[i].sk_strategy);
+      break;
     }
 
     if (which == 0)
     {
-
+      break; /* no need to consider remaining conditions */
     }
   }
 
@@ -291,7 +291,7 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
   /* Fast-path for no matching children */
   if (!which)
   {
-
+    PG_RETURN_VOID();
   }
 
   out->nodeNumbers = (int *)palloc(sizeof(int) * 2);

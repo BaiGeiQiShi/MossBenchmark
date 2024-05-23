@@ -56,12 +56,14 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db, int *nmaps, const char *old_pgd
    * first print as much info as we can about mismatches.
    */
   old_relnum = new_relnum = 0;
-  while (old_relnum < old_db->rel_arr.nrels || new_relnum < new_db->rel_arr.nrels) {
+  while (old_relnum < old_db->rel_arr.nrels || new_relnum < new_db->rel_arr.nrels)
+  {
     RelInfo *old_rel = (old_relnum < old_db->rel_arr.nrels) ? &old_db->rel_arr.rels[old_relnum] : NULL;
     RelInfo *new_rel = (new_relnum < new_db->rel_arr.nrels) ? &new_db->rel_arr.rels[new_relnum] : NULL;
 
     /* handle running off one array before the other */
-    if (!new_rel) {
+    if (!new_rel)
+    {
       /*
        * old_rel is unmatched.  This should never happen, because we
        * force new rels to have TOAST tables if the old one did.
@@ -71,14 +73,16 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db, int *nmaps, const char *old_pgd
       old_relnum++;
       continue;
     }
-    if (!old_rel) {
+    if (!old_rel)
+    {
       /*
        * new_rel is unmatched.  This shouldn't really happen either, but
        * if it's a TOAST table, we can ignore it and continue
        * processing, assuming that the new server made a TOAST table
        * that wasn't needed.
        */
-      if (strcmp(new_rel->nspname, "pg_toast") != 0) {
+      if (strcmp(new_rel->nspname, "pg_toast") != 0)
+      {
         report_unmatched_relation(new_rel, new_db, true);
         all_matched = false;
       }
@@ -87,15 +91,19 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db, int *nmaps, const char *old_pgd
     }
 
     /* check for mismatched OID */
-    if (old_rel->reloid < new_rel->reloid) {
+    if (old_rel->reloid < new_rel->reloid)
+    {
       /* old_rel is unmatched, see comment above */
       report_unmatched_relation(old_rel, old_db, false);
       all_matched = false;
       old_relnum++;
       continue;
-    } else if (old_rel->reloid > new_rel->reloid) {
+    }
+    else if (old_rel->reloid > new_rel->reloid)
+    {
       /* new_rel is unmatched, see comment above */
-      if (strcmp(new_rel->nspname, "pg_toast") != 0) {
+      if (strcmp(new_rel->nspname, "pg_toast") != 0)
+      {
         report_unmatched_relation(new_rel, new_db, true);
         all_matched = false;
       }
@@ -112,8 +120,12 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db, int *nmaps, const char *old_pgd
      * pre-9.0 they can change during certain commands such as CLUSTER, so
      * don't insist on a match if old cluster is < 9.0.
      */
-    if (strcmp(old_rel->nspname, new_rel->nspname) != 0 || (strcmp(old_rel->relname, new_rel->relname) != 0 && (GET_MAJOR_VERSION(old_cluster.major_version) >= 900 || strcmp(old_rel->nspname, "pg_toast") != 0))) {
-      pg_log(PG_WARNING,"Relation names for OID %u in database \"%s\" do not match: old name \"%s.%s\", new name \"%s.%s\"\n",old_rel->reloid, old_db->db_name, old_rel->nspname, old_rel->relname, new_rel->nspname, new_rel->relname);
+    if (strcmp(old_rel->nspname, new_rel->nspname) != 0 || (strcmp(old_rel->relname, new_rel->relname) != 0 && (GET_MAJOR_VERSION(old_cluster.major_version) >= 900 || strcmp(old_rel->nspname, "pg_toast") != 0)))
+    {
+      pg_log(PG_WARNING,
+          "Relation names for OID %u in database \"%s\" do not match: "
+          "old name \"%s.%s\", new name \"%s.%s\"\n",
+          old_rel->reloid, old_db->db_name, old_rel->nspname, old_rel->relname, new_rel->nspname, new_rel->relname);
       all_matched = false;
       old_relnum++;
       new_relnum++;
@@ -127,7 +139,8 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db, int *nmaps, const char *old_pgd
     new_relnum++;
   }
 
-  if (!all_matched) {
+  if (!all_matched)
+  {
     pg_fatal("Failed to match up old and new tables in database \"%s\"\n", old_db->db_name);
   }
 
@@ -144,24 +157,30 @@ static void
 create_rel_filename_map(const char *old_data, const char *new_data, const DbInfo *old_db, const DbInfo *new_db, const RelInfo *old_rel, const RelInfo *new_rel, FileNameMap *map)
 {
   /* In case old/new tablespaces don't match, do them separately. */
-  if (strlen(old_rel->tablespace) == 0) {
+  if (strlen(old_rel->tablespace) == 0)
+  {
     /*
      * relation belongs to the default tablespace, hence relfiles should
      * exist in the data directories.
      */
     map->old_tablespace = old_data;
     map->old_tablespace_suffix = "/base";
-  } else {
+  }
+  else
+  {
     /* relation belongs to a tablespace, so use the tablespace location */
     map->old_tablespace = old_rel->tablespace;
     map->old_tablespace_suffix = old_cluster.tablespace_suffix;
   }
 
   /* Do the same for new tablespaces */
-  if (strlen(new_rel->tablespace) == 0) {
+  if (strlen(new_rel->tablespace) == 0)
+  {
     map->new_tablespace = new_data;
     map->new_tablespace_suffix = "/base";
-  } else {
+  }
+  else
+  {
     map->new_tablespace = new_rel->tablespace;
     map->new_tablespace_suffix = new_cluster.tablespace_suffix;
   }
@@ -184,7 +203,8 @@ create_rel_filename_map(const char *old_data, const char *new_data, const DbInfo
 }
 
 /*
- * Complain about a relation we couldn't match to the other database,* identifying it as best we can.
+ * Complain about a relation we couldn't match to the other database,
+ * identifying it as best we can.
  */
 static void
 report_unmatched_relation(const RelInfo *rel, const DbInfo *db, bool is_new_db)
@@ -194,51 +214,64 @@ report_unmatched_relation(const RelInfo *rel, const DbInfo *db, bool is_new_db)
   int i;
 
   snprintf(reldesc, sizeof(reldesc), "\"%s.%s\"", rel->nspname, rel->relname);
-  if (rel->indtable) {
-    for (i = 0; i < db->rel_arr.nrels; i++) {
+  if (rel->indtable)
+  {
+    for (i = 0; i < db->rel_arr.nrels; i++)
+    {
       const RelInfo *hrel = &db->rel_arr.rels[i];
 
-      if (hrel->reloid == rel->indtable) {
+      if (hrel->reloid == rel->indtable)
+      {
         snprintf(reldesc + strlen(reldesc), sizeof(reldesc) - strlen(reldesc), _(" which is an index on \"%s.%s\""), hrel->nspname, hrel->relname);
         /* Shift attention to index's table for toast check */
         rel = hrel;
         break;
       }
     }
-    if (i >= db->rel_arr.nrels) {
+    if (i >= db->rel_arr.nrels)
+    {
       snprintf(reldesc + strlen(reldesc), sizeof(reldesc) - strlen(reldesc), _(" which is an index on OID %u"), rel->indtable);
     }
   }
-  if (rel->toastheap) {
-    for (i = 0; i < db->rel_arr.nrels; i++) {
+  if (rel->toastheap)
+  {
+    for (i = 0; i < db->rel_arr.nrels; i++)
+    {
       const RelInfo *brel = &db->rel_arr.rels[i];
 
-      if (brel->reloid == rel->toastheap) {
+      if (brel->reloid == rel->toastheap)
+      {
         snprintf(reldesc + strlen(reldesc), sizeof(reldesc) - strlen(reldesc), _(" which is the TOAST table for \"%s.%s\""), brel->nspname, brel->relname);
         break;
       }
     }
-    if (i >= db->rel_arr.nrels) {
+    if (i >= db->rel_arr.nrels)
+    {
       snprintf(reldesc + strlen(reldesc), sizeof(reldesc) - strlen(reldesc), _(" which is the TOAST table for OID %u"), rel->toastheap);
     }
   }
 
-  if (is_new_db) {
-    pg_log(PG_WARNING,"No match found in old cluster for new relation with OID %u in database \"%s\": %s\n",reloid, db->db_name, reldesc);
-  } else {
-    pg_log(PG_WARNING,"No match found in new cluster for old relation with OID %u in database \"%s\": %s\n",reloid, db->db_name, reldesc);
+  if (is_new_db)
+  {
+    pg_log(PG_WARNING, "No match found in old cluster for new relation with OID %u in database \"%s\": %s\n", reloid, db->db_name, reldesc);
+  }
+  else
+  {
+    pg_log(PG_WARNING, "No match found in new cluster for old relation with OID %u in database \"%s\": %s\n", reloid, db->db_name, reldesc);
   }
 }
 
 void
 print_maps(FileNameMap *maps, int n_maps, const char *db_name)
 {
-  if (log_opts.verbose) {
+  if (log_opts.verbose)
+  {
     int mapnum;
 
     pg_log(PG_VERBOSE, "mappings for database \"%s\":\n", db_name);
 
-    for (mapnum = 0; mapnum < n_maps; mapnum++) {
+    for (mapnum = 0; mapnum < n_maps; mapnum++)
+    {
       pg_log(PG_VERBOSE, "%s.%s: %u to %u\n", maps[mapnum].nspname, maps[mapnum].relname, maps[mapnum].old_relfilenode, maps[mapnum].new_relfilenode);
     }
 
@@ -257,23 +290,29 @@ get_db_and_rel_infos(ClusterInfo *cluster)
 {
   int dbnum;
 
-  if (cluster->dbarr.dbs != NULL) {
+  if (cluster->dbarr.dbs != NULL)
+  {
     free_db_and_rel_infos(&cluster->dbarr);
   }
 
   get_db_infos(cluster);
 
-  for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++) {
+  for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+  {
     get_rel_infos(cluster, &cluster->dbarr.dbs[dbnum]);
   }
 
-  if (cluster == &old_cluster) {
+  if (cluster == &old_cluster)
+  {
     pg_log(PG_VERBOSE, "\nsource databases:\n");
-  } else {
+  }
+  else
+  {
     pg_log(PG_VERBOSE, "\ntarget databases:\n");
   }
 
-  if (log_opts.verbose) {
+  if (log_opts.verbose)
+  {
     print_db_infos(&cluster->dbarr);
   }
 }
@@ -295,9 +334,16 @@ get_db_infos(ClusterInfo *cluster)
   int i_datname, i_oid, i_encoding, i_datcollate, i_datctype, i_spclocation;
   char query[QUERY_ALLOC];
 
-  snprintf(query, sizeof(query),"SELECT d.oid, d.datname, d.encoding, d.datcollate, d.datctype, %s AS spclocation FROM pg_catalog.pg_database d  LEFT OUTER JOIN pg_catalog.pg_tablespace t  ON d.dattablespace = t.oid WHERE d.datallowconn = true "
+  snprintf(query, sizeof(query),
+      "SELECT d.oid, d.datname, d.encoding, d.datcollate, d.datctype, "
+      "%s AS spclocation "
+      "FROM pg_catalog.pg_database d "
+      " LEFT OUTER JOIN pg_catalog.pg_tablespace t "
+      " ON d.dattablespace = t.oid "
+      "WHERE d.datallowconn = true "
       /* we don't preserve pg_database.oid so we sort by name */
-      "ORDER BY 2",/* 9.2 removed the spclocation column */
+      "ORDER BY 2",
+      /* 9.2 removed the spclocation column */
       (GET_MAJOR_VERSION(cluster->major_version) <= 901) ? "t.spclocation" : "pg_catalog.pg_tablespace_location(t.oid)");
 
   res = executeQueryOrDie(conn, "%s", query);
@@ -312,7 +358,8 @@ get_db_infos(ClusterInfo *cluster)
   ntups = PQntuples(res);
   dbinfos = (DbInfo *)pg_malloc(sizeof(DbInfo) * ntups);
 
-  for (tupnum = 0; tupnum < ntups; tupnum++) {
+  for (tupnum = 0; tupnum < ntups; tupnum++)
+  {
     dbinfos[tupnum].db_oid = atooid(PQgetvalue(res, tupnum, i_oid));
     dbinfos[tupnum].db_name = pg_strdup(PQgetvalue(res, tupnum, i_datname));
     dbinfos[tupnum].db_encoding = atoi(PQgetvalue(res, tupnum, i_encoding));
@@ -356,7 +403,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
   query[0] = '\0'; /* initialize query string to empty */
 
   /*
-   * Create a CTE that collects OIDs of regular user tables and matviews,* but excluding toast tables and indexes.  We assume that relations with
+   * Create a CTE that collects OIDs of regular user tables and matviews,
+   * but excluding toast tables and indexes.  We assume that relations with
    * OIDs >= FirstNormalObjectId belong to the user.  (That's probably
    * redundant with the namespace-name exclusions, but let's be safe.)
    *
@@ -364,16 +412,33 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
    * output, so we have to copy that system table.  It's easiest to do that
    * by treating it as a user table.
    */
-  snprintf(query + strlen(query), sizeof(query) - strlen(query),"WITH regular_heap (reloid, indtable, toastheap) AS (   SELECT c.oid, 0::oid, 0::oid   FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n          ON c.relnamespace = n.oid   WHERE relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_MATVIEW) ") AND "
+  snprintf(query + strlen(query), sizeof(query) - strlen(query),
+      "WITH regular_heap (reloid, indtable, toastheap) AS ( "
+      "  SELECT c.oid, 0::oid, 0::oid "
+      "  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
+      "         ON c.relnamespace = n.oid "
+      "  WHERE relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_MATVIEW) ") AND "
                                                                                                /* exclude possible orphaned temp tables */
-                                                                                               "    ((n.nspname !~ '^pg_temp_' AND       n.nspname !~ '^pg_toast_temp_' AND       n.nspname NOT IN ('pg_catalog', 'information_schema',                         'binary_upgrade', 'pg_toast') AND       c.oid >= %u::pg_catalog.oid) OR      (n.nspname = 'pg_catalog' AND       relname IN ('pg_largeobject') ))), ",FirstNormalObjectId);
+                                                                                               "    ((n.nspname !~ '^pg_temp_' AND "
+                                                                                               "      n.nspname !~ '^pg_toast_temp_' AND "
+                                                                                               "      n.nspname NOT IN ('pg_catalog', 'information_schema', "
+                                                                                               "                        'binary_upgrade', 'pg_toast') AND "
+                                                                                               "      c.oid >= %u::pg_catalog.oid) OR "
+                                                                                               "     (n.nspname = 'pg_catalog' AND "
+                                                                                               "      relname IN ('pg_largeobject') ))), ",
+      FirstNormalObjectId);
 
   /*
    * Add a CTE that collects OIDs of toast tables belonging to the tables
    * selected by the regular_heap CTE.  (We have to do this separately
    * because the namespace-name rules above don't work for toast tables.)
    */
-  snprintf(query + strlen(query), sizeof(query) - strlen(query),"  toast_heap (reloid, indtable, toastheap) AS (   SELECT c.reltoastrelid, 0::oid, c.oid   FROM regular_heap JOIN pg_catalog.pg_class c       ON regular_heap.reloid = c.oid   WHERE c.reltoastrelid != 0), ");
+  snprintf(query + strlen(query), sizeof(query) - strlen(query),
+      "  toast_heap (reloid, indtable, toastheap) AS ( "
+      "  SELECT c.reltoastrelid, 0::oid, c.oid "
+      "  FROM regular_heap JOIN pg_catalog.pg_class c "
+      "      ON regular_heap.reloid = c.oid "
+      "  WHERE c.reltoastrelid != 0), ");
 
   /*
    * Add a CTE that collects OIDs of all valid indexes on the previously
@@ -381,13 +446,36 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
    * Testing indisready is necessary in 9.2, and harmless in earlier/later
    * versions.
    */
-  snprintf(query + strlen(query), sizeof(query) - strlen(query),"  all_index (reloid, indtable, toastheap) AS (   SELECT indexrelid, indrelid, 0::oid   FROM pg_catalog.pg_index   WHERE indisvalid AND indisready     AND indrelid IN         (SELECT reloid FROM regular_heap          UNION ALL          SELECT reloid FROM toast_heap)) ");
+  snprintf(query + strlen(query), sizeof(query) - strlen(query),
+      "  all_index (reloid, indtable, toastheap) AS ( "
+      "  SELECT indexrelid, indrelid, 0::oid "
+      "  FROM pg_catalog.pg_index "
+      "  WHERE indisvalid AND indisready "
+      "    AND indrelid IN "
+      "        (SELECT reloid FROM regular_heap "
+      "         UNION ALL "
+      "         SELECT reloid FROM toast_heap)) ");
 
   /*
    * And now we can write the query that retrieves the data we want for each
    * heap and index relation.  Make sure result is sorted by OID.
    */
-  snprintf(query + strlen(query), sizeof(query) - strlen(query),"SELECT all_rels.*, n.nspname, c.relname,   c.relfilenode, c.reltablespace, %s FROM (SELECT * FROM regular_heap       UNION ALL       SELECT * FROM toast_heap       UNION ALL       SELECT * FROM all_index) all_rels   JOIN pg_catalog.pg_class c       ON all_rels.reloid = c.oid   JOIN pg_catalog.pg_namespace n      ON c.relnamespace = n.oid   LEFT OUTER JOIN pg_catalog.pg_tablespace t      ON c.reltablespace = t.oid ORDER BY 1;",/* 9.2 removed the pg_tablespace.spclocation column */
+  snprintf(query + strlen(query), sizeof(query) - strlen(query),
+      "SELECT all_rels.*, n.nspname, c.relname, "
+      "  c.relfilenode, c.reltablespace, %s "
+      "FROM (SELECT * FROM regular_heap "
+      "      UNION ALL "
+      "      SELECT * FROM toast_heap "
+      "      UNION ALL "
+      "      SELECT * FROM all_index) all_rels "
+      "  JOIN pg_catalog.pg_class c "
+      "      ON all_rels.reloid = c.oid "
+      "  JOIN pg_catalog.pg_namespace n "
+      "     ON c.relnamespace = n.oid "
+      "  LEFT OUTER JOIN pg_catalog.pg_tablespace t "
+      "     ON c.reltablespace = t.oid "
+      "ORDER BY 1;",
+      /* 9.2 removed the pg_tablespace.spclocation column */
       (GET_MAJOR_VERSION(cluster->major_version) >= 902) ? "pg_catalog.pg_tablespace_location(t.oid) AS spclocation" : "t.spclocation");
 
   res = executeQueryOrDie(conn, "%s", query);
@@ -405,7 +493,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
   i_reltablespace = PQfnumber(res, "reltablespace");
   i_spclocation = PQfnumber(res, "spclocation");
 
-  for (relnum = 0; relnum < ntups; relnum++) {
+  for (relnum = 0; relnum < ntups; relnum++)
+  {
     RelInfo *curr = &relinfos[num_rels++];
 
     curr->reloid = atooid(PQgetvalue(res, relnum, i_reloid));
@@ -421,9 +510,12 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
      * memory consumption.
      */
     /* Can we reuse the previous string allocation? */
-    if (last_namespace && strcmp(nspname, last_namespace) == 0) {
+    if (last_namespace && strcmp(nspname, last_namespace) == 0)
+    {
       curr->nspname = last_namespace;
-    } else {
+    }
+    else
+    {
       last_namespace = curr->nspname = pg_strdup(nspname);
       curr->nsp_alloc = true;
     }
@@ -435,7 +527,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
     curr->tblsp_alloc = false;
 
     /* Is the tablespace oid non-default? */
-    if (atooid(PQgetvalue(res, relnum, i_reltablespace)) != 0) {
+    if (atooid(PQgetvalue(res, relnum, i_reltablespace)) != 0)
+    {
       /*
        * The tablespace location might be "", meaning the cluster
        * default location, i.e. pg_default or pg_global.
@@ -443,13 +536,18 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
       tablespace = PQgetvalue(res, relnum, i_spclocation);
 
       /* Can we reuse the previous string allocation? */
-      if (last_tablespace && strcmp(tablespace, last_tablespace) == 0) {
+      if (last_tablespace && strcmp(tablespace, last_tablespace) == 0)
+      {
         curr->tablespace = last_tablespace;
-      } else {
+      }
+      else
+      {
         last_tablespace = curr->tablespace = pg_strdup(tablespace);
         curr->tblsp_alloc = true;
       }
-    } else {
+    }
+    else
+    {
       /* A zero reltablespace oid indicates the database tablespace. */
       curr->tablespace = dbinfo->db_tablespace;
     }
@@ -467,7 +565,8 @@ free_db_and_rel_infos(DbInfoArr *db_arr)
 {
   int dbnum;
 
-  for (dbnum = 0; dbnum < db_arr->ndbs; dbnum++) {
+  for (dbnum = 0; dbnum < db_arr->ndbs; dbnum++)
+  {
     free_rel_infos(&db_arr->dbs[dbnum].rel_arr);
     pg_free(db_arr->dbs[dbnum].db_name);
   }
@@ -481,12 +580,15 @@ free_rel_infos(RelInfoArr *rel_arr)
 {
   int relnum;
 
-  for (relnum = 0; relnum < rel_arr->nrels; relnum++) {
-    if (rel_arr->rels[relnum].nsp_alloc) {
+  for (relnum = 0; relnum < rel_arr->nrels; relnum++)
+  {
+    if (rel_arr->rels[relnum].nsp_alloc)
+    {
       pg_free(rel_arr->rels[relnum].nspname);
     }
     pg_free(rel_arr->rels[relnum].relname);
-    if (rel_arr->rels[relnum].tblsp_alloc) {
+    if (rel_arr->rels[relnum].tblsp_alloc)
+    {
       pg_free(rel_arr->rels[relnum].tablespace);
     }
   }
@@ -499,7 +601,8 @@ print_db_infos(DbInfoArr *db_arr)
 {
   int dbnum;
 
-  for (dbnum = 0; dbnum < db_arr->ndbs; dbnum++) {
+  for (dbnum = 0; dbnum < db_arr->ndbs; dbnum++)
+  {
     pg_log(PG_VERBOSE, "Database: %s\n", db_arr->dbs[dbnum].db_name);
     print_rel_infos(&db_arr->dbs[dbnum].rel_arr);
     pg_log(PG_VERBOSE, "\n\n");
@@ -511,7 +614,8 @@ print_rel_infos(RelInfoArr *rel_arr)
 {
   int relnum;
 
-  for (relnum = 0; relnum < rel_arr->nrels; relnum++) {
+  for (relnum = 0; relnum < rel_arr->nrels; relnum++)
+  {
     pg_log(PG_VERBOSE, "relname: %s.%s: reloid: %u reltblspace: %s\n", rel_arr->rels[relnum].nspname, rel_arr->rels[relnum].relname, rel_arr->rels[relnum].reloid, rel_arr->rels[relnum].tablespace);
   }
 }

@@ -227,7 +227,7 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
   if (planner_hook)
   {
-
+    result = (*planner_hook)(parse, cursorOptions, boundParams);
   }
   else
   {
@@ -346,11 +346,11 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
      */
     if (tuple_fraction >= 1.0)
     {
-
+      tuple_fraction = 0.0;
     }
     else if (tuple_fraction <= 0.0)
     {
-
+      tuple_fraction = 1e-10;
     }
   }
   else
@@ -669,7 +669,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse, PlannerInfo *parent_root, bo
 
     switch (rte->rtekind)
     {
-    case RTE_RELATION:;
+    case RTE_RELATION:
       if (rte->inh)
       {
         /*
@@ -686,17 +686,17 @@ subquery_planner(PlannerGlobal *glob, Query *parse, PlannerInfo *parent_root, bo
         rte->inh = has_subclass(rte->relid);
       }
       break;
-    case RTE_JOIN:;
+    case RTE_JOIN:
       root->hasJoinRTEs = true;
       if (IS_OUTER_JOIN(rte->jointype))
       {
         hasOuterJoins = true;
       }
       break;
-    case RTE_RESULT:;
+    case RTE_RESULT:
       hasResultRTEs = true;
       break;
-    default:;;
+    default:
       /* No work here for other RTE types */
       break;
     }
@@ -1090,7 +1090,7 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
 {
   if (jtnode == NULL)
   {
-
+    return;
   }
   if (IsA(jtnode, RangeTblRef))
   {
@@ -1119,7 +1119,7 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(jtnode));
   }
 }
 
@@ -1701,7 +1701,7 @@ inheritance_planner(PlannerInfo *root)
     resultRelations = list_make1_int(parse->resultRelation);
     if (parse->withCheckOptions)
     {
-
+      withCheckOptionLists = list_make1(parse->withCheckOptions);
     }
     if (parse->returningList)
     {
@@ -1743,7 +1743,7 @@ inheritance_planner(PlannerInfo *root)
    */
   if (parse->rowMarks)
   {
-
+    rowMarks = NIL;
   }
   else
   {
@@ -1868,7 +1868,10 @@ grouping_planner(PlannerInfo *root, bool inheritance_update, double tuple_fracti
      */
     if (parse->rowMarks)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                         /*------
+                           translator: %s is a SQL row locking clause such as FOR UPDATE */
+                         errmsg("%s is not allowed with UNION/INTERSECT/EXCEPT", LCS_asString(linitial_node(RowMarkClause, parse->rowMarks)->strength))));
     }
 
     /*
@@ -2279,7 +2282,7 @@ grouping_planner(PlannerInfo *root, bool inheritance_update, double tuple_fracti
        */
       if (parse->rowMarks)
       {
-
+        rowMarks = NIL;
       }
       else
       {
@@ -2319,13 +2322,13 @@ grouping_planner(PlannerInfo *root, bool inheritance_update, double tuple_fracti
    */
   if (final_rel->fdwroutine && final_rel->fdwroutine->GetForeignUpperPaths)
   {
-
+    final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL, current_rel, final_rel, &extra);
   }
 
   /* Let extensions possibly add some more paths */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_FINAL, current_rel, final_rel, &extra);
   }
 
   /* Note: currently, we leave it to callers to do set_cheapest() */
@@ -2685,19 +2688,19 @@ select_rowmark_type(RangeTblEntry *rte, LockClauseStrength strength)
     /* Let the FDW select the rowmark type, if it wants to */
     FdwRoutine *fdwroutine = GetFdwRoutineByRelId(rte->relid);
 
-
-
-
-
+    if (fdwroutine->GetForeignRowMarkType != NULL)
+    {
+      return fdwroutine->GetForeignRowMarkType(rte, strength);
+    }
     /* Otherwise, use ROW_MARK_COPY by default */
-
+    return ROW_MARK_COPY;
   }
   else
   {
     /* Regular table, apply the appropriate lock type */
     switch (strength)
     {
-    case LCS_NONE:;
+    case LCS_NONE:
 
       /*
        * We don't need a tuple lock, only the ability to re-fetch
@@ -2705,21 +2708,21 @@ select_rowmark_type(RangeTblEntry *rte, LockClauseStrength strength)
        */
       return ROW_MARK_REFERENCE;
       break;
-    case LCS_FORKEYSHARE:;
+    case LCS_FORKEYSHARE:
       return ROW_MARK_KEYSHARE;
       break;
-    case LCS_FORSHARE:;
+    case LCS_FORSHARE:
       return ROW_MARK_SHARE;
       break;
-    case LCS_FORNOKEYUPDATE:;
-
+    case LCS_FORNOKEYUPDATE:
+      return ROW_MARK_NOKEYEXCLUSIVE;
       break;
-    case LCS_FORUPDATE:;
+    case LCS_FORUPDATE:
       return ROW_MARK_EXCLUSIVE;
       break;
     }
-
-
+    elog(ERROR, "unrecognized LockClauseStrength %d", (int)strength);
+    return ROW_MARK_EXCLUSIVE; /* keep compiler quiet */
   }
 }
 
@@ -2762,7 +2765,7 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
       if (((Const *)est)->constisnull)
       {
         /* NULL indicates LIMIT ALL, ie, no limit */
-
+        *count_est = 0; /* treat as not present */
       }
       else
       {
@@ -2791,14 +2794,14 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
       if (((Const *)est)->constisnull)
       {
         /* Treat NULL as no offset; the executor will too */
-
+        *offset_est = 0; /* treat as not present */
       }
       else
       {
         *offset_est = DatumGetInt64(((Const *)est)->constvalue);
         if (*offset_est < 0)
         {
-
+          *offset_est = 0; /* treat as not present */
         }
       }
     }
@@ -2859,7 +2862,7 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
       else
       {
         /* both fractional */
-
+        tuple_fraction = Min(tuple_fraction, limit_fraction);
       }
     }
     else
@@ -2881,7 +2884,7 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
      */
     if (*offset_est < 0)
     {
-
+      limit_fraction = 0.10;
     }
     else
     {
@@ -2896,16 +2899,16 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
      */
     if (tuple_fraction >= 1.0)
     {
-
-
-
-
-
-
-
-
-
-
+      if (limit_fraction >= 1.0)
+      {
+        /* both absolute, so add them together */
+        tuple_fraction += limit_fraction;
+      }
+      else
+      {
+        /* caller absolute, limit fractional; use limit */
+        tuple_fraction = limit_fraction;
+      }
     }
     else
     {
@@ -2916,11 +2919,11 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction, int64 *offset_est, in
       else
       {
         /* both fractional, so add them together */
-
-
-
-
-
+        tuple_fraction += limit_fraction;
+        if (tuple_fraction >= 1.0)
+        {
+          tuple_fraction = 0.0; /* assume fetch all */
+        }
       }
     }
   }
@@ -2991,8 +2994,8 @@ limit_needed(Query *parse)
 
 /*
  * remove_useless_groupby_columns
- *		Remove any columns in the GROUP BY clause that are redundant due
- *to being functionally dependent on other GROUP BY columns.
+ *		Remove any columns in the GROUP BY clause that are redundant due to
+ *		being functionally dependent on other GROUP BY columns.
  *
  * Since some other DBMSes do not allow references to ungrouped columns, it's
  * not unusual to find all columns listed in GROUP BY even though listing the
@@ -3267,7 +3270,7 @@ preprocess_groupclause(PlannerInfo *root, List *force)
     }
     if (!OidIsValid(gc->sortop))
     {
-
+      return parse->groupClause; /* give up, GROUP BY can't be sorted */
     }
     new_groupclause = lappend(new_groupclause, gc);
   }
@@ -3453,7 +3456,7 @@ extract_rollup_sets(List *groupingSets)
 
     if (u > 0 && u < i)
     {
-
+      chains[i] = chains[u];
     }
     else if (v > 0 && v < i)
     {
@@ -3759,7 +3762,7 @@ get_number_of_groups(PlannerInfo *root, double path_rows, grouping_sets_data *gd
   else
   {
     /* Not grouping */
-
+    dNumGroups = 1;
   }
 
   return dNumGroups;
@@ -3984,12 +3987,12 @@ create_degenerate_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel, RelOp
      */
     List *paths = NIL;
 
-
-
-
-
-
-
+    while (--nrows >= 0)
+    {
+      path = (Path *)create_group_result_path(root, grouped_rel, grouped_rel->reltarget, (List *)parse->havingQual);
+      paths = lappend(paths, path);
+    }
+    path = (Path *)create_append_path(root, grouped_rel, paths, NIL, NIL, NULL, 0, false, NIL, -1);
   }
   else
   {
@@ -4120,13 +4123,13 @@ create_ordinary_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel, RelOptI
    */
   if (grouped_rel->fdwroutine && grouped_rel->fdwroutine->GetForeignUpperPaths)
   {
-
+    grouped_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_GROUP_AGG, input_rel, grouped_rel, extra);
   }
 
   /* Let extensions possibly add some more paths */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_GROUP_AGG, input_rel, grouped_rel, extra);
   }
 }
 
@@ -4268,7 +4271,7 @@ consider_groupingsets_paths(PlannerInfo *root, RelOptInfo *grouped_rel, Path *pa
      */
     if (new_rollups == NIL)
     {
-
+      return;
     }
 
     /*
@@ -4305,7 +4308,7 @@ consider_groupingsets_paths(PlannerInfo *root, RelOptInfo *grouped_rel, Path *pa
    */
   if (list_length(gd->rollups) == 0)
   {
-
+    return;
   }
 
   /*
@@ -4420,7 +4423,7 @@ consider_groupingsets_paths(PlannerInfo *root, RelOptInfo *grouped_rel, Path *pa
           }
           else
           {
-
+            rollups = lappend(rollups, rollup);
           }
         }
       }
@@ -4491,7 +4494,7 @@ create_window_paths(PlannerInfo *root, RelOptInfo *input_rel, PathTarget *input_
    */
   if (input_rel->consider_parallel && output_target_parallel_safe && is_parallel_safe(root, (Node *)activeWindows))
   {
-
+    window_rel->consider_parallel = true;
   }
 
   /*
@@ -4523,13 +4526,13 @@ create_window_paths(PlannerInfo *root, RelOptInfo *input_rel, PathTarget *input_
    */
   if (window_rel->fdwroutine && window_rel->fdwroutine->GetForeignUpperPaths)
   {
-
+    window_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_WINDOW, input_rel, window_rel, NULL);
   }
 
   /* Let extensions possibly add some more paths */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_WINDOW, input_rel, window_rel, NULL);
   }
 
   /* Now choose the best path(s) */
@@ -4782,7 +4785,7 @@ create_distinct_paths(PlannerInfo *root, RelOptInfo *input_rel)
   /* Give a helpful error if we failed to find any implementation */
   if (distinct_rel->pathlist == NIL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not implement DISTINCT"), errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
   }
 
   /*
@@ -4791,13 +4794,13 @@ create_distinct_paths(PlannerInfo *root, RelOptInfo *input_rel)
    */
   if (distinct_rel->fdwroutine && distinct_rel->fdwroutine->GetForeignUpperPaths)
   {
-
+    distinct_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_DISTINCT, input_rel, distinct_rel, NULL);
   }
 
   /* Let extensions possibly add some more paths */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_DISTINCT, input_rel, distinct_rel, NULL);
   }
 
   /* Now choose the best path(s) */
@@ -4918,13 +4921,13 @@ create_ordered_paths(PlannerInfo *root, RelOptInfo *input_rel, PathTarget *targe
    */
   if (ordered_rel->fdwroutine && ordered_rel->fdwroutine->GetForeignUpperPaths)
   {
-
+    ordered_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_ORDERED, input_rel, ordered_rel, NULL);
   }
 
   /* Let extensions possibly add some more paths */
   if (create_upper_paths_hook)
   {
-
+    (*create_upper_paths_hook)(root, UPPERREL_ORDERED, input_rel, ordered_rel, NULL);
   }
 
   /*
@@ -5206,24 +5209,24 @@ postprocess_setop_tlist(List *new_tlist, List *orig_tlist)
     Assert(orig_tlist_item != NULL);
     orig_tle = lfirst_node(TargetEntry, orig_tlist_item);
     orig_tlist_item = lnext(orig_tlist_item);
-    if (orig_tle->resjunk)
-    { /* should not happen */
-
+    if (orig_tle->resjunk) /* should not happen */
+    {
+      elog(ERROR, "resjunk output columns are not implemented");
     }
     Assert(new_tle->resno == orig_tle->resno);
     new_tle->ressortgroupref = orig_tle->ressortgroupref;
   }
   if (orig_tlist_item != NULL)
   {
-
+    elog(ERROR, "resjunk output columns are not implemented");
   }
   return new_tlist;
 }
 
 /*
  * select_active_windows
- *		Create a list of the "active" window clauses (ie, those
- *referenced by non-deleted WindowFuncs) in the order they are to be executed.
+ *		Create a list of the "active" window clauses (ie, those referenced
+ *		by non-deleted WindowFuncs) in the order they are to be executed.
  */
 static List *
 select_active_windows(PlannerInfo *root, WindowFuncLists *wflists)
@@ -5321,7 +5324,7 @@ common_prefix_cmp(const void *a, const void *b)
 
     if (sca->tleSortGroupRef > scb->tleSortGroupRef)
     {
-
+      return -1;
     }
     else if (sca->tleSortGroupRef < scb->tleSortGroupRef)
     {
@@ -5329,7 +5332,7 @@ common_prefix_cmp(const void *a, const void *b)
     }
     else if (sca->sortop > scb->sortop)
     {
-
+      return -1;
     }
     else if (sca->sortop < scb->sortop)
     {
@@ -5337,11 +5340,11 @@ common_prefix_cmp(const void *a, const void *b)
     }
     else if (sca->nulls_first && !scb->nulls_first)
     {
-
+      return -1;
     }
     else if (!sca->nulls_first && scb->nulls_first)
     {
-
+      return 1;
     }
     /* no need to compare eqop, since it is fully determined by sortop */
   }
@@ -5513,11 +5516,11 @@ make_pathkeys_for_window(PlannerInfo *root, WindowClause *wc, List *tlist)
   /* Throw error if can't sort */
   if (!grouping_is_sortable(wc->partitionClause))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not implement window PARTITION BY"), errdetail("Window partitioning columns must be of sortable datatypes.")));
   }
   if (!grouping_is_sortable(wc->orderClause))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("could not implement window ORDER BY"), errdetail("Window ordering columns must be of sortable datatypes.")));
   }
 
   /* Okay, make the combined pathkeys */
@@ -5942,8 +5945,7 @@ expression_planner(Expr *expr)
 /*
  * expression_planner_with_deps
  *		Perform planner's transformations on a standalone expression,
- *		returning expression dependency information along with the
- *result.
+ *		returning expression dependency information along with the result.
  *
  * This is identical to expression_planner() except that it also returns
  * information about possible dependencies of the expression, ie identities of
@@ -6070,9 +6072,9 @@ plan_cluster_use_sort(Oid tableOid, Oid indexOid)
    * ignoring system indexes.  In such cases we should tell CLUSTER to not
    * trust the index contents but use seqscan-and-sort.
    */
-  if (lc == NULL)
-  {              /* not in the list? */
-
+  if (lc == NULL) /* not in the list? */
+  {
+    return true; /* use sort */
   }
 
   /*
@@ -6237,7 +6239,7 @@ plan_create_index_workers(Oid tableOid, Oid indexOid)
     parallel_workers--;
   }
 
-done:;
+done:
   index_close(index, NoLock);
   table_close(heap, NoLock);
 
@@ -6304,7 +6306,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel, RelOptInfo *
         else
         {
           /* Other cases should have been handled above */
-
+          Assert(false);
         }
       }
     }
@@ -6626,7 +6628,7 @@ create_partial_grouping_paths(PlannerInfo *root, RelOptInfo *grouped_rel, RelOpt
   {
     FdwRoutine *fdwroutine = partially_grouped_rel->fdwroutine;
 
-
+    fdwroutine->GetForeignUpperPaths(root, UPPERREL_PARTIAL_GROUP_AGG, input_rel, partially_grouped_rel, extra);
   }
 
   return partially_grouped_rel;
@@ -6685,7 +6687,7 @@ can_partial_agg(PlannerInfo *root, const AggClauseCosts *agg_costs)
      * We don't know how to do parallel aggregation unless we have either
      * some aggregates or a grouping clause.
      */
-
+    return false;
   }
   else if (parse->groupingSets)
   {
@@ -6971,7 +6973,7 @@ create_partitionwise_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel, Re
     /* Pruned or dummy children can be ignored. */
     if (child_input_rel == NULL || IS_DUMMY_REL(child_input_rel))
     {
-
+      continue;
     }
 
     /*
@@ -7075,7 +7077,7 @@ group_by_has_partkey(RelOptInfo *input_rel, List *targetList, List *groupClause)
   /* Rule out early, if there are no partition keys present. */
   if (!input_rel->partexprs)
   {
-
+    return false;
   }
 
   partnatts = input_rel->part_scheme->partnatts;

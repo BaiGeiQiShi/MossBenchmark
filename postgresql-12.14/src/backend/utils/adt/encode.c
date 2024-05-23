@@ -49,7 +49,7 @@ binary_encode(PG_FUNCTION_ARGS)
   enc = pg_find_encoding(namebuf);
   if (enc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized encoding: \"%s\"", namebuf)));
   }
 
   resultlen = enc->encode_len(VARDATA_ANY(data), datalen);
@@ -60,7 +60,7 @@ binary_encode(PG_FUNCTION_ARGS)
   /* Make this FATAL 'cause we've trodden on memory ... */
   if (res > resultlen)
   {
-
+    elog(FATAL, "overflow - encode estimate too small");
   }
 
   SET_VARSIZE(result, VARHDRSZ + res);
@@ -85,7 +85,7 @@ binary_decode(PG_FUNCTION_ARGS)
   enc = pg_find_encoding(namebuf);
   if (enc == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized encoding: \"%s\"", namebuf)));
   }
 
   resultlen = enc->decode_len(VARDATA_ANY(data), datalen);
@@ -96,7 +96,7 @@ binary_decode(PG_FUNCTION_ARGS)
   /* Make this FATAL 'cause we've trodden on memory ... */
   if (res > resultlen)
   {
-
+    elog(FATAL, "overflow - decode estimate too small");
   }
 
   SET_VARSIZE(result, VARHDRSZ + res);
@@ -524,14 +524,14 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
         {
           end = 1;
         }
-
-
-
-
-
-
-
-
+        else if (pos == 3)
+        {
+          end = 2;
+        }
+        else
+        {
+          ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unexpected \"=\" while decoding base64 sequence")));
+        }
       }
       b = 0;
     }
@@ -544,7 +544,7 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
       }
       if (b < 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid symbol \"%c\" while decoding base64 sequence", (int)c)));
       }
     }
     /* add it to buffer */
@@ -568,7 +568,7 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
 
   if (pos != 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid base64 end sequence"), errhint("Input data is missing padding, is truncated, or is otherwise corrupted.")));
   }
 
   return p - dst;
@@ -626,10 +626,10 @@ esc_encode(const char *src, unsigned srclen, char *dst)
     }
     else if (c == '\\')
     {
-
-
-
-
+      rp[0] = '\\';
+      rp[1] = '\\';
+      rp += 2;
+      len += 2;
     }
     else
     {
@@ -667,19 +667,19 @@ esc_decode(const char *src, unsigned srclen, char *dst)
       *rp++ = val + VAL(src[3]);
       src += 4;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (src + 1 < end && (src[1] == '\\'))
+    {
+      *rp++ = '\\';
+      src += 2;
+    }
+    else
+    {
+      /*
+       * One backslash, not followed by ### valid octal. Should never
+       * get here, since esc_dec_len does same check.
+       */
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "bytea")));
+    }
 
     len++;
   }
@@ -701,7 +701,7 @@ esc_enc_len(const char *src, unsigned srclen)
     }
     else if (*src == '\\')
     {
-
+      len += 2;
     }
     else
     {
@@ -733,20 +733,20 @@ esc_dec_len(const char *src, unsigned srclen)
        */
       src += 4;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (src + 1 < end && (src[1] == '\\'))
+    {
+      /*
+       * two backslashes = backslash
+       */
+      src += 2;
+    }
+    else
+    {
+      /*
+       * one backslash, not followed by ### valid octal
+       */
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "bytea")));
+    }
 
     len++;
   }

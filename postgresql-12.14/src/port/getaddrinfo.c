@@ -35,7 +35,8 @@
 
 #ifdef WIN32
 /*
- * The native routines may or may not exist on the Windows platform we are on,* so we dynamically look up the routines, and call them via function pointers.
+ * The native routines may or may not exist on the Windows platform we are on,
+ * so we dynamically look up the routines, and call them via function pointers.
  * Here we need to declare what the function pointers look like
  */
 typedef int(__stdcall *getaddrinfo_ptr_t)(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
@@ -55,7 +56,8 @@ haveNativeWindowsIPv6routines(void)
   void *hLibrary = NULL;
   static bool alreadyLookedForIpv6routines = false;
 
-  if (alreadyLookedForIpv6routines) {
+  if (alreadyLookedForIpv6routines)
+  {
     return (getaddrinfo_ptr != NULL);
   }
 
@@ -66,12 +68,14 @@ haveNativeWindowsIPv6routines(void)
 
   hLibrary = LoadLibraryA("ws2_32");
 
-  if (hLibrary == NULL || GetProcAddress(hLibrary, "getaddrinfo") == NULL) {
+  if (hLibrary == NULL || GetProcAddress(hLibrary, "getaddrinfo") == NULL)
+  {
     /*
      * Well, ws2_32 doesn't exist, or more likely doesn't have
      * getaddrinfo.
      */
-    if (hLibrary != NULL) {
+    if (hLibrary != NULL)
+    {
       FreeLibrary(hLibrary);
     }
 
@@ -84,7 +88,8 @@ haveNativeWindowsIPv6routines(void)
   }
 
   /* If hLibrary is null, we couldn't find a dll with functions */
-  if (hLibrary != NULL) {
+  if (hLibrary != NULL)
+  {
     /* We found a dll, so now get the addresses of the routines */
 
     getaddrinfo_ptr = (getaddrinfo_ptr_t)GetProcAddress(hLibrary, "getaddrinfo");
@@ -95,7 +100,8 @@ haveNativeWindowsIPv6routines(void)
      * If any one of the routines is missing, let's play it safe and
      * ignore them all
      */
-    if (getaddrinfo_ptr == NULL || freeaddrinfo_ptr == NULL || getnameinfo_ptr == NULL) {
+    if (getaddrinfo_ptr == NULL || freeaddrinfo_ptr == NULL || getnameinfo_ptr == NULL)
+    {
       FreeLibrary(hLibrary);
       hLibrary = NULL;
       getaddrinfo_ptr = NULL;
@@ -130,28 +136,35 @@ getaddrinfo(const char *node, const char *service, const struct addrinfo *hintp,
    * If Windows has native IPv6 support, use the native Windows routine.
    * Otherwise, fall through and use our own code.
    */
-  if (haveNativeWindowsIPv6routines()) {
+  if (haveNativeWindowsIPv6routines())
+  {
     return (*getaddrinfo_ptr)(node, service, hintp, res);
   }
 #endif
 
-  if (hintp == NULL) {
+  if (hintp == NULL)
+  {
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-  } else {
+  }
+  else
+  {
     memcpy(&hints, hintp, sizeof(hints));
   }
 
-  if (hints.ai_family != AF_INET && hints.ai_family != AF_UNSPEC) {
+  if (hints.ai_family != AF_INET && hints.ai_family != AF_UNSPEC)
+  {
     return EAI_FAMILY;
   }
 
-  if (hints.ai_socktype == 0) {
+  if (hints.ai_socktype == 0)
+  {
     hints.ai_socktype = SOCK_STREAM;
   }
 
-  if (!node && !service) {
+  if (!node && !service)
+  {
     return EAI_NONAME;
   }
 
@@ -159,14 +172,21 @@ getaddrinfo(const char *node, const char *service, const struct addrinfo *hintp,
 
   sin.sin_family = AF_INET;
 
-  if (node) {
-    if (node[0] == '\0') {
+  if (node)
+  {
+    if (node[0] == '\0')
+    {
       sin.sin_addr.s_addr = pg_hton32(INADDR_ANY);
-    } else if (hints.ai_flags & AI_NUMERICHOST) {
-      if (!inet_aton(node, &sin.sin_addr)) {
+    }
+    else if (hints.ai_flags & AI_NUMERICHOST)
+    {
+      if (!inet_aton(node, &sin.sin_addr))
+      {
         return EAI_NONAME;
       }
-    } else {
+    }
+    else
+    {
       struct hostent *hp;
 
 #ifdef FRONTEND
@@ -178,33 +198,42 @@ getaddrinfo(const char *node, const char *service, const struct addrinfo *hintp,
 #else
       hp = gethostbyname(node);
 #endif
-      if (hp == NULL) {
-        switch (h_errno) {
+      if (hp == NULL)
+      {
+        switch (h_errno)
+        {
         case HOST_NOT_FOUND:
         case NO_DATA:
           return EAI_NONAME;
         case TRY_AGAIN:
           return EAI_AGAIN;
         case NO_RECOVERY:
-        default:;
+        default:
           return EAI_FAIL;
         }
       }
-      if (hp->h_addrtype != AF_INET) {
+      if (hp->h_addrtype != AF_INET)
+      {
         return EAI_FAIL;
       }
 
       memcpy(&(sin.sin_addr), hp->h_addr, hp->h_length);
     }
-  } else {
-    if (hints.ai_flags & AI_PASSIVE) {
+  }
+  else
+  {
+    if (hints.ai_flags & AI_PASSIVE)
+    {
       sin.sin_addr.s_addr = pg_hton32(INADDR_ANY);
-    } else {
+    }
+    else
+    {
       sin.sin_addr.s_addr = pg_hton32(INADDR_LOOPBACK);
     }
   }
 
-  if (service) {
+  if (service)
+  {
     sin.sin_port = pg_hton16((unsigned short)atoi(service));
   }
 
@@ -213,12 +242,14 @@ getaddrinfo(const char *node, const char *service, const struct addrinfo *hintp,
 #endif
 
   ai = malloc(sizeof(*ai));
-  if (!ai) {
+  if (!ai)
+  {
     return EAI_MEMORY;
   }
 
   psin = malloc(sizeof(*psin));
-  if (!psin) {
+  if (!psin)
+  {
     free(ai);
     return EAI_MEMORY;
   }
@@ -242,20 +273,23 @@ getaddrinfo(const char *node, const char *service, const struct addrinfo *hintp,
 void
 freeaddrinfo(struct addrinfo *res)
 {
-  if (res) {
+  if (res)
+  {
 #ifdef WIN32
 
     /*
      * If Windows has native IPv6 support, use the native Windows routine.
      * Otherwise, fall through and use our own code.
      */
-    if (haveNativeWindowsIPv6routines()) {
+    if (haveNativeWindowsIPv6routines())
+    {
       (*freeaddrinfo_ptr)(res);
       return;
     }
 #endif
 
-    if (res->ai_addr) {
+    if (res->ai_addr)
+    {
       free(res->ai_addr);
     }
     free(res);
@@ -268,7 +302,8 @@ gai_strerror(int errcode)
 #ifdef HAVE_HSTRERROR
   int hcode;
 
-  switch (errcode) {
+  switch (errcode)
+  {
   case EAI_NONAME:
     hcode = HOST_NOT_FOUND;
     break;
@@ -276,7 +311,7 @@ gai_strerror(int errcode)
     hcode = TRY_AGAIN;
     break;
   case EAI_FAIL:
-  default:;
+  default:
     hcode = NO_RECOVERY;
     break;
   }
@@ -284,7 +319,8 @@ gai_strerror(int errcode)
   return hstrerror(hcode);
 #else /* !HAVE_HSTRERROR */
 
-  switch (errcode) {
+  switch (errcode)
+  {
   case EAI_NONAME:
     return "Unknown host";
   case EAI_AGAIN:
@@ -314,7 +350,7 @@ gai_strerror(int errcode)
   case EAI_SOCKTYPE:
     return "Socket type not supported";
 #endif
-  default:;
+  default:
     return "Unknown server error";
   }
 #endif /* HAVE_HSTRERROR */
@@ -336,44 +372,56 @@ getnameinfo(const struct sockaddr *sa, int salen, char *node, int nodelen, char 
    * If Windows has native IPv6 support, use the native Windows routine.
    * Otherwise, fall through and use our own code.
    */
-  if (haveNativeWindowsIPv6routines()) {
+  if (haveNativeWindowsIPv6routines())
+  {
     return (*getnameinfo_ptr)(sa, salen, node, nodelen, service, servicelen, flags);
   }
 #endif
 
   /* Invalid arguments. */
-  if (sa == NULL || (node == NULL && service == NULL)) {
+  if (sa == NULL || (node == NULL && service == NULL))
+  {
     return EAI_FAIL;
   }
 
 #ifdef HAVE_IPV6
-  if (sa->sa_family == AF_INET6) {
+  if (sa->sa_family == AF_INET6)
+  {
     return EAI_FAMILY;
   }
 #endif
 
   /* Unsupported flags. */
-  if (flags & NI_NAMEREQD) {
+  if (flags & NI_NAMEREQD)
+  {
     return EAI_AGAIN;
   }
 
-  if (node) {
-    if (sa->sa_family == AF_INET) {
-      if (inet_net_ntop(AF_INET, &((struct sockaddr_in *)sa)->sin_addr, sa->sa_family == AF_INET ? 32 : 128, node, nodelen) == NULL) {
+  if (node)
+  {
+    if (sa->sa_family == AF_INET)
+    {
+      if (inet_net_ntop(AF_INET, &((struct sockaddr_in *)sa)->sin_addr, sa->sa_family == AF_INET ? 32 : 128, node, nodelen) == NULL)
+      {
         return EAI_MEMORY;
       }
-    } else {
+    }
+    else
+    {
       return EAI_MEMORY;
     }
   }
 
-  if (service) {
+  if (service)
+  {
     int ret = -1;
 
-    if (sa->sa_family == AF_INET) {
+    if (sa->sa_family == AF_INET)
+    {
       ret = snprintf(service, servicelen, "%d", pg_ntoh16(((struct sockaddr_in *)sa)->sin_port));
     }
-    if (ret < 0 || ret >= servicelen) {
+    if (ret < 0 || ret >= servicelen)
+    {
       return EAI_MEMORY;
     }
   }

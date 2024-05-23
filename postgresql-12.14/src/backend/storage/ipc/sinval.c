@@ -50,8 +50,7 @@ SendSharedInvalidMessages(const SharedInvalidationMessage *msgs, int n)
 
 /*
  * ReceiveSharedInvalidMessages
- *		Process shared-cache-invalidation messages waiting for this
- *backend
+ *		Process shared-cache-invalidation messages waiting for this backend
  *
  * We guarantee to process all messages that had been queued before the
  * routine was entered.  It is of course possible for more messages to get
@@ -188,8 +187,8 @@ ProcessCatchupInterrupt(void)
      */
     if (IsTransactionOrTransactionBlock())
     {
-
-
+      elog(DEBUG4, "ProcessCatchupEvent inside transaction");
+      AcceptInvalidationMessages();
     }
     else
     {

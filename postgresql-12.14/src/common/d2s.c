@@ -35,7 +35,8 @@
 /*
  *  Runtime compiler options:
  *
- *  -DRYU_ONLY_64_BIT_OPS Avoid using uint128 or 64-bit intrinsics. Slower,*      depending on your compiler.
+ *  -DRYU_ONLY_64_BIT_OPS Avoid using uint128 or 64-bit intrinsics. Slower,
+ *      depending on your compiler.
  */
 
 #ifndef FRONTEND
@@ -418,7 +419,7 @@ d2d(const uint64 ieeeMantissa, const uint32 ieeeExponent)
          * <=> true && pow5Factor(mm) >= q, since e2 >= q.
          *----
          */
-
+        vmIsTrailingZeros = multipleOfPowerOf5(mv - 1 - mmShift, q);
       }
       else
       {
@@ -455,7 +456,7 @@ d2d(const uint64 ieeeMantissa, const uint32 ieeeExponent)
          * mm = mv - 1 - mmShift, so it has 1 trailing 0 bit iff
          * mmShift == 1.
          */
-
+        vmIsTrailingZeros = mmShift == 1;
       }
       else
       {
@@ -520,27 +521,27 @@ d2d(const uint64 ieeeMantissa, const uint32 ieeeExponent)
 
     if (vmIsTrailingZeros)
     {
+      for (;;)
+      {
+        const uint64 vmDiv10 = div10(vm);
+        const uint32 vmMod10 = (uint32)(vm - 10 * vmDiv10);
 
+        if (vmMod10 != 0)
+        {
+          break;
+        }
 
+        const uint64 vpDiv10 = div10(vp);
+        const uint64 vrDiv10 = div10(vr);
+        const uint32 vrMod10 = (uint32)(vr - 10 * vrDiv10);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        vrIsTrailingZeros &= lastRemovedDigit == 0;
+        lastRemovedDigit = (uint8)vrMod10;
+        vr = vrDiv10;
+        vp = vpDiv10;
+        vm = vmDiv10;
+        ++removed;
+      }
     }
 
     if (vrIsTrailingZeros && lastRemovedDigit == 5 && vr % 2 == 0)
@@ -582,7 +583,8 @@ d2d(const uint64 ieeeMantissa, const uint32 ieeeExponent)
      * Loop iterations below (approximately), without optimization
      * above:
      *
-     * 0: 0.03%, 1: 13.8%, 2: 70.6%, 3: 14.0%, 4: 1.40%, 5: 0.14%,* 6+: 0.02%
+     * 0: 0.03%, 1: 13.8%, 2: 70.6%, 3: 14.0%, 4: 1.40%, 5: 0.14%,
+     * 6+: 0.02%
      *
      * Loop iterations below (approximately), with optimization
      * above:
@@ -1072,8 +1074,8 @@ double_to_shortest_decimal_buf(double f, char *result)
 char *
 double_to_shortest_decimal(double f)
 {
+  char *const result = (char *)palloc(DOUBLE_SHORTEST_DECIMAL_LEN);
 
-
-
-
+  double_to_shortest_decimal_buf(f, result);
+  return result;
 }

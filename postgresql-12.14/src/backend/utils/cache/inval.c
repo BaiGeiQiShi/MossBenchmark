@@ -12,9 +12,9 @@
  *  generally scanned under the most current snapshot available, rather than
  *  the transaction snapshot.)	At the command boundary, the old tuple stops
  *	being valid and the new version, if any, becomes valid.  Therefore,
- *	we cannot simply flush a tuple from the system caches during
- *heap_update() or heap_delete().  The tuple is still good at that point; what's
- *more, even if we did flush it, it might be reloaded into the caches by a later
+ *	we cannot simply flush a tuple from the system caches during heap_update()
+ *	or heap_delete().  The tuple is still good at that point; what's more,
+ *	even if we did flush it, it might be reloaded into the caches by a later
  *	request in the same command.  So the correct behavior is to keep a list
  *	of outdated (updated/deleted) tuples and then do the required cache
  *	flushes at the next command boundary.  We must also keep track of
@@ -23,8 +23,8 @@
  *
  *	Once we have finished the command, we still need to remember inserted
  *	tuples (including new versions of updated tuples), so that we can flush
- *	them from the caches if we abort the transaction.  Similarly, we'd
- *better be able to flush "negative" cache entries that may have been loaded in
+ *	them from the caches if we abort the transaction.  Similarly, we'd better
+ *	be able to flush "negative" cache entries that may have been loaded in
  *	place of deleted tuples, so we still need the deleted ones too.
  *
  *	If we successfully complete the transaction, we have to broadcast all
@@ -74,8 +74,8 @@
  *	that.  They rely on DDL for can't-miss catalog changes taking
  *	AccessExclusiveLock on suitable objects.  (For a change made with less
  *	locking, backends might never read the change.)  The relation cache,
- *	however, needs to reflect changes from CREATE INDEX CONCURRENTLY no
- *later than the beginning of the next transaction.  Hence, when a relevant
+ *	however, needs to reflect changes from CREATE INDEX CONCURRENTLY no later
+ *	than the beginning of the next transaction.  Hence, when a relevant
  *	invalidation callback arrives during a build, relcache.c reattempts that
  *	build.  Caches with similar needs could do likewise.
  *
@@ -88,8 +88,7 @@
  *	The request lists proper are kept in CurTransactionContext of their
  *	creating (sub)transaction, since they can be forgotten on abort of that
  *	transaction but must be kept till top-level commit otherwise.  For
- *	simplicity we keep the controlling list-of-lists in
- *TopTransactionContext.
+ *	simplicity we keep the controlling list-of-lists in TopTransactionContext.
  *
  *	Currently, inval messages are sent without regard for the possibility
  *	that the object described by the catalog tuple might be a session-local
@@ -630,7 +629,7 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
   }
   else
   {
-
+    elog(FATAL, "unrecognized SI message ID: %d", msg->id);
   }
 }
 
@@ -639,12 +638,11 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
  *
  *		This blows away all tuples in the system catalog caches and
  *		all the cached relation descriptors and smgr cache entries.
- *		Relation descriptors that have positive refcounts are then
- *rebuilt.
+ *		Relation descriptors that have positive refcounts are then rebuilt.
  *
  *		We call this when we see a shared-inval-queue overflow signal,
- *		since that tells us we've lost some shared-inval messages and
- *hence don't know what needs to be invalidated.
+ *		since that tells us we've lost some shared-inval messages and hence
+ *		don't know what needs to be invalidated.
  */
 void
 InvalidateSystemCaches(void)
@@ -683,12 +681,11 @@ InvalidateSystemCachesExtended(bool debug_discard)
 
 /*
  * AcceptInvalidationMessages
- *		Read and process invalidation messages from the shared
- *invalidation message queue.
+ *		Read and process invalidation messages from the shared invalidation
+ *		message queue.
  *
  * Note:
- *		This should be called as the first step in processing a
- *transaction.
+ *		This should be called as the first step in processing a transaction.
  */
 void
 AcceptInvalidationMessages(void)
@@ -778,7 +775,7 @@ PrepareInvalidationState(void)
 void
 PostPrepare_Inval(void)
 {
-
+  AtEOXact_Inval(false);
 }
 
 /*
@@ -887,50 +884,49 @@ xactGetCommittedInvalidationMessages(SharedInvalidationMessage **msgs, bool *Rel
 void
 ProcessCommittedInvalidationMessages(SharedInvalidationMessage *msgs, int nmsgs, bool RelcacheInitFileInval, Oid dbid, Oid tsid)
 {
+  if (nmsgs <= 0)
+  {
+    return;
+  }
 
+  elog(trace_recovery(DEBUG4), "replaying commit with %d messages%s", nmsgs, (RelcacheInitFileInval ? " and relcache file invalidation" : ""));
 
+  if (RelcacheInitFileInval)
+  {
+    elog(trace_recovery(DEBUG4), "removing relcache init files for database %u", dbid);
 
+    /*
+     * RelationCacheInitFilePreInvalidate, when the invalidation message
+     * is for a specific database, requires DatabasePath to be set, but we
+     * should not use SetDatabasePath during recovery, since it is
+     * intended to be used only once by normal backends.  Hence, a quick
+     * hack: set DatabasePath directly then unset after use.
+     */
+    if (OidIsValid(dbid))
+    {
+      DatabasePath = GetDatabasePath(dbid, tsid);
+    }
 
+    RelationCacheInitFilePreInvalidate();
 
+    if (OidIsValid(dbid))
+    {
+      pfree(DatabasePath);
+      DatabasePath = NULL;
+    }
+  }
 
+  SendSharedInvalidMessages(msgs, nmsgs);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (RelcacheInitFileInval)
+  {
+    RelationCacheInitFilePostInvalidate();
+  }
 }
 
 /*
  * AtEOXact_Inval
- *		Process queued-up invalidation messages at end of main
- *transaction.
+ *		Process queued-up invalidation messages at end of main transaction.
  *
  * If isCommit, we must send out the messages in our PriorCmdInvalidMsgs list
  * to the shared invalidation message queue.  Note that these will be read
@@ -950,8 +946,7 @@ ProcessCommittedInvalidationMessages(SharedInvalidationMessage *msgs, int nmsgs,
  * anyway.
  *
  * Note:
- *		This should be called as the last step in processing a
- *transaction.
+ *		This should be called as the last step in processing a transaction.
  */
 void
 AtEOXact_Inval(bool isCommit)
@@ -999,8 +994,7 @@ AtEOXact_Inval(bool isCommit)
 
 /*
  * AtEOSubXact_Inval
- *		Process queued-up invalidation messages at end of
- *subtransaction.
+ *		Process queued-up invalidation messages at end of subtransaction.
  *
  * If isCommit, process CurrentCmdInvalidMsgs if any (there probably aren't),
  * and then attach both CurrentCmdInvalidMsgs and PriorCmdInvalidMsgs to the
@@ -1059,7 +1053,7 @@ AtEOSubXact_Inval(bool isCommit)
     /* Pending relcache inval becomes parent's problem too */
     if (myInfo->RelcacheInitFileInval)
     {
-
+      myInfo->parent->RelcacheInitFileInval = true;
     }
 
     /* Pop the transaction state stack */
@@ -1318,8 +1312,7 @@ CacheInvalidateRelcache(Relation relation)
 
 /*
  * CacheInvalidateRelcacheAll
- *		Register invalidation of the whole relcache at the end of
- *command.
+ *		Register invalidation of the whole relcache at the end of command.
  *
  * This is used by alter publication as changes in publications may affect
  * large number of tables.
@@ -1334,8 +1327,7 @@ CacheInvalidateRelcacheAll(void)
 
 /*
  * CacheInvalidateRelcacheByTuple
- *		As above, but relation is identified by passing its pg_class
- *tuple.
+ *		As above, but relation is identified by passing its pg_class tuple.
  */
 void
 CacheInvalidateRelcacheByTuple(HeapTuple classTuple)
@@ -1374,7 +1366,7 @@ CacheInvalidateRelcacheByRelid(Oid relid)
   tup = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", relid);
   }
   CacheInvalidateRelcacheByTuple(tup);
   ReleaseSysCache(tup);
@@ -1451,8 +1443,9 @@ CacheInvalidateRelmap(Oid databaseId)
 /*
  * CacheRegisterSyscacheCallback
  *		Register the specified function to be called for all future
- *		invalidation events in the specified cache.  The cache ID and
- *the hash value of the tuple being invalidated will be passed to the function.
+ *		invalidation events in the specified cache.  The cache ID and the
+ *		hash value of the tuple being invalidated will be passed to the
+ *		function.
  *
  * NOTE: Hash value zero will be passed if a cache reset request is received.
  * In this case the called routines should flush all cached state.
@@ -1465,11 +1458,11 @@ CacheRegisterSyscacheCallback(int cacheid, SyscacheCallbackFunction func, Datum 
 {
   if (cacheid < 0 || cacheid >= SysCacheSize)
   {
-
+    elog(FATAL, "invalid cache ID: %d", cacheid);
   }
   if (syscache_callback_count >= MAX_SYSCACHE_CALLBACKS)
   {
-
+    elog(FATAL, "out of syscache_callback_list slots");
   }
 
   if (syscache_callback_links[cacheid] == 0)
@@ -1484,7 +1477,7 @@ CacheRegisterSyscacheCallback(int cacheid, SyscacheCallbackFunction func, Datum 
 
     while (syscache_callback_list[i].link > 0)
     {
-
+      i = syscache_callback_list[i].link - 1;
     }
     syscache_callback_list[i].link = syscache_callback_count + 1;
   }
@@ -1511,7 +1504,7 @@ CacheRegisterRelcacheCallback(RelcacheCallbackFunction func, Datum arg)
 {
   if (relcache_callback_count >= MAX_RELCACHE_CALLBACKS)
   {
-
+    elog(FATAL, "out of relcache_callback_list slots");
   }
 
   relcache_callback_list[relcache_callback_count].function = func;
@@ -1533,7 +1526,7 @@ CallSyscacheCallbacks(int cacheid, uint32 hashvalue)
 
   if (cacheid < 0 || cacheid >= SysCacheSize)
   {
-
+    elog(ERROR, "invalid cache ID: %d", cacheid);
   }
 
   i = syscache_callback_links[cacheid] - 1;

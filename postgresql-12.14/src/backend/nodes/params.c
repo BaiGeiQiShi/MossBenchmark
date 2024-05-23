@@ -127,7 +127,7 @@ EstimateParamListSpace(ParamListInfo paramLI)
     /* give hook a chance in case parameter is dynamic */
     if (paramLI->paramFetch != NULL)
     {
-
+      prm = paramLI->paramFetch(paramLI, i + 1, false, &prmdata);
     }
     else
     {
@@ -147,8 +147,8 @@ EstimateParamListSpace(ParamListInfo paramLI)
     else
     {
       /* If no type OID, assume by-value, like copyParamList does. */
-
-
+      typLen = sizeof(Datum);
+      typByVal = true;
     }
     sz = add_size(sz, datumEstimateSpace(prm->value, prm->isnull, typByVal, typLen));
   }
@@ -202,7 +202,7 @@ SerializeParamList(ParamListInfo paramLI, char **start_address)
     /* give hook a chance in case parameter is dynamic */
     if (paramLI->paramFetch != NULL)
     {
-
+      prm = paramLI->paramFetch(paramLI, i + 1, false, &prmdata);
     }
     else
     {
@@ -227,8 +227,8 @@ SerializeParamList(ParamListInfo paramLI, char **start_address)
     else
     {
       /* If no type OID, assume by-value, like copyParamList does. */
-
-
+      typLen = sizeof(Datum);
+      typByVal = true;
     }
     datumSerialize(prm->value, prm->isnull, typByVal, typLen, start_address);
   }

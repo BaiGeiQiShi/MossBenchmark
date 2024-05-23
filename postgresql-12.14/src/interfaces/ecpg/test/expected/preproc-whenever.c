@@ -56,7 +56,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 31 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -66,7 +67,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table test ( i int , c char ( 10 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 32 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -76,7 +78,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into test values ( 1 , 'abcdefghij' )", ECPGt_EOIT, ECPGt_EORT);
 #line 33 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -89,12 +92,14 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from test", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_char, (c), (long)6, (long)1, (6) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 36 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 36 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -104,12 +109,14 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 37 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 37 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -119,12 +126,14 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from nonexistent", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 39 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 39 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -134,12 +143,14 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 40 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 40 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       sqlprint();
     }
   }
@@ -152,12 +163,14 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from nonexistent", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 43 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 43 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       print("select");
     }
   }
@@ -167,12 +180,14 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 44 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 44 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       print("select");
     }
   }
@@ -185,12 +200,14 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from nonexistent", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 47 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 47 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       print2();
     }
   }
@@ -200,12 +217,14 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 48 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 48 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       print2();
     }
   }
@@ -218,7 +237,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from nonexistent", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 51 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
   }
@@ -228,7 +248,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 52 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
   }
@@ -241,12 +262,14 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select * from nonexistent", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 55 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 55 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       goto error;
     }
   }
@@ -254,16 +277,19 @@ main(void)
 
   printf("Should not be reachable\n");
 
-error: {
+error:
+{
   ECPGtrans(__LINE__, NULL, "rollback");
 #line 59 "whenever.pgc"
 
-  if (sqlca.sqlwarn[0] == 'W') {
+  if (sqlca.sqlwarn[0] == 'W')
+  {
     warn();
   }
 #line 59 "whenever.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     goto error;
   }
 }
@@ -278,12 +304,14 @@ error: {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select 1", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 64 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 64 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -293,12 +321,14 @@ error: {
     ECPGtrans(__LINE__, NULL, "rollback");
 #line 65 "whenever.pgc"
 
-    if (sqlca.sqlwarn[0] == 'W') {
+    if (sqlca.sqlwarn[0] == 'W')
+    {
       warn();
     }
 #line 65 "whenever.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }

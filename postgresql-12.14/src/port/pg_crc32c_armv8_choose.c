@@ -52,10 +52,13 @@ pg_crc32c_armv8_available(void)
    * the SIGILL handler set to a nonstandard value.
    */
   pqsignal(SIGILL, illegal_instruction_handler);
-  if (sigsetjmp(illegal_instruction_jump, 1) == 0) {
+  if (sigsetjmp(illegal_instruction_jump, 1) == 0)
+  {
     /* Rather than hard-wiring an expected result, compare to SB8 code */
     result = (pg_comp_crc32c_armv8(0, &data, sizeof(data)) == pg_comp_crc32c_sb8(0, &data, sizeof(data)));
-  } else {
+  }
+  else
+  {
     /* We got the SIGILL trap */
     result = -1;
   }
@@ -63,7 +66,8 @@ pg_crc32c_armv8_available(void)
 
 #ifndef FRONTEND
   /* We don't expect this case, so complain loudly */
-  if (result == 0) {
+  if (result == 0)
+  {
     elog(ERROR, "crc32 hardware and software results disagree");
   }
 
@@ -80,9 +84,12 @@ pg_crc32c_armv8_available(void)
 static pg_crc32c
 pg_comp_crc32c_choose(pg_crc32c crc, const void *data, size_t len)
 {
-  if (pg_crc32c_armv8_available()) {
+  if (pg_crc32c_armv8_available())
+  {
     pg_comp_crc32c = pg_comp_crc32c_armv8;
-  } else {
+  }
+  else
+  {
     pg_comp_crc32c = pg_comp_crc32c_sb8;
   }
 

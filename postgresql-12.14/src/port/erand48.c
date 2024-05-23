@@ -11,7 +11,8 @@
  * We used to test for an operating system version rather than
  * unconditionally using our own, but (1) some versions of Cygwin have a
  * buggy erand48() that always returns zero and (2) as of 2011, glibc's
- * erand48() is strangely coded to be almost-but-not-quite thread-safe,* which doesn't matter for the backend but is important for pgbench.
+ * erand48() is strangely coded to be almost-but-not-quite thread-safe,
+ * which doesn't matter for the backend but is important for pgbench.
  *
  * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
  *
@@ -92,9 +93,9 @@ pg_erand48(unsigned short xseed[3])
 long
 pg_lrand48(void)
 {
+  uint64 x = _dorand48(_rand48_seed);
 
-
-
+  return (x >> 17) & UINT64CONST(0x7FFFFFFF);
 }
 
 /*
@@ -104,9 +105,9 @@ pg_lrand48(void)
 long
 pg_jrand48(unsigned short xseed[3])
 {
+  uint64 x = _dorand48(xseed);
 
-
-
+  return (int32)((x >> 16) & UINT64CONST(0xFFFFFFFF));
 }
 
 /*
@@ -123,7 +124,7 @@ pg_jrand48(unsigned short xseed[3])
 void
 pg_srand48(long seed)
 {
-
-
-
+  _rand48_seed[0] = RAND48_SEED_0;
+  _rand48_seed[1] = (unsigned short)seed;
+  _rand48_seed[2] = (unsigned short)(seed >> 16);
 }

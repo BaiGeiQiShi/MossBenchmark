@@ -23,14 +23,15 @@
  * The calling convention is similar to that of strtok, but with more
  * frammishes.
  *
- * s -			string to parse, if NULL continue parsing the last
- *string whitespace - set of whitespace characters that separate tokens delim -
- *set of non-whitespace separator characters (or NULL) quote -		set of
- *characters that can quote a token (NULL if none) escape -
- *character that can quote quotes (0 if none) e_strings -	if true, treat
- *E'...' syntax as a valid token del_quotes - if true, strip quotes from the
- *returned token, else return it exactly as found in the string encoding -
- *the active character-set encoding
+ * s -			string to parse, if NULL continue parsing the last string
+ * whitespace - set of whitespace characters that separate tokens
+ * delim -		set of non-whitespace separator characters (or NULL)
+ * quote -		set of characters that can quote a token (NULL if none)
+ * escape -		character that can quote quotes (0 if none)
+ * e_strings -	if true, treat E'...' syntax as a valid token
+ * del_quotes - if true, strip quotes from the returned token, else return
+ *				it exactly as found in the string
+ * encoding -	the active character-set encoding
  *
  * Characters in 'delim', if any, will be returned as single-character
  * tokens unless part of a quoted token.
@@ -61,7 +62,8 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
   char *start;
   char *p;
 
-  if (s) {
+  if (s)
+  {
     free(storage);
 
     /*
@@ -74,7 +76,8 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
     string = storage;
   }
 
-  if (!storage) {
+  if (!storage)
+  {
     return NULL;
   }
 
@@ -83,7 +86,8 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
   start = &string[offset];
 
   /* end of string reached? */
-  if (*start == '\0') {
+  if (*start == '\0')
+  {
     /* technically we don't need to free here, but we're nice */
     free(storage);
     storage = NULL;
@@ -92,7 +96,8 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
   }
 
   /* test if delimiter character */
-  if (delim && strchr(delim, *start)) {
+  if (delim && strchr(delim, *start))
+  {
     /*
      * If not at end of string, we need to insert a null to terminate the
      * returned token.  We can just overwrite the next character if it
@@ -101,13 +106,17 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
      * space above).
      */
     p = start + 1;
-    if (*p != '\0') {
-      if (!strchr(whitespace, *p)) {
+    if (*p != '\0')
+    {
+      if (!strchr(whitespace, *p))
+      {
         memmove(p + 1, p, strlen(p) + 1);
       }
       *p = '\0';
       string = p + 1;
-    } else {
+    }
+    else
+    {
       /* at end of string, so no extra work */
       string = p;
     }
@@ -117,23 +126,31 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
 
   /* check for E string */
   p = start;
-  if (e_strings && (*p == 'E' || *p == 'e') && p[1] == '\'') {
+  if (e_strings && (*p == 'E' || *p == 'e') && p[1] == '\'')
+  {
     quote = "'";
     escape = '\\'; /* if std strings before, not any more */
     p++;
   }
 
   /* test if quoting character */
-  if (quote && strchr(quote, *p)) {
+  if (quote && strchr(quote, *p))
+  {
     /* okay, we have a quoted token, now scan for the closer */
     char thisquote = *p++;
 
-    for (; *p; p += PQmblenBounded(p, encoding)) {
-      if (*p == escape && p[1] != '\0') {
+    for (; *p; p += PQmblenBounded(p, encoding))
+    {
+      if (*p == escape && p[1] != '\0')
+      {
         p++; /* process escaped anything */
-      } else if (*p == thisquote && p[1] == thisquote) {
+      }
+      else if (*p == thisquote && p[1] == thisquote)
+      {
         p++; /* process doubled quote */
-      } else if (*p == thisquote) {
+      }
+      else if (*p == thisquote)
+      {
         p++; /* skip trailing quote */
         break;
       }
@@ -143,19 +160,24 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
      * If not at end of string, we need to insert a null to terminate the
      * returned token.  See notes above.
      */
-    if (*p != '\0') {
-      if (!strchr(whitespace, *p)) {
+    if (*p != '\0')
+    {
+      if (!strchr(whitespace, *p))
+      {
         memmove(p + 1, p, strlen(p) + 1);
       }
       *p = '\0';
       string = p + 1;
-    } else {
+    }
+    else
+    {
       /* at end of string, so no extra work */
       string = p;
     }
 
     /* Clean up the token if caller wants that */
-    if (del_quotes) {
+    if (del_quotes)
+    {
       strip_quotes(start, thisquote, escape, encoding);
     }
 
@@ -164,22 +186,27 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
 
   /*
    * Otherwise no quoting character.  Scan till next whitespace, delimiter
-   * or quote.  NB: at this point, *start is known not to be '\0',* whitespace, delim, or quote, so we will consume at least one character.
+   * or quote.  NB: at this point, *start is known not to be '\0',
+   * whitespace, delim, or quote, so we will consume at least one character.
    */
   offset = strcspn(start, whitespace);
 
-  if (delim) {
+  if (delim)
+  {
     unsigned int offset2 = strcspn(start, delim);
 
-    if (offset > offset2) {
+    if (offset > offset2)
+    {
       offset = offset2;
     }
   }
 
-  if (quote) {
+  if (quote)
+  {
     unsigned int offset2 = strcspn(start, quote);
 
-    if (offset > offset2) {
+    if (offset > offset2)
+    {
       offset = offset2;
     }
   }
@@ -190,13 +217,17 @@ strtokx(const char *s, const char *whitespace, const char *delim, const char *qu
    * If not at end of string, we need to insert a null to terminate the
    * returned token.  See notes above.
    */
-  if (*p != '\0') {
-    if (!strchr(whitespace, *p)) {
+  if (*p != '\0')
+  {
+    if (!strchr(whitespace, *p))
+    {
       memmove(p + 1, p, strlen(p) + 1);
     }
     *p = '\0';
     string = p + 1;
-  } else {
+  }
+  else
+  {
     /* at end of string, so no extra work */
     string = p;
   }
@@ -225,24 +256,32 @@ strip_quotes(char *source, char quote, char escape, int encoding)
 
   src = dst = source;
 
-  if (*src && *src == quote) {
+  if (*src && *src == quote)
+  {
     src++; /* skip leading quote */
   }
 
-  while (*src) {
+  while (*src)
+  {
     char c = *src;
     int i;
 
-    if (c == quote && src[1] == '\0') {
+    if (c == quote && src[1] == '\0')
+    {
       break; /* skip trailing quote */
-    } else if (c == quote && src[1] == quote) {
+    }
+    else if (c == quote && src[1] == quote)
+    {
       src++; /* process doubled quote */
-    } else if (c == escape && src[1] != '\0') {
+    }
+    else if (c == escape && src[1] != '\0')
+    {
       src++; /* process escaped character */
     }
 
     i = PQmblenBounded(src, encoding);
-    while (i--) {
+    while (i--)
+    {
       *dst++ = *src++;
     }
   }
@@ -282,22 +321,29 @@ quote_if_needed(const char *source, const char *entails_quote, char quote, char 
 
   *dst++ = quote;
 
-  while (*src) {
+  while (*src)
+  {
     char c = *src;
     int i;
 
-    if (c == quote) {
+    if (c == quote)
+    {
       need_quotes = true;
       *dst++ = quote;
-    } else if (c == escape) {
+    }
+    else if (c == escape)
+    {
       need_quotes = true;
       *dst++ = escape;
-    } else if (strchr(entails_quote, c)) {
+    }
+    else if (strchr(entails_quote, c))
+    {
       need_quotes = true;
     }
 
     i = PQmblenBounded(src, encoding);
-    while (i--) {
+    while (i--)
+    {
       *dst++ = *src++;
     }
   }
@@ -305,7 +351,8 @@ quote_if_needed(const char *source, const char *entails_quote, char quote, char 
   *dst++ = quote;
   *dst = '\0';
 
-  if (!need_quotes) {
+  if (!need_quotes)
+  {
     free(ret);
     ret = NULL;
   }

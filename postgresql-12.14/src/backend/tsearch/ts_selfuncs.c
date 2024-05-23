@@ -83,7 +83,7 @@ tsmatchsel(PG_FUNCTION_ARGS)
    */
   if (!get_restriction_variable(root, args, varRelid, &vardata, &other, &varonleft))
   {
-
+    PG_RETURN_FLOAT8(DEFAULT_TS_MATCH_SEL);
   }
 
   /*
@@ -91,8 +91,8 @@ tsmatchsel(PG_FUNCTION_ARGS)
    */
   if (!IsA(other, Const))
   {
-
-
+    ReleaseVariableStats(vardata);
+    PG_RETURN_FLOAT8(DEFAULT_TS_MATCH_SEL);
   }
 
   /*
@@ -100,8 +100,8 @@ tsmatchsel(PG_FUNCTION_ARGS)
    */
   if (((Const *)other)->constisnull)
   {
-
-
+    ReleaseVariableStats(vardata);
+    PG_RETURN_FLOAT8(0.0);
   }
 
   /*
@@ -119,7 +119,7 @@ tsmatchsel(PG_FUNCTION_ARGS)
   else
   {
     /* If we can't see the query structure, must punt */
-
+    selec = DEFAULT_TS_MATCH_SEL;
   }
 
   ReleaseVariableStats(vardata);
@@ -137,8 +137,8 @@ tsmatchsel(PG_FUNCTION_ARGS)
 Datum
 tsmatchjoinsel(PG_FUNCTION_ARGS)
 {
-
-
+  /* for the moment we just punt */
+  PG_RETURN_FLOAT8(DEFAULT_TS_MATCH_SEL);
 }
 
 /*
@@ -156,7 +156,7 @@ tsquerysel(VariableStatData *vardata, Datum constval)
   /* Empty query matches nothing */
   if (query->size == 0)
   {
-
+    return (Selectivity)0.0;
   }
 
   if (HeapTupleIsValid(vardata->statsTuple))
@@ -179,7 +179,7 @@ tsquerysel(VariableStatData *vardata, Datum constval)
     else
     {
       /* No most-common-elements info, so do without */
-
+      selec = tsquery_opr_selec_no_stats(query);
     }
 
     /*
@@ -218,7 +218,7 @@ mcelem_tsquery_selec(TSQuery query, Datum *mcelem, int nmcelem, float4 *numbers,
    */
   if (nnumbers != nmcelem + 2)
   {
-
+    return tsquery_opr_selec_no_stats(query);
   }
 
   /*
@@ -382,27 +382,27 @@ tsquery_opr_selec(QueryItem *item, char *operand, TextFreq *lookup, int length, 
 
     switch (item->qoperator.oper)
     {
-    case OP_NOT:;
+    case OP_NOT:
       selec = 1.0 - tsquery_opr_selec(item + 1, operand, lookup, length, minfreq);
       break;
 
-    case OP_PHRASE:;
-    case OP_AND:;
+    case OP_PHRASE:
+    case OP_AND:
       s1 = tsquery_opr_selec(item + 1, operand, lookup, length, minfreq);
       s2 = tsquery_opr_selec(item + item->qoperator.left, operand, lookup, length, minfreq);
       selec = s1 * s2;
       break;
 
-    case OP_OR:;
+    case OP_OR:
       s1 = tsquery_opr_selec(item + 1, operand, lookup, length, minfreq);
       s2 = tsquery_opr_selec(item + item->qoperator.left, operand, lookup, length, minfreq);
       selec = s1 + s2 - s1 * s2;
       break;
 
-    default:;;
-
-
-
+    default:
+      elog(ERROR, "unrecognized operator: %d", item->qoperator.oper);
+      selec = 0; /* keep compiler quiet */
+      break;
     }
   }
 
@@ -435,7 +435,7 @@ compare_lexeme_textfreq(const void *e1, const void *e2)
   }
   else if (len1 < len2)
   {
-
+    return -1;
   }
 
   /* Fall back on byte-for-byte comparison */

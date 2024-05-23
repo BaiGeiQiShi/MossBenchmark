@@ -89,8 +89,7 @@ alias_relid_set(Query *query, Relids relids);
 /*
  * pull_varnos
  *		Create a set of all the distinct varnos present in a parsetree.
- *		Only varnos that reference level-zero rtable entries are
- *considered.
+ *		Only varnos that reference level-zero rtable entries are considered.
  *
  * NOTE: this is used on not-yet-planned expressions.  It may therefore find
  * bare SubLinks, and if so it needs to recurse into them to look for uplevel
@@ -100,7 +99,7 @@ alias_relid_set(Query *query, Relids relids);
 Relids
 pull_varnos(Node *node)
 {
-
+  return pull_varnos_new(NULL, node);
 }
 
 Relids
@@ -129,7 +128,7 @@ pull_varnos_new(PlannerInfo *root, Node *node)
 Relids
 pull_varnos_of_level(Node *node, int levelsup)
 {
-
+  return pull_varnos_of_level_new(NULL, node, levelsup);
 }
 
 Relids
@@ -276,9 +275,9 @@ pull_varnos_walker(Node *node, pull_varnos_context *context)
 
 /*
  * pull_varattnos
- *		Find all the distinct attribute numbers present in an expression
- *tree, and add them to the initial contents of *varattnos. Only Vars of the
- *given varno and rtable level zero are considered.
+ *		Find all the distinct attribute numbers present in an expression tree,
+ *		and add them to the initial contents of *varattnos.
+ *		Only Vars of the given varno and rtable level zero are considered.
  *
  * Attribute numbers are offset by FirstLowInvalidHeapAttributeNumber so that
  * we can include system attributes (e.g., OID) in the bitmap representation.
@@ -392,8 +391,8 @@ pull_vars_walker(Node *node, pull_vars_context *context)
 
 /*
  * contain_var_clause
- *	  Recursively scan a clause to discover whether it contains any Var
- *nodes (of the current query level).
+ *	  Recursively scan a clause to discover whether it contains any Var nodes
+ *	  (of the current query level).
  *
  *	  Returns true if any varnode found.
  *
@@ -419,11 +418,11 @@ contain_var_clause_walker(Node *node, void *context)
     {
       return true; /* abort the tree traversal and return true */
     }
-
+    return false;
   }
   if (IsA(node, CurrentOfExpr))
   {
-
+    return true;
   }
   if (IsA(node, PlaceHolderVar))
   {
@@ -438,8 +437,8 @@ contain_var_clause_walker(Node *node, void *context)
 
 /*
  * contain_vars_of_level
- *	  Recursively scan a clause to discover whether it contains any Var
- *nodes of the specified query level.
+ *	  Recursively scan a clause to discover whether it contains any Var nodes
+ *	  of the specified query level.
  *
  *	  Returns true if any such Var found.
  *
@@ -474,7 +473,7 @@ contain_vars_of_level_walker(Node *node, int *sublevels_up)
     {
       return true;
     }
-
+    return false;
   }
   if (IsA(node, PlaceHolderVar))
   {
@@ -530,7 +529,7 @@ locate_var_of_level_walker(Node *node, locate_var_of_level_context *context)
 {
   if (node == NULL)
   {
-
+    return false;
   }
   if (IsA(node, Var))
   {
@@ -541,12 +540,12 @@ locate_var_of_level_walker(Node *node, locate_var_of_level_context *context)
       context->var_location = var->location;
       return true; /* abort tree traversal and return true */
     }
-
+    return false;
   }
   if (IsA(node, CurrentOfExpr))
   {
     /* since CurrentOfExpr doesn't carry location, nothing we can do */
-
+    return false;
   }
   /* No extra code needed for PlaceHolderVar; just look in contained expr */
   if (IsA(node, Query))
@@ -554,10 +553,10 @@ locate_var_of_level_walker(Node *node, locate_var_of_level_context *context)
     /* Recurse into subselects */
     bool result;
 
-
-
-
-
+    context->sublevels_up++;
+    result = query_tree_walker((Query *)node, locate_var_of_level_walker, (void *)context, 0);
+    context->sublevels_up--;
+    return result;
   }
   return expression_tree_walker(node, locate_var_of_level_walker, (void *)context);
 }
@@ -569,23 +568,23 @@ locate_var_of_level_walker(Node *node, locate_var_of_level_context *context)
  *	  Aggrefs are handled according to these bits in 'flags':
  *		PVC_INCLUDE_AGGREGATES		include Aggrefs in output list
  *		PVC_RECURSE_AGGREGATES		recurse into Aggref arguments
- *		neither flag				throw error if Aggref
- *found Vars within an Aggref's expression are included in the result only when
- *PVC_RECURSE_AGGREGATES is specified.
+ *		neither flag				throw error if Aggref found
+ *	  Vars within an Aggref's expression are included in the result only
+ *	  when PVC_RECURSE_AGGREGATES is specified.
  *
  *	  WindowFuncs are handled according to these bits in 'flags':
- *		PVC_INCLUDE_WINDOWFUNCS		include WindowFuncs in output
- *list PVC_RECURSE_WINDOWFUNCS		recurse into WindowFunc arguments
- *		neither flag				throw error if
- *WindowFunc found Vars within a WindowFunc's expression are included in the
- *result only when PVC_RECURSE_WINDOWFUNCS is specified.
+ *		PVC_INCLUDE_WINDOWFUNCS		include WindowFuncs in output list
+ *		PVC_RECURSE_WINDOWFUNCS		recurse into WindowFunc arguments
+ *		neither flag				throw error if WindowFunc found
+ *	  Vars within a WindowFunc's expression are included in the result only
+ *	  when PVC_RECURSE_WINDOWFUNCS is specified.
  *
  *	  PlaceHolderVars are handled according to these bits in 'flags':
- *		PVC_INCLUDE_PLACEHOLDERS	include PlaceHolderVars in
- *output list PVC_RECURSE_PLACEHOLDERS	recurse into PlaceHolderVar arguments
- *		neither flag				throw error if
- *PlaceHolderVar found Vars within a PHV's expression are included in the result
- *only when PVC_RECURSE_PLACEHOLDERS is specified.
+ *		PVC_INCLUDE_PLACEHOLDERS	include PlaceHolderVars in output list
+ *		PVC_RECURSE_PLACEHOLDERS	recurse into PlaceHolderVar arguments
+ *		neither flag				throw error if PlaceHolderVar found
+ *	  Vars within a PHV's expression are included in the result only
+ *	  when PVC_RECURSE_PLACEHOLDERS is specified.
  *
  *	  GroupingFuncs are treated exactly like Aggrefs, and so do not need
  *	  their own flag bits.
@@ -629,7 +628,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
   {
     if (((Var *)node)->varlevelsup != 0)
     {
-
+      elog(ERROR, "Upper-level Var found where not expected");
     }
     context->varlist = lappend(context->varlist, node);
     return false;
@@ -638,7 +637,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
   {
     if (((Aggref *)node)->agglevelsup != 0)
     {
-
+      elog(ERROR, "Upper-level Aggref found where not expected");
     }
     if (context->flags & PVC_INCLUDE_AGGREGATES)
     {
@@ -652,20 +651,20 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
     }
     else
     {
-
+      elog(ERROR, "Aggref found where not expected");
     }
   }
   else if (IsA(node, GroupingFunc))
   {
     if (((GroupingFunc *)node)->agglevelsup != 0)
     {
-
+      elog(ERROR, "Upper-level GROUPING found where not expected");
     }
     if (context->flags & PVC_INCLUDE_AGGREGATES)
     {
-
+      context->varlist = lappend(context->varlist, node);
       /* we do NOT descend into the contained expression */
-
+      return false;
     }
     else if (context->flags & PVC_RECURSE_AGGREGATES)
     {
@@ -673,7 +672,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
     }
     else
     {
-
+      elog(ERROR, "GROUPING found where not expected");
     }
   }
   else if (IsA(node, WindowFunc))
@@ -691,14 +690,14 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
     }
     else
     {
-
+      elog(ERROR, "WindowFunc found where not expected");
     }
   }
   else if (IsA(node, PlaceHolderVar))
   {
     if (((PlaceHolderVar *)node)->phlevelsup != 0)
     {
-
+      elog(ERROR, "Upper-level PlaceHolderVar found where not expected");
     }
     if (context->flags & PVC_INCLUDE_PLACEHOLDERS)
     {
@@ -712,7 +711,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
     }
     else
     {
-
+      elog(ERROR, "PlaceHolderVar found where not expected");
     }
   }
   return expression_tree_walker(node, pull_var_clause_walker, (void *)context);
@@ -720,9 +719,9 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
 
 /*
  * flatten_join_alias_vars
- *	  Replace Vars that reference JOIN outputs with references to the
- *original relation variables instead.  This allows quals involving such vars to
- *be pushed down.  Whole-row Vars that reference JOIN relations are expanded
+ *	  Replace Vars that reference JOIN outputs with references to the original
+ *	  relation variables instead.  This allows quals involving such vars to be
+ *	  pushed down.  Whole-row Vars that reference JOIN relations are expanded
  *	  into RowExpr constructs that name the individual output Vars.  This
  *	  is necessary since we will not scan the JOIN as a base relation, which
  *	  is the only way that the executor can directly handle whole-row Vars.
@@ -797,7 +796,7 @@ flatten_join_alias_vars_mutator(Node *node, flatten_join_alias_vars_context *con
         /* Ignore dropped columns */
         if (newvar == NULL)
         {
-
+          continue;
         }
         newvar = copyObject(newvar);
 
@@ -807,7 +806,7 @@ flatten_join_alias_vars_mutator(Node *node, flatten_join_alias_vars_context *con
          */
         if (context->sublevels_up != 0)
         {
-
+          IncrementVarSublevelsUp(newvar, context->sublevels_up, 0);
         }
         /* Preserve original Var's location, if possible */
         if (IsA(newvar, Var))
@@ -919,7 +918,7 @@ alias_relid_set(Query *query, Relids relids)
 
     if (rte->rtekind == RTE_JOIN)
     {
-
+      result = bms_join(result, get_relids_for_join(query, rtindex));
     }
     else
     {

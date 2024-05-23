@@ -54,7 +54,7 @@ rmtree(const char *path, bool rmtopdir)
 
   if (filenames == NULL)
   {
-
+    return false;
   }
 
   /* now we have the names we can start removing things */
@@ -75,32 +75,32 @@ rmtree(const char *path, bool rmtopdir)
      */
     if (lstat(pathbuf, &statbuf) != 0)
     {
-
-
-
-
-
-
+      if (errno != ENOENT)
+      {
+        pg_log_warning("could not stat file or directory \"%s\": %m", pathbuf);
+        result = false;
+      }
+      continue;
     }
 
     if (S_ISDIR(statbuf.st_mode))
     {
       /* call ourselves recursively for a directory */
-
-
-
-
-
+      if (!rmtree(pathbuf, true))
+      {
+        /* we already reported the error */
+        result = false;
+      }
     }
     else
     {
       if (unlink(pathbuf) != 0)
       {
-
-
-
-
-
+        if (errno != ENOENT)
+        {
+          pg_log_warning("could not remove file or directory \"%s\": %m", pathbuf);
+          result = false;
+        }
       }
     }
   }
@@ -109,8 +109,8 @@ rmtree(const char *path, bool rmtopdir)
   {
     if (rmdir(path) != 0)
     {
-
-
+      pg_log_warning("could not remove file or directory \"%s\": %m", path);
+      result = false;
     }
   }
 

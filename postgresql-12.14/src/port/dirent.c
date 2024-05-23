@@ -21,7 +21,8 @@
 
 #include <dirent.h>
 
-struct DIR {
+struct DIR
+{
   char *dirname;
   struct dirent ret; /* Used to return to caller */
   HANDLE handle;
@@ -35,28 +36,33 @@ opendir(const char *dirname)
 
   /* Make sure it is a directory */
   attr = GetFileAttributes(dirname);
-  if (attr == INVALID_FILE_ATTRIBUTES) {
+  if (attr == INVALID_FILE_ATTRIBUTES)
+  {
     errno = ENOENT;
     return NULL;
   }
-  if ((attr & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
+  if ((attr & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)
+  {
     errno = ENOTDIR;
     return NULL;
   }
 
   d = malloc(sizeof(DIR));
-  if (!d) {
+  if (!d)
+  {
     errno = ENOMEM;
     return NULL;
   }
   d->dirname = malloc(strlen(dirname) + 4);
-  if (!d->dirname) {
+  if (!d->dirname)
+  {
     errno = ENOMEM;
     free(d);
     return NULL;
   }
   strcpy(d->dirname, dirname);
-  if (d->dirname[strlen(d->dirname) - 1] != '/' && d->dirname[strlen(d->dirname) - 1] != '\\') {
+  if (d->dirname[strlen(d->dirname) - 1] != '/' && d->dirname[strlen(d->dirname) - 1] != '\\')
+  {
     strcat(d->dirname, "\\"); /* Append backslash if not already there */
   }
   strcat(d->dirname, "*"); /* Search for entries named anything */
@@ -72,23 +78,34 @@ readdir(DIR *d)
 {
   WIN32_FIND_DATA fd;
 
-  if (d->handle == INVALID_HANDLE_VALUE) {
+  if (d->handle == INVALID_HANDLE_VALUE)
+  {
     d->handle = FindFirstFile(d->dirname, &fd);
-    if (d->handle == INVALID_HANDLE_VALUE) {
+    if (d->handle == INVALID_HANDLE_VALUE)
+    {
       /* If there are no files, force errno=0 (unlike mingw) */
-      if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+      if (GetLastError() == ERROR_FILE_NOT_FOUND)
+      {
         errno = 0;
-      } else {
+      }
+      else
+      {
         _dosmaperr(GetLastError());
       }
       return NULL;
     }
-  } else {
-    if (!FindNextFile(d->handle, &fd)) {
+  }
+  else
+  {
+    if (!FindNextFile(d->handle, &fd))
+    {
       /* If there are no more files, force errno=0 (like mingw) */
-      if (GetLastError() == ERROR_NO_MORE_FILES) {
+      if (GetLastError() == ERROR_NO_MORE_FILES)
+      {
         errno = 0;
-      } else {
+      }
+      else
+      {
         _dosmaperr(GetLastError());
       }
       return NULL;
@@ -105,7 +122,8 @@ closedir(DIR *d)
 {
   int ret = 0;
 
-  if (d->handle != INVALID_HANDLE_VALUE) {
+  if (d->handle != INVALID_HANDLE_VALUE)
+  {
     ret = !FindClose(d->handle);
   }
   free(d->dirname);

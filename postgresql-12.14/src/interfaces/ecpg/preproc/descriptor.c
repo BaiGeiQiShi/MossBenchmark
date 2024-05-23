@@ -32,7 +32,8 @@ push_assignment(char *var, enum ECPGdtype value)
 static void
 drop_assignments(void)
 {
-  while (assignments) {
+  while (assignments)
+  {
     struct assignment *old_head = assignments;
 
     assignments = old_head->next;
@@ -46,7 +47,8 @@ ECPGnumeric_lvalue(char *name)
 {
   const struct variable *v = find_variable(name);
 
-  switch (v->type->type) {
+  switch (v->type->type)
+  {
   case ECPGt_short:
   case ECPGt_int:
   case ECPGt_long:
@@ -58,7 +60,7 @@ ECPGnumeric_lvalue(char *name)
   case ECPGt_const:
     fputs(name, base_yyout);
     break;
-  default:;
+  default:
     mmerror(PARSE_ERROR, ET_ERROR, "variable \"%s\" must have a numeric type", name);
     break;
   }
@@ -75,7 +77,8 @@ add_descriptor(char *name, char *connection)
 {
   struct descriptor *new;
 
-  if (name[0] != '"') {
+  if (name[0] != '"')
+  {
     return;
   }
 
@@ -84,10 +87,13 @@ add_descriptor(char *name, char *connection)
   new->next = descriptors;
   new->name = mm_alloc(strlen(name) + 1);
   strcpy(new->name, name);
-  if (connection) {
+  if (connection)
+  {
     new->connection = mm_alloc(strlen(connection) + 1);
     strcpy(new->connection, connection);
-  } else {
+  }
+  else
+  {
     new->connection = connection;
   }
   descriptors = new;
@@ -99,15 +105,20 @@ drop_descriptor(char *name, char *connection)
   struct descriptor *i;
   struct descriptor **lastptr = &descriptors;
 
-  if (name[0] != '"') {
+  if (name[0] != '"')
+  {
     return;
   }
 
-  for (i = descriptors; i; lastptr = &i->next, i = i->next) {
-    if (strcmp(name, i->name) == 0) {
-      if ((!connection && !i->connection) || (connection && i->connection && strcmp(connection, i->connection) == 0)) {
+  for (i = descriptors; i; lastptr = &i->next, i = i->next)
+  {
+    if (strcmp(name, i->name) == 0)
+    {
+      if ((!connection && !i->connection) || (connection && i->connection && strcmp(connection, i->connection) == 0))
+      {
         *lastptr = i->next;
-        if (i->connection) {
+        if (i->connection)
+        {
           free(i->connection);
         }
         free(i->name);
@@ -124,13 +135,17 @@ lookup_descriptor(char *name, char *connection)
 {
   struct descriptor *i;
 
-  if (name[0] != '"') {
+  if (name[0] != '"')
+  {
     return NULL;
   }
 
-  for (i = descriptors; i; i = i->next) {
-    if (strcmp(name, i->name) == 0) {
-      if ((!connection && !i->connection) || (connection && i->connection && strcmp(connection, i->connection) == 0)) {
+  for (i = descriptors; i; i = i->next)
+  {
+    if (strcmp(name, i->name) == 0)
+    {
+      if ((!connection && !i->connection) || (connection && i->connection && strcmp(connection, i->connection) == 0))
+      {
         return i;
       }
     }
@@ -145,10 +160,14 @@ output_get_descr_header(char *desc_name)
   struct assignment *results;
 
   fprintf(base_yyout, "{ ECPGget_desc_header(__LINE__, %s, &(", desc_name);
-  for (results = assignments; results != NULL; results = results->next) {
-    if (results->value == ECPGd_count) {
+  for (results = assignments; results != NULL; results = results->next)
+  {
+    if (results->value == ECPGd_count)
+    {
       ECPGnumeric_lvalue(results->variable);
-    } else {
+    }
+    else
+    {
       mmerror(PARSE_ERROR, ET_WARNING, "descriptor header item \"%d\" does not exist", results->value);
     }
   }
@@ -164,18 +183,20 @@ output_get_descr(char *desc_name, char *index)
   struct assignment *results;
 
   fprintf(base_yyout, "{ ECPGget_desc(__LINE__, %s, %s,", desc_name, index);
-  for (results = assignments; results != NULL; results = results->next) {
+  for (results = assignments; results != NULL; results = results->next)
+  {
     const struct variable *v = find_variable(results->variable);
     char *str_zero = mm_strdup("0");
 
-    switch (results->value) {
+    switch (results->value)
+    {
     case ECPGd_nullable:
       mmerror(PARSE_ERROR, ET_WARNING, "nullable is always 1");
       break;
     case ECPGd_key_member:
       mmerror(PARSE_ERROR, ET_WARNING, "key_member is always 0");
       break;
-    default:;
+    default:
       break;
     }
     fprintf(base_yyout, "%s,", get_dtype(results->value));
@@ -194,10 +215,14 @@ output_set_descr_header(char *desc_name)
   struct assignment *results;
 
   fprintf(base_yyout, "{ ECPGset_desc_header(__LINE__, %s, (int)(", desc_name);
-  for (results = assignments; results != NULL; results = results->next) {
-    if (results->value == ECPGd_count) {
+  for (results = assignments; results != NULL; results = results->next)
+  {
+    if (results->value == ECPGd_count)
+    {
       ECPGnumeric_lvalue(results->variable);
-    } else {
+    }
+    else
+    {
       mmerror(PARSE_ERROR, ET_WARNING, "descriptor header item \"%d\" does not exist", results->value);
     }
   }
@@ -210,7 +235,8 @@ output_set_descr_header(char *desc_name)
 static const char *
 descriptor_item_name(enum ECPGdtype itemcode)
 {
-  switch (itemcode) {
+  switch (itemcode)
+  {
   case ECPGd_cardinality:
     return "CARDINALITY";
   case ECPGd_count:
@@ -243,7 +269,7 @@ descriptor_item_name(enum ECPGdtype itemcode)
     return "SCALE";
   case ECPGd_type:
     return "TYPE";
-  default:;
+  default:
     return NULL;
   }
 }
@@ -254,10 +280,12 @@ output_set_descr(char *desc_name, char *index)
   struct assignment *results;
 
   fprintf(base_yyout, "{ ECPGset_desc(__LINE__, %s, %s,", desc_name, index);
-  for (results = assignments; results != NULL; results = results->next) {
+  for (results = assignments; results != NULL; results = results->next)
+  {
     const struct variable *v = find_variable(results->variable);
 
-    switch (results->value) {
+    switch (results->value)
+    {
     case ECPGd_cardinality:
     case ECPGd_di_code:
     case ECPGd_di_precision:
@@ -278,15 +306,17 @@ output_set_descr(char *desc_name, char *index)
     case ECPGd_data:
     case ECPGd_indicator:
     case ECPGd_length:
-    case ECPGd_type: {
+    case ECPGd_type:
+    {
       char *str_zero = mm_strdup("0");
 
       fprintf(base_yyout, "%s,", get_dtype(results->value));
       ECPGdump_a_type(base_yyout, v->name, v->type, v->brace_level, NULL, NULL, -1, NULL, NULL, str_zero, NULL, NULL);
       free(str_zero);
-    } break;
+    }
+    break;
 
-    default:;;
+    default:;
     }
   }
   drop_assignments();

@@ -99,7 +99,8 @@ RangeVarCallbackForLockTable(const RangeVar *rv, Oid relid, Oid oldrelid, void *
   relkind = get_rel_relkind(relid);
   if (!relkind)
   {
-    return; /* woops, concurrently dropped; no permissions check */
+    return; /* woops, concurrently dropped; no permissions
+             * check */
   }
 
   /* Currently, we only allow plain tables or views to be locked */

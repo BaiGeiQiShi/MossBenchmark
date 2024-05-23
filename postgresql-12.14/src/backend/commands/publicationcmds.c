@@ -85,7 +85,7 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
 
       if (*publish_given)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
 
       /*
@@ -102,7 +102,7 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
 
       if (!SplitIdentifierString(publish, ',', &publish_list))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid list syntax for \"publish\" option")));
       }
 
       /* Process the option list. */
@@ -124,7 +124,7 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
         }
         else if (strcmp(publish_opt, "truncate") == 0)
         {
-
+          *publish_truncate = true;
         }
         else
         {
@@ -168,7 +168,7 @@ CreatePublication(CreatePublicationStmt *stmt)
   /* FOR ALL TABLES requires superuser */
   if (stmt->for_all_tables && !superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), (errmsg("must be superuser to create FOR ALL TABLES publication"))));
   }
 
   rel = table_open(PublicationRelationId, RowExclusiveLock);
@@ -302,12 +302,12 @@ AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
       {
         Oid relid = lfirst_oid(lc);
 
-
+        CacheInvalidateRelcacheByRelid(relid);
       }
     }
     else
     {
-
+      CacheInvalidateRelcacheAll();
     }
   }
 
@@ -373,7 +373,7 @@ AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
       {
         Relation oldrel = table_open(oldrelid, ShareUpdateExclusiveLock);
 
-
+        delrels = lappend(delrels, oldrel);
       }
     }
 
@@ -411,7 +411,7 @@ AlterPublication(AlterPublicationStmt *stmt)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("publication \"%s\" does not exist", stmt->pubname)));
   }
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
@@ -419,7 +419,7 @@ AlterPublication(AlterPublicationStmt *stmt)
   /* must be owner */
   if (!pg_publication_ownercheck(pubform->oid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_PUBLICATION, stmt->pubname);
   }
 
   if (stmt->options)
@@ -452,7 +452,7 @@ RemovePublicationById(Oid pubid)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for publication %u", pubid);
   }
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
@@ -486,7 +486,7 @@ RemovePublicationRelById(Oid proid)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for publication table %u", proid);
   }
 
   pubrel = (Form_pg_publication_rel)GETSTRUCT(tup);
@@ -537,8 +537,8 @@ OpenTableList(List *tables)
      */
     if (list_member_oid(relids, myrelid))
     {
-
-
+      table_close(rel, ShareUpdateExclusiveLock);
+      continue;
     }
 
     rels = lappend(rels, rel);
@@ -648,7 +648,7 @@ PublicationDropTables(Oid pubid, List *rels, bool missing_ok)
     {
       if (missing_ok)
       {
-
+        continue;
       }
 
       ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("relation \"%s\" is not part of the publication", RelationGetRelationName(rel))));
@@ -671,7 +671,7 @@ AlterPublicationOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
 
   if (form->pubowner == newOwnerId)
   {
-
+    return;
   }
 
   if (!superuser())
@@ -679,25 +679,25 @@ AlterPublicationOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
     AclResult aclresult;
 
     /* Must be owner */
-
-
-
-
+    if (!pg_publication_ownercheck(form->oid, GetUserId()))
+    {
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_PUBLICATION, NameStr(form->pubname));
+    }
 
     /* Must be able to become new owner */
-
+    check_is_member_of_role(GetUserId(), newOwnerId);
 
     /* New owner must have CREATE privilege on database */
+    aclresult = pg_database_aclcheck(MyDatabaseId, newOwnerId, ACL_CREATE);
+    if (aclresult != ACLCHECK_OK)
+    {
+      aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(MyDatabaseId));
+    }
 
-
-
-
-
-
-
-
-
-
+    if (form->puballtables && !superuser_arg(newOwnerId))
+    {
+      ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to change owner of publication \"%s\"", NameStr(form->pubname)), errhint("The owner of a FOR ALL TABLES publication must be a superuser.")));
+    }
   }
 
   form->pubowner = newOwnerId;
@@ -727,7 +727,7 @@ AlterPublicationOwner(const char *name, Oid newOwnerId)
 
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("publication \"%s\" does not exist", name)));
   }
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
@@ -750,21 +750,21 @@ AlterPublicationOwner(const char *name, Oid newOwnerId)
 void
 AlterPublicationOwner_oid(Oid subid, Oid newOwnerId)
 {
+  HeapTuple tup;
+  Relation rel;
 
+  rel = table_open(PublicationRelationId, RowExclusiveLock);
 
+  tup = SearchSysCacheCopy1(PUBLICATIONOID, ObjectIdGetDatum(subid));
 
+  if (!HeapTupleIsValid(tup))
+  {
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("publication with OID %u does not exist", subid)));
+  }
 
+  AlterPublicationOwner_internal(rel, tup, newOwnerId);
 
+  heap_freetuple(tup);
 
-
-
-
-
-
-
-
-
-
-
-
+  table_close(rel, RowExclusiveLock);
 }

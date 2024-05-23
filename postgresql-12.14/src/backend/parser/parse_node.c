@@ -82,7 +82,7 @@ free_parsestate(ParseState *pstate)
    */
   if (pstate->p_next_resno - 1 > MaxTupleAttributeNumber)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("target lists can have at most %d entries", MaxTupleAttributeNumber)));
   }
 
   if (pstate->p_target_relation != NULL)
@@ -205,8 +205,7 @@ make_var(ParseState *pstate, RangeTblEntry *rte, int attrno, int location)
 
 /*
  * transformContainerType()
- *		Identify the types involved in a subscripting operation for
- *container
+ *		Identify the types involved in a subscripting operation for container
  *
  *
  * On entry, containerType/containerTypmod identify the type of the input value
@@ -252,7 +251,7 @@ transformContainerType(Oid *containerType, int32 *containerTypmod)
   type_tuple_container = SearchSysCache1(TYPEOID, ObjectIdGetDatum(*containerType));
   if (!HeapTupleIsValid(type_tuple_container))
   {
-
+    elog(ERROR, "cache lookup failed for type %u", *containerType);
   }
   type_struct_container = (Form_pg_type)GETSTRUCT(type_tuple_container);
 
@@ -261,7 +260,7 @@ transformContainerType(Oid *containerType, int32 *containerTypmod)
   elementType = type_struct_container->typelem;
   if (elementType == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("cannot subscript type %s because it is not an array", format_type_be(origContainerType))));
   }
 
   ReleaseSysCache(type_tuple_container);
@@ -271,8 +270,8 @@ transformContainerType(Oid *containerType, int32 *containerTypmod)
 
 /*
  * transformContainerSubscripts()
- *		Transform container (array, etc) subscripting.  This is used for
- *both container fetch and container assignment.
+ *		Transform container (array, etc) subscripting.  This is used for both
+ *		container fetch and container assignment.
  *
  * In a container fetch, we are given a source container value and we produce
  * an expression that represents the result of extracting a single container
@@ -289,16 +288,17 @@ transformContainerType(Oid *containerType, int32 *containerTypmod)
  * (Note that int2vector and oidvector are treated as domains here.)
  *
  * pstate			Parse state
- * containerBase	Already-transformed expression for the container as a
- *whole containerType	OID of container's datatype (should match type of
- *					containerBase, or be the base type of
- *containerBase's domain type) elementType		OID of container's
- *element type (fetch with transformContainerType, or pass InvalidOid to do it
- *here) containerTypMod	typmod for the container (which is also typmod for the
+ * containerBase	Already-transformed expression for the container as a whole
+ * containerType	OID of container's datatype (should match type of
+ *					containerBase, or be the base type of containerBase's
+ *					domain type)
+ * elementType		OID of container's element type (fetch with
+ *					transformContainerType, or pass InvalidOid to do it here)
+ * containerTypMod	typmod for the container (which is also typmod for the
  *					elements)
  * indirection		Untransformed list of subscripts (must not be NIL)
- * assignFrom		NULL for container fetch, else transformed expression
- *for source.
+ * assignFrom		NULL for container fetch, else transformed expression for
+ *					source.
  */
 SubscriptingRef *
 transformContainerSubscripts(ParseState *pstate, Node *containerBase, Oid containerType, Oid elementType, int32 containerTypMod, List *indirection, Node *assignFrom)
@@ -355,7 +355,7 @@ transformContainerSubscripts(ParseState *pstate, Node *containerBase, Oid contai
         subexpr = coerce_to_target_type(pstate, subexpr, exprType(subexpr), INT4OID, -1, COERCION_ASSIGNMENT, COERCE_IMPLICIT_CAST, -1);
         if (subexpr == NULL)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("array subscript must have type integer"), parser_errposition(pstate, exprLocation(ai->lidx))));
         }
       }
       else if (!ai->is_slice)
@@ -382,7 +382,7 @@ transformContainerSubscripts(ParseState *pstate, Node *containerBase, Oid contai
       subexpr = coerce_to_target_type(pstate, subexpr, exprType(subexpr), INT4OID, -1, COERCION_ASSIGNMENT, COERCE_IMPLICIT_CAST, -1);
       if (subexpr == NULL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("array subscript must have type integer"), parser_errposition(pstate, exprLocation(ai->uidx))));
       }
     }
     else
@@ -407,7 +407,11 @@ transformContainerSubscripts(ParseState *pstate, Node *containerBase, Oid contai
     newFrom = coerce_to_target_type(pstate, assignFrom, typesource, typeneeded, containerTypMod, COERCION_ASSIGNMENT, COERCE_IMPLICIT_CAST, -1);
     if (newFrom == NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
+                         errmsg("array assignment requires type %s"
+                                " but expression is of type %s",
+                             format_type_be(typeneeded), format_type_be(typesource)),
+                         errhint("You will need to rewrite or cast the expression."), parser_errposition(pstate, exprLocation(assignFrom))));
     }
     assignFrom = newFrom;
   }
@@ -464,7 +468,7 @@ make_const(ParseState *pstate, Value *value, int location)
 
   switch (nodeTag(value))
   {
-  case T_Integer:;
+  case T_Integer:
     val = Int32GetDatum(intVal(value));
 
     typeid = INT4OID;
@@ -472,7 +476,7 @@ make_const(ParseState *pstate, Value *value, int location)
     typebyval = true;
     break;
 
-  case T_Float:;
+  case T_Float:
     /* could be an oversize integer as well as a float ... */
     if (scanint8(strVal(value), true, &val64))
     {
@@ -512,7 +516,7 @@ make_const(ParseState *pstate, Value *value, int location)
     }
     break;
 
-  case T_String:;
+  case T_String:
 
     /*
      * We assume here that UNKNOWN's internal representation is the
@@ -525,7 +529,7 @@ make_const(ParseState *pstate, Value *value, int location)
     typebyval = false;
     break;
 
-  case T_BitString:;
+  case T_BitString:
     /* arrange to report location if bit_in() fails */
     setup_parser_errposition_callback(&pcbstate, pstate, location);
     val = DirectFunctionCall3(bit_in, CStringGetDatum(strVal(value)), ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
@@ -535,15 +539,15 @@ make_const(ParseState *pstate, Value *value, int location)
     typebyval = false;
     break;
 
-  case T_Null:;
+  case T_Null:
     /* return a null const */
     con = makeConst(UNKNOWNOID, -1, InvalidOid, -2, (Datum)0, true, false);
     con->location = location;
     return con;
 
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)nodeTag(value));
+    return NULL; /* keep compiler quiet */
   }
 
   con = makeConst(typeid, -1, /* typmod -1 is OK for all cases */

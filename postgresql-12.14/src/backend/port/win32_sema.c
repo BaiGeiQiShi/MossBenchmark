@@ -47,7 +47,8 @@ void
 PGReserveSemaphores(int maxSemas, int port)
 {
   mySemSet = (HANDLE *)malloc(maxSemas * sizeof(HANDLE));
-  if (mySemSet == NULL) {
+  if (mySemSet == NULL)
+  {
     elog(PANIC, "out of memory");
   }
   numSems = 0;
@@ -66,7 +67,8 @@ ReleaseSemaphores(int code, Datum arg)
 {
   int i;
 
-  for (i = 0; i < numSems; i++) {
+  for (i = 0; i < numSems; i++)
+  {
     CloseHandle(mySemSet[i]);
   }
   free(mySemSet);
@@ -86,7 +88,8 @@ PGSemaphoreCreate(void)
   /* Can't do this in a backend, because static state is postmaster's */
   Assert(!IsUnderPostmaster);
 
-  if (numSems >= maxSems) {
+  if (numSems >= maxSems)
+  {
     elog(PANIC, "too many semaphores created");
   }
 
@@ -97,10 +100,13 @@ PGSemaphoreCreate(void)
 
   /* We don't need a named semaphore */
   cur_handle = CreateSemaphore(&sec_attrs, 1, 32767, NULL);
-  if (cur_handle) {
+  if (cur_handle)
+  {
     /* Successfully done */
     mySemSet[numSems++] = cur_handle;
-  } else {
+  }
+  else
+  {
     ereport(PANIC, (errmsg("could not create semaphore: error code %lu", GetLastError())));
   }
 
@@ -149,13 +155,15 @@ PGSemaphoreLock(PGSemaphore sema)
    * no hidden magic about whether the syscall will internally service a
    * signal --- we do that ourselves.
    */
-  while (!done) {
+  while (!done)
+  {
     DWORD rc;
 
     CHECK_FOR_INTERRUPTS();
 
     rc = WaitForMultipleObjectsEx(2, wh, FALSE, INFINITE, TRUE);
-    switch (rc) {
+    switch (rc)
+    {
     case WAIT_OBJECT_0:
       /* Signal event is set - we have a signal to deliver */
       pgwin32_dispatch_queued_signals();
@@ -177,7 +185,7 @@ PGSemaphoreLock(PGSemaphore sema)
     case WAIT_FAILED:
       ereport(FATAL, (errmsg("could not lock semaphore: error code %lu", GetLastError())));
       break;
-    default:;
+    default:
       elog(FATAL, "unexpected return code from WaitForMultipleObjectsEx(): %lu", rc);
       break;
     }
@@ -192,7 +200,8 @@ PGSemaphoreLock(PGSemaphore sema)
 void
 PGSemaphoreUnlock(PGSemaphore sema)
 {
-  if (!ReleaseSemaphore(sema, 1, NULL)) {
+  if (!ReleaseSemaphore(sema, 1, NULL))
+  {
     ereport(FATAL, (errmsg("could not unlock semaphore: error code %lu", GetLastError())));
   }
 }
@@ -209,10 +218,13 @@ PGSemaphoreTryLock(PGSemaphore sema)
 
   ret = WaitForSingleObject(sema, 0);
 
-  if (ret == WAIT_OBJECT_0) {
+  if (ret == WAIT_OBJECT_0)
+  {
     /* We got it! */
     return true;
-  } else if (ret == WAIT_TIMEOUT) {
+  }
+  else if (ret == WAIT_TIMEOUT)
+  {
     /* Can't get it */
     errno = EAGAIN;
     return false;

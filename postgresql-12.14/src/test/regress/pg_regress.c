@@ -40,7 +40,8 @@
 #include "portability/instr_time.h"
 
 /* for resultmap we need a list of pairs of strings */
-typedef struct _resultmap {
+typedef struct _resultmap
+{
   char *test;
   char *type;
   char *resultfile;
@@ -138,10 +139,13 @@ unlimit_core_size(void)
   struct rlimit lim;
 
   getrlimit(RLIMIT_CORE, &lim);
-  if (lim.rlim_max == 0) {
+  if (lim.rlim_max == 0)
+  {
     fprintf(stderr, _("%s: could not set core size: disallowed by hard limit\n"), progname);
     return;
-  } else if (lim.rlim_max == RLIM_INFINITY || lim.rlim_cur < lim.rlim_max) {
+  }
+  else if (lim.rlim_max == RLIM_INFINITY || lim.rlim_cur < lim.rlim_max)
+  {
     lim.rlim_cur = lim.rlim_max;
     setrlimit(RLIMIT_CORE, &lim);
   }
@@ -159,9 +163,12 @@ add_stringlist_item(_stringlist **listhead, const char *str)
 
   newentry->str = pg_strdup(str);
   newentry->next = NULL;
-  if (*listhead == NULL) {
+  if (*listhead == NULL)
+  {
     *listhead = newentry;
-  } else {
+  }
+  else
+  {
     for (oldentry = *listhead; oldentry->next; oldentry = oldentry->next)
       /* skip */;
     oldentry->next = newentry;
@@ -174,10 +181,12 @@ add_stringlist_item(_stringlist **listhead, const char *str)
 static void
 free_stringlist(_stringlist **listhead)
 {
-  if (listhead == NULL || *listhead == NULL) {
+  if (listhead == NULL || *listhead == NULL)
+  {
     return;
   }
-  if ((*listhead)->next != NULL) {
+  if ((*listhead)->next != NULL)
+  {
     free_stringlist(&((*listhead)->next));
   }
   free((*listhead)->str);
@@ -194,7 +203,8 @@ split_to_stringlist(const char *s, const char *delim, _stringlist **listhead)
   char *sc = pg_strdup(s);
   char *token = strtok(sc, delim);
 
-  while (token) {
+  while (token)
+  {
     add_stringlist_item(listhead, token);
     token = strtok(NULL, delim);
   }
@@ -231,7 +241,8 @@ status(const char *fmt, ...)
   fflush(stdout);
   va_end(ap);
 
-  if (logfile) {
+  if (logfile)
+  {
     va_start(ap, fmt);
     vfprintf(logfile, fmt, ap);
     va_end(ap);
@@ -246,7 +257,8 @@ status_end(void)
 {
   fprintf(stdout, "\n");
   fflush(stdout);
-  if (logfile) {
+  if (logfile)
+  {
     fprintf(logfile, "\n");
   }
 }
@@ -257,7 +269,8 @@ status_end(void)
 static void
 stop_postmaster(void)
 {
-  if (postmaster_running) {
+  if (postmaster_running)
+  {
     /* We use pg_ctl to issue the kill and wait for stop */
     char buf[MAXPGPATH * 2];
     int r;
@@ -268,7 +281,8 @@ stop_postmaster(void)
 
     snprintf(buf, sizeof(buf), "\"%s%spg_ctl\" stop -D \"%s/data\" -s", bindir ? bindir : "", bindir ? "/" : "", temp_instance);
     r = system(buf);
-    if (r != 0) {
+    if (r != 0)
+    {
       fprintf(stderr, _("\n%s: could not stop postmaster: exit code was %d\n"), progname, r);
       _exit(2); /* not exit(), that could be recursive */
     }
@@ -326,7 +340,8 @@ make_temp_sockdir(void)
   char *template = pg_strdup("/tmp/pg_regress-XXXXXX");
 
   temp_sockdir = mkdtemp(template);
-  if (temp_sockdir == NULL) {
+  if (temp_sockdir == NULL)
+  {
     fprintf(stderr, _("%s: could not create directory \"%s\": %s\n"), progname, template, strerror(errno));
     exit(2);
   }
@@ -366,11 +381,14 @@ make_temp_sockdir(void)
 static bool
 string_matches_pattern(const char *str, const char *pattern)
 {
-  while (*str && *pattern) {
-    if (*pattern == '.' && pattern[1] == '*') {
+  while (*str && *pattern)
+  {
+    if (*pattern == '.' && pattern[1] == '*')
+    {
       pattern += 2;
       /* Trailing .* matches everything. */
-      if (*pattern == '\0') {
+      if (*pattern == '\0')
+      {
         return true;
       }
 
@@ -378,13 +396,16 @@ string_matches_pattern(const char *str, const char *pattern)
        * Otherwise, scan for a text position at which we can match the
        * rest of the pattern.
        */
-      while (*str) {
+      while (*str)
+      {
         /*
          * Optimization to prevent most recursion: don't recurse
          * unless first pattern char might match this text char.
          */
-        if (*str == *pattern || *pattern == '.') {
-          if (string_matches_pattern(str, pattern)) {
+        if (*str == *pattern || *pattern == '.')
+        {
+          if (string_matches_pattern(str, pattern))
+          {
             return true;
           }
         }
@@ -396,7 +417,9 @@ string_matches_pattern(const char *str, const char *pattern)
        * End of text with no match.
        */
       return false;
-    } else if (*pattern != '.' && *str != *pattern) {
+    }
+    else if (*pattern != '.' && *str != *pattern)
+    {
       /*
        * Not the single-character wildcard and no explicit match? Then
        * time to quit...
@@ -408,15 +431,18 @@ string_matches_pattern(const char *str, const char *pattern)
     pattern++;
   }
 
-  if (*pattern == '\0') {
+  if (*pattern == '\0')
+  {
     return true; /* end of pattern, so declare match */
   }
 
   /* End of input string.  Do we have matching pattern remaining? */
-  while (*pattern == '.' && pattern[1] == '*') {
+  while (*pattern == '.' && pattern[1] == '*')
+  {
     pattern += 2;
   }
-  if (*pattern == '\0') {
+  if (*pattern == '\0')
+  {
     return true; /* end of pattern, so declare match */
   }
 
@@ -432,7 +458,8 @@ replace_string(char *string, const char *replace, const char *replacement)
 {
   char *ptr;
 
-  while ((ptr = strstr(string, replace)) != NULL) {
+  while ((ptr = strstr(string, replace)) != NULL)
+  {
     char *dup = pg_strdup(string);
 
     strlcpy(string, dup, ptr - string + 1);
@@ -463,7 +490,8 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 
   /* Check that indir actually exists and is a directory */
   ret = stat(indir, &st);
-  if (ret != 0 || !S_ISDIR(st.st_mode)) {
+  if (ret != 0 || !S_ISDIR(st.st_mode))
+  {
     /*
      * No warning, to avoid noise in tests that do not have these
      * directories; for example, ecpg, contrib and src/pl.
@@ -472,7 +500,8 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
   }
 
   names = pgfnames(indir);
-  if (!names) {
+  if (!names)
+  {
     /* Error logged in pgfnames */
     exit(2);
   }
@@ -491,8 +520,10 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
    * testtablespace, and this were handled by a .BAT file or similar on
    * Windows.  See pgsql-hackers discussion of 2008-01-18.
    */
-  if (directory_exists(testtablespace)) {
-    if (!rmtree(testtablespace, true)) {
+  if (directory_exists(testtablespace))
+  {
+    if (!rmtree(testtablespace, true))
+    {
       fprintf(stderr, _("\n%s: could not remove test tablespace \"%s\"\n"), progname, testtablespace);
       exit(2);
     }
@@ -501,7 +532,8 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 #endif
 
   /* finally loop on each file and do the replacement */
-  for (name = names; *name; name++) {
+  for (name = names; *name; name++)
+  {
     char srcfile[MAXPGPATH];
     char destfile[MAXPGPATH];
     char prefix[MAXPGPATH];
@@ -509,10 +541,12 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
     char line[1024];
 
     /* reject filenames not finishing in ".source" */
-    if (strlen(*name) < 8) {
+    if (strlen(*name) < 8)
+    {
       continue;
     }
-    if (strcmp(*name + strlen(*name) - 7, ".source") != 0) {
+    if (strcmp(*name + strlen(*name) - 7, ".source") != 0)
+    {
       continue;
     }
 
@@ -524,16 +558,19 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
     snprintf(destfile, MAXPGPATH, "%s/%s/%s.%s", dest_dir, dest_subdir, prefix, suffix);
 
     infile = fopen(srcfile, "r");
-    if (!infile) {
+    if (!infile)
+    {
       fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, srcfile, strerror(errno));
       exit(2);
     }
     outfile = fopen(destfile, "w");
-    if (!outfile) {
+    if (!outfile)
+    {
       fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, destfile, strerror(errno));
       exit(2);
     }
-    while (fgets(line, sizeof(line), infile)) {
+    while (fgets(line, sizeof(line), infile))
+    {
       replace_string(line, "@abs_srcdir@", inputdir);
       replace_string(line, "@abs_builddir@", outputdir);
       replace_string(line, "@testtablespace@", testtablespace);
@@ -549,7 +586,8 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
    * If we didn't process any files, complain because it probably means
    * somebody neglected to pass the needed --inputdir argument.
    */
-  if (count <= 0) {
+  if (count <= 0)
+  {
     fprintf(stderr, _("%s: no *.source files found in \"%s\"\n"), progname, indir);
     exit(2);
   }
@@ -587,16 +625,19 @@ load_resultmap(void)
   /* scan the file ... */
   snprintf(buf, sizeof(buf), "%s/resultmap", inputdir);
   f = fopen(buf, "r");
-  if (!f) {
+  if (!f)
+  {
     /* OK if it doesn't exist, else complain */
-    if (errno == ENOENT) {
+    if (errno == ENOENT)
+    {
       return;
     }
     fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, buf, strerror(errno));
     exit(2);
   }
 
-  while (fgets(buf, sizeof(buf), f)) {
+  while (fgets(buf, sizeof(buf), f))
+  {
     char *platform;
     char *file_type;
     char *expected;
@@ -604,26 +645,30 @@ load_resultmap(void)
 
     /* strip trailing whitespace, especially the newline */
     i = strlen(buf);
-    while (i > 0 && isspace((unsigned char)buf[i - 1])) {
+    while (i > 0 && isspace((unsigned char)buf[i - 1]))
+    {
       buf[--i] = '\0';
     }
 
     /* parse out the line fields */
     file_type = strchr(buf, ':');
-    if (!file_type) {
+    if (!file_type)
+    {
       fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"), buf);
       exit(2);
     }
     *file_type++ = '\0';
 
     platform = strchr(file_type, ':');
-    if (!platform) {
+    if (!platform)
+    {
       fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"), buf);
       exit(2);
     }
     *platform++ = '\0';
     expected = strchr(platform, '=');
-    if (!expected) {
+    if (!expected)
+    {
       fprintf(stderr, _("incorrectly formatted resultmap entry: %s\n"), buf);
       exit(2);
     }
@@ -635,7 +680,8 @@ load_resultmap(void)
      * the last match in the resultmap file is used. This mimics the
      * behavior of the old shell script.
      */
-    if (string_matches_pattern(host_platform, platform)) {
+    if (string_matches_pattern(host_platform, platform))
+    {
       _resultmap *entry = pg_malloc(sizeof(_resultmap));
 
       entry->test = pg_strdup(buf);
@@ -661,14 +707,17 @@ get_expectfile(const char *testname, const char *file)
    * Determine the file type from the file name. This is just what is
    * following the last dot in the file name.
    */
-  if (!file || !(file_type = strrchr(file, '.'))) {
+  if (!file || !(file_type = strrchr(file, '.')))
+  {
     return NULL;
   }
 
   file_type++;
 
-  for (rm = resultmap; rm != NULL; rm = rm->next) {
-    if (strcmp(testname, rm->test) == 0 && strcmp(file_type, rm->type) == 0) {
+  for (rm = resultmap; rm != NULL; rm = rm->next)
+  {
+    if (strcmp(testname, rm->test) == 0 && strcmp(file_type, rm->type) == 0)
+    {
       return rm->resultfile;
     }
   }
@@ -700,7 +749,8 @@ initialize_environment(void)
    */
   putenv("PGAPPNAME=pg_regress");
 
-  if (nolocale) {
+  if (nolocale)
+  {
     /*
      * Clear out any non-C locale settings
      */
@@ -737,9 +787,12 @@ initialize_environment(void)
   /*
    * Set encoding as requested
    */
-  if (encoding) {
+  if (encoding)
+  {
     doputenv("PGCLIENTENCODING", encoding);
-  } else {
+  }
+  else
+  {
     unsetenv("PGCLIENTENCODING");
   }
 
@@ -759,14 +812,16 @@ initialize_environment(void)
     const char *old_pgoptions = getenv("PGOPTIONS");
     char *new_pgoptions;
 
-    if (!old_pgoptions) {
+    if (!old_pgoptions)
+    {
       old_pgoptions = "";
     }
     new_pgoptions = psprintf("PGOPTIONS=%s %s", old_pgoptions, my_pgoptions);
     putenv(new_pgoptions);
   }
 
-  if (temp_instance) {
+  if (temp_instance)
+  {
     /*
      * Clear out any environment vars that might cause psql to connect to
      * the wrong postmaster, or otherwise behave in nondefault ways. (Note
@@ -801,11 +856,15 @@ initialize_environment(void)
     /* PGHOST, see below */
 
 #ifdef HAVE_UNIX_SOCKETS
-    if (hostname != NULL) {
+    if (hostname != NULL)
+    {
       doputenv("PGHOST", hostname);
-    } else {
+    }
+    else
+    {
       sockdir = getenv("PG_REGRESS_SOCK_DIR");
-      if (!sockdir) {
+      if (!sockdir)
+      {
         sockdir = make_temp_sockdir();
       }
       doputenv("PGHOST", sockdir);
@@ -815,13 +874,16 @@ initialize_environment(void)
     doputenv("PGHOST", hostname);
 #endif
     unsetenv("PGHOSTADDR");
-    if (port != -1) {
+    if (port != -1)
+    {
       char s[16];
 
       sprintf(s, "%d", port);
       doputenv("PGPORT", s);
     }
-  } else {
+  }
+  else
+  {
     const char *pghost;
     const char *pgport;
 
@@ -829,17 +891,20 @@ initialize_environment(void)
      * When testing an existing install, we honor existing environment
      * variables, except if they're overridden by command line options.
      */
-    if (hostname != NULL) {
+    if (hostname != NULL)
+    {
       doputenv("PGHOST", hostname);
       unsetenv("PGHOSTADDR");
     }
-    if (port != -1) {
+    if (port != -1)
+    {
       char s[16];
 
       sprintf(s, "%d", port);
       doputenv("PGPORT", s);
     }
-    if (user != NULL) {
+    if (user != NULL)
+    {
       doputenv("PGUSER", user);
     }
 
@@ -849,21 +914,26 @@ initialize_environment(void)
     pghost = getenv("PGHOST");
     pgport = getenv("PGPORT");
 #ifndef HAVE_UNIX_SOCKETS
-    if (!pghost) {
+    if (!pghost)
+    {
       pghost = "localhost";
     }
 #endif
 
-    if (pghost && pgport) {
+    if (pghost && pgport)
+    {
       printf(_("(using postmaster on %s, port %s)\n"), pghost, pgport);
     }
-    if (pghost && !pgport) {
+    if (pghost && !pgport)
+    {
       printf(_("(using postmaster on %s, default port)\n"), pghost);
     }
-    if (!pghost && pgport) {
+    if (!pghost && pgport)
+    {
       printf(_("(using postmaster on Unix socket, port %s)\n"), pgport);
     }
-    if (!pghost && !pgport) {
+    if (!pghost && !pgport)
+    {
       printf(_("(using postmaster on Unix socket, default port)\n"));
     }
   }
@@ -885,8 +955,10 @@ fmtHba(const char *raw)
   wp = ret = realloc(ret, 3 + strlen(raw) * 2);
 
   *wp++ = '"';
-  for (rp = raw; *rp; rp++) {
-    if (*rp == '"') {
+  for (rp = raw; *rp; rp++)
+  {
+    if (*rp == '"')
+    {
       *wp++ = '"';
     }
     *wp++ = *rp;
@@ -913,22 +985,26 @@ current_windows_user(const char **acct, const char **dom)
   DWORD domainnamesize = sizeof(domainname);
   SID_NAME_USE accountnameuse;
 
-  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token)) {
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token))
+  {
     fprintf(stderr, _("%s: could not open process token: error code %lu\n"), progname, GetLastError());
     exit(2);
   }
 
-  if (!GetTokenInformation(token, TokenUser, NULL, 0, &retlen) && GetLastError() != 122) {
+  if (!GetTokenInformation(token, TokenUser, NULL, 0, &retlen) && GetLastError() != 122)
+  {
     fprintf(stderr, _("%s: could not get token information buffer size: error code %lu\n"), progname, GetLastError());
     exit(2);
   }
   tokenuser = pg_malloc(retlen);
-  if (!GetTokenInformation(token, TokenUser, tokenuser, retlen, &retlen)) {
+  if (!GetTokenInformation(token, TokenUser, tokenuser, retlen, &retlen))
+  {
     fprintf(stderr, _("%s: could not get token information: error code %lu\n"), progname, GetLastError());
     exit(2);
   }
 
-  if (!LookupAccountSid(NULL, tokenuser->User.Sid, accountname, &accountnamesize, domainname, &domainnamesize, &accountnameuse)) {
+  if (!LookupAccountSid(NULL, tokenuser->User.Sid, accountname, &accountnamesize, domainname, &domainnamesize, &accountnameuse))
+  {
     fprintf(stderr, _("%s: could not look up account SID: error code %lu\n"), progname, GetLastError());
     exit(2);
   }
@@ -962,7 +1038,8 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
   current_windows_user(&accountname, &domainname);
 
   /* Determine the bootstrap superuser's name */
-  if (superuser_name == NULL) {
+  if (superuser_name == NULL)
+  {
     /*
      * Compute the default superuser name the same way initdb does.
      *
@@ -971,7 +1048,8 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
      * functions do not clearly guarantee that.
      */
     superuser_name = get_user_name(&errstr);
-    if (superuser_name == NULL) {
+    if (superuser_name == NULL)
+    {
       fprintf(stderr, "%s: %s\n", progname, errstr);
       exit(2);
     }
@@ -1000,15 +1078,18 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
 
   /* Check a Write outcome and report any error. */
 #define CW(cond)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    if (!(cond)) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if (!(cond))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       fprintf(stderr, _("%s: could not write to file \"%s\": %s\n"), progname, fname, strerror(errno));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
       exit(2);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 
   res = snprintf(fname, sizeof(fname), "%s/pg_hba.conf", pgdata);
-  if (res < 0 || res >= sizeof(fname)) {
+  if (res < 0 || res >= sizeof(fname))
+  {
     /*
      * Truncating this name is a fatal error, because we must not fail to
      * overwrite an original trust-authentication pg_hba.conf.
@@ -1017,20 +1098,23 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
     exit(2);
   }
   hba = fopen(fname, "w");
-  if (hba == NULL) {
+  if (hba == NULL)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, fname, strerror(errno));
     exit(2);
   }
   CW(fputs("# Configuration written by config_sspi_auth()\n", hba) >= 0);
   CW(fputs("host all all 127.0.0.1/32  sspi include_realm=1 map=regress\n", hba) >= 0);
-  if (have_ipv6) {
+  if (have_ipv6)
+  {
     CW(fputs("host all all ::1/128  sspi include_realm=1 map=regress\n", hba) >= 0);
   }
   CW(fclose(hba) == 0);
 
   snprintf(fname, sizeof(fname), "%s/pg_ident.conf", pgdata);
   ident = fopen(fname, "w");
-  if (ident == NULL) {
+  if (ident == NULL)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, fname, strerror(errno));
     exit(2);
   }
@@ -1042,7 +1126,8 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
    * bother escaping embedded double-quote characters.
    */
   CW(fprintf(ident, "regress  \"%s@%s\"  %s\n", accountname, domainname, fmtHba(superuser_name)) >= 0);
-  for (sl = extraroles; sl; sl = sl->next) {
+  for (sl = extraroles; sl; sl = sl->next)
+  {
     CW(fprintf(ident, "regress  \"%s@%s\"  %s\n", accountname, domainname, fmtHba(sl->str)) >= 0);
   }
   CW(fclose(ident) == 0);
@@ -1072,8 +1157,10 @@ psql_command(const char *database, const char *query, ...)
 
   /* Now escape any shell double-quote metacharacters */
   d = query_escaped;
-  for (s = query_formatted; *s; s++) {
-    if (strchr("\\\"$`", *s)) {
+  for (s = query_formatted; *s; s++)
+  {
+    if (strchr("\\\"$`", *s))
+    {
       *d++ = '\\';
     }
     *d++ = *s;
@@ -1083,7 +1170,8 @@ psql_command(const char *database, const char *query, ...)
   /* And now we can build and execute the shell command */
   snprintf(psql_cmd, sizeof(psql_cmd), "\"%s%spsql\" -X -c \"%s\" \"%s\"", bindir ? bindir : "", bindir ? "/" : "", query_escaped, database);
 
-  if (system(psql_cmd) != 0) {
+  if (system(psql_cmd) != 0)
+  {
     /* psql probably already reported the error */
     fprintf(stderr, _("command failed: %s\n"), psql_cmd);
     exit(2);
@@ -1107,16 +1195,19 @@ spawn_process(const char *cmdline)
    */
   fflush(stdout);
   fflush(stderr);
-  if (logfile) {
+  if (logfile)
+  {
     fflush(logfile);
   }
 
   pid = fork();
-  if (pid == -1) {
+  if (pid == -1)
+  {
     fprintf(stderr, _("%s: could not fork: %s\n"), progname, strerror(errno));
     exit(2);
   }
-  if (pid == 0) {
+  if (pid == 0)
+  {
     /*
      * In child
      *
@@ -1141,7 +1232,8 @@ spawn_process(const char *cmdline)
   memset(&pi, 0, sizeof(pi));
   cmdline2 = psprintf("cmd /c \"%s\"", cmdline);
 
-  if ((restrictedToken = CreateRestrictedProcess(cmdline2, &pi)) == 0) {
+  if ((restrictedToken = CreateRestrictedProcess(cmdline2, &pi)) == 0)
+  {
     exit(2);
   }
 
@@ -1159,7 +1251,8 @@ file_size(const char *file)
   long r;
   FILE *f = fopen(file, "r");
 
-  if (!f) {
+  if (!f)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, file, strerror(errno));
     return -1;
   }
@@ -1179,12 +1272,15 @@ file_line_count(const char *file)
   int l = 0;
   FILE *f = fopen(file, "r");
 
-  if (!f) {
+  if (!f)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, file, strerror(errno));
     return -1;
   }
-  while ((c = fgetc(f)) != EOF) {
-    if (c == '\n') {
+  while ((c = fgetc(f)) != EOF)
+  {
+    if (c == '\n')
+    {
       l++;
     }
   }
@@ -1197,7 +1293,8 @@ file_exists(const char *file)
 {
   FILE *f = fopen(file, "r");
 
-  if (!f) {
+  if (!f)
+  {
     return false;
   }
   fclose(f);
@@ -1209,10 +1306,12 @@ directory_exists(const char *dir)
 {
   struct stat st;
 
-  if (stat(dir, &st) != 0) {
+  if (stat(dir, &st) != 0)
+  {
     return false;
   }
-  if (S_ISDIR(st.st_mode)) {
+  if (S_ISDIR(st.st_mode))
+  {
     return true;
   }
   return false;
@@ -1222,7 +1321,8 @@ directory_exists(const char *dir)
 static void
 make_directory(const char *dir)
 {
-  if (mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
+  if (mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+  {
     fprintf(stderr, _("%s: could not create directory \"%s\": %s\n"), progname, dir, strerror(errno));
     exit(2);
   }
@@ -1239,18 +1339,21 @@ get_alternative_expectfile(const char *expectfile, int i)
   char *tmp;
   char *s;
 
-  if (!(tmp = (char *)malloc(ssize))) {
+  if (!(tmp = (char *)malloc(ssize)))
+  {
     return NULL;
   }
 
-  if (!(s = (char *)malloc(ssize))) {
+  if (!(s = (char *)malloc(ssize)))
+  {
     free(tmp);
     return NULL;
   }
 
   strcpy(tmp, expectfile);
   last_dot = strrchr(tmp, '.');
-  if (!last_dot) {
+  if (!last_dot)
+  {
     free(tmp);
     free(s);
     return NULL;
@@ -1270,7 +1373,8 @@ run_diff(const char *cmd, const char *filename)
   int r;
 
   r = system(cmd);
-  if (!WIFEXITED(r) || WEXITSTATUS(r) > 1) {
+  if (!WIFEXITED(r) || WEXITSTATUS(r) > 1)
+  {
     fprintf(stderr, _("diff command failed with status %d: %s\n"), r, cmd);
     exit(2);
   }
@@ -1280,7 +1384,8 @@ run_diff(const char *cmd, const char *filename)
    * On WIN32, if the 'diff' command cannot be found, system() returns 1,
    * but produces nothing to stdout, so we check for that here.
    */
-  if (WEXITSTATUS(r) == 1 && file_size(filename) <= 0) {
+  if (WEXITSTATUS(r) == 1 && file_size(filename) <= 0)
+  {
     fprintf(stderr, _("diff command not found: %s\n"), cmd);
     exit(2);
   }
@@ -1315,14 +1420,16 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
   platform_expectfile = get_expectfile(testname, resultsfile);
 
   strlcpy(expectfile, default_expectfile, sizeof(expectfile));
-  if (platform_expectfile) {
+  if (platform_expectfile)
+  {
     /*
      * Replace everything after the last slash in expectfile with what the
      * platform_expectfile contains.
      */
     char *p = strrchr(expectfile, '/');
 
-    if (p) {
+    if (p)
+    {
       strcpy(++p, platform_expectfile);
     }
   }
@@ -1334,7 +1441,8 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
   snprintf(cmd, sizeof(cmd), "diff %s \"%s\" \"%s\" > \"%s\"", basic_diff_opts, expectfile, resultsfile, diff);
 
   /* Is the diff file empty? */
-  if (run_diff(cmd, diff) == 0) {
+  if (run_diff(cmd, diff) == 0)
+  {
     unlink(diff);
     return false;
   }
@@ -1343,30 +1451,35 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
   best_line_count = file_line_count(diff);
   strcpy(best_expect_file, expectfile);
 
-  for (i = 0; i <= 9; i++) {
+  for (i = 0; i <= 9; i++)
+  {
     char *alt_expectfile;
 
     alt_expectfile = get_alternative_expectfile(expectfile, i);
-    if (!alt_expectfile) {
+    if (!alt_expectfile)
+    {
       fprintf(stderr, _("Unable to check secondary comparison files: %s\n"), strerror(errno));
       exit(2);
     }
 
-    if (!file_exists(alt_expectfile)) {
+    if (!file_exists(alt_expectfile))
+    {
       free(alt_expectfile);
       continue;
     }
 
     snprintf(cmd, sizeof(cmd), "diff %s \"%s\" \"%s\" > \"%s\"", basic_diff_opts, alt_expectfile, resultsfile, diff);
 
-    if (run_diff(cmd, diff) == 0) {
+    if (run_diff(cmd, diff) == 0)
+    {
       unlink(diff);
       free(alt_expectfile);
       return false;
     }
 
     l = file_line_count(diff);
-    if (l < best_line_count) {
+    if (l < best_line_count)
+    {
       /* This diff was a better match than the last one */
       best_line_count = l;
       strlcpy(best_expect_file, alt_expectfile, sizeof(best_expect_file));
@@ -1379,17 +1492,20 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
    * haven't found a complete match yet.
    */
 
-  if (platform_expectfile) {
+  if (platform_expectfile)
+  {
     snprintf(cmd, sizeof(cmd), "diff %s \"%s\" \"%s\" > \"%s\"", basic_diff_opts, default_expectfile, resultsfile, diff);
 
-    if (run_diff(cmd, diff) == 0) {
+    if (run_diff(cmd, diff) == 0)
+    {
       /* No diff = no changes = good */
       unlink(diff);
       return false;
     }
 
     l = file_line_count(diff);
-    if (l < best_line_count) {
+    if (l < best_line_count)
+    {
       /* This diff was a better match than the last one */
       best_line_count = l;
       strlcpy(best_expect_file, default_expectfile, sizeof(best_expect_file));
@@ -1403,7 +1519,8 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 
   /* Write diff header */
   difffile = fopen(difffilename, "a");
-  if (difffile) {
+  if (difffile)
+  {
     fprintf(difffile, "diff %s %s %s\n", pretty_diff_opts, best_expect_file, resultsfile);
     fclose(difffile);
   }
@@ -1437,7 +1554,8 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
 #endif
 
   tests_left = num_tests;
-  while (tests_left > 0) {
+  while (tests_left > 0)
+  {
     PID_TYPE p;
 
 #ifndef WIN32
@@ -1445,7 +1563,8 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
 
     p = wait(&exit_status);
 
-    if (p == INVALID_PID) {
+    if (p == INVALID_PID)
+    {
       fprintf(stderr, _("failed to wait for subprocesses: %s\n"), strerror(errno));
       exit(2);
     }
@@ -1454,7 +1573,8 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
     int r;
 
     r = WaitForMultipleObjects(tests_left, active_pids, FALSE, INFINITE);
-    if (r < WAIT_OBJECT_0 || r >= WAIT_OBJECT_0 + tests_left) {
+    if (r < WAIT_OBJECT_0 || r >= WAIT_OBJECT_0 + tests_left)
+    {
       fprintf(stderr, _("failed to wait for subprocesses: error code %lu\n"), GetLastError());
       exit(2);
     }
@@ -1463,8 +1583,10 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
     active_pids[r - WAIT_OBJECT_0] = active_pids[tests_left - 1];
 #endif /* WIN32 */
 
-    for (i = 0; i < num_tests; i++) {
-      if (p == pids[i]) {
+    for (i = 0; i < num_tests; i++)
+    {
+      if (p == pids[i])
+      {
 #ifdef WIN32
         GetExitCodeProcess(pids[i], &exit_status);
         CloseHandle(pids[i]);
@@ -1472,7 +1594,8 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
         pids[i] = INVALID_PID;
         statuses[i] = (int)exit_status;
         INSTR_TIME_SET_CURRENT(stoptimes[i]);
-        if (names) {
+        if (names)
+        {
           status(" %s", names[i]);
         }
         tests_left--;
@@ -1492,15 +1615,20 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
 static void
 log_child_failure(int exitstatus)
 {
-  if (WIFEXITED(exitstatus)) {
+  if (WIFEXITED(exitstatus))
+  {
     status(_(" (test process exited with exit code %d)"), WEXITSTATUS(exitstatus));
-  } else if (WIFSIGNALED(exitstatus)) {
+  }
+  else if (WIFSIGNALED(exitstatus))
+  {
 #if defined(WIN32)
     status(_(" (test process was terminated by exception 0x%X)"), WTERMSIG(exitstatus));
 #else
     status(_(" (test process was terminated by signal %d: %s)"), WTERMSIG(exitstatus), pg_strsignal(WTERMSIG(exitstatus)));
 #endif
-  } else {
+  }
+  else
+  {
     status(_(" (test process exited with unrecognized status %d)"), exitstatus);
   }
 }
@@ -1531,12 +1659,14 @@ run_schedule(const char *schedule, test_function tfunc)
   memset(tags, 0, sizeof(tags));
 
   scf = fopen(schedule, "r");
-  if (!scf) {
+  if (!scf)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, schedule, strerror(errno));
     exit(2);
   }
 
-  while (fgets(scbuf, sizeof(scbuf), scf)) {
+  while (fgets(scbuf, sizeof(scbuf), scf))
+  {
     char *test = NULL;
     char *c;
     int num_tests;
@@ -1547,18 +1677,24 @@ run_schedule(const char *schedule, test_function tfunc)
 
     /* strip trailing whitespace, especially the newline */
     i = strlen(scbuf);
-    while (i > 0 && isspace((unsigned char)scbuf[i - 1])) {
+    while (i > 0 && isspace((unsigned char)scbuf[i - 1]))
+    {
       scbuf[--i] = '\0';
     }
 
-    if (scbuf[0] == '\0' || scbuf[0] == '#') {
+    if (scbuf[0] == '\0' || scbuf[0] == '#')
+    {
       continue;
     }
-    if (strncmp(scbuf, "test: ", 6) == 0) {
+    if (strncmp(scbuf, "test: ", 6) == 0)
+    {
       test = scbuf + 6;
-    } else if (strncmp(scbuf, "ignore: ", 8) == 0) {
+    }
+    else if (strncmp(scbuf, "ignore: ", 8) == 0)
+    {
       c = scbuf + 8;
-      while (*c && isspace((unsigned char)*c)) {
+      while (*c && isspace((unsigned char)*c))
+      {
         c++;
       }
       add_stringlist_item(&ignorelist, c);
@@ -1569,23 +1705,27 @@ run_schedule(const char *schedule, test_function tfunc)
        * odd but that's how the shell-script version did it.
        */
       continue;
-    } else {
+    }
+    else
+    {
       fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"), schedule, line_num, scbuf);
       exit(2);
     }
 
     num_tests = 0;
     inword = false;
-    for (c = test;; c++) {
-      if (*c == '\0' || isspace((unsigned char)*c)) {
-        if (inword) {
+    for (c = test;; c++)
+    {
+      if (*c == '\0' || isspace((unsigned char)*c))
+      {
+        if (inword)
+        {
           /* Reached end of a test name */
           char sav;
 
-          if (num_tests >= MAX_PARALLEL_TESTS) {
-            fprintf(stderr,
-                _("too many parallel tests (more than %d) in schedule file \"%s\" line %d: %s\n"),
-                MAX_PARALLEL_TESTS, schedule, line_num, scbuf);
+          if (num_tests >= MAX_PARALLEL_TESTS)
+          {
+            fprintf(stderr, _("too many parallel tests (more than %d) in schedule file \"%s\" line %d: %s\n"), MAX_PARALLEL_TESTS, schedule, line_num, scbuf);
             exit(2);
           }
           sav = *c;
@@ -1595,38 +1735,47 @@ run_schedule(const char *schedule, test_function tfunc)
           *c = sav;
           inword = false;
         }
-        if (*c == '\0') {
+        if (*c == '\0')
+        {
           break; /* loop exit is here */
         }
-      } else if (!inword) {
+      }
+      else if (!inword)
+      {
         /* Start of a test name */
         test = c;
         inword = true;
       }
     }
 
-    if (num_tests == 0) {
+    if (num_tests == 0)
+    {
       fprintf(stderr, _("syntax error in schedule file \"%s\" line %d: %s\n"), schedule, line_num, scbuf);
       exit(2);
     }
 
-    if (num_tests == 1) {
+    if (num_tests == 1)
+    {
       status(_("test %-28s ... "), tests[0]);
       pids[0] = (tfunc)(tests[0], &resultfiles[0], &expectfiles[0], &tags[0]);
       INSTR_TIME_SET_CURRENT(starttimes[0]);
       wait_for_tests(pids, statuses, stoptimes, NULL, 1);
       /* status line is finished below */
-    } else if (max_concurrent_tests > 0 && max_concurrent_tests < num_tests) {
-      fprintf(stderr,
-          _("too many parallel tests (more than %d) in schedule file \"%s\" line %d: %s\n"),
-          max_concurrent_tests, schedule, line_num, scbuf);
+    }
+    else if (max_concurrent_tests > 0 && max_concurrent_tests < num_tests)
+    {
+      fprintf(stderr, _("too many parallel tests (more than %d) in schedule file \"%s\" line %d: %s\n"), max_concurrent_tests, schedule, line_num, scbuf);
       exit(2);
-    } else if (max_connections > 0 && max_connections < num_tests) {
+    }
+    else if (max_connections > 0 && max_connections < num_tests)
+    {
       int oldest = 0;
 
       status(_("parallel group (%d tests, in groups of %d): "), num_tests, max_connections);
-      for (i = 0; i < num_tests; i++) {
-        if (i - oldest >= max_connections) {
+      for (i = 0; i < num_tests; i++)
+      {
+        if (i - oldest >= max_connections)
+        {
           wait_for_tests(pids + oldest, statuses + oldest, stoptimes + oldest, tests + oldest, i - oldest);
           oldest = i;
         }
@@ -1635,9 +1784,12 @@ run_schedule(const char *schedule, test_function tfunc)
       }
       wait_for_tests(pids + oldest, statuses + oldest, stoptimes + oldest, tests + oldest, i - oldest);
       status_end();
-    } else {
+    }
+    else
+    {
       status(_("parallel group (%d tests): "), num_tests);
-      for (i = 0; i < num_tests; i++) {
+      for (i = 0; i < num_tests; i++)
+      {
         pids[i] = (tfunc)(tests[i], &resultfiles[i], &expectfiles[i], &tags[i]);
         INSTR_TIME_SET_CURRENT(starttimes[i]);
       }
@@ -1646,11 +1798,13 @@ run_schedule(const char *schedule, test_function tfunc)
     }
 
     /* Check results for all tests */
-    for (i = 0; i < num_tests; i++) {
+    for (i = 0; i < num_tests; i++)
+    {
       _stringlist *rl, *el, *tl;
       bool differ = false;
 
-      if (num_tests > 1) {
+      if (num_tests > 1)
+      {
         status(_("     %-28s ... "), tests[i]);
       }
 
@@ -1662,39 +1816,50 @@ run_schedule(const char *schedule, test_function tfunc)
        * length as the other two lists.
        */
       for (rl = resultfiles[i], el = expectfiles[i], tl = tags[i]; rl != NULL; /* rl and el have the same length */
-           rl = rl->next, el = el->next, tl = tl ? tl->next : NULL) {
+           rl = rl->next, el = el->next, tl = tl ? tl->next : NULL)
+      {
         bool newdiff;
 
         newdiff = results_differ(tests[i], rl->str, el->str);
-        if (newdiff && tl) {
+        if (newdiff && tl)
+        {
           printf("%s ", tl->str);
         }
         differ |= newdiff;
       }
 
-      if (differ) {
+      if (differ)
+      {
         bool ignore = false;
         _stringlist *sl;
 
-        for (sl = ignorelist; sl != NULL; sl = sl->next) {
-          if (strcmp(tests[i], sl->str) == 0) {
+        for (sl = ignorelist; sl != NULL; sl = sl->next)
+        {
+          if (strcmp(tests[i], sl->str) == 0)
+          {
             ignore = true;
             break;
           }
         }
-        if (ignore) {
+        if (ignore)
+        {
           status(_("failed (ignored)"));
           fail_ignore_count++;
-        } else {
+        }
+        else
+        {
           status(_("FAILED"));
           fail_count++;
         }
-      } else {
+      }
+      else
+      {
         status(_("ok    ")); /* align with FAILED */
         success_count++;
       }
 
-      if (statuses[i] != 0) {
+      if (statuses[i] != 0)
+      {
         log_child_failure(statuses[i]);
       }
 
@@ -1704,7 +1869,8 @@ run_schedule(const char *schedule, test_function tfunc)
       status_end();
     }
 
-    for (i = 0; i < num_tests; i++) {
+    for (i = 0; i < num_tests; i++)
+    {
       pg_free(tests[i]);
       tests[i] = NULL;
       free_stringlist(&resultfiles[i]);
@@ -1747,25 +1913,31 @@ run_single_test(const char *test, test_function tfunc)
    * two lists.
    */
   for (rl = resultfiles, el = expectfiles, tl = tags; rl != NULL; /* rl and el have the same length */
-       rl = rl->next, el = el->next, tl = tl ? tl->next : NULL) {
+       rl = rl->next, el = el->next, tl = tl ? tl->next : NULL)
+  {
     bool newdiff;
 
     newdiff = results_differ(test, rl->str, el->str);
-    if (newdiff && tl) {
+    if (newdiff && tl)
+    {
       printf("%s ", tl->str);
     }
     differ |= newdiff;
   }
 
-  if (differ) {
+  if (differ)
+  {
     status(_("FAILED"));
     fail_count++;
-  } else {
+  }
+  else
+  {
     status(_("ok    ")); /* align with FAILED */
     success_count++;
   }
 
-  if (exit_status != 0) {
+  if (exit_status != 0)
+  {
     log_child_failure(exit_status);
   }
 
@@ -1785,7 +1957,8 @@ open_result_files(void)
   FILE *difffile;
 
   /* create outputdir directory if not present */
-  if (!directory_exists(outputdir)) {
+  if (!directory_exists(outputdir))
+  {
     make_directory(outputdir);
   }
 
@@ -1793,7 +1966,8 @@ open_result_files(void)
   snprintf(file, sizeof(file), "%s/regression.out", outputdir);
   logfilename = pg_strdup(file);
   logfile = fopen(logfilename, "w");
-  if (!logfile) {
+  if (!logfile)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, logfilename, strerror(errno));
     exit(2);
   }
@@ -1802,7 +1976,8 @@ open_result_files(void)
   snprintf(file, sizeof(file), "%s/regression.diffs", outputdir);
   difffilename = pg_strdup(file);
   difffile = fopen(difffilename, "w");
-  if (!difffile) {
+  if (!difffile)
+  {
     fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, difffilename, strerror(errno));
     exit(2);
   }
@@ -1811,7 +1986,8 @@ open_result_files(void)
 
   /* also create the results directory if not present */
   snprintf(file, sizeof(file), "%s/results", outputdir);
-  if (!directory_exists(file)) {
+  if (!directory_exists(file))
+  {
     make_directory(file);
   }
 }
@@ -1833,20 +2009,29 @@ create_database(const char *dbname)
    * not mess up the tests.
    */
   header(_("creating database \"%s\""), dbname);
-  if (encoding) {
+  if (encoding)
+  {
     psql_command("postgres", "CREATE DATABASE \"%s\" TEMPLATE=template0 ENCODING='%s'%s", dbname, encoding, (nolocale) ? " LC_COLLATE='C' LC_CTYPE='C'" : "");
-  } else {
+  }
+  else
+  {
     psql_command("postgres", "CREATE DATABASE \"%s\" TEMPLATE=template0%s", dbname, (nolocale) ? " LC_COLLATE='C' LC_CTYPE='C'" : "");
   }
   psql_command(dbname,
-      "ALTER DATABASE \"%s\" SET lc_messages TO 'C';ALTER DATABASE \"%s\" SET lc_monetary TO 'C';ALTER DATABASE \"%s\" SET lc_numeric TO 'C';ALTER DATABASE \"%s\" SET lc_time TO 'C';ALTER DATABASE \"%s\" SET bytea_output TO 'hex';ALTER DATABASE \"%s\" SET timezone_abbreviations TO 'Default';",
+      "ALTER DATABASE \"%s\" SET lc_messages TO 'C';"
+      "ALTER DATABASE \"%s\" SET lc_monetary TO 'C';"
+      "ALTER DATABASE \"%s\" SET lc_numeric TO 'C';"
+      "ALTER DATABASE \"%s\" SET lc_time TO 'C';"
+      "ALTER DATABASE \"%s\" SET bytea_output TO 'hex';"
+      "ALTER DATABASE \"%s\" SET timezone_abbreviations TO 'Default';",
       dbname, dbname, dbname, dbname, dbname, dbname);
 
   /*
    * Install any requested procedural languages.  We use CREATE OR REPLACE
    * so that this will work whether or not the language is preinstalled.
    */
-  for (sl = loadlanguage; sl != NULL; sl = sl->next) {
+  for (sl = loadlanguage; sl != NULL; sl = sl->next)
+  {
     header(_("installing %s"), sl->str);
     psql_command(dbname, "CREATE OR REPLACE LANGUAGE \"%s\"", sl->str);
   }
@@ -1855,7 +2040,8 @@ create_database(const char *dbname)
    * Install any requested extensions.  We use CREATE IF NOT EXISTS so that
    * this will work whether or not the extension is preinstalled.
    */
-  for (sl = loadextension; sl != NULL; sl = sl->next) {
+  for (sl = loadextension; sl != NULL; sl = sl->next)
+  {
     header(_("installing %s"), sl->str);
     psql_command(dbname, "CREATE EXTENSION IF NOT EXISTS \"%s\"", sl->str);
   }
@@ -1873,7 +2059,8 @@ create_role(const char *rolename, const _stringlist *granted_dbs)
 {
   header(_("creating role \"%s\""), rolename);
   psql_command("postgres", "CREATE ROLE \"%s\" WITH LOGIN", rolename);
-  for (; granted_dbs != NULL; granted_dbs = granted_dbs->next) {
+  for (; granted_dbs != NULL; granted_dbs = granted_dbs->next)
+  {
     psql_command("postgres", "GRANT ALL ON DATABASE \"%s\" TO \"%s\"", granted_dbs->str, rolename);
   }
 }
@@ -1960,12 +2147,15 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
    */
   ifunc(argc, argv);
 
-  if (getenv("PG_REGRESS_DIFF_OPTS")) {
+  if (getenv("PG_REGRESS_DIFF_OPTS"))
+  {
     pretty_diff_opts = getenv("PG_REGRESS_DIFF_OPTS");
   }
 
-  while ((c = getopt_long(argc, argv, "hV", long_options, &option_index)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "hV", long_options, &option_index)) != -1)
+  {
+    switch (c)
+    {
     case 'h':
       help();
       exit(0);
@@ -2020,9 +2210,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       break;
     case 16:
       /* "--bindir=" means to use PATH */
-      if (strlen(optarg)) {
+      if (strlen(optarg))
+      {
         bindir = pg_strdup(optarg);
-      } else {
+      }
+      else
+      {
         bindir = NULL;
       }
       break;
@@ -2050,7 +2243,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     case 25:
       max_concurrent_tests = atoi(optarg);
       break;
-    default:;
+    default:
       /* getopt_long already emitted a complaint */
       fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"), progname);
       exit(2);
@@ -2060,7 +2253,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   /*
    * if we still have arguments, they are extra tests to run
    */
-  while (argc - optind >= 1) {
+  while (argc - optind >= 1)
+  {
     add_stringlist_item(&extra_tests, argv[optind]);
     optind++;
   }
@@ -2069,19 +2263,22 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
    * We must have a database to run the tests in; either a default name, or
    * one supplied by the --dbname switch.
    */
-  if (!(dblist && dblist->str && dblist->str[0])) {
+  if (!(dblist && dblist->str && dblist->str[0]))
+  {
     fprintf(stderr, _("%s: no database name was specified\n"), progname);
     exit(2);
   }
 
-  if (config_auth_datadir) {
+  if (config_auth_datadir)
+  {
 #ifdef ENABLE_SSPI
     config_sspi_auth(config_auth_datadir, user);
 #endif
     exit(0);
   }
 
-  if (temp_instance && !port_specified_by_user) {
+  if (temp_instance && !port_specified_by_user)
+  {
 
     /*
      * To reduce chances of interference with parallel installations, use
@@ -2108,7 +2305,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   unlimit_core_size();
 #endif
 
-  if (temp_instance) {
+  if (temp_instance)
+  {
     FILE *pg_conf;
     const char *env_wait;
     int wait_seconds;
@@ -2117,9 +2315,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
      * Prepare the temp instance
      */
 
-    if (directory_exists(temp_instance)) {
+    if (directory_exists(temp_instance))
+    {
       header(_("removing existing temp instance"));
-      if (!rmtree(temp_instance, true)) {
+      if (!rmtree(temp_instance, true))
+      {
         fprintf(stderr, _("\n%s: could not remove temp instance \"%s\"\n"), progname, temp_instance);
         exit(2);
       }
@@ -2132,19 +2332,17 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
     /* and a directory for log files */
     snprintf(buf, sizeof(buf), "%s/log", outputdir);
-    if (!directory_exists(buf)) {
+    if (!directory_exists(buf))
+    {
       make_directory(buf);
     }
 
     /* initdb */
     header(_("initializing database system"));
-    snprintf(buf, sizeof(buf),
-        "\"%s%sinitdb\" -D \"%s/data\" --no-clean --no-sync%s%s > \"%s/log/initdb.log\" 2>&1",
-        bindir ? bindir : "", bindir ? "/" : "", temp_instance, debug ? " --debug" : "", nolocale ? " --no-locale" : "", outputdir);
-    if (system(buf)) {
-      fprintf(stderr,
-          _("\n%s: initdb failed\nExamine %s/log/initdb.log for the reason.\nCommand was: %s\n"),
-          progname, outputdir, buf);
+    snprintf(buf, sizeof(buf), "\"%s%sinitdb\" -D \"%s/data\" --no-clean --no-sync%s%s > \"%s/log/initdb.log\" 2>&1", bindir ? bindir : "", bindir ? "/" : "", temp_instance, debug ? " --debug" : "", nolocale ? " --no-locale" : "", outputdir);
+    if (system(buf))
+    {
+      fprintf(stderr, _("\n%s: initdb failed\nExamine %s/log/initdb.log for the reason.\nCommand was: %s\n"), progname, outputdir, buf);
       exit(2);
     }
 
@@ -2158,7 +2356,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
      */
     snprintf(buf, sizeof(buf), "%s/data/postgresql.conf", temp_instance);
     pg_conf = fopen(buf, "a");
-    if (pg_conf == NULL) {
+    if (pg_conf == NULL)
+    {
       fprintf(stderr, _("\n%s: could not open \"%s\" for adding extra config: %s\n"), progname, buf, strerror(errno));
       exit(2);
     }
@@ -2170,17 +2369,20 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     fputs("log_temp_files = 128kB\n", pg_conf);
     fputs("max_prepared_transactions = 2\n", pg_conf);
 
-    for (sl = temp_configs; sl != NULL; sl = sl->next) {
+    for (sl = temp_configs; sl != NULL; sl = sl->next)
+    {
       char *temp_config = sl->str;
       FILE *extra_conf;
       char line_buf[1024];
 
       extra_conf = fopen(temp_config, "r");
-      if (extra_conf == NULL) {
+      if (extra_conf == NULL)
+      {
         fprintf(stderr, _("\n%s: could not open \"%s\" to read extra config: %s\n"), progname, temp_config, strerror(errno));
         exit(2);
       }
-      while (fgets(line_buf, sizeof(line_buf), extra_conf) != NULL) {
+      while (fgets(line_buf, sizeof(line_buf), extra_conf) != NULL)
+      {
         fputs(line_buf, pg_conf);
       }
       fclose(extra_conf);
@@ -2205,13 +2407,17 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
      */
     snprintf(buf2, sizeof(buf2), "\"%s%spsql\" -X postgres <%s 2>%s", bindir ? bindir : "", bindir ? "/" : "", DEVNULL, DEVNULL);
 
-    for (i = 0; i < 16; i++) {
-      if (system(buf2) == 0) {
+    for (i = 0; i < 16; i++)
+    {
+      if (system(buf2) == 0)
+      {
         char s[16];
 
-        if (port_specified_by_user || i == 15) {
+        if (port_specified_by_user || i == 15)
+        {
           fprintf(stderr, _("port %d apparently in use\n"), port);
-          if (!port_specified_by_user) {
+          if (!port_specified_by_user)
+          {
             fprintf(stderr, _("%s: could not determine an available port\n"), progname);
           }
           fprintf(stderr, _("Specify an unused port using the --port option or shut down any conflicting PostgreSQL servers.\n"));
@@ -2222,7 +2428,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
         port++;
         sprintf(s, "%d", port);
         doputenv("PGPORT", s);
-      } else {
+      }
+      else
+      {
         break;
       }
     }
@@ -2232,10 +2440,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
      */
     header(_("starting postmaster"));
     snprintf(buf, sizeof(buf),
-        "\"%s%spostgres\" -D \"%s/data\" -F%s -c \"listen_addresses=%s\" -k \"%s\" > \"%s/log/postmaster.log\" 2>&1",
+        "\"%s%spostgres\" -D \"%s/data\" -F%s "
+        "-c \"listen_addresses=%s\" -k \"%s\" "
+        "> \"%s/log/postmaster.log\" 2>&1",
         bindir ? bindir : "", bindir ? "/" : "", temp_instance, debug ? " -d 5" : "", hostname ? hostname : "", sockdir ? sockdir : "", outputdir);
     postmaster_pid = spawn_process(buf);
-    if (postmaster_pid == INVALID_PID) {
+    if (postmaster_pid == INVALID_PID)
+    {
       fprintf(stderr, _("\n%s: could not spawn postmaster: %s\n"), progname, strerror(errno));
       exit(2);
     }
@@ -2248,18 +2459,24 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
      * PGCTLTIMEOUT environment variable.
      */
     env_wait = getenv("PGCTLTIMEOUT");
-    if (env_wait != NULL) {
+    if (env_wait != NULL)
+    {
       wait_seconds = atoi(env_wait);
-      if (wait_seconds <= 0) {
+      if (wait_seconds <= 0)
+      {
         wait_seconds = 60;
       }
-    } else {
+    }
+    else
+    {
       wait_seconds = 60;
     }
 
-    for (i = 0; i < wait_seconds; i++) {
+    for (i = 0; i < wait_seconds; i++)
+    {
       /* Done if psql succeeds */
-      if (system(buf2) == 0) {
+      if (system(buf2) == 0)
+      {
         break;
       }
 
@@ -2272,18 +2489,15 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       if (WaitForSingleObject(postmaster_pid, 0) == WAIT_OBJECT_0)
 #endif
       {
-        fprintf(stderr,
-            _("\n%s: postmaster failed\nExamine %s/log/postmaster.log for the reason\n"),
-            progname, outputdir);
+        fprintf(stderr, _("\n%s: postmaster failed\nExamine %s/log/postmaster.log for the reason\n"), progname, outputdir);
         exit(2);
       }
 
       pg_usleep(1000000L);
     }
-    if (i >= wait_seconds) {
-      fprintf(stderr,
-          _("\n%s: postmaster did not respond within %d seconds\nExamine %s/log/postmaster.log for the reason\n"),
-          progname, wait_seconds, outputdir);
+    if (i >= wait_seconds)
+    {
+      fprintf(stderr, _("\n%s: postmaster did not respond within %d seconds\nExamine %s/log/postmaster.log for the reason\n"), progname, wait_seconds, outputdir);
 
       /*
        * If we get here, the postmaster is probably wedged somewhere in
@@ -2292,11 +2506,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
        * attempts.
        */
 #ifndef WIN32
-      if (kill(postmaster_pid, SIGKILL) != 0 && errno != ESRCH) {
+      if (kill(postmaster_pid, SIGKILL) != 0 && errno != ESRCH)
+      {
         fprintf(stderr, _("\n%s: could not kill failed postmaster: %s\n"), progname, strerror(errno));
       }
 #else
-      if (TerminateProcess(postmaster_pid, 255) == 0) {
+      if (TerminateProcess(postmaster_pid, 255) == 0)
+      {
         fprintf(stderr, _("\n%s: could not kill failed postmaster: error code %lu\n"), progname, GetLastError());
       }
 #endif
@@ -2313,16 +2529,21 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 #define ULONGPID(x) (unsigned long)(x)
 #endif
     printf(_("running on port %d with PID %lu\n"), port, ULONGPID(postmaster_pid));
-  } else {
+  }
+  else
+  {
     /*
      * Using an existing installation, so may need to get rid of
      * pre-existing database(s) and role(s)
      */
-    if (!use_existing) {
-      for (sl = dblist; sl; sl = sl->next) {
+    if (!use_existing)
+    {
+      for (sl = dblist; sl; sl = sl->next)
+      {
         drop_database_if_exists(sl->str);
       }
-      for (sl = extraroles; sl; sl = sl->next) {
+      for (sl = extraroles; sl; sl = sl->next)
+      {
         drop_role_if_exists(sl->str);
       }
     }
@@ -2331,11 +2552,14 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   /*
    * Create the test database(s) and role(s)
    */
-  if (!use_existing) {
-    for (sl = dblist; sl; sl = sl->next) {
+  if (!use_existing)
+  {
+    for (sl = dblist; sl; sl = sl->next)
+    {
       create_database(sl->str);
     }
-    for (sl = extraroles; sl; sl = sl->next) {
+    for (sl = extraroles; sl; sl = sl->next)
+    {
       create_role(sl->str, dblist);
     }
   }
@@ -2345,18 +2569,21 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
    */
   header(_("running regression test queries"));
 
-  for (sl = schedulelist; sl != NULL; sl = sl->next) {
+  for (sl = schedulelist; sl != NULL; sl = sl->next)
+  {
     run_schedule(sl->str, tfunc);
   }
 
-  for (sl = extra_tests; sl != NULL; sl = sl->next) {
+  for (sl = extra_tests; sl != NULL; sl = sl->next)
+  {
     run_single_test(sl->str, tfunc);
   }
 
   /*
    * Shut down temp installation's postmaster
    */
-  if (temp_instance) {
+  if (temp_instance)
+  {
     header(_("shutting down postmaster"));
     stop_postmaster();
   }
@@ -2366,9 +2593,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
    * conserve disk space.  (If there were errors, we leave the instance in
    * place for possible manual investigation.)
    */
-  if (temp_instance && fail_count == 0 && fail_ignore_count == 0) {
+  if (temp_instance && fail_count == 0 && fail_ignore_count == 0)
+  {
     header(_("removing temporary instance"));
-    if (!rmtree(temp_instance, true)) {
+    if (!rmtree(temp_instance, true))
+    {
       fprintf(stderr, _("\n%s: could not remove temp instance \"%s\"\n"), progname, temp_instance);
     }
   }
@@ -2378,37 +2607,52 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   /*
    * Emit nice-looking summary message
    */
-  if (fail_count == 0 && fail_ignore_count == 0) {
+  if (fail_count == 0 && fail_ignore_count == 0)
+  {
     snprintf(buf, sizeof(buf), _(" All %d tests passed. "), success_count);
-  } else if (fail_count == 0) { /* fail_count=0, fail_ignore_count>0 */
+  }
+  else if (fail_count == 0) /* fail_count=0, fail_ignore_count>0 */
+  {
     snprintf(buf, sizeof(buf), _(" %d of %d tests passed, %d failed test(s) ignored. "), success_count, success_count + fail_ignore_count, fail_ignore_count);
-  } else if (fail_ignore_count == 0) { /* fail_count>0 && fail_ignore_count=0 */
+  }
+  else if (fail_ignore_count == 0) /* fail_count>0 && fail_ignore_count=0 */
+  {
     snprintf(buf, sizeof(buf), _(" %d of %d tests failed. "), fail_count, success_count + fail_count);
-  } else {
+  }
+  else
+  {
     /* fail_count>0 && fail_ignore_count>0 */
     snprintf(buf, sizeof(buf), _(" %d of %d tests failed, %d of these failures ignored. "), fail_count + fail_ignore_count, success_count + fail_count + fail_ignore_count, fail_ignore_count);
   }
 
   putchar('\n');
-  for (i = strlen(buf); i > 0; i--) {
+  for (i = strlen(buf); i > 0; i--)
+  {
     putchar('=');
   }
   printf("\n%s\n", buf);
-  for (i = strlen(buf); i > 0; i--) {
+  for (i = strlen(buf); i > 0; i--)
+  {
     putchar('=');
   }
   putchar('\n');
   putchar('\n');
 
-  if (file_size(difffilename) > 0) {
-    printf(_("The differences that caused some tests to fail can be viewed in the\nfile \"%s\".  A copy of the test summary that you see\nabove is saved in the file \"%s\".\n\n"),
+  if (file_size(difffilename) > 0)
+  {
+    printf(_("The differences that caused some tests to fail can be viewed in the\n"
+             "file \"%s\".  A copy of the test summary that you see\n"
+             "above is saved in the file \"%s\".\n\n"),
         difffilename, logfilename);
-  } else {
+  }
+  else
+  {
     unlink(difffilename);
     unlink(logfilename);
   }
 
-  if (fail_count != 0) {
+  if (fail_count != 0)
+  {
     exit(1);
   }
 

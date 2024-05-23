@@ -65,7 +65,8 @@ show_binary_results(PGresult *res)
   t_fnum = PQfnumber(res, "t");
   b_fnum = PQfnumber(res, "b");
 
-  for (i = 0; i < PQntuples(res); i++) {
+  for (i = 0; i < PQntuples(res); i++)
+  {
     char *iptr;
     char *tptr;
     char *bptr;
@@ -97,7 +98,8 @@ show_binary_results(PGresult *res)
     printf(" i = (%d bytes) %d\n", PQgetlength(res, i, i_fnum), ival);
     printf(" t = (%d bytes) '%s'\n", PQgetlength(res, i, t_fnum), tptr);
     printf(" b = (%d bytes) ", blen);
-    for (j = 0; j < blen; j++) {
+    for (j = 0; j < blen; j++)
+    {
       printf("\\%03o", bptr[j]);
     }
     printf("\n\n");
@@ -120,9 +122,12 @@ main(int argc, char **argv)
    * conninfo string; otherwise default to setting dbname=postgres and using
    * environment variables or defaults for all other connection parameters.
    */
-  if (argc > 1) {
+  if (argc > 1)
+  {
     conninfo = argv[1];
-  } else {
+  }
+  else
+  {
     conninfo = "dbname = postgres";
   }
 
@@ -130,14 +135,16 @@ main(int argc, char **argv)
   conn = PQconnectdb(conninfo);
 
   /* Check to see that the backend connection was successfully made */
-  if (PQstatus(conn) != CONNECTION_OK) {
+  if (PQstatus(conn) != CONNECTION_OK)
+  {
     fprintf(stderr, "Connection to database failed: %s", PQerrorMessage(conn));
     exit_nicely(conn);
   }
 
   /* Set always-secure search path, so malicious users can't take control. */
   res = PQexec(conn, "SET search_path = testlibpq3");
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+  if (PQresultStatus(res) != PGRES_COMMAND_OK)
+  {
     fprintf(stderr, "SET failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -164,7 +171,8 @@ main(int argc, char **argv)
       NULL,                                                       /* default to all text params */
       1);                                                         /* ask for binary results */
 
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "SELECT failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);
@@ -196,7 +204,8 @@ main(int argc, char **argv)
       NULL,                                                             /* let the backend deduce param type */
       paramValues, paramLengths, paramFormats, 1);                      /* ask for binary results */
 
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+  if (PQresultStatus(res) != PGRES_TUPLES_OK)
+  {
     fprintf(stderr, "SELECT failed: %s", PQerrorMessage(conn));
     PQclear(res);
     exit_nicely(conn);

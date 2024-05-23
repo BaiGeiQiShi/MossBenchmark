@@ -17,7 +17,8 @@
 #include "postgres_fe.h"
 #endif
 
-static const struct {
+static const struct
+{
   DWORD winerr;
   int doserr;
 } doserrors[] =
@@ -30,13 +31,16 @@ _dosmaperr(unsigned long e)
 {
   int i;
 
-  if (e == 0) {
+  if (e == 0)
+  {
     errno = 0;
     return;
   }
 
-  for (i = 0; i < lengthof(doserrors); i++) {
-    if (doserrors[i].winerr == e) {
+  for (i = 0; i < lengthof(doserrors); i++)
+  {
+    if (doserrors[i].winerr == e)
+    {
       int doserr = doserrors[i].doserr;
 
 #ifndef FRONTEND

@@ -73,60 +73,60 @@ parse_fcall_arguments_20(StringInfo msgBuf, struct fp_info *fip, FunctionCallInf
 int
 GetOldFunctionMessage(StringInfo buf)
 {
+  int32 ibuf;
+  int nargs;
 
+  /* Dummy string argument */
+  if (pq_getstring(buf))
+  {
+    return EOF;
+  }
+  /* Function OID */
+  if (pq_getbytes((char *)&ibuf, 4))
+  {
+    return EOF;
+  }
+  appendBinaryStringInfo(buf, (char *)&ibuf, 4);
+  /* Number of arguments */
+  if (pq_getbytes((char *)&ibuf, 4))
+  {
+    return EOF;
+  }
+  appendBinaryStringInfo(buf, (char *)&ibuf, 4);
+  nargs = pg_ntoh32(ibuf);
+  /* For each argument ... */
+  while (nargs-- > 0)
+  {
+    int argsize;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /* argsize */
+    if (pq_getbytes((char *)&ibuf, 4))
+    {
+      return EOF;
+    }
+    appendBinaryStringInfo(buf, (char *)&ibuf, 4);
+    argsize = pg_ntoh32(ibuf);
+    if (argsize < -1)
+    {
+      /* FATAL here since no hope of regaining message sync */
+      ereport(FATAL, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid argument size %d in function call message", argsize)));
+    }
+    /* and arg contents */
+    if (argsize > 0)
+    {
+      /* Allocate space for arg */
+      enlargeStringInfo(buf, argsize);
+      /* And grab it */
+      if (pq_getbytes(buf->data + buf->len, argsize))
+      {
+        return EOF;
+      }
+      buf->len += argsize;
+      /* Place a trailing null per StringInfo convention */
+      buf->data[buf->len] = '\0';
+    }
+  }
+  return 0;
 }
 
 /* ----------------
@@ -139,60 +139,60 @@ GetOldFunctionMessage(StringInfo buf)
 static void
 SendFunctionResult(Datum retval, bool isnull, Oid rettype, int16 format)
 {
+  bool newstyle = (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3);
+  StringInfoData buf;
 
+  pq_beginmessage(&buf, 'V');
 
+  if (isnull)
+  {
+    if (newstyle)
+    {
+      pq_sendint32(&buf, -1);
+    }
+  }
+  else
+  {
+    if (!newstyle)
+    {
+      pq_sendbyte(&buf, 'G');
+    }
 
+    if (format == 0)
+    {
+      Oid typoutput;
+      bool typisvarlena;
+      char *outputstr;
 
+      getTypeOutputInfo(rettype, &typoutput, &typisvarlena);
+      outputstr = OidOutputFunctionCall(typoutput, retval);
+      pq_sendcountedtext(&buf, outputstr, strlen(outputstr), false);
+      pfree(outputstr);
+    }
+    else if (format == 1)
+    {
+      Oid typsend;
+      bool typisvarlena;
+      bytea *outputbytes;
 
+      getTypeBinaryOutputInfo(rettype, &typsend, &typisvarlena);
+      outputbytes = OidSendFunctionCall(typsend, retval);
+      pq_sendint32(&buf, VARSIZE(outputbytes) - VARHDRSZ);
+      pq_sendbytes(&buf, VARDATA(outputbytes), VARSIZE(outputbytes) - VARHDRSZ);
+      pfree(outputbytes);
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unsupported format code: %d", format)));
+    }
+  }
 
+  if (!newstyle)
+  {
+    pq_sendbyte(&buf, '0');
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  pq_endmessage(&buf);
 }
 
 /*
@@ -223,20 +223,20 @@ fetch_fp_info(Oid func_id, struct fp_info *fip)
   func_htp = SearchSysCache1(PROCOID, ObjectIdGetDatum(func_id));
   if (!HeapTupleIsValid(func_htp))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("function with OID %u does not exist", func_id)));
   }
   pp = (Form_pg_proc)GETSTRUCT(func_htp);
 
   /* reject pg_proc entries that are unsafe to call via fastpath */
   if (pp->prokind != PROKIND_FUNCTION || pp->proretset)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot call function %s via fastpath interface", NameStr(pp->proname))));
   }
 
   /* watch out for catalog entries with more than FUNC_MAX_ARGS args */
   if (pp->pronargs > FUNC_MAX_ARGS)
   {
-
+    elog(ERROR, "function %s has more than %d arguments", NameStr(pp->proname), FUNC_MAX_ARGS);
   }
 
   fip->namespace = pp->pronamespace;
@@ -289,7 +289,8 @@ HandleFunctionRequest(StringInfo msgBuf)
    */
   if (IsAbortedTransactionBlockState())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_IN_FAILED_SQL_TRANSACTION), errmsg("current transaction is aborted, "
+                                                                       "commands ignored until end of transaction block")));
   }
 
   /*
@@ -303,7 +304,7 @@ HandleFunctionRequest(StringInfo msgBuf)
    */
   if (PG_PROTOCOL_MAJOR(FrontendProtocol) < 3)
   {
-
+    (void)pq_getmsgstring(msgBuf); /* dummy string */
   }
 
   fid = (Oid)pq_getmsgint(msgBuf, 4); /* function oid */
@@ -318,8 +319,8 @@ HandleFunctionRequest(StringInfo msgBuf)
   /* Log as soon as we have the function OID and name */
   if (log_statement == LOGSTMT_ALL)
   {
-
-
+    ereport(LOG, (errmsg("fastpath function call: \"%s\" (OID %u)", fip->fname, fid)));
+    was_logged = true;
   }
 
   /*
@@ -329,14 +330,14 @@ HandleFunctionRequest(StringInfo msgBuf)
   aclresult = pg_namespace_aclcheck(fip->namespace, GetUserId(), ACL_USAGE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(fip->namespace));
   }
   InvokeNamespaceSearchHook(fip->namespace, true);
 
   aclresult = pg_proc_aclcheck(fid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(fid));
   }
   InvokeFunctionExecuteHook(fid);
 
@@ -355,7 +356,7 @@ HandleFunctionRequest(StringInfo msgBuf)
   }
   else
   {
-
+    rformat = parse_fcall_arguments_20(msgBuf, fip, fcinfo);
   }
 
   /* Verify we reached the end of the message where expected. */
@@ -373,8 +374,8 @@ HandleFunctionRequest(StringInfo msgBuf)
     {
       if (fcinfo->args[i].isnull)
       {
-
-
+        callit = false;
+        break;
       }
     }
   }
@@ -386,8 +387,8 @@ HandleFunctionRequest(StringInfo msgBuf)
   }
   else
   {
-
-
+    fcinfo->isnull = true;
+    retval = (Datum)0;
   }
 
   /* ensure we do at least one CHECK_FOR_INTERRUPTS per function call */
@@ -403,12 +404,12 @@ HandleFunctionRequest(StringInfo msgBuf)
    */
   switch (check_log_duration(msec_str, was_logged))
   {
-  case 1:;
-
-
-  case 2:;
-
-
+  case 1:
+    ereport(LOG, (errmsg("duration: %s ms", msec_str)));
+    break;
+  case 2:
+    ereport(LOG, (errmsg("duration: %s ms  fastpath function call: \"%s\" (OID %u)", msec_str, fip->fname, fid)));
+    break;
   }
 }
 
@@ -442,14 +443,14 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
 
   if (fip->flinfo.fn_nargs != nargs || nargs > FUNC_MAX_ARGS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("function call message contains %d arguments but function requires %d", nargs, fip->flinfo.fn_nargs)));
   }
 
   fcinfo->nargs = nargs;
 
   if (numAFormats > 1 && numAFormats != nargs)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("function call message contains %d argument formats but %d arguments", numAFormats, nargs)));
   }
 
   initStringInfo(&abuf);
@@ -465,14 +466,14 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
     argsize = pq_getmsgint(msgBuf, 4);
     if (argsize == -1)
     {
-
+      fcinfo->args[i].isnull = true;
     }
     else
     {
       fcinfo->args[i].isnull = false;
       if (argsize < 0)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid argument size %d in function call message", argsize)));
       }
 
       /* Reset abuf to empty, and insert raw data into it */
@@ -482,7 +483,7 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
 
     if (numAFormats > 1)
     {
-
+      aformat = aformats[i];
     }
     else if (numAFormats > 0)
     {
@@ -490,7 +491,7 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
     }
     else
     {
-
+      aformat = 0; /* default = text */
     }
 
     if (aformat == 0)
@@ -499,7 +500,7 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
       Oid typioparam;
       char *pstring;
 
-
+      getTypeInputInfo(fip->argtypes[i], &typinput, &typioparam);
 
       /*
        * Since stringinfo.c keeps a trailing null in place even for
@@ -507,21 +508,21 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
        * have to do encoding conversion before calling the typinput
        * routine, though.
        */
+      if (argsize == -1)
+      {
+        pstring = NULL;
+      }
+      else
+      {
+        pstring = pg_client_to_server(abuf.data, argsize);
+      }
 
-
-
-
-
-
-
-
-
-
+      fcinfo->args[i].value = OidInputFunctionCall(typinput, pstring, typioparam, -1);
       /* Free result of encoding conversion, if any */
-
-
-
-
+      if (pstring && pstring != abuf.data)
+      {
+        pfree(pstring);
+      }
     }
     else if (aformat == 1)
     {
@@ -534,7 +535,7 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
 
       if (argsize == -1)
       {
-
+        bufptr = NULL;
       }
       else
       {
@@ -546,12 +547,12 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
       /* Trouble if it didn't eat the whole buffer */
       if (argsize != -1 && abuf.cursor != abuf.len)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("incorrect binary data format in function argument %d", i + 1)));
       }
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unsupported format code: %d", aformat)));
     }
   }
 
@@ -568,63 +569,63 @@ parse_fcall_arguments(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo f
 static int16
 parse_fcall_arguments_20(StringInfo msgBuf, struct fp_info *fip, FunctionCallInfo fcinfo)
 {
+  int nargs;
+  int i;
+  StringInfoData abuf;
 
+  nargs = pq_getmsgint(msgBuf, 4); /* # of arguments */
 
+  if (fip->flinfo.fn_nargs != nargs || nargs > FUNC_MAX_ARGS)
+  {
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("function call message contains %d arguments but function requires %d", nargs, fip->flinfo.fn_nargs)));
+  }
 
+  fcinfo->nargs = nargs;
 
+  initStringInfo(&abuf);
 
+  /*
+   * Copy supplied arguments into arg vector.  In protocol 2.0 these are
+   * always assumed to be supplied in binary format.
+   *
+   * Note: although the original protocol 2.0 code did not have any way for
+   * the frontend to specify a NULL argument, we now choose to interpret
+   * length == -1 as meaning a NULL.
+   */
+  for (i = 0; i < nargs; ++i)
+  {
+    int argsize;
+    Oid typreceive;
+    Oid typioparam;
 
+    getTypeBinaryInputInfo(fip->argtypes[i], &typreceive, &typioparam);
 
+    argsize = pq_getmsgint(msgBuf, 4);
+    if (argsize == -1)
+    {
+      fcinfo->args[i].isnull = true;
+      fcinfo->args[i].value = OidReceiveFunctionCall(typreceive, NULL, typioparam, -1);
+      continue;
+    }
+    fcinfo->args[i].isnull = false;
+    if (argsize < 0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid argument size %d in function call message", argsize)));
+    }
 
+    /* Reset abuf to empty, and insert raw data into it */
+    resetStringInfo(&abuf);
+    appendBinaryStringInfo(&abuf, pq_getmsgbytes(msgBuf, argsize), argsize);
 
+    fcinfo->args[i].value = OidReceiveFunctionCall(typreceive, &abuf, typioparam, -1);
 
+    /* Trouble if it didn't eat the whole buffer */
+    if (abuf.cursor != abuf.len)
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("incorrect binary data format in function argument %d", i + 1)));
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Desired result format is always binary in protocol 2.0 */
+  return 1;
 }

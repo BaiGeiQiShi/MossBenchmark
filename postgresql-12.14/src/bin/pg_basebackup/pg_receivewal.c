@@ -62,7 +62,8 @@ stop_streaming(XLogRecPtr segendpos, uint32 timeline, bool segment_finished);
 static void
 disconnect_atexit(void)
 {
-  if (conn != NULL) {
+  if (conn != NULL)
+  {
     PQfinish(conn);
   }
 }
@@ -83,7 +84,9 @@ usage(void)
   printf(_("      --if-not-exists    do not error if slot already exists when creating a slot\n"));
   printf(_("  -n, --no-loop          do not loop on connection lost\n"));
   printf(_("      --no-sync          do not wait for changes to be written safely to disk\n"));
-  printf(_("  -s, --status-interval=SECS\n                         time between status packets sent to server (default:; %d)\n"),(standby_message_timeout / 1000));
+  printf(_("  -s, --status-interval=SECS\n"
+           "                         time between status packets sent to server (default: %d)\n"),
+      (standby_message_timeout / 1000));
   printf(_("  -S, --slot=SLOTNAME    replication slot to use\n"));
   printf(_("      --synchronous      flush write-ahead log immediately after writing\n"));
   printf(_("  -v, --verbose          output verbose messages\n"));
@@ -110,12 +113,15 @@ stop_streaming(XLogRecPtr xlogpos, uint32 timeline, bool segment_finished)
   static XLogRecPtr prevpos = InvalidXLogRecPtr;
 
   /* we assume that we get called once at the end of each segment */
-  if (verbose && segment_finished) {
+  if (verbose && segment_finished)
+  {
     pg_log_info("finished segment at %X/%X (timeline %u)", (uint32)(xlogpos >> 32), (uint32)xlogpos, timeline);
   }
 
-  if (!XLogRecPtrIsInvalid(endpos) && endpos < xlogpos) {
-    if (verbose) {
+  if (!XLogRecPtrIsInvalid(endpos) && endpos < xlogpos)
+  {
+    if (verbose)
+    {
       pg_log_info("stopped log streaming at %X/%X (timeline %u)", (uint32)(xlogpos >> 32), (uint32)xlogpos, timeline);
     }
     time_to_stop = true;
@@ -130,15 +136,18 @@ stop_streaming(XLogRecPtr xlogpos, uint32 timeline, bool segment_finished)
    * slightly before the end of the WAL that we received on the previous
    * timeline, but it's close enough for reporting purposes.
    */
-  if (verbose && prevtimeline != 0 && prevtimeline != timeline) {
+  if (verbose && prevtimeline != 0 && prevtimeline != timeline)
+  {
     pg_log_info("switched to timeline %u at %X/%X", timeline, (uint32)(prevpos >> 32), (uint32)prevpos);
   }
 
   prevtimeline = timeline;
   prevpos = xlogpos;
 
-  if (time_to_stop) {
-    if (verbose) {
+  if (time_to_stop)
+  {
+    if (verbose)
+    {
       pg_log_info("received interrupt signal, exiting");
     }
     return true;
@@ -156,7 +165,8 @@ get_destination_dir(char *dest_folder)
 
   Assert(dest_folder != NULL);
   dir = opendir(dest_folder);
-  if (dir == NULL) {
+  if (dir == NULL)
+  {
     pg_log_error("could not open directory \"%s\": %m", basedir);
     exit(1);
   }
@@ -171,7 +181,8 @@ static void
 close_destination_dir(DIR *dest_dir, char *dest_folder)
 {
   Assert(dest_dir != NULL && dest_folder != NULL);
-  if (closedir(dest_dir)) {
+  if (closedir(dest_dir))
+  {
     pg_log_error("could not close directory \"%s\": %m", dest_folder);
     exit(1);
   }
@@ -195,7 +206,8 @@ FindStreamingStart(uint32 *tli)
 
   dir = get_destination_dir(basedir);
 
-  while (errno = 0, (dirent = readdir(dir)) != NULL) {
+  while (errno = 0, (dirent = readdir(dir)) != NULL)
+  {
     uint32 tli;
     XLogSegNo segno;
     bool ispartial;
@@ -204,19 +216,28 @@ FindStreamingStart(uint32 *tli)
     /*
      * Check if the filename looks like an xlog file, or a .partial file.
      */
-    if (IsXLogFileName(dirent->d_name)) {
+    if (IsXLogFileName(dirent->d_name))
+    {
       ispartial = false;
       iscompress = false;
-    } else if (IsPartialXLogFileName(dirent->d_name)) {
+    }
+    else if (IsPartialXLogFileName(dirent->d_name))
+    {
       ispartial = true;
       iscompress = false;
-    } else if (IsCompressXLogFileName(dirent->d_name)) {
+    }
+    else if (IsCompressXLogFileName(dirent->d_name))
+    {
       ispartial = false;
       iscompress = true;
-    } else if (IsPartialCompressXLogFileName(dirent->d_name)) {
+    }
+    else if (IsPartialCompressXLogFileName(dirent->d_name))
+    {
       ispartial = true;
       iscompress = true;
-    } else {
+    }
+    else
+    {
       continue;
     }
 
@@ -228,27 +249,33 @@ FindStreamingStart(uint32 *tli)
     /*
      * Check that the segment has the right size, if it's supposed to be
      * completed.  For non-compressed segments just check the on-disk size
-     * and see if it matches a completed segment. For compressed segments,* look at the last 4 bytes of the compressed file, which is where the
+     * and see if it matches a completed segment. For compressed segments,
+     * look at the last 4 bytes of the compressed file, which is where the
      * uncompressed size is located for gz files with a size lower than
      * 4GB, and then compare it to the size of a completed segment. The 4
      * last bytes correspond to the ISIZE member according to
      * http://www.zlib.org/rfc-gzip.html.
      */
-    if (!ispartial && !iscompress) {
+    if (!ispartial && !iscompress)
+    {
       struct stat statbuf;
       char fullpath[MAXPGPATH * 2];
 
       snprintf(fullpath, sizeof(fullpath), "%s/%s", basedir, dirent->d_name);
-      if (stat(fullpath, &statbuf) != 0) {
+      if (stat(fullpath, &statbuf) != 0)
+      {
         pg_log_error("could not stat file \"%s\": %m", fullpath);
         exit(1);
       }
 
-      if (statbuf.st_size != WalSegSz) {
+      if (statbuf.st_size != WalSegSz)
+      {
         pg_log_warning("segment file \"%s\" has incorrect size %d, skipping", dirent->d_name, (int)statbuf.st_size);
         continue;
       }
-    } else if (!ispartial && iscompress) {
+    }
+    else if (!ispartial && iscompress)
+    {
       int fd;
       char buf[4];
       int bytes_out;
@@ -258,19 +285,25 @@ FindStreamingStart(uint32 *tli)
       snprintf(fullpath, sizeof(fullpath), "%s/%s", basedir, dirent->d_name);
 
       fd = open(fullpath, O_RDONLY | PG_BINARY, 0);
-      if (fd < 0) {
+      if (fd < 0)
+      {
         pg_log_error("could not open compressed file \"%s\": %m", fullpath);
         exit(1);
       }
-      if (lseek(fd, (off_t)(-4), SEEK_END) < 0) {
+      if (lseek(fd, (off_t)(-4), SEEK_END) < 0)
+      {
         pg_log_error("could not seek in compressed file \"%s\": %m", fullpath);
         exit(1);
       }
       r = read(fd, (char *)buf, sizeof(buf));
-      if (r != sizeof(buf)) {
-        if (r < 0) {
+      if (r != sizeof(buf))
+      {
+        if (r < 0)
+        {
           pg_log_error("could not read compressed file \"%s\": %m", fullpath);
-        } else {
+        }
+        else
+        {
           pg_log_error("could not read compressed file \"%s\": read %d of %zu", fullpath, r, sizeof(buf));
         }
         exit(1);
@@ -279,28 +312,32 @@ FindStreamingStart(uint32 *tli)
       close(fd);
       bytes_out = (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
 
-      if (bytes_out != WalSegSz) {
-        pg_log_warning("compressed segment file \"%s\" has incorrect uncompressed size %d, skipping",dirent->d_name, bytes_out);
+      if (bytes_out != WalSegSz)
+      {
+        pg_log_warning("compressed segment file \"%s\" has incorrect uncompressed size %d, skipping", dirent->d_name, bytes_out);
         continue;
       }
     }
 
     /* Looks like a valid segment. Remember that we saw it. */
-    if ((segno > high_segno) || (segno == high_segno && tli > high_tli) || (segno == high_segno && tli == high_tli && high_ispartial && !ispartial)) {
+    if ((segno > high_segno) || (segno == high_segno && tli > high_tli) || (segno == high_segno && tli == high_tli && high_ispartial && !ispartial))
+    {
       high_segno = segno;
       high_tli = tli;
       high_ispartial = ispartial;
     }
   }
 
-  if (errno) {
+  if (errno)
+  {
     pg_log_error("could not read directory \"%s\": %m", basedir);
     exit(1);
   }
 
   close_destination_dir(dir, basedir);
 
-  if (high_segno > 0) {
+  if (high_segno > 0)
+  {
     XLogRecPtr high_ptr;
 
     /*
@@ -308,7 +345,8 @@ FindStreamingStart(uint32 *tli)
      * highest one we saw was completed. Otherwise start streaming from
      * the beginning of the .partial segment.
      */
-    if (!high_ispartial) {
+    if (!high_ispartial)
+    {
       high_segno++;
     }
 
@@ -316,7 +354,9 @@ FindStreamingStart(uint32 *tli)
 
     *tli = high_tli;
     return high_ptr;
-  } else {
+  }
+  else
+  {
     return InvalidXLogRecPtr;
   }
 }
@@ -336,15 +376,18 @@ StreamLog(void)
   /*
    * Connect in replication mode to the server
    */
-  if (conn == NULL) {
+  if (conn == NULL)
+  {
     conn = GetConnection();
   }
-  if (!conn) {
+  if (!conn)
+  {
     /* Error message already written in GetConnection() */
     return;
   }
 
-  if (!CheckServerVersionForStreaming(conn)) {
+  if (!CheckServerVersionForStreaming(conn))
+  {
     /*
      * Error message already written in CheckServerVersionForStreaming().
      * There's no hope of recovering from a version mismatch, so don't
@@ -358,7 +401,8 @@ StreamLog(void)
    * at the same time, necessary if not valid data can be found in the
    * existing output directory.
    */
-  if (!RunIdentifySystem(conn, NULL, &servertli, &serverpos, NULL)) {
+  if (!RunIdentifySystem(conn, NULL, &servertli, &serverpos, NULL))
+  {
     exit(1);
   }
 
@@ -366,7 +410,8 @@ StreamLog(void)
    * Figure out where to start streaming.
    */
   stream.startpos = FindStreamingStart(&stream.timeline);
-  if (stream.startpos == InvalidXLogRecPtr) {
+  if (stream.startpos == InvalidXLogRecPtr)
+  {
     stream.startpos = serverpos;
     stream.timeline = servertli;
   }
@@ -379,7 +424,8 @@ StreamLog(void)
   /*
    * Start the replication
    */
-  if (verbose) {
+  if (verbose)
+  {
     pg_log_info("starting log streaming at %X/%X (timeline %u)", (uint32)(stream.startpos >> 32), (uint32)stream.startpos, stream.timeline);
   }
 
@@ -395,7 +441,8 @@ StreamLog(void)
 
   ReceiveXlogStream(conn, &stream);
 
-  if (!stream.walmethod->finish()) {
+  if (!stream.walmethod->finish())
+  {
     pg_log_info("could not finish writing WAL files: %m");
     return;
   }
@@ -425,7 +472,8 @@ sigint_handler(int signum)
 int
 main(int argc, char **argv)
 {
-  static struct option long_options[] = {{"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"directory", required_argument, NULL, 'D'}, {"dbname", required_argument, NULL, 'd'}, {"endpos", required_argument, NULL, 'E'}, {"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"no-loop", no_argument, NULL, 'n'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"status-interval", required_argument, NULL, 's'}, {"slot", required_argument, NULL, 'S'}, {"verbose", no_argument, NULL, 'v'}, {"compress", required_argument, NULL, 'Z'},/* action */
+  static struct option long_options[] = {{"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"directory", required_argument, NULL, 'D'}, {"dbname", required_argument, NULL, 'd'}, {"endpos", required_argument, NULL, 'E'}, {"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"no-loop", no_argument, NULL, 'n'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"status-interval", required_argument, NULL, 's'}, {"slot", required_argument, NULL, 'S'}, {"verbose", no_argument, NULL, 'v'}, {"compress", required_argument, NULL, 'Z'},
+      /* action */
       {"create-slot", no_argument, NULL, 1}, {"drop-slot", no_argument, NULL, 2}, {"if-not-exists", no_argument, NULL, 3}, {"synchronous", no_argument, NULL, 4}, {"no-sync", no_argument, NULL, 5}, {NULL, 0, NULL, 0}};
 
   int c;
@@ -437,18 +485,24 @@ main(int argc, char **argv)
   progname = get_progname(argv[0]);
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_basebackup"));
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       usage();
       exit(0);
-    } else if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0) {
+    }
+    else if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0)
+    {
       puts("pg_receivewal (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((c = getopt_long(argc, argv, "D:d:E:h:p:U:s:S:nwWvZ:", long_options, &option_index)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "D:d:E:h:p:U:s:S:nwWvZ:", long_options, &option_index)) != -1)
+  {
+    switch (c)
+    {
     case 'D':
       basedir = pg_strdup(optarg);
       break;
@@ -459,7 +513,8 @@ main(int argc, char **argv)
       dbhost = pg_strdup(optarg);
       break;
     case 'p':
-      if (atoi(optarg) <= 0) {
+      if (atoi(optarg) <= 0)
+      {
         pg_log_error("invalid port number \"%s\"", optarg);
         exit(1);
       }
@@ -476,7 +531,8 @@ main(int argc, char **argv)
       break;
     case 's':
       standby_message_timeout = atoi(optarg) * 1000;
-      if (standby_message_timeout < 0) {
+      if (standby_message_timeout < 0)
+      {
         pg_log_error("invalid status interval \"%s\"", optarg);
         exit(1);
       }
@@ -485,7 +541,8 @@ main(int argc, char **argv)
       replication_slot = pg_strdup(optarg);
       break;
     case 'E':
-      if (sscanf(optarg, "%X/%X", &hi, &lo) != 2) {
+      if (sscanf(optarg, "%X/%X", &hi, &lo) != 2)
+      {
         pg_log_error("could not parse end position \"%s\"", optarg);
         exit(1);
       }
@@ -499,7 +556,8 @@ main(int argc, char **argv)
       break;
     case 'Z':
       compresslevel = atoi(optarg);
-      if (compresslevel < 0 || compresslevel > 9) {
+      if (compresslevel < 0 || compresslevel > 9)
+      {
         pg_log_error("invalid compression level \"%s\"", optarg);
         exit(1);
       }
@@ -520,7 +578,7 @@ main(int argc, char **argv)
     case 5:
       do_sync = false;
       break;
-    default:;
+    default:
 
       /*
        * getopt_long already emitted a complaint
@@ -533,26 +591,30 @@ main(int argc, char **argv)
   /*
    * Any non-option arguments?
    */
-  if (optind < argc) {
+  if (optind < argc)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (do_drop_slot && do_create_slot) {
+  if (do_drop_slot && do_create_slot)
+  {
     pg_log_error("cannot use --create-slot together with --drop-slot");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (replication_slot == NULL && (do_drop_slot || do_create_slot)) {
+  if (replication_slot == NULL && (do_drop_slot || do_create_slot))
+  {
     /* translator: second %s is an option name */
     pg_log_error("%s needs a slot to be specified using --slot", do_drop_slot ? "--drop-slot" : "--create-slot");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
-  if (synchronous && !do_sync) {
+  if (synchronous && !do_sync)
+  {
     pg_log_error("cannot use --synchronous together with --no-sync");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -561,14 +623,16 @@ main(int argc, char **argv)
   /*
    * Required arguments
    */
-  if (basedir == NULL && !do_drop_slot && !do_create_slot) {
+  if (basedir == NULL && !do_drop_slot && !do_create_slot)
+  {
     pg_log_error("no target directory specified");
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
   }
 
 #ifndef HAVE_LIBZ
-  if (compresslevel != 0) {
+  if (compresslevel != 0)
+  {
     pg_log_error("this build does not support compression");
     exit(1);
   }
@@ -577,7 +641,8 @@ main(int argc, char **argv)
   /*
    * Check existence of destination folder.
    */
-  if (!do_drop_slot && !do_create_slot) {
+  if (!do_drop_slot && !do_create_slot)
+  {
     DIR *dir = get_destination_dir(basedir);
 
     close_destination_dir(dir, basedir);
@@ -587,14 +652,16 @@ main(int argc, char **argv)
    * Obtain a connection before doing anything.
    */
   conn = GetConnection();
-  if (!conn) {
+  if (!conn)
+  {
     /* error message already written in GetConnection() */
     exit(1);
   }
   atexit(disconnect_atexit);
 
   /*
-   * Trap signals.  (Don't do this until after the initial password prompt,* if one is needed, in GetConnection.)
+   * Trap signals.  (Don't do this until after the initial password prompt,
+   * if one is needed, in GetConnection.)
    */
 #ifndef WIN32
   pqsignal(SIGINT, sigint_handler);
@@ -605,7 +672,8 @@ main(int argc, char **argv)
    * replication connection and haven't connected using a database specific
    * connection.
    */
-  if (!RunIdentifySystem(conn, NULL, NULL, NULL, &db_name)) {
+  if (!RunIdentifySystem(conn, NULL, NULL, NULL, &db_name))
+  {
     exit(1);
   }
 
@@ -620,7 +688,8 @@ main(int argc, char **argv)
   umask(pg_mode_mask);
 
   /* determine remote server's xlog segment size */
-  if (!RetrieveWalSegSize(conn)) {
+  if (!RetrieveWalSegSize(conn))
+  {
     exit(1);
   }
 
@@ -628,32 +697,39 @@ main(int argc, char **argv)
    * Check that there is a database associated with connection, none should
    * be defined in this context.
    */
-  if (db_name) {
-    pg_log_error("replication connection using slot \"%s\" is unexpectedly database specific",replication_slot);
+  if (db_name)
+  {
+    pg_log_error("replication connection using slot \"%s\" is unexpectedly database specific", replication_slot);
     exit(1);
   }
 
   /*
    * Drop a replication slot.
    */
-  if (do_drop_slot) {
-    if (verbose) {
+  if (do_drop_slot)
+  {
+    if (verbose)
+    {
       pg_log_info("dropping replication slot \"%s\"", replication_slot);
     }
 
-    if (!DropReplicationSlot(conn, replication_slot)) {
+    if (!DropReplicationSlot(conn, replication_slot))
+    {
       exit(1);
     }
     exit(0);
   }
 
   /* Create a replication slot */
-  if (do_create_slot) {
-    if (verbose) {
+  if (do_create_slot)
+  {
+    if (verbose)
+    {
       pg_log_info("creating replication slot \"%s\"", replication_slot);
     }
 
-    if (!CreateReplicationSlot(conn, replication_slot, NULL, false, true, false, slot_exists_ok)) {
+    if (!CreateReplicationSlot(conn, replication_slot, NULL, false, true, false, slot_exists_ok))
+    {
       exit(1);
     }
     exit(0);
@@ -664,18 +740,24 @@ main(int argc, char **argv)
    * reuse it.
    */
 
-  while (true) {
+  while (true)
+  {
     StreamLog();
-    if (time_to_stop) {
+    if (time_to_stop)
+    {
       /*
        * We've been Ctrl-C'ed or end of streaming position has been
        * willingly reached, so exit without an error code.
        */
       exit(0);
-    } else if (noloop) {
+    }
+    else if (noloop)
+    {
       pg_log_error("disconnected");
       exit(1);
-    } else {
+    }
+    else
+    {
       /* translator: check source for value for %d */
       pg_log_info("disconnected; waiting %d seconds to try again", RECONNECT_SLEEP_TIME);
       pg_usleep(RECONNECT_SLEEP_TIME * 1000000);

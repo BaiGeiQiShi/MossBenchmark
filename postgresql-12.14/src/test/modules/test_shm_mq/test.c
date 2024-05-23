@@ -55,7 +55,8 @@ test_shm_mq(PG_FUNCTION_ARGS)
   void *data;
 
   /* A negative loopcount is nonsensical. */
-  if (loop_count < 0) {
+  if (loop_count < 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("repeat count size must be an integer value greater than or equal to zero")));
   }
 
@@ -64,7 +65,8 @@ test_shm_mq(PG_FUNCTION_ARGS)
    * send data to itself.  Therefore, a minimum of 1 worker is required. Of
    * course, a negative worker count is nonsensical.
    */
-  if (nworkers <= 0) {
+  if (nworkers <= 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("number of workers must be an integer value greater than zero")));
   }
 
@@ -73,7 +75,8 @@ test_shm_mq(PG_FUNCTION_ARGS)
 
   /* Send the initial message. */
   res = shm_mq_send(outqh, message_size, message_contents, false);
-  if (res != SHM_MQ_SUCCESS) {
+  if (res != SHM_MQ_SUCCESS)
+  {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not send message")));
   }
 
@@ -81,21 +84,25 @@ test_shm_mq(PG_FUNCTION_ARGS)
    * Receive a message and send it back out again.  Do this a number of
    * times equal to the loop count.
    */
-  for (;;) {
+  for (;;)
+  {
     /* Receive a message. */
     res = shm_mq_receive(inqh, &len, &data, false);
-    if (res != SHM_MQ_SUCCESS) {
+    if (res != SHM_MQ_SUCCESS)
+    {
       ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not receive message")));
     }
 
     /* If this is supposed to be the last iteration, stop here. */
-    if (--loop_count <= 0) {
+    if (--loop_count <= 0)
+    {
       break;
     }
 
     /* Send it back out. */
     res = shm_mq_send(outqh, len, data, false);
-    if (res != SHM_MQ_SUCCESS) {
+    if (res != SHM_MQ_SUCCESS)
+    {
       ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not send message")));
     }
   }
@@ -142,7 +149,8 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
   void *data;
 
   /* A negative loopcount is nonsensical. */
-  if (loop_count < 0) {
+  if (loop_count < 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("repeat count size must be an integer value greater than or equal to zero")));
   }
 
@@ -150,7 +158,8 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
    * Using the nonblocking interfaces, we can even send data to ourselves,
    * so the minimum number of workers for this test is zero.
    */
-  if (nworkers < 0) {
+  if (nworkers < 0)
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("number of workers must be an integer value greater than or equal to zero")));
   }
 
@@ -158,7 +167,8 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
   test_shm_mq_setup(queue_size, nworkers, &seg, &outqh, &inqh);
 
   /* Main loop. */
-  for (;;) {
+  for (;;)
+  {
     bool wait = true;
 
     /*
@@ -168,12 +178,16 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
      * same message size and contents; that's not an issue here because
      * we're sending the same message every time.
      */
-    if (send_count < loop_count) {
+    if (send_count < loop_count)
+    {
       res = shm_mq_send(outqh, message_size, message_contents, true);
-      if (res == SHM_MQ_SUCCESS) {
+      if (res == SHM_MQ_SUCCESS)
+      {
         ++send_count;
         wait = false;
-      } else if (res == SHM_MQ_DETACHED) {
+      }
+      else if (res == SHM_MQ_DETACHED)
+      {
         ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not send message")));
       }
     }
@@ -182,30 +196,39 @@ test_shm_mq_pipelined(PG_FUNCTION_ARGS)
      * If we haven't yet received the message the requisite number of
      * times, try to receive it again now.
      */
-    if (receive_count < loop_count) {
+    if (receive_count < loop_count)
+    {
       res = shm_mq_receive(inqh, &len, &data, true);
-      if (res == SHM_MQ_SUCCESS) {
+      if (res == SHM_MQ_SUCCESS)
+      {
         ++receive_count;
         /* Verifying every time is slow, so it's optional. */
-        if (verify) {
+        if (verify)
+        {
           verify_message(message_size, message_contents, len, data);
         }
         wait = false;
-      } else if (res == SHM_MQ_DETACHED) {
+      }
+      else if (res == SHM_MQ_DETACHED)
+      {
         ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not receive message")));
       }
-    } else {
+    }
+    else
+    {
       /*
        * Otherwise, we've received the message enough times.  This
        * shouldn't happen unless we've also sent it enough times.
        */
-      if (send_count != receive_count) {
+      if (send_count != receive_count)
+      {
         ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR), errmsg("message sent %d times, but received %d times", send_count, receive_count)));
       }
       break;
     }
 
-    if (wait) {
+    if (wait)
+    {
       /*
        * If we made no progress, wait for one of the other processes to
        * which we are connected to set our latch, indicating that they
@@ -232,12 +255,15 @@ verify_message(Size origlen, char *origdata, Size newlen, char *newdata)
 {
   Size i;
 
-  if (origlen != newlen) {
-    ereport(ERROR, (errmsg("message corrupted"), errdetail("The original message was %zu bytes but the final message is %zu bytes.",       origlen, newlen)));
+  if (origlen != newlen)
+  {
+    ereport(ERROR, (errmsg("message corrupted"), errdetail("The original message was %zu bytes but the final message is %zu bytes.", origlen, newlen)));
   }
 
-  for (i = 0; i < origlen; ++i) {
-    if (origdata[i] != newdata[i]) {
+  for (i = 0; i < origlen; ++i)
+  {
+    if (origdata[i] != newdata[i])
+    {
       ereport(ERROR, (errmsg("message corrupted"), errdetail("The new and original messages differ at byte %zu of %zu.", i, origlen)));
     }
   }

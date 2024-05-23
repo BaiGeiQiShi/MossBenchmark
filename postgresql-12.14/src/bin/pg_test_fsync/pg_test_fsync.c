@@ -33,7 +33,8 @@
 /* These are macros to avoid timing the function call overhead. */
 #ifndef WIN32
 #define START_TIMER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     alarm_triggered = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
     alarm(secs_per_test);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
     gettimeofday(&start_t, NULL);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
@@ -41,9 +42,11 @@
 #else
 /* WIN32 doesn't support alarm, so we create a thread and sleep there */
 #define START_TIMER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     alarm_triggered = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
-    if (CreateThread(NULL, 0, process_alarm, NULL, 0, NULL) == INVALID_HANDLE_VALUE) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+    if (CreateThread(NULL, 0, process_alarm, NULL, 0, NULL) == INVALID_HANDLE_VALUE)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+    {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
       pg_log_error("could not create thread for alarm");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
       exit(1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
@@ -52,7 +55,8 @@
 #endif
 
 #define STOP_TIMER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     gettimeofday(&stop_t, NULL);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
     print_elapse(start_t, stop_t, ops);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
   } while (0)
@@ -100,7 +104,8 @@ static void
 print_elapse(struct timeval start_t, struct timeval stop_t, int ops);
 
 #define die(msg)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  do {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+  do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     pg_log_error("%s: %m", _(msg));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     exit(1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
   } while (0)
@@ -154,19 +159,24 @@ handle_args(int argc, char *argv[])
   int option;       /* Command line option */
   int optindex = 0; /* used by getopt_long */
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0) {
+  if (argc > 1)
+  {
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+    {
       printf(_("Usage: %s [-f FILENAME] [-s SECS-PER-TEST]\n"), progname);
       exit(0);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       puts("pg_test_fsync (PostgreSQL) " PG_VERSION);
       exit(0);
     }
   }
 
-  while ((option = getopt_long(argc, argv, "f:s:", long_options, &optindex)) != -1) {
-    switch (option) {
+  while ((option = getopt_long(argc, argv, "f:s:", long_options, &optindex)) != -1)
+  {
+    switch (option)
+    {
     case 'f':
       filename = pg_strdup(optarg);
       break;
@@ -175,14 +185,15 @@ handle_args(int argc, char *argv[])
       secs_per_test = atoi(optarg);
       break;
 
-    default:;
+    default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
       break;
     }
   }
 
-  if (argc > optind) {
+  if (argc > optind)
+  {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
     exit(1);
@@ -202,7 +213,8 @@ prepare_buf(void)
   int ops;
 
   /* write random data into buffer */
-  for (ops = 0; ops < DEFAULT_XLOG_SEG_SIZE; ops++) {
+  for (ops = 0; ops < DEFAULT_XLOG_SEG_SIZE; ops++)
+  {
     full_buf[ops] = random();
   }
 
@@ -217,16 +229,19 @@ test_open(void)
   /*
    * test if we can open the target file
    */
-  if ((tmpfile = open(filename, O_RDWR | O_CREAT | PG_BINARY, S_IRUSR | S_IWUSR)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | O_CREAT | PG_BINARY, S_IRUSR | S_IWUSR)) == -1)
+  {
     die("could not open output file");
   }
   needs_unlink = 1;
-  if (write(tmpfile, full_buf, DEFAULT_XLOG_SEG_SIZE) != DEFAULT_XLOG_SEG_SIZE) {
+  if (write(tmpfile, full_buf, DEFAULT_XLOG_SEG_SIZE) != DEFAULT_XLOG_SEG_SIZE)
+  {
     die("write failed");
   }
 
   /* fsync now so that dirty buffers don't skew later tests */
-  if (fsync(tmpfile) != 0) {
+  if (fsync(tmpfile) != 0)
+  {
     die("fsync failed");
   }
 
@@ -239,9 +254,12 @@ test_sync(int writes_per_op)
   int tmpfile, ops, writes;
   bool fs_warning = false;
 
-  if (writes_per_op == 1) {
+  if (writes_per_op == 1)
+  {
     printf(_("\nCompare file sync methods using one %dkB write:\n"), XLOG_BLCKSZ_K);
-  } else {
+  }
+  else
+  {
     printf(_("\nCompare file sync methods using two %dkB writes:\n"), XLOG_BLCKSZ_K);
   }
   printf(_("(in wal_sync_method preference order, except fdatasync is Linux's default)\n"));
@@ -253,18 +271,25 @@ test_sync(int writes_per_op)
   fflush(stdout);
 
 #ifdef OPEN_DATASYNC_FLAG
-  if ((tmpfile = open(filename, O_RDWR | O_DSYNC | PG_O_DIRECT | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | O_DSYNC | PG_O_DIRECT | PG_BINARY, 0)) == -1)
+  {
     printf(NA_FORMAT, _("n/a*"));
     fs_warning = true;
-  } else {
+  }
+  else
+  {
     START_TIMER;
-    for (ops = 0; alarm_triggered == false; ops++) {
-      for (writes = 0; writes < writes_per_op; writes++) {
-        if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+    for (ops = 0; alarm_triggered == false; ops++)
+    {
+      for (writes = 0; writes < writes_per_op; writes++)
+      {
+        if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+        {
           die("write failed");
         }
       }
-      if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+      if (lseek(tmpfile, 0, SEEK_SET) == -1)
+      {
         die("seek failed");
       }
     }
@@ -282,18 +307,23 @@ test_sync(int writes_per_op)
   fflush(stdout);
 
 #ifdef HAVE_FDATASYNC
-  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+  {
     die("could not open output file");
   }
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    for (writes = 0; writes < writes_per_op; writes++) {
-      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    for (writes = 0; writes < writes_per_op; writes++)
+    {
+      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+      {
         die("write failed");
       }
     }
     fdatasync(tmpfile);
-    if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+    if (lseek(tmpfile, 0, SEEK_SET) == -1)
+    {
       die("seek failed");
     }
   }
@@ -309,20 +339,26 @@ test_sync(int writes_per_op)
   printf(LABEL_FORMAT, "fsync");
   fflush(stdout);
 
-  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+  {
     die("could not open output file");
   }
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    for (writes = 0; writes < writes_per_op; writes++) {
-      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    for (writes = 0; writes < writes_per_op; writes++)
+    {
+      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+      {
         die("write failed");
       }
     }
-    if (fsync(tmpfile) != 0) {
+    if (fsync(tmpfile) != 0)
+    {
       die("fsync failed");
     }
-    if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+    if (lseek(tmpfile, 0, SEEK_SET) == -1)
+    {
       die("seek failed");
     }
   }
@@ -336,20 +372,26 @@ test_sync(int writes_per_op)
   fflush(stdout);
 
 #ifdef HAVE_FSYNC_WRITETHROUGH
-  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+  {
     die("could not open output file");
   }
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    for (writes = 0; writes < writes_per_op; writes++) {
-      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    for (writes = 0; writes < writes_per_op; writes++)
+    {
+      if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+      {
         die("write failed");
       }
     }
-    if (pg_fsync_writethrough(tmpfile) != 0) {
+    if (pg_fsync_writethrough(tmpfile) != 0)
+    {
       die("fsync failed");
     }
-    if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+    if (lseek(tmpfile, 0, SEEK_SET) == -1)
+    {
       die("seek failed");
     }
   }
@@ -366,14 +408,20 @@ test_sync(int writes_per_op)
   fflush(stdout);
 
 #ifdef OPEN_SYNC_FLAG
-  if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT | PG_BINARY, 0)) == -1)
+  {
     printf(NA_FORMAT, _("n/a*"));
     fs_warning = true;
-  } else {
+  }
+  else
+  {
     START_TIMER;
-    for (ops = 0; alarm_triggered == false; ops++) {
-      for (writes = 0; writes < writes_per_op; writes++) {
-        if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+    for (ops = 0; alarm_triggered == false; ops++)
+    {
+      for (writes = 0; writes < writes_per_op; writes++)
+      {
+        if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+        {
 
           /*
            * This can generate write failures if the filesystem has
@@ -384,7 +432,8 @@ test_sync(int writes_per_op)
           die("write failed");
         }
       }
-      if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+      if (lseek(tmpfile, 0, SEEK_SET) == -1)
+      {
         die("seek failed");
       }
     }
@@ -395,8 +444,10 @@ test_sync(int writes_per_op)
   printf(NA_FORMAT, _("n/a"));
 #endif
 
-  if (fs_warning) {
-    printf(_("* This file system and its mount options do not support direct\n  I/O, e.g. ext4 in journaled mode.\n"));
+  if (fs_warning)
+  {
+    printf(_("* This file system and its mount options do not support direct\n"
+             "  I/O, e.g. ext4 in journaled mode.\n"));
   }
 }
 
@@ -404,7 +455,8 @@ static void
 test_open_syncs(void)
 {
   printf(_("\nCompare open_sync with different write sizes:\n"));
-  printf(_("(This is designed to compare the cost of writing 16kB in different write\nopen_sync sizes.)\n"));
+  printf(_("(This is designed to compare the cost of writing 16kB in different write\n"
+           "open_sync sizes.)\n"));
 
   test_open_sync(_(" 1 * 16kB open_sync write"), 16);
   test_open_sync(_(" 2 *  8kB open_sync writes"), 8);
@@ -427,17 +479,24 @@ test_open_sync(const char *msg, int writes_size)
   fflush(stdout);
 
 #ifdef OPEN_SYNC_FLAG
-  if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT | PG_BINARY, 0)) == -1) {
+  if ((tmpfile = open(filename, O_RDWR | OPEN_SYNC_FLAG | PG_O_DIRECT | PG_BINARY, 0)) == -1)
+  {
     printf(NA_FORMAT, _("n/a*"));
-  } else {
+  }
+  else
+  {
     START_TIMER;
-    for (ops = 0; alarm_triggered == false; ops++) {
-      for (writes = 0; writes < 16 / writes_size; writes++) {
-        if (write(tmpfile, buf, writes_size * 1024) != writes_size * 1024) {
+    for (ops = 0; alarm_triggered == false; ops++)
+    {
+      for (writes = 0; writes < 16 / writes_size; writes++)
+      {
+        if (write(tmpfile, buf, writes_size * 1024) != writes_size * 1024)
+        {
           die("write failed");
         }
       }
-      if (lseek(tmpfile, 0, SEEK_SET) == -1) {
+      if (lseek(tmpfile, 0, SEEK_SET) == -1)
+      {
         die("seek failed");
       }
     }
@@ -461,7 +520,8 @@ test_file_descriptor_sync(void)
    * on platforms which support it.
    */
   printf(_("\nTest if fsync on non-write file descriptor is honored:\n"));
-  printf(_("(If the times are similar, fsync() can sync data written on a different\ndescriptor.)\n"));
+  printf(_("(If the times are similar, fsync() can sync data written on a different\n"
+           "descriptor.)\n"));
 
   /*
    * first write, fsync and close, which is the normal behavior without
@@ -471,14 +531,18 @@ test_file_descriptor_sync(void)
   fflush(stdout);
 
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+    {
       die("could not open output file");
     }
-    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+    {
       die("write failed");
     }
-    if (fsync(tmpfile) != 0) {
+    if (fsync(tmpfile) != 0)
+    {
       die("fsync failed");
     }
     close(tmpfile);
@@ -487,7 +551,8 @@ test_file_descriptor_sync(void)
      * open and close the file again to be consistent with the following
      * test
      */
-    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+    {
       die("could not open output file");
     }
     close(tmpfile);
@@ -502,19 +567,24 @@ test_file_descriptor_sync(void)
   fflush(stdout);
 
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+    {
       die("could not open output file");
     }
-    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+    {
       die("write failed");
     }
     close(tmpfile);
     /* reopen file */
-    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+    {
       die("could not open output file");
     }
-    if (fsync(tmpfile) != 0) {
+    if (fsync(tmpfile) != 0)
+    {
       die("fsync failed");
     }
     close(tmpfile);
@@ -535,11 +605,14 @@ test_non_sync(void)
   fflush(stdout);
 
   START_TIMER;
-  for (ops = 0; alarm_triggered == false; ops++) {
-    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1) {
+  for (ops = 0; alarm_triggered == false; ops++)
+  {
+    if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
+    {
       die("could not open output file");
     }
-    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ) {
+    if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+    {
       die("write failed");
     }
     close(tmpfile);
@@ -551,7 +624,8 @@ static void
 signal_cleanup(int signum)
 {
   /* Delete the file if it exists. Ignore errors */
-  if (needs_unlink) {
+  if (needs_unlink)
+  {
     unlink(filename);
   }
   /* Finish incomplete line on stdout */

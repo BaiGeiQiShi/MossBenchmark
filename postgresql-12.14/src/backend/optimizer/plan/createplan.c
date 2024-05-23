@@ -318,7 +318,7 @@ create_plan(PlannerInfo *root, Path *best_path)
   /* Check we successfully assigned all NestLoopParams to plan nodes */
   if (root->curOuterParams != NIL)
   {
-
+    elog(ERROR, "failed to assign all NestLoopParams to plan nodes");
   }
 
   /*
@@ -344,35 +344,35 @@ create_plan_recurse(PlannerInfo *root, Path *best_path, int flags)
 
   switch (best_path->pathtype)
   {
-  case T_SeqScan:;
-  case T_SampleScan:;
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
-  case T_BitmapHeapScan:;
-  case T_TidScan:;
-  case T_SubqueryScan:;
-  case T_FunctionScan:;
-  case T_TableFuncScan:;
-  case T_ValuesScan:;
-  case T_CteScan:;
-  case T_WorkTableScan:;
-  case T_NamedTuplestoreScan:;
-  case T_ForeignScan:;
-  case T_CustomScan:;
+  case T_SeqScan:
+  case T_SampleScan:
+  case T_IndexScan:
+  case T_IndexOnlyScan:
+  case T_BitmapHeapScan:
+  case T_TidScan:
+  case T_SubqueryScan:
+  case T_FunctionScan:
+  case T_TableFuncScan:
+  case T_ValuesScan:
+  case T_CteScan:
+  case T_WorkTableScan:
+  case T_NamedTuplestoreScan:
+  case T_ForeignScan:
+  case T_CustomScan:
     plan = create_scan_plan(root, best_path, flags);
     break;
-  case T_HashJoin:;
-  case T_MergeJoin:;
-  case T_NestLoop:;
+  case T_HashJoin:
+  case T_MergeJoin:
+  case T_NestLoop:
     plan = create_join_plan(root, (JoinPath *)best_path);
     break;
-  case T_Append:;
+  case T_Append:
     plan = create_append_plan(root, (AppendPath *)best_path, flags);
     break;
-  case T_MergeAppend:;
+  case T_MergeAppend:
     plan = create_merge_append_plan(root, (MergeAppendPath *)best_path, flags);
     break;
-  case T_Result:;
+  case T_Result:
     if (IsA(best_path, ProjectionPath))
     {
       plan = create_projection_plan(root, (ProjectionPath *)best_path, flags);
@@ -392,13 +392,13 @@ create_plan_recurse(PlannerInfo *root, Path *best_path, int flags)
       plan = create_scan_plan(root, best_path, flags);
     }
     break;
-  case T_ProjectSet:;
+  case T_ProjectSet:
     plan = (Plan *)create_project_set_plan(root, (ProjectSetPath *)best_path);
     break;
-  case T_Material:;
+  case T_Material:
     plan = (Plan *)create_material_plan(root, (MaterialPath *)best_path, flags);
     break;
-  case T_Unique:;
+  case T_Unique:
     if (IsA(best_path, UpperUniquePath))
     {
       plan = (Plan *)create_upper_unique_plan(root, (UpperUniquePath *)best_path, flags);
@@ -409,16 +409,16 @@ create_plan_recurse(PlannerInfo *root, Path *best_path, int flags)
       plan = create_unique_plan(root, (UniquePath *)best_path, flags);
     }
     break;
-  case T_Gather:;
+  case T_Gather:
     plan = (Plan *)create_gather_plan(root, (GatherPath *)best_path);
     break;
-  case T_Sort:;
+  case T_Sort:
     plan = (Plan *)create_sort_plan(root, (SortPath *)best_path, flags);
     break;
-  case T_Group:;
+  case T_Group:
     plan = (Plan *)create_group_plan(root, (GroupPath *)best_path);
     break;
-  case T_Agg:;
+  case T_Agg:
     if (IsA(best_path, GroupingSetsPath))
     {
       plan = create_groupingsets_plan(root, (GroupingSetsPath *)best_path);
@@ -429,31 +429,31 @@ create_plan_recurse(PlannerInfo *root, Path *best_path, int flags)
       plan = (Plan *)create_agg_plan(root, (AggPath *)best_path);
     }
     break;
-  case T_WindowAgg:;
+  case T_WindowAgg:
     plan = (Plan *)create_windowagg_plan(root, (WindowAggPath *)best_path);
     break;
-  case T_SetOp:;
+  case T_SetOp:
     plan = (Plan *)create_setop_plan(root, (SetOpPath *)best_path, flags);
     break;
-  case T_RecursiveUnion:;
+  case T_RecursiveUnion:
     plan = (Plan *)create_recursiveunion_plan(root, (RecursiveUnionPath *)best_path);
     break;
-  case T_LockRows:;
+  case T_LockRows:
     plan = (Plan *)create_lockrows_plan(root, (LockRowsPath *)best_path, flags);
     break;
-  case T_ModifyTable:;
+  case T_ModifyTable:
     plan = (Plan *)create_modifytable_plan(root, (ModifyTablePath *)best_path);
     break;
-  case T_Limit:;
+  case T_Limit:
     plan = (Plan *)create_limit_plan(root, (LimitPath *)best_path, flags);
     break;
-  case T_GatherMerge:;
+  case T_GatherMerge:
     plan = (Plan *)create_gather_merge_plan(root, (GatherMergePath *)best_path);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)best_path->pathtype);
+    plan = NULL; /* keep compiler quiet */
+    break;
   }
 
   return plan;
@@ -486,11 +486,11 @@ create_scan_plan(PlannerInfo *root, Path *best_path, int flags)
    */
   switch (best_path->pathtype)
   {
-  case T_IndexScan:;
-  case T_IndexOnlyScan:;
+  case T_IndexScan:
+  case T_IndexOnlyScan:
     scan_clauses = castNode(IndexPath, best_path)->indexinfo->indrestrictinfo;
     break;
-  default:;;
+  default:
     scan_clauses = rel->baserestrictinfo;
     break;
   }
@@ -572,74 +572,74 @@ create_scan_plan(PlannerInfo *root, Path *best_path, int flags)
 
   switch (best_path->pathtype)
   {
-  case T_SeqScan:;
+  case T_SeqScan:
     plan = (Plan *)create_seqscan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_SampleScan:;
+  case T_SampleScan:
     plan = (Plan *)create_samplescan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_IndexScan:;
+  case T_IndexScan:
     plan = (Plan *)create_indexscan_plan(root, (IndexPath *)best_path, tlist, scan_clauses, false);
     break;
 
-  case T_IndexOnlyScan:;
+  case T_IndexOnlyScan:
     plan = (Plan *)create_indexscan_plan(root, (IndexPath *)best_path, tlist, scan_clauses, true);
     break;
 
-  case T_BitmapHeapScan:;
+  case T_BitmapHeapScan:
     plan = (Plan *)create_bitmap_scan_plan(root, (BitmapHeapPath *)best_path, tlist, scan_clauses);
     break;
 
-  case T_TidScan:;
+  case T_TidScan:
     plan = (Plan *)create_tidscan_plan(root, (TidPath *)best_path, tlist, scan_clauses);
     break;
 
-  case T_SubqueryScan:;
+  case T_SubqueryScan:
     plan = (Plan *)create_subqueryscan_plan(root, (SubqueryScanPath *)best_path, tlist, scan_clauses);
     break;
 
-  case T_FunctionScan:;
+  case T_FunctionScan:
     plan = (Plan *)create_functionscan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_TableFuncScan:;
+  case T_TableFuncScan:
     plan = (Plan *)create_tablefuncscan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_ValuesScan:;
+  case T_ValuesScan:
     plan = (Plan *)create_valuesscan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_CteScan:;
+  case T_CteScan:
     plan = (Plan *)create_ctescan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_NamedTuplestoreScan:;
+  case T_NamedTuplestoreScan:
     plan = (Plan *)create_namedtuplestorescan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_Result:;
+  case T_Result:
     plan = (Plan *)create_resultscan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_WorkTableScan:;
+  case T_WorkTableScan:
     plan = (Plan *)create_worktablescan_plan(root, best_path, tlist, scan_clauses);
     break;
 
-  case T_ForeignScan:;
+  case T_ForeignScan:
+    plan = (Plan *)create_foreignscan_plan(root, (ForeignPath *)best_path, tlist, scan_clauses);
+    break;
 
+  case T_CustomScan:
+    plan = (Plan *)create_customscan_plan(root, (CustomPath *)best_path, tlist, scan_clauses);
+    break;
 
-
-  case T_CustomScan:;
-
-
-
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)best_path->pathtype);
+    plan = NULL; /* keep compiler quiet */
+    break;
   }
 
   /*
@@ -744,7 +744,7 @@ use_physical_tlist(PlannerInfo *root, Path *path, int flags)
    */
   if (IsA(path, CustomPath))
   {
-
+    return false;
   }
 
   /*
@@ -939,19 +939,19 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 
   switch (best_path->path.pathtype)
   {
-  case T_MergeJoin:;
+  case T_MergeJoin:
     plan = (Plan *)create_mergejoin_plan(root, (MergePath *)best_path);
     break;
-  case T_HashJoin:;
+  case T_HashJoin:
     plan = (Plan *)create_hashjoin_plan(root, (HashPath *)best_path);
     break;
-  case T_NestLoop:;
+  case T_NestLoop:
     plan = (Plan *)create_nestloop_plan(root, (NestPath *)best_path);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unrecognized node type: %d", (int)best_path->path.pathtype);
+    plan = NULL; /* keep compiler quiet */
+    break;
   }
 
   /*
@@ -1094,7 +1094,7 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path, int flags)
       Assert(numsortkeys == nodenumsortkeys);
       if (memcmp(sortColIdx, nodeSortColIdx, numsortkeys * sizeof(AttrNumber)) != 0)
       {
-
+        elog(ERROR, "Append child's targetlist doesn't match Append");
       }
       Assert(memcmp(sortOperators, nodeSortOperators, numsortkeys * sizeof(Oid)) == 0);
       Assert(memcmp(collations, nodeCollations, numsortkeys * sizeof(Oid)) == 0);
@@ -1153,8 +1153,8 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path, int flags)
    */
   if (tlist_was_changed && (flags & (CP_EXACT_TLIST | CP_SMALL_TLIST)))
   {
-
-
+    tlist = list_truncate(list_copy(plan->plan.targetlist), orig_tlist_length);
+    return inject_projection_plan((Plan *)plan, tlist, plan->plan.parallel_safe);
   }
   else
   {
@@ -1235,7 +1235,7 @@ create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_path, int flag
     Assert(numsortkeys == node->numCols);
     if (memcmp(sortColIdx, node->sortColIdx, numsortkeys * sizeof(AttrNumber)) != 0)
     {
-
+      elog(ERROR, "MergeAppend child's targetlist doesn't match MergeAppend");
     }
     Assert(memcmp(sortOperators, node->sortOperators, numsortkeys * sizeof(Oid)) == 0);
     Assert(memcmp(collations, node->collations, numsortkeys * sizeof(Oid)) == 0);
@@ -1268,10 +1268,10 @@ create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_path, int flag
     {
       List *prmquals = best_path->path.param_info->ppi_clauses;
 
+      prmquals = extract_actual_clauses(prmquals, false);
+      prmquals = (List *)replace_nestloop_params(root, (Node *)prmquals);
 
-
-
-
+      prunequal = list_concat(prunequal, prmquals);
     }
 
     if (prunequal != NIL)
@@ -1290,8 +1290,8 @@ create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_path, int flag
    */
   if (tlist_was_changed && (flags & (CP_EXACT_TLIST | CP_SMALL_TLIST)))
   {
-
-
+    tlist = list_truncate(list_copy(plan->targetlist), orig_tlist_length);
+    return inject_projection_plan(plan, tlist, plan->parallel_safe);
   }
   else
   {
@@ -1406,7 +1406,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path, int flags)
   /* Done if we don't need to do any actual unique-ifying */
   if (best_path->umethod == UNIQUE_PATH_NOOP)
   {
-
+    return subplan;
   }
 
   /*
@@ -1472,9 +1472,9 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path, int flags)
     TargetEntry *tle;
 
     tle = tlist_member(uniqexpr, newtlist);
-    if (!tle)
-    { /* shouldn't happen */
-
+    if (!tle) /* shouldn't happen */
+    {
+      elog(ERROR, "failed to find unique expression in subplan tlist");
     }
     groupColIdx[groupColPos] = tle->resno;
     groupCollations[groupColPos] = exprCollation((Node *)tle->expr);
@@ -1500,7 +1500,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path, int flags)
 
       if (!get_compatible_hash_operators(in_oper, NULL, &eq_oper))
       {
-
+        elog(ERROR, "could not find compatible hash operator for operator %u", in_oper);
       }
       groupOperators[groupColPos++] = eq_oper;
     }
@@ -1518,48 +1518,48 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path, int flags)
     Sort *sort;
 
     /* Create an ORDER BY list to sort the input compatibly */
+    groupColPos = 0;
+    foreach (l, in_operators)
+    {
+      Oid in_oper = lfirst_oid(l);
+      Oid sortop;
+      Oid eqop;
+      TargetEntry *tle;
+      SortGroupClause *sortcl;
 
+      sortop = get_ordering_op_for_equality_op(in_oper, false);
+      if (!OidIsValid(sortop)) /* shouldn't happen */
+      {
+        elog(ERROR, "could not find ordering operator for equality operator %u", in_oper);
+      }
 
+      /*
+       * The Unique node will need equality operators.  Normally these
+       * are the same as the IN clause operators, but if those are
+       * cross-type operators then the equality operators are the ones
+       * for the IN clause operators' RHS datatype.
+       */
+      eqop = get_equality_op_for_ordering_op(sortop, NULL);
+      if (!OidIsValid(eqop)) /* shouldn't happen */
+      {
+        elog(ERROR, "could not find equality operator for ordering operator %u", sortop);
+      }
 
+      tle = get_tle_by_resno(subplan->targetlist, groupColIdx[groupColPos]);
+      Assert(tle != NULL);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      sortcl = makeNode(SortGroupClause);
+      sortcl->tleSortGroupRef = assignSortGroupRef(tle, subplan->targetlist);
+      sortcl->eqop = eqop;
+      sortcl->sortop = sortop;
+      sortcl->nulls_first = false;
+      sortcl->hashable = false; /* no need to make this accurate */
+      sortList = lappend(sortList, sortcl);
+      groupColPos++;
+    }
+    sort = make_sort_from_sortclauses(sortList, subplan);
+    label_sort_with_costsize(root, sort, -1.0);
+    plan = (Plan *)make_unique_from_sortclauses((Plan *)sort, sortList);
   }
 
   /* Copy cost data from Path to Plan */
@@ -1634,7 +1634,7 @@ create_gather_merge_plan(PlannerInfo *root, GatherMergePath *best_path)
   /* Now, insert a Sort node if subplan isn't sufficiently ordered */
   if (!pathkeys_contained_in(pathkeys, best_path->subpath->pathkeys))
   {
-
+    subplan = (Plan *)make_sort(subplan, gm_plan->numCols, gm_plan->sortColIdx, gm_plan->sortOperators, gm_plan->collations, gm_plan->nullsFirst);
   }
 
   /* Now insert the subplan under GatherMerge. */
@@ -1797,7 +1797,7 @@ change_plan_targetlist(Plan *subplan, List *tlist, bool tlist_parallel_safe)
    */
   if (!is_projection_capable_plan(subplan) && !tlist_same_exprs(tlist, subplan->targetlist))
   {
-
+    subplan = inject_projection_plan(subplan, tlist, subplan->parallel_safe && tlist_parallel_safe);
   }
   else
   {
@@ -2635,7 +2635,7 @@ create_indexscan_plan(PlannerInfo *root, IndexPath *best_path, List *tlist, List
       sortop = get_opfamily_member(pathkey->pk_opfamily, exprtype, exprtype, pathkey->pk_strategy);
       if (!OidIsValid(sortop))
       {
-
+        elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", pathkey->pk_strategy, exprtype, exprtype, pathkey->pk_opfamily);
       }
       indexorderbyops = lappend_oid(indexorderbyops, sortop);
     }
@@ -2676,8 +2676,8 @@ create_indexscan_plan(PlannerInfo *root, IndexPath *best_path, List *tlist, List
 
 /*
  * create_bitmap_scan_plan
- *	  Returns a bitmap scan plan for the base relation scanned by
- *'best_path' with restriction clauses 'scan_clauses' and targetlist 'tlist'.
+ *	  Returns a bitmap scan plan for the base relation scanned by 'best_path'
+ *	  with restriction clauses 'scan_clauses' and targetlist 'tlist'.
  */
 static BitmapHeapScan *
 create_bitmap_scan_plan(PlannerInfo *root, BitmapHeapPath *best_path, List *tlist, List *scan_clauses)
@@ -2737,7 +2737,7 @@ create_bitmap_scan_plan(PlannerInfo *root, BitmapHeapPath *best_path, List *tlis
 
     if (rinfo->pseudoconstant)
     {
-
+      continue; /* we may drop pseudoconstants here */
     }
     if (list_member(indexquals, clause))
     {
@@ -2883,7 +2883,7 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
       subplans = lappend(subplans, subplan);
       if (subqual == NIL)
       {
-
+        const_true_subqual = true;
       }
       else if (!const_true_subqual)
       {
@@ -2891,7 +2891,7 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
       }
       if (subindexqual == NIL)
       {
-
+        const_true_subindexqual = true;
       }
       else if (!const_true_subindexqual)
       {
@@ -2905,7 +2905,7 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
      */
     if (list_length(subplans) == 1)
     {
-
+      plan = (Plan *)linitial(subplans);
     }
     else
     {
@@ -2925,11 +2925,11 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
      */
     if (const_true_subqual)
     {
-
+      *qual = NIL;
     }
     else if (list_length(subquals) <= 1)
     {
-
+      *qual = subquals;
     }
     else
     {
@@ -2937,11 +2937,11 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
     }
     if (const_true_subindexqual)
     {
-
+      *indexqual = NIL;
     }
     else if (list_length(subindexquals) <= 1)
     {
-
+      *indexqual = subindexquals;
     }
     else
     {
@@ -3009,8 +3009,8 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual, List **qual, List **i
   }
   else
   {
-
-
+    elog(ERROR, "unrecognized node type: %d", nodeTag(bitmapqual));
+    plan = NULL; /* keep compiler quiet */
   }
 
   return plan;
@@ -3062,7 +3062,7 @@ create_tidscan_plan(PlannerInfo *root, TidPath *best_path, List *tlist, List *sc
 
       if (rinfo->pseudoconstant)
       {
-
+        continue; /* we may drop pseudoconstants here */
       }
       if (list_member_ptr(tidquals, rinfo))
       {
@@ -3116,8 +3116,8 @@ create_tidscan_plan(PlannerInfo *root, TidPath *best_path, List *tlist, List *sc
 
 /*
  * create_subqueryscan_plan
- *	 Returns a subqueryscan plan for the base relation scanned by
- *'best_path' with restriction clauses 'scan_clauses' and targetlist 'tlist'.
+ *	 Returns a subqueryscan plan for the base relation scanned by 'best_path'
+ *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
  */
 static SubqueryScan *
 create_subqueryscan_plan(PlannerInfo *root, SubqueryScanPath *best_path, List *tlist, List *scan_clauses)
@@ -3160,8 +3160,8 @@ create_subqueryscan_plan(PlannerInfo *root, SubqueryScanPath *best_path, List *t
 
 /*
  * create_functionscan_plan
- *	 Returns a functionscan plan for the base relation scanned by
- *'best_path' with restriction clauses 'scan_clauses' and targetlist 'tlist'.
+ *	 Returns a functionscan plan for the base relation scanned by 'best_path'
+ *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
  */
 static FunctionScan *
 create_functionscan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_clauses)
@@ -3200,8 +3200,8 @@ create_functionscan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *
 
 /*
  * create_tablefuncscan_plan
- *	 Returns a tablefuncscan plan for the base relation scanned by
- *'best_path' with restriction clauses 'scan_clauses' and targetlist 'tlist'.
+ *	 Returns a tablefuncscan plan for the base relation scanned by 'best_path'
+ *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
  */
 static TableFuncScan *
 create_tablefuncscan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_clauses)
@@ -3310,9 +3310,9 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_
   while (levelsup-- > 0)
   {
     cteroot = cteroot->parent_root;
-    if (!cteroot)
-    { /* shouldn't happen */
-
+    if (!cteroot) /* shouldn't happen */
+    {
+      elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
     }
   }
 
@@ -3332,18 +3332,18 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_
     }
     ndx++;
   }
-  if (lc == NULL)
-  { /* shouldn't happen */
-
+  if (lc == NULL) /* shouldn't happen */
+  {
+    elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
   }
   if (ndx >= list_length(cteroot->cte_plan_ids))
   {
-
+    elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
   }
   plan_id = list_nth_int(cteroot->cte_plan_ids, ndx);
   if (plan_id <= 0)
   {
-
+    elog(ERROR, "no plan was made for CTE \"%s\"", rte->ctename);
   }
   foreach (lc, cteroot->init_plans)
   {
@@ -3353,9 +3353,9 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_
       break;
     }
   }
-  if (lc == NULL)
-  { /* shouldn't happen */
-
+  if (lc == NULL) /* shouldn't happen */
+  {
+    elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
   }
 
   /*
@@ -3373,7 +3373,7 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_
   /* Replace any outer-relation variables with nestloop params */
   if (best_path->param_info)
   {
-
+    scan_clauses = (List *)replace_nestloop_params(root, (Node *)scan_clauses);
   }
 
   scan_plan = make_ctescan(tlist, scan_clauses, scan_relid, plan_id, cte_param_id);
@@ -3409,7 +3409,7 @@ create_namedtuplestorescan_plan(PlannerInfo *root, Path *best_path, List *tlist,
   /* Replace any outer-relation variables with nestloop params */
   if (best_path->param_info)
   {
-
+    scan_clauses = (List *)replace_nestloop_params(root, (Node *)scan_clauses);
   }
 
   scan_plan = make_namedtuplestorescan(tlist, scan_clauses, scan_relid, rte->enrname);
@@ -3457,8 +3457,8 @@ create_resultscan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *sc
 
 /*
  * create_worktablescan_plan
- *	 Returns a worktablescan plan for the base relation scanned by
- *'best_path' with restriction clauses 'scan_clauses' and targetlist 'tlist'.
+ *	 Returns a worktablescan plan for the base relation scanned by 'best_path'
+ *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
  */
 static WorkTableScan *
 create_worktablescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List *scan_clauses)
@@ -3480,23 +3480,23 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List 
    * the CTE comes from.
    */
   levelsup = rte->ctelevelsup;
-  if (levelsup == 0)
-  { /* shouldn't happen */
-
+  if (levelsup == 0) /* shouldn't happen */
+  {
+    elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
   }
   levelsup--;
   cteroot = root;
   while (levelsup-- > 0)
   {
     cteroot = cteroot->parent_root;
-    if (!cteroot)
-    { /* shouldn't happen */
-
+    if (!cteroot) /* shouldn't happen */
+    {
+      elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
     }
   }
-  if (cteroot->wt_param_id < 0)
-  { /* shouldn't happen */
-
+  if (cteroot->wt_param_id < 0) /* shouldn't happen */
+  {
+    elog(ERROR, "could not find param ID for CTE \"%s\"", rte->ctename);
   }
 
   /* Sort clauses into best execution order */
@@ -3508,7 +3508,7 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List 
   /* Replace any outer-relation variables with nestloop params */
   if (best_path->param_info)
   {
-
+    scan_clauses = (List *)replace_nestloop_params(root, (Node *)scan_clauses);
   }
 
   scan_plan = make_worktablescan(tlist, scan_clauses, scan_relid, cteroot->wt_param_id);
@@ -3526,139 +3526,139 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path, List *tlist, List 
 static ForeignScan *
 create_foreignscan_plan(PlannerInfo *root, ForeignPath *best_path, List *tlist, List *scan_clauses)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ForeignScan *scan_plan;
+  RelOptInfo *rel = best_path->path.parent;
+  Index scan_relid = rel->relid;
+  Oid rel_oid = InvalidOid;
+  Plan *outer_plan = NULL;
+
+  Assert(rel->fdwroutine != NULL);
+
+  /* transform the child path if any */
+  if (best_path->fdw_outerpath)
+  {
+    outer_plan = create_plan_recurse(root, best_path->fdw_outerpath, CP_EXACT_TLIST);
+  }
+
+  /*
+   * If we're scanning a base relation, fetch its OID.  (Irrelevant if
+   * scanning a join relation.)
+   */
+  if (scan_relid > 0)
+  {
+    RangeTblEntry *rte;
+
+    Assert(rel->rtekind == RTE_RELATION);
+    rte = planner_rt_fetch(scan_relid, root);
+    Assert(rte->rtekind == RTE_RELATION);
+    rel_oid = rte->relid;
+  }
+
+  /*
+   * Sort clauses into best execution order.  We do this first since the FDW
+   * might have more info than we do and wish to adjust the ordering.
+   */
+  scan_clauses = order_qual_clauses(root, scan_clauses);
+
+  /*
+   * Let the FDW perform its processing on the restriction clauses and
+   * generate the plan node.  Note that the FDW might remove restriction
+   * clauses that it intends to execute remotely, or even add more (if it
+   * has selected some join clauses for remote use but also wants them
+   * rechecked locally).
+   */
+  scan_plan = rel->fdwroutine->GetForeignPlan(root, rel, rel_oid, best_path, tlist, scan_clauses, outer_plan);
+
+  /* Copy cost data from Path to Plan; no need to make FDW do this */
+  copy_generic_path_info(&scan_plan->scan.plan, &best_path->path);
+
+  /* Copy foreign server OID; likewise, no need to make FDW do this */
+  scan_plan->fs_server = rel->serverid;
+
+  /*
+   * Likewise, copy the relids that are represented by this foreign scan. An
+   * upper rel doesn't have relids set, but it covers all the base relations
+   * participating in the underlying scan, so use root's all_baserels.
+   */
+  if (rel->reloptkind == RELOPT_UPPER_REL)
+  {
+    scan_plan->fs_relids = root->all_baserels;
+  }
+  else
+  {
+    scan_plan->fs_relids = best_path->path.parent->relids;
+  }
+
+  /*
+   * If this is a foreign join, and to make it valid to push down we had to
+   * assume that the current user is the same as some user explicitly named
+   * in the query, mark the finished plan as depending on the current user.
+   */
+  if (rel->useridiscurrent)
+  {
+    root->glob->dependsOnRole = true;
+  }
+
+  /*
+   * Replace any outer-relation variables with nestloop params in the qual,
+   * fdw_exprs and fdw_recheck_quals expressions.  We do this last so that
+   * the FDW doesn't have to be involved.  (Note that parts of fdw_exprs or
+   * fdw_recheck_quals could have come from join clauses, so doing this
+   * beforehand on the scan_clauses wouldn't work.)  We assume
+   * fdw_scan_tlist contains no such variables.
+   */
+  if (best_path->path.param_info)
+  {
+    scan_plan->scan.plan.qual = (List *)replace_nestloop_params(root, (Node *)scan_plan->scan.plan.qual);
+    scan_plan->fdw_exprs = (List *)replace_nestloop_params(root, (Node *)scan_plan->fdw_exprs);
+    scan_plan->fdw_recheck_quals = (List *)replace_nestloop_params(root, (Node *)scan_plan->fdw_recheck_quals);
+  }
+
+  /*
+   * If rel is a base relation, detect whether any system columns are
+   * requested from the rel.  (If rel is a join relation, rel->relid will be
+   * 0, but there can be no Var with relid 0 in the rel's targetlist or the
+   * restriction clauses, so we skip this in that case.  Note that any such
+   * columns in base relations that were joined are assumed to be contained
+   * in fdw_scan_tlist.)	This is a bit of a kluge and might go away
+   * someday, so we intentionally leave it out of the API presented to FDWs.
+   */
+  scan_plan->fsSystemCol = false;
+  if (scan_relid > 0)
+  {
+    Bitmapset *attrs_used = NULL;
+    ListCell *lc;
+    int i;
+
+    /*
+     * First, examine all the attributes needed for joins or final output.
+     * Note: we must look at rel's targetlist, not the attr_needed data,
+     * because attr_needed isn't computed for inheritance child rels.
+     */
+    pull_varattnos((Node *)rel->reltarget->exprs, scan_relid, &attrs_used);
+
+    /* Add all the attributes used by restriction clauses. */
+    foreach (lc, rel->baserestrictinfo)
+    {
+      RestrictInfo *rinfo = (RestrictInfo *)lfirst(lc);
+
+      pull_varattnos((Node *)rinfo->clause, scan_relid, &attrs_used);
+    }
+
+    /* Now, are any system columns requested from rel? */
+    for (i = FirstLowInvalidHeapAttributeNumber + 1; i < 0; i++)
+    {
+      if (bms_is_member(i - FirstLowInvalidHeapAttributeNumber, attrs_used))
+      {
+        scan_plan->fsSystemCol = true;
+        break;
+      }
+    }
+
+    bms_free(attrs_used);
+  }
+
+  return scan_plan;
 }
 
 /*
@@ -3669,55 +3669,55 @@ create_foreignscan_plan(PlannerInfo *root, ForeignPath *best_path, List *tlist, 
 static CustomScan *
 create_customscan_plan(PlannerInfo *root, CustomPath *best_path, List *tlist, List *scan_clauses)
 {
+  CustomScan *cplan;
+  RelOptInfo *rel = best_path->path.parent;
+  List *custom_plans = NIL;
+  ListCell *lc;
 
+  /* Recursively transform child paths. */
+  foreach (lc, best_path->custom_paths)
+  {
+    Plan *plan = create_plan_recurse(root, (Path *)lfirst(lc), CP_EXACT_TLIST);
 
+    custom_plans = lappend(custom_plans, plan);
+  }
 
+  /*
+   * Sort clauses into the best execution order, although custom-scan
+   * provider can reorder them again.
+   */
+  scan_clauses = order_qual_clauses(root, scan_clauses);
 
+  /*
+   * Invoke custom plan provider to create the Plan node represented by the
+   * CustomPath.
+   */
+  cplan = castNode(CustomScan, best_path->methods->PlanCustomPath(root, rel, best_path, tlist, scan_clauses, custom_plans));
 
+  /*
+   * Copy cost data from Path to Plan; no need to make custom-plan providers
+   * do this
+   */
+  copy_generic_path_info(&cplan->scan.plan, &best_path->path);
 
+  /* Likewise, copy the relids that are represented by this custom scan */
+  cplan->custom_relids = best_path->path.parent->relids;
 
+  /*
+   * Replace any outer-relation variables with nestloop params in the qual
+   * and custom_exprs expressions.  We do this last so that the custom-plan
+   * provider doesn't have to be involved.  (Note that parts of custom_exprs
+   * could have come from join clauses, so doing this beforehand on the
+   * scan_clauses wouldn't work.)  We assume custom_scan_tlist contains no
+   * such variables.
+   */
+  if (best_path->path.param_info)
+  {
+    cplan->scan.plan.qual = (List *)replace_nestloop_params(root, (Node *)cplan->scan.plan.qual);
+    cplan->custom_exprs = (List *)replace_nestloop_params(root, (Node *)cplan->custom_exprs);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return cplan;
 }
 
 /*****************************************************************************
@@ -3978,14 +3978,14 @@ create_mergejoin_plan(PlannerInfo *root, MergePath *best_path)
       /* doesn't match the current opathkey, so must match the next */
       if (lop == NULL)
       {
-
+        elog(ERROR, "outer pathkeys do not match mergeclauses");
       }
       opathkey = (PathKey *)lfirst(lop);
       opeclass = opathkey->pk_eclass;
       lop = lnext(lop);
       if (oeclass != opeclass)
       {
-
+        elog(ERROR, "outer pathkeys do not match mergeclauses");
       }
     }
 
@@ -4024,7 +4024,7 @@ create_mergejoin_plan(PlannerInfo *root, MergePath *best_path)
       {
         if (l2 == lip)
         {
-
+          break;
         }
         ipathkey = (PathKey *)lfirst(l2);
         ipeclass = ipathkey->pk_eclass;
@@ -4035,7 +4035,7 @@ create_mergejoin_plan(PlannerInfo *root, MergePath *best_path)
       }
       if (ieclass != ipeclass)
       {
-
+        elog(ERROR, "inner pathkeys do not match mergeclauses");
       }
     }
 
@@ -4055,11 +4055,11 @@ create_mergejoin_plan(PlannerInfo *root, MergePath *best_path)
      */
     if (opathkey->pk_opfamily != ipathkey->pk_opfamily || opathkey->pk_eclass->ec_collation != ipathkey->pk_eclass->ec_collation)
     {
-
+      elog(ERROR, "left and right pathkeys do not match in mergejoin");
     }
     if (first_inner_match && (opathkey->pk_strategy != ipathkey->pk_strategy || opathkey->pk_nulls_first != ipathkey->pk_nulls_first))
     {
-
+      elog(ERROR, "left and right pathkeys do not match in mergejoin");
     }
 
     /* OK, save info for executor */
@@ -4248,8 +4248,8 @@ create_hashjoin_plan(PlannerInfo *root, HashPath *best_path)
 
 /*
  * replace_nestloop_params
- *	  Replace outer-relation Vars and PlaceHolderVars in the given
- *expression with nestloop Params
+ *	  Replace outer-relation Vars and PlaceHolderVars in the given expression
+ *	  with nestloop Params
  *
  * All Vars and PlaceHolderVars belonging to the relation(s) identified by
  * root->curOuterRels are replaced by Params, and entries are added to
@@ -4335,8 +4335,7 @@ replace_nestloop_params_mutator(Node *node, PlannerInfo *root)
  *	* Replace any outer-relation Var or PHV nodes with nestloop Params.
  *	  (XXX eventually, that responsibility should go elsewhere?)
  *	* Index keys must be represented by Var nodes with varattno set to the
- *	  index's attribute number, not the attribute number in the original
- *rel.
+ *	  index's attribute number, not the attribute number in the original rel.
  *
  * *stripped_indexquals_p receives a list of the actual qual clauses.
  *
@@ -4455,7 +4454,7 @@ fix_indexqual_clause(PlannerInfo *root, IndexOptInfo *index, int indexcol, Node 
   }
   else
   {
-
+    elog(ERROR, "unsupported indexqual type: %d", (int)nodeTag(clause));
   }
 
   return clause;
@@ -4500,7 +4499,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
     }
     else
     {
-
+      elog(ERROR, "index key does not match expected index column");
     }
   }
 
@@ -4512,7 +4511,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
     {
       if (indexpr_item == NULL)
       {
-
+        elog(ERROR, "too few entries in indexprs list");
       }
       if (pos == indexcol)
       {
@@ -4521,7 +4520,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
         indexkey = (Node *)lfirst(indexpr_item);
         if (indexkey && IsA(indexkey, RelabelType))
         {
-
+          indexkey = (Node *)((RelabelType *)indexkey)->arg;
         }
         if (equal(node, indexkey))
         {
@@ -4530,7 +4529,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
         }
         else
         {
-
+          elog(ERROR, "index key does not match expected index column");
         }
       }
       indexpr_item = lnext(indexpr_item);
@@ -4539,7 +4538,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
 
   /* Oops... */
   elog(ERROR, "index key does not match expected index column");
-
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -4548,9 +4547,8 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, int indexcol)
  *	  extract the bare clauses, and rearrange the elements within the
  *	  clauses, if needed, so the outer join variable is on the left and
  *	  the inner is on the right.  The original clause data structure is not
- *	  touched; a modified list is returned.  We do, however, set the
- *transient outer_is_left field in each RestrictInfo to show which side was
- *which.
+ *	  touched; a modified list is returned.  We do, however, set the transient
+ *	  outer_is_left field in each RestrictInfo to show which side was which.
  */
 static List *
 get_switched_clauses(List *clauses, Relids outerrelids)
@@ -4598,9 +4596,9 @@ get_switched_clauses(List *clauses, Relids outerrelids)
 
 /*
  * order_qual_clauses
- *		Given a list of qual clauses that will all be evaluated at the
- *same plan node, sort the list into the order we want to check the quals in at
- *runtime.
+ *		Given a list of qual clauses that will all be evaluated at the same
+ *		plan node, sort the list into the order we want to check the quals
+ *		in at runtime.
  *
  * When security barrier quals are used in the query, we may have quals with
  * different security levels in the list.  Quals of lower security_level
@@ -4795,12 +4793,12 @@ bitmap_subplan_mark_shared(Plan *plan)
 {
   if (IsA(plan, BitmapAnd))
   {
-
+    bitmap_subplan_mark_shared(linitial(((BitmapAnd *)plan)->bitmapplans));
   }
   else if (IsA(plan, BitmapOr))
   {
-
-
+    ((BitmapOr *)plan)->isshared = true;
+    bitmap_subplan_mark_shared(linitial(((BitmapOr *)plan)->bitmapplans));
   }
   else if (IsA(plan, BitmapIndexScan))
   {
@@ -4808,7 +4806,7 @@ bitmap_subplan_mark_shared(Plan *plan)
   }
   else
   {
-
+    elog(ERROR, "unrecognized node type: %d", nodeTag(plan));
   }
 }
 
@@ -5068,28 +5066,28 @@ make_worktablescan(List *qptlist, List *qpqual, Index scanrelid, int wtParam)
 ForeignScan *
 make_foreignscan(List *qptlist, List *qpqual, Index scanrelid, List *fdw_exprs, List *fdw_private, List *fdw_scan_tlist, List *fdw_recheck_quals, Plan *outer_plan)
 {
+  ForeignScan *node = makeNode(ForeignScan);
+  Plan *plan = &node->scan.plan;
 
+  /* cost will be filled in by create_foreignscan_plan */
+  plan->targetlist = qptlist;
+  plan->qual = qpqual;
+  plan->lefttree = outer_plan;
+  plan->righttree = NULL;
+  node->scan.scanrelid = scanrelid;
+  node->operation = CMD_SELECT;
+  /* fs_server will be filled in by create_foreignscan_plan */
+  node->fs_server = InvalidOid;
+  node->fdw_exprs = fdw_exprs;
+  node->fdw_private = fdw_private;
+  node->fdw_scan_tlist = fdw_scan_tlist;
+  node->fdw_recheck_quals = fdw_recheck_quals;
+  /* fs_relids will be filled in by create_foreignscan_plan */
+  node->fs_relids = NULL;
+  /* fsSystemCol will be filled in by create_foreignscan_plan */
+  node->fsSystemCol = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return node;
 }
 
 static RecursiveUnion *
@@ -5358,9 +5356,9 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids, const 
        * have come from an ORDER BY clause, and we have to match it to
        * that same targetlist entry.
        */
-      if (ec->ec_sortref == 0)
-      { /* can't happen */
-
+      if (ec->ec_sortref == 0) /* can't happen */
+      {
+        elog(ERROR, "volatile EquivalenceClass has no sortref");
       }
       tle = get_sortgroupref_tle(ec->ec_sortref, tlist);
       Assert(tle);
@@ -5389,7 +5387,7 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids, const 
         }
         else
         {
-
+          tle = NULL;
         }
       }
     }
@@ -5450,7 +5448,7 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids, const 
          */
         if (em->em_is_const)
         {
-
+          continue;
         }
 
         /*
@@ -5480,7 +5478,7 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids, const 
       }
       if (!j)
       {
-
+        elog(ERROR, "could not find pathkey item to sort");
       }
 
       /*
@@ -5509,9 +5507,9 @@ prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids, const 
      * abstracted representation.
      */
     sortop = get_opfamily_member(pathkey->pk_opfamily, pk_datatype, pk_datatype, pathkey->pk_strategy);
-    if (!OidIsValid(sortop))
-    { /* should not happen */
-
+    if (!OidIsValid(sortop)) /* should not happen */
+    {
+      elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", pathkey->pk_strategy, pk_datatype, pk_datatype, pathkey->pk_opfamily);
     }
 
     /* Add the column to the sort arrays */
@@ -5562,7 +5560,7 @@ find_ec_member_for_tle(EquivalenceClass *ec, TargetEntry *tle, Relids relids)
      */
     if (em->em_is_const)
     {
-
+      continue;
     }
 
     /*
@@ -5595,8 +5593,7 @@ find_ec_member_for_tle(EquivalenceClass *ec, TargetEntry *tle, Relids relids)
  *
  *	  'lefttree' is the node which yields input tuples
  *	  'pathkeys' is the list of pathkeys by which the result is to be sorted
- *	  'relids' is the set of relations required by
- *prepare_sort_from_pathkeys()
+ *	  'relids' is the set of relations required by prepare_sort_from_pathkeys()
  */
 static Sort *
 make_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids)
@@ -5624,35 +5621,35 @@ make_sort_from_pathkeys(Plan *lefttree, List *pathkeys, Relids relids)
 Sort *
 make_sort_from_sortclauses(List *sortcls, Plan *lefttree)
 {
+  List *sub_tlist = lefttree->targetlist;
+  ListCell *l;
+  int numsortkeys;
+  AttrNumber *sortColIdx;
+  Oid *sortOperators;
+  Oid *collations;
+  bool *nullsFirst;
 
+  /* Convert list-ish representation to arrays wanted by executor */
+  numsortkeys = list_length(sortcls);
+  sortColIdx = (AttrNumber *)palloc(numsortkeys * sizeof(AttrNumber));
+  sortOperators = (Oid *)palloc(numsortkeys * sizeof(Oid));
+  collations = (Oid *)palloc(numsortkeys * sizeof(Oid));
+  nullsFirst = (bool *)palloc(numsortkeys * sizeof(bool));
 
+  numsortkeys = 0;
+  foreach (l, sortcls)
+  {
+    SortGroupClause *sortcl = (SortGroupClause *)lfirst(l);
+    TargetEntry *tle = get_sortgroupclause_tle(sortcl, sub_tlist);
 
+    sortColIdx[numsortkeys] = tle->resno;
+    sortOperators[numsortkeys] = sortcl->sortop;
+    collations[numsortkeys] = exprCollation((Node *)tle->expr);
+    nullsFirst[numsortkeys] = sortcl->nulls_first;
+    numsortkeys++;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return make_sort(lefttree, numsortkeys, sortColIdx, sortOperators, collations, nullsFirst);
 }
 
 /*
@@ -5694,7 +5691,7 @@ make_sort_from_groupcols(List *groupcls, AttrNumber *grpColIdx, Plan *lefttree)
 
     if (!tle)
     {
-
+      elog(ERROR, "could not retrieve tle for sort-from-groupcols");
     }
 
     sortColIdx[numsortkeys] = tle->resno;
@@ -5848,47 +5845,47 @@ make_group(List *tlist, List *qual, int numGroupCols, AttrNumber *grpColIdx, Oid
 static Unique *
 make_unique_from_sortclauses(Plan *lefttree, List *distinctList)
 {
+  Unique *node = makeNode(Unique);
+  Plan *plan = &node->plan;
+  int numCols = list_length(distinctList);
+  int keyno = 0;
+  AttrNumber *uniqColIdx;
+  Oid *uniqOperators;
+  Oid *uniqCollations;
+  ListCell *slitem;
 
+  plan->targetlist = lefttree->targetlist;
+  plan->qual = NIL;
+  plan->lefttree = lefttree;
+  plan->righttree = NULL;
 
+  /*
+   * convert SortGroupClause list into arrays of attr indexes and equality
+   * operators, as wanted by executor
+   */
+  Assert(numCols > 0);
+  uniqColIdx = (AttrNumber *)palloc(sizeof(AttrNumber) * numCols);
+  uniqOperators = (Oid *)palloc(sizeof(Oid) * numCols);
+  uniqCollations = (Oid *)palloc(sizeof(Oid) * numCols);
 
+  foreach (slitem, distinctList)
+  {
+    SortGroupClause *sortcl = (SortGroupClause *)lfirst(slitem);
+    TargetEntry *tle = get_sortgroupclause_tle(sortcl, plan->targetlist);
 
+    uniqColIdx[keyno] = tle->resno;
+    uniqOperators[keyno] = sortcl->eqop;
+    uniqCollations[keyno] = exprCollation((Node *)tle->expr);
+    Assert(OidIsValid(uniqOperators[keyno]));
+    keyno++;
+  }
 
+  node->numCols = numCols;
+  node->uniqColIdx = uniqColIdx;
+  node->uniqOperators = uniqOperators;
+  node->uniqCollations = uniqCollations;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return node;
 }
 
 /*
@@ -5943,9 +5940,9 @@ make_unique_from_pathkeys(Plan *lefttree, List *pathkeys, int numCols)
        * have come from an ORDER BY clause, and we have to match it to
        * that same targetlist entry.
        */
-      if (ec->ec_sortref == 0)
-      { /* can't happen */
-
+      if (ec->ec_sortref == 0) /* can't happen */
+      {
+        elog(ERROR, "volatile EquivalenceClass has no sortref");
       }
       tle = get_sortgroupref_tle(ec->ec_sortref, plan->targetlist);
       Assert(tle);
@@ -5975,7 +5972,7 @@ make_unique_from_pathkeys(Plan *lefttree, List *pathkeys, int numCols)
 
     if (!tle)
     {
-
+      elog(ERROR, "could not find pathkey item to sort");
     }
 
     /*
@@ -5983,9 +5980,9 @@ make_unique_from_pathkeys(Plan *lefttree, List *pathkeys, int numCols)
      * abstracted representation.
      */
     eqop = get_opfamily_member(pathkey->pk_opfamily, pk_datatype, pk_datatype, BTEqualStrategyNumber);
-    if (!OidIsValid(eqop))
-    { /* should not happen */
-
+    if (!OidIsValid(eqop)) /* should not happen */
+    {
+      elog(ERROR, "missing operator %d(%u,%u) in opfamily %u", BTEqualStrategyNumber, pk_datatype, pk_datatype, pathkey->pk_opfamily);
     }
 
     uniqColIdx[keyno] = tle->resno;
@@ -6256,7 +6253,7 @@ make_modifytable(PlannerInfo *root, CmdType operation, bool canSetTag, Index nom
       Assert(rte->rtekind == RTE_RELATION);
       if (rte->relkind == RELKIND_FOREIGN_TABLE)
       {
-
+        fdwroutine = GetFdwRoutineByRelId(rte->relid);
       }
       else
       {
@@ -6274,16 +6271,16 @@ make_modifytable(PlannerInfo *root, CmdType operation, bool canSetTag, Index nom
     direct_modify = false;
     if (fdwroutine != NULL && fdwroutine->PlanDirectModify != NULL && fdwroutine->BeginDirectModify != NULL && fdwroutine->IterateDirectModify != NULL && fdwroutine->EndDirectModify != NULL && withCheckOptionLists == NIL && !has_row_triggers(subroot, rti, operation) && !has_stored_generated_columns(subroot, rti))
     {
-
+      direct_modify = fdwroutine->PlanDirectModify(subroot, node, rti, i);
     }
     if (direct_modify)
     {
-
+      direct_modify_plans = bms_add_member(direct_modify_plans, i);
     }
 
     if (!direct_modify && fdwroutine != NULL && fdwroutine->PlanForeignModify != NULL)
     {
-
+      fdw_private = fdwroutine->PlanForeignModify(subroot, node, rti, i);
     }
     else
     {
@@ -6308,18 +6305,18 @@ is_projection_capable_path(Path *path)
   /* Most plan types can project, so just list the ones that can't */
   switch (path->pathtype)
   {
-  case T_Hash:;
-  case T_Material:;
-  case T_Sort:;
-  case T_Unique:;
-  case T_SetOp:;
-  case T_LockRows:;
-  case T_Limit:;
-  case T_ModifyTable:;
-  case T_MergeAppend:;
-  case T_RecursiveUnion:;
+  case T_Hash:
+  case T_Material:
+  case T_Sort:
+  case T_Unique:
+  case T_SetOp:
+  case T_LockRows:
+  case T_Limit:
+  case T_ModifyTable:
+  case T_MergeAppend:
+  case T_RecursiveUnion:
     return false;
-  case T_Append:;
+  case T_Append:
 
     /*
      * Append can't project, but if an AppendPath is being used to
@@ -6327,7 +6324,7 @@ is_projection_capable_path(Path *path)
      * Result which can project.
      */
     return IS_DUMMY_APPEND(path);
-  case T_ProjectSet:;
+  case T_ProjectSet:
 
     /*
      * Although ProjectSet certainly projects, say "no" because we
@@ -6336,7 +6333,7 @@ is_projection_capable_path(Path *path)
      * get relaxed later.
      */
     return false;
-  default:;;
+  default:
     break;
   }
   return true;
@@ -6352,19 +6349,19 @@ is_projection_capable_plan(Plan *plan)
   /* Most plan types can project, so just list the ones that can't */
   switch (nodeTag(plan))
   {
-  case T_Hash:;
-  case T_Material:;
-  case T_Sort:;
-  case T_Unique:;
-  case T_SetOp:;
-  case T_LockRows:;
-  case T_Limit:;
-  case T_ModifyTable:;
-  case T_Append:;
-  case T_MergeAppend:;
-  case T_RecursiveUnion:;
+  case T_Hash:
+  case T_Material:
+  case T_Sort:
+  case T_Unique:
+  case T_SetOp:
+  case T_LockRows:
+  case T_Limit:
+  case T_ModifyTable:
+  case T_Append:
+  case T_MergeAppend:
+  case T_RecursiveUnion:
     return false;
-  case T_ProjectSet:;
+  case T_ProjectSet:
 
     /*
      * Although ProjectSet certainly projects, say "no" because we
@@ -6372,8 +6369,8 @@ is_projection_capable_plan(Plan *plan)
      * something else; the SRFs have to stay at top level.  This might
      * get relaxed later.
      */
-
-  default:;;
+    return false;
+  default:
     break;
   }
   return true;

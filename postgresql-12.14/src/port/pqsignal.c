@@ -16,7 +16,8 @@
  *	support BSD-style signal(2), but there really shouldn't be anything
  *	out there anymore that doesn't have the POSIX API.
  *
- *	Windows, of course, is resolutely in a class by itself.  In the backend,*	we don't use this file at all; src/backend/port/win32/signal.c provides
+ *	Windows, of course, is resolutely in a class by itself.  In the backend,
+ *	we don't use this file at all; src/backend/port/win32/signal.c provides
  *	pqsignal() for the backend environment.  Frontend programs can use
  *	this version of pqsignal() if they wish, but beware that this does
  *	not provide restartable signals on Windows.
@@ -52,7 +53,7 @@ pqsignal(int signo, pqsigfunc func)
 #endif
   if (sigaction(signo, &act, &oact) < 0)
   {
-
+    return SIG_ERR;
   }
   return oact.sa_handler;
 #else /* WIN32 */

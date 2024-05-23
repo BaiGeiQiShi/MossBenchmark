@@ -338,7 +338,7 @@ InitCatalogCache(void)
     SysCache[cacheId] = InitCatCache(cacheId, cacheinfo[cacheId].reloid, cacheinfo[cacheId].indoid, cacheinfo[cacheId].nkeys, cacheinfo[cacheId].key, cacheinfo[cacheId].nbuckets);
     if (!PointerIsValid(SysCache[cacheId]))
     {
-
+      elog(ERROR, "could not initialize cache %u (%d)", cacheinfo[cacheId].reloid, cacheId);
     }
     /* Accumulate data for OID lists, too */
     SysCacheRelationOid[SysCacheRelationOidSize++] = cacheinfo[cacheId].reloid;
@@ -623,8 +623,8 @@ SearchSysCacheAttNum(Oid relid, int16 attnum)
   }
   if (((Form_pg_attribute)GETSTRUCT(tuple))->attisdropped)
   {
-
-
+    ReleaseSysCache(tuple);
+    return NULL;
   }
   return tuple;
 }
@@ -679,7 +679,7 @@ SysCacheGetAttr(int cacheId, HeapTuple tup, AttrNumber attributeNumber, bool *is
    */
   if (cacheId < 0 || cacheId >= SysCacheSize || !PointerIsValid(SysCache[cacheId]))
   {
-
+    elog(ERROR, "invalid cache ID: %d", cacheId);
   }
   if (!PointerIsValid(SysCache[cacheId]->cc_tupdesc))
   {
@@ -705,7 +705,7 @@ GetSysCacheHashValue(int cacheId, Datum key1, Datum key2, Datum key3, Datum key4
 {
   if (cacheId < 0 || cacheId >= SysCacheSize || !PointerIsValid(SysCache[cacheId]))
   {
-
+    elog(ERROR, "invalid cache ID: %d", cacheId);
   }
 
   return GetCatCacheHashValue(SysCache[cacheId], key1, key2, key3, key4);
@@ -719,7 +719,7 @@ SearchSysCacheList(int cacheId, int nkeys, Datum key1, Datum key2, Datum key3)
 {
   if (cacheId < 0 || cacheId >= SysCacheSize || !PointerIsValid(SysCache[cacheId]))
   {
-
+    elog(ERROR, "invalid cache ID: %d", cacheId);
   }
 
   return SearchCatCacheList(SysCache[cacheId], nkeys, key1, key2, key3);
@@ -738,13 +738,13 @@ SysCacheInvalidate(int cacheId, uint32 hashValue)
 {
   if (cacheId < 0 || cacheId >= SysCacheSize)
   {
-
+    elog(ERROR, "invalid cache ID: %d", cacheId);
   }
 
   /* if this cache isn't initialized yet, no need to do anything */
   if (!PointerIsValid(SysCache[cacheId]))
   {
-
+    return;
   }
 
   CatCacheInvalidate(SysCache[cacheId], hashValue);
@@ -766,15 +766,15 @@ RelationInvalidatesSnapshotsOnly(Oid relid)
 {
   switch (relid)
   {
-  case DbRoleSettingRelationId:;
-  case DependRelationId:;
-  case SharedDependRelationId:;
-  case DescriptionRelationId:;
-  case SharedDescriptionRelationId:;
-  case SecLabelRelationId:;
-  case SharedSecLabelRelationId:;
+  case DbRoleSettingRelationId:
+  case DependRelationId:
+  case SharedDependRelationId:
+  case DescriptionRelationId:
+  case SharedDescriptionRelationId:
+  case SecLabelRelationId:
+  case SharedSecLabelRelationId:
     return true;
-  default:;;
+  default:
     break;
   }
 

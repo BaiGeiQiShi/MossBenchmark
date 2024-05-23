@@ -75,16 +75,19 @@ pgrename(const char *from, const char *to)
      * presumably you can get that too with some OS versions. We don't
      * expect real permission errors where we currently use rename().
      */
-    if (err != ERROR_ACCESS_DENIED && err != ERROR_SHARING_VIOLATION && err != ERROR_LOCK_VIOLATION) {
+    if (err != ERROR_ACCESS_DENIED && err != ERROR_SHARING_VIOLATION && err != ERROR_LOCK_VIOLATION)
+    {
       return -1;
     }
 #else
-    if (errno != EACCES) {
+    if (errno != EACCES)
+    {
       return -1;
     }
 #endif
 
-    if (++loops > 100) { /* time out after 10 sec */
+    if (++loops > 100) /* time out after 10 sec */
+    {
       return -1;
     }
     pg_usleep(100000); /* us */
@@ -107,11 +110,14 @@ pgunlink(const char *path)
    * someone else to close the file, as the caller might be holding locks
    * and blocking other backends.
    */
-  while (unlink(path)) {
-    if (errno != EACCES) {
+  while (unlink(path))
+  {
+    if (errno != EACCES)
+    {
       return -1;
     }
-    if (++loops > 100) { /* time out after 10 sec */
+    if (++loops > 100) /* time out after 10 sec */
+    {
       return -1;
     }
     pg_usleep(100000); /* us */
@@ -129,11 +135,12 @@ pgunlink(const char *path)
 /*
  *	pgsymlink support:
  *
- *	This struct is a replacement for REPARSE_DATA_BUFFER which is defined in
- *VC6 winnt.h but omitted in later SDK functions. We only need the
- *SymbolicLinkReparseBuffer part of the original struct's union.
+ *	This struct is a replacement for REPARSE_DATA_BUFFER which is defined in VC6 winnt.h
+ *	but omitted in later SDK functions.
+ *	We only need the SymbolicLinkReparseBuffer part of the original struct's union.
  */
-typedef struct {
+typedef struct
+{
   DWORD ReparseTag;
   WORD ReparseDataLength;
   WORD Reserved;
@@ -165,18 +172,23 @@ pgsymlink(const char *oldpath, const char *newpath)
   CreateDirectory(newpath, 0);
   dirhandle = CreateFile(newpath, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, 0);
 
-  if (dirhandle == INVALID_HANDLE_VALUE) {
+  if (dirhandle == INVALID_HANDLE_VALUE)
+  {
     return -1;
   }
 
   /* make sure we have an unparsed native win32 path */
-  if (memcmp("\\??\\", oldpath, 4) != 0) {
+  if (memcmp("\\??\\", oldpath, 4) != 0)
+  {
     snprintf(nativeTarget, sizeof(nativeTarget), "\\??\\%s", oldpath);
-  } else {
+  }
+  else
+  {
     strlcpy(nativeTarget, oldpath, sizeof(nativeTarget));
   }
 
-  while ((p = strchr(p, '/')) != NULL) {
+  while ((p = strchr(p, '/')) != NULL)
+  {
     *p++ = '\\';
   }
 
@@ -194,7 +206,8 @@ pgsymlink(const char *oldpath, const char *newpath)
    * FSCTL_SET_REPARSE_POINT is coded differently depending on SDK version;
    * we use our own definition
    */
-  if (!DeviceIoControl(dirhandle, CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_ANY_ACCESS), reparseBuf, reparseBuf->ReparseDataLength + REPARSE_JUNCTION_DATA_BUFFER_HEADER_SIZE, 0, 0, &len, 0)) {
+  if (!DeviceIoControl(dirhandle, CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_ANY_ACCESS), reparseBuf, reparseBuf->ReparseDataLength + REPARSE_JUNCTION_DATA_BUFFER_HEADER_SIZE, 0, 0, &len, 0))
+  {
     LPSTR msg;
 
     errno = 0;
@@ -230,22 +243,26 @@ pgreadlink(const char *path, char *buf, size_t size)
   int r;
 
   attr = GetFileAttributes(path);
-  if (attr == INVALID_FILE_ATTRIBUTES) {
+  if (attr == INVALID_FILE_ATTRIBUTES)
+  {
     _dosmaperr(GetLastError());
     return -1;
   }
-  if ((attr & FILE_ATTRIBUTE_REPARSE_POINT) == 0) {
+  if ((attr & FILE_ATTRIBUTE_REPARSE_POINT) == 0)
+  {
     errno = EINVAL;
     return -1;
   }
 
   h = CreateFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, 0);
-  if (h == INVALID_HANDLE_VALUE) {
+  if (h == INVALID_HANDLE_VALUE)
+  {
     _dosmaperr(GetLastError());
     return -1;
   }
 
-  if (!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)reparseBuf, sizeof(buffer), &len, NULL)) {
+  if (!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, NULL, 0, (LPVOID)reparseBuf, sizeof(buffer), &len, NULL))
+  {
     LPSTR msg;
 
     errno = 0;
@@ -263,14 +280,16 @@ pgreadlink(const char *path, char *buf, size_t size)
   CloseHandle(h);
 
   /* Got it, let's get some results from this */
-  if (reparseBuf->ReparseTag != IO_REPARSE_TAG_MOUNT_POINT) {
+  if (reparseBuf->ReparseTag != IO_REPARSE_TAG_MOUNT_POINT)
+  {
     errno = EINVAL;
     return -1;
   }
 
   r = WideCharToMultiByte(CP_ACP, 0, reparseBuf->PathBuffer, -1, buf, size, NULL, NULL);
 
-  if (r <= 0) {
+  if (r <= 0)
+  {
     errno = EINVAL;
     return -1;
   }
@@ -279,7 +298,8 @@ pgreadlink(const char *path, char *buf, size_t size)
    * If the path starts with "\??\", which it will do in most (all?) cases,
    * strip those out.
    */
-  if (r > 4 && strncmp(buf, "\\??\\", 4) == 0) {
+  if (r > 4 && strncmp(buf, "\\??\\", 4) == 0)
+  {
     memmove(buf, buf + 4, strlen(buf + 4) + 1);
     r -= 4;
   }
@@ -295,7 +315,8 @@ pgwin32_is_junction(const char *path)
 {
   DWORD attr = GetFileAttributes(path);
 
-  if (attr == INVALID_FILE_ATTRIBUTES) {
+  if (attr == INVALID_FILE_ATTRIBUTES)
+  {
     _dosmaperr(GetLastError());
     return false;
   }
@@ -319,8 +340,10 @@ pgwin32_safestat(const char *path, struct stat *buf)
   WIN32_FILE_ATTRIBUTE_DATA attr;
 
   r = stat(path, buf);
-  if (r < 0) {
-    if (GetLastError() == ERROR_DELETE_PENDING) {
+  if (r < 0)
+  {
+    if (GetLastError() == ERROR_DELETE_PENDING)
+    {
       /*
        * File has been deleted, but is not gone from the filesystem yet.
        * This can happen when some process with FILE_SHARE_DELETE has it
@@ -335,7 +358,8 @@ pgwin32_safestat(const char *path, struct stat *buf)
     return r;
   }
 
-  if (!GetFileAttributesEx(path, GetFileExInfoStandard, &attr)) {
+  if (!GetFileAttributesEx(path, GetFileExInfoStandard, &attr))
+  {
     _dosmaperr(GetLastError());
     return -1;
   }

@@ -38,7 +38,8 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   struct ucred peercred;
   ACCEPT_TYPE_ARG3 so_len = sizeof(peercred);
 
-  if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred)) {
+  if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
+  {
     return -1;
   }
   *uid = peercred.uid;
@@ -49,7 +50,8 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   struct xucred peercred;
   ACCEPT_TYPE_ARG3 so_len = sizeof(peercred);
 
-  if (getsockopt(sock, 0, LOCAL_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred) || peercred.cr_version != XUCRED_VERSION) {
+  if (getsockopt(sock, 0, LOCAL_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred) || peercred.cr_version != XUCRED_VERSION)
+  {
     return -1;
   }
   *uid = peercred.cr_uid;
@@ -60,7 +62,8 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   ucred_t *ucred;
 
   ucred = NULL; /* must be initialized to NULL */
-  if (getpeerucred(sock, &ucred) == -1) {
+  if (getpeerucred(sock, &ucred) == -1)
+  {
     return -1;
   }
 
@@ -68,7 +71,8 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   *gid = ucred_getegid(ucred);
   ucred_free(ucred);
 
-  if (*uid == (uid_t)(-1) || *gid == (gid_t)(-1)) {
+  if (*uid == (uid_t)(-1) || *gid == (gid_t)(-1))
+  {
     return -1;
   }
   return 0;

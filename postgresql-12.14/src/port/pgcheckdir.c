@@ -37,50 +37,62 @@ pg_check_dir(const char *dir)
   int readdir_errno;
 
   chkdir = opendir(dir);
-  if (chkdir == NULL) {
+  if (chkdir == NULL)
+  {
     return (errno == ENOENT) ? 0 : -1;
   }
 
-  while (errno = 0, (file = readdir(chkdir)) != NULL) {
-    if (strcmp(".", file->d_name) == 0 || strcmp("..", file->d_name) == 0) {
+  while (errno = 0, (file = readdir(chkdir)) != NULL)
+  {
+    if (strcmp(".", file->d_name) == 0 || strcmp("..", file->d_name) == 0)
+    {
       /* skip this and parent directory */
       continue;
     }
 #ifndef WIN32
     /* file starts with "." */
-    else if (file->d_name[0] == '.') {
+    else if (file->d_name[0] == '.')
+    {
       dot_found = true;
     }
     /* lost+found directory */
-    else if (strcmp("lost+found", file->d_name) == 0) {
+    else if (strcmp("lost+found", file->d_name) == 0)
+    {
       mount_found = true;
     }
 #endif
-    else {
+    else
+    {
       result = 4; /* not empty */
       break;
     }
   }
 
-  if (errno) {
+  if (errno)
+  {
     result = -1; /* some kind of I/O error? */
   }
 
   /* Close chkdir and avoid overwriting the readdir errno on success */
   readdir_errno = errno;
-  if (closedir(chkdir)) {
+  if (closedir(chkdir))
+  {
     result = -1; /* error executing closedir */
-  } else {
+  }
+  else
+  {
     errno = readdir_errno;
   }
 
   /* We report on mount point if we find a lost+found directory */
-  if (result == 1 && mount_found) {
+  if (result == 1 && mount_found)
+  {
     result = 3;
   }
 
   /* We report on dot-files if we _only_ find dot files */
-  if (result == 1 && dot_found) {
+  if (result == 1 && dot_found)
+  {
     result = 2;
   }
 

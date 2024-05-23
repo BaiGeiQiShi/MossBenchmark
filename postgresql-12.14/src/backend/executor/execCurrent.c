@@ -61,7 +61,7 @@ execCurrentOf(CurrentOfExpr *cexpr, ExprContext *econtext, Oid table_oid, ItemPo
   table_name = get_rel_name(table_oid);
   if (table_name == NULL)
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", table_oid);
   }
 
   /* Find the cursor's portal */
@@ -77,7 +77,7 @@ execCurrentOf(CurrentOfExpr *cexpr, ExprContext *econtext, Oid table_oid, ItemPo
    */
   if (portal->strategy != PORTAL_ONE_SELECT)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_STATE), errmsg("cursor \"%s\" is not a SELECT query", cursor_name)));
   }
   queryDesc = portal->queryDesc;
   if (queryDesc == NULL || queryDesc->estate == NULL)
@@ -132,7 +132,7 @@ execCurrentOf(CurrentOfExpr *cexpr, ExprContext *econtext, Oid table_oid, ItemPo
      */
     if (portal->atStart || portal->atEnd)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_STATE), errmsg("cursor \"%s\" is not positioned on a row", cursor_name)));
     }
 
     /* Return the currently scanned TID, if there is one */
@@ -201,7 +201,7 @@ execCurrentOf(CurrentOfExpr *cexpr, ExprContext *econtext, Oid table_oid, ItemPo
        */
       IndexScanDesc scan = ((IndexOnlyScanState *)scanstate)->ioss_ScanDesc;
 
-
+      *current_tid = scan->xs_heaptid;
     }
     else
     {
@@ -227,7 +227,7 @@ execCurrentOf(CurrentOfExpr *cexpr, ExprContext *econtext, Oid table_oid, ItemPo
       ldatum = slot_getsysattr(scanstate->ss_ScanTupleSlot, SelfItemPointerAttributeNumber, &lisnull);
       if (lisnull)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_CURSOR_STATE), errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"", cursor_name, table_name)));
       }
       tuple_tid = (ItemPointer)DatumGetPointer(ldatum);
 
@@ -262,7 +262,7 @@ fetch_cursor_param_value(ExprContext *econtext, int paramId)
     }
     else
     {
-
+      prm = &paramInfo->params[paramId - 1];
     }
 
     if (OidIsValid(prm->ptype) && !prm->isnull)
@@ -270,7 +270,7 @@ fetch_cursor_param_value(ExprContext *econtext, int paramId)
       /* safety check in case hook did something unexpected */
       if (prm->ptype != REFCURSOROID)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("type of parameter %d (%s) does not match that when preparing the plan (%s)", paramId, format_type_be(prm->ptype), format_type_be(REFCURSOROID))));
       }
 
       /* We know that refcursor uses text's I/O routines */
@@ -278,8 +278,8 @@ fetch_cursor_param_value(ExprContext *econtext, int paramId)
     }
   }
 
-
-
+  ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("no value found for parameter %d", paramId)));
+  return NULL;
 }
 
 /*
@@ -306,7 +306,7 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
 
   if (node == NULL)
   {
-
+    return NULL;
   }
   switch (nodeTag(node))
   {
@@ -320,14 +320,14 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
      * relationship of such a node's current output tuple to the
      * children's current outputs.)
      */
-  case T_SeqScanState:;
-  case T_SampleScanState:;
-  case T_IndexScanState:;
-  case T_IndexOnlyScanState:;
-  case T_BitmapHeapScanState:;
-  case T_TidScanState:;
-  case T_ForeignScanState:;
-  case T_CustomScanState:;
+  case T_SeqScanState:
+  case T_SampleScanState:
+  case T_IndexScanState:
+  case T_IndexOnlyScanState:
+  case T_BitmapHeapScanState:
+  case T_TidScanState:
+  case T_ForeignScanState:
+  case T_CustomScanState:
   {
     ScanState *sstate = (ScanState *)node;
 
@@ -360,7 +360,7 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
      * simply-updatable, since they won't be if the sorting is
      * implemented by a Sort node.)
      */
-  case T_AppendState:;
+  case T_AppendState:
   {
     AppendState *astate = (AppendState *)node;
     int i;
@@ -375,7 +375,7 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
       }
       if (result)
       {
-
+        return NULL; /* multiple matches */
       }
       result = elem;
     }
@@ -386,19 +386,19 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
      * Result and Limit can be descended through (these are safe
      * because they always return their input's current row)
      */
-  case T_ResultState:;
-  case T_LimitState:;
-
-
+  case T_ResultState:
+  case T_LimitState:
+    result = search_plan_tree(node->lefttree, table_oid, pending_rescan);
+    break;
 
     /*
      * SubqueryScan too, but it keeps the child in a different place
      */
-  case T_SubqueryScanState:;
+  case T_SubqueryScanState:
+    result = search_plan_tree(((SubqueryScanState *)node)->subplan, table_oid, pending_rescan);
+    break;
 
-
-
-  default:;;
+  default:
     /* Otherwise, assume we can't descend through it */
     break;
   }
@@ -409,7 +409,7 @@ search_plan_tree(PlanState *node, Oid table_oid, bool *pending_rescan)
    */
   if (result && node->chgParam != NULL)
   {
-
+    *pending_rescan = true;
   }
 
   return result;

@@ -32,16 +32,15 @@
 #include "utils/varlena.h"
 
 /*****************************************************************************
- *	 USER I/O ROUTINES (none)
- **
+ *	 USER I/O ROUTINES (none)												 *
  *****************************************************************************/
 
 /*
  *		namein	- converts "..." to internal representation
  *
  *		Note:
- *				[Old] Currently if strlen(s) < NAMEDATALEN, the
- *extra chars are nulls Now, always NULL terminated
+ *				[Old] Currently if strlen(s) < NAMEDATALEN, the extra chars are nulls
+ *				Now, always NULL terminated
  */
 Datum
 namein(PG_FUNCTION_ARGS)
@@ -77,26 +76,25 @@ nameout(PG_FUNCTION_ARGS)
 }
 
 /*
- *		namerecv			- converts external binary
- *format to name
+ *		namerecv			- converts external binary format to name
  */
 Datum
 namerecv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  Name result;
+  char *str;
+  int nbytes;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
+  if (nbytes >= NAMEDATALEN)
+  {
+    ereport(ERROR, (errcode(ERRCODE_NAME_TOO_LONG), errmsg("identifier too long"), errdetail("Identifier must be less than %d characters.", NAMEDATALEN)));
+  }
+  result = (NameData *)palloc0(NAMEDATALEN);
+  memcpy(result, str, nbytes);
+  pfree(str);
+  PG_RETURN_NAME(result);
 }
 
 /*
@@ -105,17 +103,16 @@ namerecv(PG_FUNCTION_ARGS)
 Datum
 namesend(PG_FUNCTION_ARGS)
 {
+  Name s = PG_GETARG_NAME(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendtext(&buf, NameStr(*s), strlen(NameStr(*s)));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*****************************************************************************
- *	 COMPARISON/SORTING ROUTINES
- **
+ *	 COMPARISON/SORTING ROUTINES											 *
  *****************************************************************************/
 
 /*
@@ -225,19 +222,18 @@ btnamesortsupport(PG_FUNCTION_ARGS)
 }
 
 /*****************************************************************************
- *	 MISCELLANEOUS PUBLIC ROUTINES
- **
+ *	 MISCELLANEOUS PUBLIC ROUTINES											 *
  *****************************************************************************/
 
 int
 namecpy(Name n1, const NameData *n2)
 {
-
-
-
-
-
-
+  if (!n1 || !n2)
+  {
+    return -1;
+  }
+  StrNCpy(NameStr(*n1), NameStr(*n2), NAMEDATALEN);
+  return 0;
 }
 
 #ifdef NOT_USED
@@ -253,7 +249,7 @@ namestrcpy(Name name, const char *str)
 {
   if (!name || !str)
   {
-
+    return -1;
   }
   StrNCpy(NameStr(*name), str, NAMEDATALEN);
   return 0;
@@ -295,15 +291,15 @@ namestrcmp(Name name, const char *str)
 {
   if (!name && !str)
   {
-
+    return 0;
   }
   if (!name)
   {
-
+    return -1; /* NULL < anything */
   }
   if (!str)
   {
-
+    return 1; /* NULL < anything */
   }
   return strncmp(NameStr(*name), str, NAMEDATALEN);
 }
@@ -340,7 +336,7 @@ current_schema(PG_FUNCTION_ARGS)
   list_free(search_path);
   if (!nspname)
   {
-
+    PG_RETURN_NULL(); /* recently-deleted namespace? */
   }
   PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(nspname)));
 }
@@ -402,7 +398,7 @@ nameconcatoid(PG_FUNCTION_ARGS)
   /* Truncate oversize input by truncating name part, not suffix */
   if (namlen + suflen >= NAMEDATALEN)
   {
-
+    namlen = pg_mbcliplen(NameStr(*nam), namlen, NAMEDATALEN - 1 - suflen);
   }
 
   /* We use palloc0 here to ensure result is zero-padded */

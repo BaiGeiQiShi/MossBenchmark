@@ -20,14 +20,14 @@
  *
  *	The interface for writing to an archive consists of three functions:
  *	AllocateCompressor, WriteDataToArchive and EndCompressor. First you call
- *	AllocateCompressor, then write all the data by calling
- *WriteDataToArchive as many times as needed, and finally EndCompressor.
- *WriteDataToArchive and EndCompressor will call the WriteFunc that was provided
- *to AllocateCompressor for each chunk of compressed data.
+ *	AllocateCompressor, then write all the data by calling WriteDataToArchive
+ *	as many times as needed, and finally EndCompressor. WriteDataToArchive
+ *	and EndCompressor will call the WriteFunc that was provided to
+ *	AllocateCompressor for each chunk of compressed data.
  *
  *	The interface for reading an archive consists of just one function:
- *	ReadDataFromArchive. ReadDataFromArchive reads the whole compressed
- *input stream, by repeatedly calling the given ReadFunc. ReadFunc returns the
+ *	ReadDataFromArchive. ReadDataFromArchive reads the whole compressed input
+ *	stream, by repeatedly calling the given ReadFunc. ReadFunc returns the
  *	compressed data chunk at a time, and ReadDataFromArchive decompresses it
  *	and passes the decompressed data to ahwrite(), until ReadFunc returns 0
  *	to signal EOF.
@@ -62,7 +62,8 @@
  */
 
 /* typedef appears in compress_io.h */
-struct CompressorState {
+struct CompressorState
+{
   CompressionAlgorithm comprAlg;
   WriteFunc writeF;
 
@@ -104,17 +105,23 @@ WriteDataToArchiveNone(ArchiveHandle *AH, CompressorState *cs, const char *data,
 static void
 ParseCompressionOption(int compression, CompressionAlgorithm *alg, int *level)
 {
-  if (compression == Z_DEFAULT_COMPRESSION || (compression > 0 && compression <= 9)) {
+  if (compression == Z_DEFAULT_COMPRESSION || (compression > 0 && compression <= 9))
+  {
     *alg = COMPR_ALG_LIBZ;
-  } else if (compression == 0) {
+  }
+  else if (compression == 0)
+  {
     *alg = COMPR_ALG_NONE;
-  } else {
+  }
+  else
+  {
     fatal("invalid compression code: %d", compression);
     *alg = COMPR_ALG_NONE; /* keep compiler quiet */
   }
 
   /* The level is just the passed-in value. */
-  if (level) {
+  if (level)
+  {
     *level = compression;
   }
 }
@@ -132,7 +139,8 @@ AllocateCompressor(int compression, WriteFunc writeF)
   ParseCompressionOption(compression, &alg, &level);
 
 #ifndef HAVE_LIBZ
-  if (alg == COMPR_ALG_LIBZ) {
+  if (alg == COMPR_ALG_LIBZ)
+  {
     fatal("not built with zlib support");
   }
 #endif
@@ -145,7 +153,8 @@ AllocateCompressor(int compression, WriteFunc writeF)
    * Perform compression algorithm specific initialization.
    */
 #ifdef HAVE_LIBZ
-  if (alg == COMPR_ALG_LIBZ) {
+  if (alg == COMPR_ALG_LIBZ)
+  {
     InitCompressorZlib(cs, level);
   }
 #endif
@@ -164,10 +173,12 @@ ReadDataFromArchive(ArchiveHandle *AH, int compression, ReadFunc readF)
 
   ParseCompressionOption(compression, &alg, NULL);
 
-  if (alg == COMPR_ALG_NONE) {
+  if (alg == COMPR_ALG_NONE)
+  {
     ReadDataFromArchiveNone(AH, readF);
   }
-  if (alg == COMPR_ALG_LIBZ) {
+  if (alg == COMPR_ALG_LIBZ)
+  {
 #ifdef HAVE_LIBZ
     ReadDataFromArchiveZlib(AH, readF);
 #else
@@ -182,7 +193,8 @@ ReadDataFromArchive(ArchiveHandle *AH, int compression, ReadFunc readF)
 void
 WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs, const void *data, size_t dLen)
 {
-  switch (cs->comprAlg) {
+  switch (cs->comprAlg)
+  {
   case COMPR_ALG_LIBZ:
 #ifdef HAVE_LIBZ
     WriteDataToArchiveZlib(AH, cs, data, dLen);
@@ -204,7 +216,8 @@ void
 EndCompressor(ArchiveHandle *AH, CompressorState *cs)
 {
 #ifdef HAVE_LIBZ
-  if (cs->comprAlg == COMPR_ALG_LIBZ) {
+  if (cs->comprAlg == COMPR_ALG_LIBZ)
+  {
     EndCompressorZlib(AH, cs);
   }
 #endif
@@ -236,7 +249,8 @@ InitCompressorZlib(CompressorState *cs, int level)
   cs->zlibOut = (char *)pg_malloc(ZLIB_OUT_SIZE + 1);
   cs->zlibOutSize = ZLIB_OUT_SIZE;
 
-  if (deflateInit(zp, level) != Z_OK) {
+  if (deflateInit(zp, level) != Z_OK)
+  {
     fatal("could not initialize compression library: %s", zp->msg);
   }
 
@@ -256,7 +270,8 @@ EndCompressorZlib(ArchiveHandle *AH, CompressorState *cs)
   /* Flush any remaining data from zlib buffer */
   DeflateCompressorZlib(AH, cs, true);
 
-  if (deflateEnd(zp) != Z_OK) {
+  if (deflateEnd(zp) != Z_OK)
+  {
     fatal("could not close compression stream: %s", zp->msg);
   }
 
@@ -271,18 +286,22 @@ DeflateCompressorZlib(ArchiveHandle *AH, CompressorState *cs, bool flush)
   char *out = cs->zlibOut;
   int res = Z_OK;
 
-  while (cs->zp->avail_in != 0 || flush) {
+  while (cs->zp->avail_in != 0 || flush)
+  {
     res = deflate(zp, flush ? Z_FINISH : Z_NO_FLUSH);
-    if (res == Z_STREAM_ERROR) {
+    if (res == Z_STREAM_ERROR)
+    {
       fatal("could not compress data: %s", zp->msg);
     }
-    if ((flush && (zp->avail_out < cs->zlibOutSize)) || (zp->avail_out == 0) || (zp->avail_in != 0)) {
+    if ((flush && (zp->avail_out < cs->zlibOutSize)) || (zp->avail_out == 0) || (zp->avail_in != 0))
+    {
       /*
        * Extra paranoia: avoid zero-length chunks, since a zero length
        * chunk is the EOF marker in the custom format. This should never
        * happen but...
        */
-      if (zp->avail_out < cs->zlibOutSize) {
+      if (zp->avail_out < cs->zlibOutSize)
+      {
         /*
          * Any write function should do its own error checking but to
          * make sure we do a check here as well...
@@ -295,7 +314,8 @@ DeflateCompressorZlib(ArchiveHandle *AH, CompressorState *cs, bool flush)
       zp->avail_out = cs->zlibOutSize;
     }
 
-    if (res == Z_STREAM_END) {
+    if (res == Z_STREAM_END)
+    {
       break;
     }
   }
@@ -331,21 +351,25 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
 
   out = pg_malloc(ZLIB_OUT_SIZE + 1);
 
-  if (inflateInit(zp) != Z_OK) {
+  if (inflateInit(zp) != Z_OK)
+  {
     fatal("could not initialize compression library: %s", zp->msg);
   }
 
   /* no minimal chunk size for zlib */
-  while ((cnt = readF(AH, &buf, &buflen))) {
+  while ((cnt = readF(AH, &buf, &buflen)))
+  {
     zp->next_in = (void *)buf;
     zp->avail_in = cnt;
 
-    while (zp->avail_in > 0) {
+    while (zp->avail_in > 0)
+    {
       zp->next_out = (void *)out;
       zp->avail_out = ZLIB_OUT_SIZE;
 
       res = inflate(zp, 0);
-      if (res != Z_OK && res != Z_STREAM_END) {
+      if (res != Z_OK && res != Z_STREAM_END)
+      {
         fatal("could not uncompress data: %s", zp->msg);
       }
 
@@ -356,11 +380,13 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
 
   zp->next_in = NULL;
   zp->avail_in = 0;
-  while (res != Z_STREAM_END) {
+  while (res != Z_STREAM_END)
+  {
     zp->next_out = (void *)out;
     zp->avail_out = ZLIB_OUT_SIZE;
     res = inflate(zp, 0);
-    if (res != Z_OK && res != Z_STREAM_END) {
+    if (res != Z_OK && res != Z_STREAM_END)
+    {
       fatal("could not uncompress data: %s", zp->msg);
     }
 
@@ -368,7 +394,8 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
     ahwrite(out, 1, ZLIB_OUT_SIZE - zp->avail_out, AH);
   }
 
-  if (inflateEnd(zp) != Z_OK) {
+  if (inflateEnd(zp) != Z_OK)
+  {
     fatal("could not close compression library: %s", zp->msg);
   }
 
@@ -392,7 +419,8 @@ ReadDataFromArchiveNone(ArchiveHandle *AH, ReadFunc readF)
   buf = pg_malloc(ZLIB_OUT_SIZE);
   buflen = ZLIB_OUT_SIZE;
 
-  while ((cnt = readF(AH, &buf, &buflen))) {
+  while ((cnt = readF(AH, &buf, &buflen)))
+  {
     ahwrite(buf, 1, cnt, AH);
   }
 
@@ -415,7 +443,8 @@ WriteDataToArchiveNone(ArchiveHandle *AH, CompressorState *cs, const char *data,
  * cfp represents an open stream, wrapping the underlying FILE or gzFile
  * pointer. This is opaque to the callers.
  */
-struct cfp {
+struct cfp
+{
   FILE *uncompressedfp;
 #ifdef HAVE_LIBZ
   gzFile compressedfp;
@@ -442,7 +471,8 @@ free_keep_errno(void *p)
  * be either "r" or "rb".
  *
  * If the file at 'path' does not exist, we append the ".gz" suffix (if 'path'
- * doesn't already have it) and try again. So if you pass "foo" as 'path',* this will open either "foo" or "foo.gz".
+ * doesn't already have it) and try again. So if you pass "foo" as 'path',
+ * this will open either "foo" or "foo.gz".
  *
  * On failure, return NULL with an error code in errno.
  */
@@ -452,14 +482,17 @@ cfopen_read(const char *path, const char *mode)
   cfp *fp;
 
 #ifdef HAVE_LIBZ
-  if (hasSuffix(path, ".gz")) {
+  if (hasSuffix(path, ".gz"))
+  {
     fp = cfopen(path, mode, 1);
-  } else
+  }
+  else
 #endif
   {
     fp = cfopen(path, mode, 0);
 #ifdef HAVE_LIBZ
-    if (fp == NULL) {
+    if (fp == NULL)
+    {
       char *fname;
 
       fname = psprintf("%s.gz", path);
@@ -487,9 +520,12 @@ cfopen_write(const char *path, const char *mode, int compression)
 {
   cfp *fp;
 
-  if (compression == 0) {
+  if (compression == 0)
+  {
     fp = cfopen(path, mode, 0);
-  } else {
+  }
+  else
+  {
 #ifdef HAVE_LIBZ
     char *fname;
 
@@ -515,33 +551,41 @@ cfopen(const char *path, const char *mode, int compression)
 {
   cfp *fp = pg_malloc(sizeof(cfp));
 
-  if (compression != 0) {
+  if (compression != 0)
+  {
 #ifdef HAVE_LIBZ
-    if (compression != Z_DEFAULT_COMPRESSION) {
+    if (compression != Z_DEFAULT_COMPRESSION)
+    {
       /* user has specified a compression level, so tell zlib to use it */
       char mode_compression[32];
 
       snprintf(mode_compression, sizeof(mode_compression), "%s%d", mode, compression);
       fp->compressedfp = gzopen(path, mode_compression);
-    } else {
+    }
+    else
+    {
       /* don't specify a level, just use the zlib default */
       fp->compressedfp = gzopen(path, mode);
     }
 
     fp->uncompressedfp = NULL;
-    if (fp->compressedfp == NULL) {
+    if (fp->compressedfp == NULL)
+    {
       free_keep_errno(fp);
       fp = NULL;
     }
 #else
     fatal("not built with zlib support");
 #endif
-  } else {
+  }
+  else
+  {
 #ifdef HAVE_LIBZ
     fp->compressedfp = NULL;
 #endif
     fp->uncompressedfp = fopen(path, mode);
-    if (fp->uncompressedfp == NULL) {
+    if (fp->uncompressedfp == NULL)
+    {
       free_keep_errno(fp);
       fp = NULL;
     }
@@ -555,24 +599,29 @@ cfread(void *ptr, int size, cfp *fp)
 {
   int ret;
 
-  if (size == 0) {
+  if (size == 0)
+  {
     return 0;
   }
 
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     ret = gzread(fp->compressedfp, ptr, size);
-    if (ret != size && !gzeof(fp->compressedfp)) {
+    if (ret != size && !gzeof(fp->compressedfp))
+    {
       int errnum;
       const char *errmsg = gzerror(fp->compressedfp, &errnum);
 
       fatal("could not read from input file: %s", errnum == Z_ERRNO ? strerror(errno) : errmsg);
     }
-  } else
+  }
+  else
 #endif
   {
     ret = fread(ptr, 1, size, fp->uncompressedfp);
-    if (ret != size && !feof(fp->uncompressedfp)) {
+    if (ret != size && !feof(fp->uncompressedfp))
+    {
       READ_ERROR_EXIT(fp->uncompressedfp);
     }
   }
@@ -583,9 +632,11 @@ int
 cfwrite(const void *ptr, int size, cfp *fp)
 {
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     return gzwrite(fp->compressedfp, ptr, size);
-  } else
+  }
+  else
 #endif
     return fwrite(ptr, 1, size, fp->uncompressedfp);
 }
@@ -596,20 +647,27 @@ cfgetc(cfp *fp)
   int ret;
 
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     ret = gzgetc(fp->compressedfp);
-    if (ret == EOF) {
-      if (!gzeof(fp->compressedfp)) {
+    if (ret == EOF)
+    {
+      if (!gzeof(fp->compressedfp))
+      {
         fatal("could not read from input file: %s", strerror(errno));
-      } else {
+      }
+      else
+      {
         fatal("could not read from input file: end of file");
       }
     }
-  } else
+  }
+  else
 #endif
   {
     ret = fgetc(fp->uncompressedfp);
-    if (ret == EOF) {
+    if (ret == EOF)
+    {
       READ_ERROR_EXIT(fp->uncompressedfp);
     }
   }
@@ -621,9 +679,11 @@ char *
 cfgets(cfp *fp, char *buf, int len)
 {
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     return gzgets(fp->compressedfp, buf, len);
-  } else
+  }
+  else
 #endif
     return fgets(buf, len, fp->uncompressedfp);
 }
@@ -633,15 +693,18 @@ cfclose(cfp *fp)
 {
   int result;
 
-  if (fp == NULL) {
+  if (fp == NULL)
+  {
     errno = EBADF;
     return EOF;
   }
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     result = gzclose(fp->compressedfp);
     fp->compressedfp = NULL;
-  } else
+  }
+  else
 #endif
   {
     result = fclose(fp->uncompressedfp);
@@ -656,9 +719,11 @@ int
 cfeof(cfp *fp)
 {
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     return gzeof(fp->compressedfp);
-  } else
+  }
+  else
 #endif
     return feof(fp->uncompressedfp);
 }
@@ -667,11 +732,13 @@ const char *
 get_cfp_error(cfp *fp)
 {
 #ifdef HAVE_LIBZ
-  if (fp->compressedfp) {
+  if (fp->compressedfp)
+  {
     int errnum;
     const char *errmsg = gzerror(fp->compressedfp, &errnum);
 
-    if (errnum != Z_ERRNO) {
+    if (errnum != Z_ERRNO)
+    {
       return errmsg;
     }
   }
@@ -686,7 +753,8 @@ hasSuffix(const char *filename, const char *suffix)
   int filenamelen = strlen(filename);
   int suffixlen = strlen(suffix);
 
-  if (filenamelen < suffixlen) {
+  if (filenamelen < suffixlen)
+  {
     return 0;
   }
 

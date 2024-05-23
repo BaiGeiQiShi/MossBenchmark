@@ -27,7 +27,8 @@
  * arrays, but that is no concern of this code.
  *
  * The match is done case-insensitively.  Note that we deliberately use a
- * dumbed-down case conversion that will only translate 'A'-'Z' into 'a'-'z',* even if we are in a locale where tolower() would produce more or different
+ * dumbed-down case conversion that will only translate 'A'-'Z' into 'a'-'z',
+ * even if we are in a locale where tolower() would produce more or different
  * translations.  This is to conform to the SQL99 spec, which says that
  * keywords are to be matched in this way even though non-keyword identifiers
  * receive a different case-normalization mapping.

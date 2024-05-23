@@ -222,7 +222,7 @@ CreateSharedInvalidationState(void)
   shmInvalBuffer = (SISeg *)ShmemInitStruct("shmInvalBuffer", SInvalShmemSize(), &found);
   if (found)
   {
-
+    return;
   }
 
   /* Clear message counters, save size of procState array, init spinlock */
@@ -289,9 +289,9 @@ SharedInvalBackendInit(bool sendOnly)
       /*
        * out of procState slots: MaxBackends exceeded -- report normally
        */
-
-
-
+      MyBackendId = InvalidBackendId;
+      LWLockRelease(SInvalWriteLock);
+      ereport(FATAL, (errcode(ERRCODE_TOO_MANY_CONNECTIONS), errmsg("sorry, too many clients already")));
     }
   }
 
@@ -394,8 +394,8 @@ BackendIdGetProc(int backendID)
 
 /*
  * BackendIdGetTransactionIds
- *		Get the xid and xmin of the backend. The result may be out of
- *date arbitrarily quickly, so the caller must be careful about how this
+ *		Get the xid and xmin of the backend. The result may be out of date
+ *		arbitrarily quickly, so the caller must be careful about how this
  *		information is used.
  */
 void
@@ -715,13 +715,13 @@ SICleanupQueue(bool callerHasWriteLock, int minFree)
    */
   if (min >= MSGNUMWRAPAROUND)
   {
-
-
-
-
-
-
-
+    segP->minMsgNum -= MSGNUMWRAPAROUND;
+    segP->maxMsgNum -= MSGNUMWRAPAROUND;
+    for (i = 0; i < segP->lastBackend; i++)
+    {
+      /* we don't bother skipping inactive entries here */
+      segP->procState[i].nextMsgNum -= MSGNUMWRAPAROUND;
+    }
   }
 
   /*

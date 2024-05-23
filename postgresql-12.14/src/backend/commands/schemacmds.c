@@ -80,13 +80,13 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString, int stmt_lo
   {
     HeapTuple tuple;
 
-
-
-
-
-
-
-
+    tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(owner_uid));
+    if (!HeapTupleIsValid(tuple))
+    {
+      elog(ERROR, "cache lookup failed for role %u", owner_uid);
+    }
+    schemaName = pstrdup(NameStr(((Form_pg_authid)GETSTRUCT(tuple))->rolname));
+    ReleaseSysCache(tuple);
   }
 
   /*
@@ -99,7 +99,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString, int stmt_lo
   aclresult = pg_database_aclcheck(MyDatabaseId, saved_uid, ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(MyDatabaseId));
   }
 
   check_is_member_of_role(saved_uid, owner_uid);
@@ -107,7 +107,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString, int stmt_lo
   /* Additional check to protect reserved schema names */
   if (!allowSystemTableMods && IsReservedName(schemaName))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("unacceptable schema name \"%s\"", schemaName), errdetail("The prefix \"pg_\" is reserved for system schemas.")));
   }
 
   /*
@@ -229,9 +229,9 @@ RemoveSchemaById(Oid schemaOid)
   relation = table_open(NamespaceRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(schemaOid));
-  if (!HeapTupleIsValid(tup))
-  { /* should not happen */
-
+  if (!HeapTupleIsValid(tup)) /* should not happen */
+  {
+    elog(ERROR, "cache lookup failed for namespace %u", schemaOid);
   }
 
   CatalogTupleDelete(relation, &tup->t_self);
@@ -259,7 +259,7 @@ RenameSchema(const char *oldname, const char *newname)
   tup = SearchSysCacheCopy1(NAMESPACENAME, CStringGetDatum(oldname));
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("schema \"%s\" does not exist", oldname)));
   }
 
   nspform = (Form_pg_namespace)GETSTRUCT(tup);
@@ -268,25 +268,25 @@ RenameSchema(const char *oldname, const char *newname)
   /* make sure the new name doesn't exist */
   if (OidIsValid(get_namespace_oid(newname, true)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_SCHEMA), errmsg("schema \"%s\" already exists", newname)));
   }
 
   /* must be owner */
   if (!pg_namespace_ownercheck(nspOid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_SCHEMA, oldname);
   }
 
   /* must have CREATE privilege on database */
   aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
-
+    aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(MyDatabaseId));
   }
 
   if (!allowSystemTableMods && IsReservedName(newname))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("unacceptable schema name \"%s\"", newname), errdetail("The prefix \"pg_\" is reserved for system schemas.")));
   }
 
   /* rename */
@@ -314,7 +314,7 @@ AlterSchemaOwner_oid(Oid oid, Oid newOwnerId)
   tup = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(oid));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for schema %u", oid);
   }
 
   AlterSchemaOwner_internal(tup, rel, newOwnerId);
@@ -341,7 +341,7 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
   tup = SearchSysCache1(NAMESPACENAME, CStringGetDatum(name));
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("schema \"%s\" does not exist", name)));
   }
 
   nspform = (Form_pg_namespace)GETSTRUCT(tup);
@@ -386,7 +386,7 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
     /* Otherwise, must be owner of the existing object */
     if (!pg_namespace_ownercheck(nspForm->oid, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_SCHEMA, NameStr(nspForm->nspname));
     }
 
     /* Must be able to become new owner */
@@ -404,7 +404,7 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
     aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(MyDatabaseId));
     }
 
     memset(repl_null, false, sizeof(repl_null));
@@ -420,9 +420,9 @@ AlterSchemaOwner_internal(HeapTuple tup, Relation rel, Oid newOwnerId)
     aclDatum = SysCacheGetAttr(NAMESPACENAME, tup, Anum_pg_namespace_nspacl, &isNull);
     if (!isNull)
     {
-
-
-
+      newAcl = aclnewowner(DatumGetAclP(aclDatum), nspForm->nspowner, newOwnerId);
+      repl_repl[Anum_pg_namespace_nspacl - 1] = true;
+      repl_val[Anum_pg_namespace_nspacl - 1] = PointerGetDatum(newAcl);
     }
 
     newtuple = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null, repl_repl);

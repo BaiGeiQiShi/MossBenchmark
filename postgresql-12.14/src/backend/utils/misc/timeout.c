@@ -103,7 +103,7 @@ insert_timeout(TimeoutId id, int index)
 
   if (index < 0 || index > num_active_timeouts)
   {
-
+    elog(FATAL, "timeout index %d out of range 0..%d", index, num_active_timeouts);
   }
 
   for (i = num_active_timeouts - 1; i >= index; i--)
@@ -126,7 +126,7 @@ remove_timeout_index(int index)
 
   if (index < 0 || index >= num_active_timeouts)
   {
-
+    elog(FATAL, "timeout index %d out of range 0..%d", index, num_active_timeouts - 1);
   }
 
   for (i = index + 1; i < num_active_timeouts; i++)
@@ -156,7 +156,7 @@ enable_timeout(TimeoutId id, TimestampTz now, TimestampTz fin_time)
   i = find_active_timeout(id);
   if (i >= 0)
   {
-
+    remove_timeout_index(i);
   }
 
   /*
@@ -173,7 +173,7 @@ enable_timeout(TimeoutId id, TimestampTz now, TimestampTz fin_time)
     }
     if (fin_time == old_timeout->fin_time && id < old_timeout->index)
     {
-
+      break;
     }
   }
 
@@ -213,7 +213,7 @@ schedule_alarm(TimestampTz now)
      */
     if (secs == 0 && usecs == 0)
     {
-
+      usecs = 1;
     }
 
     timeval.it_value.tv_sec = secs;
@@ -254,7 +254,7 @@ schedule_alarm(TimestampTz now)
     /* Set the alarm timer */
     if (setitimer(ITIMER_REAL, &timeval, NULL) != 0)
     {
-
+      elog(FATAL, "could not enable SIGALRM timer: %m");
     }
   }
 }
@@ -391,17 +391,17 @@ RegisterTimeout(TimeoutId id, timeout_handler_proc handler)
   if (id >= USER_TIMEOUT)
   {
     /* Allocate a user-defined timeout reason */
-
-
-
-
-
-
-
-
-
-
-
+    for (id = USER_TIMEOUT; id < MAX_TIMEOUTS; id++)
+    {
+      if (all_timeouts[id].timeout_handler == NULL)
+      {
+        break;
+      }
+    }
+    if (id >= MAX_TIMEOUTS)
+    {
+      ereport(FATAL, (errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED), errmsg("cannot add more timeout reasons")));
+    }
   }
 
   Assert(all_timeouts[id].timeout_handler == NULL);
@@ -426,7 +426,7 @@ reschedule_timeouts(void)
   /* For flexibility, allow this to be called before we're initialized. */
   if (!all_timeouts_initialized)
   {
-
+    return;
   }
 
   /* Disable timeout interrupts for safety. */
@@ -435,7 +435,7 @@ reschedule_timeouts(void)
   /* Reschedule the interrupt, if any timeouts remain active. */
   if (num_active_timeouts > 0)
   {
-
+    schedule_alarm(GetCurrentTimestamp());
   }
 }
 
@@ -472,17 +472,17 @@ enable_timeout_after(TimeoutId id, int delay_ms)
 void
 enable_timeout_at(TimeoutId id, TimestampTz fin_time)
 {
+  TimestampTz now;
 
+  /* Disable timeout interrupts for safety. */
+  disable_alarm();
 
+  /* Queue the timeout at the appropriate time. */
+  now = GetCurrentTimestamp();
+  enable_timeout(id, now, fin_time);
 
-
-
-
-
-
-
-
-
+  /* Set the timer interrupt. */
+  schedule_alarm(now);
 }
 
 /*
@@ -511,18 +511,18 @@ enable_timeouts(const EnableTimeoutParams *timeouts, int count)
 
     switch (timeouts[i].type)
     {
-    case TMPARAM_AFTER:;
+    case TMPARAM_AFTER:
       fin_time = TimestampTzPlusMilliseconds(now, timeouts[i].delay_ms);
       enable_timeout(id, now, fin_time);
       break;
 
-    case TMPARAM_AT:;
+    case TMPARAM_AT:
+      enable_timeout(id, now, timeouts[i].fin_time);
+      break;
 
-
-
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized timeout type %d", (int)timeouts[i].type);
+      break;
     }
   }
 
@@ -567,7 +567,7 @@ disable_timeout(TimeoutId id, bool keep_indicator)
   /* Reschedule the interrupt, if any timeouts remain active. */
   if (num_active_timeouts > 0)
   {
-
+    schedule_alarm(GetCurrentTimestamp());
   }
 }
 
@@ -639,7 +639,7 @@ disable_all_timeouts(bool keep_indicators)
     MemSet(&timeval, 0, sizeof(struct itimerval));
     if (setitimer(ITIMER_REAL, &timeval, NULL) != 0)
     {
-
+      elog(FATAL, "could not disable SIGALRM timer: %m");
     }
   }
 
@@ -688,7 +688,7 @@ get_timeout_indicator(TimeoutId id, bool reset_indicator)
 TimestampTz
 get_timeout_start_time(TimeoutId id)
 {
-
+  return all_timeouts[id].start_time;
 }
 
 /*
@@ -702,5 +702,5 @@ get_timeout_start_time(TimeoutId id)
 TimestampTz
 get_timeout_finish_time(TimeoutId id)
 {
-
+  return all_timeouts[id].fin_time;
 }

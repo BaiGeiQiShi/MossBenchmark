@@ -33,28 +33,34 @@ ecpg_filter(const char *sourcefile, const char *outfile)
   char linebuf[LINEBUFSIZE];
 
   s = fopen(sourcefile, "r");
-  if (!s) {
+  if (!s)
+  {
     fprintf(stderr, "Could not open file %s for reading\n", sourcefile);
     exit(2);
   }
   t = fopen(outfile, "w");
-  if (!t) {
+  if (!t)
+  {
     fprintf(stderr, "Could not open file %s for writing\n", outfile);
     exit(2);
   }
 
-  while (fgets(linebuf, LINEBUFSIZE, s)) {
+  while (fgets(linebuf, LINEBUFSIZE, s))
+  {
     /* check for "#line " in the beginning */
-    if (strstr(linebuf, "#line ") == linebuf) {
+    if (strstr(linebuf, "#line ") == linebuf)
+    {
       char *p = strchr(linebuf, '"');
       char *n;
       int plen = 1;
 
-      while (*p && (*(p + plen) == '.' || strchr(p + plen, '/') != NULL)) {
+      while (*p && (*(p + plen) == '.' || strchr(p + plen, '/') != NULL))
+      {
         plen++;
       }
       /* plen is one more than the number of . and / characters */
-      if (plen > 1) {
+      if (plen > 1)
+      {
         n = (char *)malloc(plen);
         StrNCpy(n, p + 1, plen);
         replace_string(linebuf, n, "");
@@ -67,7 +73,8 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 }
 
 /*
- * start an ecpg test process for specified file (including redirection),* and return process ID
+ * start an ecpg test process for specified file (including redirection),
+ * and return process ID
  */
 
 static PID_TYPE
@@ -126,7 +133,8 @@ ecpg_start_test(const char *testname, _stringlist **resultfiles, _stringlist **e
 
   pid = spawn_process(cmd);
 
-  if (pid == INVALID_PID) {
+  if (pid == INVALID_PID)
+  {
     fprintf(stderr, _("could not start process for test %s\n"), testname);
     exit(2);
   }

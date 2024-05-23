@@ -20,7 +20,7 @@
 #include "ecpg_kwlist_d.h"
 
 /* Token codes for ECPG keywords */
-#define PG_KEYWORD(kwname, value) value, 
+#define PG_KEYWORD(kwname, value) value,
 
 static const uint16 ECPGScanKeywordTokens[] = {
 #include "ecpg_kwlist.h"
@@ -42,13 +42,15 @@ ScanECPGKeywordLookup(const char *text)
 
   /* First check SQL symbols defined by the backend. */
   kwnum = ScanKeywordLookup(text, &ScanKeywords);
-  if (kwnum >= 0) {
+  if (kwnum >= 0)
+  {
     return SQLScanKeywordTokens[kwnum];
   }
 
   /* Try ECPG-specific keywords. */
   kwnum = ScanKeywordLookup(text, &ScanECPGKeywords);
-  if (kwnum >= 0) {
+  if (kwnum >= 0)
+  {
     return ECPGScanKeywordTokens[kwnum];
   }
 

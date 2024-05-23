@@ -26,11 +26,13 @@ dlopen(const char *file, int mode)
 {
   int flags = 0;
 
-  if (mode & RTLD_NOW) {
+  if (mode & RTLD_NOW)
+  {
     flags |= BIND_IMMEDIATE;
   }
 #ifdef NOT_USED
-  if (mode & RTLD_LAZY) {
+  if (mode & RTLD_LAZY)
+  {
     flags |= BIND_DEFERRED;
   }
 #endif
@@ -43,7 +45,8 @@ dlsym(void *handle, const char *symbol)
 {
   void *value;
 
-  if (shl_findsym((shl_t *)&handle, symbol, TYPE_PROCEDURE, &value) == -1) {
+  if (shl_findsym((shl_t *)&handle, symbol, TYPE_PROCEDURE, &value) == -1)
+  {
     return NULL;
   }
   return value;
@@ -60,7 +63,8 @@ dlerror(void)
 {
   static char errmsg[] = "shl_load failed";
 
-  if (errno) {
+  if (errno)
+  {
     return strerror(errno);
   }
 
@@ -76,7 +80,8 @@ set_dl_error(void)
 {
   DWORD err = GetLastError();
 
-  if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT), last_dyn_error, sizeof(last_dyn_error) - 1, NULL) == 0) {
+  if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT), last_dyn_error, sizeof(last_dyn_error) - 1, NULL) == 0)
+  {
     snprintf(last_dyn_error, sizeof(last_dyn_error) - 1, "unknown error %lu", err);
   }
 }
@@ -84,9 +89,12 @@ set_dl_error(void)
 char *
 dlerror(void)
 {
-  if (last_dyn_error[0]) {
+  if (last_dyn_error[0])
+  {
     return last_dyn_error;
-  } else {
+  }
+  else
+  {
     return NULL;
   }
 }
@@ -94,7 +102,8 @@ dlerror(void)
 int
 dlclose(void *handle)
 {
-  if (!FreeLibrary((HMODULE)handle)) {
+  if (!FreeLibrary((HMODULE)handle))
+  {
     set_dl_error();
     return 1;
   }
@@ -108,7 +117,8 @@ dlsym(void *handle, const char *symbol)
   void *ptr;
 
   ptr = GetProcAddress((HMODULE)handle, symbol);
-  if (!ptr) {
+  if (!ptr)
+  {
     set_dl_error();
     return NULL;
   }
@@ -127,7 +137,8 @@ dlopen(const char *file, int mode)
   h = LoadLibrary(file);
   SetErrorMode(prevmode);
 
-  if (!h) {
+  if (!h)
+  {
     set_dl_error();
     return NULL;
   }

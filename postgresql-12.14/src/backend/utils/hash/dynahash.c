@@ -420,7 +420,7 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
    */
   if (flags & HASH_KEYCOPY)
   {
-
+    hashp->keycopy = info->keycopy;
   }
   else if (hashp->hash == string_hash)
   {
@@ -457,12 +457,12 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
     if (flags & HASH_ATTACH)
     {
       /* make local copies of some heavily-used values */
+      hctl = hashp->hctl;
+      hashp->keysize = hctl->keysize;
+      hashp->ssize = hctl->ssize;
+      hashp->sshift = hctl->sshift;
 
-
-
-
-
-
+      return hashp;
     }
   }
   else
@@ -479,7 +479,7 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
     hashp->hctl = (HASHHDR *)hashp->alloc(sizeof(HASHHDR));
     if (!hashp->hctl)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
     }
   }
 
@@ -506,14 +506,14 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
 
   if (flags & HASH_SEGMENT)
   {
-
-
+    hctl->ssize = info->ssize;
+    hctl->sshift = my_log2(info->ssize);
     /* ssize had better be a power of 2 */
-
+    Assert(hctl->ssize == (1L << hctl->sshift));
   }
   if (flags & HASH_FFACTOR)
   {
-
+    hctl->ffactor = info->ffactor;
   }
 
   /*
@@ -544,7 +544,7 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
   /* Build the hash directory structure */
   if (!init_htab(hashp, nelem))
   {
-
+    elog(ERROR, "failed to initialize hash table \"%s\"", hashp->tabname);
   }
 
   /*
@@ -575,7 +575,7 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
     nelem_alloc = nelem / freelist_partitions;
     if (nelem_alloc <= 0)
     {
-
+      nelem_alloc = 1;
     }
 
     /*
@@ -597,7 +597,7 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
 
       if (!element_alloc(hashp, temp, i))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
       }
     }
   }
@@ -713,7 +713,7 @@ init_htab(HTAB *hashp, long nelem)
    */
   while (nbuckets < hctl->num_partitions)
   {
-
+    nbuckets <<= 1;
   }
 
   hctl->max_bucket = hctl->low_mask = nbuckets - 1;
@@ -731,14 +731,14 @@ init_htab(HTAB *hashp, long nelem)
    */
   if (nsegs > hctl->dsize)
   {
-
-
-
-
-
-
-
-
+    if (!(hashp->dir))
+    {
+      hctl->dsize = nsegs;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /* Allocate a directory */
@@ -748,7 +748,7 @@ init_htab(HTAB *hashp, long nelem)
     hashp->dir = (HASHSEGMENT *)hashp->alloc(hctl->dsize * sizeof(HASHSEGMENT));
     if (!hashp->dir)
     {
-
+      return false;
     }
   }
 
@@ -758,7 +758,7 @@ init_htab(HTAB *hashp, long nelem)
     *segp = seg_alloc(hashp);
     if (*segp == NULL)
     {
-
+      return false;
     }
   }
 
@@ -792,7 +792,7 @@ hash_estimate_size(long num_entries, Size entrysize)
   nDirEntries = DEF_DIRSIZE;
   while (nDirEntries < nSegments)
   {
-
+    nDirEntries <<= 1; /* dir_alloc doubles dsize at each call */
   }
 
   /* fixed control info */
@@ -832,7 +832,7 @@ hash_select_dirsize(long num_entries)
   nDirEntries = DEF_DIRSIZE;
   while (nDirEntries < nSegments)
   {
-
+    nDirEntries <<= 1; /* dir_alloc doubles dsize at each call */
   }
 
   return nDirEntries;
@@ -999,7 +999,7 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
 
   if (segp == NULL)
   {
-
+    hash_corrupted(hashp);
   }
 
   prevBucketPtr = &segp[segment_ndx];
@@ -1035,14 +1035,14 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
    */
   switch (action)
   {
-  case HASH_FIND:;
+  case HASH_FIND:
     if (currBucket != NULL)
     {
       return (void *)ELEMENTKEY(currBucket);
     }
     return NULL;
 
-  case HASH_REMOVE:;
+  case HASH_REMOVE:
     if (currBucket != NULL)
     {
       /* if partitioned, must lock to touch nentries and freeList */
@@ -1076,12 +1076,12 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
     }
     return NULL;
 
-  case HASH_ENTER_NULL:;
+  case HASH_ENTER_NULL:
     /* ENTER_NULL does not work with palloc-based allocator */
     Assert(hashp->alloc != DynaHashAlloc);
     /* FALL THRU */
 
-  case HASH_ENTER:;
+  case HASH_ENTER:
     /* Return existing element if found, else create one */
     if (currBucket != NULL)
     {
@@ -1091,26 +1091,26 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
     /* disallow inserts if frozen */
     if (hashp->frozen)
     {
-
+      elog(ERROR, "cannot insert into frozen hashtable \"%s\"", hashp->tabname);
     }
 
     currBucket = get_hash_entry(hashp, freelist_idx);
     if (currBucket == NULL)
     {
       /* out of memory */
-
-
-
-
+      if (action == HASH_ENTER_NULL)
+      {
+        return NULL;
+      }
       /* report a generic message */
-
-
-
-
-
-
-
-
+      if (hashp->isshared)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory")));
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
+      }
     }
 
     /* link into hashbucket chain */
@@ -1131,9 +1131,9 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
     return (void *)ELEMENTKEY(currBucket);
   }
 
+  elog(ERROR, "unrecognized hash action code: %d", (int)action);
 
-
-
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -1158,140 +1158,140 @@ hash_search_with_hash_value(HTAB *hashp, const void *keyPtr, uint32 hashvalue, H
 bool
 hash_update_hash_key(HTAB *hashp, void *existingEntry, const void *newKeyPtr)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  HASHELEMENT *existingElement = ELEMENT_FROM_KEY(existingEntry);
+  HASHHDR *hctl = hashp->hctl;
+  uint32 newhashvalue;
+  Size keysize;
+  uint32 bucket;
+  uint32 newbucket;
+  long segment_num;
+  long segment_ndx;
+  HASHSEGMENT segp;
+  HASHBUCKET currBucket;
+  HASHBUCKET *prevBucketPtr;
+  HASHBUCKET *oldPrevPtr;
+  HashCompareFunc match;
+
+#if HASH_STATISTICS
+  hash_accesses++;
+  hctl->accesses++;
+#endif
+
+  /* disallow updates if frozen */
+  if (hashp->frozen)
+  {
+    elog(ERROR, "cannot update in frozen hashtable \"%s\"", hashp->tabname);
+  }
+
+  /*
+   * Lookup the existing element using its saved hash value.  We need to do
+   * this to be able to unlink it from its hash chain, but as a side benefit
+   * we can verify the validity of the passed existingEntry pointer.
+   */
+  bucket = calc_bucket(hctl, existingElement->hashvalue);
+
+  segment_num = bucket >> hashp->sshift;
+  segment_ndx = MOD(bucket, hashp->ssize);
+
+  segp = hashp->dir[segment_num];
+
+  if (segp == NULL)
+  {
+    hash_corrupted(hashp);
+  }
+
+  prevBucketPtr = &segp[segment_ndx];
+  currBucket = *prevBucketPtr;
+
+  while (currBucket != NULL)
+  {
+    if (currBucket == existingElement)
+    {
+      break;
+    }
+    prevBucketPtr = &(currBucket->link);
+    currBucket = *prevBucketPtr;
+  }
+
+  if (currBucket == NULL)
+  {
+    elog(ERROR, "hash_update_hash_key argument is not in hashtable \"%s\"", hashp->tabname);
+  }
+
+  oldPrevPtr = prevBucketPtr;
+
+  /*
+   * Now perform the equivalent of a HASH_ENTER operation to locate the hash
+   * chain we want to put the entry into.
+   */
+  newhashvalue = hashp->hash(newKeyPtr, hashp->keysize);
+
+  newbucket = calc_bucket(hctl, newhashvalue);
+
+  segment_num = newbucket >> hashp->sshift;
+  segment_ndx = MOD(newbucket, hashp->ssize);
+
+  segp = hashp->dir[segment_num];
+
+  if (segp == NULL)
+  {
+    hash_corrupted(hashp);
+  }
+
+  prevBucketPtr = &segp[segment_ndx];
+  currBucket = *prevBucketPtr;
+
+  /*
+   * Follow collision chain looking for matching key
+   */
+  match = hashp->match;     /* save one fetch in inner loop */
+  keysize = hashp->keysize; /* ditto */
+
+  while (currBucket != NULL)
+  {
+    if (currBucket->hashvalue == newhashvalue && match(ELEMENTKEY(currBucket), newKeyPtr, keysize) == 0)
+    {
+      break;
+    }
+    prevBucketPtr = &(currBucket->link);
+    currBucket = *prevBucketPtr;
+#if HASH_STATISTICS
+    hash_collisions++;
+    hctl->collisions++;
+#endif
+  }
+
+  if (currBucket != NULL)
+  {
+    return false; /* collision with an existing entry */
+  }
+
+  currBucket = existingElement;
+
+  /*
+   * If old and new hash values belong to the same bucket, we need not
+   * change any chain links, and indeed should not since this simplistic
+   * update will corrupt the list if currBucket is the last element.  (We
+   * cannot fall out earlier, however, since we need to scan the bucket to
+   * check for duplicate keys.)
+   */
+  if (bucket != newbucket)
+  {
+    /* OK to remove record from old hash bucket's chain. */
+    *oldPrevPtr = currBucket->link;
+
+    /* link into new hashbucket chain */
+    *prevBucketPtr = currBucket;
+    currBucket->link = NULL;
+  }
+
+  /* copy new key into record */
+  currBucket->hashvalue = newhashvalue;
+  hashp->keycopy(ELEMENTKEY(currBucket), newKeyPtr, keysize);
+
+  /* rest of record is untouched */
+
+  return true;
 }
 
 /*
@@ -1323,7 +1323,7 @@ get_hash_entry(HTAB *hashp, int freelist_idx)
 
     if (IS_PARTITIONED(hctl))
     {
-
+      SpinLockRelease(&hctl->freeList[freelist_idx].mutex);
     }
 
     /*
@@ -1342,42 +1342,42 @@ get_hash_entry(HTAB *hashp, int freelist_idx)
     {
       int borrow_from_idx;
 
-
-
-
-
+      if (!IS_PARTITIONED(hctl))
+      {
+        return NULL; /* out of memory */
+      }
 
       /* try to borrow element from another freelist */
+      borrow_from_idx = freelist_idx;
+      for (;;)
+      {
+        borrow_from_idx = (borrow_from_idx + 1) % NUM_FREELISTS;
+        if (borrow_from_idx == freelist_idx)
+        {
+          break; /* examined all freelists, fail */
+        }
 
+        SpinLockAcquire(&(hctl->freeList[borrow_from_idx].mutex));
+        newElement = hctl->freeList[borrow_from_idx].freeList;
 
+        if (newElement != NULL)
+        {
+          hctl->freeList[borrow_from_idx].freeList = newElement->link;
+          SpinLockRelease(&(hctl->freeList[borrow_from_idx].mutex));
 
+          /* careful: count the new element in its proper freelist */
+          SpinLockAcquire(&hctl->freeList[freelist_idx].mutex);
+          hctl->freeList[freelist_idx].nentries++;
+          SpinLockRelease(&hctl->freeList[freelist_idx].mutex);
 
+          return newElement;
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        SpinLockRelease(&(hctl->freeList[borrow_from_idx].mutex));
+      }
 
       /* no elements available to borrow either, so out of memory */
-
+      return NULL;
     }
   }
 
@@ -1471,8 +1471,8 @@ hash_seq_search(HASH_SEQ_STATUS *status)
   {
     /* Continuing scan of curBucket... */
     status->curEntry = curElem->link;
-    if (status->curEntry == NULL)
-    { /* end of this bucket */
+    if (status->curEntry == NULL) /* end of this bucket */
+    {
       ++status->curBucket;
     }
     return (void *)ELEMENTKEY(curElem);
@@ -1526,8 +1526,8 @@ hash_seq_search(HASH_SEQ_STATUS *status)
 
   /* Begin scan of curBucket... */
   status->curEntry = curElem->link;
-  if (status->curEntry == NULL)
-  { /* end of this bucket */
+  if (status->curEntry == NULL) /* end of this bucket */
+  {
     ++curBucket;
   }
   status->curBucket = curBucket;
@@ -1545,8 +1545,8 @@ hash_seq_term(HASH_SEQ_STATUS *status)
 
 /*
  * hash_freeze
- *			Freeze a hashtable against future insertions (deletions
- *are still allowed)
+ *			Freeze a hashtable against future insertions (deletions are
+ *			still allowed)
  *
  * The reason for doing this is that by preventing any more bucket splits,
  * we no longer need to worry about registering hash_seq_search scans,
@@ -1559,15 +1559,15 @@ hash_seq_term(HASH_SEQ_STATUS *status)
 void
 hash_freeze(HTAB *hashp)
 {
-
-
-
-
-
-
-
-
-
+  if (hashp->isshared)
+  {
+    elog(ERROR, "cannot freeze shared hashtable \"%s\"", hashp->tabname);
+  }
+  if (!hashp->frozen && has_seq_scans(hashp))
+  {
+    elog(ERROR, "cannot freeze hashtable \"%s\" because it has active scans", hashp->tabname);
+  }
+  hashp->frozen = true;
 }
 
 /********************************* UTILITIES ************************/
@@ -1601,14 +1601,14 @@ expand_table(HTAB *hashp)
     /* Allocate new segment if necessary -- could fail if dir full */
     if (new_segnum >= hctl->dsize)
     {
-
-
-
-
+      if (!dir_realloc(hashp))
+      {
+        return false;
+      }
     }
     if (!(hashp->dir[new_segnum] = seg_alloc(hashp)))
     {
-
+      return false;
     }
     hctl->nsegs++;
   }
@@ -1672,41 +1672,41 @@ expand_table(HTAB *hashp)
 static bool
 dir_realloc(HTAB *hashp)
 {
+  HASHSEGMENT *p;
+  HASHSEGMENT *old_p;
+  long new_dsize;
+  long old_dirsize;
+  long new_dirsize;
 
+  if (hashp->hctl->max_dsize != NO_MAX_DSIZE)
+  {
+    return false;
+  }
 
+  /* Reallocate directory */
+  new_dsize = hashp->hctl->dsize << 1;
+  old_dirsize = hashp->hctl->dsize * sizeof(HASHSEGMENT);
+  new_dirsize = new_dsize * sizeof(HASHSEGMENT);
 
+  old_p = hashp->dir;
+  CurrentDynaHashCxt = hashp->hcxt;
+  p = (HASHSEGMENT *)hashp->alloc((Size)new_dirsize);
 
+  if (p != NULL)
+  {
+    memcpy(p, old_p, old_dirsize);
+    MemSet(((char *)p) + old_dirsize, 0, new_dirsize - old_dirsize);
+    hashp->dir = p;
+    hashp->hctl->dsize = new_dsize;
 
+    /* XXX assume the allocator is palloc, so we know how to free */
+    Assert(hashp->alloc == DynaHashAlloc);
+    pfree(old_p);
 
+    return true;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return false;
 }
 
 static HASHSEGMENT
@@ -1719,7 +1719,7 @@ seg_alloc(HTAB *hashp)
 
   if (!segp)
   {
-
+    return NULL;
   }
 
   MemSet(segp, 0, sizeof(HASHBUCKET) * hashp->ssize);
@@ -1742,7 +1742,7 @@ element_alloc(HTAB *hashp, int nelem, int freelist_idx)
 
   if (hashp->isfixed)
   {
-
+    return false;
   }
 
   /* Each element has a HASHELEMENT header plus user data. */
@@ -1753,7 +1753,7 @@ element_alloc(HTAB *hashp, int nelem, int freelist_idx)
 
   if (!firstElement)
   {
-
+    return false;
   }
 
   /* prepare to link all the new entries into the freelist */
@@ -1788,18 +1788,18 @@ element_alloc(HTAB *hashp, int nelem, int freelist_idx)
 static void
 hash_corrupted(HTAB *hashp)
 {
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * If the corruption is in a shared hashtable, we'd better force a
+   * systemwide restart.  Otherwise, just shut down this one backend.
+   */
+  if (hashp->isshared)
+  {
+    elog(PANIC, "hash table \"%s\" corrupted", hashp->tabname);
+  }
+  else
+  {
+    elog(FATAL, "hash table \"%s\" corrupted", hashp->tabname);
+  }
 }
 
 /* calculate ceil(log base 2) of num */
@@ -1812,7 +1812,7 @@ my_log2(long num)
   /* guard against too-large input, which would put us into infinite loop */
   if (num > LONG_MAX / 2)
   {
-
+    num = LONG_MAX / 2;
   }
 
   for (i = 0, limit = 1; limit < num; i++, limit <<= 1)
@@ -1834,7 +1834,7 @@ next_pow2_int(long num)
 {
   if (num > INT_MAX / 2)
   {
-
+    num = INT_MAX / 2;
   }
   return 1 << my_log2(num);
 }
@@ -1879,7 +1879,7 @@ register_seq_scan(HTAB *hashp)
 {
   if (num_seq_scans >= MAX_SEQ_SCANS)
   {
-
+    elog(ERROR, "too many active hash_seq_search scans, cannot start one on \"%s\"", hashp->tabname);
   }
   seq_scan_tables[num_seq_scans] = hashp;
   seq_scan_level[num_seq_scans] = GetCurrentTransactionNestLevel();
@@ -1916,7 +1916,7 @@ has_seq_scans(HTAB *hashp)
   {
     if (seq_scan_tables[i] == hashp)
     {
-
+      return true;
     }
   }
   return false;
@@ -1941,7 +1941,7 @@ AtEOXact_HashTables(bool isCommit)
 
     for (i = 0; i < num_seq_scans; i++)
     {
-
+      elog(WARNING, "leaked hash_seq_search scan for hash table %p", seq_scan_tables[i]);
     }
   }
   num_seq_scans = 0;
@@ -1960,15 +1960,15 @@ AtEOSubXact_HashTables(bool isCommit, int nestDepth)
    */
   for (i = num_seq_scans - 1; i >= 0; i--)
   {
-
-
-
-
-
-
-
-
-
-
+    if (seq_scan_level[i] >= nestDepth)
+    {
+      if (isCommit)
+      {
+        elog(WARNING, "leaked hash_seq_search scan for hash table %p", seq_scan_tables[i]);
+      }
+      seq_scan_tables[i] = seq_scan_tables[num_seq_scans - 1];
+      seq_scan_level[i] = seq_scan_level[num_seq_scans - 1];
+      num_seq_scans--;
+    }
   }
 }

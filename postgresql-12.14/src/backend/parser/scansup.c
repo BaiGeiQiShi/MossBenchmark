@@ -61,48 +61,48 @@ scanstr(const char *s)
     }
     else if (s[i] == '\\')
     {
+      i++;
+      switch (s[i])
+      {
+      case 'b':
+        newStr[j] = '\b';
+        break;
+      case 'f':
+        newStr[j] = '\f';
+        break;
+      case 'n':
+        newStr[j] = '\n';
+        break;
+      case 'r':
+        newStr[j] = '\r';
+        break;
+      case 't':
+        newStr[j] = '\t';
+        break;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      {
+        int k;
+        long octVal = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        for (k = 0; s[i + k] >= '0' && s[i + k] <= '7' && k < 3; k++)
+        {
+          octVal = (octVal << 3) + (s[i + k] - '0');
+        }
+        i += k - 1;
+        newStr[j] = ((char)octVal);
+      }
+      break;
+      default:
+        newStr[j] = s[i];
+        break;
+      } /* switch */
     } /* s[i] == '\\' */
     else
     {
@@ -165,7 +165,7 @@ downcase_identifier(const char *ident, int len, bool warn, bool truncate)
     }
     else if (enc_is_single_byte && IS_HIGHBIT_SET(ch) && isupper(ch))
     {
-
+      ch = tolower(ch);
     }
     result[i] = (char)ch;
   }

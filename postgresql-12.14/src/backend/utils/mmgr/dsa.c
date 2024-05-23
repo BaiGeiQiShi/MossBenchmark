@@ -411,30 +411,30 @@ check_for_freed_segments_locked(dsa_area *area);
 dsa_area *
 dsa_create(int tranche_id)
 {
+  dsm_segment *segment;
+  dsa_area *area;
 
+  /*
+   * Create the DSM segment that will hold the shared control object and the
+   * first segment of usable space.
+   */
+  segment = dsm_create(DSA_INITIAL_SEGMENT_SIZE, 0);
 
+  /*
+   * All segments backing this area are pinned, so that DSA can explicitly
+   * control their lifetime (otherwise a newly created segment belonging to
+   * this area might be freed when the only backend that happens to have it
+   * mapped in ends, corrupting the area).
+   */
+  dsm_pin_segment(segment);
 
+  /* Create a new DSA area with the control object in this segment. */
+  area = create_internal(dsm_segment_address(segment), DSA_INITIAL_SEGMENT_SIZE, tranche_id, dsm_segment_handle(segment), segment);
 
+  /* Clean up when the control segment detaches. */
+  on_dsm_detach(segment, &dsa_on_dsm_detach_release_in_place, PointerGetDatum(dsm_segment_address(segment)));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return area;
 }
 
 /*
@@ -480,8 +480,8 @@ dsa_create_in_place(void *place, size_t size, int tranche_id, dsm_segment *segme
 dsa_handle
 dsa_get_handle(dsa_area *area)
 {
-
-
+  Assert(area->control->handle != DSM_HANDLE_INVALID);
+  return area->control->handle;
 }
 
 /*
@@ -492,25 +492,25 @@ dsa_get_handle(dsa_area *area)
 dsa_area *
 dsa_attach(dsa_handle handle)
 {
+  dsm_segment *segment;
+  dsa_area *area;
 
+  /*
+   * An area handle is really a DSM segment handle for the first segment, so
+   * we go ahead and attach to that.
+   */
+  segment = dsm_attach(handle);
+  if (segment == NULL)
+  {
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not attach to dynamic shared area")));
+  }
 
+  area = attach_internal(dsm_segment_address(segment), segment, handle);
 
+  /* Clean up when the control segment detaches. */
+  on_dsm_detach(segment, &dsa_on_dsm_detach_release_in_place, PointerGetDatum(dsm_segment_address(segment)));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return area;
 }
 
 /*
@@ -572,7 +572,7 @@ dsa_on_dsm_detach_release_in_place(dsm_segment *segment, Datum place)
 void
 dsa_on_shmem_exit_release_in_place(int code, Datum place)
 {
-
+  dsa_release_in_place(DatumGetPointer(place));
 }
 
 /*
@@ -627,7 +627,7 @@ dsa_pin_mapping(dsa_area *area)
   {
     if (area->segment_maps[i].segment != NULL)
     {
-
+      dsm_pin_mapping(area->segment_maps[i].segment);
     }
   }
 }
@@ -666,7 +666,7 @@ dsa_allocate_extended(dsa_area *area, size_t size, int flags)
   /* Sanity check on huge individual allocation size. */
   if (((flags & DSA_ALLOC_HUGE) != 0 && !AllocHugeSizeIsValid(size)) || ((flags & DSA_ALLOC_HUGE) == 0 && !AllocSizeIsValid(size)))
   {
-
+    elog(ERROR, "invalid DSA memory alloc request size %zu", size);
   }
 
   /*
@@ -688,11 +688,11 @@ dsa_allocate_extended(dsa_area *area, size_t size, int flags)
     if (!DsaPointerIsValid(span_pointer))
     {
       /* Raise error unless asked not to. */
-
-
-
-
-
+      if ((flags & DSA_ALLOC_NO_OOM) == 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory"), errdetail("Failed on DSA request of size %zu.", size)));
+      }
+      return InvalidDsaPointer;
     }
 
     LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
@@ -706,15 +706,15 @@ dsa_allocate_extended(dsa_area *area, size_t size, int flags)
     if (segment_map == NULL)
     {
       /* Can't make any more segments: game over. */
-
-
+      LWLockRelease(DSA_AREA_LOCK(area));
+      dsa_free(area, span_pointer);
 
       /* Raise error unless asked not to. */
-
-
-
-
-
+      if ((flags & DSA_ALLOC_NO_OOM) == 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory"), errdetail("Failed on DSA request of size %zu.", size)));
+      }
+      return InvalidDsaPointer;
     }
 
     /*
@@ -726,7 +726,7 @@ dsa_allocate_extended(dsa_area *area, size_t size, int flags)
      */
     if (!FreePageManagerGet(segment_map->fpm, npages, &first_page))
     {
-
+      elog(FATAL, "dsa_allocate could not find %zu free pages", npages);
     }
     LWLockRelease(DSA_AREA_LOCK(area));
 
@@ -792,11 +792,11 @@ dsa_allocate_extended(dsa_area *area, size_t size, int flags)
   if (!DsaPointerIsValid(result))
   {
     /* Raise error unless asked not to. */
-
-
-
-
-
+    if ((flags & DSA_ALLOC_NO_OOM) == 0)
+    {
+      ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory"), errdetail("Failed on DSA request of size %zu.", size)));
+    }
+    return InvalidDsaPointer;
   }
 
   /* Zero-initialize the memory if requested. */
@@ -885,8 +885,8 @@ dsa_free(dsa_area *area, dsa_pointer dp)
      * highest-numbered fullness class, which is never scanned for free
      * chunks.  We must move it to the next-lower fullness class.
      */
-
-
+    unlink_span(area, span);
+    add_span_to_fullness_class(area, span, span_pointer, DSA_FULLNESS_CLASSES - 2);
 
     /*
      * If this is the only span, and there is no active span, then we
@@ -906,7 +906,7 @@ dsa_free(dsa_area *area, dsa_pointer dp)
      * will be very inefficient if we deallocate and reallocate the block
      * every time.
      */
-
+    destroy_superblock(area, span_pointer);
   }
 
   LWLockRelease(DSA_SCLASS_LOCK(area, size_class));
@@ -956,15 +956,15 @@ dsa_get_address(dsa_area *area, dsa_pointer dp)
 void
 dsa_pin(dsa_area *area)
 {
-
-
-
-
-
-
-
-
-
+  LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+  if (area->control->pinned)
+  {
+    LWLockRelease(DSA_AREA_LOCK(area));
+    elog(ERROR, "dsa_area already pinned");
+  }
+  area->control->pinned = true;
+  ++area->control->refcnt;
+  LWLockRelease(DSA_AREA_LOCK(area));
 }
 
 /*
@@ -975,16 +975,16 @@ dsa_pin(dsa_area *area)
 void
 dsa_unpin(dsa_area *area)
 {
-
-
-
-
-
-
-
-
-
-
+  LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+  Assert(area->control->refcnt > 1);
+  if (!area->control->pinned)
+  {
+    LWLockRelease(DSA_AREA_LOCK(area));
+    elog(ERROR, "dsa_area not pinned");
+  }
+  area->control->pinned = false;
+  --area->control->refcnt;
+  LWLockRelease(DSA_AREA_LOCK(area));
 }
 
 /*
@@ -999,9 +999,9 @@ dsa_unpin(dsa_area *area)
 void
 dsa_set_size_limit(dsa_area *area, size_t limit)
 {
-
-
-
+  LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+  area->control->max_total_segment_size = limit;
+  LWLockRelease(DSA_AREA_LOCK(area));
 }
 
 /*
@@ -1011,44 +1011,44 @@ dsa_set_size_limit(dsa_area *area, size_t limit)
 void
 dsa_trim(dsa_area *area)
 {
+  int size_class;
 
+  /*
+   * Trim in reverse pool order so we get to the spans-of-spans last, just
+   * in case any become entirely free while processing all the other pools.
+   */
+  for (size_class = DSA_NUM_SIZE_CLASSES - 1; size_class >= 0; --size_class)
+  {
+    dsa_area_pool *pool = &area->control->pools[size_class];
+    dsa_pointer span_pointer;
 
+    if (size_class == DSA_SCLASS_SPAN_LARGE)
+    {
+      /* Large object frees give back segments aggressively already. */
+      continue;
+    }
 
+    /*
+     * Search fullness class 1 only.  That is where we expect to find an
+     * entirely empty superblock (entirely empty superblocks in other
+     * fullness classes are returned to the free page map by dsa_free).
+     */
+    LWLockAcquire(DSA_SCLASS_LOCK(area, size_class), LW_EXCLUSIVE);
+    span_pointer = pool->spans[1];
+    while (DsaPointerIsValid(span_pointer))
+    {
+      dsa_area_span *span = dsa_get_address(area, span_pointer);
+      dsa_pointer next = span->nextspan;
 
+      if (span->nallocatable == span->nmax)
+      {
+        destroy_superblock(area, span_pointer);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      span_pointer = next;
+    }
+    LWLockRelease(DSA_SCLASS_LOCK(area, size_class));
+  }
 }
 
 /*
@@ -1058,93 +1058,96 @@ dsa_trim(dsa_area *area)
 void
 dsa_dump(dsa_area *area)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  size_t i, j;
+
+  /*
+   * Note: This gives an inconsistent snapshot as it acquires and releases
+   * individual locks as it goes...
+   */
+
+  LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+  check_for_freed_segments_locked(area);
+  fprintf(stderr, "dsa_area handle %x:\n", area->control->handle);
+  fprintf(stderr, "  max_total_segment_size: %zu\n", area->control->max_total_segment_size);
+  fprintf(stderr, "  total_segment_size: %zu\n", area->control->total_segment_size);
+  fprintf(stderr, "  refcnt: %d\n", area->control->refcnt);
+  fprintf(stderr, "  pinned: %c\n", area->control->pinned ? 't' : 'f');
+  fprintf(stderr, "  segment bins:\n");
+  for (i = 0; i < DSA_NUM_SEGMENT_BINS; ++i)
+  {
+    if (area->control->segment_bins[i] != DSA_SEGMENT_INDEX_NONE)
+    {
+      dsa_segment_index segment_index;
+
+      fprintf(stderr, "    segment bin %zu (at least %d contiguous pages free):\n", i, 1 << (i - 1));
+      segment_index = area->control->segment_bins[i];
+      while (segment_index != DSA_SEGMENT_INDEX_NONE)
+      {
+        dsa_segment_map *segment_map;
+
+        segment_map = get_segment_by_index(area, segment_index);
+
+        fprintf(stderr,
+            "      segment index %zu, usable_pages = %zu, "
+            "contiguous_pages = %zu, mapped at %p\n",
+            segment_index, segment_map->header->usable_pages, fpm_largest(segment_map->fpm), segment_map->mapped_address);
+        segment_index = segment_map->header->next;
+      }
+    }
+  }
+  LWLockRelease(DSA_AREA_LOCK(area));
+
+  fprintf(stderr, "  pools:\n");
+  for (i = 0; i < DSA_NUM_SIZE_CLASSES; ++i)
+  {
+    bool found = false;
+
+    LWLockAcquire(DSA_SCLASS_LOCK(area, i), LW_EXCLUSIVE);
+    for (j = 0; j < DSA_FULLNESS_CLASSES; ++j)
+    {
+      if (DsaPointerIsValid(area->control->pools[i].spans[j]))
+      {
+        found = true;
+      }
+    }
+    if (found)
+    {
+      if (i == DSA_SCLASS_BLOCK_OF_SPANS)
+      {
+        fprintf(stderr, "    pool for blocks of span objects:\n");
+      }
+      else if (i == DSA_SCLASS_SPAN_LARGE)
+      {
+        fprintf(stderr, "    pool for large object spans:\n");
+      }
+      else
+      {
+        fprintf(stderr, "    pool for size class %zu (object size %hu bytes):\n", i, dsa_size_classes[i]);
+      }
+      for (j = 0; j < DSA_FULLNESS_CLASSES; ++j)
+      {
+        if (!DsaPointerIsValid(area->control->pools[i].spans[j]))
+        {
+          fprintf(stderr, "      fullness class %zu is empty\n", j);
+        }
+        else
+        {
+          dsa_pointer span_pointer = area->control->pools[i].spans[j];
+
+          fprintf(stderr, "      fullness class %zu:\n", j);
+          while (DsaPointerIsValid(span_pointer))
+          {
+            dsa_area_span *span;
+
+            span = dsa_get_address(area, span_pointer);
+            fprintf(stderr, "        span descriptor at " DSA_POINTER_FORMAT ", superblock at " DSA_POINTER_FORMAT ", pages = %zu, objects free = %hu/%hu\n", span_pointer, span->start, span->npages, span->nallocatable, span->nmax);
+            span_pointer = span->nextspan;
+          }
+        }
+      }
+    }
+    LWLockRelease(DSA_SCLASS_LOCK(area, i));
+  }
 }
 
 /*
@@ -1186,7 +1189,7 @@ create_internal(void *place, size_t size, int tranche_id, dsm_handle control_han
   /* Sanity check on the space we have to work in. */
   if (size < dsa_minimum_size())
   {
-
+    elog(ERROR, "dsa_area space must be at least %zu, but %zu provided", dsa_minimum_size(), size);
   }
 
   /* Now figure out how much space is usable */
@@ -1301,7 +1304,7 @@ attach_internal(void *place, dsm_segment *segment, dsa_handle handle)
   if (control->refcnt == 0)
   {
     /* We can't attach to a DSA area that has already been destroyed. */
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not attach to dynamic shared area")));
   }
   ++control->refcnt;
   area->freed_segment_counter = area->control->freed_segment_counter;
@@ -1381,25 +1384,25 @@ transfer_first_span(dsa_area *area, dsa_area_pool *pool, int fromclass, int tocl
   }
 
   /* Remove span from head of source list. */
-
-
-
-
-
-
-
+  span = dsa_get_address(area, span_pointer);
+  pool->spans[fromclass] = span->nextspan;
+  if (DsaPointerIsValid(span->nextspan))
+  {
+    nextspan = (dsa_area_span *)dsa_get_address(area, span->nextspan);
+    nextspan->prevspan = InvalidDsaPointer;
+  }
 
   /* Add span to head of target list. */
+  span->nextspan = pool->spans[toclass];
+  pool->spans[toclass] = span_pointer;
+  if (DsaPointerIsValid(span->nextspan))
+  {
+    nextspan = (dsa_area_span *)dsa_get_address(area, span->nextspan);
+    nextspan->prevspan = span_pointer;
+  }
+  span->fclass = toclass;
 
-
-
-
-
-
-
-
-
-
+  return true;
 }
 
 /*
@@ -1430,7 +1433,7 @@ alloc_object(dsa_area *area, int size_class)
    */
   if (!DsaPointerIsValid(pool->spans[1]) && !ensure_active_superblock(area, pool, size_class))
   {
-
+    result = InvalidDsaPointer;
   }
   else
   {
@@ -1461,7 +1464,7 @@ alloc_object(dsa_area *area, int size_class)
     /* If it's now full, move it to the highest-numbered fullness class. */
     if (span->nallocatable == 0)
     {
-
+      transfer_first_span(area, pool, 1, DSA_FULLNESS_CLASSES - 1);
     }
   }
 
@@ -1540,71 +1543,71 @@ ensure_active_superblock(dsa_area *area, dsa_area_pool *pool, int size_class)
       dsa_area_span *prevspan;
       dsa_pointer next_span_pointer;
 
-
-
+      span = (dsa_area_span *)dsa_get_address(area, span_pointer);
+      next_span_pointer = span->nextspan;
 
       /* Figure out what fullness class should contain this span. */
-
+      tfclass = (nmax - span->nallocatable) * (DSA_FULLNESS_CLASSES - 1) / nmax;
 
       /* Look up next span. */
-
-
-
-
-
-
-
-
+      if (DsaPointerIsValid(span->nextspan))
+      {
+        nextspan = (dsa_area_span *)dsa_get_address(area, span->nextspan);
+      }
+      else
+      {
+        nextspan = NULL;
+      }
 
       /*
        * If utilization has dropped enough that this now belongs in some
        * other fullness class, move it there.
        */
+      if (tfclass < fclass)
+      {
+        /* Remove from the current fullness class list. */
+        if (pool->spans[fclass] == span_pointer)
+        {
+          /* It was the head; remove it. */
+          Assert(!DsaPointerIsValid(span->prevspan));
+          pool->spans[fclass] = span->nextspan;
+          if (nextspan != NULL)
+          {
+            nextspan->prevspan = InvalidDsaPointer;
+          }
+        }
+        else
+        {
+          /* It was not the head. */
+          Assert(DsaPointerIsValid(span->prevspan));
+          prevspan = (dsa_area_span *)dsa_get_address(area, span->prevspan);
+          prevspan->nextspan = span->nextspan;
+        }
+        if (nextspan != NULL)
+        {
+          nextspan->prevspan = span->prevspan;
+        }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        /* Push onto the head of the new fullness class list. */
+        span->nextspan = pool->spans[tfclass];
+        pool->spans[tfclass] = span_pointer;
+        span->prevspan = InvalidDsaPointer;
+        if (DsaPointerIsValid(span->nextspan))
+        {
+          nextspan = (dsa_area_span *)dsa_get_address(area, span->nextspan);
+          nextspan->prevspan = span_pointer;
+        }
+        span->fclass = tfclass;
+      }
 
       /* Advance to next span on list. */
-
+      span_pointer = next_span_pointer;
     }
 
     /* Stop now if we found a suitable block. */
     if (DsaPointerIsValid(pool->spans[1]))
     {
-
+      return true;
     }
   }
 
@@ -1621,12 +1624,12 @@ ensure_active_superblock(dsa_area *area, dsa_area_pool *pool, int size_class)
   {
     if (transfer_first_span(area, pool, fclass, 1))
     {
-
+      return true;
     }
   }
   if (!DsaPointerIsValid(pool->spans[1]) && transfer_first_span(area, pool, 0, 1))
   {
-
+    return true;
   }
 
   /*
@@ -1643,7 +1646,7 @@ ensure_active_superblock(dsa_area *area, dsa_area_pool *pool, int size_class)
     span_pointer = alloc_object(area, DSA_SCLASS_BLOCK_OF_SPANS);
     if (!DsaPointerIsValid(span_pointer))
     {
-
+      return false;
     }
     npages = DSA_PAGES_PER_SUPERBLOCK;
   }
@@ -1656,8 +1659,8 @@ ensure_active_superblock(dsa_area *area, dsa_area_pool *pool, int size_class)
     segment_map = make_new_segment(area, npages);
     if (segment_map == NULL)
     {
-
-
+      LWLockRelease(DSA_AREA_LOCK(area));
+      return false;
     }
   }
 
@@ -1667,7 +1670,7 @@ ensure_active_superblock(dsa_area *area, dsa_area_pool *pool, int size_class)
    */
   if (!FreePageManagerGet(segment_map->fpm, npages, &first_page))
   {
-
+    elog(FATAL, "dsa_allocate could not find %zu free pages for superblock", npages);
   }
   LWLockRelease(DSA_AREA_LOCK(area));
 
@@ -1729,13 +1732,13 @@ get_segment_by_index(dsa_area *area, dsa_segment_index index)
     /* It's an error to try to access an unused slot. */
     if (handle == DSM_HANDLE_INVALID)
     {
-
+      elog(ERROR, "dsa_area could not attach to a segment that has been freed");
     }
 
     segment = dsm_attach(handle);
     if (segment == NULL)
     {
-
+      elog(ERROR, "dsa_area could not attach to segment");
     }
     if (area->mapping_pinned)
     {
@@ -1786,61 +1789,61 @@ get_segment_by_index(dsa_area *area, dsa_segment_index index)
 static void
 destroy_superblock(dsa_area *area, dsa_pointer span_pointer)
 {
+  dsa_area_span *span = dsa_get_address(area, span_pointer);
+  int size_class = span->size_class;
+  dsa_segment_map *segment_map;
 
+  /* Remove it from its fullness class list. */
+  unlink_span(area, span);
 
+  /*
+   * Note: Here we acquire the area lock while we already hold a per-pool
+   * lock.  We never hold the area lock and then take a pool lock, or we
+   * could deadlock.
+   */
+  LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+  check_for_freed_segments_locked(area);
+  segment_map = get_segment_by_index(area, DSA_EXTRACT_SEGMENT_NUMBER(span->start));
+  FreePageManagerPut(segment_map->fpm, DSA_EXTRACT_OFFSET(span->start) / FPM_PAGE_SIZE, span->npages);
+  /* Check if the segment is now entirely free. */
+  if (fpm_largest(segment_map->fpm) == segment_map->header->usable_pages)
+  {
+    dsa_segment_index index = get_segment_index(area, segment_map);
 
+    /* If it's not the segment with extra control data, free it. */
+    if (index != 0)
+    {
+      /*
+       * Give it back to the OS, and allow other backends to detect that
+       * they need to detach.
+       */
+      unlink_segment(area, segment_map);
+      segment_map->header->freed = true;
+      Assert(area->control->total_segment_size >= segment_map->header->size);
+      area->control->total_segment_size -= segment_map->header->size;
+      dsm_unpin_segment(dsm_segment_handle(segment_map->segment));
+      dsm_detach(segment_map->segment);
+      area->control->segment_handles[index] = DSM_HANDLE_INVALID;
+      ++area->control->freed_segment_counter;
+      segment_map->segment = NULL;
+      segment_map->header = NULL;
+      segment_map->mapped_address = NULL;
+    }
+  }
+  LWLockRelease(DSA_AREA_LOCK(area));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * Span-of-spans blocks store the span which describes them within the
+   * block itself, so freeing the storage implicitly frees the descriptor
+   * also.  If this is a block of any other type, we need to separately free
+   * the span object also.  This recursive call to dsa_free will acquire the
+   * span pool's lock.  We can't deadlock because the acquisition order is
+   * always some other pool and then the span pool.
+   */
+  if (size_class != DSA_SCLASS_BLOCK_OF_SPANS)
+  {
+    dsa_free(area, span_pointer);
+  }
 }
 
 static void
@@ -1869,18 +1872,18 @@ unlink_span(dsa_area *area, dsa_area_span *span)
 static void
 add_span_to_fullness_class(dsa_area *area, dsa_area_span *span, dsa_pointer span_pointer, int fclass)
 {
+  dsa_area_pool *pool = dsa_get_address(area, span->pool);
 
+  if (DsaPointerIsValid(pool->spans[fclass]))
+  {
+    dsa_area_span *head = dsa_get_address(area, pool->spans[fclass]);
 
-
-
-
-
-
-
-
-
-
-
+    head->prevspan = span_pointer;
+  }
+  span->prevspan = InvalidDsaPointer;
+  span->nextspan = pool->spans[fclass];
+  pool->spans[fclass] = span_pointer;
+  span->fclass = fclass;
 }
 
 /*
@@ -1923,8 +1926,8 @@ unlink_segment(dsa_area *area, dsa_segment_map *segment_map)
   {
     dsa_segment_map *prev;
 
-
-
+    prev = get_segment_by_index(area, segment_map->header->prev);
+    prev->header->next = segment_map->header->next;
   }
   else
   {
@@ -1935,8 +1938,8 @@ unlink_segment(dsa_area *area, dsa_segment_map *segment_map)
   {
     dsa_segment_map *next;
 
-
-
+    next = get_segment_by_index(area, segment_map->header->next);
+    next->header->prev = segment_map->header->prev;
   }
 }
 
@@ -1982,8 +1985,8 @@ get_best_segment(dsa_area *area, size_t npages)
       /* Not enough for the request, still enough for this bin. */
       if (contiguous_pages >= threshold && contiguous_pages < npages)
       {
-
-
+        segment_index = next_segment_index;
+        continue;
       }
 
       /* Re-bin it if it's no longer in the appropriate bin. */
@@ -2005,9 +2008,9 @@ get_best_segment(dsa_area *area, size_t npages)
         {
           dsa_segment_map *next;
 
-
-
-
+          next = get_segment_by_index(area, segment_map->header->next);
+          Assert(next->header->bin == new_bin);
+          next->header->prev = segment_index;
         }
 
         /*
@@ -2059,7 +2062,7 @@ make_new_segment(dsa_area *area, size_t requested_pages)
   }
   if (new_index == DSA_MAX_SEGMENTS)
   {
-
+    return NULL;
   }
 
   /*
@@ -2068,7 +2071,7 @@ make_new_segment(dsa_area *area, size_t requested_pages)
    */
   if (area->control->total_segment_size >= area->control->max_total_segment_size)
   {
-
+    return NULL;
   }
 
   /*
@@ -2099,7 +2102,7 @@ make_new_segment(dsa_area *area, size_t requested_pages)
   }
   if (total_size <= metadata_bytes)
   {
-
+    return NULL;
   }
   usable_pages = (total_size - metadata_bytes) / FPM_PAGE_SIZE;
   Assert(metadata_bytes + usable_pages * FPM_PAGE_SIZE <= total_size);
@@ -2111,34 +2114,34 @@ make_new_segment(dsa_area *area, size_t requested_pages)
      * We'll make an odd-sized segment, working forward from the requested
      * number of pages.
      */
-
-
+    usable_pages = requested_pages;
+    metadata_bytes = MAXALIGN(sizeof(dsa_segment_header)) + MAXALIGN(sizeof(FreePageManager)) + usable_pages * sizeof(dsa_pointer);
 
     /* Add padding up to next page boundary. */
-
-
-
-
-
+    if (metadata_bytes % FPM_PAGE_SIZE != 0)
+    {
+      metadata_bytes += FPM_PAGE_SIZE - (metadata_bytes % FPM_PAGE_SIZE);
+    }
+    total_size = metadata_bytes + usable_pages * FPM_PAGE_SIZE;
 
     /* Is that too large for dsa_pointer's addressing scheme? */
-
-
-
-
+    if (total_size > DSA_MAX_SEGMENT_SIZE)
+    {
+      return NULL;
+    }
 
     /* Would that exceed the limit? */
-
-
-
-
+    if (total_size > area->control->max_total_segment_size - area->control->total_segment_size)
+    {
+      return NULL;
+    }
   }
 
   /* Create the segment. */
   segment = dsm_create(total_size, 0);
   if (segment == NULL)
   {
-
+    return NULL;
   }
   dsm_pin_segment(segment);
   if (area->mapping_pinned)
@@ -2187,8 +2190,8 @@ make_new_segment(dsa_area *area, size_t requested_pages)
   {
     dsa_segment_map *next = get_segment_by_index(area, segment_map->header->next);
 
-
-
+    Assert(next->header->bin == segment_map->header->bin);
+    next->header->prev = new_index;
   }
 
   return segment_map;
@@ -2230,9 +2233,9 @@ check_for_freed_segments(dsa_area *area)
   if (unlikely(area->freed_segment_counter != freed_segment_counter))
   {
     /* Check all currently mapped segments to find what's been freed. */
-
-
-
+    LWLockAcquire(DSA_AREA_LOCK(area), LW_EXCLUSIVE);
+    check_for_freed_segments_locked(area);
+    LWLockRelease(DSA_AREA_LOCK(area));
   }
 }
 
@@ -2253,16 +2256,16 @@ check_for_freed_segments_locked(dsa_area *area)
   freed_segment_counter = area->control->freed_segment_counter;
   if (unlikely(area->freed_segment_counter != freed_segment_counter))
   {
-
-
-
-
-
-
-
-
-
-
-
+    for (i = 0; i <= area->high_segment_index; ++i)
+    {
+      if (area->segment_maps[i].header != NULL && area->segment_maps[i].header->freed)
+      {
+        dsm_detach(area->segment_maps[i].segment);
+        area->segment_maps[i].segment = NULL;
+        area->segment_maps[i].header = NULL;
+        area->segment_maps[i].mapped_address = NULL;
+      }
+    }
+    area->freed_segment_counter = freed_segment_counter;
   }
 }

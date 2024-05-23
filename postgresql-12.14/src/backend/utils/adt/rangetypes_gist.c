@@ -244,7 +244,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
 
   if (RangeTypeGetOid(orig) != RangeTypeGetOid(new))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   typcache = range_get_typcache(fcinfo, RangeTypeGetOid(orig));
@@ -287,7 +287,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
        * Original range requires broadening.  (-inf; +inf) is most far
        * from normal range in this case.
        */
-
+      *penalty = 2 * CONTAIN_EMPTY_PENALTY;
     }
     else if (orig_lower.infinite || orig_upper.infinite)
     {
@@ -295,7 +295,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
        * (-inf, x) or (x, +inf) original ranges are closer to normal
        * ranges, so it's worse to mix it with empty ranges.
        */
-
+      *penalty = 3 * CONTAIN_EMPTY_PENALTY;
     }
     else
     {
@@ -308,38 +308,38 @@ range_gist_penalty(PG_FUNCTION_ARGS)
   else if (new_lower.infinite && new_upper.infinite)
   {
     /* Handle insertion of (-inf, +inf) range */
+    if (orig_lower.infinite && orig_upper.infinite)
+    {
+      /*
+       * Best case is inserting to (-inf, +inf) original range.
+       */
+      *penalty = 0.0;
+    }
+    else if (orig_lower.infinite || orig_upper.infinite)
+    {
+      /*
+       * When original range is (-inf, x) or (x, +inf) it requires
+       * broadening of original range (extension of one bound to
+       * infinity).
+       */
+      *penalty = INFINITE_BOUND_PENALTY;
+    }
+    else
+    {
+      /*
+       * Insertion to normal original range is least preferred.
+       */
+      *penalty = 2 * INFINITE_BOUND_PENALTY;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (RangeIsOrContainsEmpty(orig))
+    {
+      /*
+       * Original range is narrower when it doesn't contain empty
+       * ranges. Add additional penalty otherwise.
+       */
+      *penalty += CONTAIN_EMPTY_PENALTY;
+    }
   }
   else if (new_lower.infinite)
   {
@@ -355,7 +355,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
          * case original range is narrower. But we can't express that
          * in single float value.
          */
-
+        *penalty = 0.0;
       }
       else
       {
@@ -371,7 +371,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
           }
           else
           {
-
+            *penalty = DEFAULT_SUBTYPE_DIFF_PENALTY;
           }
         }
         else
@@ -414,14 +414,14 @@ range_gist_penalty(PG_FUNCTION_ARGS)
            * Get extension of original range using subtype_diff. Use
            * constant if subtype_diff unavailable.
            */
-
-
-
-
-
-
-
-
+          if (has_subtype_diff)
+          {
+            *penalty = call_subtype_diff(typcache, orig_lower.val, new_lower.val);
+          }
+          else
+          {
+            *penalty = DEFAULT_SUBTYPE_DIFF_PENALTY;
+          }
         }
         else
         {
@@ -465,7 +465,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
         }
         else
         {
-
+          diff += DEFAULT_SUBTYPE_DIFF_PENALTY;
         }
       }
       if (range_cmp_bounds(typcache, &new_upper, &orig_upper) > 0)
@@ -476,7 +476,7 @@ range_gist_penalty(PG_FUNCTION_ARGS)
         }
         else
         {
-
+          diff += DEFAULT_SUBTYPE_DIFF_PENALTY;
         }
       }
       *penalty = diff;
@@ -559,12 +559,12 @@ range_gist_picksplit(PG_FUNCTION_ARGS)
     else if ((biggest_class & ~CLS_CONTAIN_EMPTY) == CLS_LOWER_INF)
     {
       /* upper bound sorting split for (-inf, x) ranges */
-
+      range_gist_single_sorting_split(typcache, entryvec, v, true);
     }
     else if ((biggest_class & ~CLS_CONTAIN_EMPTY) == CLS_UPPER_INF)
     {
       /* lower bound sorting split for (x, +inf) ranges */
-
+      range_gist_single_sorting_split(typcache, entryvec, v, false);
     }
     else
     {
@@ -604,33 +604,33 @@ range_gist_picksplit(PG_FUNCTION_ARGS)
       int infCount, nonInfCount;
       int emptyCount, nonEmptyCount;
 
+      nonInfCount = count_in_classes[CLS_NORMAL] + count_in_classes[CLS_CONTAIN_EMPTY] + count_in_classes[CLS_EMPTY];
+      infCount = total_count - nonInfCount;
 
+      nonEmptyCount = count_in_classes[CLS_NORMAL] + count_in_classes[CLS_LOWER_INF] + count_in_classes[CLS_UPPER_INF] + count_in_classes[CLS_LOWER_INF | CLS_UPPER_INF];
+      emptyCount = total_count - nonEmptyCount;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (infCount > 0 && nonInfCount > 0 && (Abs(infCount - nonInfCount) <= Abs(emptyCount - nonEmptyCount)))
+      {
+        classes_groups[CLS_NORMAL] = SPLIT_RIGHT;
+        classes_groups[CLS_CONTAIN_EMPTY] = SPLIT_RIGHT;
+        classes_groups[CLS_EMPTY] = SPLIT_RIGHT;
+      }
+      else if (emptyCount > 0 && nonEmptyCount > 0)
+      {
+        classes_groups[CLS_NORMAL] = SPLIT_RIGHT;
+        classes_groups[CLS_LOWER_INF] = SPLIT_RIGHT;
+        classes_groups[CLS_UPPER_INF] = SPLIT_RIGHT;
+        classes_groups[CLS_LOWER_INF | CLS_UPPER_INF] = SPLIT_RIGHT;
+      }
+      else
+      {
+        /*
+         * Either total_count == emptyCount or total_count ==
+         * infCount.
+         */
+        classes_groups[biggest_class] = SPLIT_RIGHT;
+      }
     }
 
     range_gist_class_split(typcache, entryvec, v, classes_groups);
@@ -709,9 +709,9 @@ range_super_union(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
       return r2;
     }
     /* Else we'd better copy it (modify-in-place isn't safe) */
-
-
-
+    r2 = rangeCopy(r2);
+    range_set_contain_empty(r2);
+    return r2;
   }
   if (empty2)
   {
@@ -758,7 +758,7 @@ range_super_union(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
 
   if ((flags1 & RANGE_CONTAIN_EMPTY) || (flags2 & RANGE_CONTAIN_EMPTY))
   {
-
+    range_set_contain_empty(result);
   }
 
   return result;
@@ -772,45 +772,45 @@ range_gist_consistent_int(TypeCacheEntry *typcache, StrategyNumber strategy, Ran
 {
   switch (strategy)
   {
-  case RANGESTRAT_BEFORE:;
+  case RANGESTRAT_BEFORE:
     if (RangeIsEmpty(key) || RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
       return false;
     }
     return (!range_overright_internal(typcache, key, DatumGetRangeTypeP(query)));
-  case RANGESTRAT_OVERLEFT:;
+  case RANGESTRAT_OVERLEFT:
     if (RangeIsEmpty(key) || RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
       return false;
     }
     return (!range_after_internal(typcache, key, DatumGetRangeTypeP(query)));
-  case RANGESTRAT_OVERLAPS:;
+  case RANGESTRAT_OVERLAPS:
     return range_overlaps_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_OVERRIGHT:;
+  case RANGESTRAT_OVERRIGHT:
     if (RangeIsEmpty(key) || RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
       return false;
     }
     return (!range_before_internal(typcache, key, DatumGetRangeTypeP(query)));
-  case RANGESTRAT_AFTER:;
+  case RANGESTRAT_AFTER:
     if (RangeIsEmpty(key) || RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
       return false;
     }
     return (!range_overleft_internal(typcache, key, DatumGetRangeTypeP(query)));
-  case RANGESTRAT_ADJACENT:;
+  case RANGESTRAT_ADJACENT:
     if (RangeIsEmpty(key) || RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
       return false;
     }
     if (range_adjacent_internal(typcache, key, DatumGetRangeTypeP(query)))
     {
-
+      return true;
     }
     return range_overlaps_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINS:;
+  case RANGESTRAT_CONTAINS:
     return range_contains_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINED_BY:;
+  case RANGESTRAT_CONTAINED_BY:
 
     /*
      * Empty ranges are contained by anything, so if key is or
@@ -822,9 +822,9 @@ range_gist_consistent_int(TypeCacheEntry *typcache, StrategyNumber strategy, Ran
       return true;
     }
     return range_overlaps_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINS_ELEM:;
+  case RANGESTRAT_CONTAINS_ELEM:
     return range_contains_elem_internal(typcache, key, query);
-  case RANGESTRAT_EQ:;
+  case RANGESTRAT_EQ:
 
     /*
      * If query is empty, descend only if the key is or contains any
@@ -832,12 +832,12 @@ range_gist_consistent_int(TypeCacheEntry *typcache, StrategyNumber strategy, Ran
      */
     if (RangeIsEmpty(DatumGetRangeTypeP(query)))
     {
-
+      return RangeIsOrContainsEmpty(key);
     }
     return range_contains_internal(typcache, key, DatumGetRangeTypeP(query));
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized range strategy: %d", strategy);
+    return false; /* keep compiler quiet */
   }
 }
 
@@ -849,29 +849,29 @@ range_gist_consistent_leaf(TypeCacheEntry *typcache, StrategyNumber strategy, Ra
 {
   switch (strategy)
   {
-  case RANGESTRAT_BEFORE:;
+  case RANGESTRAT_BEFORE:
     return range_before_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_OVERLEFT:;
+  case RANGESTRAT_OVERLEFT:
     return range_overleft_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_OVERLAPS:;
+  case RANGESTRAT_OVERLAPS:
     return range_overlaps_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_OVERRIGHT:;
+  case RANGESTRAT_OVERRIGHT:
     return range_overright_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_AFTER:;
+  case RANGESTRAT_AFTER:
     return range_after_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_ADJACENT:;
+  case RANGESTRAT_ADJACENT:
     return range_adjacent_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINS:;
+  case RANGESTRAT_CONTAINS:
     return range_contains_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINED_BY:;
+  case RANGESTRAT_CONTAINED_BY:
     return range_contained_by_internal(typcache, key, DatumGetRangeTypeP(query));
-  case RANGESTRAT_CONTAINS_ELEM:;
+  case RANGESTRAT_CONTAINS_ELEM:
     return range_contains_elem_internal(typcache, key, query);
-  case RANGESTRAT_EQ:;
+  case RANGESTRAT_EQ:
     return range_eq_internal(typcache, key, DatumGetRangeTypeP(query));
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized range strategy: %d", strategy);
+    return false; /* keep compiler quiet */
   }
 }
 
@@ -961,61 +961,61 @@ range_gist_class_split(TypeCacheEntry *typcache, GistEntryVector *entryvec, GIST
 static void
 range_gist_single_sorting_split(TypeCacheEntry *typcache, GistEntryVector *entryvec, GIST_SPLITVEC *v, bool use_upper_bound)
 {
+  SingleBoundSortItem *sortItems;
+  RangeType *left_range = NULL;
+  RangeType *right_range = NULL;
+  OffsetNumber i, maxoff, split_idx;
 
+  maxoff = entryvec->n - 1;
 
+  sortItems = (SingleBoundSortItem *)palloc(maxoff * sizeof(SingleBoundSortItem));
 
+  /*
+   * Prepare auxiliary array and sort the values.
+   */
+  for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
+  {
+    RangeType *range = DatumGetRangeTypeP(entryvec->vector[i].key);
+    RangeBound bound2;
+    bool empty;
 
+    sortItems[i - 1].index = i;
+    /* Put appropriate bound into array */
+    if (use_upper_bound)
+    {
+      range_deserialize(typcache, range, &bound2, &sortItems[i - 1].bound, &empty);
+    }
+    else
+    {
+      range_deserialize(typcache, range, &sortItems[i - 1].bound, &bound2, &empty);
+    }
+    Assert(!empty);
+  }
 
+  qsort_arg(sortItems, maxoff, sizeof(SingleBoundSortItem), single_bound_cmp, typcache);
 
+  split_idx = maxoff / 2;
 
+  v->spl_nleft = 0;
+  v->spl_nright = 0;
 
+  for (i = 0; i < maxoff; i++)
+  {
+    int idx = sortItems[i].index;
+    RangeType *range = DatumGetRangeTypeP(entryvec->vector[idx].key);
 
+    if (i < split_idx)
+    {
+      PLACE_LEFT(range, idx);
+    }
+    else
+    {
+      PLACE_RIGHT(range, idx);
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  v->spl_ldatum = RangeTypePGetDatum(left_range);
+  v->spl_rdatum = RangeTypePGetDatum(right_range);
 }
 
 /*
@@ -1208,8 +1208,8 @@ range_gist_double_sorting_split(TypeCacheEntry *typcache, GistEntryVector *entry
    */
   if (context.first)
   {
-
-
+    range_gist_fallback_split(typcache, entryvec, v);
+    return;
   }
 
   /*
@@ -1265,7 +1265,7 @@ range_gist_double_sorting_split(TypeCacheEntry *typcache, GistEntryVector *entry
         else
         {
           /* Without subtype_diff, take all deltas as zero */
-
+          common_entries[common_entries_count].delta = 0;
         }
         common_entries_count++;
       }
@@ -1313,7 +1313,7 @@ range_gist_double_sorting_split(TypeCacheEntry *typcache, GistEntryVector *entry
        */
       if (i < context.common_left)
       {
-
+        PLACE_LEFT(range, idx);
       }
       else
       {
@@ -1378,7 +1378,7 @@ range_gist_consider_split(ConsiderSplitContext *context, RangeBound *right_lower
     }
     else
     {
-
+      overlap = max_left_count - min_left_count;
     }
 
     /* If there is no previous selection, select this split */
@@ -1443,7 +1443,7 @@ get_gist_range_class(RangeType *range)
     }
     if (flags & RANGE_CONTAIN_EMPTY)
     {
-
+      classNumber |= CLS_CONTAIN_EMPTY;
     }
   }
   return classNumber;
@@ -1455,11 +1455,11 @@ get_gist_range_class(RangeType *range)
 static int
 single_bound_cmp(const void *a, const void *b, void *arg)
 {
+  SingleBoundSortItem *i1 = (SingleBoundSortItem *)a;
+  SingleBoundSortItem *i2 = (SingleBoundSortItem *)b;
+  TypeCacheEntry *typcache = (TypeCacheEntry *)arg;
 
-
-
-
-
+  return range_cmp_bounds(typcache, &i1->bound, &i2->bound);
 }
 
 /*
@@ -1501,14 +1501,14 @@ common_entry_cmp(const void *i1, const void *i2)
   {
     return -1;
   }
-
-
-
-
-
-
-
-
+  else if (delta1 > delta2)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
 }
 
 /*
@@ -1526,5 +1526,5 @@ call_subtype_diff(TypeCacheEntry *typcache, Datum val1, Datum val2)
   {
     return value;
   }
-
+  return 0.0;
 }

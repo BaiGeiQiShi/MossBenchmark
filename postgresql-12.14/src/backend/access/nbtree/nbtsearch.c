@@ -291,31 +291,31 @@ _bt_moveright(Relation rel, BTScanInsert key, Buffer buf, bool forupdate, BTStac
       BlockNumber blkno = BufferGetBlockNumber(buf);
 
       /* upgrade our lock if necessary */
+      if (access == BT_READ)
+      {
+        LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+        LockBuffer(buf, BT_WRITE);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (P_INCOMPLETE_SPLIT(opaque))
+      {
+        _bt_finish_split(rel, buf, stack);
+      }
+      else
+      {
+        _bt_relbuf(rel, buf);
+      }
 
       /* re-acquire the lock in the right mode, and re-check */
-
-
+      buf = _bt_getbuf(rel, blkno, access);
+      continue;
     }
 
     if (P_IGNORE(opaque) || _bt_compare(rel, key, page, P_HIKEY) >= cmpval)
     {
       /* step right one page */
-
-
+      buf = _bt_relandgetbuf(rel, buf, opaque->btpo_next, access);
+      continue;
     }
     else
     {
@@ -325,7 +325,7 @@ _bt_moveright(Relation rel, BTScanInsert key, Buffer buf, bool forupdate, BTStac
 
   if (P_IGNORE(opaque))
   {
-
+    elog(ERROR, "fell off the end of index \"%s\"", RelationGetRelationName(rel));
   }
 
   return buf;
@@ -641,7 +641,7 @@ _bt_compare(Relation rel, BTScanInsert key, Page page, OffsetNumber offnum)
     {
       if (scankey->sk_flags & SK_BT_NULLS_FIRST)
       {
-
+        result = 1; /* NOT_NULL ">" NULL */
       }
       else
       {
@@ -759,12 +759,11 @@ _bt_compare(Relation rel, BTScanInsert key, Page page, OffsetNumber offnum)
  *		We need to be clever about the direction of scan, the search
  *		conditions, and the tree ordering.  We find the first item (or,
  *		if backwards scan, the last item) in the tree that satisfies the
- *		qualifications in the scan key.  On success exit, the page
- *containing the current index tuple is pinned but not locked, and data about
- *		the matching tuple(s) on the page has been loaded into
- *so->currPos. scan->xs_ctup.t_self is set to the heap TID of the current tuple,
- *		and if requested, scan->xs_itup points to a copy of the index
- *tuple.
+ *		qualifications in the scan key.  On success exit, the page containing
+ *		the current index tuple is pinned but not locked, and data about
+ *		the matching tuple(s) on the page has been loaded into so->currPos.
+ *		scan->xs_ctup.t_self is set to the heap TID of the current tuple,
+ *		and if requested, scan->xs_itup points to a copy of the index tuple.
  *
  * If there are no matching items in the index, we return false, with no
  * pins or locks held.
@@ -831,14 +830,14 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     }
     else if (blkno == P_NONE)
     {
-
-
+      _bt_parallel_done(scan);
+      return false;
     }
     else if (blkno != InvalidBlockNumber)
     {
       if (!_bt_parallel_readpage(scan, blkno, dir))
       {
-
+        return false;
       }
       goto readcomplete;
     }
@@ -979,8 +978,8 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
        */
       switch (cur->sk_strategy)
       {
-      case BTLessStrategyNumber:;
-      case BTLessEqualStrategyNumber:;
+      case BTLessStrategyNumber:
+      case BTLessEqualStrategyNumber:
         if (chosen == NULL)
         {
           if (ScanDirectionIsBackward(dir))
@@ -993,12 +992,12 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
           }
         }
         break;
-      case BTEqualStrategyNumber:;
+      case BTEqualStrategyNumber:
         /* override any non-equality choice */
         chosen = cur;
         break;
-      case BTGreaterEqualStrategyNumber:;
-      case BTGreaterStrategyNumber:;
+      case BTGreaterEqualStrategyNumber:
+      case BTGreaterStrategyNumber:
         if (chosen == NULL)
         {
           if (ScanDirectionIsForward(dir))
@@ -1065,8 +1064,8 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
       Assert(subkey->sk_flags & SK_ROW_MEMBER);
       if (subkey->sk_flags & SK_ISNULL)
       {
-
-
+        _bt_parallel_done(scan);
+        return false;
       }
       memcpy(inskey.scankeys + i, subkey, sizeof(ScanKeyData));
 
@@ -1095,15 +1094,15 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
           Assert(subkey->sk_flags & SK_ROW_MEMBER);
           if (subkey->sk_attno != keysCount + 1)
           {
-
+            break; /* out-of-sequence, can't use it */
           }
           if (subkey->sk_strategy != cur->sk_strategy)
           {
-
+            break; /* wrong direction, can't use it */
           }
           if (subkey->sk_flags & SK_ISNULL)
           {
-
+            break; /* can't use null keys */
           }
           Assert(keysCount < INDEX_MAX_KEYS);
           memcpy(inskey.scankeys + keysCount, subkey, sizeof(ScanKeyData));
@@ -1116,15 +1115,15 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
         }
         if (!used_all_subkeys)
         {
-
-
-
-
-
-
-
-
-
+          switch (strat_total)
+          {
+          case BTLessStrategyNumber:
+            strat_total = BTLessEqualStrategyNumber;
+            break;
+          case BTGreaterStrategyNumber:
+            strat_total = BTGreaterEqualStrategyNumber;
+            break;
+          }
         }
         break; /* done with outer loop */
       }
@@ -1160,7 +1159,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
         cmp_proc = get_opfamily_proc(rel->rd_opfamily[i], rel->rd_opcintype[i], cur->sk_subtype, BTORDER_PROC);
         if (!RegProcedureIsValid(cmp_proc))
         {
-
+          elog(ERROR, "missing support function %d(%u,%u) for attribute %d of index \"%s\"", BTORDER_PROC, rel->rd_opcintype[i], cur->sk_subtype, cur->sk_attno, RelationGetRelationName(rel));
         }
         ScanKeyEntryInitialize(inskey.scankeys + i, cur->sk_flags, cur->sk_attno, InvalidStrategy, cur->sk_subtype, cur->sk_collation, cmp_proc, cur->sk_argument);
       }
@@ -1182,7 +1181,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
    */
   switch (strat_total)
   {
-  case BTLessStrategyNumber:;
+  case BTLessStrategyNumber:
 
     /*
      * Find first item >= scankey, then back up one to arrive at last
@@ -1194,7 +1193,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     goback = true;
     break;
 
-  case BTLessEqualStrategyNumber:;
+  case BTLessEqualStrategyNumber:
 
     /*
      * Find first item > scankey, then back up one to arrive at last
@@ -1202,11 +1201,11 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
      * for a backward scan, so that is always the correct starting
      * position.)
      */
+    nextkey = true;
+    goback = true;
+    break;
 
-
-
-
-  case BTEqualStrategyNumber:;
+  case BTEqualStrategyNumber:
 
     /*
      * If a backward scan was specified, need to start with last equal
@@ -1232,7 +1231,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     }
     break;
 
-  case BTGreaterEqualStrategyNumber:;
+  case BTGreaterEqualStrategyNumber:
 
     /*
      * Find first item >= scankey.  (This is only used for forward
@@ -1242,7 +1241,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     goback = false;
     break;
 
-  case BTGreaterStrategyNumber:;
+  case BTGreaterStrategyNumber:
 
     /*
      * Find first item > scankey.  (This is only used for forward
@@ -1252,10 +1251,10 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     goback = false;
     break;
 
-  default:;;
+  default:
     /* can't get here, but keep compiler quiet */
-
-
+    elog(ERROR, "unrecognized strat_total: %d", (int)strat_total);
+    return false;
   }
 
   /* Initialize remaining insertion scan key fields */
@@ -1350,7 +1349,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
     _bt_drop_lock_and_maybe_pin(scan, &so->currPos);
   }
 
-readcomplete:;
+readcomplete:
   /* OK, itemIndex says what to return */
   currItem = &so->currPos.items[so->currPos.itemIndex];
   scan->xs_heaptid = currItem->heapTid;
@@ -1365,13 +1364,13 @@ readcomplete:;
 /*
  *	_bt_next() -- Get the next item in a scan.
  *
- *		On entry, so->currPos describes the current page, which may be
- *pinned but is not locked, and so->currPos.itemIndex identifies which item was
+ *		On entry, so->currPos describes the current page, which may be pinned
+ *		but is not locked, and so->currPos.itemIndex identifies which item was
  *		previously returned.
  *
- *		On successful exit, scan->xs_ctup.t_self is set to the TID of
- *the next heap tuple, and if requested, scan->xs_itup points to a copy of the
- *index tuple.  so->currPos is updated as needed.
+ *		On successful exit, scan->xs_ctup.t_self is set to the TID of the
+ *		next heap tuple, and if requested, scan->xs_itup points to a copy of
+ *		the index tuple.  so->currPos is updated as needed.
  *
  *		On failure exit (no more tuples), we release pin and set
  *		so->currPos.buf to InvalidBuffer.
@@ -1467,7 +1466,7 @@ _bt_readpage(IndexScanDesc scan, ScanDirection dir, OffsetNumber offnum)
     }
     else
     {
-
+      _bt_parallel_release(scan, BufferGetBlockNumber(so->currPos.buf));
     }
   }
 
@@ -1748,13 +1747,13 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
        * Seize the scan to get the current block number; if the scan has
        * ended already, bail out.
        */
-
-
-
-
-
-
-
+      status = _bt_parallel_seize(scan, &blkno);
+      BTScanPosUnpinIfPinned(so->currPos);
+      if (!status)
+      {
+        BTScanPosInvalidate(so->currPos);
+        return false;
+      }
     }
     else
     {
@@ -1827,22 +1826,22 @@ _bt_readnextpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
           break;
         }
       }
-
-
-
-
-
+      else if (scan->parallel_scan != NULL)
+      {
+        /* allow next page be processed by parallel worker */
+        _bt_parallel_release(scan, opaque->btpo_next);
+      }
 
       /* nope, keep going */
       if (scan->parallel_scan != NULL)
       {
-
-
-
-
-
-
-
+        _bt_relbuf(rel, so->currPos.buf);
+        status = _bt_parallel_seize(scan, &blkno);
+        if (!status)
+        {
+          BTScanPosInvalidate(so->currPos);
+          return false;
+        }
       }
       else
       {
@@ -1859,8 +1858,8 @@ _bt_readnextpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
      */
     if (so->currPos.currPage != blkno)
     {
-
-
+      BTScanPosUnpinIfPinned(so->currPos);
+      so->currPos.currPage = blkno;
     }
 
     /*
@@ -1934,11 +1933,11 @@ _bt_readnextpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
           break;
         }
       }
-
-
-
-
-
+      else if (scan->parallel_scan != NULL)
+      {
+        /* allow next page be processed by parallel worker */
+        _bt_parallel_release(scan, BufferGetBlockNumber(so->currPos.buf));
+      }
 
       /*
        * For parallel scans, get the last page scanned as it is quite
@@ -1948,14 +1947,14 @@ _bt_readnextpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
        */
       if (scan->parallel_scan != NULL)
       {
-
-
-
-
-
-
-
-
+        _bt_relbuf(rel, so->currPos.buf);
+        status = _bt_parallel_seize(scan, &blkno);
+        if (!status)
+        {
+          BTScanPosInvalidate(so->currPos);
+          return false;
+        }
+        so->currPos.buf = _bt_getbuf(rel, blkno, BT_READ);
       }
     }
   }
@@ -1964,8 +1963,7 @@ _bt_readnextpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
 }
 
 /*
- *	_bt_parallel_readpage() -- Read current page containing valid data for
- *scan
+ *	_bt_parallel_readpage() -- Read current page containing valid data for scan
  *
  * On success, release lock and maybe pin on buffer.  We return true to
  * indicate success.
@@ -1979,7 +1977,7 @@ _bt_parallel_readpage(IndexScanDesc scan, BlockNumber blkno, ScanDirection dir)
 
   if (!_bt_readnextpage(scan, blkno, dir))
   {
-
+    return false;
   }
 
   /* Drop the lock, and maybe the pin, on the current page */
@@ -2055,65 +2053,65 @@ _bt_walk_left(Relation rel, Buffer buf, Snapshot snapshot)
         /* Found desired page, return it */
         return buf;
       }
-
-
-
-
-
-
-
-
-
+      if (P_RIGHTMOST(opaque) || ++tries > 4)
+      {
+        break;
+      }
+      blkno = opaque->btpo_next;
+      buf = _bt_relandgetbuf(rel, buf, blkno, BT_READ);
+      page = BufferGetPage(buf);
+      TestForOldSnapshot(snapshot, rel, page);
+      opaque = (BTPageOpaque)PageGetSpecialPointer(page);
     }
 
     /* Return to the original page to see what's up */
     buf = _bt_relandgetbuf(rel, buf, obknum, BT_READ);
+    page = BufferGetPage(buf);
+    TestForOldSnapshot(snapshot, rel, page);
+    opaque = (BTPageOpaque)PageGetSpecialPointer(page);
+    if (P_ISDELETED(opaque))
+    {
+      /*
+       * It was deleted.  Move right to first nondeleted page (there
+       * must be one); that is the page that has acquired the deleted
+       * one's keyspace, so stepping left from it will take us where we
+       * want to be.
+       */
+      for (;;)
+      {
+        if (P_RIGHTMOST(opaque))
+        {
+          elog(ERROR, "fell off the end of index \"%s\"", RelationGetRelationName(rel));
+        }
+        blkno = opaque->btpo_next;
+        buf = _bt_relandgetbuf(rel, buf, blkno, BT_READ);
+        page = BufferGetPage(buf);
+        TestForOldSnapshot(snapshot, rel, page);
+        opaque = (BTPageOpaque)PageGetSpecialPointer(page);
+        if (!P_ISDELETED(opaque))
+        {
+          break;
+        }
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * Now return to top of loop, resetting obknum to point to this
+       * nondeleted page, and try again.
+       */
+    }
+    else
+    {
+      /*
+       * It wasn't deleted; the explanation had better be that the page
+       * to the left got split or deleted. Without this check, we'd go
+       * into an infinite loop if there's anything wrong.
+       */
+      if (opaque->btpo_prev == lblkno)
+      {
+        elog(ERROR, "could not find left sibling of block %u in index \"%s\"", obknum, RelationGetRelationName(rel));
+      }
+      /* Okay to try again with new lblkno value */
+    }
   }
 
   return InvalidBuffer;
@@ -2170,15 +2168,15 @@ _bt_get_endpoint(Relation rel, uint32 level, bool rightmost, Snapshot snapshot)
      */
     while (P_IGNORE(opaque) || (rightmost && !P_RIGHTMOST(opaque)))
     {
-
-
-
-
-
-
-
-
-
+      blkno = opaque->btpo_next;
+      if (blkno == P_NONE)
+      {
+        elog(ERROR, "fell off the end of index \"%s\"", RelationGetRelationName(rel));
+      }
+      buf = _bt_relandgetbuf(rel, buf, blkno, BT_READ);
+      page = BufferGetPage(buf);
+      TestForOldSnapshot(snapshot, rel, page);
+      opaque = (BTPageOpaque)PageGetSpecialPointer(page);
     }
 
     /* Done? */
@@ -2188,13 +2186,13 @@ _bt_get_endpoint(Relation rel, uint32 level, bool rightmost, Snapshot snapshot)
     }
     if (opaque->btpo.level < level)
     {
-
+      elog(ERROR, "btree level %u not found in index \"%s\"", level, RelationGetRelationName(rel));
     }
 
     /* Descend to leftmost or rightmost child page */
     if (rightmost)
     {
-
+      offnum = PageGetMaxOffsetNumber(page);
     }
     else
     {
@@ -2270,8 +2268,8 @@ _bt_endpoint(IndexScanDesc scan, ScanDirection dir)
   }
   else
   {
-
-
+    elog(ERROR, "invalid scan direction: %d", (int)dir);
+    start = 0; /* keep compiler quiet */
   }
 
   /* remember which buffer we have pinned */

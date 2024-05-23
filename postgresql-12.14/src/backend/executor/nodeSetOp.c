@@ -143,7 +143,7 @@ set_output_count(SetOpState *setopstate, SetOpStatePerGroup pergroup)
 
   switch (plannode->cmd)
   {
-  case SETOPCMD_INTERSECT:;
+  case SETOPCMD_INTERSECT:
     if (pergroup->numLeft > 0 && pergroup->numRight > 0)
     {
       setopstate->numOutput = 1;
@@ -153,10 +153,10 @@ set_output_count(SetOpState *setopstate, SetOpStatePerGroup pergroup)
       setopstate->numOutput = 0;
     }
     break;
-  case SETOPCMD_INTERSECT_ALL:;
+  case SETOPCMD_INTERSECT_ALL:
     setopstate->numOutput = (pergroup->numLeft < pergroup->numRight) ? pergroup->numLeft : pergroup->numRight;
     break;
-  case SETOPCMD_EXCEPT:;
+  case SETOPCMD_EXCEPT:
     if (pergroup->numLeft > 0 && pergroup->numRight == 0)
     {
       setopstate->numOutput = 1;
@@ -166,12 +166,12 @@ set_output_count(SetOpState *setopstate, SetOpStatePerGroup pergroup)
       setopstate->numOutput = 0;
     }
     break;
-  case SETOPCMD_EXCEPT_ALL:;
+  case SETOPCMD_EXCEPT_ALL:
     setopstate->numOutput = (pergroup->numLeft < pergroup->numRight) ? 0 : (pergroup->numLeft - pergroup->numRight);
     break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unrecognized set op: %d", (int)plannode->cmd);
+    break;
   }
 }
 
@@ -258,8 +258,8 @@ setop_retrieve_direct(SetOpState *setopstate)
       else
       {
         /* outer plan produced no tuples at all */
-
-
+        setopstate->setop_done = true;
+        return NULL;
       }
     }
 
@@ -457,7 +457,7 @@ setop_retrieve_hash_table(SetOpState *setopstate)
 
   /* No more groups */
   ExecClearTuple(resultTupleSlot);
-
+  return NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -581,61 +581,61 @@ ExecEndSetOp(SetOpState *node)
 void
 ExecReScanSetOp(SetOpState *node)
 {
+  ExecClearTuple(node->ps.ps_ResultTupleSlot);
+  node->setop_done = false;
+  node->numOutput = 0;
 
+  if (((SetOp *)node->ps.plan)->strategy == SETOP_HASHED)
+  {
+    /*
+     * In the hashed case, if we haven't yet built the hash table then we
+     * can just return; nothing done yet, so nothing to undo. If subnode's
+     * chgParam is not NULL then it will be re-scanned by ExecProcNode,
+     * else no reason to re-scan it at all.
+     */
+    if (!node->table_filled)
+    {
+      return;
+    }
 
+    /*
+     * If we do have the hash table and the subplan does not have any
+     * parameter changes, then we can just rescan the existing hash table;
+     * no need to build it again.
+     */
+    if (node->ps.lefttree->chgParam == NULL)
+    {
+      ResetTupleHashIterator(node->hashtable, &node->hashiter);
+      return;
+    }
+  }
 
+  /* Release first tuple of group, if we have made a copy */
+  if (node->grp_firstTuple != NULL)
+  {
+    heap_freetuple(node->grp_firstTuple);
+    node->grp_firstTuple = NULL;
+  }
 
+  /* Release any hashtable storage */
+  if (node->tableContext)
+  {
+    MemoryContextResetAndDeleteChildren(node->tableContext);
+  }
 
+  /* And rebuild empty hashtable if needed */
+  if (((SetOp *)node->ps.plan)->strategy == SETOP_HASHED)
+  {
+    ResetTupleHashTable(node->hashtable);
+    node->table_filled = false;
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * if chgParam of subnode is not null then plan will be re-scanned by
+   * first ExecProcNode.
+   */
+  if (node->ps.lefttree->chgParam == NULL)
+  {
+    ExecReScan(node->ps.lefttree);
+  }
 }

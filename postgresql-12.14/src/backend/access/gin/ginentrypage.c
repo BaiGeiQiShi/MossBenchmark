@@ -100,7 +100,7 @@ GinFormTuple(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCategory
   {
     if (errorTooBig)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds maximum %zu for index \"%s\"", (Size)newsize, (Size)GinMaxItemSize, RelationGetRelationName(ginstate->index))));
     }
     pfree(itup);
     return NULL;
@@ -165,18 +165,18 @@ ginReadTuple(GinState *ginstate, OffsetNumber attnum, IndexTuple itup, int *nite
       ipd = ginPostingListDecode((GinPostingList *)ptr, &ndecoded);
       if (nipd != ndecoded)
       {
-
+        elog(ERROR, "number of items mismatch in GIN entry tuple, %d in tuple header, %d decoded", nipd, ndecoded);
       }
     }
     else
     {
-
+      ipd = palloc(0);
     }
   }
   else
   {
-
-
+    ipd = (ItemPointer)palloc(sizeof(ItemPointerData) * nipd);
+    memcpy(ipd, ptr, sizeof(ItemPointerData) * nipd);
   }
   *nitems = nipd;
   return ipd;
@@ -209,8 +209,8 @@ GinFormInteriorTuple(IndexTuple itup, Page page, BlockNumber childblk)
   else
   {
     /* Copy the tuple as-is */
-
-
+    nitup = (IndexTuple)palloc(IndexTupleSize(itup));
+    memcpy(nitup, itup, IndexTupleSize(itup));
   }
 
   /* Now insert the correct downlink */
@@ -250,7 +250,7 @@ entryIsMoveRight(GinBtree btree, Page page)
 
   if (ginCompareAttEntries(btree->ginstate, btree->entryAttnum, btree->entryKey, btree->entryCategory, attnum, key, category) > 0)
   {
-
+    return true;
   }
 
   return false;
@@ -273,9 +273,9 @@ entryLocateEntry(GinBtree btree, GinBtreeStack *stack)
 
   if (btree->fullScan)
   {
-
-
-
+    stack->off = FirstOffsetNumber;
+    stack->predictNumber *= PageGetMaxOffsetNumber(page);
+    return btree->getLeftMostChild(btree, page);
   }
 
   low = FirstOffsetNumber;
@@ -345,8 +345,8 @@ entryLocateLeafEntry(GinBtree btree, GinBtreeStack *stack)
 
   if (btree->fullScan)
   {
-
-
+    stack->off = FirstOffsetNumber;
+    return true;
   }
 
   low = FirstOffsetNumber;
@@ -414,41 +414,41 @@ entryFindChildPtr(GinBtree btree, Page page, BlockNumber blkno, OffsetNumber sto
      * we hope, that needed pointer goes to right. It's true if there
      * wasn't a deletion
      */
-
-
-
-
-
-
-
-
-
+    for (i = storedOff + 1; i <= maxoff; i++)
+    {
+      itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, i));
+      if (GinGetDownlink(itup) == blkno)
+      {
+        return i;
+      }
+    }
+    maxoff = storedOff - 1;
   }
 
   /* last chance */
   for (i = FirstOffsetNumber; i <= maxoff; i++)
   {
-
-
-
-
-
+    itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, i));
+    if (GinGetDownlink(itup) == blkno)
+    {
+      return i;
+    }
   }
 
-
+  return InvalidOffsetNumber;
 }
 
 static BlockNumber
 entryGetLeftMostPage(GinBtree btree, Page page)
 {
+  IndexTuple itup;
 
+  Assert(!GinPageIsLeaf(page));
+  Assert(!GinPageIsData(page));
+  Assert(PageGetMaxOffsetNumber(page) >= FirstOffsetNumber);
 
-
-
-
-
-
-
+  itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, FirstOffsetNumber));
+  return GinGetDownlink(itup);
 }
 
 static bool
@@ -555,7 +555,7 @@ entryExecPlaceToPage(GinBtree btree, Buffer buf, GinBtreeStack *stack, void *ins
   placed = PageAddItem(page, (Item)insertData->entry, IndexTupleSize(insertData->entry), off, false, false);
   if (placed != off)
   {
-
+    elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(btree->index));
   }
 
   if (RelationNeedsWAL(btree->index) && !btree->isBuild)
@@ -608,10 +608,10 @@ entrySplitPage(GinBtree btree, Buffer origbuf, GinBtreeStack *stack, GinBtreeEnt
   {
     if (i == off)
     {
-
-
-
-
+      size = MAXALIGN(IndexTupleSize(insertData->entry));
+      memcpy(ptr, insertData->entry, size);
+      ptr += size;
+      totalsize += size + sizeof(ItemIdData);
     }
 
     itup = (IndexTuple)PageGetItem(lpage, PageGetItemId(lpage, i));
@@ -664,7 +664,7 @@ entrySplitPage(GinBtree btree, Buffer origbuf, GinBtreeStack *stack, GinBtreeEnt
 
     if (PageAddItem(page, (Item)itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
     {
-
+      elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(btree->index));
     }
     ptr += MAXALIGN(IndexTupleSize(itup));
   }
@@ -706,14 +706,14 @@ ginEntryFillRoot(GinBtree btree, Page root, BlockNumber lblkno, Page lpage, Bloc
   itup = GinFormInteriorTuple(getRightMostTuple(lpage), lpage, lblkno);
   if (PageAddItem(root, (Item)itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
   {
-
+    elog(ERROR, "failed to add item to index root page");
   }
   pfree(itup);
 
   itup = GinFormInteriorTuple(getRightMostTuple(rpage), rpage, rblkno);
   if (PageAddItem(root, (Item)itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
   {
-
+    elog(ERROR, "failed to add item to index root page");
   }
   pfree(itup);
 }

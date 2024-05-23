@@ -115,7 +115,7 @@ get_row_security_policies(Query *root, RangeTblEntry *rte, int rt_index, List **
   /* If this is not a normal relation, just return immediately */
   if (rte->relkind != RELKIND_RELATION && rte->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    return;
   }
 
   /* Switch to checkAsUser if it's set */
@@ -361,33 +361,33 @@ get_policies_for_relation(Relation relation, CmdType cmd, Oid user_id, List **pe
       /* Check whether the policy applies to the specified command type */
       switch (cmd)
       {
-      case CMD_SELECT:;
+      case CMD_SELECT:
         if (policy->polcmd == ACL_SELECT_CHR)
         {
           cmd_matches = true;
         }
         break;
-      case CMD_INSERT:;
+      case CMD_INSERT:
         if (policy->polcmd == ACL_INSERT_CHR)
         {
           cmd_matches = true;
         }
         break;
-      case CMD_UPDATE:;
+      case CMD_UPDATE:
         if (policy->polcmd == ACL_UPDATE_CHR)
         {
           cmd_matches = true;
         }
         break;
-      case CMD_DELETE:;
+      case CMD_DELETE:
         if (policy->polcmd == ACL_DELETE_CHR)
         {
           cmd_matches = true;
         }
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized policy command type %d", (int)cmd);
+        break;
       }
     }
 
@@ -429,32 +429,32 @@ get_policies_for_relation(Relation relation, CmdType cmd, Oid user_id, List **pe
      * always check all built-in restrictive policies, in name order,
      * before checking restrictive policies added by hooks, in name order.
      */
+    hook_policies = sort_policies_by_name(hook_policies);
 
+    foreach (item, hook_policies)
+    {
+      RowSecurityPolicy *policy = (RowSecurityPolicy *)lfirst(item);
 
-
-
-
-
-
-
-
-
-
+      if (check_role_for_policy(policy->roles, user_id))
+      {
+        *restrictive_policies = lappend(*restrictive_policies, policy);
+      }
+    }
   }
 
   if (row_security_policy_hook_permissive)
   {
     List *hook_policies = (*row_security_policy_hook_permissive)(cmd, relation);
 
+    foreach (item, hook_policies)
+    {
+      RowSecurityPolicy *policy = (RowSecurityPolicy *)lfirst(item);
 
-
-
-
-
-
-
-
-
+      if (check_role_for_policy(policy->roles, user_id))
+      {
+        *permissive_policies = lappend(*permissive_policies, policy);
+      }
+    }
   }
 }
 
@@ -511,11 +511,11 @@ row_security_policy_cmp(const void *a, const void *b)
   /* Guard against NULL policy names from extensions */
   if (pa->policy_name == NULL)
   {
-
+    return pb->policy_name == NULL ? 0 : 1;
   }
   if (pb->policy_name == NULL)
   {
-
+    return -1;
   }
 
   return strcmp(pa->policy_name, pb->policy_name);

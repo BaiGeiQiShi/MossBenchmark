@@ -114,7 +114,7 @@ IsTidEqualClause(RestrictInfo *rinfo, RelOptInfo *rel)
   /* The other argument must be a pseudoconstant */
   if (bms_is_member(rel->relid, other_relids) || contain_volatile_functions(other))
   {
-
+    return false;
   }
 
   return true; /* success */
@@ -146,7 +146,7 @@ IsTidEqualAnyClause(PlannerInfo *root, RestrictInfo *rinfo, RelOptInfo *rel)
   }
   if (!node->useOr)
   {
-
+    return false;
   }
   Assert(list_length(node->args) == 2);
   arg1 = linitial(node->args);
@@ -158,13 +158,13 @@ IsTidEqualAnyClause(PlannerInfo *root, RestrictInfo *rinfo, RelOptInfo *rel)
     /* The other argument must be a pseudoconstant */
     if (bms_is_member(rel->relid, pull_varnos(root, arg2)) || contain_volatile_functions(arg2))
     {
-
+      return false;
     }
 
     return true; /* success */
   }
 
-
+  return false;
 }
 
 /*
@@ -188,7 +188,7 @@ IsCurrentOfClause(RestrictInfo *rinfo, RelOptInfo *rel)
     return true;
   }
 
-
+  return false;
 }
 
 /*

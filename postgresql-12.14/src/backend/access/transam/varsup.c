@@ -55,7 +55,7 @@ GetNewTransactionId(bool isSubXact)
    */
   if (IsInParallelMode())
   {
-
+    elog(ERROR, "cannot assign TransactionIds during a parallel operation");
   }
 
   /*
@@ -72,7 +72,7 @@ GetNewTransactionId(bool isSubXact)
   /* safety check, we should never get this far in a HS standby */
   if (RecoveryInProgress())
   {
-
+    elog(ERROR, "cannot assign TransactionIds during recovery");
   }
 
   LWLockAcquire(XidGenLock, LW_EXCLUSIVE);
@@ -107,51 +107,57 @@ GetNewTransactionId(bool isSubXact)
     TransactionId xidWrapLimit = ShmemVariableCache->xidWrapLimit;
     Oid oldest_datoid = ShmemVariableCache->oldestXidDB;
 
-
+    LWLockRelease(XidGenLock);
 
     /*
      * To avoid swamping the postmaster with signals, we issue the autovac
      * request only once per 64K transaction starts.  This still gives
      * plenty of chances before we get into real trouble.
      */
+    if (IsUnderPostmaster && (xid % 65536) == 0)
+    {
+      SendPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER);
+    }
 
+    if (IsUnderPostmaster && TransactionIdFollowsOrEquals(xid, xidStopLimit))
+    {
+      char *oldest_datname = get_database_name(oldest_datoid);
 
+      /* complain even if that DB has disappeared */
+      if (oldest_datname)
+      {
+        ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("database is not accepting commands to avoid wraparound data loss in database \"%s\"", oldest_datname),
+                           errhint("Stop the postmaster and vacuum that database in single-user mode.\n"
+                                   "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("database is not accepting commands to avoid wraparound data loss in database with OID %u", oldest_datoid),
+                           errhint("Stop the postmaster and vacuum that database in single-user mode.\n"
+                                   "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+      }
+    }
+    else if (TransactionIdFollowsOrEquals(xid, xidWarnLimit))
+    {
+      char *oldest_datname = get_database_name(oldest_datoid);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /* complain even if that DB has disappeared */
+      if (oldest_datname)
+      {
+        ereport(WARNING, (errmsg("database \"%s\" must be vacuumed within %u transactions", oldest_datname, xidWrapLimit - xid), errhint("To avoid a database shutdown, execute a database-wide VACUUM in that database.\n"
+                                                                                                                                         "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+      }
+      else
+      {
+        ereport(WARNING, (errmsg("database with OID %u must be vacuumed within %u transactions", oldest_datoid, xidWrapLimit - xid), errhint("To avoid a database shutdown, execute a database-wide VACUUM in that database.\n"
+                                                                                                                                             "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+      }
+    }
 
     /* Re-acquire lock and start over */
-
-
-
+    LWLockAcquire(XidGenLock, LW_EXCLUSIVE);
+    full_xid = ShmemVariableCache->nextFullXid;
+    xid = XidFromFullTransactionId(full_xid);
   }
 
   /*
@@ -225,7 +231,7 @@ GetNewTransactionId(bool isSubXact)
     }
     else
     {
-
+      MyPgXact->overflowed = true;
     }
   }
 
@@ -256,47 +262,47 @@ ReadNextFullTransactionId(void)
 void
 AdvanceNextFullTransactionIdPastXid(TransactionId xid)
 {
+  FullTransactionId newNextFullXid;
+  TransactionId next_xid;
+  uint32 epoch;
 
+  /*
+   * It is safe to read nextFullXid without a lock, because this is only
+   * called from the startup process or single-process mode, meaning that no
+   * other process can modify it.
+   */
+  Assert(AmStartupProcess() || !IsUnderPostmaster);
 
+  /* Fast return if this isn't an xid high enough to move the needle. */
+  next_xid = XidFromFullTransactionId(ShmemVariableCache->nextFullXid);
+  if (!TransactionIdFollowsOrEquals(xid, next_xid))
+  {
+    return;
+  }
 
+  /*
+   * Compute the FullTransactionId that comes after the given xid.  To do
+   * this, we preserve the existing epoch, but detect when we've wrapped
+   * into a new epoch.  This is necessary because WAL records and 2PC state
+   * currently contain 32 bit xids.  The wrap logic is safe in those cases
+   * because the span of active xids cannot exceed one epoch at any given
+   * point in the WAL stream.
+   */
+  TransactionIdAdvance(xid);
+  epoch = EpochFromFullTransactionId(ShmemVariableCache->nextFullXid);
+  if (unlikely(xid < next_xid))
+  {
+    ++epoch;
+  }
+  newNextFullXid = FullTransactionIdFromEpochAndXid(epoch, xid);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /*
+   * We still need to take a lock to modify the value when there are
+   * concurrent readers.
+   */
+  LWLockAcquire(XidGenLock, LW_EXCLUSIVE);
+  ShmemVariableCache->nextFullXid = newNextFullXid;
+  LWLockRelease(XidGenLock);
 }
 
 /*
@@ -345,7 +351,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
   xidWrapLimit = oldest_datfrozenxid + (MaxTransactionId >> 1);
   if (xidWrapLimit < FirstNormalTransactionId)
   {
-
+    xidWrapLimit += FirstNormalTransactionId;
   }
 
   /*
@@ -359,7 +365,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
   xidStopLimit = xidWrapLimit - 1000000;
   if (xidStopLimit < FirstNormalTransactionId)
   {
-
+    xidStopLimit -= FirstNormalTransactionId;
   }
 
   /*
@@ -375,7 +381,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
   xidWarnLimit = xidStopLimit - 10000000;
   if (xidWarnLimit < FirstNormalTransactionId)
   {
-
+    xidWarnLimit -= FirstNormalTransactionId;
   }
 
   /*
@@ -396,7 +402,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
   xidVacLimit = oldest_datfrozenxid + autovacuum_freeze_max_age;
   if (xidVacLimit < FirstNormalTransactionId)
   {
-
+    xidVacLimit += FirstNormalTransactionId;
   }
 
   /* Grab lock for just long enough to set the new limit values */
@@ -422,7 +428,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
    */
   if (TransactionIdFollowsOrEquals(curXid, xidVacLimit) && IsUnderPostmaster && !InRecovery)
   {
-
+    SendPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER);
   }
 
   /* Give an immediate warning if past the wrap warn point */
@@ -439,23 +445,25 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
      * NULL, for example because the database just got dropped.  We'll
      * still warn, even though the warning might now be unnecessary.
      */
+    if (IsTransactionState())
+    {
+      oldest_datname = get_database_name(oldest_datoid);
+    }
+    else
+    {
+      oldest_datname = NULL;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (oldest_datname)
+    {
+      ereport(WARNING, (errmsg("database \"%s\" must be vacuumed within %u transactions", oldest_datname, xidWrapLimit - curXid), errhint("To avoid a database shutdown, execute a database-wide VACUUM in that database.\n"
+                                                                                                                                          "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+    }
+    else
+    {
+      ereport(WARNING, (errmsg("database with OID %u must be vacuumed within %u transactions", oldest_datoid, xidWrapLimit - curXid), errhint("To avoid a database shutdown, execute a database-wide VACUUM in that database.\n"
+                                                                                                                                              "You might also need to commit or roll back old prepared transactions, or drop stale replication slots.")));
+    }
   }
 }
 
@@ -487,19 +495,19 @@ ForceTransactionIdLimitUpdate(void)
 
   if (!TransactionIdIsNormal(oldestXid))
   {
-
+    return true; /* shouldn't happen, but just in case */
   }
   if (!TransactionIdIsValid(xidVacLimit))
   {
-
+    return true; /* this shouldn't happen anymore either */
   }
   if (TransactionIdFollowsOrEquals(nextXid, xidVacLimit))
   {
-
+    return true; /* past VacLimit, don't delay updating */
   }
   if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(oldestXidDB)))
   {
-
+    return true; /* could happen, per comments above */
   }
   return false;
 }
@@ -522,7 +530,7 @@ GetNewObjectId(void)
   /* safety check, we should never get this far in a HS standby */
   if (RecoveryInProgress())
   {
-
+    elog(ERROR, "cannot assign OIDs during recovery");
   }
 
   LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
@@ -555,8 +563,8 @@ GetNewObjectId(void)
       if (ShmemVariableCache->nextOid < ((Oid)FirstBootstrapObjectId))
       {
         /* wraparound in standalone mode (unlikely but possible) */
-
-
+        ShmemVariableCache->nextOid = FirstNormalObjectId;
+        ShmemVariableCache->oidCount = 0;
       }
     }
   }

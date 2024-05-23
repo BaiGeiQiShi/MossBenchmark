@@ -60,16 +60,23 @@ unicode_to_utf8word(uint32 c)
 {
   uint32 word;
 
-  if (c <= 0x7F) {
+  if (c <= 0x7F)
+  {
     word = c;
-  } else if (c <= 0x7FF) {
+  }
+  else if (c <= 0x7FF)
+  {
     word = (0xC0 | ((c >> 6) & 0x1F)) << 8;
     word |= 0x80 | (c & 0x3F);
-  } else if (c <= 0xFFFF) {
+  }
+  else if (c <= 0xFFFF)
+  {
     word = (0xE0 | ((c >> 12) & 0x0F)) << 16;
     word |= (0x80 | ((c >> 6) & 0x3F)) << 8;
     word |= 0x80 | (c & 0x3F);
-  } else {
+  }
+  else
+  {
     word = (0xF0 | ((c >> 18) & 0x07)) << 24;
     word |= (0x80 | ((c >> 12) & 0x3F)) << 16;
     word |= (0x80 | ((c >> 6) & 0x3F)) << 8;
@@ -84,16 +91,23 @@ utf8word_to_unicode(uint32 c)
 {
   uint32 ucs;
 
-  if (c <= 0x7F) {
+  if (c <= 0x7F)
+  {
     ucs = c;
-  } else if (c <= 0xFFFF) {
+  }
+  else if (c <= 0xFFFF)
+  {
     ucs = ((c >> 8) & 0x1F) << 6;
     ucs |= c & 0x3F;
-  } else if (c <= 0xFFFFFF) {
+  }
+  else if (c <= 0xFFFFFF)
+  {
     ucs = ((c >> 16) & 0x0F) << 12;
     ucs |= ((c >> 8) & 0x3F) << 6;
     ucs |= c & 0x3F;
-  } else {
+  }
+  else
+  {
     ucs = ((c >> 24) & 0x07) << 18;
     ucs |= ((c >> 16) & 0x3F) << 12;
     ucs |= ((c >> 8) & 0x3F) << 6;

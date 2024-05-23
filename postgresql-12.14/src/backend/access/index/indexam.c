@@ -14,13 +14,14 @@
  *		index_open		- open an index relation by relation OID
  *		index_close		- close an index relation
  *		index_beginscan - start a scan of an index with amgettuple
- *		index_beginscan_bitmap - start a scan of an index with
- *amgetbitmap index_rescan	- restart a scan of an index index_endscan
- *- end a scan index_insert	- insert an index tuple into a relation
+ *		index_beginscan_bitmap - start a scan of an index with amgetbitmap
+ *		index_rescan	- restart a scan of an index
+ *		index_endscan	- end a scan
+ *		index_insert	- insert an index tuple into a relation
  *		index_markpos	- mark a scan position
  *		index_restrpos	- restore a scan position
- *		index_parallelscan_estimate - estimate shared memory for
- *parallel scan index_parallelscan_initialize - initialize parallel scan
+ *		index_parallelscan_estimate - estimate shared memory for parallel scan
+ *		index_parallelscan_initialize - initialize parallel scan
  *		index_parallelrescan  - (re)start a parallel scan of an index
  *		index_beginscan_parallel - join parallel index scan
  *		index_getnext_tid	- get the next TID from a scan
@@ -128,8 +129,8 @@ index_open(Oid relationId, LOCKMODE lockmode)
  *
  *		If lockmode is not "NoLock", we then release the specified lock.
  *
- *		Note that it is often sensible to hold a lock beyond
- *index_close; in that case, the lock is released automatically at xact end.
+ *		Note that it is often sensible to hold a lock beyond index_close;
+ *		in that case, the lock is released automatically at xact end.
  * ----------------
  */
 void
@@ -693,8 +694,8 @@ index_vacuum_cleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 /* ----------------
  *		index_can_return
  *
- *		Does the index access method support index-only scans for the
- *given column?
+ *		Does the index access method support index-only scans for the given
+ *		column?
  * ----------------
  */
 bool
@@ -715,22 +716,23 @@ index_can_return(Relation indexRelation, int attno)
  *		index_getprocid
  *
  *		Index access methods typically require support routines that are
- *		not directly the implementation of any WHERE-clause query
- *operator and so cannot be kept in pg_amop.  Instead, such routines are kept in
- *pg_amproc.  These registered procedure OIDs are assigned numbers according to
- *a convention established by the access method. The general index code doesn't
- *know anything about the routines involved; it just builds an ordered list of
- *them for each attribute on which an index is defined.
+ *		not directly the implementation of any WHERE-clause query operator
+ *		and so cannot be kept in pg_amop.  Instead, such routines are kept
+ *		in pg_amproc.  These registered procedure OIDs are assigned numbers
+ *		according to a convention established by the access method.
+ *		The general index code doesn't know anything about the routines
+ *		involved; it just builds an ordered list of them for
+ *		each attribute on which an index is defined.
  *
  *		As of Postgres 8.3, support routines within an operator family
- *		are further subdivided by the "left type" and "right type" of
- *the query operator(s) that they support.  The "default" functions for a
+ *		are further subdivided by the "left type" and "right type" of the
+ *		query operator(s) that they support.  The "default" functions for a
  *		particular indexed attribute are those with both types equal to
  *		the index opclass' opcintype (note that this is subtly different
- *		from the indexed attribute's own type: it may be a
- *binary-compatible type instead).  Only the default functions are stored in
- *relcache entries --- access methods can use the syscache to look up
- *non-default functions.
+ *		from the indexed attribute's own type: it may be a binary-compatible
+ *		type instead).  Only the default functions are stored in relcache
+ *		entries --- access methods can use the syscache to look up non-default
+ *		functions.
  *
  *		This routine returns the requested default procedure OID for a
  *		particular indexed attribute.
@@ -805,7 +807,7 @@ index_getprocinfo(Relation irel, AttrNumber attnum, uint16 procnum)
      */
     if (!RegProcedureIsValid(procId))
     {
-
+      elog(ERROR, "missing support function %d for attribute %d of index \"%s\"", procnum, attnum, RelationGetRelationName(irel));
     }
 
     fmgr_info_cxt(procId, locinfo, irel->rd_indexcxt);
@@ -818,8 +820,8 @@ index_getprocinfo(Relation irel, AttrNumber attnum, uint16 procnum)
  *		index_store_float8_orderby_distances
  *
  *		Convert AM distance function's results (that can be inexact)
- *		to ORDER BY types and save them into
- *xs_orderbyvals/xs_orderbynulls for a possible recheck.
+ *		to ORDER BY types and save them into xs_orderbyvals/xs_orderbynulls
+ *		for a possible recheck.
  * ----------------
  */
 void
@@ -853,42 +855,42 @@ index_store_float8_orderby_distances(IndexScanDesc scan, Oid *orderByTypes, Inde
         scan->xs_orderbynulls[i] = true;
       }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (orderByTypes[i] == FLOAT4OID)
+    {
+      /* convert distance function's result to ORDER BY type */
+#ifndef USE_FLOAT4_BYVAL
+      /* must free any old value to avoid memory leakage */
+      if (!scan->xs_orderbynulls[i])
+      {
+        pfree(DatumGetPointer(scan->xs_orderbyvals[i]));
+      }
+#endif
+      if (distances && !distances[i].isnull)
+      {
+        scan->xs_orderbyvals[i] = Float4GetDatum((float4)distances[i].value);
+        scan->xs_orderbynulls[i] = false;
+      }
+      else
+      {
+        scan->xs_orderbyvals[i] = (Datum)0;
+        scan->xs_orderbynulls[i] = true;
+      }
+    }
+    else
+    {
+      /*
+       * If the ordering operator's return value is anything else, we
+       * don't know how to convert the float8 bound calculated by the
+       * distance function to that.  The executor won't actually need
+       * the order by values we return here, if there are no lossy
+       * results, so only insist on converting if the *recheck flag is
+       * set.
+       */
+      if (scan->xs_recheckorderby)
+      {
+        elog(ERROR, "ORDER BY operator must return float8 or float4 if the distance function is lossy");
+      }
+      scan->xs_orderbynulls[i] = true;
+    }
   }
 }

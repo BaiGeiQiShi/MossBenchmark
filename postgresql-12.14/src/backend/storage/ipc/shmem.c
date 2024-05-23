@@ -47,12 +47,12 @@
  *	of shared memory in a lot of different places (and changing
  *	things during development), this is important.
  *
- *		(c) In standard Unix-ish environments, individual backends do
- *not need to re-establish their local pointers into shared memory, because they
- *inherit correct values of those variables via fork() from the postmaster.
- *However, this does not work in the EXEC_BACKEND case. In ports using
- *EXEC_BACKEND, new backends have to set up their local pointers using the
- *method described in (b) above.
+ *		(c) In standard Unix-ish environments, individual backends do not
+ *	need to re-establish their local pointers into shared memory, because
+ *	they inherit correct values of those variables via fork() from the
+ *	postmaster.  However, this does not work in the EXEC_BACKEND case.
+ *	In ports using EXEC_BACKEND, new backends have to set up their local
+ *	pointers using the method described in (b) above.
  *
  *		(d) memory allocation model: shared memory can never be
  *	freed, once allocated.   Each hash table has its own free list,
@@ -157,7 +157,7 @@ ShmemAlloc(Size size)
   newSpace = ShmemAllocNoError(size);
   if (!newSpace)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory (%zu bytes requested)", size)));
   }
   return newSpace;
 }
@@ -201,7 +201,7 @@ ShmemAllocNoError(Size size)
   }
   else
   {
-
+    newSpace = NULL;
   }
 
   SpinLockRelease(ShmemLock);
@@ -239,7 +239,7 @@ ShmemAllocUnlocked(Size size)
   newFree = newStart + size;
   if (newFree > ShmemSegHdr->totalsize)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory (%zu bytes requested)", size)));
   }
   ShmemSegHdr->freeoffset = newFree;
 
@@ -258,7 +258,7 @@ ShmemAllocUnlocked(Size size)
 bool
 ShmemAddrIsValid(const void *addr)
 {
-
+  return (addr >= ShmemBase) && (addr < ShmemEnd);
 }
 
 /*
@@ -337,7 +337,7 @@ ShmemInitHash(const char *name, /* table string name for shmem index */
    */
   if (found)
   {
-
+    hash_flags |= HASH_ATTACH;
   }
 
   /* Pass location of hashtable header to hash_create */
@@ -380,9 +380,9 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
     if (IsUnderPostmaster)
     {
       /* Must be initializing a (non-standalone) backend */
-
-
-
+      Assert(shmemseghdr->index != NULL);
+      structPtr = shmemseghdr->index;
+      *foundPtr = true;
     }
     else
     {
@@ -408,8 +408,8 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 
   if (!result)
   {
-
-
+    LWLockRelease(ShmemIndexLock);
+    ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("could not create ShmemIndex entry for data structure \"%s\"", name)));
   }
 
   if (*foundPtr)
@@ -419,12 +419,14 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
      * already.  The size better be the same as the size we are trying to
      * initialize to, or there is a name conflict (or worse).
      */
-
-
-
-
-
-
+    if (result->size != size)
+    {
+      LWLockRelease(ShmemIndexLock);
+      ereport(ERROR, (errmsg("ShmemIndex entry size is wrong for data structure"
+                             " \"%s\": expected %zu, actual %zu",
+                         name, size, result->size)));
+    }
+    structPtr = result->location;
   }
   else
   {
@@ -433,9 +435,11 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
     if (structPtr == NULL)
     {
       /* out of memory; remove the failed ShmemIndex entry */
-
-
-
+      hash_search(ShmemIndex, name, HASH_REMOVE, NULL);
+      LWLockRelease(ShmemIndexLock);
+      ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("not enough shared memory for data structure"
+                                                             " \"%s\" (%zu bytes requested)",
+                                                          name, size)));
     }
     result->size = size;
     result->location = structPtr;
@@ -462,7 +466,7 @@ add_size(Size s1, Size s2)
   /* We are assuming Size is an unsigned type here... */
   if (result < s1 || result < s2)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested shared memory size overflows size_t")));
   }
   return result;
 }
@@ -483,7 +487,7 @@ mul_size(Size s1, Size s2)
   /* We are assuming Size is an unsigned type here... */
   if (result / s2 != s1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested shared memory size overflows size_t")));
   }
   return result;
 }

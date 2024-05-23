@@ -42,7 +42,7 @@ ts_lexize(PG_FUNCTION_ARGS)
     ptr = (TSLexeme *)DatumGetPointer(FunctionCall4(&dict->lexize, PointerGetDatum(dict->dictData), PointerGetDatum(VARDATA_ANY(in)), Int32GetDatum(VARSIZE_ANY_EXHDR(in)), PointerGetDatum(&dstate)));
     if (ptr != NULL)
     {
-
+      res = ptr;
     }
   }
 

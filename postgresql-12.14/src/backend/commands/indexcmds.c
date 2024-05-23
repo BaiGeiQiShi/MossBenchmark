@@ -97,8 +97,8 @@ struct ReindexIndexCallbackState
 
 /*
  * CheckIndexCompatible
- *		Determine whether an existing index definition is compatible
- *with a prospective index definition, such that the existing index storage
+ *		Determine whether an existing index definition is compatible with a
+ *		prospective index definition, such that the existing index storage
  *		could become the storage of the new index, avoiding a rebuild.
  *
  * 'heapRelation': the relation the index would apply to.
@@ -175,7 +175,7 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
   tuple = SearchSysCache1(AMNAME, PointerGetDatum(accessMethodName));
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("access method \"%s\" does not exist", accessMethodName)));
   }
   accessMethodForm = (Form_pg_am)GETSTRUCT(tuple);
   accessMethodId = accessMethodForm->oid;
@@ -203,7 +203,7 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
   tuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(oldId));
   if (!HeapTupleIsValid(tuple))
   {
-
+    elog(ERROR, "cache lookup failed for index %u", oldId);
   }
   indexForm = (Form_pg_index)GETSTRUCT(tuple);
 
@@ -213,8 +213,8 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
    */
   if (!(heap_attisnull(tuple, Anum_pg_index_indpred, NULL) && heap_attisnull(tuple, Anum_pg_index_indexprs, NULL) && indexForm->indisvalid))
   {
-
-
+    ReleaseSysCache(tuple);
+    return false;
   }
 
   /* Any change in operator class or collation breaks compatibility. */
@@ -235,7 +235,7 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
 
   if (!ret)
   {
-
+    return false;
   }
 
   /* For polymorphic opcintype, column type changes break compatibility. */
@@ -244,8 +244,8 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
   {
     if (IsPolymorphicType(get_opclass_input_type(classObjectId[i])) && TupleDescAttr(irel->rd_att, i)->atttypid != typeObjectId[i])
     {
-
-
+      ret = false;
+      break;
     }
   }
 
@@ -255,24 +255,24 @@ CheckIndexCompatible(Oid oldId, const char *accessMethodName, List *attributeLis
     Oid *old_operators, *old_procs;
     uint16 *old_strats;
 
-
-
+    RelationGetExclusionInfo(irel, &old_operators, &old_procs, &old_strats);
+    ret = memcmp(old_operators, indexInfo->ii_ExclusionOps, old_natts * sizeof(Oid)) == 0;
 
     /* Require an exact input type match for polymorphic operators. */
+    if (ret)
+    {
+      for (i = 0; i < old_natts && ret; i++)
+      {
+        Oid left, right;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        op_input_types(indexInfo->ii_ExclusionOps[i], &left, &right);
+        if ((IsPolymorphicType(left) || IsPolymorphicType(right)) && TupleDescAttr(irel->rd_att, i)->atttypid != typeObjectId[i])
+        {
+          ret = false;
+          break;
+        }
+      }
+    }
   }
 
   index_close(irel, NoLock);
@@ -329,7 +329,7 @@ WaitForOlderSnapshots(TransactionId limitXmin, bool progress)
   {
     if (!VirtualTransactionIdIsValid(old_snapshots[i]))
     {
-
+      continue; /* found uninteresting in previous cycle */
     }
 
     if (i > 0)
@@ -340,26 +340,26 @@ WaitForOlderSnapshots(TransactionId limitXmin, bool progress)
       int j;
       int k;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      newer_snapshots = GetCurrentVirtualXIDs(limitXmin, true, false, PROC_IS_AUTOVACUUM | PROC_IN_VACUUM, &n_newer_snapshots);
+      for (j = i; j < n_old_snapshots; j++)
+      {
+        if (!VirtualTransactionIdIsValid(old_snapshots[j]))
+        {
+          continue; /* found uninteresting in previous cycle */
+        }
+        for (k = 0; k < n_newer_snapshots; k++)
+        {
+          if (VirtualTransactionIdEquals(old_snapshots[j], newer_snapshots[k]))
+          {
+            break;
+          }
+        }
+        if (k >= n_newer_snapshots) /* not there anymore */
+        {
+          SetInvalidVirtualTransactionId(old_snapshots[j]);
+        }
+      }
+      pfree(newer_snapshots);
     }
 
     if (VirtualTransactionIdIsValid(old_snapshots[i]))
@@ -412,9 +412,9 @@ WaitForOlderSnapshots(TransactionId limitXmin, bool progress)
  *		the child of a constraint (only used when recursing)
  * 'is_alter_table': this is due to an ALTER rather than a CREATE operation.
  * 'check_rights': check for CREATE rights in namespace and tablespace.  (This
- *		should be true except when ALTER is deleting/recreating an
- *index.) 'check_not_in_use': check for table not already in use in current
- *session. This should be true unless caller is holding the table open, in which
+ *		should be true except when ALTER is deleting/recreating an index.)
+ * 'check_not_in_use': check for table not already in use in current session.
+ *		This should be true unless caller is holding the table open, in which
  *		case the caller had better have checked it earlier.
  * 'skip_build': make the catalog entries but don't create the index files
  * 'quiet': suppress the NOTICE chatter ordinarily provided for constraints.
@@ -522,11 +522,11 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
 
   if (numberOfKeyAttributes <= 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("must specify at least one column")));
   }
   if (numberOfAttributes > INDEX_MAX_KEYS)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_TOO_MANY_COLUMNS), errmsg("cannot use more than %d columns in an index", INDEX_MAX_KEYS)));
   }
 
   /*
@@ -560,12 +560,12 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
   /* Ensure that it makes sense to index this kind of relation */
   switch (rel->rd_rel->relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_MATVIEW:;
-  case RELKIND_PARTITIONED_TABLE:;
+  case RELKIND_RELATION:
+  case RELKIND_MATVIEW:
+  case RELKIND_PARTITIONED_TABLE:
     /* OK */
     break;
-  case RELKIND_FOREIGN_TABLE:;
+  case RELKIND_FOREIGN_TABLE:
 
     /*
      * Custom error message for FOREIGN TABLE since the term is close
@@ -573,9 +573,9 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
      */
     ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot create index on foreign table \"%s\"", RelationGetRelationName(rel))));
     break;
-  default:;;
-
-
+  default:
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table or materialized view", RelationGetRelationName(rel))));
+    break;
   }
 
   /*
@@ -601,7 +601,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
     }
     if (stmt->excludeOpNames)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot create exclusion constraints on partitioned table \"%s\"", RelationGetRelationName(rel))));
     }
   }
 
@@ -610,7 +610,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
    */
   if (RELATION_IS_OTHER_TEMP(rel))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot create indexes on temporary tables of other sessions")));
   }
 
   /*
@@ -637,7 +637,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
     aclresult = pg_namespace_aclcheck(namespaceId, root_save_userid, ACL_CREATE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceId));
     }
   }
 
@@ -667,7 +667,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
     aclresult = pg_tablespace_aclcheck(tablespaceId, root_save_userid, ACL_CREATE);
     if (aclresult != ACLCHECK_OK)
     {
-
+      aclcheck_error(aclresult, OBJECT_TABLESPACE, get_tablespace_name(tablespaceId));
     }
   }
 
@@ -682,7 +682,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
   }
   else if (tablespaceId == GLOBALTABLESPACE_OID)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("only shared relations can be placed in pg_global tablespace")));
   }
 
   /*
@@ -719,7 +719,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
 
     if (!HeapTupleIsValid(tuple))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("access method \"%s\" does not exist", accessMethodName)));
     }
   }
   accessMethodForm = (Form_pg_am)GETSTRUCT(tuple);
@@ -730,7 +730,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
 
   if (stmt->unique && !amRoutine->amcanunique)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("access method \"%s\" does not support unique indexes", accessMethodName)));
   }
   if (stmt->indexIncludingParams != NIL && !amRoutine->amcaninclude)
   {
@@ -738,11 +738,11 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
   }
   if (numberOfKeyAttributes > 1 && !amRoutine->amcanmulticol)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("access method \"%s\" does not support multicolumn indexes", accessMethodName)));
   }
   if (stmt->excludeOpNames && amRoutine->amgettuple == NULL)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("access method \"%s\" does not support exclusion constraints", accessMethodName)));
   }
 
   amcanorder = amRoutine->amcanorder;
@@ -811,15 +811,15 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
     {
       constraint_type = "UNIQUE";
     }
-
-
-
-
-
-
-
-
-
+    else if (stmt->excludeOpNames != NIL)
+    {
+      constraint_type = "EXCLUDE";
+    }
+    else
+    {
+      elog(ERROR, "unknown constraint type");
+      constraint_type = NULL; /* keep compiler quiet */
+    }
 
     /*
      * Verify that all the columns in the partition key appear in the
@@ -850,7 +850,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
       ptkey_eqop = get_opfamily_member(key->partopfamily[i], key->partopcintype[i], key->partopcintype[i], eq_strategy);
       if (!OidIsValid(ptkey_eqop))
       {
-
+        elog(ERROR, "missing operator %d(%u,%u) in partition opfamily %u", eq_strategy, key->partopcintype[i], key->partopcintype[i], key->partopfamily[i]);
       }
 
       /*
@@ -865,7 +865,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
       }
       else
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot match partition key to an index using access method \"%s\"", accessMethodName)));
       }
 
       /*
@@ -920,7 +920,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
 
     if (attno < 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("index creation on system columns is not supported")));
     }
   }
 
@@ -965,8 +965,8 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
     }
     else
     {
-
-
+      elog(ERROR, "unknown constraint type");
+      constraint_type = NULL; /* keep compiler quiet */
     }
 
     ereport(DEBUG1, (errmsg("%s %s will create implicit index \"%s\" for table \"%s\"", is_alter_table ? "ALTER TABLE / ADD" : "CREATE TABLE /", constraint_type, indexRelationName, RelationGetRelationName(rel))));
@@ -1191,8 +1191,8 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
               cldConstrOid = get_relation_idx_constraint_oid(childRelid, cldidxid);
               if (cldConstrOid == InvalidOid)
               {
-
-
+                index_close(cldidx, lockmode);
+                continue;
               }
             }
 
@@ -1261,14 +1261,14 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
               ielem->expr = map_variable_attnos((Node *)ielem->expr, 1, 0, attmap, maplen, InvalidOid, &found_whole_row);
               if (found_whole_row)
               {
-
+                elog(ERROR, "cannot convert whole-row table reference");
               }
             }
           }
           childStmt->whereClause = map_variable_attnos(stmt->whereClause, 1, 0, attmap, maplen, InvalidOid, &found_whole_row);
           if (found_whole_row)
           {
-
+            elog(ERROR, "cannot convert whole-row table reference");
           }
 
           /*
@@ -1302,7 +1302,7 @@ DefineIndex(Oid relationId, IndexStmt *stmt, Oid indexRelationId, Oid parentInde
         tup = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexRelationId));
         if (!HeapTupleIsValid(tup))
         {
-
+          elog(ERROR, "cache lookup failed for index %u", indexRelationId);
         }
         newtup = heap_copytuple(tup);
         ((Form_pg_index)GETSTRUCT(newtup))->indisvalid = false;
@@ -1576,7 +1576,7 @@ CheckPredicate(Expr *predicate)
    */
   if (CheckMutability(predicate))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("functions in index predicate must be marked IMMUTABLE")));
   }
 }
 
@@ -1667,7 +1667,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
 
       if (attn >= nkeycols)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("expressions are not supported in included columns")));
       }
       atttype = exprType(expr);
       attcollation = exprCollation(expr);
@@ -1708,7 +1708,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
          */
         if (CheckMutability((Expr *)expr))
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("functions in index expression must be marked IMMUTABLE")));
         }
       }
     }
@@ -1723,19 +1723,19 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
     {
       if (attribute->collation)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("including column does not support a collation")));
       }
       if (attribute->opclass)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("including column does not support an operator class")));
       }
       if (attribute->ordering != SORTBY_DEFAULT)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("including column does not support ASC/DESC options")));
       }
       if (attribute->nulls_ordering != SORTBY_NULLS_DEFAULT)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("including column does not support NULLS FIRST/LAST options")));
       }
 
       classOidP[attn] = InvalidOid;
@@ -1776,7 +1776,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
     {
       if (!OidIsValid(attcollation))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for index expression"), errhint("Use the COLLATE clause to set the collation explicitly.")));
       }
     }
     else
@@ -1844,7 +1844,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
        */
       if (get_commutator(opid) != opid)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("operator %s is not commutative", format_operator(opid)), errdetail("Only commutative operators can be used in exclusion constraints.")));
       }
 
       /*
@@ -1858,17 +1858,18 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
         Form_pg_opfamily opfform;
 
         /*
-         * attribute->opclass might not explicitly name the opfamily,         * so fetch the name of the selected opfamily for use in the
+         * attribute->opclass might not explicitly name the opfamily,
+         * so fetch the name of the selected opfamily for use in the
          * error message.
          */
+        opftuple = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamily));
+        if (!HeapTupleIsValid(opftuple))
+        {
+          elog(ERROR, "cache lookup failed for opfamily %u", opfamily);
+        }
+        opfform = (Form_pg_opfamily)GETSTRUCT(opftuple);
 
-
-
-
-
-
-
-
+        ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("operator %s is not a member of operator family \"%s\"", format_operator(opid), NameStr(opfform->opfname)), errdetail("The exclusion operator must be related to the index operator class for the constraint.")));
       }
 
       indexInfo->ii_ExclusionOps[attn] = opid;
@@ -1908,11 +1909,11 @@ ComputeIndexAttrs(IndexInfo *indexInfo, Oid *typeOidP, Oid *collationOidP, Oid *
       /* index AM does not support ordering */
       if (attribute->ordering != SORTBY_DEFAULT)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("access method \"%s\" does not support ASC/DESC options", accessMethodName)));
       }
       if (attribute->nulls_ordering != SORTBY_NULLS_DEFAULT)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("access method \"%s\" does not support NULLS FIRST/LAST options", accessMethodName)));
       }
     }
 
@@ -1956,7 +1957,7 @@ ResolveOpClass(List *opclass, Oid attrType, const char *accessMethodName, Oid ac
 
     if (strcmp(claname, "network_ops") == 0 || strcmp(claname, "timespan_ops") == 0 || strcmp(claname, "datetime_ops") == 0 || strcmp(claname, "lztext_ops") == 0 || strcmp(claname, "timestamp_ops") == 0 || strcmp(claname, "bigbox_ops") == 0)
     {
-
+      opclass = NIL;
     }
   }
 
@@ -1999,7 +2000,7 @@ ResolveOpClass(List *opclass, Oid attrType, const char *accessMethodName, Oid ac
 
   if (!HeapTupleIsValid(tuple))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("operator class \"%s\" does not exist for access method \"%s\"", NameListToString(opclass), accessMethodName)));
   }
 
   /*
@@ -2012,7 +2013,7 @@ ResolveOpClass(List *opclass, Oid attrType, const char *accessMethodName, Oid ac
 
   if (!IsBinaryCoercible(attrType, opInputType))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("operator class \"%s\" does not accept data type %s", NameListToString(opclass), format_type_be(attrType))));
   }
 
   ReleaseSysCache(tuple);
@@ -2098,7 +2099,7 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
   /* raise error if pg_opclass contains inconsistent data */
   if (nexact > 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("there are multiple default operator classes for data type %s", format_type_be(type_id))));
   }
 
   if (nexact == 1 || ncompatiblepreferred == 1 || (ncompatiblepreferred == 0 && ncompatible == 1))
@@ -2115,8 +2116,8 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
  *	Create a name for an implicitly created index, sequence, constraint,
  *	extended statistics, etc.
  *
- *	The parameters are typically: the original table name, the original
- *field name, and a "type" string (such as "seq" or "pkey").    The field name
+ *	The parameters are typically: the original table name, the original field
+ *	name, and a "type" string (such as "seq" or "pkey").    The field name
  *	and/or type can be NULL if not relevant.
  *
  *	The result is a palloc'd string.
@@ -2168,7 +2169,7 @@ makeObjectName(const char *name1, const char *name2, const char *label)
   {
     if (name1chars > name2chars)
     {
-
+      name1chars--;
     }
     else
     {
@@ -2199,7 +2200,7 @@ makeObjectName(const char *name1, const char *name2, const char *label)
   }
   else
   {
-
+    name[ndx] = '\0';
   }
 
   return name;
@@ -2326,7 +2327,7 @@ ChooseIndexNameAddition(List *colnames)
     buflen += strlen(buf + buflen);
     if (buflen >= NAMEDATALEN)
     {
-
+      break;
     }
   }
   return pstrdup(buf);
@@ -2479,8 +2480,8 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation, Oid relId, Oid oldRelI
    */
   if (relId != oldRelId && OidIsValid(oldRelId))
   {
-
-
+    UnlockRelationOid(state->locked_table_oid, table_lockmode);
+    state->locked_table_oid = InvalidOid;
   }
 
   /* If the relation does not exist, there's nothing more to do. */
@@ -2497,11 +2498,11 @@ RangeVarCallbackForReindexIndex(const RangeVar *relation, Oid relId, Oid oldRelI
   relkind = get_rel_relkind(relId);
   if (!relkind)
   {
-
+    return;
   }
   if (relkind != RELKIND_INDEX && relkind != RELKIND_PARTITIONED_INDEX)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not an index", relation->relname)));
   }
 
   /* Check permissions */
@@ -2620,11 +2621,11 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind, int 
 
     if (strcmp(objectName, get_database_name(objectOid)) != 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("can only reindex the currently open database")));
     }
     if (!pg_database_ownercheck(objectOid, GetUserId()))
     {
-
+      aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_DATABASE, objectName);
     }
   }
 
@@ -2682,13 +2683,13 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind, int 
     /* Skip temp tables of other backends; we can't reindex them at all */
     if (classtuple->relpersistence == RELPERSISTENCE_TEMP && !isTempNamespace(classtuple->relnamespace))
     {
-
+      continue;
     }
 
     /* Check user/system classification, and optionally skip */
     if (objectKind == REINDEX_OBJECT_SYSTEM && !IsSystemClass(relid, classtuple))
     {
-
+      continue;
     }
 
     /*
@@ -2701,7 +2702,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind, int 
      */
     if (classtuple->relisshared && !pg_class_ownercheck(relid, GetUserId()))
     {
-
+      continue;
     }
 
     /*
@@ -2730,7 +2731,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind, int 
      */
     if (relid == RelationRelationId)
     {
-
+      relids = lcons_oid(relid, relids);
     }
     else
     {
@@ -2766,7 +2767,7 @@ ReindexMultipleTables(const char *objectName, ReindexObjectType objectKind, int 
 
       if (result && (options & REINDEXOPT_VERBOSE))
       {
-
+        ereport(INFO, (errmsg("table \"%s.%s\" was reindexed", get_namespace_name(get_rel_namespace(relid)), get_rel_name(relid))));
       }
 
       PopActiveSnapshot();
@@ -2832,14 +2833,14 @@ ReindexRelationConcurrently(Oid relationOid, int options)
   if (options & REINDEXOPT_VERBOSE)
   {
     /* Save data needed by REINDEX VERBOSE in private context */
+    oldcontext = MemoryContextSwitchTo(private_context);
 
+    relationName = get_rel_name(relationOid);
+    relationNamespace = get_namespace_name(get_rel_namespace(relationOid));
 
+    pg_rusage_init(&ru0);
 
-
-
-
-
-
+    MemoryContextSwitchTo(oldcontext);
   }
 
   relkind = get_rel_relkind(relationOid);
@@ -2850,9 +2851,9 @@ ReindexRelationConcurrently(Oid relationOid, int options)
    */
   switch (relkind)
   {
-  case RELKIND_RELATION:;
-  case RELKIND_MATVIEW:;
-  case RELKIND_TOASTVALUE:;
+  case RELKIND_RELATION:
+  case RELKIND_MATVIEW:
+  case RELKIND_TOASTVALUE:
   {
     /*
      * In the case of a relation, find all its indexes including
@@ -2924,7 +2925,7 @@ ReindexRelationConcurrently(Oid relationOid, int options)
 
         if (!indexRelation->rd_index->indisvalid)
         {
-
+          ereport(WARNING, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("cannot reindex invalid index \"%s.%s\" concurrently, skipping", get_namespace_name(get_rel_namespace(cellOid)), get_rel_name(cellOid))));
         }
         else
         {
@@ -2948,7 +2949,7 @@ ReindexRelationConcurrently(Oid relationOid, int options)
     table_close(heapRelation, NoLock);
     break;
   }
-  case RELKIND_INDEX:;
+  case RELKIND_INDEX:
   {
     Oid heapId = IndexGetRelation(relationOid, false);
 
@@ -2963,7 +2964,7 @@ ReindexRelationConcurrently(Oid relationOid, int options)
      */
     if (IsToastNamespace(get_rel_namespace(relationOid)) && !get_index_isvalid(relationOid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot reindex invalid index on TOAST table concurrently")));
     }
 
     /* Save the list of relation OIDs in private context */
@@ -2981,14 +2982,14 @@ ReindexRelationConcurrently(Oid relationOid, int options)
     MemoryContextSwitchTo(oldcontext);
     break;
   }
-  case RELKIND_PARTITIONED_TABLE:;
+  case RELKIND_PARTITIONED_TABLE:
     /* see reindex_relation() */
     ereport(WARNING, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("REINDEX of partitioned tables is not yet implemented, skipping \"%s\"", get_rel_name(relationOid))));
     return false;
-  default:;;
+  default:
     /* Return error if type of relation is not supported */
-
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("cannot reindex this type of relation concurrently")));
+    break;
   }
 
   /* Definitely no indexes, so leave */
@@ -3053,7 +3054,7 @@ ReindexRelationConcurrently(Oid relationOid, int options)
     /* This function shouldn't be called for temporary relations. */
     if (indexRel->rd_rel->relpersistence == RELPERSISTENCE_TEMP)
     {
-
+      elog(ERROR, "cannot reindex a temporary table concurrently");
     }
 
     pgstat_progress_start_command(PROGRESS_COMMAND_CREATE_INDEX, RelationGetRelid(heapRel));
@@ -3443,22 +3444,22 @@ ReindexRelationConcurrently(Oid relationOid, int options)
   /* Log what we did */
   if (options & REINDEXOPT_VERBOSE)
   {
+    if (relkind == RELKIND_INDEX)
+    {
+      ereport(INFO, (errmsg("index \"%s.%s\" was reindexed", relationNamespace, relationName), errdetail("%s.", pg_rusage_show(&ru0))));
+    }
+    else
+    {
+      foreach (lc, newIndexIds)
+      {
+        Oid indOid = lfirst_oid(lc);
 
+        ereport(INFO, (errmsg("index \"%s.%s\" was reindexed", get_namespace_name(get_rel_namespace(indOid)), get_rel_name(indOid))));
+        /* Don't show rusage here, since it's not per index. */
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      ereport(INFO, (errmsg("table \"%s.%s\" was reindexed", relationNamespace, relationName), errdetail("%s.", pg_rusage_show(&ru0))));
+    }
   }
 
   MemoryContextDelete(private_context);
@@ -3516,7 +3517,7 @@ IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
        * No pg_inherits row, and no parent wanted: nothing to do in this
        * case.
        */
-
+      fix_dependencies = false;
     }
     else
     {
@@ -3543,14 +3544,14 @@ IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
        * good; if it differs, that amounts to a corrupt catalog and
        * should not happen.
        */
-
-
-
-
-
+      if (inhForm->inhparent != parentOid)
+      {
+        /* unexpected: we should not get called in this case */
+        elog(ERROR, "bogus pg_inherit row: inhrelid %u inhparent %u", inhForm->inhrelid, inhForm->inhparent);
+      }
 
       /* already in the right state */
-
+      fix_dependencies = false;
     }
   }
 
@@ -3611,7 +3612,7 @@ update_relispartition(Oid relationId, bool newval)
   tup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(relationId));
   if (!HeapTupleIsValid(tup))
   {
-
+    elog(ERROR, "cache lookup failed for relation %u", relationId);
   }
   Assert(((Form_pg_class)GETSTRUCT(tup))->relispartition != newval);
   ((Form_pg_class)GETSTRUCT(tup))->relispartition = newval;

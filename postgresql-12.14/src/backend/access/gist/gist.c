@@ -119,21 +119,21 @@ createTempGistContext(void)
 void
 gistbuildempty(Relation index)
 {
+  Buffer buffer;
 
+  /* Initialize the root page */
+  buffer = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
+  LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
 
+  /* Initialize and xlog buffer */
+  START_CRIT_SECTION();
+  GISTInitBuffer(buffer, F_LEAF);
+  MarkBufferDirty(buffer);
+  log_newpage_buffer(buffer, true);
+  END_CRIT_SECTION();
 
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Unlock and release the buffer */
+  UnlockReleaseBuffer(buffer);
 }
 
 /*
@@ -223,7 +223,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
    */
   if (GistFollowRight(page))
   {
-
+    elog(ERROR, "concurrent GiST page split was incomplete");
   }
 
   /* should never try to insert to a deleted page */
@@ -249,8 +249,8 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
    */
   if (is_split && GistPageIsLeaf(page) && GistPageHasGarbage(page))
   {
-
-
+    gistprunepage(rel, page, buffer, heapRel);
+    is_split = gistnospace(page, itup, ntup, oldoffnum, freespace);
   }
 
   if (is_split)
@@ -301,7 +301,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
     }
     if (npage > GIST_MAX_SPLIT_PAGES)
     {
-
+      elog(ERROR, "GiST page split into too many halves (%d, maximum %d)", npage, GIST_MAX_SPLIT_PAGES);
     }
 
     /*
@@ -410,7 +410,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
 
         if (PageAddItem(ptr->page, (Item)data, IndexTupleSize(thistup), i + FirstOffsetNumber, false, false) == InvalidOffsetNumber)
         {
-
+          elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(rel));
         }
 
         /*
@@ -419,7 +419,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
          */
         if (newblkno && ItemPointerEquals(&thistup->t_tid, &(*itup)->t_tid))
         {
-
+          *newblkno = ptr->block.blkno;
         }
 
         data += IndexTupleSize(thistup);
@@ -514,7 +514,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
       }
       else
       {
-
+        recptr = gistGetFakeLSN(rel);
       }
     }
 
@@ -556,7 +556,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
         /* One-for-one replacement, so use PageIndexTupleOverwrite */
         if (!PageIndexTupleOverwrite(page, oldoffnum, (Item)*itup, IndexTupleSize(*itup)))
         {
-
+          elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(rel));
         }
       }
       else
@@ -606,7 +606,7 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate, Buffer buffe
 
     if (newblkno)
     {
-
+      *newblkno = blkno;
     }
   }
 
@@ -683,13 +683,13 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
      */
     while (stack->retry_from_parent)
     {
-
-
-
-
-
-
-
+      if (xlocked)
+      {
+        LockBuffer(stack->buffer, GIST_UNLOCK);
+      }
+      xlocked = false;
+      ReleaseBuffer(stack->buffer);
+      state.stack = stack = stack->parent;
     }
 
     if (XLogRecPtrIsInvalid(stack->lsn))
@@ -718,23 +718,23 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
      */
     if (GistFollowRight(stack->page))
     {
+      if (!xlocked)
+      {
+        LockBuffer(stack->buffer, GIST_UNLOCK);
+        LockBuffer(stack->buffer, GIST_EXCLUSIVE);
+        xlocked = true;
+        /* someone might've completed the split when we unlocked */
+        if (!GistFollowRight(stack->page))
+        {
+          continue;
+        }
+      }
+      gistfixsplit(&state, giststate);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      UnlockReleaseBuffer(stack->buffer);
+      xlocked = false;
+      state.stack = stack = stack->parent;
+      continue;
     }
 
     if ((stack->blkno != GIST_ROOT_BLKNO && stack->parent->lsn < GistPageGetNSN(stack->page)) || GistPageIsDeleted(stack->page))
@@ -745,10 +745,10 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
        * the tuple we're inserting anymore, so go back to parent and
        * rechoose the best child.
        */
-
-
-
-
+      UnlockReleaseBuffer(stack->buffer);
+      xlocked = false;
+      state.stack = stack = stack->parent;
+      continue;
     }
 
     if (!GistPageIsLeaf(stack->page))
@@ -772,7 +772,7 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
        */
       if (GistTupleIsInvalid(idxtuple))
       {
-
+        ereport(ERROR, (errmsg("index \"%s\" contains an inner tuple marked as invalid", RelationGetRelationName(r)), errdetail("This is caused by an incomplete page split at crash recovery before upgrading to PostgreSQL 9.1."), errhint("Please REINDEX it.")));
       }
 
       /*
@@ -796,7 +796,7 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
           if (PageGetLSN(stack->page) != stack->lsn)
           {
             /* the page was changed while we unlocked it, retry */
-
+            continue;
           }
         }
 
@@ -818,13 +818,13 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
            * child pages, so we just need to retry from the root
            * page.
            */
-
-
-
-
-
-
-
+          if (stack->blkno != GIST_ROOT_BLKNO)
+          {
+            UnlockReleaseBuffer(stack->buffer);
+            xlocked = false;
+            state.stack = stack = stack->parent;
+          }
+          continue;
         }
       }
       LockBuffer(stack->buffer, GIST_UNLOCK);
@@ -869,9 +869,9 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
              * very rare situation: during unlock/lock index with
              * number of pages = 1 was increased
              */
-
-
-
+            LockBuffer(stack->buffer, GIST_UNLOCK);
+            xlocked = false;
+            continue;
           }
 
           /*
@@ -885,10 +885,10 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
            * The page was split or deleted while we momentarily
            * unlocked the page. Go back to parent.
            */
-
-
-
-
+          UnlockReleaseBuffer(stack->buffer);
+          xlocked = false;
+          state.stack = stack = stack->parent;
+          continue;
         }
       }
 
@@ -919,107 +919,107 @@ gistdoinsert(Relation r, IndexTuple itup, Size freespace, GISTSTATE *giststate, 
 static GISTInsertStack *
 gistFindPath(Relation r, BlockNumber child, OffsetNumber *downlinkoffnum)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  Page page;
+  Buffer buffer;
+  OffsetNumber i, maxoff;
+  ItemId iid;
+  IndexTuple idxtuple;
+  List *fifo;
+  GISTInsertStack *top, *ptr;
+  BlockNumber blkno;
+
+  top = (GISTInsertStack *)palloc0(sizeof(GISTInsertStack));
+  top->blkno = GIST_ROOT_BLKNO;
+  top->downlinkoffnum = InvalidOffsetNumber;
+
+  fifo = list_make1(top);
+  while (fifo != NIL)
+  {
+    /* Get next page to visit */
+    top = linitial(fifo);
+    fifo = list_delete_first(fifo);
+
+    buffer = ReadBuffer(r, top->blkno);
+    LockBuffer(buffer, GIST_SHARE);
+    gistcheckpage(r, buffer);
+    page = (Page)BufferGetPage(buffer);
+
+    if (GistPageIsLeaf(page))
+    {
+      /*
+       * Because we scan the index top-down, all the rest of the pages
+       * in the queue must be leaf pages as well.
+       */
+      UnlockReleaseBuffer(buffer);
+      break;
+    }
+
+    /* currently, internal pages are never deleted */
+    Assert(!GistPageIsDeleted(page));
+
+    top->lsn = BufferGetLSNAtomic(buffer);
+
+    /*
+     * If F_FOLLOW_RIGHT is set, the page to the right doesn't have a
+     * downlink. This should not normally happen..
+     */
+    if (GistFollowRight(page))
+    {
+      elog(ERROR, "concurrent GiST page split was incomplete");
+    }
+
+    if (top->parent && top->parent->lsn < GistPageGetNSN(page) && GistPageGetOpaque(page)->rightlink != InvalidBlockNumber /* sanity check */)
+    {
+      /*
+       * Page was split while we looked elsewhere. We didn't see the
+       * downlink to the right page when we scanned the parent, so add
+       * it to the queue now.
+       *
+       * Put the right page ahead of the queue, so that we visit it
+       * next. That's important, because if this is the lowest internal
+       * level, just above leaves, we might already have queued up some
+       * leaf pages, and we assume that there can't be any non-leaf
+       * pages behind leaf pages.
+       */
+      ptr = (GISTInsertStack *)palloc0(sizeof(GISTInsertStack));
+      ptr->blkno = GistPageGetOpaque(page)->rightlink;
+      ptr->downlinkoffnum = InvalidOffsetNumber;
+      ptr->parent = top->parent;
+
+      fifo = lcons(ptr, fifo);
+    }
+
+    maxoff = PageGetMaxOffsetNumber(page);
+
+    for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
+    {
+      iid = PageGetItemId(page, i);
+      idxtuple = (IndexTuple)PageGetItem(page, iid);
+      blkno = ItemPointerGetBlockNumber(&(idxtuple->t_tid));
+      if (blkno == child)
+      {
+        /* Found it! */
+        UnlockReleaseBuffer(buffer);
+        *downlinkoffnum = i;
+        return top;
+      }
+      else
+      {
+        /* Append this child to the list of pages to visit later */
+        ptr = (GISTInsertStack *)palloc0(sizeof(GISTInsertStack));
+        ptr->blkno = blkno;
+        ptr->downlinkoffnum = i;
+        ptr->parent = top;
+
+        fifo = lappend(fifo, ptr);
+      }
+    }
+
+    UnlockReleaseBuffer(buffer);
+  }
+
+  elog(ERROR, "failed to re-find parent of a page in index \"%s\", block %u", RelationGetRelationName(r), child);
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -1060,19 +1060,19 @@ gistFindCorrectParent(Relation r, GISTInsertStack *child)
       }
 
       parent->blkno = GistPageGetOpaque(parent->page)->rightlink;
-
-
-
-
-
-
-
-
-
-
-
-
-
+      UnlockReleaseBuffer(parent->buffer);
+      if (parent->blkno == InvalidBlockNumber)
+      {
+        /*
+         * End of chain and still didn't find parent. It's a very-very
+         * rare situation when root splited.
+         */
+        break;
+      }
+      parent->buffer = ReadBuffer(r, parent->blkno);
+      LockBuffer(parent->buffer, GIST_EXCLUSIVE);
+      gistcheckpage(r, parent->buffer);
+      parent->page = (Page)BufferGetPage(parent->buffer);
     }
 
     /*
@@ -1082,30 +1082,30 @@ gistFindCorrectParent(Relation r, GISTInsertStack *child)
 
     ptr = child->parent->parent; /* child->parent already released
                                   * above */
-
-
-
-
-
+    while (ptr)
+    {
+      ReleaseBuffer(ptr->buffer);
+      ptr = ptr->parent;
+    }
 
     /* ok, find new path */
-
+    ptr = parent = gistFindPath(r, child->blkno, &child->downlinkoffnum);
 
     /* read all buffers as expected by caller */
     /* note we don't lock them or gistcheckpage them here! */
-
-
-
-
-
-
+    while (ptr)
+    {
+      ptr->buffer = ReadBuffer(r, ptr->blkno);
+      ptr->page = (Page)BufferGetPage(ptr->buffer);
+      ptr = ptr->parent;
+    }
 
     /* install new chain of parents to stack */
-
+    child->parent = parent;
 
     /* make recursive call to normal processing */
-
-
+    LockBuffer(child->parent->buffer, GIST_EXCLUSIVE);
+    gistFindCorrectParent(r, child);
   }
 
   return;
@@ -1117,58 +1117,58 @@ gistFindCorrectParent(Relation r, GISTInsertStack *child)
 static IndexTuple
 gistformdownlink(Relation rel, Buffer buf, GISTSTATE *giststate, GISTInsertStack *stack)
 {
+  Page page = BufferGetPage(buf);
+  OffsetNumber maxoff;
+  OffsetNumber offset;
+  IndexTuple downlink = NULL;
 
+  maxoff = PageGetMaxOffsetNumber(page);
+  for (offset = FirstOffsetNumber; offset <= maxoff; offset = OffsetNumberNext(offset))
+  {
+    IndexTuple ituple = (IndexTuple)PageGetItem(page, PageGetItemId(page, offset));
 
+    if (downlink == NULL)
+    {
+      downlink = CopyIndexTuple(ituple);
+    }
+    else
+    {
+      IndexTuple newdownlink;
 
+      newdownlink = gistgetadjusted(rel, downlink, ituple, giststate);
+      if (newdownlink)
+      {
+        downlink = newdownlink;
+      }
+    }
+  }
 
+  /*
+   * If the page is completely empty, we can't form a meaningful downlink
+   * for it. But we have to insert a downlink for the page. Any key will do,
+   * as long as its consistent with the downlink of parent page, so that we
+   * can legally insert it to the parent. A minimal one that matches as few
+   * scans as possible would be best, to keep scans from doing useless work,
+   * but we don't know how to construct that. So we just use the downlink of
+   * the original page that was split - that's as far from optimal as it can
+   * get but will do..
+   */
+  if (!downlink)
+  {
+    ItemId iid;
 
+    LockBuffer(stack->parent->buffer, GIST_EXCLUSIVE);
+    gistFindCorrectParent(rel, stack);
+    iid = PageGetItemId(stack->parent->page, stack->downlinkoffnum);
+    downlink = (IndexTuple)PageGetItem(stack->parent->page, iid);
+    downlink = CopyIndexTuple(downlink);
+    LockBuffer(stack->parent->buffer, GIST_UNLOCK);
+  }
 
+  ItemPointerSetBlockNumber(&(downlink->t_tid), BufferGetBlockNumber(buf));
+  GistTupleSetValid(downlink);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return downlink;
 }
 
 /*
@@ -1177,51 +1177,51 @@ gistformdownlink(Relation rel, Buffer buf, GISTSTATE *giststate, GISTInsertStack
 static void
 gistfixsplit(GISTInsertState *state, GISTSTATE *giststate)
 {
+  GISTInsertStack *stack = state->stack;
+  Buffer buf;
+  Page page;
+  List *splitinfo = NIL;
 
+  elog(LOG, "fixing incomplete split in index \"%s\", block %u", RelationGetRelationName(state->r), stack->blkno);
 
+  Assert(GistFollowRight(stack->page));
+  Assert(OffsetNumberIsValid(stack->downlinkoffnum));
 
+  buf = stack->buffer;
 
+  /*
+   * Read the chain of split pages, following the rightlinks. Construct a
+   * downlink tuple for each page.
+   */
+  for (;;)
+  {
+    GISTPageSplitInfo *si = palloc(sizeof(GISTPageSplitInfo));
+    IndexTuple downlink;
 
+    page = BufferGetPage(buf);
 
+    /* Form the new downlink tuples to insert to parent */
+    downlink = gistformdownlink(state->r, buf, giststate, stack);
 
+    si->buf = buf;
+    si->downlink = downlink;
 
+    splitinfo = lappend(splitinfo, si);
 
+    if (GistFollowRight(page))
+    {
+      /* lock next page */
+      buf = ReadBuffer(state->r, GistPageGetOpaque(page)->rightlink);
+      LockBuffer(buf, GIST_EXCLUSIVE);
+    }
+    else
+    {
+      break;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  /* Insert the downlinks */
+  gistfinishsplit(state, stack, giststate, splitinfo, false);
 }
 
 /*
@@ -1258,8 +1258,8 @@ gistinserttuple(GISTInsertState *state, GISTInsertStack *stack, GISTSTATE *gists
  *
  *	- Lock on stack->buffer is released, if 'unlockbuf' is true. The page is
  *	  always kept pinned, however.
- *	- Lock on 'leftchild' is released, if 'unlockleftchild' is true. The
- *page is kept pinned.
+ *	- Lock on 'leftchild' is released, if 'unlockleftchild' is true. The page
+ *	  is kept pinned.
  *	- Lock and pin on 'rightchild' are always released.
  *
  * Returns 'true' if the page had to be split. Note that if the page was
@@ -1357,20 +1357,20 @@ gistfinishsplit(GISTInsertState *state, GISTInsertStack *stack, GISTSTATE *gists
    */
   while (list_length(reversed) > 2)
   {
+    right = (GISTPageSplitInfo *)linitial(reversed);
+    left = (GISTPageSplitInfo *)lsecond(reversed);
 
-
-
-
-
-
-
-
-
-
-
-
+    gistFindCorrectParent(state->r, stack);
+    if (gistinserttuples(state, stack->parent, giststate, &right->downlink, 1, InvalidOffsetNumber, left->buf, right->buf, false, false))
+    {
+      /*
+       * If the parent page was split, the existing downlink might
+       * have moved.
+       */
+      stack->downlinkoffnum = InvalidOffsetNumber;
+    }
     /* gistinserttuples() released the lock on right->buf. */
-
+    reversed = list_delete_first(reversed);
   }
 
   right = (GISTPageSplitInfo *)linitial(reversed);
@@ -1440,7 +1440,7 @@ gistSplit(Relation r, Page page, IndexTuple *itup, /* contains compressed entry 
    */
   if (len == 1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds maximum %zu for index \"%s\"", IndexTupleSize(itup[0]), GiSTPageSize, RelationGetRelationName(r))));
   }
 
   memset(v.spl_lisnull, true, sizeof(bool) * giststate->nonLeafTupdesc->natts);
@@ -1464,7 +1464,7 @@ gistSplit(Relation r, Page page, IndexTuple *itup, /* contains compressed entry 
   /* finalize splitting (may need another split) */
   if (!gistfitpage(rvectup, v.splitVector.spl_nright))
   {
-
+    res = gistSplit(r, page, rvectup, v.splitVector.spl_nright, giststate);
   }
   else
   {
@@ -1478,16 +1478,16 @@ gistSplit(Relation r, Page page, IndexTuple *itup, /* contains compressed entry 
   {
     SplitedPageLayout *resptr, *subres;
 
-
+    resptr = subres = gistSplit(r, page, lvectup, v.splitVector.spl_nleft, giststate);
 
     /* install on list's tail */
+    while (resptr->next)
+    {
+      resptr = resptr->next;
+    }
 
-
-
-
-
-
-
+    resptr->next = res;
+    res = subres;
   }
   else
   {
@@ -1514,7 +1514,7 @@ initGISTstate(Relation index)
   /* safety check to protect fixed-size arrays in GISTSTATE */
   if (index->rd_att->natts > INDEX_MAX_KEYS)
   {
-
+    elog(ERROR, "numberOfAttributes %d > %d", index->rd_att->natts, INDEX_MAX_KEYS);
   }
 
   /* Create the memory context that will hold the GISTSTATE */
@@ -1603,7 +1603,7 @@ initGISTstate(Relation index)
      */
     if (OidIsValid(index->rd_indcollation[i]))
     {
-
+      giststate->supportCollation[i] = index->rd_indcollation[i];
     }
     else
     {
@@ -1645,71 +1645,71 @@ freeGISTstate(GISTSTATE *giststate)
 static void
 gistprunepage(Relation rel, Page page, Buffer buffer, Relation heapRel)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  OffsetNumber deletable[MaxIndexTuplesPerPage];
+  int ndeletable = 0;
+  OffsetNumber offnum, maxoff;
+  TransactionId latestRemovedXid = InvalidTransactionId;
+
+  Assert(GistPageIsLeaf(page));
+
+  /*
+   * Scan over all items to see which ones need to be deleted according to
+   * LP_DEAD flags.
+   */
+  maxoff = PageGetMaxOffsetNumber(page);
+  for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum = OffsetNumberNext(offnum))
+  {
+    ItemId itemId = PageGetItemId(page, offnum);
+
+    if (ItemIdIsDead(itemId))
+    {
+      deletable[ndeletable++] = offnum;
+    }
+  }
+
+  if (XLogStandbyInfoActive() && RelationNeedsWAL(rel))
+  {
+    latestRemovedXid = index_compute_xid_horizon_for_tuples(rel, heapRel, buffer, deletable, ndeletable);
+  }
+
+  if (ndeletable > 0)
+  {
+    START_CRIT_SECTION();
+
+    PageIndexMultiDelete(page, deletable, ndeletable);
+
+    /*
+     * Mark the page as not containing any LP_DEAD items.  This is not
+     * certainly true (there might be some that have recently been marked,
+     * but weren't included in our target-item list), but it will almost
+     * always be true and it doesn't seem worth an additional page scan to
+     * check it. Remember that F_HAS_GARBAGE is only a hint anyway.
+     */
+    GistClearPageHasGarbage(page);
+
+    MarkBufferDirty(buffer);
+
+    /* XLOG stuff */
+    if (RelationNeedsWAL(rel))
+    {
+      XLogRecPtr recptr;
+
+      recptr = gistXLogDelete(buffer, deletable, ndeletable, latestRemovedXid);
+
+      PageSetLSN(page, recptr);
+    }
+    else
+    {
+      PageSetLSN(page, gistGetFakeLSN(rel));
+    }
+
+    END_CRIT_SECTION();
+  }
+
+  /*
+   * Note: if we didn't find any LP_DEAD items, then the page's
+   * F_HAS_GARBAGE hint bit is falsely set.  We do not bother expending a
+   * separate write to clear it, however.  We will clear it when we split
+   * the page.
+   */
 }

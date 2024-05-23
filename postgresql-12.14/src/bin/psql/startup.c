@@ -44,20 +44,28 @@ PsqlSettings pset;
  * Structures to pass information between the option parsing routine
  * and the main function
  */
-enum _actions { ACT_SINGLE_QUERY, ACT_SINGLE_SLASH, ACT_FILE };
+enum _actions
+{
+  ACT_SINGLE_QUERY,
+  ACT_SINGLE_SLASH,
+  ACT_FILE
+};
 
-typedef struct SimpleActionListCell {
+typedef struct SimpleActionListCell
+{
   struct SimpleActionListCell *next;
   enum _actions action;
   char *val;
 } SimpleActionListCell;
 
-typedef struct SimpleActionList {
+typedef struct SimpleActionList
+{
   SimpleActionListCell *head;
   SimpleActionListCell *tail;
 } SimpleActionList;
 
-struct adhoc_opts {
+struct adhoc_opts
+{
   char *dbname;
   char *host;
   char *port;
@@ -88,7 +96,8 @@ EstablishVariableSpace(void);
 static void
 log_pre_callback(void)
 {
-  if (pset.queryFout && pset.queryFout != stdout) {
+  if (pset.queryFout && pset.queryFout != stdout)
+  {
     fflush(pset.queryFout);
   }
 }
@@ -96,10 +105,13 @@ log_pre_callback(void)
 static void
 log_locus_callback(const char **filename, uint64 *lineno)
 {
-  if (pset.inputfile) {
+  if (pset.inputfile)
+  {
     *filename = pset.inputfile;
     *lineno = pset.lineno;
-  } else {
+  }
+  else
+  {
     *filename = NULL;
     *lineno = 0;
   }
@@ -124,12 +136,15 @@ main(int argc, char *argv[])
   pg_logging_set_locus_callback(log_locus_callback);
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("psql"));
 
-  if (argc > 1) {
-    if ((strcmp(argv[1], "-?") == 0) || (argc == 2 && (strcmp(argv[1], "--help") == 0))) {
+  if (argc > 1)
+  {
+    if ((strcmp(argv[1], "-?") == 0) || (argc == 2 && (strcmp(argv[1], "--help") == 0)))
+    {
       usage(NOPAGER);
       exit(EXIT_SUCCESS);
     }
-    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0) {
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+    {
       showVersion();
       exit(EXIT_SUCCESS);
     }
@@ -196,26 +211,31 @@ main(int argc, char *argv[])
    * as if the user had specified "-f -".  This lets single-transaction mode
    * work in this case.
    */
-  if (options.actions.head == NULL && pset.notty) {
+  if (options.actions.head == NULL && pset.notty)
+  {
     simple_action_list_append(&options.actions, ACT_FILE, NULL);
   }
 
   /* Bail out if -1 was specified but will be ignored. */
-  if (options.single_txn && options.actions.head == NULL) {
+  if (options.single_txn && options.actions.head == NULL)
+  {
     pg_log_fatal("-1 can only be used in non-interactive mode");
     exit(EXIT_FAILURE);
   }
 
-  if (!pset.popt.topt.fieldSep.separator && !pset.popt.topt.fieldSep.separator_zero) {
+  if (!pset.popt.topt.fieldSep.separator && !pset.popt.topt.fieldSep.separator_zero)
+  {
     pset.popt.topt.fieldSep.separator = pg_strdup(DEFAULT_FIELD_SEP);
     pset.popt.topt.fieldSep.separator_zero = false;
   }
-  if (!pset.popt.topt.recordSep.separator && !pset.popt.topt.recordSep.separator_zero) {
+  if (!pset.popt.topt.recordSep.separator && !pset.popt.topt.recordSep.separator_zero)
+  {
     pset.popt.topt.recordSep.separator = pg_strdup(DEFAULT_RECORD_SEP);
     pset.popt.topt.recordSep.separator_zero = false;
   }
 
-  if (pset.getPassword == TRI_YES) {
+  if (pset.getPassword == TRI_YES)
+  {
     /*
      * We can't be sure yet of the username that will be used, so don't
      * offer a potentially wrong one.  Typical uses of this option are
@@ -226,7 +246,8 @@ main(int argc, char *argv[])
   }
 
   /* loop until we have a password if requested by backend */
-  do {
+  do
+  {
 #define PARAMS_ARRAY_SIZE 8
     const char **keywords = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*keywords));
     const char **values = pg_malloc(PARAMS_ARRAY_SIZE * sizeof(*values));
@@ -253,7 +274,8 @@ main(int argc, char *argv[])
     free(keywords);
     free(values);
 
-    if (PQstatus(pset.db) == CONNECTION_BAD && PQconnectionNeedsPassword(pset.db) && !have_password && pset.getPassword != TRI_NO) {
+    if (PQstatus(pset.db) == CONNECTION_BAD && PQconnectionNeedsPassword(pset.db) && !have_password && pset.getPassword != TRI_NO)
+    {
       /*
        * Before closing the old PGconn, extract the user name that was
        * actually connected with --- it might've come out of a URI or
@@ -262,9 +284,12 @@ main(int argc, char *argv[])
       const char *realusername = PQuser(pset.db);
       char *password_prompt;
 
-      if (realusername && realusername[0]) {
+      if (realusername && realusername[0])
+      {
         password_prompt = psprintf(_("Password for user %s: "), realusername);
-      } else {
+      }
+      else
+      {
         password_prompt = pg_strdup(_("Password: "));
       }
       PQfinish(pset.db);
@@ -276,7 +301,8 @@ main(int argc, char *argv[])
     }
   } while (new_pass);
 
-  if (PQstatus(pset.db) == CONNECTION_BAD) {
+  if (PQstatus(pset.db) == CONNECTION_BAD)
+  {
     pg_log_error("%s", PQerrorMessage(pset.db));
     PQfinish(pset.db);
     exit(EXIT_BADCONN);
@@ -288,10 +314,12 @@ main(int argc, char *argv[])
 
   SyncVariables();
 
-  if (options.list_dbs) {
+  if (options.list_dbs)
+  {
     int success;
 
-    if (!options.no_psqlrc) {
+    if (!options.no_psqlrc)
+    {
       process_psqlrc(argv[0]);
     }
 
@@ -300,15 +328,18 @@ main(int argc, char *argv[])
     exit(success ? EXIT_SUCCESS : EXIT_FAILURE);
   }
 
-  if (options.logfilename) {
+  if (options.logfilename)
+  {
     pset.logfile = fopen(options.logfilename, "a");
-    if (!pset.logfile) {
+    if (!pset.logfile)
+    {
       pg_log_fatal("could not open log file \"%s\": %m", options.logfilename);
       exit(EXIT_FAILURE);
     }
   }
 
-  if (!options.no_psqlrc) {
+  if (!options.no_psqlrc)
+  {
     process_psqlrc(argv[0]);
   }
 
@@ -316,39 +347,51 @@ main(int argc, char *argv[])
    * If any actions were given by user, process them in the order in which
    * they were specified.  Note single_txn is only effective in this mode.
    */
-  if (options.actions.head != NULL) {
+  if (options.actions.head != NULL)
+  {
     PGresult *res;
     SimpleActionListCell *cell;
 
     successResult = EXIT_SUCCESS; /* silence compiler */
 
-    if (options.single_txn) {
-      if ((res = PSQLexec("BEGIN")) == NULL) {
-        if (pset.on_error_stop) {
+    if (options.single_txn)
+    {
+      if ((res = PSQLexec("BEGIN")) == NULL)
+      {
+        if (pset.on_error_stop)
+        {
           successResult = EXIT_USER;
           goto error;
         }
-      } else {
+      }
+      else
+      {
         PQclear(res);
       }
     }
 
-    for (cell = options.actions.head; cell; cell = cell->next) {
-      if (cell->action == ACT_SINGLE_QUERY) {
+    for (cell = options.actions.head; cell; cell = cell->next)
+    {
+      if (cell->action == ACT_SINGLE_QUERY)
+      {
         pg_logging_config(PG_LOG_FLAG_TERSE);
 
-        if (pset.echo == PSQL_ECHO_ALL) {
+        if (pset.echo == PSQL_ECHO_ALL)
+        {
           puts(cell->val);
         }
 
         successResult = SendQuery(cell->val) ? EXIT_SUCCESS : EXIT_FAILURE;
-      } else if (cell->action == ACT_SINGLE_SLASH) {
+      }
+      else if (cell->action == ACT_SINGLE_SLASH)
+      {
         PsqlScanState scan_state;
         ConditionalStack cond_stack;
 
         pg_logging_config(PG_LOG_FLAG_TERSE);
 
-        if (pset.echo == PSQL_ECHO_ALL) {
+        if (pset.echo == PSQL_ECHO_ALL)
+        {
           puts(cell->val);
         }
 
@@ -361,25 +404,35 @@ main(int argc, char *argv[])
 
         psql_scan_destroy(scan_state);
         conditional_stack_destroy(cond_stack);
-      } else if (cell->action == ACT_FILE) {
+      }
+      else if (cell->action == ACT_FILE)
+      {
         successResult = process_file(cell->val, false);
-      } else {
+      }
+      else
+      {
         /* should never come here */
         Assert(false);
       }
 
-      if (successResult != EXIT_SUCCESS && pset.on_error_stop) {
+      if (successResult != EXIT_SUCCESS && pset.on_error_stop)
+      {
         break;
       }
     }
 
-    if (options.single_txn) {
-      if ((res = PSQLexec("COMMIT")) == NULL) {
-        if (pset.on_error_stop) {
+    if (options.single_txn)
+    {
+      if ((res = PSQLexec("COMMIT")) == NULL)
+      {
+        if (pset.on_error_stop)
+        {
           successResult = EXIT_USER;
           goto error;
         }
-      } else {
+      }
+      else
+      {
         PQclear(res);
       }
     }
@@ -390,10 +443,12 @@ main(int argc, char *argv[])
   /*
    * or otherwise enter interactive main loop
    */
-  else {
+  else
+  {
     pg_logging_config(PG_LOG_FLAG_TERSE);
     connection_warnings(true);
-    if (!pset.quiet) {
+    if (!pset.quiet)
+    {
       printf(_("Type \"help\" for help.\n\n"));
     }
     initializeInput(options.no_readline ? 0 : 1);
@@ -401,7 +456,8 @@ main(int argc, char *argv[])
   }
 
   /* clean up */
-  if (pset.logfile) {
+  if (pset.logfile)
+  {
     fclose(pset.logfile);
   }
   PQfinish(pset.db);
@@ -417,15 +473,18 @@ main(int argc, char *argv[])
 static void
 parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
 {
-  static struct option long_options[] = {{"echo-all", no_argument, NULL, 'a'}, {"no-align", no_argument, NULL, 'A'}, {"command", required_argument, NULL, 'c'}, {"dbname", required_argument, NULL, 'd'}, {"echo-queries", no_argument, NULL, 'e'}, {"echo-errors", no_argument, NULL, 'b'}, {"echo-hidden", no_argument, NULL, 'E'}, {"file", required_argument, NULL, 'f'}, {"field-separator", required_argument, NULL, 'F'}, {"field-separator-zero", no_argument, NULL, 'z'}, {"host", required_argument, NULL, 'h'}, {"html", no_argument, NULL, 'H'}, {"list", no_argument, NULL, 'l'}, {"log-file", required_argument, NULL, 'L'}, {"no-readline", no_argument, NULL, 'n'}, {"single-transaction", no_argument, NULL, '1'}, {"output", required_argument, NULL, 'o'}, {"port", required_argument, NULL, 'p'}, {"pset", required_argument, NULL, 'P'}, {"quiet", no_argument, NULL, 'q'}, {"record-separator", required_argument, NULL, 'R'}, {"record-separator-zero", no_argument, NULL, '0'},{"single-step", no_argument, NULL, 's'}, {"single-line", no_argument, NULL, 'S'}, {"tuples-only", no_argument, NULL, 't'}, {"table-attr", required_argument, NULL, 'T'}, {"username", required_argument, NULL, 'U'}, {"set", required_argument, NULL, 'v'}, {"variable", required_argument, NULL, 'v'}, {"version", no_argument, NULL, 'V'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"expanded", no_argument, NULL, 'x'}, {"no-psqlrc", no_argument, NULL, 'X'}, {"help", optional_argument, NULL, 1}, {"csv", no_argument, NULL, 2}, {NULL, 0, NULL, 0}};
+  static struct option long_options[] = {{"echo-all", no_argument, NULL, 'a'}, {"no-align", no_argument, NULL, 'A'}, {"command", required_argument, NULL, 'c'}, {"dbname", required_argument, NULL, 'd'}, {"echo-queries", no_argument, NULL, 'e'}, {"echo-errors", no_argument, NULL, 'b'}, {"echo-hidden", no_argument, NULL, 'E'}, {"file", required_argument, NULL, 'f'}, {"field-separator", required_argument, NULL, 'F'}, {"field-separator-zero", no_argument, NULL, 'z'}, {"host", required_argument, NULL, 'h'}, {"html", no_argument, NULL, 'H'}, {"list", no_argument, NULL, 'l'}, {"log-file", required_argument, NULL, 'L'}, {"no-readline", no_argument, NULL, 'n'}, {"single-transaction", no_argument, NULL, '1'}, {"output", required_argument, NULL, 'o'}, {"port", required_argument, NULL, 'p'}, {"pset", required_argument, NULL, 'P'}, {"quiet", no_argument, NULL, 'q'}, {"record-separator", required_argument, NULL, 'R'}, {"record-separator-zero", no_argument, NULL, '0'},
+      {"single-step", no_argument, NULL, 's'}, {"single-line", no_argument, NULL, 'S'}, {"tuples-only", no_argument, NULL, 't'}, {"table-attr", required_argument, NULL, 'T'}, {"username", required_argument, NULL, 'U'}, {"set", required_argument, NULL, 'v'}, {"variable", required_argument, NULL, 'v'}, {"version", no_argument, NULL, 'V'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"expanded", no_argument, NULL, 'x'}, {"no-psqlrc", no_argument, NULL, 'X'}, {"help", optional_argument, NULL, 1}, {"csv", no_argument, NULL, 2}, {NULL, 0, NULL, 0}};
 
   int optindex;
   int c;
 
   memset(options, 0, sizeof *options);
 
-  while ((c = getopt_long(argc, argv, "aAbc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxXz?01", long_options, &optindex)) != -1) {
-    switch (c) {
+  while ((c = getopt_long(argc, argv, "aAbc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxXz?01", long_options, &optindex)) != -1)
+  {
+    switch (c)
+    {
     case 'a':
       SetVariable(pset.vars, "ECHO", "all");
       break;
@@ -436,9 +495,12 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
       SetVariable(pset.vars, "ECHO", "errors");
       break;
     case 'c':
-      if (optarg[0] == '\\') {
+      if (optarg[0] == '\\')
+      {
         simple_action_list_append(&options->actions, ACT_SINGLE_SLASH, optarg + 1);
-      } else {
+      }
+      else
+      {
         simple_action_list_append(&options->actions, ACT_SINGLE_QUERY, optarg);
       }
       break;
@@ -474,28 +536,34 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
       options->no_readline = true;
       break;
     case 'o':
-      if (!setQFout(optarg)) {
+      if (!setQFout(optarg))
+      {
         exit(EXIT_FAILURE);
       }
       break;
     case 'p':
       options->port = pg_strdup(optarg);
       break;
-    case 'P': {
+    case 'P':
+    {
       char *value;
       char *equal_loc;
       bool result;
 
       value = pg_strdup(optarg);
       equal_loc = strchr(value, '=');
-      if (!equal_loc) {
+      if (!equal_loc)
+      {
         result = do_pset(value, NULL, &pset.popt, true);
-      } else {
+      }
+      else
+      {
         *equal_loc = '\0';
         result = do_pset(value, equal_loc + 1, &pset.popt, true);
       }
 
-      if (!result) {
+      if (!result)
+      {
         pg_log_fatal("could not set printing parameter \"%s\"", value);
         exit(EXIT_FAILURE);
       }
@@ -525,19 +593,25 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
     case 'U':
       options->username = pg_strdup(optarg);
       break;
-    case 'v': {
+    case 'v':
+    {
       char *value;
       char *equal_loc;
 
       value = pg_strdup(optarg);
       equal_loc = strchr(value, '=');
-      if (!equal_loc) {
-        if (!DeleteVariable(pset.vars, value)) {
+      if (!equal_loc)
+      {
+        if (!DeleteVariable(pset.vars, value))
+        {
           exit(EXIT_FAILURE); /* error already printed */
         }
-      } else {
+      }
+      else
+      {
         *equal_loc = '\0';
-        if (!SetVariable(pset.vars, value, equal_loc + 1)) {
+        if (!SetVariable(pset.vars, value, equal_loc + 1))
+        {
           exit(EXIT_FAILURE); /* error already printed */
         }
       }
@@ -570,32 +644,44 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
       options->single_txn = true;
       break;
     case '?':
-      if (optind <= argc && strcmp(argv[optind - 1], "-?") == 0) {
+      if (optind <= argc && strcmp(argv[optind - 1], "-?") == 0)
+      {
         /* actual help option given */
         usage(NOPAGER);
         exit(EXIT_SUCCESS);
-      } else {
+      }
+      else
+      {
         /* getopt error (unknown option or missing argument) */
         goto unknown_option;
       }
       break;
-    case 1: {
-      if (!optarg || strcmp(optarg, "options") == 0) {
+    case 1:
+    {
+      if (!optarg || strcmp(optarg, "options") == 0)
+      {
         usage(NOPAGER);
-      } else if (optarg && strcmp(optarg, "commands") == 0) {
+      }
+      else if (optarg && strcmp(optarg, "commands") == 0)
+      {
         slashUsage(NOPAGER);
-      } else if (optarg && strcmp(optarg, "variables") == 0) {
+      }
+      else if (optarg && strcmp(optarg, "variables") == 0)
+      {
         helpVariables(NOPAGER);
-      } else {
+      }
+      else
+      {
         goto unknown_option;
       }
 
       exit(EXIT_SUCCESS);
-    } break;
+    }
+    break;
     case 2:
       pset.popt.topt.format = PRINT_CSV;
       break;
-    default:;
+    default:
     unknown_option:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), pset.progname);
       exit(EXIT_FAILURE);
@@ -606,12 +692,18 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
   /*
    * if we still have arguments, use it as the database name and username
    */
-  while (argc - optind >= 1) {
-    if (!options->dbname) {
+  while (argc - optind >= 1)
+  {
+    if (!options->dbname)
+    {
       options->dbname = argv[optind];
-    } else if (!options->username) {
+    }
+    else if (!options->username)
+    {
       options->username = argv[optind];
-    } else if (!pset.quiet) {
+    }
+    else if (!pset.quiet)
+    {
       pg_log_warning("extra command-line argument \"%s\" ignored", argv[optind]);
     }
 
@@ -632,15 +724,21 @@ simple_action_list_append(SimpleActionList *list, enum _actions action, const ch
 
   cell->next = NULL;
   cell->action = action;
-  if (val) {
+  if (val)
+  {
     cell->val = pg_strdup(val);
-  } else {
+  }
+  else
+  {
     cell->val = NULL;
   }
 
-  if (list->tail) {
+  if (list->tail)
+  {
     list->tail->next = cell;
-  } else {
+  }
+  else
+  {
     list->head = cell;
   }
   list->tail = cell;
@@ -658,7 +756,8 @@ process_psqlrc(char *argv0)
   char etc_path[MAXPGPATH];
   char *envrc = getenv("PSQLRC");
 
-  if (find_my_exec(argv0, my_exec_path) < 0) {
+  if (find_my_exec(argv0, my_exec_path) < 0)
+  {
     pg_log_fatal("could not find own program executable");
     exit(EXIT_FAILURE);
   }
@@ -668,13 +767,16 @@ process_psqlrc(char *argv0)
   snprintf(rc_file, MAXPGPATH, "%s/%s", etc_path, SYSPSQLRC);
   process_psqlrc_file(rc_file);
 
-  if (envrc != NULL && strlen(envrc) > 0) {
+  if (envrc != NULL && strlen(envrc) > 0)
+  {
     /* might need to free() this */
     char *envrc_alloc = pstrdup(envrc);
 
     expand_tilde(&envrc_alloc);
     process_psqlrc_file(envrc_alloc);
-  } else if (get_home_path(home)) {
+  }
+  else if (get_home_path(home))
+  {
     snprintf(rc_file, MAXPGPATH, "%s/%s", home, PSQLRC);
     process_psqlrc_file(rc_file);
   }
@@ -693,11 +795,16 @@ process_psqlrc_file(char *filename)
   psqlrc_major = psprintf("%s-%s", filename, PG_MAJORVERSION);
 
   /* check for minor version first, then major, then no version */
-  if (access(psqlrc_minor, R_OK) == 0) {
+  if (access(psqlrc_minor, R_OK) == 0)
+  {
     (void)process_file(psqlrc_minor, false);
-  } else if (access(psqlrc_major, R_OK) == 0) {
+  }
+  else if (access(psqlrc_major, R_OK) == 0)
+  {
     (void)process_file(psqlrc_major, false);
-  } else if (access(filename, R_OK) == 0) {
+  }
+  else if (access(filename, R_OK) == 0)
+  {
     (void)process_file(filename, false);
   }
 
@@ -722,16 +829,20 @@ showVersion(void)
  *
  * By policy, every special variable that controls any psql behavior should
  * have one or both hooks, even if they're just no-ops.  This ensures that
- * the variable will remain present in variables.c's list even when unset,* which ensures that it's known to tab completion.
+ * the variable will remain present in variables.c's list even when unset,
+ * which ensures that it's known to tab completion.
  */
 
 static char *
 bool_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     /* "\unset FOO" becomes "\set FOO off" */
     newval = pg_strdup("off");
-  } else if (newval[0] == '\0') {
+  }
+  else if (newval[0] == '\0')
+  {
     /* "\set FOO" becomes "\set FOO on" */
     pg_free(newval);
     newval = pg_strdup("on");
@@ -772,7 +883,8 @@ singlestep_hook(const char *newval)
 static char *
 fetch_count_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("0");
   }
   return newval;
@@ -797,7 +909,8 @@ histfile_hook(const char *newval)
 static char *
 histsize_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("500");
   }
   return newval;
@@ -823,9 +936,12 @@ ignoreeof_substitute_hook(char *newval)
    * the shell."  Unlike bash, however, we insist on the stored value
    * actually being a valid integer.
    */
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("0");
-  } else if (!ParseVariableNum(newval, NULL, &dummy)) {
+  }
+  else if (!ParseVariableNum(newval, NULL, &dummy))
+  {
     newval = pg_strdup("10");
   }
   return newval;
@@ -840,7 +956,8 @@ ignoreeof_hook(const char *newval)
 static char *
 echo_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("none");
   }
   return newval;
@@ -850,15 +967,24 @@ static bool
 echo_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "queries") == 0) {
+  if (pg_strcasecmp(newval, "queries") == 0)
+  {
     pset.echo = PSQL_ECHO_QUERIES;
-  } else if (pg_strcasecmp(newval, "errors") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "errors") == 0)
+  {
     pset.echo = PSQL_ECHO_ERRORS;
-  } else if (pg_strcasecmp(newval, "all") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "all") == 0)
+  {
     pset.echo = PSQL_ECHO_ALL;
-  } else if (pg_strcasecmp(newval, "none") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "none") == 0)
+  {
     pset.echo = PSQL_ECHO_NONE;
-  } else {
+  }
+  else
+  {
     PsqlVarEnumError("ECHO", newval, "none, errors, queries, all");
     return false;
   }
@@ -869,14 +995,20 @@ static bool
 echo_hidden_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "noexec") == 0) {
+  if (pg_strcasecmp(newval, "noexec") == 0)
+  {
     pset.echo_hidden = PSQL_ECHO_HIDDEN_NOEXEC;
-  } else {
+  }
+  else
+  {
     bool on_off;
 
-    if (ParseVariableBool(newval, NULL, &on_off)) {
+    if (ParseVariableBool(newval, NULL, &on_off))
+    {
       pset.echo_hidden = on_off ? PSQL_ECHO_HIDDEN_ON : PSQL_ECHO_HIDDEN_OFF;
-    } else {
+    }
+    else
+    {
       PsqlVarEnumError("ECHO_HIDDEN", newval, "on, off, noexec");
       return false;
     }
@@ -888,14 +1020,20 @@ static bool
 on_error_rollback_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "interactive") == 0) {
+  if (pg_strcasecmp(newval, "interactive") == 0)
+  {
     pset.on_error_rollback = PSQL_ERROR_ROLLBACK_INTERACTIVE;
-  } else {
+  }
+  else
+  {
     bool on_off;
 
-    if (ParseVariableBool(newval, NULL, &on_off)) {
+    if (ParseVariableBool(newval, NULL, &on_off))
+    {
       pset.on_error_rollback = on_off ? PSQL_ERROR_ROLLBACK_ON : PSQL_ERROR_ROLLBACK_OFF;
-    } else {
+    }
+    else
+    {
       PsqlVarEnumError("ON_ERROR_ROLLBACK", newval, "on, off, interactive");
       return false;
     }
@@ -906,7 +1044,8 @@ on_error_rollback_hook(const char *newval)
 static char *
 comp_keyword_case_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("preserve-upper");
   }
   return newval;
@@ -916,15 +1055,24 @@ static bool
 comp_keyword_case_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "preserve-upper") == 0) {
+  if (pg_strcasecmp(newval, "preserve-upper") == 0)
+  {
     pset.comp_case = PSQL_COMP_CASE_PRESERVE_UPPER;
-  } else if (pg_strcasecmp(newval, "preserve-lower") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "preserve-lower") == 0)
+  {
     pset.comp_case = PSQL_COMP_CASE_PRESERVE_LOWER;
-  } else if (pg_strcasecmp(newval, "upper") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "upper") == 0)
+  {
     pset.comp_case = PSQL_COMP_CASE_UPPER;
-  } else if (pg_strcasecmp(newval, "lower") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "lower") == 0)
+  {
     pset.comp_case = PSQL_COMP_CASE_LOWER;
-  } else {
+  }
+  else
+  {
     PsqlVarEnumError("COMP_KEYWORD_CASE", newval, "lower, upper, preserve-lower, preserve-upper");
     return false;
   }
@@ -934,7 +1082,8 @@ comp_keyword_case_hook(const char *newval)
 static char *
 histcontrol_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("none");
   }
   return newval;
@@ -944,15 +1093,24 @@ static bool
 histcontrol_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "ignorespace") == 0) {
+  if (pg_strcasecmp(newval, "ignorespace") == 0)
+  {
     pset.histcontrol = hctl_ignorespace;
-  } else if (pg_strcasecmp(newval, "ignoredups") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "ignoredups") == 0)
+  {
     pset.histcontrol = hctl_ignoredups;
-  } else if (pg_strcasecmp(newval, "ignoreboth") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "ignoreboth") == 0)
+  {
     pset.histcontrol = hctl_ignoreboth;
-  } else if (pg_strcasecmp(newval, "none") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "none") == 0)
+  {
     pset.histcontrol = hctl_none;
-  } else {
+  }
+  else
+  {
     PsqlVarEnumError("HISTCONTROL", newval, "none, ignorespace, ignoredups, ignoreboth");
     return false;
   }
@@ -983,7 +1141,8 @@ prompt3_hook(const char *newval)
 static char *
 verbosity_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("default");
   }
   return newval;
@@ -993,20 +1152,30 @@ static bool
 verbosity_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "default") == 0) {
+  if (pg_strcasecmp(newval, "default") == 0)
+  {
     pset.verbosity = PQERRORS_DEFAULT;
-  } else if (pg_strcasecmp(newval, "verbose") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "verbose") == 0)
+  {
     pset.verbosity = PQERRORS_VERBOSE;
-  } else if (pg_strcasecmp(newval, "terse") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "terse") == 0)
+  {
     pset.verbosity = PQERRORS_TERSE;
-  } else if (pg_strcasecmp(newval, "sqlstate") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "sqlstate") == 0)
+  {
     pset.verbosity = PQERRORS_SQLSTATE;
-  } else {
+  }
+  else
+  {
     PsqlVarEnumError("VERBOSITY", newval, "default, verbose, terse, sqlstate");
     return false;
   }
 
-  if (pset.db) {
+  if (pset.db)
+  {
     PQsetErrorVerbosity(pset.db, pset.verbosity);
   }
   return true;
@@ -1015,7 +1184,8 @@ verbosity_hook(const char *newval)
 static char *
 show_context_substitute_hook(char *newval)
 {
-  if (newval == NULL) {
+  if (newval == NULL)
+  {
     newval = pg_strdup("errors");
   }
   return newval;
@@ -1025,18 +1195,26 @@ static bool
 show_context_hook(const char *newval)
 {
   Assert(newval != NULL); /* else substitute hook messed up */
-  if (pg_strcasecmp(newval, "never") == 0) {
+  if (pg_strcasecmp(newval, "never") == 0)
+  {
     pset.show_context = PQSHOW_CONTEXT_NEVER;
-  } else if (pg_strcasecmp(newval, "errors") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "errors") == 0)
+  {
     pset.show_context = PQSHOW_CONTEXT_ERRORS;
-  } else if (pg_strcasecmp(newval, "always") == 0) {
+  }
+  else if (pg_strcasecmp(newval, "always") == 0)
+  {
     pset.show_context = PQSHOW_CONTEXT_ALWAYS;
-  } else {
+  }
+  else
+  {
     PsqlVarEnumError("SHOW_CONTEXT", newval, "never, errors, always");
     return false;
   }
 
-  if (pset.db) {
+  if (pset.db)
+  {
     PQsetErrorContextVisibility(pset.db, pset.show_context);
   }
   return true;

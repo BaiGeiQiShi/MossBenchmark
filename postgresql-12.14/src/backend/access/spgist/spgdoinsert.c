@@ -79,11 +79,11 @@ addNode(SpGistState *state, SpGistInnerTuple tuple, Datum label, int offset)
   /* if offset is negative, insert at end */
   if (offset < 0)
   {
-
+    offset = tuple->nNodes;
   }
   else if (offset > tuple->nNodes)
   {
-
+    elog(ERROR, "invalid offset for adding node to SPGiST inner tuple");
   }
 
   nodes = palloc(sizeof(SpGistNodeTuple) * (tuple->nNodes + 1));
@@ -110,7 +110,7 @@ cmpOffsetNumbers(const void *a, const void *b)
 {
   if (*(const OffsetNumber *)a == *(const OffsetNumber *)b)
   {
-
+    return 0;
   }
   return (*(const OffsetNumber *)a > *(const OffsetNumber *)b) ? 1 : -1;
 }
@@ -171,7 +171,7 @@ spgPageIndexMultiDelete(SpGistState *state, Page page, OffsetNumber *itemnos, in
 
     if (PageAddItem(page, (Item)tuple, tuple->size, itemno, false, false) != itemno)
     {
-
+      elog(ERROR, "failed to add item of size %u to SPGiST index page", tuple->size);
     }
 
     if (tupstate == SPGIST_REDIRECT)
@@ -267,23 +267,23 @@ addLeafTuple(Relation index, SpGistState *state, SpGistLeafTuple leafTuple, SPPa
       xlrec.offnumLeaf = offnum;
       xlrec.offnumHeadLeaf = current->offnum;
     }
+    else if (head->tupstate == SPGIST_DEAD)
+    {
+      leafTuple->nextOffset = InvalidOffsetNumber;
+      PageIndexTupleDelete(current->page, current->offnum);
+      if (PageAddItem(current->page, (Item)leafTuple, leafTuple->size, current->offnum, false, false) != current->offnum)
+      {
+        elog(ERROR, "failed to add item of size %u to SPGiST index page", leafTuple->size);
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /* WAL replay distinguishes this case by equal offnums */
+      xlrec.offnumLeaf = current->offnum;
+      xlrec.offnumHeadLeaf = current->offnum;
+    }
+    else
+    {
+      elog(ERROR, "unexpected SPGiST tuple state: %d", head->tupstate);
+    }
   }
 
   MarkBufferDirty(current->buffer);
@@ -356,17 +356,17 @@ checkSplitConditions(Relation index, SpGistState *state, SPPageDesc *current, in
       n++;
       totalSize += it->size + sizeof(ItemIdData);
     }
-
-
-
-
-
-
-
-
-
-
-
+    else if (it->tupstate == SPGIST_DEAD)
+    {
+      /* We could see a DEAD tuple as first/only chain item */
+      Assert(i == current->offnum);
+      Assert(it->nextOffset == InvalidOffsetNumber);
+      /* Don't count it in result, because it won't go to other page */
+    }
+    else
+    {
+      elog(ERROR, "unexpected SPGiST tuple state: %d", it->tupstate);
+    }
 
     i = it->nextOffset;
   }
@@ -424,20 +424,20 @@ moveLeafs(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc *p
       size += it->size + sizeof(ItemIdData);
       nDelete++;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else if (it->tupstate == SPGIST_DEAD)
+    {
+      /* We could see a DEAD tuple as first/only chain item */
+      Assert(i == current->offnum);
+      Assert(it->nextOffset == InvalidOffsetNumber);
+      /* We don't want to move it, so don't count it in size */
+      toDelete[nDelete] = i;
+      nDelete++;
+      replaceDead = true;
+    }
+    else
+    {
+      elog(ERROR, "unexpected SPGiST tuple state: %d", it->tupstate);
+    }
 
     i = it->nextOffset;
   }
@@ -588,7 +588,7 @@ checkAllTheSame(spgPickSplitIn *in, spgPickSplitOut *out, bool tooBig, bool *inc
   /* If there's only the new leaf tuple, don't select allTheSame mode */
   if (in->nTuples <= 1)
   {
-
+    return false;
   }
 
   /* If tuple set doesn't fit on one page, ignore the new tuple in test */
@@ -609,7 +609,7 @@ checkAllTheSame(spgPickSplitIn *in, spgPickSplitOut *out, bool tooBig, bool *inc
   /* If the new tuple is in its own node, it can't be included in split */
   if (tooBig && out->mapTuplesToNodes[in->nTuples - 1] != theNode)
   {
-
+    *includeNew = false;
   }
 
   out->nNodes = 8; /* arbitrary number of child nodes */
@@ -745,9 +745,9 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
         /* we will delete the tuple altogether, so count full space */
         spaceToDelete += it->size + sizeof(ItemIdData);
       }
-      else
-      { /* tuples on root should be live */
-
+      else /* tuples on root should be live */
+      {
+        elog(ERROR, "unexpected SPGiST tuple state: %d", it->tupstate);
       }
     }
   }
@@ -772,19 +772,19 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
         Assert(it->size >= SGDTSIZE);
         spaceToDelete += it->size - SGDTSIZE;
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
+      else if (it->tupstate == SPGIST_DEAD)
+      {
+        /* We could see a DEAD tuple as first/only chain item */
+        Assert(i == current->offnum);
+        Assert(it->nextOffset == InvalidOffsetNumber);
+        toDelete[nToDelete] = i;
+        nToDelete++;
+        /* replacing it with redirect will save no space */
+      }
+      else
+      {
+        elog(ERROR, "unexpected SPGiST tuple state: %d", it->tupstate);
+      }
 
       i = it->nextOffset;
     }
@@ -827,20 +827,20 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
      * Perform dummy split that puts all tuples into one node.
      * checkAllTheSame will override this and force allTheSame mode.
      */
-
-
-
-
+    out.hasPrefix = false;
+    out.nNodes = 1;
+    out.nodeLabels = NULL;
+    out.mapTuplesToNodes = palloc0(sizeof(int) * in.nTuples);
 
     /*
      * Form new leaf tuples and count up the total space needed.
      */
-
-
-
-
-
-
+    totalLeafSizes = 0;
+    for (i = 0; i < in.nTuples; i++)
+    {
+      newLeafs[i] = spgFormLeafTuple(state, heapPtrs + i, (Datum)0, true);
+      totalLeafSizes += newLeafs[i]->size + sizeof(ItemIdData);
+    }
   }
 
   /*
@@ -862,8 +862,8 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
   }
   else
   {
-
-
+    maxToInclude = in.nTuples - 1;
+    totalLeafSizes -= newLeafs[in.nTuples - 1]->size + sizeof(ItemIdData);
   }
 
   /*
@@ -905,7 +905,7 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
     n = out.mapTuplesToNodes[i];
     if (n < 0 || n >= out.nNodes)
     {
-
+      elog(ERROR, "inconsistent result of SPGiST picksplit function");
     }
     leafSizes[n] += newLeafs[i]->size + sizeof(ItemIdData);
   }
@@ -987,9 +987,9 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
      * it's not going to fit yet.  Don't bother allocating a second leaf
      * buffer that we won't be able to use.
      */
-
-
-
+    newLeafBuffer = InvalidBuffer;
+    Assert(includeNew);
+    Assert(nToInsert == 0);
   }
   else
   {
@@ -1056,13 +1056,13 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
       }
       if (curspace < 0 || newspace < 0)
       {
-
+        elog(ERROR, "failed to divide leaf tuple groups across pages");
       }
     }
     else
     {
       /* oops, we already excluded new tuple ... should not get here */
-
+      elog(ERROR, "failed to divide leaf tuple groups across pages");
     }
     /* Expand the per-node assignments to be shown per leaf tuple */
     for (i = 0; i < nToInsert; i++)
@@ -1103,7 +1103,7 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
     else if (isNew)
     {
       /* don't expose the freshly init'd buffer as a backup block */
-
+      Assert(nToDelete == 0);
     }
     else
     {
@@ -1274,7 +1274,7 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
     xlrec.offnumInner = current->offnum = PageAddItem(current->page, (Item)innerTuple, innerTuple->size, InvalidOffsetNumber, false, false);
     if (current->offnum != FirstOffsetNumber)
     {
-
+      elog(ERROR, "failed to add item of size %u to SPGiST index page", innerTuple->size);
     }
 
     /* No parent link to update, nor redirection to do */
@@ -1310,7 +1310,7 @@ doPickSplit(Relation index, SpGistState *state, SPPageDesc *current, SPPageDesc 
       flags = REGBUF_STANDARD;
       if (xlrec.initSrc)
       {
-
+        flags |= REGBUF_WILL_INIT;
       }
       XLogRegisterBuffer(0, saveCurrent.buffer, flags);
     }
@@ -1424,7 +1424,7 @@ spgMatchNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTup
 
   if (i != nodeN)
   {
-
+    elog(ERROR, "failed to find requested node %d in SPGiST inner tuple", nodeN);
   }
 
   /* Point current to the downlink location, if any */
@@ -1482,7 +1482,7 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
     PageIndexTupleDelete(current->page, current->offnum);
     if (PageAddItem(current->page, (Item)newInnerTuple, newInnerTuple->size, current->offnum, false, false) != current->offnum)
     {
-
+      elog(ERROR, "failed to add item of size %u to SPGiST index page", newInnerTuple->size);
     }
 
     MarkBufferDirty(current->buffer);
@@ -1519,7 +1519,7 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
      */
     if (SpGistBlockIsRoot(current->blkno))
     {
-
+      elog(ERROR, "cannot enlarge root tuple any more");
     }
     Assert(parent->buffer != InvalidBuffer);
 
@@ -1546,7 +1546,7 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
      */
     if (current->blkno == saveCurrent.blkno)
     {
-
+      elog(ERROR, "SPGiST new buffer shouldn't be same as old buffer");
     }
 
     /*
@@ -1555,11 +1555,11 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
      */
     if (parent->buffer == saveCurrent.buffer)
     {
-
+      xlrec.parentBlk = 0;
     }
     else if (parent->buffer == current->buffer)
     {
-
+      xlrec.parentBlk = 1;
     }
     else
     {
@@ -1585,7 +1585,7 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
      */
     if (state->isBuild)
     {
-
+      dt = spgFormDeadTuple(state, SPGIST_PLACEHOLDER, InvalidBlockNumber, InvalidOffsetNumber);
     }
     else
     {
@@ -1595,12 +1595,12 @@ spgAddNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTuple
     PageIndexTupleDelete(saveCurrent.page, saveCurrent.offnum);
     if (PageAddItem(saveCurrent.page, (Item)dt, dt->size, saveCurrent.offnum, false, false) != saveCurrent.offnum)
     {
-
+      elog(ERROR, "failed to add item of size %u to SPGiST index page", dt->size);
     }
 
     if (state->isBuild)
     {
-
+      SpGistPageGetOpaque(saveCurrent.page)->nPlaceholder++;
     }
     else
     {
@@ -1673,11 +1673,11 @@ spgSplitNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTup
   /* Check opclass gave us sane values */
   if (out->result.splitTuple.prefixNNodes <= 0 || out->result.splitTuple.prefixNNodes > SGITMAXNNODES)
   {
-
+    elog(ERROR, "invalid number of prefix nodes: %d", out->result.splitTuple.prefixNNodes);
   }
   if (out->result.splitTuple.childNodeN < 0 || out->result.splitTuple.childNodeN >= out->result.splitTuple.prefixNNodes)
   {
-
+    elog(ERROR, "invalid child node number: %d", out->result.splitTuple.childNodeN);
   }
 
   /*
@@ -1704,7 +1704,7 @@ spgSplitNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTup
   /* it must fit in the space that innerTuple now occupies */
   if (prefixTuple->size > innerTuple->size)
   {
-
+    elog(ERROR, "SPGiST inner-tuple split must not produce longer prefix");
   }
 
   /*
@@ -1748,7 +1748,7 @@ spgSplitNodeAction(Relation index, SpGistState *state, SpGistInnerTuple innerTup
   xlrec.offnumPrefix = PageAddItem(current->page, (Item)prefixTuple, prefixTuple->size, current->offnum, false, false);
   if (xlrec.offnumPrefix != current->offnum)
   {
-
+    elog(ERROR, "failed to add item of size %u to SPGiST index page", prefixTuple->size);
   }
 
   /*
@@ -1906,7 +1906,7 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
 
   if (leafSize > SPGIST_PAGE_CAPACITY && (isnull || !state->config.longValuesOK))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds maximum %zu for index \"%s\"", leafSize - sizeof(ItemIdData), SPGIST_PAGE_CAPACITY - sizeof(ItemIdData), RelationGetRelationName(index)), errhint("Values larger than a buffer page cannot be indexed.")));
   }
   bestLeafSize = leafSize;
 
@@ -1948,8 +1948,8 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
      */
     if (INTERRUPTS_PENDING_CONDITION())
     {
-
-
+      result = false;
+      break;
     }
 
     if (current.blkno == InvalidBlockNumber)
@@ -1987,9 +1987,9 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
        */
       if (!ConditionalLockBuffer(current.buffer))
       {
-
-
-
+        ReleaseBuffer(current.buffer);
+        UnlockReleaseBuffer(parent.buffer);
+        return false;
       }
     }
     else
@@ -2002,7 +2002,7 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
     /* should not arrive at a page of the wrong type */
     if (isnull ? !SpGistPageStoresNulls(current.page) : SpGistPageStoresNulls(current.page))
     {
-
+      elog(ERROR, "SPGiST index page %u has wrong nulls flag", current.blkno);
     }
 
     if (SpGistPageIsLeaf(current.page))
@@ -2061,11 +2061,11 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
        * function is broken and produces add or split requests
        * repeatedly, check for query cancel (see comments above).
        */
-    process_inner_tuple:;
+    process_inner_tuple:
       if (INTERRUPTS_PENDING_CONDITION())
       {
-
-
+        result = false;
+        break;
       }
 
       innerTuple = (SpGistInnerTuple)PageGetItem(current.page, PageGetItemId(current.page, current.offnum));
@@ -2089,7 +2089,7 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
       else
       {
         /* force "match" action (to insert to random subnode) */
-
+        out.resultType = spgMatchNode;
       }
 
       if (innerTuple->allTheSame)
@@ -2101,7 +2101,7 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
          */
         if (out.resultType == spgAddNode)
         {
-
+          elog(ERROR, "cannot add a node to an allTheSame inner tuple");
         }
         else if (out.resultType == spgMatchNode)
         {
@@ -2111,7 +2111,7 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
 
       switch (out.resultType)
       {
-      case spgMatchNode:;
+      case spgMatchNode:
         /* Descend to N'th child node */
         spgMatchNodeAction(index, state, innerTuple, &current, &parent, out.result.matchNode.nodeN);
         /* Adjust level as per opclass request */
@@ -2144,23 +2144,23 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
         {
           bool ok = false;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          if (state->config.longValuesOK && !isnull)
+          {
+            if (leafSize < bestLeafSize)
+            {
+              ok = true;
+              bestLeafSize = leafSize;
+              numNoProgressCycles = 0;
+            }
+            else if (++numNoProgressCycles < 10)
+            {
+              ok = true;
+            }
+          }
+          if (!ok)
+          {
+            ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("index row size %zu exceeds maximum %zu for index \"%s\"", leafSize - sizeof(ItemIdData), SPGIST_PAGE_CAPACITY - sizeof(ItemIdData), RelationGetRelationName(index)), errhint("Values larger than a buffer page cannot be indexed.")));
+          }
         }
 
         /*
@@ -2170,11 +2170,11 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
          * page for the tuple).
          */
         break;
-      case spgAddNode:;
+      case spgAddNode:
         /* AddNode is not sensible if nodes don't have labels */
         if (in.nodeLabels == NULL)
         {
-
+          elog(ERROR, "cannot add a node to an inner tuple without node labels");
         }
         /* Add node to inner tuple, per request */
         spgAddNodeAction(index, state, innerTuple, &current, &parent, out.result.addNode.nodeN, out.result.addNode.nodeLabel);
@@ -2185,16 +2185,16 @@ spgdoinsert(Relation index, SpGistState *state, ItemPointer heapPtr, Datum datum
          */
         goto process_inner_tuple;
         break;
-      case spgSplitTuple:;
+      case spgSplitTuple:
         /* Split inner tuple, per request */
         spgSplitNodeAction(index, state, innerTuple, &current, &out);
 
         /* Retry insertion into the split node */
         goto process_inner_tuple;
         break;
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized SPGiST choose result: %d", (int)out.resultType);
+        break;
       }
     }
   } /* end loop */

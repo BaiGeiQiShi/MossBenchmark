@@ -201,7 +201,7 @@ IsValidJsonNumber(const char *str, int len)
 
   if (len <= 0)
   {
-
+    return false;
   }
 
   /*
@@ -262,12 +262,12 @@ json_out(PG_FUNCTION_ARGS)
 Datum
 json_send(PG_FUNCTION_ARGS)
 {
+  text *t = PG_GETARG_TEXT_PP(0);
+  StringInfoData buf;
 
-
-
-
-
-
+  pq_begintypsend(&buf);
+  pq_sendtext(&buf, VARDATA_ANY(t), VARSIZE_ANY_EXHDR(t));
+  PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
 /*
@@ -276,18 +276,18 @@ json_send(PG_FUNCTION_ARGS)
 Datum
 json_recv(PG_FUNCTION_ARGS)
 {
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  char *str;
+  int nbytes;
+  JsonLexContext *lex;
 
+  str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
 
+  /* Validate it. */
+  lex = makeJsonLexContextCstringLen(str, nbytes, false);
+  pg_parse_json(lex, &nullSemAction);
 
-
-
-
-
-
-
-
-
-
+  PG_RETURN_TEXT_P(cstring_to_text_with_len(str, nbytes));
 }
 
 /*
@@ -346,13 +346,13 @@ pg_parse_json(JsonLexContext *lex, JsonSemAction *sem)
   /* parse by recursive descent */
   switch (tok)
   {
-  case JSON_TOKEN_OBJECT_START:;
+  case JSON_TOKEN_OBJECT_START:
     parse_object(lex, sem);
     break;
-  case JSON_TOKEN_ARRAY_START:;
+  case JSON_TOKEN_ARRAY_START:
     parse_array(lex, sem);
     break;
-  default:;;
+  default:
     parse_scalar(lex, sem); /* json can be a bare scalar */
   }
 
@@ -419,22 +419,22 @@ parse_scalar(JsonLexContext *lex, JsonSemAction *sem)
   /* a scalar must be a string, a number, true, false, or null */
   switch (tok)
   {
-  case JSON_TOKEN_TRUE:;
+  case JSON_TOKEN_TRUE:
     lex_accept(lex, JSON_TOKEN_TRUE, valaddr);
     break;
-  case JSON_TOKEN_FALSE:;
+  case JSON_TOKEN_FALSE:
     lex_accept(lex, JSON_TOKEN_FALSE, valaddr);
     break;
-  case JSON_TOKEN_NULL:;
+  case JSON_TOKEN_NULL:
     lex_accept(lex, JSON_TOKEN_NULL, valaddr);
     break;
-  case JSON_TOKEN_NUMBER:;
+  case JSON_TOKEN_NUMBER:
     lex_accept(lex, JSON_TOKEN_NUMBER, valaddr);
     break;
-  case JSON_TOKEN_STRING:;
+  case JSON_TOKEN_STRING:
     lex_accept(lex, JSON_TOKEN_STRING, valaddr);
     break;
-  default:;;
+  default:
     report_parse_error(JSON_PARSE_VALUE, lex);
   }
 
@@ -482,13 +482,13 @@ parse_object_field(JsonLexContext *lex, JsonSemAction *sem)
 
   switch (tok)
   {
-  case JSON_TOKEN_OBJECT_START:;
+  case JSON_TOKEN_OBJECT_START:
     parse_object(lex, sem);
     break;
-  case JSON_TOKEN_ARRAY_START:;
+  case JSON_TOKEN_ARRAY_START:
     parse_array(lex, sem);
     break;
-  default:;;
+  default:
     parse_scalar(lex, sem);
   }
 
@@ -530,16 +530,16 @@ parse_object(JsonLexContext *lex, JsonSemAction *sem)
   tok = lex_peek(lex);
   switch (tok)
   {
-  case JSON_TOKEN_STRING:;
+  case JSON_TOKEN_STRING:
     parse_object_field(lex, sem);
     while (lex_accept(lex, JSON_TOKEN_COMMA, NULL))
     {
       parse_object_field(lex, sem);
     }
     break;
-  case JSON_TOKEN_OBJECT_END:;
+  case JSON_TOKEN_OBJECT_END:
     break;
-  default:;;
+  default:
     /* case of an invalid initial token inside the object */
     report_parse_error(JSON_PARSE_OBJECT_START, lex);
   }
@@ -573,13 +573,13 @@ parse_array_element(JsonLexContext *lex, JsonSemAction *sem)
   /* an array element is any object, array or scalar */
   switch (tok)
   {
-  case JSON_TOKEN_OBJECT_START:;
+  case JSON_TOKEN_OBJECT_START:
     parse_object(lex, sem);
     break;
-  case JSON_TOKEN_ARRAY_START:;
+  case JSON_TOKEN_ARRAY_START:
     parse_array(lex, sem);
     break;
-  default:;;
+  default:
     parse_scalar(lex, sem);
   }
 
@@ -672,119 +672,119 @@ json_lex(JsonLexContext *lex)
     switch (*s)
     {
       /* Single-character token, some kind of punctuation mark. */
-    case '{':;
+    case '{':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_OBJECT_START;
       break;
-    case '}':;
+    case '}':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_OBJECT_END;
       break;
-    case '[':;
+    case '[':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_ARRAY_START;
       break;
-    case ']':;
+    case ']':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_ARRAY_END;
       break;
-    case ',':;
+    case ',':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_COMMA;
       break;
-    case ':':;
+    case ':':
       lex->prev_token_terminator = lex->token_terminator;
       lex->token_terminator = s + 1;
       lex->token_type = JSON_TOKEN_COLON;
       break;
-    case '"':;
+    case '"':
       /* string */
       json_lex_string(lex);
       lex->token_type = JSON_TOKEN_STRING;
       break;
-    case '-':;
+    case '-':
       /* Negative number. */
       json_lex_number(lex, s + 1, NULL, NULL);
       lex->token_type = JSON_TOKEN_NUMBER;
       break;
-    case '0':;
-    case '1':;
-    case '2':;
-    case '3':;
-    case '4':;
-    case '5':;
-    case '6':;
-    case '7':;
-    case '8':;
-    case '9':;
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
       /* Positive number. */
       json_lex_number(lex, s, NULL, NULL);
       lex->token_type = JSON_TOKEN_NUMBER;
       break;
-    default:;;
+    default:
+    {
+      char *p;
+
+      /*
+       * We're not dealing with a string, number, legal
+       * punctuation mark, or end of string.  The only legal
+       * tokens we might find here are true, false, and null,
+       * but for error reporting purposes we scan until we see a
+       * non-alphanumeric character.  That way, we can report
+       * the whole word as an unexpected token, rather than just
+       * some unintuitive prefix thereof.
+       */
+      for (p = s; p - s < lex->input_length - len && JSON_ALPHANUMERIC_CHAR(*p); p++)
+        /* skip */;
+
+      /*
+       * We got some sort of unexpected punctuation or an
+       * otherwise unexpected character, so just complain about
+       * that one character.
+       */
+      if (p == s)
       {
-        char *p;
-
-        /*
-         * We're not dealing with a string, number, legal
-         * punctuation mark, or end of string.  The only legal
-         * tokens we might find here are true, false, and null,
-         * but for error reporting purposes we scan until we see a
-         * non-alphanumeric character.  That way, we can report
-         * the whole word as an unexpected token, rather than just
-         * some unintuitive prefix thereof.
-         */
-        for (p = s; p - s < lex->input_length - len && JSON_ALPHANUMERIC_CHAR(*p); p++)
-          /* skip */;
-
-        /*
-         * We got some sort of unexpected punctuation or an
-         * otherwise unexpected character, so just complain about
-         * that one character.
-         */
-        if (p == s)
-        {
-          lex->prev_token_terminator = lex->token_terminator;
-          lex->token_terminator = s + 1;
-          report_invalid_token(lex);
-        }
-
-        /*
-         * We've got a real alphanumeric token here.  If it
-         * happens to be true, false, or null, all is well.  If
-         * not, error out.
-         */
         lex->prev_token_terminator = lex->token_terminator;
-        lex->token_terminator = p;
-        if (p - s == 4)
+        lex->token_terminator = s + 1;
+        report_invalid_token(lex);
+      }
+
+      /*
+       * We've got a real alphanumeric token here.  If it
+       * happens to be true, false, or null, all is well.  If
+       * not, error out.
+       */
+      lex->prev_token_terminator = lex->token_terminator;
+      lex->token_terminator = p;
+      if (p - s == 4)
+      {
+        if (memcmp(s, "true", 4) == 0)
         {
-          if (memcmp(s, "true", 4) == 0)
-          {
-            lex->token_type = JSON_TOKEN_TRUE;
-          }
-          else if (memcmp(s, "null", 4) == 0)
-          {
-            lex->token_type = JSON_TOKEN_NULL;
-          }
-          else
-          {
-            report_invalid_token(lex);
-          }
+          lex->token_type = JSON_TOKEN_TRUE;
         }
-        else if (p - s == 5 && memcmp(s, "false", 5) == 0)
+        else if (memcmp(s, "null", 4) == 0)
         {
-          lex->token_type = JSON_TOKEN_FALSE;
+          lex->token_type = JSON_TOKEN_NULL;
         }
         else
         {
           report_invalid_token(lex);
         }
       }
+      else if (p - s == 5 && memcmp(s, "false", 5) == 0)
+      {
+        lex->token_type = JSON_TOKEN_FALSE;
+      }
+      else
+      {
+        report_invalid_token(lex);
+      }
+    }
     } /* end of switch */
   }
 }
@@ -835,8 +835,8 @@ json_lex_string(JsonLexContext *lex)
       len++;
       if (len >= lex->input_length)
       {
-
-
+        lex->token_terminator = s;
+        report_invalid_token(lex);
       }
       else if (*s == 'u')
       {
@@ -849,8 +849,8 @@ json_lex_string(JsonLexContext *lex)
           len++;
           if (len >= lex->input_length)
           {
-
-
+            lex->token_terminator = s;
+            report_invalid_token(lex);
           }
           else if (*s >= '0' && *s <= '9')
           {
@@ -896,7 +896,7 @@ json_lex_string(JsonLexContext *lex)
 
           if (hi_surrogate != -1)
           {
-
+            ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Unicode low surrogate must follow a high surrogate."), report_json_context(lex)));
           }
 
           /*
@@ -924,7 +924,7 @@ json_lex_string(JsonLexContext *lex)
              * form feed character in JSON, so it's useful in all
              * encodings.
              */
-
+            appendStringInfoChar(lex->strval, (char)ch);
           }
           else
           {
@@ -936,32 +936,32 @@ json_lex_string(JsonLexContext *lex)
       {
         if (hi_surrogate != -1)
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Unicode low surrogate must follow a high surrogate."), report_json_context(lex)));
         }
 
         switch (*s)
         {
-        case '"':;
-        case '\\':;
-        case '/':;
+        case '"':
+        case '\\':
+        case '/':
           appendStringInfoChar(lex->strval, *s);
           break;
-        case 'b':;
+        case 'b':
           appendStringInfoChar(lex->strval, '\b');
           break;
-        case 'f':;
-
-
-        case 'n':;
+        case 'f':
+          appendStringInfoChar(lex->strval, '\f');
+          break;
+        case 'n':
           appendStringInfoChar(lex->strval, '\n');
           break;
-        case 'r':;
-
-
-        case 't':;
-
-
-        default:;;
+        case 'r':
+          appendStringInfoChar(lex->strval, '\r');
+          break;
+        case 't':
+          appendStringInfoChar(lex->strval, '\t');
+          break;
+        default:
           /* Not a valid string escape, so error out. */
           lex->token_terminator = s + pg_mblen(s);
           ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Escape sequence \"\\%s\" is invalid.", extract_mb_char(s)), report_json_context(lex)));
@@ -993,7 +993,7 @@ json_lex_string(JsonLexContext *lex)
 
   if (hi_surrogate != -1)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Unicode low surrogate must follow a high surrogate."), report_json_context(lex)));
   }
 
   /* Hooray, we found the end of the string! */
@@ -1083,8 +1083,8 @@ json_lex_number(JsonLexContext *lex, char *s, bool *num_err, int *total_len)
     len++;
     if (len < lex->input_length && (*s == '+' || *s == '-'))
     {
-
-
+      s++;
+      len++;
     }
     if (len == lex->input_length || *s < '0' || *s > '9')
     {
@@ -1165,32 +1165,32 @@ report_parse_error(JsonParseContext ctx, JsonLexContext *lex)
   {
     switch (ctx)
     {
-    case JSON_PARSE_VALUE:;
+    case JSON_PARSE_VALUE:
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected JSON value, but found \"%s\".", token), report_json_context(lex)));
       break;
-    case JSON_PARSE_STRING:;
+    case JSON_PARSE_STRING:
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected string, but found \"%s\".", token), report_json_context(lex)));
       break;
-    case JSON_PARSE_ARRAY_START:;
-
-
-    case JSON_PARSE_ARRAY_NEXT:;
-
-
-    case JSON_PARSE_OBJECT_START:;
+    case JSON_PARSE_ARRAY_START:
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected array element or \"]\", but found \"%s\".", token), report_json_context(lex)));
+      break;
+    case JSON_PARSE_ARRAY_NEXT:
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected \",\" or \"]\", but found \"%s\".", token), report_json_context(lex)));
+      break;
+    case JSON_PARSE_OBJECT_START:
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected string or \"}\", but found \"%s\".", token), report_json_context(lex)));
       break;
-    case JSON_PARSE_OBJECT_LABEL:;
+    case JSON_PARSE_OBJECT_LABEL:
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected \":\", but found \"%s\".", token), report_json_context(lex)));
       break;
-    case JSON_PARSE_OBJECT_NEXT:;
+    case JSON_PARSE_OBJECT_NEXT:
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected \",\" or \"}\", but found \"%s\".", token), report_json_context(lex)));
       break;
-    case JSON_PARSE_OBJECT_COMMA:;
-
-
-    default:;;
-
+    case JSON_PARSE_OBJECT_COMMA:
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "json"), errdetail("Expected string, but found \"%s\".", token), report_json_context(lex)));
+      break;
+    default:
+      elog(ERROR, "unexpected json parse state: %d", ctx);
     }
   }
 }
@@ -1247,10 +1247,10 @@ report_json_context(JsonLexContext *lex)
     /* Always advance over newlines */
     if (context_start < context_end && *context_start == '\n')
     {
-
-
-
-
+      context_start++;
+      line_start = context_start;
+      line_number++;
+      continue;
     }
     /* Otherwise, done as soon as we are close enough to context_end */
     if (context_end - context_start < 50)
@@ -1258,14 +1258,14 @@ report_json_context(JsonLexContext *lex)
       break;
     }
     /* Advance to next multibyte character */
-
-
-
-
-
-
-
-
+    if (IS_HIGHBIT_SET(*context_start))
+    {
+      context_start += pg_mblen(context_start);
+    }
+    else
+    {
+      context_start++;
+    }
   }
 
   /*
@@ -1336,46 +1336,46 @@ json_categorize_type(Oid typoid, JsonTypeCategory *tcategory, Oid *outfuncoid)
 
   switch (typoid)
   {
-  case BOOLOID:;
+  case BOOLOID:
     *tcategory = JSONTYPE_BOOL;
     break;
 
-  case INT2OID:;
-  case INT4OID:;
-  case INT8OID:;
-  case FLOAT4OID:;
-  case FLOAT8OID:;
-  case NUMERICOID:;
+  case INT2OID:
+  case INT4OID:
+  case INT8OID:
+  case FLOAT4OID:
+  case FLOAT8OID:
+  case NUMERICOID:
     getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
     *tcategory = JSONTYPE_NUMERIC;
     break;
 
-  case DATEOID:;
+  case DATEOID:
     *tcategory = JSONTYPE_DATE;
     break;
 
-  case TIMESTAMPOID:;
+  case TIMESTAMPOID:
     *tcategory = JSONTYPE_TIMESTAMP;
     break;
 
-  case TIMESTAMPTZOID:;
+  case TIMESTAMPTZOID:
     *tcategory = JSONTYPE_TIMESTAMPTZ;
     break;
 
-  case JSONOID:;
-  case JSONBOID:;
+  case JSONOID:
+  case JSONBOID:
     getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
     *tcategory = JSONTYPE_JSON;
     break;
 
-  default:;;
+  default:
     /* Check for arrays and composites */
     if (OidIsValid(get_element_type(typoid)) || typoid == ANYARRAYOID || typoid == RECORDARRAYOID)
     {
       *tcategory = JSONTYPE_ARRAY;
     }
-    else if (type_is_rowtype(typoid))
-    { /* includes RECORDOID */
+    else if (type_is_rowtype(typoid)) /* includes RECORDOID */
+    {
       *tcategory = JSONTYPE_COMPOSITE;
     }
     else
@@ -1388,17 +1388,17 @@ json_categorize_type(Oid typoid, JsonTypeCategory *tcategory, Oid *outfuncoid)
         Oid castfunc;
         CoercionPathType ctype;
 
-
-
-
-
-
-
-
-
-
-
-
+        ctype = find_coercion_pathway(JSONOID, typoid, COERCION_EXPLICIT, &castfunc);
+        if (ctype == COERCION_PATH_FUNC && OidIsValid(castfunc))
+        {
+          *tcategory = JSONTYPE_CAST;
+          *outfuncoid = castfunc;
+        }
+        else
+        {
+          /* non builtin type with no cast */
+          getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
+        }
       }
       else
       {
@@ -1443,24 +1443,24 @@ datum_to_json(Datum val, bool is_null, StringInfo result, JsonTypeCategory tcate
 
   switch (tcategory)
   {
-  case JSONTYPE_ARRAY:;
+  case JSONTYPE_ARRAY:
     array_to_json_internal(val, result, false);
     break;
-  case JSONTYPE_COMPOSITE:;
+  case JSONTYPE_COMPOSITE:
     composite_to_json(val, result, false);
     break;
-  case JSONTYPE_BOOL:;
+  case JSONTYPE_BOOL:
     outputstr = DatumGetBool(val) ? "true" : "false";
     if (key_scalar)
     {
-
+      escape_json(result, outputstr);
     }
     else
     {
       appendStringInfoString(result, outputstr);
     }
     break;
-  case JSONTYPE_NUMERIC:;
+  case JSONTYPE_NUMERIC:
     outputstr = OidOutputFunctionCall(outfuncoid, val);
 
     /*
@@ -1477,7 +1477,7 @@ datum_to_json(Datum val, bool is_null, StringInfo result, JsonTypeCategory tcate
     }
     pfree(outputstr);
     break;
-  case JSONTYPE_DATE:;
+  case JSONTYPE_DATE:
   {
     char buf[MAXDATELEN + 1];
 
@@ -1485,7 +1485,7 @@ datum_to_json(Datum val, bool is_null, StringInfo result, JsonTypeCategory tcate
     appendStringInfo(result, "\"%s\"", buf);
   }
   break;
-  case JSONTYPE_TIMESTAMP:;
+  case JSONTYPE_TIMESTAMP:
   {
     char buf[MAXDATELEN + 1];
 
@@ -1493,7 +1493,7 @@ datum_to_json(Datum val, bool is_null, StringInfo result, JsonTypeCategory tcate
     appendStringInfo(result, "\"%s\"", buf);
   }
   break;
-  case JSONTYPE_TIMESTAMPTZ:;
+  case JSONTYPE_TIMESTAMPTZ:
   {
     char buf[MAXDATELEN + 1];
 
@@ -1501,21 +1501,21 @@ datum_to_json(Datum val, bool is_null, StringInfo result, JsonTypeCategory tcate
     appendStringInfo(result, "\"%s\"", buf);
   }
   break;
-  case JSONTYPE_JSON:;
+  case JSONTYPE_JSON:
     /* JSON and JSONB output will already be escaped */
     outputstr = OidOutputFunctionCall(outfuncoid, val);
     appendStringInfoString(result, outputstr);
     pfree(outputstr);
     break;
-  case JSONTYPE_CAST:;
+  case JSONTYPE_CAST:
     /* outfuncoid refers to a cast function, not an output function */
-
-
-
-
-
-
-  default:;;
+    jsontext = DatumGetTextPP(OidFunctionCall1(outfuncoid, val));
+    outputstr = text_to_cstring(jsontext);
+    appendStringInfoString(result, outputstr);
+    pfree(outputstr);
+    pfree(jsontext);
+    break;
+  default:
     outputstr = OidOutputFunctionCall(outfuncoid, val);
     escape_json(result, outputstr);
     pfree(outputstr);
@@ -1537,7 +1537,7 @@ JsonEncodeDateTime(char *buf, Datum value, Oid typid)
 
   switch (typid)
   {
-  case DATEOID:;
+  case DATEOID:
   {
     DateADT date;
     struct pg_tm tm;
@@ -1556,18 +1556,18 @@ JsonEncodeDateTime(char *buf, Datum value, Oid typid)
     }
   }
   break;
-  case TIMEOID:;
+  case TIMEOID:
   {
     TimeADT time = DatumGetTimeADT(value);
     struct pg_tm tt, *tm = &tt;
     fsec_t fsec;
 
     /* Same as time_out(), but forcing DateStyle */
-
-
+    time2tm(time, tm, &fsec);
+    EncodeTimeOnly(tm, fsec, false, 0, USE_XSD_DATES, buf);
   }
-
-  case TIMETZOID:;
+  break;
+  case TIMETZOID:
   {
     TimeTzADT *time = DatumGetTimeTzADTP(value);
     struct pg_tm tt, *tm = &tt;
@@ -1575,11 +1575,11 @@ JsonEncodeDateTime(char *buf, Datum value, Oid typid)
     int tz;
 
     /* Same as timetz_out(), but forcing DateStyle */
-
-
+    timetz2tm(time, tm, &fsec, &tz);
+    EncodeTimeOnly(tm, fsec, true, tz, USE_XSD_DATES, buf);
   }
-
-  case TIMESTAMPOID:;
+  break;
+  case TIMESTAMPOID:
   {
     Timestamp timestamp;
     struct pg_tm tm;
@@ -1597,11 +1597,11 @@ JsonEncodeDateTime(char *buf, Datum value, Oid typid)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("timestamp out of range")));
     }
   }
   break;
-  case TIMESTAMPTZOID:;
+  case TIMESTAMPTZOID:
   {
     TimestampTz timestamp;
     struct pg_tm tm;
@@ -1621,13 +1621,13 @@ JsonEncodeDateTime(char *buf, Datum value, Oid typid)
     }
     else
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("timestamp out of range")));
     }
   }
   break;
-  default:;;
-
-
+  default:
+    elog(ERROR, "unknown jsonb value datetime type oid %d", typid);
+    return NULL;
   }
 
   return buf;
@@ -1701,8 +1701,8 @@ array_to_json_internal(Datum array, StringInfo result, bool use_line_feeds)
 
   if (nitems <= 0)
   {
-
-
+    appendStringInfoString(result, "[]");
+    return;
   }
 
   get_typlenbyvalalign(element_type, &typlen, &typbyval, &typalign);
@@ -1759,7 +1759,7 @@ composite_to_json(Datum composite, StringInfo result, bool use_line_feeds)
 
     if (att->attisdropped)
     {
-
+      continue;
     }
 
     if (needsep)
@@ -1806,7 +1806,7 @@ add_json(Datum val, bool is_null, StringInfo result, Oid val_type, bool key_scal
 
   if (val_type == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
   }
 
   if (is_null)
@@ -1902,7 +1902,7 @@ to_json(PG_FUNCTION_ARGS)
 
   if (val_type == InvalidOid)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
   }
 
   json_categorize_type(val_type, &tcategory, &outfuncoid);
@@ -1929,7 +1929,7 @@ json_agg_transfn(PG_FUNCTION_ARGS)
   if (!AggCheckCallContext(fcinfo, &aggcontext))
   {
     /* cannot be called directly because of internal-type argument */
-
+    elog(ERROR, "json_agg_transfn called in non-aggregate context");
   }
 
   if (PG_ARGISNULL(0))
@@ -1938,7 +1938,7 @@ json_agg_transfn(PG_FUNCTION_ARGS)
 
     if (arg_type == InvalidOid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine input data type")));
     }
 
     /*
@@ -1964,8 +1964,8 @@ json_agg_transfn(PG_FUNCTION_ARGS)
   /* fast path for NULLs */
   if (PG_ARGISNULL(1))
   {
-
-
+    datum_to_json((Datum)0, true, state->str, JSONTYPE_NULL, InvalidOid, false);
+    PG_RETURN_POINTER(state);
   }
 
   val = PG_GETARG_DATUM(1);
@@ -2002,7 +2002,7 @@ json_agg_finalfn(PG_FUNCTION_ARGS)
   /* NULL result for no rows in, as is standard with aggregates */
   if (state == NULL)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Else return state with appropriate array terminator added */
@@ -2024,7 +2024,7 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
   if (!AggCheckCallContext(fcinfo, &aggcontext))
   {
     /* cannot be called directly because of internal-type argument */
-
+    elog(ERROR, "json_object_agg_transfn called in non-aggregate context");
   }
 
   if (PG_ARGISNULL(0))
@@ -2046,7 +2046,7 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 
     if (arg_type == InvalidOid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine data type for argument %d", 1)));
     }
 
     json_categorize_type(arg_type, &state->key_category, &state->key_output_func);
@@ -2055,7 +2055,7 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 
     if (arg_type == InvalidOid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("could not determine data type for argument %d", 2)));
     }
 
     json_categorize_type(arg_type, &state->val_category, &state->val_output_func);
@@ -2089,7 +2089,7 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 
   if (PG_ARGISNULL(2))
   {
-
+    arg = (Datum)0;
   }
   else
   {
@@ -2117,7 +2117,7 @@ json_object_agg_finalfn(PG_FUNCTION_ARGS)
   /* NULL result for no rows in, as is standard with aggregates */
   if (state == NULL)
   {
-
+    PG_RETURN_NULL();
   }
 
   /* Else return state with appropriate object terminator added */
@@ -2168,7 +2168,9 @@ json_build_object(PG_FUNCTION_ARGS)
 
   if (nargs % 2 != 0)
   {
-    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("argument list must have even number of elements"), errhint("The arguments of %s must consist of alternating keys and values.", "json_build_object()")));
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("argument list must have even number of elements"),
+                       /* translator: %s is a SQL function name */
+                       errhint("The arguments of %s must consist of alternating keys and values.", "json_build_object()")));
   }
 
   result = makeStringInfo();
@@ -2275,25 +2277,25 @@ json_object(PG_FUNCTION_ARGS)
 
   switch (ndims)
   {
-  case 0:;
+  case 0:
     PG_RETURN_DATUM(CStringGetTextDatum("{}"));
     break;
 
-  case 1:;
+  case 1:
     if ((ARR_DIMS(in_array)[0]) % 2)
     {
       ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("array must have even number of elements")));
     }
     break;
 
-  case 2:;
+  case 2:
     if ((ARR_DIMS(in_array)[1]) != 2)
     {
       ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("array must have two columns")));
     }
     break;
 
-  default:;;
+  default:
     ereport(ERROR, (errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR), errmsg("wrong number of array subscripts")));
   }
 
@@ -2309,7 +2311,7 @@ json_object(PG_FUNCTION_ARGS)
   {
     if (in_nulls[i * 2])
     {
-
+      ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("null value not allowed for object key")));
     }
 
     v = TextDatumGetCString(in_datums[i * 2]);
@@ -2403,7 +2405,7 @@ json_object_two_arg(PG_FUNCTION_ARGS)
     pfree(v);
     if (val_nulls[i])
     {
-
+      appendStringInfoString(&result, "null");
     }
     else
     {
@@ -2439,28 +2441,28 @@ escape_json(StringInfo buf, const char *str)
   {
     switch (*p)
     {
-    case '\b':;
+    case '\b':
       appendStringInfoString(buf, "\\b");
       break;
-    case '\f':;
+    case '\f':
       appendStringInfoString(buf, "\\f");
       break;
-    case '\n':;
+    case '\n':
       appendStringInfoString(buf, "\\n");
       break;
-    case '\r':;
+    case '\r':
       appendStringInfoString(buf, "\\r");
       break;
-    case '\t':;
+    case '\t':
       appendStringInfoString(buf, "\\t");
       break;
-    case '"':;
+    case '"':
       appendStringInfoString(buf, "\\\"");
       break;
-    case '\\':;
+    case '\\':
       appendStringInfoString(buf, "\\\\");
       break;
-    default:;;
+    default:
       if ((unsigned char)*p < ' ')
       {
         appendStringInfo(buf, "\\u%04x", (int)*p);
@@ -2504,27 +2506,27 @@ json_typeof(PG_FUNCTION_ARGS)
   tok = lex_peek(lex);
   switch (tok)
   {
-  case JSON_TOKEN_OBJECT_START:;
+  case JSON_TOKEN_OBJECT_START:
     type = "object";
     break;
-  case JSON_TOKEN_ARRAY_START:;
+  case JSON_TOKEN_ARRAY_START:
     type = "array";
     break;
-  case JSON_TOKEN_STRING:;
+  case JSON_TOKEN_STRING:
     type = "string";
     break;
-  case JSON_TOKEN_NUMBER:;
+  case JSON_TOKEN_NUMBER:
     type = "number";
     break;
-  case JSON_TOKEN_TRUE:;
-  case JSON_TOKEN_FALSE:;
+  case JSON_TOKEN_TRUE:
+  case JSON_TOKEN_FALSE:
     type = "boolean";
     break;
-  case JSON_TOKEN_NULL:;
+  case JSON_TOKEN_NULL:
     type = "null";
     break;
-  default:;;
-
+  default:
+    elog(ERROR, "unexpected json token: %d", tok);
   }
 
   PG_RETURN_TEXT_P(cstring_to_text(type));

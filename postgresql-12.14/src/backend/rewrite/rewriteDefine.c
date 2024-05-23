@@ -99,7 +99,7 @@ InsertRule(const char *rulname, int evtype, Oid eventrel_oid, bool evinstead, No
   {
     if (!replace)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("rule \"%s\" for relation \"%s\" already exists", rulname, get_rel_name(eventrel_oid))));
     }
 
     /*
@@ -236,12 +236,12 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
    */
   if (event_relation->rd_rel->relkind != RELKIND_RELATION && event_relation->rd_rel->relkind != RELKIND_MATVIEW && event_relation->rd_rel->relkind != RELKIND_VIEW && event_relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table or view", RelationGetRelationName(event_relation))));
   }
 
   if (!allowSystemTableMods && IsSystemRelation(event_relation))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied: \"%s\" is a system catalog", RelationGetRelationName(event_relation))));
   }
 
   /*
@@ -249,7 +249,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
    */
   if (!pg_class_ownercheck(event_relid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(event_relation->rd_rel->relkind), RelationGetRelationName(event_relation));
   }
 
   /*
@@ -269,11 +269,11 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
     }
     if (query->resultRelation == PRS2_OLD_VARNO)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("rule actions on OLD are not implemented"), errhint("Use views or triggers instead.")));
     }
     if (query->resultRelation == PRS2_NEW_VARNO)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("rule actions on NEW are not implemented"), errhint("Use triggers instead.")));
     }
   }
 
@@ -286,7 +286,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
      */
     if (list_length(action) == 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("INSTEAD NOTHING rules on SELECT are not implemented"), errhint("Use views instead.")));
     }
 
     /*
@@ -294,7 +294,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
      */
     if (list_length(action) > 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("multiple actions for rules on SELECT are not implemented")));
     }
 
     /*
@@ -303,7 +303,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
     query = linitial_node(Query, action);
     if (!is_instead || query->commandType != CMD_SELECT)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("rules on SELECT must have action INSTEAD SELECT")));
     }
 
     /*
@@ -311,7 +311,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
      */
     if (query->hasModifyingCTE)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("rules on SELECT must not contain data-modifying statements in WITH")));
     }
 
     /*
@@ -319,7 +319,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
      */
     if (event_qual != NULL)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("event qualifications are not implemented for rules on SELECT")));
     }
 
     /*
@@ -361,11 +361,11 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
        * worry about where a multibyte character might have gotten
        * truncated.
        */
-
-
-
-
-
+      if (strncmp(rulename, "_RET", 4) != 0 || strncmp(rulename + 4, RelationGetRelationName(event_relation), NAMEDATALEN - 4 - 4) != 0)
+      {
+        ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("view rule for \"%s\" must be named \"%s\"", RelationGetRelationName(event_relation), ViewSelectRuleName)));
+      }
+      rulename = pstrdup(ViewSelectRuleName);
     }
 
     /*
@@ -405,7 +405,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
       slot = table_slot_create(event_relation, NULL);
       if (table_scan_getnextslot(scanDesc, ForwardScanDirection, slot))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not convert table \"%s\" to a view because it is not empty", RelationGetRelationName(event_relation))));
       }
       ExecDropSingleTupleTableSlot(slot);
       table_endscan(scanDesc);
@@ -413,12 +413,12 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
 
       if (event_relation->rd_rel->relhastriggers)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not convert table \"%s\" to a view because it has triggers", RelationGetRelationName(event_relation)), errhint("In particular, the table cannot be involved in any foreign key relationships.")));
       }
 
       if (event_relation->rd_rel->relhasindex)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("could not convert table \"%s\" to a view because it has indexes", RelationGetRelationName(event_relation))));
       }
 
       if (event_relation->rd_rel->relhassubclass)
@@ -466,16 +466,16 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
       }
       if (haveReturning)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("cannot have multiple RETURNING lists in a rule")));
       }
       haveReturning = true;
       if (event_qual != NULL)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("RETURNING lists are not supported in conditional rules")));
       }
       if (!is_instead)
       {
-
+        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("RETURNING lists are not supported in non-INSTEAD rules")));
       }
       checkRuleResultList(query->returningList, RelationGetDescr(event_relation), false, false);
     }
@@ -487,7 +487,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
      */
     if (strcmp(rulename, ViewSelectRuleName) == 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("non-view rule for \"%s\" must not be named \"%s\"", RelationGetRelationName(event_relation), ViewSelectRuleName)));
     }
   }
 
@@ -576,7 +576,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
     classTup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(event_relid));
     if (!HeapTupleIsValid(classTup))
     {
-
+      elog(ERROR, "cache lookup failed for relation %u", event_relid);
     }
     classForm = (Form_pg_class)GETSTRUCT(classTup);
 
@@ -608,8 +608,7 @@ DefineQueryRewrite(const char *rulename, Oid event_relid, Node *event_qual, CmdT
 
 /*
  * checkRuleResultList
- *		Verify that targetList produces output compatible with a
- *tupledesc
+ *		Verify that targetList produces output compatible with a tupledesc
  *
  * The targetList might be either a SELECT targetlist, or a RETURNING list;
  * isSelect tells which.  This is used for choosing error messages.
@@ -659,7 +658,8 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect, bool 
      * with RETURNING to a regular table, and rejecting that case is
      * altogether more annoying.  In principle we could support it by
      * modifying the targetlist to include dummy NULL columns
-     * corresponding to the dropped columns in the tupdesc.  However,     * places like ruleutils.c would have to be fixed to not process such
+     * corresponding to the dropped columns in the tupdesc.  However,
+     * places like ruleutils.c would have to be fixed to not process such
      * entries, and that would take an uncertain and possibly rather large
      * amount of work.  (Note we could not dodge that by marking the dummy
      * columns resjunk, since it's precisely the non-resjunk tlist columns
@@ -667,20 +667,20 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect, bool 
      */
     if (attr->attisdropped)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), isSelect ? errmsg("cannot convert relation containing dropped columns to view") : errmsg("cannot create a RETURNING list for a relation containing dropped columns")));
     }
 
     /* Check name match if required; no need for two error texts here */
     if (requireColumnNameMatch && strcmp(tle->resname, attname) != 0)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("SELECT rule's target entry %d has different column name from column \"%s\"", i, attname), errdetail("SELECT target entry is named \"%s\".", tle->resname)));
     }
 
     /* Check type match. */
     tletypid = exprType((Node *)tle->expr);
     if (attr->atttypid != tletypid)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), isSelect ? errmsg("SELECT rule's target entry %d has different type from column \"%s\"", i, attname) : errmsg("RETURNING list's entry %d has different type from column \"%s\"", i, attname), isSelect ? errdetail("SELECT target entry has type %s, but column has type %s.", format_type_be(tletypid), format_type_be(attr->atttypid)) : errdetail("RETURNING list entry has type %s, but column has type %s.", format_type_be(tletypid), format_type_be(attr->atttypid))));
     }
 
     /*
@@ -692,20 +692,20 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect, bool 
     tletypmod = exprTypmod((Node *)tle->expr);
     if (attr->atttypmod != tletypmod && attr->atttypmod != -1 && tletypmod != -1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), isSelect ? errmsg("SELECT rule's target entry %d has different size from column \"%s\"", i, attname) : errmsg("RETURNING list's entry %d has different size from column \"%s\"", i, attname), isSelect ? errdetail("SELECT target entry has type %s, but column has type %s.", format_type_with_typemod(tletypid, tletypmod), format_type_with_typemod(attr->atttypid, attr->atttypmod)) : errdetail("RETURNING list entry has type %s, but column has type %s.", format_type_with_typemod(tletypid, tletypmod), format_type_with_typemod(attr->atttypid, attr->atttypmod))));
     }
   }
 
   if (i != resultDesc->natts)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), isSelect ? errmsg("SELECT rule's target list has too few entries") : errmsg("RETURNING list has too few entries")));
   }
 }
 
 /*
  * setRuleCheckAsUser
- *		Recursively scan a query or expression tree and set the
- *checkAsUser field to the given userid in all rtable entries.
+ *		Recursively scan a query or expression tree and set the checkAsUser
+ *		field to the given userid in all rtable entries.
  *
  * Note: for a view (ON SELECT rule), the checkAsUser field of the OLD
  * RTE entry will be overridden when the view rule is expanded, and the
@@ -791,7 +791,7 @@ EnableDisableRule(Relation rel, const char *rulename, char fires_when)
   ruletup = SearchSysCacheCopy2(RULERELNAME, ObjectIdGetDatum(owningRel), PointerGetDatum(rulename));
   if (!HeapTupleIsValid(ruletup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("rule \"%s\" for relation \"%s\" does not exist", rulename, get_rel_name(owningRel))));
   }
 
   ruleform = (Form_pg_rewrite)GETSTRUCT(ruletup);
@@ -803,7 +803,7 @@ EnableDisableRule(Relation rel, const char *rulename, char fires_when)
   Assert(eventRelationOid == owningRel);
   if (!pg_class_ownercheck(eventRelationOid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(get_rel_relkind(eventRelationOid)), get_rel_name(eventRelationOid));
   }
 
   /*
@@ -845,25 +845,25 @@ RangeVarCallbackForRenameRule(const RangeVar *rv, Oid relid, Oid oldrelid, void 
   tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
   if (!HeapTupleIsValid(tuple))
   {
-
+    return; /* concurrently dropped */
   }
   form = (Form_pg_class)GETSTRUCT(tuple);
 
   /* only tables and views can have rules */
   if (form->relkind != RELKIND_RELATION && form->relkind != RELKIND_VIEW && form->relkind != RELKIND_PARTITIONED_TABLE)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table or view", rv->relname)));
   }
 
   if (!allowSystemTableMods && IsSystemClass(relid, form))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied: \"%s\" is a system catalog", rv->relname)));
   }
 
   /* you must own the table to rename one of its rules */
   if (!pg_class_ownercheck(relid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(get_rel_relkind(relid)), rv->relname);
   }
 
   ReleaseSysCache(tuple);

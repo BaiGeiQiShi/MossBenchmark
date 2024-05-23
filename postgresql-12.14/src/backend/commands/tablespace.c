@@ -156,10 +156,10 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
         if (MakePGDirectory(dir) < 0)
         {
           /* Failure other than not exists or not in WAL replay? */
-
-
-
-
+          if (errno != ENOENT || !isRedo)
+          {
+            ereport(ERROR, (errcode_for_file_access(), errmsg("could not create directory \"%s\": %m", dir)));
+          }
 
           /*
            * During WAL replay, it's conceivable that several levels
@@ -171,10 +171,10 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
            * trouble we cannot get out of, so just report that and
            * bail out.
            */
-
-
-
-
+          if (pg_mkdir_p(dir, pg_dir_create_mode) < 0)
+          {
+            ereport(ERROR, (errcode_for_file_access(), errmsg("could not create directory \"%s\": %m", dir)));
+          }
         }
       }
 
@@ -182,7 +182,7 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
     }
     else
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat directory \"%s\": %m", dir)));
     }
   }
   else
@@ -190,7 +190,7 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
     /* Is it not a directory? */
     if (!S_ISDIR(st.st_mode))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" exists but is not a directory", dir)));
     }
   }
 
@@ -221,13 +221,13 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
   /* Must be super user */
   if (!superuser())
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to create tablespace \"%s\"", stmt->tablespacename), errhint("Must be superuser to create a tablespace.")));
   }
 
   /* However, the eventual owner of the tablespace need not be */
   if (stmt->owner)
   {
-
+    ownerId = get_rolespec_oid(stmt->owner, false);
   }
   else
   {
@@ -241,7 +241,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
   /* disallow quotes, else CREATE DATABASE would be at risk */
   if (strchr(location, '\''))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("tablespace location cannot contain single quotes")));
   }
 
   in_place = allow_in_place_tablespaces && strlen(location) == 0;
@@ -254,7 +254,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
    */
   if (!in_place && !is_absolute_path(location))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("tablespace location must be an absolute path")));
   }
 
   /*
@@ -265,13 +265,13 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
    */
   if (strlen(location) + 1 + strlen(TABLESPACE_VERSION_DIRECTORY) + 1 + OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1 + OIDCHARS > MAXPGPATH)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("tablespace location \"%s\" is too long", location)));
   }
 
   /* Warn if the tablespace is in the data directory. */
   if (path_is_prefix_of_path(DataDir, location))
   {
-
+    ereport(WARNING, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("tablespace location should not be inside the data directory")));
   }
 
   /*
@@ -280,7 +280,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
    */
   if (!allowSystemTableMods && IsReservedName(stmt->tablespacename))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("unacceptable tablespace name \"%s\"", stmt->tablespacename), errdetail("The prefix \"pg_\" is reserved for system tablespaces.")));
   }
 
   /*
@@ -301,7 +301,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
    */
   if (OidIsValid(get_tablespace_oid(stmt->tablespacename, true)))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("tablespace \"%s\" already exists", stmt->tablespacename)));
   }
 
   /*
@@ -408,18 +408,18 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 
   if (!HeapTupleIsValid(tuple))
   {
-
-
-
-
-
-
-
-
-
-
-
-
+    if (!stmt->missing_ok)
+    {
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace \"%s\" does not exist", tablespacename)));
+    }
+    else
+    {
+      ereport(NOTICE, (errmsg("tablespace \"%s\" does not exist, skipping", tablespacename)));
+      /* XXX I assume I need one or both of these next two calls */
+      table_endscan(scandesc);
+      table_close(rel, NoLock);
+    }
+    return;
   }
 
   spcform = (Form_pg_tablespace)GETSTRUCT(tuple);
@@ -428,13 +428,13 @@ DropTableSpace(DropTableSpaceStmt *stmt)
   /* Must be tablespace owner */
   if (!pg_tablespace_ownercheck(tablespaceoid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TABLESPACE, tablespacename);
   }
 
   /* Disallow drop of the standard tablespaces, even by superuser */
   if (tablespaceoid == GLOBALTABLESPACE_OID || tablespaceoid == DEFAULTTABLESPACE_OID)
   {
-
+    aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_TABLESPACE, tablespacename);
   }
 
   /* Check for pg_shdepend entries depending on this tablespace */
@@ -562,10 +562,10 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 
   if (in_place)
   {
-
-
-
-
+    if (MakePGDirectory(linkloc) < 0 && errno != EEXIST)
+    {
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not create directory \"%s\": %m", linkloc)));
+    }
   }
 
   location_with_version_dir = psprintf("%s/%s", in_place ? linkloc : location, TABLESPACE_VERSION_DIRECTORY);
@@ -580,11 +580,14 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
   {
     if (errno == ENOENT)
     {
-      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FILE), errmsg("directory \"%s\" does not exist", location), InRecovery ? errhint("Create this directory for the tablespace before restarting the server.") : 0));
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FILE), errmsg("directory \"%s\" does not exist", location),
+                         InRecovery ? errhint("Create this directory for the tablespace before "
+                                              "restarting the server.")
+                                    : 0));
     }
     else
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not set permissions on directory \"%s\": %m", location)));
     }
   }
 
@@ -599,20 +602,20 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
   {
     if (errno != ENOENT)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat directory \"%s\": %m", location_with_version_dir)));
     }
     else if (MakePGDirectory(location_with_version_dir) < 0)
     {
-
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not create directory \"%s\": %m", location_with_version_dir)));
     }
   }
   else if (!S_ISDIR(st.st_mode))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" exists but is not a directory", location_with_version_dir)));
   }
   else if (!InRecovery)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_IN_USE), errmsg("directory \"%s\" already in use as a tablespace", location_with_version_dir)));
   }
 
   /*
@@ -620,7 +623,7 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
    */
   if (!in_place && InRecovery)
   {
-
+    remove_tablespace_symlink(linkloc);
   }
 
   /*
@@ -628,7 +631,7 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
    */
   if (!in_place && symlink(location, linkloc) < 0)
   {
-
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not create symbolic link \"%s\": %m", linkloc)));
   }
 
   pfree(linkloc);
@@ -685,22 +688,22 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
   dirdesc = AllocateDir(linkloc_with_version_dir);
   if (dirdesc == NULL)
   {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (errno == ENOENT)
+    {
+      if (!redo)
+      {
+        ereport(WARNING, (errcode_for_file_access(), errmsg("could not open directory \"%s\": %m", linkloc_with_version_dir)));
+      }
+      /* The symlink might still exist, so go try to remove it */
+      goto remove_symlink;
+    }
+    else if (redo)
+    {
+      /* in redo, just log other types of error */
+      ereport(LOG, (errcode_for_file_access(), errmsg("could not open directory \"%s\": %m", linkloc_with_version_dir)));
+      pfree(linkloc_with_version_dir);
+      return false;
+    }
     /* else let ReadDir report the error */
   }
 
@@ -725,7 +728,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
     /* remove empty directory */
     if (rmdir(subfile) < 0)
     {
-
+      ereport(redo ? LOG : ERROR, (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", subfile)));
     }
 
     pfree(subfile);
@@ -736,9 +739,9 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
   /* remove version directory */
   if (rmdir(linkloc_with_version_dir) < 0)
   {
-
-
-
+    ereport(redo ? LOG : ERROR, (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", linkloc_with_version_dir)));
+    pfree(linkloc_with_version_dir);
+    return false;
   }
 
   /*
@@ -751,23 +754,23 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
    * there's no point in retrying it.  Also, ENOENT should provoke no more
    * than a warning.
    */
-remove_symlink:;
+remove_symlink:
   linkloc = pstrdup(linkloc_with_version_dir);
   get_parent_directory(linkloc);
   if (lstat(linkloc, &st) < 0)
   {
     int saved_errno = errno;
 
-
+    ereport(redo ? LOG : (saved_errno == ENOENT ? WARNING : ERROR), (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", linkloc)));
   }
   else if (S_ISDIR(st.st_mode))
   {
+    if (rmdir(linkloc) < 0)
+    {
+      int saved_errno = errno;
 
-
-
-
-
-
+      ereport(redo ? LOG : (saved_errno == ENOENT ? WARNING : ERROR), (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", linkloc)));
+    }
   }
 #ifdef S_ISLNK
   else if (S_ISLNK(st.st_mode))
@@ -776,14 +779,14 @@ remove_symlink:;
     {
       int saved_errno = errno;
 
-
+      ereport(redo ? LOG : (saved_errno == ENOENT ? WARNING : ERROR), (errcode_for_file_access(), errmsg("could not remove symbolic link \"%s\": %m", linkloc)));
     }
   }
 #endif
   else
   {
     /* Refuse to remove anything that's not a directory or symlink */
-
+    ereport(redo ? LOG : ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("\"%s\" is not a directory or symbolic link", linkloc)));
   }
 
   pfree(linkloc_with_version_dir);
@@ -831,42 +834,42 @@ directory_is_empty(const char *path)
 void
 remove_tablespace_symlink(const char *linkloc)
 {
+  struct stat st;
 
+  if (lstat(linkloc, &st) < 0)
+  {
+    if (errno == ENOENT)
+    {
+      return;
+    }
+    ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", linkloc)));
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (S_ISDIR(st.st_mode))
+  {
+    /*
+     * This will fail if the directory isn't empty, but not if it's a
+     * junction point.
+     */
+    if (rmdir(linkloc) < 0 && errno != ENOENT)
+    {
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not remove directory \"%s\": %m", linkloc)));
+    }
+  }
+#ifdef S_ISLNK
+  else if (S_ISLNK(st.st_mode))
+  {
+    if (unlink(linkloc) < 0 && errno != ENOENT)
+    {
+      ereport(ERROR, (errcode_for_file_access(), errmsg("could not remove symbolic link \"%s\": %m", linkloc)));
+    }
+  }
+#endif
+  else
+  {
+    /* Refuse to remove anything that's not a directory or symlink */
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("\"%s\" is not a directory or symbolic link", linkloc)));
+  }
 }
 
 /*
@@ -892,7 +895,7 @@ RenameTableSpace(const char *oldname, const char *newname)
   tup = heap_getnext(scan, ForwardScanDirection);
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace \"%s\" does not exist", oldname)));
   }
 
   newtuple = heap_copytuple(tup);
@@ -904,13 +907,13 @@ RenameTableSpace(const char *oldname, const char *newname)
   /* Must be owner */
   if (!pg_tablespace_ownercheck(tspId, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_TABLESPACE, oldname);
   }
 
   /* Validate new name */
   if (!allowSystemTableMods && IsReservedName(newname))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_RESERVED_NAME), errmsg("unacceptable tablespace name \"%s\"", newname), errdetail("The prefix \"pg_\" is reserved for system tablespaces.")));
   }
 
   /*
@@ -930,7 +933,7 @@ RenameTableSpace(const char *oldname, const char *newname)
   tup = heap_getnext(scan, ForwardScanDirection);
   if (HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("tablespace \"%s\" already exists", newname)));
   }
 
   table_endscan(scan);
@@ -976,7 +979,7 @@ AlterTableSpaceOptions(AlterTableSpaceOptionsStmt *stmt)
   tup = heap_getnext(scandesc, ForwardScanDirection);
   if (!HeapTupleIsValid(tup))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace \"%s\" does not exist", stmt->tablespacename)));
   }
 
   tablespaceoid = ((Form_pg_tablespace)GETSTRUCT(tup))->oid;
@@ -984,7 +987,7 @@ AlterTableSpaceOptions(AlterTableSpaceOptionsStmt *stmt)
   /* Must be owner of the existing object */
   if (!pg_tablespace_ownercheck(tablespaceoid, GetUserId()))
   {
-
+    aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TABLESPACE, stmt->tablespacename);
   }
 
   /* Generate new proposed spcoptions (text array) */
@@ -1041,15 +1044,15 @@ check_default_tablespace(char **newval, void **extra, GucSource source)
        * When source == PGC_S_TEST, don't throw a hard error for a
        * nonexistent tablespace, only a NOTICE.  See comments in guc.h.
        */
-
-
-
-
-
-
-
-
-
+      if (source == PGC_S_TEST)
+      {
+        ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace \"%s\" does not exist", *newval)));
+      }
+      else
+      {
+        GUC_check_errdetail("Tablespace \"%s\" does not exist.", *newval);
+        return false;
+      }
     }
   }
 
@@ -1141,10 +1144,10 @@ check_temp_tablespaces(char **newval, void **extra, GucSource source)
   if (!SplitIdentifierString(rawname, ',', &namelist))
   {
     /* syntax error in name list */
-
-
-
-
+    GUC_check_errdetail("List syntax is invalid.");
+    pfree(rawname);
+    list_free(namelist);
+    return false;
   }
 
   /*
@@ -1161,73 +1164,73 @@ check_temp_tablespaces(char **newval, void **extra, GucSource source)
     ListCell *l;
 
     /* temporary workspace until we are done verifying the list */
+    tblSpcs = (Oid *)palloc(list_length(namelist) * sizeof(Oid));
+    numSpcs = 0;
+    foreach (l, namelist)
+    {
+      char *curname = (char *)lfirst(l);
+      Oid curoid;
+      AclResult aclresult;
 
+      /* Allow an empty string (signifying database default) */
+      if (curname[0] == '\0')
+      {
+        /* InvalidOid signifies database's default tablespace */
+        tblSpcs[numSpcs++] = InvalidOid;
+        continue;
+      }
 
+      /*
+       * In an interactive SET command, we ereport for bad info.  When
+       * source == PGC_S_TEST, don't throw a hard error for a
+       * nonexistent tablespace, only a NOTICE.  See comments in guc.h.
+       */
+      curoid = get_tablespace_oid(curname, source <= PGC_S_TEST);
+      if (curoid == InvalidOid)
+      {
+        if (source == PGC_S_TEST)
+        {
+          ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("tablespace \"%s\" does not exist", curname)));
+        }
+        continue;
+      }
 
+      /*
+       * Allow explicit specification of database's default tablespace
+       * in temp_tablespaces without triggering permissions checks.
+       */
+      if (curoid == MyDatabaseTableSpace)
+      {
+        /* InvalidOid signifies database's default tablespace */
+        tblSpcs[numSpcs++] = InvalidOid;
+        continue;
+      }
 
+      /* Check permissions, similarly complaining only if interactive */
+      aclresult = pg_tablespace_aclcheck(curoid, GetUserId(), ACL_CREATE);
+      if (aclresult != ACLCHECK_OK)
+      {
+        if (source >= PGC_S_INTERACTIVE)
+        {
+          aclcheck_error(aclresult, OBJECT_TABLESPACE, curname);
+        }
+        continue;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      tblSpcs[numSpcs++] = curoid;
+    }
 
     /* Now prepare an "extra" struct for assign_temp_tablespaces */
+    myextra = malloc(offsetof(temp_tablespaces_extra, tblSpcs) + numSpcs * sizeof(Oid));
+    if (!myextra)
+    {
+      return false;
+    }
+    myextra->numSpcs = numSpcs;
+    memcpy(myextra->tblSpcs, tblSpcs, numSpcs * sizeof(Oid));
+    *extra = (void *)myextra;
 
-
-
-
-
-
-
-
-
-
+    pfree(tblSpcs);
   }
 
   pfree(rawname);
@@ -1251,7 +1254,7 @@ assign_temp_tablespaces(const char *newval, void *extra)
    */
   if (myextra)
   {
-
+    SetTempTablespaces(myextra->tblSpcs, myextra->numSpcs);
   }
   else
   {
@@ -1290,7 +1293,7 @@ PrepareTempTablespaces(void)
    */
   if (!IsTransactionState())
   {
-
+    return;
   }
 
   /* Need a modifiable copy of string */
@@ -1300,10 +1303,10 @@ PrepareTempTablespaces(void)
   if (!SplitIdentifierString(rawname, ',', &namelist))
   {
     /* syntax error in name list */
-
-
-
-
+    SetTempTablespaces(NULL, 0);
+    pfree(rawname);
+    list_free(namelist);
+    return;
   }
 
   /* Store tablespace OIDs in an array in TopTransactionContext */
@@ -1316,40 +1319,40 @@ PrepareTempTablespaces(void)
     AclResult aclresult;
 
     /* Allow an empty string (signifying database default) */
-
-
-
-
-
-
+    if (curname[0] == '\0')
+    {
+      /* InvalidOid signifies database's default tablespace */
+      tblSpcs[numSpcs++] = InvalidOid;
+      continue;
+    }
 
     /* Else verify that name is a valid tablespace name */
-
-
-
-
-
-
+    curoid = get_tablespace_oid(curname, true);
+    if (curoid == InvalidOid)
+    {
+      /* Skip any bad list elements */
+      continue;
+    }
 
     /*
      * Allow explicit specification of database's default tablespace in
      * temp_tablespaces without triggering permissions checks.
      */
-
-
-
-
-
-
+    if (curoid == MyDatabaseTableSpace)
+    {
+      /* InvalidOid signifies database's default tablespace */
+      tblSpcs[numSpcs++] = InvalidOid;
+      continue;
+    }
 
     /* Check permissions similarly */
+    aclresult = pg_tablespace_aclcheck(curoid, GetUserId(), ACL_CREATE);
+    if (aclresult != ACLCHECK_OK)
+    {
+      continue;
+    }
 
-
-
-
-
-
-
+    tblSpcs[numSpcs++] = curoid;
   }
 
   SetTempTablespaces(tblSpcs, numSpcs);
@@ -1437,7 +1440,7 @@ get_tablespace_name(Oid spc_oid)
   }
   else
   {
-
+    result = NULL;
   }
 
   table_endscan(scandesc);
@@ -1452,57 +1455,57 @@ get_tablespace_name(Oid spc_oid)
 void
 tblspc_redo(XLogReaderState *record)
 {
+  uint8 info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
+  /* Backup blocks are not used in tblspc records */
+  Assert(!XLogRecHasAnyBlockRefs(record));
 
+  if (info == XLOG_TBLSPC_CREATE)
+  {
+    xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *)XLogRecGetData(record);
+    char *location = xlrec->ts_path;
 
+    create_tablespace_directories(location, xlrec->ts_id);
+  }
+  else if (info == XLOG_TBLSPC_DROP)
+  {
+    xl_tblspc_drop_rec *xlrec = (xl_tblspc_drop_rec *)XLogRecGetData(record);
 
+    /*
+     * If we issued a WAL record for a drop tablespace it implies that
+     * there were no files in it at all when the DROP was done. That means
+     * that no permanent objects can exist in it at this point.
+     *
+     * It is possible for standby users to be using this tablespace as a
+     * location for their temporary files, so if we fail to remove all
+     * files then do conflict processing and try again, if currently
+     * enabled.
+     *
+     * Other possible reasons for failure include bollixed file
+     * permissions on a standby server when they were okay on the primary,
+     * etc etc. There's not much we can do about that, so just remove what
+     * we can and press on.
+     */
+    if (!destroy_tablespace_directories(xlrec->ts_id, true))
+    {
+      ResolveRecoveryConflictWithTablespace(xlrec->ts_id);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      /*
+       * If we did recovery processing then hopefully the backends who
+       * wrote temp files should have cleaned up and exited by now.  So
+       * retry before complaining.  If we fail again, this is just a LOG
+       * condition, because it's not worth throwing an ERROR for (as
+       * that would crash the database and require manual intervention
+       * before we could get past this WAL record on restart).
+       */
+      if (!destroy_tablespace_directories(xlrec->ts_id, true))
+      {
+        ereport(LOG, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("directories for tablespace %u could not be removed", xlrec->ts_id), errhint("You can remove the directories manually if necessary.")));
+      }
+    }
+  }
+  else
+  {
+    elog(PANIC, "tblspc_redo: unknown op code %u", info);
+  }
 }

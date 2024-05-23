@@ -18,31 +18,30 @@
  *	  * Skip running the finalfunc, so that the output is always the
  *	  final transvalue state.
  *	  * Substitute the combinefunc for the transfunc, so that transvalue
- *	  states (propagated up from a child partial-aggregation step) are
- *merged rather than processing raw input rows.  (The statements below about the
- *transfunc apply equally to the combinefunc, when it's selected.)
+ *	  states (propagated up from a child partial-aggregation step) are merged
+ *	  rather than processing raw input rows.  (The statements below about
+ *	  the transfunc apply equally to the combinefunc, when it's selected.)
  *	  * Apply the serializefunc to the output values (this only makes sense
  *	  when skipping the finalfunc, since the serializefunc works on the
  *	  transvalue data type).
  *	  * Apply the deserializefunc to the input values (this only makes sense
  *	  when using the combinefunc, for similar reasons).
  *	  It is the planner's responsibility to connect up Agg nodes using these
- *	  alternate behaviors in a way that makes sense, with partial
- *aggregation results being fed to nodes that expect them.
+ *	  alternate behaviors in a way that makes sense, with partial aggregation
+ *	  results being fed to nodes that expect them.
  *
  *	  If a normal aggregate call specifies DISTINCT or ORDER BY, we sort the
  *	  input tuples and eliminate duplicates (if required) before performing
- *	  the above-depicted process.  (However, we don't do that for
- *ordered-set aggregates; their "ORDER BY" inputs are ordinary aggregate
- *arguments so far as this module is concerned.)	Note that partial
- *aggregation is not supported in these cases, since we couldn't ensure global
+ *	  the above-depicted process.  (However, we don't do that for ordered-set
+ *	  aggregates; their "ORDER BY" inputs are ordinary aggregate arguments
+ *	  so far as this module is concerned.)	Note that partial aggregation
+ *	  is not supported in these cases, since we couldn't ensure global
  *	  ordering or distinctness of the inputs.
  *
  *	  If transfunc is marked "strict" in pg_proc and initcond is NULL,
- *	  then the first non-NULL input_value is assigned directly to
- *transvalue, and transfunc isn't applied until the second non-NULL input_value.
- *	  The agg's first input type and transtype must be the same in this
- *case!
+ *	  then the first non-NULL input_value is assigned directly to transvalue,
+ *	  and transfunc isn't applied until the second non-NULL input_value.
+ *	  The agg's first input type and transtype must be the same in this case!
  *
  *	  If transfunc is marked "strict" then NULL input_values are skipped,
  *	  keeping the previous transvalue.  If transfunc is not strict then it
@@ -61,22 +60,22 @@
  *
  *	  A finalfunc can have additional arguments beyond the transvalue and
  *	  any "direct" arguments, corresponding to the input arguments of the
- *	  aggregate.  These are always just passed as NULL.  Such arguments may
- *be needed to allow resolution of a polymorphic aggregate's result type.
+ *	  aggregate.  These are always just passed as NULL.  Such arguments may be
+ *	  needed to allow resolution of a polymorphic aggregate's result type.
  *
- *	  We compute aggregate input expressions and run the transition
- *functions in a temporary econtext (aggstate->tmpcontext).  This is reset at
- *least once per input tuple, so when the transvalue datatype is
- *	  pass-by-reference, we have to be careful to copy it into a
- *longer-lived memory context, and free the prior value to avoid memory leakage.
- *We store transvalues in another set of econtexts, aggstate->aggcontexts (one
- *per grouping set, see below), which are also used for the hashtable structures
- *in AGG_HASHED mode.  These econtexts are rescanned, not just reset, at group
- *boundaries so that aggregate transition functions can register shutdown
- *callbacks via AggRegisterCallback.
+ *	  We compute aggregate input expressions and run the transition functions
+ *	  in a temporary econtext (aggstate->tmpcontext).  This is reset at least
+ *	  once per input tuple, so when the transvalue datatype is
+ *	  pass-by-reference, we have to be careful to copy it into a longer-lived
+ *	  memory context, and free the prior value to avoid memory leakage.  We
+ *	  store transvalues in another set of econtexts, aggstate->aggcontexts
+ *	  (one per grouping set, see below), which are also used for the hashtable
+ *	  structures in AGG_HASHED mode.  These econtexts are rescanned, not just
+ *	  reset, at group boundaries so that aggregate transition functions can
+ *	  register shutdown callbacks via AggRegisterCallback.
  *
- *	  The node's regular econtext (aggstate->ss.ps.ps_ExprContext) is used
- *to run finalize functions and compute the output tuple; this context can be
+ *	  The node's regular econtext (aggstate->ss.ps.ps_ExprContext) is used to
+ *	  run finalize functions and compute the output tuple; this context can be
  *	  reset once per output tuple.
  *
  *	  The executor's AggState node is passed as the fmgr "context" value in
@@ -90,15 +89,15 @@
  *	  it is completely forbidden for functions to modify pass-by-ref inputs,
  *	  but in the aggregate case we know the left input is either the initial
  *	  transition value or a previous function result, and in either case its
- *	  value need not be preserved.  See int8inc() for an example.  Notice
- *that the EEOP_AGG_PLAIN_TRANS step is coded to avoid a data copy step when the
- *previous transition value pointer is returned.  It is also possible to avoid
- *repeated data copying when the transition value is an expanded object: to do
- *that, the transition function must take care to return an expanded object that
- *is in a child context of the memory context returned by AggCheckCallContext().
- *Also, some transition functions want to store working state in addition to the
- *nominal transition value; they can use the memory context returned by
- *AggCheckCallContext() to do that.
+ *	  value need not be preserved.  See int8inc() for an example.  Notice that
+ *	  the EEOP_AGG_PLAIN_TRANS step is coded to avoid a data copy step when
+ *	  the previous transition value pointer is returned.  It is also possible
+ *	  to avoid repeated data copying when the transition value is an expanded
+ *	  object: to do that, the transition function must take care to return
+ *	  an expanded object that is in a child context of the memory context
+ *	  returned by AggCheckCallContext().  Also, some transition functions want
+ *	  to store working state in addition to the nominal transition value; they
+ *	  can use the memory context returned by AggCheckCallContext() to do that.
  *
  *	  Note: AggCheckCallContext() is available as of PostgreSQL 9.0.  The
  *	  AggState is available as context in earlier releases (back to 8.1),
@@ -114,10 +113,10 @@
  *	  Grouping sets:
  *
  *	  A list of grouping sets which is structurally equivalent to a ROLLUP
- *	  clause (e.g. (a,b,c), (a,b), (a)) can be processed in a single pass
- *over ordered data.  We do this by keeping a separate set of transition values
- *	  for each grouping set being concurrently processed; for each input
- *tuple we update them all, and on group boundaries we reset those states
+ *	  clause (e.g. (a,b,c), (a,b), (a)) can be processed in a single pass over
+ *	  ordered data.  We do this by keeping a separate set of transition values
+ *	  for each grouping set being concurrently processed; for each input tuple
+ *	  we update them all, and on group boundaries we reset those states
  *	  (starting at the front of the list) whose grouping values have changed
  *	  (the list of grouping sets is ordered from most specific to least
  *	  specific).
@@ -125,74 +124,75 @@
  *	  Where more complex grouping sets are used, we break them down into
  *	  "phases", where each phase has a different sort order (except phase 0
  *	  which is reserved for hashing).  During each phase but the last, the
- *	  input tuples are additionally stored in a tuplesort which is keyed to
- *the next phase's sort order; during each phase but the first, the input tuples
- *are drawn from the previously sorted data.  (The sorting of the data for the
- *first phase is handled by the planner, as it might be satisfied by underlying
- *nodes.)
+ *	  input tuples are additionally stored in a tuplesort which is keyed to the
+ *	  next phase's sort order; during each phase but the first, the input
+ *	  tuples are drawn from the previously sorted data.  (The sorting of the
+ *	  data for the first phase is handled by the planner, as it might be
+ *	  satisfied by underlying nodes.)
  *
  *	  Hashing can be mixed with sorted grouping.  To do this, we have an
- *	  AGG_MIXED strategy that populates the hashtables during the first
- *sorted phase, and switches to reading them out after completing all sort
- *phases. We can also support AGG_HASHED with multiple hash tables and no
- *sorting at all.
+ *	  AGG_MIXED strategy that populates the hashtables during the first sorted
+ *	  phase, and switches to reading them out after completing all sort phases.
+ *	  We can also support AGG_HASHED with multiple hash tables and no sorting
+ *	  at all.
  *
  *	  From the perspective of aggregate transition and final functions, the
- *	  only issue regarding grouping sets is this: a single call site
- *(flinfo) of an aggregate function may be used for updating several different
- *	  transition values in turn. So the function must not cache in the
- *flinfo anything which logically belongs as part of the transition value (most
+ *	  only issue regarding grouping sets is this: a single call site (flinfo)
+ *	  of an aggregate function may be used for updating several different
+ *	  transition values in turn. So the function must not cache in the flinfo
+ *	  anything which logically belongs as part of the transition value (most
  *	  importantly, the memory context in which the transition value exists).
- *	  The support API functions (AggCheckCallContext, AggRegisterCallback)
- *are sensitive to the grouping set for which the aggregate function is
+ *	  The support API functions (AggCheckCallContext, AggRegisterCallback) are
+ *	  sensitive to the grouping set for which the aggregate function is
  *	  currently being called.
  *
  *	  Plan structure:
  *
  *	  What we get from the planner is actually one "real" Agg node which is
- *	  part of the plan tree proper, but which optionally has an additional
- *list of Agg nodes hung off the side via the "chain" field.  This is because an
+ *	  part of the plan tree proper, but which optionally has an additional list
+ *	  of Agg nodes hung off the side via the "chain" field.  This is because an
  *	  Agg node happens to be a convenient representation of all the data we
  *	  need for grouping sets.
  *
- *	  For many purposes, we treat the "real" node as if it were just the
- *first node in the chain.  The chain must be ordered such that hashed entries
+ *	  For many purposes, we treat the "real" node as if it were just the first
+ *	  node in the chain.  The chain must be ordered such that hashed entries
  *	  come before sorted/plain entries; the real node is marked AGG_MIXED if
- *	  there are both types present (in which case the real node describes
- *one of the hashed groupings, other AGG_HASHED nodes may optionally follow in
- *	  the chain, followed in turn by AGG_SORTED or (one) AGG_PLAIN node). If
+ *	  there are both types present (in which case the real node describes one
+ *	  of the hashed groupings, other AGG_HASHED nodes may optionally follow in
+ *	  the chain, followed in turn by AGG_SORTED or (one) AGG_PLAIN node).  If
  *	  the real node is marked AGG_HASHED or AGG_SORTED, then all the chained
  *	  nodes must be of the same type; if it is AGG_PLAIN, there can be no
  *	  chained nodes.
  *
- *	  We collect all hashed nodes into a single "phase", numbered 0, and
- *create a sorted phase (numbered 1..n) for each AGG_SORTED or AGG_PLAIN node.
- *	  Phase 0 is allocated even if there are no hashes, but remains unused
- *in that case.
+ *	  We collect all hashed nodes into a single "phase", numbered 0, and create
+ *	  a sorted phase (numbered 1..n) for each AGG_SORTED or AGG_PLAIN node.
+ *	  Phase 0 is allocated even if there are no hashes, but remains unused in
+ *	  that case.
  *
  *	  AGG_HASHED nodes actually refer to only a single grouping set each,
  *	  because for each hashed grouping we need a separate grpColIdx and
  *	  numGroups estimate.  AGG_SORTED nodes represent a "rollup", a list of
- *	  grouping sets that share a sort order.  Each AGG_SORTED node other
- *than the first one has an associated Sort node which describes the sort order
- *	  to be used; the first sorted node takes its input from the outer
- *subtree, which the planner has already arranged to provide ordered data.
+ *	  grouping sets that share a sort order.  Each AGG_SORTED node other than
+ *	  the first one has an associated Sort node which describes the sort order
+ *	  to be used; the first sorted node takes its input from the outer subtree,
+ *	  which the planner has already arranged to provide ordered data.
  *
  *	  Memory and ExprContext usage:
  *
- *	  Because we're accumulating aggregate values across input rows, we need
- *to use more memory contexts than just simple input/output tuple contexts. In
- *fact, for a rollup, we need a separate context for each grouping set so that
- *we can reset the inner (finer-grained) aggregates on their group boundaries
- *while continuing to accumulate values for outer (coarser-grained) groupings.
- *On top of this, we might be simultaneously populating hashtables; however, we
- *only need one context for all the hashtables.
+ *	  Because we're accumulating aggregate values across input rows, we need to
+ *	  use more memory contexts than just simple input/output tuple contexts.
+ *	  In fact, for a rollup, we need a separate context for each grouping set
+ *	  so that we can reset the inner (finer-grained) aggregates on their group
+ *	  boundaries while continuing to accumulate values for outer
+ *	  (coarser-grained) groupings.  On top of this, we might be simultaneously
+ *	  populating hashtables; however, we only need one context for all the
+ *	  hashtables.
  *
- *	  So we create an array, aggcontexts, with an ExprContext for each
- *grouping set in the largest rollup that we're going to process, and use the
+ *	  So we create an array, aggcontexts, with an ExprContext for each grouping
+ *	  set in the largest rollup that we're going to process, and use the
  *	  per-tuple memory context of those ExprContexts to store the aggregate
- *	  transition values.  hashcontext is the single context created to
- *support all hash tables.
+ *	  transition values.  hashcontext is the single context created to support
+ *	  all hash tables.
  *
  *    Transition / Combine function invocation:
  *
@@ -429,7 +429,7 @@ initialize_aggregate(AggState *aggstate, AggStatePerTrans pertrans, AggStatePerG
      */
     if (pertrans->sortstates[aggstate->current_set])
     {
-
+      tuplesort_end(pertrans->sortstates[aggstate->current_set]);
     }
 
     /*
@@ -503,7 +503,7 @@ initialize_aggregates(AggState *aggstate, AggStatePerGroup *pergroups, int numRe
 
   if (numReset == 0)
   {
-
+    numReset = numGroupingSets;
   }
 
   for (setno = 0; setno < numReset; setno++)
@@ -553,7 +553,7 @@ advance_transition_function(AggState *aggstate, AggStatePerTrans pertrans, AggSt
     {
       if (fcinfo->args[i].isnull)
       {
-
+        return;
       }
     }
     if (pergroupstate->noTransValue)
@@ -582,7 +582,7 @@ advance_transition_function(AggState *aggstate, AggStatePerTrans pertrans, AggSt
        * strict *and* returned a NULL on a prior cycle. If that happens
        * we will propagate the NULL all the way to the end.
        */
-
+      return;
     }
   }
 
@@ -907,8 +907,8 @@ finalize_aggregate(AggState *aggstate, AggStatePerAgg peragg, AggStatePerGroup p
     if (fcinfo->flinfo->fn_strict && anynull)
     {
       /* don't call a strict function with NULL inputs */
-
-
+      *resultVal = (Datum)0;
+      *resultIsNull = true;
     }
     else
     {
@@ -1489,17 +1489,17 @@ ExecAgg(PlanState *pstate)
     /* Dispatch based on strategy */
     switch (node->phase->aggstrategy)
     {
-    case AGG_HASHED:;
+    case AGG_HASHED:
       if (!node->table_filled)
       {
         agg_fill_hash_table(node);
       }
       /* FALLTHROUGH */
-    case AGG_MIXED:;
+    case AGG_MIXED:
       result = agg_retrieve_hash_table(node);
       break;
-    case AGG_PLAIN:;
-    case AGG_SORTED:;
+    case AGG_PLAIN:
+    case AGG_SORTED:
       result = agg_retrieve_direct(node);
       break;
     }
@@ -2539,7 +2539,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
     aggTuple = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(aggref->aggfnoid));
     if (!HeapTupleIsValid(aggTuple))
     {
-
+      elog(ERROR, "cache lookup failed for aggregate %u", aggref->aggfnoid);
     }
     aggform = (Form_pg_aggregate)GETSTRUCT(aggTuple);
 
@@ -2566,7 +2566,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
       /* If not set then the planner messed up */
       if (!OidIsValid(transfn_oid))
       {
-
+        elog(ERROR, "combinefn not set for aggregate function");
       }
     }
     else
@@ -2613,7 +2613,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
         if (!OidIsValid(aggform->aggserialfn))
         {
-
+          elog(ERROR, "serialfunc not provided for serialization aggregation");
         }
         serialfn_oid = aggform->aggserialfn;
       }
@@ -2626,7 +2626,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
         if (!OidIsValid(aggform->aggdeserialfn))
         {
-
+          elog(ERROR, "deserialfunc not provided for deserialization aggregation");
         }
         deserialfn_oid = aggform->aggdeserialfn;
       }
@@ -2640,7 +2640,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
       procTuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(aggref->aggfnoid));
       if (!HeapTupleIsValid(procTuple))
       {
-
+        elog(ERROR, "cache lookup failed for function %u", aggref->aggfnoid);
       }
       aggOwner = ((Form_pg_proc)GETSTRUCT(procTuple))->proowner;
       ReleaseSysCache(procTuple);
@@ -2648,7 +2648,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
       aclresult = pg_proc_aclcheck(transfn_oid, aggOwner, ACL_EXECUTE);
       if (aclresult != ACLCHECK_OK)
       {
-
+        aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(transfn_oid));
       }
       InvokeFunctionExecuteHook(transfn_oid);
       if (OidIsValid(finalfn_oid))
@@ -2656,7 +2656,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
         aclresult = pg_proc_aclcheck(finalfn_oid, aggOwner, ACL_EXECUTE);
         if (aclresult != ACLCHECK_OK)
         {
-
+          aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(finalfn_oid));
         }
         InvokeFunctionExecuteHook(finalfn_oid);
       }
@@ -2665,7 +2665,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
         aclresult = pg_proc_aclcheck(serialfn_oid, aggOwner, ACL_EXECUTE);
         if (aclresult != ACLCHECK_OK)
         {
-
+          aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(serialfn_oid));
         }
         InvokeFunctionExecuteHook(serialfn_oid);
       }
@@ -2674,7 +2674,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
         aclresult = pg_proc_aclcheck(deserialfn_oid, aggOwner, ACL_EXECUTE);
         if (aclresult != ACLCHECK_OK)
         {
-
+          aclcheck_error(aclresult, OBJECT_FUNCTION, get_func_name(deserialfn_oid));
         }
         InvokeFunctionExecuteHook(deserialfn_oid);
       }
@@ -2778,7 +2778,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
    */
   if (numaggs != list_length(aggstate->aggs))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_GROUPING_ERROR), errmsg("aggregate function calls cannot be nested")));
   }
 
   /*
@@ -2830,7 +2830,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
     }
     else
     {
-
+      Assert(false);
     }
 
     phase->evaltrans = ExecBuildAggTrans(aggstate, phase, dosort, dohash);
@@ -2914,7 +2914,7 @@ build_pertrans_for_aggref(AggStatePerTrans pertrans, AggState *aggstate, EState 
      */
     if (pertrans->transfn.fn_strict && aggtranstype == INTERNALOID)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("combine function with transition type %s must not be declared STRICT", format_type_be(aggtranstype))));
     }
   }
   else
@@ -2958,7 +2958,7 @@ build_pertrans_for_aggref(AggStatePerTrans pertrans, AggState *aggstate, EState 
     {
       if (numArguments <= numDirectArgs || !IsBinaryCoercible(inputTypes[numDirectArgs], aggtranstype))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate %u needs to have compatible input type and transition type", aggref->aggfnoid)));
       }
     }
   }
@@ -3231,7 +3231,7 @@ find_compatible_pertrans(AggState *aggstate, Aggref *newagg, bool shareable, Oid
      */
     if (aggserialfn != pertrans->serialfn_oid || aggdeserialfn != pertrans->deserialfn_oid)
     {
-
+      continue;
     }
 
     /*
@@ -3354,8 +3354,8 @@ ExecReScanAgg(AggState *node)
 
       if (pertrans->sortstates[setno])
       {
-
-
+        tuplesort_end(pertrans->sortstates[setno]);
+        pertrans->sortstates[setno] = NULL;
       }
     }
   }
@@ -3376,8 +3376,8 @@ ExecReScanAgg(AggState *node)
   /* Release first tuple of group, if we have made a copy */
   if (node->grp_firstTuple != NULL)
   {
-
-
+    heap_freetuple(node->grp_firstTuple);
+    node->grp_firstTuple = NULL;
   }
   ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
@@ -3505,7 +3505,7 @@ AggGetAggref(FunctionCallInfo fcinfo)
 
     if (curperagg)
     {
-
+      return curperagg->aggref;
     }
 
     /* check curpertrans (valid when in a transition function) */
@@ -3516,7 +3516,7 @@ AggGetAggref(FunctionCallInfo fcinfo)
       return curpertrans->aggref;
     }
   }
-
+  return NULL;
 }
 
 /*
@@ -3532,13 +3532,13 @@ AggGetAggref(FunctionCallInfo fcinfo)
 MemoryContext
 AggGetTempMemoryContext(FunctionCallInfo fcinfo)
 {
+  if (fcinfo->context && IsA(fcinfo->context, AggState))
+  {
+    AggState *aggstate = (AggState *)fcinfo->context;
 
-
-
-
-
-
-
+    return aggstate->tmpcontext->ecxt_per_tuple_memory;
+  }
+  return NULL;
 }
 
 /*
@@ -3569,7 +3569,7 @@ AggStateIsShared(FunctionCallInfo fcinfo)
 
     if (curperagg)
     {
-
+      return aggstate->pertrans[curperagg->transno].aggshared;
     }
 
     /* check curpertrans (valid when in a transition function) */
@@ -3580,7 +3580,7 @@ AggStateIsShared(FunctionCallInfo fcinfo)
       return curpertrans->aggshared;
     }
   }
-
+  return true;
 }
 
 /*
@@ -3610,7 +3610,7 @@ AggRegisterCallback(FunctionCallInfo fcinfo, ExprContextCallbackFunction func, D
 
     return;
   }
-
+  elog(ERROR, "aggregate function cannot register a callback in this context");
 }
 
 /*
@@ -3626,6 +3626,6 @@ AggRegisterCallback(FunctionCallInfo fcinfo, ExprContextCallbackFunction func, D
 Datum
 aggregate_dummy(PG_FUNCTION_ARGS)
 {
-
-
+  elog(ERROR, "aggregate function %u called as normal function", fcinfo->flinfo->fn_oid);
+  return (Datum)0; /* keep compiler quiet */
 }

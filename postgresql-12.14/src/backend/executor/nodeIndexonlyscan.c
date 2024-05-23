@@ -16,8 +16,8 @@
  * INTERFACE ROUTINES
  *		ExecIndexOnlyScan			scans an index
  *		IndexOnlyNext				retrieve next tuple
- *		ExecInitIndexOnlyScan		creates and initializes state
- *info. ExecReScanIndexOnlyScan		rescans the indexed relation.
+ *		ExecInitIndexOnlyScan		creates and initializes state info.
+ *		ExecReScanIndexOnlyScan		rescans the indexed relation.
  *		ExecEndIndexOnlyScan		releases all storage.
  *		ExecIndexOnlyMarkPos		marks scan position.
  *		ExecIndexOnlyRestrPos		restores scan position.
@@ -25,9 +25,8 @@
  *						parallel index-only scan
  *		ExecIndexOnlyScanInitializeDSM	initialize DSM for parallel
  *						index-only scan
- *		ExecIndexOnlyScanReInitializeDSM	reinitialize DSM for
- *fresh scan ExecIndexOnlyScanInitializeWorker attach to DSM info in parallel
- *worker
+ *		ExecIndexOnlyScanReInitializeDSM	reinitialize DSM for fresh scan
+ *		ExecIndexOnlyScanInitializeWorker attach to DSM info in parallel worker
  */
 #include "postgres.h"
 
@@ -78,10 +77,10 @@ IndexOnlyNext(IndexOnlyScanState *node)
     {
       direction = BackwardScanDirection;
     }
-
-
-
-
+    else if (ScanDirectionIsBackward(direction))
+    {
+      direction = ForwardScanDirection;
+    }
   }
   scandesc = node->ioss_ScanDesc;
   econtext = node->ss.ps.ps_ExprContext;
@@ -176,7 +175,7 @@ IndexOnlyNext(IndexOnlyScanState *node)
        */
       if (scandesc->xs_heap_continue)
       {
-
+        elog(ERROR, "non-MVCC snapshots are not supported in index-only scans");
       }
 
       /*
@@ -211,7 +210,7 @@ IndexOnlyNext(IndexOnlyScanState *node)
     }
     else
     {
-
+      elog(ERROR, "no data returned for index-only scan");
     }
 
     /*
@@ -295,8 +294,8 @@ StoreIndexTuple(TupleTableSlot *slot, IndexTuple itup, TupleDesc itupdesc)
 static bool
 IndexOnlyRecheck(IndexOnlyScanState *node, TupleTableSlot *slot)
 {
-
-
+  elog(ERROR, "EvalPlanQual recheck is not supported in index-only scans");
+  return false; /* keep compiler quiet */
 }
 
 /* ----------------------------------------------------------------
@@ -440,16 +439,16 @@ ExecIndexOnlyMarkPos(IndexOnlyScanState *node)
      */
     Index scanrelid = ((Scan *)node->ss.ps.plan)->scanrelid;
 
-
-
-
-
-
-
-
-
-
-
+    Assert(scanrelid > 0);
+    if (epqstate->relsubs_slot[scanrelid - 1] != NULL || epqstate->relsubs_rowmark[scanrelid - 1] != NULL)
+    {
+      /* Verify the claim above */
+      if (!epqstate->relsubs_done[scanrelid - 1])
+      {
+        elog(ERROR, "unexpected ExecIndexOnlyMarkPos call in EPQ recheck");
+      }
+      return;
+    }
   }
 
   index_markpos(node->ioss_ScanDesc);
@@ -462,27 +461,27 @@ ExecIndexOnlyMarkPos(IndexOnlyScanState *node)
 void
 ExecIndexOnlyRestrPos(IndexOnlyScanState *node)
 {
+  EState *estate = node->ss.ps.state;
+  EPQState *epqstate = estate->es_epq_active;
 
+  if (estate->es_epq_active != NULL)
+  {
+    /* See comments in ExecIndexMarkPos */
+    Index scanrelid = ((Scan *)node->ss.ps.plan)->scanrelid;
 
+    Assert(scanrelid > 0);
+    if (epqstate->relsubs_slot[scanrelid - 1] != NULL || epqstate->relsubs_rowmark[scanrelid - 1] != NULL)
+    {
+      /* Verify the claim above */
+      if (!epqstate->relsubs_done[scanrelid - 1])
+      {
+        elog(ERROR, "unexpected ExecIndexOnlyRestrPos call in EPQ recheck");
+      }
+      return;
+    }
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  index_restrpos(node->ioss_ScanDesc);
 }
 
 /* ----------------------------------------------------------------

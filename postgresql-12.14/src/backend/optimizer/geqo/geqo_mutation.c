@@ -11,24 +11,19 @@
 
 /* contributed by:
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic
-   Control	   * =							 =
-   University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany *
+   *  Martin Utesch				 * Institute of Automatic Control	   *
+   =							 = University of Mining and Technology =
+   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
    =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
  */
 
 /* this is adopted from Genitor : */
 /*************************************************************/
 /*															 */
-/*	Copyright (c) 1990
- */
-/*	Darrell L. Whitley
- */
-/*	Computer Science Department
- */
-/*	Colorado State University
- */
+/*	Copyright (c) 1990										 */
+/*	Darrell L. Whitley										 */
+/*	Computer Science Department								 */
+/*	Colorado State University								 */
 /*															 */
 /*	Permission is hereby granted to copy all or any part of  */
 /*	this program for free distribution.   The author's name  */
@@ -50,11 +45,13 @@ geqo_mutation(PlannerInfo *root, Gene *tour, int num_gene)
   int num_swaps = geqo_randint(root, num_gene / 3, 0);
   Gene temp;
 
-  while (num_swaps > 0) {
+  while (num_swaps > 0)
+  {
     swap1 = geqo_randint(root, num_gene - 1, 0);
     swap2 = geqo_randint(root, num_gene - 1, 0);
 
-    while (swap1 == swap2) {
+    while (swap1 == swap2)
+    {
       swap2 = geqo_randint(root, num_gene - 1, 0);
     }
 

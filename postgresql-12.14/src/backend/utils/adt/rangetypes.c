@@ -167,125 +167,125 @@ range_out(PG_FUNCTION_ARGS)
 Datum
 range_recv(PG_FUNCTION_ARGS)
 {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
+  Oid rngtypoid = PG_GETARG_OID(1);
+  int32 typmod = PG_GETARG_INT32(2);
+  RangeType *range;
+  RangeIOData *cache;
+  char flags;
+  RangeBound lower;
+  RangeBound upper;
+
+  check_stack_depth(); /* recurses when subtype is a range type */
+
+  cache = get_range_io_data(fcinfo, rngtypoid, IOFunc_receive);
+
+  /* receive the flags... */
+  flags = (unsigned char)pq_getmsgbyte(buf);
+
+  /*
+   * Mask out any unsupported flags, particularly RANGE_xB_NULL which would
+   * confuse following tests.  Note that range_serialize will take care of
+   * cleaning up any inconsistencies in the remaining flags.
+   */
+  flags &= (RANGE_EMPTY | RANGE_LB_INC | RANGE_LB_INF | RANGE_UB_INC | RANGE_UB_INF);
+
+  /* receive the bounds ... */
+  if (RANGE_HAS_LBOUND(flags))
+  {
+    uint32 bound_len = pq_getmsgint(buf, 4);
+    const char *bound_data = pq_getmsgbytes(buf, bound_len);
+    StringInfoData bound_buf;
+
+    initStringInfo(&bound_buf);
+    appendBinaryStringInfo(&bound_buf, bound_data, bound_len);
+
+    lower.val = ReceiveFunctionCall(&cache->proc, &bound_buf, cache->typioparam, typmod);
+    pfree(bound_buf.data);
+  }
+  else
+  {
+    lower.val = (Datum)0;
+  }
+
+  if (RANGE_HAS_UBOUND(flags))
+  {
+    uint32 bound_len = pq_getmsgint(buf, 4);
+    const char *bound_data = pq_getmsgbytes(buf, bound_len);
+    StringInfoData bound_buf;
+
+    initStringInfo(&bound_buf);
+    appendBinaryStringInfo(&bound_buf, bound_data, bound_len);
+
+    upper.val = ReceiveFunctionCall(&cache->proc, &bound_buf, cache->typioparam, typmod);
+    pfree(bound_buf.data);
+  }
+  else
+  {
+    upper.val = (Datum)0;
+  }
+
+  pq_getmsgend(buf);
+
+  /* finish constructing RangeBound representation */
+  lower.infinite = (flags & RANGE_LB_INF) != 0;
+  lower.inclusive = (flags & RANGE_LB_INC) != 0;
+  lower.lower = true;
+  upper.infinite = (flags & RANGE_UB_INF) != 0;
+  upper.inclusive = (flags & RANGE_UB_INC) != 0;
+  upper.lower = false;
+
+  /* serialize and canonicalize */
+  range = make_range(cache->typcache, &lower, &upper, flags & RANGE_EMPTY);
+
+  PG_RETURN_RANGE_P(range);
 }
 
 Datum
 range_send(PG_FUNCTION_ARGS)
 {
+  RangeType *range = PG_GETARG_RANGE_P(0);
+  StringInfo buf = makeStringInfo();
+  RangeIOData *cache;
+  char flags;
+  RangeBound lower;
+  RangeBound upper;
+  bool empty;
 
+  check_stack_depth(); /* recurses when subtype is a range type */
 
+  cache = get_range_io_data(fcinfo, RangeTypeGetOid(range), IOFunc_send);
 
+  /* deserialize */
+  range_deserialize(cache->typcache, range, &lower, &upper, &empty);
+  flags = range_get_flags(range);
 
+  /* construct output */
+  pq_begintypsend(buf);
 
+  pq_sendbyte(buf, flags);
 
+  if (RANGE_HAS_LBOUND(flags))
+  {
+    Datum bound = PointerGetDatum(SendFunctionCall(&cache->proc, lower.val));
+    uint32 bound_len = VARSIZE(bound) - VARHDRSZ;
+    char *bound_data = VARDATA(bound);
 
+    pq_sendint32(buf, bound_len);
+    pq_sendbytes(buf, bound_data, bound_len);
+  }
 
+  if (RANGE_HAS_UBOUND(flags))
+  {
+    Datum bound = PointerGetDatum(SendFunctionCall(&cache->proc, upper.val));
+    uint32 bound_len = VARSIZE(bound) - VARHDRSZ;
+    char *bound_data = VARDATA(bound);
 
+    pq_sendint32(buf, bound_len);
+    pq_sendbytes(buf, bound_data, bound_len);
+  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  PG_RETURN_BYTEA_P(pq_endtypsend(buf));
 }
 
 /*
@@ -311,7 +311,7 @@ get_range_io_data(FunctionCallInfo fcinfo, Oid rngtypid, IOFuncSelector func)
     cache->typcache = lookup_type_cache(rngtypid, TYPECACHE_RANGE_INFO);
     if (cache->typcache->rngelemtype == NULL)
     {
-
+      elog(ERROR, "type %u is not a range type", rngtypid);
     }
 
     /* get_type_io_data does more than we need, but is convenient */
@@ -320,14 +320,14 @@ get_range_io_data(FunctionCallInfo fcinfo, Oid rngtypid, IOFuncSelector func)
     if (!OidIsValid(cache->typiofunc))
     {
       /* this could only happen for receive or send */
-
-
-
-
-
-
-
-
+      if (func == IOFunc_receive)
+      {
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("no binary input function available for type %s", format_type_be(cache->typcache->rngelemtype->type_id))));
+      }
+      else
+      {
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("no binary output function available for type %s", format_type_be(cache->typcache->rngelemtype->type_id))));
+      }
     }
     fmgr_info_cxt(cache->typiofunc, &cache->proc, fcinfo->flinfo->fn_mcxt);
 
@@ -389,7 +389,7 @@ range_constructor3(PG_FUNCTION_ARGS)
 
   if (PG_ARGISNULL(2))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("range constructor flags argument must not be null")));
   }
 
   flags = range_parse_flags(text_to_cstring(PG_GETARG_TEXT_PP(2)));
@@ -550,7 +550,7 @@ range_eq_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -595,20 +595,20 @@ range_eq(PG_FUNCTION_ARGS)
 bool
 range_ne_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
 {
-
+  return (!range_eq_internal(typcache, r1, r2));
 }
 
 /* inequality */
 Datum
 range_ne(PG_FUNCTION_ARGS)
 {
+  RangeType *r1 = PG_GETARG_RANGE_P(0);
+  RangeType *r2 = PG_GETARG_RANGE_P(1);
+  TypeCacheEntry *typcache;
 
+  typcache = range_get_typcache(fcinfo, RangeTypeGetOid(r1));
 
-
-
-
-
-
+  PG_RETURN_BOOL(range_ne_internal(typcache, r1, r2));
 }
 
 /* contains? */
@@ -648,7 +648,7 @@ range_before_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -687,7 +687,7 @@ range_after_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -790,7 +790,7 @@ range_adjacent_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -833,7 +833,7 @@ range_overlaps_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -882,7 +882,7 @@ range_overleft_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -926,7 +926,7 @@ range_overright_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -976,7 +976,7 @@ range_minus(PG_FUNCTION_ARGS)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   typcache = range_get_typcache(fcinfo, RangeTypeGetOid(r1));
@@ -987,7 +987,7 @@ range_minus(PG_FUNCTION_ARGS)
   /* if either is empty, r1 is the correct answer */
   if (empty1 || empty2)
   {
-
+    PG_RETURN_RANGE_P(r1);
   }
 
   cmp_l1l2 = range_cmp_bounds(typcache, &lower1, &lower2);
@@ -997,7 +997,7 @@ range_minus(PG_FUNCTION_ARGS)
 
   if (cmp_l1l2 < 0 && cmp_u1u2 > 0)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION), errmsg("result of range difference would not be contiguous")));
   }
 
   if (cmp_l1u2 > 0 || cmp_u1l2 < 0)
@@ -1017,15 +1017,15 @@ range_minus(PG_FUNCTION_ARGS)
     PG_RETURN_RANGE_P(make_range(typcache, &lower1, &lower2, false));
   }
 
+  if (cmp_l1l2 >= 0 && cmp_u1u2 >= 0 && cmp_l1u2 <= 0)
+  {
+    upper2.inclusive = !upper2.inclusive;
+    upper2.lower = true; /* it will become the lower bound */
+    PG_RETURN_RANGE_P(make_range(typcache, &upper2, &upper1, false));
+  }
 
-
-
-
-
-
-
-
-
+  elog(ERROR, "unexpected case in range_minus");
+  PG_RETURN_NULL();
 }
 
 /*
@@ -1044,7 +1044,7 @@ range_union_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2, boo
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -1053,11 +1053,11 @@ range_union_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2, boo
   /* if either is empty, the other is the correct answer */
   if (empty1)
   {
-
+    return r2;
   }
   if (empty2)
   {
-
+    return r1;
   }
 
   if (strict && !DatumGetBool(range_overlaps_internal(typcache, r1, r2)) && !DatumGetBool(range_adjacent_internal(typcache, r1, r2)))
@@ -1076,7 +1076,7 @@ range_union_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2, boo
 
   if (range_cmp_bounds(typcache, &upper1, &upper2) > 0)
   {
-
+    result_upper = &upper1;
   }
   else
   {
@@ -1130,7 +1130,7 @@ range_intersect(PG_FUNCTION_ARGS)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   typcache = range_get_typcache(fcinfo, RangeTypeGetOid(r1));
@@ -1145,7 +1145,7 @@ range_intersect(PG_FUNCTION_ARGS)
 
   if (range_cmp_bounds(typcache, &lower1, &lower2) >= 0)
   {
-
+    result_lower = &lower1;
   }
   else
   {
@@ -1158,7 +1158,7 @@ range_intersect(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    result_upper = &upper2;
   }
 
   PG_RETURN_RANGE_P(make_range(typcache, result_lower, result_upper, false));
@@ -1183,7 +1183,7 @@ range_cmp(PG_FUNCTION_ARGS)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   typcache = range_get_typcache(fcinfo, RangeTypeGetOid(r1));
@@ -1286,7 +1286,7 @@ hash_range(PG_FUNCTION_ARGS)
     scache = lookup_type_cache(scache->type_id, TYPECACHE_HASH_PROC_FINFO);
     if (!OidIsValid(scache->hash_proc_finfo.fn_oid))
     {
-
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify a hash function for type %s", format_type_be(scache->type_id))));
     }
   }
 
@@ -1349,11 +1349,11 @@ hash_range_extended(PG_FUNCTION_ARGS)
   scache = typcache->rngelemtype;
   if (!OidIsValid(scache->hash_extended_proc_finfo.fn_oid))
   {
-
-
-
-
-
+    scache = lookup_type_cache(scache->type_id, TYPECACHE_HASH_EXTENDED_PROC_FINFO);
+    if (!OidIsValid(scache->hash_extended_proc_finfo.fn_oid))
+    {
+      ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("could not identify a hash function for type %s", format_type_be(scache->type_id))));
+    }
   }
 
   if (RANGE_HAS_LBOUND(flags))
@@ -1362,7 +1362,7 @@ hash_range_extended(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    lower_hash = 0;
   }
 
   if (RANGE_HAS_UBOUND(flags))
@@ -1371,7 +1371,7 @@ hash_range_extended(PG_FUNCTION_ARGS)
   }
   else
   {
-
+    upper_hash = 0;
   }
 
   /* Merge hashes of flags and bounds */
@@ -1406,7 +1406,7 @@ int4range_canonical(PG_FUNCTION_ARGS)
 
   if (empty)
   {
-
+    PG_RETURN_RANGE_P(r);
   }
 
   if (!lower.infinite && !lower.inclusive)
@@ -1439,7 +1439,7 @@ int8range_canonical(PG_FUNCTION_ARGS)
 
   if (empty)
   {
-
+    PG_RETURN_RANGE_P(r);
   }
 
   if (!lower.infinite && !lower.inclusive)
@@ -1472,7 +1472,7 @@ daterange_canonical(PG_FUNCTION_ARGS)
 
   if (empty)
   {
-
+    PG_RETURN_RANGE_P(r);
   }
 
   if (!lower.infinite && !DATE_NOT_FINITE(DatumGetDateADT(lower.val)) && !lower.inclusive)
@@ -1514,56 +1514,56 @@ int4range_subdiff(PG_FUNCTION_ARGS)
 Datum
 int8range_subdiff(PG_FUNCTION_ARGS)
 {
+  int64 v1 = PG_GETARG_INT64(0);
+  int64 v2 = PG_GETARG_INT64(1);
 
-
-
-
+  PG_RETURN_FLOAT8((float8)v1 - (float8)v2);
 }
 
 Datum
 numrange_subdiff(PG_FUNCTION_ARGS)
 {
+  Datum v1 = PG_GETARG_DATUM(0);
+  Datum v2 = PG_GETARG_DATUM(1);
+  Datum numresult;
+  float8 floatresult;
 
+  numresult = DirectFunctionCall2(numeric_sub, v1, v2);
 
+  floatresult = DatumGetFloat8(DirectFunctionCall1(numeric_float8, numresult));
 
-
-
-
-
-
-
-
+  PG_RETURN_FLOAT8(floatresult);
 }
 
 Datum
 daterange_subdiff(PG_FUNCTION_ARGS)
 {
+  int32 v1 = PG_GETARG_INT32(0);
+  int32 v2 = PG_GETARG_INT32(1);
 
-
-
-
+  PG_RETURN_FLOAT8((float8)v1 - (float8)v2);
 }
 
 Datum
 tsrange_subdiff(PG_FUNCTION_ARGS)
 {
+  Timestamp v1 = PG_GETARG_TIMESTAMP(0);
+  Timestamp v2 = PG_GETARG_TIMESTAMP(1);
+  float8 result;
 
-
-
-
-
-
+  result = ((float8)v1 - (float8)v2) / USECS_PER_SEC;
+  PG_RETURN_FLOAT8(result);
 }
 
 Datum
 tstzrange_subdiff(PG_FUNCTION_ARGS)
 {
+  Timestamp v1 = PG_GETARG_TIMESTAMP(0);
+  Timestamp v2 = PG_GETARG_TIMESTAMP(1);
+  float8 result;
 
-
-
-
-
-
+  result = ((float8)v1 - (float8)v2) / USECS_PER_SEC;
+  PG_RETURN_FLOAT8(result);
 }
 
 /*
@@ -1593,7 +1593,7 @@ range_get_typcache(FunctionCallInfo fcinfo, Oid rngtypid)
     typcache = lookup_type_cache(rngtypid, TYPECACHE_RANGE_INFO);
     if (typcache->rngelemtype == NULL)
     {
-
+      elog(ERROR, "type %u is not a range type", rngtypid);
     }
     fcinfo->flinfo->fn_extra = (void *)typcache;
   }
@@ -1907,7 +1907,7 @@ range_cmp_bounds(TypeCacheEntry *typcache, RangeBound *b1, RangeBound *b2)
     }
     else
     {
-
+      return b1->lower ? -1 : 1;
     }
   }
   else if (b1->infinite)
@@ -1989,7 +1989,7 @@ range_cmp_bound_values(TypeCacheEntry *typcache, RangeBound *b1, RangeBound *b2)
      */
     if (b1->lower == b2->lower)
     {
-
+      return 0;
     }
     else
     {
@@ -2050,29 +2050,29 @@ range_parse_flags(const char *flags_str)
 
   if (flags_str[0] == '\0' || flags_str[1] == '\0' || flags_str[2] != '\0')
   {
-
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid range bound flags"), errhint("Valid values are \"[]\", \"[)\", \"(]\", and \"()\".")));
   }
 
   switch (flags_str[0])
   {
-  case '[':;
+  case '[':
     flags |= RANGE_LB_INC;
     break;
-  case '(':;
+  case '(':
     break;
-  default:;;
-
+  default:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid range bound flags"), errhint("Valid values are \"[]\", \"[)\", \"(]\", and \"()\".")));
   }
 
   switch (flags_str[1])
   {
-  case ']':;
+  case ']':
     flags |= RANGE_UB_INC;
     break;
-  case ')':;
+  case ')':
     break;
-  default:;;
-
+  default:
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid range bound flags"), errhint("Valid values are \"[]\", \"[)\", \"(]\", and \"()\".")));
   }
 
   return flags;
@@ -2138,7 +2138,7 @@ range_parse(const char *string, char *flags, char **lbound_str, char **ubound_st
     /* should have consumed everything */
     if (*ptr != '\0')
     {
-
+      ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed range literal: \"%s\"", string), errdetail("Junk after \"empty\" key word.")));
     }
 
     return;
@@ -2188,8 +2188,8 @@ range_parse(const char *string, char *flags, char **lbound_str, char **ubound_st
   {
     ptr++;
   }
-  else
-  { /* must be a comma */
+  else /* must be a comma */
+  {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed range literal: \"%s\"", string), errdetail("Too many commas.")));
   }
 
@@ -2248,7 +2248,7 @@ range_parse_bound(const char *string, const char *ptr, char **bound_str, bool *i
       {
         if (*ptr == '\0')
         {
-
+          ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("malformed range literal: \"%s\"", string), errdetail("Unexpected end of input.")));
         }
         appendStringInfoChar(&buf, *ptr++);
       }
@@ -2261,7 +2261,7 @@ range_parse_bound(const char *string, const char *ptr, char **bound_str, bool *i
         else if (*ptr == '"')
         {
           /* doubled quote within quote sequence */
-
+          appendStringInfoChar(&buf, *ptr++);
         }
         else
         {
@@ -2389,7 +2389,7 @@ range_contains_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
   /* Different types should be prevented by ANYRANGE matching rules */
   if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
   {
-
+    elog(ERROR, "range types do not match");
   }
 
   range_deserialize(typcache, r1, &lower1, &upper1, &empty1);
@@ -2451,7 +2451,7 @@ range_contains_elem_internal(TypeCacheEntry *typcache, RangeType *r, Datum val)
     }
     if (cmp == 0 && !lower.inclusive)
     {
-
+      return false;
     }
   }
 
@@ -2533,8 +2533,8 @@ datum_write(Pointer ptr, Datum datum, bool typbyval, char typalign, int16 typlen
        * Throw error, because we must never put a toast pointer inside a
        * range object.  Caller should have detoasted it.
        */
-
-
+      elog(ERROR, "cannot store a toast pointer inside a range");
+      data_length = 0; /* keep compiler quiet */
     }
     else if (VARATT_IS_SHORT(val))
     {
@@ -2552,26 +2552,26 @@ datum_write(Pointer ptr, Datum datum, bool typbyval, char typalign, int16 typlen
     else
     {
       /* full 4-byte header varlena */
-
-
-
+      ptr = (char *)att_align_nominal(ptr, typalign);
+      data_length = VARSIZE(val);
+      memcpy(ptr, val, data_length);
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  else if (typlen == -2)
+  {
+    /* cstring ... never needs alignment */
+    Assert(typalign == 'c');
+    data_length = strlen(DatumGetCString(datum)) + 1;
+    memcpy(ptr, DatumGetPointer(datum), data_length);
+  }
+  else
+  {
+    /* fixed-length pass-by-reference */
+    ptr = (char *)att_align_nominal(ptr, typalign);
+    Assert(typlen > 0);
+    data_length = typlen;
+    memcpy(ptr, DatumGetPointer(datum), data_length);
+  }
 
   ptr += data_length;
 

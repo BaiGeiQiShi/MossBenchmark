@@ -276,7 +276,7 @@ heapam_tuple_complete_speculative(Relation relation, TupleTableSlot *slot, uint3
   }
   else
   {
-
+    heap_abort_speculative(relation, &slot->tts_tid);
   }
 
   if (shouldFree)
@@ -342,7 +342,7 @@ heapam_tuple_lock(Relation relation, ItemPointer tid, Snapshot snapshot, TupleTa
 
   Assert(TTS_IS_BUFFERTUPLE(slot));
 
-tuple_lock_retry:;
+tuple_lock_retry:
   tuple->t_self = *tid;
   result = heap_lock_tuple(relation, tuple, cid, mode, wait_policy, follow_updates, &buffer, tmfd);
 
@@ -393,14 +393,14 @@ tuple_lock_retry:;
            */
           if (!TransactionIdEquals(HeapTupleHeaderGetXmin(tuple->t_data), priorXmax))
           {
-
-
+            ReleaseBuffer(buffer);
+            return TM_Deleted;
           }
 
           /* otherwise xmin should not be dirty... */
           if (TransactionIdIsValid(SnapshotDirty.xmin))
           {
-
+            ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg_internal("t_xmin %u is uncommitted in tuple (%u,%u) to be updated in table \"%s\"", SnapshotDirty.xmin, ItemPointerGetBlockNumber(&tuple->t_self), ItemPointerGetOffsetNumber(&tuple->t_self), RelationGetRelationName(relation))));
           }
 
           /*
@@ -412,24 +412,24 @@ tuple_lock_retry:;
             ReleaseBuffer(buffer);
             switch (wait_policy)
             {
-            case LockWaitBlock:;
-
-
-            case LockWaitSkip:;
+            case LockWaitBlock:
+              XactLockTableWait(SnapshotDirty.xmax, relation, &tuple->t_self, XLTW_FetchUpdated);
+              break;
+            case LockWaitSkip:
               if (!ConditionalXactLockTableWait(SnapshotDirty.xmax))
               {
                 /* skip instead of waiting */
                 return TM_WouldBlock;
               }
-
-            case LockWaitError:;
+              break;
+            case LockWaitError:
               if (!ConditionalXactLockTableWait(SnapshotDirty.xmax))
               {
                 ereport(ERROR, (errcode(ERRCODE_LOCK_NOT_AVAILABLE), errmsg("could not obtain lock on row in relation \"%s\"", RelationGetRelationName(relation))));
               }
               break;
             }
-
+            continue; /* loop back to repeat heap_fetch */
           }
 
           /*
@@ -446,15 +446,15 @@ tuple_lock_retry:;
            */
           if (TransactionIdIsCurrentTransactionId(priorXmax) && HeapTupleHeaderGetCmin(tuple->t_data) >= cid)
           {
-
+            tmfd->xmax = priorXmax;
 
             /*
              * Cmin is the problematic value, so store that. See
              * above.
              */
-
-
-
+            tmfd->cmax = HeapTupleHeaderGetCmin(tuple->t_data);
+            ReleaseBuffer(buffer);
+            return TM_SelfModified;
           }
 
           /*
@@ -471,8 +471,8 @@ tuple_lock_retry:;
          */
         if (tuple->t_data == NULL)
         {
-
-
+          Assert(!BufferIsValid(buffer));
+          return TM_Deleted;
         }
 
         /*
@@ -480,8 +480,8 @@ tuple_lock_retry:;
          */
         if (!TransactionIdEquals(HeapTupleHeaderGetXmin(tuple->t_data), priorXmax))
         {
-
-
+          ReleaseBuffer(buffer);
+          return TM_Deleted;
         }
 
         /*
@@ -501,8 +501,8 @@ tuple_lock_retry:;
         if (ItemPointerEquals(&tuple->t_self, &tuple->t_data->t_ctid))
         {
           /* deleted, so forget about it */
-
-
+          ReleaseBuffer(buffer);
+          return TM_Deleted;
         }
 
         /* updated, so look at the updated row */
@@ -516,7 +516,7 @@ tuple_lock_retry:;
     else
     {
       /* tuple was deleted, so give up */
-
+      return TM_Deleted;
     }
   }
 
@@ -538,7 +538,7 @@ heapam_finish_bulk_insert(Relation relation, int options)
    */
   if (options & HEAP_INSERT_SKIP_WAL)
   {
-
+    heap_sync(relation);
   }
 }
 
@@ -629,17 +629,17 @@ heapam_relation_copy_data(Relation rel, const RelFileNode *newrnode)
   {
     if (smgrexists(RelationGetSmgr(rel), forkNum))
     {
-
+      smgrcreate(dstrel, forkNum, false);
 
       /*
        * WAL log creation if the relation is persistent, or this is the
        * init fork of an unlogged relation.
        */
-
-
-
-
-
+      if (rel->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT || (rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED && forkNum == INIT_FORKNUM))
+      {
+        log_smgrcreate(newrnode, forkNum);
+      }
+      RelationCopyStorage(RelationGetSmgr(rel), dstrel, forkNum, rel->rd_rel->relpersistence);
     }
   }
 
@@ -757,7 +757,7 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap, Relation Ol
       /* Since we used no scan keys, should never need to recheck */
       if (indexScan->xs_recheck)
       {
-
+        elog(ERROR, "CLUSTER does not support lossy index conditions");
       }
     }
     else
@@ -799,18 +799,18 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap, Relation Ol
 
     switch (HeapTupleSatisfiesVacuum(tuple, OldestXmin, buf))
     {
-    case HEAPTUPLE_DEAD:;
+    case HEAPTUPLE_DEAD:
       /* Definitely dead */
       isdead = true;
       break;
-    case HEAPTUPLE_RECENTLY_DEAD:;
-
+    case HEAPTUPLE_RECENTLY_DEAD:
+      *tups_recently_dead += 1;
       /* fall through */
-    case HEAPTUPLE_LIVE:;
+    case HEAPTUPLE_LIVE:
       /* Live or recently dead, must copy it */
       isdead = false;
       break;
-    case HEAPTUPLE_INSERT_IN_PROGRESS:;
+    case HEAPTUPLE_INSERT_IN_PROGRESS:
 
       /*
        * Since we hold exclusive lock on the relation, normally the
@@ -822,28 +822,28 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap, Relation Ol
        */
       if (!is_system_catalog && !TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(tuple->t_data)))
       {
-
+        elog(WARNING, "concurrent insert in progress within table \"%s\"", RelationGetRelationName(OldHeap));
       }
       /* treat as live */
       isdead = false;
       break;
-    case HEAPTUPLE_DELETE_IN_PROGRESS:;
+    case HEAPTUPLE_DELETE_IN_PROGRESS:
 
       /*
        * Similar situation to INSERT_IN_PROGRESS case.
        */
       if (!is_system_catalog && !TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetUpdateXid(tuple->t_data)))
       {
-
+        elog(WARNING, "concurrent delete in progress within table \"%s\"", RelationGetRelationName(OldHeap));
       }
       /* treat as recently dead */
       *tups_recently_dead += 1;
       isdead = false;
       break;
-    default:;;
-
-
-
+    default:
+      elog(ERROR, "unexpected HeapTupleSatisfiesVacuum result");
+      isdead = false; /* keep compiler quiet */
+      break;
     }
 
     LockBuffer(buf, BUFFER_LOCK_UNLOCK);
@@ -855,8 +855,8 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap, Relation Ol
       if (rewrite_heap_dead_tuple(rwstate, tuple))
       {
         /* A previous recently-dead tuple is now known dead */
-
-
+        *tups_vacuumed += 1;
+        *tups_recently_dead -= 1;
       }
       continue;
     }
@@ -1016,18 +1016,18 @@ heapam_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin, dou
 
     switch (HeapTupleSatisfiesVacuum(targtuple, OldestXmin, hscan->rs_cbuf))
     {
-    case HEAPTUPLE_LIVE:;
+    case HEAPTUPLE_LIVE:
       sample_it = true;
       *liverows += 1;
       break;
 
-    case HEAPTUPLE_DEAD:;
-    case HEAPTUPLE_RECENTLY_DEAD:;
+    case HEAPTUPLE_DEAD:
+    case HEAPTUPLE_RECENTLY_DEAD:
       /* Count dead and recently-dead rows */
       *deadrows += 1;
       break;
 
-    case HEAPTUPLE_INSERT_IN_PROGRESS:;
+    case HEAPTUPLE_INSERT_IN_PROGRESS:
 
       /*
        * Insert-in-progress rows are not counted.  We assume that
@@ -1054,7 +1054,7 @@ heapam_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin, dou
       }
       break;
 
-    case HEAPTUPLE_DELETE_IN_PROGRESS:;
+    case HEAPTUPLE_DELETE_IN_PROGRESS:
 
       /*
        * We count and sample delete-in-progress rows the same as
@@ -1084,14 +1084,14 @@ heapam_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin, dou
       }
       else
       {
-
-
+        sample_it = true;
+        *liverows += 1;
       }
       break;
 
-    default:;;
-
-
+    default:
+      elog(ERROR, "unexpected HeapTupleSatisfiesVacuum result");
+      break;
     }
 
     if (sample_it)
@@ -1335,7 +1335,7 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
       bool indexIt;
       TransactionId xwait;
 
-    recheck:;
+    recheck:
 
       /*
        * We could possibly get away with not locking the buffer here,
@@ -1354,19 +1354,19 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
        */
       switch (HeapTupleSatisfiesVacuum(heapTuple, OldestXmin, hscan->rs_cbuf))
       {
-      case HEAPTUPLE_DEAD:;
+      case HEAPTUPLE_DEAD:
         /* Definitely dead, we can ignore it */
         indexIt = false;
         tupleIsAlive = false;
         break;
-      case HEAPTUPLE_LIVE:;
+      case HEAPTUPLE_LIVE:
         /* Normal case, index and unique-check it */
         indexIt = true;
         tupleIsAlive = true;
         /* Count it as live, too */
         reltuples += 1;
         break;
-      case HEAPTUPLE_RECENTLY_DEAD:;
+      case HEAPTUPLE_RECENTLY_DEAD:
 
         /*
          * If tuple is recently deleted then we must index it
@@ -1382,20 +1382,20 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
          * We don't count recently-dead tuples in reltuples, even
          * if we index them; see heapam_scan_analyze_next_tuple().
          */
-
-
-
-
-
-
-
-
-
-
+        if (HeapTupleIsHotUpdated(heapTuple))
+        {
+          indexIt = false;
+          /* mark the index as unsafe for old snapshots */
+          indexInfo->ii_BrokenHotChain = true;
+        }
+        else
+        {
+          indexIt = true;
+        }
         /* In any case, exclude the tuple from unique-checking */
-
-
-      case HEAPTUPLE_INSERT_IN_PROGRESS:;
+        tupleIsAlive = false;
+        break;
+      case HEAPTUPLE_INSERT_IN_PROGRESS:
 
         /*
          * In "anyvisible" mode, this tuple is visible and we
@@ -1403,10 +1403,10 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
          */
         if (anyvisible)
         {
-
-
-
-
+          indexIt = true;
+          tupleIsAlive = true;
+          reltuples += 1;
+          break;
         }
 
         /*
@@ -1420,10 +1420,10 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
         xwait = HeapTupleHeaderGetXmin(heapTuple->t_data);
         if (!TransactionIdIsCurrentTransactionId(xwait))
         {
-
-
-
-
+          if (!is_system_catalog)
+          {
+            elog(WARNING, "concurrent insert in progress within table \"%s\"", RelationGetRelationName(heapRelation));
+          }
 
           /*
            * If we are performing uniqueness checks, indexing
@@ -1431,16 +1431,16 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
            * failure.  In that case we wait for the inserting
            * transaction to finish and check again.
            */
-
-
-
-
-
-
-
-
-
-
+          if (checking_uniqueness)
+          {
+            /*
+             * Must drop the lock on the buffer before we wait
+             */
+            LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_UNLOCK);
+            XactLockTableWait(xwait, heapRelation, &heapTuple->t_self, XLTW_InsertIndexUnique);
+            CHECK_FOR_INTERRUPTS();
+            goto recheck;
+          }
         }
         else
         {
@@ -1460,7 +1460,7 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
         indexIt = true;
         tupleIsAlive = true;
         break;
-      case HEAPTUPLE_DELETE_IN_PROGRESS:;
+      case HEAPTUPLE_DELETE_IN_PROGRESS:
 
         /*
          * As with INSERT_IN_PROGRESS case, this is unexpected
@@ -1469,19 +1469,19 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
          */
         if (anyvisible)
         {
-
-
-
-
+          indexIt = true;
+          tupleIsAlive = false;
+          reltuples += 1;
+          break;
         }
 
         xwait = HeapTupleHeaderGetUpdateXid(heapTuple->t_data);
         if (!TransactionIdIsCurrentTransactionId(xwait))
         {
-
-
-
-
+          if (!is_system_catalog)
+          {
+            elog(WARNING, "concurrent delete in progress within table \"%s\"", RelationGetRelationName(heapRelation));
+          }
 
           /*
            * If we are performing uniqueness checks, assuming
@@ -1497,22 +1497,22 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
            * only way to know what to do is to wait for the
            * deleting transaction to finish and check again.
            */
-
-
-
-
-
-
-
-
-
-
+          if (checking_uniqueness || HeapTupleIsHotUpdated(heapTuple))
+          {
+            /*
+             * Must drop the lock on the buffer before we wait
+             */
+            LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_UNLOCK);
+            XactLockTableWait(xwait, heapRelation, &heapTuple->t_self, XLTW_InsertIndexUnique);
+            CHECK_FOR_INTERRUPTS();
+            goto recheck;
+          }
 
           /*
            * Otherwise index it but don't check for uniqueness,
            * the same as a RECENTLY_DEAD tuple.
            */
-
+          indexIt = true;
 
           /*
            * Count HEAPTUPLE_DELETE_IN_PROGRESS tuples as live,
@@ -1521,7 +1521,7 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
            * heapam_scan_analyze_next_tuple() does, and we want
            * the behavior to be consistent.
            */
-
+          reltuples += 1;
         }
         else if (HeapTupleIsHotUpdated(heapTuple))
         {
@@ -1531,9 +1531,9 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
            * index contents don't matter), so treat the same as
            * RECENTLY_DEAD HOT-updated tuples.
            */
-
+          indexIt = false;
           /* mark the index as unsafe for old snapshots */
-
+          indexInfo->ii_BrokenHotChain = true;
         }
         else
         {
@@ -1547,10 +1547,10 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
         /* In any case, exclude the tuple from unique-checking */
         tupleIsAlive = false;
         break;
-      default:;;
-
-
-
+      default:
+        elog(ERROR, "unexpected HeapTupleSatisfiesVacuum result");
+        indexIt = tupleIsAlive = false; /* keep compiler quiet */
+        break;
       }
 
       LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_UNLOCK);
@@ -1618,14 +1618,14 @@ heapam_index_build_range_scan(Relation heapRelation, Relation indexRelation, Ind
       {
         Page page = BufferGetPage(hscan->rs_cbuf);
 
-
-
-
+        LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_SHARE);
+        heap_get_root_tuples(page, root_offsets);
+        LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_UNLOCK);
       }
 
       if (!OffsetNumberIsValid(root_offsets[offnum - 1]))
       {
-
+        ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg_internal("failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"", ItemPointerGetBlockNumber(&heapTuple->t_self), offnum, RelationGetRelationName(heapRelation))));
       }
 
       ItemPointerSetOffsetNumber(&rootTuple.t_self, root_offsets[offnum - 1]);
@@ -1788,12 +1788,12 @@ heapam_index_validate_scan(Relation heapRelation, Relation indexRelation, IndexI
 
     if (HeapTupleIsHeapOnly(heapTuple))
     {
-
-
-
-
-
-
+      root_offnum = root_offsets[root_offnum - 1];
+      if (!OffsetNumberIsValid(root_offnum))
+      {
+        ereport(ERROR, (errcode(ERRCODE_DATA_CORRUPTED), errmsg_internal("failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"", ItemPointerGetBlockNumber(heapcursor), ItemPointerGetOffsetNumber(heapcursor), RelationGetRelationName(heapRelation))));
+      }
+      ItemPointerSetOffsetNumber(&rootTuple, root_offnum);
     }
 
     /*
@@ -1863,7 +1863,7 @@ heapam_index_validate_scan(Relation heapRelation, Relation indexRelation, IndexI
        * in this index, and note which are null.  This also performs
        * evaluation of any expressions needed.
        */
-
+      FormIndexDatum(indexInfo, slot, estate, values, isnull);
 
       /*
        * You'd think we should go ahead and build the index tuple here,
@@ -1883,9 +1883,9 @@ heapam_index_validate_scan(Relation heapRelation, Relation indexRelation, IndexI
        * there is one.
        */
 
+      index_insert(indexRelation, values, isnull, &rootTuple, heapRelation, indexInfo->ii_Unique ? UNIQUE_CHECK_YES : UNIQUE_CHECK_NO, indexInfo);
 
-
-
+      state->tups_inserted += 1;
     }
   }
 
@@ -1963,10 +1963,10 @@ heapam_relation_size(Relation rel, ForkNumber forkNumber)
   /* InvalidForkNumber indicates returning the size for all forks */
   if (forkNumber == InvalidForkNumber)
   {
-
-
-
-
+    for (int i = 0; i < MAX_FORKNUM; i++)
+    {
+      nblocks += smgrnblocks(reln, i);
+    }
   }
   else
   {
@@ -2243,7 +2243,7 @@ heapam_scan_bitmap_next_block(TableScanDesc scan, TBMIterateResult *tbmres)
       lp = PageGetItemId(dp, offnum);
       if (!ItemIdIsNormal(lp))
       {
-
+        continue;
       }
       loctup.t_data = (HeapTupleHeader)PageGetItem((Page)dp, lp);
       loctup.t_len = ItemIdGetLength(lp);
@@ -2316,7 +2316,7 @@ heapam_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
   /* return false immediately if relation is empty */
   if (hscan->rs_nblocks == 0)
   {
-
+    return false;
   }
 
   if (tsm->NextSampleBlock)
@@ -2357,7 +2357,7 @@ heapam_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
        */
       if (scan->rs_flags & SO_ALLOW_SYNC)
       {
-
+        ss_report_location(scan->rs_rd, blockno);
       }
 
       if (blockno == hscan->rs_startblock)
@@ -2430,7 +2430,7 @@ heapam_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate, Tu
       itemid = PageGetItemId(page, tupoffset);
       if (!ItemIdIsNormal(itemid))
       {
-
+        continue;
       }
 
       tuple->t_data = (HeapTupleHeader)PageGetItem(page, itemid);
@@ -2439,7 +2439,7 @@ heapam_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate, Tu
 
       if (all_visible)
       {
-
+        visible = true;
       }
       else
       {
@@ -2455,7 +2455,7 @@ heapam_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate, Tu
       /* Try next tuple from same page. */
       if (!visible)
       {
-
+        continue;
       }
 
       /* Found visible tuple, return it. */
@@ -2526,7 +2526,7 @@ reform_and_rewrite_tuple(HeapTuple tuple, Relation OldHeap, Relation NewHeap, Da
   {
     if (TupleDescAttr(newTupDesc, i)->attisdropped)
     {
-
+      isnull[i] = true;
     }
   }
 

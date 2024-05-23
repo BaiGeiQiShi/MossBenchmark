@@ -24,13 +24,16 @@ rint(double x)
   double r;
 
   /* Per POSIX, NaNs must be returned unchanged. */
-  if (isnan(x)) {
+  if (isnan(x))
+  {
     return x;
   }
 
-  if (x <= 0.0) {
+  if (x <= 0.0)
+  {
     /* Both positive and negative zero should be returned unchanged. */
-    if (x == 0.0) {
+    if (x == 0.0)
+    {
       return x;
     }
 
@@ -48,7 +51,8 @@ rint(double x)
      * Be careful to return minus zero when input+0.5 >= 0, as that's what
      * rint() should return with negative input.
      */
-    if (x >= 0.0) {
+    if (x >= 0.0)
+    {
       return -0.0;
     }
 
@@ -57,7 +61,8 @@ rint(double x)
      * detected by testing x+0.5 == x+1.0; if that happens, the input is
      * returned unchanged.  This also covers the case of minus infinity.
      */
-    if (x == x_orig + 1.0) {
+    if (x == x_orig + 1.0)
+    {
       return x_orig;
     }
 
@@ -67,7 +72,8 @@ rint(double x)
     /*
      * If the rounding did not produce exactly input+0.5 then we're done.
      */
-    if (r != x) {
+    if (r != x)
+    {
       return r;
     }
 
@@ -80,21 +86,26 @@ rint(double x)
      * here: x is an integer.
      */
     return floor(x * 0.5) * 2.0;
-  } else {
+  }
+  else
+  {
     /*
      * The positive case is similar but with signs inverted and using
      * ceil() instead of floor().
      */
     x_orig = x;
     x -= 0.5;
-    if (x <= 0.0) {
+    if (x <= 0.0)
+    {
       return 0.0;
     }
-    if (x == x_orig - 1.0) {
+    if (x == x_orig - 1.0)
+    {
       return x_orig;
     }
     r = ceil(x);
-    if (r != x) {
+    if (r != x)
+    {
       return r;
     }
     return ceil(x * 0.5) * 2.0;

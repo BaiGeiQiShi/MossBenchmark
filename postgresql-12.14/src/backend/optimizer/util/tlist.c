@@ -96,7 +96,7 @@ tlist_member_ignore_relabel(Expr *node, List *targetlist)
 
   while (node && IsA(node, RelabelType))
   {
-
+    node = ((RelabelType *)node)->arg;
   }
 
   foreach (temp, targetlist)
@@ -106,7 +106,7 @@ tlist_member_ignore_relabel(Expr *node, List *targetlist)
 
     while (tlexpr && IsA(tlexpr, RelabelType))
     {
-
+      tlexpr = ((RelabelType *)tlexpr)->arg;
     }
 
     if (equal(node, tlexpr))
@@ -137,7 +137,7 @@ tlist_member_match_var(Var *var, List *targetlist)
 
     if (!tlvar || !IsA(tlvar, Var))
     {
-
+      continue;
     }
     if (var->varno == tlvar->varno && var->varattno == tlvar->varattno && var->varlevelsup == tlvar->varlevelsup && var->vartype == tlvar->vartype)
     {
@@ -149,8 +149,7 @@ tlist_member_match_var(Var *var, List *targetlist)
 
 /*
  * add_to_flat_tlist
- *		Add more items to a flattened tlist (if they're not already in
- *it)
+ *		Add more items to a flattened tlist (if they're not already in it)
  *
  * 'tlist' is the flattened tlist
  * 'exprs' is a list of expressions (usually, but not necessarily, Vars)
@@ -160,23 +159,23 @@ tlist_member_match_var(Var *var, List *targetlist)
 List *
 add_to_flat_tlist(List *tlist, List *exprs)
 {
+  int next_resno = list_length(tlist) + 1;
+  ListCell *lc;
 
+  foreach (lc, exprs)
+  {
+    Expr *expr = (Expr *)lfirst(lc);
 
+    if (!tlist_member(expr, tlist))
+    {
+      TargetEntry *tle;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      tle = makeTargetEntry(copyObject(expr), /* copy needed?? */
+          next_resno++, NULL, false);
+      tlist = lappend(tlist, tle);
+    }
+  }
+  return tlist;
 }
 
 /*
@@ -295,7 +294,7 @@ tlist_same_datatypes(List *tlist, List *colTypes, bool junkOK)
     {
       if (curColType == NULL)
       {
-
+        return false; /* tlist longer than colTypes */
       }
       if (exprType((Node *)tle->expr) != lfirst_oid(curColType))
       {
@@ -306,7 +305,7 @@ tlist_same_datatypes(List *tlist, List *colTypes, bool junkOK)
   }
   if (curColType != NULL)
   {
-
+    return false; /* tlist shorter than colTypes */
   }
   return true;
 }
@@ -330,33 +329,32 @@ tlist_same_collations(List *tlist, List *colCollations, bool junkOK)
     {
       if (!junkOK)
       {
-
+        return false;
       }
     }
     else
     {
       if (curColColl == NULL)
       {
-
+        return false; /* tlist longer than colCollations */
       }
       if (exprCollation((Node *)tle->expr) != lfirst_oid(curColColl))
       {
-
+        return false;
       }
       curColColl = lnext(curColColl);
     }
   }
   if (curColColl != NULL)
   {
-
+    return false; /* tlist shorter than colCollations */
   }
   return true;
 }
 
 /*
  * apply_tlist_labeling
- *		Apply the TargetEntry labeling attributes of src_tlist to
- *dest_tlist
+ *		Apply the TargetEntry labeling attributes of src_tlist to dest_tlist
  *
  * This is useful for reattaching column names etc to a plan's final output
  * targetlist.
@@ -402,7 +400,7 @@ get_sortgroupref_tle(Index sortref, List *targetList)
   }
 
   elog(ERROR, "ORDER/GROUP BY expression not found in targetlist");
-
+  return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -479,13 +477,12 @@ get_sortgroupref_clause(Index sortref, List *clauses)
   }
 
   elog(ERROR, "ORDER/GROUP BY expression not found in list");
-
+  return NULL; /* keep compiler quiet */
 }
 
 /*
  * get_sortgroupref_clause_noerr
- *		As above, but return NULL rather than throwing an error if not
- *found.
+ *		As above, but return NULL rather than throwing an error if not found.
  */
 SortGroupClause *
 get_sortgroupref_clause_noerr(Index sortref, List *clauses)
@@ -783,8 +780,7 @@ add_new_column_to_pathtarget(PathTarget *target, Expr *expr)
 
 /*
  * add_new_columns_to_pathtarget
- *		Apply add_new_column_to_pathtarget() for each element of the
- *list.
+ *		Apply add_new_column_to_pathtarget() for each element of the list.
  */
 void
 add_new_columns_to_pathtarget(PathTarget *target, List *exprs)
@@ -801,8 +797,7 @@ add_new_columns_to_pathtarget(PathTarget *target, List *exprs)
 
 /*
  * apply_pathtarget_labeling_to_tlist
- *		Apply any sortgrouprefs in the PathTarget to matching tlist
- *entries
+ *		Apply any sortgrouprefs in the PathTarget to matching tlist entries
  *
  * Here, we do not assume that the tlist entries are one-for-one with the
  * PathTarget.  The intended use of this function is to deal with cases
@@ -844,7 +839,7 @@ apply_pathtarget_labeling_to_tlist(List *tlist, PathTarget *target)
       }
       else
       {
-
+        tle = tlist_member(expr, tlist);
       }
 
       /*
@@ -855,11 +850,11 @@ apply_pathtarget_labeling_to_tlist(List *tlist, PathTarget *target)
        */
       if (!tle)
       {
-
+        elog(ERROR, "ORDER/GROUP BY expression not found in targetlist");
       }
       if (tle->ressortgroupref != 0 && tle->ressortgroupref != target->sortgrouprefs[i])
       {
-
+        elog(ERROR, "targetlist item has multiple sortgroupref labels");
       }
 
       tle->ressortgroupref = target->sortgrouprefs[i];
@@ -870,8 +865,7 @@ apply_pathtarget_labeling_to_tlist(List *tlist, PathTarget *target)
 
 /*
  * split_pathtarget_at_srfs
- *		Split given PathTarget into multiple levels to position SRFs
- *safely
+ *		Split given PathTarget into multiple levels to position SRFs safely
  *
  * The executor can only handle set-returning functions that appear at the
  * top level of the targetlist of a ProjectSet plan node.  If we have any SRFs

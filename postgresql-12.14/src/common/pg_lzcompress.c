@@ -9,70 +9,73 @@
  *		Entry routines:
  *
  *			int32
- *			pglz_compress(const char *source, int32 slen, char
- **dest, const PGLZ_Strategy *strategy);
+ *			pglz_compress(const char *source, int32 slen, char *dest,
+ *						  const PGLZ_Strategy *strategy);
  *
  *				source is the input data to be compressed.
  *
  *				slen is the length of the input data.
  *
- *				dest is the output area for the compressed
- *result. It must be at least as big as PGLZ_MAX_OUTPUT(slen).
+ *				dest is the output area for the compressed result.
+ *					It must be at least as big as PGLZ_MAX_OUTPUT(slen).
  *
- *				strategy is a pointer to some information
- *controlling the compression algorithm. If NULL, the compiled in default
- *strategy is used.
+ *				strategy is a pointer to some information controlling
+ *					the compression algorithm. If NULL, the compiled
+ *					in default strategy is used.
  *
- *				The return value is the number of bytes written
- *in the buffer dest, or -1 if compression fails; in the latter case the
- *contents of dest are undefined.
+ *				The return value is the number of bytes written in the
+ *				buffer dest, or -1 if compression fails; in the latter
+ *				case the contents of dest are undefined.
  *
  *			int32
- *			pglz_decompress(const char *source, int32 slen, char
- **dest, int32 rawsize, bool check_complete)
+ *			pglz_decompress(const char *source, int32 slen, char *dest,
+ *							int32 rawsize, bool check_complete)
  *
  *				source is the compressed input.
  *
  *				slen is the length of the compressed input.
  *
- *				dest is the area where the uncompressed data
- *will be written to. It is the callers responsibility to provide enough space.
+ *				dest is the area where the uncompressed data will be
+ *					written to. It is the callers responsibility to
+ *					provide enough space.
  *
- *					The data is written to buff exactly as
- *it was handed to pglz_compress(). No terminating zero byte is added.
+ *					The data is written to buff exactly as it was handed
+ *					to pglz_compress(). No terminating zero byte is added.
  *
  *				rawsize is the length of the uncompressed data.
  *
- *				check_complete is a flag to let us know if -1
- *should be returned in cases where we don't reach the end of the source or dest
- *buffers, or not.  This should be false if the caller is asking for only a
- *partial result and true otherwise.
+ *				check_complete is a flag to let us know if -1 should be
+ *					returned in cases where we don't reach the end of the
+ *					source or dest buffers, or not.  This should be false
+ *					if the caller is asking for only a partial result and
+ *					true otherwise.
  *
- *				The return value is the number of bytes written
- *in the buffer dest, or -1 if decompression fails.
+ *				The return value is the number of bytes written in the
+ *				buffer dest, or -1 if decompression fails.
  *
  *		The decompression algorithm and internal data format:
  *
  *			It is made with the compressed data itself.
  *
- *			The data representation is easiest explained by
- *describing the process of decompression.
+ *			The data representation is easiest explained by describing
+ *			the process of decompression.
  *
  *			If compressed_size == rawsize, then the data
- *			is stored uncompressed as plain bytes. Thus, the
- *decompressor simply copies rawsize bytes to the destination.
+ *			is stored uncompressed as plain bytes. Thus, the decompressor
+ *			simply copies rawsize bytes to the destination.
  *
- *			Otherwise the first byte tells what to do the next 8
- *times. We call this the control byte.
+ *			Otherwise the first byte tells what to do the next 8 times.
+ *			We call this the control byte.
  *
- *			An unset bit in the control byte means, that one
- *uncompressed byte follows, which is copied from input to output.
+ *			An unset bit in the control byte means, that one uncompressed
+ *			byte follows, which is copied from input to output.
  *
- *			A set bit in the control byte means, that a tag of 2-3
- *bytes follows. A tag contains information to copy some bytes, that are already
- *in the output buffer, to the current location in the output. Let's call the
- *three tag bytes T1, T2 and T3. The position of the data to copy is coded as an
- *offset from the actual output position.
+ *			A set bit in the control byte means, that a tag of 2-3 bytes
+ *			follows. A tag contains information to copy some bytes, that
+ *			are already in the output buffer, to the current location in
+ *			the output. Let's call the three tag bytes T1, T2 and T3. The
+ *			position of the data to copy is coded as an offset from the
+ *			actual output position.
  *
  *			The offset is in the upper nibble of T1 and in T2.
  *			The length is in the lower nibble of T1.
@@ -82,69 +85,73 @@
  *				7---T1--0  7---T2--0
  *				OOOO LLLL  OOOO OOOO
  *
- *			This limits the offset to 1-4095 (12 bits) and the
- *length to 3-18 (4 bits) because 3 is always added to it. To emit a tag of 2
- *bytes with a length of 2 only saves one control bit. But we lose one byte in
- *the possible length of a tag.
+ *			This limits the offset to 1-4095 (12 bits) and the length
+ *			to 3-18 (4 bits) because 3 is always added to it. To emit
+ *			a tag of 2 bytes with a length of 2 only saves one control
+ *			bit. But we lose one byte in the possible length of a tag.
  *
  *			In the actual implementation, the 2 byte tag's length is
- *			limited to 3-17, because the value 0xF in the length
- *nibble has special meaning. It means, that the next following byte (T3) has to
- *be added to the length value of 18. That makes total limits of 1-4095 for
- *offset and 3-273 for length.
+ *			limited to 3-17, because the value 0xF in the length nibble
+ *			has special meaning. It means, that the next following
+ *			byte (T3) has to be added to the length value of 18. That
+ *			makes total limits of 1-4095 for offset and 3-273 for length.
  *
- *			Now that we have successfully decoded a tag. We simply
- *copy the output that occurred <offset> bytes back to the current output
- *location in the specified <length>. Thus, a sequence of 200 spaces (think
- *about bpchar fields) could be coded in 4 bytes. One literal space and a three
- *byte tag to copy 199 bytes with a -1 offset. Whow - that's a compression rate
- *of 98%! Well, the implementation needs to save the original data size too, so
- *we need another 4 bytes for it and end up with a total compression rate of
- *96%, what's still worth a Whow.
+ *			Now that we have successfully decoded a tag. We simply copy
+ *			the output that occurred <offset> bytes back to the current
+ *			output location in the specified <length>. Thus, a
+ *			sequence of 200 spaces (think about bpchar fields) could be
+ *			coded in 4 bytes. One literal space and a three byte tag to
+ *			copy 199 bytes with a -1 offset. Whow - that's a compression
+ *			rate of 98%! Well, the implementation needs to save the
+ *			original data size too, so we need another 4 bytes for it
+ *			and end up with a total compression rate of 96%, what's still
+ *			worth a Whow.
  *
  *		The compression algorithm
  *
  *			The following uses numbers used in the default strategy.
  *
- *			The compressor works best for attributes of a size
- *between 1K and 1M. For smaller items there's not that much chance of
- *			redundancy in the character sequence (except for large
- *areas of identical bytes like trailing spaces) and for bigger ones our 4K
- *maximum look-back distance is too small.
+ *			The compressor works best for attributes of a size between
+ *			1K and 1M. For smaller items there's not that much chance of
+ *			redundancy in the character sequence (except for large areas
+ *			of identical bytes like trailing spaces) and for bigger ones
+ *			our 4K maximum look-back distance is too small.
  *
  *			The compressor creates a table for lists of positions.
- *			For each input position (except the last 3), a hash key
- *is built from the 4 next input bytes and the position remembered in the
- *appropriate list. Thus, the table points to linked lists of likely to be at
- *least in the first 4 characters matching strings. This is done on the fly
- *while the input is compressed into the output area.  Table entries are only
- *			kept for the last 4096 input positions, since we cannot
- *use back-pointers larger than that anyway.  The size of the hash table is
- *chosen based on the size of the input - a larger table has a larger startup
- *cost, as it needs to be initialized to zero, but reduces the number of hash
- *collisions on long inputs.
+ *			For each input position (except the last 3), a hash key is
+ *			built from the 4 next input bytes and the position remembered
+ *			in the appropriate list. Thus, the table points to linked
+ *			lists of likely to be at least in the first 4 characters
+ *			matching strings. This is done on the fly while the input
+ *			is compressed into the output area.  Table entries are only
+ *			kept for the last 4096 input positions, since we cannot use
+ *			back-pointers larger than that anyway.  The size of the hash
+ *			table is chosen based on the size of the input - a larger table
+ *			has a larger startup cost, as it needs to be initialized to
+ *			zero, but reduces the number of hash collisions on long inputs.
  *
- *			For each byte in the input, its hash key (built from
- *this byte and the next 3) is used to find the appropriate list in the table.
- *The lists remember the positions of all bytes that had the same hash key in
- *the past in increasing backward offset order. Now for all entries in the used
- *lists, the match length is computed by comparing the characters from the
- *			entries position with the characters from the actual
- *input position.
+ *			For each byte in the input, its hash key (built from this
+ *			byte and the next 3) is used to find the appropriate list
+ *			in the table. The lists remember the positions of all bytes
+ *			that had the same hash key in the past in increasing backward
+ *			offset order. Now for all entries in the used lists, the
+ *			match length is computed by comparing the characters from the
+ *			entries position with the characters from the actual input
+ *			position.
  *
- *			The compressor starts with a so called "good_match" of
- *128. It is a "prefer speed against compression ratio" optimizer. So if the
- *first entry looked at already has 128 or more matching characters, the lookup
- *stops and that position is used for the next tag in the output.
+ *			The compressor starts with a so called "good_match" of 128.
+ *			It is a "prefer speed against compression ratio" optimizer.
+ *			So if the first entry looked at already has 128 or more
+ *			matching characters, the lookup stops and that position is
+ *			used for the next tag in the output.
  *
- *			For each subsequent entry in the history list, the
- *"good_match" is lowered by 10%. So the compressor will be more happy with
- *			short matches the farer it has to go back in the
- *history. Another "speed against ratio" preference characteristic of the
- *algorithm.
+ *			For each subsequent entry in the history list, the "good_match"
+ *			is lowered by 10%. So the compressor will be more happy with
+ *			short matches the farer it has to go back in the history.
+ *			Another "speed against ratio" preference characteristic of
+ *			the algorithm.
  *
- *			Thus there are 3 stop conditions for the lookup of
- *matches:
+ *			Thus there are 3 stop conditions for the lookup of matches:
  *
  *				- a match >= good_match is found
  *				- there are no more history entries to look at
@@ -152,16 +159,16 @@
  *				  to be coded into a tag.
  *
  *			Finally the match algorithm checks that at least a match
- *			of 3 or more bytes has been found, because that is the
- *smallest amount of copy information to code into a tag. If so, a tag is
- *omitted and all the input bytes covered by that are just scanned for the
- *history add's, otherwise a literal character is omitted and only his history
- *entry added.
+ *			of 3 or more bytes has been found, because that is the smallest
+ *			amount of copy information to code into a tag. If so, a tag
+ *			is omitted and all the input bytes covered by that are just
+ *			scanned for the history add's, otherwise a literal character
+ *			is omitted and only his history entry added.
  *
  *		Acknowledgments:
  *
- *			Many thanks to Adisak Pochanayon, who's article about
- *SLZ inspired me to write the PostgreSQL compression this way.
+ *			Many thanks to Adisak Pochanayon, who's article about SLZ
+ *			inspired me to write the PostgreSQL compression this way.
  *
  *			Jan Wieck
  *
@@ -243,7 +250,8 @@ static int16 hist_start[PGLZ_MAX_HISTORY_LISTS];
 static PGLZ_HistEntry hist_entries[PGLZ_HISTORY_SIZE + 1];
 
 /*
- * Element 0 in hist_entries is unused, and means 'invalid'. Likewise,* INVALID_ENTRY_PTR in next/prev pointers mean 'invalid'.
+ * Element 0 in hist_entries is unused, and means 'invalid'. Likewise,
+ * INVALID_ENTRY_PTR in next/prev pointers mean 'invalid'.
  */
 #define INVALID_ENTRY 0
 #define INVALID_ENTRY_PTR (&hist_entries[INVALID_ENTRY])
@@ -267,7 +275,8 @@ static PGLZ_HistEntry hist_entries[PGLZ_HISTORY_SIZE + 1];
  *
  *		Adds a new entry to the history table.
  *
- * If _recycle is true, then we are recycling a previously used entry,* and must first delink it from its old hashcode's linked list.
+ * If _recycle is true, then we are recycling a previously used entry,
+ * and must first delink it from its old hashcode's linked list.
  *
  * NOTE: beware of multiple evaluations of macro's arguments, and note that
  * _hn and _recycle are modified in the macro.
@@ -410,7 +419,8 @@ pglz_find_match(int16 *hstart, const char *input, const char *end, int *lenp, in
 
     /*
      * Determine length of match. A better match must be larger than the
-     * best so far. And if we already have a match of 16 or more bytes,* it's worth the call overhead to use memcmp() to check if this match
+     * best so far. And if we already have a match of 16 or more bytes,
+     * it's worth the call overhead to use memcmp() to check if this match
      * is equal for the same size. After that we must fallback to
      * character by character comparison to know the exact position where
      * the diff occurred.
@@ -486,8 +496,8 @@ pglz_find_match(int16 *hstart, const char *input, const char *end, int *lenp, in
 /* ----------
  * pglz_compress -
  *
- *		Compresses source into dest using strategy. Returns the number
- *of bytes written in buffer dest, or -1 if compression fails.
+ *		Compresses source into dest using strategy. Returns the number of
+ *		bytes written in buffer dest, or -1 if compression fails.
  * ----------
  */
 int32
@@ -519,7 +529,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
    */
   if (strategy == NULL)
   {
-
+    strategy = PGLZ_strategy_default;
   }
 
   /*
@@ -528,7 +538,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
    */
   if (strategy->match_size_good <= 0 || slen < strategy->min_input_size || slen > strategy->max_input_size)
   {
-
+    return -1;
   }
 
   /*
@@ -537,31 +547,31 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
   good_match = strategy->match_size_good;
   if (good_match > PGLZ_MAX_MATCH)
   {
-
+    good_match = PGLZ_MAX_MATCH;
   }
   else if (good_match < 17)
   {
-
+    good_match = 17;
   }
 
   good_drop = strategy->match_size_drop;
   if (good_drop < 0)
   {
-
+    good_drop = 0;
   }
   else if (good_drop > 100)
   {
-
+    good_drop = 100;
   }
 
   need_rate = strategy->min_comp_rate;
   if (need_rate < 0)
   {
-
+    need_rate = 0;
   }
   else if (need_rate > 99)
   {
-
+    need_rate = 99;
   }
 
   /*
@@ -572,7 +582,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
   if (slen > (INT_MAX / 100))
   {
     /* Approximate to avoid overflow */
-
+    result_max = (slen / 100) * (100 - need_rate);
   }
   else
   {
@@ -587,7 +597,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
    */
   if (slen < 128)
   {
-
+    hashsz = 512;
   }
   else if (slen < 256)
   {
@@ -638,7 +648,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
      */
     if (!found_match && bp - bstart >= strategy->first_success_by)
     {
-
+      return -1;
     }
 
     /*
@@ -679,7 +689,7 @@ pglz_compress(const char *source, int32 slen, char *dest, const PGLZ_Strategy *s
   result_size = bp - bstart;
   if (result_size >= result_max)
   {
-
+    return -1;
   }
 
   /* success */
@@ -776,7 +786,7 @@ pglz_decompress(const char *source, int32 slen, char *dest, int32 rawsize, bool 
    */
   if (check_complete && (dp != destend || sp != srcend))
   {
-
+    return -1;
   }
 
   /*

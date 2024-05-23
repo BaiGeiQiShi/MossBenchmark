@@ -32,18 +32,19 @@
  * INTERFACE ROUTINES
  * Message assembly and output:
  *		pq_beginmessage - initialize StringInfo buffer
- *		pq_sendbyte		- append a raw byte to a StringInfo
- *buffer pq_sendint		- append a binary integer to a StringInfo buffer
- *		pq_sendint64	- append a binary 8-byte int to a StringInfo
- *buffer pq_sendfloat4	- append a float4 to a StringInfo buffer pq_sendfloat8
- *- append a float8 to a StringInfo buffer pq_sendbytes	- append raw data to a
- *StringInfo buffer pq_sendcountedtext - append a counted text string (with
- *character set conversion) pq_sendtext		- append a text string (with
- *conversion) pq_sendstring	- append a null-terminated text string (with
- *conversion) pq_send_ascii_string - append a null-terminated text string
- *(without conversion) pq_endmessage	- send the completed message to the
- *frontend Note: it is also possible to append data to the StringInfo buffer
- *using the regular StringInfo routines, but this is discouraged since required
+ *		pq_sendbyte		- append a raw byte to a StringInfo buffer
+ *		pq_sendint		- append a binary integer to a StringInfo buffer
+ *		pq_sendint64	- append a binary 8-byte int to a StringInfo buffer
+ *		pq_sendfloat4	- append a float4 to a StringInfo buffer
+ *		pq_sendfloat8	- append a float8 to a StringInfo buffer
+ *		pq_sendbytes	- append raw data to a StringInfo buffer
+ *		pq_sendcountedtext - append a counted text string (with character set conversion)
+ *		pq_sendtext		- append a text string (with conversion)
+ *		pq_sendstring	- append a null-terminated text string (with conversion)
+ *		pq_send_ascii_string - append a null-terminated text string (without conversion)
+ *		pq_endmessage	- send the completed message to the frontend
+ * Note: it is also possible to append data to the StringInfo buffer using
+ * the regular StringInfo routines, but this is discouraged since required
  * character set conversion may not occur.
  *
  * typsend support (construct a bytea value containing external binary data):
@@ -51,9 +52,8 @@
  *		pq_endtypsend	- return the completed string as a "bytea*"
  *
  * Special-case message output:
- *		pq_puttextmessage - generate a character set-converted message
- *in one step pq_putemptymessage - convenience routine for message with empty
- *body
+ *		pq_puttextmessage - generate a character set-converted message in one step
+ *		pq_putemptymessage - convenience routine for message with empty body
  *
  * Message parsing after input:
  *		pq_getmsgbyte	- get a raw byte from a message buffer
@@ -64,9 +64,9 @@
  *		pq_getmsgbytes	- get raw data from a message buffer
  *		pq_copymsgbytes - copy raw data from a message buffer
  *		pq_getmsgtext	- get a counted text string (with conversion)
- *		pq_getmsgstring - get a null-terminated text string (with
- *conversion) pq_getmsgrawstring - get a null-terminated text string - NO
- *conversion pq_getmsgend	- verify message fully consumed
+ *		pq_getmsgstring - get a null-terminated text string (with conversion)
+ *		pq_getmsgrawstring - get a null-terminated text string - NO conversion
+ *		pq_getmsgend	- verify message fully consumed
  */
 
 #include "postgres.h"
@@ -97,8 +97,7 @@ pq_beginmessage(StringInfo buf, char msgtype)
 
 /* --------------------------------
 
- *		pq_beginmessage_reuse - initialize for sending a message, reuse
- buffer
+ *		pq_beginmessage_reuse - initialize for sending a message, reuse buffer
  *
  * This requires the buffer to be allocated in a sufficiently long-lived
  * memory context.
@@ -129,8 +128,7 @@ pq_sendbytes(StringInfo buf, const char *data, int datalen)
 }
 
 /* --------------------------------
- *		pq_sendcountedtext - append a counted text string (with
- *character set conversion)
+ *		pq_sendcountedtext - append a counted text string (with character set conversion)
  *
  * The data sent to the frontend by this routine is a 4-byte count field
  * followed by the string.  The count includes itself or not, as per the
@@ -148,10 +146,10 @@ pq_sendcountedtext(StringInfo buf, const char *str, int slen, bool countincludes
   p = pg_server_to_client(str, slen);
   if (p != str) /* actual conversion has been done? */
   {
-
-
-
-
+    slen = strlen(p);
+    pq_sendint32(buf, slen + extra);
+    appendBinaryStringInfoNT(buf, p, slen);
+    pfree(p);
   }
   else
   {
@@ -178,9 +176,9 @@ pq_sendtext(StringInfo buf, const char *str, int slen)
   p = pg_server_to_client(str, slen);
   if (p != str) /* actual conversion has been done? */
   {
-
-
-
+    slen = strlen(p);
+    appendBinaryStringInfo(buf, p, slen);
+    pfree(p);
   }
   else
   {
@@ -189,8 +187,7 @@ pq_sendtext(StringInfo buf, const char *str, int slen)
 }
 
 /* --------------------------------
- *		pq_sendstring	- append a null-terminated text string (with
- *conversion)
+ *		pq_sendstring	- append a null-terminated text string (with conversion)
  *
  * NB: passed text string must be null-terminated, and so is the data
  * sent to the frontend.
@@ -205,9 +202,9 @@ pq_sendstring(StringInfo buf, const char *str)
   p = pg_server_to_client(str, slen);
   if (p != str) /* actual conversion has been done? */
   {
-
-
-
+    slen = strlen(p);
+    appendBinaryStringInfoNT(buf, p, slen + 1);
+    pfree(p);
   }
   else
   {
@@ -216,8 +213,7 @@ pq_sendstring(StringInfo buf, const char *str)
 }
 
 /* --------------------------------
- *		pq_send_ascii_string	- append a null-terminated text string
- *(without conversion)
+ *		pq_send_ascii_string	- append a null-terminated text string (without conversion)
  *
  * This function intentionally bypasses encoding conversion, instead just
  * silently replacing any non-7-bit-ASCII characters with question marks.
@@ -234,17 +230,17 @@ pq_sendstring(StringInfo buf, const char *str)
 void
 pq_send_ascii_string(StringInfo buf, const char *str)
 {
+  while (*str)
+  {
+    char ch = *str++;
 
-
-
-
-
-
-
-
-
-
-
+    if (IS_HIGHBIT_SET(ch))
+    {
+      ch = '?';
+    }
+    appendStringInfoCharMacro(buf, ch);
+  }
+  appendStringInfoChar(buf, '\0');
 }
 
 /* --------------------------------
@@ -313,8 +309,7 @@ pq_endmessage(StringInfo buf)
 }
 
 /* --------------------------------
- *		pq_endmessage_reuse	- send the completed message to the
- frontend
+ *		pq_endmessage_reuse	- send the completed message to the frontend
  *
  * The data buffer is *not* freed, allowing to reuse the buffer with
  * pq_beginmessage_reuse.
@@ -329,8 +324,7 @@ pq_endmessage_reuse(StringInfo buf)
 }
 
 /* --------------------------------
- *		pq_begintypsend		- initialize for constructing a bytea
- *result
+ *		pq_begintypsend		- initialize for constructing a bytea result
  * --------------------------------
  */
 void
@@ -366,33 +360,31 @@ pq_endtypsend(StringInfo buf)
 }
 
 /* --------------------------------
- *		pq_puttextmessage - generate a character set-converted message
- *in one step
+ *		pq_puttextmessage - generate a character set-converted message in one step
  *
- *		This is the same as the pqcomm.c routine pq_putmessage, except
- *that the message body is a null-terminated string to which encoding conversion
- *applies.
+ *		This is the same as the pqcomm.c routine pq_putmessage, except that
+ *		the message body is a null-terminated string to which encoding
+ *		conversion applies.
  * --------------------------------
  */
 void
 pq_puttextmessage(char msgtype, const char *str)
 {
+  int slen = strlen(str);
+  char *p;
 
-
-
-
-
-
-
-
-
-
-
+  p = pg_server_to_client(str, slen);
+  if (p != str) /* actual conversion has been done? */
+  {
+    (void)pq_putmessage(msgtype, p, strlen(p) + 1);
+    pfree(p);
+    return;
+  }
+  (void)pq_putmessage(msgtype, str, slen + 1);
 }
 
 /* --------------------------------
- *		pq_putemptymessage - convenience routine for message with empty
- *body
+ *		pq_putemptymessage - convenience routine for message with empty body
  * --------------------------------
  */
 void
@@ -410,7 +402,7 @@ pq_getmsgbyte(StringInfo msg)
 {
   if (msg->cursor >= msg->len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("no data left in message")));
   }
   return (unsigned char)msg->data[msg->cursor++];
 }
@@ -431,22 +423,22 @@ pq_getmsgint(StringInfo msg, int b)
 
   switch (b)
   {
-  case 1:;
-
-
-
-  case 2:;
+  case 1:
+    pq_copymsgbytes(msg, (char *)&n8, 1);
+    result = n8;
+    break;
+  case 2:
     pq_copymsgbytes(msg, (char *)&n16, 2);
     result = pg_ntoh16(n16);
     break;
-  case 4:;
+  case 4:
     pq_copymsgbytes(msg, (char *)&n32, 4);
     result = pg_ntoh32(n32);
     break;
-  default:;;
-
-
-
+  default:
+    elog(ERROR, "unsupported integer size %d", b);
+    result = 0; /* keep compiler quiet */
+    break;
   }
   return result;
 }
@@ -478,14 +470,14 @@ pq_getmsgint64(StringInfo msg)
 float4
 pq_getmsgfloat4(StringInfo msg)
 {
+  union
+  {
+    float4 f;
+    uint32 i;
+  } swap;
 
-
-
-
-
-
-
-
+  swap.i = pq_getmsgint(msg, 4);
+  return swap.f;
 }
 
 /* --------------------------------
@@ -497,14 +489,14 @@ pq_getmsgfloat4(StringInfo msg)
 float8
 pq_getmsgfloat8(StringInfo msg)
 {
+  union
+  {
+    float8 f;
+    int64 i;
+  } swap;
 
-
-
-
-
-
-
-
+  swap.i = pq_getmsgint64(msg);
+  return swap.f;
 }
 
 /* --------------------------------
@@ -521,7 +513,7 @@ pq_getmsgbytes(StringInfo msg, int datalen)
 
   if (datalen < 0 || datalen > (msg->len - msg->cursor))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("insufficient data left in message")));
   }
   result = &msg->data[msg->cursor];
   msg->cursor += datalen;
@@ -539,7 +531,7 @@ pq_copymsgbytes(StringInfo msg, char *buf, int datalen)
 {
   if (datalen < 0 || datalen > (msg->len - msg->cursor))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("insufficient data left in message")));
   }
   memcpy(buf, &msg->data[msg->cursor], datalen);
   msg->cursor += datalen;
@@ -549,44 +541,42 @@ pq_copymsgbytes(StringInfo msg, char *buf, int datalen)
  *		pq_getmsgtext	- get a counted text string (with conversion)
  *
  *		Always returns a pointer to a freshly palloc'd result.
- *		The result has a trailing null, *and* we return its strlen in
- **nbytes.
+ *		The result has a trailing null, *and* we return its strlen in *nbytes.
  * --------------------------------
  */
 char *
 pq_getmsgtext(StringInfo msg, int rawbytes, int *nbytes)
 {
+  char *str;
+  char *p;
 
+  if (rawbytes < 0 || rawbytes > (msg->len - msg->cursor))
+  {
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("insufficient data left in message")));
+  }
+  str = &msg->data[msg->cursor];
+  msg->cursor += rawbytes;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  p = pg_client_to_server(str, rawbytes);
+  if (p != str) /* actual conversion has been done? */
+  {
+    *nbytes = strlen(p);
+  }
+  else
+  {
+    p = (char *)palloc(rawbytes + 1);
+    memcpy(p, str, rawbytes);
+    p[rawbytes] = '\0';
+    *nbytes = rawbytes;
+  }
+  return p;
 }
 
 /* --------------------------------
- *		pq_getmsgstring - get a null-terminated text string (with
- *conversion)
+ *		pq_getmsgstring - get a null-terminated text string (with conversion)
  *
- *		May return a pointer directly into the message buffer, or a
- *pointer to a palloc'd conversion result.
+ *		May return a pointer directly into the message buffer, or a pointer
+ *		to a palloc'd conversion result.
  * --------------------------------
  */
 const char *
@@ -605,7 +595,7 @@ pq_getmsgstring(StringInfo msg)
   slen = strlen(str);
   if (msg->cursor + slen >= msg->len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid string in message")));
   }
   msg->cursor += slen + 1;
 
@@ -613,8 +603,7 @@ pq_getmsgstring(StringInfo msg)
 }
 
 /* --------------------------------
- *		pq_getmsgrawstring - get a null-terminated text string - NO
- *conversion
+ *		pq_getmsgrawstring - get a null-terminated text string - NO conversion
  *
  *		Returns a pointer directly into the message buffer.
  * --------------------------------
@@ -635,7 +624,7 @@ pq_getmsgrawstring(StringInfo msg)
   slen = strlen(str);
   if (msg->cursor + slen >= msg->len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid string in message")));
   }
   msg->cursor += slen + 1;
 
@@ -651,6 +640,6 @@ pq_getmsgend(StringInfo msg)
 {
   if (msg->cursor != msg->len)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("invalid message format")));
   }
 }

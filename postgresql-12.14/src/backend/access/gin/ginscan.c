@@ -70,7 +70,7 @@ ginFillScanEntry(GinScanOpaque so, OffsetNumber attnum, StrategyNumber strategy,
       if (prevEntry->extra_data == NULL && prevEntry->isPartialMatch == isPartialMatch && prevEntry->strategy == strategy && prevEntry->searchMode == searchMode && prevEntry->attnum == attnum && ginCompareEntries(ginstate, attnum, prevEntry->queryKey, prevEntry->queryCategory, queryKey, queryCategory) == 0)
       {
         /* Successful match */
-
+        return prevEntry;
       }
     }
   }
@@ -99,8 +99,8 @@ ginFillScanEntry(GinScanOpaque so, OffsetNumber attnum, StrategyNumber strategy,
   /* Add it to so's array */
   if (so->totalentries >= so->allocentries)
   {
-
-
+    so->allocentries *= 2;
+    so->entries = (GinScanEntry *)repalloc(so->entries, so->allocentries * sizeof(GinScanEntry));
   }
   so->entries[so->totalentries++] = scanEntry;
 
@@ -169,19 +169,19 @@ ginFillScanKey(GinScanOpaque so, OffsetNumber attnum, StrategyNumber strategy, i
       queryKey = (Datum)0;
       switch (searchMode)
       {
-      case GIN_SEARCH_MODE_INCLUDE_EMPTY:;
+      case GIN_SEARCH_MODE_INCLUDE_EMPTY:
         queryCategory = GIN_CAT_EMPTY_ITEM;
         break;
-      case GIN_SEARCH_MODE_ALL:;
+      case GIN_SEARCH_MODE_ALL:
         queryCategory = GIN_CAT_EMPTY_QUERY;
         break;
-      case GIN_SEARCH_MODE_EVERYTHING:;
-
-
-      default:;;
-
-
-
+      case GIN_SEARCH_MODE_EVERYTHING:
+        queryCategory = GIN_CAT_EMPTY_QUERY;
+        break;
+      default:
+        elog(ERROR, "unexpected searchMode: %d", searchMode);
+        queryCategory = 0; /* keep compiler quiet */
+        break;
       }
       isPartialMatch = false;
       this_extra = NULL;
@@ -219,7 +219,7 @@ ginFreeScanKeys(GinScanOpaque so)
 
     if (entry->buffer != InvalidBuffer)
     {
-
+      ReleaseBuffer(entry->buffer);
     }
     if (entry->list)
     {
@@ -227,7 +227,7 @@ ginFreeScanKeys(GinScanOpaque so)
     }
     if (entry->matchIterator)
     {
-
+      tbm_end_iterate(entry->matchIterator);
     }
     if (entry->matchBitmap)
     {
@@ -287,8 +287,8 @@ ginNewScanKey(IndexScanDesc scan)
      */
     if (skey->sk_flags & SK_ISNULL)
     {
-
-
+      so->isVoidRes = true;
+      break;
     }
 
     /* OK to call the extractQueryFn */
@@ -301,7 +301,7 @@ ginNewScanKey(IndexScanDesc scan)
      */
     if (searchMode < GIN_SEARCH_MODE_DEFAULT || searchMode > GIN_SEARCH_MODE_ALL)
     {
-
+      searchMode = GIN_SEARCH_MODE_ALL;
     }
 
     /* Non-default modes require the index to have placeholders */
@@ -337,8 +337,8 @@ ginNewScanKey(IndexScanDesc scan)
       {
         if (nullFlags[j])
         {
-
-
+          categories[j] = GIN_CAT_NULL_KEY;
+          hasNullQuery = true;
         }
       }
     }
@@ -352,8 +352,8 @@ ginNewScanKey(IndexScanDesc scan)
    */
   if (so->nkeys == 0 && !so->isVoidRes)
   {
-
-
+    hasNullQuery = true;
+    ginFillScanKey(so, FirstOffsetNumber, InvalidStrategy, GIN_SEARCH_MODE_EVERYTHING, (Datum)0, 0, NULL, NULL, NULL, NULL);
   }
 
   /*
@@ -368,7 +368,7 @@ ginNewScanKey(IndexScanDesc scan)
     ginGetStats(scan->indexRelation, &ginStats);
     if (ginStats.ginVersion < 1)
     {
-
+      ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("old GIN indexes do not support whole-index scans nor searches for nulls"), errhint("To fix this, do REINDEX INDEX \"%s\".", RelationGetRelationName(scan->indexRelation))));
     }
   }
 

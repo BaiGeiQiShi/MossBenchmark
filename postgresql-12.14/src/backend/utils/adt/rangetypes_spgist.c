@@ -1,8 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * rangetypes_spgist.c
- *	  implementation of quad tree over ranges mapped to 2d-points for
- *SP-GiST.
+ *	  implementation of quad tree over ranges mapped to 2d-points for SP-GiST.
  *
  * Quad tree is a data structure similar to a binary tree, but is adapted to
  * 2d data. Each inner node of a quad tree contains a point (centroid) which
@@ -162,18 +161,18 @@ spg_range_quad_choose(PG_FUNCTION_ARGS)
    */
   if (!in->hasPrefix)
   {
-
-
-
-
-
-
-
-
-
-
-
-
+    out->resultType = spgMatchNode;
+    if (RangeIsEmpty(inRange))
+    {
+      out->result.matchNode.nodeN = 0;
+    }
+    else
+    {
+      out->result.matchNode.nodeN = 1;
+    }
+    out->result.matchNode.levelAdd = 1;
+    out->result.matchNode.restDatum = RangeTypePGetDatum(inRange);
+    PG_RETURN_VOID();
   }
 
   centroid = DatumGetRangeTypeP(in->prefixDatum);
@@ -337,100 +336,100 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
      * No centroid on this inner node. Such a node has two child nodes,
      * the first for empty ranges, and the second for non-empty ones.
      */
-
+    Assert(in->nNodes == 2);
 
     /*
      * Nth bit of which variable means that (N - 1)th node should be
      * visited. Initially all bits are set. Bits of nodes which should be
      * skipped will be unset.
      */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    which = (1 << 1) | (1 << 2);
+    for (i = 0; i < in->nkeys; i++)
+    {
+      StrategyNumber strategy = in->scankeys[i].sk_strategy;
+      bool empty;
+
+      /*
+       * The only strategy when second argument of operator is not range
+       * is RANGESTRAT_CONTAINS_ELEM.
+       */
+      if (strategy != RANGESTRAT_CONTAINS_ELEM)
+      {
+        empty = RangeIsEmpty(DatumGetRangeTypeP(in->scankeys[i].sk_argument));
+      }
+      else
+      {
+        empty = false;
+      }
+
+      switch (strategy)
+      {
+      case RANGESTRAT_BEFORE:
+      case RANGESTRAT_OVERLEFT:
+      case RANGESTRAT_OVERLAPS:
+      case RANGESTRAT_OVERRIGHT:
+      case RANGESTRAT_AFTER:
+      case RANGESTRAT_ADJACENT:
+        /* These strategies return false if any argument is empty */
+        if (empty)
+        {
+          which = 0;
+        }
+        else
+        {
+          which &= (1 << 2);
+        }
+        break;
+
+      case RANGESTRAT_CONTAINS:
+
+        /*
+         * All ranges contain an empty range. Only non-empty
+         * ranges can contain a non-empty range.
+         */
+        if (!empty)
+        {
+          which &= (1 << 2);
+        }
+        break;
+
+      case RANGESTRAT_CONTAINED_BY:
+
+        /*
+         * Only an empty range is contained by an empty range.
+         * Both empty and non-empty ranges can be contained by a
+         * non-empty range.
+         */
+        if (empty)
+        {
+          which &= (1 << 1);
+        }
+        break;
+
+      case RANGESTRAT_CONTAINS_ELEM:
+        which &= (1 << 2);
+        break;
+
+      case RANGESTRAT_EQ:
+        if (empty)
+        {
+          which &= (1 << 1);
+        }
+        else
+        {
+          which &= (1 << 2);
+        }
+        break;
+
+      default:
+        elog(ERROR, "unrecognized range strategy: %d", strategy);
+        break;
+      }
+      if (which == 0)
+      {
+        break; /* no need to consider remaining conditions */
+      }
+    }
   }
   else
   {
@@ -515,7 +514,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
        */
       switch (strategy)
       {
-      case RANGESTRAT_BEFORE:;
+      case RANGESTRAT_BEFORE:
 
         /*
          * Range A is before range B if upper bound of A is lower
@@ -525,7 +524,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         inclusive = false;
         break;
 
-      case RANGESTRAT_OVERLEFT:;
+      case RANGESTRAT_OVERLEFT:
 
         /*
          * Range A is overleft to range B if upper bound of A is
@@ -534,7 +533,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         maxUpper = &upper;
         break;
 
-      case RANGESTRAT_OVERLAPS:;
+      case RANGESTRAT_OVERLAPS:
 
         /*
          * Non-empty ranges overlap, if lower bound of each range
@@ -544,7 +543,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         minUpper = &lower;
         break;
 
-      case RANGESTRAT_OVERRIGHT:;
+      case RANGESTRAT_OVERRIGHT:
 
         /*
          * Range A is overright to range B if lower bound of A is
@@ -553,7 +552,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         minLower = &lower;
         break;
 
-      case RANGESTRAT_AFTER:;
+      case RANGESTRAT_AFTER:
 
         /*
          * Range A is after range B if lower bound of A is greater
@@ -563,10 +562,10 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         inclusive = false;
         break;
 
-      case RANGESTRAT_ADJACENT:;
+      case RANGESTRAT_ADJACENT:
         if (empty)
         {
-
+          break; /* Skip to strictEmpty check. */
         }
 
         /*
@@ -629,7 +628,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         needPrevious = true;
         break;
 
-      case RANGESTRAT_CONTAINS:;
+      case RANGESTRAT_CONTAINS:
 
         /*
          * Non-empty range A contains non-empty range B if lower
@@ -648,13 +647,13 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         }
         break;
 
-      case RANGESTRAT_CONTAINED_BY:;
+      case RANGESTRAT_CONTAINED_BY:
         /* The opposite of contains. */
         strictEmpty = false;
         if (empty)
         {
           /* An empty range is only contained by an empty range */
-
+          which &= (1 << 5);
         }
         else
         {
@@ -663,7 +662,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         }
         break;
 
-      case RANGESTRAT_EQ:;
+      case RANGESTRAT_EQ:
 
         /*
          * Equal range can be only in the same quadrant where
@@ -673,9 +672,9 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         which &= (1 << getQuadrant(typcache, centroid, range));
         break;
 
-      default:;;
-
-
+      default:
+        elog(ERROR, "unrecognized range strategy: %d", strategy);
+        break;
       }
 
       if (strictEmpty)
@@ -683,8 +682,8 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
         if (empty)
         {
           /* Scan key is empty, no branches are satisfying */
-
-
+          which = 0;
+          break;
         }
         else
         {
@@ -739,7 +738,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
          */
         if (range_cmp_bounds(typcache, &centroidUpper, minUpper) <= 0)
         {
-
+          which &= (1 << 1) | (1 << 4) | (1 << 5);
         }
       }
       if (maxUpper)
@@ -764,7 +763,7 @@ spg_range_quad_inner_consistent(PG_FUNCTION_ARGS)
 
       if (which == 0)
       {
-
+        break; /* no need to consider remaining conditions */
       }
     }
   }
@@ -988,39 +987,39 @@ spg_range_quad_leaf_consistent(PG_FUNCTION_ARGS)
     /* Call the function corresponding to the scan strategy */
     switch (in->scankeys[i].sk_strategy)
     {
-    case RANGESTRAT_BEFORE:;
+    case RANGESTRAT_BEFORE:
       res = range_before_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_OVERLEFT:;
+    case RANGESTRAT_OVERLEFT:
       res = range_overleft_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_OVERLAPS:;
+    case RANGESTRAT_OVERLAPS:
       res = range_overlaps_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_OVERRIGHT:;
+    case RANGESTRAT_OVERRIGHT:
       res = range_overright_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_AFTER:;
+    case RANGESTRAT_AFTER:
       res = range_after_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_ADJACENT:;
+    case RANGESTRAT_ADJACENT:
       res = range_adjacent_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_CONTAINS:;
+    case RANGESTRAT_CONTAINS:
       res = range_contains_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_CONTAINED_BY:;
+    case RANGESTRAT_CONTAINED_BY:
       res = range_contained_by_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    case RANGESTRAT_CONTAINS_ELEM:;
+    case RANGESTRAT_CONTAINS_ELEM:
       res = range_contains_elem_internal(typcache, leafRange, keyDatum);
       break;
-    case RANGESTRAT_EQ:;
+    case RANGESTRAT_EQ:
       res = range_eq_internal(typcache, leafRange, DatumGetRangeTypeP(keyDatum));
       break;
-    default:;;
-
-
+    default:
+      elog(ERROR, "unrecognized range strategy: %d", in->scankeys[i].sk_strategy);
+      break;
     }
 
     /*

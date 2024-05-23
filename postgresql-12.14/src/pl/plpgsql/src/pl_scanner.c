@@ -81,7 +81,8 @@ static const uint16 UnreservedPLKeywordTokens[] = {
 #define AT_STMT_START(prev_token) ((prev_token) == ';' || (prev_token) == K_BEGIN || (prev_token) == K_THEN || (prev_token) == K_ELSE || (prev_token) == K_LOOP)
 
 /* Auxiliary data about a token (other than the token type) */
-typedef struct {
+typedef struct
+{
   YYSTYPE lval; /* semantic information */
   YYLTYPE lloc; /* offset in scanbuf */
   int leng;     /* length in bytes */
@@ -144,65 +145,92 @@ plpgsql_yylex(void)
   int kwnum;
 
   tok1 = internal_yylex(&aux1);
-  if (tok1 == IDENT || tok1 == PARAM) {
+  if (tok1 == IDENT || tok1 == PARAM)
+  {
     int tok2;
     TokenAuxData aux2;
 
     tok2 = internal_yylex(&aux2);
-    if (tok2 == '.') {
+    if (tok2 == '.')
+    {
       int tok3;
       TokenAuxData aux3;
 
       tok3 = internal_yylex(&aux3);
-      if (tok3 == IDENT) {
+      if (tok3 == IDENT)
+      {
         int tok4;
         TokenAuxData aux4;
 
         tok4 = internal_yylex(&aux4);
-        if (tok4 == '.') {
+        if (tok4 == '.')
+        {
           int tok5;
           TokenAuxData aux5;
 
           tok5 = internal_yylex(&aux5);
-          if (tok5 == IDENT) {
-            if (plpgsql_parse_tripword(aux1.lval.str, aux3.lval.str, aux5.lval.str, &aux1.lval.wdatum, &aux1.lval.cword)) {
+          if (tok5 == IDENT)
+          {
+            if (plpgsql_parse_tripword(aux1.lval.str, aux3.lval.str, aux5.lval.str, &aux1.lval.wdatum, &aux1.lval.cword))
+            {
               tok1 = T_DATUM;
-            } else {
+            }
+            else
+            {
               tok1 = T_CWORD;
             }
-          } else {
+          }
+          else
+          {
             /* not A.B.C, so just process A.B */
             push_back_token(tok5, &aux5);
             push_back_token(tok4, &aux4);
-            if (plpgsql_parse_dblword(aux1.lval.str, aux3.lval.str, &aux1.lval.wdatum, &aux1.lval.cword)) {
+            if (plpgsql_parse_dblword(aux1.lval.str, aux3.lval.str, &aux1.lval.wdatum, &aux1.lval.cword))
+            {
               tok1 = T_DATUM;
-            } else {
+            }
+            else
+            {
               tok1 = T_CWORD;
             }
           }
-        } else {
+        }
+        else
+        {
           /* not A.B.C, so just process A.B */
           push_back_token(tok4, &aux4);
-          if (plpgsql_parse_dblword(aux1.lval.str, aux3.lval.str, &aux1.lval.wdatum, &aux1.lval.cword)) {
+          if (plpgsql_parse_dblword(aux1.lval.str, aux3.lval.str, &aux1.lval.wdatum, &aux1.lval.cword))
+          {
             tok1 = T_DATUM;
-          } else {
+          }
+          else
+          {
             tok1 = T_CWORD;
           }
         }
-      } else {
+      }
+      else
+      {
         /* not A.B, so just process A */
         push_back_token(tok3, &aux3);
         push_back_token(tok2, &aux2);
-        if (plpgsql_parse_word(aux1.lval.str, core_yy.scanbuf + aux1.lloc, true, &aux1.lval.wdatum, &aux1.lval.word)) {
+        if (plpgsql_parse_word(aux1.lval.str, core_yy.scanbuf + aux1.lloc, true, &aux1.lval.wdatum, &aux1.lval.word))
+        {
           tok1 = T_DATUM;
-        } else if (!aux1.lval.word.quoted && (kwnum = ScanKeywordLookup(aux1.lval.word.ident, &UnreservedPLKeywords)) >= 0) {
+        }
+        else if (!aux1.lval.word.quoted && (kwnum = ScanKeywordLookup(aux1.lval.word.ident, &UnreservedPLKeywords)) >= 0)
+        {
           aux1.lval.keyword = GetScanKeyword(kwnum, &UnreservedPLKeywords);
           tok1 = UnreservedPLKeywordTokens[kwnum];
-        } else {
+        }
+        else
+        {
           tok1 = T_WORD;
         }
       }
-    } else {
+    }
+    else
+    {
       /* not A.B, so just process A */
       push_back_token(tok2, &aux2);
 
@@ -223,16 +251,23 @@ plpgsql_yylex(void)
        * do variable lookup, because it sets up aux1.lval.word for the
        * non-variable cases.
        */
-      if (plpgsql_parse_word(aux1.lval.str, core_yy.scanbuf + aux1.lloc, (!AT_STMT_START(plpgsql_yytoken) || (tok2 == '=' || tok2 == COLON_EQUALS || tok2 == '[')), &aux1.lval.wdatum, &aux1.lval.word)) {
+      if (plpgsql_parse_word(aux1.lval.str, core_yy.scanbuf + aux1.lloc, (!AT_STMT_START(plpgsql_yytoken) || (tok2 == '=' || tok2 == COLON_EQUALS || tok2 == '[')), &aux1.lval.wdatum, &aux1.lval.word))
+      {
         tok1 = T_DATUM;
-      } else if (!aux1.lval.word.quoted && (kwnum = ScanKeywordLookup(aux1.lval.word.ident, &UnreservedPLKeywords)) >= 0) {
+      }
+      else if (!aux1.lval.word.quoted && (kwnum = ScanKeywordLookup(aux1.lval.word.ident, &UnreservedPLKeywords)) >= 0)
+      {
         aux1.lval.keyword = GetScanKeyword(kwnum, &UnreservedPLKeywords);
         tok1 = UnreservedPLKeywordTokens[kwnum];
-      } else {
+      }
+      else
+      {
         tok1 = T_WORD;
       }
     }
-  } else {
+  }
+  else
+  {
     /*
      * Not a potential plpgsql variable name, just return the data.
      *
@@ -264,11 +299,14 @@ internal_yylex(TokenAuxData *auxdata)
   int token;
   const char *yytext;
 
-  if (num_pushbacks > 0) {
+  if (num_pushbacks > 0)
+  {
     num_pushbacks--;
     token = pushback_token[num_pushbacks];
     *auxdata = pushback_auxdata[num_pushbacks];
-  } else {
+  }
+  else
+  {
     token = core_yylex(&auxdata->lval.core_yystype, &auxdata->lloc, yyscanner);
 
     /* remember the length of yytext before it gets changed */
@@ -276,18 +314,25 @@ internal_yylex(TokenAuxData *auxdata)
     auxdata->leng = strlen(yytext);
 
     /* Check for << >> and #, which the core considers operators */
-    if (token == Op) {
-      if (strcmp(auxdata->lval.str, "<<") == 0) {
+    if (token == Op)
+    {
+      if (strcmp(auxdata->lval.str, "<<") == 0)
+      {
         token = LESS_LESS;
-      } else if (strcmp(auxdata->lval.str, ">>") == 0) {
+      }
+      else if (strcmp(auxdata->lval.str, ">>") == 0)
+      {
         token = GREATER_GREATER;
-      } else if (strcmp(auxdata->lval.str, "#") == 0) {
+      }
+      else if (strcmp(auxdata->lval.str, "#") == 0)
+      {
         token = '#';
       }
     }
 
     /* The core returns PARAM as ival, but we treat it like IDENT */
-    else if (token == PARAM) {
+    else if (token == PARAM)
+    {
       auxdata->lval.str = pstrdup(yytext);
     }
   }
@@ -301,7 +346,8 @@ internal_yylex(TokenAuxData *auxdata)
 static void
 push_back_token(int token, TokenAuxData *auxdata)
 {
-  if (num_pushbacks >= MAX_PUSHBACKS) {
+  if (num_pushbacks >= MAX_PUSHBACKS)
+  {
     elog(ERROR, "too many tokens pushed back");
   }
   pushback_token[num_pushbacks] = token;
@@ -337,8 +383,10 @@ plpgsql_token_is_unreserved_keyword(int token)
 {
   int i;
 
-  for (i = 0; i < lengthof(UnreservedPLKeywordTokens); i++) {
-    if (UnreservedPLKeywordTokens[i] == token) {
+  for (i = 0; i < lengthof(UnreservedPLKeywordTokens); i++)
+  {
+    if (UnreservedPLKeywordTokens[i] == token)
+    {
       return true;
     }
   }
@@ -392,11 +440,13 @@ plpgsql_peek2(int *tok1_p, int *tok2_p, int *tok1_loc, int *tok2_loc)
   tok2 = internal_yylex(&aux2);
 
   *tok1_p = tok1;
-  if (tok1_loc) {
+  if (tok1_loc)
+  {
     *tok1_loc = aux1.lloc;
   }
   *tok2_p = tok2;
-  if (tok2_loc) {
+  if (tok2_loc)
+  {
     *tok2_loc = aux2.lloc;
   }
 
@@ -420,7 +470,8 @@ plpgsql_scanner_errposition(int location)
 {
   int pos;
 
-  if (location < 0 || scanorig == NULL) {
+  if (location < 0 || scanorig == NULL)
+  {
     return 0; /* no-op if location is unknown */
   }
 
@@ -448,9 +499,14 @@ plpgsql_yyerror(const char *message)
 {
   char *yytext = core_yy.scanbuf + plpgsql_yylloc;
 
-  if (*yytext == '\0') {
-    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),   errmsg("%s at end of input", _(message)), plpgsql_scanner_errposition(plpgsql_yylloc)));
-  } else {
+  if (*yytext == '\0')
+  {
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                       /* translator: %s is typically the translation of "syntax error" */
+                       errmsg("%s at end of input", _(message)), plpgsql_scanner_errposition(plpgsql_yylloc)));
+  }
+  else
+  {
     /*
      * If we have done any lookahead then flex will have restored the
      * character after the end-of-token.  Zap it again so that we report
@@ -459,7 +515,9 @@ plpgsql_yyerror(const char *message)
      */
     yytext[plpgsql_yyleng] = '\0';
 
-    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),    errmsg("%s at or near \"%s\"", _(message), yytext), plpgsql_scanner_errposition(plpgsql_yylloc)));
+    ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
+                       /* translator: first %s is typically the translation of "syntax error" */
+                       errmsg("%s at or near \"%s\"", _(message), yytext), plpgsql_scanner_errposition(plpgsql_yylloc)));
   }
 }
 
@@ -476,17 +534,20 @@ plpgsql_location_to_lineno(int location)
 {
   const char *loc;
 
-  if (location < 0 || scanorig == NULL) {
+  if (location < 0 || scanorig == NULL)
+  {
     return 0; /* garbage in, garbage out */
   }
   loc = scanorig + location;
 
   /* be correct, but not fast, if input location goes backwards */
-  if (loc < cur_line_start) {
+  if (loc < cur_line_start)
+  {
     location_lineno_init();
   }
 
-  while (cur_line_end != NULL && loc > cur_line_end) {
+  while (cur_line_end != NULL && loc > cur_line_end)
+  {
     cur_line_start = cur_line_end + 1;
     cur_line_num++;
     cur_line_end = strchr(cur_line_start, '\n');

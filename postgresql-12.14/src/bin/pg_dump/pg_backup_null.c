@@ -81,7 +81,8 @@ InitArchiveFmt_Null(ArchiveHandle *AH)
   /*
    * Now prevent reading...
    */
-  if (AH->mode == archModeRead) {
+  if (AH->mode == archModeRead)
+  {
     fatal("this format cannot be read");
   }
 }
@@ -108,7 +109,8 @@ _WriteData(ArchiveHandle *AH, const void *data, size_t dLen)
 static void
 _WriteBlobData(ArchiveHandle *AH, const void *data, size_t dLen)
 {
-  if (dLen > 0) {
+  if (dLen > 0)
+  {
     PQExpBuffer buf = createPQExpBuffer();
 
     appendByteaLiteralAHX(buf, (const unsigned char *)data, dLen, AH);
@@ -153,18 +155,23 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 {
   bool old_blob_style = (AH->version < K_VERS_1_12);
 
-  if (oid == 0) {
+  if (oid == 0)
+  {
     fatal("invalid OID for large object");
   }
 
   /* With an old archive we must do drop and create logic here */
-  if (old_blob_style && AH->public.ropt->dropSchema) {
+  if (old_blob_style && AH->public.ropt->dropSchema)
+  {
     DropBlobIfExists(AH, oid);
   }
 
-  if (old_blob_style) {
+  if (old_blob_style)
+  {
     ahprintf(AH, "SELECT pg_catalog.lo_open(pg_catalog.lo_create('%u'), %d);\n", oid, INV_WRITE);
-  } else {
+  }
+  else
+  {
     ahprintf(AH, "SELECT pg_catalog.lo_open('%u', %d);\n", oid, INV_WRITE);
   }
 
@@ -203,16 +210,19 @@ _EndBlobs(ArchiveHandle *AH, TocEntry *te)
 static void
 _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 {
-  if (te->dataDumper) {
+  if (te->dataDumper)
+  {
     AH->currToc = te;
 
-    if (strcmp(te->desc, "BLOBS") == 0) {
+    if (strcmp(te->desc, "BLOBS") == 0)
+    {
       _StartBlobs(AH, te);
     }
 
     te->dataDumper((Archive *)AH, te->dataDumperArg);
 
-    if (strcmp(te->desc, "BLOBS") == 0) {
+    if (strcmp(te->desc, "BLOBS") == 0)
+    {
       _EndBlobs(AH, te);
     }
 
@@ -236,5 +246,6 @@ _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 
 static void
 _CloseArchive(ArchiveHandle *AH)
-{ /* Nothing to do */
+{
+  /* Nothing to do */
 }

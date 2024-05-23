@@ -14,9 +14,9 @@
  */
 /* INTERFACE ROUTINES
  *		ExecInitBitmapAnd	- initialize the BitmapAnd node
- *		MultiExecBitmapAnd	- retrieve the result bitmap from the
- *node ExecEndBitmapAnd	- shut down the BitmapAnd node ExecReScanBitmapAnd -
- *rescan the BitmapAnd node
+ *		MultiExecBitmapAnd	- retrieve the result bitmap from the node
+ *		ExecEndBitmapAnd	- shut down the BitmapAnd node
+ *		ExecReScanBitmapAnd - rescan the BitmapAnd node
  *
  *	 NOTES
  *		BitmapAnd nodes don't make use of their left and right
@@ -40,8 +40,8 @@
 static TupleTableSlot *
 ExecBitmapAnd(PlanState *pstate)
 {
-
-
+  elog(ERROR, "BitmapAnd node does not support ExecProcNode call convention");
+  return NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -116,7 +116,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
   /* must provide our own instrumentation support */
   if (node->ps.instrument)
   {
-
+    InstrStartNode(node->ps.instrument);
   }
 
   /*
@@ -137,7 +137,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
 
     if (!subresult || !IsA(subresult, TIDBitmap))
     {
-
+      elog(ERROR, "unrecognized result from subplan");
     }
 
     if (result == NULL)
@@ -165,13 +165,13 @@ MultiExecBitmapAnd(BitmapAndState *node)
 
   if (result == NULL)
   {
-
+    elog(ERROR, "BitmapAnd doesn't support zero inputs");
   }
 
   /* must provide our own instrumentation support */
   if (node->ps.instrument)
   {
-
+    InstrStopNode(node->ps.instrument, 0 /* XXX */);
   }
 
   return (Node *)result;

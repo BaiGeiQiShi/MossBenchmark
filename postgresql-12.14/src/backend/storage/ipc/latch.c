@@ -172,13 +172,13 @@ InitializeLatchSupport(void)
     if (selfpipe_owner_pid != 0)
     {
       /* Assert we go through here but once in a child process */
-
+      Assert(selfpipe_owner_pid != MyProcPid);
       /* Release postmaster's pipe FDs; ignore any error */
-
-
+      (void)close(selfpipe_readfd);
+      (void)close(selfpipe_writefd);
       /* Clean up, just for safety's sake; we'll set these below */
-
-
+      selfpipe_readfd = selfpipe_writefd = -1;
+      selfpipe_owner_pid = 0;
     }
     else
     {
@@ -208,23 +208,23 @@ InitializeLatchSupport(void)
    */
   if (pipe(pipefd) < 0)
   {
-
+    elog(FATAL, "pipe() failed: %m");
   }
   if (fcntl(pipefd[0], F_SETFL, O_NONBLOCK) == -1)
   {
-
+    elog(FATAL, "fcntl(F_SETFL) failed on read-end of self-pipe: %m");
   }
   if (fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == -1)
   {
-
+    elog(FATAL, "fcntl(F_SETFL) failed on write-end of self-pipe: %m");
   }
   if (fcntl(pipefd[0], F_SETFD, FD_CLOEXEC) == -1)
   {
-
+    elog(FATAL, "fcntl(F_SETFD) failed on read-end of self-pipe: %m");
   }
   if (fcntl(pipefd[1], F_SETFD, FD_CLOEXEC) == -1)
   {
-
+    elog(FATAL, "fcntl(F_SETFD) failed on write-end of self-pipe: %m");
   }
 
   selfpipe_readfd = pipefd[0];
@@ -323,7 +323,7 @@ OwnLatch(Latch *latch)
 
   if (latch->owner_pid != 0)
   {
-
+    elog(ERROR, "latch already owned");
   }
 
   latch->owner_pid = MyProcPid;
@@ -620,7 +620,7 @@ CreateWaitEventSet(MemoryContext context, int nevents)
   set->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
   if (set->epoll_fd < 0)
   {
-
+    elog(ERROR, "epoll_create1 failed: %m");
   }
 #else
   /* cope with ancient glibc lacking epoll_create1 (e.g., RHEL5) */
@@ -737,29 +737,29 @@ AddWaitEventToSet(WaitEventSet *set, uint32 events, pgsocket fd, Latch *latch, v
   {
     if (latch->owner_pid != MyProcPid)
     {
-
+      elog(ERROR, "cannot wait on a latch owned by another process");
     }
     if (set->latch)
     {
-
+      elog(ERROR, "cannot wait on more than one latch");
     }
     if ((events & WL_LATCH_SET) != WL_LATCH_SET)
     {
-
+      elog(ERROR, "latch events only support being set");
     }
   }
   else
   {
     if (events & WL_LATCH_SET)
     {
-
+      elog(ERROR, "cannot wait on latch without a specified latch");
     }
   }
 
   /* waiting for socket readiness without a socket indicates a bug */
   if (fd == PGINVALID_SOCKET && (events & WL_SOCKET_MASK))
   {
-
+    elog(ERROR, "cannot wait on socket event without a socket");
   }
 
   event = &set->events[set->nevents];
@@ -827,12 +827,12 @@ ModifyWaitEvent(WaitEventSet *set, int pos, uint32 events, Latch *latch)
   if (event->events & WL_LATCH_SET && events != event->events)
   {
     /* we could allow to disable latch events for a while */
-
+    elog(ERROR, "cannot modify latch event");
   }
 
   if (event->events & WL_POSTMASTER_DEATH)
   {
-
+    elog(ERROR, "cannot modify postmaster death event");
   }
 
   /* FIXME: validate event mask */
@@ -901,7 +901,9 @@ WaitEventAdjustEpoll(WaitEventSet *set, WaitEvent *event, int action)
 
   if (rc < 0)
   {
-
+    ereport(ERROR, (errcode_for_socket_access(),
+                       /* translator: %s is a syscall name, such as "poll()" */
+                       errmsg("%s failed: %m", "epoll_ctl()")));
   }
 }
 #endif
@@ -1101,7 +1103,7 @@ WaitEventSetWait(WaitEventSet *set, long timeout, WaitEvent *occurred_events, in
       cur_timeout = timeout - (long)INSTR_TIME_GET_MILLISEC(cur_time);
       if (cur_timeout <= 0)
       {
-
+        break;
       }
     }
   }
@@ -1141,8 +1143,10 @@ WaitEventSetWaitBlock(WaitEventSet *set, int cur_timeout, WaitEvent *occurred_ev
     /* EINTR is okay, otherwise complain */
     if (errno != EINTR)
     {
-
-
+      waiting = false;
+      ereport(ERROR, (errcode_for_socket_access(),
+                         /* translator: %s is a syscall name, such as "poll()" */
+                         errmsg("%s failed: %m", "epoll_wait()")));
     }
     return 0;
   }
@@ -1192,17 +1196,17 @@ WaitEventSetWaitBlock(WaitEventSet *set, int cur_timeout, WaitEvent *occurred_ev
        * WL_POSTMASTER_DEATH event would be painful. Re-checking doesn't
        * cost much.
        */
-
-
-
-
-
-
-
-
-
-
-
+      if (!PostmasterIsAliveInternal())
+      {
+        if (set->exit_on_postmaster_death)
+        {
+          proc_exit(1);
+        }
+        occurred_events->fd = PGINVALID_SOCKET;
+        occurred_events->events = WL_POSTMASTER_DEATH;
+        occurred_events++;
+        returned_events++;
+      }
     }
     else if (cur_event->events & (WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE))
     {
@@ -1217,7 +1221,7 @@ WaitEventSetWaitBlock(WaitEventSet *set, int cur_timeout, WaitEvent *occurred_ev
       if ((cur_event->events & WL_SOCKET_WRITEABLE) && (cur_epoll_event->events & (EPOLLOUT | EPOLLERR | EPOLLHUP)))
       {
         /* writable, or EOF */
-
+        occurred_events->events |= WL_SOCKET_WRITEABLE;
       }
 
       if (occurred_events->events != 0)
@@ -1258,7 +1262,9 @@ WaitEventSetWaitBlock(WaitEventSet *set, int cur_timeout, WaitEvent *occurred_ev
     if (errno != EINTR)
     {
       waiting = false;
-      ereport(ERROR, (errcode_for_socket_access(), errmsg("%s failed: %m", "poll()")));
+      ereport(ERROR, (errcode_for_socket_access(),
+                         /* translator: %s is a syscall name, such as "poll()" */
+                         errmsg("%s failed: %m", "poll()")));
     }
     return 0;
   }
@@ -1504,8 +1510,7 @@ WaitEventSetWaitBlock(WaitEventSet *set, int cur_timeout, WaitEvent *occurred_ev
        * did, the caller might drop that event expecting it to reoccur
        * on next call.  So, we must force the event to be reset if this
        * WaitEventSet is used again in order to avoid an indefinite
-       * hang.  Refer
-       *https://msdn.microsoft.com/en-us/library/windows/desktop/ms741576(v=vs.85).aspx
+       * hang.  Refer https://msdn.microsoft.com/en-us/library/windows/desktop/ms741576(v=vs.85).aspx
        * for the behavior of socket events.
        *------
        */
@@ -1567,31 +1572,31 @@ sendSelfPipeByte(void)
   int rc;
   char dummy = 0;
 
-retry:;
+retry:
   rc = write(selfpipe_writefd, &dummy, 1);
   if (rc < 0)
   {
     /* If interrupted by signal, just retry */
-
-
-
-
+    if (errno == EINTR)
+    {
+      goto retry;
+    }
 
     /*
      * If the pipe is full, we don't need to retry, the data that's there
      * already is enough to wake up WaitLatch.
      */
-
-
-
-
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+    {
+      return;
+    }
 
     /*
      * Oops, the write() failed for some other reason. We might be in a
      * signal handler, so it's not safe to elog(). We have no choice but
      * silently ignore the error.
      */
-
+    return;
   }
 }
 #endif /* !WIN32 */
@@ -1619,24 +1624,24 @@ drainSelfPipe(void)
     rc = read(selfpipe_readfd, buf, sizeof(buf));
     if (rc < 0)
     {
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (errno == EAGAIN || errno == EWOULDBLOCK)
+      {
+        break; /* the pipe is empty */
+      }
+      else if (errno == EINTR)
+      {
+        continue; /* retry */
+      }
+      else
+      {
+        waiting = false;
+        elog(ERROR, "read() on self-pipe failed: %m");
+      }
     }
     else if (rc == 0)
     {
-
-
+      waiting = false;
+      elog(ERROR, "unexpected EOF on self-pipe");
     }
     else if (rc < sizeof(buf))
     {

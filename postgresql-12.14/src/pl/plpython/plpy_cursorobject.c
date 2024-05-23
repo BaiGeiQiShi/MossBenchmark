@@ -40,12 +40,21 @@ static char PLy_cursor_doc[] = {"Wrapper around a PostgreSQL cursor"};
 static PyMethodDef PLy_cursor_methods[] = {{"fetch", PLy_cursor_fetch, METH_VARARGS, NULL}, {"close", PLy_cursor_close, METH_NOARGS, NULL}, {NULL, NULL, 0, NULL}};
 
 static PyTypeObject PLy_CursorType = {
-    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLyCursor",.tp_basicsize = sizeof(PLyCursorObject),.tp_dealloc = PLy_cursor_dealloc,.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_ITER,.tp_doc = PLy_cursor_doc,.tp_iter = PyObject_SelfIter,.tp_iternext = PLy_cursor_iternext,.tp_methods = PLy_cursor_methods,};
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "PLyCursor",
+    .tp_basicsize = sizeof(PLyCursorObject),
+    .tp_dealloc = PLy_cursor_dealloc,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_ITER,
+    .tp_doc = PLy_cursor_doc,
+    .tp_iter = PyObject_SelfIter,
+    .tp_iternext = PLy_cursor_iternext,
+    .tp_methods = PLy_cursor_methods,
+};
 
 void
 PLy_cursor_init_type(void)
 {
-  if (PyType_Ready(&PLy_CursorType) < 0) {
+  if (PyType_Ready(&PLy_CursorType) < 0)
+  {
     elog(ERROR, "could not initialize PLy_CursorType");
   }
 }
@@ -57,13 +66,15 @@ PLy_cursor(PyObject *self, PyObject *args)
   PyObject *plan;
   PyObject *planargs = NULL;
 
-  if (PyArg_ParseTuple(args, "s", &query)) {
+  if (PyArg_ParseTuple(args, "s", &query))
+  {
     return PLy_cursor_query(query);
   }
 
   PyErr_Clear();
 
-  if (PyArg_ParseTuple(args, "O|O", &plan, &planargs)) {
+  if (PyArg_ParseTuple(args, "O|O", &plan, &planargs))
+  {
     return PLy_cursor_plan(plan, planargs);
   }
 
@@ -79,7 +90,8 @@ PLy_cursor_query(const char *query)
   volatile MemoryContext oldcontext;
   volatile ResourceOwner oldowner;
 
-  if ((cursor = PyObject_New(PLyCursorObject, &PLy_CursorType)) == NULL) {
+  if ((cursor = PyObject_New(PLyCursorObject, &PLy_CursorType)) == NULL)
+  {
     return NULL;
   }
   cursor->portalname = NULL;
@@ -102,14 +114,16 @@ PLy_cursor_query(const char *query)
     pg_verifymbstr(query, strlen(query), false);
 
     plan = SPI_prepare(query, 0, NULL);
-    if (plan == NULL) {
+    if (plan == NULL)
+    {
       elog(ERROR, "SPI_prepare failed: %s", SPI_result_code_string(SPI_result));
     }
 
     portal = SPI_cursor_open(NULL, plan, NULL, NULL, exec_ctx->curr_proc->fn_readonly);
     SPI_freeplan(plan);
 
-    if (portal == NULL) {
+    if (portal == NULL)
+    {
       elog(ERROR, "SPI_cursor_open() failed: %s", SPI_result_code_string(SPI_result));
     }
 
@@ -141,23 +155,29 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
   volatile MemoryContext oldcontext;
   volatile ResourceOwner oldowner;
 
-  if (args) {
-    if (!PySequence_Check(args) || PyString_Check(args) || PyUnicode_Check(args)) {
+  if (args)
+  {
+    if (!PySequence_Check(args) || PyString_Check(args) || PyUnicode_Check(args))
+    {
       PLy_exception_set(PyExc_TypeError, "plpy.cursor takes a sequence as its second argument");
       return NULL;
     }
     nargs = PySequence_Length(args);
-  } else {
+  }
+  else
+  {
     nargs = 0;
   }
 
   plan = (PLyPlanObject *)ob;
 
-  if (nargs != plan->nargs) {
+  if (nargs != plan->nargs)
+  {
     char *sv;
     PyObject *so = PyObject_Str(args);
 
-    if (!so) {
+    if (!so)
+    {
       PLy_elog(ERROR, "could not execute plan");
     }
     sv = PyString_AsString(so);
@@ -167,7 +187,8 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
     return NULL;
   }
 
-  if ((cursor = PyObject_New(PLyCursorObject, &PLy_CursorType)) == NULL) {
+  if ((cursor = PyObject_New(PLyCursorObject, &PLy_CursorType)) == NULL)
+  {
     return NULL;
   }
   cursor->portalname = NULL;
@@ -188,13 +209,17 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
     char *volatile nulls;
     volatile int j;
 
-    if (nargs > 0) {
+    if (nargs > 0)
+    {
       nulls = palloc(nargs * sizeof(char));
-    } else {
+    }
+    else
+    {
       nulls = NULL;
     }
 
-    for (j = 0; j < nargs; j++) {
+    for (j = 0; j < nargs; j++)
+    {
       PLyObToDatum *arg = &plan->args[j];
       PyObject *elem;
 
@@ -216,7 +241,8 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
     }
 
     portal = SPI_cursor_open(NULL, plan->plan, plan->values, nulls, exec_ctx->curr_proc->fn_readonly);
-    if (portal == NULL) {
+    if (portal == NULL)
+    {
       elog(ERROR, "SPI_cursor_open() failed: %s", SPI_result_code_string(SPI_result));
     }
 
@@ -231,8 +257,10 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
     int k;
 
     /* cleanup plan->values array */
-    for (k = 0; k < nargs; k++) {
-      if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL))) {
+    for (k = 0; k < nargs; k++)
+    {
+      if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL)))
+      {
         pfree(DatumGetPointer(plan->values[k]));
         plan->values[k] = PointerGetDatum(NULL);
       }
@@ -245,8 +273,10 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
   }
   PG_END_TRY();
 
-  for (i = 0; i < nargs; i++) {
-    if (!plan->args[i].typbyval && (plan->values[i] != PointerGetDatum(NULL))) {
+  for (i = 0; i < nargs; i++)
+  {
+    if (!plan->args[i].typbyval && (plan->values[i] != PointerGetDatum(NULL)))
+    {
       pfree(DatumGetPointer(plan->values[i]));
       plan->values[i] = PointerGetDatum(NULL);
     }
@@ -264,16 +294,19 @@ PLy_cursor_dealloc(PyObject *arg)
 
   cursor = (PLyCursorObject *)arg;
 
-  if (!cursor->closed) {
+  if (!cursor->closed)
+  {
     portal = GetPortalByName(cursor->portalname);
 
-    if (PortalIsValid(portal)) {
+    if (PortalIsValid(portal))
+    {
       UnpinPortal(portal);
       SPI_cursor_close(portal);
     }
     cursor->closed = true;
   }
-  if (cursor->mcxt) {
+  if (cursor->mcxt)
+  {
     MemoryContextDelete(cursor->mcxt);
     cursor->mcxt = NULL;
   }
@@ -292,13 +325,15 @@ PLy_cursor_iternext(PyObject *self)
 
   cursor = (PLyCursorObject *)self;
 
-  if (cursor->closed) {
+  if (cursor->closed)
+  {
     PLy_exception_set(PyExc_ValueError, "iterating a closed cursor");
     return NULL;
   }
 
   portal = GetPortalByName(cursor->portalname);
-  if (!PortalIsValid(portal)) {
+  if (!PortalIsValid(portal))
+  {
     PLy_exception_set(PyExc_ValueError, "iterating a cursor in an aborted subtransaction");
     return NULL;
   }
@@ -311,10 +346,13 @@ PLy_cursor_iternext(PyObject *self)
   PG_TRY();
   {
     SPI_cursor_fetch(portal, true, 1);
-    if (SPI_processed == 0) {
+    if (SPI_processed == 0)
+    {
       PyErr_SetNone(PyExc_StopIteration);
       ret = NULL;
-    } else {
+    }
+    else
+    {
       PLy_input_setup_tuple(&cursor->result, SPI_tuptable->tupdesc, exec_ctx->curr_proc);
 
       ret = PLy_input_from_tuple(&cursor->result, SPI_tuptable->vals[0], SPI_tuptable->tupdesc, true);
@@ -345,25 +383,29 @@ PLy_cursor_fetch(PyObject *self, PyObject *args)
   volatile ResourceOwner oldowner;
   Portal portal;
 
-  if (!PyArg_ParseTuple(args, "i:fetch", &count)) {
+  if (!PyArg_ParseTuple(args, "i:fetch", &count))
+  {
     return NULL;
   }
 
   cursor = (PLyCursorObject *)self;
 
-  if (cursor->closed) {
+  if (cursor->closed)
+  {
     PLy_exception_set(PyExc_ValueError, "fetch from a closed cursor");
     return NULL;
   }
 
   portal = GetPortalByName(cursor->portalname);
-  if (!PortalIsValid(portal)) {
+  if (!PortalIsValid(portal))
+  {
     PLy_exception_set(PyExc_ValueError, "iterating a cursor in an aborted subtransaction");
     return NULL;
   }
 
   ret = (PLyResultObject *)PLy_result_new();
-  if (ret == NULL) {
+  if (ret == NULL)
+  {
     return NULL;
   }
 
@@ -382,7 +424,8 @@ PLy_cursor_fetch(PyObject *self, PyObject *args)
     Py_DECREF(ret->nrows);
     ret->nrows = PyLong_FromUnsignedLongLong(SPI_processed);
 
-    if (SPI_processed != 0) {
+    if (SPI_processed != 0)
+    {
       uint64 i;
 
       /*
@@ -390,19 +433,24 @@ PLy_cursor_fetch(PyObject *self, PyObject *args)
        * and list indices; so we cannot support a result larger than
        * PY_SSIZE_T_MAX.
        */
-      if (SPI_processed > (uint64)PY_SSIZE_T_MAX) {
+      if (SPI_processed > (uint64)PY_SSIZE_T_MAX)
+      {
         ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("query result has too many rows to fit in a Python list")));
       }
 
       Py_DECREF(ret->rows);
       ret->rows = PyList_New(SPI_processed);
-      if (!ret->rows) {
+      if (!ret->rows)
+      {
         Py_DECREF(ret);
         ret = NULL;
-      } else {
+      }
+      else
+      {
         PLy_input_setup_tuple(&cursor->result, SPI_tuptable->tupdesc, exec_ctx->curr_proc);
 
-        for (i = 0; i < SPI_processed; i++) {
+        for (i = 0; i < SPI_processed; i++)
+        {
           PyObject *row = PLy_input_from_tuple(&cursor->result, SPI_tuptable->vals[i], SPI_tuptable->tupdesc, true);
 
           PyList_SetItem(ret->rows, i, row);
@@ -429,10 +477,12 @@ PLy_cursor_close(PyObject *self, PyObject *unused)
 {
   PLyCursorObject *cursor = (PLyCursorObject *)self;
 
-  if (!cursor->closed) {
+  if (!cursor->closed)
+  {
     Portal portal = GetPortalByName(cursor->portalname);
 
-    if (!PortalIsValid(portal)) {
+    if (!PortalIsValid(portal))
+    {
       PLy_exception_set(PyExc_ValueError, "closing a cursor in an aborted subtransaction");
       return NULL;
     }

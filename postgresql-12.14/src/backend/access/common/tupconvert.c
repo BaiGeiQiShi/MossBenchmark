@@ -29,8 +29,8 @@
  * The setup routine checks whether the given source and destination tuple
  * descriptors are logically compatible.  If not, it throws an error.
  * If so, it returns NULL if they are physically compatible (ie, no conversion
- * is needed), else a TupleConversionMap that can be used by
- * execute_attr_map_tuple to perform the conversion.
+ * is needed), else a TupleConversionMap that can be used by execute_attr_map_tuple
+ * to perform the conversion.
  *
  * The TupleConversionMap, if needed, is palloc'd in the caller's memory
  * context.  Also, the given tuple descriptors are referenced by the map,
@@ -77,39 +77,47 @@ convert_tuples_by_position(TupleDesc indesc, TupleDesc outdesc, const char *msg)
   j = 0;                  /* j is next physical input attribute */
   nincols = noutcols = 0; /* these count non-dropped attributes */
   same = true;
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < n; i++)
+  {
     Form_pg_attribute att = TupleDescAttr(outdesc, i);
     Oid atttypid;
     int32 atttypmod;
 
-    if (att->attisdropped) {
+    if (att->attisdropped)
+    {
       continue; /* attrMap[i] is already 0 */
     }
     noutcols++;
     atttypid = att->atttypid;
     atttypmod = att->atttypmod;
-    for (; j < indesc->natts; j++) {
+    for (; j < indesc->natts; j++)
+    {
       att = TupleDescAttr(indesc, j);
-      if (att->attisdropped) {
+      if (att->attisdropped)
+      {
         continue;
       }
       nincols++;
       /* Found matching column, check type */
-      if (atttypid != att->atttypid || (atttypmod != att->atttypmod && atttypmod >= 0)) {
-        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)),errdetail("Returned type %s does not match expected type %s in column %d.",format_type_with_typemod(att->atttypid, att->atttypmod), format_type_with_typemod(atttypid, atttypmod), noutcols)));
+      if (atttypid != att->atttypid || (atttypmod != att->atttypmod && atttypmod >= 0))
+      {
+        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)), errdetail("Returned type %s does not match expected type %s in column %d.", format_type_with_typemod(att->atttypid, att->atttypmod), format_type_with_typemod(atttypid, atttypmod), noutcols)));
       }
       attrMap[i] = (AttrNumber)(j + 1);
       j++;
       break;
     }
-    if (attrMap[i] == 0) {
+    if (attrMap[i] == 0)
+    {
       same = false; /* we'll complain below */
     }
   }
 
   /* Check for unused input columns */
-  for (; j < indesc->natts; j++) {
-    if (TupleDescAttr(indesc, j)->attisdropped) {
+  for (; j < indesc->natts; j++)
+  {
+    if (TupleDescAttr(indesc, j)->attisdropped)
+    {
       continue;
     }
     nincols++;
@@ -117,16 +125,22 @@ convert_tuples_by_position(TupleDesc indesc, TupleDesc outdesc, const char *msg)
   }
 
   /* Report column count mismatch using the non-dropped-column counts */
-  if (!same) {
-    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)),errdetail("Number of returned columns (%d) does not match expected column count (%d).", nincols, noutcols)));
+  if (!same)
+  {
+    ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)),
+                       errdetail("Number of returned columns (%d) does not match "
+                                 "expected column count (%d).",
+                           nincols, noutcols)));
   }
 
   /*
    * Check to see if the map is one-to-one, in which case we need not do a
    * tuple conversion.
    */
-  if (indesc->natts == outdesc->natts) {
-    for (i = 0; i < n; i++) {
+  if (indesc->natts == outdesc->natts)
+  {
+    for (i = 0; i < n; i++)
+    {
       Form_pg_attribute inatt = TupleDescAttr(indesc, i);
       Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
 
@@ -134,12 +148,14 @@ convert_tuples_by_position(TupleDesc indesc, TupleDesc outdesc, const char *msg)
        * If the input column has a missing attribute, we need a
        * conversion.
        */
-      if (inatt->atthasmissing) {
+      if (inatt->atthasmissing)
+      {
         same = false;
         break;
       }
 
-      if (attrMap[i] == (i + 1)) {
+      if (attrMap[i] == (i + 1))
+      {
         continue;
       }
 
@@ -148,18 +164,22 @@ convert_tuples_by_position(TupleDesc indesc, TupleDesc outdesc, const char *msg)
        * also dropped, we needn't convert.  However, attlen and attalign
        * must agree.
        */
-      if (attrMap[i] == 0 && inatt->attisdropped && inatt->attlen == outatt->attlen && inatt->attalign == outatt->attalign) {
+      if (attrMap[i] == 0 && inatt->attisdropped && inatt->attlen == outatt->attlen && inatt->attalign == outatt->attalign)
+      {
         continue;
       }
 
       same = false;
       break;
     }
-  } else {
+  }
+  else
+  {
     same = false;
   }
 
-  if (same) {
+  if (same)
+  {
     /* Runtime conversion is not needed */
     pfree(attrMap);
     return NULL;
@@ -199,7 +219,8 @@ convert_tuples_by_name(TupleDesc indesc, TupleDesc outdesc, const char *msg)
   /* Verify compatibility and prepare attribute-number map */
   attrMap = convert_tuples_by_name_map_if_req(indesc, outdesc, msg);
 
-  if (attrMap == NULL) {
+  if (attrMap == NULL)
+  {
     /* runtime conversion is not needed */
     return NULL;
   }
@@ -240,14 +261,16 @@ convert_tuples_by_name_map(TupleDesc indesc, TupleDesc outdesc, const char *msg)
   innatts = indesc->natts;
 
   attrMap = (AttrNumber *)palloc0(outnatts * sizeof(AttrNumber));
-  for (i = 0; i < outnatts; i++) {
+  for (i = 0; i < outnatts; i++)
+  {
     Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
     char *attname;
     Oid atttypid;
     int32 atttypmod;
     int j;
 
-    if (outatt->attisdropped) {
+    if (outatt->attisdropped)
+    {
       continue; /* attrMap[i] is already 0 */
     }
     attname = NameStr(outatt->attname);
@@ -265,28 +288,34 @@ convert_tuples_by_name_map(TupleDesc indesc, TupleDesc outdesc, const char *msg)
      * them, but it should leave 'nextindesc' at the correct position for
      * the next outer loop.
      */
-    for (j = 0; j < innatts; j++) {
+    for (j = 0; j < innatts; j++)
+    {
       Form_pg_attribute inatt;
 
       nextindesc++;
-      if (nextindesc >= innatts) {
+      if (nextindesc >= innatts)
+      {
         nextindesc = 0;
       }
 
       inatt = TupleDescAttr(indesc, nextindesc);
-      if (inatt->attisdropped) {
+      if (inatt->attisdropped)
+      {
         continue;
       }
-      if (strcmp(attname, NameStr(inatt->attname)) == 0) {
+      if (strcmp(attname, NameStr(inatt->attname)) == 0)
+      {
         /* Found it, check type */
-        if (atttypid != inatt->atttypid || atttypmod != inatt->atttypmod) {
+        if (atttypid != inatt->atttypid || atttypmod != inatt->atttypmod)
+        {
           ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)), errdetail("Attribute \"%s\" of type %s does not match corresponding attribute of type %s.", attname, format_type_be(outdesc->tdtypeid), format_type_be(indesc->tdtypeid))));
         }
         attrMap[i] = inatt->attnum;
         break;
       }
     }
-    if (attrMap[i] == 0) {
+    if (attrMap[i] == 0)
+    {
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg_internal("%s", _(msg)), errdetail("Attribute \"%s\" of type %s does not exist in type %s.", attname, format_type_be(outdesc->tdtypeid), format_type_be(indesc->tdtypeid))));
     }
   }
@@ -313,9 +342,11 @@ convert_tuples_by_name_map_if_req(TupleDesc indesc, TupleDesc outdesc, const cha
    * Check to see if the map is one-to-one, in which case we need not do a
    * tuple conversion.
    */
-  if (indesc->natts == outdesc->natts) {
+  if (indesc->natts == outdesc->natts)
+  {
     same = true;
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n; i++)
+    {
       Form_pg_attribute inatt = TupleDescAttr(indesc, i);
       Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
 
@@ -323,12 +354,14 @@ convert_tuples_by_name_map_if_req(TupleDesc indesc, TupleDesc outdesc, const cha
        * If the input column has a missing attribute, we need a
        * conversion.
        */
-      if (inatt->atthasmissing) {
+      if (inatt->atthasmissing)
+      {
         same = false;
         break;
       }
 
-      if (attrMap[i] == (i + 1)) {
+      if (attrMap[i] == (i + 1))
+      {
         continue;
       }
 
@@ -337,22 +370,28 @@ convert_tuples_by_name_map_if_req(TupleDesc indesc, TupleDesc outdesc, const cha
        * also dropped, we needn't convert.  However, attlen and attalign
        * must agree.
        */
-      if (attrMap[i] == 0 && inatt->attisdropped && inatt->attlen == outatt->attlen && inatt->attalign == outatt->attalign) {
+      if (attrMap[i] == 0 && inatt->attisdropped && inatt->attlen == outatt->attlen && inatt->attalign == outatt->attalign)
+      {
         continue;
       }
 
       same = false;
       break;
     }
-  } else {
+  }
+  else
+  {
     same = false;
   }
 
-  if (same) {
+  if (same)
+  {
     /* Runtime conversion is not needed */
     pfree(attrMap);
     return NULL;
-  } else {
+  }
+  else
+  {
     return attrMap;
   }
 }
@@ -381,7 +420,8 @@ execute_attr_map_tuple(HeapTuple tuple, TupleConversionMap *map)
   /*
    * Transpose into proper fields of the new tuple.
    */
-  for (i = 0; i < outnatts; i++) {
+  for (i = 0; i < outnatts; i++)
+  {
     int j = attrMap[i];
 
     outvalues[i] = invalues[j];
@@ -425,14 +465,18 @@ execute_attr_map_slot(AttrNumber *attrMap, TupleTableSlot *in_slot, TupleTableSl
   outisnull = out_slot->tts_isnull;
 
   /* Transpose into proper fields of the out slot. */
-  for (i = 0; i < outnatts; i++) {
+  for (i = 0; i < outnatts; i++)
+  {
     int j = attrMap[i] - 1;
 
     /* attrMap[i] == 0 means it's a NULL datum. */
-    if (j == -1) {
+    if (j == -1)
+    {
       outvalues[i] = (Datum)0;
       outisnull[i] = true;
-    } else {
+    }
+    else
+    {
       outvalues[i] = invalues[j];
       outisnull[i] = inisnull[j];
     }
@@ -459,7 +503,8 @@ execute_attr_map_cols(Bitmapset *in_cols, TupleConversionMap *map)
   int out_attnum;
 
   /* fast path for the common trivial case */
-  if (in_cols == NULL) {
+  if (in_cols == NULL)
+  {
     return NULL;
   }
 
@@ -468,24 +513,32 @@ execute_attr_map_cols(Bitmapset *in_cols, TupleConversionMap *map)
    */
   out_cols = NULL;
 
-  for (out_attnum = FirstLowInvalidHeapAttributeNumber + 1; out_attnum <= maplen; out_attnum++) {
+  for (out_attnum = FirstLowInvalidHeapAttributeNumber + 1; out_attnum <= maplen; out_attnum++)
+  {
     int in_attnum;
 
-    if (out_attnum < 0) {
+    if (out_attnum < 0)
+    {
       /* System column. No mapping. */
       in_attnum = out_attnum;
-    } else if (out_attnum == 0) {
+    }
+    else if (out_attnum == 0)
+    {
       continue;
-    } else {
+    }
+    else
+    {
       /* normal user column */
       in_attnum = attrMap[out_attnum - 1];
 
-      if (in_attnum == 0) {
+      if (in_attnum == 0)
+      {
         continue;
       }
     }
 
-    if (bms_is_member(in_attnum - FirstLowInvalidHeapAttributeNumber, in_cols)) {
+    if (bms_is_member(in_attnum - FirstLowInvalidHeapAttributeNumber, in_cols))
+    {
       out_cols = bms_add_member(out_cols, out_attnum - FirstLowInvalidHeapAttributeNumber);
     }
   }

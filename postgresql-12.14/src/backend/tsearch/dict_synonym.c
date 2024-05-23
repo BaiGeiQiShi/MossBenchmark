@@ -49,14 +49,14 @@ findwrd(char *in, char **end, uint16 *flags)
   /* Skip leading spaces */
   while (*in && t_isspace(in))
   {
-
+    in += pg_mblen(in);
   }
 
   /* Return NULL on empty lines */
   if (*in == '\0')
   {
-
-
+    *end = NULL;
+    return NULL;
   }
 
   lastchar = start = in;
@@ -113,26 +113,26 @@ dsynonym_init(PG_FUNCTION_ARGS)
     {
       filename = defGetString(defel);
     }
-
-
-
-
-
-
-
-
+    else if (strcmp(defel->defname, "casesensitive") == 0)
+    {
+      case_sensitive = defGetBoolean(defel);
+    }
+    else
+    {
+      ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("unrecognized synonym parameter: \"%s\"", defel->defname)));
+    }
   }
 
   if (!filename)
   {
-
+    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("missing Synonyms parameter")));
   }
 
   filename = get_tsearch_config_filename(filename, "syn");
 
   if (!tsearch_readline_begin(&trst, filename))
   {
-
+    ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("could not open synonym file \"%s\": %m", filename)));
   }
 
   d = (DictSyn *)palloc0(sizeof(DictSyn));
@@ -143,12 +143,12 @@ dsynonym_init(PG_FUNCTION_ARGS)
     if (!starti)
     {
       /* Empty line */
-
+      goto skipline;
     }
     if (*end == '\0')
     {
       /* A line with only one word. Ignore silently. */
-
+      goto skipline;
     }
     *end = '\0';
 
@@ -156,7 +156,7 @@ dsynonym_init(PG_FUNCTION_ARGS)
     if (!starto)
     {
       /* A line with only one word (+whitespace). Ignore silently. */
-
+      goto skipline;
     }
     *end = '\0';
 
@@ -174,15 +174,15 @@ dsynonym_init(PG_FUNCTION_ARGS)
       }
       else
       {
-
-
+        d->len *= 2;
+        d->syn = (Syn *)repalloc(d->syn, sizeof(Syn) * d->len);
       }
     }
 
     if (case_sensitive)
     {
-
-
+      d->syn[cur].in = pstrdup(starti);
+      d->syn[cur].out = pstrdup(starto);
     }
     else
     {
@@ -195,7 +195,7 @@ dsynonym_init(PG_FUNCTION_ARGS)
 
     cur++;
 
-  skipline:;
+  skipline:
     pfree(line);
   }
 
@@ -221,12 +221,12 @@ dsynonym_lexize(PG_FUNCTION_ARGS)
   /* note: d->len test protects against Solaris bsearch-of-no-items bug */
   if (len <= 0 || d->len <= 0)
   {
-
+    PG_RETURN_POINTER(NULL);
   }
 
   if (d->case_sensitive)
   {
-
+    key.in = pnstrdup(in, len);
   }
   else
   {

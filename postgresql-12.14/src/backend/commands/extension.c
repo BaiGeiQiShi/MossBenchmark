@@ -1413,14 +1413,14 @@ CreateExtensionInternal(char *extensionName, char *schemaName, const char *versi
      */
     List *search_path = fetch_search_path(false);
 
-    if (search_path == NIL)
-    { /* nothing valid in search_path? */
+    if (search_path == NIL) /* nothing valid in search_path? */
+    {
       ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("no schema has been selected to create in")));
     }
     schemaOid = linitial_oid(search_path);
     schemaName = get_namespace_name(schemaOid);
-    if (schemaName == NULL)
-    { /* recently-deleted namespace? */
+    if (schemaName == NULL) /* recently-deleted namespace? */
+    {
       ereport(ERROR, (errcode(ERRCODE_UNDEFINED_SCHEMA), errmsg("no schema has been selected to create in")));
     }
 
@@ -1818,7 +1818,8 @@ pg_available_extensions(PG_FUNCTION_ARGS)
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize))
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* Build a tuple descriptor for our result type */
@@ -1939,7 +1940,8 @@ pg_available_extension_versions(PG_FUNCTION_ARGS)
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize))
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* Build a tuple descriptor for our result type */
@@ -2179,7 +2181,8 @@ pg_extension_update_paths(PG_FUNCTION_ARGS)
   }
   if (!(rsinfo->allowedModes & SFRM_Materialize))
   {
-    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
+    ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not "
+                                                                   "allowed in this context")));
   }
 
   /* Build a tuple descriptor for our result type */
@@ -2336,8 +2339,8 @@ pg_extension_config_dump(PG_FUNCTION_ARGS)
 
   extTup = systable_getnext(extScan);
 
-  if (!HeapTupleIsValid(extTup))
-  { /* should not happen */
+  if (!HeapTupleIsValid(extTup)) /* should not happen */
+  {
     elog(ERROR, "could not find tuple for extension %u", CurrentExtensionObject);
   }
 
@@ -2463,8 +2466,8 @@ extension_config_remove(Oid extensionoid, Oid tableoid)
 
   extTup = systable_getnext(extScan);
 
-  if (!HeapTupleIsValid(extTup))
-  { /* should not happen */
+  if (!HeapTupleIsValid(extTup)) /* should not happen */
+  {
     elog(ERROR, "could not find tuple for extension %u", extensionoid);
   }
 
@@ -2644,7 +2647,9 @@ AlterExtensionNamespace(const char *extensionName, const char *newschema, Oid *o
    */
   if (getExtensionOfObject(NamespaceRelationId, nspOid) == extensionOid)
   {
-    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot move extension \"%s\" into schema \"%s\" because the extension contains the schema", extensionName, newschema)));
+    ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot move extension \"%s\" into schema \"%s\" "
+                                                                              "because the extension contains the schema",
+                                                                           extensionName, newschema)));
   }
 
   /* Locate the pg_extension tuple */
@@ -2656,8 +2661,8 @@ AlterExtensionNamespace(const char *extensionName, const char *newschema, Oid *o
 
   extTup = systable_getnext(extScan);
 
-  if (!HeapTupleIsValid(extTup))
-  { /* should not happen */
+  if (!HeapTupleIsValid(extTup)) /* should not happen */
+  {
     elog(ERROR, "could not find tuple for extension %u", extensionOid);
   }
 
@@ -2716,8 +2721,8 @@ AlterExtensionNamespace(const char *extensionName, const char *newschema, Oid *o
     dep.objectId = pg_depend->objid;
     dep.objectSubId = pg_depend->objsubid;
 
-    if (dep.objectSubId != 0)
-    { /* should not happen */
+    if (dep.objectSubId != 0) /* should not happen */
+    {
       elog(ERROR, "extension should not have a sub-object dependency");
     }
 
@@ -2955,8 +2960,8 @@ ApplyExtensionUpdates(Oid extensionOid, ExtensionControlFile *pcontrol, const ch
 
     extTup = systable_getnext(extScan);
 
-    if (!HeapTupleIsValid(extTup))
-    { /* should not happen */
+    if (!HeapTupleIsValid(extTup)) /* should not happen */
+    {
       elog(ERROR, "could not find tuple for extension %u", extensionOid);
     }
 
@@ -3114,7 +3119,9 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt, ObjectAddress *
      */
     if (object.classId == NamespaceRelationId && object.objectId == get_extension_schema(extension.objectId))
     {
-      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot add schema \"%s\" to extension \"%s\" because the schema contains the extension", get_namespace_name(object.objectId), stmt->extname)));
+      ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("cannot add schema \"%s\" to extension \"%s\" "
+                                                                                "because the schema contains the extension",
+                                                                             get_namespace_name(object.objectId), stmt->extname)));
     }
 
     /*

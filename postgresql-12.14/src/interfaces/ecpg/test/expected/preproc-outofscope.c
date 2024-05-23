@@ -34,7 +34,8 @@
 #define DECSIZE 30
 
 typedef unsigned char NumericDigit;
-typedef struct {
+typedef struct
+{
   int ndigits;          /* number of digits in digits[] - can be 0! */
   int weight;           /* weight of first digit */
   int rscale;           /* result scale */
@@ -44,7 +45,8 @@ typedef struct {
   NumericDigit *digits; /* decimal digits */
 } numeric;
 
-typedef struct {
+typedef struct
+{
   int ndigits;                  /* number of digits in digits[] - can be 0! */
   int weight;                   /* weight of first digit */
   int rscale;                   /* result scale */
@@ -54,49 +56,50 @@ typedef struct {
 } decimal;
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-numeric *
-PGTYPESnumeric_new(void);
-decimal *
-PGTYPESdecimal_new(void);
-void
-PGTYPESnumeric_free(numeric *);
-void
-PGTYPESdecimal_free(decimal *);
-numeric *
-PGTYPESnumeric_from_asc(char *, char **);
-char *
-PGTYPESnumeric_to_asc(numeric *, int);
-int
-PGTYPESnumeric_add(numeric *, numeric *, numeric *);
-int
-PGTYPESnumeric_sub(numeric *, numeric *, numeric *);
-int
-PGTYPESnumeric_mul(numeric *, numeric *, numeric *);
-int
-PGTYPESnumeric_div(numeric *, numeric *, numeric *);
-int
-PGTYPESnumeric_cmp(numeric *, numeric *);
-int
-PGTYPESnumeric_from_int(signed int, numeric *);
-int
-PGTYPESnumeric_from_long(signed long int, numeric *);
-int
-PGTYPESnumeric_copy(numeric *, numeric *);
-int
-PGTYPESnumeric_from_double(double, numeric *);
-int
-PGTYPESnumeric_to_double(numeric *, double *);
-int
-PGTYPESnumeric_to_int(numeric *, int *);
-int
-PGTYPESnumeric_to_long(numeric *, long *);
-int
-PGTYPESnumeric_to_decimal(numeric *, decimal *);
-int
-PGTYPESnumeric_from_decimal(decimal *, numeric *);
+  numeric *
+  PGTYPESnumeric_new(void);
+  decimal *
+  PGTYPESdecimal_new(void);
+  void
+  PGTYPESnumeric_free(numeric *);
+  void
+  PGTYPESdecimal_free(decimal *);
+  numeric *
+  PGTYPESnumeric_from_asc(char *, char **);
+  char *
+  PGTYPESnumeric_to_asc(numeric *, int);
+  int
+  PGTYPESnumeric_add(numeric *, numeric *, numeric *);
+  int
+  PGTYPESnumeric_sub(numeric *, numeric *, numeric *);
+  int
+  PGTYPESnumeric_mul(numeric *, numeric *, numeric *);
+  int
+  PGTYPESnumeric_div(numeric *, numeric *, numeric *);
+  int
+  PGTYPESnumeric_cmp(numeric *, numeric *);
+  int
+  PGTYPESnumeric_from_int(signed int, numeric *);
+  int
+  PGTYPESnumeric_from_long(signed long int, numeric *);
+  int
+  PGTYPESnumeric_copy(numeric *, numeric *);
+  int
+  PGTYPESnumeric_from_double(double, numeric *);
+  int
+  PGTYPESnumeric_to_double(numeric *, double *);
+  int
+  PGTYPESnumeric_to_int(numeric *, int *);
+  int
+  PGTYPESnumeric_to_long(numeric *, long *);
+  int
+  PGTYPESnumeric_to_decimal(numeric *, decimal *);
+  int
+  PGTYPESnumeric_from_decimal(decimal *, numeric *);
 
 #ifdef __cplusplus
 }
@@ -122,7 +125,8 @@ typedef struct mynulltype MYNULLTYPE;
 
 #line 11 "outofscope.pgc"
 
-struct mytype {
+struct mytype
+{
 #line 3 "struct.h"
   int id;
 
@@ -138,7 +142,8 @@ struct mytype {
 #line 7 "struct.h"
   char c[30];
 };
-struct mynulltype {
+struct mynulltype
+{
 #line 13 "struct.h"
   int id;
 
@@ -180,14 +185,16 @@ get_var1(MYTYPE **myvar0, MYNULLTYPE **mynullvar0)
   ECPGset_var(1, (mynullvar), __LINE__); /* declare mycur cursor for select * from a1 */
 #line 28 "outofscope.pgc"
 
-  if (sqlca.sqlcode < 0) {
+  if (sqlca.sqlcode < 0)
+  {
     exit(1);
   }
 #line 28 "outofscope.pgc"
 
 #line 28 "outofscope.pgc"
 
-  if (sqlca.sqlcode != 0) {
+  if (sqlca.sqlcode != 0)
+  {
     exit(1);
   }
 
@@ -199,10 +206,12 @@ static void
 open_cur1(void)
 {
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare mycur cursor for select * from a1", ECPGt_EOIT, ECPGt_int, &((*(MYTYPE *)(ECPGget_var(0))).id), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).id), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).t), (long)64, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).t), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d1), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d1), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d2), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d2), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).c), (long)30, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).c),(long)1, (long)1, sizeof(struct mynulltype), ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "declare mycur cursor for select * from a1", ECPGt_EOIT, ECPGt_int, &((*(MYTYPE *)(ECPGget_var(0))).id), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).id), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).t), (long)64, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).t), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d1), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d1), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d2), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d2), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).c), (long)30, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).c),
+        (long)1, (long)1, sizeof(struct mynulltype), ECPGt_EORT);
 #line 40 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -213,10 +222,12 @@ static void
 get_record1(void)
 {
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch mycur", ECPGt_EOIT, ECPGt_int, &((*(MYTYPE *)(ECPGget_var(0))).id), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).id), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).t), (long)64, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).t), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d1), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d1), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d2), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d2), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).c), (long)30, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).c), (long)1, (long)1,sizeof(struct mynulltype), ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch mycur", ECPGt_EOIT, ECPGt_int, &((*(MYTYPE *)(ECPGget_var(0))).id), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).id), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).t), (long)64, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).t), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d1), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d1), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_double, &((*(MYTYPE *)(ECPGget_var(0))).d2), (long)1, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).d2), (long)1, (long)1, sizeof(struct mynulltype), ECPGt_char, &((*(MYTYPE *)(ECPGget_var(0))).c), (long)30, (long)1, sizeof(struct mytype), ECPGt_int, &((*(MYNULLTYPE *)(ECPGget_var(1))).c), (long)1, (long)1,
+        sizeof(struct mynulltype), ECPGt_EORT);
 #line 46 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -230,7 +241,8 @@ close_cur1(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "close mycur", ECPGt_EOIT, ECPGt_EORT);
 #line 52 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -252,7 +264,8 @@ main(void)
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 66 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -263,7 +276,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "set datestyle to iso", ECPGt_EOIT, ECPGt_EORT);
 #line 69 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -271,10 +285,11 @@ main(void)
 
   strcpy(msg, "create");
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"create table a1 ( id serial primary key , t text , d1 numeric , d2 float8 , c character ( 10 ) )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "create table a1 ( id serial primary key , t text , d1 numeric , d2 float8 , c character ( 10 ) )", ECPGt_EOIT, ECPGt_EORT);
 #line 72 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -282,30 +297,33 @@ main(void)
 
   strcpy(msg, "insert");
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"insert into a1 ( id , t , d1 , d2 , c ) values ( default , 'a' , 1.0 , 2 , 'a' )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into a1 ( id , t , d1 , d2 , c ) values ( default , 'a' , 1.0 , 2 , 'a' )", ECPGt_EOIT, ECPGt_EORT);
 #line 75 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 75 "outofscope.pgc"
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"insert into a1 ( id , t , d1 , d2 , c ) values ( default , null , null , null , null )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into a1 ( id , t , d1 , d2 , c ) values ( default , null , null , null , null )", ECPGt_EOIT, ECPGt_EORT);
 #line 76 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
 #line 76 "outofscope.pgc"
 
   {
-    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal,"insert into a1 ( id , t , d1 , d2 , c ) values ( default , 'b' , 2.0 , 3 , 'b' )",ECPGt_EOIT, ECPGt_EORT);
+    ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into a1 ( id , t , d1 , d2 , c ) values ( default , 'b' , 2.0 , 3 , 'b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 77 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -316,7 +334,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 80 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -327,10 +346,12 @@ main(void)
   get_var1(&myvar, &mynullvar);
   open_cur1();
 
-  for (loopcount = 0; loopcount < 100; loopcount++) {
+  for (loopcount = 0; loopcount < 100; loopcount++)
+  {
     memset(myvar, 0, sizeof(MYTYPE));
     get_record1();
-    if (sqlca.sqlcode == ECPG_NOT_FOUND) {
+    if (sqlca.sqlcode == ECPG_NOT_FOUND)
+    {
       break;
     }
     printf("id=%d%s t='%s'%s d1=%f%s d2=%f%s c = '%s'%s\n", myvar->id, mynullvar->id ? " (NULL)" : "", myvar->t, mynullvar->t ? " (NULL)" : "", myvar->d1, mynullvar->d1 ? " (NULL)" : "", myvar->d2, mynullvar->d2 ? " (NULL)" : "", myvar->c, mynullvar->c ? " (NULL)" : "");
@@ -346,7 +367,8 @@ main(void)
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "drop table a1", ECPGt_EOIT, ECPGt_EORT);
 #line 107 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -357,7 +379,8 @@ main(void)
     ECPGtrans(__LINE__, NULL, "commit");
 #line 110 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
@@ -368,7 +391,8 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
 #line 113 "outofscope.pgc"
 
-    if (sqlca.sqlcode < 0) {
+    if (sqlca.sqlcode < 0)
+    {
       exit(1);
     }
   }
