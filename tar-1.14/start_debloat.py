@@ -103,12 +103,11 @@ for k in ks:
     for alpha in alphas:
         for beta in betas:
             os.system(f"chattr -i {CURRDIR}/*")
-            os.system(f"chmod 755 /*")
+            os.system(f"chattr +i /bin /usr/bin")
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
            
-            os.system(f"chmod 555 /*")
 
 #            print(beta);os.system("sleep 1")
             #region init envs and do some cleaning
@@ -149,4 +148,4 @@ for k in ks:
                     except subprocess.CalledProcessError as e:#error and need restart
                         print(e)
 
-            os.system(f"chmod 755 /*")
+            os.system(f"chattr -i /bin /usr/bin")
