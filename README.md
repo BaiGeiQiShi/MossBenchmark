@@ -38,3 +38,5 @@ you need to modify path of `lib` in `compile.sh`
 ## postgresql-12.14
 
 Use "/postgresql-12.14" (absolute path) as working directory, or you have to change path in `postgresql-12.14/path_generator/generate_cov.py` and `postgresql-12.14/cleanup` to your preference.
+
+Due to the impact of long comment blocks on parsing code, we use `postgresql-12.14/deletecomments.py` to delete all comments in the source code. 
