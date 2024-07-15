@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- *	  GB18030 <--> UTF8
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/mb/conversion_procs/utf8_and_gb18030/utf8_and_gb18030.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                       
+   
+                                                                         
+                                                                        
+   
+                  
+                                                                               
+   
+                                                                            
+   
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -22,12 +22,12 @@ PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(gb18030_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_gb18030);
 
-/*
- * Convert 4-byte GB18030 characters to and from a linear code space
- *
- * The first and third bytes can range from 0x81 to 0xfe (126 values),
- * while the second and fourth bytes can range from 0x30 to 0x39 (10 values).
- */
+   
+                                                                     
+   
+                                                                       
+                                                                              
+   
 static inline uint32
 gb_linear(uint32 gb)
 {
@@ -50,11 +50,11 @@ gb_unlinear(uint32 lin)
   return (r0 << 24) | (r1 << 16) | (r2 << 8) | r3;
 }
 
-/*
- * Convert word-formatted UTF8 to and from Unicode code points
- *
- * Probably this should be somewhere else ...
- */
+   
+                                                               
+   
+                                              
+   
 static inline uint32
 unicode_to_utf8word(uint32 c)
 {
@@ -117,12 +117,12 @@ utf8word_to_unicode(uint32 c)
   return ucs;
 }
 
-/*
- * Perform mapping of GB18030 ranges to UTF8
- *
- * The ranges we need to convert are specified in gb-18030-2000.xml.
- * All are ranges of 4-byte GB18030 codes.
- */
+   
+                                             
+   
+                                                                     
+                                           
+   
 static uint32
 conv_18030_to_utf8(uint32 code)
 {
@@ -143,13 +143,13 @@ conv_18030_to_utf8(uint32 code)
   conv18030(0xFA2A, 0x84309C38, 0x84318537);
   conv18030(0xFFE6, 0x8431A234, 0x8431A439);
   conv18030(0x10000, 0x90308130, 0xE3329A35);
-  /* No mapping exists */
+                         
   return 0;
 }
 
-/*
- * Perform mapping of UTF8 ranges to GB18030
- */
+   
+                                             
+   
 static uint32
 conv_utf8_to_18030(uint32 code)
 {
@@ -172,20 +172,20 @@ conv_utf8_to_18030(uint32 code)
   convutf8(0xFA2A, 0xFE2F, 0x84309C38);
   convutf8(0xFFE6, 0xFFFF, 0x8431A234);
   convutf8(0x10000, 0x10FFFF, 0x90308130);
-  /* No mapping exists */
+                         
   return 0;
 }
 
-/* ----------
- * conv_proc(
- *		INTEGER,	-- source encoding id
- *		INTEGER,	-- destination encoding id
- *		CSTRING,	-- source string (null terminated C string)
- *		CSTRING,	-- destination string (null terminated C string)
- *		INTEGER		-- source string length
- * ) returns VOID;
- * ----------
- */
+              
+              
+                                   
+                                        
+                                                         
+                                                              
+                                     
+                   
+              
+   
 Datum
 gb18030_to_utf8(PG_FUNCTION_ARGS)
 {

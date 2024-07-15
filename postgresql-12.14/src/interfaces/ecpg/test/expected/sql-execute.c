@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "execute.pgc"
@@ -16,13 +16,13 @@
 
 #line 6 "execute.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 8 "execute.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 14 "execute.pgc"
   int amount[8];
@@ -38,7 +38,7 @@ main(void)
 
 #line 18 "execute.pgc"
   char command[128];
-/* exec sql end declare section */
+                                  
 #line 19 "execute.pgc"
 
   int i, j;
@@ -165,7 +165,7 @@ main(void)
   }
 #line 49 "execute.pgc"
 
-  /* declare CUR cursor for $1 */
+                                 
 #line 50 "execute.pgc"
 
   {
@@ -192,14 +192,14 @@ main(void)
 
   for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
   {
-    /* exec sql begin declare section */
+                                        
 
 #line 58 "execute.pgc"
     char n[8], l = letter[i][0];
 
 #line 59 "execute.pgc"
     int a = amount[i];
-/* exec sql end declare section */
+                                  
 #line 60 "execute.pgc"
 
     strncpy(n, name[i], 8);
@@ -241,7 +241,7 @@ main(void)
   }
 #line 71 "execute.pgc"
 
-  /* declare CUR2 cursor for $1 */
+                                  
 #line 72 "execute.pgc"
 
   {
@@ -268,14 +268,14 @@ main(void)
 
   for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
   {
-    /* exec sql begin declare section */
+                                        
 
 #line 80 "execute.pgc"
     char n[8], l = letter[i][0];
 
 #line 81 "execute.pgc"
     int a = amount[i];
-/* exec sql end declare section */
+                                  
 #line 82 "execute.pgc"
 
     strncpy(n, name[i], 8);
@@ -330,14 +330,14 @@ main(void)
 
   for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
   {
-    /* exec sql begin declare section */
+                                        
 
 #line 99 "execute.pgc"
     char n[8], l = letter[i][0];
 
 #line 100 "execute.pgc"
     int a = amount[i];
-/* exec sql end declare section */
+                                  
 #line 101 "execute.pgc"
 
     strncpy(n, name[i], 8);

@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- *
- * timeline.c
- *	  timeline-related functions.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                 
+   
+                                                                         
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include "pg_rewind.h"
@@ -14,18 +14,18 @@
 #include "access/timeline.h"
 #include "access/xlog_internal.h"
 
-/*
- * This is copy-pasted from the backend readTimeLineHistory, modified to
- * return a malloc'd array and to work without backend functions.
- */
-/*
- * Try to read a timeline's history file.
- *
- * If successful, return the list of component TLIs (the given TLI followed by
- * its ancestor TLIs).  If we can't find the history file, assume that the
- * timeline has no parents, and return a list of just the specified timeline
- * ID.
- */
+   
+                                                                         
+                                                                  
+   
+   
+                                          
+   
+                                                                               
+                                                                           
+                                                                             
+       
+   
 TimeLineHistoryEntry *
 rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
 {
@@ -38,9 +38,9 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
   char *bufptr;
   bool lastline = false;
 
-  /*
-   * Parse the file...
-   */
+     
+                       
+     
   prevend = InvalidXLogRecPtr;
   bufptr = buffer;
   while (!lastline)
@@ -65,7 +65,7 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
       *bufptr++ = '\0';
     }
 
-    /* skip leading whitespace and check for # comment */
+                                                         
     for (ptr = fline; *ptr; ptr++)
     {
       if (!isspace((unsigned char)*ptr))
@@ -82,7 +82,7 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
 
     if (nfields < 1)
     {
-      /* expect a numeric timeline ID as first field of line */
+                                                               
       pg_log_error("syntax error in history file: %s", fline);
       pg_log_error("Expected a numeric timeline ID.");
       exit(1);
@@ -111,7 +111,7 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
     entry->end = ((uint64)(switchpoint_hi)) << 32 | (uint64)switchpoint_lo;
     prevend = entry->end;
 
-    /* we ignore the remainder of each line */
+                                              
   }
 
   if (entries && targetTLI <= lasttli)
@@ -121,10 +121,10 @@ rewind_parseTimeLineHistory(char *buffer, TimeLineID targetTLI, int *nentries)
     exit(1);
   }
 
-  /*
-   * Create one more entry for the "tip" of the timeline, which has no entry
-   * in the history file.
-   */
+     
+                                                                             
+                          
+     
   nlines++;
   if (entries)
   {

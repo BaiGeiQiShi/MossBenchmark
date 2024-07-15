@@ -1,14 +1,14 @@
-/*-------------------------------------------------------------------------
- *
- *	  EUC_JIS_2004, SHIFT_JIS_2004
- *
- * Copyright (c) 2007-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/mb/conversion_procs/euc2004_sjis2004/euc2004_sjis2004.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                  
+   
+                                                                
+   
+                  
+                                                                               
+   
+                                                                            
+   
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -24,16 +24,16 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
 static void
 shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len);
 
-/* ----------
- * conv_proc(
- *		INTEGER,	-- source encoding id
- *		INTEGER,	-- destination encoding id
- *		CSTRING,	-- source string (null terminated C string)
- *		CSTRING,	-- destination string (null terminated C string)
- *		INTEGER		-- source string length
- * ) returns VOID;
- * ----------
- */
+              
+              
+                                   
+                                        
+                                                         
+                                                              
+                                     
+                   
+              
+   
 
 Datum
 euc_jis_2004_to_shift_jis_2004(PG_FUNCTION_ARGS)
@@ -63,9 +63,9 @@ shift_jis_2004_to_euc_jis_2004(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * EUC_JIS_2004 -> SHIFT_JIS_2004
- */
+   
+                                  
+   
 static void
 euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
 {
@@ -77,7 +77,7 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
     c1 = *euc;
     if (!IS_HIGHBIT_SET(c1))
     {
-      /* ASCII */
+                 
       if (c1 == 0)
       {
         report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
@@ -95,11 +95,11 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
       report_invalid_encoding(PG_EUC_JIS_2004, (const char *)euc, len);
     }
 
-    if (c1 == SS2 && l == 2) /* JIS X 0201 kana? */
+    if (c1 == SS2 && l == 2)                       
     {
       *p++ = euc[1];
     }
-    else if (c1 == SS3 && l == 3) /* JIS X 0213 plane 2? */
+    else if (c1 == SS3 && l == 3)                          
     {
       ku = euc[1] - 0xa0;
       ten = euc[2] - 0xa0;
@@ -149,7 +149,7 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
       }
     }
 
-    else if (l == 2) /* JIS X 0213 plane 1? */
+    else if (l == 2)                          
     {
       ku = c1 - 0xa0;
       ten = euc[1] - 0xa0;
@@ -198,11 +198,11 @@ euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len)
   *p = '\0';
 }
 
-/*
- * returns SHIFT_JIS_2004 "ku" code indicated by second byte
- * *ku = 0: "ku" = even
- * *ku = 1: "ku" = odd
- */
+   
+                                                             
+                        
+                       
+   
 static int
 get_ten(int b, int *ku)
 {
@@ -225,15 +225,15 @@ get_ten(int b, int *ku)
   }
   else
   {
-    ten = -1; /* error */
-    *ku = 0;  /* keep compiler quiet */
+    ten = -1;            
+    *ku = 0;                           
   }
   return ten;
 }
 
-/*
- * SHIFT_JIS_2004 ---> EUC_JIS_2004
- */
+   
+                                    
+   
 
 static void
 shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len)
@@ -249,7 +249,7 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
 
     if (!IS_HIGHBIT_SET(c1))
     {
-      /* ASCII */
+                 
       if (c1 == 0)
       {
         report_invalid_encoding(PG_SHIFT_JIS_2004, (const char *)sjis, len);
@@ -269,7 +269,7 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
 
     if (c1 >= 0xa1 && c1 <= 0xdf && l == 1)
     {
-      /* JIS X0201 (1 byte kana) */
+                                   
       *p++ = SS2;
       *p++ = c1;
     }
@@ -281,10 +281,10 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
       ku = 1;
       ten = 1;
 
-      /*
-       * JIS X 0213
-       */
-      if (c1 >= 0x81 && c1 <= 0x9f) /* plane 1 1ku-62ku */
+         
+                    
+         
+      if (c1 >= 0x81 && c1 <= 0x9f)                       
       {
         ku = (c1 << 1) - 0x100;
         ten = get_ten(c2, &kubun);
@@ -294,7 +294,7 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
         }
         ku -= kubun;
       }
-      else if (c1 >= 0xe0 && c1 <= 0xef) /* plane 1 62ku-94ku */
+      else if (c1 >= 0xe0 && c1 <= 0xef)                        
       {
         ku = (c1 << 1) - 0x180;
         ten = get_ten(c2, &kubun);
@@ -306,8 +306,8 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
         }
         ku -= kubun;
       }
-      else if (c1 >= 0xf0 && c1 <= 0xf3) /* plane 2
-                                          * 1,3,4,5,8,12,13,14,15 ku */
+      else if (c1 >= 0xf0 && c1 <= 0xf3)            
+                                                                       
       {
         plane = 2;
         ten = get_ten(c2, &kubun);
@@ -331,7 +331,7 @@ shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len
           break;
         }
       }
-      else if (c1 >= 0xf4 && c1 <= 0xfc) /* plane 2 78-94ku */
+      else if (c1 >= 0xf4 && c1 <= 0xfc)                      
       {
         plane = 2;
         ten = get_ten(c2, &kubun);

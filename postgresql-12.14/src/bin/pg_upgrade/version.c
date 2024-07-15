@@ -1,11 +1,11 @@
-/*
- *	version.c
- *
- *	Postgres-version-specific routines
- *
- *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *	src/bin/pg_upgrade/version.c
- */
+   
+             
+   
+                                      
+   
+                                                                
+                                
+   
 
 #include "postgres_fe.h"
 
@@ -14,11 +14,11 @@
 #include "catalog/pg_class_d.h"
 #include "fe_utils/string_utils.h"
 
-/*
- * new_9_0_populate_pg_largeobject_metadata()
- *	new >= 9.0, old <= 8.4
- *	9.0 has a new pg_largeobject permission table
- */
+   
+                                              
+                          
+                                                 
+   
 void
 new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
 {
@@ -38,7 +38,7 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
     DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
     PGconn *conn = connectToServer(cluster, active_db->db_name);
 
-    /* find if there are any large objects */
+                                             
     res = executeQueryOrDie(conn, "SELECT count(*) "
                                   "FROM	pg_catalog.pg_largeobject ");
 
@@ -104,19 +104,19 @@ new_9_0_populate_pg_largeobject_metadata(ClusterInfo *cluster, bool check_mode)
   }
 }
 
-/*
- * check_for_data_types_usage()
- *	Detect whether there are any stored columns depending on given type(s)
- *
- * If so, write a report to the given file name, and return true.
- *
- * base_query should be a SELECT yielding a single column named "oid",
- * containing the pg_type OIDs of one or more types that are known to have
- * inconsistent on-disk representations across server versions.
- *
- * We check for the type(s) in tables, matviews, and indexes, but not views;
- * there's no storage involved in a view.
- */
+   
+                                
+                                                                          
+   
+                                                                  
+   
+                                                                       
+                                                                           
+                                                                
+   
+                                                                             
+                                          
+   
 bool
 check_for_data_types_usage(ClusterInfo *cluster, const char *base_query, const char *output_path)
 {
@@ -135,28 +135,28 @@ check_for_data_types_usage(ClusterInfo *cluster, const char *base_query, const c
     int rowno;
     int i_nspname, i_relname, i_attname;
 
-    /*
-     * The type(s) of interest might be wrapped in a domain, array,
-     * composite, or range, and these container types can be nested (to
-     * varying extents depending on server version, but that's not of
-     * concern here).  To handle all these cases we need a recursive CTE.
-     */
+       
+                                                                    
+                                                                        
+                                                                      
+                                                                          
+       
     initPQExpBuffer(&querybuf);
     appendPQExpBuffer(&querybuf,
         "WITH RECURSIVE oids AS ( "
-        /* start with the type(s) returned by base_query */
+                                                           
         "	%s "
         "	UNION ALL "
         "	SELECT * FROM ( "
-        /* inner WITH because we can only reference the CTE once */
+                                                                   
         "		WITH x AS (SELECT oid FROM oids) "
-        /* domains on any type selected so far */
+                                                 
         "			SELECT t.oid FROM pg_catalog.pg_type t, x WHERE typbasetype = x.oid AND typtype = 'd' "
         "			UNION ALL "
-        /* arrays over any type selected so far */
+                                                  
         "			SELECT t.oid FROM pg_catalog.pg_type t, x WHERE typelem = x.oid AND typtype = 'b' "
         "			UNION ALL "
-        /* composite types containing any type selected so far */
+                                                                 
         "			SELECT t.oid FROM pg_catalog.pg_type t, pg_catalog.pg_class c, pg_catalog.pg_attribute a, x "
         "			WHERE t.typtype = 'c' AND "
         "				  t.oid = c.reltype AND "
@@ -165,18 +165,18 @@ check_for_data_types_usage(ClusterInfo *cluster, const char *base_query, const c
         "				  a.atttypid = x.oid ",
         base_query);
 
-    /* Ranges came in in 9.2 */
+                               
     if (GET_MAJOR_VERSION(cluster->major_version) >= 902)
     {
       appendPQExpBuffer(&querybuf, "			UNION ALL "
-                                   /* ranges containing any type selected so far */
+                                                                                   
                                    "			SELECT t.oid FROM pg_catalog.pg_type t, pg_catalog.pg_range r, x "
                                    "			WHERE t.typtype = 'r' AND r.rngtypid = t.oid AND r.rngsubtype = x.oid");
     }
 
     appendPQExpBuffer(&querybuf, "	) foo "
                                  ") "
-                                 /* now look for stored columns of any such type */
+                                                                                   
                                  "SELECT n.nspname, c.relname, a.attname "
                                  "FROM	pg_catalog.pg_class c, "
                                  "		pg_catalog.pg_namespace n, "
@@ -186,10 +186,10 @@ check_for_data_types_usage(ClusterInfo *cluster, const char *base_query, const c
                                  "		a.atttypid IN (SELECT oid FROM oids) AND "
                                  "		c.relkind IN (" CppAsString2(RELKIND_RELATION) ", " CppAsString2(RELKIND_MATVIEW) ", " CppAsString2(RELKIND_INDEX) ") AND "
                                                                                                                                                                    "		c.relnamespace = n.oid AND "
-                                                                                                                                                                   /* exclude possible orphaned temp tables */
+                                                                                                                                                                                                              
                                                                                                                                                                    "		n.nspname !~ '^pg_temp_' AND "
                                                                                                                                                                    "		n.nspname !~ '^pg_toast_temp_' AND "
-                                                                                                                                                                   /* exclude system catalogs, too */
+                                                                                                                                                                                                     
                                                                                                                                                                    "		n.nspname NOT IN ('pg_catalog', 'information_schema')");
 
     res = executeQueryOrDie(conn, "%s", querybuf.data);
@@ -228,16 +228,16 @@ check_for_data_types_usage(ClusterInfo *cluster, const char *base_query, const c
   return found;
 }
 
-/*
- * check_for_data_type_usage()
- *	Detect whether there are any stored columns depending on the given type
- *
- * If so, write a report to the given file name, and return true.
- *
- * type_name should be a fully qualified type name.  This is just a
- * trivial wrapper around check_for_data_types_usage() to convert a
- * type name into a base query.
- */
+   
+                               
+                                                                           
+   
+                                                                  
+   
+                                                                    
+                                                                    
+                                
+   
 bool
 check_for_data_type_usage(ClusterInfo *cluster, const char *type_name, const char *output_path)
 {
@@ -253,14 +253,14 @@ check_for_data_type_usage(ClusterInfo *cluster, const char *type_name, const cha
   return found;
 }
 
-/*
- * old_9_3_check_for_line_data_type_usage()
- *	9.3 -> 9.4
- *	Fully implement the 'line' data type in 9.4, which previously returned
- *	"not enabled" by default and was only functionally enabled with a
- *	compile-time switch; as of 9.4 "line" has a different on-disk
- *	representation format.
- */
+   
+                                            
+              
+                                                                          
+                                                                     
+                                                                 
+                          
+   
 void
 old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster)
 {
@@ -287,19 +287,19 @@ old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster)
   }
 }
 
-/*
- * old_9_6_check_for_unknown_data_type_usage()
- *	9.6 -> 10
- *	It's no longer allowed to create tables or views with "unknown"-type
- *	columns.  We do not complain about views with such columns, because
- *	they should get silently converted to "text" columns during the DDL
- *	dump and reload; it seems unlikely to be worth making users do that
- *	by hand.  However, if there's a table with such a column, the DDL
- *	reload will fail, so we should pre-detect that rather than failing
- *	mid-upgrade.  Worse, if there's a matview with such a column, the
- *	DDL reload will silently change it to "text" which won't match the
- *	on-disk storage (which is like "cstring").  So we *must* reject that.
- */
+   
+                                               
+             
+                                                                        
+                                                                       
+                                                                       
+                                                                       
+                                                                     
+                                                                      
+                                                                     
+                                                                      
+                                                                         
+   
 void
 old_9_6_check_for_unknown_data_type_usage(ClusterInfo *cluster)
 {
@@ -325,11 +325,11 @@ old_9_6_check_for_unknown_data_type_usage(ClusterInfo *cluster)
   }
 }
 
-/*
- * old_9_6_invalidate_hash_indexes()
- *	9.6 -> 10
- *	Hash index binary format has changed from 9.6->10.0
- */
+   
+                                     
+             
+                                                       
+   
 void
 old_9_6_invalidate_hash_indexes(ClusterInfo *cluster, bool check_mode)
 {
@@ -350,7 +350,7 @@ old_9_6_invalidate_hash_indexes(ClusterInfo *cluster, bool check_mode)
     DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
     PGconn *conn = connectToServer(cluster, active_db->db_name);
 
-    /* find hash indexes */
+                           
     res = executeQueryOrDie(conn, "SELECT n.nspname, c.relname "
                                   "FROM	pg_catalog.pg_class c, "
                                   "		pg_catalog.pg_index i, "
@@ -391,7 +391,7 @@ old_9_6_invalidate_hash_indexes(ClusterInfo *cluster, bool check_mode)
 
     if (!check_mode && db_used)
     {
-      /* mark hash indexes as invalid */
+                                        
       PQclear(executeQueryOrDie(conn, "UPDATE pg_catalog.pg_index i "
                                       "SET	indisvalid = false "
                                       "FROM	pg_catalog.pg_class c, "
@@ -441,14 +441,14 @@ old_9_6_invalidate_hash_indexes(ClusterInfo *cluster, bool check_mode)
   }
 }
 
-/*
- * old_11_check_for_sql_identifier_data_type_usage()
- *	11 -> 12
- *	In 12, the sql_identifier data type was switched from name to varchar,
- *	which does affect the storage (name is by-ref, but not varlena). This
- *	means user tables using sql_identifier for columns are broken because
- *	the on-disk format is different.
- */
+   
+                                                     
+            
+                                                                          
+                                                                         
+                                                                         
+                                    
+   
 void
 old_11_check_for_sql_identifier_data_type_usage(ClusterInfo *cluster)
 {
@@ -475,10 +475,10 @@ old_11_check_for_sql_identifier_data_type_usage(ClusterInfo *cluster)
   }
 }
 
-/*
- * report_extension_updates()
- *	Report extensions that should be updated.
- */
+   
+                              
+                                             
+   
 void
 report_extension_updates(ClusterInfo *cluster)
 {
@@ -499,7 +499,7 @@ report_extension_updates(ClusterInfo *cluster)
     DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
     PGconn *conn = connectToServer(cluster, active_db->db_name);
 
-    /* find extensions needing updates */
+                                         
     res = executeQueryOrDie(conn, "SELECT name "
                                   "FROM pg_available_extensions "
                                   "WHERE installed_version != default_version");

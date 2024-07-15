@@ -1,38 +1,38 @@
-/*
- * lexical analyzer
- * This file is #included by regcomp.c.
- *
- * Copyright (c) 1998, 1999 Henry Spencer.  All rights reserved.
- *
- * Development of this software was funded, in part, by Cray Research Inc.,
- * UUNET Communications Services Inc., Sun Microsystems Inc., and Scriptics
- * Corporation, none of whom are responsible for the results.  The author
- * thanks all of them.
- *
- * Redistribution and use in source and binary forms -- with or without
- * modification -- are permitted for any purpose, provided that
- * redistributions in source form retain this entire copyright notice and
- * indicate the origin and nature of any modifications.
- *
- * I'd appreciate being given credit for this package in the documentation
- * of software which uses it, but that is not a requirement.
- *
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * HENRY SPENCER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * src/backend/regex/regc_lex.c
- *
- */
+   
+                    
+                                        
+   
+                                                                 
+   
+                                                                            
+                                                                            
+                                                                          
+                       
+   
+                                                                        
+                                                                
+                                                                          
+                                                        
+   
+                                                                           
+                                                             
+   
+                                                                              
+                                                                            
+                                                                           
+                                                                          
+                                                                       
+                                                                               
+                                                                            
+                                                                           
+                                                                          
+                                              
+   
+                                
+   
+   
 
-/* scanning macros (know about v) */
+                                    
 #define ATEOS() (v->now >= v->stop)
 #define HAVE(n) (v->stop - v->now >= (n))
 #define NEXT1(c) (!ATEOS() && *v->now == CHR(c))
@@ -42,32 +42,32 @@
 #define SETV(c, n) (v->nexttype = (c), v->nextvalue = (n))
 #define RET(c) return (SET(c), 1)
 #define RETV(c, n) return (SETV(c, n), 1)
-#define FAILW(e) return (ERR(e), 0) /* ERR does SET(EOS) */
+#define FAILW(e) return (ERR(e), 0)                        
 #define LASTTYPE(t) (v->lasttype == (t))
 
-/* lexical contexts */
-#define L_ERE 1   /* mainline ERE/ARE */
-#define L_BRE 2   /* mainline BRE */
-#define L_Q 3     /* REG_QUOTE */
-#define L_EBND 4  /* ERE/ARE bound */
-#define L_BBND 5  /* BRE bound */
-#define L_BRACK 6 /* brackets */
-#define L_CEL 7   /* collating element */
-#define L_ECL 8   /* equivalence class */
-#define L_CCL 9   /* character class */
+                      
+#define L_ERE 1                         
+#define L_BRE 2                     
+#define L_Q 3                    
+#define L_EBND 4                     
+#define L_BBND 5                 
+#define L_BRACK 6               
+#define L_CEL 7                          
+#define L_ECL 8                          
+#define L_CCL 9                        
 #define INTOCON(c) (v->lexcon = (c))
 #define INCON(con) (v->lexcon == (con))
 
-/* construct pointer past end of chr array */
+                                             
 #define ENDOF(array) ((array) + sizeof(array) / sizeof(chr))
 
-/*
- * lexstart - set up lexical stuff, scan leading options
- */
+   
+                                                         
+   
 static void
 lexstart(struct vars *v)
 {
-  prefixes(v); /* may turn on new type bits etc. */
+  prefixes(v);                                     
   NOERR();
 
   if (v->cflags & REG_QUOTE)
@@ -86,57 +86,57 @@ lexstart(struct vars *v)
     INTOCON(L_BRE);
   }
 
-  v->nexttype = EMPTY; /* remember we were at the start */
-  next(v);             /* set up the first token */
+  v->nexttype = EMPTY;                                    
+  next(v);                                         
 }
 
-/*
- * prefixes - implement various special prefixes
- */
+   
+                                                 
+   
 static void
 prefixes(struct vars *v)
 {
-  /* literal string doesn't get any of this stuff */
+                                                    
   if (v->cflags & REG_QUOTE)
   {
     return;
   }
 
-  /* initial "***" gets special things */
+                                         
   if (HAVE(4) && NEXT3('*', '*', '*'))
   {
     switch (*(v->now + 3))
     {
-    case CHR('?'): /* "***?" error, msg shows version */
+    case CHR('?'):                                      
       ERR(REG_BADPAT);
-      return; /* proceed no further */
+      return;                         
       break;
-    case CHR('='): /* "***=" shifts to literal string */
+    case CHR('='):                                      
       NOTE(REG_UNONPOSIX);
       v->cflags |= REG_QUOTE;
       v->cflags &= ~(REG_ADVANCED | REG_EXPANDED | REG_NEWLINE);
       v->now += 4;
-      return; /* and there can be no more prefixes */
+      return;                                        
       break;
-    case CHR(':'): /* "***:" shifts to AREs */
+    case CHR(':'):                            
       NOTE(REG_UNONPOSIX);
       v->cflags |= REG_ADVANCED;
       v->now += 4;
       break;
-    default: /* otherwise *** is just an error */
+    default:                                     
       ERR(REG_BADRPT);
       return;
       break;
     }
   }
 
-  /* BREs and EREs don't get embedded options */
+                                                
   if ((v->cflags & REG_ADVANCED) != REG_ADVANCED)
   {
     return;
   }
 
-  /* embedded options (AREs only) */
+                                    
   if (HAVE(3) && NEXT2('(', '?') && iscalpha(*(v->now + 2)))
   {
     NOTE(REG_UNONPOSIX);
@@ -145,42 +145,42 @@ prefixes(struct vars *v)
     {
       switch (*v->now)
       {
-      case CHR('b'): /* BREs (but why???) */
+      case CHR('b'):                        
         v->cflags &= ~(REG_ADVANCED | REG_QUOTE);
         break;
-      case CHR('c'): /* case sensitive */
+      case CHR('c'):                     
         v->cflags &= ~REG_ICASE;
         break;
-      case CHR('e'): /* plain EREs */
+      case CHR('e'):                 
         v->cflags |= REG_EXTENDED;
         v->cflags &= ~(REG_ADVF | REG_QUOTE);
         break;
-      case CHR('i'): /* case insensitive */
+      case CHR('i'):                       
         v->cflags |= REG_ICASE;
         break;
-      case CHR('m'): /* Perloid synonym for n */
-      case CHR('n'): /* \n affects ^ $ . [^ */
+      case CHR('m'):                            
+      case CHR('n'):                          
         v->cflags |= REG_NEWLINE;
         break;
-      case CHR('p'): /* ~Perl, \n affects . [^ */
+      case CHR('p'):                             
         v->cflags |= REG_NLSTOP;
         v->cflags &= ~REG_NLANCH;
         break;
-      case CHR('q'): /* literal string */
+      case CHR('q'):                     
         v->cflags |= REG_QUOTE;
         v->cflags &= ~REG_ADVANCED;
         break;
-      case CHR('s'): /* single line, \n ordinary */
+      case CHR('s'):                               
         v->cflags &= ~REG_NEWLINE;
         break;
-      case CHR('t'): /* tight syntax */
+      case CHR('t'):                   
         v->cflags &= ~REG_EXPANDED;
         break;
-      case CHR('w'): /* weird, \n affects ^ $ only */
+      case CHR('w'):                                 
         v->cflags &= ~REG_NLSTOP;
         v->cflags |= REG_NLANCH;
         break;
-      case CHR('x'): /* expanded syntax */
+      case CHR('x'):                      
         v->cflags |= REG_EXPANDED;
         break;
       default:
@@ -201,82 +201,82 @@ prefixes(struct vars *v)
   }
 }
 
-/*
- * lexnest - "call a subroutine", interpolating string at the lexical level
- *
- * Note, this is not a very general facility.  There are a number of
- * implicit assumptions about what sorts of strings can be subroutines.
- */
+   
+                                                                            
+   
+                                                                     
+                                                                        
+   
 static void
-lexnest(struct vars *v, const chr *beginp, /* start of interpolation */
-    const chr *endp)                       /* one past end of interpolation */
+lexnest(struct vars *v, const chr *beginp,                             
+    const chr *endp)                                                          
 {
-  assert(v->savenow == NULL); /* only one level of nesting */
+  assert(v->savenow == NULL);                                
   v->savenow = v->now;
   v->savestop = v->stop;
   v->now = beginp;
   v->stop = endp;
 }
 
-/*
- * string constants to interpolate as expansions of things like \d
- */
-static const chr backd[] = {/* \d */
+   
+                                                                   
+   
+static const chr backd[] = {        
     CHR('['), CHR('['), CHR(':'), CHR('d'), CHR('i'), CHR('g'), CHR('i'), CHR('t'), CHR(':'), CHR(']'), CHR(']')};
-static const chr backD[] = {/* \D */
+static const chr backD[] = {        
     CHR('['), CHR('^'), CHR('['), CHR(':'), CHR('d'), CHR('i'), CHR('g'), CHR('i'), CHR('t'), CHR(':'), CHR(']'), CHR(']')};
-static const chr brbackd[] = {/* \d within brackets */
+static const chr brbackd[] = {                        
     CHR('['), CHR(':'), CHR('d'), CHR('i'), CHR('g'), CHR('i'), CHR('t'), CHR(':'), CHR(']')};
-static const chr backs[] = {/* \s */
+static const chr backs[] = {        
     CHR('['), CHR('['), CHR(':'), CHR('s'), CHR('p'), CHR('a'), CHR('c'), CHR('e'), CHR(':'), CHR(']'), CHR(']')};
-static const chr backS[] = {/* \S */
+static const chr backS[] = {        
     CHR('['), CHR('^'), CHR('['), CHR(':'), CHR('s'), CHR('p'), CHR('a'), CHR('c'), CHR('e'), CHR(':'), CHR(']'), CHR(']')};
-static const chr brbacks[] = {/* \s within brackets */
+static const chr brbacks[] = {                        
     CHR('['), CHR(':'), CHR('s'), CHR('p'), CHR('a'), CHR('c'), CHR('e'), CHR(':'), CHR(']')};
-static const chr backw[] = {/* \w */
+static const chr backw[] = {        
     CHR('['), CHR('['), CHR(':'), CHR('a'), CHR('l'), CHR('n'), CHR('u'), CHR('m'), CHR(':'), CHR(']'), CHR('_'), CHR(']')};
-static const chr backW[] = {/* \W */
+static const chr backW[] = {        
     CHR('['), CHR('^'), CHR('['), CHR(':'), CHR('a'), CHR('l'), CHR('n'), CHR('u'), CHR('m'), CHR(':'), CHR(']'), CHR('_'), CHR(']')};
-static const chr brbackw[] = {/* \w within brackets */
+static const chr brbackw[] = {                        
     CHR('['), CHR(':'), CHR('a'), CHR('l'), CHR('n'), CHR('u'), CHR('m'), CHR(':'), CHR(']'), CHR('_')};
 
-/*
- * lexword - interpolate a bracket expression for word characters
- * Possibly ought to inquire whether there is a "word" character class.
- */
+   
+                                                                  
+                                                                        
+   
 static void
 lexword(struct vars *v)
 {
   lexnest(v, backw, ENDOF(backw));
 }
 
-/*
- * next - get next token
- */
-static int /* 1 normal, 0 failure */
+   
+                         
+   
+static int                          
 next(struct vars *v)
 {
   chr c;
 
-next_restart: /* loop here after eating a comment */
+next_restart:                                       
 
-  /* errors yield an infinite sequence of failures */
+                                                     
   if (ISERR())
   {
-    return 0; /* the error has set nexttype to EOS */
+    return 0;                                        
   }
 
-  /* remember flavor of last token */
+                                     
   v->lasttype = v->nexttype;
 
-  /* REG_BOSONLY */
+                   
   if (v->nexttype == EMPTY && (v->cflags & REG_BOSONLY))
   {
-    /* at start of a REG_BOSONLY RE */
-    RETV(SBEGIN, 0); /* same as \A */
+                                      
+    RETV(SBEGIN, 0);                 
   }
 
-  /* if we're nested and we've hit end, return to outer level */
+                                                                
   if (v->savenow != NULL && ATEOS())
   {
     v->now = v->savenow;
@@ -284,7 +284,7 @@ next_restart: /* loop here after eating a comment */
     v->savenow = v->savestop = NULL;
   }
 
-  /* skip white space etc. if appropriate (not in literal or []) */
+                                                                   
   if (v->cflags & REG_EXPANDED)
   {
     switch (v->lexcon)
@@ -298,7 +298,7 @@ next_restart: /* loop here after eating a comment */
     }
   }
 
-  /* handle EOS, depending on context */
+                                        
   if (ATEOS())
   {
     switch (v->lexcon)
@@ -322,21 +322,21 @@ next_restart: /* loop here after eating a comment */
     assert(NOTREACHED);
   }
 
-  /* okay, time to actually get a character */
+                                              
   c = *v->now++;
 
-  /* deal with the easy contexts, punt EREs to code below */
+                                                            
   switch (v->lexcon)
   {
-  case L_BRE: /* punt BREs to separate function */
+  case L_BRE:                                     
     return brenext(v, c);
     break;
-  case L_ERE: /* see below */
+  case L_ERE:                
     break;
-  case L_Q: /* literal strings are easy */
+  case L_Q:                               
     RETV(PLAIN, c);
     break;
-  case L_BBND: /* bounds are fairly simple */
+  case L_BBND:                               
   case L_EBND:
     switch (c)
     {
@@ -355,7 +355,7 @@ next_restart: /* loop here after eating a comment */
     case CHR(','):
       RET(',');
       break;
-    case CHR('}'): /* ERE bound ends with } */
+    case CHR('}'):                            
       if (INCON(L_EBND))
       {
         INTOCON(L_ERE);
@@ -372,7 +372,7 @@ next_restart: /* loop here after eating a comment */
         FAILW(REG_BADBR);
       }
       break;
-    case CHR('\\'): /* BRE bound ends with \} */
+    case CHR('\\'):                             
       if (INCON(L_BBND) && NEXT1('}'))
       {
         v->now++;
@@ -390,7 +390,7 @@ next_restart: /* loop here after eating a comment */
     }
     assert(NOTREACHED);
     break;
-  case L_BRACK: /* brackets are not too hard */
+  case L_BRACK:                                
     switch (c)
     {
     case CHR(']'):
@@ -417,7 +417,7 @@ next_restart: /* loop here after eating a comment */
       }
       (DISCARD) lexescape(v);
       switch (v->nexttype)
-      { /* not all escapes okay here */
+      {                                
       case PLAIN:
         return 1;
         break;
@@ -437,12 +437,12 @@ next_restart: /* loop here after eating a comment */
           FAILW(REG_EESCAPE);
           break;
         }
-        /* lexnest done, back up and try again */
+                                                 
         v->nexttype = v->lasttype;
         return next(v);
         break;
       }
-      /* not one of the acceptable escapes */
+                                             
       FAILW(REG_EESCAPE);
       break;
     case CHR('-'):
@@ -464,7 +464,7 @@ next_restart: /* loop here after eating a comment */
       {
       case CHR('.'):
         INTOCON(L_CEL);
-        /* might or might not be locale-specific */
+                                                   
         RET(COLLEL);
         break;
       case CHR('='):
@@ -477,7 +477,7 @@ next_restart: /* loop here after eating a comment */
         NOTE(REG_ULOCALE);
         RET(CCLASS);
         break;
-      default: /* oops */
+      default:           
         v->now--;
         RETV(PLAIN, c);
         break;
@@ -490,7 +490,7 @@ next_restart: /* loop here after eating a comment */
     }
     assert(NOTREACHED);
     break;
-  case L_CEL: /* collating elements are easy */
+  case L_CEL:                                  
     if (c == CHR('.') && NEXT1(']'))
     {
       v->now++;
@@ -502,7 +502,7 @@ next_restart: /* loop here after eating a comment */
       RETV(PLAIN, c);
     }
     break;
-  case L_ECL: /* ditto equivalence classes */
+  case L_ECL:                                
     if (c == CHR('=') && NEXT1(']'))
     {
       v->now++;
@@ -514,7 +514,7 @@ next_restart: /* loop here after eating a comment */
       RETV(PLAIN, c);
     }
     break;
-  case L_CCL: /* ditto character classes */
+  case L_CCL:                              
     if (c == CHR(':') && NEXT1(']'))
     {
       v->now++;
@@ -531,10 +531,10 @@ next_restart: /* loop here after eating a comment */
     break;
   }
 
-  /* that got rid of everything except EREs and AREs */
+                                                       
   assert(INCON(L_ERE));
 
-  /* deal with EREs and AREs, except for backslashes */
+                                                       
   switch (c)
   {
   case CHR('|'):
@@ -567,7 +567,7 @@ next_restart: /* loop here after eating a comment */
     }
     RETV('?', 1);
     break;
-  case CHR('{'): /* bounds start or plain character */
+  case CHR('{'):                                      
     if (v->cflags & REG_EXPANDED)
     {
       skip(v);
@@ -586,7 +586,7 @@ next_restart: /* loop here after eating a comment */
     }
     assert(NOTREACHED);
     break;
-  case CHR('('): /* parenthesis, or advanced extension */
+  case CHR('('):                                         
     if ((v->cflags & REG_ADVF) && NEXT1('?'))
     {
       NOTE(REG_UNONPOSIX);
@@ -597,10 +597,10 @@ next_restart: /* loop here after eating a comment */
       }
       switch (*v->now++)
       {
-      case CHR(':'): /* non-capturing paren */
+      case CHR(':'):                          
         RETV('(', 0);
         break;
-      case CHR('#'): /* comment */
+      case CHR('#'):              
         while (!ATEOS() && *v->now != CHR(')'))
         {
           v->now++;
@@ -611,11 +611,11 @@ next_restart: /* loop here after eating a comment */
         }
         assert(v->nexttype == v->lasttype);
         goto next_restart;
-      case CHR('='): /* positive lookahead */
+      case CHR('='):                         
         NOTE(REG_ULOOKAROUND);
         RETV(LACON, LATYPE_AHEAD_POS);
         break;
-      case CHR('!'): /* negative lookahead */
+      case CHR('!'):                         
         NOTE(REG_ULOOKAROUND);
         RETV(LACON, LATYPE_AHEAD_NEG);
         break;
@@ -626,11 +626,11 @@ next_restart: /* loop here after eating a comment */
         }
         switch (*v->now++)
         {
-        case CHR('='): /* positive lookbehind */
+        case CHR('='):                          
           NOTE(REG_ULOOKAROUND);
           RETV(LACON, LATYPE_BEHIND_POS);
           break;
-        case CHR('!'): /* negative lookbehind */
+        case CHR('!'):                          
           NOTE(REG_ULOOKAROUND);
           RETV(LACON, LATYPE_BEHIND_NEG);
           break;
@@ -648,7 +648,7 @@ next_restart: /* loop here after eating a comment */
     }
     if (v->cflags & REG_NOSUB)
     {
-      RETV('(', 0); /* all parens non-capturing */
+      RETV('(', 0);                               
     }
     else
     {
@@ -662,7 +662,7 @@ next_restart: /* loop here after eating a comment */
     }
     RETV(')', c);
     break;
-  case CHR('['): /* easy except for [[:<:]] and [[:>:]] */
+  case CHR('['):                                          
     if (HAVE(6) && *(v->now + 0) == CHR('[') && *(v->now + 1) == CHR(':') && (*(v->now + 2) == CHR('<') || *(v->now + 2) == CHR('>')) && *(v->now + 3) == CHR(':') && *(v->now + 4) == CHR(']') && *(v->now + 5) == CHR(']'))
     {
       c = *(v->now + 2);
@@ -687,21 +687,21 @@ next_restart: /* loop here after eating a comment */
   case CHR('$'):
     RET('$');
     break;
-  case CHR('\\'): /* mostly punt backslashes to code below */
+  case CHR('\\'):                                            
     if (ATEOS())
     {
       FAILW(REG_EESCAPE);
     }
     break;
-  default: /* ordinary character */
+  default:                         
     RETV(PLAIN, c);
     break;
   }
 
-  /* ERE/ARE backslash handling; backslash already eaten */
+                                                           
   assert(!ATEOS());
   if (!(v->cflags & REG_ADVF))
-  { /* only AREs have non-trivial escapes */
+  {                                         
     if (iscalnum(*v->now))
     {
       NOTE(REG_UBSALNUM);
@@ -715,7 +715,7 @@ next_restart: /* loop here after eating a comment */
     FAILW(REG_EESCAPE);
   }
   if (v->nexttype == CCLASS)
-  { /* fudge at lexical level */
+  {                             
     switch (v->nextvalue)
     {
     case 'd':
@@ -741,19 +741,19 @@ next_restart: /* loop here after eating a comment */
       FAILW(REG_ASSERT);
       break;
     }
-    /* lexnest done, back up and try again */
+                                             
     v->nexttype = v->lasttype;
     return next(v);
   }
-  /* otherwise, lexescape has already done the work */
+                                                      
   return !ISERR();
 }
 
-/*
- * lexescape - parse an ARE backslash escape (backslash already eaten)
- * Note slightly nonstandard use of the CCLASS type code.
- */
-static int /* not actually used, but convenient for RETV */
+   
+                                                                       
+                                                          
+   
+static int                                                 
 lexescape(struct vars *v)
 {
   chr c;
@@ -860,7 +860,7 @@ lexescape(struct vars *v)
     break;
   case CHR('x'):
     NOTE(REG_UUNPORT);
-    c = lexdigits(v, 16, 1, 255); /* REs >255 long outside spec */
+    c = lexdigits(v, 16, 1, 255);                                 
     if (ISERR() || !CHR_IS_IN_RANGE(c))
     {
       FAILW(REG_EESCAPE);
@@ -888,25 +888,25 @@ lexescape(struct vars *v)
   case CHR('8'):
   case CHR('9'):
     save = v->now;
-    v->now--;                     /* put first digit back */
-    c = lexdigits(v, 10, 1, 255); /* REs >255 long outside spec */
+    v->now--;                                               
+    c = lexdigits(v, 10, 1, 255);                                 
     if (ISERR())
     {
       FAILW(REG_EESCAPE);
     }
-    /* ugly heuristic (first test is "exactly 1 digit?") */
+                                                           
     if (v->now == save || ((int)c > 0 && (int)c <= v->nsubexp))
     {
       NOTE(REG_UBACKREF);
       RETV(BACKREF, c);
     }
-    /* oops, doesn't look like it's a backref after all... */
+                                                             
     v->now = save;
-    /* and fall through into octal number */
-    /* FALLTHROUGH */
+                                            
+                     
   case CHR('0'):
     NOTE(REG_UUNPORT);
-    v->now--; /* put first digit back */
+    v->now--;                           
     c = lexdigits(v, 8, 1, 3);
     if (ISERR())
     {
@@ -914,7 +914,7 @@ lexescape(struct vars *v)
     }
     if (c > 0xff)
     {
-      /* out of range, so we handled one digit too much */
+                                                          
       v->now--;
       c >>= 3;
     }
@@ -922,22 +922,22 @@ lexescape(struct vars *v)
     break;
   default:
     assert(iscalpha(c));
-    FAILW(REG_EESCAPE); /* unknown alphabetic escape */
+    FAILW(REG_EESCAPE);                                
     break;
   }
   assert(NOTREACHED);
 }
 
-/*
- * lexdigits - slurp up digits and return chr value
- *
- * This does not account for overflow; callers should range-check the result
- * if maxlen is large enough to make that possible.
- */
-static chr /* chr value; errors signalled via ERR */
+   
+                                                    
+   
+                                                                             
+                                                    
+   
+static chr                                          
 lexdigits(struct vars *v, int base, int minlen, int maxlen)
 {
-  uchr n; /* unsigned to avoid overflow misbehavior */
+  uchr n;                                             
   int len;
   chr c;
   int d;
@@ -986,19 +986,19 @@ lexdigits(struct vars *v, int base, int minlen, int maxlen)
       d = 15;
       break;
     default:
-      v->now--; /* oops, not a digit at all */
+      v->now--;                               
       d = -1;
       break;
     }
 
     if (d >= base)
-    { /* not a plausible digit */
+    {                            
       v->now--;
       d = -1;
     }
     if (d < 0)
     {
-      break; /* NOTE BREAK OUT */
+      break;                     
     }
     n = n * ub + (uchr)d;
   }
@@ -1010,13 +1010,13 @@ lexdigits(struct vars *v, int base, int minlen, int maxlen)
   return (chr)n;
 }
 
-/*
- * brenext - get next BRE token
- *
- * This is much like EREs except for all the stupid backslashes and the
- * context-dependency of some things.
- */
-static int /* 1 normal, 0 failure */
+   
+                                
+   
+                                                                        
+                                      
+   
+static int                          
 brenext(struct vars *v, chr c)
 {
   switch (c)
@@ -1076,7 +1076,7 @@ brenext(struct vars *v, chr c)
     RETV(PLAIN, c);
     break;
   case CHR('\\'):
-    break; /* see below */
+    break;                
   default:
     RETV(PLAIN, c);
     break;
@@ -1137,9 +1137,9 @@ brenext(struct vars *v, chr c)
   return 0;
 }
 
-/*
- * skip - skip white space and comments in expanded form
- */
+   
+                                                         
+   
 static void
 skip(struct vars *v)
 {
@@ -1155,14 +1155,14 @@ skip(struct vars *v)
     }
     if (ATEOS() || *v->now != CHR('#'))
     {
-      break; /* NOTE BREAK OUT */
+      break;                     
     }
     assert(NEXT1('#'));
     while (!ATEOS() && *v->now != CHR('\n'))
     {
       v->now++;
     }
-    /* leave the newline to be picked up by the iscspace loop */
+                                                                
   }
 
   if (v->now != start)
@@ -1171,27 +1171,27 @@ skip(struct vars *v)
   }
 }
 
-/*
- * newline - return the chr for a newline
- *
- * This helps confine use of CHR to this source file.
- */
+   
+                                          
+   
+                                                      
+   
 static chr
 newline(void)
 {
   return CHR('\n');
 }
 
-/*
- * chrnamed - return the chr known by a given (chr string) name
- *
- * The code is a bit clumsy, but this routine gets only such specialized
- * use that it hardly matters.
- */
+   
+                                                                
+   
+                                                                         
+                               
+   
 static chr
-chrnamed(struct vars *v, const chr *startp, /* start of name */
-    const chr *endp,                        /* just past end of name */
-    chr lastresort)                         /* what to return if name lookup fails */
+chrnamed(struct vars *v, const chr *startp,                    
+    const chr *endp,                                                   
+    chr lastresort)                                                                  
 {
   chr c;
   int errsave;

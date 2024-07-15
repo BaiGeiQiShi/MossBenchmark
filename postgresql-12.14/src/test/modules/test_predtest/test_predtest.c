@@ -1,15 +1,15 @@
-/*--------------------------------------------------------------------------
- *
- * test_predtest.c
- *		Test correctness of optimizer's predicate proof logic.
- *
- * Copyright (c) 2018-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		src/test/modules/test_predtest/test_predtest.c
- *
- * -------------------------------------------------------------------------
- */
+                                                                             
+   
+                   
+                                                           
+   
+                                                                
+   
+                  
+                                                   
+   
+                                                                             
+   
 
 #include "postgres.h"
 
@@ -23,9 +23,9 @@
 
 PG_MODULE_MAGIC;
 
-/*
- * test_predtest(query text) returns record
- */
+   
+                                            
+   
 PG_FUNCTION_INFO_V1(test_predtest);
 
 Datum
@@ -47,18 +47,18 @@ test_predtest(PG_FUNCTION_ARGS)
   bool nulls[8];
   int i;
 
-  /* We use SPI to parse, plan, and execute the test query */
+                                                             
   if (SPI_connect() != SPI_OK_CONNECT)
   {
     elog(ERROR, "SPI_connect failed");
   }
 
-  /*
-   * First, plan and execute the query, and inspect the results.  To the
-   * extent that the query fully exercises the two expressions, this
-   * provides an experimental indication of whether implication or
-   * refutation holds.
-   */
+     
+                                                                         
+                                                                     
+                                                                   
+                       
+     
   spiplan = SPI_prepare(query_string, 0, NULL);
   if (spiplan == NULL)
   {
@@ -84,7 +84,7 @@ test_predtest(PG_FUNCTION_ARGS)
     bool isnull;
     char c1, c2;
 
-    /* Extract column values in a 3-way representation */
+                                                         
     dat = SPI_getbinval(tup, tupdesc, 1, &isnull);
     if (isnull)
     {
@@ -113,34 +113,34 @@ test_predtest(PG_FUNCTION_ARGS)
       c2 = 'f';
     }
 
-    /* Check for violations of various proof conditions */
+                                                          
 
-    /* strong implication: truth of c2 implies truth of c1 */
+                                                             
     if (c2 == 't' && c1 != 't')
     {
       s_i_holds = false;
     }
-    /* weak implication: non-falsity of c2 implies non-falsity of c1 */
+                                                                       
     if (c2 != 'f' && c1 == 'f')
     {
       w_i_holds = false;
     }
-    /* strong refutation: truth of c2 implies falsity of c1 */
+                                                              
     if (c2 == 't' && c1 != 'f')
     {
       s_r_holds = false;
     }
-    /* weak refutation: truth of c2 implies non-truth of c1 */
+                                                              
     if (c2 == 't' && c1 == 't')
     {
       w_r_holds = false;
     }
   }
 
-  /*
-   * Now, dig the clause querytrees out of the plan, and see what predtest.c
-   * does with them.
-   */
+     
+                                                                             
+                     
+     
   cplan = SPI_plan_get_cached_plan(spiplan);
 
   if (list_length(cplan->stmt_list) != 1)
@@ -157,20 +157,20 @@ test_predtest(PG_FUNCTION_ARGS)
   clause1 = castNode(TargetEntry, linitial(plan->targetlist))->expr;
   clause2 = castNode(TargetEntry, lsecond(plan->targetlist))->expr;
 
-  /*
-   * Because the clauses are in the SELECT list, preprocess_expression did
-   * not pass them through canonicalize_qual nor make_ands_implicit.
-   *
-   * We can't do canonicalize_qual here, since it's unclear whether the
-   * expressions ought to be treated as WHERE or CHECK clauses. Fortunately,
-   * useful test expressions wouldn't be affected by those transformations
-   * anyway.  We should do make_ands_implicit, though.
-   *
-   * Another way in which this does not exactly duplicate the normal usage
-   * of the proof functions is that they are often given qual clauses
-   * containing RestrictInfo nodes.  But since predtest.c just looks through
-   * those anyway, it seems OK to not worry about that point.
-   */
+     
+                                                                           
+                                                                     
+     
+                                                                        
+                                                                             
+                                                                           
+                                                       
+     
+                                                                           
+                                                                      
+                                                                             
+                                                              
+     
   clause1 = (Expr *)make_ands_implicit(clause1);
   clause2 = (Expr *)make_ands_implicit(clause2);
 
@@ -182,9 +182,9 @@ test_predtest(PG_FUNCTION_ARGS)
 
   weak_refuted_by = predicate_refuted_by((List *)clause1, (List *)clause2, true);
 
-  /*
-   * Issue warning if any proof is demonstrably incorrect.
-   */
+     
+                                                           
+     
   if (strong_implied_by && !s_i_holds)
   {
     elog(WARNING, "strong_implied_by result is incorrect");
@@ -202,9 +202,9 @@ test_predtest(PG_FUNCTION_ARGS)
     elog(WARNING, "weak_refuted_by result is incorrect");
   }
 
-  /*
-   * Clean up and return a record of the results.
-   */
+     
+                                                  
+     
   if (SPI_finish() != SPI_OK_FINISH)
   {
     elog(ERROR, "SPI_finish failed");

@@ -1,13 +1,13 @@
-/* ------------------------------------------------------------------------
- *
- * nodeCustom.c
- *		Routines to handle execution of custom scan node
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * ------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                     
+   
+                                                                         
+                                                                        
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/parallel.h"
@@ -33,69 +33,69 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
   Index scanrelid = cscan->scan.scanrelid;
   Index tlistvarno;
 
-  /*
-   * Allocate the CustomScanState object.  We let the custom scan provider
-   * do the palloc, in case it wants to make a larger object that embeds
-   * CustomScanState as the first field.  It must set the node tag and the
-   * methods field correctly at this time.  Other standard fields should be
-   * set to zero.
-   */
+     
+                                                                           
+                                                                         
+                                                                           
+                                                                            
+                  
+     
   css = castNode(CustomScanState, cscan->methods->CreateCustomScanState(cscan));
 
-  /* ensure flags is filled correctly */
+                                        
   css->flags = cscan->flags;
 
-  /* fill up fields of ScanState */
+                                   
   css->ss.ps.plan = &cscan->scan.plan;
   css->ss.ps.state = estate;
   css->ss.ps.ExecProcNode = ExecCustomScan;
 
-  /* create expression context for node */
+                                          
   ExecAssignExprContext(estate, &css->ss.ps);
 
-  /*
-   * open the scan relation, if any
-   */
+     
+                                    
+     
   if (scanrelid > 0)
   {
     scan_rel = ExecOpenScanRelation(estate, scanrelid, eflags);
     css->ss.ss_currentRelation = scan_rel;
   }
 
-  /*
-   * Determine the scan tuple type.  If the custom scan provider provided a
-   * targetlist describing the scan tuples, use that; else use base
-   * relation's rowtype.
-   */
+     
+                                                                            
+                                                                    
+                         
+     
   if (cscan->custom_scan_tlist != NIL || scan_rel == NULL)
   {
     TupleDesc scan_tupdesc;
 
     scan_tupdesc = ExecTypeFromTL(cscan->custom_scan_tlist);
     ExecInitScanTupleSlot(estate, &css->ss, scan_tupdesc, &TTSOpsVirtual);
-    /* Node's targetlist will contain Vars with varno = INDEX_VAR */
+                                                                    
     tlistvarno = INDEX_VAR;
   }
   else
   {
     ExecInitScanTupleSlot(estate, &css->ss, RelationGetDescr(scan_rel), &TTSOpsVirtual);
-    /* Node's targetlist will contain Vars with varno = scanrelid */
+                                                                    
     tlistvarno = scanrelid;
   }
 
-  /*
-   * Initialize result slot, type and projection.
-   */
+     
+                                                  
+     
   ExecInitResultTupleSlotTL(&css->ss.ps, &TTSOpsVirtual);
   ExecAssignScanProjectionInfoWithVarno(&css->ss, tlistvarno);
 
-  /* initialize child expressions */
+                                    
   css->ss.ps.qual = ExecInitQual(cscan->scan.plan.qual, (PlanState *)css);
 
-  /*
-   * The callback of custom-scan provider applies the final initialization
-   * of the custom-scan-state node according to its logic.
-   */
+     
+                                                                           
+                                                           
+     
   css->methods->BeginCustomScan(css, estate, eflags);
 
   return css;
@@ -118,10 +118,10 @@ ExecEndCustomScan(CustomScanState *node)
   Assert(node->methods->EndCustomScan != NULL);
   node->methods->EndCustomScan(node);
 
-  /* Free the exprcontext */
+                            
   ExecFreeExprContext(&node->ss.ps);
 
-  /* Clean out the tuple table */
+                                 
   ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
   ExecClearTuple(node->ss.ss_ScanTupleSlot);
 }

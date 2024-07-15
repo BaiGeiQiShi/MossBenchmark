@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "twophase.pgc"
@@ -15,7 +15,7 @@
 
 #line 5 "twophase.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 7 "twophase.pgc"
 
 int

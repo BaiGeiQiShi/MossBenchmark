@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "char_array.pgc"
@@ -21,23 +21,23 @@ warn(void)
   fprintf(stderr, "Warning: At least one column was truncated\n");
 }
 
-/* Compatible handling of char array to retrieve varchar field to char array
-   should be fixed-length, blank-padded, then null-terminated.
-   Conforms to the ANSI Fixed Character type. */
+                                                                             
+                                                               
+                                                
 
 int
 main()
 {
 
-  /* exec sql whenever sql_warning  do warn ( ) ; */
+                                                    
 #line 18 "char_array.pgc"
 
-  /* exec sql whenever sqlerror  stop ; */
+                                          
 #line 19 "char_array.pgc"
 
   const char *ppppp = "XXXXX";
   int loopcount;
-  /* exec sql begin declare section */
+                                      
 
 #line 24 "char_array.pgc"
   char shortstr[5];
@@ -50,7 +50,7 @@ main()
 
 #line 27 "char_array.pgc"
   short bigstr_ind = 0;
-/* exec sql end declare section */
+                                  
 #line 28 "char_array.pgc"
 
   ECPGdebug(1, stderr);
@@ -190,7 +190,7 @@ main()
   }
 #line 39 "char_array.pgc"
 
-  /* declare C cursor for select strval , strval from strdbase */
+                                                                 
 #line 41 "char_array.pgc"
 
   {
@@ -210,7 +210,7 @@ main()
   }
 #line 42 "char_array.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 44 "char_array.pgc"
 
   printf("Full Str.  :  Short  Ind.\n");

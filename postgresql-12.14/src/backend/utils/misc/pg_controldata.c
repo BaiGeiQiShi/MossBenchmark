@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * pg_controldata.c
- *
- * Routines to expose the contents of the control data file via
- * a set of SQL functions.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/misc/pg_controldata.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+   
+                                                                
+                           
+   
+                                                                         
+                                                                        
+   
+                  
+                                             
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -38,10 +38,10 @@ pg_control_system(PG_FUNCTION_ARGS)
   ControlFileData *ControlFile;
   bool crc_ok;
 
-  /*
-   * Construct a tuple descriptor for the result row.  This must match this
-   * function's pg_proc entry!
-   */
+     
+                                                                            
+                               
+     
   tupdesc = CreateTemplateTupleDesc(4);
   TupleDescInitEntry(tupdesc, (AttrNumber)1, "pg_control_version", INT4OID, -1, 0);
   TupleDescInitEntry(tupdesc, (AttrNumber)2, "catalog_version_no", INT4OID, -1, 0);
@@ -49,7 +49,7 @@ pg_control_system(PG_FUNCTION_ARGS)
   TupleDescInitEntry(tupdesc, (AttrNumber)4, "pg_control_last_modified", TIMESTAMPTZOID, -1, 0);
   tupdesc = BlessTupleDesc(tupdesc);
 
-  /* read the control file */
+                             
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {
@@ -85,10 +85,10 @@ pg_control_checkpoint(PG_FUNCTION_ARGS)
   char xlogfilename[MAXFNAMELEN];
   bool crc_ok;
 
-  /*
-   * Construct a tuple descriptor for the result row.  This must match this
-   * function's pg_proc entry!
-   */
+     
+                                                                            
+                               
+     
   tupdesc = CreateTemplateTupleDesc(18);
   TupleDescInitEntry(tupdesc, (AttrNumber)1, "checkpoint_lsn", LSNOID, -1, 0);
   TupleDescInitEntry(tupdesc, (AttrNumber)2, "redo_lsn", LSNOID, -1, 0);
@@ -110,21 +110,21 @@ pg_control_checkpoint(PG_FUNCTION_ARGS)
   TupleDescInitEntry(tupdesc, (AttrNumber)18, "checkpoint_time", TIMESTAMPTZOID, -1, 0);
   tupdesc = BlessTupleDesc(tupdesc);
 
-  /* Read the control file. */
+                              
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {
     ereport(ERROR, (errmsg("calculated CRC checksum does not match value stored in file")));
   }
 
-  /*
-   * Calculate name of the WAL file containing the latest checkpoint's REDO
-   * start point.
-   */
+     
+                                                                            
+                  
+     
   XLByteToSeg(ControlFile->checkPointCopy.redo, segno, wal_segment_size);
   XLogFileName(xlogfilename, ControlFile->checkPointCopy.ThisTimeLineID, segno, wal_segment_size);
 
-  /* Populate the values and null arrays */
+                                           
   values[0] = LSNGetDatum(ControlFile->checkPoint);
   nulls[0] = false;
 
@@ -194,10 +194,10 @@ pg_control_recovery(PG_FUNCTION_ARGS)
   ControlFileData *ControlFile;
   bool crc_ok;
 
-  /*
-   * Construct a tuple descriptor for the result row.  This must match this
-   * function's pg_proc entry!
-   */
+     
+                                                                            
+                               
+     
   tupdesc = CreateTemplateTupleDesc(5);
   TupleDescInitEntry(tupdesc, (AttrNumber)1, "min_recovery_end_lsn", LSNOID, -1, 0);
   TupleDescInitEntry(tupdesc, (AttrNumber)2, "min_recovery_end_timeline", INT4OID, -1, 0);
@@ -206,7 +206,7 @@ pg_control_recovery(PG_FUNCTION_ARGS)
   TupleDescInitEntry(tupdesc, (AttrNumber)5, "end_of_backup_record_required", BOOLOID, -1, 0);
   tupdesc = BlessTupleDesc(tupdesc);
 
-  /* read the control file */
+                             
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {
@@ -243,10 +243,10 @@ pg_control_init(PG_FUNCTION_ARGS)
   ControlFileData *ControlFile;
   bool crc_ok;
 
-  /*
-   * Construct a tuple descriptor for the result row.  This must match this
-   * function's pg_proc entry!
-   */
+     
+                                                                            
+                               
+     
   tupdesc = CreateTemplateTupleDesc(12);
   TupleDescInitEntry(tupdesc, (AttrNumber)1, "max_data_alignment", INT4OID, -1, 0);
   TupleDescInitEntry(tupdesc, (AttrNumber)2, "database_block_size", INT4OID, -1, 0);
@@ -262,7 +262,7 @@ pg_control_init(PG_FUNCTION_ARGS)
   TupleDescInitEntry(tupdesc, (AttrNumber)12, "data_page_checksum_version", INT4OID, -1, 0);
   tupdesc = BlessTupleDesc(tupdesc);
 
-  /* read the control file */
+                             
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {

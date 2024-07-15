@@ -27,13 +27,13 @@ lose_s(symbol *p)
   free((char *)p - HEAD);
 }
 
-/*
-   new_p = skip_utf8(p, c, lb, l, n); skips n characters forwards from p + c
-   if n +ve, or n characters backwards from p + c - 1 if n -ve. new_p is the new
-   position, or -1 on failure.
-
-   -- used to implement hop and next in the utf8 case.
-*/
+   
+                                                                             
+                                                                                 
+                               
+ 
+                                                       
+  
 
 extern int
 skip_utf8(const symbol *p, int c, int lb, int l, int n)
@@ -49,7 +49,7 @@ skip_utf8(const symbol *p, int c, int lb, int l, int n)
       }
       b = p[c++];
       if (b >= 0xC0)
-      { /* 1100 0000 */
+      {                
         while (c < l)
         {
           b = p[c];
@@ -57,7 +57,7 @@ skip_utf8(const symbol *p, int c, int lb, int l, int n)
           {
             break;
           }
-          /* break unless b is 10------ */
+                                          
           c++;
         }
       }
@@ -73,13 +73,13 @@ skip_utf8(const symbol *p, int c, int lb, int l, int n)
       }
       b = p[--c];
       if (b >= 0x80)
-      { /* 1000 0000 */
+      {                
         while (c > lb)
         {
           b = p[c];
           if (b >= 0xC0)
           {
-            break; /* 1100 0000 */
+            break;                
           }
           c--;
         }
@@ -89,7 +89,7 @@ skip_utf8(const symbol *p, int c, int lb, int l, int n)
   return c;
 }
 
-/* Code for character groupings: utf8 cases */
+                                              
 
 static int
 get_utf8(const symbol *p, int c, int l, int *slot)
@@ -101,13 +101,13 @@ get_utf8(const symbol *p, int c, int l, int *slot)
   }
   b0 = p[c++];
   if (b0 < 0xC0 || c == l)
-  { /* 1100 0000 */
+  {                
     *slot = b0;
     return 1;
   }
   b1 = p[c++];
   if (b0 < 0xE0 || c == l)
-  { /* 1110 0000 */
+  {                
     *slot = (b0 & 0x1F) << 6 | (b1 & 0x3F);
     return 2;
   }
@@ -125,13 +125,13 @@ get_b_utf8(const symbol *p, int c, int lb, int *slot)
   }
   b0 = p[--c];
   if (b0 < 0x80 || c == lb)
-  { /* 1000 0000 */
+  {                
     *slot = b0;
     return 1;
   }
   b1 = p[--c];
   if (b1 >= 0xC0 || c == lb)
-  { /* 1100 0000 */
+  {                
     *slot = (b1 & 0x1F) << 6 | (b0 & 0x3F);
     return 2;
   }
@@ -219,7 +219,7 @@ out_grouping_b_U(struct SN_env *z, const unsigned char *s, int min, int max, int
   return 0;
 }
 
-/* Code for character groupings: non-utf8 cases */
+                                                  
 
 extern int
 in_grouping(struct SN_env *z, const unsigned char *s, int min, int max, int repeat)
@@ -357,7 +357,7 @@ find_among(struct SN_env *z, const struct among *v, int v_size)
   {
     int k = i + ((j - i) >> 1);
     int diff = 0;
-    int common = common_i < common_j ? common_i : common_j; /* smaller */
+    int common = common_i < common_j ? common_i : common_j;              
     w = v + k;
     {
       int i2;
@@ -390,16 +390,16 @@ find_among(struct SN_env *z, const struct among *v, int v_size)
     {
       if (i > 0)
       {
-        break; /* v->s has been inspected */
+        break;                              
       }
       if (j == i)
       {
-        break; /* only one item in v */
+        break;                         
       }
 
-      /* - but now we need to go round once more to get
-         v->s inspected. This looks messy, but is actually
-         the optimal approach.  */
+                                                        
+                                                           
+                                  
 
       if (first_key_inspected)
       {
@@ -435,7 +435,7 @@ find_among(struct SN_env *z, const struct among *v, int v_size)
   }
 }
 
-/* find_among_b is for backwards processing. Same comments apply */
+                                                                   
 
 extern int
 find_among_b(struct SN_env *z, const struct among *v, int v_size)
@@ -532,9 +532,9 @@ find_among_b(struct SN_env *z, const struct among *v, int v_size)
   }
 }
 
-/* Increase the size of the buffer pointed to by p to at least n symbols.
- * If insufficient memory, returns NULL and frees the old buffer.
- */
+                                                                          
+                                                                  
+   
 static symbol *
 increase_size(symbol *p, int n)
 {
@@ -551,11 +551,11 @@ increase_size(symbol *p, int n)
   return q;
 }
 
-/* to replace symbols between c_bra and c_ket in z->p by the
-   s_size symbols at s.
-   Returns 0 on success, -1 on error.
-   Also, frees z->p (and sets it to NULL) on error.
-*/
+                                                             
+                        
+                                      
+                                                    
+  
 extern int
 replace_s(struct SN_env *z, int c_bra, int c_ket, int s_size, const symbol *s, int *adjptr)
 {
@@ -608,7 +608,7 @@ static int
 slice_check(struct SN_env *z)
 {
 
-  if (z->bra < 0 || z->bra > z->ket || z->ket > z->l || z->p == NULL || z->l > SIZE(z->p)) /* this line could be removed */
+  if (z->bra < 0 || z->bra > z->ket || z->ket > z->l || z->p == NULL || z->l > SIZE(z->p))                                 
   {
 #if 0
         fprintf(stderr, "faulty slice operation:\n");
@@ -727,7 +727,7 @@ len_utf8(const symbol *p)
 extern void debug(struct SN_env * z, int number, int line_count) {
     int i;
     int limit = SIZE(z->p);
-    /*if (number >= 0) printf("%3d (line %4d): '", number, line_count);*/
+                                                                         
     if (number >= 0) printf("%3d (line %4d): [%d]'", number, line_count,limit);
     for (i = 0; i <= limit; i++) {
         if (z->lb == i) printf("{");

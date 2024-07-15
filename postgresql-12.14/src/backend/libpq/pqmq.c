@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * pqmq.c
- *	  Use the frontend/backend protocol for communication over a shm_mq
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *	src/backend/libpq/pqmq.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                                                       
+   
+                                                                         
+                                                                        
+   
+                            
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -47,10 +47,10 @@ mq_endcopyout(bool errorAbort);
 
 static const PQcommMethods PqCommMqMethods = {mq_comm_reset, mq_flush, mq_flush_if_writable, mq_is_send_pending, mq_putmessage, mq_putmessage_noblock, mq_startcopyout, mq_endcopyout};
 
-/*
- * Arrange to redirect frontend/backend protocol messages to a shared-memory
- * message queue.
- */
+   
+                                                                             
+                  
+   
 void
 pq_redirect_to_shm_mq(dsm_segment *seg, shm_mq_handle *mqh)
 {
@@ -61,10 +61,10 @@ pq_redirect_to_shm_mq(dsm_segment *seg, shm_mq_handle *mqh)
   on_dsm_detach(seg, pq_cleanup_redirect_to_shm_mq, (Datum)0);
 }
 
-/*
- * When the DSM that contains our shm_mq goes away, we need to stop sending
- * messages to it.
- */
+   
+                                                                            
+                   
+   
 static void
 pq_cleanup_redirect_to_shm_mq(dsm_segment *seg, Datum arg)
 {
@@ -72,10 +72,10 @@ pq_cleanup_redirect_to_shm_mq(dsm_segment *seg, Datum arg)
   whereToSendOutput = DestNone;
 }
 
-/*
- * Arrange to SendProcSignal() to the parallel master each time we transmit
- * message data via the shm_mq.
- */
+   
+                                                                            
+                                
+   
 void
 pq_set_parallel_master(pid_t pid, BackendId backend_id)
 {
@@ -87,49 +87,49 @@ pq_set_parallel_master(pid_t pid, BackendId backend_id)
 static void
 mq_comm_reset(void)
 {
-  /* Nothing to do. */
+                      
 }
 
 static int
 mq_flush(void)
 {
-  /* Nothing to do. */
+                      
   return 0;
 }
 
 static int
 mq_flush_if_writable(void)
 {
-  /* Nothing to do. */
+                      
   return 0;
 }
 
 static bool
 mq_is_send_pending(void)
 {
-  /* There's never anything pending. */
+                                       
   return 0;
 }
 
-/*
- * Transmit a libpq protocol message to the shared memory message queue
- * selected via pq_mq_handle.  We don't include a length word, because the
- * receiver will know the length of the message from shm_mq_receive().
- */
+   
+                                                                        
+                                                                           
+                                                                       
+   
 static int
 mq_putmessage(char msgtype, const char *s, size_t len)
 {
   shm_mq_iovec iov[2];
   shm_mq_result result;
 
-  /*
-   * If we're sending a message, and we have to wait because the queue is
-   * full, and then we get interrupted, and that interrupt results in trying
-   * to send another message, we respond by detaching the queue.  There's no
-   * way to return to the original context, but even if there were, just
-   * queueing the message would amount to indefinitely postponing the
-   * response to the interrupt.  So we do this instead.
-   */
+     
+                                                                          
+                                                                             
+                                                                             
+                                                                         
+                                                                      
+                                                        
+     
   if (pq_mq_busy)
   {
     if (pq_mq_handle != NULL)
@@ -140,12 +140,12 @@ mq_putmessage(char msgtype, const char *s, size_t len)
     return EOF;
   }
 
-  /*
-   * If the message queue is already gone, just ignore the message. This
-   * doesn't necessarily indicate a problem; for example, DEBUG messages can
-   * be generated late in the shutdown sequence, after all DSMs have already
-   * been detached.
-   */
+     
+                                                                         
+                                                                             
+                                                                             
+                    
+     
   if (pq_mq_handle == NULL)
   {
     return 0;
@@ -192,41 +192,41 @@ mq_putmessage(char msgtype, const char *s, size_t len)
 static void
 mq_putmessage_noblock(char msgtype, const char *s, size_t len)
 {
-  /*
-   * While the shm_mq machinery does support sending a message in
-   * non-blocking mode, there's currently no way to try sending beginning to
-   * send the message that doesn't also commit us to completing the
-   * transmission.  This could be improved in the future, but for now we
-   * don't need it.
-   */
+     
+                                                                  
+                                                                             
+                                                                    
+                                                                         
+                    
+     
   elog(ERROR, "not currently supported");
 }
 
 static void
 mq_startcopyout(void)
 {
-  /* Nothing to do. */
+                      
 }
 
 static void
 mq_endcopyout(bool errorAbort)
 {
-  /* Nothing to do. */
+                      
 }
 
-/*
- * Parse an ErrorResponse or NoticeResponse payload and populate an ErrorData
- * structure with the results.
- */
+   
+                                                                              
+                               
+   
 void
 pq_parse_errornotice(StringInfo msg, ErrorData *edata)
 {
-  /* Initialize edata with reasonable defaults. */
+                                                  
   MemSet(edata, 0, sizeof(ErrorData));
   edata->elevel = ERROR;
   edata->assoc_context = CurrentMemoryContext;
 
-  /* Loop over fields and extract each one. */
+                                              
   for (;;)
   {
     char code = pq_getmsgbyte(msg);
@@ -242,24 +242,24 @@ pq_parse_errornotice(StringInfo msg, ErrorData *edata)
     switch (code)
     {
     case PG_DIAG_SEVERITY:
-      /* ignore, trusting we'll get a nonlocalized version */
+                                                             
       break;
     case PG_DIAG_SEVERITY_NONLOCALIZED:
       if (strcmp(value, "DEBUG") == 0)
       {
-        /*
-         * We can't reconstruct the exact DEBUG level, but
-         * presumably it was >= client_min_messages, so select
-         * DEBUG1 to ensure we'll pass it on to the client.
-         */
+           
+                                                           
+                                                               
+                                                            
+           
         edata->elevel = DEBUG1;
       }
       else if (strcmp(value, "LOG") == 0)
       {
-        /*
-         * It can't be LOG_SERVER_ONLY, or the worker wouldn't
-         * have sent it to us; so LOG is the correct value.
-         */
+           
+                                                               
+                                                            
+           
         edata->elevel = LOG;
       }
       else if (strcmp(value, "INFO") == 0)

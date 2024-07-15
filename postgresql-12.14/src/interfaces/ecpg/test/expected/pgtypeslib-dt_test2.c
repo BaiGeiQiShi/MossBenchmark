@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "dt_test2.pgc"
@@ -19,18 +19,18 @@
 #line 8 "dt_test2.pgc"
 
 char *dates[] = {"19990108foobar", "19990108 foobar", "1999-01-08 foobar", "January 8, 1999", "1999-01-08", "1/8/1999", "1/18/1999", "01/02/03", "1999-Jan-08", "Jan-08-1999", "08-Jan-1999", "99-Jan-08", "08-Jan-99", "08-Jan-06", "Jan-08-99", "19990108", "990108", "1999.008", "J2451187", "January 8, 99 BC",
-    /*
-     * Maximize space usage in ParseDateTime() with 25
-     * (MAXDATEFIELDS) fields and 128 (MAXDATELEN) total length.
-     */
+       
+                                                       
+                                                                 
+       
     "........................Xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    /* 26 fields */
+                   
     ".........................aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     NULL};
 
-/* do not conflict with libc "times" symbol */
+                                              
 static char *times[] = {"0:04", "1:59 PDT", "13:24:40 -8:00", "13:24:40.495+3", "13:24:40.123456123+3", NULL};
 
 char *intervals[] = {"1 minute", "1 12:59:10", "2 day 12 hour 59 minute 10 second", "1 days 12 hrs 59 mins 10 secs", "1 days 1 hours 1 minutes 1 seconds", "1 year 59 mins", "1 year 59 mins foobar", NULL};
@@ -38,7 +38,7 @@ char *intervals[] = {"1 minute", "1 12:59:10", "2 day 12 hour 59 minute 10 secon
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 62 "dt_test2.pgc"
   date date1;
@@ -54,7 +54,7 @@ main(void)
 
 #line 66 "dt_test2.pgc"
   date *dc;
-/* exec sql end declare section */
+                                  
 #line 67 "dt_test2.pgc"
 
   int i, j;

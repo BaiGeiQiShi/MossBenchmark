@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * ts_parse.c
- *		main parse functions for tsearch
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/ts_parse.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                     
+   
+                                                                         
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -19,9 +19,9 @@
 
 #define IGNORE_LONGLEXEME 1
 
-/*
- * Lexize subsystem
- */
+   
+                    
+   
 
 typedef struct ParsedLex
 {
@@ -44,13 +44,13 @@ typedef struct
   int posDict;
   DictSubState dictState;
   ParsedLex *curSub;
-  ListParsedLex towork; /* current list to work */
-  ListParsedLex waste;  /* list of lexemes that already lexized */
+  ListParsedLex towork;                           
+  ListParsedLex waste;                                            
 
-  /*
-   * fields to store last variant to lexize (basically, thesaurus or similar
-   * to, which wants	several lexemes
-   */
+     
+                                                                             
+                                     
+     
 
   ParsedLex *lastRes;
   TSLexeme *tmpRes;
@@ -185,10 +185,10 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
   if (ld->curDictId == InvalidOid)
   {
-    /*
-     * usual mode: dictionary wants only one word, but we should keep in
-     * mind that we should go through all stack
-     */
+       
+                                                                         
+                                                
+       
 
     while (ld->towork.head)
     {
@@ -200,7 +200,7 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
       if (curVal->type == 0 || curVal->type >= ld->cfg->lenmap || map->len == 0)
       {
-        /* skip this type of lexeme */
+                                      
         RemoveHead(ld);
         continue;
       }
@@ -215,10 +215,10 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
         if (ld->dictState.getnext)
         {
-          /*
-           * dictionary wants next word, so setup and store current
-           * position and go to multiword mode
-           */
+             
+                                                                    
+                                               
+             
 
           ld->curDictId = DatumGetObjectId(map->dictIds[i]);
           ld->posDict = i + 1;
@@ -230,7 +230,7 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
           return LexizeExec(ld, correspondLexem);
         }
 
-        if (!res) /* dictionary doesn't know this lexeme */
+        if (!res)                                          
         {
           continue;
         }
@@ -251,12 +251,12 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
     }
   }
   else
-  { /* curDictId is valid */
+  {                         
     dict = lookup_ts_dictionary_cache(ld->curDictId);
 
-    /*
-     * Dictionary ld->curDictId asks  us about following words
-     */
+       
+                                                               
+       
 
     while (ld->curSub)
     {
@@ -270,16 +270,16 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
         if (curVal->type >= ld->cfg->lenmap || map->len == 0)
         {
-          /* skip this type of lexeme */
+                                        
           ld->curSub = curVal->next;
           continue;
         }
 
-        /*
-         * We should be sure that current type of lexeme is recognized
-         * by our dictionary: we just check is it exist in list of
-         * dictionaries ?
-         */
+           
+                                                                       
+                                                                   
+                          
+           
         for (i = 0; i < map->len && !dictExists; i++)
         {
           if (ld->curDictId == DatumGetObjectId(map->dictIds[i]))
@@ -290,10 +290,10 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
         if (!dictExists)
         {
-          /*
-           * Dictionary can't work with current tpe of lexeme,
-           * return to basic mode and redo all stored lexemes
-           */
+             
+                                                               
+                                                              
+             
           ld->curDictId = InvalidOid;
           return LexizeExec(ld, correspondLexem);
         }
@@ -306,7 +306,7 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
       if (ld->dictState.getnext)
       {
-        /* Dictionary wants one more */
+                                       
         ld->curSub = curVal->next;
         if (res)
         {
@@ -317,11 +317,11 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
       if (res || ld->tmpRes)
       {
-        /*
-         * Dictionary normalizes lexemes, so we remove from stack all
-         * used lexemes, return to basic mode and redo end of stack
-         * (if it exists)
-         */
+           
+                                                                      
+                                                                    
+                          
+           
         if (res)
         {
           moveToWaste(ld, ld->curSub);
@@ -332,7 +332,7 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
           moveToWaste(ld, ld->lastRes);
         }
 
-        /* reset to initial state */
+                                    
         ld->curDictId = InvalidOid;
         ld->posDict = 0;
         ld->lastRes = NULL;
@@ -341,10 +341,10 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
         return res;
       }
 
-      /*
-       * Dict don't want next lexem and didn't recognize anything, redo
-       * from ld->towork.head
-       */
+         
+                                                                        
+                              
+         
       ld->curDictId = InvalidOid;
       return LexizeExec(ld, correspondLexem);
     }
@@ -354,11 +354,11 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
   return NULL;
 }
 
-/*
- * Parse string and lexize words.
- *
- * prs will be filled in.
- */
+   
+                                  
+   
+                          
+   
 void
 parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
 {
@@ -397,7 +397,7 @@ parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
     {
       TSLexeme *ptr = norms;
 
-      prs->pos++; /* set pos */
+      prs->pos++;              
 
       while (ptr->lexeme)
       {
@@ -427,11 +427,11 @@ parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
   FunctionCall1(&(prsobj->prsend), PointerGetDatum(prsdata));
 }
 
-/*
- * Headline framework
- */
+   
+                      
+   
 
-/* Add a word to prs->words[] */
+                                
 static void
 hladdword(HeadlineParsedText *prs, char *buf, int buflen, int type)
 {
@@ -448,14 +448,14 @@ hladdword(HeadlineParsedText *prs, char *buf, int buflen, int type)
   prs->curwords++;
 }
 
-/*
- * Add pos and matching-query-item data to the just-added word.
- * Here, buf/buflen represent a processed lexeme, not raw token text.
- *
- * If the query contains more than one matching item, we replicate
- * the last-added word so that each item can be pointed to.  The
- * duplicate entries are marked with repeated = 1.
- */
+   
+                                                                
+                                                                      
+   
+                                                                   
+                                                                 
+                                                   
+   
 static void
 hlfinditem(HeadlineParsedText *prs, TSQuery query, int32 pos, char *buf, int buflen)
 {
@@ -591,9 +591,9 @@ hlparsetext(Oid cfgId, HeadlineParsedText *prs, TSQuery query, char *buf, int bu
   FunctionCall1(&(prsobj->prsend), PointerGetDatum(prsdata));
 }
 
-/*
- * Generate the headline, as a text object, from HeadlineParsedText.
- */
+   
+                                                                     
+   
 text *
 generateHeadline(HeadlineParsedText *prs)
 {
@@ -624,10 +624,10 @@ generateHeadline(HeadlineParsedText *prs)
       if (!infrag)
       {
 
-        /* start of a new fragment */
+                                     
         infrag = 1;
         numfragments++;
-        /* add a fragment delimiter if this is after the first one */
+                                                                     
         if (numfragments > 1)
         {
           memcpy(ptr, prs->fragdelim, prs->fragdelimlen);

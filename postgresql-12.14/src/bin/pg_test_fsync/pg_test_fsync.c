@@ -1,7 +1,7 @@
-/*
- *	pg_test_fsync.c
- *		tests all supported fsync() methods
- */
+   
+                   
+                                        
+   
 
 #include "postgres_fe.h"
 
@@ -16,21 +16,21 @@
 #include "access/xlogdefs.h"
 #include "common/logging.h"
 
-/*
- * put the temp files in the local directory
- * unless the user specifies otherwise
- */
+   
+                                             
+                                       
+   
 #define FSYNC_FILENAME "./pg_test_fsync.out"
 
 #define XLOG_BLCKSZ_K (XLOG_BLCKSZ / 1024)
 
 #define LABEL_FORMAT "        %-30s"
 #define NA_FORMAT "%21s\n"
-/* translator: maintain alignment with NA_FORMAT */
+                                                   
 #define OPS_FORMAT gettext_noop("%13.3f ops/sec  %6.0f usecs/op\n")
 #define USECS_SEC 1000000
 
-/* These are macros to avoid timing the function call overhead. */
+                                                                  
 #ifndef WIN32
 #define START_TIMER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
@@ -40,7 +40,7 @@
     gettimeofday(&start_t, NULL);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 #else
-/* WIN32 doesn't support alarm, so we create a thread and sleep there */
+                                                                        
 #define START_TIMER                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -119,14 +119,14 @@ main(int argc, char *argv[])
 
   handle_args(argc, argv);
 
-  /* Prevent leaving behind the test file */
+                                            
   pqsignal(SIGINT, signal_cleanup);
   pqsignal(SIGTERM, signal_cleanup);
 #ifndef WIN32
   pqsignal(SIGALRM, process_alarm);
 #endif
 #ifdef SIGHUP
-  /* Not defined on win32 */
+                            
   pqsignal(SIGHUP, signal_cleanup);
 #endif
 
@@ -134,10 +134,10 @@ main(int argc, char *argv[])
 
   test_open();
 
-  /* Test using 1 XLOG_BLCKSZ write */
+                                      
   test_sync(1);
 
-  /* Test using 2 XLOG_BLCKSZ writes */
+                                       
   test_sync(2);
 
   test_open_syncs();
@@ -156,8 +156,8 @@ handle_args(int argc, char *argv[])
 {
   static struct option long_options[] = {{"filename", required_argument, NULL, 'f'}, {"secs-per-test", required_argument, NULL, 's'}, {NULL, 0, NULL, 0}};
 
-  int option;       /* Command line option */
-  int optindex = 0; /* used by getopt_long */
+  int option;                                
+  int optindex = 0;                          
 
   if (argc > 1)
   {
@@ -212,7 +212,7 @@ prepare_buf(void)
 {
   int ops;
 
-  /* write random data into buffer */
+                                     
   for (ops = 0; ops < DEFAULT_XLOG_SEG_SIZE; ops++)
   {
     full_buf[ops] = random();
@@ -226,9 +226,9 @@ test_open(void)
 {
   int tmpfile;
 
-  /*
-   * test if we can open the target file
-   */
+     
+                                         
+     
   if ((tmpfile = open(filename, O_RDWR | O_CREAT | PG_BINARY, S_IRUSR | S_IWUSR)) == -1)
   {
     die("could not open output file");
@@ -239,7 +239,7 @@ test_open(void)
     die("write failed");
   }
 
-  /* fsync now so that dirty buffers don't skew later tests */
+                                                              
   if (fsync(tmpfile) != 0)
   {
     die("fsync failed");
@@ -264,9 +264,9 @@ test_sync(int writes_per_op)
   }
   printf(_("(in wal_sync_method preference order, except fdatasync is Linux's default)\n"));
 
-  /*
-   * Test open_datasync if available
-   */
+     
+                                     
+     
   printf(LABEL_FORMAT, "open_datasync");
   fflush(stdout);
 
@@ -300,9 +300,9 @@ test_sync(int writes_per_op)
   printf(NA_FORMAT, _("n/a"));
 #endif
 
-  /*
-   * Test fdatasync if available
-   */
+     
+                                 
+     
   printf(LABEL_FORMAT, "fdatasync");
   fflush(stdout);
 
@@ -333,9 +333,9 @@ test_sync(int writes_per_op)
   printf(NA_FORMAT, _("n/a"));
 #endif
 
-  /*
-   * Test fsync
-   */
+     
+                
+     
   printf(LABEL_FORMAT, "fsync");
   fflush(stdout);
 
@@ -365,9 +365,9 @@ test_sync(int writes_per_op)
   STOP_TIMER;
   close(tmpfile);
 
-  /*
-   * If fsync_writethrough is available, test as well
-   */
+     
+                                                      
+     
   printf(LABEL_FORMAT, "fsync_writethrough");
   fflush(stdout);
 
@@ -401,9 +401,9 @@ test_sync(int writes_per_op)
   printf(NA_FORMAT, _("n/a"));
 #endif
 
-  /*
-   * Test open_sync if available
-   */
+     
+                                 
+     
   printf(LABEL_FORMAT, "open_sync");
   fflush(stdout);
 
@@ -423,12 +423,12 @@ test_sync(int writes_per_op)
         if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
         {
 
-          /*
-           * This can generate write failures if the filesystem has
-           * a large block size, e.g. 4k, and there is no support
-           * for O_DIRECT writes smaller than the file system block
-           * size, e.g. XFS.
-           */
+             
+                                                                    
+                                                                  
+                                                                    
+                             
+             
           die("write failed");
         }
       }
@@ -465,9 +465,9 @@ test_open_syncs(void)
   test_open_sync(_("16 *  1kB open_sync writes"), 1);
 }
 
-/*
- * Test open_sync with different size files
- */
+   
+                                            
+   
 static void
 test_open_sync(const char *msg, int writes_size)
 {
@@ -513,20 +513,20 @@ test_file_descriptor_sync(void)
 {
   int tmpfile, ops;
 
-  /*
-   * Test whether fsync can sync data written on a different descriptor for
-   * the same file.  This checks the efficiency of multi-process fsyncs
-   * against the same file. Possibly this should be done with writethrough
-   * on platforms which support it.
-   */
+     
+                                                                            
+                                                                        
+                                                                           
+                                    
+     
   printf(_("\nTest if fsync on non-write file descriptor is honored:\n"));
   printf(_("(If the times are similar, fsync() can sync data written on a different\n"
            "descriptor.)\n"));
 
-  /*
-   * first write, fsync and close, which is the normal behavior without
-   * multiple descriptors
-   */
+     
+                                                                        
+                          
+     
   printf(LABEL_FORMAT, "write, fsync, close");
   fflush(stdout);
 
@@ -547,10 +547,10 @@ test_file_descriptor_sync(void)
     }
     close(tmpfile);
 
-    /*
-     * open and close the file again to be consistent with the following
-     * test
-     */
+       
+                                                                         
+            
+       
     if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
     {
       die("could not open output file");
@@ -559,10 +559,10 @@ test_file_descriptor_sync(void)
   }
   STOP_TIMER;
 
-  /*
-   * Now open, write, close, open again and fsync This simulates processes
-   * fsyncing each other's writes.
-   */
+     
+                                                                           
+                                   
+     
   printf(LABEL_FORMAT, "write, close, fsync");
   fflush(stdout);
 
@@ -578,7 +578,7 @@ test_file_descriptor_sync(void)
       die("write failed");
     }
     close(tmpfile);
-    /* reopen file */
+                     
     if ((tmpfile = open(filename, O_RDWR | PG_BINARY, 0)) == -1)
     {
       die("could not open output file");
@@ -597,9 +597,9 @@ test_non_sync(void)
 {
   int tmpfile, ops;
 
-  /*
-   * Test a simple write without fsync
-   */
+     
+                                       
+     
   printf(_("\nNon-sync'ed %dkB writes:\n"), XLOG_BLCKSZ_K);
   printf(LABEL_FORMAT, "write");
   fflush(stdout);
@@ -623,12 +623,12 @@ test_non_sync(void)
 static void
 signal_cleanup(int signum)
 {
-  /* Delete the file if it exists. Ignore errors */
+                                                   
   if (needs_unlink)
   {
     unlink(filename);
   }
-  /* Finish incomplete line on stdout */
+                                        
   puts("");
   exit(signum);
 }
@@ -649,9 +649,9 @@ pg_fsync_writethrough(int fd)
 }
 #endif
 
-/*
- * print out the writes per second for tests
- */
+   
+                                             
+   
 static void
 print_elapse(struct timeval start_t, struct timeval stop_t, int ops)
 {
@@ -672,7 +672,7 @@ process_alarm(int sig)
 static DWORD WINAPI
 process_alarm(LPVOID param)
 {
-  /* WIN32 doesn't support alarm, so we create a thread and sleep here */
+                                                                         
   Sleep(secs_per_test * 1000);
   alarm_triggered = true;
   ExitThread(0);

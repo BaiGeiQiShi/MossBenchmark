@@ -1,38 +1,38 @@
-/*
- * getopt_long() -- long options parser
- *
- * Portions Copyright (c) 1987, 1993, 1994
- * The Regents of the University of California.  All rights reserved.
- *
- * Portions Copyright (c) 2003
- * PostgreSQL Global Development Group
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *	  notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *	  notice, this list of conditions and the following disclaimer in the
- *	  documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
- *	  may be used to endorse or promote products derived from this software
- *	  without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * src/port/getopt_long.c
- */
+   
+                                        
+   
+                                           
+                                                                      
+   
+                               
+                                       
+   
+                                                                      
+                                                                      
+            
+                                                                     
+                                                                   
+                                                                        
+                                                                         
+                                                                          
+                                                                           
+                                                                           
+                                                
+   
+                                                                           
+                                                                         
+                                                                              
+                                                                            
+                                                                              
+                                                                           
+                                                                         
+                                                                              
+                                                                             
+                                                                          
+                
+   
+                          
+   
 
 #include "c.h"
 
@@ -42,24 +42,24 @@
 #define BADARG ':'
 #define EMSG ""
 
-/*
- * getopt_long
- *	Parse argc/argv argument vector, with long options.
- *
- * This implementation does not use optreset.  Instead, we guarantee that
- * it can be restarted on a new argv array after a previous call returned -1,
- * if the caller resets optind to 1 before the first call of the new series.
- * (Internally, this means we must be sure to reset "place" to EMSG before
- * returning -1.)
- */
+   
+               
+                                                       
+   
+                                                                          
+                                                                              
+                                                                             
+                                                                           
+                  
+   
 int
 getopt_long(int argc, char *const argv[], const char *optstring, const struct option *longopts, int *longindex)
 {
-  static char *place = EMSG; /* option letter processing */
-  char *oli;                 /* option letter list index */
+  static char *place = EMSG;                               
+  char *oli;                                               
 
   if (!*place)
-  { /* update scanning pointer */
+  {                              
     if (optind >= argc)
     {
       place = EMSG;
@@ -78,14 +78,14 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
 
     if (!*place)
     {
-      /* treat "-" as not being an option */
+                                            
       place = EMSG;
       return -1;
     }
 
     if (place[0] == '-' && place[1] == '\0')
     {
-      /* found "--", treat it as end of options */
+                                                  
       ++optind;
       place = EMSG;
       return -1;
@@ -93,7 +93,7 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
 
     if (place[0] == '-' && place[1])
     {
-      /* long option */
+                       
       size_t namelen;
       int i;
 
@@ -144,7 +144,7 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
             optarg = NULL;
             if (place[namelen] != 0)
             {
-              /* XXX error? */
+                              
             }
           }
 
@@ -179,7 +179,7 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
     }
   }
 
-  /* short option */
+                    
   optopt = (int)*place++;
 
   oli = strchr(optstring, optopt);
@@ -197,7 +197,7 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
   }
 
   if (oli[1] != ':')
-  { /* don't need argument */
+  {                          
     optarg = NULL;
     if (!*place)
     {
@@ -205,13 +205,13 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
     }
   }
   else
-  {             /* need an argument */
-    if (*place) /* no white space */
+  {                                   
+    if (*place)                     
     {
       optarg = place;
     }
     else if (argc <= ++optind)
-    { /* no arg */
+    {             
       place = EMSG;
       if (*optstring == ':')
       {
@@ -225,7 +225,7 @@ getopt_long(int argc, char *const argv[], const char *optstring, const struct op
     }
     else
     {
-      /* white space */
+                       
       optarg = argv[optind];
     }
     place = EMSG;

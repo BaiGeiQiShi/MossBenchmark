@@ -1,8 +1,8 @@
-/*
- * reporting Python exceptions as PostgreSQL errors
- *
- * src/pl/plpython/plpy_elog.c
- */
+   
+                                                    
+   
+                               
+   
 
 #include "postgres.h"
 
@@ -33,14 +33,14 @@ get_string_attr(PyObject *obj, char *attrname, char **str);
 static bool
 set_string_attr(PyObject *obj, char *attrname, char *str);
 
-/*
- * Emit a PG error or notice, together with any available info about
- * the current Python error, previously set by PLy_exception_set().
- * This should be used to propagate Python errors into PG.  If fmt is
- * NULL, the Python error becomes the primary error message, otherwise
- * it becomes the detail.  If there is a Python traceback, it is put
- * in the context.
- */
+   
+                                                                     
+                                                                    
+                                                                      
+                                                                       
+                                                                     
+                   
+   
 void
 PLy_elog_impl(int elevel, const char *fmt, ...)
 {
@@ -82,7 +82,7 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
     }
   }
 
-  /* this releases our refcount on tb! */
+                                         
   PLy_traceback(exc, val, tb, &xmsg, &tbmsg, &tb_depth);
 
   if (fmt)
@@ -105,10 +105,10 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
     }
     primary = emsg.data;
 
-    /* Since we have a format string, we cannot have a SPI detail. */
+                                                                     
     Assert(detail == NULL);
 
-    /* If there's an exception message, it goes in the detail. */
+                                                                 
     if (xmsg)
     {
       detail = xmsg;
@@ -163,16 +163,16 @@ PLy_elog_impl(int elevel, const char *fmt, ...)
   Py_XDECREF(val);
 }
 
-/*
- * Extract a Python traceback from the given exception data.
- *
- * The exception error message is returned in xmsg, the traceback in
- * tbmsg (both as palloc'd strings) and the traceback depth in
- * tb_depth.
- *
- * We release refcounts on all the Python objects in the traceback stack,
- * but not on e or v.
- */
+   
+                                                             
+   
+                                                                     
+                                                               
+             
+   
+                                                                          
+                      
+   
 static void
 PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg, int *tb_depth)
 {
@@ -185,9 +185,9 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
   StringInfoData xstr;
   StringInfoData tbstr;
 
-  /*
-   * if no exception, return nulls
-   */
+     
+                                   
+     
   if (e == NULL)
   {
     *xmsg = NULL;
@@ -197,9 +197,9 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     return;
   }
 
-  /*
-   * Format the exception and its value and put it in xmsg.
-   */
+     
+                                                            
+     
 
   e_type_o = PyObject_GetAttrString(e, "__name__");
   e_module_o = PyObject_GetAttrString(e, "__module__");
@@ -226,16 +226,16 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
   {
     if (PyString_Check(e))
     {
-      /* deprecated string exceptions */
+                                        
       appendStringInfoString(&xstr, PyString_AsString(e));
     }
     else
     {
-      /* shouldn't happen */
+                            
       appendStringInfoString(&xstr, "unrecognized exception");
     }
   }
-  /* mimics behavior of traceback.format_exception_only */
+                                                          
   else if (strcmp(e_module_s, "builtins") == 0 || strcmp(e_module_s, "__main__") == 0 || strcmp(e_module_s, "exceptions") == 0)
   {
     appendStringInfo(&xstr, "%s", e_type_s);
@@ -248,13 +248,13 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
 
   *xmsg = xstr.data;
 
-  /*
-   * Now format the traceback and put it in tbmsg.
-   */
+     
+                                                   
+     
 
   *tb_depth = 0;
   initStringInfo(&tbstr);
-  /* Mimic Python traceback reporting as close as possible. */
+                                                              
   appendStringInfoString(&tbstr, "Traceback (most recent call last):");
   while (tb != NULL && tb != Py_None)
   {
@@ -267,10 +267,10 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
 
     PG_TRY();
     {
-      /*
-       * Ancient versions of Python (circa 2.3) contain a bug whereby
-       * the fetches below can fail if the error indicator is set.
-       */
+         
+                                                                      
+                                                                   
+         
       PyErr_Clear();
 
       lineno = PyObject_GetAttrString(tb, "tb_lineno");
@@ -314,7 +314,7 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     }
     PG_END_TRY();
 
-    /* The first frame always points at <module>, skip it. */
+                                                             
     if (*tb_depth > 0)
     {
       PLyExecutionContext *exec_ctx = PLy_current_execution_context();
@@ -324,10 +324,10 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
       char *plain_filename;
       long plain_lineno;
 
-      /*
-       * The second frame points at the internal function, but to mimic
-       * Python error reporting we want to say <module>.
-       */
+         
+                                                                        
+                                                         
+         
       if (*tb_depth == 1)
       {
         fname = "<module>";
@@ -350,21 +350,21 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
         appendStringInfo(&tbstr, "\n  PL/Python function \"%s\", line %ld, in %s", proname, plain_lineno - 1, fname);
       }
 
-      /*
-       * function code object was compiled with "<string>" as the
-       * filename
-       */
+         
+                                                                  
+                  
+         
       if (exec_ctx->curr_proc && plain_filename != NULL && strcmp(plain_filename, "<string>") == 0)
       {
-        /*
-         * If we know the current procedure, append the exact line
-         * from the source, again mimicking Python's traceback.py
-         * module behavior.  We could store the already line-split
-         * source to avoid splitting it every time, but producing a
-         * traceback is not the most important scenario to optimize
-         * for.  But we do not go as far as traceback.py in reading
-         * the source of imported modules.
-         */
+           
+                                                                   
+                                                                  
+                                                                   
+                                                                    
+                                                                    
+                                                                    
+                                           
+           
         line = get_source_line(exec_ctx->curr_proc->src, plain_lineno);
         if (line)
         {
@@ -380,7 +380,7 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     Py_DECREF(lineno);
     Py_DECREF(filename);
 
-    /* Release the current frame and go to the next one. */
+                                                           
     tb_prev = tb;
     tb = PyObject_GetAttrString(tb, "tb_next");
     Assert(tb_prev != Py_None);
@@ -392,7 +392,7 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
     (*tb_depth)++;
   }
 
-  /* Return the traceback. */
+                             
   *tbmsg = tbstr.data;
 
   Py_XDECREF(e_type_o);
@@ -400,9 +400,9 @@ PLy_traceback(PyObject *e, PyObject *v, PyObject *tb, char **xmsg, char **tbmsg,
   Py_XDECREF(vob);
 }
 
-/*
- * Extract error code from SPIError's sqlstate attribute.
- */
+   
+                                                          
+   
 static void
 PLy_get_sqlerrcode(PyObject *exc, int *sqlerrcode)
 {
@@ -424,9 +424,9 @@ PLy_get_sqlerrcode(PyObject *exc, int *sqlerrcode)
   Py_DECREF(sqlstate);
 }
 
-/*
- * Extract the error data from a SPIError
- */
+   
+                                          
+   
 static void
 PLy_get_spi_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hint, char **query, int *position, char **schema_name, char **table_name, char **column_name, char **datatype_name, char **constraint_name)
 {
@@ -440,22 +440,22 @@ PLy_get_spi_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hin
   }
   else
   {
-    /*
-     * If there's no spidata, at least set the sqlerrcode. This can happen
-     * if someone explicitly raises a SPI exception from Python code.
-     */
+       
+                                                                           
+                                                                      
+       
     PLy_get_sqlerrcode(exc, sqlerrcode);
   }
 
   Py_XDECREF(spidata);
 }
 
-/*
- * Extract the error data from an Error.
- *
- * Note: position and query attributes are never set for Error so, unlike
- * PLy_get_spi_error_data, this function doesn't return them.
- */
+   
+                                         
+   
+                                                                          
+                                                              
+   
 static void
 PLy_get_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hint, char **schema_name, char **table_name, char **column_name, char **datatype_name, char **constraint_name)
 {
@@ -469,9 +469,9 @@ PLy_get_error_data(PyObject *exc, int *sqlerrcode, char **detail, char **hint, c
   get_string_attr(exc, "constraint_name", constraint_name);
 }
 
-/*
- * Get the given source line as a palloc'd string
- */
+   
+                                                  
+   
 static char *
 get_source_line(const char *src, int lineno)
 {
@@ -479,7 +479,7 @@ get_source_line(const char *src, int lineno)
   const char *next = src;
   int current = 0;
 
-  /* sanity check */
+                    
   if (lineno <= 0)
   {
     return NULL;
@@ -511,11 +511,11 @@ get_source_line(const char *src, int lineno)
     return pstrdup(s);
   }
 
-  /*
-   * Sanity check, next < s if the line was all-whitespace, which should
-   * never happen if Python reported a frame created on that line, but check
-   * anyway.
-   */
+     
+                                                                         
+                                                                             
+             
+     
   if (next < s)
   {
     return NULL;
@@ -524,7 +524,7 @@ get_source_line(const char *src, int lineno)
   return pnstrdup(s, next - s);
 }
 
-/* call PyErr_SetString with a vprint interface and translation support */
+                                                                          
 void
 PLy_exception_set(PyObject *exc, const char *fmt, ...)
 {
@@ -538,7 +538,7 @@ PLy_exception_set(PyObject *exc, const char *fmt, ...)
   PyErr_SetString(exc, buf);
 }
 
-/* same, with pluralized message */
+                                   
 void
 PLy_exception_set_plural(PyObject *exc, const char *fmt_singular, const char *fmt_plural, unsigned long n, ...)
 {
@@ -552,7 +552,7 @@ PLy_exception_set_plural(PyObject *exc, const char *fmt_singular, const char *fm
   PyErr_SetString(exc, buf);
 }
 
-/* set attributes of the given exception to details from ErrorData */
+                                                                     
 void
 PLy_exception_set_with_details(PyObject *excclass, ErrorData *edata)
 {
@@ -565,7 +565,7 @@ PLy_exception_set_with_details(PyObject *excclass, ErrorData *edata)
     goto failure;
   }
 
-  /* create a new exception with the error message as the parameter */
+                                                                      
   error = PyObject_CallObject(excclass, args);
   if (!error)
   {
@@ -631,7 +631,7 @@ failure:
   elog(ERROR, "could not convert error to Python exception");
 }
 
-/* get string value of an object attribute */
+                                             
 static void
 get_string_attr(PyObject *obj, char *attrname, char **str)
 {
@@ -645,9 +645,9 @@ get_string_attr(PyObject *obj, char *attrname, char **str)
   Py_XDECREF(val);
 }
 
-/* set an object attribute to a string value, returns true when the set was
- * successful
- */
+                                                                            
+              
+   
 static bool
 set_string_attr(PyObject *obj, char *attrname, char *str)
 {

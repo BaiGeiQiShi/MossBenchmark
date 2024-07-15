@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * fe-gssapi-common.c
- *     The front-end (client) GSSAPI common code
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *      src/interfaces/libpq/fe-gssapi-common.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                      
+                                                 
+   
+                                                                         
+                                                                        
+   
+                  
+                                                
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -18,10 +18,10 @@
 #include "libpq-int.h"
 #include "pqexpbuffer.h"
 
-/*
- * Fetch all errors of a specific type and append to "str".
- * Each error string is preceded by a space.
- */
+   
+                                                            
+                                             
+   
 static void
 pg_GSS_error_int(PQExpBuffer str, OM_uint32 stat, int type)
 {
@@ -41,9 +41,9 @@ pg_GSS_error_int(PQExpBuffer str, OM_uint32 stat, int type)
   } while (msg_ctx);
 }
 
-/*
- * GSSAPI errors contain two parts; put both into conn->errorMessage.
- */
+   
+                                                                      
+   
 void
 pg_GSS_error(const char *mprefix, PGconn *conn, OM_uint32 maj_stat, OM_uint32 min_stat)
 {
@@ -55,9 +55,9 @@ pg_GSS_error(const char *mprefix, PGconn *conn, OM_uint32 maj_stat, OM_uint32 mi
   appendPQExpBufferChar(&conn->errorMessage, '\n');
 }
 
-/*
- * Check if we can acquire credentials at all (and yield them if so).
- */
+   
+                                                                      
+   
 bool
 pg_GSS_have_cred_cache(gss_cred_id_t *cred_out)
 {
@@ -74,9 +74,9 @@ pg_GSS_have_cred_cache(gss_cred_id_t *cred_out)
   return true;
 }
 
-/*
- * Try to load service name for a connection
- */
+   
+                                             
+   
 int
 pg_GSS_load_servicename(PGconn *conn)
 {
@@ -87,7 +87,7 @@ pg_GSS_load_servicename(PGconn *conn)
 
   if (conn->gtarg_nam != NULL)
   {
-    /* Already taken care of - move along */
+                                            
     return STATUS_OK;
   }
 
@@ -98,10 +98,10 @@ pg_GSS_load_servicename(PGconn *conn)
     return STATUS_ERROR;
   }
 
-  /*
-   * Import service principal name so the proper ticket can be acquired by
-   * the GSSAPI system.
-   */
+     
+                                                                           
+                        
+     
   maxlen = strlen(conn->krbsrvname) + strlen(host) + 2;
   temp_gbuf.value = (char *)malloc(maxlen);
   if (!temp_gbuf.value)

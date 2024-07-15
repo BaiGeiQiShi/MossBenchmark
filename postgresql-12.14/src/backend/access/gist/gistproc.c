@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * gistproc.c
- *	  Support procedures for GiSTs over 2-D objects (boxes, polygons, circles,
- *	  points).
- *
- * This gives R-tree behavior, with Guttman's poly-time split algorithm.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	src/backend/access/gist/gistproc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                                              
+              
+   
+                                                                         
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                      
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <math.h>
@@ -30,16 +30,16 @@ gist_box_leaf_consistent(BOX *key, BOX *query, StrategyNumber strategy);
 static bool
 rtree_internal_consistent(BOX *key, BOX *query, StrategyNumber strategy);
 
-/* Minimum accepted ratio of split */
+                                     
 #define LIMIT_RATIO 0.3
 
-/**************************************************
- * Box ops
- **************************************************/
+                                                    
+           
+                                                    
 
-/*
- * Calculates union of two boxes, a and b. The result is stored in *n.
- */
+   
+                                                                       
+   
 static void
 rt_box_union(BOX *n, const BOX *a, const BOX *b)
 {
@@ -49,30 +49,30 @@ rt_box_union(BOX *n, const BOX *a, const BOX *b)
   n->low.y = float8_min(a->low.y, b->low.y);
 }
 
-/*
- * Size of a BOX for penalty-calculation purposes.
- * The result can be +Infinity, but not NaN.
- */
+   
+                                                   
+                                             
+   
 static float8
 size_box(const BOX *box)
 {
-  /*
-   * Check for zero-width cases.  Note that we define the size of a zero-
-   * by-infinity box as zero.  It's important to special-case this somehow,
-   * as naively multiplying infinity by zero will produce NaN.
-   *
-   * The less-than cases should not happen, but if they do, say "zero".
-   */
+     
+                                                                          
+                                                                            
+                                                               
+     
+                                                                        
+     
   if (float8_le(box->high.x, box->low.x) || float8_le(box->high.y, box->low.y))
   {
     return 0.0;
   }
 
-  /*
-   * We treat NaN as larger than +Infinity, so any distance involving a NaN
-   * and a non-NaN is infinite.  Note the previous check eliminated the
-   * possibility that the low fields are NaNs.
-   */
+     
+                                                                            
+                                                                        
+                                               
+     
   if (isnan(box->high.x) || isnan(box->high.y))
   {
     return get_float8_infinity();
@@ -80,10 +80,10 @@ size_box(const BOX *box)
   return float8_mul(float8_mi(box->high.x, box->low.x), float8_mi(box->high.y, box->low.y));
 }
 
-/*
- * Return amount by which the union of the two boxes is larger than
- * the original BOX's area.  The result can be +Infinity, but not NaN.
- */
+   
+                                                                    
+                                                                       
+   
 static float8
 box_penalty(const BOX *original, const BOX *new)
 {
@@ -93,13 +93,13 @@ box_penalty(const BOX *original, const BOX *new)
   return float8_mi(size_box(&unionbox), size_box(original));
 }
 
-/*
- * The GiST Consistent method for boxes
- *
- * Should return false if for all data items x below entry,
- * the predicate x op query must be false, where op is the oper
- * corresponding to strategy in the pg_amop table.
- */
+   
+                                        
+   
+                                                            
+                                                                
+                                                   
+   
 Datum
 gist_box_consistent(PG_FUNCTION_ARGS)
 {
@@ -107,10 +107,10 @@ gist_box_consistent(PG_FUNCTION_ARGS)
   BOX *query = PG_GETARG_BOX_P(1);
   StrategyNumber strategy = (StrategyNumber)PG_GETARG_UINT16(2);
 
-  /* Oid		subtype = PG_GETARG_OID(3); */
+                                        
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
 
-  /* All cases served by this function are exact */
+                                                   
   *recheck = false;
 
   if (DatumGetBoxP(entry->key) == NULL || query == NULL)
@@ -118,10 +118,10 @@ gist_box_consistent(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /*
-   * if entry is not leaf, use rtree_internal_consistent, else use
-   * gist_box_leaf_consistent
-   */
+     
+                                                                   
+                              
+     
   if (GIST_LEAF(entry))
   {
     PG_RETURN_BOOL(gist_box_leaf_consistent(DatumGetBoxP(entry->key), query, strategy));
@@ -132,9 +132,9 @@ gist_box_consistent(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * Increase BOX b to include addon.
- */
+   
+                                    
+   
 static void
 adjustBox(BOX *b, const BOX *addon)
 {
@@ -156,11 +156,11 @@ adjustBox(BOX *b, const BOX *addon)
   }
 }
 
-/*
- * The GiST Union method for boxes
- *
- * returns the minimal bounding box that encloses all the entries in entryvec
- */
+   
+                                   
+   
+                                                                              
+   
 Datum
 gist_box_union(PG_FUNCTION_ARGS)
 {
@@ -184,16 +184,16 @@ gist_box_union(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(pageunion);
 }
 
-/*
- * We store boxes as boxes in GiST indexes, so we do not need
- * compress, decompress, or fetch functions.
- */
+   
+                                                              
+                                             
+   
 
-/*
- * The GiST Penalty method for boxes (also used for points)
- *
- * As in the R-tree paper, we use change in area as our penalty metric
- */
+   
+                                                            
+   
+                                                                       
+   
 Datum
 gist_box_penalty(PG_FUNCTION_ARGS)
 {
@@ -207,10 +207,10 @@ gist_box_penalty(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(result);
 }
 
-/*
- * Trivial split: half of entries will be placed on one page
- * and another half - to another
- */
+   
+                                                             
+                                 
+   
 static void
 fallbackSplit(GistEntryVector *entryvec, GIST_SPLITVEC *v)
 {
@@ -265,52 +265,52 @@ fallbackSplit(GistEntryVector *entryvec, GIST_SPLITVEC *v)
   v->spl_rdatum = BoxPGetDatum(unionR);
 }
 
-/*
- * Represents information about an entry that can be placed to either group
- * without affecting overlap over selected axis ("common entry").
- */
+   
+                                                                            
+                                                                  
+   
 typedef struct
 {
-  /* Index of entry in the initial array */
+                                           
   int index;
-  /* Delta between penalties of entry insertion into different groups */
+                                                                        
   float8 delta;
 } CommonEntry;
 
-/*
- * Context for g_box_consider_split. Contains information about currently
- * selected split and some general information.
- */
+   
+                                                                          
+                                                
+   
 typedef struct
 {
-  int entriesCount; /* total number of entries being split */
-  BOX boundingBox;  /* minimum bounding box across all entries */
+  int entriesCount;                                          
+  BOX boundingBox;                                               
 
-  /* Information about currently selected split follows */
+                                                          
 
-  bool first; /* true if no split was selected yet */
+  bool first;                                        
 
-  float8 leftUpper;  /* upper bound of left interval */
-  float8 rightLower; /* lower bound of right interval */
+  float8 leftUpper;                                    
+  float8 rightLower;                                    
 
   float4 ratio;
   float4 overlap;
-  int dim;      /* axis of this split */
-  float8 range; /* width of general MBR projection to the
-                 * selected axis */
+  int dim;                              
+  float8 range;                                           
+                                   
 } ConsiderSplitContext;
 
-/*
- * Interval represents projection of box to axis.
- */
+   
+                                                  
+   
 typedef struct
 {
   float8 lower, upper;
 } SplitInterval;
 
-/*
- * Interval comparison function by lower bound of the interval;
- */
+   
+                                                                
+   
 static int
 interval_cmp_lower(const void *i1, const void *i2)
 {
@@ -319,9 +319,9 @@ interval_cmp_lower(const void *i1, const void *i2)
   return float8_cmp_internal(lower1, lower2);
 }
 
-/*
- * Interval comparison function by upper bound of the interval;
- */
+   
+                                                                
+   
 static int
 interval_cmp_upper(const void *i1, const void *i2)
 {
@@ -330,9 +330,9 @@ interval_cmp_upper(const void *i1, const void *i2)
   return float8_cmp_internal(upper1, upper2);
 }
 
-/*
- * Replace negative (or NaN) value with zero.
- */
+   
+                                              
+   
 static inline float
 non_negative(float val)
 {
@@ -346,9 +346,9 @@ non_negative(float val)
   }
 }
 
-/*
- * Consider replacement of currently selected split with the better one.
- */
+   
+                                                                         
+   
 static inline void
 g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLower, int minLeftCount, float8 leftUpper, int maxLeftCount)
 {
@@ -356,10 +356,10 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
   float4 ratio, overlap;
   float8 range;
 
-  /*
-   * Calculate entries distribution ratio assuming most uniform distribution
-   * of common entries.
-   */
+     
+                                                                             
+                        
+     
   if (minLeftCount >= (context->entriesCount + 1) / 2)
   {
     leftCount = minLeftCount;
@@ -377,23 +377,23 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
   }
   rightCount = context->entriesCount - leftCount;
 
-  /*
-   * Ratio of split - quotient between size of lesser group and total
-   * entries count.
-   */
+     
+                                                                      
+                    
+     
   ratio = float4_div(Min(leftCount, rightCount), context->entriesCount);
 
   if (ratio > LIMIT_RATIO)
   {
     bool selectthis = false;
 
-    /*
-     * The ratio is acceptable, so compare current split with previously
-     * selected one. Between splits of one dimension we search for minimal
-     * overlap (allowing negative values) and minimal ration (between same
-     * overlaps. We switch dimension if find less overlap (non-negative)
-     * or less range with same overlap.
-     */
+       
+                                                                         
+                                                                           
+                                                                           
+                                                                         
+                                        
+       
     if (dimNum == 0)
     {
       range = float8_mi(context->boundingBox.high.x, context->boundingBox.low.x);
@@ -405,17 +405,17 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
 
     overlap = float8_div(float8_mi(leftUpper, rightLower), range);
 
-    /* If there is no previous selection, select this */
+                                                        
     if (context->first)
     {
       selectthis = true;
     }
     else if (context->dim == dimNum)
     {
-      /*
-       * Within the same dimension, choose the new split if it has a
-       * smaller overlap, or same overlap but better ratio.
-       */
+         
+                                                                     
+                                                            
+         
       if (overlap < context->overlap || (overlap == context->overlap && ratio > context->ratio))
       {
         selectthis = true;
@@ -423,23 +423,23 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
     }
     else
     {
-      /*
-       * Across dimensions, choose the new split if it has a smaller
-       * *non-negative* overlap, or same *non-negative* overlap but
-       * bigger range. This condition differs from the one described in
-       * the article. On the datasets where leaf MBRs don't overlap
-       * themselves, non-overlapping splits (i.e. splits which have zero
-       * *non-negative* overlap) are frequently possible. In this case
-       * splits tends to be along one dimension, because most distant
-       * non-overlapping splits (i.e. having lowest negative overlap)
-       * appears to be in the same dimension as in the previous split.
-       * Therefore MBRs appear to be very prolonged along another
-       * dimension, which leads to bad search performance. Using range
-       * as the second split criteria makes MBRs more quadratic. Using
-       * *non-negative* overlap instead of overlap as the first split
-       * criteria gives to range criteria a chance to matter, because
-       * non-overlapping splits are equivalent in this criteria.
-       */
+         
+                                                                     
+                                                                    
+                                                                        
+                                                                    
+                                                                         
+                                                                       
+                                                                      
+                                                                      
+                                                                       
+                                                                  
+                                                                       
+                                                                       
+                                                                      
+                                                                      
+                                                                 
+         
       if (non_negative(overlap) < non_negative(context->overlap) || (range > context->range && non_negative(overlap) <= non_negative(context->overlap)))
       {
         selectthis = true;
@@ -448,7 +448,7 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
 
     if (selectthis)
     {
-      /* save information about selected split */
+                                                 
       context->first = false;
       context->ratio = ratio;
       context->range = range;
@@ -460,9 +460,9 @@ g_box_consider_split(ConsiderSplitContext *context, int dimNum, float8 rightLowe
   }
 }
 
-/*
- * Compare common entries by their deltas.
- */
+   
+                                           
+   
 static int
 common_entry_cmp(const void *i1, const void *i2)
 {
@@ -471,32 +471,32 @@ common_entry_cmp(const void *i1, const void *i2)
   return float8_cmp_internal(delta1, delta2);
 }
 
-/*
- * --------------------------------------------------------------------------
- * Double sorting split algorithm. This is used for both boxes and points.
- *
- * The algorithm finds split of boxes by considering splits along each axis.
- * Each entry is first projected as an interval on the X-axis, and different
- * ways to split the intervals into two groups are considered, trying to
- * minimize the overlap of the groups. Then the same is repeated for the
- * Y-axis, and the overall best split is chosen. The quality of a split is
- * determined by overlap along that axis and some other criteria (see
- * g_box_consider_split).
- *
- * After that, all the entries are divided into three groups:
- *
- * 1) Entries which should be placed to the left group
- * 2) Entries which should be placed to the right group
- * 3) "Common entries" which can be placed to any of groups without affecting
- *	  of overlap along selected axis.
- *
- * The common entries are distributed by minimizing penalty.
- *
- * For details see:
- * "A new double sorting-based node splitting algorithm for R-tree", A. Korotkov
- * http://syrcose.ispras.ru/2011/files/SYRCoSE2011_Proceedings.pdf#page=36
- * --------------------------------------------------------------------------
- */
+   
+                                                                              
+                                                                           
+   
+                                                                             
+                                                                             
+                                                                         
+                                                                         
+                                                                           
+                                                                      
+                          
+   
+                                                              
+   
+                                                       
+                                                        
+                                                                              
+                                     
+   
+                                                             
+   
+                    
+                                                                                 
+                                                                           
+                                                                              
+   
 Datum
 gist_box_picksplit(PG_FUNCTION_ARGS)
 {
@@ -515,13 +515,13 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
   maxoff = entryvec->n - 1;
   nentries = context.entriesCount = maxoff - FirstOffsetNumber + 1;
 
-  /* Allocate arrays for intervals along axes */
+                                                
   intervalsLower = (SplitInterval *)palloc(nentries * sizeof(SplitInterval));
   intervalsUpper = (SplitInterval *)palloc(nentries * sizeof(SplitInterval));
 
-  /*
-   * Calculate the overall minimum bounding box over all the entries.
-   */
+     
+                                                                      
+     
   for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
   {
     box = DatumGetBoxP(entryvec->vector[i].key);
@@ -535,16 +535,16 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
     }
   }
 
-  /*
-   * Iterate over axes for optimal split searching.
-   */
-  context.first = true; /* nothing selected yet */
+     
+                                                    
+     
+  context.first = true;                           
   for (dim = 0; dim < 2; dim++)
   {
     float8 leftUpper, rightLower;
     int i1, i2;
 
-    /* Project each entry as an interval on the selected axis. */
+                                                                 
     for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
     {
       box = DatumGetBoxP(entryvec->vector[i].key);
@@ -560,57 +560,57 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
       }
     }
 
-    /*
-     * Make two arrays of intervals: one sorted by lower bound and another
-     * sorted by upper bound.
-     */
+       
+                                                                           
+                              
+       
     memcpy(intervalsUpper, intervalsLower, sizeof(SplitInterval) * nentries);
     qsort(intervalsLower, nentries, sizeof(SplitInterval), interval_cmp_lower);
     qsort(intervalsUpper, nentries, sizeof(SplitInterval), interval_cmp_upper);
 
-    /*----
-     * The goal is to form a left and right interval, so that every entry
-     * interval is contained by either left or right interval (or both).
-     *
-     * For example, with the intervals (0,1), (1,3), (2,3), (2,4):
-     *
-     * 0 1 2 3 4
-     * +-+
-     *	 +---+
-     *	   +-+
-     *	   +---+
-     *
-     * The left and right intervals are of the form (0,a) and (b,4).
-     * We first consider splits where b is the lower bound of an entry.
-     * We iterate through all entries, and for each b, calculate the
-     * smallest possible a. Then we consider splits where a is the
-     * upper bound of an entry, and for each a, calculate the greatest
-     * possible b.
-     *
-     * In the above example, the first loop would consider splits:
-     * b=0: (0,1)-(0,4)
-     * b=1: (0,1)-(1,4)
-     * b=2: (0,3)-(2,4)
-     *
-     * And the second loop:
-     * a=1: (0,1)-(1,4)
-     * a=3: (0,3)-(2,4)
-     * a=4: (0,4)-(2,4)
-     */
+           
+                                                                          
+                                                                         
+       
+                                                                   
+       
+                 
+           
+              
+              
+                
+       
+                                                                     
+                                                                        
+                                                                     
+                                                                   
+                                                                       
+                   
+       
+                                                                   
+                        
+                        
+                        
+       
+                            
+                        
+                        
+                        
+       
 
-    /*
-     * Iterate over lower bound of right group, finding smallest possible
-     * upper bound of left group.
-     */
+       
+                                                                          
+                                  
+       
     i1 = 0;
     i2 = 0;
     rightLower = intervalsLower[i1].lower;
     leftUpper = intervalsUpper[i2].lower;
     while (true)
     {
-      /*
-       * Find next lower bound of right group.
-       */
+         
+                                               
+         
       while (i1 < nentries && float8_eq(rightLower, intervalsLower[i1].lower))
       {
         if (float8_lt(leftUpper, intervalsLower[i1].upper))
@@ -625,34 +625,34 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
       }
       rightLower = intervalsLower[i1].lower;
 
-      /*
-       * Find count of intervals which anyway should be placed to the
-       * left group.
-       */
+         
+                                                                      
+                     
+         
       while (i2 < nentries && float8_le(intervalsUpper[i2].upper, leftUpper))
       {
         i2++;
       }
 
-      /*
-       * Consider found split.
-       */
+         
+                               
+         
       g_box_consider_split(&context, dim, rightLower, i1, leftUpper, i2);
     }
 
-    /*
-     * Iterate over upper bound of left group finding greatest possible
-     * lower bound of right group.
-     */
+       
+                                                                        
+                                   
+       
     i1 = nentries - 1;
     i2 = nentries - 1;
     rightLower = intervalsLower[i1].upper;
     leftUpper = intervalsUpper[i2].upper;
     while (true)
     {
-      /*
-       * Find next upper bound of left group.
-       */
+         
+                                              
+         
       while (i2 >= 0 && float8_eq(leftUpper, intervalsUpper[i2].upper))
       {
         if (float8_gt(rightLower, intervalsUpper[i2].lower))
@@ -667,57 +667,57 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
       }
       leftUpper = intervalsUpper[i2].upper;
 
-      /*
-       * Find count of intervals which anyway should be placed to the
-       * right group.
-       */
+         
+                                                                      
+                      
+         
       while (i1 >= 0 && float8_ge(intervalsLower[i1].lower, rightLower))
       {
         i1--;
       }
 
-      /*
-       * Consider found split.
-       */
+         
+                               
+         
       g_box_consider_split(&context, dim, rightLower, i1 + 1, leftUpper, i2 + 1);
     }
   }
 
-  /*
-   * If we failed to find any acceptable splits, use trivial split.
-   */
+     
+                                                                    
+     
   if (context.first)
   {
     fallbackSplit(entryvec, v);
     PG_RETURN_POINTER(v);
   }
 
-  /*
-   * Ok, we have now selected the split across one axis.
-   *
-   * While considering the splits, we already determined that there will be
-   * enough entries in both groups to reach the desired ratio, but we did
-   * not memorize which entries go to which group. So determine that now.
-   */
+     
+                                                         
+     
+                                                                            
+                                                                          
+                                                                          
+     
 
-  /* Allocate vectors for results */
+                                    
   v->spl_left = (OffsetNumber *)palloc(nentries * sizeof(OffsetNumber));
   v->spl_right = (OffsetNumber *)palloc(nentries * sizeof(OffsetNumber));
   v->spl_nleft = 0;
   v->spl_nright = 0;
 
-  /* Allocate bounding boxes of left and right groups */
+                                                        
   leftBox = palloc0(sizeof(BOX));
   rightBox = palloc0(sizeof(BOX));
 
-  /*
-   * Allocate an array for "common entries" - entries which can be placed to
-   * either group without affecting overlap along selected axis.
-   */
+     
+                                                                             
+                                                                 
+     
   commonEntriesCount = 0;
   commonEntries = (CommonEntry *)palloc(nentries * sizeof(CommonEntry));
 
-  /* Helper macros to place an entry in the left or right group */
+                                                                  
 #define PLACE_LEFT(box, off)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -738,17 +738,17 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
     v->spl_right[v->spl_nright++] = off;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
   } while (0)
 
-  /*
-   * Distribute entries which can be distributed unambiguously, and collect
-   * common entries.
-   */
+     
+                                                                            
+                     
+     
   for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
   {
     float8 lower, upper;
 
-    /*
-     * Get upper and lower bounds along selected axis.
-     */
+       
+                                                       
+       
     box = DatumGetBoxP(entryvec->vector[i].key);
     if (context.dim == 0)
     {
@@ -763,70 +763,70 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
 
     if (float8_le(upper, context.leftUpper))
     {
-      /* Fits to the left group */
+                                  
       if (float8_ge(lower, context.rightLower))
       {
-        /* Fits also to the right group, so "common entry" */
+                                                             
         commonEntries[commonEntriesCount++].index = i;
       }
       else
       {
-        /* Doesn't fit to the right group, so join to the left group */
+                                                                       
         PLACE_LEFT(box, i);
       }
     }
     else
     {
-      /*
-       * Each entry should fit on either left or right group. Since this
-       * entry didn't fit on the left group, it better fit in the right
-       * group.
-       */
+         
+                                                                         
+                                                                        
+                
+         
       Assert(float8_ge(lower, context.rightLower));
 
-      /* Doesn't fit to the left group, so join to the right group */
+                                                                     
       PLACE_RIGHT(box, i);
     }
   }
 
-  /*
-   * Distribute "common entries", if any.
-   */
+     
+                                          
+     
   if (commonEntriesCount > 0)
   {
-    /*
-     * Calculate minimum number of entries that must be placed in both
-     * groups, to reach LIMIT_RATIO.
-     */
+       
+                                                                       
+                                     
+       
     int m = ceil(LIMIT_RATIO * nentries);
 
-    /*
-     * Calculate delta between penalties of join "common entries" to
-     * different groups.
-     */
+       
+                                                                     
+                         
+       
     for (i = 0; i < commonEntriesCount; i++)
     {
       box = DatumGetBoxP(entryvec->vector[commonEntries[i].index].key);
       commonEntries[i].delta = Abs(float8_mi(box_penalty(leftBox, box), box_penalty(rightBox, box)));
     }
 
-    /*
-     * Sort "common entries" by calculated deltas in order to distribute
-     * the most ambiguous entries first.
-     */
+       
+                                                                         
+                                         
+       
     qsort(commonEntries, commonEntriesCount, sizeof(CommonEntry), common_entry_cmp);
 
-    /*
-     * Distribute "common entries" between groups.
-     */
+       
+                                                   
+       
     for (i = 0; i < commonEntriesCount; i++)
     {
       box = DatumGetBoxP(entryvec->vector[commonEntries[i].index].key);
 
-      /*
-       * Check if we have to place this entry in either group to achieve
-       * LIMIT_RATIO.
-       */
+         
+                                                                         
+                      
+         
       if (v->spl_nleft + (commonEntriesCount - i) <= m)
       {
         PLACE_LEFT(box, commonEntries[i].index);
@@ -837,7 +837,7 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
       }
       else
       {
-        /* Otherwise select the group by minimal penalty */
+                                                           
         if (box_penalty(leftBox, box) < box_penalty(rightBox, box))
         {
           PLACE_LEFT(box, commonEntries[i].index);
@@ -855,16 +855,16 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(v);
 }
 
-/*
- * Equality method
- *
- * This is used for boxes, points, circles, and polygons, all of which store
- * boxes as GiST index entries.
- *
- * Returns true only when boxes are exactly the same.  We can't use fuzzy
- * comparisons here without breaking index consistency; therefore, this isn't
- * equivalent to box_same().
- */
+   
+                   
+   
+                                                                             
+                                
+   
+                                                                          
+                                                                              
+                             
+   
 Datum
 gist_box_same(PG_FUNCTION_ARGS)
 {
@@ -883,9 +883,9 @@ gist_box_same(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(result);
 }
 
-/*
- * Leaf-level consistency for boxes: just apply the query operator
- */
+   
+                                                                   
+   
 static bool
 gist_box_leaf_consistent(BOX *key, BOX *query, StrategyNumber strategy)
 {
@@ -933,22 +933,22 @@ gist_box_leaf_consistent(BOX *key, BOX *query, StrategyNumber strategy)
     break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    retval = false; /* keep compiler quiet */
+    retval = false;                          
     break;
   }
   return retval;
 }
 
-/*****************************************
- * Common rtree functions (for boxes, polygons, and circles)
- *****************************************/
+                                           
+                                                             
+                                           
 
-/*
- * Internal-page consistency for all these types
- *
- * We can use the same function since all types use bounding boxes as the
- * internal-page representation.
- */
+   
+                                                 
+   
+                                                                          
+                                 
+   
 static bool
 rtree_internal_consistent(BOX *key, BOX *query, StrategyNumber strategy)
 {
@@ -994,19 +994,19 @@ rtree_internal_consistent(BOX *key, BOX *query, StrategyNumber strategy)
     break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    retval = false; /* keep compiler quiet */
+    retval = false;                          
     break;
   }
   return retval;
 }
 
-/**************************************************
- * Polygon ops
- **************************************************/
+                                                    
+               
+                                                    
 
-/*
- * GiST compress for polygons: represent a polygon by its bounding box
- */
+   
+                                                                       
+   
 Datum
 gist_poly_compress(PG_FUNCTION_ARGS)
 {
@@ -1031,9 +1031,9 @@ gist_poly_compress(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(retval);
 }
 
-/*
- * The GiST Consistent method for polygons
- */
+   
+                                           
+   
 Datum
 gist_poly_consistent(PG_FUNCTION_ARGS)
 {
@@ -1041,11 +1041,11 @@ gist_poly_consistent(PG_FUNCTION_ARGS)
   POLYGON *query = PG_GETARG_POLYGON_P(1);
   StrategyNumber strategy = (StrategyNumber)PG_GETARG_UINT16(2);
 
-  /* Oid		subtype = PG_GETARG_OID(3); */
+                                        
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
   bool result;
 
-  /* All cases served by this function are inexact */
+                                                     
   *recheck = true;
 
   if (DatumGetBoxP(entry->key) == NULL || query == NULL)
@@ -1053,26 +1053,26 @@ gist_poly_consistent(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /*
-   * Since the operators require recheck anyway, we can just use
-   * rtree_internal_consistent even at leaf nodes.  (This works in part
-   * because the index entries are bounding boxes not polygons.)
-   */
+     
+                                                                 
+                                                                        
+                                                                 
+     
   result = rtree_internal_consistent(DatumGetBoxP(entry->key), &(query->boundbox), strategy);
 
-  /* Avoid memory leak if supplied poly is toasted */
+                                                     
   PG_FREE_IF_COPY(query, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/**************************************************
- * Circle ops
- **************************************************/
+                                                    
+              
+                                                    
 
-/*
- * GiST compress for circles: represent a circle by its bounding box
- */
+   
+                                                                     
+   
 Datum
 gist_circle_compress(PG_FUNCTION_ARGS)
 {
@@ -1100,9 +1100,9 @@ gist_circle_compress(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(retval);
 }
 
-/*
- * The GiST Consistent method for circles
- */
+   
+                                          
+   
 Datum
 gist_circle_consistent(PG_FUNCTION_ARGS)
 {
@@ -1110,12 +1110,12 @@ gist_circle_consistent(PG_FUNCTION_ARGS)
   CIRCLE *query = PG_GETARG_CIRCLE_P(1);
   StrategyNumber strategy = (StrategyNumber)PG_GETARG_UINT16(2);
 
-  /* Oid		subtype = PG_GETARG_OID(3); */
+                                        
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
   BOX bbox;
   bool result;
 
-  /* All cases served by this function are inexact */
+                                                     
   *recheck = true;
 
   if (DatumGetBoxP(entry->key) == NULL || query == NULL)
@@ -1123,11 +1123,11 @@ gist_circle_consistent(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /*
-   * Since the operators require recheck anyway, we can just use
-   * rtree_internal_consistent even at leaf nodes.  (This works in part
-   * because the index entries are bounding boxes not circles.)
-   */
+     
+                                                                 
+                                                                        
+                                                                
+     
   bbox.high.x = float8_pl(query->center.x, query->radius);
   bbox.low.x = float8_mi(query->center.x, query->radius);
   bbox.high.y = float8_pl(query->center.y, query->radius);
@@ -1138,16 +1138,16 @@ gist_circle_consistent(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(result);
 }
 
-/**************************************************
- * Point ops
- **************************************************/
+                                                    
+             
+                                                    
 
 Datum
 gist_point_compress(PG_FUNCTION_ARGS)
 {
   GISTENTRY *entry = (GISTENTRY *)PG_GETARG_POINTER(0);
 
-  if (entry->leafkey) /* Point, actually */
+  if (entry->leafkey)                      
   {
     BOX *box = palloc(sizeof(BOX));
     Point *point = DatumGetPointP(entry->key);
@@ -1163,12 +1163,12 @@ gist_point_compress(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(entry);
 }
 
-/*
- * GiST Fetch method for point
- *
- * Get point coordinates from its bounding box coordinates and form new
- * gistentry.
- */
+   
+                               
+   
+                                                                        
+              
+   
 Datum
 gist_point_fetch(PG_FUNCTION_ARGS)
 {
@@ -1196,17 +1196,17 @@ computeDistance(bool isLeaf, BOX *box, Point *point)
 
   if (isLeaf)
   {
-    /* simple point to point distance */
+                                        
     result = point_point_distance(point, &box->low);
   }
   else if (point->x <= box->high.x && point->x >= box->low.x && point->y <= box->high.y && point->y >= box->low.y)
   {
-    /* point inside the box */
+                              
     result = 0.0;
   }
   else if (point->x <= box->high.x && point->x >= box->low.x)
   {
-    /* point is over or below box */
+                                    
     Assert(box->low.y <= box->high.y);
     if (point->y > box->high.y)
     {
@@ -1223,7 +1223,7 @@ computeDistance(bool isLeaf, BOX *box, Point *point)
   }
   else if (point->y <= box->high.y && point->y >= box->low.y)
   {
-    /* point is to left or right of box */
+                                          
     Assert(box->low.x <= box->high.x);
     if (point->x > box->high.x)
     {
@@ -1240,7 +1240,7 @@ computeDistance(bool isLeaf, BOX *box, Point *point)
   }
   else
   {
-    /* closest point will be a vertex */
+                                        
     Point p;
     float8 subresult;
 
@@ -1294,7 +1294,7 @@ gist_point_consistent_internal(StrategyNumber strategy, bool isLeaf, BOX *key, P
   case RTSameStrategyNumber:
     if (isLeaf)
     {
-      /* key.high must equal key.low, so we can disregard it */
+                                                               
       result = (FPeq(key->low.x, query->x) && FPeq(key->low.y, query->y));
     }
     else
@@ -1304,7 +1304,7 @@ gist_point_consistent_internal(StrategyNumber strategy, bool isLeaf, BOX *key, P
     break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    result = false; /* keep compiler quiet */
+    result = false;                          
     break;
   }
 
@@ -1334,18 +1334,18 @@ gist_point_consistent(PG_FUNCTION_ARGS)
     break;
   case BoxStrategyNumberGroup:
   {
-    /*
-     * The only operator in this group is point <@ box (on_pb), so
-     * we needn't examine strategy again.
-     *
-     * For historical reasons, on_pb uses exact rather than fuzzy
-     * comparisons.  We could use box_overlap when at an internal
-     * page, but that would lead to possibly visiting child pages
-     * uselessly, because box_overlap uses fuzzy comparisons.
-     * Instead we write a non-fuzzy overlap test.  The same code
-     * will also serve for leaf-page tests, since leaf keys have
-     * high == low.
-     */
+       
+                                                                   
+                                          
+       
+                                                                  
+                                                                  
+                                                                  
+                                                              
+                                                                 
+                                                                 
+                    
+       
     BOX *query, *key;
 
     query = PG_GETARG_BOX_P(1);
@@ -1363,10 +1363,10 @@ gist_point_consistent(PG_FUNCTION_ARGS)
 
     if (GIST_LEAF(entry) && result)
     {
-      /*
-       * We are on leaf page and quick check shows overlapping
-       * of polygon's bounding box and point
-       */
+         
+                                                               
+                                             
+         
       BOX *box = DatumGetBoxP(entry->key);
 
       Assert(box->high.x == box->low.x && box->high.y == box->low.y);
@@ -1383,10 +1383,10 @@ gist_point_consistent(PG_FUNCTION_ARGS)
 
     if (GIST_LEAF(entry) && result)
     {
-      /*
-       * We are on leaf page and quick check shows overlapping
-       * of polygon's bounding box and point
-       */
+         
+                                                               
+                                             
+         
       BOX *box = DatumGetBoxP(entry->key);
 
       Assert(box->high.x == box->low.x && box->high.y == box->low.y);
@@ -1397,7 +1397,7 @@ gist_point_consistent(PG_FUNCTION_ARGS)
   break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    result = false; /* keep compiler quiet */
+    result = false;                          
     break;
   }
 
@@ -1419,30 +1419,30 @@ gist_point_distance(PG_FUNCTION_ARGS)
     break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    distance = 0.0; /* keep compiler quiet */
+    distance = 0.0;                          
     break;
   }
 
   PG_RETURN_FLOAT8(distance);
 }
 
-/*
- * The inexact GiST distance method for geometric types that store bounding
- * boxes.
- *
- * Compute lossy distance from point to index entries.  The result is inexact
- * because index entries are bounding boxes, not the exact shapes of the
- * indexed geometric types.  We use distance from point to MBR of index entry.
- * This is a lower bound estimate of distance from point to indexed geometric
- * type.
- */
+   
+                                                                            
+          
+   
+                                                                              
+                                                                         
+                                                                               
+                                                                              
+         
+   
 static float8
 gist_bbox_distance(GISTENTRY *entry, Datum query, StrategyNumber strategy, bool *recheck)
 {
   float8 distance;
   StrategyNumber strategyGroup = strategy / GeoStrategyNumberOffset;
 
-  /* Bounding box distance is always inexact. */
+                                                
   *recheck = true;
 
   switch (strategyGroup)
@@ -1452,7 +1452,7 @@ gist_bbox_distance(GISTENTRY *entry, Datum query, StrategyNumber strategy, bool 
     break;
   default:
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    distance = 0.0; /* keep compiler quiet */
+    distance = 0.0;                          
   }
 
   return distance;
@@ -1465,7 +1465,7 @@ gist_circle_distance(PG_FUNCTION_ARGS)
   Datum query = PG_GETARG_DATUM(1);
   StrategyNumber strategy = (StrategyNumber)PG_GETARG_UINT16(2);
 
-  /* Oid subtype = PG_GETARG_OID(3); */
+                                       
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
   float8 distance;
 
@@ -1481,7 +1481,7 @@ gist_poly_distance(PG_FUNCTION_ARGS)
   Datum query = PG_GETARG_DATUM(1);
   StrategyNumber strategy = (StrategyNumber)PG_GETARG_UINT16(2);
 
-  /* Oid subtype = PG_GETARG_OID(3); */
+                                       
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
   float8 distance;
 

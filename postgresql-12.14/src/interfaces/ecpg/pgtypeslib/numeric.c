@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/pgtypeslib/numeric.c */
+                                              
 
 #include "postgres_fe.h"
 #include <ctype.h>
@@ -24,13 +24,13 @@
 #include "pgtypes_numeric.h"
 
 #if 0
-/* ----------
- * apply_typmod() -
- *
- *	Do bounds checking and rounding according to the attributes
- *	typmod field.
- * ----------
- */
+              
+                    
+   
+                                                               
+                 
+              
+   
 static int
 apply_typmod(numeric *var, long typmod)
 {
@@ -39,7 +39,7 @@ apply_typmod(numeric *var, long typmod)
 	int			maxweight;
 	int			i;
 
-	/* Do nothing if we have a default typmod (-1) */
+	                                                 
 	if (typmod < (long) (VARHDRSZ))
 		return 0;
 
@@ -48,7 +48,7 @@ apply_typmod(numeric *var, long typmod)
 	scale = typmod & 0xffff;
 	maxweight = precision - scale;
 
-	/* Round to target scale */
+	                           
 	i = scale + var->weight + 1;
 	if (i >= 0 && var->ndigits > i)
 	{
@@ -73,16 +73,16 @@ apply_typmod(numeric *var, long typmod)
 	else
 		var->ndigits = Max(0, Min(i, var->ndigits));
 
-	/*
-	 * Check for overflow - note we can't do this before rounding, because
-	 * rounding could raise the weight.  Also note that the var's weight could
-	 * be inflated by leading zeroes, which will be stripped before storage
-	 * but perhaps might not have been yet. In any case, we must recognize a
-	 * true zero, whose weight doesn't mean anything.
-	 */
+	   
+                                                                        
+                                                                            
+                                                                         
+                                                                          
+                                                   
+    
 	if (var->weight >= maxweight)
 	{
-		/* Determine true weight; and check for all-zero result */
+		                                                          
 		int			tweight = var->weight;
 
 		for (i = 0; i < var->ndigits; i++)
@@ -105,12 +105,12 @@ apply_typmod(numeric *var, long typmod)
 }
 #endif
 
-/* ----------
- *	alloc_var() -
- *
- *	 Allocate a digit buffer of ndigits digits (plus a spare digit for rounding)
- * ----------
- */
+              
+                 
+   
+                                                                                
+              
+   
 static int
 alloc_var(numeric *var, int ndigits)
 {
@@ -160,12 +160,12 @@ PGTYPESdecimal_new(void)
   return var;
 }
 
-/* ----------
- * set_var_from_str()
- *
- *	Parse a string and put the number into a variable
- * ----------
- */
+              
+                      
+   
+                                                     
+              
+   
 static int
 set_var_from_str(char *str, char **ptr, numeric *dest)
 {
@@ -188,7 +188,7 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
     *ptr += 3;
     dest->sign = NUMERIC_NAN;
 
-    /* Should be nothing left but spaces */
+                                           
     while (*(*ptr))
     {
       if (!isspace((unsigned char)*(*ptr)))
@@ -266,7 +266,7 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
   }
   dest->ndigits = i;
 
-  /* Handle exponent, if any */
+                               
   if (*(*ptr) == 'e' || *(*ptr) == 'E')
   {
     long exponent;
@@ -293,7 +293,7 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
     }
   }
 
-  /* Should be nothing left but spaces */
+                                         
   while (*(*ptr))
   {
     if (!isspace((unsigned char)*(*ptr)))
@@ -304,7 +304,7 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
     (*ptr)++;
   }
 
-  /* Strip any leading zeroes */
+                                
   while (dest->ndigits > 0 && *(dest->digits) == 0)
   {
     (dest->digits)++;
@@ -320,13 +320,13 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
   return 0;
 }
 
-/* ----------
- * get_str_from_var() -
- *
- *	Convert a var to text representation (guts of numeric_out).
- *	CAUTION: var's contents may be modified by rounding!
- * ----------
- */
+              
+                        
+   
+                                                               
+                                                        
+              
+   
 static char *
 get_str_from_var(numeric *var, int dscale)
 {
@@ -346,9 +346,9 @@ get_str_from_var(numeric *var, int dscale)
     return str;
   }
 
-  /*
-   * Check if we must round up before printing the value and do so.
-   */
+     
+                                                                    
+     
   i = dscale + var->weight + 1;
   if (i >= 0 && var->ndigits > i)
   {
@@ -375,26 +375,26 @@ get_str_from_var(numeric *var, int dscale)
     var->ndigits = Max(0, Min(i, var->ndigits));
   }
 
-  /*
-   * Allocate space for the result
-   */
+     
+                                   
+     
   if ((str = (char *)pgtypes_alloc(Max(0, dscale) + Max(0, var->weight) + 4)) == NULL)
   {
     return NULL;
   }
   cp = str;
 
-  /*
-   * Output a dash for negative values
-   */
+     
+                                       
+     
   if (var->sign == NUMERIC_NEG)
   {
     *cp++ = '-';
   }
 
-  /*
-   * Output all digits before the decimal point
-   */
+     
+                                                
+     
   i = Max(var->weight, 0);
   d = 0;
 
@@ -411,9 +411,9 @@ get_str_from_var(numeric *var, int dscale)
     i--;
   }
 
-  /*
-   * If requested, output a decimal point and all the digits that follow it.
-   */
+     
+                                                                             
+     
   if (dscale > 0)
   {
     *cp++ = '.';
@@ -431,9 +431,9 @@ get_str_from_var(numeric *var, int dscale)
     }
   }
 
-  /*
-   * terminate the string and return it
-   */
+     
+                                        
+     
   *cp = '\0';
   return str;
 }
@@ -484,19 +484,19 @@ PGTYPESnumeric_to_asc(numeric *num, int dscale)
     dscale = num->dscale;
   }
 
-  /* get_str_from_var may change its argument */
+                                                
   s = get_str_from_var(numcopy, dscale);
   PGTYPESnumeric_free(numcopy);
   return s;
 }
 
-/* ----------
- * zero_var() -
- *
- *	Set a variable to ZERO.
- *	Note: rscale and dscale are not touched.
- * ----------
- */
+              
+                
+   
+                           
+                                            
+              
+   
 static void
 zero_var(numeric *var)
 {
@@ -504,8 +504,8 @@ zero_var(numeric *var)
   var->buf = NULL;
   var->digits = NULL;
   var->ndigits = 0;
-  var->weight = 0;         /* by convention; doesn't really matter */
-  var->sign = NUMERIC_POS; /* anything but NAN... */
+  var->weight = 0;                                                   
+  var->sign = NUMERIC_POS;                          
 }
 
 void
@@ -521,15 +521,15 @@ PGTYPESdecimal_free(decimal *var)
   free(var);
 }
 
-/* ----------
- * cmp_abs() -
- *
- *	Compare the absolute values of var1 and var2
- *	Returns:	-1 for ABS(var1) < ABS(var2)
- *				0  for ABS(var1) == ABS(var2)
- *				1  for ABS(var1) > ABS(var2)
- * ----------
- */
+              
+               
+   
+                                                
+                                         
+                                    
+                                   
+              
+   
 static int
 cmp_abs(numeric *var1, numeric *var2)
 {
@@ -590,13 +590,13 @@ cmp_abs(numeric *var1, numeric *var2)
   return 0;
 }
 
-/* ----------
- * add_abs() -
- *
- *	Add the absolute values of two variables into result.
- *	result might point to one of the operands without danger.
- * ----------
- */
+              
+               
+   
+                                                         
+                                                             
+              
+   
 static int
 add_abs(numeric *var1, numeric *var2, numeric *result)
 {
@@ -609,7 +609,7 @@ add_abs(numeric *var1, numeric *var2, numeric *result)
   int i, i1, i2;
   int carry = 0;
 
-  /* copy these values into local vars for speed in inner loop */
+                                                                 
   int var1ndigits = var1->ndigits;
   int var2ndigits = var2->ndigits;
   NumericDigit *var1digits = var1->digits;
@@ -684,16 +684,16 @@ add_abs(numeric *var1, numeric *var2, numeric *result)
   return 0;
 }
 
-/* ----------
- * sub_abs() -
- *
- *	Subtract the absolute value of var2 from the absolute value of var1
- *	and store in result. result might point to one of the operands
- *	without danger.
- *
- *	ABS(var1) MUST BE GREATER OR EQUAL ABS(var2) !!!
- * ----------
- */
+              
+               
+   
+                                                                       
+                                                                  
+                   
+   
+                                                    
+              
+   
 static int
 sub_abs(numeric *var1, numeric *var2, numeric *result)
 {
@@ -706,7 +706,7 @@ sub_abs(numeric *var1, numeric *var2, numeric *result)
   int i, i1, i2;
   int borrow = 0;
 
-  /* copy these values into local vars for speed in inner loop */
+                                                                 
   int var1ndigits = var1->ndigits;
   int var2ndigits = var2->ndigits;
   NumericDigit *var1digits = var1->digits;
@@ -781,26 +781,26 @@ sub_abs(numeric *var1, numeric *var2, numeric *result)
   return 0;
 }
 
-/* ----------
- * add_var() -
- *
- *	Full version of add functionality on variable level (handling signs).
- *	result might point to one of the operands too without danger.
- * ----------
- */
+              
+               
+   
+                                                                         
+                                                                 
+              
+   
 int
 PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
 {
-  /*
-   * Decide on the signs of the two variables what to do
-   */
+     
+                                                         
+     
   if (var1->sign == NUMERIC_POS)
   {
     if (var2->sign == NUMERIC_POS)
     {
-      /*
-       * Both are positive result = +(ABS(var1) + ABS(var2))
-       */
+         
+                                                             
+         
       if (add_abs(var1, var2, result) != 0)
       {
         return -1;
@@ -809,28 +809,28 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
     }
     else
     {
-      /*
-       * var1 is positive, var2 is negative Must compare absolute values
-       */
+         
+                                                                         
+         
       switch (cmp_abs(var1, var2))
       {
       case 0:
-        /* ----------
-         * ABS(var1) == ABS(var2)
-         * result = ZERO
-         * ----------
-         */
+                      
+                                  
+                         
+                      
+           
         zero_var(result);
         result->rscale = Max(var1->rscale, var2->rscale);
         result->dscale = Max(var1->dscale, var2->dscale);
         break;
 
       case 1:
-        /* ----------
-         * ABS(var1) > ABS(var2)
-         * result = +(ABS(var1) - ABS(var2))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var1, var2, result) != 0)
         {
           return -1;
@@ -839,11 +839,11 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
         break;
 
       case -1:
-        /* ----------
-         * ABS(var1) < ABS(var2)
-         * result = -(ABS(var2) - ABS(var1))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var2, var1, result) != 0)
         {
           return -1;
@@ -857,30 +857,30 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
   {
     if (var2->sign == NUMERIC_POS)
     {
-      /* ----------
-       * var1 is negative, var2 is positive
-       * Must compare absolute values
-       * ----------
-       */
+                    
+                                            
+                                      
+                    
+         
       switch (cmp_abs(var1, var2))
       {
       case 0:
-        /* ----------
-         * ABS(var1) == ABS(var2)
-         * result = ZERO
-         * ----------
-         */
+                      
+                                  
+                         
+                      
+           
         zero_var(result);
         result->rscale = Max(var1->rscale, var2->rscale);
         result->dscale = Max(var1->dscale, var2->dscale);
         break;
 
       case 1:
-        /* ----------
-         * ABS(var1) > ABS(var2)
-         * result = -(ABS(var1) - ABS(var2))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var1, var2, result) != 0)
         {
           return -1;
@@ -889,11 +889,11 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
         break;
 
       case -1:
-        /* ----------
-         * ABS(var1) < ABS(var2)
-         * result = +(ABS(var2) - ABS(var1))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var2, var1, result) != 0)
         {
           return -1;
@@ -904,11 +904,11 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
     }
     else
     {
-      /* ----------
-       * Both are negative
-       * result = -(ABS(var1) + ABS(var2))
-       * ----------
-       */
+                    
+                           
+                                           
+                    
+         
       if (add_abs(var1, var2, result) != 0)
       {
         return -1;
@@ -920,28 +920,28 @@ PGTYPESnumeric_add(numeric *var1, numeric *var2, numeric *result)
   return 0;
 }
 
-/* ----------
- * sub_var() -
- *
- *	Full version of sub functionality on variable level (handling signs).
- *	result might point to one of the operands too without danger.
- * ----------
- */
+              
+               
+   
+                                                                         
+                                                                 
+              
+   
 int
 PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
 {
-  /*
-   * Decide on the signs of the two variables what to do
-   */
+     
+                                                         
+     
   if (var1->sign == NUMERIC_POS)
   {
     if (var2->sign == NUMERIC_NEG)
     {
-      /* ----------
-       * var1 is positive, var2 is negative
-       * result = +(ABS(var1) + ABS(var2))
-       * ----------
-       */
+                    
+                                            
+                                           
+                    
+         
       if (add_abs(var1, var2, result) != 0)
       {
         return -1;
@@ -950,30 +950,30 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
     }
     else
     {
-      /* ----------
-       * Both are positive
-       * Must compare absolute values
-       * ----------
-       */
+                    
+                           
+                                      
+                    
+         
       switch (cmp_abs(var1, var2))
       {
       case 0:
-        /* ----------
-         * ABS(var1) == ABS(var2)
-         * result = ZERO
-         * ----------
-         */
+                      
+                                  
+                         
+                      
+           
         zero_var(result);
         result->rscale = Max(var1->rscale, var2->rscale);
         result->dscale = Max(var1->dscale, var2->dscale);
         break;
 
       case 1:
-        /* ----------
-         * ABS(var1) > ABS(var2)
-         * result = +(ABS(var1) - ABS(var2))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var1, var2, result) != 0)
         {
           return -1;
@@ -982,11 +982,11 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
         break;
 
       case -1:
-        /* ----------
-         * ABS(var1) < ABS(var2)
-         * result = -(ABS(var2) - ABS(var1))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var2, var1, result) != 0)
         {
           return -1;
@@ -1000,30 +1000,30 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
   {
     if (var2->sign == NUMERIC_NEG)
     {
-      /* ----------
-       * Both are negative
-       * Must compare absolute values
-       * ----------
-       */
+                    
+                           
+                                      
+                    
+         
       switch (cmp_abs(var1, var2))
       {
       case 0:
-        /* ----------
-         * ABS(var1) == ABS(var2)
-         * result = ZERO
-         * ----------
-         */
+                      
+                                  
+                         
+                      
+           
         zero_var(result);
         result->rscale = Max(var1->rscale, var2->rscale);
         result->dscale = Max(var1->dscale, var2->dscale);
         break;
 
       case 1:
-        /* ----------
-         * ABS(var1) > ABS(var2)
-         * result = -(ABS(var1) - ABS(var2))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var1, var2, result) != 0)
         {
           return -1;
@@ -1032,11 +1032,11 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
         break;
 
       case -1:
-        /* ----------
-         * ABS(var1) < ABS(var2)
-         * result = +(ABS(var2) - ABS(var1))
-         * ----------
-         */
+                      
+                                 
+                                             
+                      
+           
         if (sub_abs(var2, var1, result) != 0)
         {
           return -1;
@@ -1047,11 +1047,11 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
     }
     else
     {
-      /* ----------
-       * var1 is negative, var2 is positive
-       * result = -(ABS(var1) + ABS(var2))
-       * ----------
-       */
+                    
+                                            
+                                           
+                    
+         
       if (add_abs(var1, var2, result) != 0)
       {
         return -1;
@@ -1063,13 +1063,13 @@ PGTYPESnumeric_sub(numeric *var1, numeric *var2, numeric *result)
   return 0;
 }
 
-/* ----------
- * mul_var() -
- *
- *	Multiplication on variable level. Product of var1 * var2 is stored
- *	in result.  Accuracy of result is determined by global_rscale.
- * ----------
- */
+              
+               
+   
+                                                                      
+                                                                  
+              
+   
 int
 PGTYPESnumeric_mul(numeric *var1, numeric *var2, numeric *result)
 {
@@ -1158,14 +1158,14 @@ PGTYPESnumeric_mul(numeric *var1, numeric *var2, numeric *result)
   return 0;
 }
 
-/*
- * Default scale selection for division
- *
- * Returns the appropriate display scale for the division result,
- * and sets global_rscale to the result scale to use during div_var.
- *
- * Note that this must be called before div_var.
- */
+   
+                                        
+   
+                                                                  
+                                                                     
+   
+                                                 
+   
 static int
 select_div_scale(numeric *var1, numeric *var2, int *rscale)
 {
@@ -1173,17 +1173,17 @@ select_div_scale(numeric *var1, numeric *var2, int *rscale)
   NumericDigit firstdigit1, firstdigit2;
   int res_dscale;
 
-  /*
-   * The result scale of a division isn't specified in any SQL standard. For
-   * PostgreSQL we select a display scale that will give at least
-   * NUMERIC_MIN_SIG_DIGITS significant digits, so that numeric gives a
-   * result no less accurate than float8; but use a scale not less than
-   * either input's display scale.
-   */
+     
+                                                                             
+                                                                  
+                                                                        
+                                                                        
+                                   
+     
 
-  /* Get the actual (normalized) weight and first digit of each input */
+                                                                        
 
-  weight1 = 0; /* values to use if var1 is zero */
+  weight1 = 0;                                    
   firstdigit1 = 0;
   for (i = 0; i < var1->ndigits; i++)
   {
@@ -1195,7 +1195,7 @@ select_div_scale(numeric *var1, numeric *var2, int *rscale)
     }
   }
 
-  weight2 = 0; /* values to use if var2 is zero */
+  weight2 = 0;                                    
   firstdigit2 = 0;
   for (i = 0; i < var2->ndigits; i++)
   {
@@ -1207,24 +1207,24 @@ select_div_scale(numeric *var1, numeric *var2, int *rscale)
     }
   }
 
-  /*
-   * Estimate weight of quotient.  If the two first digits are equal, we
-   * can't be sure, but assume that var1 is less than var2.
-   */
+     
+                                                                         
+                                                            
+     
   qweight = weight1 - weight2;
   if (firstdigit1 <= firstdigit2)
   {
     qweight--;
   }
 
-  /* Select display scale */
+                            
   res_dscale = NUMERIC_MIN_SIG_DIGITS - qweight;
   res_dscale = Max(res_dscale, var1->dscale);
   res_dscale = Max(res_dscale, var2->dscale);
   res_dscale = Max(res_dscale, NUMERIC_MIN_DISPLAY_SCALE);
   res_dscale = Min(res_dscale, NUMERIC_MAX_DISPLAY_SCALE);
 
-  /* Select result scale */
+                           
   *rscale = res_dscale + 4;
 
   return res_dscale;
@@ -1254,9 +1254,9 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
   int err = -1;
   NumericDigit *tmp_buf;
 
-  /*
-   * First of all division by zero check
-   */
+     
+                                         
+     
   ndigits_tmp = var2->ndigits + 1;
   if (ndigits_tmp == 1)
   {
@@ -1264,9 +1264,9 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
     return -1;
   }
 
-  /*
-   * Determine the result sign, weight and number of digits to calculate
-   */
+     
+                                                                         
+     
   if (var1->sign == var2->sign)
   {
     res_sign = NUMERIC_POS;
@@ -1282,9 +1282,9 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
     res_ndigits = 1;
   }
 
-  /*
-   * Now result zero check
-   */
+     
+                           
+     
   if (var1->ndigits == 0)
   {
     zero_var(result);
@@ -1292,18 +1292,18 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
     return 0;
   }
 
-  /*
-   * Initialize local variables
-   */
+     
+                                
+     
   init_var(&dividend);
   for (i = 1; i < 10; i++)
   {
     init_var(&divisor[i]);
   }
 
-  /*
-   * Make a copy of the divisor which has one leading zero digit
-   */
+     
+                                                                 
+     
   divisor[1].ndigits = ndigits_tmp;
   divisor[1].rscale = var2->ndigits;
   divisor[1].sign = NUMERIC_POS;
@@ -1316,9 +1316,9 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
   divisor[1].digits[0] = 0;
   memcpy(&(divisor[1].digits[1]), var2->digits, ndigits_tmp - 1);
 
-  /*
-   * Make a copy of the dividend
-   */
+     
+                                 
+     
   dividend.ndigits = var1->ndigits;
   dividend.weight = 0;
   dividend.rscale = var1->ndigits;
@@ -1331,11 +1331,11 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
   dividend.digits = dividend.buf;
   memcpy(dividend.digits, var1->digits, var1->ndigits);
 
-  /*
-   * Setup the result. Do the allocation in a temporary buffer first, so we
-   * don't free result->buf unless we have successfully allocated a buffer
-   * to replace it with.
-   */
+     
+                                                                            
+                                                                           
+                         
+     
   tmp_buf = digitbuf_alloc(res_ndigits + 2);
   if (tmp_buf == NULL)
   {
@@ -1473,13 +1473,13 @@ PGTYPESnumeric_div(numeric *var1, numeric *var2, numeric *result)
   }
 
   result->dscale = res_dscale;
-  err = 0; /* if we've made it this far, return success */
+  err = 0;                                                
 
 done:
 
-  /*
-   * Tidy up
-   */
+     
+             
+     
   if (dividend.buf != NULL)
   {
     digitbuf_free(dividend.buf);
@@ -1499,24 +1499,24 @@ done:
 int
 PGTYPESnumeric_cmp(numeric *var1, numeric *var2)
 {
-  /* use cmp_abs function to calculate the result */
+                                                    
 
-  /* both are positive: normal comparison with cmp_abs */
+                                                         
   if (var1->sign == NUMERIC_POS && var2->sign == NUMERIC_POS)
   {
     return cmp_abs(var1, var2);
   }
 
-  /* both are negative: return the inverse of the normal comparison */
+                                                                      
   if (var1->sign == NUMERIC_NEG && var2->sign == NUMERIC_NEG)
   {
-    /*
-     * instead of inverting the result, we invert the parameter ordering
-     */
+       
+                                                                         
+       
     return cmp_abs(var2, var1);
   }
 
-  /* one is positive, one is negative: trivial */
+                                                 
   if (var1->sign == NUMERIC_POS && var2->sign == NUMERIC_NEG)
   {
     return 1;
@@ -1533,7 +1533,7 @@ PGTYPESnumeric_cmp(numeric *var1, numeric *var2)
 int
 PGTYPESnumeric_from_int(signed int int_val, numeric *var)
 {
-  /* implicit conversion */
+                           
   signed long int long_int = int_val;
 
   return PGTYPESnumeric_from_long(long_int, var);
@@ -1542,13 +1542,13 @@ PGTYPESnumeric_from_int(signed int int_val, numeric *var)
 int
 PGTYPESnumeric_from_long(signed long int long_val, numeric *var)
 {
-  /* calculate the size of the long int number */
-  /* a number n needs log_10 n digits */
+                                                 
+                                        
 
-  /*
-   * however we multiply by 10 each time and compare instead of calculating
-   * the logarithm
-   */
+     
+                                                                            
+                   
+     
 
   int size = 0;
   int i;
@@ -1575,12 +1575,12 @@ PGTYPESnumeric_from_long(signed long int long_val, numeric *var)
 
   if (reach_limit > LONG_MAX / 10)
   {
-    /* add the first digit and a .0 */
+                                      
     size += 2;
   }
   else
   {
-    /* always add a .0 */
+                         
     size++;
     reach_limit /= 10;
   }
@@ -1603,11 +1603,11 @@ PGTYPESnumeric_from_long(signed long int long_val, numeric *var)
     i++;
     reach_limit /= 10;
 
-    /*
-     * we can abandon if abs_long_val reaches 0, because the memory is
-     * initialized properly and filled with '0', so converting 10000 in
-     * only one step is no problem
-     */
+       
+                                                                       
+                                                                        
+                                   
+       
   } while (abs_long_val > 0);
 
   return 0;
@@ -1696,9 +1696,9 @@ numericvar_to_double(numeric *var, double *dp)
     return -1;
   }
 
-  /*
-   * strtod does not reset errno to 0 in case of success.
-   */
+     
+                                                          
+     
   errno = 0;
   val = strtod(tmp, &endptr);
   if (errno == ERANGE)
@@ -1715,10 +1715,10 @@ numericvar_to_double(numeric *var, double *dp)
     return -1;
   }
 
-  /* can't free tmp yet, endptr points still into it */
+                                                       
   if (*endptr != '\0')
   {
-    /* shouldn't happen ... */
+                              
     free(tmp);
     errno = PGTYPES_NUM_BAD_NUMERIC;
     return -1;
@@ -1752,7 +1752,7 @@ PGTYPESnumeric_to_int(numeric *nv, int *ip)
     return i;
   }
 
-/* silence compilers that might complain about useless tests */
+                                                               
 #if SIZEOF_LONG > SIZEOF_INT
 
   if (l < INT_MIN || l > INT_MAX)
@@ -1782,7 +1782,7 @@ PGTYPESnumeric_to_long(numeric *nv, long *lp)
   *lp = strtol(s, &endptr, 10);
   if (endptr == s)
   {
-    /* this should not happen actually */
+                                         
     free(s);
     return -1;
   }

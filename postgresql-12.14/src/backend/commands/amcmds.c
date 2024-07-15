@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * amcmds.c
- *	  Routines for SQL commands that manipulate access methods.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/commands/amcmds.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/htup_details.h"
@@ -34,10 +34,10 @@ lookup_am_handler_func(List *handler_name, char amtype);
 static const char *
 get_am_type_string(char amtype);
 
-/*
- * CreateAccessMethod
- *		Registers a new access method.
- */
+   
+                      
+                                   
+   
 ObjectAddress
 CreateAccessMethod(CreateAmStmt *stmt)
 {
@@ -52,27 +52,27 @@ CreateAccessMethod(CreateAmStmt *stmt)
 
   rel = table_open(AccessMethodRelationId, RowExclusiveLock);
 
-  /* Must be super user */
+                          
   if (!superuser())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("permission denied to create access method \"%s\"", stmt->amname), errhint("Must be superuser to create an access method.")));
   }
 
-  /* Check if name is used */
+                             
   amoid = GetSysCacheOid1(AMNAME, Anum_pg_am_oid, CStringGetDatum(stmt->amname));
   if (OidIsValid(amoid))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("access method \"%s\" already exists", stmt->amname)));
   }
 
-  /*
-   * Get the handler function oid, verifying the AM type while at it.
-   */
+     
+                                                                      
+     
   amhandler = lookup_am_handler_func(stmt->handler_name, stmt->amtype);
 
-  /*
-   * Insert tuple into pg_am.
-   */
+     
+                              
+     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -91,7 +91,7 @@ CreateAccessMethod(CreateAmStmt *stmt)
   myself.objectId = amoid;
   myself.objectSubId = 0;
 
-  /* Record dependency on handler function */
+                                             
   referenced.classId = ProcedureRelationId;
   referenced.objectId = amhandler;
   referenced.objectSubId = 0;
@@ -105,9 +105,9 @@ CreateAccessMethod(CreateAmStmt *stmt)
   return myself;
 }
 
-/*
- * Guts of access method deletion.
- */
+   
+                                   
+   
 void
 RemoveAccessMethodById(Oid amOid)
 {
@@ -134,16 +134,16 @@ RemoveAccessMethodById(Oid amOid)
   table_close(relation, RowExclusiveLock);
 }
 
-/*
- * get_am_type_oid
- *		Worker for various get_am_*_oid variants
- *
- * If missing_ok is false, throw an error if access method not found.  If
- * true, just return InvalidOid.
- *
- * If amtype is not '\0', an error is raised if the AM found is not of the
- * given type.
- */
+   
+                   
+                                             
+   
+                                                                          
+                                 
+   
+                                                                           
+               
+   
 static Oid
 get_am_type_oid(const char *amname, char amtype, bool missing_ok)
 {
@@ -171,39 +171,39 @@ get_am_type_oid(const char *amname, char amtype, bool missing_ok)
   return oid;
 }
 
-/*
- * get_index_am_oid - given an access method name, look up its OID
- *		and verify it corresponds to an index AM.
- */
+   
+                                                                   
+                                              
+   
 Oid
 get_index_am_oid(const char *amname, bool missing_ok)
 {
   return get_am_type_oid(amname, AMTYPE_INDEX, missing_ok);
 }
 
-/*
- * get_table_am_oid - given an access method name, look up its OID
- *		and verify it corresponds to an table AM.
- */
+   
+                                                                   
+                                              
+   
 Oid
 get_table_am_oid(const char *amname, bool missing_ok)
 {
   return get_am_type_oid(amname, AMTYPE_TABLE, missing_ok);
 }
 
-/*
- * get_am_oid - given an access method name, look up its OID.
- *		The type is not checked.
- */
+   
+                                                              
+                             
+   
 Oid
 get_am_oid(const char *amname, bool missing_ok)
 {
   return get_am_type_oid(amname, '\0', missing_ok);
 }
 
-/*
- * get_am_name - given an access method OID name and type, look up its name.
- */
+   
+                                                                             
+   
 char *
 get_am_name(Oid amOid)
 {
@@ -221,9 +221,9 @@ get_am_name(Oid amOid)
   return result;
 }
 
-/*
- * Convert single-character access method type into string for error reporting.
- */
+   
+                                                                                
+   
 static const char *
 get_am_type_string(char amtype)
 {
@@ -234,18 +234,18 @@ get_am_type_string(char amtype)
   case AMTYPE_TABLE:
     return "TABLE";
   default:
-    /* shouldn't happen */
+                          
     elog(ERROR, "invalid access method type '%c'", amtype);
-    return NULL; /* keep compiler quiet */
+    return NULL;                          
   }
 }
 
-/*
- * Convert a handler function name to an Oid.  If the return type of the
- * function doesn't match the given AM type, an error is raised.
- *
- * This function either return valid function Oid or throw an error.
- */
+   
+                                                                         
+                                                                 
+   
+                                                                     
+   
 static Oid
 lookup_am_handler_func(List *handler_name, char amtype)
 {
@@ -258,10 +258,10 @@ lookup_am_handler_func(List *handler_name, char amtype)
     ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION), errmsg("handler function is not specified")));
   }
 
-  /* handlers have one argument of type internal */
+                                                   
   handlerOid = LookupFuncName(handler_name, 1, funcargtypes, false);
 
-  /* check that handler has the correct return type */
+                                                      
   switch (amtype)
   {
   case AMTYPE_INDEX:

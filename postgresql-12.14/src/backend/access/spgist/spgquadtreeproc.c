@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * spgquadtreeproc.c
- *	  implementation of quad tree over points for SP-GiST
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/spgist/spgquadtreeproc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                     
+                                                         
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                                 
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -26,11 +26,11 @@
 Datum
 spg_quad_config(PG_FUNCTION_ARGS)
 {
-  /* spgConfigIn *cfgin = (spgConfigIn *) PG_GETARG_POINTER(0); */
+                                                                  
   spgConfigOut *cfg = (spgConfigOut *)PG_GETARG_POINTER(1);
 
   cfg->prefixType = POINTOID;
-  cfg->labelType = VOIDOID; /* we don't need node labels */
+  cfg->labelType = VOIDOID;                                
   cfg->canReturnData = true;
   cfg->longValuesOK = false;
   PG_RETURN_VOID();
@@ -38,18 +38,18 @@ spg_quad_config(PG_FUNCTION_ARGS)
 
 #define SPTEST(f, x, y) DatumGetBool(DirectFunctionCall2(f, PointPGetDatum(x), PointPGetDatum(y)))
 
-/*
- * Determine which quadrant a point falls into, relative to the centroid.
- *
- * Quadrants are identified like this:
- *
- *	 4	|  1
- *	----+-----
- *	 3	|  2
- *
- * Points on one of the axes are taken to lie in the lowest-numbered
- * adjacent quadrant.
- */
+   
+                                                                          
+   
+                                       
+   
+           
+              
+           
+   
+                                                                     
+                      
+   
 static int16
 getQuadrant(Point *centroid, Point *tst)
 {
@@ -77,7 +77,7 @@ getQuadrant(Point *centroid, Point *tst)
   return 0;
 }
 
-/* Returns bounding box of a given quadrant inside given bounding box */
+                                                                        
 static BOX *
 getQuadrantArea(BOX *bbox, Point *centroid, int quadrant)
 {
@@ -120,7 +120,7 @@ spg_quad_choose(PG_FUNCTION_ARGS)
   if (in->allTheSame)
   {
     out->resultType = spgMatchNode;
-    /* nodeN will be set by core */
+                                   
     out->result.matchNode.levelAdd = 0;
     out->result.matchNode.restDatum = PointPGetDatum(inPoint);
     PG_RETURN_VOID();
@@ -176,7 +176,7 @@ spg_quad_picksplit(PG_FUNCTION_ARGS)
   Point *centroid;
 
 #ifdef USE_MEDIAN
-  /* Use the median values of x and y as the centroid point */
+                                                              
   Point **sorted;
 
   sorted = palloc(sizeof(*sorted) * in->nTuples);
@@ -192,7 +192,7 @@ spg_quad_picksplit(PG_FUNCTION_ARGS)
   qsort(sorted, in->nTuples, sizeof(*sorted), y_cmp);
   centroid->y = sorted[in->nTuples >> 1]->y;
 #else
-  /* Use the average values of x and y as the centroid point */
+                                                               
   centroid = palloc0(sizeof(*centroid));
 
   for (i = 0; i < in->nTuples; i++)
@@ -209,7 +209,7 @@ spg_quad_picksplit(PG_FUNCTION_ARGS)
   out->prefixDatum = PointPGetDatum(centroid);
 
   out->nNodes = 4;
-  out->nodeLabels = NULL; /* we don't need node labels */
+  out->nodeLabels = NULL;                                
 
   out->mapTuplesToNodes = palloc(sizeof(int) * in->nTuples);
   out->leafTupleDatums = palloc(sizeof(Datum) * in->nTuples);
@@ -240,13 +240,13 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
   Assert(in->hasPrefix);
   centroid = DatumGetPointP(in->prefixDatum);
 
-  /*
-   * When ordering scan keys are specified, we've to calculate distance for
-   * them.  In order to do that, we need calculate bounding boxes for all
-   * children nodes.  Calculation of those bounding boxes on non-zero level
-   * require knowledge of bounding box of upper node.  So, we save bounding
-   * boxes to traversalValues.
-   */
+     
+                                                                            
+                                                                          
+                                                                            
+                                                                            
+                               
+     
   if (in->norderbys > 0)
   {
     out->distances = (double **)palloc(sizeof(double *) * in->nNodes);
@@ -271,7 +271,7 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
 
   if (in->allTheSame)
   {
-    /* Report that all nodes should be visited */
+                                                 
     out->nNodes = in->nNodes;
     out->nodeNumbers = (int *)palloc(sizeof(int) * in->nNodes);
     for (i = 0; i < in->nNodes; i++)
@@ -282,7 +282,7 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
       {
         MemoryContext oldCtx = MemoryContextSwitchTo(in->traversalMemoryContext);
 
-        /* Use parent quadrant box as traversalValue */
+                                                       
         BOX *quadrant = box_copy(bbox);
 
         MemoryContextSwitchTo(oldCtx);
@@ -296,7 +296,7 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
 
   Assert(in->nNodes == 4);
 
-  /* "which" is a bitmask of quadrants that satisfy all constraints */
+                                                                      
   which = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
 
   for (i = 0; i < in->nkeys; i++)
@@ -335,20 +335,20 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
       break;
     case RTContainedByStrategyNumber:
 
-      /*
-       * For this operator, the query is a box not a point.  We
-       * cheat to the extent of assuming that DatumGetPointP won't
-       * do anything that would be bad for a pointer-to-box.
-       */
+         
+                                                                
+                                                                   
+                                                             
+         
       boxQuery = DatumGetBoxP(in->scankeys[i].sk_argument);
 
       if (DatumGetBool(DirectFunctionCall2(box_contain_pt, PointerGetDatum(boxQuery), PointerGetDatum(centroid))))
       {
-        /* centroid is in box, so all quadrants are OK */
+                                                         
       }
       else
       {
-        /* identify quadrant(s) containing all corners of box */
+                                                                
         Point p;
         int r = 0;
 
@@ -371,7 +371,7 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
 
     if (which == 0)
     {
-      break; /* no need to consider remaining conditions */
+      break;                                               
     }
   }
 
@@ -381,7 +381,7 @@ spg_quad_inner_consistent(PG_FUNCTION_ARGS)
     out->levelAdds[i] = 1;
   }
 
-  /* We must descend into the quadrant(s) identified by which */
+                                                                
   out->nodeNumbers = (int *)palloc(sizeof(int) * 4);
   out->nNodes = 0;
 
@@ -419,13 +419,13 @@ spg_quad_leaf_consistent(PG_FUNCTION_ARGS)
   bool res;
   int i;
 
-  /* all tests are exact */
+                           
   out->recheck = false;
 
-  /* leafDatum is what it is... */
+                                  
   out->leafValue = in->leafDatum;
 
-  /* Perform the required comparison(s) */
+                                          
   res = true;
   for (i = 0; i < in->nkeys; i++)
   {
@@ -450,11 +450,11 @@ spg_quad_leaf_consistent(PG_FUNCTION_ARGS)
       break;
     case RTContainedByStrategyNumber:
 
-      /*
-       * For this operator, the query is a box not a point.  We
-       * cheat to the extent of assuming that DatumGetPointP won't
-       * do anything that would be bad for a pointer-to-box.
-       */
+         
+                                                                
+                                                                   
+                                                             
+         
       res = SPTEST(box_contain_pt, query, datum);
       break;
     default:
@@ -470,7 +470,7 @@ spg_quad_leaf_consistent(PG_FUNCTION_ARGS)
 
   if (res && in->norderbys > 0)
   {
-    /* ok, it passes -> let's compute the distances */
+                                                      
     out->distances = spg_key_orderbys_distances(in->leafDatum, true, in->orderbys, in->norderbys);
   }
 

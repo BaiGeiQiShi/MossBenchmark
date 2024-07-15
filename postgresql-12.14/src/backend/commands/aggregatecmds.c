@@ -1,25 +1,25 @@
-/*-------------------------------------------------------------------------
- *
- * aggregatecmds.c
- *
- *	  Routines for aggregate-manipulation commands
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/commands/aggregatecmds.c
- *
- * DESCRIPTION
- *	  The "DefineFoo" routines take the parse tree and pick out the
- *	  appropriate arguments/flags, passing the results to the
- *	  corresponding "FooDefine" routines (in src/catalog) that do
- *	  the actual catalog-munging.  These routines also verify permission
- *	  of the user to execute the command.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+   
+                                                  
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                          
+   
+               
+                                                                   
+                                                             
+                                                                 
+                                                                        
+                                         
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/htup_details.h"
@@ -41,17 +41,17 @@
 static char
 extractModify(DefElem *defel);
 
-/*
- *	DefineAggregate
- *
- * "oldstyle" signals the old (pre-8.2) style where the aggregate input type
- * is specified by a BASETYPE element in the parameters.  Otherwise,
- * "args" is a pair, whose first element is a list of FunctionParameter structs
- * defining the agg's arguments (both direct and aggregated), and whose second
- * element is an Integer node with the number of direct args, or -1 if this
- * isn't an ordered-set aggregate.
- * "parameters" is a list of DefElem representing the agg's definition clauses.
- */
+   
+                   
+   
+                                                                             
+                                                                     
+                                                                                
+                                                                               
+                                                                            
+                                   
+                                                                                
+   
 ObjectAddress
 DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List *parameters, bool replace)
 {
@@ -95,17 +95,17 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   char proparallel = PROPARALLEL_UNSAFE;
   ListCell *pl;
 
-  /* Convert list of names to a name and namespace */
+                                                     
   aggNamespace = QualifiedNameGetCreationNamespace(name, &aggName);
 
-  /* Check we have creation rights in target namespace */
+                                                         
   aclresult = pg_namespace_aclcheck(aggNamespace, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(aggNamespace));
   }
 
-  /* Deconstruct the output of the aggr_args grammar production */
+                                                                  
   if (!oldstyle)
   {
     Assert(list_length(args) == 2);
@@ -121,15 +121,15 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     args = linitial_node(List, args);
   }
 
-  /* Examine aggregate's definition clauses */
+                                              
   foreach (pl, parameters)
   {
     DefElem *defel = lfirst_node(DefElem, pl);
 
-    /*
-     * sfunc1, stype1, and initcond1 are accepted as obsolete spellings
-     * for sfunc, stype, initcond.
-     */
+       
+                                                                        
+                                   
+       
     if (strcmp(defel->defname, "sfunc") == 0)
     {
       transfuncName = defGetQualifiedName(defel);
@@ -243,9 +243,9 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
   }
 
-  /*
-   * make sure we have our required definitions
-   */
+     
+                                                
+     
   if (transType == NULL)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate stype must be specified")));
@@ -255,11 +255,11 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate sfunc must be specified")));
   }
 
-  /*
-   * if mtransType is given, mtransfuncName and minvtransfuncName must be as
-   * well; if not, then none of the moving-aggregate options should have
-   * been given.
-   */
+     
+                                                                             
+                                                                         
+                 
+     
   if (mtransType != NULL)
   {
     if (mtransfuncName == NIL)
@@ -295,10 +295,10 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
   }
 
-  /*
-   * Default values for modify flags can only be determined once we know the
-   * aggKind.
-   */
+     
+                                                                             
+              
+     
   if (finalfuncModify == 0)
   {
     finalfuncModify = (aggKind == AGGKIND_NORMAL) ? AGGMODIFY_READ_ONLY : AGGMODIFY_READ_WRITE;
@@ -308,18 +308,18 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     mfinalfuncModify = (aggKind == AGGKIND_NORMAL) ? AGGMODIFY_READ_ONLY : AGGMODIFY_READ_WRITE;
   }
 
-  /*
-   * look up the aggregate's input datatype(s).
-   */
+     
+                                                
+     
   if (oldstyle)
   {
-    /*
-     * Old style: use basetype parameter.  This supports aggregates of
-     * zero or one input, with input type ANY meaning zero inputs.
-     *
-     * Historically we allowed the command to look like basetype = 'ANY'
-     * so we must do a case-insensitive comparison for the name ANY. Ugh.
-     */
+       
+                                                                       
+                                                                   
+       
+                                                                         
+                                                                          
+       
     Oid aggArgTypes[1];
 
     if (baseType == NULL)
@@ -346,10 +346,10 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   }
   else
   {
-    /*
-     * New style: args is a list of FunctionParameters (possibly zero of
-     * 'em).  We share functioncmds.c's code for processing them.
-     */
+       
+                                                                         
+                                                                  
+       
     Oid requiredResultType;
 
     if (baseType != NULL)
@@ -359,29 +359,29 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
 
     numArgs = list_length(args);
     interpret_function_parameter_list(pstate, args, InvalidOid, OBJECT_AGGREGATE, &parameterTypes, &allParameterTypes, &parameterModes, &parameterNames, &parameterDefaults, &variadicArgType, &requiredResultType);
-    /* Parameter defaults are not currently allowed by the grammar */
+                                                                     
     Assert(parameterDefaults == NIL);
-    /* There shouldn't have been any OUT parameters, either */
+                                                              
     Assert(requiredResultType == InvalidOid);
   }
 
-  /*
-   * look up the aggregate's transtype.
-   *
-   * transtype can't be a pseudo-type, since we need to be able to store
-   * values of the transtype.  However, we can allow polymorphic transtype
-   * in some cases (AggregateCreate will check).  Also, we allow "internal"
-   * for functions that want to pass pointers to private data structures;
-   * but allow that only to superusers, since you could crash the system (or
-   * worse) by connecting up incompatible internal-using functions in an
-   * aggregate.
-   */
+     
+                                        
+     
+                                                                         
+                                                                           
+                                                                            
+                                                                          
+                                                                             
+                                                                         
+                
+     
   transTypeId = typenameTypeId(NULL, transType);
   transTypeType = get_typtype(transTypeId);
   if (transTypeType == TYPTYPE_PSEUDO && !IsPolymorphicType(transTypeId))
   {
     if (transTypeId == INTERNALOID && superuser())
-      /* okay */;
+                ;
     else
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate transition data type cannot be %s", format_type_be(transTypeId))));
@@ -390,9 +390,9 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
 
   if (serialfuncName && deserialfuncName)
   {
-    /*
-     * Serialization is only needed/allowed for transtype INTERNAL.
-     */
+       
+                                                                    
+       
     if (transTypeId != INTERNALOID)
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("serialization functions may be specified only when the aggregate transition data type is %s", format_type_be(INTERNALOID))));
@@ -400,16 +400,16 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
   }
   else if (serialfuncName || deserialfuncName)
   {
-    /*
-     * Cannot specify one function without the other.
-     */
+       
+                                                      
+       
     ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("must specify both or neither of serialization and deserialization functions")));
   }
 
-  /*
-   * If a moving-aggregate transtype is specified, look that up.  Same
-   * restrictions as for transtype.
-   */
+     
+                                                                       
+                                    
+     
   if (mtransType)
   {
     mtransTypeId = typenameTypeId(NULL, mtransType);
@@ -417,7 +417,7 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     if (mtransTypeType == TYPTYPE_PSEUDO && !IsPolymorphicType(mtransTypeId))
     {
       if (mtransTypeId == INTERNALOID && superuser())
-        /* okay */;
+                  ;
       else
       {
         ereport(ERROR, (errcode(ERRCODE_INVALID_FUNCTION_DEFINITION), errmsg("aggregate transition data type cannot be %s", format_type_be(mtransTypeId))));
@@ -425,15 +425,15 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
   }
 
-  /*
-   * If we have an initval, and it's not for a pseudotype (particularly a
-   * polymorphic type), make sure it's acceptable to the type's input
-   * function.  We will store the initval as text, because the input
-   * function isn't necessarily immutable (consider "now" for timestamp),
-   * and we want to use the runtime not creation-time interpretation of the
-   * value.  However, if it's an incorrect value it seems much more
-   * user-friendly to complain at CREATE AGGREGATE time.
-   */
+     
+                                                                          
+                                                                      
+                                                                     
+                                                                          
+                                                                            
+                                                                    
+                                                         
+     
   if (initval && transTypeType != TYPTYPE_PSEUDO)
   {
     Oid typinput, typioparam;
@@ -442,9 +442,9 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     (void)OidInputFunctionCall(typinput, initval, typioparam, -1);
   }
 
-  /*
-   * Likewise for moving-aggregate initval.
-   */
+     
+                                            
+     
   if (minitval && mtransTypeType != TYPTYPE_PSEUDO)
   {
     Oid typinput, typioparam;
@@ -473,32 +473,32 @@ DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle, List 
     }
   }
 
-  /*
-   * Most of the argument-checking is done inside of AggregateCreate
-   */
-  return AggregateCreate(aggName,                                                                                                                                                                                        /* aggregate name */
-      aggNamespace,                                                                                                                                                                                                      /* namespace */
-      replace, aggKind, numArgs, numDirectArgs, parameterTypes, PointerGetDatum(allParameterTypes), PointerGetDatum(parameterModes), PointerGetDatum(parameterNames), parameterDefaults, variadicArgType, transfuncName, /* step function name */
-      finalfuncName,                                                                                                                                                                                                     /* final function name */
-      combinefuncName,                                                                                                                                                                                                   /* combine function name */
-      serialfuncName,                                                                                                                                                                                                    /* serial function name */
-      deserialfuncName,                                                                                                                                                                                                  /* deserial function name */
-      mtransfuncName,                                                                                                                                                                                                    /* fwd trans function name */
-      minvtransfuncName,                                                                                                                                                                                                 /* inv trans function name */
-      mfinalfuncName,                                                                                                                                                                                                    /* final function name */
-      finalfuncExtraArgs, mfinalfuncExtraArgs, finalfuncModify, mfinalfuncModify, sortoperatorName,                                                                                                                      /* sort operator name */
-      transTypeId,                                                                                                                                                                                                       /* transition data type */
-      transSpace,                                                                                                                                                                                                        /* transition space */
-      mtransTypeId,                                                                                                                                                                                                      /* transition data type */
-      mtransSpace,                                                                                                                                                                                                       /* transition space */
-      initval,                                                                                                                                                                                                           /* initial condition */
-      minitval,                                                                                                                                                                                                          /* initial condition */
-      proparallel);                                                                                                                                                                                                      /* parallel safe? */
+     
+                                                                     
+     
+  return AggregateCreate(aggName,                                                                                                                                                                                                            
+      aggNamespace,                                                                                                                                                                                                                     
+      replace, aggKind, numArgs, numDirectArgs, parameterTypes, PointerGetDatum(allParameterTypes), PointerGetDatum(parameterModes), PointerGetDatum(parameterNames), parameterDefaults, variadicArgType, transfuncName,                         
+      finalfuncName,                                                                                                                                                                                                                              
+      combinefuncName,                                                                                                                                                                                                                              
+      serialfuncName,                                                                                                                                                                                                                              
+      deserialfuncName,                                                                                                                                                                                                                              
+      mtransfuncName,                                                                                                                                                                                                                                 
+      minvtransfuncName,                                                                                                                                                                                                                              
+      mfinalfuncName,                                                                                                                                                                                                                             
+      finalfuncExtraArgs, mfinalfuncExtraArgs, finalfuncModify, mfinalfuncModify, sortoperatorName,                                                                                                                                              
+      transTypeId,                                                                                                                                                                                                                                 
+      transSpace,                                                                                                                                                                                                                              
+      mtransTypeId,                                                                                                                                                                                                                                
+      mtransSpace,                                                                                                                                                                                                                             
+      initval,                                                                                                                                                                                                                                  
+      minitval,                                                                                                                                                                                                                                 
+      proparallel);                                                                                                                                                                                                                          
 }
 
-/*
- * Convert the string form of [m]finalfunc_modify to the catalog representation
- */
+   
+                                                                                
+   
 static char
 extractModify(DefElem *defel)
 {
@@ -517,5 +517,5 @@ extractModify(DefElem *defel)
     return AGGMODIFY_READ_WRITE;
   }
   ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("parameter \"%s\" must be READ_ONLY, SHAREABLE, or READ_WRITE", defel->defname)));
-  return 0; /* keep compiler quiet */
+  return 0;                          
 }

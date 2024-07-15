@@ -1,27 +1,27 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "test5.pgc"
-/*
- * this file tests all sorts of connecting to one single database.
- */
+   
+                                                                   
+   
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-/* do not include regression.h */
+                                 
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 16 "test5.pgc"
   char db[200];
@@ -31,7 +31,7 @@ main(void)
 
 #line 18 "test5.pgc"
   char *user = "regress_ecpg_user1";
-/* exec sql end declare section */
+                                  
 #line 19 "test5.pgc"
 
   ECPGdebug(1, stderr);
@@ -60,7 +60,7 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
   }
 #line 27 "test5.pgc"
-  /* <-- "main" not specified */
+                                
 
   strcpy(db, "ecpg2_regression");
   strcpy(id, "main");
@@ -184,7 +184,7 @@ main(void)
   }
 #line 65 "test5.pgc"
 
-  /* connect twice */
+                     
   {
     ECPGconnect(__LINE__, 0, "ecpg2_regression", NULL, NULL, "main", 0);
   }
@@ -200,7 +200,7 @@ main(void)
   }
 #line 70 "test5.pgc"
 
-  /* not connected */
+                     
   {
     ECPGdisconnect(__LINE__, "nonexistent");
   }

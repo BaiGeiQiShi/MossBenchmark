@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * varchar.c
- *	  Functions for the built-in types char(n) and varchar(n).
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/varchar.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                              
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/tuptoaster.h"
@@ -28,7 +28,7 @@
 #include "utils/varlena.h"
 #include "mb/pg_wchar.h"
 
-/* common code for bpchartypmodin and varchartypmodin */
+                                                        
 static int32
 anychar_typmodin(ArrayType *ta, const char *typename)
 {
@@ -38,10 +38,10 @@ anychar_typmodin(ArrayType *ta, const char *typename)
 
   tl = ArrayGetIntegerTypmods(ta, &n);
 
-  /*
-   * we're not too tense about good error message here because grammar
-   * shouldn't allow wrong number of modifiers for CHAR
-   */
+     
+                                                                       
+                                                        
+     
   if (n != 1)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid type modifier")));
@@ -56,17 +56,17 @@ anychar_typmodin(ArrayType *ta, const char *typename)
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("length for type %s cannot exceed %d", typename, MaxAttrSize)));
   }
 
-  /*
-   * For largely historical reasons, the typmod is VARHDRSZ plus the number
-   * of characters; there is enough client-side code that knows about that
-   * that we'd better not change it.
-   */
+     
+                                                                            
+                                                                           
+                                     
+     
   typmod = VARHDRSZ + *tl;
 
   return typmod;
 }
 
-/* common code for bpchartypmodout and varchartypmodout */
+                                                          
 static char *
 anychar_typmodout(int32 typmod)
 {
@@ -84,45 +84,45 @@ anychar_typmodout(int32 typmod)
   return res;
 }
 
-/*
- * CHAR() and VARCHAR() types are part of the SQL standard. CHAR()
- * is for blank-padded string whose length is specified in CREATE TABLE.
- * VARCHAR is for storing string whose length is at most the length specified
- * at CREATE TABLE time.
- *
- * It's hard to implement these types because we cannot figure out
- * the length of the type from the type itself. I changed (hopefully all) the
- * fmgr calls that invoke input functions of a data type to supply the
- * length also. (eg. in INSERTs, we have the tupleDescriptor which contains
- * the length of the attributes and hence the exact length of the char() or
- * varchar(). We pass this to bpcharin() or varcharin().) In the case where
- * we cannot determine the length, we pass in -1 instead and the input
- * converter does not enforce any length check.
- *
- * We actually implement this as a varlena so that we don't have to pass in
- * the length for the comparison functions. (The difference between these
- * types and "text" is that we truncate and possibly blank-pad the string
- * at insertion time.)
- *
- *															  - ay 6/95
- */
+   
+                                                                   
+                                                                         
+                                                                              
+                         
+   
+                                                                   
+                                                                              
+                                                                       
+                                                                            
+                                                                            
+                                                                            
+                                                                       
+                                                
+   
+                                                                            
+                                                                          
+                                                                          
+                       
+   
+                             
+   
 
-/*****************************************************************************
- *	 bpchar - char()														 *
- *****************************************************************************/
+                                                                               
+                                    
+                                                                               
 
-/*
- * bpchar_input -- common guts of bpcharin and bpcharrecv
- *
- * s is the input text of length len (may not be null-terminated)
- * atttypmod is the typmod value to apply
- *
- * Note that atttypmod is measured in characters, which
- * is not necessarily the same as the number of bytes.
- *
- * If the input string is too long, raise an error, unless the extra
- * characters are spaces, in which case they're truncated.  (per SQL)
- */
+   
+                                                          
+   
+                                                                  
+                                          
+   
+                                                        
+                                                       
+   
+                                                                     
+                                                                      
+   
 static BpChar *
 bpchar_input(const char *s, size_t len, int32 atttypmod)
 {
@@ -130,28 +130,28 @@ bpchar_input(const char *s, size_t len, int32 atttypmod)
   char *r;
   size_t maxlen;
 
-  /* If typmod is -1 (or invalid), use the actual string length */
+                                                                  
   if (atttypmod < (int32)VARHDRSZ)
   {
     maxlen = len;
   }
   else
   {
-    size_t charlen; /* number of CHARACTERS in the input */
+    size_t charlen;                                        
 
     maxlen = atttypmod - VARHDRSZ;
     charlen = pg_mbstrlen_with_len(s, len);
     if (charlen > maxlen)
     {
-      /* Verify that extra characters are spaces, and clip them off */
+                                                                      
       size_t mbmaxlen = pg_mbcharcliplen(s, len, maxlen);
       size_t j;
 
-      /*
-       * at this point, len is the actual BYTE length of the input
-       * string, maxlen is the max number of CHARACTERS allowed for this
-       * bpchar type, mbmaxlen is the length in BYTES of those chars.
-       */
+         
+                                                                   
+                                                                         
+                                                                      
+         
       for (j = mbmaxlen; j < len; j++)
       {
         if (s[j] != ' ')
@@ -160,18 +160,18 @@ bpchar_input(const char *s, size_t len, int32 atttypmod)
         }
       }
 
-      /*
-       * Now we set maxlen to the necessary byte length, not the number
-       * of CHARACTERS!
-       */
+         
+                                                                        
+                        
+         
       maxlen = len = mbmaxlen;
     }
     else
     {
-      /*
-       * Now we set maxlen to the necessary byte length, not the number
-       * of CHARACTERS!
-       */
+         
+                                                                        
+                        
+         
       maxlen = len + (maxlen - charlen);
     }
   }
@@ -181,7 +181,7 @@ bpchar_input(const char *s, size_t len, int32 atttypmod)
   r = VARDATA(result);
   memcpy(r, s, len);
 
-  /* blank pad the string if necessary */
+                                         
   if (maxlen > len)
   {
     memset(r + len, ' ', maxlen - len);
@@ -190,10 +190,10 @@ bpchar_input(const char *s, size_t len, int32 atttypmod)
   return result;
 }
 
-/*
- * Convert a C string to CHARACTER internal representation.  atttypmod
- * is the declared length of the type plus VARHDRSZ.
- */
+   
+                                                                       
+                                                     
+   
 Datum
 bpcharin(PG_FUNCTION_ARGS)
 {
@@ -209,12 +209,12 @@ bpcharin(PG_FUNCTION_ARGS)
   PG_RETURN_BPCHAR_P(result);
 }
 
-/*
- * Convert a CHARACTER value to a C string.
- *
- * Uses the text conversion functions, which is only appropriate if BpChar
- * and text are equivalent types.
- */
+   
+                                            
+   
+                                                                           
+                                  
+   
 Datum
 bpcharout(PG_FUNCTION_ARGS)
 {
@@ -223,9 +223,9 @@ bpcharout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(TextDatumGetCString(txt));
 }
 
-/*
- *		bpcharrecv			- converts external binary format to bpchar
- */
+   
+                                                             
+   
 Datum
 bpcharrecv(PG_FUNCTION_ARGS)
 {
@@ -245,28 +245,28 @@ bpcharrecv(PG_FUNCTION_ARGS)
   PG_RETURN_BPCHAR_P(result);
 }
 
-/*
- *		bpcharsend			- converts bpchar to binary format
- */
+   
+                                                    
+   
 Datum
 bpcharsend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as textsend, so share code */
+                                                   
   return textsend(fcinfo);
 }
 
-/*
- * Converts a CHARACTER type to the specified size.
- *
- * maxlen is the typmod, ie, declared length plus VARHDRSZ bytes.
- * isExplicit is true if this is for an explicit cast to char(N).
- *
- * Truncation rules: for an explicit cast, silently truncate to the given
- * length; for an implicit cast, raise error unless extra characters are
- * all spaces.  (This is sort-of per SQL: the spec would actually have us
- * raise a "completion condition" for the explicit cast case, but Postgres
- * hasn't got such a concept.)
- */
+   
+                                                    
+   
+                                                                  
+                                                                  
+   
+                                                                          
+                                                                         
+                                                                          
+                                                                           
+                               
+   
 Datum
 bpchar(PG_FUNCTION_ARGS)
 {
@@ -278,10 +278,10 @@ bpchar(PG_FUNCTION_ARGS)
   char *r;
   char *s;
   int i;
-  int charlen; /* number of characters in the input string +
-                * VARHDRSZ */
+  int charlen;                                               
+                             
 
-  /* No work if typmod is invalid */
+                                    
   if (maxlen < (int32)VARHDRSZ)
   {
     PG_RETURN_BPCHAR_P(source);
@@ -294,7 +294,7 @@ bpchar(PG_FUNCTION_ARGS)
 
   charlen = pg_mbstrlen_with_len(s, len);
 
-  /* No work if supplied data matches typmod already */
+                                                       
   if (charlen == maxlen)
   {
     PG_RETURN_BPCHAR_P(source);
@@ -302,7 +302,7 @@ bpchar(PG_FUNCTION_ARGS)
 
   if (charlen > maxlen)
   {
-    /* Verify that extra characters are spaces, and clip them off */
+                                                                    
     size_t maxmblen;
 
     maxmblen = pg_mbcharcliplen(s, len, maxlen);
@@ -320,18 +320,18 @@ bpchar(PG_FUNCTION_ARGS)
 
     len = maxmblen;
 
-    /*
-     * At this point, maxlen is the necessary byte length, not the number
-     * of CHARACTERS!
-     */
+       
+                                                                          
+                      
+       
     maxlen = len;
   }
   else
   {
-    /*
-     * At this point, maxlen is the necessary byte length, not the number
-     * of CHARACTERS!
-     */
+       
+                                                                          
+                      
+       
     maxlen = len + (maxlen - charlen);
   }
 
@@ -343,7 +343,7 @@ bpchar(PG_FUNCTION_ARGS)
 
   memcpy(r, s, len);
 
-  /* blank pad the string if necessary */
+                                         
   if (maxlen > len)
   {
     memset(r + len, ' ', maxlen - len);
@@ -352,9 +352,9 @@ bpchar(PG_FUNCTION_ARGS)
   PG_RETURN_BPCHAR_P(result);
 }
 
-/* char_bpchar()
- * Convert char to bpchar(1).
- */
+                 
+                              
+   
 Datum
 char_bpchar(PG_FUNCTION_ARGS)
 {
@@ -369,9 +369,9 @@ char_bpchar(PG_FUNCTION_ARGS)
   PG_RETURN_BPCHAR_P(result);
 }
 
-/* bpchar_name()
- * Converts a bpchar() type to a NameData type.
- */
+                 
+                                                
+   
 Datum
 bpchar_name(PG_FUNCTION_ARGS)
 {
@@ -383,13 +383,13 @@ bpchar_name(PG_FUNCTION_ARGS)
   len = VARSIZE_ANY_EXHDR(s);
   s_data = VARDATA_ANY(s);
 
-  /* Truncate oversize input */
+                               
   if (len >= NAMEDATALEN)
   {
     len = pg_mbcliplen(s_data, len, NAMEDATALEN - 1);
   }
 
-  /* Remove trailing blanks */
+                              
   while (len > 0)
   {
     if (s_data[len - 1] != ' ')
@@ -399,19 +399,19 @@ bpchar_name(PG_FUNCTION_ARGS)
     len--;
   }
 
-  /* We use palloc0 here to ensure result is zero-padded */
+                                                           
   result = (Name)palloc0(NAMEDATALEN);
   memcpy(NameStr(*result), s_data, len);
 
   PG_RETURN_NAME(result);
 }
 
-/* name_bpchar()
- * Converts a NameData type to a bpchar type.
- *
- * Uses the text conversion functions, which is only appropriate if BpChar
- * and text are equivalent types.
- */
+                 
+                                              
+   
+                                                                           
+                                  
+   
 Datum
 name_bpchar(PG_FUNCTION_ARGS)
 {
@@ -438,28 +438,28 @@ bpchartypmodout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(anychar_typmodout(typmod));
 }
 
-/*****************************************************************************
- *	 varchar - varchar(n)
- *
- * Note: varchar piggybacks on type text for most operations, and so has no
- * C-coded functions except for I/O and typmod checking.
- *****************************************************************************/
+                                                                               
+                         
+   
+                                                                            
+                                                         
+                                                                               
 
-/*
- * varchar_input -- common guts of varcharin and varcharrecv
- *
- * s is the input text of length len (may not be null-terminated)
- * atttypmod is the typmod value to apply
- *
- * Note that atttypmod is measured in characters, which
- * is not necessarily the same as the number of bytes.
- *
- * If the input string is too long, raise an error, unless the extra
- * characters are spaces, in which case they're truncated.  (per SQL)
- *
- * Uses the C string to text conversion function, which is only appropriate
- * if VarChar and text are equivalent types.
- */
+   
+                                                             
+   
+                                                                  
+                                          
+   
+                                                        
+                                                       
+   
+                                                                     
+                                                                      
+   
+                                                                            
+                                             
+   
 static VarChar *
 varchar_input(const char *s, size_t len, int32 atttypmod)
 {
@@ -470,7 +470,7 @@ varchar_input(const char *s, size_t len, int32 atttypmod)
 
   if (atttypmod >= (int32)VARHDRSZ && len > maxlen)
   {
-    /* Verify that extra characters are spaces, and clip them off */
+                                                                    
     size_t mbmaxlen = pg_mbcharcliplen(s, len, maxlen);
     size_t j;
 
@@ -489,10 +489,10 @@ varchar_input(const char *s, size_t len, int32 atttypmod)
   return result;
 }
 
-/*
- * Convert a C string to VARCHAR internal representation.  atttypmod
- * is the declared length of the type plus VARHDRSZ.
- */
+   
+                                                                     
+                                                     
+   
 Datum
 varcharin(PG_FUNCTION_ARGS)
 {
@@ -508,12 +508,12 @@ varcharin(PG_FUNCTION_ARGS)
   PG_RETURN_VARCHAR_P(result);
 }
 
-/*
- * Convert a VARCHAR value to a C string.
- *
- * Uses the text to C string conversion function, which is only appropriate
- * if VarChar and text are equivalent types.
- */
+   
+                                          
+   
+                                                                            
+                                             
+   
 Datum
 varcharout(PG_FUNCTION_ARGS)
 {
@@ -522,9 +522,9 @@ varcharout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(TextDatumGetCString(txt));
 }
 
-/*
- *		varcharrecv			- converts external binary format to varchar
- */
+   
+                                                               
+   
 Datum
 varcharrecv(PG_FUNCTION_ARGS)
 {
@@ -544,25 +544,25 @@ varcharrecv(PG_FUNCTION_ARGS)
   PG_RETURN_VARCHAR_P(result);
 }
 
-/*
- *		varcharsend			- converts varchar to binary format
- */
+   
+                                                      
+   
 Datum
 varcharsend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as textsend, so share code */
+                                                   
   return textsend(fcinfo);
 }
 
-/*
- * varchar_support()
- *
- * Planner support function for the varchar() length coercion function.
- *
- * Currently, the only interesting thing we can do is flatten calls that set
- * the new maximum length >= the previous maximum length.  We can ignore the
- * isExplicit argument, since that only affects truncation cases.
- */
+   
+                     
+   
+                                                                        
+   
+                                                                             
+                                                                             
+                                                                  
+   
 Datum
 varchar_support(PG_FUNCTION_ARGS)
 {
@@ -597,18 +597,18 @@ varchar_support(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(ret);
 }
 
-/*
- * Converts a VARCHAR type to the specified size.
- *
- * maxlen is the typmod, ie, declared length plus VARHDRSZ bytes.
- * isExplicit is true if this is for an explicit cast to varchar(N).
- *
- * Truncation rules: for an explicit cast, silently truncate to the given
- * length; for an implicit cast, raise error unless extra characters are
- * all spaces.  (This is sort-of per SQL: the spec would actually have us
- * raise a "completion condition" for the explicit cast case, but Postgres
- * hasn't got such a concept.)
- */
+   
+                                                  
+   
+                                                                  
+                                                                     
+   
+                                                                          
+                                                                         
+                                                                          
+                                                                           
+                               
+   
 Datum
 varchar(PG_FUNCTION_ARGS)
 {
@@ -624,15 +624,15 @@ varchar(PG_FUNCTION_ARGS)
   s_data = VARDATA_ANY(source);
   maxlen = typmod - VARHDRSZ;
 
-  /* No work if typmod is invalid or supplied data fits it already */
+                                                                     
   if (maxlen < 0 || len <= maxlen)
   {
     PG_RETURN_VARCHAR_P(source);
   }
 
-  /* only reach here if string is too long... */
+                                                
 
-  /* truncate multibyte string preserving multibyte boundary */
+                                                               
   maxmblen = pg_mbcharcliplen(s_data, len, maxlen);
 
   if (!isExplicit)
@@ -665,11 +665,11 @@ varchartypmodout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(anychar_typmodout(typmod));
 }
 
-/*****************************************************************************
- * Exported functions
- *****************************************************************************/
+                                                                               
+                      
+                                                                               
 
-/* "True" length (not counting trailing blanks) of a BpChar */
+                                                              
 static inline int
 bcTruelen(BpChar *arg)
 {
@@ -681,10 +681,10 @@ bpchartruelen(char *s, int len)
 {
   int i;
 
-  /*
-   * Note that we rely on the assumption that ' ' is a singleton unit on
-   * every supported multibyte server encoding.
-   */
+     
+                                                                         
+                                                
+     
   for (i = len - 1; i >= 0; i--)
   {
     if (s[i] != ' ')
@@ -701,10 +701,10 @@ bpcharlen(PG_FUNCTION_ARGS)
   BpChar *arg = PG_GETARG_BPCHAR_PP(0);
   int len;
 
-  /* get number of bytes, ignoring trailing spaces */
+                                                     
   len = bcTruelen(arg);
 
-  /* in multibyte encoding, convert to number of characters */
+                                                              
   if (pg_database_encoding_max_length() != 1)
   {
     len = pg_mbstrlen_with_len(VARDATA_ANY(arg), len);
@@ -718,27 +718,27 @@ bpcharoctetlen(PG_FUNCTION_ARGS)
 {
   Datum arg = PG_GETARG_DATUM(0);
 
-  /* We need not detoast the input at all */
+                                            
   PG_RETURN_INT32(toast_raw_datum_size(arg) - VARHDRSZ);
 }
 
-/*****************************************************************************
- *	Comparison Functions used for bpchar
- *
- * Note: btree indexes need these routines not to leak memory; therefore,
- * be careful to free working copies of toasted datums.  Most places don't
- * need to be so careful.
- *****************************************************************************/
+                                                                               
+                                        
+   
+                                                                          
+                                                                           
+                          
+                                                                               
 
 static void
 check_collation_set(Oid collid)
 {
   if (!OidIsValid(collid))
   {
-    /*
-     * This typically means that the parser could not resolve a conflict
-     * of implicit collations, so report it that way.
-     */
+       
+                                                                         
+                                                      
+       
     ereport(ERROR, (errcode(ERRCODE_INDETERMINATE_COLLATION), errmsg("could not determine which collation to use for string comparison"), errhint("Use the COLLATE clause to set the collation explicitly.")));
   }
 }
@@ -759,10 +759,10 @@ bpchareq(PG_FUNCTION_ARGS)
 
   if (lc_collate_is_c(collid) || collid == DEFAULT_COLLATION_OID || pg_newlocale_from_collation(collid)->deterministic)
   {
-    /*
-     * Since we only care about equality or not-equality, we can avoid all
-     * the expense of strcoll() here, and just do bitwise comparison.
-     */
+       
+                                                                           
+                                                                      
+       
     if (len1 != len2)
     {
       result = false;
@@ -799,10 +799,10 @@ bpcharne(PG_FUNCTION_ARGS)
 
   if (lc_collate_is_c(collid) || collid == DEFAULT_COLLATION_OID || pg_newlocale_from_collation(collid)->deterministic)
   {
-    /*
-     * Since we only care about equality or not-equality, we can avoid all
-     * the expense of strcoll() here, and just do bitwise comparison.
-     */
+       
+                                                                           
+                                                                      
+       
     if (len1 != len2)
     {
       result = true;
@@ -927,7 +927,7 @@ bpchar_sortsupport(PG_FUNCTION_ARGS)
 
   oldcontext = MemoryContextSwitchTo(ssup->ssup_cxt);
 
-  /* Use generic string SortSupport */
+                                      
   varstr_sortsupport(ssup, BPCHAROID, collid);
 
   MemoryContextSwitchTo(oldcontext);
@@ -967,10 +967,10 @@ bpchar_smaller(PG_FUNCTION_ARGS)
   PG_RETURN_BPCHAR_P((cmp <= 0) ? arg1 : arg2);
 }
 
-/*
- * bpchar needs a specialized hash function because we want to ignore
- * trailing blanks in comparisons.
- */
+   
+                                                                      
+                                   
+   
 Datum
 hashbpchar(PG_FUNCTION_ARGS)
 {
@@ -1021,11 +1021,11 @@ hashbpchar(PG_FUNCTION_ARGS)
     }
     else
 #endif
-      /* shouldn't happen */
+                            
       elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
-  /* Avoid leaking memory for toasted inputs */
+                                               
   PG_FREE_IF_COPY(key, 0);
 
   return result;
@@ -1081,7 +1081,7 @@ hashbpcharextended(PG_FUNCTION_ARGS)
     }
     else
 #endif
-      /* shouldn't happen */
+                            
       elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
@@ -1090,13 +1090,13 @@ hashbpcharextended(PG_FUNCTION_ARGS)
   return result;
 }
 
-/*
- * The following operators support character-by-character comparison
- * of bpchar datums, to allow building indexes suitable for LIKE clauses.
- * Note that the regular bpchareq/bpcharne comparison operators, and
- * regular support functions 1 and 2 with "C" collation are assumed to be
- * compatible with these!
- */
+   
+                                                                     
+                                                                          
+                                                                     
+                                                                          
+                          
+   
 
 static int
 internal_bpchar_pattern_compare(BpChar *arg1, BpChar *arg2)
@@ -1209,7 +1209,7 @@ btbpchar_pattern_sortsupport(PG_FUNCTION_ARGS)
 
   oldcontext = MemoryContextSwitchTo(ssup->ssup_cxt);
 
-  /* Use generic string SortSupport, forcing "C" collation */
+                                                             
   varstr_sortsupport(ssup, BPCHAROID, C_COLLATION_OID);
 
   MemoryContextSwitchTo(oldcontext);

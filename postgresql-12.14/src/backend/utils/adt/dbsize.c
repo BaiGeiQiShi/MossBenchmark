@@ -1,13 +1,13 @@
-/*
- * dbsize.c
- *		Database object size functions, and related inquiries
- *
- * Copyright (c) 2002-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/dbsize.c
- *
- */
+   
+            
+                                                          
+   
+                                                                
+   
+                  
+                                    
+   
+   
 
 #include "postgres.h"
 
@@ -31,10 +31,10 @@
 #include "utils/relmapper.h"
 #include "utils/syscache.h"
 
-/* Divide by two and round away from zero */
+                                            
 #define half_rounded(x) (((x) + ((x) < 0 ? -1 : 1)) / 2)
 
-/* Return physical size of directory contents, or 0 if dir doesn't exist */
+                                                                           
 static int64
 db_dir_size(const char *path)
 {
@@ -81,9 +81,9 @@ db_dir_size(const char *path)
   return dirsize;
 }
 
-/*
- * calculate size of database in all tablespaces
- */
+   
+                                                 
+   
 static int64
 calculate_database_size(Oid dbOid)
 {
@@ -94,23 +94,23 @@ calculate_database_size(Oid dbOid)
   char pathname[MAXPGPATH + 21 + sizeof(TABLESPACE_VERSION_DIRECTORY)];
   AclResult aclresult;
 
-  /*
-   * User must have connect privilege for target database or be a member of
-   * pg_read_all_stats
-   */
+     
+                                                                            
+                       
+     
   aclresult = pg_database_aclcheck(dbOid, GetUserId(), ACL_CONNECT);
   if (aclresult != ACLCHECK_OK && !is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS))
   {
     aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(dbOid));
   }
 
-  /* Shared storage in pg_global is not counted */
+                                                  
 
-  /* Include pg_default storage */
+                                  
   snprintf(pathname, sizeof(pathname), "base/%u", dbOid);
   totalsize = db_dir_size(pathname);
 
-  /* Scan the non-default tablespaces */
+                                        
   snprintf(dirpath, MAXPGPATH, "pg_tblspc");
   dirdesc = AllocateDir(dirpath);
 
@@ -165,10 +165,10 @@ pg_database_size_name(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(size);
 }
 
-/*
- * Calculate total size of tablespace. Returns -1 if the tablespace directory
- * cannot be found.
- */
+   
+                                                                              
+                    
+   
 static int64
 calculate_tablespace_size(Oid tblspcOid)
 {
@@ -179,11 +179,11 @@ calculate_tablespace_size(Oid tblspcOid)
   struct dirent *direntry;
   AclResult aclresult;
 
-  /*
-   * User must be a member of pg_read_all_stats or have CREATE privilege for
-   * target tablespace, either explicitly granted or implicitly because it
-   * is default for current database.
-   */
+     
+                                                                             
+                                                                           
+                                      
+     
   if (tblspcOid != MyDatabaseTableSpace && !is_member_of_role(GetUserId(), DEFAULT_ROLE_READ_ALL_STATS))
   {
     aclresult = pg_tablespace_aclcheck(tblspcOid, GetUserId(), ACL_CREATE);
@@ -284,12 +284,12 @@ pg_tablespace_size_name(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(size);
 }
 
-/*
- * calculate size of (one fork of) a relation
- *
- * Note: we can safely apply this to temp tables of other sessions, so there
- * is no check here or at the call sites for that.
- */
+   
+                                              
+   
+                                                                             
+                                                   
+   
 static int64
 calculate_relation_size(RelFileNode *rfn, BackendId backend, ForkNumber forknum)
 {
@@ -342,13 +342,13 @@ pg_relation_size(PG_FUNCTION_ARGS)
 
   rel = try_relation_open(relOid, AccessShareLock);
 
-  /*
-   * Before 9.2, we used to throw an error if the relation didn't exist, but
-   * that makes queries like "SELECT pg_relation_size(oid) FROM pg_class"
-   * less robust, because while we scan pg_class with an MVCC snapshot,
-   * someone else might drop the table. It's better to return NULL for
-   * already-dropped tables than throw an error and abort the whole query.
-   */
+     
+                                                                             
+                                                                          
+                                                                        
+                                                                       
+                                                                           
+     
   if (rel == NULL)
   {
     PG_RETURN_NULL();
@@ -361,10 +361,10 @@ pg_relation_size(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(size);
 }
 
-/*
- * Calculate total on-disk size of a TOAST relation, including its indexes.
- * Must not be applied to non-TOAST relations.
- */
+   
+                                                                            
+                                               
+   
 static int64
 calculate_toast_table_size(Oid toastrelid)
 {
@@ -376,16 +376,16 @@ calculate_toast_table_size(Oid toastrelid)
 
   toastRel = relation_open(toastrelid, AccessShareLock);
 
-  /* toast heap size, including FSM and VM size */
+                                                  
   for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
   {
     size += calculate_relation_size(&(toastRel->rd_node), toastRel->rd_backend, forkNum);
   }
 
-  /* toast index size, including FSM and VM size */
+                                                   
   indexlist = RelationGetIndexList(toastRel);
 
-  /* Size is calculated using all the indexes available */
+                                                          
   foreach (lc, indexlist)
   {
     Relation toastIdxRel;
@@ -404,31 +404,31 @@ calculate_toast_table_size(Oid toastrelid)
   return size;
 }
 
-/*
- * Calculate total on-disk size of a given table,
- * including FSM and VM, plus TOAST table if any.
- * Indexes other than the TOAST table's index are not included.
- *
- * Note that this also behaves sanely if applied to an index or toast table;
- * those won't have attached toast tables, but they can have multiple forks.
- */
+   
+                                                  
+                                                  
+                                                                
+   
+                                                                             
+                                                                             
+   
 static int64
 calculate_table_size(Relation rel)
 {
   int64 size = 0;
   ForkNumber forkNum;
 
-  /*
-   * heap size, including FSM and VM
-   */
+     
+                                     
+     
   for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
   {
     size += calculate_relation_size(&(rel->rd_node), rel->rd_backend, forkNum);
   }
 
-  /*
-   * Size of toast relation
-   */
+     
+                            
+     
   if (OidIsValid(rel->rd_rel->reltoastrelid))
   {
     size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
@@ -437,19 +437,19 @@ calculate_table_size(Relation rel)
   return size;
 }
 
-/*
- * Calculate total on-disk size of all indexes attached to the given table.
- *
- * Can be applied safely to an index, but you'll just get zero.
- */
+   
+                                                                            
+   
+                                                                
+   
 static int64
 calculate_indexes_size(Relation rel)
 {
   int64 size = 0;
 
-  /*
-   * Aggregate all indexes on the given relation
-   */
+     
+                                                 
+     
   if (rel->rd_rel->relhasindex)
   {
     List *index_oids = RelationGetIndexList(rel);
@@ -519,24 +519,24 @@ pg_indexes_size(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(size);
 }
 
-/*
- *	Compute the on-disk size of all files for the relation,
- *	including heap data, index data, toast data, FSM, VM.
- */
+   
+                                                           
+                                                         
+   
 static int64
 calculate_total_relation_size(Relation rel)
 {
   int64 size;
 
-  /*
-   * Aggregate the table size, this includes size of the heap, toast and
-   * toast index with free space and visibility map
-   */
+     
+                                                                         
+                                                    
+     
   size = calculate_table_size(rel);
 
-  /*
-   * Add size of all attached indexes as well
-   */
+     
+                                              
+     
   size += calculate_indexes_size(rel);
 
   return size;
@@ -563,9 +563,9 @@ pg_total_relation_size(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(size);
 }
 
-/*
- * formatting with size units
- */
+   
+                              
+   
 Datum
 pg_size_pretty(PG_FUNCTION_ARGS)
 {
@@ -580,11 +580,11 @@ pg_size_pretty(PG_FUNCTION_ARGS)
   }
   else
   {
-    /*
-     * We use divide instead of bit shifting so that behavior matches for
-     * both positive and negative size values.
-     */
-    size /= (1 << 9); /* keep one extra bit for rounding */
+       
+                                                                          
+                                               
+       
+    size /= (1 << 9);                                      
     if (Abs(size) < limit2)
     {
       snprintf(buf, sizeof(buf), INT64_FORMAT " kB", half_rounded(size));
@@ -704,8 +704,8 @@ pg_size_pretty_numeric(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* keep one extra bit for rounding */
-    /* size /= (1 << 9) */
+                                         
+                          
     size = numeric_truncated_divide(size, 1 << 9);
 
     if (numeric_is_less(numeric_absolute(size), limit2))
@@ -715,7 +715,7 @@ pg_size_pretty_numeric(PG_FUNCTION_ARGS)
     }
     else
     {
-      /* size /= (1 << 10) */
+                             
       size = numeric_truncated_divide(size, 1 << 10);
 
       if (numeric_is_less(numeric_absolute(size), limit2))
@@ -725,7 +725,7 @@ pg_size_pretty_numeric(PG_FUNCTION_ARGS)
       }
       else
       {
-        /* size /= (1 << 10) */
+                               
         size = numeric_truncated_divide(size, 1 << 10);
 
         if (numeric_is_less(numeric_absolute(size), limit2))
@@ -735,7 +735,7 @@ pg_size_pretty_numeric(PG_FUNCTION_ARGS)
         }
         else
         {
-          /* size /= (1 << 10) */
+                                 
           size = numeric_truncated_divide(size, 1 << 10);
           size = numeric_half_rounded(size);
           result = psprintf("%s TB", numeric_to_cstring(size));
@@ -747,9 +747,9 @@ pg_size_pretty_numeric(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(cstring_to_text(result));
 }
 
-/*
- * Convert a human-readable size to a size in bytes
- */
+   
+                                                    
+   
 Datum
 pg_size_bytes(PG_FUNCTION_ARGS)
 {
@@ -762,23 +762,23 @@ pg_size_bytes(PG_FUNCTION_ARGS)
 
   str = text_to_cstring(arg);
 
-  /* Skip leading whitespace */
+                               
   strptr = str;
   while (isspace((unsigned char)*strptr))
   {
     strptr++;
   }
 
-  /* Check that we have a valid number and determine where it ends */
+                                                                     
   endptr = strptr;
 
-  /* Part (1): sign */
+                      
   if (*endptr == '-' || *endptr == '+')
   {
     endptr++;
   }
 
-  /* Part (2): main digit string */
+                                   
   if (isdigit((unsigned char)*endptr))
   {
     have_digits = true;
@@ -788,7 +788,7 @@ pg_size_bytes(PG_FUNCTION_ARGS)
     } while (isdigit((unsigned char)*endptr));
   }
 
-  /* Part (3): optional decimal point and fractional digits */
+                                                              
   if (*endptr == '.')
   {
     endptr++;
@@ -802,34 +802,34 @@ pg_size_bytes(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Complain if we don't have a valid number at this point */
+                                                              
   if (!have_digits)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid size: \"%s\"", str)));
   }
 
-  /* Part (4): optional exponent */
+                                   
   if (*endptr == 'e' || *endptr == 'E')
   {
     long exponent;
     char *cp;
 
-    /*
-     * Note we might one day support EB units, so if what follows 'E'
-     * isn't a number, just treat it all as a unit to be parsed.
-     */
+       
+                                                                      
+                                                                 
+       
     exponent = strtol(endptr + 1, &cp, 10);
-    (void)exponent; /* Silence -Wunused-result warnings */
+    (void)exponent;                                       
     if (cp > endptr + 1)
     {
       endptr = cp;
     }
   }
 
-  /*
-   * Parse the number, saving the next character, which may be the first
-   * character of the unit string.
-   */
+     
+                                                                         
+                                   
+     
   saved_char = *endptr;
   *endptr = '\0';
 
@@ -837,19 +837,19 @@ pg_size_bytes(PG_FUNCTION_ARGS)
 
   *endptr = saved_char;
 
-  /* Skip whitespace between number and unit */
+                                               
   strptr = endptr;
   while (isspace((unsigned char)*strptr))
   {
     strptr++;
   }
 
-  /* Handle possible unit */
+                            
   if (*strptr != '\0')
   {
     int64 multiplier = 0;
 
-    /* Trim any trailing whitespace */
+                                      
     endptr = str + VARSIZE_ANY_EXHDR(arg) - 1;
 
     while (isspace((unsigned char)*endptr))
@@ -860,7 +860,7 @@ pg_size_bytes(PG_FUNCTION_ARGS)
     endptr++;
     *endptr = '\0';
 
-    /* Parse the unit case-insensitively */
+                                           
     if (pg_strcasecmp(strptr, "bytes") == 0)
     {
       multiplier = (int64)1;
@@ -904,20 +904,20 @@ pg_size_bytes(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(result);
 }
 
-/*
- * Get the filenode of a relation
- *
- * This is expected to be used in queries like
- *		SELECT pg_relation_filenode(oid) FROM pg_class;
- * That leads to a couple of choices.  We work from the pg_class row alone
- * rather than actually opening each relation, for efficiency.  We don't
- * fail if we can't find the relation --- some rows might be visible in
- * the query's MVCC snapshot even though the relations have been dropped.
- * (Note: we could avoid using the catcache, but there's little point
- * because the relation mapper also works "in the now".)  We also don't
- * fail if the relation doesn't have storage.  In all these cases it
- * seems better to quietly return NULL.
- */
+   
+                                  
+   
+                                               
+                                                    
+                                                                           
+                                                                         
+                                                                        
+                                                                          
+                                                                      
+                                                                        
+                                                                     
+                                        
+   
 Datum
 pg_relation_filenode(PG_FUNCTION_ARGS)
 {
@@ -940,19 +940,19 @@ pg_relation_filenode(PG_FUNCTION_ARGS)
   case RELKIND_INDEX:
   case RELKIND_SEQUENCE:
   case RELKIND_TOASTVALUE:
-    /* okay, these have storage */
+                                  
     if (relform->relfilenode)
     {
       result = relform->relfilenode;
     }
-    else /* Consult the relation mapper */
+    else                                  
     {
       result = RelationMapOidToFilenode(relid, relform->relisshared);
     }
     break;
 
   default:
-    /* no storage, return NULL */
+                                 
     result = InvalidOid;
     break;
   }
@@ -967,19 +967,19 @@ pg_relation_filenode(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * Get the relation via (reltablespace, relfilenode)
- *
- * This is expected to be used when somebody wants to match an individual file
- * on the filesystem back to its table. That's not trivially possible via
- * pg_class, because that doesn't contain the relfilenodes of shared and nailed
- * tables.
- *
- * We don't fail but return NULL if we cannot find a mapping.
- *
- * InvalidOid can be passed instead of the current database's default
- * tablespace.
- */
+   
+                                                     
+   
+                                                                               
+                                                                          
+                                                                                
+           
+   
+                                                              
+   
+                                                                      
+               
+   
 Datum
 pg_filenode_relation(PG_FUNCTION_ARGS)
 {
@@ -987,7 +987,7 @@ pg_filenode_relation(PG_FUNCTION_ARGS)
   Oid relfilenode = PG_GETARG_OID(1);
   Oid heaprel;
 
-  /* test needed so RelidByRelfilenode doesn't misbehave */
+                                                           
   if (!OidIsValid(relfilenode))
   {
     PG_RETURN_NULL();
@@ -1005,11 +1005,11 @@ pg_filenode_relation(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * Get the pathname (relative to $PGDATA) of a relation
- *
- * See comments for pg_relation_filenode.
- */
+   
+                                                        
+   
+                                          
+   
 Datum
 pg_relation_filepath(PG_FUNCTION_ARGS)
 {
@@ -1034,9 +1034,9 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
   case RELKIND_INDEX:
   case RELKIND_SEQUENCE:
   case RELKIND_TOASTVALUE:
-    /* okay, these have storage */
+                                  
 
-    /* This logic should match RelationInitPhysicalAddr */
+                                                          
     if (relform->reltablespace)
     {
       rnode.spcNode = relform->reltablespace;
@@ -1057,16 +1057,16 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
     {
       rnode.relNode = relform->relfilenode;
     }
-    else /* Consult the relation mapper */
+    else                                  
     {
       rnode.relNode = RelationMapOidToFilenode(relid, relform->relisshared);
     }
     break;
 
   default:
-    /* no storage, return NULL */
+                                 
     rnode.relNode = InvalidOid;
-    /* some compilers generate warnings without these next two lines */
+                                                                       
     rnode.dbNode = InvalidOid;
     rnode.spcNode = InvalidOid;
     break;
@@ -1078,7 +1078,7 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
     PG_RETURN_NULL();
   }
 
-  /* Determine owning backend. */
+                                 
   switch (relform->relpersistence)
   {
   case RELPERSISTENCE_UNLOGGED:
@@ -1092,14 +1092,14 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
     }
     else
     {
-      /* Do it the hard way. */
+                               
       backend = GetTempNamespaceBackendId(relform->relnamespace);
       Assert(backend != InvalidBackendId);
     }
     break;
   default:
     elog(ERROR, "invalid relpersistence: %c", relform->relpersistence);
-    backend = InvalidBackendId; /* placate compiler */
+    backend = InvalidBackendId;                       
     break;
   }
 

@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "rfmtdate.pgc"
@@ -14,10 +14,10 @@
 #include <pgtypes_error.h>
 #include <sqltypes.h>
 
-/*
- * This file tests various forms of date-input/output by means of
- * rfmtdate / rdefmtdate / rstrdate
- */
+   
+                                                                  
+                                    
+   
 
 static void
 check_return(int ret);
@@ -117,7 +117,7 @@ main(void)
     printf("date: %s\n", dbuf);
   }
 
-  /* input mask is mmddyyyy */
+                              
   date_test_strdate("12031994");
   date_test_strdate("9.6.1994");
 
@@ -147,26 +147,26 @@ main(void)
   date_test_defmt("yy/mm/dd", "47/03/29");
   date_test_defmt("mmm.dd.yyyy", "oct 28 1975");
   date_test_defmt("mmddyy", "Nov 14th, 1985");
-  /* ok: still contains dd mm yy */
+                                   
   date_test_defmt("bladdfoommbaryybong", "20/11/1954");
-  /* 1994 is not a leap year, it accepts the date as 01-03-1994 */
+                                                                  
   date_test_defmt("ddmmyy", "29-02-1994");
 
-  /* ECPG_INFORMIX_ENOTDMY, need "dd", "mm" and "yy" */
+                                                       
   date_test_defmt("dmy", "20/11/1954");
 
-  /* ECPG_INFORMIX_ENOSHORTDATE */
+                                  
   date_test_defmt("ddmmyy", "21254");
   date_test_defmt("ddmmyy", "    21254    ");
 
-  /* ECPG_INFORMIX_BAD_DAY */
+                             
   date_test_defmt("ddmmyy", "320494");
 
-  /* ECPG_INFORMIX_BAD_MONTH */
+                               
   date_test_defmt("mm-yyyy-dd", "13-1993-21");
 
-  /* ECPG_INFORMIX_BAD_YEAR */
-  /* ??? */
+                              
+           
 
   return 0;
 }

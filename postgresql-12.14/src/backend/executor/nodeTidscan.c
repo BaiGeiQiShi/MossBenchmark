@@ -1,25 +1,25 @@
-/*-------------------------------------------------------------------------
- *
- * nodeTidscan.c
- *	  Routines to support direct tid scans of relations
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/executor/nodeTidscan.c
- *
- *-------------------------------------------------------------------------
- */
-/*
- * INTERFACE ROUTINES
- *
- *		ExecTidScan			scans a relation using tids
- *		ExecInitTidScan		creates and initializes state info.
- *		ExecReScanTidScan	rescans the tid relation.
- *		ExecEndTidScan		releases all storage.
- */
+                                                                            
+   
+                 
+                                                       
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                        
+   
+                                                                            
+   
+   
+                      
+   
+                                              
+                                                         
+                                                
+                                          
+   
 #include "postgres.h"
 
 #include "access/sysattr.h"
@@ -35,12 +35,12 @@
 
 #define IsCTIDVar(node) ((node) != NULL && IsA((node), Var) && ((Var *)(node))->varattno == SelfItemPointerAttributeNumber && ((Var *)(node))->varlevelsup == 0)
 
-/* one element in tss_tidexprs */
+                                 
 typedef struct TidExpr
 {
-  ExprState *exprstate; /* ExprState for a TID-yielding subexpr */
-  bool isarray;         /* if true, it yields tid[] not just tid */
-  CurrentOfExpr *cexpr; /* alternatively, we can have CURRENT OF */
+  ExprState *exprstate;                                           
+  bool isarray;                                                    
+  CurrentOfExpr *cexpr;                                            
 } TidExpr;
 
 static void
@@ -52,13 +52,13 @@ itemptr_comparator(const void *a, const void *b);
 static TupleTableSlot *
 TidNext(TidScanState *node);
 
-/*
- * Extract the qual subexpressions that yield TIDs to search for,
- * and compile them into ExprStates if they're ordinary expressions.
- *
- * CURRENT OF is a special case that we can't compile usefully;
- * just drop it into the TidExpr list as-is.
- */
+   
+                                                                  
+                                                                     
+   
+                                                                
+                                             
+   
 static void
 TidExprListCreate(TidScanState *tidstate)
 {
@@ -117,16 +117,16 @@ TidExprListCreate(TidScanState *tidstate)
     tidstate->tss_tidexprs = lappend(tidstate->tss_tidexprs, tidexpr);
   }
 
-  /* CurrentOfExpr could never appear OR'd with something else */
+                                                                 
   Assert(list_length(tidstate->tss_tidexprs) == 1 || !tidstate->tss_isCurrentOf);
 }
 
-/*
- * Compute the list of TIDs to be visited, by evaluating the expressions
- * for them.
- *
- * (The result is actually an array, not a list.)
- */
+   
+                                                                         
+             
+   
+                                                  
+   
 static void
 TidListEval(TidScanState *tidstate)
 {
@@ -137,22 +137,22 @@ TidListEval(TidScanState *tidstate)
   int numTids;
   ListCell *l;
 
-  /*
-   * Start scan on-demand - initializing a scan isn't free (e.g. heap stats
-   * the size of the table), so it makes sense to delay that until needed -
-   * the node might never get executed.
-   */
+     
+                                                                            
+                                                                            
+                                        
+     
   if (tidstate->ss.ss_currentScanDesc == NULL)
   {
     tidstate->ss.ss_currentScanDesc = table_beginscan_tid(tidstate->ss.ss_currentRelation, tidstate->ss.ps.state->es_snapshot);
   }
   scan = tidstate->ss.ss_currentScanDesc;
 
-  /*
-   * We initialize the array with enough slots for the case that all quals
-   * are simple OpExprs or CurrentOfExprs.  If there are any
-   * ScalarArrayOpExprs, we may have to enlarge the array.
-   */
+     
+                                                                           
+                                                             
+                                                           
+     
   numAllocTids = list_length(tidstate->tss_tidexprs);
   tidList = (ItemPointerData *)palloc(numAllocTids * sizeof(ItemPointerData));
   numTids = 0;
@@ -171,13 +171,13 @@ TidListEval(TidScanState *tidstate)
         continue;
       }
 
-      /*
-       * We silently discard any TIDs that the AM considers invalid
-       * (E.g. for heap, they could be out of range at the time of scan
-       * start.  Since we hold at least AccessShareLock on the table, it
-       * won't be possible for someone to truncate away the blocks we
-       * intend to visit.).
-       */
+         
+                                                                    
+                                                                        
+                                                                         
+                                                                      
+                            
+         
       if (!table_tuple_tid_valid(scan, itemptr))
       {
         continue;
@@ -247,18 +247,18 @@ TidListEval(TidScanState *tidstate)
     }
   }
 
-  /*
-   * Sort the array of TIDs into order, and eliminate duplicates.
-   * Eliminating duplicates is necessary since we want OR semantics across
-   * the list.  Sorting makes it easier to detect duplicates, and as a bonus
-   * ensures that we will visit the heap in the most efficient way.
-   */
+     
+                                                                  
+                                                                           
+                                                                             
+                                                                    
+     
   if (numTids > 1)
   {
     int lastTid;
     int i;
 
-    /* CurrentOfExpr could never appear OR'd with something else */
+                                                                   
     Assert(!tidstate->tss_isCurrentOf);
 
     qsort((void *)tidList, numTids, sizeof(ItemPointerData), itemptr_comparator);
@@ -278,9 +278,9 @@ TidListEval(TidScanState *tidstate)
   tidstate->tss_TidPtr = -1;
 }
 
-/*
- * qsort comparator for ItemPointerData items
- */
+   
+                                              
+   
 static int
 itemptr_comparator(const void *a, const void *b)
 {
@@ -310,14 +310,14 @@ itemptr_comparator(const void *a, const void *b)
   return 0;
 }
 
-/* ----------------------------------------------------------------
- *		TidNext
- *
- *		Retrieve a tuple from the TidScan node's currentRelation
- *		using the tids in the TidScanState information.
- *
- * ----------------------------------------------------------------
- */
+                                                                    
+            
+   
+                                                             
+                                                    
+   
+                                                                    
+   
 static TupleTableSlot *
 TidNext(TidScanState *node)
 {
@@ -331,18 +331,18 @@ TidNext(TidScanState *node)
   int numTids;
   bool bBackward;
 
-  /*
-   * extract necessary information from tid scan node
-   */
+     
+                                                      
+     
   estate = node->ss.ps.state;
   direction = estate->es_direction;
   snapshot = estate->es_snapshot;
   heapRelation = node->ss.ss_currentRelation;
   slot = node->ss.ss_ScanTupleSlot;
 
-  /*
-   * First time through, compute the list of TIDs to be visited
-   */
+     
+                                                                
+     
   if (node->tss_TidList == NULL)
   {
     TidListEval(node);
@@ -352,15 +352,15 @@ TidNext(TidScanState *node)
   tidList = node->tss_TidList;
   numTids = node->tss_NumTids;
 
-  /*
-   * Initialize or advance scan position, depending on direction.
-   */
+     
+                                                                  
+     
   bBackward = ScanDirectionIsBackward(direction);
   if (bBackward)
   {
     if (node->tss_TidPtr < 0)
     {
-      /* initialize for backward scan */
+                                        
       node->tss_TidPtr = numTids - 1;
     }
     else
@@ -372,7 +372,7 @@ TidNext(TidScanState *node)
   {
     if (node->tss_TidPtr < 0)
     {
-      /* initialize for forward scan */
+                                       
       node->tss_TidPtr = 0;
     }
     else
@@ -385,11 +385,11 @@ TidNext(TidScanState *node)
   {
     ItemPointerData tid = tidList[node->tss_TidPtr];
 
-    /*
-     * For WHERE CURRENT OF, the tuple retrieved from the cursor might
-     * since have been updated; if so, we should fetch the version that is
-     * current according to our snapshot.
-     */
+       
+                                                                       
+                                                                           
+                                          
+       
     if (node->tss_isCurrentOf)
     {
       table_tuple_get_latest_tid(scan, &tid);
@@ -400,7 +400,7 @@ TidNext(TidScanState *node)
       return slot;
     }
 
-    /* Bad TID or failed snapshot qual; try next */
+                                                   
     if (bBackward)
     {
       node->tss_TidPtr--;
@@ -413,45 +413,45 @@ TidNext(TidScanState *node)
     CHECK_FOR_INTERRUPTS();
   }
 
-  /*
-   * if we get here it means the tid scan failed so we are at the end of the
-   * scan..
-   */
+     
+                                                                             
+            
+     
   return ExecClearTuple(slot);
 }
 
-/*
- * TidRecheck -- access method routine to recheck a tuple in EvalPlanQual
- */
+   
+                                                                          
+   
 static bool
 TidRecheck(TidScanState *node, TupleTableSlot *slot)
 {
-  /*
-   * XXX shouldn't we check here to make sure tuple matches TID list? In
-   * runtime-key case this is not certain, is it?  However, in the WHERE
-   * CURRENT OF case it might not match anyway ...
-   */
+     
+                                                                         
+                                                                         
+                                                   
+     
   return true;
 }
 
-/* ----------------------------------------------------------------
- *		ExecTidScan(node)
- *
- *		Scans the relation using tids and returns
- *		   the next qualifying tuple in the direction specified.
- *		We call the ExecScan() routine and pass it the appropriate
- *		access method functions.
- *
- *		Conditions:
- *		  -- the "cursor" maintained by the AMI is positioned at the tuple
- *			 returned previously.
- *
- *		Initial States:
- *		  -- the relation indicated is opened for scanning so that the
- *			 "cursor" is positioned before the first qualifying tuple.
- *		  -- tidPtr is -1.
- * ----------------------------------------------------------------
- */
+                                                                    
+                      
+   
+                                              
+                                                             
+                                                               
+                             
+   
+                
+                                                                       
+                           
+   
+                    
+                                                                   
+                                                                
+                       
+                                                                    
+   
 static TupleTableSlot *
 ExecTidScan(PlanState *pstate)
 {
@@ -460,10 +460,10 @@ ExecTidScan(PlanState *pstate)
   return ExecScan(&node->ss, (ExecScanAccessMtd)TidNext, (ExecScanRecheckMtd)TidRecheck);
 }
 
-/* ----------------------------------------------------------------
- *		ExecReScanTidScan(node)
- * ----------------------------------------------------------------
- */
+                                                                    
+                            
+                                                                    
+   
 void
 ExecReScanTidScan(TidScanState *node)
 {
@@ -475,7 +475,7 @@ ExecReScanTidScan(TidScanState *node)
   node->tss_NumTids = 0;
   node->tss_TidPtr = -1;
 
-  /* not really necessary, but seems good form */
+                                                 
   if (node->ss.ss_currentScanDesc)
   {
     table_rescan(node->ss.ss_currentScanDesc, NULL);
@@ -484,13 +484,13 @@ ExecReScanTidScan(TidScanState *node)
   ExecScanReScan(&node->ss);
 }
 
-/* ----------------------------------------------------------------
- *		ExecEndTidScan
- *
- *		Releases any storage allocated through C routines.
- *		Returns nothing.
- * ----------------------------------------------------------------
- */
+                                                                    
+                   
+   
+                                                       
+                     
+                                                                    
+   
 void
 ExecEndTidScan(TidScanState *node)
 {
@@ -499,14 +499,14 @@ ExecEndTidScan(TidScanState *node)
     table_endscan(node->ss.ss_currentScanDesc);
   }
 
-  /*
-   * Free the exprcontext
-   */
+     
+                          
+     
   ExecFreeExprContext(&node->ss.ps);
 
-  /*
-   * clear out tuple table slots
-   */
+     
+                                 
+     
   if (node->ss.ps.ps_ResultTupleSlot)
   {
     ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
@@ -514,73 +514,73 @@ ExecEndTidScan(TidScanState *node)
   ExecClearTuple(node->ss.ss_ScanTupleSlot);
 }
 
-/* ----------------------------------------------------------------
- *		ExecInitTidScan
- *
- *		Initializes the tid scan's state information, creates
- *		scan keys, and opens the base and tid relations.
- *
- *		Parameters:
- *		  node: TidNode node produced by the planner.
- *		  estate: the execution state initialized in InitPlan.
- * ----------------------------------------------------------------
- */
+                                                                    
+                    
+   
+                                                          
+                                                     
+   
+                
+                                                  
+                                                           
+                                                                    
+   
 TidScanState *
 ExecInitTidScan(TidScan *node, EState *estate, int eflags)
 {
   TidScanState *tidstate;
   Relation currentRelation;
 
-  /*
-   * create state structure
-   */
+     
+                            
+     
   tidstate = makeNode(TidScanState);
   tidstate->ss.ps.plan = (Plan *)node;
   tidstate->ss.ps.state = estate;
   tidstate->ss.ps.ExecProcNode = ExecTidScan;
 
-  /*
-   * Miscellaneous initialization
-   *
-   * create expression context for node
-   */
+     
+                                  
+     
+                                        
+     
   ExecAssignExprContext(estate, &tidstate->ss.ps);
 
-  /*
-   * mark tid list as not computed yet
-   */
+     
+                                       
+     
   tidstate->tss_TidList = NULL;
   tidstate->tss_NumTids = 0;
   tidstate->tss_TidPtr = -1;
 
-  /*
-   * open the scan relation
-   */
+     
+                            
+     
   currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
 
   tidstate->ss.ss_currentRelation = currentRelation;
-  tidstate->ss.ss_currentScanDesc = NULL; /* no heap scan here */
+  tidstate->ss.ss_currentScanDesc = NULL;                        
 
-  /*
-   * get the scan type from the relation descriptor.
-   */
+     
+                                                     
+     
   ExecInitScanTupleSlot(estate, &tidstate->ss, RelationGetDescr(currentRelation), table_slot_callbacks(currentRelation));
 
-  /*
-   * Initialize result type and projection.
-   */
+     
+                                            
+     
   ExecInitResultTypeTL(&tidstate->ss.ps);
   ExecAssignScanProjectionInfo(&tidstate->ss);
 
-  /*
-   * initialize child expressions
-   */
+     
+                                  
+     
   tidstate->ss.ps.qual = ExecInitQual(node->scan.plan.qual, (PlanState *)tidstate);
 
   TidExprListCreate(tidstate);
 
-  /*
-   * all done.
-   */
+     
+               
+     
   return tidstate;
 }

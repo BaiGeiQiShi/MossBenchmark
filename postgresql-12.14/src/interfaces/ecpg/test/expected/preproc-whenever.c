@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "whenever.pgc"
@@ -13,7 +13,7 @@
 
 #line 3 "whenever.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 5 "whenever.pgc"
 
 static void
@@ -85,7 +85,7 @@ main(void)
   }
 #line 33 "whenever.pgc"
 
-  /* exec sql whenever sql_warning  do warn ( ) ; */
+                                                    
 #line 35 "whenever.pgc"
 
   {
@@ -156,7 +156,7 @@ main(void)
   }
 #line 40 "whenever.pgc"
 
-  /* exec sql whenever sqlerror  do print ( \"select\" ) ; */
+                                                             
 #line 42 "whenever.pgc"
 
   {
@@ -193,7 +193,7 @@ main(void)
   }
 #line 44 "whenever.pgc"
 
-  /* exec sql whenever sqlerror  call print2 ( ) ; */
+                                                     
 #line 46 "whenever.pgc"
 
   {
@@ -230,7 +230,7 @@ main(void)
   }
 #line 48 "whenever.pgc"
 
-  /* exec sql whenever sqlerror  continue ; */
+                                              
 #line 50 "whenever.pgc"
 
   {
@@ -255,7 +255,7 @@ main(void)
   }
 #line 52 "whenever.pgc"
 
-  /* exec sql whenever sqlerror  goto  error ; */
+                                                 
 #line 54 "whenever.pgc"
 
   {
@@ -295,11 +295,11 @@ error:
 }
 #line 59 "whenever.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 61 "whenever.pgc"
 
-  /* This cannot fail, thus we don't get an exit value not equal 0. */
-  /* However, it still test the precompiler output. */
+                                                                      
+                                                      
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select 1", ECPGt_EOIT, ECPGt_int, &(i), (long)1, (long)1, sizeof(int), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
 #line 64 "whenever.pgc"

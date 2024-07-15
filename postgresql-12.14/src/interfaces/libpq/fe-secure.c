@@ -1,26 +1,26 @@
-/*-------------------------------------------------------------------------
- *
- * fe-secure.c
- *	  functions related to setting up a secure connection to the backend.
- *	  Secure connections are expected to provide confidentiality,
- *	  message integrity and endpoint authentication.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/interfaces/libpq/fe-secure.c
- *
- * NOTES
- *
- *	  We don't provide informational callbacks here (like
- *	  info_cb() in be-secure.c), since there's no good mechanism to
- *	  display such information to the user.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                                                         
+                                                                 
+                                                    
+   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                      
+   
+         
+   
+                                                         
+                                                                   
+                                           
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -55,10 +55,10 @@
 #endif
 #endif
 
-/*
- * Macros to handle disabling and then restoring the state of SIGPIPE handling.
- * On Windows, these are all no-ops since there's no SIGPIPEs.
- */
+   
+                                                                                
+                                                               
+   
 
 #ifndef WIN32
 
@@ -99,7 +99,7 @@ struct sigpipe_info
     if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
       pq_reset_sigpipe(&(spinfo).oldsigmask, (spinfo).sigpipe_pending, (spinfo).got_epipe);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   } while (0)
-#else /* !ENABLE_THREAD_SAFETY */
+#else                            
 
 #define DECLARE_SIGPIPE_INFO(spinfo) pqsigfunc spinfo = NULL
 
@@ -118,18 +118,18 @@ struct sigpipe_info
     if (!SIGPIPE_MASKED(conn))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
       pqsignal(SIGPIPE, spinfo);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   } while (0)
-#endif /* ENABLE_THREAD_SAFETY */
-#else  /* WIN32 */
+#endif                           
+#else             
 
 #define DECLARE_SIGPIPE_INFO(spinfo)
 #define DISABLE_SIGPIPE(conn, spinfo, failaction)
 #define REMEMBER_EPIPE(spinfo, cond)
 #define RESTORE_SIGPIPE(conn, spinfo)
-#endif /* WIN32 */
+#endif            
 
-/* ------------------------------------------------------------ */
-/*			 Procedures common to all secure sessions			*/
-/* ------------------------------------------------------------ */
+                                                                  
+                                                   
+                                                                  
 
 int
 PQsslInUse(PGconn *conn)
@@ -141,10 +141,10 @@ PQsslInUse(PGconn *conn)
   return conn->ssl_in_use;
 }
 
-/*
- *	Exported function to allow application to tell us it's already
- *	initialized OpenSSL.
- */
+   
+                                                                  
+                        
+   
 void
 PQinitSSL(int do_init)
 {
@@ -153,10 +153,10 @@ PQinitSSL(int do_init)
 #endif
 }
 
-/*
- *	Exported function to allow application to tell us it's already
- *	initialized OpenSSL and/or libcrypto.
- */
+   
+                                                                  
+                                         
+   
 void
 PQinitOpenSSL(int do_ssl, int do_crypto)
 {
@@ -165,9 +165,9 @@ PQinitOpenSSL(int do_ssl, int do_crypto)
 #endif
 }
 
-/*
- *	Initialize global SSL context
- */
+   
+                                 
+   
 int
 pqsecure_initialize(PGconn *conn)
 {
@@ -180,23 +180,23 @@ pqsecure_initialize(PGconn *conn)
   return r;
 }
 
-/*
- *	Begin or continue negotiating a secure session.
- */
+   
+                                                   
+   
 PostgresPollingStatusType
 pqsecure_open_client(PGconn *conn)
 {
 #ifdef USE_SSL
   return pgtls_open_client(conn);
 #else
-  /* shouldn't get here */
+                          
   return PGRES_POLLING_FAILED;
 #endif
 }
 
-/*
- *	Close secure session.
- */
+   
+                         
+   
 void
 pqsecure_close(PGconn *conn)
 {
@@ -208,13 +208,13 @@ pqsecure_close(PGconn *conn)
 #endif
 }
 
-/*
- *	Read data from a secure connection.
- *
- * On failure, this function is responsible for putting a suitable message
- * into conn->errorMessage.  The caller must still inspect errno, but only
- * to determine whether to continue/retry after error.
- */
+   
+                                       
+   
+                                                                           
+                                                                           
+                                                       
+   
 ssize_t
 pqsecure_read(PGconn *conn, void *ptr, size_t len)
 {
@@ -254,7 +254,7 @@ pqsecure_raw_read(PGconn *conn, void *ptr, size_t len)
   {
     result_errno = SOCK_ERRNO;
 
-    /* Set error message if appropriate */
+                                          
     switch (result_errno)
     {
 #ifdef EAGAIN
@@ -264,7 +264,7 @@ pqsecure_raw_read(PGconn *conn, void *ptr, size_t len)
     case EWOULDBLOCK:
 #endif
     case EINTR:
-      /* no error message, caller is expected to retry */
+                                                         
       break;
 
 #ifdef ECONNRESET
@@ -281,19 +281,19 @@ pqsecure_raw_read(PGconn *conn, void *ptr, size_t len)
     }
   }
 
-  /* ensure we return the intended errno to caller */
+                                                     
   SOCK_ERRNO_SET(result_errno);
 
   return n;
 }
 
-/*
- *	Write data to a secure connection.
- *
- * On failure, this function is responsible for putting a suitable message
- * into conn->errorMessage.  The caller must still inspect errno, but only
- * to determine whether to continue/retry after error.
- */
+   
+                                      
+   
+                                                                           
+                                                                           
+                                                       
+   
 ssize_t
 pqsecure_write(PGconn *conn, const void *ptr, size_t len)
 {
@@ -337,7 +337,7 @@ pqsecure_raw_write(PGconn *conn, const void *ptr, size_t len)
   }
 
 retry_masked:
-#endif /* MSG_NOSIGNAL */
+#endif                   
 
   DISABLE_SIGPIPE(conn, spinfo, return -1);
 
@@ -347,11 +347,11 @@ retry_masked:
   {
     result_errno = SOCK_ERRNO;
 
-    /*
-     * If we see an EINVAL, it may be because MSG_NOSIGNAL isn't available
-     * on this machine.  So, clear sigpipe_flag so we don't try the flag
-     * again, and retry the send().
-     */
+       
+                                                                           
+                                                                         
+                                    
+       
 #ifdef MSG_NOSIGNAL
     if (flags != 0 && result_errno == EINVAL)
     {
@@ -359,9 +359,9 @@ retry_masked:
       flags = 0;
       goto retry_masked;
     }
-#endif /* MSG_NOSIGNAL */
+#endif                   
 
-    /* Set error message if appropriate */
+                                          
     switch (result_errno)
     {
 #ifdef EAGAIN
@@ -371,15 +371,15 @@ retry_masked:
     case EWOULDBLOCK:
 #endif
     case EINTR:
-      /* no error message, caller is expected to retry */
+                                                         
       break;
 
     case EPIPE:
-      /* Set flag for EPIPE */
+                              
       REMEMBER_EPIPE(spinfo, true);
 
 #ifdef ECONNRESET
-      /* FALL THRU */
+                     
 
     case ECONNRESET:
 #endif
@@ -396,13 +396,13 @@ retry_masked:
 
   RESTORE_SIGPIPE(conn, spinfo);
 
-  /* ensure we return the intended errno to caller */
+                                                     
   SOCK_ERRNO_SET(result_errno);
 
   return n;
 }
 
-/* Dummy versions of SSL info functions, when built without SSL support */
+                                                                          
 #ifndef USE_SSL
 
 void *
@@ -430,9 +430,9 @@ PQsslAttributeNames(PGconn *conn)
 
   return result;
 }
-#endif /* USE_SSL */
+#endif              
 
-/* Dummy version of GSSAPI information functions, when built without GSS support */
+                                                                                   
 #ifndef ENABLE_GSS
 
 void *
@@ -447,14 +447,14 @@ PQgssEncInUse(PGconn *conn)
   return 0;
 }
 
-#endif /* ENABLE_GSS */
+#endif                 
 
 #if defined(ENABLE_THREAD_SAFETY) && !defined(WIN32)
 
-/*
- *	Block SIGPIPE for this thread.  This prevents send()/write() from exiting
- *	the application.
- */
+   
+                                                                             
+                    
+   
 int
 pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending)
 {
@@ -464,17 +464,17 @@ pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending)
   sigemptyset(&sigpipe_sigset);
   sigaddset(&sigpipe_sigset, SIGPIPE);
 
-  /* Block SIGPIPE and save previous mask for later reset */
+                                                            
   SOCK_ERRNO_SET(pthread_sigmask(SIG_BLOCK, &sigpipe_sigset, osigset));
   if (SOCK_ERRNO)
   {
     return -1;
   }
 
-  /* We can have a pending SIGPIPE only if it was blocked before */
+                                                                   
   if (sigismember(osigset, SIGPIPE))
   {
-    /* Is there a pending SIGPIPE? */
+                                     
     if (sigpending(&sigset) != 0)
     {
       return -1;
@@ -497,24 +497,24 @@ pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending)
   return 0;
 }
 
-/*
- *	Discard any pending SIGPIPE and reset the signal mask.
- *
- * Note: we are effectively assuming here that the C library doesn't queue
- * up multiple SIGPIPE events.  If it did, then we'd accidentally leave
- * ours in the queue when an event was already pending and we got another.
- * As long as it doesn't queue multiple events, we're OK because the caller
- * can't tell the difference.
- *
- * The caller should say got_epipe = false if it is certain that it
- * didn't get an EPIPE error; in that case we'll skip the clear operation
- * and things are definitely OK, queuing or no.  If it got one or might have
- * gotten one, pass got_epipe = true.
- *
- * We do not want this to change errno, since if it did that could lose
- * the error code from a preceding send().  We essentially assume that if
- * we were able to do pq_block_sigpipe(), this can't fail.
- */
+   
+                                                          
+   
+                                                                           
+                                                                        
+                                                                           
+                                                                            
+                              
+   
+                                                                    
+                                                                          
+                                                                             
+                                      
+   
+                                                                        
+                                                                          
+                                                           
+   
 void
 pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending, bool got_epipe)
 {
@@ -522,7 +522,7 @@ pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending, bool got_epipe)
   int signo;
   sigset_t sigset;
 
-  /* Clear SIGPIPE only if none was pending */
+                                              
   if (got_epipe && !sigpipe_pending)
   {
     if (sigpending(&sigset) == 0 && sigismember(&sigset, SIGPIPE))
@@ -536,10 +536,10 @@ pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending, bool got_epipe)
     }
   }
 
-  /* Restore saved block mask */
+                                
   pthread_sigmask(SIG_SETMASK, osigset, NULL);
 
   SOCK_ERRNO_SET(save_errno);
 }
 
-#endif /* ENABLE_THREAD_SAFETY && !WIN32 */
+#endif                                     

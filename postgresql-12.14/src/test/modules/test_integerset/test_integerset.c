@@ -1,15 +1,15 @@
-/*--------------------------------------------------------------------------
- *
- * test_integerset.c
- *		Test integer set data structure.
- *
- * Copyright (c) 2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		src/test/modules/test_integerset/test_integerset.c
- *
- * -------------------------------------------------------------------------
- */
+                                                                             
+   
+                     
+                                     
+   
+                                                           
+   
+                  
+                                                       
+   
+                                                                             
+   
 #include "postgres.h"
 
 #include "fmgr.h"
@@ -21,39 +21,39 @@
 #include "storage/itemptr.h"
 #include "miscadmin.h"
 
-/*
- * If you enable this, the "pattern" tests will print information about
- * how long populating, probing, and iterating the test set takes, and
- * how much memory the test set consumed.  That can be used as
- * micro-benchmark of various operations and input patterns (you might
- * want to increase the number of values used in each of the test, if
- * you do that, to reduce noise).
- *
- * The information is printed to the server's stderr, mostly because
- * that's where MemoryContextStats() output goes.
- */
+   
+                                                                        
+                                                                       
+                                                               
+                                                                       
+                                                                      
+                                  
+   
+                                                                     
+                                                  
+   
 static const bool intset_test_stats = false;
 
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(test_integerset);
 
-/*
- * A struct to define a pattern of integers, for use with the test_pattern()
- * function.
- */
+   
+                                                                             
+             
+   
 typedef struct
 {
-  char *test_name;   /* short name of the test, for humans */
-  char *pattern_str; /* a bit pattern */
-  uint64 spacing;    /* pattern repeats at this interval */
-  uint64 num_values; /* number of integers to set in total */
+  char *test_name;                                           
+  char *pattern_str;                    
+  uint64 spacing;                                          
+  uint64 num_values;                                         
 } test_spec;
 
 static const test_spec test_specs[] = {{"all ones", "1111111111", 10, 10000000}, {"alternating bits", "0101010101", 10, 10000000}, {"clusters of ten", "1111111111", 10000, 10000000}, {"clusters of hundred", "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111", 10000, 100000000}, {"one-every-64k", "1", 65536, 10000000}, {"sparse", "100000000000000000000000000000001", 10000000, 10000000}, {"single values, distance > 2^32", "1", UINT64CONST(10000000000), 1000000}, {"clusters, distance > 2^32", "10101010", UINT64CONST(10000000000), 10000000},
     {
-        "clusters, distance > 2^60", "10101010", UINT64CONST(2000000000000000000), 23 /* can't be much higher than this, or we
-                                                                                       * overflow uint64 */
+        "clusters, distance > 2^60", "10101010", UINT64CONST(2000000000000000000), 23                                          
+                                                                                                           
     }};
 
 static void
@@ -69,13 +69,13 @@ test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
 static void
 test_huge_distances(void);
 
-/*
- * SQL-callable entry point to perform all tests.
- */
+   
+                                                  
+   
 Datum
 test_integerset(PG_FUNCTION_ARGS)
 {
-  /* Tests for various corner cases */
+                                      
   test_empty();
   test_huge_distances();
   test_single_value(0);
@@ -88,7 +88,7 @@ test_integerset(PG_FUNCTION_ARGS)
   test_single_value_and_filler(PG_UINT64_MAX - 1, 1000, 2000);
   test_single_value_and_filler(PG_UINT64_MAX, 1000, 2000);
 
-  /* Test different test patterns, with lots of entries */
+                                                          
   for (int i = 0; i < lengthof(test_specs); i++)
   {
     test_pattern(&test_specs[i]);
@@ -97,9 +97,9 @@ test_integerset(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * Test with a repeating pattern, defined by the 'spec'.
- */
+   
+                                                         
+   
 static void
 test_pattern(const test_spec *spec)
 {
@@ -120,7 +120,7 @@ test_pattern(const test_spec *spec)
     fprintf(stderr, "-----\ntesting intset with pattern \"%s\"\n", spec->test_name);
   }
 
-  /* Pre-process the pattern, creating an array of integers from it. */
+                                                                       
   patternlen = strlen(spec->pattern_str);
   pattern_values = palloc(patternlen * sizeof(uint64));
   pattern_num_values = 0;
@@ -132,23 +132,23 @@ test_pattern(const test_spec *spec)
     }
   }
 
-  /*
-   * Allocate the integer set.
-   *
-   * Allocate it in a separate memory context, so that we can print its
-   * memory usage easily.  (intset_create() creates a memory context of its
-   * own, too, but we don't have direct access to it, so we cannot call
-   * MemoryContextStats() on it directly).
-   */
+     
+                               
+     
+                                                                        
+                                                                            
+                                                                        
+                                           
+     
   intset_ctx = AllocSetContextCreate(CurrentMemoryContext, "intset test", ALLOCSET_SMALL_SIZES);
   MemoryContextSetIdentifier(intset_ctx, spec->test_name);
   old_ctx = MemoryContextSwitchTo(intset_ctx);
   intset = intset_create();
   MemoryContextSwitchTo(old_ctx);
 
-  /*
-   * Add values to the set.
-   */
+     
+                            
+     
   starttime = GetCurrentTimestamp();
 
   n = 0;
@@ -174,39 +174,39 @@ test_pattern(const test_spec *spec)
     fprintf(stderr, "added " UINT64_FORMAT " values in %d ms\n", spec->num_values, (int)(endtime - starttime) / 1000);
   }
 
-  /*
-   * Print stats on the amount of memory used.
-   *
-   * We print the usage reported by intset_memory_usage(), as well as the
-   * stats from the memory context.  They should be in the same ballpark,
-   * but it's hard to automate testing that, so if you're making changes to
-   * the implementation, just observe that manually.
-   */
+     
+                                               
+     
+                                                                          
+                                                                          
+                                                                            
+                                                     
+     
   if (intset_test_stats)
   {
     uint64 mem_usage;
 
-    /*
-     * Also print memory usage as reported by intset_memory_usage().  It
-     * should be in the same ballpark as the usage reported by
-     * MemoryContextStats().
-     */
+       
+                                                                         
+                                                               
+                             
+       
     mem_usage = intset_memory_usage(intset);
     fprintf(stderr, "intset_memory_usage() reported " UINT64_FORMAT " (%0.2f bytes / integer)\n", mem_usage, (double)mem_usage / spec->num_values);
 
     MemoryContextStats(intset_ctx);
   }
 
-  /* Check that intset_get_num_entries works */
+                                               
   n = intset_num_entries(intset);
   if (n != spec->num_values)
   {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected " UINT64_FORMAT, n, spec->num_values);
   }
 
-  /*
-   * Test random-access probes with intset_is_member()
-   */
+     
+                                                       
+     
   starttime = GetCurrentTimestamp();
 
   for (n = 0; n < 100000; n++)
@@ -215,17 +215,17 @@ test_pattern(const test_spec *spec)
     bool expected;
     uint64 x;
 
-    /*
-     * Pick next value to probe at random.  We limit the probes to the
-     * last integer that we added to the set, plus an arbitrary constant
-     * (1000).  There's no point in probing the whole 0 - 2^64 range, if
-     * only a small part of the integer space is used.  We would very
-     * rarely hit values that are actually in the set.
-     */
+       
+                                                                       
+                                                                         
+                                                                         
+                                                                      
+                                                       
+       
     x = (pg_lrand48() << 31) | pg_lrand48();
     x = x % (last_int + 1000);
 
-    /* Do we expect this value to be present in the set? */
+                                                           
     if (x >= last_int)
     {
       expected = false;
@@ -248,7 +248,7 @@ test_pattern(const test_spec *spec)
       }
     }
 
-    /* Is it present according to intset_is_member() ? */
+                                                         
     b = intset_is_member(intset, x);
 
     if (b != expected)
@@ -262,9 +262,9 @@ test_pattern(const test_spec *spec)
     fprintf(stderr, "probed " UINT64_FORMAT " values in %d ms\n", n, (int)(endtime - starttime) / 1000);
   }
 
-  /*
-   * Test iterator
-   */
+     
+                   
+     
   starttime = GetCurrentTimestamp();
 
   intset_begin_iterate(intset);
@@ -308,9 +308,9 @@ test_pattern(const test_spec *spec)
   MemoryContextDelete(intset_ctx);
 }
 
-/*
- * Test with a set containing a single integer.
- */
+   
+                                                
+   
 static void
 test_single_value(uint64 value)
 {
@@ -321,21 +321,21 @@ test_single_value(uint64 value)
 
   elog(NOTICE, "testing intset with single value " UINT64_FORMAT, value);
 
-  /* Create the set. */
+                       
   intset = intset_create();
   intset_add_member(intset, value);
 
-  /* Test intset_get_num_entries() */
+                                     
   num_entries = intset_num_entries(intset);
   if (num_entries != 1)
   {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected 1", num_entries);
   }
 
-  /*
-   * Test intset_is_member() at various special values, like 0 and maximum
-   * possible 64-bit integer, as well as the value itself.
-   */
+     
+                                                                           
+                                                           
+     
   if (intset_is_member(intset, 0) != (value == 0))
   {
     elog(ERROR, "intset_is_member failed for 0");
@@ -353,9 +353,9 @@ test_single_value(uint64 value)
     elog(ERROR, "intset_is_member failed for the tested value");
   }
 
-  /*
-   * Test iterator
-   */
+     
+                   
+     
   intset_begin_iterate(intset);
   found = intset_iterate_next(intset, &x);
   if (!found || x != value)
@@ -370,17 +370,17 @@ test_single_value(uint64 value)
   }
 }
 
-/*
- * Test with an integer set that contains:
- *
- * - a given single 'value', and
- * - all integers between 'filler_min' and 'filler_max'.
- *
- * This exercises different codepaths than testing just with a single value,
- * because the implementation buffers newly-added values.  If we add just a
- * single value to the set, we won't test the internal B-tree code at all,
- * just the code that deals with the buffer.
- */
+   
+                                           
+   
+                                 
+                                                         
+   
+                                                                             
+                                                                            
+                                                                           
+                                             
+   
 static void
 test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
 {
@@ -415,17 +415,17 @@ test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
     iter_expected[n++] = value;
   }
 
-  /* Test intset_get_num_entries() */
+                                     
   num_entries = intset_num_entries(intset);
   if (num_entries != n)
   {
     elog(ERROR, "intset_num_entries returned " UINT64_FORMAT ", expected " UINT64_FORMAT, num_entries, n);
   }
 
-  /*
-   * Test intset_is_member() at various spots, at and around the values that
-   * we expect to be set, as well as 0 and the maximum possible value.
-   */
+     
+                                                                             
+                                                                       
+     
   check_with_filler(intset, 0, value, filler_min, filler_max);
   check_with_filler(intset, 1, value, filler_min, filler_max);
   check_with_filler(intset, filler_min - 1, value, filler_min, filler_max);
@@ -462,12 +462,12 @@ test_single_value_and_filler(uint64 value, uint64 filler_min, uint64 filler_max)
   }
 }
 
-/*
- * Helper function for test_single_value_and_filler.
- *
- * Calls intset_is_member() for value 'x', and checks that the result is what
- * we expect.
- */
+   
+                                                     
+   
+                                                                              
+              
+   
 static void
 check_with_filler(IntegerSet *intset, uint64 x, uint64 value, uint64 filler_min, uint64 filler_max)
 {
@@ -484,9 +484,9 @@ check_with_filler(IntegerSet *intset, uint64 x, uint64 value, uint64 filler_min,
   }
 }
 
-/*
- * Test empty set
- */
+   
+                  
+   
 static void
 test_empty(void)
 {
@@ -497,7 +497,7 @@ test_empty(void)
 
   intset = intset_create();
 
-  /* Test intset_is_member() */
+                               
   if (intset_is_member(intset, 0) != false)
   {
     elog(ERROR, "intset_is_member on empty set returned true");
@@ -511,7 +511,7 @@ test_empty(void)
     elog(ERROR, "intset_is_member on empty set returned true");
   }
 
-  /* Test iterator */
+                     
   intset_begin_iterate(intset);
   if (intset_iterate_next(intset, &x))
   {
@@ -519,13 +519,13 @@ test_empty(void)
   }
 }
 
-/*
- * Test with integers that are more than 2^60 apart.
- *
- * The Simple-8b encoding used by the set implementation can only encode
- * values up to 2^60.  That makes large differences like this interesting
- * to test.
- */
+   
+                                                     
+   
+                                                                         
+                                                                          
+            
+   
 static void
 test_huge_distances(void)
 {
@@ -541,61 +541,61 @@ test_huge_distances(void)
   val = 0;
   values[num_values++] = val;
 
-  /* Test differences on both sides of the 2^60 boundary. */
-  val += UINT64CONST(1152921504606846976) - 1; /* 2^60 - 1 */
+                                                            
+  val += UINT64CONST(1152921504606846976) - 1;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) - 1; /* 2^60 - 1 */
+  val += UINT64CONST(1152921504606846976) - 1;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976); /* 2^60 */
+  val += UINT64CONST(1152921504606846976);           
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976); /* 2^60 */
+  val += UINT64CONST(1152921504606846976);           
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976); /* 2^60 */
+  val += UINT64CONST(1152921504606846976);           
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) + 1; /* 2^60 + 1 */
+  val += UINT64CONST(1152921504606846976) + 1;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) + 1; /* 2^60 + 1 */
+  val += UINT64CONST(1152921504606846976) + 1;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) + 1; /* 2^60 + 1 */
+  val += UINT64CONST(1152921504606846976) + 1;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) + 2; /* 2^60 + 2 */
+  val += UINT64CONST(1152921504606846976) + 2;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976) + 2; /* 2^60 + 2 */
+  val += UINT64CONST(1152921504606846976) + 2;               
   values[num_values++] = val;
 
-  val += UINT64CONST(1152921504606846976); /* 2^60 */
+  val += UINT64CONST(1152921504606846976);           
   values[num_values++] = val;
 
-  /*
-   * We're now very close to 2^64, so can't add large values anymore.  But
-   * add more smaller values to the end, to make sure that all the above
-   * values get flushed and packed into the tree structure.
-   */
+     
+                                                                           
+                                                                         
+                                                            
+     
   while (num_values < 1000)
   {
     val += pg_lrand48();
     values[num_values++] = val;
   }
 
-  /* Create an IntegerSet using these values */
+                                               
   intset = intset_create();
   for (int i = 0; i < num_values; i++)
   {
     intset_add_member(intset, values[i]);
   }
 
-  /*
-   * Test intset_is_member() around each of these values
-   */
+     
+                                                         
+     
   for (int i = 0; i < num_values; i++)
   {
     uint64 x = values[i];
@@ -626,9 +626,9 @@ test_huge_distances(void)
     }
   }
 
-  /*
-   * Test iterator
-   */
+     
+                   
+     
   intset_begin_iterate(intset);
   for (int i = 0; i < num_values; i++)
   {

@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * standbydesc.c
- *	  rmgr descriptor routines for storage/ipc/standby.c
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/rmgrdesc/standbydesc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                               
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "storage/standbydefs.h"
@@ -88,11 +88,11 @@ standby_identify(uint8 info)
   return id;
 }
 
-/*
- * This routine is used by both standby_desc and xact_desc, because
- * transaction commits and XLOG_INVALIDATIONS messages contain invalidations;
- * it seems pointless to duplicate the code.
- */
+   
+                                                                    
+                                                                              
+                                             
+   
 void
 standby_desc_invalidations(StringInfo buf, int nmsgs, SharedInvalidationMessage *msgs, Oid dbId, Oid tsId, bool relcacheInitFileInval)
 {
@@ -120,12 +120,12 @@ standby_desc_invalidations(StringInfo buf, int nmsgs, SharedInvalidationMessage 
     {
       appendStringInfo(buf, " relcache %u", msg->rc.relId);
     }
-    /* not expected, but print something anyway */
+                                                  
     else if (msg->id == SHAREDINVALSMGR_ID)
     {
       appendStringInfoString(buf, " smgr");
     }
-    /* not expected, but print something anyway */
+                                                  
     else if (msg->id == SHAREDINVALRELMAP_ID)
     {
       appendStringInfo(buf, " relmap db %u", msg->rm.dbId);

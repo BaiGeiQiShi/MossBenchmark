@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * dict_ispell.c
- *		Ispell dictionary interface
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/dict_ispell.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                
+   
+                                                                         
+   
+   
+                  
+                                       
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "commands/defrem.h"

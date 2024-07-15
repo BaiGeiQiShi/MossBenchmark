@@ -1,7 +1,7 @@
-/* src/interfaces/ecpg/preproc/ecpg.c */
+                                        
 
-/* Main for ecpg, the PostgreSQL embedded SQL precompiler. */
-/* Copyright (c) 1996-2019, PostgreSQL Global Development Group */
+                                                             
+                                                                  
 
 #include "postgres_fe.h"
 
@@ -83,13 +83,13 @@ add_preprocessor_define(char *define)
 
   defines = mm_alloc(sizeof(struct _defines));
 
-  /* look for = sign */
+                       
   ptr = strchr(define_copy, '=');
   if (ptr != NULL)
   {
     char *tmp;
 
-    /* symbol has a value */
+                            
     for (tmp = ptr - 1; *tmp == ' '; tmp--)
       ;
     tmp[1] = '\0';
@@ -183,8 +183,8 @@ main(int argc, char *const argv[])
       break;
     case 'h':
       header_mode = true;
-      /* this must include "-c" to make sense, so fall through */
-      /* FALLTHROUGH */
+                                                                 
+                       
     case 'c':
       auto_create_c = true;
       break;
@@ -265,7 +265,7 @@ main(int argc, char *const argv[])
     return 0;
   }
 
-  if (optind >= argc) /* no files specified */
+  if (optind >= argc)                         
   {
     fprintf(stderr, _("%s: no input files specified\n"), progname);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), argv[0]);
@@ -273,12 +273,12 @@ main(int argc, char *const argv[])
   }
   else
   {
-    /* after the options there must not be anything but filenames */
+                                                                    
     for (fnr = optind; fnr < argc; fnr++)
     {
       char *ptr2ext;
 
-      /* If argv[fnr] is "-" we have to read from stdin */
+                                                          
       if (strcmp(argv[fnr], "-") == 0)
       {
         input_filename = mm_alloc(strlen("stdin") + 1);
@@ -290,16 +290,16 @@ main(int argc, char *const argv[])
         input_filename = mm_alloc(strlen(argv[fnr]) + 5);
         strcpy(input_filename, argv[fnr]);
 
-        /* take care of relative paths */
+                                         
         ptr2ext = last_dir_separator(input_filename);
         ptr2ext = (ptr2ext ? strrchr(ptr2ext, '.') : strrchr(input_filename, '.'));
 
-        /* no extension? */
+                           
         if (ptr2ext == NULL)
         {
           ptr2ext = input_filename + strlen(input_filename);
 
-          /* no extension => add .pgc or .pgh */
+                                                
           ptr2ext[0] = '.';
           ptr2ext[1] = 'p';
           ptr2ext[2] = 'g';
@@ -310,7 +310,7 @@ main(int argc, char *const argv[])
         base_yyin = fopen(input_filename, PG_BINARY_R);
       }
 
-      if (out_option == 0) /* calculate the output name */
+      if (out_option == 0)                                
       {
         if (strcmp(input_filename, "stdin") == 0)
         {
@@ -322,7 +322,7 @@ main(int argc, char *const argv[])
           strcpy(output_filename, input_filename);
 
           ptr2ext = strrchr(output_filename, '.');
-          /* make extension = .c resp. .h */
+                                            
           ptr2ext[1] = (header_mode == true) ? 'h' : 'c';
           ptr2ext[2] = '\0';
 
@@ -348,7 +348,7 @@ main(int argc, char *const argv[])
         struct _defines *defptr;
         struct typedefs *typeptr;
 
-        /* remove old cursor definitions if any are still there */
+                                                                  
         for (ptr = cur; ptr != NULL;)
         {
           struct cursor *this = ptr;
@@ -372,7 +372,7 @@ main(int argc, char *const argv[])
         }
         cur = NULL;
 
-        /* remove non-pertinent old defines as well */
+                                                      
         while (defines && !defines->pertinent)
         {
           defptr = defines;
@@ -397,7 +397,7 @@ main(int argc, char *const argv[])
           }
         }
 
-        /* and old typedefs */
+                              
         for (typeptr = types; typeptr != NULL;)
         {
           struct typedefs *this = typeptr;
@@ -410,48 +410,48 @@ main(int argc, char *const argv[])
         }
         types = NULL;
 
-        /* initialize whenever structures */
+                                            
         memset(&when_error, 0, sizeof(struct when));
         memset(&when_nf, 0, sizeof(struct when));
         memset(&when_warn, 0, sizeof(struct when));
 
-        /* and structure member lists */
+                                        
         memset(struct_member_list, 0, sizeof(struct_member_list));
 
-        /*
-         * and our variable counter for out of scope cursors'
-         * variables
-         */
+           
+                                                              
+                     
+           
         ecpg_internal_var = 0;
 
-        /* finally the actual connection */
+                                           
         connection = NULL;
 
-        /* initialize lex */
+                            
         lex_init();
 
-        /* we need several includes */
-        /* but not if we are in header mode */
+                                      
+                                              
         if (regression_mode)
         {
-          fprintf(base_yyout, "/* Processed by ecpg (regression mode) */\n");
+          fprintf(base_yyout, "                                         \n");
         }
         else
         {
-          fprintf(base_yyout, "/* Processed by ecpg (%s) */\n", PG_VERSION);
+          fprintf(base_yyout, "                            \n", PG_VERSION);
         }
 
         if (header_mode == false)
         {
-          fprintf(base_yyout, "/* These include files are added by the preprocessor */\n#include <ecpglib.h>\n#include <ecpgerrno.h>\n#include <sqlca.h>\n");
+          fprintf(base_yyout, "                                                       \n#include <ecpglib.h>\n#include <ecpgerrno.h>\n#include <sqlca.h>\n");
 
-          /* add some compatibility headers */
+                                              
           if (INFORMIX_MODE)
           {
-            fprintf(base_yyout, "/* Needed for informix compatibility */\n#include <ecpg_informix.h>\n");
+            fprintf(base_yyout, "                                       \n#include <ecpg_informix.h>\n");
           }
 
-          fprintf(base_yyout, "/* End of automatic include section */\n");
+          fprintf(base_yyout, "                                      \n");
         }
 
         if (regression_mode)
@@ -461,13 +461,13 @@ main(int argc, char *const argv[])
 
         output_line_number();
 
-        /* and parse the source */
+                                  
         base_yyparse();
 
-        /*
-         * Check whether all cursors were indeed opened.  It does not
-         * really make sense to declare a cursor but not open it.
-         */
+           
+                                                                      
+                                                                  
+           
         for (ptr = cur; ptr != NULL; ptr = ptr->next)
         {
           if (!(ptr->opened))
@@ -485,9 +485,9 @@ main(int argc, char *const argv[])
           fclose(base_yyout);
         }
 
-        /*
-         * If there was an error, delete the output file.
-         */
+           
+                                                          
+           
         if (ret_value != 0)
         {
           if (strcmp(output_filename, "-") != 0 && unlink(output_filename) != 0)

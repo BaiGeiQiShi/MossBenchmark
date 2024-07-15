@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * partitionfuncs.c
- *	  Functions for accessing partition-related metadata
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/partitionfuncs.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+                                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                            
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -25,19 +25,19 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-/*
- * Checks if a given relation can be part of a partition tree.  Returns
- * false if the relation cannot be processed, in which case it is up to
- * the caller to decide what to do, by either raising an error or doing
- * something else.
- */
+   
+                                                                        
+                                                                        
+                                                                        
+                   
+   
 static bool
 check_rel_can_be_partition(Oid relid)
 {
   char relkind;
   bool relispartition;
 
-  /* Check if relation exists */
+                                
   if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(relid)))
   {
     return false;
@@ -46,7 +46,7 @@ check_rel_can_be_partition(Oid relid)
   relkind = get_rel_relkind(relid);
   relispartition = get_rel_relispartition(relid);
 
-  /* Only allow relation types that can appear in partition trees. */
+                                                                     
   if (!relispartition && relkind != RELKIND_PARTITIONED_TABLE && relkind != RELKIND_PARTITIONED_INDEX)
   {
     return false;
@@ -55,14 +55,14 @@ check_rel_can_be_partition(Oid relid)
   return true;
 }
 
-/*
- * pg_partition_tree
- *
- * Produce a view with one row per member of a partition tree, beginning
- * from the top-most parent given by the caller.  This gives information
- * about each partition, its immediate partitioned parent, if it is
- * a leaf partition and its level in the hierarchy.
- */
+   
+                     
+   
+                                                                         
+                                                                         
+                                                                    
+                                                    
+   
 Datum
 pg_partition_tree(PG_FUNCTION_ARGS)
 {
@@ -71,14 +71,14 @@ pg_partition_tree(PG_FUNCTION_ARGS)
   FuncCallContext *funcctx;
   ListCell **next;
 
-  /* stuff done only on the first call of the function */
+                                                         
   if (SRF_IS_FIRSTCALL())
   {
     MemoryContext oldcxt;
     TupleDesc tupdesc;
     List *partitions;
 
-    /* create a function context for cross-call persistence */
+                                                              
     funcctx = SRF_FIRSTCALL_INIT();
 
     if (!check_rel_can_be_partition(rootrelid))
@@ -86,13 +86,13 @@ pg_partition_tree(PG_FUNCTION_ARGS)
       SRF_RETURN_DONE(funcctx);
     }
 
-    /* switch to memory context appropriate for multiple function calls */
+                                                                          
     oldcxt = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-    /*
-     * Find all members of inheritance set.  We only need AccessShareLock
-     * on the children for the partition information lookup.
-     */
+       
+                                                                          
+                                                             
+       
     partitions = find_all_inheritors(rootrelid, AccessShareLock, NULL);
 
     tupdesc = CreateTemplateTupleDesc(PG_PARTITION_TREE_COLS);
@@ -103,7 +103,7 @@ pg_partition_tree(PG_FUNCTION_ARGS)
 
     funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
-    /* allocate memory for user context */
+                                          
     next = (ListCell **)palloc(sizeof(ListCell *));
     *next = list_head(partitions);
     funcctx->user_fctx = (void *)next;
@@ -111,7 +111,7 @@ pg_partition_tree(PG_FUNCTION_ARGS)
     MemoryContextSwitchTo(oldcxt);
   }
 
-  /* stuff done on every call of the function */
+                                                
   funcctx = SRF_PERCALL_SETUP();
   next = (ListCell **)funcctx->user_fctx;
 
@@ -128,16 +128,16 @@ pg_partition_tree(PG_FUNCTION_ARGS)
     List *ancestors = get_partition_ancestors(lfirst_oid(*next));
     ListCell *lc;
 
-    /*
-     * Form tuple with appropriate data.
-     */
+       
+                                         
+       
     MemSet(nulls, 0, sizeof(nulls));
     MemSet(values, 0, sizeof(values));
 
-    /* relid */
+               
     values[0] = ObjectIdGetDatum(relid);
 
-    /* parentid */
+                  
     if (ancestors != NIL)
     {
       parentid = linitial_oid(ancestors);
@@ -151,10 +151,10 @@ pg_partition_tree(PG_FUNCTION_ARGS)
       nulls[1] = true;
     }
 
-    /* isleaf */
+                
     values[2] = BoolGetDatum(relkind != RELKIND_PARTITIONED_TABLE && relkind != RELKIND_PARTITIONED_INDEX);
 
-    /* level */
+               
     if (relid != rootrelid)
     {
       foreach (lc, ancestors)
@@ -175,17 +175,17 @@ pg_partition_tree(PG_FUNCTION_ARGS)
     SRF_RETURN_NEXT(funcctx, result);
   }
 
-  /* done when there are no more elements left */
+                                                 
   SRF_RETURN_DONE(funcctx);
 }
 
-/*
- * pg_partition_root
- *
- * Returns the top-most parent of the partition tree to which a given
- * relation belongs, or NULL if it's not (or cannot be) part of any
- * partition tree.
- */
+   
+                     
+   
+                                                                      
+                                                                    
+                   
+   
 Datum
 pg_partition_root(PG_FUNCTION_ARGS)
 {
@@ -198,13 +198,13 @@ pg_partition_root(PG_FUNCTION_ARGS)
     PG_RETURN_NULL();
   }
 
-  /* fetch the list of ancestors */
+                                   
   ancestors = get_partition_ancestors(relid);
 
-  /*
-   * If the input relation is already the top-most parent, just return
-   * itself.
-   */
+     
+                                                                       
+             
+     
   if (ancestors == NIL)
   {
     PG_RETURN_OID(relid);
@@ -213,20 +213,20 @@ pg_partition_root(PG_FUNCTION_ARGS)
   rootrelid = llast_oid(ancestors);
   list_free(ancestors);
 
-  /*
-   * "rootrelid" must contain a valid OID, given that the input relation is
-   * a valid partition tree member as checked above.
-   */
+     
+                                                                            
+                                                     
+     
   Assert(OidIsValid(rootrelid));
   PG_RETURN_OID(rootrelid);
 }
 
-/*
- * pg_partition_ancestors
- *
- * Produces a view with one row per ancestor of the given partition,
- * including the input relation itself.
- */
+   
+                          
+   
+                                                                     
+                                        
+   
 Datum
 pg_partition_ancestors(PG_FUNCTION_ARGS)
 {

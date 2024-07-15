@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "sqlda.pgc"
@@ -35,7 +35,7 @@ typedef struct sqlda_struct sqlda_t;
 
 #endif
 
-#endif /* ECPG_SQLDA_H */
+#endif                   
 
 #line 7 "sqlda.pgc"
 
@@ -71,9 +71,9 @@ typedef struct sqlda_struct sqlda_t;
 #define CLVCHARPTRTYPE 124
 #define CTYPEMAX 25
 
-/*
- * Values used in sqlda->sqlvar[i]->sqltype
- */
+   
+                                            
+   
 #define SQLCHAR ECPGt_char
 #define SQLSMINT ECPGt_short
 #define SQLINT ECPGt_int
@@ -96,14 +96,14 @@ typedef struct sqlda_struct sqlda_t;
 #define SQLSERIAL8 ECPGt_long
 #endif
 
-#endif /* ndef ECPG_SQLTYPES_H */
+#endif                           
 
 #line 8 "sqlda.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 10 "sqlda.pgc"
 
-/* These shouldn't be under DECLARE SECTION */
+                                              
 sqlda_t *inp_sqlda, *outp_sqlda;
 
 static void
@@ -151,7 +151,7 @@ dump_sqlda(sqlda_t *sqlda)
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 57 "sqlda.pgc"
   char *stmt1 = "SELECT * FROM t1";
@@ -164,7 +164,7 @@ main(void)
 
 #line 60 "sqlda.pgc"
   int id;
-/* exec sql end declare section */
+                                  
 #line 61 "sqlda.pgc"
 
   char msg[128];
@@ -231,7 +231,7 @@ main(void)
   }
 #line 88 "sqlda.pgc"
 
-  /* SQLDA test for getting all records from a table */
+                                                       
 
   outp_sqlda = NULL;
 
@@ -248,7 +248,7 @@ main(void)
 #line 95 "sqlda.pgc"
 
   strcpy(msg, "declare");
-  /* declare mycur1 cursor for $1 */
+                                    
 #line 98 "sqlda.pgc"
 
   strcpy(msg, "open");
@@ -263,7 +263,7 @@ main(void)
   }
 #line 101 "sqlda.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 103 "sqlda.pgc"
 
   rec = 0;
@@ -291,7 +291,7 @@ main(void)
     dump_sqlda(outp_sqlda);
   }
 
-  /* exec sql whenever not found  continue ; */
+                                               
 #line 115 "sqlda.pgc"
 
   strcpy(msg, "close");
@@ -320,9 +320,9 @@ main(void)
 
   free(outp_sqlda);
 
-  /* SQLDA test for getting all records from a table
-     using the Informix-specific FETCH ... USING DESCRIPTOR
-   */
+                                                     
+                                                            
+     
 
   outp_sqlda = NULL;
 
@@ -339,7 +339,7 @@ main(void)
 #line 132 "sqlda.pgc"
 
   strcpy(msg, "declare");
-  /* declare mycur2 cursor for $1 */
+                                    
 #line 135 "sqlda.pgc"
 
   strcpy(msg, "open");
@@ -354,7 +354,7 @@ main(void)
   }
 #line 138 "sqlda.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 140 "sqlda.pgc"
 
   rec = 0;
@@ -382,7 +382,7 @@ main(void)
     dump_sqlda(outp_sqlda);
   }
 
-  /* exec sql whenever not found  continue ; */
+                                               
 #line 152 "sqlda.pgc"
 
   strcpy(msg, "close");
@@ -411,9 +411,9 @@ main(void)
 
   free(outp_sqlda);
 
-  /* SQLDA test for getting one record using an input descriptor */
+                                                                   
 
-  /* Input sqlda has to be built manually */
+                                            
   inp_sqlda = (sqlda_t *)malloc(sizeof(sqlda_t));
   memset(inp_sqlda, 0, sizeof(sqlda_t));
   inp_sqlda->sqld = 1;
@@ -471,9 +471,9 @@ main(void)
   free(inp_sqlda);
   free(outp_sqlda);
 
-  /* SQLDA test for getting one record using an input descriptor
-   * on a named connection
-   */
+                                                                 
+                           
+     
 
   {
     ECPGconnect(__LINE__, 1, "ecpg1_regression", NULL, NULL, "con2", 0);
@@ -486,7 +486,7 @@ main(void)
   }
 #line 199 "sqlda.pgc"
 
-  /* Input sqlda has to be built manually */
+                                            
   inp_sqlda = (sqlda_t *)malloc(sizeof(sqlda_t));
   memset(inp_sqlda, 0, sizeof(sqlda_t));
   inp_sqlda->sqld = 1;
@@ -568,7 +568,7 @@ main(void)
   }
 #line 236 "sqlda.pgc"
 
-  /* End test */
+                
 
   strcpy(msg, "drop");
   {

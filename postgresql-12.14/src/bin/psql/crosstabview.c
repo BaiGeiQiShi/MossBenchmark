@@ -1,10 +1,10 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/crosstabview.c
- */
+   
+                                              
+   
+                                                                
+   
+                               
+   
 #include "postgres_fe.h"
 
 #include "common.h"
@@ -15,66 +15,66 @@
 
 #include "common/logging.h"
 
-/*
- * Value/position from the resultset that goes into the horizontal or vertical
- * crosstabview header.
- */
+   
+                                                                               
+                        
+   
 typedef struct _pivot_field
 {
-  /*
-   * Pointer obtained from PQgetvalue() for colV or colH. Each distinct
-   * value becomes an entry in the vertical header (colV), or horizontal
-   * header (colH). A Null value is represented by a NULL pointer.
-   */
+     
+                                                                        
+                                                                         
+                                                                   
+     
   char *name;
 
-  /*
-   * When a sort is requested on an alternative column, this holds
-   * PQgetvalue() for the sort column corresponding to <name>. If <name>
-   * appear multiple times, it's the first value in the order of the results
-   * that is kept. A Null value is represented by a NULL pointer.
-   */
+     
+                                                                   
+                                                                         
+                                                                             
+                                                                  
+     
   char *sort_value;
 
-  /*
-   * Rank of this value, starting at 0. Initially, it's the relative
-   * position of the first appearance of <name> in the resultset. For
-   * example, if successive rows contain B,A,C,A,D then it's B:0,A:1,C:2,D:3
-   * When a sort column is specified, ranks get updated in a final pass to
-   * reflect the desired order.
-   */
+     
+                                                                     
+                                                                      
+                                                                             
+                                                                           
+                                
+     
   int rank;
 } pivot_field;
 
-/* Node in avl_tree */
+                      
 typedef struct _avl_node
 {
-  /* Node contents */
+                     
   pivot_field field;
 
-  /*
-   * Height of this node in the tree (number of nodes on the longest path to
-   * a leaf).
-   */
+     
+                                                                             
+              
+     
   int height;
 
-  /*
-   * Child nodes. [0] points to left subtree, [1] to right subtree. Never
-   * NULL, points to the empty node avl_tree.end when no left or right
-   * value.
-   */
+     
+                                                                          
+                                                                       
+            
+     
   struct _avl_node *children[2];
 } avl_node;
 
-/*
- * Control structure for the AVL tree (binary search tree kept
- * balanced with the AVL algorithm)
- */
+   
+                                                               
+                                    
+   
 typedef struct _avl_tree
 {
-  int count;      /* Total number of nodes */
-  avl_node *root; /* root of the tree */
-  avl_node *end;  /* Immutable dereferenceable empty tree */
+  int count;                                 
+  avl_node *root;                       
+  avl_node *end;                                            
 } avl_tree;
 
 static bool
@@ -96,13 +96,13 @@ pivotFieldCompare(const void *a, const void *b);
 static int
 rankCompare(const void *a, const void *b);
 
-/*
- * Main entry point to this module.
- *
- * Process the data from *res according to the options in pset (global),
- * to generate the horizontal and vertical headers contents,
- * then call printCrosstab() for the actual output.
- */
+   
+                                    
+   
+                                                                         
+                                                             
+                                                    
+   
 bool
 PrintResultsInCrosstab(const PGresult *res)
 {
@@ -134,7 +134,7 @@ PrintResultsInCrosstab(const PGresult *res)
     goto error_return;
   }
 
-  /* Process first optional arg (vertical header column) */
+                                                           
   if (pset.ctv_args[0] == NULL)
   {
     field_for_rows = 0;
@@ -148,7 +148,7 @@ PrintResultsInCrosstab(const PGresult *res)
     }
   }
 
-  /* Process second optional arg (horizontal header column) */
+                                                              
   if (pset.ctv_args[1] == NULL)
   {
     field_for_columns = 1;
@@ -162,23 +162,23 @@ PrintResultsInCrosstab(const PGresult *res)
     }
   }
 
-  /* Insist that header columns be distinct */
+                                              
   if (field_for_columns == field_for_rows)
   {
     pg_log_error("\\crosstabview: vertical and horizontal headers must be different columns");
     goto error_return;
   }
 
-  /* Process third optional arg (data column) */
+                                                
   if (pset.ctv_args[2] == NULL)
   {
     int i;
 
-    /*
-     * If the data column was not specified, we search for the one not
-     * used as either vertical or horizontal headers.  Must be exactly
-     * three columns, or this won't be unique.
-     */
+       
+                                                                       
+                                                                       
+                                               
+       
     if (PQnfields(res) != 3)
     {
       pg_log_error("\\crosstabview: data column must be specified when query returns more than three columns");
@@ -205,10 +205,10 @@ PrintResultsInCrosstab(const PGresult *res)
     }
   }
 
-  /* Process fourth optional arg (horizontal header sort column) */
+                                                                   
   if (pset.ctv_args[3] == NULL)
   {
-    sort_field_for_columns = -1; /* no sort column */
+    sort_field_for_columns = -1;                     
   }
   else
   {
@@ -219,18 +219,18 @@ PrintResultsInCrosstab(const PGresult *res)
     }
   }
 
-  /*
-   * First part: accumulate the names that go into the vertical and
-   * horizontal headers, each into an AVL binary tree to build the set of
-   * DISTINCT values.
-   */
+     
+                                                                    
+                                                                          
+                      
+     
 
   for (rn = 0; rn < PQntuples(res); rn++)
   {
     char *val;
     char *val1;
 
-    /* horizontal */
+                    
     val = PQgetisnull(res, rn, field_for_columns) ? NULL : PQgetvalue(res, rn, field_for_columns);
     val1 = NULL;
 
@@ -247,15 +247,15 @@ PrintResultsInCrosstab(const PGresult *res)
       goto error_return;
     }
 
-    /* vertical */
+                  
     val = PQgetisnull(res, rn, field_for_rows) ? NULL : PQgetvalue(res, rn, field_for_rows);
 
     avlMergeValue(&piv_rows, val, NULL);
   }
 
-  /*
-   * Second part: Generate sorted arrays from the AVL trees.
-   */
+     
+                                                             
+     
 
   num_columns = piv_columns.count;
   num_rows = piv_rows.count;
@@ -267,18 +267,18 @@ PrintResultsInCrosstab(const PGresult *res)
   avlCollectFields(&piv_columns, piv_columns.root, array_columns, 0);
   avlCollectFields(&piv_rows, piv_rows.root, array_rows, 0);
 
-  /*
-   * Third part: optionally, process the ranking data for the horizontal
-   * header
-   */
+     
+                                                                         
+            
+     
   if (sort_field_for_columns >= 0)
   {
     rankSort(num_columns, array_columns);
   }
 
-  /*
-   * Fourth part: print the crosstab'ed results.
-   */
+     
+                                                 
+     
   retval = printCrosstab(res, num_columns, array_columns, field_for_columns, num_rows, array_rows, field_for_rows, field_for_data);
 
 error_return:
@@ -290,10 +290,10 @@ error_return:
   return retval;
 }
 
-/*
- * Output the pivoted resultset with the printTable* functions.  Return true
- * if successful, false otherwise.
- */
+   
+                                                                             
+                                   
+   
 static bool
 printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns, int field_for_columns, int num_rows, pivot_field *piv_rows, int field_for_rows, int field_for_data)
 {
@@ -306,25 +306,25 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
 
   printTableInit(&cont, &popt.topt, popt.title, num_columns + 1, num_rows);
 
-  /* Step 1: set target column names (horizontal header) */
+                                                           
 
-  /* The name of the first column is kept unchanged by the pivoting */
+                                                                      
   printTableAddHeader(&cont, PQfname(results, field_for_rows), false, column_type_alignment(PQftype(results, field_for_rows)));
 
-  /*
-   * To iterate over piv_columns[] by piv_columns[].rank, create a reverse
-   * map associating each piv_columns[].rank to its index in piv_columns.
-   * This avoids an O(N^2) loop later.
-   */
+     
+                                                                           
+                                                                          
+                                       
+     
   horiz_map = (int *)pg_malloc(sizeof(int) * num_columns);
   for (i = 0; i < num_columns; i++)
   {
     horiz_map[piv_columns[i].rank] = i;
   }
 
-  /*
-   * The display alignment depends on its PQftype().
-   */
+     
+                                                     
+     
   col_align = column_type_alignment(PQftype(results, field_for_data));
 
   for (i = 0; i < num_columns; i++)
@@ -337,7 +337,7 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
   }
   pg_free(horiz_map);
 
-  /* Step 2: set row names in the first output column (vertical header) */
+                                                                          
   for (i = 0; i < num_rows; i++)
   {
     int k = piv_rows[i].rank;
@@ -346,9 +346,9 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
   }
   cont.cellsadded = num_rows * (num_columns + 1);
 
-  /*
-   * Step 3: fill in the content cells.
-   */
+     
+                                        
+     
   for (rn = 0; rn < PQntuples(results); rn++)
   {
     int row_number;
@@ -356,7 +356,7 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     pivot_field *rp, *cp;
     pivot_field elt;
 
-    /* Find target row */
+                         
     if (!PQgetisnull(results, rn, field_for_rows))
     {
       elt.name = PQgetvalue(results, rn, field_for_rows);
@@ -369,7 +369,7 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     Assert(rp != NULL);
     row_number = rp->rank;
 
-    /* Find target column */
+                            
     if (!PQgetisnull(results, rn, field_for_columns))
     {
       elt.name = PQgetvalue(results, rn, field_for_columns);
@@ -383,17 +383,17 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     Assert(cp != NULL);
     col_number = cp->rank;
 
-    /* Place value into cell */
+                               
     if (col_number >= 0 && row_number >= 0)
     {
       int idx;
 
-      /* index into the cont.cells array */
+                                           
       idx = 1 + col_number + row_number * (num_columns + 1);
 
-      /*
-       * If the cell already contains a value, raise an error.
-       */
+         
+                                                               
+         
       if (cont.cells[idx] != NULL)
       {
         pg_log_error("\\crosstabview: query result contains multiple data values for row \"%s\", column \"%s\"", rp->name ? rp->name : (popt.nullPrint ? popt.nullPrint : "(null)"), cp->name ? cp->name : (popt.nullPrint ? popt.nullPrint : "(null)"));
@@ -404,10 +404,10 @@ printCrosstab(const PGresult *results, int num_columns, pivot_field *piv_columns
     }
   }
 
-  /*
-   * The non-initialized cells must be set to an empty string for the print
-   * functions
-   */
+     
+                                                                            
+               
+     
   for (i = 0; i < cont.cellsadded; i++)
   {
     if (cont.cells[i] == NULL)
@@ -425,12 +425,12 @@ error:
   return retval;
 }
 
-/*
- * The avl* functions below provide a minimalistic implementation of AVL binary
- * trees, to efficiently collect the distinct values that will form the horizontal
- * and vertical headers. It only supports adding new values, no removal or even
- * search.
- */
+   
+                                                                                
+                                                                                   
+                                                                                
+           
+   
 static void
 avlInit(avl_tree *tree)
 {
@@ -440,7 +440,7 @@ avlInit(avl_tree *tree)
   tree->root = tree->end;
 }
 
-/* Deallocate recursively an AVL tree, starting from node */
+                                                            
 static void
 avlFree(avl_tree *tree, avl_node *node)
 {
@@ -456,24 +456,24 @@ avlFree(avl_tree *tree, avl_node *node)
   }
   if (node == tree->root)
   {
-    /* free the root separately as it's not child of anything */
+                                                                
     if (node != tree->end)
     {
       pg_free(node);
     }
-    /* free the tree->end struct only once and when all else is freed */
+                                                                        
     pg_free(tree->end);
   }
 }
 
-/* Set the height to 1 plus the greatest of left and right heights */
+                                                                     
 static void
 avlUpdateHeight(avl_node *n)
 {
   n->height = 1 + (n->children[0]->height > n->children[1]->height ? n->children[0]->height : n->children[1]->height);
 }
 
-/* Rotate a subtree left (dir=0) or right (dir=1). Not recursive */
+                                                                   
 static avl_node *
 avlRotate(avl_node **current, int dir)
 {
@@ -494,11 +494,11 @@ avlBalance(avl_node *n)
   return n->children[0]->height - n->children[1]->height;
 }
 
-/*
- * After an insertion, possibly rebalance the tree so that the left and right
- * node heights don't differ by more than 1.
- * May update *node.
- */
+   
+                                                                              
+                                             
+                     
+   
 static void
 avlAdjustBalance(avl_tree *tree, avl_node **node)
 {
@@ -521,11 +521,11 @@ avlAdjustBalance(avl_tree *tree, avl_node **node)
   }
 }
 
-/*
- * Insert a new value/field, starting from *node, reaching the correct position
- * in the tree by recursion.  Possibly rebalance the tree and possibly update
- * *node.  Do nothing if the value is already present in the tree.
- */
+   
+                                                                                
+                                                                              
+                                                                   
+   
 static void
 avlInsertNode(avl_tree *tree, avl_node **node, pivot_field field)
 {
@@ -553,7 +553,7 @@ avlInsertNode(avl_tree *tree, avl_node **node, pivot_field field)
   }
 }
 
-/* Insert the value into the AVL tree, if it does not preexist */
+                                                                 
 static void
 avlMergeValue(avl_tree *tree, char *name, char *sort_value)
 {
@@ -565,12 +565,12 @@ avlMergeValue(avl_tree *tree, char *name, char *sort_value)
   avlInsertNode(tree, &tree->root, field);
 }
 
-/*
- * Recursively extract node values into the names array, in sorted order with a
- * left-to-right tree traversal.
- * Return the next candidate offset to write into the names array.
- * fields[] must be preallocated to hold tree->count entries
- */
+   
+                                                                                
+                                 
+                                                                   
+                                                             
+   
 static int
 avlCollectFields(avl_tree *tree, avl_node *node, pivot_field *fields, int idx)
 {
@@ -587,8 +587,8 @@ avlCollectFields(avl_tree *tree, avl_node *node, pivot_field *fields, int idx)
 static void
 rankSort(int num_columns, pivot_field *piv_columns)
 {
-  int *hmap; /* [[offset in piv_columns, rank], ...for
-              * every header entry] */
+  int *hmap;                                           
+                                      
   int i;
 
   hmap = (int *)pg_malloc(sizeof(int) * num_columns * 2);
@@ -596,7 +596,7 @@ rankSort(int num_columns, pivot_field *piv_columns)
   {
     char *val = piv_columns[i].sort_value;
 
-    /* ranking information is valid if non null and matches /^-?\d+$/ */
+                                                                        
     if (val && ((*val == '-' && strspn(val + 1, "0123456789") == strlen(val + 1)) || strspn(val, "0123456789") == strlen(val)))
     {
       hmap[i * 2] = atoi(val);
@@ -604,7 +604,7 @@ rankSort(int num_columns, pivot_field *piv_columns)
     }
     else
     {
-      /* invalid rank information ignored (equivalent to rank 0) */
+                                                                   
       hmap[i * 2] = 0;
       hmap[i * 2 + 1] = i;
     }
@@ -620,15 +620,15 @@ rankSort(int num_columns, pivot_field *piv_columns)
   pg_free(hmap);
 }
 
-/*
- * Look up a column reference, which can be either:
- * - a number from 1 to PQnfields(res)
- * - a column name matching one of PQfname(res,...)
- *
- * Returns zero-based column number, or -1 if not found or ambiguous.
- *
- * Note: may modify contents of "arg" string.
- */
+   
+                                                    
+                                       
+                                                    
+   
+                                                                      
+   
+                                              
+   
 static int
 indexOfColumn(char *arg, const PGresult *res)
 {
@@ -636,7 +636,7 @@ indexOfColumn(char *arg, const PGresult *res)
 
   if (arg[0] && strspn(arg, "0123456789") == strlen(arg))
   {
-    /* if arg contains only digits, it's a column number */
+                                                           
     idx = atoi(arg) - 1;
     if (idx < 0 || idx >= PQnfields(res))
     {
@@ -648,14 +648,14 @@ indexOfColumn(char *arg, const PGresult *res)
   {
     int i;
 
-    /*
-     * Dequote and downcase the column name.  By checking for all-digits
-     * before doing this, we can ensure that a quoted name is treated as a
-     * name even if it's all digits.
-     */
+       
+                                                                         
+                                                                           
+                                     
+       
     dequote_downcase_identifier(arg, true, pset.encoding);
 
-    /* Now look for match(es) among res' column names */
+                                                        
     idx = -1;
     for (i = 0; i < PQnfields(res); i++)
     {
@@ -663,7 +663,7 @@ indexOfColumn(char *arg, const PGresult *res)
       {
         if (idx >= 0)
         {
-          /* another idx was already found for the same name */
+                                                               
           pg_log_error("\\crosstabview: ambiguous column name: \"%s\"", arg);
           return -1;
         }
@@ -680,20 +680,20 @@ indexOfColumn(char *arg, const PGresult *res)
   return idx;
 }
 
-/*
- * Value comparator for vertical and horizontal headers
- * used for deduplication only.
- * - null values are considered equal
- * - non-null < null
- * - non-null values are compared with strcmp()
- */
+   
+                                                        
+                                
+                                      
+                     
+                                                
+   
 static int
 pivotFieldCompare(const void *a, const void *b)
 {
   const pivot_field *pa = (const pivot_field *)a;
   const pivot_field *pb = (const pivot_field *)b;
 
-  /* test null values */
+                        
   if (!pb->name)
   {
     return pa->name ? -1 : 0;
@@ -703,7 +703,7 @@ pivotFieldCompare(const void *a, const void *b)
     return 1;
   }
 
-  /* non-null values */
+                       
   return strcmp(pa->name, pb->name);
 }
 

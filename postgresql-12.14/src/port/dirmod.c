@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- *
- * dirmod.c
- *	  directory handling functions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *	This includes replacement versions of functions that work on
- *	Win32 (NT4 and newer).
- *
- * IDENTIFICATION
- *	  src/port/dirmod.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                  
+   
+                                                                         
+                                                                        
+   
+                                                                
+                          
+   
+                  
+                       
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -21,7 +21,7 @@
 #include "postgres_fe.h"
 #endif
 
-/* Don't modify declarations in system headers */
+                                                 
 #if defined(WIN32) || defined(__CYGWIN__)
 #undef rename
 #undef unlink
@@ -41,21 +41,21 @@
 
 #if defined(WIN32) || defined(__CYGWIN__)
 
-/*
- *	pgrename
- */
+   
+            
+   
 int
 pgrename(const char *from, const char *to)
 {
   int loops = 0;
 
-  /*
-   * We need to loop because even though PostgreSQL uses flags that allow
-   * rename while the file is open, other applications might have the file
-   * open without those flags.  However, we won't wait indefinitely for
-   * someone else to close the file, as the caller might be holding locks
-   * and blocking other backends.
-   */
+     
+                                                                          
+                                                                           
+                                                                        
+                                                                          
+                                  
+     
 #if defined(WIN32) && !defined(__CYGWIN__)
   while (!MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING))
 #else
@@ -67,14 +67,14 @@ pgrename(const char *from, const char *to)
 
     _dosmaperr(err);
 
-    /*
-     * Modern NT-based Windows versions return ERROR_SHARING_VIOLATION if
-     * another process has the file open without FILE_SHARE_DELETE.
-     * ERROR_LOCK_VIOLATION has also been seen with some anti-virus
-     * software. This used to check for just ERROR_ACCESS_DENIED, so
-     * presumably you can get that too with some OS versions. We don't
-     * expect real permission errors where we currently use rename().
-     */
+       
+                                                                          
+                                                                    
+                                                                    
+                                                                     
+                                                                       
+                                                                      
+       
     if (err != ERROR_ACCESS_DENIED && err != ERROR_SHARING_VIOLATION && err != ERROR_LOCK_VIOLATION)
     {
       return -1;
@@ -86,65 +86,65 @@ pgrename(const char *from, const char *to)
     }
 #endif
 
-    if (++loops > 100) /* time out after 10 sec */
+    if (++loops > 100)                            
     {
       return -1;
     }
-    pg_usleep(100000); /* us */
+    pg_usleep(100000);         
   }
   return 0;
 }
 
-/*
- *	pgunlink
- */
+   
+            
+   
 int
 pgunlink(const char *path)
 {
   int loops = 0;
 
-  /*
-   * We need to loop because even though PostgreSQL uses flags that allow
-   * unlink while the file is open, other applications might have the file
-   * open without those flags.  However, we won't wait indefinitely for
-   * someone else to close the file, as the caller might be holding locks
-   * and blocking other backends.
-   */
+     
+                                                                          
+                                                                           
+                                                                        
+                                                                          
+                                  
+     
   while (unlink(path))
   {
     if (errno != EACCES)
     {
       return -1;
     }
-    if (++loops > 100) /* time out after 10 sec */
+    if (++loops > 100)                            
     {
       return -1;
     }
-    pg_usleep(100000); /* us */
+    pg_usleep(100000);         
   }
   return 0;
 }
 
-/* We undefined these above; now redefine for possible use below */
+                                                                   
 #define rename(from, to) pgrename(from, to)
 #define unlink(path) pgunlink(path)
-#endif /* defined(WIN32) || defined(__CYGWIN__) */
+#endif                                            
 
-#if defined(WIN32) && !defined(__CYGWIN__) /* Cygwin has its own symlinks */
+#if defined(WIN32) && !defined(__CYGWIN__)                                  
 
-/*
- *	pgsymlink support:
- *
- *	This struct is a replacement for REPARSE_DATA_BUFFER which is defined in VC6 winnt.h
- *	but omitted in later SDK functions.
- *	We only need the SymbolicLinkReparseBuffer part of the original struct's union.
- */
+   
+                      
+   
+                                                                                        
+                                       
+                                                                                   
+   
 typedef struct
 {
   DWORD ReparseTag;
   WORD ReparseDataLength;
   WORD Reserved;
-  /* SymbolicLinkReparseBuffer */
+                                 
   WORD SubstituteNameOffset;
   WORD SubstituteNameLength;
   WORD PrintNameOffset;
@@ -154,11 +154,11 @@ typedef struct
 
 #define REPARSE_JUNCTION_DATA_BUFFER_HEADER_SIZE FIELD_OFFSET(REPARSE_JUNCTION_DATA_BUFFER, SubstituteNameOffset)
 
-/*
- *	pgsymlink - uses Win32 junction points
- *
- *	For reference:	http://www.codeproject.com/KB/winsdk/junctionpoints.aspx
- */
+   
+                                          
+   
+                                                                           
+   
 int
 pgsymlink(const char *oldpath, const char *newpath)
 {
@@ -177,7 +177,7 @@ pgsymlink(const char *oldpath, const char *newpath)
     return -1;
   }
 
-  /* make sure we have an unparsed native win32 path */
+                                                       
   if (memcmp("\\??\\", oldpath, 4) != 0)
   {
     snprintf(nativeTarget, sizeof(nativeTarget), "\\??\\%s", oldpath);
@@ -202,10 +202,10 @@ pgsymlink(const char *oldpath, const char *newpath)
   reparseBuf->PrintNameLength = 0;
   MultiByteToWideChar(CP_ACP, 0, nativeTarget, -1, reparseBuf->PathBuffer, MAX_PATH);
 
-  /*
-   * FSCTL_SET_REPARSE_POINT is coded differently depending on SDK version;
-   * we use our own definition
-   */
+     
+                                                                            
+                               
+     
   if (!DeviceIoControl(dirhandle, CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_ANY_ACCESS), reparseBuf, reparseBuf->ReparseDataLength + REPARSE_JUNCTION_DATA_BUFFER_HEADER_SIZE, 0, 0, &len, 0))
   {
     LPSTR msg;
@@ -229,9 +229,9 @@ pgsymlink(const char *oldpath, const char *newpath)
   return 0;
 }
 
-/*
- *	pgreadlink - uses Win32 junction points
- */
+   
+                                           
+   
 int
 pgreadlink(const char *path, char *buf, size_t size)
 {
@@ -279,7 +279,7 @@ pgreadlink(const char *path, char *buf, size_t size)
   }
   CloseHandle(h);
 
-  /* Got it, let's get some results from this */
+                                                
   if (reparseBuf->ReparseTag != IO_REPARSE_TAG_MOUNT_POINT)
   {
     errno = EINVAL;
@@ -294,10 +294,10 @@ pgreadlink(const char *path, char *buf, size_t size)
     return -1;
   }
 
-  /*
-   * If the path starts with "\??\", which it will do in most (all?) cases,
-   * strip those out.
-   */
+     
+                                                                            
+                      
+     
   if (r > 4 && strncmp(buf, "\\??\\", 4) == 0)
   {
     memmove(buf, buf + 4, strlen(buf + 4) + 1);
@@ -306,10 +306,10 @@ pgreadlink(const char *path, char *buf, size_t size)
   return r;
 }
 
-/*
- * Assumes the file exists, so will return false if it doesn't
- * (since a nonexistent file is not a junction)
- */
+   
+                                                               
+                                                
+   
 bool
 pgwin32_is_junction(const char *path)
 {
@@ -322,17 +322,17 @@ pgwin32_is_junction(const char *path)
   }
   return ((attr & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
 }
-#endif /* defined(WIN32) && !defined(__CYGWIN__) */
+#endif                                             
 
 #if defined(WIN32) && !defined(__CYGWIN__)
 
 #undef stat
 
-/*
- * The stat() function in win32 is not guaranteed to update the st_size
- * field when run. So we define our own version that uses the Win32 API
- * to update this field.
- */
+   
+                                                                        
+                                                                        
+                         
+   
 int
 pgwin32_safestat(const char *path, struct stat *buf)
 {
@@ -344,13 +344,13 @@ pgwin32_safestat(const char *path, struct stat *buf)
   {
     if (GetLastError() == ERROR_DELETE_PENDING)
     {
-      /*
-       * File has been deleted, but is not gone from the filesystem yet.
-       * This can happen when some process with FILE_SHARE_DELETE has it
-       * open and it will be fully removed once that handle is closed.
-       * Meanwhile, we can't open it, so indicate that the file just
-       * doesn't exist.
-       */
+         
+                                                                         
+                                                                         
+                                                                       
+                                                                     
+                        
+         
       errno = ENOENT;
       return -1;
     }
@@ -364,10 +364,10 @@ pgwin32_safestat(const char *path, struct stat *buf)
     return -1;
   }
 
-  /*
-   * XXX no support for large files here, but we don't do that in general on
-   * Win32 yet.
-   */
+     
+                                                                             
+                
+     
   buf->st_size = attr.nFileSizeLow;
 
   return 0;

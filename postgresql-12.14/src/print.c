@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * Query-result printing support for frontend code
- *
- * This file used to be part of psql, but now it's separated out to allow
- * other frontend programs to use it.  Because the printing code needs
- * access to the cancel_pressed flag as well as SIGPIPE trapping and
- * pager open/close functions, all that stuff came with it.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/fe_utils/print.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                   
+   
+                                                                          
+                                                                       
+                                                                     
+                                                            
+   
+   
+                                                                         
+                                                                        
+   
+                        
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <limits.h>
@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 #ifndef WIN32
-#include <sys/ioctl.h> /* for ioctl() */
+#include <sys/ioctl.h>                  
 #endif
 
 #ifdef HAVE_TERMIOS_H
@@ -35,18 +35,18 @@
 #include "catalog/pg_type_d.h"
 #include "fe_utils/mbprint.h"
 
-/*
- * If the calling program doesn't have any mechanism for setting
- * cancel_pressed, it will have no effect.
- *
- * Note: print.c's general strategy for when to check cancel_pressed is to do
- * so at completion of each row of output.
- */
+   
+                                                                 
+                                           
+   
+                                                                              
+                                           
+   
 volatile bool cancel_pressed = false;
 
 static bool always_ignore_sigpipe = false;
 
-/* info for locale-aware numeric formatting; set up by setDecimalLocale() */
+                                                                            
 static char *decimal_point;
 static int groupdigits;
 static char *thousands_sep;
@@ -54,12 +54,12 @@ static char *thousands_sep;
 static char default_footer[100];
 static printTableFooter default_footer_cell = {default_footer, NULL};
 
-/* Line style control structures */
+                                   
 const printTextFormat pg_asciiformat = {"ascii", {{"-", "+", "+", "+"}, {"-", "+", "+", "+"}, {"-", "+", "+", "+"}, {"", "|", "|", "|"}}, "|", "|", "|", " ", "+", " ", "+", ".", ".", true};
 
 const printTextFormat pg_asciiformat_old = {"old-ascii", {{"-", "+", "+", "+"}, {"-", "+", "+", "+"}, {"-", "+", "+", "+"}, {"", "|", "|", "|"}}, ":", ";", " ", "+", " ", " ", " ", " ", " ", false};
 
-/* Default unicode linestyle format */
+                                      
 printTextFormat pg_utf8format;
 
 typedef struct unicodeStyleRowFormat
@@ -103,57 +103,57 @@ typedef struct unicodeStyleFormat
 
 static const unicodeStyleFormat unicode_style = {{
                                                      {
-                                                         /* ─ */
+                                                                
                                                          "\342\224\200",
-                                                         /* ├╟ */
+                                                                 
                                                          {"\342\224\234", "\342\225\237"},
-                                                         /* ┤╢ */
+                                                                 
                                                          {"\342\224\244", "\342\225\242"},
                                                      },
                                                      {
-                                                         /* ═ */
+                                                                
                                                          "\342\225\220",
-                                                         /* ╞╠ */
+                                                                 
                                                          {"\342\225\236", "\342\225\240"},
-                                                         /* ╡╣ */
+                                                                 
                                                          {"\342\225\241", "\342\225\243"},
                                                      },
                                                  },
     {
         {
-            /* │ */
+                   
             "\342\224\202",
-            /* ┼╪ */
+                    
             {"\342\224\274", "\342\225\252"},
-            /* ┴╧ */
+                    
             {"\342\224\264", "\342\225\247"},
-            /* ┬╤ */
+                    
             {"\342\224\254", "\342\225\244"},
         },
         {
-            /* ║ */
+                   
             "\342\225\221",
-            /* ╫╬ */
+                    
             {"\342\225\253", "\342\225\254"},
-            /* ╨╩ */
+                    
             {"\342\225\250", "\342\225\251"},
-            /* ╥╦ */
+                    
             {"\342\225\245", "\342\225\246"},
         },
     },
     {
-        /* └│┌─┐┘ */
+                    
         {"\342\224\224", "\342\224\202", "\342\224\214", "\342\224\200", "\342\224\220", "\342\224\230"},
-        /* ╚║╔═╗╝ */
+                    
         {"\342\225\232", "\342\225\221", "\342\225\224", "\342\225\220", "\342\225\227", "\342\225\235"},
     },
-    " ", "\342\206\265", /* ↵ */
-    " ", "\342\206\265", /* ↵ */
-    "\342\200\246",      /* … */
-    "\342\200\246",      /* … */
+    " ", "\342\206\265",        
+    " ", "\342\206\265",        
+    "\342\200\246",             
+    "\342\200\246",             
     true};
 
-/* Local functions */
+                     
 static int
 strlen_max_width(unsigned char *str, int *target_width, int encoding);
 static void
@@ -162,32 +162,32 @@ IsPagerNeeded(const printTableContent *cont, int extra_lines, bool expanded, FIL
 static void
 print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager);
 
-/* Count number of digits in integral part of number */
+                                                       
 static int
 integer_digits(const char *my_str)
 {
-  /* ignoring any sign ... */
+                             
   if (my_str[0] == '-' || my_str[0] == '+')
   {
     my_str++;
   }
-  /* ... count initial integral digits */
+                                         
   return strspn(my_str, "0123456789");
 }
 
-/* Compute additional length required for locale-aware numeric output */
+                                                                        
 static int
 additional_numeric_locale_len(const char *my_str)
 {
   int int_len = integer_digits(my_str), len = 0;
 
-  /* Account for added thousands_sep instances */
+                                                 
   if (int_len > groupdigits)
   {
     len += ((int_len - 1) / groupdigits) * strlen(thousands_sep);
   }
 
-  /* Account for possible additional length of decimal_point */
+                                                               
   if (strchr(my_str, '.') != NULL)
   {
     len += strlen(decimal_point) - 1;
@@ -196,24 +196,24 @@ additional_numeric_locale_len(const char *my_str)
   return len;
 }
 
-/*
- * Format a numeric value per current LC_NUMERIC locale setting
- *
- * Returns the appropriately formatted string in a new allocated block,
- * caller must free.
- *
- * setDecimalLocale() must have been called earlier.
- */
+   
+                                                                
+   
+                                                                        
+                     
+   
+                                                     
+   
 static char *
 format_numeric_locale(const char *my_str)
 {
   char *new_str;
   int new_len, int_len, leading_digits, i, new_str_pos;
 
-  /*
-   * If the string doesn't look like a number, return it unchanged.  This
-   * check is essential to avoid mangling already-localized "money" values.
-   */
+     
+                                                                          
+                                                                            
+     
   if (strspn(my_str, "0123456789+-.eE") != strlen(my_str))
   {
     return pg_strdup(my_str);
@@ -224,24 +224,24 @@ format_numeric_locale(const char *my_str)
   new_str_pos = 0;
   int_len = integer_digits(my_str);
 
-  /* number of digits in first thousands group */
+                                                 
   leading_digits = int_len % groupdigits;
   if (leading_digits == 0)
   {
     leading_digits = groupdigits;
   }
 
-  /* process sign */
+                    
   if (my_str[0] == '-' || my_str[0] == '+')
   {
     new_str[new_str_pos++] = my_str[0];
     my_str++;
   }
 
-  /* process integer part of number */
+                                      
   for (i = 0; i < int_len; i++)
   {
-    /* Time to insert separator? */
+                                   
     if (i > 0 && --leading_digits == 0)
     {
       strcpy(&new_str[new_str_pos], thousands_sep);
@@ -251,7 +251,7 @@ format_numeric_locale(const char *my_str)
     new_str[new_str_pos++] = my_str[i];
   }
 
-  /* handle decimal point if any */
+                                   
   if (my_str[i] == '.')
   {
     strcpy(&new_str[new_str_pos], decimal_point);
@@ -259,21 +259,21 @@ format_numeric_locale(const char *my_str)
     i++;
   }
 
-  /* copy the rest (fractional digits and/or exponent, and \0 terminator) */
+                                                                            
   strcpy(&new_str[new_str_pos], &my_str[i]);
 
-  /* assert we didn't underestimate new_len (an overestimate is OK) */
+                                                                      
   Assert(strlen(new_str) <= new_len);
 
   return new_str;
 }
 
-/*
- * fputnbytes: print exactly N bytes to a file
- *
- * We avoid using %.*s here because it can misbehave if the data
- * is not valid in what libc thinks is the prevailing encoding.
- */
+   
+                                               
+   
+                                                                 
+                                                                
+   
 static void
 fputnbytes(FILE *f, const char *str, size_t n)
 {
@@ -296,15 +296,15 @@ print_separator(struct separator sep, FILE *fout)
   }
 }
 
-/*
- * Return the list of explicitly-requested footers or, when applicable, the
- * default "(xx rows)" footer.  Always omit the default footer when given
- * non-default footers, "\pset footer off", or a specific instruction to that
- * effect from a calling backslash command.  Vertical formats number each row,
- * making the default footer redundant; they do not call this function.
- *
- * The return value may point to static storage; do not keep it across calls.
- */
+   
+                                                                            
+                                                                          
+                                                                              
+                                                                               
+                                                                        
+   
+                                                                              
+   
 static printTableFooter *
 footers_with_default(const printTableContent *cont)
 {
@@ -323,9 +323,9 @@ footers_with_default(const printTableContent *cont)
   }
 }
 
-/*************************/
-/* Unaligned text		 */
-/*************************/
+                           
+                      
+                           
 
 static void
 print_unaligned_text(const printTableContent *cont, FILE *fout)
@@ -342,14 +342,14 @@ print_unaligned_text(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(cont->title, fout);
       print_separator(cont->opt->recordSep, fout);
     }
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       for (ptr = cont->headers; *ptr; ptr++)
@@ -365,11 +365,11 @@ print_unaligned_text(const printTableContent *cont, FILE *fout)
   }
   else
   {
-    /* assume continuing printout */
+                                    
     need_recordsep = true;
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (need_recordsep)
@@ -393,7 +393,7 @@ print_unaligned_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print footers */
+                     
   if (cont->opt->stop_table)
   {
     printTableFooter *footers = footers_with_default(cont);
@@ -414,11 +414,11 @@ print_unaligned_text(const printTableContent *cont, FILE *fout)
       }
     }
 
-    /*
-     * The last record is terminated by a newline, independent of the set
-     * record separator.  But when the record separator is a zero byte, we
-     * use that (compatible with find -print0 and xargs).
-     */
+       
+                                                                          
+                                                                           
+                                                          
+       
     if (need_recordsep)
     {
       if (cont->opt->recordSep.separator_zero)
@@ -448,7 +448,7 @@ print_unaligned_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(cont->title, fout);
@@ -457,16 +457,16 @@ print_unaligned_vertical(const printTableContent *cont, FILE *fout)
   }
   else
   {
-    /* assume continuing printout */
+                                    
     need_recordsep = true;
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (need_recordsep)
     {
-      /* record separator is 2 occurrences of recordsep in this mode */
+                                                                       
       print_separator(cont->opt->recordSep, fout);
       print_separator(cont->opt->recordSep, fout);
       need_recordsep = false;
@@ -492,7 +492,7 @@ print_unaligned_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->stop_table)
   {
-    /* print footers */
+                       
     if (!opt_tuples_only && cont->footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -505,7 +505,7 @@ print_unaligned_vertical(const printTableContent *cont, FILE *fout)
       }
     }
 
-    /* see above in print_unaligned_text() */
+                                             
     if (need_recordsep)
     {
       if (cont->opt->recordSep.separator_zero)
@@ -520,11 +520,11 @@ print_unaligned_vertical(const printTableContent *cont, FILE *fout)
   }
 }
 
-/********************/
-/* Aligned text		*/
-/********************/
+                      
+                   
+                      
 
-/* draw "line" */
+                 
 static void
 _print_horizontal_line(const unsigned int ncolumns, const unsigned int *widths, unsigned short border, printTextRule pos, const printTextFormat *format, FILE *fout)
 {
@@ -572,9 +572,9 @@ _print_horizontal_line(const unsigned int ncolumns, const unsigned int *widths, 
   fputc('\n', fout);
 }
 
-/*
- *	Print pretty boxes around cells.
- */
+   
+                                    
+   
 static void
 print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 {
@@ -589,7 +589,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
   unsigned int i, j;
 
   unsigned int *width_header, *max_width, *width_wrap, *width_average;
-  unsigned int *max_nl_lines, /* value split by newlines */
+  unsigned int *max_nl_lines,                              
       *curr_nl_line, *max_bytes;
   unsigned char **format_buf;
   unsigned int width_total;
@@ -599,12 +599,12 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
   const char *const *ptr;
 
-  struct lineptr **col_lineptrs; /* pointers to line pointer per column */
+  struct lineptr **col_lineptrs;                                          
 
-  bool *header_done;       /* Have all header lines been output? */
-  int *bytes_output;       /* Bytes output for column value */
-  printTextLineWrap *wrap; /* Wrap status for each column */
-  int output_columns = 0;  /* Width of interactive console */
+  bool *header_done;                                               
+  int *bytes_output;                                          
+  printTextLineWrap *wrap;                                  
+  int output_columns = 0;                                    
   bool is_local_pager = false;
 
   if (cancel_pressed)
@@ -649,7 +649,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     wrap = NULL;
   }
 
-  /* scan all column headers, find maximum width and max max_nl_lines */
+                                                                        
   for (i = 0; i < col_count; i++)
   {
     int width, nl_lines, bytes_required;
@@ -674,11 +674,11 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
     width_header[i] = width;
   }
-  /* Add height of tallest header column */
+                                           
   extra_output_lines += extra_row_output_lines;
   extra_row_output_lines = 0;
 
-  /* scan all cells, find maximum width, compute cell_count */
+                                                              
   for (i = 0, ptr = cont->cells; *ptr; ptr++, i++, cell_count++)
   {
     int width, nl_lines, bytes_required;
@@ -701,7 +701,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     width_average[i % col_count] += width;
   }
 
-  /* If we have rows, compute average */
+                                        
   if (col_count != 0 && cell_count != 0)
   {
     int rows = cell_count / col_count;
@@ -712,7 +712,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     }
   }
 
-  /* adjust the total display width based on border style */
+                                                            
   if (opt_border == 0)
   {
     width_total = col_count;
@@ -733,16 +733,16 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     total_header_width += width_header[i];
   }
 
-  /*
-   * At this point: max_width[] contains the max width of each column,
-   * max_nl_lines[] contains the max number of lines in each column,
-   * max_bytes[] contains the maximum storage space for formatting strings,
-   * width_total contains the giant width sum.  Now we allocate some memory
-   * for line pointers.
-   */
+     
+                                                                       
+                                                                     
+                                                                            
+                                                                            
+                        
+     
   for (i = 0; i < col_count; i++)
   {
-    /* Add entry for ptr == NULL array termination */
+                                                     
     col_lineptrs[i] = pg_malloc0((max_nl_lines[i] + 1) * sizeof(**col_lineptrs));
 
     format_buf[i] = pg_malloc(max_bytes[i] + 1);
@@ -750,15 +750,15 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     col_lineptrs[i]->ptr = format_buf[i];
   }
 
-  /* Default word wrap to the full width, i.e. no word wrap */
+                                                              
   for (i = 0; i < col_count; i++)
   {
     width_wrap[i] = max_width[i];
   }
 
-  /*
-   * Choose target output width: \pset columns, or $COLUMNS, or ioctl
-   */
+     
+                                                                      
+     
   if (cont->opt->columns > 0)
   {
     output_columns = cont->opt->columns;
@@ -784,32 +784,32 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
   if (cont->opt->format == PRINT_WRAPPED)
   {
-    /*
-     * Optional optimized word wrap. Shrink columns with a high max/avg
-     * ratio.  Slightly bias against wider columns. (Increases chance a
-     * narrow column will fit in its cell.)  If available columns is
-     * positive...  and greater than the width of the unshrinkable column
-     * headers
-     */
+       
+                                                                        
+                                                                        
+                                                                     
+                                                                          
+               
+       
     if (output_columns > 0 && output_columns >= total_header_width)
     {
-      /* While there is still excess width... */
+                                                
       while (width_total > output_columns)
       {
         double max_ratio = 0;
         int worst_col = -1;
 
-        /*
-         * Find column that has the highest ratio of its maximum width
-         * compared to its average width.  This tells us which column
-         * will produce the fewest wrapped values if shortened.
-         * width_wrap starts as equal to max_width.
-         */
+           
+                                                                       
+                                                                      
+                                                                
+                                                    
+           
         for (i = 0; i < col_count; i++)
         {
           if (width_average[i] && width_wrap[i] > width_header[i])
           {
-            /* Penalize wide columns by 1% of their width */
+                                                            
             double ratio;
 
             ratio = (double)width_wrap[i] / width_average[i] + max_width[i] * 0.01;
@@ -821,57 +821,57 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           }
         }
 
-        /* Exit loop if we can't squeeze any more. */
+                                                     
         if (worst_col == -1)
         {
           break;
         }
 
-        /* Decrease width of target column by one. */
+                                                     
         width_wrap[worst_col]--;
         width_total--;
       }
     }
   }
 
-  /*
-   * If in expanded auto mode, we have now calculated the expected width, so
-   * we can now escape to vertical mode if necessary.  If the output has
-   * only one column, the expanded format would be wider than the regular
-   * format, so don't use it in that case.
-   */
+     
+                                                                             
+                                                                         
+                                                                          
+                                           
+     
   if (cont->opt->expanded == 2 && output_columns > 0 && cont->ncolumns > 1 && (output_columns < total_header_width || output_columns < width_total))
   {
     print_aligned_vertical(cont, fout, is_pager);
     goto cleanup;
   }
 
-  /* If we wrapped beyond the display width, use the pager */
+                                                             
   if (!is_pager && fout == stdout && output_columns > 0 && (output_columns < total_header_width || output_columns < width_total))
   {
-    fout = PageOutput(INT_MAX, cont->opt); /* force pager */
+    fout = PageOutput(INT_MAX, cont->opt);                  
     is_pager = is_local_pager = true;
   }
 
-  /* Check if newlines or our wrapping now need the pager */
+                                                            
   if (!is_pager && fout == stdout)
   {
-    /* scan all cells, find maximum width, compute cell_count */
+                                                                
     for (i = 0, ptr = cont->cells; *ptr; ptr++, cell_count++)
     {
       int width, nl_lines, bytes_required;
 
       pg_wcssize((const unsigned char *)*ptr, strlen(*ptr), encoding, &width, &nl_lines, &bytes_required);
 
-      /*
-       * A row can have both wrapping and newlines that cause it to
-       * display across multiple lines.  We check for both cases below.
-       */
+         
+                                                                    
+                                                                        
+         
       if (width > 0 && width_wrap[i])
       {
         unsigned int extra_lines;
 
-        /* don't count the first line of nl_lines - it's not "extra" */
+                                                                       
         extra_lines = ((width - 1) / width_wrap[i]) + nl_lines - 1;
         if (extra_lines > extra_row_output_lines)
         {
@@ -879,11 +879,11 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
         }
       }
 
-      /* i is the current column number: increment with wrap */
+                                                               
       if (++i >= col_count)
       {
         i = 0;
-        /* At last column of each row, add tallest column height */
+                                                                   
         extra_output_lines += extra_row_output_lines;
         extra_row_output_lines = 0;
       }
@@ -892,10 +892,10 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     is_local_pager = is_pager;
   }
 
-  /* time to output */
+                      
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (cont->title && !opt_tuples_only)
     {
       int width, height;
@@ -903,17 +903,17 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
       pg_wcssize((const unsigned char *)cont->title, strlen(cont->title), encoding, &width, &height, NULL);
       if (width >= width_total)
       {
-        /* Aligned */
+                     
         fprintf(fout, "%s\n", cont->title);
       }
       else
       {
-        /* Centered */
+                      
         fprintf(fout, "%-*s%s\n", (width_total - width) / 2, "", cont->title);
       }
     }
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       int more_col_wrapping;
@@ -956,7 +956,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           {
             nbspace = width_wrap[i] - this_line->width;
 
-            /* centered */
+                          
             fprintf(fout, "%-*s%s%-*s", nbspace / 2, "", this_line->ptr, (nbspace + 1) / 2, "");
 
             if (!(this_line + 1)->ptr)
@@ -993,7 +993,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
     }
   }
 
-  /* print cells, one loop per row */
+                                     
   for (i = 0, ptr = cont->cells; *ptr; i += col_count, ptr += col_count)
   {
     bool more_lines;
@@ -1003,9 +1003,9 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
       break;
     }
 
-    /*
-     * Format each cell.
-     */
+       
+                         
+       
     for (j = 0; j < col_count; j++)
     {
       pg_wcsformat((const unsigned char *)ptr[j], strlen(ptr[j]), encoding, col_lineptrs[j], max_nl_lines[j]);
@@ -1014,31 +1014,31 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
     memset(bytes_output, 0, col_count * sizeof(int));
 
-    /*
-     * Each time through this loop, one display line is output. It can
-     * either be a full value or a partial value if embedded newlines
-     * exist or if 'format=wrapping' mode is enabled.
-     */
+       
+                                                                       
+                                                                      
+                                                      
+       
     do
     {
       more_lines = false;
 
-      /* left border */
+                       
       if (opt_border == 2)
       {
         fputs(dformat->leftvrule, fout);
       }
 
-      /* for each column */
+                           
       for (j = 0; j < col_count; j++)
       {
-        /* We have a valid array element, so index it */
+                                                        
         struct lineptr *this_line = &col_lineptrs[j][curr_nl_line[j]];
         int bytes_to_output;
         int chars_to_output = width_wrap[j];
         bool finalspaces = (opt_border == 2 || (col_count > 0 && j < col_count - 1));
 
-        /* Print left-hand wrap or newline mark */
+                                                  
         if (opt_border != 0)
         {
           if (wrap[j] == PRINT_LINE_WRAP_WRAP)
@@ -1057,7 +1057,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 
         if (!this_line->ptr)
         {
-          /* Past newline lines so just pad for other columns */
+                                                                
           if (finalspaces)
           {
             fprintf(fout, "%*s", chars_to_output, "");
@@ -1065,42 +1065,42 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
         }
         else
         {
-          /* Get strlen() of the characters up to width_wrap */
+                                                               
           bytes_to_output = strlen_max_width(this_line->ptr + bytes_output[j], &chars_to_output, encoding);
 
-          /*
-           * If we exceeded width_wrap, it means the display width
-           * of a single character was wider than our target width.
-           * In that case, we have to pretend we are only printing
-           * the target display width and make the best of it.
-           */
+             
+                                                                   
+                                                                    
+                                                                   
+                                                               
+             
           if (chars_to_output > width_wrap[j])
           {
             chars_to_output = width_wrap[j];
           }
 
-          if (cont->aligns[j] == 'r') /* Right aligned cell */
+          if (cont->aligns[j] == 'r')                         
           {
-            /* spaces first */
+                              
             fprintf(fout, "%*s", width_wrap[j] - chars_to_output, "");
             fputnbytes(fout, (char *)(this_line->ptr + bytes_output[j]), bytes_to_output);
           }
-          else /* Left aligned cell */
+          else                        
           {
-            /* spaces second */
+                               
             fputnbytes(fout, (char *)(this_line->ptr + bytes_output[j]), bytes_to_output);
           }
 
           bytes_output[j] += bytes_to_output;
 
-          /* Do we have more text to wrap? */
+                                             
           if (*(this_line->ptr + bytes_output[j]) != '\0')
           {
             more_lines = true;
           }
           else
           {
-            /* Advance to next newline line */
+                                              
             curr_nl_line[j]++;
             if (col_lineptrs[j][curr_nl_line[j]].ptr != NULL)
             {
@@ -1110,7 +1110,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           }
         }
 
-        /* Determine next line's wrap status for this column */
+                                                               
         wrap[j] = PRINT_LINE_WRAP_NONE;
         if (col_lineptrs[j][curr_nl_line[j]].ptr != NULL)
         {
@@ -1124,11 +1124,11 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           }
         }
 
-        /*
-         * If left-aligned, pad out remaining space if needed (not
-         * last column, and/or wrap marks required).
-         */
-        if (cont->aligns[j] != 'r') /* Left aligned cell */
+           
+                                                                   
+                                                     
+           
+        if (cont->aligns[j] != 'r')                        
         {
           if (finalspaces || wrap[j] == PRINT_LINE_WRAP_WRAP || wrap[j] == PRINT_LINE_WRAP_NEWLINE)
           {
@@ -1136,7 +1136,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           }
         }
 
-        /* Print right-hand wrap or newline mark */
+                                                   
         if (wrap[j] == PRINT_LINE_WRAP_WRAP)
         {
           fputs(format->wrap_right, fout);
@@ -1150,7 +1150,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
           fputc(' ', fout);
         }
 
-        /* Print column divider, if not the last column */
+                                                          
         if (opt_border != 0 && (col_count > 0 && j < col_count - 1))
         {
           if (wrap[j + 1] == PRINT_LINE_WRAP_WRAP)
@@ -1172,7 +1172,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
         }
       }
 
-      /* end-of-row border */
+                             
       if (opt_border == 2)
       {
         fputs(dformat->rightvrule, fout);
@@ -1191,7 +1191,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
       _print_horizontal_line(col_count, width_wrap, opt_border, PRINT_RULE_BOTTOM, format, fout);
     }
 
-    /* print footers */
+                       
     if (footers && !opt_tuples_only && !cancel_pressed)
     {
       printTableFooter *f;
@@ -1206,7 +1206,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
   }
 
 cleanup:
-  /* clean up */
+                
   for (i = 0; i < col_count; i++)
   {
     free(col_lineptrs[i]);
@@ -1322,7 +1322,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
   unsigned int i, hwidth = 0, dwidth = 0, hheight = 1, dheight = 1, hformatsize = 0, dformatsize = 0;
   struct lineptr *hlineptr, *dlineptr;
   bool is_local_pager = false, hmultiline = false, dmultiline = false;
-  int output_columns = 0; /* Width of interactive console */
+  int output_columns = 0;                                   
 
   if (cancel_pressed)
   {
@@ -1353,18 +1353,18 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     return;
   }
 
-  /*
-   * Deal with the pager here instead of in printTable(), because we could
-   * get here via print_aligned_text() in expanded auto mode, and so we have
-   * to recalculate the pager requirement based on vertical output.
-   */
+     
+                                                                           
+                                                                             
+                                                                    
+     
   if (!is_pager)
   {
     IsPagerNeeded(cont, 0, true, &fout, &is_pager);
     is_local_pager = is_pager;
   }
 
-  /* Find the maximum dimensions for the headers */
+                                                   
   for (i = 0; i < cont->ncolumns; i++)
   {
     int width, height, fs;
@@ -1385,7 +1385,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     }
   }
 
-  /* find longest data cell */
+                              
   for (i = 0, ptr = cont->cells; *ptr; ptr++, i++)
   {
     int width, height, fs;
@@ -1406,10 +1406,10 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     }
   }
 
-  /*
-   * We now have all the information we need to setup the formatting
-   * structures
-   */
+     
+                                                                     
+                
+     
   dlineptr = pg_malloc((sizeof(*dlineptr)) * (dheight + 1));
   hlineptr = pg_malloc((sizeof(*hlineptr)) * (hheight + 1));
 
@@ -1418,16 +1418,16 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fprintf(fout, "%s\n", cont->title);
     }
   }
 
-  /*
-   * Choose target output width: \pset columns, or $COLUMNS, or ioctl
-   */
+     
+                                                                      
+     
   if (cont->opt->columns > 0)
   {
     output_columns = cont->opt->columns;
@@ -1451,24 +1451,24 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
 #endif
   }
 
-  /*
-   * Calculate available width for data in wrapped mode
-   */
+     
+                                                        
+     
   if (cont->opt->format == PRINT_WRAPPED)
   {
     unsigned int swidth, rwidth = 0, newdwidth;
 
     if (opt_border == 0)
     {
-      /*
-       * For border = 0, one space in the middle.  (If we discover we
-       * need to wrap, the spacer column will be replaced by a wrap
-       * marker, and we'll make room below for another wrap marker at
-       * the end of the line.  But for now, assume no wrap is needed.)
-       */
+         
+                                                                      
+                                                                    
+                                                                      
+                                                                       
+         
       swidth = 1;
 
-      /* We might need a column for header newline markers, too */
+                                                                  
       if (hmultiline)
       {
         swidth++;
@@ -1476,13 +1476,13 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     }
     else if (opt_border == 1)
     {
-      /*
-       * For border = 1, two spaces and a vrule in the middle.  (As
-       * above, we might need one more column for a wrap marker.)
-       */
+         
+                                                                    
+                                                                  
+         
       swidth = 3;
 
-      /* We might need a column for left header newline markers, too */
+                                                                       
       if (hmultiline && (format == &pg_asciiformat_old))
       {
         swidth++;
@@ -1490,22 +1490,22 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     }
     else
     {
-      /*
-       * For border = 2, two more for the vrules at the beginning and
-       * end of the lines, plus spacer columns adjacent to these.  (We
-       * won't need extra columns for wrap/newline markers, we'll just
-       * repurpose the spacers.)
-       */
+         
+                                                                      
+                                                                       
+                                                                       
+                                 
+         
       swidth = 7;
     }
 
-    /* Reserve a column for data newline indicators, too, if needed */
+                                                                      
     if (dmultiline && opt_border < 2 && format != &pg_asciiformat_old)
     {
       swidth++;
     }
 
-    /* Determine width required for record header lines */
+                                                          
     if (!opt_tuples_only)
     {
       if (cont->nrows > 0)
@@ -1514,26 +1514,26 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       }
       if (opt_border == 0)
       {
-        rwidth += 9; /* "* RECORD " */
+        rwidth += 9;                  
       }
       else if (opt_border == 1)
       {
-        rwidth += 12; /* "-[ RECORD  ]" */
+        rwidth += 12;                     
       }
       else
       {
-        rwidth += 15; /* "+-[ RECORD  ]-+" */
+        rwidth += 15;                        
       }
     }
 
-    /* We might need to do the rest of the calculation twice */
+                                                               
     for (;;)
     {
       unsigned int width;
 
-      /* Total width required to not wrap data */
+                                                 
       width = hwidth + swidth + dwidth;
-      /* ... and not the header lines, either */
+                                                
       if (width < rwidth)
       {
         width = rwidth;
@@ -1543,9 +1543,9 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       {
         unsigned int min_width;
 
-        /* Minimum acceptable width: room for just 3 columns of data */
+                                                                       
         min_width = hwidth + swidth + 3;
-        /* ... but not less than what the record header lines need */
+                                                                     
         if (min_width < rwidth)
         {
           min_width = rwidth;
@@ -1553,32 +1553,32 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
 
         if (output_columns >= width)
         {
-          /* Plenty of room, use native data width */
-          /* (but at least enough for the record header lines) */
+                                                     
+                                                                 
           newdwidth = width - hwidth - swidth;
         }
         else if (output_columns < min_width)
         {
-          /* Set data width to match min_width */
+                                                 
           newdwidth = min_width - hwidth - swidth;
         }
         else
         {
-          /* Set data width to match output_columns */
+                                                      
           newdwidth = output_columns - hwidth - swidth;
         }
       }
       else
       {
-        /* Don't know the wrap limit, so use native data width */
-        /* (but at least enough for the record header lines) */
+                                                                 
+                                                               
         newdwidth = width - hwidth - swidth;
       }
 
-      /*
-       * If we will need to wrap data and didn't already allocate a data
-       * newline/wrap marker column, do so and recompute.
-       */
+         
+                                                                         
+                                                          
+         
       if (newdwidth < dwidth && !dmultiline && opt_border < 2 && format != &pg_asciiformat_old)
       {
         dmultiline = true;
@@ -1593,7 +1593,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
     dwidth = newdwidth;
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     printTextRule pos;
@@ -1613,14 +1613,14 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       pos = PRINT_RULE_MIDDLE;
     }
 
-    /* Print record header (e.g. "[ RECORD N ]") above each record */
+                                                                     
     if (i % cont->ncolumns == 0)
     {
       unsigned int lhwidth = hwidth;
 
       if ((opt_border < 2) && (hmultiline) && (format == &pg_asciiformat_old))
       {
-        lhwidth++; /* for newline indicators */
+        lhwidth++;                             
       }
 
       if (!opt_tuples_only)
@@ -1633,61 +1633,61 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       }
     }
 
-    /* Format the header */
+                           
     pg_wcsformat((const unsigned char *)cont->headers[i % cont->ncolumns], strlen(cont->headers[i % cont->ncolumns]), encoding, hlineptr, hheight);
-    /* Format the data */
+                         
     pg_wcsformat((const unsigned char *)*ptr, strlen(*ptr), encoding, dlineptr, dheight);
 
-    /*
-     * Loop through header and data in parallel dealing with newlines and
-     * wrapped lines until they're both exhausted
-     */
+       
+                                                                          
+                                                  
+       
     dline = hline = 0;
     dcomplete = hcomplete = 0;
     offset = 0;
     chars_to_output = dlineptr[dline].width;
     while (!dcomplete || !hcomplete)
     {
-      /* Left border */
+                       
       if (opt_border == 2)
       {
         fprintf(fout, "%s", dformat->leftvrule);
       }
 
-      /* Header (never wrapped so just need to deal with newlines) */
+                                                                     
       if (!hcomplete)
       {
         int swidth = hwidth, target_width = hwidth;
 
-        /*
-         * Left spacer or new line indicator
-         */
+           
+                                             
+           
         if ((opt_border == 2) || (hmultiline && (format == &pg_asciiformat_old)))
         {
           fputs(hline ? format->header_nl_left : " ", fout);
         }
 
-        /*
-         * Header text
-         */
+           
+                       
+           
         strlen_max_width(hlineptr[hline].ptr, &target_width, encoding);
         fprintf(fout, "%-s", hlineptr[hline].ptr);
 
-        /*
-         * Spacer
-         */
+           
+                  
+           
         swidth -= target_width;
         if (swidth > 0)
         {
           fprintf(fout, "%*s", swidth, " ");
         }
 
-        /*
-         * New line indicator or separator's space
-         */
+           
+                                                   
+           
         if (hlineptr[hline + 1].ptr)
         {
-          /* More lines after this one due to a newline */
+                                                          
           if ((opt_border > 0) || (hmultiline && (format != &pg_asciiformat_old)))
           {
             fputs(format->header_nl_right, fout);
@@ -1696,7 +1696,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
         }
         else
         {
-          /* This was the last line of the header */
+                                                    
           if ((opt_border > 0) || (hmultiline && (format != &pg_asciiformat_old)))
           {
             fputs(" ", fout);
@@ -1721,7 +1721,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
         fprintf(fout, "%*s", swidth, " ");
       }
 
-      /* Separator */
+                     
       if (opt_border > 0)
       {
         if (offset)
@@ -1738,31 +1738,31 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
         }
       }
 
-      /* Data */
+                
       if (!dcomplete)
       {
         int target_width = dwidth, bytes_to_output, swidth = dwidth;
 
-        /*
-         * Left spacer or wrap indicator
-         */
+           
+                                         
+           
         fputs(offset == 0 ? " " : format->wrap_left, fout);
 
-        /*
-         * Data text
-         */
+           
+                     
+           
         bytes_to_output = strlen_max_width(dlineptr[dline].ptr + offset, &target_width, encoding);
         fputnbytes(fout, (char *)(dlineptr[dline].ptr + offset), bytes_to_output);
 
         chars_to_output -= target_width;
         offset += bytes_to_output;
 
-        /* Spacer */
+                    
         swidth -= target_width;
 
         if (chars_to_output)
         {
-          /* continuing a wrapped column */
+                                           
           if ((opt_border > 1) || (dmultiline && (format != &pg_asciiformat_old)))
           {
             if (swidth > 0)
@@ -1774,7 +1774,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
         }
         else if (dlineptr[dline + 1].ptr)
         {
-          /* reached a newline in the column */
+                                               
           if ((opt_border > 1) || (dmultiline && (format != &pg_asciiformat_old)))
           {
             if (swidth > 0)
@@ -1789,7 +1789,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
         }
         else
         {
-          /* reached the end of the cell */
+                                           
           if (opt_border > 1)
           {
             if (swidth > 0)
@@ -1801,7 +1801,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
           dcomplete = 1;
         }
 
-        /* Right border */
+                          
         if (opt_border == 2)
         {
           fputs(dformat->rightvrule, fout);
@@ -1811,10 +1811,10 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       }
       else
       {
-        /*
-         * data exhausted (this can occur if header is longer than the
-         * data due to newlines in the header)
-         */
+           
+                                                                       
+                                               
+           
         if (opt_border < 2)
         {
           fputs("\n", fout);
@@ -1834,7 +1834,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
       print_aligned_vertical_line(format, opt_border, 0, hwidth, dwidth, PRINT_RULE_BOTTOM, fout);
     }
 
-    /* print footers */
+                       
     if (!opt_tuples_only && cont->footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -1863,9 +1863,9 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout, bool is_pager)
   }
 }
 
-/**********************/
-/* CSV format		  */
-/**********************/
+                        
+                   
+                        
 
 static void
 csv_escaped_print(const char *str, FILE *fout)
@@ -1877,7 +1877,7 @@ csv_escaped_print(const char *str, FILE *fout)
   {
     if (*p == '"')
     {
-      fputc('"', fout); /* double quotes are doubled */
+      fputc('"', fout);                                
     }
     fputc(*p, fout);
   }
@@ -1887,19 +1887,19 @@ csv_escaped_print(const char *str, FILE *fout)
 static void
 csv_print_field(const char *str, FILE *fout, char sep)
 {
-  /*----------------
-   * Enclose and escape field contents when one of these conditions is met:
-   * - the field separator is found in the contents.
-   * - the field contains a CR or LF.
-   * - the field contains a double quote.
-   * - the field is exactly "\.".
-   * - the field separator is either "\" or ".".
-   * The last two cases prevent producing a line that the server's COPY
-   * command would interpret as an end-of-data marker.  We only really
-   * need to ensure that the complete line isn't exactly "\.", but for
-   * simplicity we apply stronger restrictions here.
-   *----------------
-   */
+                     
+                                                                            
+                                                     
+                                      
+                                          
+                                  
+                                                 
+                                                                        
+                                                                       
+                                                                       
+                                                     
+                     
+     
   if (strchr(str, sep) != NULL || strcspn(str, "\r\n\"") != strlen(str) || strcmp(str, "\\.") == 0 || sep == '\\' || sep == '.')
   {
     csv_escaped_print(str, fout);
@@ -1921,17 +1921,17 @@ print_csv_text(const printTableContent *cont, FILE *fout)
     return;
   }
 
-  /*
-   * The title and footer are never printed in csv format. The header is
-   * printed if opt_tuples_only is false.
-   *
-   * Despite RFC 4180 saying that end of lines are CRLF, terminate lines
-   * with '\n', which prints out as the system-dependent EOL string in text
-   * mode (typically LF on Unix and CRLF on Windows).
-   */
+     
+                                                                         
+                                          
+     
+                                                                         
+                                                                            
+                                                      
+     
   if (cont->opt->start_table && !cont->opt->tuples_only)
   {
-    /* print headers */
+                       
     for (ptr = cont->headers; *ptr; ptr++)
     {
       if (ptr != cont->headers)
@@ -1943,7 +1943,7 @@ print_csv_text(const printTableContent *cont, FILE *fout)
     fputc('\n', fout);
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     csv_print_field(*ptr, fout, cont->opt->csvFieldSep[0]);
@@ -1964,7 +1964,7 @@ print_csv_vertical(const printTableContent *cont, FILE *fout)
   const char *const *ptr;
   int i;
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (cancel_pressed)
@@ -1972,22 +1972,22 @@ print_csv_vertical(const printTableContent *cont, FILE *fout)
       return;
     }
 
-    /* print name of column */
+                              
     csv_print_field(cont->headers[i % cont->ncolumns], fout, cont->opt->csvFieldSep[0]);
 
-    /* print field separator */
+                               
     fputc(cont->opt->csvFieldSep[0], fout);
 
-    /* print field value */
+                           
     csv_print_field(*ptr, fout, cont->opt->csvFieldSep[0]);
 
     fputc('\n', fout);
   }
 }
 
-/**********************/
-/* HTML				  */
-/**********************/
+                        
+               
+                        
 
 void
 html_escaped_print(const char *in, FILE *fout)
@@ -2015,7 +2015,7 @@ html_escaped_print(const char *in, FILE *fout)
       fputs("&quot;", fout);
       break;
     case ' ':
-      /* protect leading space, for EXPLAIN output */
+                                                     
       if (leading_space)
       {
         fputs("&nbsp;", fout);
@@ -2059,7 +2059,7 @@ print_html_text(const printTableContent *cont, FILE *fout)
     }
     fputs(">\n", fout);
 
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs("  <caption>", fout);
@@ -2067,7 +2067,7 @@ print_html_text(const printTableContent *cont, FILE *fout)
       fputs("</caption>\n", fout);
     }
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       fputs("  <tr>\n", fout);
@@ -2081,7 +2081,7 @@ print_html_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (i % cont->ncolumns == 0)
@@ -2094,7 +2094,7 @@ print_html_text(const printTableContent *cont, FILE *fout)
     }
 
     fprintf(fout, "    <td align=\"%s\">", cont->aligns[(i) % cont->ncolumns] == 'r' ? "right" : "left");
-    /* is string only whitespace? */
+                                    
     if ((*ptr)[strspn(*ptr, " \t")] == '\0')
     {
       fputs("&nbsp; ", fout);
@@ -2118,7 +2118,7 @@ print_html_text(const printTableContent *cont, FILE *fout)
 
     fputs("</table>\n", fout);
 
-    /* print footers */
+                       
     if (!opt_tuples_only && footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2160,7 +2160,7 @@ print_html_vertical(const printTableContent *cont, FILE *fout)
     }
     fputs(">\n", fout);
 
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs("  <caption>", fout);
@@ -2169,7 +2169,7 @@ print_html_vertical(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (i % cont->ncolumns == 0)
@@ -2194,7 +2194,7 @@ print_html_vertical(const printTableContent *cont, FILE *fout)
     fputs("</th>\n", fout);
 
     fprintf(fout, "    <td align=\"%s\">", cont->aligns[i % cont->ncolumns] == 'r' ? "right" : "left");
-    /* is string only whitespace? */
+                                    
     if ((*ptr)[strspn(*ptr, " \t")] == '\0')
     {
       fputs("&nbsp; ", fout);
@@ -2211,7 +2211,7 @@ print_html_vertical(const printTableContent *cont, FILE *fout)
   {
     fputs("</table>\n", fout);
 
-    /* print footers */
+                       
     if (!opt_tuples_only && cont->footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2229,9 +2229,9 @@ print_html_vertical(const printTableContent *cont, FILE *fout)
   }
 }
 
-/*************************/
-/* ASCIIDOC				 */
-/*************************/
+                           
+                  
+                           
 
 static void
 asciidoc_escaped_print(const char *in, FILE *fout)
@@ -2267,10 +2267,10 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print table in new paragraph - enforce preliminary new line */
+                                                                     
     fputs("\n", fout);
 
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(".", fout);
@@ -2278,7 +2278,7 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
       fputs("\n", fout);
     }
 
-    /* print table [] header definition */
+                                          
     fprintf(fout, "[%scols=\"", !opt_tuples_only ? "options=\"header\"," : "");
     for (i = 0; i < cont->ncolumns; i++)
     {
@@ -2304,7 +2304,7 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
     fputs("]\n", fout);
     fputs("|====\n", fout);
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       for (ptr = cont->headers; *ptr; ptr++)
@@ -2320,7 +2320,7 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (i % cont->ncolumns == 0)
@@ -2337,7 +2337,7 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
     }
     fputs("|", fout);
 
-    /* protect against needless spaces */
+                                         
     if ((*ptr)[strspn(*ptr, " \t")] == '\0')
     {
       if ((i + 1) % cont->ncolumns != 0)
@@ -2362,7 +2362,7 @@ print_asciidoc_text(const printTableContent *cont, FILE *fout)
   {
     printTableFooter *footers = footers_with_default(cont);
 
-    /* print footers */
+                       
     if (!opt_tuples_only && footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2394,10 +2394,10 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print table in new paragraph - enforce preliminary new line */
+                                                                     
     fputs("\n", fout);
 
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(".", fout);
@@ -2405,7 +2405,7 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
       fputs("\n", fout);
     }
 
-    /* print table [] header definition */
+                                          
     fputs("[cols=\"h,l\"", fout);
     switch (opt_border)
     {
@@ -2423,7 +2423,7 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
     fputs("|====\n", fout);
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     if (i % cont->ncolumns == 0)
@@ -2446,7 +2446,7 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
     asciidoc_escaped_print(cont->headers[i % cont->ncolumns], fout);
 
     fprintf(fout, " %s|", cont->aligns[i % cont->ncolumns] == 'r' ? ">l" : "<l");
-    /* is string only whitespace? */
+                                    
     if ((*ptr)[strspn(*ptr, " \t")] == '\0')
     {
       fputs(" ", fout);
@@ -2462,7 +2462,7 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->stop_table)
   {
-    /* print footers */
+                       
     if (!opt_tuples_only && cont->footers != NULL && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2478,9 +2478,9 @@ print_asciidoc_vertical(const printTableContent *cont, FILE *fout)
   }
 }
 
-/*************************/
-/* LaTeX				 */
-/*************************/
+                           
+               
+                           
 
 static void
 latex_escaped_print(const char *in, FILE *fout)
@@ -2491,11 +2491,11 @@ latex_escaped_print(const char *in, FILE *fout)
   {
     switch (*p)
     {
-      /*
-       * We convert ASCII characters per the recommendations in
-       * Scott Pakin's "The Comprehensive LATEX Symbol List",
-       * available from CTAN.  For non-ASCII, you're on your own.
-       */
+         
+                                                                
+                                                              
+                                                                  
+         
     case '#':
       fputs("\\#", fout);
       break;
@@ -2536,7 +2536,7 @@ latex_escaped_print(const char *in, FILE *fout)
       fputs("\\~{}", fout);
       break;
     case '\n':
-      /* This is not right, but doing it right seems too hard */
+                                                                
       fputs("\\\\", fout);
       break;
     default:;
@@ -2566,7 +2566,7 @@ print_latex_text(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs("\\begin{center}\n", fout);
@@ -2574,7 +2574,7 @@ print_latex_text(const printTableContent *cont, FILE *fout)
       fputs("\n\\end{center}\n\n", fout);
     }
 
-    /* begin environment and set alignments and borders */
+                                                          
     fputs("\\begin{tabular}{", fout);
 
     if (opt_border >= 2)
@@ -2601,7 +2601,7 @@ print_latex_text(const printTableContent *cont, FILE *fout)
       fputs("\\hline\n", fout);
     }
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       for (i = 0, ptr = cont->headers; i < cont->ncolumns; i++, ptr++)
@@ -2619,7 +2619,7 @@ print_latex_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     latex_escaped_print(*ptr, fout);
@@ -2653,7 +2653,7 @@ print_latex_text(const printTableContent *cont, FILE *fout)
 
     fputs("\\end{tabular}\n\n\\noindent ", fout);
 
-    /* print footers */
+                       
     if (footers && !opt_tuples_only && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2669,9 +2669,9 @@ print_latex_text(const printTableContent *cont, FILE *fout)
   }
 }
 
-/*************************/
-/* LaTeX longtable		 */
-/*************************/
+                           
+                       
+                           
 
 static void
 print_latex_longtable_text(const printTableContent *cont, FILE *fout)
@@ -2696,7 +2696,7 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* begin environment and set alignments and borders */
+                                                          
     fputs("\\begin{longtable}{", fout);
 
     if (opt_border >= 2)
@@ -2706,15 +2706,15 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
 
     for (i = 0; i < cont->ncolumns; i++)
     {
-      /* longtable supports either a width (p) or an alignment (l/r) */
-      /* Are we left-justified and was a proportional width specified? */
+                                                                       
+                                                                         
       if (*(cont->aligns + i) == 'l' && opt_table_attr)
       {
 #define LONGTABLE_WHITESPACE " \t\n"
 
-        /* advance over whitespace */
+                                     
         next_opt_table_attr_char += strspn(next_opt_table_attr_char, LONGTABLE_WHITESPACE);
-        /* We have a value? */
+                              
         if (next_opt_table_attr_char[0] != '\0')
         {
           fputs("p{", fout);
@@ -2723,7 +2723,7 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
           next_opt_table_attr_char += strcspn(next_opt_table_attr_char, LONGTABLE_WHITESPACE);
           fputs("\\textwidth}", fout);
         }
-        /* use previous value */
+                                
         else if (last_opt_table_attr_char != NULL)
         {
           fputs("p{", fout);
@@ -2753,10 +2753,10 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
 
     fputs("}\n", fout);
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
-      /* firsthead */
+                     
       if (opt_border >= 2)
       {
         fputs("\\toprule\n", fout);
@@ -2774,7 +2774,7 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
       fputs(" \\\\\n", fout);
       fputs("\\midrule\n\\endfirsthead\n", fout);
 
-      /* secondary heads */
+                           
       if (opt_border >= 2)
       {
         fputs("\\toprule\n", fout);
@@ -2790,17 +2790,17 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
         fputs("}}", fout);
       }
       fputs(" \\\\\n", fout);
-      /* If the line under the row already appeared, don't do another */
+                                                                        
       if (opt_border != 3)
       {
         fputs("\\midrule\n", fout);
       }
       fputs("\\endhead\n", fout);
 
-      /* table name, caption? */
+                                
       if (!opt_tuples_only && cont->title)
       {
-        /* Don't output if we are printing a line under each row */
+                                                                   
         if (opt_border == 2)
         {
           fputs("\\bottomrule\n", fout);
@@ -2820,7 +2820,7 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
         latex_escaped_print(cont->title, fout);
         fputs("}\n\\endlastfoot\n", fout);
       }
-      /* output bottom table line? */
+                                     
       else if (opt_border >= 2)
       {
         fputs("\\bottomrule\n\\endfoot\n", fout);
@@ -2829,10 +2829,10 @@ print_latex_longtable_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
-    /* Add a line under each row? */
+                                    
     if (i != 0 && i % cont->ncolumns != 0)
     {
       fputs("\n&\n", fout);
@@ -2881,7 +2881,7 @@ print_latex_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs("\\begin{center}\n", fout);
@@ -2889,7 +2889,7 @@ print_latex_vertical(const printTableContent *cont, FILE *fout)
       fputs("\n\\end{center}\n\n", fout);
     }
 
-    /* begin environment and set alignments and borders */
+                                                          
     fputs("\\begin{tabular}{", fout);
     if (opt_border == 0)
     {
@@ -2906,10 +2906,10 @@ print_latex_vertical(const printTableContent *cont, FILE *fout)
     fputs("}\n", fout);
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
-    /* new record */
+                    
     if (i % cont->ncolumns == 0)
     {
       if (cancel_pressed)
@@ -2949,7 +2949,7 @@ print_latex_vertical(const printTableContent *cont, FILE *fout)
 
     fputs("\\end{tabular}\n\n\\noindent ", fout);
 
-    /* print footers */
+                       
     if (cont->footers && !opt_tuples_only && !cancel_pressed)
     {
       printTableFooter *f;
@@ -2965,9 +2965,9 @@ print_latex_vertical(const printTableContent *cont, FILE *fout)
   }
 }
 
-/*************************/
-/* Troff -ms			 */
-/*************************/
+                           
+                  
+                           
 
 static void
 troff_ms_escaped_print(const char *in, FILE *fout)
@@ -3008,7 +3008,7 @@ print_troff_ms_text(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(".LP\n.DS C\n", fout);
@@ -3016,7 +3016,7 @@ print_troff_ms_text(const printTableContent *cont, FILE *fout)
       fputs("\n.DE\n", fout);
     }
 
-    /* begin environment and set alignments and borders */
+                                                          
     fputs(".LP\n.TS\n", fout);
     if (opt_border == 2)
     {
@@ -3037,7 +3037,7 @@ print_troff_ms_text(const printTableContent *cont, FILE *fout)
     }
     fputs(".\n", fout);
 
-    /* print headers */
+                       
     if (!opt_tuples_only)
     {
       for (i = 0, ptr = cont->headers; i < cont->ncolumns; i++, ptr++)
@@ -3054,7 +3054,7 @@ print_troff_ms_text(const printTableContent *cont, FILE *fout)
     }
   }
 
-  /* print cells */
+                   
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
     troff_ms_escaped_print(*ptr, fout);
@@ -3079,7 +3079,7 @@ print_troff_ms_text(const printTableContent *cont, FILE *fout)
 
     fputs(".TE\n.DS L\n", fout);
 
-    /* print footers */
+                       
     if (footers && !opt_tuples_only && !cancel_pressed)
     {
       printTableFooter *f;
@@ -3103,7 +3103,7 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
   unsigned long record = cont->opt->prior_records + 1;
   unsigned int i;
   const char *const *ptr;
-  unsigned short current_format = 0; /* 0=none, 1=header, 2=body */
+  unsigned short current_format = 0;                               
 
   if (cancel_pressed)
   {
@@ -3117,7 +3117,7 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
 
   if (cont->opt->start_table)
   {
-    /* print title */
+                     
     if (!opt_tuples_only && cont->title)
     {
       fputs(".LP\n.DS C\n", fout);
@@ -3125,7 +3125,7 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
       fputs("\n.DE\n", fout);
     }
 
-    /* begin environment and set alignments and borders */
+                                                          
     fputs(".LP\n.TS\n", fout);
     if (opt_border == 2)
     {
@@ -3136,7 +3136,7 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
       fputs("center;\n", fout);
     }
 
-    /* basic format */
+                      
     if (opt_tuples_only)
     {
       fputs("c l;\n", fout);
@@ -3144,13 +3144,13 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
   }
   else
   {
-    current_format = 2; /* assume tuples printed already */
+    current_format = 2;                                    
   }
 
-  /* print records */
+                     
   for (i = 0, ptr = cont->cells; *ptr; i++, ptr++)
   {
-    /* new record */
+                    
     if (i % cont->ncolumns == 0)
     {
       if (cancel_pressed)
@@ -3211,7 +3211,7 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
   {
     fputs(".TE\n.DS L\n", fout);
 
-    /* print footers */
+                       
     if (cont->footers && !opt_tuples_only && !cancel_pressed)
     {
       printTableFooter *f;
@@ -3227,18 +3227,18 @@ print_troff_ms_vertical(const printTableContent *cont, FILE *fout)
   }
 }
 
-/********************************/
-/* Public functions				*/
-/********************************/
+                                  
+                         
+                                  
 
-/*
- * disable_sigpipe_trap
- *
- * Turn off SIGPIPE interrupt --- call this before writing to a temporary
- * query output file that is a pipe.
- *
- * No-op on Windows, where there's no SIGPIPE interrupts.
- */
+   
+                        
+   
+                                                                          
+                                     
+   
+                                                          
+   
 void
 disable_sigpipe_trap(void)
 {
@@ -3247,21 +3247,21 @@ disable_sigpipe_trap(void)
 #endif
 }
 
-/*
- * restore_sigpipe_trap
- *
- * Restore normal SIGPIPE interrupt --- call this when done writing to a
- * temporary query output file that was (or might have been) a pipe.
- *
- * Note: within psql, we enable SIGPIPE interrupts unless the permanent query
- * output file is a pipe, in which case they should be kept off.  This
- * approach works only because psql is not currently complicated enough to
- * have nested usages of short-lived output files.  Otherwise we'd probably
- * need a genuine save-and-restore-state approach; but for now, that would be
- * useless complication.  In non-psql programs, this always enables SIGPIPE.
- *
- * No-op on Windows, where there's no SIGPIPE interrupts.
- */
+   
+                        
+   
+                                                                         
+                                                                     
+   
+                                                                              
+                                                                       
+                                                                           
+                                                                            
+                                                                              
+                                                                             
+   
+                                                          
+   
 void
 restore_sigpipe_trap(void)
 {
@@ -3270,28 +3270,28 @@ restore_sigpipe_trap(void)
 #endif
 }
 
-/*
- * set_sigpipe_trap_state
- *
- * Set the trap state that restore_sigpipe_trap should restore to.
- */
+   
+                          
+   
+                                                                   
+   
 void
 set_sigpipe_trap_state(bool ignore)
 {
   always_ignore_sigpipe = ignore;
 }
 
-/*
- * PageOutput
- *
- * Tests if pager is needed and returns appropriate FILE pointer.
- *
- * If the topt argument is NULL no pager is used.
- */
+   
+              
+   
+                                                                  
+   
+                                                  
+   
 FILE *
 PageOutput(int lines, const printTableOpt *topt)
 {
-  /* check whether we need / can / are supposed to use pager */
+                                                               
   if (topt && topt->pager && isatty(fileno(stdin)) && isatty(fileno(stdout)))
   {
 #ifdef TIOCGWINSZ
@@ -3302,7 +3302,7 @@ PageOutput(int lines, const printTableOpt *topt)
 
     result = ioctl(fileno(stdout), TIOCGWINSZ, &screen_size);
 
-    /* >= accounts for a one-line prompt */
+                                           
     if (result == -1 || (lines >= screen_size.ws_row && lines >= min_lines) || pager > 1)
 #endif
     {
@@ -3320,7 +3320,7 @@ PageOutput(int lines, const printTableOpt *topt)
       }
       else
       {
-        /* if PAGER is empty or all-white-space, don't use pager */
+                                                                   
         if (strspn(pagerprog, " \t\r\n") == strlen(pagerprog))
         {
           return stdout;
@@ -3332,7 +3332,7 @@ PageOutput(int lines, const printTableOpt *topt)
       {
         return pagerpipe;
       }
-      /* if popen fails, silently proceed without pager */
+                                                          
       restore_sigpipe_trap();
     }
   }
@@ -3340,24 +3340,24 @@ PageOutput(int lines, const printTableOpt *topt)
   return stdout;
 }
 
-/*
- * ClosePager
- *
- * Close previously opened pager pipe, if any
- */
+   
+              
+   
+                                              
+   
 void
 ClosePager(FILE *pagerpipe)
 {
   if (pagerpipe && pagerpipe != stdout)
   {
-    /*
-     * If printing was canceled midstream, warn about it.
-     *
-     * Some pagers like less use Ctrl-C as part of their command set. Even
-     * so, we abort our processing and warn the user what we did.  If the
-     * pager quit as a result of the SIGINT, this message won't go
-     * anywhere ...
-     */
+       
+                                                          
+       
+                                                                           
+                                                                          
+                                                                   
+                    
+       
     if (cancel_pressed)
     {
       fprintf(pagerpipe, _("Interrupted\n"));
@@ -3368,16 +3368,16 @@ ClosePager(FILE *pagerpipe)
   }
 }
 
-/*
- * Initialise a table contents struct.
- *		Must be called before any other printTable method is used.
- *
- * The title is not duplicated; the caller must ensure that the buffer
- * is available for the lifetime of the printTableContent struct.
- *
- * If you call this, you must call printTableCleanup once you're done with the
- * table.
- */
+   
+                                       
+                                                               
+   
+                                                                       
+                                                                  
+   
+                                                                               
+          
+   
 void
 printTableInit(printTableContent *const content, const printTableOpt *opt, const char *title, const int ncolumns, const int nrows)
 {
@@ -3402,23 +3402,23 @@ printTableInit(printTableContent *const content, const printTableOpt *opt, const
   content->cellsadded = 0;
 }
 
-/*
- * Add a header to the table.
- *
- * Headers are not duplicated; you must ensure that the header string is
- * available for the lifetime of the printTableContent struct.
- *
- * If translate is true, the function will pass the header through gettext.
- * Otherwise, the header will not be translated.
- *
- * align is either 'l' or 'r', and specifies the alignment for cells in this
- * column.
- */
+   
+                              
+   
+                                                                         
+                                                               
+   
+                                                                            
+                                                 
+   
+                                                                             
+           
+   
 void
 printTableAddHeader(printTableContent *const content, char *header, const bool translate, const char align)
 {
 #ifndef ENABLE_NLS
-  (void)translate; /* unused parameter */
+  (void)translate;                       
 #endif
 
   if (content->header >= content->headers + content->ncolumns)
@@ -3443,23 +3443,23 @@ printTableAddHeader(printTableContent *const content, char *header, const bool t
   content->align++;
 }
 
-/*
- * Add a cell to the table.
- *
- * Cells are not duplicated; you must ensure that the cell string is available
- * for the lifetime of the printTableContent struct.
- *
- * If translate is true, the function will pass the cell through gettext.
- * Otherwise, the cell will not be translated.
- *
- * If mustfree is true, the cell string is freed by printTableCleanup().
- * Note: Automatic freeing of translatable strings is not supported.
- */
+   
+                            
+   
+                                                                               
+                                                     
+   
+                                                                          
+                                               
+   
+                                                                         
+                                                                     
+   
 void
 printTableAddCell(printTableContent *const content, char *cell, const bool translate, const bool mustfree)
 {
 #ifndef ENABLE_NLS
-  (void)translate; /* unused parameter */
+  (void)translate;                       
 #endif
 
   if (content->cellsadded >= content->ncolumns * content->nrows)
@@ -3493,18 +3493,18 @@ printTableAddCell(printTableContent *const content, char *cell, const bool trans
   content->cellsadded++;
 }
 
-/*
- * Add a footer to the table.
- *
- * Footers are added as elements of a singly-linked list, and the content is
- * strdup'd, so there is no need to keep the original footer string around.
- *
- * Footers are never translated by the function.  If you want the footer
- * translated you must do so yourself, before calling printTableAddFooter.  The
- * reason this works differently to headers and cells is that footers tend to
- * be made of up individually translated components, rather than being
- * translated as a whole.
- */
+   
+                              
+   
+                                                                             
+                                                                            
+   
+                                                                         
+                                                                                
+                                                                              
+                                                                       
+                          
+   
 void
 printTableAddFooter(printTableContent *const content, const char *footer)
 {
@@ -3525,15 +3525,15 @@ printTableAddFooter(printTableContent *const content, const char *footer)
   content->footer = f;
 }
 
-/*
- * Change the content of the last-added footer.
- *
- * The current contents of the last-added footer are freed, and replaced by the
- * content given in *footer.  If there was no previous footer, add a new one.
- *
- * The content is strdup'd, so there is no need to keep the original string
- * around.
- */
+   
+                                                
+   
+                                                                                
+                                                                              
+   
+                                                                            
+           
+   
 void
 printTableSetFooter(printTableContent *const content, const char *footer)
 {
@@ -3548,12 +3548,12 @@ printTableSetFooter(printTableContent *const content, const char *footer)
   }
 }
 
-/*
- * Free all memory allocated to this struct.
- *
- * Once this has been called, the struct is unusable unless you pass it to
- * printTableInit() again.
- */
+   
+                                             
+   
+                                                                           
+                           
+   
 void
 printTableCleanup(printTableContent *const content)
 {
@@ -3600,11 +3600,11 @@ printTableCleanup(printTableContent *const content)
   content->footer = NULL;
 }
 
-/*
- * IsPagerNeeded
- *
- * Setup pager if required
- */
+   
+                 
+   
+                           
+   
 static void
 IsPagerNeeded(const printTableContent *cont, int extra_lines, bool expanded, FILE **fout, bool *is_pager)
 {
@@ -3625,10 +3625,10 @@ IsPagerNeeded(const printTableContent *cont, int extra_lines, bool expanded, FIL
     {
       printTableFooter *f;
 
-      /*
-       * FIXME -- this is slightly bogus: it counts the number of
-       * footers, not the number of lines in them.
-       */
+         
+                                                                  
+                                                   
+         
       for (f = cont->footers; f; f = f->next)
       {
         lines++;
@@ -3644,14 +3644,14 @@ IsPagerNeeded(const printTableContent *cont, int extra_lines, bool expanded, FIL
   }
 }
 
-/*
- * Use this to print any table in the supported formats.
- *
- * cont: table data and formatting options
- * fout: where to print to
- * is_pager: true if caller has already redirected fout to be a pager pipe
- * flog: if not null, also print the table there (for --log-file option)
- */
+   
+                                                         
+   
+                                           
+                           
+                                                                           
+                                                                         
+   
 void
 printTable(const printTableContent *cont, FILE *fout, bool is_pager, FILE *flog)
 {
@@ -3667,14 +3667,14 @@ printTable(const printTableContent *cont, FILE *fout, bool is_pager, FILE *flog)
     return;
   }
 
-  /* print_aligned_*() handle the pager themselves */
+                                                     
   if (!is_pager && cont->opt->format != PRINT_ALIGNED && cont->opt->format != PRINT_WRAPPED)
   {
     IsPagerNeeded(cont, 0, (cont->opt->expanded == 1), &fout, &is_pager);
     is_local_pager = is_pager;
   }
 
-  /* print the stuff */
+                       
 
   if (flog)
   {
@@ -3696,11 +3696,11 @@ printTable(const printTableContent *cont, FILE *fout, bool is_pager, FILE *flog)
   case PRINT_ALIGNED:
   case PRINT_WRAPPED:
 
-    /*
-     * In expanded-auto mode, force vertical if a pager is passed in;
-     * else we may make different decisions for different hunks of the
-     * query result.
-     */
+       
+                                                                      
+                                                                       
+                     
+       
     if (cont->opt->expanded == 1 || (cont->opt->expanded == 2 && is_pager))
     {
       print_aligned_vertical(cont, fout, is_pager);
@@ -3782,15 +3782,15 @@ printTable(const printTableContent *cont, FILE *fout, bool is_pager, FILE *flog)
   }
 }
 
-/*
- * Use this to print query results
- *
- * result: result of a successful query
- * opt: formatting options
- * fout: where to print to
- * is_pager: true if caller has already redirected fout to be a pager pipe
- * flog: if not null, also print the data there (for --log-file option)
- */
+   
+                                   
+   
+                                        
+                           
+                           
+                                                                           
+                                                                        
+   
 void
 printQuery(const PGresult *result, const printQueryOpt *opt, FILE *fout, bool is_pager, FILE *flog)
 {
@@ -3804,7 +3804,7 @@ printQuery(const PGresult *result, const printQueryOpt *opt, FILE *fout, bool is
 
   printTableInit(&cont, &opt->topt, opt->title, PQnfields(result), PQntuples(result));
 
-  /* Assert caller supplied enough translate_columns[] entries */
+                                                                 
   Assert(opt->translate_columns == NULL || opt->n_translate_columns >= cont.ncolumns);
 
   for (i = 0; i < cont.ncolumns; i++)
@@ -3812,7 +3812,7 @@ printQuery(const PGresult *result, const printQueryOpt *opt, FILE *fout, bool is
     printTableAddHeader(&cont, PQfname(result, i), opt->translate_header, column_type_alignment(PQftype(result, i)));
   }
 
-  /* set cells */
+                 
   for (r = 0; r < cont.nrows; r++)
   {
     for (c = 0; c < cont.ncolumns; c++)
@@ -3840,7 +3840,7 @@ printQuery(const PGresult *result, const printQueryOpt *opt, FILE *fout, bool is
     }
   }
 
-  /* set footers */
+                   
   if (opt->footers)
   {
     char **footer;
@@ -3888,36 +3888,36 @@ setDecimalLocale(void)
 
   extlconv = localeconv();
 
-  /* Don't accept an empty decimal_point string */
+                                                  
   if (*extlconv->decimal_point)
   {
     decimal_point = pg_strdup(extlconv->decimal_point);
   }
   else
   {
-    decimal_point = "."; /* SQL output standard */
+    decimal_point = ".";                          
   }
 
-  /*
-   * Although the Open Group standard allows locales to supply more than one
-   * group width, we consider only the first one, and we ignore any attempt
-   * to suppress grouping by specifying CHAR_MAX.  As in the backend's
-   * cash.c, we must apply a range check to avoid being fooled by variant
-   * CHAR_MAX values.
-   */
+     
+                                                                             
+                                                                            
+                                                                       
+                                                                          
+                      
+     
   groupdigits = *extlconv->grouping;
   if (groupdigits <= 0 || groupdigits > 6)
   {
-    groupdigits = 3; /* most common */
+    groupdigits = 3;                  
   }
 
-  /* Don't accept an empty thousands_sep string, either */
-  /* similar code exists in formatting.c */
+                                                          
+                                           
   if (*extlconv->thousands_sep)
   {
     thousands_sep = pg_strdup(extlconv->thousands_sep);
   }
-  /* Make sure thousands separator doesn't match decimal point symbol. */
+                                                                         
   else if (strcmp(decimal_point, ",") != 0)
   {
     thousands_sep = ",";
@@ -3928,15 +3928,15 @@ setDecimalLocale(void)
   }
 }
 
-/* get selected or default line style */
+                                        
 const printTextFormat *
 get_line_style(const printTableOpt *opt)
 {
-  /*
-   * Note: this function mainly exists to preserve the convention that a
-   * printTableOpt struct can be initialized to zeroes to get default
-   * behavior.
-   */
+     
+                                                                         
+                                                                      
+               
+     
   if (opt->line_style != NULL)
   {
     return opt->line_style;
@@ -3977,7 +3977,7 @@ refresh_utf8format(const printTableOpt *opt)
   popt->lrule[PRINT_RULE_BOTTOM].midvrule = column->up_and_horizontal[opt->unicode_border_linestyle];
   popt->lrule[PRINT_RULE_BOTTOM].rightvrule = border->left_and_right;
 
-  /* N/A */
+           
   popt->lrule[PRINT_RULE_DATA].hrule = "";
   popt->lrule[PRINT_RULE_DATA].leftvrule = border->vertical;
   popt->lrule[PRINT_RULE_DATA].midvrule = column->vertical;
@@ -3987,7 +3987,7 @@ refresh_utf8format(const printTableOpt *opt)
   popt->midvrule_wrap = column->vertical;
   popt->midvrule_blank = column->vertical;
 
-  /* Same for all unicode today */
+                                  
   popt->header_nl_left = unicode_style.header_nl_left;
   popt->header_nl_right = unicode_style.header_nl_right;
   popt->nl_left = unicode_style.nl_left;
@@ -3999,11 +3999,11 @@ refresh_utf8format(const printTableOpt *opt)
   return;
 }
 
-/*
- * Compute the byte distance to the end of the string or *target_width
- * display character positions, whichever comes first.  Update *target_width
- * to be the number of display character positions actually filled.
- */
+   
+                                                                       
+                                                                             
+                                                                    
+   
 static int
 strlen_max_width(unsigned char *str, int *target_width, int encoding)
 {
@@ -4015,12 +4015,12 @@ strlen_max_width(unsigned char *str, int *target_width, int encoding)
   {
     int char_width = PQdsplen((char *)str, encoding);
 
-    /*
-     * If the display width of the new character causes the string to
-     * exceed its target width, skip it and return.  However, if this is
-     * the first character of the string (curr_width == 0), we have to
-     * accept it.
-     */
+       
+                                                                      
+                                                                         
+                                                                       
+                  
+       
     if (*target_width < curr_width + char_width && curr_width != 0)
     {
       break;
@@ -4031,7 +4031,7 @@ strlen_max_width(unsigned char *str, int *target_width, int encoding)
     str += PQmblen((char *)str, encoding);
 
     if (str > end)
-    { /* Don't overrun invalid string */
+    {                                   
       str = end;
     }
   }

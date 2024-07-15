@@ -1,28 +1,28 @@
-/*-------------------------------------------------------------------------
- *
- * hashfunc.c
- *	  Support functions for hash access method.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/hash/hashfunc.c
- *
- * NOTES
- *	  These functions are stored in pg_amproc.  For each operator class
- *	  defined for hash indexes, they compute the hash value of the argument.
- *
- *	  Additional hash functions appear in /utils/adt/ files for various
- *	  specialized datatypes.
- *
- *	  It is expected that every bit of a hash function's 32-bit result is
- *	  as random as every other; failure to ensure this is likely to lead
- *	  to poor performance of hash joins, for example.  In most cases a hash
- *	  function should use hash_any() or its variant hash_uint32().
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                        
+   
+         
+                                                                       
+                                                                            
+   
+                                                                       
+                            
+   
+                                                                         
+                                                                        
+                                                                           
+                                                                  
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -33,17 +33,17 @@
 #include "utils/hashutils.h"
 #include "utils/pg_locale.h"
 
-/*
- * Datatype-specific hash functions.
- *
- * These support both hash indexes and hash joins.
- *
- * NOTE: some of these are also used by catcache operations, without
- * any direct connection to hash indexes.  Also, the common hash_any
- * routine is also used by dynahash tables.
- */
+   
+                                     
+   
+                                                   
+   
+                                                                     
+                                                                     
+                                            
+   
 
-/* Note: this is used for both "char" and boolean datatypes */
+                                                              
 Datum
 hashchar(PG_FUNCTION_ARGS)
 {
@@ -83,14 +83,14 @@ hashint4extended(PG_FUNCTION_ARGS)
 Datum
 hashint8(PG_FUNCTION_ARGS)
 {
-  /*
-   * The idea here is to produce a hash value compatible with the values
-   * produced by hashint4 and hashint2 for logically equal inputs; this is
-   * necessary to support cross-type hash joins across these input types.
-   * Since all three types are signed, we can xor the high half of the int8
-   * value if the sign is positive, or the complement of the high half when
-   * the sign is negative.
-   */
+     
+                                                                         
+                                                                           
+                                                                          
+                                                                            
+                                                                            
+                           
+     
   int64 val = PG_GETARG_INT64(0);
   uint32 lohalf = (uint32)val;
   uint32 hihalf = (uint32)(val >> 32);
@@ -103,7 +103,7 @@ hashint8(PG_FUNCTION_ARGS)
 Datum
 hashint8extended(PG_FUNCTION_ARGS)
 {
-  /* Same approach as hashint8 */
+                                 
   int64 val = PG_GETARG_INT64(0);
   uint32 lohalf = (uint32)val;
   uint32 hihalf = (uint32)(val >> 32);
@@ -143,32 +143,32 @@ hashfloat4(PG_FUNCTION_ARGS)
   float4 key = PG_GETARG_FLOAT4(0);
   float8 key8;
 
-  /*
-   * On IEEE-float machines, minus zero and zero have different bit patterns
-   * but should compare as equal.  We must ensure that they have the same
-   * hash value, which is most reliably done this way:
-   */
+     
+                                                                             
+                                                                          
+                                                       
+     
   if (key == (float4)0)
   {
     PG_RETURN_UINT32(0);
   }
 
-  /*
-   * To support cross-type hashing of float8 and float4, we want to return
-   * the same hash value hashfloat8 would produce for an equal float8 value.
-   * So, widen the value to float8 and hash that.  (We must do this rather
-   * than have hashfloat8 try to narrow its value to float4; that could fail
-   * on overflow.)
-   */
+     
+                                                                           
+                                                                             
+                                                                           
+                                                                             
+                   
+     
   key8 = key;
 
-  /*
-   * Similarly, NaNs can have different bit patterns but they should all
-   * compare as equal.  For backwards-compatibility reasons we force them to
-   * have the hash value of a standard float8 NaN.  (You'd think we could
-   * replace key with a float4 NaN and then widen it; but on some old
-   * platforms, that way produces a different bit pattern.)
-   */
+     
+                                                                         
+                                                                             
+                                                                          
+                                                                      
+                                                            
+     
   if (isnan(key8))
   {
     key8 = get_float8_nan();
@@ -184,7 +184,7 @@ hashfloat4extended(PG_FUNCTION_ARGS)
   uint64 seed = PG_GETARG_INT64(1);
   float8 key8;
 
-  /* Same approach as hashfloat4 */
+                                   
   if (key == (float4)0)
   {
     PG_RETURN_UINT64(seed);
@@ -203,21 +203,21 @@ hashfloat8(PG_FUNCTION_ARGS)
 {
   float8 key = PG_GETARG_FLOAT8(0);
 
-  /*
-   * On IEEE-float machines, minus zero and zero have different bit patterns
-   * but should compare as equal.  We must ensure that they have the same
-   * hash value, which is most reliably done this way:
-   */
+     
+                                                                             
+                                                                          
+                                                       
+     
   if (key == (float8)0)
   {
     PG_RETURN_UINT32(0);
   }
 
-  /*
-   * Similarly, NaNs can have different bit patterns but they should all
-   * compare as equal.  For backwards-compatibility reasons we force them to
-   * have the hash value of a standard NaN.
-   */
+     
+                                                                         
+                                                                             
+                                            
+     
   if (isnan(key))
   {
     key = get_float8_nan();
@@ -232,7 +232,7 @@ hashfloat8extended(PG_FUNCTION_ARGS)
   float8 key = PG_GETARG_FLOAT8(0);
   uint64 seed = PG_GETARG_INT64(1);
 
-  /* Same approach as hashfloat8 */
+                                   
   if (key == (float8)0)
   {
     PG_RETURN_UINT64(seed);
@@ -322,11 +322,11 @@ hashtext(PG_FUNCTION_ARGS)
     }
     else
 #endif
-      /* shouldn't happen */
+                            
       elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
-  /* Avoid leaking memory for toasted inputs */
+                                               
   PG_FREE_IF_COPY(key, 0);
 
   return result;
@@ -377,7 +377,7 @@ hashtextextended(PG_FUNCTION_ARGS)
     }
     else
 #endif
-      /* shouldn't happen */
+                            
       elog(ERROR, "unsupported collprovider: %c", mylocale->provider);
   }
 
@@ -386,10 +386,10 @@ hashtextextended(PG_FUNCTION_ARGS)
   return result;
 }
 
-/*
- * hashvarlena() can be used for any varlena datatype in which there are
- * no non-significant bits, ie, distinct bitpatterns never compare as equal.
- */
+   
+                                                                         
+                                                                             
+   
 Datum
 hashvarlena(PG_FUNCTION_ARGS)
 {
@@ -398,7 +398,7 @@ hashvarlena(PG_FUNCTION_ARGS)
 
   result = hash_any((unsigned char *)VARDATA_ANY(key), VARSIZE_ANY_EXHDR(key));
 
-  /* Avoid leaking memory for toasted inputs */
+                                               
   PG_FREE_IF_COPY(key, 0);
 
   return result;

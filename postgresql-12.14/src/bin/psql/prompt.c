@@ -1,10 +1,10 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/prompt.c
- */
+   
+                                              
+   
+                                                                
+   
+                         
+   
 #include "postgres_fe.h"
 
 #ifdef WIN32
@@ -22,47 +22,47 @@
 #include "prompt.h"
 #include "settings.h"
 
-/*--------------------------
- * get_prompt
- *
- * Returns a statically allocated prompt made by interpolating certain
- * tcsh style escape sequences into pset.vars "PROMPT1|2|3".
- * (might not be completely multibyte safe)
- *
- * Defined interpolations are:
- * %M - database server "hostname.domainname", "[local]" for AF_UNIX
- *		sockets, "[local:/dir/name]" if not default
- * %m - like %M, but hostname only (before first dot), or always "[local]"
- * %p - backend pid
- * %> - database server port number
- * %n - database user name
- * %/ - current database
- * %~ - like %/ but "~" when database name equals user name
- * %# - "#" if superuser, ">" otherwise
- * %R - in prompt1 normally =, or ^ if single line mode,
- *			or a ! if session is not connected to a database;
- *		in prompt2 -, *, ', or ";
- *		in prompt3 nothing
- * %x - transaction status: empty, *, !, ? (unknown or no connection)
- * %l - The line number inside the current statement, starting from 1.
- * %? - the error code of the last query (not yet implemented)
- * %% - a percent sign
- *
- * %[0-9]		   - the character with the given decimal code
- * %0[0-7]		   - the character with the given octal code
- * %0x[0-9A-Fa-f]  - the character with the given hexadecimal code
- *
- * %`command`	   - The result of executing command in /bin/sh with trailing
- *					 newline stripped.
- * %:name:		   - The value of the psql variable 'name'
- * (those will not be rescanned for more escape sequences!)
- *
- * %[ ... %]	   - tell readline that the contained text is invisible
- *
- * If the application-wide prompts become NULL somehow, the returned string
- * will be empty (not NULL!).
- *--------------------------
- */
+                             
+              
+   
+                                                                       
+                                                             
+                                            
+   
+                               
+                                                                     
+                                                
+                                                                           
+                    
+                                    
+                           
+                         
+                                                            
+                                        
+                                                         
+                                                       
+                              
+                       
+                                                                      
+                                                                       
+                                                               
+                       
+   
+                                                          
+                                                         
+                                                                   
+   
+                                                                            
+                          
+                                                       
+                                                            
+   
+                                                                     
+   
+                                                                            
+                              
+                             
+   
 
 char *
 get_prompt(promptStatus_t status, ConditionalStack cstack)
@@ -103,7 +103,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
     {
       switch (*p)
       {
-        /* Current database */
+                              
       case '/':
         if (pset.db)
         {
@@ -126,14 +126,14 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         }
         break;
 
-        /* DB server hostname (long/short) */
+                                             
       case 'M':
       case 'm':
         if (pset.db)
         {
           const char *host = PQhost(pset.db);
 
-          /* INET socket */
+                           
           if (host && host[0] && !is_absolute_path(host))
           {
             strlcpy(buf, host, sizeof(buf));
@@ -143,7 +143,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
             }
           }
 #ifdef HAVE_UNIX_SOCKETS
-          /* UNIX socket */
+                           
           else
           {
             if (!host || strcmp(host, DEFAULT_PGSOCKET_DIR) == 0 || *p == 'm')
@@ -158,21 +158,21 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
 #endif
         }
         break;
-        /* DB server port number */
+                                   
       case '>':
         if (pset.db && PQport(pset.db))
         {
           strlcpy(buf, PQport(pset.db), sizeof(buf));
         }
         break;
-        /* DB server user name */
+                                 
       case 'n':
         if (pset.db)
         {
           strlcpy(buf, session_username(), sizeof(buf));
         }
         break;
-        /* backend pid */
+                         
       case 'p':
         if (pset.db)
         {
@@ -272,7 +272,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         break;
 
       case '?':
-        /* not here yet */
+                          
         break;
 
       case '#':
@@ -286,7 +286,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         }
         break;
 
-        /* execute command */
+                             
       case '`':
       {
         FILE *fd;
@@ -313,7 +313,7 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
         break;
       }
 
-        /* interpolate variable */
+                                  
       case ':':
       {
         char *name;
@@ -337,14 +337,14 @@ get_prompt(promptStatus_t status, ConditionalStack cstack)
       case ']':
 #if defined(USE_READLINE) && defined(RL_PROMPT_START_IGNORE)
 
-        /*
-         * readline >=4.0 undocumented feature: non-printing
-         * characters in prompt strings must be marked as such, in
-         * order to properly display the line during editing.
-         */
+           
+                                                             
+                                                                   
+                                                              
+           
         buf[0] = (*p == '[') ? RL_PROMPT_START_IGNORE : RL_PROMPT_END_IGNORE;
         buf[1] = '\0';
-#endif /* USE_READLINE */
+#endif                   
         break;
 
       default:

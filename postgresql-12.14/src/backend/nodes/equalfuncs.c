@@ -1,31 +1,31 @@
-/*-------------------------------------------------------------------------
- *
- * equalfuncs.c
- *	  Equality functions to compare node trees.
- *
- * NOTE: we currently support comparing all node types found in parse
- * trees.  We do not support comparing executor state trees; there
- * is no need for that, and no point in maintaining all the code that
- * would be needed.  We also do not support comparing Path trees, mainly
- * because the circular linkages between RelOptInfo and Path nodes can't
- * be handled easily in a simple depth-first traversal.
- *
- * Currently, in fact, equal() doesn't know how to compare Plan trees
- * either.  This might need to be fixed someday.
- *
- * NOTE: it is intentional that parse location fields (in nodes that have
- * one) are not compared.  This is because we want, for example, a variable
- * "x" to be considered equal() to another reference to "x" in the query.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/nodes/equalfuncs.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                               
+   
+                                                                      
+                                                                   
+                                                                      
+                                                                         
+                                                                         
+                                                        
+   
+                                                                      
+                                                 
+   
+                                                                          
+                                                                            
+                                                                          
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -34,14 +34,14 @@
 #include "nodes/pathnodes.h"
 #include "utils/datum.h"
 
-/*
- * Macros to simplify comparison of different kinds of fields.  Use these
- * wherever possible to reduce the chance for silly typos.  Note that these
- * hard-wire the convention that the local variables in an Equal routine are
- * named 'a' and 'b'.
- */
+   
+                                                                          
+                                                                            
+                                                                             
+                      
+   
 
-/* Compare a simple scalar field (int, float, bool, enum, etc) */
+                                                                 
 #define COMPARE_SCALAR_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -49,7 +49,7 @@
       return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
-/* Compare a field that is a pointer to some kind of Node or Node tree */
+                                                                         
 #define COMPARE_NODE_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -57,7 +57,7 @@
       return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
-/* Compare a field that is a pointer to a Bitmapset */
+                                                      
 #define COMPARE_BITMAPSET_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -65,7 +65,7 @@
       return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
-/* Compare a field that is a pointer to a C string, or perhaps NULL */
+                                                                      
 #define COMPARE_STRING_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -73,10 +73,10 @@
       return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
-/* Macro for comparing string fields that might be NULL */
+                                                          
 #define equalstr(a, b) (((a) != NULL && (b) != NULL) ? (strcmp(a, b) == 0) : (a) == (b))
 
-/* Compare a field that is a pointer to a simple palloc'd object of size sz */
+                                                                              
 #define COMPARE_POINTER_FIELD(fldname, sz)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -84,15 +84,15 @@
       return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   } while (0)
 
-/* Compare a parse location field (this is a no-op, per note above) */
+                                                                      
 #define COMPARE_LOCATION_FIELD(fldname) ((void)0)
 
-/* Compare a CoercionForm field (also a no-op, per comment in primnodes.h) */
+                                                                             
 #define COMPARE_COERCIONFORM_FIELD(fldname) ((void)0)
 
-/*
- *	Stuff from primnodes.h
- */
+   
+                          
+   
 
 static bool
 _equalAlias(const Alias *a, const Alias *b)
@@ -152,12 +152,12 @@ _equalIntoClause(const IntoClause *a, const IntoClause *b)
   return true;
 }
 
-/*
- * We don't need an _equalExpr because Expr is an abstract supertype which
- * should never actually get instantiated.  Also, since it has no common
- * fields except NodeTag, there's no need for a helper routine to factor
- * out comparing the common fields...
- */
+   
+                                                                           
+                                                                         
+                                                                         
+                                      
+   
 
 static bool
 _equalVar(const Var *a, const Var *b)
@@ -186,10 +186,10 @@ _equalConst(const Const *a, const Const *b)
   COMPARE_SCALAR_FIELD(constbyval);
   COMPARE_LOCATION_FIELD(location);
 
-  /*
-   * We treat all NULL constants of the same type as equal. Someday this
-   * might need to change?  But datumIsEqual doesn't work on nulls, so...
-   */
+     
+                                                                         
+                                                                          
+     
   if (a->constisnull)
   {
     return true;
@@ -217,7 +217,7 @@ _equalAggref(const Aggref *a, const Aggref *b)
   COMPARE_SCALAR_FIELD(aggtype);
   COMPARE_SCALAR_FIELD(aggcollid);
   COMPARE_SCALAR_FIELD(inputcollid);
-  /* ignore aggtranstype since it might not be set yet */
+                                                         
   COMPARE_NODE_FIELD(aggargtypes);
   COMPARE_NODE_FIELD(aggdirectargs);
   COMPARE_NODE_FIELD(args);
@@ -239,9 +239,9 @@ _equalGroupingFunc(const GroupingFunc *a, const GroupingFunc *b)
 {
   COMPARE_NODE_FIELD(args);
 
-  /*
-   * We must not compare the refs or cols field
-   */
+     
+                                                
+     
 
   COMPARE_SCALAR_FIELD(agglevelsup);
   COMPARE_LOCATION_FIELD(location);
@@ -313,12 +313,12 @@ _equalOpExpr(const OpExpr *a, const OpExpr *b)
 {
   COMPARE_SCALAR_FIELD(opno);
 
-  /*
-   * Special-case opfuncid: it is allowable for it to differ if one node
-   * contains zero and the other doesn't.  This just means that the one node
-   * isn't as far along in the parse/plan pipeline and hasn't had the
-   * opfuncid cache filled yet.
-   */
+     
+                                                                         
+                                                                             
+                                                                      
+                                
+     
   if (a->opfuncid != b->opfuncid && a->opfuncid != 0 && b->opfuncid != 0)
   {
     return false;
@@ -339,12 +339,12 @@ _equalDistinctExpr(const DistinctExpr *a, const DistinctExpr *b)
 {
   COMPARE_SCALAR_FIELD(opno);
 
-  /*
-   * Special-case opfuncid: it is allowable for it to differ if one node
-   * contains zero and the other doesn't.  This just means that the one node
-   * isn't as far along in the parse/plan pipeline and hasn't had the
-   * opfuncid cache filled yet.
-   */
+     
+                                                                         
+                                                                             
+                                                                      
+                                
+     
   if (a->opfuncid != b->opfuncid && a->opfuncid != 0 && b->opfuncid != 0)
   {
     return false;
@@ -365,12 +365,12 @@ _equalNullIfExpr(const NullIfExpr *a, const NullIfExpr *b)
 {
   COMPARE_SCALAR_FIELD(opno);
 
-  /*
-   * Special-case opfuncid: it is allowable for it to differ if one node
-   * contains zero and the other doesn't.  This just means that the one node
-   * isn't as far along in the parse/plan pipeline and hasn't had the
-   * opfuncid cache filled yet.
-   */
+     
+                                                                         
+                                                                             
+                                                                      
+                                
+     
   if (a->opfuncid != b->opfuncid && a->opfuncid != 0 && b->opfuncid != 0)
   {
     return false;
@@ -391,12 +391,12 @@ _equalScalarArrayOpExpr(const ScalarArrayOpExpr *a, const ScalarArrayOpExpr *b)
 {
   COMPARE_SCALAR_FIELD(opno);
 
-  /*
-   * Special-case opfuncid: it is allowable for it to differ if one node
-   * contains zero and the other doesn't.  This just means that the one node
-   * isn't as far along in the parse/plan pipeline and hasn't had the
-   * opfuncid cache filled yet.
-   */
+     
+                                                                         
+                                                                             
+                                                                      
+                                
+     
   if (a->opfuncid != b->opfuncid && a->opfuncid != 0 && b->opfuncid != 0)
   {
     return false;
@@ -816,14 +816,14 @@ _equalOnConflictExpr(const OnConflictExpr *a, const OnConflictExpr *b)
   return true;
 }
 
-/*
- * Stuff from pathnodes.h
- */
+   
+                          
+   
 
 static bool
 _equalPathKey(const PathKey *a, const PathKey *b)
 {
-  /* We assume pointer equality is sufficient to compare the eclasses */
+                                                                        
   COMPARE_SCALAR_FIELD(pk_eclass);
   COMPARE_SCALAR_FIELD(pk_opfamily);
   COMPARE_SCALAR_FIELD(pk_strategy);
@@ -843,10 +843,10 @@ _equalRestrictInfo(const RestrictInfo *a, const RestrictInfo *b)
   COMPARE_BITMAPSET_FIELD(outer_relids);
   COMPARE_BITMAPSET_FIELD(nullable_relids);
 
-  /*
-   * We ignore all the remaining fields, since they may not be set yet, and
-   * should be derivable from the clause anyway.
-   */
+     
+                                                                            
+                                                 
+     
 
   return true;
 }
@@ -854,22 +854,22 @@ _equalRestrictInfo(const RestrictInfo *a, const RestrictInfo *b)
 static bool
 _equalPlaceHolderVar(const PlaceHolderVar *a, const PlaceHolderVar *b)
 {
-  /*
-   * We intentionally do not compare phexpr.  Two PlaceHolderVars with the
-   * same ID and levelsup should be considered equal even if the contained
-   * expressions have managed to mutate to different states.  This will
-   * happen during final plan construction when there are nested PHVs, since
-   * the inner PHV will get replaced by a Param in some copies of the outer
-   * PHV.  Another way in which it can happen is that initplan sublinks
-   * could get replaced by differently-numbered Params when sublink folding
-   * is done.  (The end result of such a situation would be some
-   * unreferenced initplans, which is annoying but not really a problem.) On
-   * the same reasoning, there is no need to examine phrels.
-   *
-   * COMPARE_NODE_FIELD(phexpr);
-   *
-   * COMPARE_BITMAPSET_FIELD(phrels);
-   */
+     
+                                                                           
+                                                                           
+                                                                        
+                                                                             
+                                                                            
+                                                                        
+                                                                            
+                                                                 
+                                                                             
+                                                             
+     
+                                 
+     
+                                      
+     
   COMPARE_SCALAR_FIELD(phid);
   COMPARE_SCALAR_FIELD(phlevelsup);
 
@@ -911,7 +911,7 @@ static bool
 _equalPlaceHolderInfo(const PlaceHolderInfo *a, const PlaceHolderInfo *b)
 {
   COMPARE_SCALAR_FIELD(phid);
-  COMPARE_NODE_FIELD(ph_var); /* should be redundant */
+  COMPARE_NODE_FIELD(ph_var);                          
   COMPARE_BITMAPSET_FIELD(ph_eval_at);
   COMPARE_BITMAPSET_FIELD(ph_lateral);
   COMPARE_BITMAPSET_FIELD(ph_needed);
@@ -920,9 +920,9 @@ _equalPlaceHolderInfo(const PlaceHolderInfo *a, const PlaceHolderInfo *b)
   return true;
 }
 
-/*
- * Stuff from extensible.h
- */
+   
+                           
+   
 static bool
 _equalExtensibleNode(const ExtensibleNode *a, const ExtensibleNode *b)
 {
@@ -930,10 +930,10 @@ _equalExtensibleNode(const ExtensibleNode *a, const ExtensibleNode *b)
 
   COMPARE_STRING_FIELD(extnodename);
 
-  /* At this point, we know extnodename is the same for both nodes. */
+                                                                      
   methods = GetExtensibleNodeMethods(a->extnodename, false);
 
-  /* compare the private fields */
+                                  
   if (!methods->nodeEqual(a, b))
   {
     return false;
@@ -942,16 +942,16 @@ _equalExtensibleNode(const ExtensibleNode *a, const ExtensibleNode *b)
   return true;
 }
 
-/*
- * Stuff from parsenodes.h
- */
+   
+                           
+   
 
 static bool
 _equalQuery(const Query *a, const Query *b)
 {
   COMPARE_SCALAR_FIELD(commandType);
   COMPARE_SCALAR_FIELD(querySource);
-  /* we intentionally ignore queryId, since it might not be set */
+                                                                  
   COMPARE_SCALAR_FIELD(canSetTag);
   COMPARE_NODE_FIELD(utilityStmt);
   COMPARE_SCALAR_FIELD(resultRelation);
@@ -2332,7 +2332,7 @@ _equalParamRef(const ParamRef *a, const ParamRef *b)
 static bool
 _equalAConst(const A_Const *a, const A_Const *b)
 {
-  if (!equal(&a->val, &b->val)) /* hack for in-line Value field */
+  if (!equal(&a->val, &b->val))                                   
   {
     return false;
   }
@@ -2901,9 +2901,9 @@ _equalPartitionCmd(const PartitionCmd *a, const PartitionCmd *b)
   return true;
 }
 
-/*
- * Stuff from pg_list.h
- */
+   
+                        
+   
 
 static bool
 _equalList(const List *a, const List *b)
@@ -2911,17 +2911,17 @@ _equalList(const List *a, const List *b)
   const ListCell *item_a;
   const ListCell *item_b;
 
-  /*
-   * Try to reject by simple scalar checks before grovelling through all the
-   * list elements...
-   */
+     
+                                                                             
+                      
+     
   COMPARE_SCALAR_FIELD(type);
   COMPARE_SCALAR_FIELD(length);
 
-  /*
-   * We place the switch outside the loop for the sake of efficiency; this
-   * may not be worth doing...
-   */
+     
+                                                                           
+                               
+     
   switch (a->type)
   {
   case T_List:
@@ -2953,21 +2953,21 @@ _equalList(const List *a, const List *b)
     break;
   default:
     elog(ERROR, "unrecognized list node type: %d", (int)a->type);
-    return false; /* keep compiler quiet */
+    return false;                          
   }
 
-  /*
-   * If we got here, we should have run out of elements of both lists
-   */
+     
+                                                                      
+     
   Assert(item_a == NULL);
   Assert(item_b == NULL);
 
   return true;
 }
 
-/*
- * Stuff from value.h
- */
+   
+                      
+   
 
 static bool
 _equalValue(const Value *a, const Value *b)
@@ -2985,7 +2985,7 @@ _equalValue(const Value *a, const Value *b)
     COMPARE_STRING_FIELD(val.str);
     break;
   case T_Null:
-    /* nothing to do */
+                       
     break;
   default:
     elog(ERROR, "unrecognized node type: %d", (int)a->type);
@@ -2995,10 +2995,10 @@ _equalValue(const Value *a, const Value *b)
   return true;
 }
 
-/*
- * equal
- *	  returns whether two nodes are equal
- */
+   
+         
+                                         
+   
 bool
 equal(const void *a, const void *b)
 {
@@ -3009,30 +3009,30 @@ equal(const void *a, const void *b)
     return true;
   }
 
-  /*
-   * note that a!=b, so only one of them can be NULL
-   */
+     
+                                                     
+     
   if (a == NULL || b == NULL)
   {
     return false;
   }
 
-  /*
-   * are they the same type of nodes?
-   */
+     
+                                      
+     
   if (nodeTag(a) != nodeTag(b))
   {
     return false;
   }
 
-  /* Guard against stack overflow due to overly complex expressions */
+                                                                      
   check_stack_depth();
 
   switch (nodeTag(a))
   {
-    /*
-     * PRIMITIVE NODES
-     */
+       
+                       
+       
   case T_Alias:
     retval = _equalAlias(a, b);
     break;
@@ -3187,9 +3187,9 @@ equal(const void *a, const void *b)
     retval = _equalJoinExpr(a, b);
     break;
 
-    /*
-     * RELATION NODES
-     */
+       
+                      
+       
   case T_PathKey:
     retval = _equalPathKey(a, b);
     break;
@@ -3223,16 +3223,16 @@ equal(const void *a, const void *b)
     retval = _equalValue(a, b);
     break;
 
-    /*
-     * EXTENSIBLE NODES
-     */
+       
+                        
+       
   case T_ExtensibleNode:
     retval = _equalExtensibleNode(a, b);
     break;
 
-    /*
-     * PARSE NODES
-     */
+       
+                   
+       
   case T_Query:
     retval = _equalQuery(a, b);
     break;
@@ -3731,7 +3731,7 @@ equal(const void *a, const void *b)
 
   default:
     elog(ERROR, "unrecognized node type: %d", (int)nodeTag(a));
-    retval = false; /* keep compiler quiet */
+    retval = false;                          
     break;
   }
 

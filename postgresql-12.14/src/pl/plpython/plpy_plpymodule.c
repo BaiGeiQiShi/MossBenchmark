@@ -1,8 +1,8 @@
-/*
- * the plpy module
- *
- * src/pl/plpython/plpy_plpymodule.c
- */
+   
+                   
+   
+                                     
+   
 
 #include "postgres.h"
 
@@ -32,7 +32,7 @@ PLy_create_exception(char *name, PyObject *base, PyObject *dict, const char *mod
 static void
 PLy_generate_spi_exceptions(PyObject *mod, PyObject *base);
 
-/* module functions */
+                      
 static PyObject *
 PLy_debug(PyObject *self, PyObject *args, PyObject *kw);
 static PyObject *
@@ -54,7 +54,7 @@ PLy_quote_nullable(PyObject *self, PyObject *args);
 static PyObject *
 PLy_quote_ident(PyObject *self, PyObject *args);
 
-/* A list of all known exceptions, generated from backend/utils/errcodes.txt */
+                                                                               
 typedef struct ExceptionMap
 {
   char *name;
@@ -67,39 +67,39 @@ static const ExceptionMap exception_map[] = {
     {NULL, NULL, 0}};
 
 static PyMethodDef PLy_methods[] = {
-    /*
-     * logging methods
-     */
+       
+                       
+       
     {"debug", (PyCFunction)PLy_debug, METH_VARARGS | METH_KEYWORDS, NULL}, {"log", (PyCFunction)PLy_log, METH_VARARGS | METH_KEYWORDS, NULL}, {"info", (PyCFunction)PLy_info, METH_VARARGS | METH_KEYWORDS, NULL}, {"notice", (PyCFunction)PLy_notice, METH_VARARGS | METH_KEYWORDS, NULL}, {"warning", (PyCFunction)PLy_warning, METH_VARARGS | METH_KEYWORDS, NULL}, {"error", (PyCFunction)PLy_error, METH_VARARGS | METH_KEYWORDS, NULL}, {"fatal", (PyCFunction)PLy_fatal, METH_VARARGS | METH_KEYWORDS, NULL},
 
-    /*
-     * create a stored plan
-     */
+       
+                            
+       
     {"prepare", PLy_spi_prepare, METH_VARARGS, NULL},
 
-    /*
-     * execute a plan or query
-     */
+       
+                               
+       
     {"execute", PLy_spi_execute, METH_VARARGS, NULL},
 
-    /*
-     * escaping strings
-     */
+       
+                        
+       
     {"quote_literal", PLy_quote_literal, METH_VARARGS, NULL}, {"quote_nullable", PLy_quote_nullable, METH_VARARGS, NULL}, {"quote_ident", PLy_quote_ident, METH_VARARGS, NULL},
 
-    /*
-     * create the subtransaction context manager
-     */
+       
+                                                 
+       
     {"subtransaction", PLy_subtransaction_new, METH_NOARGS, NULL},
 
-    /*
-     * create a cursor
-     */
+       
+                       
+       
     {"cursor", PLy_cursor, METH_VARARGS, NULL},
 
-    /*
-     * transaction control
-     */
+       
+                           
+       
     {"commit", PLy_commit, METH_NOARGS, NULL}, {"rollback", PLy_rollback, METH_NOARGS, NULL},
 
     {NULL, NULL, 0, NULL}};
@@ -121,10 +121,10 @@ static PyModuleDef PLy_exc_module = {
     .m_methods = PLy_exc_methods,
 };
 
-/*
- * Must have external linkage, because PyMODINIT_FUNC does dllexport on
- * Windows-like platforms.
- */
+   
+                                                                        
+                           
+   
 PyMODINIT_FUNC
 PyInit_plpy(void)
 {
@@ -140,7 +140,7 @@ PyInit_plpy(void)
 
   return m;
 }
-#endif /* PY_MAJOR_VERSION >= 3 */
+#endif                            
 
 void
 PLy_init_plpy(void)
@@ -151,9 +151,9 @@ PLy_init_plpy(void)
   PyObject *plpy;
 #endif
 
-  /*
-   * initialize plpy module
-   */
+     
+                            
+     
   PLy_plan_init_type();
   PLy_result_init_type();
   PLy_subtransaction_init_type();
@@ -161,17 +161,17 @@ PLy_init_plpy(void)
 
 #if PY_MAJOR_VERSION >= 3
   PyModule_Create(&PLy_module);
-  /* for Python 3 we initialized the exceptions in PyInit_plpy */
+                                                                 
 #else
   plpy = Py_InitModule("plpy", PLy_methods);
   PLy_add_exceptions(plpy);
 #endif
 
-  /* PyDict_SetItemString(plpy, "PlanType", (PyObject *) &PLy_PlanType); */
+                                                                           
 
-  /*
-   * initialize main module, and add plpy
-   */
+     
+                                          
+     
   main_mod = PyImport_AddModule("__main__");
   main_dict = PyModule_GetDict(main_mod);
   plpy_mod = PyImport_AddModule("plpy");
@@ -202,10 +202,10 @@ PLy_add_exceptions(PyObject *plpy)
     PLy_elog(ERROR, "could not create the spiexceptions module");
   }
 
-  /*
-   * PyModule_AddObject does not add a refcount to the object, for some odd
-   * reason; we must do that.
-   */
+     
+                                                                            
+                              
+     
   Py_INCREF(excmod);
   if (PyModule_AddObject(plpy, "spiexceptions", excmod) < 0)
   {
@@ -224,9 +224,9 @@ PLy_add_exceptions(PyObject *plpy)
   PLy_generate_spi_exceptions(excmod, PLy_exc_spi_error);
 }
 
-/*
- * Create an exception object and add it to the module
- */
+   
+                                                       
+   
 static PyObject *
 PLy_create_exception(char *name, PyObject *base, PyObject *dict, const char *modname, PyObject *mod)
 {
@@ -238,25 +238,25 @@ PLy_create_exception(char *name, PyObject *base, PyObject *dict, const char *mod
     PLy_elog(ERROR, NULL);
   }
 
-  /*
-   * PyModule_AddObject does not add a refcount to the object, for some odd
-   * reason; we must do that.
-   */
+     
+                                                                            
+                              
+     
   Py_INCREF(exc);
   PyModule_AddObject(mod, modname, exc);
 
-  /*
-   * The caller will also store a pointer to the exception object in some
-   * permanent variable, so add another ref to account for that.  This is
-   * probably excessively paranoid, but let's be sure.
-   */
+     
+                                                                          
+                                                                          
+                                                       
+     
   Py_INCREF(exc);
   return exc;
 }
 
-/*
- * Add all the autogenerated exceptions as subclasses of SPIError
- */
+   
+                                                                  
+   
 static void
 PLy_generate_spi_exceptions(PyObject *mod, PyObject *base)
 {
@@ -292,10 +292,10 @@ PLy_generate_spi_exceptions(PyObject *mod, PyObject *base)
   }
 }
 
-/*
- * the python interface to the elog function
- * don't confuse these with PLy_elog
- */
+   
+                                             
+                                     
+   
 static PyObject *
 PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw);
 
@@ -402,7 +402,7 @@ PLy_quote_ident(PyObject *self, PyObject *args)
   return ret;
 }
 
-/* enforce cast of object to string */
+                                      
 static char *
 object_to_string(PyObject *obj)
 {
@@ -444,10 +444,10 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
 
   if (PyTuple_Size(args) == 1)
   {
-    /*
-     * Treat single argument specially to avoid undesirable ('tuple',)
-     * decoration.
-     */
+       
+                                                                       
+                   
+       
     PyObject *o;
 
     if (!PyArg_UnpackTuple(args, "plpy.elog", 1, 1, &o))
@@ -478,7 +478,7 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
 
       if (strcmp(keyword, "message") == 0)
       {
-        /* the message should not be overwritten */
+                                                   
         if (PyTuple_Size(args) != 0)
         {
           PLy_exception_set(PyExc_TypeError, "argument 'message' given by name and position");
@@ -601,8 +601,8 @@ PLy_output(volatile int level, PyObject *self, PyObject *args, PyObject *kw)
   }
   PG_END_TRY();
 
-  /*
-   * return a legal object so the interpreter will continue on its merry way
-   */
+     
+                                                                             
+     
   Py_RETURN_NONE;
 }

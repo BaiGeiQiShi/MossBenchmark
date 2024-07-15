@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "outofscope.pgc"
@@ -36,23 +36,23 @@
 typedef unsigned char NumericDigit;
 typedef struct
 {
-  int ndigits;          /* number of digits in digits[] - can be 0! */
-  int weight;           /* weight of first digit */
-  int rscale;           /* result scale */
-  int dscale;           /* display scale */
-  int sign;             /* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
-  NumericDigit *buf;    /* start of alloc'd space for digits[] */
-  NumericDigit *digits; /* decimal digits */
+  int ndigits;                                                        
+  int weight;                                      
+  int rscale;                             
+  int dscale;                              
+  int sign;                                                           
+  NumericDigit *buf;                                             
+  NumericDigit *digits;                     
 } numeric;
 
 typedef struct
 {
-  int ndigits;                  /* number of digits in digits[] - can be 0! */
-  int weight;                   /* weight of first digit */
-  int rscale;                   /* result scale */
-  int dscale;                   /* display scale */
-  int sign;                     /* NUMERIC_POS, NUMERIC_NEG, or NUMERIC_NAN */
-  NumericDigit digits[DECSIZE]; /* decimal digits */
+  int ndigits;                                                                
+  int weight;                                              
+  int rscale;                                     
+  int dscale;                                      
+  int sign;                                                                   
+  NumericDigit digits[DECSIZE];                     
 } decimal;
 
 #ifdef __cplusplus
@@ -105,15 +105,15 @@ extern "C"
 }
 #endif
 
-#endif /* PGTYPES_NUMERIC */
+#endif                      
 
 #line 8 "outofscope.pgc"
 
-/* exec sql begin declare section */
+                                    
 
 #line 1 "struct.h"
 
-/* dec_t */
+           
 
 typedef struct mytype MYTYPE;
 
@@ -158,31 +158,31 @@ struct mynulltype
 
 #line 17 "struct.h"
   int c;
-}; /* exec sql end declare section */
+};                                   
 #line 12 "outofscope.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 14 "outofscope.pgc"
 
-/* Functions for test 1 */
+                          
 
 static void
 get_var1(MYTYPE **myvar0, MYNULLTYPE **mynullvar0)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 22 "outofscope.pgc"
   MYTYPE *myvar = malloc(sizeof(MYTYPE));
 
 #line 23 "outofscope.pgc"
   MYNULLTYPE *mynullvar = malloc(sizeof(MYNULLTYPE));
-/* exec sql end declare section */
+                                  
 #line 24 "outofscope.pgc"
 
-  /* Test DECLARE ... SELECT ... INTO with pointers */
+                                                      
 
   ECPGset_var(0, (myvar), __LINE__);
-  ECPGset_var(1, (mynullvar), __LINE__); /* declare mycur cursor for select * from a1 */
+  ECPGset_var(1, (mynullvar), __LINE__);                                                
 #line 28 "outofscope.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -341,7 +341,7 @@ main(void)
   }
 #line 80 "outofscope.pgc"
 
-  /* Test out-of-scope DECLARE/OPEN/FETCH/CLOSE */
+                                                  
 
   get_var1(&myvar, &mynullvar);
   open_cur1();

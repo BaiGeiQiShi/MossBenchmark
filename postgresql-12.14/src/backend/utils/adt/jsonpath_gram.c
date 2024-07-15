@@ -1,92 +1,92 @@
-/* A Bison parser, made by GNU Bison 3.7.5.  */
+                                               
 
-/* Bison implementation for Yacc-like parsers in C
+                                                   
+ 
+                                                                                 
+        
+ 
+                                                                        
+                                                                        
+                                                                     
+                                       
+ 
+                                                                   
+                                                                  
+                                                                 
+                                                
+ 
+                                                                     
+                                                                            
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
-   Inc.
+                                                                      
+                                                                     
+                                                                   
+                                                                     
+                                                                       
+                                                                    
+                                                                      
+                                                                  
+                                           
+ 
+                                                                       
+                            
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+                                                             
+                                                            
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+                                                                  
+                                                                
+                                                                     
 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+                                                                  
+                                                                      
+                                                                  
+                                                                 
+                                                                  
+                              
 
-/* As a special exception, you may create a larger work that contains
-   part or all of the Bison parser skeleton and distribute that work
-   under terms of your choice, so long as that work isn't itself a
-   parser generator using the skeleton or a modified version thereof
-   as a parser skeleton.  Alternatively, if you modify or redistribute
-   the parser skeleton itself, you may (at your option) remove this
-   special exception, which will cause the skeleton and the resulting
-   Bison output files to be licensed under the GNU General Public
-   License without this special exception.
-
-   This special exception was added by the Free Software Foundation in
-   version 2.2 of Bison.  */
-
-/* C LALR(1) parser skeleton written by Richard Stallman, by
-   simplifying the original so-called "semantic" parser.  */
-
-/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
-   especially those whose name start with YY_ or yy_.  They are
-   private implementation details that can be changed or removed.  */
-
-/* All symbols defined below should begin with yy or YY, to avoid
-   infringing on user name space.  This should be done even for local
-   variables, as they might otherwise be expanded by user macros.
-   There are some unavoidable exceptions within include files to
-   define necessary library symbols; they are noted "INFRINGES ON
-   USER NAME SPACE" below.  */
-
-/* Identify Bison output, and Bison version.  */
+                                                
 #define YYBISON 30705
 
-/* Bison version string.  */
+                            
 #define YYBISON_VERSION "3.7.5"
 
-/* Skeleton name.  */
+                     
 #define YYSKELETON_NAME "yacc.c"
 
-/* Pure parsers.  */
+                    
 #define YYPURE 1
 
-/* Push parsers.  */
+                    
 #define YYPUSH 0
 
-/* Pull parsers.  */
+                    
 #define YYPULL 1
 
-/* Substitute the variable and function names.  */
+                                                  
 #define yyparse jsonpath_yyparse
 #define yylex jsonpath_yylex
 #define yyerror jsonpath_yyerror
 #define yydebug jsonpath_yydebug
 #define yynerrs jsonpath_yynerrs
 
-/* First part of user prologue.  */
+                                   
 #line 1 "jsonpath_gram.y"
 
-/*-------------------------------------------------------------------------
- *
- * jsonpath_gram.y
- *	 Grammar definitions for jsonpath datatype
- *
- * Transforms tokenized jsonpath into tree of JsonPathParseItem structs.
- *
- * Copyright (c) 2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	src/backend/utils/adt/jsonpath_gram.y
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                                              
+   
+                                                                         
+   
+                                                           
+   
+                  
+                                         
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -98,7 +98,7 @@
 #include "utils/builtins.h"
 #include "utils/jsonpath.h"
 
-/* struct JsonPathString is shared between scan and gram */
+                                                           
 typedef struct JsonPathString
 {
   char *val;
@@ -108,7 +108,7 @@ typedef struct JsonPathString
 
 union YYSTYPE;
 
-/* flex 2.5.4 doesn't bother with a decl for this */
+                                                    
 int
 jsonpath_yylex(union YYSTYPE *yylval_param);
 int
@@ -141,14 +141,14 @@ makeAny(int first, int last);
 static JsonPathParseItem *
 makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathString *flags);
 
-/*
- * Bison doesn't allocate anything that needs to live across parser calls,
- * so we can easily have it use palloc instead of malloc.  This prevents
- * memory leaks if we error out during parsing.  Note this only works with
- * bison >= 2.0.  However, in bison 1.875 the default is to use alloca()
- * if possible, so there's not really much problem anyhow, at least if
- * you're building with gcc.
- */
+   
+                                                                           
+                                                                         
+                                                                           
+                                                                         
+                                                                       
+                             
+   
 #define YYMALLOC palloc
 #define YYFREE pfree
 
@@ -175,7 +175,7 @@ makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathStri
 #endif
 #endif
 
-/* Debug traces.  */
+                    
 #ifndef YYDEBUG
 #define YYDEBUG 0
 #endif
@@ -183,65 +183,65 @@ makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathStri
 extern int jsonpath_yydebug;
 #endif
 
-/* Token kinds.  */
+                   
 #ifndef YYTOKENTYPE
 #define YYTOKENTYPE
 enum yytokentype
 {
   YYEMPTY = -2,
-  YYEOF = 0,            /* "end of file"  */
-  YYerror = 256,        /* error  */
-  YYUNDEF = 257,        /* "invalid token"  */
-  TO_P = 258,           /* TO_P  */
-  NULL_P = 259,         /* NULL_P  */
-  TRUE_P = 260,         /* TRUE_P  */
-  FALSE_P = 261,        /* FALSE_P  */
-  IS_P = 262,           /* IS_P  */
-  UNKNOWN_P = 263,      /* UNKNOWN_P  */
-  EXISTS_P = 264,       /* EXISTS_P  */
-  IDENT_P = 265,        /* IDENT_P  */
-  STRING_P = 266,       /* STRING_P  */
-  NUMERIC_P = 267,      /* NUMERIC_P  */
-  INT_P = 268,          /* INT_P  */
-  VARIABLE_P = 269,     /* VARIABLE_P  */
-  OR_P = 270,           /* OR_P  */
-  AND_P = 271,          /* AND_P  */
-  NOT_P = 272,          /* NOT_P  */
-  LESS_P = 273,         /* LESS_P  */
-  LESSEQUAL_P = 274,    /* LESSEQUAL_P  */
-  EQUAL_P = 275,        /* EQUAL_P  */
-  NOTEQUAL_P = 276,     /* NOTEQUAL_P  */
-  GREATEREQUAL_P = 277, /* GREATEREQUAL_P  */
-  GREATER_P = 278,      /* GREATER_P  */
-  ANY_P = 279,          /* ANY_P  */
-  STRICT_P = 280,       /* STRICT_P  */
-  LAX_P = 281,          /* LAX_P  */
-  LAST_P = 282,         /* LAST_P  */
-  STARTS_P = 283,       /* STARTS_P  */
-  WITH_P = 284,         /* WITH_P  */
-  LIKE_REGEX_P = 285,   /* LIKE_REGEX_P  */
-  FLAG_P = 286,         /* FLAG_P  */
-  ABS_P = 287,          /* ABS_P  */
-  SIZE_P = 288,         /* SIZE_P  */
-  TYPE_P = 289,         /* TYPE_P  */
-  FLOOR_P = 290,        /* FLOOR_P  */
-  DOUBLE_P = 291,       /* DOUBLE_P  */
-  CEILING_P = 292,      /* CEILING_P  */
-  KEYVALUE_P = 293,     /* KEYVALUE_P  */
-  UMINUS = 294          /* UMINUS  */
+  YYEOF = 0,                                
+  YYerror = 256,                    
+  YYUNDEF = 257,                              
+  TO_P = 258,                      
+  NULL_P = 259,                      
+  TRUE_P = 260,                      
+  FALSE_P = 261,                      
+  IS_P = 262,                      
+  UNKNOWN_P = 263,                      
+  EXISTS_P = 264,                      
+  IDENT_P = 265,                      
+  STRING_P = 266,                      
+  NUMERIC_P = 267,                      
+  INT_P = 268,                      
+  VARIABLE_P = 269,                      
+  OR_P = 270,                      
+  AND_P = 271,                      
+  NOT_P = 272,                      
+  LESS_P = 273,                      
+  LESSEQUAL_P = 274,                      
+  EQUAL_P = 275,                      
+  NOTEQUAL_P = 276,                      
+  GREATEREQUAL_P = 277,                      
+  GREATER_P = 278,                      
+  ANY_P = 279,                      
+  STRICT_P = 280,                      
+  LAX_P = 281,                      
+  LAST_P = 282,                      
+  STARTS_P = 283,                      
+  WITH_P = 284,                      
+  LIKE_REGEX_P = 285,                      
+  FLAG_P = 286,                      
+  ABS_P = 287,                      
+  SIZE_P = 288,                      
+  TYPE_P = 289,                      
+  FLOOR_P = 290,                      
+  DOUBLE_P = 291,                      
+  CEILING_P = 292,                      
+  KEYVALUE_P = 293,                      
+  UMINUS = 294                       
 };
 typedef enum yytokentype yytoken_kind_t;
 #endif
 
-/* Value type.  */
+                  
 #if !defined YYSTYPE && !defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
 #line 79 "jsonpath_gram.y"
 
   JsonPathString str;
-  List *elems;  /* list of JsonPathParseItem */
-  List *indexs; /* list of integers */
+  List *elems;                                 
+  List *indexs;                       
   JsonPathParseItem *value;
   JsonPathParseResult *result;
   JsonPathItemType optype;
@@ -258,87 +258,87 @@ typedef union YYSTYPE YYSTYPE;
 int
 jsonpath_yyparse(JsonPathParseResult **result);
 
-/* Symbol kind.  */
+                   
 enum yysymbol_kind_t
 {
   YYSYMBOL_YYEMPTY = -2,
-  YYSYMBOL_YYEOF = 0,                /* "end of file"  */
-  YYSYMBOL_YYerror = 1,              /* error  */
-  YYSYMBOL_YYUNDEF = 2,              /* "invalid token"  */
-  YYSYMBOL_TO_P = 3,                 /* TO_P  */
-  YYSYMBOL_NULL_P = 4,               /* NULL_P  */
-  YYSYMBOL_TRUE_P = 5,               /* TRUE_P  */
-  YYSYMBOL_FALSE_P = 6,              /* FALSE_P  */
-  YYSYMBOL_IS_P = 7,                 /* IS_P  */
-  YYSYMBOL_UNKNOWN_P = 8,            /* UNKNOWN_P  */
-  YYSYMBOL_EXISTS_P = 9,             /* EXISTS_P  */
-  YYSYMBOL_IDENT_P = 10,             /* IDENT_P  */
-  YYSYMBOL_STRING_P = 11,            /* STRING_P  */
-  YYSYMBOL_NUMERIC_P = 12,           /* NUMERIC_P  */
-  YYSYMBOL_INT_P = 13,               /* INT_P  */
-  YYSYMBOL_VARIABLE_P = 14,          /* VARIABLE_P  */
-  YYSYMBOL_OR_P = 15,                /* OR_P  */
-  YYSYMBOL_AND_P = 16,               /* AND_P  */
-  YYSYMBOL_NOT_P = 17,               /* NOT_P  */
-  YYSYMBOL_LESS_P = 18,              /* LESS_P  */
-  YYSYMBOL_LESSEQUAL_P = 19,         /* LESSEQUAL_P  */
-  YYSYMBOL_EQUAL_P = 20,             /* EQUAL_P  */
-  YYSYMBOL_NOTEQUAL_P = 21,          /* NOTEQUAL_P  */
-  YYSYMBOL_GREATEREQUAL_P = 22,      /* GREATEREQUAL_P  */
-  YYSYMBOL_GREATER_P = 23,           /* GREATER_P  */
-  YYSYMBOL_ANY_P = 24,               /* ANY_P  */
-  YYSYMBOL_STRICT_P = 25,            /* STRICT_P  */
-  YYSYMBOL_LAX_P = 26,               /* LAX_P  */
-  YYSYMBOL_LAST_P = 27,              /* LAST_P  */
-  YYSYMBOL_STARTS_P = 28,            /* STARTS_P  */
-  YYSYMBOL_WITH_P = 29,              /* WITH_P  */
-  YYSYMBOL_LIKE_REGEX_P = 30,        /* LIKE_REGEX_P  */
-  YYSYMBOL_FLAG_P = 31,              /* FLAG_P  */
-  YYSYMBOL_ABS_P = 32,               /* ABS_P  */
-  YYSYMBOL_SIZE_P = 33,              /* SIZE_P  */
-  YYSYMBOL_TYPE_P = 34,              /* TYPE_P  */
-  YYSYMBOL_FLOOR_P = 35,             /* FLOOR_P  */
-  YYSYMBOL_DOUBLE_P = 36,            /* DOUBLE_P  */
-  YYSYMBOL_CEILING_P = 37,           /* CEILING_P  */
-  YYSYMBOL_KEYVALUE_P = 38,          /* KEYVALUE_P  */
-  YYSYMBOL_39_ = 39,                 /* '+'  */
-  YYSYMBOL_40_ = 40,                 /* '-'  */
-  YYSYMBOL_41_ = 41,                 /* '*'  */
-  YYSYMBOL_42_ = 42,                 /* '/'  */
-  YYSYMBOL_43_ = 43,                 /* '%'  */
-  YYSYMBOL_UMINUS = 44,              /* UMINUS  */
-  YYSYMBOL_45_ = 45,                 /* '('  */
-  YYSYMBOL_46_ = 46,                 /* ')'  */
-  YYSYMBOL_47_ = 47,                 /* '$'  */
-  YYSYMBOL_48_ = 48,                 /* '@'  */
-  YYSYMBOL_49_ = 49,                 /* ','  */
-  YYSYMBOL_50_ = 50,                 /* '['  */
-  YYSYMBOL_51_ = 51,                 /* ']'  */
-  YYSYMBOL_52_ = 52,                 /* '{'  */
-  YYSYMBOL_53_ = 53,                 /* '}'  */
-  YYSYMBOL_54_ = 54,                 /* '.'  */
-  YYSYMBOL_55_ = 55,                 /* '?'  */
-  YYSYMBOL_YYACCEPT = 56,            /* $accept  */
-  YYSYMBOL_result = 57,              /* result  */
-  YYSYMBOL_expr_or_predicate = 58,   /* expr_or_predicate  */
-  YYSYMBOL_mode = 59,                /* mode  */
-  YYSYMBOL_scalar_value = 60,        /* scalar_value  */
-  YYSYMBOL_comp_op = 61,             /* comp_op  */
-  YYSYMBOL_delimited_predicate = 62, /* delimited_predicate  */
-  YYSYMBOL_predicate = 63,           /* predicate  */
-  YYSYMBOL_starts_with_initial = 64, /* starts_with_initial  */
-  YYSYMBOL_path_primary = 65,        /* path_primary  */
-  YYSYMBOL_accessor_expr = 66,       /* accessor_expr  */
-  YYSYMBOL_expr = 67,                /* expr  */
-  YYSYMBOL_index_elem = 68,          /* index_elem  */
-  YYSYMBOL_index_list = 69,          /* index_list  */
-  YYSYMBOL_array_accessor = 70,      /* array_accessor  */
-  YYSYMBOL_any_level = 71,           /* any_level  */
-  YYSYMBOL_any_path = 72,            /* any_path  */
-  YYSYMBOL_accessor_op = 73,         /* accessor_op  */
-  YYSYMBOL_key = 74,                 /* key  */
-  YYSYMBOL_key_name = 75,            /* key_name  */
-  YYSYMBOL_method = 76               /* method  */
+  YYSYMBOL_YYEOF = 0,                                    
+  YYSYMBOL_YYerror = 1,                          
+  YYSYMBOL_YYUNDEF = 2,                                    
+  YYSYMBOL_TO_P = 3,                            
+  YYSYMBOL_NULL_P = 4,                            
+  YYSYMBOL_TRUE_P = 5,                            
+  YYSYMBOL_FALSE_P = 6,                            
+  YYSYMBOL_IS_P = 7,                            
+  YYSYMBOL_UNKNOWN_P = 8,                            
+  YYSYMBOL_EXISTS_P = 9,                            
+  YYSYMBOL_IDENT_P = 10,                           
+  YYSYMBOL_STRING_P = 11,                           
+  YYSYMBOL_NUMERIC_P = 12,                           
+  YYSYMBOL_INT_P = 13,                           
+  YYSYMBOL_VARIABLE_P = 14,                           
+  YYSYMBOL_OR_P = 15,                           
+  YYSYMBOL_AND_P = 16,                           
+  YYSYMBOL_NOT_P = 17,                           
+  YYSYMBOL_LESS_P = 18,                           
+  YYSYMBOL_LESSEQUAL_P = 19,                           
+  YYSYMBOL_EQUAL_P = 20,                           
+  YYSYMBOL_NOTEQUAL_P = 21,                           
+  YYSYMBOL_GREATEREQUAL_P = 22,                           
+  YYSYMBOL_GREATER_P = 23,                           
+  YYSYMBOL_ANY_P = 24,                           
+  YYSYMBOL_STRICT_P = 25,                           
+  YYSYMBOL_LAX_P = 26,                           
+  YYSYMBOL_LAST_P = 27,                           
+  YYSYMBOL_STARTS_P = 28,                           
+  YYSYMBOL_WITH_P = 29,                           
+  YYSYMBOL_LIKE_REGEX_P = 30,                           
+  YYSYMBOL_FLAG_P = 31,                           
+  YYSYMBOL_ABS_P = 32,                           
+  YYSYMBOL_SIZE_P = 33,                           
+  YYSYMBOL_TYPE_P = 34,                           
+  YYSYMBOL_FLOOR_P = 35,                           
+  YYSYMBOL_DOUBLE_P = 36,                           
+  YYSYMBOL_CEILING_P = 37,                           
+  YYSYMBOL_KEYVALUE_P = 38,                           
+  YYSYMBOL_39_ = 39,                           
+  YYSYMBOL_40_ = 40,                           
+  YYSYMBOL_41_ = 41,                           
+  YYSYMBOL_42_ = 42,                           
+  YYSYMBOL_43_ = 43,                           
+  YYSYMBOL_UMINUS = 44,                           
+  YYSYMBOL_45_ = 45,                           
+  YYSYMBOL_46_ = 46,                           
+  YYSYMBOL_47_ = 47,                           
+  YYSYMBOL_48_ = 48,                           
+  YYSYMBOL_49_ = 49,                           
+  YYSYMBOL_50_ = 50,                           
+  YYSYMBOL_51_ = 51,                           
+  YYSYMBOL_52_ = 52,                           
+  YYSYMBOL_53_ = 53,                           
+  YYSYMBOL_54_ = 54,                           
+  YYSYMBOL_55_ = 55,                           
+  YYSYMBOL_YYACCEPT = 56,                          
+  YYSYMBOL_result = 57,                           
+  YYSYMBOL_expr_or_predicate = 58,                           
+  YYSYMBOL_mode = 59,                           
+  YYSYMBOL_scalar_value = 60,                           
+  YYSYMBOL_comp_op = 61,                           
+  YYSYMBOL_delimited_predicate = 62,                           
+  YYSYMBOL_predicate = 63,                           
+  YYSYMBOL_starts_with_initial = 64,                           
+  YYSYMBOL_path_primary = 65,                           
+  YYSYMBOL_accessor_expr = 66,                           
+  YYSYMBOL_expr = 67,                           
+  YYSYMBOL_index_elem = 68,                           
+  YYSYMBOL_index_list = 69,                           
+  YYSYMBOL_array_accessor = 70,                           
+  YYSYMBOL_any_level = 71,                           
+  YYSYMBOL_any_path = 72,                           
+  YYSYMBOL_accessor_op = 73,                           
+  YYSYMBOL_key = 74,                           
+  YYSYMBOL_key_name = 75,                           
+  YYSYMBOL_method = 76                            
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -346,22 +346,22 @@ typedef enum yysymbol_kind_t yysymbol_kind_t;
 #undef short
 #endif
 
-/* On compilers that do not define __PTRDIFF_MAX__ etc., make sure
-   <limits.h> and (if available) <stdint.h> are included
-   so that the code can choose integer types of a good width.  */
+                                                                   
+                                                         
+                                                                 
 
 #ifndef __PTRDIFF_MAX__
-#include <limits.h> /* INFRINGES ON USER NAME SPACE */
+#include <limits.h>                                   
 #if defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
-#include <stdint.h> /* INFRINGES ON USER NAME SPACE */
+#include <stdint.h>                                   
 #define YY_STDINT_H
 #endif
 #endif
 
-/* Narrow types that promote to a signed type and that can represent a
-   signed or unsigned integer of at least N bits.  In tables they can
-   save space and decrease cache pressure.  Promoting to a signed type
-   helps avoid bugs in integer arithmetic.  */
+                                                                       
+                                                                      
+                                                                       
+                                              
 
 #ifdef __INT_LEAST8_MAX__
 typedef __INT_LEAST8_TYPE__ yytype_int8;
@@ -379,11 +379,11 @@ typedef int_least16_t yytype_int16;
 typedef short yytype_int16;
 #endif
 
-/* Work around bug in HP-UX 11.23, which defines these macros
-   incorrectly for preprocessor constants.  This workaround can likely
-   be removed in 2023, as HPE has promised support for HP-UX 11.23
-   (aka HP-UX 11i v2) only through the end of 2022; see Table 2 of
-   <https://h20195.www2.hpe.com/V2/getpdf.aspx/4AA4-7673ENW.pdf>.  */
+                                                              
+                                                                       
+                                                                   
+                                                                   
+                                                                     
 #ifdef __hpux
 #undef UINT_LEAST8_MAX
 #undef UINT_LEAST16_MAX
@@ -417,7 +417,7 @@ typedef int yytype_uint16;
 #define YYPTRDIFF_MAXIMUM __PTRDIFF_MAX__
 #elif defined PTRDIFF_MAX
 #ifndef ptrdiff_t
-#include <stddef.h> /* INFRINGES ON USER NAME SPACE */
+#include <stddef.h>                                   
 #endif
 #define YYPTRDIFF_T ptrdiff_t
 #define YYPTRDIFF_MAXIMUM PTRDIFF_MAX
@@ -433,7 +433,7 @@ typedef int yytype_uint16;
 #elif defined size_t
 #define YYSIZE_T size_t
 #elif defined __STDC_VERSION__ && 199901 <= __STDC_VERSION__
-#include <stddef.h> /* INFRINGES ON USER NAME SPACE */
+#include <stddef.h>                                   
 #define YYSIZE_T size_t
 #else
 #define YYSIZE_T unsigned
@@ -444,16 +444,16 @@ typedef int yytype_uint16;
 
 #define YYSIZEOF(X) YY_CAST(YYPTRDIFF_T, sizeof(X))
 
-/* Stored state numbers (used for stacks). */
+                                             
 typedef yytype_uint8 yy_state_t;
 
-/* State numbers in computations.  */
+                                     
 typedef int yy_state_fast_t;
 
 #ifndef YY_
 #if defined YYENABLE_NLS && YYENABLE_NLS
 #if ENABLE_NLS
-#include <libintl.h> /* INFRINGES ON USER NAME SPACE */
+#include <libintl.h>                                   
 #define YY_(Msgid) dgettext("bison-runtime", Msgid)
 #endif
 #endif
@@ -478,15 +478,15 @@ typedef int yy_state_fast_t;
 #endif
 #endif
 
-/* Suppress unused-variable warnings by "using" E.  */
+                                                      
 #if !defined lint || defined __GNUC__
 #define YY_USE(E) ((void)(E))
 #else
-#define YY_USE(E) /* empty */
+#define YY_USE(E)            
 #endif
 
 #if defined __GNUC__ && !defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
-/* Suppress an incorrect diagnostic about yylval being uninitialized.  */
+                                                                         
 #define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wuninitialized\"") _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 #define YY_IGNORE_MAYBE_UNINITIALIZED_END _Pragma("GCC diagnostic pop")
 #else
@@ -497,7 +497,7 @@ typedef int yy_state_fast_t;
 #define YY_IGNORE_MAYBE_UNINITIALIZED_END
 #endif
 #ifndef YY_INITIAL_VALUE
-#define YY_INITIAL_VALUE(Value) /* Nothing. */
+#define YY_INITIAL_VALUE(Value)               
 #endif
 
 #if defined __cplusplus && defined __GNUC__ && !defined __ICC && 6 <= __GNUC__
@@ -513,24 +513,24 @@ typedef int yy_state_fast_t;
 
 #if !defined yyoverflow
 
-/* The parser invokes alloca or malloc; define the necessary symbols.  */
+                                                                         
 
 #ifdef YYSTACK_USE_ALLOCA
 #if YYSTACK_USE_ALLOCA
 #ifdef __GNUC__
 #define YYSTACK_ALLOC __builtin_alloca
 #elif defined __BUILTIN_VA_ARG_INCR
-#include <alloca.h> /* INFRINGES ON USER NAME SPACE */
+#include <alloca.h>                                   
 #elif defined _AIX
 #define YYSTACK_ALLOC __alloca
 #elif defined _MSC_VER
-#include <malloc.h> /* INFRINGES ON USER NAME SPACE */
+#include <malloc.h>                                   
 #define alloca _alloca
 #else
 #define YYSTACK_ALLOC alloca
 #if !defined _ALLOCA_H && !defined EXIT_SUCCESS
-#include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
-/* Use EXIT_SUCCESS as a witness for stdlib.h.  */
+#include <stdlib.h>                                   
+                                                  
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
 #endif
@@ -540,18 +540,18 @@ typedef int yy_state_fast_t;
 #endif
 
 #ifdef YYSTACK_ALLOC
-/* Pacify GCC's 'empty if-body' warning.  */
+                                            
 #define YYSTACK_FREE(Ptr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  { /* empty */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
+  {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     ;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 #ifndef YYSTACK_ALLOC_MAXIMUM
-/* The OS might guarantee only one guard page at the bottom of the stack,
-   and a page size can be as small as 4096 bytes.  So we cannot safely
-   invoke alloca (N) if N exceeds 4096.  Use a slightly smaller number
-   to allow for a few compiler-allocated temporary stack slots.  */
-#define YYSTACK_ALLOC_MAXIMUM 4032 /* reasonable circa 2006 */
+                                                                          
+                                                                       
+                                                                       
+                                                                   
+#define YYSTACK_ALLOC_MAXIMUM 4032                            
 #endif
 #else
 #define YYSTACK_ALLOC YYMALLOC
@@ -560,7 +560,7 @@ typedef int yy_state_fast_t;
 #define YYSTACK_ALLOC_MAXIMUM YYSIZE_MAXIMUM
 #endif
 #if (defined __cplusplus && !defined EXIT_SUCCESS && !((defined YYMALLOC || defined malloc) && (defined YYFREE || defined free)))
-#include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
+#include <stdlib.h>                                   
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
 #endif
@@ -568,42 +568,42 @@ typedef int yy_state_fast_t;
 #ifndef YYMALLOC
 #define YYMALLOC malloc
 #if !defined malloc && !defined EXIT_SUCCESS
-void *malloc(YYSIZE_T); /* INFRINGES ON USER NAME SPACE */
+void *malloc(YYSIZE_T);                                   
 #endif
 #endif
 #ifndef YYFREE
 #define YYFREE free
 #if !defined free && !defined EXIT_SUCCESS
 void
-free(void *); /* INFRINGES ON USER NAME SPACE */
+free(void *);                                   
 #endif
 #endif
 #endif
-#endif /* !defined yyoverflow */
+#endif                          
 
 #if (!defined yyoverflow && (!defined __cplusplus || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
 
-/* A type that is properly aligned for any stack member.  */
+                                                            
 union yyalloc
 {
   yy_state_t yyss_alloc;
   YYSTYPE yyvs_alloc;
 };
 
-/* The size of the maximum gap between one aligned stack and the next.  */
+                                                                          
 #define YYSTACK_GAP_MAXIMUM (YYSIZEOF(union yyalloc) - 1)
 
-/* The size of an array large to enough to hold all stacks, each with
-   N elements.  */
+                                                                      
+                  
 #define YYSTACK_BYTES(N) ((N) * (YYSIZEOF(yy_state_t) + YYSIZEOF(YYSTYPE)) + YYSTACK_GAP_MAXIMUM)
 
 #define YYCOPY_NEEDED 1
 
-/* Relocate STACK from its old location to the new one.  The
-   local variables YYSIZE and YYSTACKSIZE give the old and new number of
-   elements in the stack, and YYPTR gives the new location of the
-   stack.  Advance YYPTR to a properly aligned location for the next
-   stack.  */
+                                                             
+                                                                         
+                                                                  
+                                                                     
+             
 #define YYSTACK_RELOCATE(Stack_alloc, Stack)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -617,8 +617,8 @@ union yyalloc
 #endif
 
 #if defined YYCOPY_NEEDED && YYCOPY_NEEDED
-/* Copy COUNT objects from SRC to DST.  The source and destination do
-   not overlap.  */
+                                                                      
+                   
 #ifndef YYCOPY
 #if defined __GNUC__ && 1 < __GNUC__
 #define YYCOPY(Dst, Src, Count) __builtin_memcpy(Dst, Src, YY_CAST(YYSIZE_T, (Count)) * sizeof(*(Src)))
@@ -632,49 +632,49 @@ union yyalloc
   } while (0)
 #endif
 #endif
-#endif /* !YYCOPY_NEEDED */
+#endif                     
 
-/* YYFINAL -- State number of the termination state.  */
+                                                        
 #define YYFINAL 5
-/* YYLAST -- Last index in YYTABLE.  */
+                                       
 #define YYLAST 234
 
-/* YYNTOKENS -- Number of terminals.  */
+                                        
 #define YYNTOKENS 56
-/* YYNNTS -- Number of nonterminals.  */
+                                        
 #define YYNNTS 21
-/* YYNRULES -- Number of rules.  */
+                                   
 #define YYNRULES 99
-/* YYNSTATES -- Number of states.  */
+                                     
 #define YYNSTATES 137
 
-/* YYMAXUTOK -- Last valid token kind.  */
+                                          
 #define YYMAXUTOK 294
 
-/* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex, with out-of-bounds checking.  */
+                                                                      
+                                                         
 #define YYTRANSLATE(YYX) (0 <= (YYX) && (YYX) <= YYMAXUTOK ? YY_CAST(yysymbol_kind_t, yytranslate[YYX]) : YYSYMBOL_YYUNDEF)
 
-/* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
-   as returned by yylex.  */
+                                                                      
+                            
 static const yytype_int8 yytranslate[] = {0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 47, 43, 2, 2, 45, 46, 41, 39, 49, 40, 54, 42, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 55, 48, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 50, 2, 51, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 52, 2, 53, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 44};
 
 #if YYDEBUG
-/* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
+                                                                     
 static const yytype_int16 yyrline[] = {0, 127, 127, 133, 137, 138, 142, 143, 144, 148, 149, 150, 151, 152, 153, 154, 158, 159, 160, 161, 162, 163, 167, 168, 172, 173, 174, 175, 176, 177, 179, 181, 182, 187, 188, 192, 193, 194, 195, 199, 200, 201, 202, 206, 207, 208, 209, 210, 211, 212, 213, 214, 218, 219, 223, 224, 228, 229, 233, 234, 238, 239, 240, 245, 246, 247, 248, 249, 250, 254, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 284, 285, 286, 287, 288, 289, 290};
 #endif
 
-/** Accessing symbol of state STATE.  */
+                                        
 #define YY_ACCESSING_SYMBOL(State) YY_CAST(yysymbol_kind_t, yystos[State])
 
 #if YYDEBUG || 0
-/* The user-facing name of the symbol whose (internal) number is
-   YYSYMBOL.  No bounds checking.  */
+                                                                 
+                                     
 static const char *
 yysymbol_name(yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
 
-/* YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
-   First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
+                                                                
+                                                                       
 static const char *const yytname[] = {"\"end of file\"", "error", "\"invalid token\"", "TO_P", "NULL_P", "TRUE_P", "FALSE_P", "IS_P", "UNKNOWN_P", "EXISTS_P", "IDENT_P", "STRING_P", "NUMERIC_P", "INT_P", "VARIABLE_P", "OR_P", "AND_P", "NOT_P", "LESS_P", "LESSEQUAL_P", "EQUAL_P", "NOTEQUAL_P", "GREATEREQUAL_P", "GREATER_P", "ANY_P", "STRICT_P", "LAX_P", "LAST_P", "STARTS_P", "WITH_P", "LIKE_REGEX_P", "FLAG_P", "ABS_P", "SIZE_P", "TYPE_P", "FLOOR_P", "DOUBLE_P", "CEILING_P", "KEYVALUE_P", "'+'", "'-'", "'*'", "'/'", "'%'", "UMINUS", "'('", "')'", "'$'", "'@'", "','", "'['", "']'", "'{'", "'}'", "'.'", "'?'", "$accept", "result", "expr_or_predicate", "mode", "scalar_value", "comp_op", "delimited_predicate", "predicate", "starts_with_initial", "path_primary", "accessor_expr", "expr", "index_elem", "index_list", "array_accessor", "any_level", "any_path", "accessor_op", "key", "key_name", "method", YY_NULLPTR};
 
 static const char *
@@ -685,8 +685,8 @@ yysymbol_name(yysymbol_kind_t yysymbol)
 #endif
 
 #ifdef YYPRINT
-/* YYTOKNUM[NUM] -- (External) token number corresponding to the
-   (internal) symbol number NUM (which must be that of a token).  */
+                                                                 
+                                                                    
 static const yytype_int16 yytoknum[] = {0, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 43, 45, 42, 47, 37, 294, 40, 41, 36, 64, 44, 91, 93, 123, 125, 46, 63};
 #endif
 
@@ -698,36 +698,36 @@ static const yytype_int16 yytoknum[] = {0, 256, 257, 258, 259, 260, 261, 262, 26
 
 #define yytable_value_is_error(Yyn) 0
 
-/* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
-   STATE-NUM.  */
+                                                                   
+                 
 static const yytype_int16 yypact[] = {67, -46, -46, 8, 51, -46, -46, -46, -46, -26, -46, -46, -46, -46, -3, -46, 113, 113, 51, -46, -46, -46, -46, -46, 17, -46, -45, 191, 113, 51, -46, 51, -46, -46, 15, 162, 51, 51, 68, 138, -25, -46, -46, -46, -46, -46, -46, -46, -46, 42, 14, 113, 113, 113, 113, 113, 113, 89, 20, 191, 29, 4, -45, 13, -46, -5, -2, -46, -23, -46, -46, -46, -46, -46, -46, -46, -46, -46, 24, -46, -46, -46, -46, -46, -46, -46, 32, 38, 49, 52, 59, 61, 69, -46, -46, -46, -46, 75, 51, 7, 74, 60, 60, -46, -46, -46, 46, -46, -46, -45, 104, -46, -46, -46, 113, 113, -46, -11, 76, 54, -46, -46, -46, 110, -46, 46, -46, -46, -46, 0, -46, -46, -46, -11, -46, 70, -46};
 
-/* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
-   Performed when YYTABLE does not specify something else to do.  Zero
-   means the default is an error.  */
+                                                                       
+                                                                       
+                                     
 static const yytype_int8 yydefact[] = {8, 6, 7, 0, 0, 1, 10, 11, 12, 0, 9, 13, 14, 15, 0, 38, 0, 0, 0, 36, 37, 2, 35, 24, 5, 39, 43, 4, 0, 0, 28, 0, 45, 46, 0, 0, 0, 0, 0, 0, 0, 65, 42, 18, 20, 16, 17, 21, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 44, 27, 26, 0, 52, 54, 0, 72, 73, 74, 75, 76, 77, 78, 70, 71, 60, 79, 80, 88, 89, 90, 91, 92, 81, 82, 83, 84, 85, 86, 87, 64, 66, 63, 69, 0, 0, 0, 31, 47, 48, 49, 50, 51, 25, 23, 22, 0, 0, 41, 40, 56, 0, 0, 57, 0, 0, 0, 33, 34, 30, 0, 29, 53, 55, 58, 59, 0, 67, 68, 32, 0, 61, 0, 62};
 
-/* YYPGOTO[NTERM-NUM].  */
+                          
 static const yytype_int8 yypgoto[] = {-46, -46, -46, -46, -46, -46, 119, -14, -46, -46, -46, -4, 19, -46, -46, 3, -46, -19, -46, -46, -46};
 
-/* YYDEFGOTO[NTERM-NUM].  */
+                            
 static const yytype_uint8 yydefgoto[] = {0, 3, 21, 4, 22, 56, 23, 24, 122, 25, 26, 59, 67, 68, 41, 129, 94, 111, 95, 96, 97};
 
-/* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
-   positive, shift that token.  If negative, reduce the rule whose
-   number is the opposite.  If YYTABLE_NINF, syntax error.  */
+                                                                    
+                                                                   
+                                                              
 static const yytype_int16 yytable[] = {27, 114, 127, 133, 34, 38, 9, 42, 5, 39, 40, 110, 32, 33, 35, 58, 128, 60, 120, 28, 98, 121, 63, 64, 57, 100, 115, 35, 116, 37, 36, 37, 36, 37, 66, 36, 37, 51, 52, 53, 54, 55, 29, 112, 36, 37, 113, 101, 102, 103, 104, 105, 106, 134, 38, 6, 7, 8, 39, 40, 9, 61, 10, 11, 12, 13, 108, -3, 14, 36, 37, 99, 6, 7, 8, 109, 117, -93, 15, 10, 11, 12, 13, -94, 119, 51, 52, 53, 54, 55, 16, 17, 1, 2, -95, 15, 18, -96, 19, 20, 131, 53, 54, 55, -97, 123, -98, 16, 17, 65, 125, 66, 124, 31, -99, 19, 20, 6, 7, 8, 118, 132, 130, 136, 10, 11, 12, 13, 51, 52, 53, 54, 55, 30, 126, 107, 135, 0, 0, 0, 15, 69, 70, 71, 72, 73, 74, 75, 76, 77, 0, 0, 16, 17, 0, 0, 0, 0, 31, 0, 19, 20, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 0, 0, 93, 43, 44, 45, 46, 47, 48, 0, 0, 0, 0, 49, 0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 51, 52, 53, 54, 55, 0, 0, 62, 43, 44, 45, 46, 47, 48, 0, 0, 0, 0, 49, 0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 51, 52, 53, 54, 55};
 
 static const yytype_int16 yycheck[] = {4, 3, 13, 3, 18, 50, 9, 26, 0, 54, 55, 7, 16, 17, 18, 29, 27, 31, 11, 45, 45, 14, 36, 37, 28, 11, 49, 31, 51, 16, 15, 16, 15, 16, 38, 15, 16, 39, 40, 41, 42, 43, 45, 62, 15, 16, 51, 51, 52, 53, 54, 55, 56, 53, 50, 4, 5, 6, 54, 55, 9, 46, 11, 12, 13, 14, 46, 0, 17, 15, 16, 29, 4, 5, 6, 46, 52, 45, 27, 11, 12, 13, 14, 45, 98, 39, 40, 41, 42, 43, 39, 40, 25, 26, 45, 27, 45, 45, 47, 48, 46, 41, 42, 43, 45, 31, 45, 39, 40, 41, 114, 115, 8, 45, 45, 47, 48, 4, 5, 6, 45, 11, 46, 53, 11, 12, 13, 14, 39, 40, 41, 42, 43, 14, 115, 46, 133, -1, -1, -1, 27, 3, 4, 5, 6, 7, 8, 9, 10, 11, -1, -1, 39, 40, -1, -1, -1, -1, 45, -1, 47, 48, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, -1, -1, 41, 18, 19, 20, 21, 22, 23, -1, -1, -1, -1, 28, -1, 30, -1, -1, -1, -1, -1, -1, -1, -1, 39, 40, 41, 42, 43, -1, -1, 46, 18, 19, 20, 21, 22, 23, -1, -1, -1, -1, 28, -1, 30, -1, -1, -1, -1, -1, -1, -1, -1, 39, 40, 41, 42, 43};
 
-/* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
-   symbol of state STATE-NUM.  */
+                                                               
+                                 
 static const yytype_int8 yystos[] = {0, 25, 26, 57, 59, 0, 4, 5, 6, 9, 11, 12, 13, 14, 17, 27, 39, 40, 45, 47, 48, 58, 60, 62, 63, 65, 66, 67, 45, 45, 62, 45, 67, 67, 63, 67, 15, 16, 50, 54, 55, 70, 73, 18, 19, 20, 21, 22, 23, 28, 30, 39, 40, 41, 42, 43, 61, 67, 63, 67, 63, 46, 46, 63, 63, 41, 67, 68, 69, 3, 4, 5, 6, 7, 8, 9, 10, 11, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 41, 72, 74, 75, 76, 45, 29, 11, 67, 67, 67, 67, 67, 67, 46, 46, 46, 7, 73, 73, 51, 3, 49, 51, 52, 45, 63, 11, 14, 64, 31, 8, 67, 68, 13, 27, 71, 46, 46, 11, 3, 53, 71, 53};
 
-/* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
+                                                                  
 static const yytype_int8 yyr1[] = {0, 56, 57, 57, 58, 58, 59, 59, 59, 60, 60, 60, 60, 60, 60, 60, 61, 61, 61, 61, 61, 61, 62, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 64, 64, 65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 67, 67, 67, 67, 67, 67, 67, 68, 68, 69, 69, 70, 70, 71, 71, 72, 72, 72, 73, 73, 73, 73, 73, 73, 74, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 76, 76, 76, 76, 76, 76, 76};
 
-/* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
+                                                                         
 static const yytype_int8 yyr2[] = {0, 2, 2, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 4, 1, 3, 3, 3, 2, 5, 4, 3, 5, 1, 1, 1, 1, 1, 1, 1, 4, 4, 2, 1, 3, 2, 2, 3, 3, 3, 3, 3, 1, 3, 1, 3, 3, 3, 1, 1, 1, 4, 6, 2, 2, 1, 2, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
 enum
@@ -761,15 +761,15 @@ enum
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   while (0)
 
-/* Backward compatibility with an undocumented macro.
-   Use YYerror or YYUNDEF. */
+                                                      
+                             
 #define YYERRCODE YYUNDEF
 
-/* Enable debugging if requested.  */
+                                     
 #if YYDEBUG
 
 #ifndef YYFPRINTF
-#include <stdio.h> /* INFRINGES ON USER NAME SPACE */
+#include <stdio.h>                                   
 #define YYFPRINTF fprintf
 #endif
 
@@ -780,7 +780,7 @@ enum
       YYFPRINTF Args;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 
-/* This macro is provided for backward compatibility. */
+                                                        
 #ifndef YY_LOCATION_PRINT
 #define YY_LOCATION_PRINT(File, Loc) ((void)0)
 #endif
@@ -796,9 +796,9 @@ enum
     }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
   } while (0)
 
-/*-----------------------------------.
-| Print this symbol's value on YYO.  |
-`-----------------------------------*/
+                                       
+                                       
+                                      
 
 static void
 yy_symbol_value_print(FILE *yyo, yysymbol_kind_t yykind, YYSTYPE const *const yyvaluep, JsonPathParseResult **result)
@@ -821,9 +821,9 @@ yy_symbol_value_print(FILE *yyo, yysymbol_kind_t yykind, YYSTYPE const *const yy
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
-/*---------------------------.
-| Print this symbol on YYO.  |
-`---------------------------*/
+                               
+                               
+                              
 
 static void
 yy_symbol_print(FILE *yyo, yysymbol_kind_t yykind, YYSTYPE const *const yyvaluep, JsonPathParseResult **result)
@@ -834,10 +834,10 @@ yy_symbol_print(FILE *yyo, yysymbol_kind_t yykind, YYSTYPE const *const yyvaluep
   YYFPRINTF(yyo, ")");
 }
 
-/*------------------------------------------------------------------.
-| yy_stack_print -- Print the state stack from its BOTTOM up to its |
-| TOP (included).                                                   |
-`------------------------------------------------------------------*/
+                                                                      
+                                                                      
+                                                                      
+                                                                     
 
 static void
 yy_stack_print(yy_state_t *yybottom, yy_state_t *yytop)
@@ -858,9 +858,9 @@ yy_stack_print(yy_state_t *yybottom, yy_state_t *yytop)
       yy_stack_print((Bottom), (Top));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   } while (0)
 
-/*------------------------------------------------.
-| Report that the YYRULE is going to be reduced.  |
-`------------------------------------------------*/
+                                                    
+                                                    
+                                                   
 
 static void
 yy_reduce_print(yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, JsonPathParseResult **result)
@@ -869,7 +869,7 @@ yy_reduce_print(yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, JsonPathParseResu
   int yynrhs = yyr2[yyrule];
   int yyi;
   YYFPRINTF(stderr, "Reducing stack by rule %d (line %d):\n", yyrule - 1, yylno);
-  /* The symbols being reduced.  */
+                                   
   for (yyi = 0; yyi < yynrhs; yyi++)
   {
     YYFPRINTF(stderr, "   $%d = ", yyi + 1);
@@ -885,35 +885,35 @@ yy_reduce_print(yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, JsonPathParseResu
       yy_reduce_print(yyssp, yyvsp, Rule, result);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
   } while (0)
 
-/* Nonzero means print parse trace.  It is left uninitialized so that
-   multiple parsers can coexist.  */
+                                                                      
+                                    
 int yydebug;
-#else /* !YYDEBUG */
+#else               
 #define YYDPRINTF(Args) ((void)0)
 #define YY_SYMBOL_PRINT(Title, Kind, Value, Location)
 #define YY_STACK_PRINT(Bottom, Top)
 #define YY_REDUCE_PRINT(Rule)
-#endif /* !YYDEBUG */
+#endif               
 
-/* YYINITDEPTH -- initial size of the parser's stacks.  */
+                                                          
 #ifndef YYINITDEPTH
 #define YYINITDEPTH 200
 #endif
 
-/* YYMAXDEPTH -- maximum size the stacks can grow to (effective only
-   if the built-in stack extension method is used).
-
-   Do not make this value too large; the results are undefined if
-   YYSTACK_ALLOC_MAXIMUM < YYSTACK_BYTES (YYMAXDEPTH)
-   evaluated with infinite-precision integer arithmetic.  */
+                                                                     
+                                                    
+ 
+                                                                  
+                                                      
+                                                            
 
 #ifndef YYMAXDEPTH
 #define YYMAXDEPTH 10000
 #endif
 
-/*-----------------------------------------------.
-| Release the memory associated to this symbol.  |
-`-----------------------------------------------*/
+                                                   
+                                                   
+                                                  
 
 static void
 yydestruct(const char *yymsg, yysymbol_kind_t yykind, YYSTYPE *yyvaluep, JsonPathParseResult **result)
@@ -931,76 +931,76 @@ yydestruct(const char *yymsg, yysymbol_kind_t yykind, YYSTYPE *yyvaluep, JsonPat
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
-/*----------.
-| yyparse.  |
-`----------*/
+              
+              
+             
 
 int
 yyparse(JsonPathParseResult **result)
 {
-  /* Lookahead token kind.  */
+                              
   int yychar;
 
-  /* The semantic value of the lookahead symbol.  */
-  /* Default value used for initialization, for pacifying older GCCs
-     or non-GCC compilers.  */
+                                                    
+                                                                     
+                              
   YY_INITIAL_VALUE(static YYSTYPE yyval_default;)
   YYSTYPE yylval YY_INITIAL_VALUE(= yyval_default);
 
-  /* Number of syntax errors so far.  */
+                                        
   int yynerrs = 0;
 
   yy_state_fast_t yystate = 0;
-  /* Number of tokens to shift before error messages enabled.  */
+                                                                 
   int yyerrstatus = 0;
 
-  /* Refer to the stacks through separate pointers, to allow yyoverflow
-     to reallocate them elsewhere.  */
+                                                                        
+                                      
 
-  /* Their size.  */
+                    
   YYPTRDIFF_T yystacksize = YYINITDEPTH;
 
-  /* The state stack: array, bottom, top.  */
+                                             
   yy_state_t yyssa[YYINITDEPTH];
   yy_state_t *yyss = yyssa;
   yy_state_t *yyssp = yyss;
 
-  /* The semantic value stack: array, bottom, top.  */
+                                                      
   YYSTYPE yyvsa[YYINITDEPTH];
   YYSTYPE *yyvs = yyvsa;
   YYSTYPE *yyvsp = yyvs;
 
   int yyn;
-  /* The return value of yyparse.  */
+                                     
   int yyresult;
-  /* Lookahead symbol kind.  */
+                               
   yysymbol_kind_t yytoken = YYSYMBOL_YYEMPTY;
-  /* The variables used to return semantic value and location from the
-     action routines.  */
+                                                                       
+                         
   YYSTYPE yyval;
 
 #define YYPOPSTACK(N) (yyvsp -= (N), yyssp -= (N))
 
-  /* The number of symbols on the RHS of the reduced rule.
-     Keep to zero when no symbol should be popped.  */
+                                                           
+                                                      
   int yylen = 0;
 
   YYDPRINTF((stderr, "Starting parse\n"));
 
-  yychar = YYEMPTY; /* Cause a token to be read.  */
+  yychar = YYEMPTY;                                 
   goto yysetstate;
 
-/*------------------------------------------------------------.
-| yynewstate -- push a new state, which is found in yystate.  |
-`------------------------------------------------------------*/
+                                                                
+                                                                
+                                                               
 yynewstate:
-  /* In all cases, when you get here, the value and location stacks
-     have just been pushed.  So pushing a state here evens the stacks.  */
+                                                                    
+                                                                          
   yyssp++;
 
-/*--------------------------------------------------------------------.
-| yysetstate -- set current state (the top of the stack) to yystate.  |
-`--------------------------------------------------------------------*/
+                                                                        
+                                                                        
+                                                                       
 yysetstate:
   YYDPRINTF((stderr, "Entering state %d\n", yystate));
   YY_ASSERT(0 <= yystate && yystate < YYNSTATES);
@@ -1014,27 +1014,27 @@ yysetstate:
     goto yyexhaustedlab;
 #else
   {
-    /* Get the current used size of the three stacks, in elements.  */
+                                                                      
     YYPTRDIFF_T yysize = yyssp - yyss + 1;
 
 #if defined yyoverflow
     {
-      /* Give user a chance to reallocate the stack.  Use copies of
-         these so that the &'s don't force the real ones into
-         memory.  */
+                                                                    
+                                                              
+                    
       yy_state_t *yyss1 = yyss;
       YYSTYPE *yyvs1 = yyvs;
 
-      /* Each stack pointer address is followed by the size of the
-         data in use in that stack, in bytes.  This used to be a
-         conditional around just the two extra args, but that might
-         be undefined if yyoverflow is a macro.  */
+                                                                   
+                                                                 
+                                                                    
+                                                   
       yyoverflow(YY_("memory exhausted"), &yyss1, yysize * YYSIZEOF(*yyssp), &yyvs1, yysize * YYSIZEOF(*yyvsp), &yystacksize);
       yyss = yyss1;
       yyvs = yyvs1;
     }
-#else /* defined YYSTACK_RELOCATE */
-    /* Extend the stack our own way.  */
+#else                               
+                                        
     if (YYMAXDEPTH <= yystacksize)
     {
       goto yyexhaustedlab;
@@ -1074,7 +1074,7 @@ yysetstate:
       YYABORT;
     }
   }
-#endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
+#endif                                                       
 
   if (yystate == YYFINAL)
   {
@@ -1083,23 +1083,23 @@ yysetstate:
 
   goto yybackup;
 
-/*-----------.
-| yybackup.  |
-`-----------*/
+               
+               
+              
 yybackup:
-  /* Do appropriate processing given the current state.  Read a
-     lookahead token if we need one and don't already have one.  */
+                                                                
+                                                                   
 
-  /* First try to decide what to do without reference to lookahead token.  */
+                                                                             
   yyn = yypact[yystate];
   if (yypact_value_is_default(yyn))
   {
     goto yydefault;
   }
 
-  /* Not known => get a lookahead token if don't already have one.  */
+                                                                      
 
-  /* YYCHAR is either empty, or end-of-input, or a valid lookahead.  */
+                                                                       
   if (yychar == YYEMPTY)
   {
     YYDPRINTF((stderr, "Reading a token\n"));
@@ -1114,10 +1114,10 @@ yybackup:
   }
   else if (yychar == YYerror)
   {
-    /* The scanner already issued an error message, process directly
-       to error recovery.  But do not keep the error token as
-       lookahead, it is too special and may lead us to an endless
-       loop in error recovery. */
+                                                                     
+                                                              
+                                                                  
+                                 
     yychar = YYUNDEF;
     yytoken = YYSYMBOL_YYerror;
     goto yyerrlab1;
@@ -1128,8 +1128,8 @@ yybackup:
     YY_SYMBOL_PRINT("Next token is", yytoken, &yylval, &yylloc);
   }
 
-  /* If the proper action on seeing token YYTOKEN is to reduce or to
-     detect an error, take that action.  */
+                                                                     
+                                           
   yyn += yytoken;
   if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken)
   {
@@ -1146,27 +1146,27 @@ yybackup:
     goto yyreduce;
   }
 
-  /* Count tokens shifted since error; after three, turn off error
-     status.  */
+                                                                   
+                
   if (yyerrstatus)
   {
     yyerrstatus--;
   }
 
-  /* Shift the lookahead token.  */
+                                   
   YY_SYMBOL_PRINT("Shifting", yytoken, &yylval, &yylloc);
   yystate = yyn;
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
   *++yyvsp = yylval;
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 
-  /* Discard the shifted token.  */
+                                   
   yychar = YYEMPTY;
   goto yynewstate;
 
-/*-----------------------------------------------------------.
-| yydefault -- do the default action for the current state.  |
-`-----------------------------------------------------------*/
+                                                               
+                                                               
+                                                              
 yydefault:
   yyn = yydefact[yystate];
   if (yyn == 0)
@@ -1175,27 +1175,27 @@ yydefault:
   }
   goto yyreduce;
 
-/*-----------------------------.
-| yyreduce -- do a reduction.  |
-`-----------------------------*/
+                                 
+                                 
+                                
 yyreduce:
-  /* yyn is the number of a rule to reduce with.  */
+                                                    
   yylen = yyr2[yyn];
 
-  /* If YYLEN is nonzero, implement the default value of the action:
-     '$$ = $1'.
-
-     Otherwise, the following line sets YYVAL to garbage.
-     This behavior is undocumented and Bison
-     users should not rely upon it.  Assigning to YYVAL
-     unconditionally makes the parser a bit smaller, and it avoids a
-     GCC warning that YYVAL may be used uninitialized.  */
+                                                                     
+                
+ 
+                                                          
+                                             
+                                                        
+                                                                     
+                                                          
   yyval = yyvsp[1 - yylen];
 
   YY_REDUCE_PRINT(yyn);
   switch (yyn)
   {
-  case 2: /* result: mode expr_or_predicate  */
+  case 2:                                      
 #line 127 "jsonpath_gram.y"
   {
     *result = palloc(sizeof(JsonPathParseResult));
@@ -1206,7 +1206,7 @@ yyreduce:
 #line 1439 "jsonpath_gram.c"
   break;
 
-  case 3: /* result: %empty  */
+  case 3:                      
 #line 133 "jsonpath_gram.y"
   {
     *result = NULL;
@@ -1214,7 +1214,7 @@ yyreduce:
 #line 1445 "jsonpath_gram.c"
   break;
 
-  case 4: /* expr_or_predicate: expr  */
+  case 4:                               
 #line 137 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1222,7 +1222,7 @@ yyreduce:
 #line 1451 "jsonpath_gram.c"
   break;
 
-  case 5: /* expr_or_predicate: predicate  */
+  case 5:                                    
 #line 138 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1230,7 +1230,7 @@ yyreduce:
 #line 1457 "jsonpath_gram.c"
   break;
 
-  case 6: /* mode: STRICT_P  */
+  case 6:                      
 #line 142 "jsonpath_gram.y"
   {
     (yyval.boolean) = false;
@@ -1238,7 +1238,7 @@ yyreduce:
 #line 1463 "jsonpath_gram.c"
   break;
 
-  case 7: /* mode: LAX_P  */
+  case 7:                   
 #line 143 "jsonpath_gram.y"
   {
     (yyval.boolean) = true;
@@ -1246,7 +1246,7 @@ yyreduce:
 #line 1469 "jsonpath_gram.c"
   break;
 
-  case 8: /* mode: %empty  */
+  case 8:                    
 #line 144 "jsonpath_gram.y"
   {
     (yyval.boolean) = true;
@@ -1254,7 +1254,7 @@ yyreduce:
 #line 1475 "jsonpath_gram.c"
   break;
 
-  case 9: /* scalar_value: STRING_P  */
+  case 9:                              
 #line 148 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemString(&(yyvsp[0].str));
@@ -1262,7 +1262,7 @@ yyreduce:
 #line 1481 "jsonpath_gram.c"
   break;
 
-  case 10: /* scalar_value: NULL_P  */
+  case 10:                            
 #line 149 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemString(NULL);
@@ -1270,7 +1270,7 @@ yyreduce:
 #line 1487 "jsonpath_gram.c"
   break;
 
-  case 11: /* scalar_value: TRUE_P  */
+  case 11:                            
 #line 150 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBool(true);
@@ -1278,7 +1278,7 @@ yyreduce:
 #line 1493 "jsonpath_gram.c"
   break;
 
-  case 12: /* scalar_value: FALSE_P  */
+  case 12:                             
 #line 151 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBool(false);
@@ -1286,7 +1286,7 @@ yyreduce:
 #line 1499 "jsonpath_gram.c"
   break;
 
-  case 13: /* scalar_value: NUMERIC_P  */
+  case 13:                               
 #line 152 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemNumeric(&(yyvsp[0].str));
@@ -1294,7 +1294,7 @@ yyreduce:
 #line 1505 "jsonpath_gram.c"
   break;
 
-  case 14: /* scalar_value: INT_P  */
+  case 14:                           
 #line 153 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemNumeric(&(yyvsp[0].str));
@@ -1302,7 +1302,7 @@ yyreduce:
 #line 1511 "jsonpath_gram.c"
   break;
 
-  case 15: /* scalar_value: VARIABLE_P  */
+  case 15:                                
 #line 154 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemVariable(&(yyvsp[0].str));
@@ -1310,7 +1310,7 @@ yyreduce:
 #line 1517 "jsonpath_gram.c"
   break;
 
-  case 16: /* comp_op: EQUAL_P  */
+  case 16:                        
 #line 158 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiEqual;
@@ -1318,7 +1318,7 @@ yyreduce:
 #line 1523 "jsonpath_gram.c"
   break;
 
-  case 17: /* comp_op: NOTEQUAL_P  */
+  case 17:                           
 #line 159 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiNotEqual;
@@ -1326,7 +1326,7 @@ yyreduce:
 #line 1529 "jsonpath_gram.c"
   break;
 
-  case 18: /* comp_op: LESS_P  */
+  case 18:                       
 #line 160 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiLess;
@@ -1334,7 +1334,7 @@ yyreduce:
 #line 1535 "jsonpath_gram.c"
   break;
 
-  case 19: /* comp_op: GREATER_P  */
+  case 19:                          
 #line 161 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiGreater;
@@ -1342,7 +1342,7 @@ yyreduce:
 #line 1541 "jsonpath_gram.c"
   break;
 
-  case 20: /* comp_op: LESSEQUAL_P  */
+  case 20:                            
 #line 162 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiLessOrEqual;
@@ -1350,7 +1350,7 @@ yyreduce:
 #line 1547 "jsonpath_gram.c"
   break;
 
-  case 21: /* comp_op: GREATEREQUAL_P  */
+  case 21:                               
 #line 163 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiGreaterOrEqual;
@@ -1358,7 +1358,7 @@ yyreduce:
 #line 1553 "jsonpath_gram.c"
   break;
 
-  case 22: /* delimited_predicate: '(' predicate ')'  */
+  case 22:                                              
 #line 167 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[-1].value);
@@ -1366,7 +1366,7 @@ yyreduce:
 #line 1559 "jsonpath_gram.c"
   break;
 
-  case 23: /* delimited_predicate: EXISTS_P '(' expr ')'  */
+  case 23:                                                  
 #line 168 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiExists, (yyvsp[-1].value));
@@ -1374,7 +1374,7 @@ yyreduce:
 #line 1565 "jsonpath_gram.c"
   break;
 
-  case 24: /* predicate: delimited_predicate  */
+  case 24:                                      
 #line 172 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1382,7 +1382,7 @@ yyreduce:
 #line 1571 "jsonpath_gram.c"
   break;
 
-  case 25: /* predicate: expr comp_op expr  */
+  case 25:                                    
 #line 173 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary((yyvsp[-1].optype), (yyvsp[-2].value), (yyvsp[0].value));
@@ -1390,7 +1390,7 @@ yyreduce:
 #line 1577 "jsonpath_gram.c"
   break;
 
-  case 26: /* predicate: predicate AND_P predicate  */
+  case 26:                                            
 #line 174 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiAnd, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1398,7 +1398,7 @@ yyreduce:
 #line 1583 "jsonpath_gram.c"
   break;
 
-  case 27: /* predicate: predicate OR_P predicate  */
+  case 27:                                           
 #line 175 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiOr, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1406,7 +1406,7 @@ yyreduce:
 #line 1589 "jsonpath_gram.c"
   break;
 
-  case 28: /* predicate: NOT_P delimited_predicate  */
+  case 28:                                            
 #line 176 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiNot, (yyvsp[0].value));
@@ -1414,7 +1414,7 @@ yyreduce:
 #line 1595 "jsonpath_gram.c"
   break;
 
-  case 29: /* predicate: '(' predicate ')' IS_P UNKNOWN_P  */
+  case 29:                                                   
 #line 178 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiIsUnknown, (yyvsp[-3].value));
@@ -1422,7 +1422,7 @@ yyreduce:
 #line 1601 "jsonpath_gram.c"
   break;
 
-  case 30: /* predicate: expr STARTS_P WITH_P starts_with_initial  */
+  case 30:                                                           
 #line 180 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiStartsWith, (yyvsp[-3].value), (yyvsp[0].value));
@@ -1430,7 +1430,7 @@ yyreduce:
 #line 1607 "jsonpath_gram.c"
   break;
 
-  case 31: /* predicate: expr LIKE_REGEX_P STRING_P  */
+  case 31:                                             
 #line 181 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemLikeRegex((yyvsp[-2].value), &(yyvsp[0].str), NULL);
@@ -1438,7 +1438,7 @@ yyreduce:
 #line 1613 "jsonpath_gram.c"
   break;
 
-  case 32: /* predicate: expr LIKE_REGEX_P STRING_P FLAG_P STRING_P  */
+  case 32:                                                             
 #line 183 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemLikeRegex((yyvsp[-4].value), &(yyvsp[-2].str), &(yyvsp[0].str));
@@ -1446,7 +1446,7 @@ yyreduce:
 #line 1619 "jsonpath_gram.c"
   break;
 
-  case 33: /* starts_with_initial: STRING_P  */
+  case 33:                                     
 #line 187 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemString(&(yyvsp[0].str));
@@ -1454,7 +1454,7 @@ yyreduce:
 #line 1625 "jsonpath_gram.c"
   break;
 
-  case 34: /* starts_with_initial: VARIABLE_P  */
+  case 34:                                       
 #line 188 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemVariable(&(yyvsp[0].str));
@@ -1462,7 +1462,7 @@ yyreduce:
 #line 1631 "jsonpath_gram.c"
   break;
 
-  case 35: /* path_primary: scalar_value  */
+  case 35:                                  
 #line 192 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1470,7 +1470,7 @@ yyreduce:
 #line 1637 "jsonpath_gram.c"
   break;
 
-  case 36: /* path_primary: '$'  */
+  case 36:                         
 #line 193 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType(jpiRoot);
@@ -1478,7 +1478,7 @@ yyreduce:
 #line 1643 "jsonpath_gram.c"
   break;
 
-  case 37: /* path_primary: '@'  */
+  case 37:                         
 #line 194 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType(jpiCurrent);
@@ -1486,7 +1486,7 @@ yyreduce:
 #line 1649 "jsonpath_gram.c"
   break;
 
-  case 38: /* path_primary: LAST_P  */
+  case 38:                            
 #line 195 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType(jpiLast);
@@ -1494,7 +1494,7 @@ yyreduce:
 #line 1655 "jsonpath_gram.c"
   break;
 
-  case 39: /* accessor_expr: path_primary  */
+  case 39:                                   
 #line 199 "jsonpath_gram.y"
   {
     (yyval.elems) = list_make1((yyvsp[0].value));
@@ -1502,7 +1502,7 @@ yyreduce:
 #line 1661 "jsonpath_gram.c"
   break;
 
-  case 40: /* accessor_expr: '(' expr ')' accessor_op  */
+  case 40:                                               
 #line 200 "jsonpath_gram.y"
   {
     (yyval.elems) = list_make2((yyvsp[-2].value), (yyvsp[0].value));
@@ -1510,7 +1510,7 @@ yyreduce:
 #line 1667 "jsonpath_gram.c"
   break;
 
-  case 41: /* accessor_expr: '(' predicate ')' accessor_op  */
+  case 41:                                                    
 #line 201 "jsonpath_gram.y"
   {
     (yyval.elems) = list_make2((yyvsp[-2].value), (yyvsp[0].value));
@@ -1518,7 +1518,7 @@ yyreduce:
 #line 1673 "jsonpath_gram.c"
   break;
 
-  case 42: /* accessor_expr: accessor_expr accessor_op  */
+  case 42:                                                
 #line 202 "jsonpath_gram.y"
   {
     (yyval.elems) = lappend((yyvsp[-1].elems), (yyvsp[0].value));
@@ -1526,7 +1526,7 @@ yyreduce:
 #line 1679 "jsonpath_gram.c"
   break;
 
-  case 43: /* expr: accessor_expr  */
+  case 43:                           
 #line 206 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemList((yyvsp[0].elems));
@@ -1534,7 +1534,7 @@ yyreduce:
 #line 1685 "jsonpath_gram.c"
   break;
 
-  case 44: /* expr: '(' expr ')'  */
+  case 44:                          
 #line 207 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[-1].value);
@@ -1542,7 +1542,7 @@ yyreduce:
 #line 1691 "jsonpath_gram.c"
   break;
 
-  case 45: /* expr: '+' expr  */
+  case 45:                      
 #line 208 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiPlus, (yyvsp[0].value));
@@ -1550,7 +1550,7 @@ yyreduce:
 #line 1697 "jsonpath_gram.c"
   break;
 
-  case 46: /* expr: '-' expr  */
+  case 46:                      
 #line 209 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiMinus, (yyvsp[0].value));
@@ -1558,7 +1558,7 @@ yyreduce:
 #line 1703 "jsonpath_gram.c"
   break;
 
-  case 47: /* expr: expr '+' expr  */
+  case 47:                           
 #line 210 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiAdd, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1566,7 +1566,7 @@ yyreduce:
 #line 1709 "jsonpath_gram.c"
   break;
 
-  case 48: /* expr: expr '-' expr  */
+  case 48:                           
 #line 211 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiSub, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1574,7 +1574,7 @@ yyreduce:
 #line 1715 "jsonpath_gram.c"
   break;
 
-  case 49: /* expr: expr '*' expr  */
+  case 49:                           
 #line 212 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiMul, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1582,7 +1582,7 @@ yyreduce:
 #line 1721 "jsonpath_gram.c"
   break;
 
-  case 50: /* expr: expr '/' expr  */
+  case 50:                           
 #line 213 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiDiv, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1590,7 +1590,7 @@ yyreduce:
 #line 1727 "jsonpath_gram.c"
   break;
 
-  case 51: /* expr: expr '%' expr  */
+  case 51:                           
 #line 214 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiMod, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1598,7 +1598,7 @@ yyreduce:
 #line 1733 "jsonpath_gram.c"
   break;
 
-  case 52: /* index_elem: expr  */
+  case 52:                        
 #line 218 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiSubscript, (yyvsp[0].value), NULL);
@@ -1606,7 +1606,7 @@ yyreduce:
 #line 1739 "jsonpath_gram.c"
   break;
 
-  case 53: /* index_elem: expr TO_P expr  */
+  case 53:                                  
 #line 219 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemBinary(jpiSubscript, (yyvsp[-2].value), (yyvsp[0].value));
@@ -1614,7 +1614,7 @@ yyreduce:
 #line 1745 "jsonpath_gram.c"
   break;
 
-  case 54: /* index_list: index_elem  */
+  case 54:                              
 #line 223 "jsonpath_gram.y"
   {
     (yyval.indexs) = list_make1((yyvsp[0].value));
@@ -1622,7 +1622,7 @@ yyreduce:
 #line 1751 "jsonpath_gram.c"
   break;
 
-  case 55: /* index_list: index_list ',' index_elem  */
+  case 55:                                             
 #line 224 "jsonpath_gram.y"
   {
     (yyval.indexs) = lappend((yyvsp[-2].indexs), (yyvsp[0].value));
@@ -1630,7 +1630,7 @@ yyreduce:
 #line 1757 "jsonpath_gram.c"
   break;
 
-  case 56: /* array_accessor: '[' '*' ']'  */
+  case 56:                                   
 #line 228 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType(jpiAnyArray);
@@ -1638,7 +1638,7 @@ yyreduce:
 #line 1763 "jsonpath_gram.c"
   break;
 
-  case 57: /* array_accessor: '[' index_list ']'  */
+  case 57:                                          
 #line 229 "jsonpath_gram.y"
   {
     (yyval.value) = makeIndexArray((yyvsp[-1].indexs));
@@ -1646,7 +1646,7 @@ yyreduce:
 #line 1769 "jsonpath_gram.c"
   break;
 
-  case 58: /* any_level: INT_P  */
+  case 58:                        
 #line 233 "jsonpath_gram.y"
   {
     (yyval.integer) = pg_atoi((yyvsp[0].str).val, 4, 0);
@@ -1654,7 +1654,7 @@ yyreduce:
 #line 1775 "jsonpath_gram.c"
   break;
 
-  case 59: /* any_level: LAST_P  */
+  case 59:                         
 #line 234 "jsonpath_gram.y"
   {
     (yyval.integer) = -1;
@@ -1662,7 +1662,7 @@ yyreduce:
 #line 1781 "jsonpath_gram.c"
   break;
 
-  case 60: /* any_path: ANY_P  */
+  case 60:                       
 #line 238 "jsonpath_gram.y"
   {
     (yyval.value) = makeAny(0, -1);
@@ -1670,7 +1670,7 @@ yyreduce:
 #line 1787 "jsonpath_gram.c"
   break;
 
-  case 61: /* any_path: ANY_P '{' any_level '}'  */
+  case 61:                                         
 #line 239 "jsonpath_gram.y"
   {
     (yyval.value) = makeAny((yyvsp[-1].integer), (yyvsp[-1].integer));
@@ -1678,7 +1678,7 @@ yyreduce:
 #line 1793 "jsonpath_gram.c"
   break;
 
-  case 62: /* any_path: ANY_P '{' any_level TO_P any_level '}'  */
+  case 62:                                                        
 #line 241 "jsonpath_gram.y"
   {
     (yyval.value) = makeAny((yyvsp[-3].integer), (yyvsp[-1].integer));
@@ -1686,7 +1686,7 @@ yyreduce:
 #line 1799 "jsonpath_gram.c"
   break;
 
-  case 63: /* accessor_op: '.' key  */
+  case 63:                            
 #line 245 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1694,7 +1694,7 @@ yyreduce:
 #line 1805 "jsonpath_gram.c"
   break;
 
-  case 64: /* accessor_op: '.' '*'  */
+  case 64:                            
 #line 246 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType(jpiAnyKey);
@@ -1702,7 +1702,7 @@ yyreduce:
 #line 1811 "jsonpath_gram.c"
   break;
 
-  case 65: /* accessor_op: array_accessor  */
+  case 65:                                   
 #line 247 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1710,7 +1710,7 @@ yyreduce:
 #line 1817 "jsonpath_gram.c"
   break;
 
-  case 66: /* accessor_op: '.' any_path  */
+  case 66:                                 
 #line 248 "jsonpath_gram.y"
   {
     (yyval.value) = (yyvsp[0].value);
@@ -1718,7 +1718,7 @@ yyreduce:
 #line 1823 "jsonpath_gram.c"
   break;
 
-  case 67: /* accessor_op: '.' method '(' ')'  */
+  case 67:                                       
 #line 249 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemType((yyvsp[-2].optype));
@@ -1726,7 +1726,7 @@ yyreduce:
 #line 1829 "jsonpath_gram.c"
   break;
 
-  case 68: /* accessor_op: '?' '(' predicate ')'  */
+  case 68:                                          
 #line 250 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemUnary(jpiFilter, (yyvsp[-1].value));
@@ -1734,7 +1734,7 @@ yyreduce:
 #line 1835 "jsonpath_gram.c"
   break;
 
-  case 69: /* key: key_name  */
+  case 69:                     
 #line 254 "jsonpath_gram.y"
   {
     (yyval.value) = makeItemKey(&(yyvsp[0].str));
@@ -1742,7 +1742,7 @@ yyreduce:
 #line 1841 "jsonpath_gram.c"
   break;
 
-  case 93: /* method: ABS_P  */
+  case 93:                     
 #line 284 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiAbs;
@@ -1750,7 +1750,7 @@ yyreduce:
 #line 1847 "jsonpath_gram.c"
   break;
 
-  case 94: /* method: SIZE_P  */
+  case 94:                      
 #line 285 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiSize;
@@ -1758,7 +1758,7 @@ yyreduce:
 #line 1853 "jsonpath_gram.c"
   break;
 
-  case 95: /* method: TYPE_P  */
+  case 95:                      
 #line 286 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiType;
@@ -1766,7 +1766,7 @@ yyreduce:
 #line 1859 "jsonpath_gram.c"
   break;
 
-  case 96: /* method: FLOOR_P  */
+  case 96:                       
 #line 287 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiFloor;
@@ -1774,7 +1774,7 @@ yyreduce:
 #line 1865 "jsonpath_gram.c"
   break;
 
-  case 97: /* method: DOUBLE_P  */
+  case 97:                        
 #line 288 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiDouble;
@@ -1782,7 +1782,7 @@ yyreduce:
 #line 1871 "jsonpath_gram.c"
   break;
 
-  case 98: /* method: CEILING_P  */
+  case 98:                         
 #line 289 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiCeiling;
@@ -1790,7 +1790,7 @@ yyreduce:
 #line 1877 "jsonpath_gram.c"
   break;
 
-  case 99: /* method: KEYVALUE_P  */
+  case 99:                          
 #line 290 "jsonpath_gram.y"
   {
     (yyval.optype) = jpiKeyValue;
@@ -1803,17 +1803,17 @@ yyreduce:
   default:
     break;
   }
-  /* User semantic actions sometimes alter yychar, and that requires
-     that yytoken be updated with the new translation.  We take the
-     approach of translating immediately before every use of yytoken.
-     One alternative is translating here after every semantic action,
-     but that translation would be missed if the semantic action invokes
-     YYABORT, YYACCEPT, or YYERROR immediately after altering yychar or
-     if it invokes YYBACKUP.  In the case of YYABORT or YYACCEPT, an
-     incorrect destructor might then be invoked immediately.  In the
-     case of YYERROR or YYBACKUP, subsequent parser actions might lead
-     to an incorrect destructor call or verbose syntax error message
-     before the lookahead is translated.  */
+                                                                     
+                                                                    
+                                                                      
+                                                                      
+                                                                         
+                                                                        
+                                                                     
+                                                                     
+                                                                       
+                                                                     
+                                            
   YY_SYMBOL_PRINT("-> $$ =", YY_CAST(yysymbol_kind_t, yyr1[yyn]), &yyval, &yyloc);
 
   YYPOPSTACK(yylen);
@@ -1821,9 +1821,9 @@ yyreduce:
 
   *++yyvsp = yyval;
 
-  /* Now 'shift' the result of the reduction.  Determine what state
-     that goes to, based on the state we popped back to and the rule
-     number reduced by.  */
+                                                                    
+                                                                     
+                           
   {
     const int yylhs = yyr1[yyn] - YYNTOKENS;
     const int yyi = yypgoto[yylhs] + *yyssp;
@@ -1832,14 +1832,14 @@ yyreduce:
 
   goto yynewstate;
 
-/*--------------------------------------.
-| yyerrlab -- here on detecting error.  |
-`--------------------------------------*/
+                                          
+                                          
+                                         
 yyerrlab:
-  /* Make sure we have latest lookahead translation.  See comments at
-     user semantic actions for why this is necessary.  */
+                                                                      
+                                                         
   yytoken = yychar == YYEMPTY ? YYSYMBOL_YYEMPTY : YYTRANSLATE(yychar);
-  /* If not already recovering from an error, report this error.  */
+                                                                    
   if (!yyerrstatus)
   {
     ++yynerrs;
@@ -1848,12 +1848,12 @@ yyerrlab:
 
   if (yyerrstatus == 3)
   {
-    /* If just tried and failed to reuse lookahead token after an
-       error, discard it.  */
+                                                                  
+                             
 
     if (yychar <= YYEOF)
     {
-      /* Return failure if at end of input.  */
+                                               
       if (yychar == YYEOF)
       {
         YYABORT;
@@ -1866,36 +1866,36 @@ yyerrlab:
     }
   }
 
-  /* Else will try to reuse lookahead token after shifting the error
-     token.  */
+                                                                     
+               
   goto yyerrlab1;
 
-/*---------------------------------------------------.
-| yyerrorlab -- error raised explicitly by YYERROR.  |
-`---------------------------------------------------*/
+                                                       
+                                                       
+                                                      
 yyerrorlab:
-  /* Pacify compilers when the user code never invokes YYERROR and the
-     label yyerrorlab therefore never appears in user code.  */
+                                                                       
+                                                               
   if (0)
   {
     YYERROR;
   }
 
-  /* Do not reclaim the symbols of the rule whose action triggered
-     this YYERROR.  */
+                                                                   
+                      
   YYPOPSTACK(yylen);
   yylen = 0;
   YY_STACK_PRINT(yyss, yyssp);
   yystate = *yyssp;
   goto yyerrlab1;
 
-/*-------------------------------------------------------------.
-| yyerrlab1 -- common code for both syntax error and YYERROR.  |
-`-------------------------------------------------------------*/
+                                                                 
+                                                                 
+                                                                
 yyerrlab1:
-  yyerrstatus = 3; /* Each real token shifted decrements this.  */
+  yyerrstatus = 3;                                                
 
-  /* Pop stack until we find a state that shifts the error token.  */
+                                                                     
   for (;;)
   {
     yyn = yypact[yystate];
@@ -1912,7 +1912,7 @@ yyerrlab1:
       }
     }
 
-    /* Pop the current state because it cannot handle the error token.  */
+                                                                          
     if (yyssp == yyss)
     {
       YYABORT;
@@ -1928,49 +1928,49 @@ yyerrlab1:
   *++yyvsp = yylval;
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 
-  /* Shift the error token.  */
+                               
   YY_SYMBOL_PRINT("Shifting", YY_ACCESSING_SYMBOL(yyn), yyvsp, yylsp);
 
   yystate = yyn;
   goto yynewstate;
 
-/*-------------------------------------.
-| yyacceptlab -- YYACCEPT comes here.  |
-`-------------------------------------*/
+                                         
+                                         
+                                        
 yyacceptlab:
   yyresult = 0;
   goto yyreturn;
 
-/*-----------------------------------.
-| yyabortlab -- YYABORT comes here.  |
-`-----------------------------------*/
+                                       
+                                       
+                                      
 yyabortlab:
   yyresult = 1;
   goto yyreturn;
 
 #if !defined yyoverflow
-/*-------------------------------------------------.
-| yyexhaustedlab -- memory exhaustion comes here.  |
-`-------------------------------------------------*/
+                                                     
+                                                     
+                                                    
 yyexhaustedlab:
   yyerror(result, YY_("memory exhausted"));
   yyresult = 2;
   goto yyreturn;
 #endif
 
-/*-------------------------------------------------------.
-| yyreturn -- parsing is finished, clean up and return.  |
-`-------------------------------------------------------*/
+                                                           
+                                                           
+                                                          
 yyreturn:
   if (yychar != YYEMPTY)
   {
-    /* Make sure we have latest lookahead translation.  See comments at
-       user semantic actions for why this is necessary.  */
+                                                                        
+                                                           
     yytoken = YYTRANSLATE(yychar);
     yydestruct("Cleanup: discarding lookahead", yytoken, &yylval, result);
   }
-  /* Do not reclaim the symbols of the rule whose action triggered
-     this YYABORT or YYACCEPT.  */
+                                                                   
+                                  
   YYPOPSTACK(yylen);
   YY_STACK_PRINT(yyss, yyssp);
   while (yyssp != yyss)
@@ -1990,10 +1990,10 @@ yyreturn:
 
 #line 292 "jsonpath_gram.y"
 
-/*
- * The helper functions below allocate and fill JsonPathParseItem's of various
- * types.
- */
+   
+                                                                               
+          
+   
 
 static JsonPathParseItem *
 makeItemType(JsonPathItemType type)
@@ -2119,7 +2119,7 @@ makeItemList(List *list)
     return head;
   }
 
-  /* append items to the end of already existing list */
+                                                        
   while (end->next)
   {
     end = end->next;
@@ -2183,7 +2183,7 @@ makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathStri
   v->value.like_regex.pattern = pattern->val;
   v->value.like_regex.patternlen = pattern->len;
 
-  /* Parse the flags string, convert to bitmask.  Duplicate flags are OK. */
+                                                                            
   v->value.like_regex.flags = 0;
   for (i = 0; flags && i < flags->len; i++)
   {
@@ -2210,31 +2210,31 @@ makeItemLikeRegex(JsonPathParseItem *expr, JsonPathString *pattern, JsonPathStri
     }
   }
 
-  /* Convert flags to what RE_compile_and_cache needs */
+                                                        
   cflags = jspConvertRegexFlags(v->value.like_regex.flags);
 
-  /* check regex validity */
+                            
   (void)RE_compile_and_cache(cstring_to_text_with_len(pattern->val, pattern->len), cflags, DEFAULT_COLLATION_OID);
 
   return v;
 }
 
-/*
- * Convert from XQuery regex flags to those recognized by our regex library.
- */
+   
+                                                                             
+   
 int
 jspConvertRegexFlags(uint32 xflags)
 {
-  /* By default, XQuery is very nearly the same as Spencer's AREs */
+                                                                    
   int cflags = REG_ADVANCED;
 
-  /* Ignore-case means the same thing, too, modulo locale issues */
+                                                                   
   if (xflags & JSP_REGEX_ICASE)
   {
     cflags |= REG_ICASE;
   }
 
-  /* Per XQuery spec, if 'q' is specified then 'm', 's', 'x' are ignored */
+                                                                           
   if (xflags & JSP_REGEX_QUOTE)
   {
     cflags &= ~REG_ADVANCED;
@@ -2242,7 +2242,7 @@ jspConvertRegexFlags(uint32 xflags)
   }
   else
   {
-    /* Note that dotall mode is the default in POSIX */
+                                                       
     if (!(xflags & JSP_REGEX_DOTALL))
     {
       cflags |= REG_NLSTOP;
@@ -2252,13 +2252,13 @@ jspConvertRegexFlags(uint32 xflags)
       cflags |= REG_NLANCH;
     }
 
-    /*
-     * XQuery's 'x' mode is related to Spencer's expanded mode, but it's
-     * not really enough alike to justify treating JSP_REGEX_WSPACE as
-     * REG_EXPANDED.  For now we treat 'x' as unimplemented; perhaps in
-     * future we'll modify the regex library to have an option for
-     * XQuery-style ignore-whitespace mode.
-     */
+       
+                                                                         
+                                                                       
+                                                                        
+                                                                   
+                                            
+       
     if (xflags & JSP_REGEX_WSPACE)
     {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("XQuery \"x\" flag (expanded regular expressions) is not implemented")));
@@ -2268,12 +2268,12 @@ jspConvertRegexFlags(uint32 xflags)
   return cflags;
 }
 
-/*
- * jsonpath_scan.l is compiled as part of jsonpath_gram.y.  Currently, this is
- * unavoidable because jsonpath_gram does not create a .h file to export its
- * token symbols.  If these files ever grow large enough to be worth compiling
- * separately, that could be fixed; but for now it seems like useless
- * complication.
- */
+   
+                                                                               
+                                                                             
+                                                                               
+                                                                      
+                 
+   
 
 #include "jsonpath_scan.c"

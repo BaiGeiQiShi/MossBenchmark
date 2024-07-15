@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- *
- * utility.c
- *	  Contains functions which control the execution of the POSTGRES utility
- *	  commands.  At one time acted as an interface between the Lisp and C
- *	  systems.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/tcop/utility.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                                            
+                                                                         
+              
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/htup_details.h"
@@ -71,24 +71,24 @@
 #include "utils/syscache.h"
 #include "utils/rel.h"
 
-/* Hook for plugins to get control in ProcessUtility() */
+                                                         
 ProcessUtility_hook_type ProcessUtility_hook = NULL;
 
-/* local function declarations */
+                                 
 static void
 ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryString, ProcessUtilityContext context, ParamListInfo params, QueryEnvironment *queryEnv, DestReceiver *dest, char *completionTag);
 static void
 ExecDropStmt(DropStmt *stmt, bool isTopLevel);
 
-/*
- * CommandIsReadOnly: is an executable query read-only?
- *
- * This is a much stricter test than we apply for XactReadOnly mode;
- * the query must be *in truth* read-only, because the caller wishes
- * not to do CommandCounterIncrement for it.
- *
- * Note: currently no need to support raw or analyzed queries here
- */
+   
+                                                        
+   
+                                                                     
+                                                                     
+                                             
+   
+                                                                   
+   
 bool
 CommandIsReadOnly(PlannedStmt *pstmt)
 {
@@ -98,11 +98,11 @@ CommandIsReadOnly(PlannedStmt *pstmt)
   case CMD_SELECT:
     if (pstmt->rowMarks != NIL)
     {
-      return false; /* SELECT FOR [KEY] UPDATE/SHARE */
+      return false;                                    
     }
     else if (pstmt->hasModifyingCTE)
     {
-      return false; /* data-modifying CTE */
+      return false;                         
     }
     else
     {
@@ -113,7 +113,7 @@ CommandIsReadOnly(PlannedStmt *pstmt)
   case CMD_DELETE:
     return false;
   case CMD_UTILITY:
-    /* For now, treat all utility commands as read/write */
+                                                           
     return false;
   default:
     elog(WARNING, "unrecognized commandType: %d", (int)pstmt->commandType);
@@ -122,27 +122,27 @@ CommandIsReadOnly(PlannedStmt *pstmt)
   return false;
 }
 
-/*
- * check_xact_readonly: is a utility command read-only?
- *
- * Here we use the loose rules of XactReadOnly mode: no permanent effects
- * on the database are allowed.
- */
+   
+                                                        
+   
+                                                                          
+                                
+   
 static void
 check_xact_readonly(Node *parsetree)
 {
-  /* Only perform the check if we have a reason to do so. */
+                                                            
   if (!XactReadOnly && !IsInParallelMode())
   {
     return;
   }
 
-  /*
-   * Note: Commands that need to do more complicated checking are handled
-   * elsewhere, in particular COPY and plannable statements do their own
-   * checking.  However they should all call PreventCommandIfReadOnly or
-   * PreventCommandIfParallelMode to actually throw the error.
-   */
+     
+                                                                          
+                                                                         
+                                                                         
+                                                               
+     
 
   switch (nodeTag(parsetree))
   {
@@ -224,127 +224,127 @@ check_xact_readonly(Node *parsetree)
     PreventCommandIfParallelMode(CreateCommandTag(parsetree));
     break;
   default:
-    /* do nothing */
+                    
     break;
   }
 }
 
-/*
- * PreventCommandIfReadOnly: throw error if XactReadOnly
- *
- * This is useful mainly to ensure consistency of the error message wording;
- * most callers have checked XactReadOnly for themselves.
- */
+   
+                                                         
+   
+                                                                             
+                                                          
+   
 void
 PreventCommandIfReadOnly(const char *cmdname)
 {
   if (XactReadOnly)
   {
     ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
-                       /* translator: %s is name of a SQL command, eg CREATE */
+                                                                               
                        errmsg("cannot execute %s in a read-only transaction", cmdname)));
   }
 }
 
-/*
- * PreventCommandIfParallelMode: throw error if current (sub)transaction is
- * in parallel mode.
- *
- * This is useful mainly to ensure consistency of the error message wording;
- * most callers have checked IsInParallelMode() for themselves.
- */
+   
+                                                                            
+                     
+   
+                                                                             
+                                                                
+   
 void
 PreventCommandIfParallelMode(const char *cmdname)
 {
   if (IsInParallelMode())
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TRANSACTION_STATE),
-                       /* translator: %s is name of a SQL command, eg CREATE */
+                                                                               
                        errmsg("cannot execute %s during a parallel operation", cmdname)));
   }
 }
 
-/*
- * PreventCommandDuringRecovery: throw error if RecoveryInProgress
- *
- * The majority of operations that are unsafe in a Hot Standby
- * will be rejected by XactReadOnly tests.  However there are a few
- * commands that are allowed in "read-only" xacts but cannot be allowed
- * in Hot Standby mode.  Those commands should call this function.
- */
+   
+                                                                   
+   
+                                                               
+                                                                    
+                                                                        
+                                                                   
+   
 void
 PreventCommandDuringRecovery(const char *cmdname)
 {
   if (RecoveryInProgress())
   {
     ereport(ERROR, (errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
-                       /* translator: %s is name of a SQL command, eg CREATE */
+                                                                               
                        errmsg("cannot execute %s during recovery", cmdname)));
   }
 }
 
-/*
- * CheckRestrictedOperation: throw error for hazardous command if we're
- * inside a security restriction context.
- *
- * This is needed to protect session-local state for which there is not any
- * better-defined protection mechanism, such as ownership.
- */
+   
+                                                                        
+                                          
+   
+                                                                            
+                                                           
+   
 static void
 CheckRestrictedOperation(const char *cmdname)
 {
   if (InSecurityRestrictedOperation())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-                       /* translator: %s is name of a SQL command, eg PREPARE */
+                                                                                
                        errmsg("cannot execute %s within security-restricted operation", cmdname)));
   }
 }
 
-/*
- * ProcessUtility
- *		general utility function invoker
- *
- *	pstmt: PlannedStmt wrapper for the utility statement
- *	queryString: original source text of command
- *	context: identifies source of statement (toplevel client command,
- *		non-toplevel client command, subcommand of a larger utility command)
- *	params: parameters to use during execution
- *	queryEnv: environment for parse through execution (e.g., ephemeral named
- *		tables like trigger transition tables).  May be NULL.
- *	dest: where to send results
- *	completionTag: points to a buffer of size COMPLETION_TAG_BUFSIZE
- *		in which to store a command completion status string.
- *
- * Caller MUST supply a queryString; it is not allowed (anymore) to pass NULL.
- * If you really don't have source text, you can pass a constant string,
- * perhaps "(query not available)".
- *
- * completionTag is only set nonempty if we want to return a nondefault status.
- *
- * completionTag may be NULL if caller doesn't want a status string.
- *
- * Note for users of ProcessUtility_hook: the same queryString may be passed
- * to multiple invocations of ProcessUtility when processing a query string
- * containing multiple semicolon-separated statements.  One should use
- * pstmt->stmt_location and pstmt->stmt_len to identify the substring
- * containing the current statement.  Keep in mind also that some utility
- * statements (e.g., CREATE SCHEMA) will recurse to ProcessUtility to process
- * sub-statements, often passing down the same queryString, stmt_location,
- * and stmt_len that were given for the whole statement.
- */
+   
+                  
+                                     
+   
+                                                        
+                                                
+                                                                     
+                                                                         
+                                              
+                                                                            
+                                                          
+                               
+                                                                    
+                                                          
+   
+                                                                               
+                                                                         
+                                    
+   
+                                                                                
+   
+                                                                     
+   
+                                                                             
+                                                                            
+                                                                       
+                                                                      
+                                                                          
+                                                                              
+                                                                           
+                                                         
+   
 void
 ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtilityContext context, ParamListInfo params, QueryEnvironment *queryEnv, DestReceiver *dest, char *completionTag)
 {
   Assert(IsA(pstmt, PlannedStmt));
   Assert(pstmt->commandType == CMD_UTILITY);
-  Assert(queryString != NULL); /* required as of 8.4 */
+  Assert(queryString != NULL);                         
 
-  /*
-   * We provide a function hook variable that lets loadable plugins get
-   * control when ProcessUtility is called.  Such a plugin would normally
-   * call standard_ProcessUtility().
-   */
+     
+                                                                        
+                                                                          
+                                     
+     
   if (ProcessUtility_hook)
   {
     (*ProcessUtility_hook)(pstmt, queryString, context, params, queryEnv, dest, completionTag);
@@ -355,17 +355,17 @@ ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtilityContex
   }
 }
 
-/*
- * standard_ProcessUtility itself deals only with utility commands for
- * which we do not provide event trigger support.  Commands that do have
- * such support are passed down to ProcessUtilitySlow, which contains the
- * necessary infrastructure for such triggers.
- *
- * This division is not just for performance: it's critical that the
- * event trigger code not be invoked when doing START TRANSACTION for
- * example, because we might need to refresh the event trigger cache,
- * which requires being in a valid transaction.
- */
+   
+                                                                       
+                                                                         
+                                                                          
+                                               
+   
+                                                                     
+                                                                      
+                                                                      
+                                                
+   
 void
 standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtilityContext context, ParamListInfo params, QueryEnvironment *queryEnv, DestReceiver *dest, char *completionTag)
 {
@@ -374,7 +374,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   bool isAtomicContext = (!(context == PROCESS_UTILITY_TOPLEVEL || context == PROCESS_UTILITY_QUERY_NONATOMIC) || IsTransactionBlock());
   ParseState *pstate;
 
-  /* This can recurse, so check for excessive recursion */
+                                                          
   check_stack_depth();
 
   check_xact_readonly(parsetree);
@@ -389,19 +389,19 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
 
   switch (nodeTag(parsetree))
   {
-    /*
-     * ******************** transactions ********************
-     */
+       
+                                                              
+       
   case T_TransactionStmt:
   {
     TransactionStmt *stmt = (TransactionStmt *)parsetree;
 
     switch (stmt->kind)
     {
-      /*
-       * START TRANSACTION, as defined by SQL99: Identical
-       * to BEGIN.  Same code for both.
-       */
+         
+                                                           
+                                        
+         
     case TRANS_STMT_BEGIN:
     case TRANS_STMT_START:
     {
@@ -431,7 +431,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     case TRANS_STMT_COMMIT:
       if (!EndTransactionBlock(stmt->chain))
       {
-        /* report unsuccessful commit in completionTag */
+                                                         
         if (completionTag)
         {
           strcpy(completionTag, "ROLLBACK");
@@ -443,7 +443,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
       PreventCommandDuringRecovery("PREPARE TRANSACTION");
       if (!PrepareTransactionBlock(stmt->gid))
       {
-        /* report unsuccessful commit in completionTag */
+                                                         
         if (completionTag)
         {
           strcpy(completionTag, "ROLLBACK");
@@ -481,18 +481,18 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
       RequireTransactionBlock(isTopLevel, "ROLLBACK TO SAVEPOINT");
       RollbackToSavepoint(stmt->savepoint_name);
 
-      /*
-       * CommitTransactionCommand is in charge of
-       * re-defining the savepoint again
-       */
+         
+                                                  
+                                         
+         
       break;
     }
   }
   break;
 
-    /*
-     * Portal (cursor) manipulation
-     */
+       
+                                    
+       
   case T_DeclareCursorStmt:
     PerformCursorOpen((DeclareCursorStmt *)parsetree, params, queryString, isTopLevel);
     break;
@@ -515,19 +515,19 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     break;
 
   case T_CreateTableSpaceStmt:
-    /* no event triggers for global objects */
+                                              
     PreventInTransactionBlock(isTopLevel, "CREATE TABLESPACE");
     CreateTableSpace((CreateTableSpaceStmt *)parsetree);
     break;
 
   case T_DropTableSpaceStmt:
-    /* no event triggers for global objects */
+                                              
     PreventInTransactionBlock(isTopLevel, "DROP TABLESPACE");
     DropTableSpace((DropTableSpaceStmt *)parsetree);
     break;
 
   case T_AlterTableSpaceOptionsStmt:
-    /* no event triggers for global objects */
+                                              
     AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *)parsetree);
     break;
 
@@ -562,23 +562,23 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     break;
 
   case T_GrantRoleStmt:
-    /* no event triggers for global objects */
+                                              
     GrantRole((GrantRoleStmt *)parsetree);
     break;
 
   case T_CreatedbStmt:
-    /* no event triggers for global objects */
+                                              
     PreventInTransactionBlock(isTopLevel, "CREATE DATABASE");
     createdb(pstate, (CreatedbStmt *)parsetree);
     break;
 
   case T_AlterDatabaseStmt:
-    /* no event triggers for global objects */
+                                              
     AlterDatabase(pstate, (AlterDatabaseStmt *)parsetree, isTopLevel);
     break;
 
   case T_AlterDatabaseSetStmt:
-    /* no event triggers for global objects */
+                                              
     AlterDatabaseSet((AlterDatabaseSetStmt *)parsetree);
     break;
 
@@ -586,13 +586,13 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   {
     DropdbStmt *stmt = (DropdbStmt *)parsetree;
 
-    /* no event triggers for global objects */
+                                              
     PreventInTransactionBlock(isTopLevel, "DROP DATABASE");
     dropdb(stmt->dbname, stmt->missing_ok);
   }
   break;
 
-    /* Query-level asynchronous notification */
+                                               
   case T_NotifyStmt:
   {
     NotifyStmt *stmt = (NotifyStmt *)parsetree;
@@ -616,7 +616,7 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   {
     UnlistenStmt *stmt = (UnlistenStmt *)parsetree;
 
-    /* we allow UNLISTEN during recovery, as it's a noop */
+                                                           
     CheckRestrictedOperation("UNLISTEN");
     if (stmt->conditionname)
     {
@@ -633,8 +633,8 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   {
     LoadStmt *stmt = (LoadStmt *)parsetree;
 
-    closeAllVfds(); /* probably not necessary... */
-    /* Allowed names are restricted if you're not superuser */
+    closeAllVfds();                                
+                                                              
     load_file(stmt->filename, !superuser());
   }
   break;
@@ -644,9 +644,9 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     break;
 
   case T_ClusterStmt:
-    /* we choose to allow this during "read only" transactions */
+                                                                 
     PreventCommandDuringRecovery("CLUSTER");
-    /* forbidden in parallel mode due to CommandIsReadOnly */
+                                                             
     cluster((ClusterStmt *)parsetree, isTopLevel);
     break;
 
@@ -654,9 +654,9 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   {
     VacuumStmt *stmt = (VacuumStmt *)parsetree;
 
-    /* we choose to allow this during "read only" transactions */
+                                                                 
     PreventCommandDuringRecovery(stmt->is_vacuumcmd ? "VACUUM" : "ANALYZE");
-    /* forbidden in parallel mode due to CommandIsReadOnly */
+                                                             
     ExecVacuum(pstate, stmt, isTopLevel);
   }
   break;
@@ -683,57 +683,57 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   break;
 
   case T_DiscardStmt:
-    /* should we allow DISCARD PLANS? */
+                                        
     CheckRestrictedOperation("DISCARD");
     DiscardCommand((DiscardStmt *)parsetree, isTopLevel);
     break;
 
   case T_CreateEventTrigStmt:
-    /* no event triggers on event triggers */
+                                             
     CreateEventTrigger((CreateEventTrigStmt *)parsetree);
     break;
 
   case T_AlterEventTrigStmt:
-    /* no event triggers on event triggers */
+                                             
     AlterEventTrigger((AlterEventTrigStmt *)parsetree);
     break;
 
-    /*
-     * ******************************** ROLE statements ****
-     */
+       
+                                                             
+       
   case T_CreateRoleStmt:
-    /* no event triggers for global objects */
+                                              
     CreateRole(pstate, (CreateRoleStmt *)parsetree);
     break;
 
   case T_AlterRoleStmt:
-    /* no event triggers for global objects */
+                                              
     AlterRole((AlterRoleStmt *)parsetree);
     break;
 
   case T_AlterRoleSetStmt:
-    /* no event triggers for global objects */
+                                              
     AlterRoleSet((AlterRoleSetStmt *)parsetree);
     break;
 
   case T_DropRoleStmt:
-    /* no event triggers for global objects */
+                                              
     DropRole((DropRoleStmt *)parsetree);
     break;
 
   case T_ReassignOwnedStmt:
-    /* no event triggers for global objects */
+                                              
     ReassignOwnedObjects((ReassignOwnedStmt *)parsetree);
     break;
 
   case T_LockStmt:
 
-    /*
-     * Since the lock would just get dropped immediately, LOCK TABLE
-     * outside a transaction block is presumed to be user error.
-     */
+       
+                                                                     
+                                                                 
+       
     RequireTransactionBlock(isTopLevel, "LOCK TABLE");
-    /* forbidden in parallel mode due to CommandIsReadOnly */
+                                                             
     LockTableCommand((LockStmt *)parsetree);
     break;
 
@@ -748,13 +748,13 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
       ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to do CHECKPOINT")));
     }
 
-    /*
-     * You might think we should have a PreventCommandDuringRecovery()
-     * here, but we interpret a CHECKPOINT command during recovery as
-     * a request for a restartpoint instead. We allow this since it
-     * can be a useful way of reducing switchover time when using
-     * various forms of replication.
-     */
+       
+                                                                       
+                                                                      
+                                                                    
+                                                                  
+                                     
+       
     RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_WAIT | (RecoveryInProgress() ? 0 : CHECKPOINT_FORCE));
     break;
 
@@ -767,9 +767,9 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
       PreventInTransactionBlock(isTopLevel, "REINDEX CONCURRENTLY");
     }
 
-    /* we choose to allow this during "read only" transactions */
+                                                                 
     PreventCommandDuringRecovery("REINDEX");
-    /* forbidden in parallel mode due to CommandIsReadOnly */
+                                                             
     switch (stmt->kind)
     {
     case REINDEX_OBJECT_INDEX:
@@ -782,12 +782,12 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
     case REINDEX_OBJECT_SYSTEM:
     case REINDEX_OBJECT_DATABASE:
 
-      /*
-       * This cannot run inside a user transaction block; if
-       * we were inside a transaction, then its commit- and
-       * start-transaction-command calls would not have the
-       * intended effect!
-       */
+         
+                                                             
+                                                            
+                                                            
+                          
+         
       PreventInTransactionBlock(isTopLevel, (stmt->kind == REINDEX_OBJECT_SCHEMA) ? "REINDEX SCHEMA" : (stmt->kind == REINDEX_OBJECT_SYSTEM) ? "REINDEX SYSTEM" : "REINDEX DATABASE");
       ReindexMultipleTables(stmt->name, stmt->kind, stmt->options, stmt->concurrent);
       break;
@@ -798,10 +798,10 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   }
   break;
 
-    /*
-     * The following statements are supported by Event Triggers only
-     * in some cases, so we "fast path" them in the other cases.
-     */
+       
+                                                                     
+                                                                 
+       
 
   case T_GrantStmt:
   {
@@ -924,26 +924,26 @@ standard_ProcessUtility(PlannedStmt *pstmt, const char *queryString, ProcessUtil
   }
 
   default:
-    /* All other statement types have event trigger support */
+                                                              
     ProcessUtilitySlow(pstate, pstmt, queryString, context, params, queryEnv, dest, completionTag);
     break;
   }
 
   free_parsestate(pstate);
 
-  /*
-   * Make effects of commands visible, for instance so that
-   * PreCommit_on_commit_actions() can see them (see for example bug
-   * #15631).
-   */
+     
+                                                            
+                                                                     
+              
+     
   CommandCounterIncrement();
 }
 
-/*
- * The "Slow" variant of ProcessUtility should only receive statements
- * supported by the event triggers facility.  Therefore, we always
- * perform the trigger support calls if the context allows it.
- */
+   
+                                                                       
+                                                                   
+                                                               
+   
 static void
 ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryString, ProcessUtilityContext context, ParamListInfo params, QueryEnvironment *queryEnv, DestReceiver *dest, char *completionTag)
 {
@@ -955,10 +955,10 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
   ObjectAddress address;
   ObjectAddress secondaryObject = InvalidObjectAddress;
 
-  /* All event trigger calls are done only when isCompleteQuery is true */
+                                                                          
   needCleanup = isCompleteQuery && EventTriggerBeginCompleteQuery();
 
-  /* PG_TRY block is to ensure we call EventTriggerEndCompleteQuery */
+                                                                      
   PG_TRY();
   {
     if (isCompleteQuery)
@@ -968,16 +968,16 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     switch (nodeTag(parsetree))
     {
-      /*
-       * relation and attribute manipulation
-       */
+         
+                                             
+         
     case T_CreateSchemaStmt:
       CreateSchemaCommand((CreateSchemaStmt *)parsetree, queryString, pstmt->stmt_location, pstmt->stmt_len);
 
-      /*
-       * EventTriggerCollectSimpleCommand called by
-       * CreateSchemaCommand
-       */
+         
+                                                    
+                             
+         
       commandCollected = true;
       break;
 
@@ -987,14 +987,14 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       List *stmts;
       RangeVar *table_rv = NULL;
 
-      /* Run parse analysis ... */
+                                  
       stmts = transformCreateStmt((CreateStmt *)parsetree, queryString);
 
-      /*
-       * ... and do it.  We can't use foreach() because we may
-       * modify the list midway through, so pick off the
-       * elements one at a time, the hard way.
-       */
+         
+                                                               
+                                                         
+                                               
+         
       while (stmts != NIL)
       {
         Node *stmt = (Node *)linitial(stmts);
@@ -1007,23 +1007,23 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
           Datum toast_options;
           static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
 
-          /* Remember transformed RangeVar for LIKE */
+                                                      
           table_rv = cstmt->relation;
 
-          /* Create the table itself */
+                                       
           address = DefineRelation(cstmt, RELKIND_RELATION, InvalidOid, NULL, queryString);
           EventTriggerCollectSimpleCommand(address, secondaryObject, stmt);
 
-          /*
-           * Let NewRelationCreateToastTable decide if this
-           * one needs a secondary relation too.
-           */
+             
+                                                            
+                                                 
+             
           CommandCounterIncrement();
 
-          /*
-           * parse and validate reloptions for the toast
-           * table
-           */
+             
+                                                         
+                   
+             
           toast_options = transformRelOptions((Datum)0, cstmt->options, "toast", validnsps, true, false);
           (void)heap_reloptions(RELKIND_TOASTVALUE, toast_options, true);
 
@@ -1033,22 +1033,22 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
         {
           CreateForeignTableStmt *cstmt = (CreateForeignTableStmt *)stmt;
 
-          /* Remember transformed RangeVar for LIKE */
+                                                      
           table_rv = cstmt->base.relation;
 
-          /* Create the table itself */
+                                       
           address = DefineRelation(&cstmt->base, RELKIND_FOREIGN_TABLE, InvalidOid, NULL, queryString);
           CreateForeignTable(cstmt, address.objectId);
           EventTriggerCollectSimpleCommand(address, secondaryObject, stmt);
         }
         else if (IsA(stmt, TableLikeClause))
         {
-          /*
-           * Do delayed processing of LIKE options.  This
-           * will result in additional sub-statements for us
-           * to process.  Those should get done before any
-           * remaining actions, so prepend them to "stmts".
-           */
+             
+                                                          
+                                                             
+                                                           
+                                                            
+             
           TableLikeClause *like = (TableLikeClause *)stmt;
           List *morestmts;
 
@@ -1059,11 +1059,11 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
         }
         else
         {
-          /*
-           * Recurse for anything else.  Note the recursive
-           * call will stash the objects so created into our
-           * event trigger context.
-           */
+             
+                                                            
+                                                             
+                                    
+             
           PlannedStmt *wrapper;
 
           wrapper = makeNode(PlannedStmt);
@@ -1076,17 +1076,17 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
           ProcessUtility(wrapper, queryString, PROCESS_UTILITY_SUBCOMMAND, params, NULL, None_Receiver, NULL);
         }
 
-        /* Need CCI between commands */
+                                       
         if (stmts != NIL)
         {
           CommandCounterIncrement();
         }
       }
 
-      /*
-       * The multiple commands generated here are stashed
-       * individually, so disable collection below.
-       */
+         
+                                                          
+                                                    
+         
       commandCollected = true;
     }
     break;
@@ -1099,44 +1099,44 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       ListCell *l;
       LOCKMODE lockmode;
 
-      /*
-       * Figure out lock mode, and acquire lock.  This also does
-       * basic permissions checks, so that we won't wait for a
-       * lock on (for example) a relation on which we have no
-       * permissions.
-       */
+         
+                                                                 
+                                                               
+                                                              
+                      
+         
       lockmode = AlterTableGetLockLevel(atstmt->cmds);
       relid = AlterTableLookupRelation(atstmt, lockmode);
 
       if (OidIsValid(relid))
       {
-        /* Run parse analysis ... */
+                                    
         stmts = transformAlterTableStmt(relid, atstmt, queryString);
 
-        /* ... ensure we have an event trigger context ... */
+                                                             
         EventTriggerAlterTableStart(parsetree);
         EventTriggerAlterTableRelid(relid);
 
-        /* ... and do it */
+                           
         foreach (l, stmts)
         {
           Node *stmt = (Node *)lfirst(l);
 
           if (IsA(stmt, AlterTableStmt))
           {
-            /* Do the table alteration proper */
+                                                
             AlterTable(relid, lockmode, (AlterTableStmt *)stmt);
           }
           else
           {
-            /*
-             * Recurse for anything else.  If we need to
-             * do so, "close" the current complex-command
-             * set, and start a new one at the bottom;
-             * this is needed to ensure the ordering of
-             * queued commands is consistent with the way
-             * they are executed here.
-             */
+               
+                                                         
+                                                          
+                                                       
+                                                        
+                                                          
+                                       
+               
             PlannedStmt *wrapper;
 
             EventTriggerAlterTableEnd();
@@ -1151,14 +1151,14 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
             EventTriggerAlterTableRelid(relid);
           }
 
-          /* Need CCI between commands */
+                                         
           if (lnext(l) != NULL)
           {
             CommandCounterIncrement();
           }
         }
 
-        /* done */
+                  
         EventTriggerAlterTableEnd();
       }
       else
@@ -1167,7 +1167,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       }
     }
 
-      /* ALTER TABLE stashes commands internally */
+                                                   
       commandCollected = true;
       break;
 
@@ -1175,45 +1175,45 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
     {
       AlterDomainStmt *stmt = (AlterDomainStmt *)parsetree;
 
-      /*
-       * Some or all of these functions are recursive to cover
-       * inherited things, so permission checks are done there.
-       */
+         
+                                                               
+                                                                
+         
       switch (stmt->subtype)
       {
-      case 'T': /* ALTER DOMAIN DEFAULT */
+      case 'T':                           
 
-        /*
-         * Recursively alter column default for table and,
-         * if requested, for descendants
-         */
+           
+                                                           
+                                         
+           
         address = AlterDomainDefault(stmt->typeName, stmt->def);
         break;
-      case 'N': /* ALTER DOMAIN DROP NOT NULL */
+      case 'N':                                 
         address = AlterDomainNotNull(stmt->typeName, false);
         break;
-      case 'O': /* ALTER DOMAIN SET NOT NULL */
+      case 'O':                                
         address = AlterDomainNotNull(stmt->typeName, true);
         break;
-      case 'C': /* ADD CONSTRAINT */
+      case 'C':                     
         address = AlterDomainAddConstraint(stmt->typeName, stmt->def, &secondaryObject);
         break;
-      case 'X': /* DROP CONSTRAINT */
+      case 'X':                      
         address = AlterDomainDropConstraint(stmt->typeName, stmt->name, stmt->behavior, stmt->missing_ok);
         break;
-      case 'V': /* VALIDATE CONSTRAINT */
+      case 'V':                          
         address = AlterDomainValidateConstraint(stmt->typeName, stmt->name);
         break;
-      default: /* oops */
+      default:           
         elog(ERROR, "unrecognized alter domain type: %d", (int)stmt->subtype);
         break;
       }
     }
     break;
 
-      /*
-       * ************* object creation / destruction **************
-       */
+         
+                                                                    
+         
     case T_DefineStmt:
     {
       DefineStmt *stmt = (DefineStmt *)parsetree;
@@ -1258,7 +1258,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
     }
     break;
 
-    case T_IndexStmt: /* CREATE INDEX */
+    case T_IndexStmt:                   
     {
       IndexStmt *stmt = (IndexStmt *)parsetree;
       Oid relid;
@@ -1270,27 +1270,27 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
         PreventInTransactionBlock(isTopLevel, "CREATE INDEX CONCURRENTLY");
       }
 
-      /*
-       * Look up the relation OID just once, right here at the
-       * beginning, so that we don't end up repeating the name
-       * lookup later and latching onto a different relation
-       * partway through.  To avoid lock upgrade hazards, it's
-       * important that we take the strongest lock that will
-       * eventually be needed here, so the lockmode calculation
-       * needs to match what DefineIndex() does.
-       */
+         
+                                                               
+                                                               
+                                                             
+                                                               
+                                                             
+                                                                
+                                                 
+         
       lockmode = stmt->concurrent ? ShareUpdateExclusiveLock : ShareLock;
       relid = RangeVarGetRelidExtended(stmt->relation, lockmode, 0, RangeVarCallbackOwnsRelation, NULL);
 
-      /*
-       * CREATE INDEX on partitioned tables (but not regular
-       * inherited tables) recurses to partitions, so we must
-       * acquire locks early to avoid deadlocks.
-       *
-       * We also take the opportunity to verify that all
-       * partitions are something we can put an index on, to
-       * avoid building some indexes only to fail later.
-       */
+         
+                                                             
+                                                              
+                                                 
+         
+                                                         
+                                                             
+                                                         
+         
       if (stmt->relation->inh && get_rel_relkind(relid) == RELKIND_PARTITIONED_TABLE)
       {
         ListCell *lc;
@@ -1314,36 +1314,36 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
         list_free(inheritors);
       }
 
-      /*
-       * If the IndexStmt is already transformed, it must have
-       * come from generateClonedIndexStmt, which in current
-       * usage means it came from expandTableLikeClause rather
-       * than from original parse analysis.  And that means we
-       * must treat it like ALTER TABLE ADD INDEX, not CREATE.
-       * (This is a bit grotty, but currently it doesn't seem
-       * worth adding a separate bool field for the purpose.)
-       */
+         
+                                                               
+                                                             
+                                                               
+                                                               
+                                                               
+                                                              
+                                                              
+         
       is_alter_table = stmt->transformed;
 
-      /* Run parse analysis ... */
+                                  
       stmt = transformIndexStmt(relid, stmt, queryString);
 
-      /* ... and do it */
+                         
       EventTriggerAlterTableStart(parsetree);
-      address = DefineIndex(relid, /* OID of heap relation */
-          stmt, InvalidOid,        /* no predefined OID */
-          InvalidOid,              /* no parent index */
-          InvalidOid,              /* no parent constraint */
-          is_alter_table, true,    /* check_rights */
-          true,                    /* check_not_in_use */
-          false,                   /* skip_build */
-          false);                  /* quiet */
+      address = DefineIndex(relid,                           
+          stmt, InvalidOid,                               
+          InvalidOid,                                   
+          InvalidOid,                                        
+          is_alter_table, true,                      
+          true,                                          
+          false,                                   
+          false);                             
 
-      /*
-       * Add the CREATE INDEX node itself to stash right away;
-       * if there were any commands stashed in the ALTER TABLE
-       * code, we need them to appear after this one.
-       */
+         
+                                                               
+                                                               
+                                                      
+         
       EventTriggerCollectSimpleCommand(address, secondaryObject, parsetree);
       commandCollected = true;
       EventTriggerAlterTableEnd();
@@ -1388,17 +1388,17 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_DropUserMappingStmt:
       RemoveUserMapping((DropUserMappingStmt *)parsetree);
-      /* no commands stashed for DROP */
+                                        
       commandCollected = true;
       break;
 
     case T_ImportForeignSchemaStmt:
       ImportForeignSchema((ImportForeignSchemaStmt *)parsetree);
-      /* commands are stashed inside ImportForeignSchema */
+                                                           
       commandCollected = true;
       break;
 
-    case T_CompositeTypeStmt: /* CREATE TYPE (composite) */
+    case T_CompositeTypeStmt:                              
     {
       CompositeTypeStmt *stmt = (CompositeTypeStmt *)parsetree;
 
@@ -1406,36 +1406,36 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
     }
     break;
 
-    case T_CreateEnumStmt: /* CREATE TYPE AS ENUM */
+    case T_CreateEnumStmt:                          
       address = DefineEnum((CreateEnumStmt *)parsetree);
       break;
 
-    case T_CreateRangeStmt: /* CREATE TYPE AS RANGE */
+    case T_CreateRangeStmt:                           
       address = DefineRange((CreateRangeStmt *)parsetree);
       break;
 
-    case T_AlterEnumStmt: /* ALTER TYPE (enum) */
+    case T_AlterEnumStmt:                        
       address = AlterEnum((AlterEnumStmt *)parsetree);
       break;
 
-    case T_ViewStmt: /* CREATE VIEW */
+    case T_ViewStmt:                  
       EventTriggerAlterTableStart(parsetree);
       address = DefineView((ViewStmt *)parsetree, queryString, pstmt->stmt_location, pstmt->stmt_len);
       EventTriggerCollectSimpleCommand(address, secondaryObject, parsetree);
-      /* stashed internally */
+                              
       commandCollected = true;
       EventTriggerAlterTableEnd();
       break;
 
-    case T_CreateFunctionStmt: /* CREATE FUNCTION */
+    case T_CreateFunctionStmt:                      
       address = CreateFunction(pstate, (CreateFunctionStmt *)parsetree);
       break;
 
-    case T_AlterFunctionStmt: /* ALTER FUNCTION */
+    case T_AlterFunctionStmt:                     
       address = AlterFunction(pstate, (AlterFunctionStmt *)parsetree);
       break;
 
-    case T_RuleStmt: /* CREATE RULE */
+    case T_RuleStmt:                  
       address = DefineRule((RuleStmt *)parsetree, queryString);
       break;
 
@@ -1453,12 +1453,12 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_RefreshMatViewStmt:
 
-      /*
-       * REFRESH CONCURRENTLY executes some DDL commands internally.
-       * Inhibit DDL command collection here to avoid those commands
-       * from showing up in the deparsed command queue.  The refresh
-       * command itself is queued, which is enough.
-       */
+         
+                                                                     
+                                                                     
+                                                                     
+                                                    
+         
       EventTriggerInhibitCommandCollection();
       PG_TRY();
       {
@@ -1495,17 +1495,17 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_CreateOpClassStmt:
       DefineOpClass((CreateOpClassStmt *)parsetree);
-      /* command is stashed in DefineOpClass */
+                                               
       commandCollected = true;
       break;
 
     case T_CreateOpFamilyStmt:
       address = DefineOpFamily((CreateOpFamilyStmt *)parsetree);
 
-      /*
-       * DefineOpFamily calls EventTriggerCollectSimpleCommand
-       * directly.
-       */
+         
+                                                               
+                   
+         
       commandCollected = true;
       break;
 
@@ -1515,7 +1515,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_AlterOpFamilyStmt:
       AlterOpFamily((AlterOpFamilyStmt *)parsetree);
-      /* commands are stashed in AlterOpFamily */
+                                                 
       commandCollected = true;
       break;
 
@@ -1526,23 +1526,23 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
     case T_AlterTSConfigurationStmt:
       AlterTSConfiguration((AlterTSConfigurationStmt *)parsetree);
 
-      /*
-       * Commands are stashed in MakeConfigurationMapping and
-       * DropConfigurationMapping, which are called from
-       * AlterTSConfiguration
-       */
+         
+                                                              
+                                                         
+                              
+         
       commandCollected = true;
       break;
 
     case T_AlterTableMoveAllStmt:
       AlterTableMoveAll((AlterTableMoveAllStmt *)parsetree);
-      /* commands are stashed in AlterTableMoveAll */
+                                                     
       commandCollected = true;
       break;
 
     case T_DropStmt:
       ExecDropStmt((DropStmt *)parsetree, isTopLevel);
-      /* no commands stashed for DROP */
+                                        
       commandCollected = true;
       break;
 
@@ -1572,13 +1572,13 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_GrantStmt:
       ExecuteGrantStmt((GrantStmt *)parsetree);
-      /* commands are stashed in ExecGrantStmt_oids */
+                                                      
       commandCollected = true;
       break;
 
     case T_DropOwnedStmt:
       DropOwnedObjects((DropOwnedStmt *)parsetree);
-      /* no commands stashed for DROP */
+                                        
       commandCollected = true;
       break;
 
@@ -1588,11 +1588,11 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       commandCollected = true;
       break;
 
-    case T_CreatePolicyStmt: /* CREATE POLICY */
+    case T_CreatePolicyStmt:                    
       address = CreatePolicy((CreatePolicyStmt *)parsetree);
       break;
 
-    case T_AlterPolicyStmt: /* ALTER POLICY */
+    case T_AlterPolicyStmt:                   
       address = AlterPolicy((AlterPolicyStmt *)parsetree);
       break;
 
@@ -1611,10 +1611,10 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
     case T_AlterPublicationStmt:
       AlterPublication((AlterPublicationStmt *)parsetree);
 
-      /*
-       * AlterPublication calls EventTriggerCollectSimpleCommand
-       * directly
-       */
+         
+                                                                 
+                  
+         
       commandCollected = true;
       break;
 
@@ -1628,7 +1628,7 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
 
     case T_DropSubscriptionStmt:
       DropSubscription((DropSubscriptionStmt *)parsetree, isTopLevel);
-      /* no commands stashed for DROP */
+                                        
       commandCollected = true;
       break;
 
@@ -1645,10 +1645,10 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
       break;
     }
 
-    /*
-     * Remember the object so that ddl_command_end event triggers have
-     * access to it.
-     */
+       
+                                                                       
+                     
+       
     if (!commandCollected)
     {
       EventTriggerCollectSimpleCommand(address, secondaryObject, parsetree);
@@ -1676,9 +1676,9 @@ ProcessUtilitySlow(ParseState *pstate, PlannedStmt *pstmt, const char *queryStri
   }
 }
 
-/*
- * Dispatch function for DropStmt
- */
+   
+                                  
+   
 static void
 ExecDropStmt(DropStmt *stmt, bool isTopLevel)
 {
@@ -1689,7 +1689,7 @@ ExecDropStmt(DropStmt *stmt, bool isTopLevel)
     {
       PreventInTransactionBlock(isTopLevel, "DROP INDEX CONCURRENTLY");
     }
-    /* fall through */
+                      
 
   case OBJECT_TABLE:
   case OBJECT_SEQUENCE:
@@ -1704,14 +1704,14 @@ ExecDropStmt(DropStmt *stmt, bool isTopLevel)
   }
 }
 
-/*
- * UtilityReturnsTuples
- *		Return "true" if this utility statement will send output to the
- *		destination.
- *
- * Generally, there should be a case here for each case in ProcessUtility
- * where "dest" is passed on.
- */
+   
+                        
+                                                                    
+                 
+   
+                                                                          
+                              
+   
 bool
 UtilityReturnsTuples(Node *parsetree)
 {
@@ -1735,7 +1735,7 @@ UtilityReturnsTuples(Node *parsetree)
     portal = GetPortalByName(stmt->portalname);
     if (!PortalIsValid(portal))
     {
-      return false; /* not our business to raise error */
+      return false;                                      
     }
     return portal->tupDesc ? true : false;
   }
@@ -1748,7 +1748,7 @@ UtilityReturnsTuples(Node *parsetree)
     entry = FetchPreparedStatement(stmt->name, false);
     if (!entry)
     {
-      return false; /* not our business to raise error */
+      return false;                                      
     }
     if (entry->plansource->resultDesc)
     {
@@ -1768,14 +1768,14 @@ UtilityReturnsTuples(Node *parsetree)
   }
 }
 
-/*
- * UtilityTupleDescriptor
- *		Fetch the actual output tuple descriptor for a utility statement
- *		for which UtilityReturnsTuples() previously returned "true".
- *
- * The returned descriptor is created in (or copied into) the current memory
- * context.
- */
+   
+                          
+                                                                     
+                                                                 
+   
+                                                                             
+            
+   
 TupleDesc
 UtilityTupleDescriptor(Node *parsetree)
 {
@@ -1796,7 +1796,7 @@ UtilityTupleDescriptor(Node *parsetree)
     portal = GetPortalByName(stmt->portalname);
     if (!PortalIsValid(portal))
     {
-      return NULL; /* not our business to raise error */
+      return NULL;                                      
     }
     return CreateTupleDescCopy(portal->tupDesc);
   }
@@ -1809,7 +1809,7 @@ UtilityTupleDescriptor(Node *parsetree)
     entry = FetchPreparedStatement(stmt->name, false);
     if (!entry)
     {
-      return NULL; /* not our business to raise error */
+      return NULL;                                      
     }
     return FetchPreparedStatementResultDesc(entry);
   }
@@ -1829,10 +1829,10 @@ UtilityTupleDescriptor(Node *parsetree)
   }
 }
 
-/*
- * QueryReturnsTuples
- *		Return "true" if this Query will send output to the destination.
- */
+   
+                      
+                                                                     
+   
 #ifdef NOT_USED
 bool
 QueryReturnsTuples(Query *parsetree)
@@ -1840,12 +1840,12 @@ QueryReturnsTuples(Query *parsetree)
   switch (parsetree->commandType)
   {
   case CMD_SELECT:
-    /* returns tuples */
+                        
     return true;
   case CMD_INSERT:
   case CMD_UPDATE:
   case CMD_DELETE:
-    /* the forms with RETURNING return tuples */
+                                                
     if (parsetree->returningList)
     {
       return true;
@@ -1855,27 +1855,27 @@ QueryReturnsTuples(Query *parsetree)
     return UtilityReturnsTuples(parsetree->utilityStmt);
   case CMD_UNKNOWN:
   case CMD_NOTHING:
-    /* probably shouldn't get here */
+                                     
     break;
   }
-  return false; /* default */
+  return false;              
 }
 #endif
 
-/*
- * UtilityContainsQuery
- *		Return the contained Query, or NULL if there is none
- *
- * Certain utility statements, such as EXPLAIN, contain a plannable Query.
- * This function encapsulates knowledge of exactly which ones do.
- * We assume it is invoked only on already-parse-analyzed statements
- * (else the contained parsetree isn't a Query yet).
- *
- * In some cases (currently, only EXPLAIN of CREATE TABLE AS/SELECT INTO and
- * CREATE MATERIALIZED VIEW), potentially Query-containing utility statements
- * can be nested.  This function will drill down to a non-utility Query, or
- * return NULL if none.
- */
+   
+                        
+                                                         
+   
+                                                                           
+                                                                  
+                                                                     
+                                                     
+   
+                                                                             
+                                                                              
+                                                                            
+                        
+   
 Query *
 UtilityContainsQuery(Node *parsetree)
 {
@@ -1912,12 +1912,12 @@ UtilityContainsQuery(Node *parsetree)
   }
 }
 
-/*
- * AlterObjectTypeCommandTag
- *		helper function for CreateCommandTag
- *
- * This covers most cases where ALTER is used with an ObjectType enum.
- */
+   
+                             
+                                         
+   
+                                                                       
+   
 static const char *
 AlterObjectTypeCommandTag(ObjectType objtype)
 {
@@ -2055,18 +2055,18 @@ AlterObjectTypeCommandTag(ObjectType objtype)
   return tag;
 }
 
-/*
- * CreateCommandTag
- *		utility to get a string representation of the command operation,
- *		given either a raw (un-analyzed) parsetree, an analyzed Query,
- *		or a PlannedStmt.
- *
- * This must handle all command types, but since the vast majority
- * of 'em are utility commands, it seems sensible to keep it here.
- *
- * NB: all result strings must be shorter than COMPLETION_TAG_BUFSIZE.
- * Also, the result must point at a true constant (permanent storage).
- */
+   
+                    
+                                                                     
+                                                                   
+                      
+   
+                                                                   
+                                                                   
+   
+                                                                       
+                                                                       
+   
 const char *
 CreateCommandTag(Node *parsetree)
 {
@@ -2074,12 +2074,12 @@ CreateCommandTag(Node *parsetree)
 
   switch (nodeTag(parsetree))
   {
-    /* recurse if we're given a RawStmt */
+                                          
   case T_RawStmt:
     tag = CreateCommandTag(((RawStmt *)parsetree)->stmt);
     break;
 
-    /* raw plannable queries */
+                               
   case T_InsertStmt:
     tag = "INSERT";
     break;
@@ -2096,7 +2096,7 @@ CreateCommandTag(Node *parsetree)
     tag = "SELECT";
     break;
 
-    /* utility statements --- same whether raw or cooked */
+                                                           
   case T_TransactionStmt:
   {
     TransactionStmt *stmt = (TransactionStmt *)parsetree;
@@ -2807,7 +2807,7 @@ CreateCommandTag(Node *parsetree)
   }
   break;
 
-    /* already-planned queries */
+                                 
   case T_PlannedStmt:
   {
     PlannedStmt *stmt = (PlannedStmt *)parsetree;
@@ -2816,14 +2816,14 @@ CreateCommandTag(Node *parsetree)
     {
     case CMD_SELECT:
 
-      /*
-       * We take a little extra care here so that the result
-       * will be useful for complaints about read-only
-       * statements
-       */
+         
+                                                             
+                                                       
+                    
+         
       if (stmt->rowMarks != NIL)
       {
-        /* not 100% but probably close enough */
+                                                
         switch (((PlanRowMark *)linitial(stmt->rowMarks))->strength)
         {
         case LCS_FORKEYSHARE:
@@ -2868,7 +2868,7 @@ CreateCommandTag(Node *parsetree)
   }
   break;
 
-    /* parsed-and-rewritten-but-not-planned queries */
+                                                      
   case T_Query:
   {
     Query *stmt = (Query *)parsetree;
@@ -2877,14 +2877,14 @@ CreateCommandTag(Node *parsetree)
     {
     case CMD_SELECT:
 
-      /*
-       * We take a little extra care here so that the result
-       * will be useful for complaints about read-only
-       * statements
-       */
+         
+                                                             
+                                                       
+                    
+         
       if (stmt->rowMarks != NIL)
       {
-        /* not 100% but probably close enough */
+                                                
         switch (((RowMarkClause *)linitial(stmt->rowMarks))->strength)
         {
         case LCS_FORKEYSHARE:
@@ -2938,15 +2938,15 @@ CreateCommandTag(Node *parsetree)
   return tag;
 }
 
-/*
- * GetCommandLogLevel
- *		utility to get the minimum log_statement level for a command,
- *		given either a raw (un-analyzed) parsetree, an analyzed Query,
- *		or a PlannedStmt.
- *
- * This must handle all command types, but since the vast majority
- * of 'em are utility commands, it seems sensible to keep it here.
- */
+   
+                      
+                                                                  
+                                                                   
+                      
+   
+                                                                   
+                                                                   
+   
 LogStmtLevel
 GetCommandLogLevel(Node *parsetree)
 {
@@ -2954,12 +2954,12 @@ GetCommandLogLevel(Node *parsetree)
 
   switch (nodeTag(parsetree))
   {
-    /* recurse if we're given a RawStmt */
+                                          
   case T_RawStmt:
     lev = GetCommandLogLevel(((RawStmt *)parsetree)->stmt);
     break;
 
-    /* raw plannable queries */
+                               
   case T_InsertStmt:
   case T_DeleteStmt:
   case T_UpdateStmt:
@@ -2969,7 +2969,7 @@ GetCommandLogLevel(Node *parsetree)
   case T_SelectStmt:
     if (((SelectStmt *)parsetree)->intoClause)
     {
-      lev = LOGSTMT_DDL; /* SELECT INTO */
+      lev = LOGSTMT_DDL;                  
     }
     else
     {
@@ -2977,7 +2977,7 @@ GetCommandLogLevel(Node *parsetree)
     }
     break;
 
-    /* utility statements --- same whether raw or cooked */
+                                                           
   case T_TransactionStmt:
     lev = LOGSTMT_ALL;
     break;
@@ -3057,7 +3057,7 @@ GetCommandLogLevel(Node *parsetree)
   {
     PrepareStmt *stmt = (PrepareStmt *)parsetree;
 
-    /* Look through a PREPARE to the contained stmt */
+                                                      
     lev = GetCommandLogLevel(stmt->query);
   }
   break;
@@ -3067,7 +3067,7 @@ GetCommandLogLevel(Node *parsetree)
     ExecuteStmt *stmt = (ExecuteStmt *)parsetree;
     PreparedStatement *ps;
 
-    /* Look through an EXECUTE to the referenced stmt */
+                                                        
     ps = FetchPreparedStatement(stmt->name, false);
     if (ps && ps->plansource->raw_parse_tree)
     {
@@ -3227,7 +3227,7 @@ GetCommandLogLevel(Node *parsetree)
     bool analyze = false;
     ListCell *lc;
 
-    /* Look through an EXPLAIN ANALYZE to the contained stmt */
+                                                               
     foreach (lc, stmt->options)
     {
       DefElem *opt = (DefElem *)lfirst(lc);
@@ -3236,14 +3236,14 @@ GetCommandLogLevel(Node *parsetree)
       {
         analyze = defGetBoolean(opt);
       }
-      /* don't "break", as explain.c will use the last value */
+                                                               
     }
     if (analyze)
     {
       return GetCommandLogLevel(stmt->query);
     }
 
-    /* Plain EXPLAIN isn't so interesting */
+                                            
     lev = LOGSTMT_ALL;
   }
   break;
@@ -3329,7 +3329,7 @@ GetCommandLogLevel(Node *parsetree)
     break;
 
   case T_ReindexStmt:
-    lev = LOGSTMT_ALL; /* should this be DDL? */
+    lev = LOGSTMT_ALL;                          
     break;
 
   case T_CreateConversionStmt:
@@ -3404,7 +3404,7 @@ GetCommandLogLevel(Node *parsetree)
     lev = LOGSTMT_DDL;
     break;
 
-    /* already-planned queries */
+                                 
   case T_PlannedStmt:
   {
     PlannedStmt *stmt = (PlannedStmt *)parsetree;
@@ -3433,7 +3433,7 @@ GetCommandLogLevel(Node *parsetree)
   }
   break;
 
-    /* parsed-and-rewritten-but-not-planned queries */
+                                                      
   case T_Query:
   {
     Query *stmt = (Query *)parsetree;

@@ -1,31 +1,31 @@
-/*-------------------------------------------------------------------------
- *
- * test_parser.c
- *	  Simple example of a text search parser
- *
- * Copyright (c) 2007-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/test/modules/test_parser/test_parser.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                            
+   
+                                                                
+   
+                  
+                                                
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "fmgr.h"
 
 PG_MODULE_MAGIC;
 
-/*
- * types
- */
+   
+         
+   
 
-/* self-defined type */
+                       
 typedef struct
 {
-  char *buffer; /* text to parse */
-  int len;      /* length of the text in buffer */
-  int pos;      /* position of the parser */
+  char *buffer;                    
+  int len;                                        
+  int pos;                                  
 } ParserState;
 
 typedef struct
@@ -35,9 +35,9 @@ typedef struct
   char *descr;
 } LexDescr;
 
-/*
- * functions
- */
+   
+             
+   
 PG_FUNCTION_INFO_V1(testprs_start);
 PG_FUNCTION_INFO_V1(testprs_getlexeme);
 PG_FUNCTION_INFO_V1(testprs_end);
@@ -68,9 +68,9 @@ testprs_getlexeme(PG_FUNCTION_ARGS)
 
   if (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ')
   {
-    /* blank type */
+                    
     type = 12;
-    /* go to the next non-space character */
+                                            
     while (pst->pos < pst->len && (pst->buffer)[pst->pos] == ' ')
     {
       (pst->pos)++;
@@ -78,9 +78,9 @@ testprs_getlexeme(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* word type */
+                   
     type = 3;
-    /* go to the next space character */
+                                        
     while (pst->pos < pst->len && (pst->buffer)[pst->pos] != ' ')
     {
       (pst->pos)++;
@@ -89,7 +89,7 @@ testprs_getlexeme(PG_FUNCTION_ARGS)
 
   *tlen = pst->pos - startpos;
 
-  /* we are finished if (*tlen == 0) */
+                                       
   if (*tlen == 0)
   {
     type = 0;
@@ -110,14 +110,14 @@ testprs_end(PG_FUNCTION_ARGS)
 Datum
 testprs_lextype(PG_FUNCTION_ARGS)
 {
-  /*
-   * Remarks: - we have to return the blanks for headline reason - we use
-   * the same lexids like Teodor in the default word parser; in this way we
-   * can reuse the headline function of the default word parser.
-   */
+     
+                                                                          
+                                                                            
+                                                                 
+     
   LexDescr *descr = (LexDescr *)palloc(sizeof(LexDescr) * (2 + 1));
 
-  /* there are only two types in this parser */
+                                               
   descr[0].lexid = 3;
   descr[0].alias = pstrdup("word");
   descr[0].descr = pstrdup("Word");

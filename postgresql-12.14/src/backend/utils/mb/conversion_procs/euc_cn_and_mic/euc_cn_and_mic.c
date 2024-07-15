@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- *	  EUC_CN and MULE_INTERNAL
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/mb/conversion_procs/euc_cn_and_mic/euc_cn_and_mic.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                              
+   
+                                                                         
+                                                                        
+   
+                  
+                                                                           
+   
+                                                                            
+   
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -20,16 +20,16 @@ PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(euc_cn_to_mic);
 PG_FUNCTION_INFO_V1(mic_to_euc_cn);
 
-/* ----------
- * conv_proc(
- *		INTEGER,	-- source encoding id
- *		INTEGER,	-- destination encoding id
- *		CSTRING,	-- source string (null terminated C string)
- *		CSTRING,	-- destination string (null terminated C string)
- *		INTEGER		-- source string length
- * ) returns VOID;
- * ----------
- */
+              
+              
+                                   
+                                        
+                                                         
+                                                              
+                                     
+                   
+              
+   
 
 static void
 euc_cn2mic(const unsigned char *euc, unsigned char *p, int len);
@@ -64,9 +64,9 @@ mic_to_euc_cn(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * EUC_CN ---> MIC
- */
+   
+                   
+   
 static void
 euc_cn2mic(const unsigned char *euc, unsigned char *p, int len)
 {
@@ -88,7 +88,7 @@ euc_cn2mic(const unsigned char *euc, unsigned char *p, int len)
       len -= 2;
     }
     else
-    { /* should be ASCII */
+    {                      
       if (c1 == 0)
       {
         report_invalid_encoding(PG_EUC_CN, (const char *)euc, len);
@@ -101,9 +101,9 @@ euc_cn2mic(const unsigned char *euc, unsigned char *p, int len)
   *p = '\0';
 }
 
-/*
- * MIC ---> EUC_CN
- */
+   
+                   
+   
 static void
 mic2euc_cn(const unsigned char *mic, unsigned char *p, int len)
 {
@@ -128,7 +128,7 @@ mic2euc_cn(const unsigned char *mic, unsigned char *p, int len)
       len -= 3;
     }
     else
-    { /* should be ASCII */
+    {                      
       if (c1 == 0)
       {
         report_invalid_encoding(PG_MULE_INTERNAL, (const char *)mic, len);

@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- * A stack of automaton states to handle nested conditionals.
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/fe_utils/conditional.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+                                                              
+   
+                                                                
+   
+                              
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include "fe_utils/conditional.h"
 
-/*
- * create stack
- */
+   
+                
+   
 ConditionalStack
 conditional_stack_create(void)
 {
@@ -23,9 +23,9 @@ conditional_stack_create(void)
   return cstack;
 }
 
-/*
- * destroy stack
- */
+   
+                 
+   
 void
 conditional_stack_destroy(ConditionalStack cstack)
 {
@@ -36,9 +36,9 @@ conditional_stack_destroy(ConditionalStack cstack)
   free(cstack);
 }
 
-/*
- * Create a new conditional branch.
- */
+   
+                                    
+   
 void
 conditional_stack_push(ConditionalStack cstack, ifState new_state)
 {
@@ -51,10 +51,10 @@ conditional_stack_push(ConditionalStack cstack, ifState new_state)
   cstack->head = p;
 }
 
-/*
- * Destroy the topmost conditional branch.
- * Returns false if there was no branch to end.
- */
+   
+                                           
+                                                
+   
 bool
 conditional_stack_pop(ConditionalStack cstack)
 {
@@ -69,9 +69,9 @@ conditional_stack_pop(ConditionalStack cstack)
   return true;
 }
 
-/*
- * Returns current stack depth, for debugging purposes.
- */
+   
+                                                        
+   
 int
 conditional_stack_depth(ConditionalStack cstack)
 {
@@ -93,9 +93,9 @@ conditional_stack_depth(ConditionalStack cstack)
   }
 }
 
-/*
- * Fetch the current state of the top of the stack.
- */
+   
+                                                    
+   
 ifState
 conditional_stack_peek(ConditionalStack cstack)
 {
@@ -106,10 +106,10 @@ conditional_stack_peek(ConditionalStack cstack)
   return cstack->head->if_state;
 }
 
-/*
- * Change the state of the topmost branch.
- * Returns false if there was no branch state to set.
- */
+   
+                                           
+                                                      
+   
 bool
 conditional_stack_poke(ConditionalStack cstack, ifState new_state)
 {
@@ -121,19 +121,19 @@ conditional_stack_poke(ConditionalStack cstack, ifState new_state)
   return true;
 }
 
-/*
- * True if there are no active \if-blocks.
- */
+   
+                                           
+   
 bool
 conditional_stack_empty(ConditionalStack cstack)
 {
   return cstack->head == NULL;
 }
 
-/*
- * True if we should execute commands normally; that is, the current
- * conditional branch is active, or there is no open \if block.
- */
+   
+                                                                     
+                                                                
+   
 bool
 conditional_active(ConditionalStack cstack)
 {
@@ -142,9 +142,9 @@ conditional_active(ConditionalStack cstack)
   return s == IFSTATE_NONE || s == IFSTATE_TRUE || s == IFSTATE_ELSE_TRUE;
 }
 
-/*
- * Save current query buffer length in topmost stack entry.
- */
+   
+                                                            
+   
 void
 conditional_stack_set_query_len(ConditionalStack cstack, int len)
 {
@@ -152,10 +152,10 @@ conditional_stack_set_query_len(ConditionalStack cstack, int len)
   cstack->head->query_len = len;
 }
 
-/*
- * Fetch last-recorded query buffer length from topmost stack entry.
- * Will return -1 if no stack or it was never saved.
- */
+   
+                                                                     
+                                                     
+   
 int
 conditional_stack_get_query_len(ConditionalStack cstack)
 {
@@ -166,9 +166,9 @@ conditional_stack_get_query_len(ConditionalStack cstack)
   return cstack->head->query_len;
 }
 
-/*
- * Save current parenthesis nesting depth in topmost stack entry.
- */
+   
+                                                                  
+   
 void
 conditional_stack_set_paren_depth(ConditionalStack cstack, int depth)
 {
@@ -176,10 +176,10 @@ conditional_stack_set_paren_depth(ConditionalStack cstack, int depth)
   cstack->head->paren_depth = depth;
 }
 
-/*
- * Fetch last-recorded parenthesis nesting depth from topmost stack entry.
- * Will return -1 if no stack or it was never saved.
- */
+   
+                                                                           
+                                                     
+   
 int
 conditional_stack_get_paren_depth(ConditionalStack cstack)
 {

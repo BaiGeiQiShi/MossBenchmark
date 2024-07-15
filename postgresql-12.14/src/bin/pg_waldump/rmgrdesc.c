@@ -1,10 +1,10 @@
-/*
- * rmgrdesc.c
- *
- * pg_waldump resource managers definition
- *
- * src/bin/pg_waldump/rmgrdesc.c
- */
+   
+              
+   
+                                           
+   
+                                 
+   
 #define FRONTEND 1
 #include "postgres.h"
 

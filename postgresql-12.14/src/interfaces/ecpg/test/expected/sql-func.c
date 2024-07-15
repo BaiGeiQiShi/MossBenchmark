@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "func.pgc"
@@ -35,10 +35,10 @@ main()
   }
 #line 13 "func.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 14 "func.pgc"
 
-  /* exec sql whenever sqlerror  sqlprint ; */
+                                              
 #line 15 "func.pgc"
 
   {

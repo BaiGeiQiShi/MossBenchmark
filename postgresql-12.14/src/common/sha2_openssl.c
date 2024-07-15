@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * sha2_openssl.c
- *	  Set of wrapper routines on top of OpenSSL to support SHA-224
- *	  SHA-256, SHA-384 and SHA-512 functions.
- *
- * This should only be used if code is compiled with OpenSSL support.
- *
- * Portions Copyright (c) 2016-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		  src/common/sha2_openssl.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                                                  
+                                             
+   
+                                                                      
+   
+                                                                         
+   
+                  
+                                
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -24,7 +24,7 @@
 
 #include "common/sha2.h"
 
-/* Interface routines for SHA-256 */
+                                    
 void
 pg_sha256_init(pg_sha256_ctx *ctx)
 {
@@ -43,7 +43,7 @@ pg_sha256_final(pg_sha256_ctx *ctx, uint8 *dest)
   SHA256_Final(dest, (SHA256_CTX *)ctx);
 }
 
-/* Interface routines for SHA-512 */
+                                    
 void
 pg_sha512_init(pg_sha512_ctx *ctx)
 {
@@ -62,7 +62,7 @@ pg_sha512_final(pg_sha512_ctx *ctx, uint8 *dest)
   SHA512_Final(dest, (SHA512_CTX *)ctx);
 }
 
-/* Interface routines for SHA-384 */
+                                    
 void
 pg_sha384_init(pg_sha384_ctx *ctx)
 {
@@ -81,7 +81,7 @@ pg_sha384_final(pg_sha384_ctx *ctx, uint8 *dest)
   SHA384_Final(dest, (SHA512_CTX *)ctx);
 }
 
-/* Interface routines for SHA-224 */
+                                    
 void
 pg_sha224_init(pg_sha224_ctx *ctx)
 {

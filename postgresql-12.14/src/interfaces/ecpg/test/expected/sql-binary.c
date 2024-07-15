@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "binary.pgc"
@@ -14,7 +14,7 @@
 
 #line 4 "binary.pgc"
 
-/* exec sql begin declare section */
+                                    
 
 struct TBempl
 {
@@ -29,16 +29,16 @@ struct TBempl
 
 #line 12 "binary.pgc"
   char byte[20];
-}; /* exec sql end declare section */
+};                                   
 #line 14 "binary.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 16 "binary.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 22 "binary.pgc"
   struct TBempl empl;
@@ -48,7 +48,7 @@ main(void)
 
 #line 24 "binary.pgc"
   char *data = "\\001\\155\\000\\212";
-/* exec sql end declare section */
+                                  
 #line 25 "binary.pgc"
 
   int i;
@@ -100,7 +100,7 @@ main(void)
   }
 #line 35 "binary.pgc"
 
-  ECPGset_var(0, &(empl.idnum), __LINE__); /* declare C cursor for select name , accs , byte from empl where idnum = $1  */
+  ECPGset_var(0, &(empl.idnum), __LINE__);                                                                                 
 #line 36 "binary.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -147,7 +147,7 @@ main(void)
 #line 41 "binary.pgc"
 
   memset(empl.name, 0, 21L);
-  ECPGset_var(1, &(empl.idnum), __LINE__); /* declare B binary cursor for select name , accs , byte from empl where idnum = $1  */
+  ECPGset_var(1, &(empl.idnum), __LINE__);                                                                                        
 #line 44 "binary.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -191,7 +191,7 @@ main(void)
   }
 #line 47 "binary.pgc"
 
-  /* do not print a.accs because big/little endian will have different outputs here */
+                                                                                      
   printf("name=%s, byte=", empl.name);
   for (i = 0; i < 4; i++)
   {
@@ -199,7 +199,7 @@ main(void)
   }
   printf("\n");
 
-  ECPGset_var(2, &(empl.idnum), __LINE__); /* declare A binary cursor for select byte from empl where idnum = $1  */
+  ECPGset_var(2, &(empl.idnum), __LINE__);                                                                          
 #line 55 "binary.pgc"
 
   if (sqlca.sqlcode < 0)

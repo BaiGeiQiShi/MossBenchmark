@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- *
- * attoptcache.c
- *	  Attribute options cache management.
- *
- * Attribute options are cached separately from the fixed-size portion of
- * pg_attribute entries, which are handled by the relcache.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/cache/attoptcache.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                         
+   
+                                                                          
+                                                            
+   
+                                                                         
+                                                                        
+   
+                  
+                                           
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/reloptions.h"
@@ -23,10 +23,10 @@
 #include "utils/inval.h"
 #include "utils/syscache.h"
 
-/* Hash table for information about each attribute's options */
+                                                               
 static HTAB *AttoptCacheHash = NULL;
 
-/* attrelid and attnum form the lookup key, and must appear first */
+                                                                    
 typedef struct
 {
   Oid attrelid;
@@ -35,19 +35,19 @@ typedef struct
 
 typedef struct
 {
-  AttoptCacheKey key;  /* lookup key - must be first */
-  AttributeOpts *opts; /* options, or NULL if none */
+  AttoptCacheKey key;                                  
+  AttributeOpts *opts;                               
 } AttoptCacheEntry;
 
-/*
- * InvalidateAttoptCacheCallback
- *		Flush all cache entries when pg_attribute is updated.
- *
- * When pg_attribute is updated, we must flush the cache entry at least
- * for that attribute.  Currently, we just flush them all.  Since attribute
- * options are not currently used in performance-critical paths (such as
- * query execution), this seems OK.
- */
+   
+                                 
+                                                          
+   
+                                                                        
+                                                                            
+                                                                         
+                                    
+   
 static void
 InvalidateAttoptCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
 {
@@ -68,35 +68,35 @@ InvalidateAttoptCacheCallback(Datum arg, int cacheid, uint32 hashvalue)
   }
 }
 
-/*
- * InitializeAttoptCache
- *		Initialize the attribute options cache.
- */
+   
+                         
+                                            
+   
 static void
 InitializeAttoptCache(void)
 {
   HASHCTL ctl;
 
-  /* Initialize the hash table. */
+                                  
   MemSet(&ctl, 0, sizeof(ctl));
   ctl.keysize = sizeof(AttoptCacheKey);
   ctl.entrysize = sizeof(AttoptCacheEntry);
   AttoptCacheHash = hash_create("Attopt cache", 256, &ctl, HASH_ELEM | HASH_BLOBS);
 
-  /* Make sure we've initialized CacheMemoryContext. */
+                                                       
   if (!CacheMemoryContext)
   {
     CreateCacheMemoryContext();
   }
 
-  /* Watch for invalidation events. */
+                                      
   CacheRegisterSyscacheCallback(ATTNUM, InvalidateAttoptCacheCallback, (Datum)0);
 }
 
-/*
- * get_attribute_options
- *		Fetch attribute options for a specified table OID.
- */
+   
+                         
+                                                       
+   
 AttributeOpts *
 get_attribute_options(Oid attrelid, int attnum)
 {
@@ -105,28 +105,28 @@ get_attribute_options(Oid attrelid, int attnum)
   AttributeOpts *result;
   HeapTuple tp;
 
-  /* Find existing cache entry, if any. */
+                                          
   if (!AttoptCacheHash)
   {
     InitializeAttoptCache();
   }
-  memset(&key, 0, sizeof(key)); /* make sure any padding bits are unset */
+  memset(&key, 0, sizeof(key));                                           
   key.attrelid = attrelid;
   key.attnum = attnum;
   attopt = (AttoptCacheEntry *)hash_search(AttoptCacheHash, (void *)&key, HASH_FIND, NULL);
 
-  /* Not found in Attopt cache.  Construct new cache entry. */
+                                                              
   if (!attopt)
   {
     AttributeOpts *opts;
 
     tp = SearchSysCache2(ATTNUM, ObjectIdGetDatum(attrelid), Int16GetDatum(attnum));
 
-    /*
-     * If we don't find a valid HeapTuple, it must mean someone has
-     * managed to request attribute details for a non-existent attribute.
-     * We treat that case as if no options were specified.
-     */
+       
+                                                                    
+                                                                          
+                                                           
+       
     if (!HeapTupleIsValid(tp))
     {
       opts = NULL;
@@ -151,15 +151,15 @@ get_attribute_options(Oid attrelid, int attnum)
       ReleaseSysCache(tp);
     }
 
-    /*
-     * It's important to create the actual cache entry only after reading
-     * pg_attribute, since the read could cause a cache flush.
-     */
+       
+                                                                          
+                                                               
+       
     attopt = (AttoptCacheEntry *)hash_search(AttoptCacheHash, (void *)&key, HASH_ENTER, NULL);
     attopt->opts = opts;
   }
 
-  /* Return results in caller's memory context. */
+                                                  
   if (attopt->opts == NULL)
   {
     return NULL;

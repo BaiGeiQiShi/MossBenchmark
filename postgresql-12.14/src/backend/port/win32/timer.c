@@ -1,24 +1,24 @@
-/*-------------------------------------------------------------------------
- *
- * timer.c
- *	  Microsoft Windows Win32 Timer Implementation
- *
- *	  Limitations of this implementation:
- *
- *	  - Does not support interval timer (value->it_interval)
- *	  - Only supports ITIMER_REAL
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/port/win32/timer.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                                  
+   
+                                         
+   
+                                                            
+                                 
+   
+                                                                         
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #include "postgres.h"
 
-/* Communication area for inter-thread communication */
+                                                       
 typedef struct timerCA
 {
   struct itimerval value;
@@ -29,7 +29,7 @@ typedef struct timerCA
 static timerCA timerCommArea;
 static HANDLE timerThreadHandle = INVALID_HANDLE_VALUE;
 
-/* Timer management thread */
+                             
 static DWORD WINAPI
 pg_timer_thread(LPVOID param)
 {
@@ -46,15 +46,15 @@ pg_timer_thread(LPVOID param)
     r = WaitForSingleObjectEx(timerCommArea.event, waittime, FALSE);
     if (r == WAIT_OBJECT_0)
     {
-      /* Event signalled from main thread, change the timer */
+                                                              
       EnterCriticalSection(&timerCommArea.crit_sec);
       if (timerCommArea.value.it_value.tv_sec == 0 && timerCommArea.value.it_value.tv_usec == 0)
       {
-        waittime = INFINITE; /* Cancel the interrupt */
+        waittime = INFINITE;                           
       }
       else
       {
-        /* WaitForSingleObjectEx() uses milliseconds, round up */
+                                                                 
         waittime = (timerCommArea.value.it_value.tv_usec + 999) / 1000 + timerCommArea.value.it_value.tv_sec * 1000;
       }
       ResetEvent(timerCommArea.event);
@@ -62,13 +62,13 @@ pg_timer_thread(LPVOID param)
     }
     else if (r == WAIT_TIMEOUT)
     {
-      /* Timeout expired, signal SIGALRM and turn it off */
+                                                           
       pg_queue_signal(SIGALRM);
       waittime = INFINITE;
     }
     else
     {
-      /* Should never happen */
+                               
       Assert(false);
     }
   }
@@ -76,10 +76,10 @@ pg_timer_thread(LPVOID param)
   return 0;
 }
 
-/*
- * Win32 setitimer emulation by creating a persistent thread
- * to handle the timer setting and notification upon timeout.
- */
+   
+                                                             
+                                                              
+   
 int
 setitimer(int which, const struct itimerval *value, struct itimerval *ovalue)
 {
@@ -89,7 +89,7 @@ setitimer(int which, const struct itimerval *value, struct itimerval *ovalue)
 
   if (timerThreadHandle == INVALID_HANDLE_VALUE)
   {
-    /* First call in this backend, create event and the timer thread */
+                                                                       
     timerCommArea.event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (timerCommArea.event == NULL)
     {
@@ -107,7 +107,7 @@ setitimer(int which, const struct itimerval *value, struct itimerval *ovalue)
     }
   }
 
-  /* Request the timer thread to change settings */
+                                                   
   EnterCriticalSection(&timerCommArea.crit_sec);
   if (ovalue)
   {

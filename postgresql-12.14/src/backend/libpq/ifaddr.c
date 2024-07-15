@@ -1,21 +1,21 @@
-/*-------------------------------------------------------------------------
- *
- * ifaddr.c
- *	  IP netmask calculations, and enumerating network interfaces.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/libpq/ifaddr.c
- *
- * This file and the IPV6 implementation were initially provided by
- * Nigel Kukard <nkukard@lbsd.net>, Linux Based Systems Design
- * http://www.lbsd.net.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                                                  
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                
+   
+                                                                    
+                                                               
+                        
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -40,12 +40,12 @@ static int
 range_sockaddr_AF_INET6(const struct sockaddr_in6 *addr, const struct sockaddr_in6 *netaddr, const struct sockaddr_in6 *netmask);
 #endif
 
-/*
- * pg_range_sockaddr - is addr within the subnet specified by netaddr/netmask ?
- *
- * Note: caller must already have verified that all three addresses are
- * in the same address family; and AF_UNIX addresses are not supported.
- */
+   
+                                                                                
+   
+                                                                        
+                                                                        
+   
 int
 pg_range_sockaddr(const struct sockaddr_storage *addr, const struct sockaddr_storage *netaddr, const struct sockaddr_storage *netmask)
 {
@@ -95,18 +95,18 @@ range_sockaddr_AF_INET6(const struct sockaddr_in6 *addr, const struct sockaddr_i
 
   return 1;
 }
-#endif /* HAVE_IPV6 */
+#endif                
 
-/*
- *	pg_sockaddr_cidr_mask - make a network mask of the appropriate family
- *	  and required number of significant bits
- *
- * numbits can be null, in which case the mask is fully set.
- *
- * The resulting mask is placed in *mask, which had better be big enough.
- *
- * Return value is 0 if okay, -1 if not.
- */
+   
+                                                                         
+                                             
+   
+                                                             
+   
+                                                                          
+   
+                                         
+   
 int
 pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
 {
@@ -138,7 +138,7 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
       return -1;
     }
     memset(&mask4, 0, sizeof(mask4));
-    /* avoid "x << 32", which is not portable */
+                                                
     if (bits > 0)
     {
       maskl = (0xffffffffUL << (32 - (int)bits)) & 0xffffffffUL;
@@ -191,10 +191,10 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage *mask, char *numbits, int family)
   return 0;
 }
 
-/*
- * Run the callback function for the addr/mask, after making sure the
- * mask is sane for the addr.
- */
+   
+                                                                      
+                              
+   
 static void
 run_ifaddr_callback(PgIfAddrCallback callback, void *cb_data, struct sockaddr *addr, struct sockaddr *mask)
 {
@@ -205,7 +205,7 @@ run_ifaddr_callback(PgIfAddrCallback callback, void *cb_data, struct sockaddr *a
     return;
   }
 
-  /* Check that the mask is valid */
+                                    
   if (mask)
   {
     if (mask->sa_family != addr->sa_family)
@@ -230,7 +230,7 @@ run_ifaddr_callback(PgIfAddrCallback callback, void *cb_data, struct sockaddr *a
 #endif
   }
 
-  /* If mask is invalid, generate our own fully-set mask */
+                                                           
   if (!mask)
   {
     pg_sockaddr_cidr_mask(&fullmask, NULL, addr->sa_family);
@@ -245,12 +245,12 @@ run_ifaddr_callback(PgIfAddrCallback callback, void *cb_data, struct sockaddr *a
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-/*
- * Enumerate the system's network interface addresses and call the callback
- * for each one.  Returns 0 if successful, -1 if trouble.
- *
- * This version is for Win32.  Uses the Winsock 2 functions (ie: ws2_32.dll)
- */
+   
+                                                                            
+                                                          
+   
+                                                                             
+   
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
@@ -284,7 +284,7 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
       error = WSAGetLastError();
       if (error == WSAEFAULT || error == WSAENOBUFS)
       {
-        continue; /* need to make the buffer bigger */
+        continue;                                     
       }
       closesocket(sock);
       free(ii);
@@ -303,19 +303,19 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   free(ii);
   return 0;
 }
-#elif HAVE_GETIFADDRS /* && !WIN32 */
+#elif HAVE_GETIFADDRS                
 
 #ifdef HAVE_IFADDRS_H
 #include <ifaddrs.h>
 #endif
 
-/*
- * Enumerate the system's network interface addresses and call the callback
- * for each one.  Returns 0 if successful, -1 if trouble.
- *
- * This version uses the getifaddrs() interface, which is available on
- * BSDs, AIX, and modern Linux.
- */
+   
+                                                                            
+                                                          
+   
+                                                                       
+                                
+   
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
@@ -334,7 +334,7 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   freeifaddrs(ifa);
   return 0;
 }
-#else /* !HAVE_GETIFADDRS && !WIN32 */
+#else                                 
 
 #include <sys/ioctl.h>
 
@@ -346,25 +346,25 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 #include <sys/sockio.h>
 #endif
 
-/*
- * SIOCGIFCONF does not return IPv6 addresses on Solaris
- * and HP/UX. So we prefer SIOCGLIFCONF if it's available.
- *
- * On HP/UX, however, it *only* returns IPv6 addresses,
- * and the structs are named slightly differently too.
- * We'd have to do another call with SIOCGIFCONF to get the
- * IPv4 addresses as well. We don't currently bother, just
- * fall back to SIOCGIFCONF on HP/UX.
- */
+   
+                                                         
+                                                           
+   
+                                                        
+                                                       
+                                                            
+                                                           
+                                      
+   
 
 #if defined(SIOCGLIFCONF) && !defined(__hpux)
 
-/*
- * Enumerate the system's network interface addresses and call the callback
- * for each one.  Returns 0 if successful, -1 if trouble.
- *
- * This version uses ioctl(SIOCGLIFCONF).
- */
+   
+                                                                            
+                                                          
+   
+                                          
+   
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
@@ -414,11 +414,11 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
       return -1;
     }
 
-    /*
-     * Some Unixes try to return as much data as possible, with no
-     * indication of whether enough space allocated. Don't believe we have
-     * it all unless there's lots of slop.
-     */
+       
+                                                                   
+                                                                           
+                                           
+       
     if (lifc.lifc_len < n_buffer - 1024)
     {
       break;
@@ -426,7 +426,7 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   }
 
 #ifdef HAVE_IPV6
-  /* We'll need an IPv6 socket too for the SIOCGLIFNETMASK ioctls */
+                                                                    
   sock6 = socket(AF_INET6, SOCK_DGRAM, 0);
   if (sock6 == PGINVALID_SOCKET)
   {
@@ -467,33 +467,33 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 }
 #elif defined(SIOCGIFCONF)
 
-/*
- * Remaining Unixes use SIOCGIFCONF. Some only return IPv4 information
- * here, so this is the least preferred method. Note that there is no
- * standard way to iterate the struct ifreq returned in the array.
- * On some OSs the structures are padded large enough for any address,
- * on others you have to calculate the size of the struct ifreq.
- */
+   
+                                                                       
+                                                                      
+                                                                   
+                                                                       
+                                                                 
+   
 
-/* Some OSs have _SIZEOF_ADDR_IFREQ, so just use that */
+                                                        
 #ifndef _SIZEOF_ADDR_IFREQ
 
-/* Calculate based on sockaddr.sa_len */
+                                        
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 #define _SIZEOF_ADDR_IFREQ(ifr) ((ifr).ifr_addr.sa_len > sizeof(struct sockaddr) ? (sizeof(struct ifreq) - sizeof(struct sockaddr) + (ifr).ifr_addr.sa_len) : sizeof(struct ifreq))
 
-/* Padded ifreq structure, simple */
+                                    
 #else
 #define _SIZEOF_ADDR_IFREQ(ifr) sizeof(struct ifreq)
 #endif
-#endif /* !_SIZEOF_ADDR_IFREQ */
+#endif                          
 
-/*
- * Enumerate the system's network interface addresses and call the callback
- * for each one.  Returns 0 if successful, -1 if trouble.
- *
- * This version uses ioctl(SIOCGIFCONF).
- */
+   
+                                                                            
+                                                          
+   
+                                         
+   
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
@@ -536,11 +536,11 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
       return -1;
     }
 
-    /*
-     * Some Unixes try to return as much data as possible, with no
-     * indication of whether enough space allocated. Don't believe we have
-     * it all unless there's lots of slop.
-     */
+       
+                                                                   
+                                                                           
+                                           
+       
     if (ifc.ifc_len < n_buffer - 1024)
     {
       break;
@@ -563,15 +563,15 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   close(sock);
   return 0;
 }
-#else  /* !defined(SIOCGIFCONF) */
+#else                             
 
-/*
- * Enumerate the system's network interface addresses and call the callback
- * for each one.  Returns 0 if successful, -1 if trouble.
- *
- * This version is our fallback if there's no known way to get the
- * interface addresses.  Just return the standard loopback addresses.
- */
+   
+                                                                            
+                                                          
+   
+                                                                   
+                                                                      
+   
 int
 pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 {
@@ -582,7 +582,7 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   struct sockaddr_in6 addr6;
 #endif
 
-  /* addr 127.0.0.1/8 */
+                        
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = pg_ntoh32(0x7f000001);
@@ -591,7 +591,7 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
   run_ifaddr_callback(callback, cb_data, (struct sockaddr *)&addr, (struct sockaddr *)&mask);
 
 #ifdef HAVE_IPV6
-  /* addr ::1/128 */
+                    
   memset(&addr6, 0, sizeof(addr6));
   addr6.sin6_family = AF_INET6;
   addr6.sin6_addr.s6_addr[15] = 1;
@@ -602,6 +602,6 @@ pg_foreach_ifaddr(PgIfAddrCallback callback, void *cb_data)
 
   return 0;
 }
-#endif /* !defined(SIOCGIFCONF) */
+#endif                            
 
-#endif /* !HAVE_GETIFADDRS */
+#endif                       

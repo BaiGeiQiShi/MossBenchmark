@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * encode.c
- *	  Various data encoding/decoding things.
- *
- * Copyright (c) 2001-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/encode.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                            
+   
+                                                                
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -28,9 +28,9 @@ struct pg_encoding
 static const struct pg_encoding *
 pg_find_encoding(const char *name);
 
-/*
- * SQL functions.
- */
+   
+                  
+   
 
 Datum
 binary_encode(PG_FUNCTION_ARGS)
@@ -57,7 +57,7 @@ binary_encode(PG_FUNCTION_ARGS)
 
   res = enc->encode(VARDATA_ANY(data), datalen, VARDATA(result));
 
-  /* Make this FATAL 'cause we've trodden on memory ... */
+                                                          
   if (res > resultlen)
   {
     elog(FATAL, "overflow - encode estimate too small");
@@ -93,7 +93,7 @@ binary_decode(PG_FUNCTION_ARGS)
 
   res = enc->decode(VARDATA_ANY(data), datalen, VARDATA(result));
 
-  /* Make this FATAL 'cause we've trodden on memory ... */
+                                                          
   if (res > resultlen)
   {
     elog(FATAL, "overflow - decode estimate too small");
@@ -104,9 +104,9 @@ binary_decode(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(result);
 }
 
-/*
- * HEX
- */
+   
+       
+   
 
 static const char hextbl[] = "0123456789abcdef";
 
@@ -314,9 +314,9 @@ hex_dec_len(const char *src, unsigned srclen)
   return srclen >> 1;
 }
 
-/*
- * BASE64
- */
+   
+          
+   
 
 static const char _base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -468,7 +468,7 @@ pg_base64_encode(const char *src, unsigned len, char *dst)
     pos--;
     s++;
 
-    /* write it out */
+                      
     if (pos < 0)
     {
       *p++ = _base64[(buf >> 18) & 0x3f];
@@ -517,7 +517,7 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
 
     if (c == '=')
     {
-      /* end sequence */
+                        
       if (!end)
       {
         if (pos == 2)
@@ -547,7 +547,7 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
         ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid symbol \"%c\" while decoding base64 sequence", (int)c)));
       }
     }
-    /* add it to buffer */
+                          
     buf = (buf << 6) + b;
     pos++;
     if (pos == 4)
@@ -577,7 +577,7 @@ pg_base64_decode(const char *src, unsigned len, char *dst)
 static unsigned
 pg_base64_enc_len(const char *src, unsigned srclen)
 {
-  /* 3 bytes will be converted to 4, linefeed after 76 chars */
+                                                               
   return (srclen + 2) * 4 / 3 + srclen / (76 * 3 / 4);
 }
 
@@ -587,19 +587,19 @@ pg_base64_dec_len(const char *src, unsigned srclen)
   return (srclen * 3) >> 2;
 }
 
-/*
- * Escape
- * Minimally escape bytea to text.
- * De-escape text to bytea.
- *
- * We must escape zero bytes and high-bit-set bytes to avoid generating
- * text that might be invalid in the current encoding, or that might
- * change to something else if passed through an encoding conversion
- * (leading to failing to de-escape to the original bytea value).
- * Also of course backslash itself has to be escaped.
- *
- * De-escaping processes \\ and any \### octal
- */
+   
+          
+                                   
+                            
+   
+                                                                        
+                                                                     
+                                                                     
+                                                                  
+                                                      
+   
+                                               
+   
 
 #define VAL(CH) ((CH) - '0')
 #define DIG(VAL) ((VAL) + '0')
@@ -674,10 +674,10 @@ esc_decode(const char *src, unsigned srclen, char *dst)
     }
     else
     {
-      /*
-       * One backslash, not followed by ### valid octal. Should never
-       * get here, since esc_dec_len does same check.
-       */
+         
+                                                                      
+                                                      
+         
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "bytea")));
     }
 
@@ -728,23 +728,23 @@ esc_dec_len(const char *src, unsigned srclen)
     }
     else if (src + 3 < end && (src[1] >= '0' && src[1] <= '3') && (src[2] >= '0' && src[2] <= '7') && (src[3] >= '0' && src[3] <= '7'))
     {
-      /*
-       * backslash + valid octal
-       */
+         
+                                 
+         
       src += 4;
     }
     else if (src + 1 < end && (src[1] == '\\'))
     {
-      /*
-       * two backslashes = backslash
-       */
+         
+                                     
+         
       src += 2;
     }
     else
     {
-      /*
-       * one backslash, not followed by ### valid octal
-       */
+         
+                                                        
+         
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s", "bytea")));
     }
 
@@ -753,9 +753,9 @@ esc_dec_len(const char *src, unsigned srclen)
   return len;
 }
 
-/*
- * Common
- */
+   
+          
+   
 
 static const struct
 {

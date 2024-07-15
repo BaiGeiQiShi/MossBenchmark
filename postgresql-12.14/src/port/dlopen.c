@@ -1,23 +1,23 @@
-/*-------------------------------------------------------------------------
- *
- * dlopen.c
- *	  dynamic loader for platforms without dlopen()
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/port/dlopen.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                                   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                       
+   
+                                                                            
+   
 
 #include "c.h"
 
 #if defined(__hpux)
 
-/* System includes */
+                     
 #include <a.out.h>
 #include <dl.h>
 
@@ -132,7 +132,7 @@ dlopen(const char *file, int mode)
   HMODULE h;
   int prevmode;
 
-  /* Disable popup error messages when loading DLLs */
+                                                      
   prevmode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
   h = LoadLibrary(file);
   SetErrorMode(prevmode);

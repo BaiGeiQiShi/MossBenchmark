@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "nan_test.pgc"
@@ -23,12 +23,12 @@
 #define isinf(x) ((_fpclass(x) == _FPCLASS_PINF) || (_fpclass(x) == _FPCLASS_NINF))
 #define isnan(x) _isnan(x)
 #endif
-#endif /* WIN32 */
+#endif            
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 21 "nan_test.pgc"
   int id, loopcount;
@@ -41,11 +41,11 @@ main(void)
 
 #line 24 "nan_test.pgc"
   char val[16];
-/* exec sql end declare section */
+                                  
 #line 25 "nan_test.pgc"
 
   ECPGdebug(1, stderr);
-  /* exec sql whenever sqlerror  do sqlprint ( ) ; */
+                                                     
 #line 28 "nan_test.pgc"
 
   {
@@ -81,7 +81,7 @@ main(void)
   }
 #line 33 "nan_test.pgc"
 
-  /* declare cur cursor for select id , d , d from nantest1 */
+                                                              
 #line 35 "nan_test.pgc"
 
   {
@@ -261,7 +261,7 @@ main(void)
   }
 #line 75 "nan_test.pgc"
 
-  /* declare cur1 cursor for select id , d , d from nantest2 */
+                                                               
 #line 77 "nan_test.pgc"
 
   {

@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * char.c
- *	  Functions for the built-in type "char" (not to be confused with
- *	  bpchar, which is the SQL CHAR(n) type).
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/char.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                                                     
+                                             
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                  
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <limits.h>
@@ -20,15 +20,15 @@
 #include "libpq/pqformat.h"
 #include "utils/builtins.h"
 
-/*****************************************************************************
- *	 USER I/O ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                      
+                                                                               
 
-/*
- *		charin			- converts "x" to 'x'
- *
- * Note that an empty input string will implicitly be converted to \0.
- */
+   
+                                   
+   
+                                                                       
+   
 Datum
 charin(PG_FUNCTION_ARGS)
 {
@@ -37,13 +37,13 @@ charin(PG_FUNCTION_ARGS)
   PG_RETURN_CHAR(ch[0]);
 }
 
-/*
- *		charout			- converts 'x' to "x"
- *
- * Note that if the char value is \0, the resulting string will appear
- * to be empty (null-terminated after zero characters).  So this is the
- * inverse of the charin() function for such data.
- */
+   
+                                    
+   
+                                                                       
+                                                                        
+                                                   
+   
 Datum
 charout(PG_FUNCTION_ARGS)
 {
@@ -55,13 +55,13 @@ charout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		charrecv			- converts external binary format to char
- *
- * The external representation is one byte, with no character set
- * conversion.  This is somewhat dubious, perhaps, but in many
- * cases people use char for a 1-byte binary type.
- */
+   
+                                                         
+   
+                                                                  
+                                                               
+                                                   
+   
 Datum
 charrecv(PG_FUNCTION_ARGS)
 {
@@ -70,9 +70,9 @@ charrecv(PG_FUNCTION_ARGS)
   PG_RETURN_CHAR(pq_getmsgbyte(buf));
 }
 
-/*
- *		charsend			- converts char to binary format
- */
+   
+                                                
+   
 Datum
 charsend(PG_FUNCTION_ARGS)
 {
@@ -84,16 +84,16 @@ charsend(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*****************************************************************************
- *	 PUBLIC ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                    
+                                                                               
 
-/*
- * NOTE: comparisons are done as though char is unsigned (uint8).
- * Conversions to and from integer are done as though char is signed (int8).
- *
- * You wanted consistency?
- */
+   
+                                                                  
+                                                                             
+   
+                           
+   
 
 Datum
 chareq(PG_FUNCTION_ARGS)
@@ -176,11 +176,11 @@ text_char(PG_FUNCTION_ARGS)
   text *arg1 = PG_GETARG_TEXT_PP(0);
   char result;
 
-  /*
-   * An empty input string is converted to \0 (for consistency with charin).
-   * If the input is longer than one character, the excess data is silently
-   * discarded.
-   */
+     
+                                                                             
+                                                                            
+                
+     
   if (VARSIZE_ANY_EXHDR(arg1) > 0)
   {
     result = *(VARDATA_ANY(arg1));
@@ -199,10 +199,10 @@ char_text(PG_FUNCTION_ARGS)
   char arg1 = PG_GETARG_CHAR(0);
   text *result = palloc(VARHDRSZ + 1);
 
-  /*
-   * Convert \0 to an empty string, for consistency with charout (and
-   * because the text stuff doesn't like embedded nulls all that well).
-   */
+     
+                                                                      
+                                                                        
+     
   if (arg1 != '\0')
   {
     SET_VARSIZE(result, VARHDRSZ + 1);

@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/ecpglib/typename.c */
+                                            
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -11,9 +11,9 @@
 #include "sqltypes.h"
 #include "sql3types.h"
 
-/*
- * This function is used to generate the correct type names.
- */
+   
+                                                             
+   
 const char *
 ecpg_type_name(enum ECPGttype typ)
 {
@@ -67,7 +67,7 @@ ecpg_type_name(enum ECPGttype typ)
   default:
     abort();
   }
-  return ""; /* keep MSC compiler happy */
+  return "";                              
 }
 
 int
@@ -76,29 +76,29 @@ ecpg_dynamic_type(Oid type)
   switch (type)
   {
   case BOOLOID:
-    return SQL3_BOOLEAN; /* bool */
+    return SQL3_BOOLEAN;           
   case INT2OID:
-    return SQL3_SMALLINT; /* int2 */
+    return SQL3_SMALLINT;           
   case INT4OID:
-    return SQL3_INTEGER; /* int4 */
+    return SQL3_INTEGER;           
   case TEXTOID:
-    return SQL3_CHARACTER; /* text */
+    return SQL3_CHARACTER;           
   case FLOAT4OID:
-    return SQL3_REAL; /* float4 */
+    return SQL3_REAL;             
   case FLOAT8OID:
-    return SQL3_DOUBLE_PRECISION; /* float8 */
+    return SQL3_DOUBLE_PRECISION;             
   case BPCHAROID:
-    return SQL3_CHARACTER; /* bpchar */
+    return SQL3_CHARACTER;             
   case VARCHAROID:
-    return SQL3_CHARACTER_VARYING; /* varchar */
+    return SQL3_CHARACTER_VARYING;              
   case DATEOID:
-    return SQL3_DATE_TIME_TIMESTAMP; /* date */
+    return SQL3_DATE_TIME_TIMESTAMP;           
   case TIMEOID:
-    return SQL3_DATE_TIME_TIMESTAMP; /* time */
+    return SQL3_DATE_TIME_TIMESTAMP;           
   case TIMESTAMPOID:
-    return SQL3_DATE_TIME_TIMESTAMP; /* datetime */
+    return SQL3_DATE_TIME_TIMESTAMP;               
   case NUMERICOID:
-    return SQL3_NUMERIC; /* numeric */
+    return SQL3_NUMERIC;              
   default:
     return 0;
   }
@@ -138,7 +138,7 @@ sqlda_dynamic_type(Oid type, enum COMPAT_MODE compat)
 #ifdef HAVE_LONG_INT_64
     return ECPGt_long;
 #endif
-    /* Unhandled types always return a string */
+                                                
   default:
     return ECPGt_char;
   }

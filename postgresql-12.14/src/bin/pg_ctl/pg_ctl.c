@@ -1,13 +1,13 @@
-/*-------------------------------------------------------------------------
- *
- * pg_ctl --- start/stops/restarts the PostgreSQL server
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * src/bin/pg_ctl/pg_ctl.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                         
+   
+                                                                         
+   
+                           
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -30,11 +30,11 @@
 #include "getopt_long.h"
 #include "utils/pidfile.h"
 
-#ifdef WIN32 /* on Unix, we don't need libpq */
+#ifdef WIN32                                   
 #include "pqexpbuffer.h"
 #endif
 
-/* PID can be negative for standalone backend */
+                                                
 typedef long pgpid_t;
 
 typedef enum
@@ -72,14 +72,14 @@ typedef enum
 
 #define USEC_PER_SEC 1000000
 
-#define WAITS_PER_SEC 10 /* should divide USEC_PER_SEC evenly */
+#define WAITS_PER_SEC 10                                        
 
 static bool do_wait = true;
 static int wait_seconds = DEFAULT_WAIT;
 static bool wait_seconds_arg = false;
 static bool silent_mode = false;
 static ShutdownMode shutdown_mode = FAST_MODE;
-static int sig = SIGINT; /* default */
+static int sig = SIGINT;              
 static CtlCommand ctl_command = NO_COMMAND;
 static char *pg_data = NULL;
 static char *pg_config = NULL;
@@ -89,7 +89,7 @@ static const char *progname;
 static char *log_file = NULL;
 static char *exec_path = NULL;
 static char *event_source = NULL;
-static char *register_servicename = "PostgreSQL"; /* FIXME: + version ID? */
+static char *register_servicename = "PostgreSQL";                           
 static char *register_username = NULL;
 static char *register_password = NULL;
 static char *argv0 = NULL;
@@ -225,15 +225,15 @@ write_eventlog(int level, const char *line)
     }
   }
 
-  ReportEvent(evtHandle, level, 0, 0, /* All events are Id 0 */
+  ReportEvent(evtHandle, level, 0, 0,                          
       NULL, 1, 0, &line, NULL);
 }
 #endif
 
-/*
- * Write errors to stderr (or by equal means when stderr is
- * not available).
- */
+   
+                                                            
+                   
+   
 static void
 write_stderr(const char *fmt, ...)
 {
@@ -241,17 +241,17 @@ write_stderr(const char *fmt, ...)
 
   va_start(ap, fmt);
 #ifndef WIN32
-  /* On Unix, we just fprintf to stderr */
+                                          
   vfprintf(stderr, fmt, ap);
 #else
 
-  /*
-   * On Win32, we print to stderr if running on a console, or write to
-   * eventlog if running as a service
-   */
-  if (pgwin32_is_service()) /* Running as a service */
+     
+                                                                       
+                                      
+     
+  if (pgwin32_is_service())                           
   {
-    char errbuf[2048]; /* Arbitrary size? */
+    char errbuf[2048];                      
 
     vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
 
@@ -259,17 +259,17 @@ write_stderr(const char *fmt, ...)
   }
   else
   {
-    /* Not running as service, write to stderr */
+                                                 
     vfprintf(stderr, fmt, ap);
   }
 #endif
   va_end(ap);
 }
 
-/*
- * Given an already-localized string, print it to stdout unless the
- * user has specified that no messages should be printed.
- */
+   
+                                                                    
+                                                          
+   
 static void
 print_msg(const char *msg)
 {
@@ -298,11 +298,11 @@ get_pgpid(bool is_status_request)
       write_stderr(_("%s: could not access directory \"%s\": %s\n"), progname, pg_data, strerror(errno));
     }
 
-    /*
-     * The Linux Standard Base Core Specification 3.1 says this should
-     * return '4, program or service status is unknown'
-     * https://refspecs.linuxbase.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
-     */
+       
+                                                                       
+                                                        
+                                                                                                   
+       
     exit(is_status_request ? 4 : 1);
   }
 
@@ -315,7 +315,7 @@ get_pgpid(bool is_status_request)
   pidf = fopen(pid_file, "r");
   if (pidf == NULL)
   {
-    /* No pid file, not an error on startup */
+                                              
     if (errno == ENOENT)
     {
       return 0;
@@ -328,7 +328,7 @@ get_pgpid(bool is_status_request)
   }
   if (fscanf(pidf, "%ld", &pid) != 1)
   {
-    /* Is the file empty? */
+                            
     if (ftell(pidf) == 0 && feof(pidf))
     {
       write_stderr(_("%s: the PID file \"%s\" is empty\n"), progname, pid_file);
@@ -343,14 +343,14 @@ get_pgpid(bool is_status_request)
   return (pgpid_t)pid;
 }
 
-/*
- * get the lines from a text file - return NULL if file can't be opened
- *
- * Trailing newlines are deleted from the lines (this is a change from pre-v10)
- *
- * *numlines is set to the number of line pointers returned; there is
- * also an additional NULL pointer after the last real line.
- */
+   
+                                                                        
+   
+                                                                                
+   
+                                                                      
+                                                             
+   
 static char **
 readfile(const char *path, int *numlines)
 {
@@ -364,16 +364,16 @@ readfile(const char *path, int *numlines)
   int len;
   struct stat statbuf;
 
-  *numlines = 0; /* in case of failure or empty file */
+  *numlines = 0;                                       
 
-  /*
-   * Slurp the file into memory.
-   *
-   * The file can change concurrently, so we read the whole file into memory
-   * with a single read() call. That's not guaranteed to get an atomic
-   * snapshot, but in practice, for a small file, it's close enough for the
-   * current use.
-   */
+     
+                                 
+     
+                                                                             
+                                                                       
+                                                                            
+                  
+     
   fd = open(path, O_RDONLY | PG_BINARY, 0);
   if (fd < 0)
   {
@@ -386,7 +386,7 @@ readfile(const char *path, int *numlines)
   }
   if (statbuf.st_size == 0)
   {
-    /* empty file */
+                    
     close(fd);
     result = (char **)pg_malloc(sizeof(char *));
     *result = NULL;
@@ -398,16 +398,16 @@ readfile(const char *path, int *numlines)
   close(fd);
   if (len != statbuf.st_size)
   {
-    /* oops, the file size changed between fstat and read */
+                                                            
     free(buffer);
     return NULL;
   }
 
-  /*
-   * Count newlines. We expect there to be a newline after each full line,
-   * including one at the end of file. If there isn't a newline at the end,
-   * any characters after the last newline will be ignored.
-   */
+     
+                                                                           
+                                                                            
+                                                            
+     
   nlines = 0;
   for (i = 0; i < len; i++)
   {
@@ -417,11 +417,11 @@ readfile(const char *path, int *numlines)
     }
   }
 
-  /* set up the result buffer */
+                                
   result = (char **)pg_malloc((nlines + 1) * sizeof(char *));
   *numlines = nlines;
 
-  /* now split the buffer into lines */
+                                       
   linebegin = buffer;
   n = 0;
   for (i = 0; i < len; i++)
@@ -432,7 +432,7 @@ readfile(const char *path, int *numlines)
       char *linebuf = pg_malloc(slen + 1);
 
       memcpy(linebuf, linebegin, slen);
-      /* we already dropped the \n, but get rid of any \r too */
+                                                                
       if (slen > 0 && linebuf[slen - 1] == '\r')
       {
         slen--;
@@ -449,9 +449,9 @@ readfile(const char *path, int *numlines)
   return result;
 }
 
-/*
- * Free memory allocated for optlines through readfile()
- */
+   
+                                                         
+   
 static void
 free_readfile(char **optlines)
 {
@@ -473,21 +473,21 @@ free_readfile(char **optlines)
   return;
 }
 
-/*
- * start/test/stop routines
- */
+   
+                            
+   
 
-/*
- * Start the postmaster and return its PID.
- *
- * Currently, on Windows what we return is the PID of the shell process
- * that launched the postmaster (and, we trust, is waiting for it to exit).
- * So the PID is usable for "is the postmaster still running" checks,
- * but cannot be compared directly to postmaster.pid.
- *
- * On Windows, we also save aside a handle to the shell process in
- * "postmasterProcess", which the caller should close when done with it.
- */
+   
+                                            
+   
+                                                                        
+                                                                            
+                                                                      
+                                                      
+   
+                                                                   
+                                                                         
+   
 static pgpid_t
 start_postmaster(void)
 {
@@ -496,30 +496,30 @@ start_postmaster(void)
 #ifndef WIN32
   pgpid_t pm_pid;
 
-  /* Flush stdio channels just before fork, to avoid double-output problems */
+                                                                              
   fflush(stdout);
   fflush(stderr);
 
   pm_pid = fork();
   if (pm_pid < 0)
   {
-    /* fork failed */
+                     
     write_stderr(_("%s: could not start server: %s\n"), progname, strerror(errno));
     exit(1);
   }
   if (pm_pid > 0)
   {
-    /* fork succeeded, in parent */
+                                   
     return pm_pid;
   }
 
-  /* fork succeeded, in child */
+                                
 
-  /*
-   * If possible, detach the postmaster process from the launching process
-   * group and make it a group leader, so that it doesn't get signaled along
-   * with the current group that launched it.
-   */
+     
+                                                                           
+                                                                             
+                                              
+     
 #ifdef HAVE_SETSID
   if (setsid() < 0)
   {
@@ -528,11 +528,11 @@ start_postmaster(void)
   }
 #endif
 
-  /*
-   * Since there might be quotes to handle here, it is easier simply to pass
-   * everything to a shell to process them.  Use exec so that the postmaster
-   * has the same PID as the current child process.
-   */
+     
+                                                                             
+                                                                             
+                                                    
+     
   if (log_file != NULL)
   {
     cmd = psprintf("exec \"%s\" %s%s < \"%s\" >> \"%s\" 2>&1", exec_path, pgdata_opt, post_opts, DEVNULL, log_file);
@@ -544,46 +544,46 @@ start_postmaster(void)
 
   (void)execl("/bin/sh", "/bin/sh", "-c", cmd, (char *)NULL);
 
-  /* exec failed */
+                   
   write_stderr(_("%s: could not start server: %s\n"), progname, strerror(errno));
   exit(1);
 
-  return 0; /* keep dumb compilers quiet */
+  return 0;                                
 
-#else  /* WIN32 */
+#else             
 
-  /*
-   * As with the Unix case, it's easiest to use the shell (CMD.EXE) to
-   * handle redirection etc.  Unfortunately CMD.EXE lacks any equivalent of
-   * "exec", so we don't get to find out the postmaster's PID immediately.
-   */
+     
+                                                                       
+                                                                            
+                                                                           
+     
   PROCESS_INFORMATION pi;
 
   if (log_file != NULL)
   {
-    /*
-     * First, open the log file if it exists.  The idea is that if the
-     * file is still locked by a previous postmaster run, we'll wait until
-     * it comes free, instead of failing with ERROR_SHARING_VIOLATION.
-     * (It'd be better to open the file in a sharing-friendly mode, but we
-     * can't use CMD.EXE to do that, so work around it.  Note that the
-     * previous postmaster will still have the file open for a short time
-     * after removing postmaster.pid.)
-     *
-     * If the log file doesn't exist, we *must not* create it here.  If we
-     * were launched with higher privileges than the restricted process
-     * will have, the log file might end up with permissions settings that
-     * prevent the postmaster from writing on it.
-     */
+       
+                                                                       
+                                                                           
+                                                                       
+                                                                           
+                                                                       
+                                                                          
+                                       
+       
+                                                                           
+                                                                        
+                                                                           
+                                                  
+       
     int fd = open(log_file, O_RDWR, 0);
 
     if (fd == -1)
     {
-      /*
-       * ENOENT is expectable since we didn't use O_CREAT.  Otherwise
-       * complain.  We could just fall through and let CMD.EXE report
-       * the problem, but its error reporting is pretty miserable.
-       */
+         
+                                                                      
+                                                                      
+                                                                   
+         
       if (errno != ENOENT)
       {
         write_stderr(_("%s: could not open log file \"%s\": %s\n"), progname, log_file, strerror(errno));
@@ -607,27 +607,27 @@ start_postmaster(void)
     write_stderr(_("%s: could not start server: error code %lu\n"), progname, (unsigned long)GetLastError());
     exit(1);
   }
-  /* Don't close command process handle here; caller must do so */
+                                                                  
   postmasterProcess = pi.hProcess;
   CloseHandle(pi.hThread);
-  return pi.dwProcessId; /* Shell's PID, not postmaster's! */
-#endif /* WIN32 */
+  return pi.dwProcessId;                                     
+#endif            
 }
 
-/*
- * Wait for the postmaster to become ready.
- *
- * On Unix, pm_pid is the PID of the just-launched postmaster.  On Windows,
- * it may be the PID of an ancestor shell process, so we can't check the
- * contents of postmaster.pid quite as carefully.
- *
- * On Windows, the static variable postmasterProcess is an implicit argument
- * to this routine; it contains a handle to the postmaster process or an
- * ancestor shell process thereof.
- *
- * Note that the checkpoint parameter enables a Windows service control
- * manager checkpoint, it's got nothing to do with database checkpoints!!
- */
+   
+                                            
+   
+                                                                            
+                                                                         
+                                                  
+   
+                                                                             
+                                                                         
+                                   
+   
+                                                                        
+                                                                          
+   
 static WaitPMResult
 wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
 {
@@ -638,63 +638,63 @@ wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
     char **optlines;
     int numlines;
 
-    /*
-     * Try to read the postmaster.pid file.  If it's not valid, or if the
-     * status line isn't there yet, just keep waiting.
-     */
+       
+                                                                          
+                                                       
+       
     if ((optlines = readfile(pid_file, &numlines)) != NULL && numlines >= LOCK_FILE_LINE_PM_STATUS)
     {
-      /* File is complete enough for us, parse it */
+                                                    
       pgpid_t pmpid;
       time_t pmstart;
 
-      /*
-       * Make sanity checks.  If it's for the wrong PID, or the recorded
-       * start time is before pg_ctl started, then either we are looking
-       * at the wrong data directory, or this is a pre-existing pidfile
-       * that hasn't (yet?) been overwritten by our child postmaster.
-       * Allow 2 seconds slop for possible cross-process clock skew.
-       */
+         
+                                                                         
+                                                                         
+                                                                        
+                                                                      
+                                                                     
+         
       pmpid = atol(optlines[LOCK_FILE_LINE_PID - 1]);
       pmstart = atol(optlines[LOCK_FILE_LINE_START_TIME - 1]);
       if (pmstart >= start_time - 2 &&
 #ifndef WIN32
           pmpid == pm_pid
 #else
-          /* Windows can only reject standalone-backend PIDs */
+                                                               
           pmpid > 0
 #endif
       )
       {
-        /*
-         * OK, seems to be a valid pidfile from our child.  Check the
-         * status line (this assumes a v10 or later server).
-         */
+           
+                                                                      
+                                                             
+           
         char *pmstatus = optlines[LOCK_FILE_LINE_PM_STATUS - 1];
 
         if (strcmp(pmstatus, PM_STATUS_READY) == 0 || strcmp(pmstatus, PM_STATUS_STANDBY) == 0)
         {
-          /* postmaster is done starting up */
+                                              
           free_readfile(optlines);
           return POSTMASTER_READY;
         }
       }
     }
 
-    /*
-     * Free the results of readfile.
-     *
-     * This is safe to call even if optlines is NULL.
-     */
+       
+                                     
+       
+                                                      
+       
     free_readfile(optlines);
 
-    /*
-     * Check whether the child postmaster process is still alive.  This
-     * lets us exit early if the postmaster fails during startup.
-     *
-     * On Windows, we may be checking the postmaster's parent shell, but
-     * that's fine for this purpose.
-     */
+       
+                                                                        
+                                                                  
+       
+                                                                         
+                                     
+       
 #ifndef WIN32
     {
       int exitstatus;
@@ -711,19 +711,19 @@ wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
     }
 #endif
 
-    /* Startup still in process; wait, printing a dot once per second */
+                                                                        
     if (i % WAITS_PER_SEC == 0)
     {
 #ifdef WIN32
       if (do_checkpoint)
       {
-        /*
-         * Increment the wait hint by 6 secs (connection timeout +
-         * sleep).  We must do this to indicate to the SCM that our
-         * startup time is changing, otherwise it'll usually send a
-         * stop signal after 20 seconds, despite incrementing the
-         * checkpoint counter.
-         */
+           
+                                                                   
+                                                                    
+                                                                    
+                                                                  
+                               
+           
         status.dwWaitHint += 6000;
         status.dwCheckPoint++;
         SetServiceStatus(hStatus, (LPSERVICE_STATUS)&status);
@@ -736,16 +736,16 @@ wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
     pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
   }
 
-  /* out of patience; report that postmaster is still starting up */
+                                                                    
   return POSTMASTER_STILL_STARTING;
 }
 
-/*
- * Wait for the postmaster to stop.
- *
- * Returns true if the postmaster stopped cleanly (i.e., removed its pidfile).
- * Returns false if the postmaster dies uncleanly, or if we time out.
- */
+   
+                                    
+   
+                                                                               
+                                                                      
+   
 static bool
 wait_for_postmaster_stop(void)
 {
@@ -757,20 +757,20 @@ wait_for_postmaster_stop(void)
 
     if ((pid = get_pgpid(false)) == 0)
     {
-      return true; /* pid file is gone */
+      return true;                       
     }
 
     if (kill((pid_t)pid, 0) != 0)
     {
-      /*
-       * Postmaster seems to have died.  Check the pid file once more to
-       * avoid a race condition, but give up waiting.
-       */
+         
+                                                                         
+                                                      
+         
       if (get_pgpid(false) == 0)
       {
-        return true; /* pid file is gone */
+        return true;                       
       }
-      return false; /* postmaster died untimely */
+      return false;                               
     }
 
     if (cnt % WAITS_PER_SEC == 0)
@@ -779,15 +779,15 @@ wait_for_postmaster_stop(void)
     }
     pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
   }
-  return false; /* timeout reached */
+  return false;                      
 }
 
-/*
- * Wait for the postmaster to promote.
- *
- * Returns true on success, else false.
- * To avoid waiting uselessly, we check for postmaster death here too.
- */
+   
+                                       
+   
+                                        
+                                                                       
+   
 static bool
 wait_for_postmaster_promote(void)
 {
@@ -800,17 +800,17 @@ wait_for_postmaster_promote(void)
 
     if ((pid = get_pgpid(false)) == 0)
     {
-      return false; /* pid file is gone */
+      return false;                       
     }
     if (kill((pid_t)pid, 0) != 0)
     {
-      return false; /* postmaster died */
+      return false;                      
     }
 
     state = get_control_dbstate();
     if (state == DB_IN_PRODUCTION)
     {
-      return true; /* successful promotion */
+      return true;                           
     }
 
     if (cnt % WAITS_PER_SEC == 0)
@@ -819,7 +819,7 @@ wait_for_postmaster_promote(void)
     }
     pg_usleep(USEC_PER_SEC / WAITS_PER_SEC);
   }
-  return false; /* timeout reached */
+  return false;                      
 }
 
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
@@ -847,7 +847,7 @@ read_post_opts(void)
 {
   if (post_opts == NULL)
   {
-    post_opts = ""; /* default */
+    post_opts = "";              
     if (ctl_command == RESTART_COMMAND)
     {
       char **optlines;
@@ -871,14 +871,14 @@ read_post_opts(void)
 
         optline = optlines[0];
 
-        /*
-         * Are we at the first option, as defined by space and
-         * double-quote?
-         */
+           
+                                                               
+                         
+           
         if ((arg1 = strstr(optline, " \"")) != NULL)
         {
-          *arg1 = '\0';                    /* terminate so we get only program name */
-          post_opts = pg_strdup(arg1 + 1); /* point past whitespace */
+          *arg1 = '\0';                                                               
+          post_opts = pg_strdup(arg1 + 1);                            
         }
         if (exec_path == NULL)
         {
@@ -886,18 +886,18 @@ read_post_opts(void)
         }
       }
 
-      /* Free the results of readfile. */
+                                         
       free_readfile(optlines);
     }
   }
 }
 
-/*
- * SIGINT signal handler used while waiting for postmaster to start up.
- * Forwards the SIGINT to the postmaster process, asking it to shut down,
- * before terminating pg_ctl itself. This way, if the user hits CTRL-C while
- * waiting for the server to start up, the server launch is aborted.
- */
+   
+                                                                        
+                                                                          
+                                                                             
+                                                                     
+   
 static void
 trap_sigint_during_startup(int sig)
 {
@@ -909,10 +909,10 @@ trap_sigint_during_startup(int sig)
     }
   }
 
-  /*
-   * Clear the signal handler, and send the signal again, to terminate the
-   * process as normal.
-   */
+     
+                                                                           
+                        
+     
   pqsignal(SIGINT, SIG_DFL);
   raise(SIGINT);
 }
@@ -1010,7 +1010,7 @@ do_start(void)
 
   read_post_opts();
 
-  /* No -D or -D already added during server start */
+                                                     
   if (ctl_command == RESTART_COMMAND || pgdata_opt == NULL)
   {
     pgdata_opt = "";
@@ -1028,11 +1028,11 @@ do_start(void)
   }
 #endif
 
-  /*
-   * If possible, tell the postmaster our parent shell's PID (see the
-   * comments in CreateLockFile() for motivation).  Windows hasn't got
-   * getppid() unfortunately.
-   */
+     
+                                                                      
+                                                                       
+                              
+     
 #ifndef WIN32
   {
     static char env_var[32];
@@ -1046,14 +1046,14 @@ do_start(void)
 
   if (do_wait)
   {
-    /*
-     * If the user interrupts the startup (e.g. with CTRL-C), we'd like to
-     * abort the server launch.  Install a signal handler that will
-     * forward SIGINT to the postmaster process, while we wait.
-     *
-     * (We don't bother to reset the signal handler after the launch, as
-     * we're about to exit, anyway.)
-     */
+       
+                                                                           
+                                                                    
+                                                                
+       
+                                                                         
+                                     
+       
     postmasterPID = pm_pid;
     pqsignal(SIGINT, trap_sigint_during_startup);
 
@@ -1085,7 +1085,7 @@ do_start(void)
   }
 
 #ifdef WIN32
-  /* Now we don't need the handle to the shell process anymore */
+                                                                 
   CloseHandle(postmasterProcess);
   postmasterProcess = INVALID_HANDLE_VALUE;
 #endif
@@ -1099,13 +1099,13 @@ do_stop(void)
 
   pid = get_pgpid(false);
 
-  if (pid == 0) /* no pid file */
+  if (pid == 0)                  
   {
     write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
     write_stderr(_("Is server running?\n"));
     exit(1);
   }
-  else if (pid < 0) /* standalone backend, not postmaster */
+  else if (pid < 0)                                         
   {
     pid = -pid;
     write_stderr(_("%s: cannot stop server; "
@@ -1127,12 +1127,12 @@ do_stop(void)
   }
   else
   {
-    /*
-     * If backup_label exists, an online backup is running. Warn the user
-     * that smart shutdown will wait for it to finish. However, if the
-     * server is in archive recovery, we're recovering from an online
-     * backup instead of performing one.
-     */
+       
+                                                                          
+                                                                       
+                                                                      
+                                         
+       
     if (shutdown_mode == SMART_MODE && stat(backup_file, &statbuf) == 0 && get_control_dbstate() != DB_IN_ARCHIVE_RECOVERY)
     {
       print_msg(_("WARNING: online backup mode is active\n"
@@ -1159,9 +1159,9 @@ do_stop(void)
   }
 }
 
-/*
- *	restart/reload routines
- */
+   
+                           
+   
 
 static void
 do_restart(void)
@@ -1171,7 +1171,7 @@ do_restart(void)
 
   pid = get_pgpid(false);
 
-  if (pid == 0) /* no pid file */
+  if (pid == 0)                  
   {
     write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
     write_stderr(_("Is server running?\n"));
@@ -1179,7 +1179,7 @@ do_restart(void)
     do_start();
     return;
   }
-  else if (pid < 0) /* standalone backend, not postmaster */
+  else if (pid < 0)                                         
   {
     pid = -pid;
     if (postmaster_is_alive((pid_t)pid))
@@ -1200,12 +1200,12 @@ do_restart(void)
       exit(1);
     }
 
-    /*
-     * If backup_label exists, an online backup is running. Warn the user
-     * that smart shutdown will wait for it to finish. However, if the
-     * server is in archive recovery, we're recovering from an online
-     * backup instead of performing one.
-     */
+       
+                                                                          
+                                                                       
+                                                                      
+                                         
+       
     if (shutdown_mode == SMART_MODE && stat(backup_file, &statbuf) == 0 && get_control_dbstate() != DB_IN_ARCHIVE_RECOVERY)
     {
       print_msg(_("WARNING: online backup mode is active\n"
@@ -1214,7 +1214,7 @@ do_restart(void)
 
     print_msg(_("waiting for server to shut down..."));
 
-    /* always wait for restart */
+                                 
     if (!wait_for_postmaster_stop())
     {
       print_msg(_(" failed\n"));
@@ -1246,13 +1246,13 @@ do_reload(void)
   pgpid_t pid;
 
   pid = get_pgpid(false);
-  if (pid == 0) /* no pid file */
+  if (pid == 0)                  
   {
     write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
     write_stderr(_("Is server running?\n"));
     exit(1);
   }
-  else if (pid < 0) /* standalone backend, not postmaster */
+  else if (pid < 0)                                         
   {
     pid = -pid;
     write_stderr(_("%s: cannot reload server; "
@@ -1271,9 +1271,9 @@ do_reload(void)
   print_msg(_("server signaled\n"));
 }
 
-/*
- * promote
- */
+   
+           
+   
 
 static void
 do_promote(void)
@@ -1283,13 +1283,13 @@ do_promote(void)
 
   pid = get_pgpid(false);
 
-  if (pid == 0) /* no pid file */
+  if (pid == 0)                  
   {
     write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
     write_stderr(_("Is server running?\n"));
     exit(1);
   }
-  else if (pid < 0) /* standalone backend, not postmaster */
+  else if (pid < 0)                                         
   {
     pid = -pid;
     write_stderr(_("%s: cannot promote server; "
@@ -1306,11 +1306,11 @@ do_promote(void)
     exit(1);
   }
 
-  /*
-   * For 9.3 onwards, "fast" promotion is performed. Promotion with a full
-   * checkpoint is still possible by writing a file called
-   * "fallback_promote" instead of "promote"
-   */
+     
+                                                                           
+                                                           
+                                             
+     
   snprintf(promote_file, MAXPGPATH, "%s/promote", pg_data);
 
   if ((prmfile = fopen(promote_file, "w")) == NULL)
@@ -1356,9 +1356,9 @@ do_promote(void)
   }
 }
 
-/*
- * log rotate
- */
+   
+              
+   
 
 static void
 do_logrotate(void)
@@ -1368,13 +1368,13 @@ do_logrotate(void)
 
   pid = get_pgpid(false);
 
-  if (pid == 0) /* no pid file */
+  if (pid == 0)                  
   {
     write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
     write_stderr(_("Is server running?\n"));
     exit(1);
   }
-  else if (pid < 0) /* standalone backend, not postmaster */
+  else if (pid < 0)                                         
   {
     pid = -pid;
     write_stderr(_("%s: cannot rotate log file; "
@@ -1410,23 +1410,23 @@ do_logrotate(void)
   print_msg(_("server signaled to rotate log file\n"));
 }
 
-/*
- *	utility routines
- */
+   
+                    
+   
 
 static bool
 postmaster_is_alive(pid_t pid)
 {
-  /*
-   * Test to see if the process is still there.  Note that we do not
-   * consider an EPERM failure to mean that the process is still there;
-   * EPERM must mean that the given PID belongs to some other userid, and
-   * considering the permissions on $PGDATA, that means it's not the
-   * postmaster we are after.
-   *
-   * Don't believe that our own PID or parent shell's PID is the postmaster,
-   * either.  (Windows hasn't got getppid(), though.)
-   */
+     
+                                                                     
+                                                                        
+                                                                          
+                                                                     
+                              
+     
+                                                                             
+                                                      
+     
   if (pid == getpid())
   {
     return false;
@@ -1450,10 +1450,10 @@ do_status(void)
   pgpid_t pid;
 
   pid = get_pgpid(true);
-  /* Is there a pid file? */
+                            
   if (pid != 0)
   {
-    /* standalone backend? */
+                             
     if (pid < 0)
     {
       pid = -pid;
@@ -1464,7 +1464,7 @@ do_status(void)
       }
     }
     else
-    /* must be a postmaster */
+                              
     {
       if (postmaster_is_alive((pid_t)pid))
       {
@@ -1482,7 +1482,7 @@ do_status(void)
             puts(*curr_line);
           }
 
-          /* Free the results of readfile */
+                                            
           free_readfile(optlines);
         }
         return;
@@ -1491,11 +1491,11 @@ do_status(void)
   }
   printf(_("%s: no server running\n"), progname);
 
-  /*
-   * The Linux Standard Base Core Specification 3.1 says this should return
-   * '3, program is not running'
-   * https://refspecs.linuxbase.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
-   */
+     
+                                                                            
+                                 
+                                                                                                 
+     
   exit(3);
 }
 
@@ -1519,8 +1519,8 @@ IsWindowsXPOrGreater(void)
 
   osv.dwOSVersionInfoSize = sizeof(osv);
 
-  /* Windows XP = Version 5.1 */
-  return (!GetVersionEx(&osv) || /* could not get version */
+                                
+  return (!GetVersionEx(&osv) ||                            
           osv.dwMajorVersion > 5 || (osv.dwMajorVersion == 5 && osv.dwMinorVersion >= 1));
 }
 
@@ -1531,8 +1531,8 @@ IsWindows7OrGreater(void)
 
   osv.dwOSVersionInfoSize = sizeof(osv);
 
-  /* Windows 7 = Version 6.0 */
-  return (!GetVersionEx(&osv) || /* could not get version */
+                               
+  return (!GetVersionEx(&osv) ||                            
           osv.dwMajorVersion > 6 || (osv.dwMajorVersion == 6 && osv.dwMinorVersion >= 0));
 }
 #endif
@@ -1576,19 +1576,19 @@ pgwin32_CommandLine(bool registration)
     }
   }
 
-  /* if path does not end in .exe, append it */
+                                               
   if (strlen(cmdPath) < 4 || pg_strcasecmp(cmdPath + strlen(cmdPath) - 4, ".exe") != 0)
   {
     snprintf(cmdPath + strlen(cmdPath), sizeof(cmdPath) - strlen(cmdPath), ".exe");
   }
 
-  /* use backslashes in path to avoid problems with some third-party tools */
+                                                                             
   make_native_path(cmdPath);
 
-  /* be sure to double-quote the executable's name in the command */
+                                                                    
   appendPQExpBuffer(cmdLine, "\"%s\"", cmdPath);
 
-  /* append assorted switches to the command line, as needed */
+                                                               
 
   if (registration)
   {
@@ -1597,12 +1597,12 @@ pgwin32_CommandLine(bool registration)
 
   if (pg_config)
   {
-    /* We need the -D path to be absolute */
+                                            
     char *dataDir;
 
     if ((dataDir = make_absolute_path(pg_config)) == NULL)
     {
-      /* make_absolute_path already reported the error */
+                                                         
       exit(1);
     }
     make_native_path(dataDir);
@@ -1620,7 +1620,7 @@ pgwin32_CommandLine(bool registration)
     appendPQExpBuffer(cmdLine, " -w");
   }
 
-  /* Don't propagate a value from an environment variable. */
+                                                             
   if (registration && wait_seconds_arg && wait_seconds != DEFAULT_WAIT)
   {
     appendPQExpBuffer(cmdLine, " -t %d", wait_seconds);
@@ -1724,23 +1724,23 @@ pgwin32_ServiceHandler(DWORD request)
   case SERVICE_CONTROL_STOP:
   case SERVICE_CONTROL_SHUTDOWN:
 
-    /*
-     * We only need a short wait hint here as it just needs to wait
-     * for the next checkpoint. They occur every 5 seconds during
-     * shutdown
-     */
+       
+                                                                    
+                                                                  
+                
+       
     status.dwWaitHint = 10000;
     pgwin32_SetServiceStatus(SERVICE_STOP_PENDING);
     SetEvent(shutdownEvent);
     return;
 
   case SERVICE_CONTROL_PAUSE:
-    /* Win32 config reloading */
+                                
     status.dwWaitHint = 5000;
     kill(postmasterPID, SIGHUP);
     return;
 
-    /* FIXME: These could be used to replace other signals etc */
+                                                                 
   case SERVICE_CONTROL_CONTINUE:
   case SERVICE_CONTROL_INTERROGATE:
   default:
@@ -1754,7 +1754,7 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR *argv)
   PROCESS_INFORMATION pi;
   DWORD ret;
 
-  /* Initialize variables */
+                            
   status.dwWin32ExitCode = S_OK;
   status.dwCheckPoint = 0;
   status.dwWaitHint = 60000;
@@ -1767,7 +1767,7 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR *argv)
 
   read_post_opts();
 
-  /* Register the control request handler */
+                                            
   if ((hStatus = RegisterServiceCtrlHandler(register_servicename, pgwin32_ServiceHandler)) == (SERVICE_STATUS_HANDLE)0)
   {
     return;
@@ -1778,7 +1778,7 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR *argv)
     return;
   }
 
-  /* Start the postmaster */
+                            
   pgwin32_SetServiceStatus(SERVICE_START_PENDING);
   if (!CreateRestrictedProcess(pgwin32_CommandLine(false), &pi, true))
   {
@@ -1803,26 +1803,26 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR *argv)
 
   pgwin32_SetServiceStatus(SERVICE_RUNNING);
 
-  /* Wait for quit... */
+                        
   ret = WaitForMultipleObjects(2, shutdownHandles, FALSE, INFINITE);
 
   pgwin32_SetServiceStatus(SERVICE_STOP_PENDING);
   switch (ret)
   {
-  case WAIT_OBJECT_0: /* shutdown event */
+  case WAIT_OBJECT_0:                     
   {
-    /*
-     * status.dwCheckPoint can be incremented by
-     * wait_for_postmaster_start(), so it might not start from 0.
-     */
+       
+                                                 
+                                                                  
+       
     int maxShutdownCheckPoint = status.dwCheckPoint + 12;
 
     kill(postmasterPID, SIGINT);
 
-    /*
-     * Increment the checkpoint and try again. Abort after 12
-     * checkpoints as the postmaster has probably hung.
-     */
+       
+                                                              
+                                                        
+       
     while (WaitForSingleObject(postmasterProcess, 5000) == WAIT_TIMEOUT && status.dwCheckPoint < maxShutdownCheckPoint)
     {
       status.dwCheckPoint++;
@@ -1831,11 +1831,11 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR *argv)
     break;
   }
 
-  case (WAIT_OBJECT_0 + 1): /* postmaster went down */
+  case (WAIT_OBJECT_0 + 1):                           
     break;
 
   default:
-    /* shouldn't get here? */
+                             
     break;
   }
 
@@ -1857,12 +1857,12 @@ pgwin32_doRunAsService(void)
   }
 }
 
-/*
- * Mingw headers are incomplete, and so are the libraries. So we have to load
- * a whole lot of API functions dynamically. Since we have to do this anyway,
- * also load the couple of functions that *do* exist in minwg headers but not
- * on NT4. That way, we don't break on NT4.
- */
+   
+                                                                              
+                                                                              
+                                                                              
+                                            
+   
 typedef BOOL(WINAPI *__CreateRestrictedToken)(HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
 typedef BOOL(WINAPI *__IsProcessInJob)(HANDLE, HANDLE, PBOOL);
 typedef HANDLE(WINAPI *__CreateJobObject)(LPSECURITY_ATTRIBUTES, LPCTSTR);
@@ -1870,18 +1870,18 @@ typedef BOOL(WINAPI *__SetInformationJobObject)(HANDLE, JOBOBJECTINFOCLASS, LPVO
 typedef BOOL(WINAPI *__AssignProcessToJobObject)(HANDLE, HANDLE);
 typedef BOOL(WINAPI *__QueryInformationJobObject)(HANDLE, JOBOBJECTINFOCLASS, LPVOID, DWORD, LPDWORD);
 
-/*
- * Create a restricted token, a job object sandbox, and execute the specified
- * process with it.
- *
- * Returns 0 on success, non-zero on failure, same as CreateProcess().
- *
- * On NT4, or any other system not containing the required functions, will
- * launch the process under the current token without doing any modifications.
- *
- * NOTE! Job object will only work when running as a service, because it's
- * automatically destroyed when pg_ctl exits.
- */
+   
+                                                                              
+                    
+   
+                                                                       
+   
+                                                                           
+                                                                               
+   
+                                                                           
+                                              
+   
 static int
 CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_service)
 {
@@ -1894,7 +1894,7 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
   SID_AND_ATTRIBUTES dropSids[2];
   PTOKEN_PRIVILEGES delPrivs;
 
-  /* Functions loaded dynamically */
+                                    
   __CreateRestrictedToken _CreateRestrictedToken = NULL;
   __IsProcessInJob _IsProcessInJob = NULL;
   __CreateJobObject _CreateJobObject = NULL;
@@ -1915,10 +1915,10 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
 
   if (_CreateRestrictedToken == NULL)
   {
-    /*
-     * NT4 doesn't have CreateRestrictedToken, so just call ordinary
-     * CreateProcess
-     */
+       
+                                                                     
+                     
+       
     write_stderr(_("%s: WARNING: cannot create restricted tokens on this platform\n"), progname);
     if (Advapi32Handle != NULL)
     {
@@ -1927,18 +1927,18 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
     return CreateProcess(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, processInfo);
   }
 
-  /* Open the current token to use as a base for the restricted one */
+                                                                      
   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
   {
-    /*
-     * Most Windows targets make DWORD a 32-bit unsigned long, but in case
-     * it doesn't cast DWORD before printing.
-     */
+       
+                                                                           
+                                              
+       
     write_stderr(_("%s: could not open process token: error code %lu\n"), progname, (unsigned long)GetLastError());
     return 0;
   }
 
-  /* Allocate list of SIDs to remove */
+                                       
   ZeroMemory(&dropSids, sizeof(dropSids));
   if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &dropSids[0].Sid) || !AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid))
   {
@@ -1946,11 +1946,11 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
     return 0;
   }
 
-  /* Get list of privileges to remove */
+                                        
   delPrivs = GetPrivilegesToDelete(origToken);
   if (delPrivs == NULL)
   {
-    /* Error message already printed */
+                                       
     return 0;
   }
 
@@ -1981,20 +1981,20 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
     _QueryInformationJobObject = (__QueryInformationJobObject)GetProcAddress(Kernel32Handle, "QueryInformationJobObject");
   }
 
-  /* Verify that we found all functions */
+                                          
   if (_IsProcessInJob == NULL || _CreateJobObject == NULL || _SetInformationJobObject == NULL || _AssignProcessToJobObject == NULL || _QueryInformationJobObject == NULL)
   {
-    /*
-     * IsProcessInJob() is not available on < WinXP, so there is no need
-     * to log the error every time in that case
-     */
+       
+                                                                         
+                                                
+       
     if (IsWindowsXPOrGreater())
     {
 
-      /*
-       * Log error if we can't get version, or if we're on WinXP/2003 or
-       * newer
-       */
+         
+                                                                         
+               
+         
       write_stderr(_("%s: WARNING: could not locate all job object functions in system API\n"), progname);
     }
   }
@@ -2006,11 +2006,11 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
     {
       if (!inJob)
       {
-        /*
-         * Job objects are working, and the new process isn't in one,
-         * so we can create one safely. If any problems show up when
-         * setting it, we're going to ignore them.
-         */
+           
+                                                                      
+                                                                     
+                                                   
+           
         HANDLE job;
         char jobname[128];
 
@@ -2037,12 +2037,12 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
           {
             if (!IsWindows7OrGreater())
             {
-              /*
-               * On Windows 7 (and presumably later),
-               * JOB_OBJECT_UILIMIT_HANDLES prevents us from
-               * starting as a service. So we only enable it on
-               * Vista and earlier (version <= 6.0)
-               */
+                 
+                                                      
+                                                             
+                                                                
+                                                    
+                 
               uiRestrictions.UIRestrictionsClass |= JOB_OBJECT_UILIMIT_HANDLES;
             }
           }
@@ -2064,18 +2064,18 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
 
   FreeLibrary(Kernel32Handle);
 
-  /*
-   * We intentionally don't close the job object handle, because we want the
-   * object to live on until pg_ctl shuts down.
-   */
+     
+                                                                             
+                                                
+     
   return r;
 }
 
-/*
- * Get a list of privileges to delete from the access token. We delete all privileges
- * except SeLockMemoryPrivilege which is needed to use large pages, and
- * SeChangeNotifyPrivilege which is enabled by default in DISABLE_MAX_PRIVILEGE.
- */
+   
+                                                                                      
+                                                                        
+                                                                                 
+   
 static PTOKEN_PRIVILEGES
 GetPrivilegesToDelete(HANDLE hToken)
 {
@@ -2125,7 +2125,7 @@ GetPrivilegesToDelete(HANDLE hToken)
 
   return tokenPrivs;
 }
-#endif /* WIN32 */
+#endif            
 
 static void
 do_advice(void)
@@ -2297,11 +2297,11 @@ set_starttype(char *starttypeopt)
 }
 #endif
 
-/*
- * adjust_data_dir
- *
- * If a configuration-only directory was specified, find the real data dir.
- */
+   
+                   
+   
+                                                                            
+   
 static void
 adjust_data_dir(void)
 {
@@ -2309,13 +2309,13 @@ adjust_data_dir(void)
   char *my_exec_path, *cmd;
   FILE *fd;
 
-  /* do nothing if we're working without knowledge of data dir */
+                                                                 
   if (pg_config == NULL)
   {
     return;
   }
 
-  /* If there is no postgresql.conf, it can't be a config-only dir */
+                                                                     
   snprintf(filename, sizeof(filename), "%s/postgresql.conf", pg_config);
   if ((fd = fopen(filename, "r")) == NULL)
   {
@@ -2323,7 +2323,7 @@ adjust_data_dir(void)
   }
   fclose(fd);
 
-  /* If PG_VERSION exists, it can't be a config-only dir */
+                                                           
   snprintf(filename, sizeof(filename), "%s/PG_VERSION", pg_config);
   if ((fd = fopen(filename, "r")) != NULL)
   {
@@ -2331,9 +2331,9 @@ adjust_data_dir(void)
     return;
   }
 
-  /* Must be a configuration directory, so find the data directory */
+                                                                     
 
-  /* we use a private my_exec_path to avoid interfering with later uses */
+                                                                          
   if (exec_path == NULL)
   {
     my_exec_path = find_other_exec_or_die(argv0, "postgres", PG_BACKEND_VERSIONSTR);
@@ -2343,7 +2343,7 @@ adjust_data_dir(void)
     my_exec_path = pg_strdup(exec_path);
   }
 
-  /* it's important for -C to be the first option, see main.c */
+                                                                
   cmd = psprintf("\"%s\" -C data_directory %s%s", my_exec_path, pgdata_opt ? pgdata_opt : "", post_opts ? post_opts : "");
 
   fd = popen(cmd, "r");
@@ -2355,7 +2355,7 @@ adjust_data_dir(void)
   pclose(fd);
   free(my_exec_path);
 
-  /* Remove trailing newline */
+                               
   if (strchr(filename, '\n') != NULL)
   {
     *strchr(filename, '\n') = '\0';
@@ -2399,16 +2399,16 @@ main(int argc, char **argv)
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_ctl"));
   start_time = time(NULL);
 
-  /*
-   * save argv[0] so do_start() can look for the postmaster if necessary. we
-   * don't look for postmaster here because in many cases we won't need it.
-   */
+     
+                                                                             
+                                                                            
+     
   argv0 = argv[0];
 
-  /* Set restrictive mode mask until PGDATA permissions are checked */
+                                                                      
   umask(PG_MODE_MASK_OWNER);
 
-  /* support --help and --version even if invoked as root */
+                                                            
   if (argc > 1)
   {
     if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
@@ -2423,9 +2423,9 @@ main(int argc, char **argv)
     }
   }
 
-  /*
-   * Disallow running as root, to forestall any possible security holes.
-   */
+     
+                                                                         
+     
 #ifndef WIN32
   if (geteuid() == 0)
   {
@@ -2444,15 +2444,15 @@ main(int argc, char **argv)
     wait_seconds = atoi(env_wait);
   }
 
-  /*
-   * 'Action' can be before or after args so loop over both. Some
-   * getopt_long() implementations will reorder argv[] to place all flags
-   * first (GNU?), but we don't rely on it. Our /port version doesn't do
-   * that.
-   */
+     
+                                                                  
+                                                                          
+                                                                         
+           
+     
   optind = 1;
 
-  /* process command-line options */
+                                    
   while (optind < argc)
   {
     while ((c = getopt_long(argc, argv, "cD:e:l:m:N:o:p:P:sS:t:U:wW", long_options, &option_index)) != -1)
@@ -2469,11 +2469,11 @@ main(int argc, char **argv)
         env_var = psprintf("PGDATA=%s", pgdata_D);
         putenv(env_var);
 
-        /*
-         * We could pass PGDATA just in an environment
-         * variable but we do -D too for clearer postmaster
-         * 'ps' display
-         */
+           
+                                                       
+                                                            
+                        
+           
         pgdata_opt = psprintf("-D \"%s\" ", pgdata_D);
         break;
       }
@@ -2490,7 +2490,7 @@ main(int argc, char **argv)
         register_servicename = pg_strdup(optarg);
         break;
       case 'o':
-        /* append option? */
+                            
         if (!post_opts)
         {
           post_opts = pg_strdup(optarg);
@@ -2531,7 +2531,7 @@ main(int argc, char **argv)
         }
         else
         {
-          /* Prepend .\ for local accounts */
+                                             
           register_username = psprintf(".\\%s", optarg);
         }
         break;
@@ -2545,13 +2545,13 @@ main(int argc, char **argv)
         allow_core_files = true;
         break;
       default:
-        /* getopt_long already issued a suitable error message */
+                                                                 
         do_advice();
         exit(1);
       }
     }
 
-    /* Process an action */
+                           
     if (optind < argc)
     {
       if (ctl_command != NO_COMMAND)
@@ -2636,7 +2636,7 @@ main(int argc, char **argv)
     exit(1);
   }
 
-  /* Note we put any -D switch into the env var above */
+                                                        
   pg_config = getenv("PGDATA");
   if (pg_config)
   {
@@ -2645,10 +2645,10 @@ main(int argc, char **argv)
     pg_data = pg_strdup(pg_config);
   }
 
-  /* -D might point at config-only directory; if so find the real PGDATA */
+                                                                           
   adjust_data_dir();
 
-  /* Complain if -D needed and not provided */
+                                              
   if (pg_config == NULL && ctl_command != KILL_COMMAND && ctl_command != UNREGISTER_COMMAND)
   {
     write_stderr(_("%s: no database directory specified and environment variable PGDATA unset\n"), progname);
@@ -2669,13 +2669,13 @@ main(int argc, char **argv)
     snprintf(pid_file, MAXPGPATH, "%s/postmaster.pid", pg_data);
     snprintf(backup_file, MAXPGPATH, "%s/backup_label", pg_data);
 
-    /*
-     * Set mask based on PGDATA permissions,
-     *
-     * Don't error here if the data directory cannot be stat'd. This is
-     * handled differently based on the command and we don't want to
-     * interfere with that logic.
-     */
+       
+                                             
+       
+                                                                        
+                                                                     
+                                  
+       
     if (GetDataDirectoryCreatePerm(pg_data))
     {
       umask(pg_mode_mask);

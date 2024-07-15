@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * int8.c
- *	  Internal 64-bit integer operations
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/int8.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                        
+   
+                                                                         
+                                                                        
+   
+                  
+                                  
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -35,22 +35,22 @@ typedef struct
   int64 step;
 } generate_series_fctx;
 
-/***********************************************************************
- **
- **		Routines for 64-bit integers.
- **
- ***********************************************************************/
+                                                                         
+    
+                                   
+    
+                                                                         
 
-/*----------------------------------------------------------
- * Formatting and conversion routines.
- *---------------------------------------------------------*/
+                                                             
+                                       
+                                                             
 
-/*
- * scanint8 --- try to parse a string into an int8.
- *
- * If errorOK is false, ereport a useful error message if the string is bad.
- * If errorOK is true, just return "false" for bad input.
- */
+   
+                                                    
+   
+                                                                             
+                                                          
+   
 bool
 scanint8(const char *str, bool errorOK, int64 *result)
 {
@@ -58,21 +58,21 @@ scanint8(const char *str, bool errorOK, int64 *result)
   int64 tmp = 0;
   bool neg = false;
 
-  /*
-   * Do our own scan, rather than relying on sscanf which might be broken
-   * for long long.
-   *
-   * As INT64_MIN can't be stored as a positive 64 bit integer, accumulate
-   * value as a negative number.
-   */
+     
+                                                                          
+                    
+     
+                                                                           
+                                 
+     
 
-  /* skip leading spaces */
+                           
   while (*ptr && isspace((unsigned char)*ptr))
   {
     ptr++;
   }
 
-  /* handle sign */
+                   
   if (*ptr == '-')
   {
     ptr++;
@@ -83,13 +83,13 @@ scanint8(const char *str, bool errorOK, int64 *result)
     ptr++;
   }
 
-  /* require at least one digit */
+                                  
   if (unlikely(!isdigit((unsigned char)*ptr)))
   {
     goto invalid_syntax;
   }
 
-  /* process digits */
+                      
   while (*ptr && isdigit((unsigned char)*ptr))
   {
     int8 digit = (*ptr++ - '0');
@@ -100,7 +100,7 @@ scanint8(const char *str, bool errorOK, int64 *result)
     }
   }
 
-  /* allow trailing whitespace, but not other trailing chars */
+                                                               
   while (*ptr != '\0' && isspace((unsigned char)*ptr))
   {
     ptr++;
@@ -113,7 +113,7 @@ scanint8(const char *str, bool errorOK, int64 *result)
 
   if (!neg)
   {
-    /* could fail if input is most negative number */
+                                                     
     if (unlikely(tmp == PG_INT64_MIN))
     {
       goto out_of_range;
@@ -139,8 +139,8 @@ invalid_syntax:
   return false;
 }
 
-/* int8in()
- */
+            
+   
 Datum
 int8in(PG_FUNCTION_ARGS)
 {
@@ -151,8 +151,8 @@ int8in(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(result);
 }
 
-/* int8out()
- */
+             
+   
 Datum
 int8out(PG_FUNCTION_ARGS)
 {
@@ -165,9 +165,9 @@ int8out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		int8recv			- converts external binary format to int8
- */
+   
+                                                         
+   
 Datum
 int8recv(PG_FUNCTION_ARGS)
 {
@@ -176,9 +176,9 @@ int8recv(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(pq_getmsgint64(buf));
 }
 
-/*
- *		int8send			- converts int8 to binary format
- */
+   
+                                                
+   
 Datum
 int8send(PG_FUNCTION_ARGS)
 {
@@ -190,13 +190,13 @@ int8send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*----------------------------------------------------------
- *	Relational operators for int8s, including cross-data-type comparisons.
- *---------------------------------------------------------*/
+                                                             
+                                                                          
+                                                             
 
-/* int8relop()
- * Is val1 relop val2?
- */
+               
+                       
+   
 Datum
 int8eq(PG_FUNCTION_ARGS)
 {
@@ -251,9 +251,9 @@ int8ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(val1 >= val2);
 }
 
-/* int84relop()
- * Is 64-bit val1 relop 32-bit val2?
- */
+                
+                                     
+   
 Datum
 int84eq(PG_FUNCTION_ARGS)
 {
@@ -308,9 +308,9 @@ int84ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(val1 >= val2);
 }
 
-/* int48relop()
- * Is 32-bit val1 relop 64-bit val2?
- */
+                
+                                     
+   
 Datum
 int48eq(PG_FUNCTION_ARGS)
 {
@@ -365,9 +365,9 @@ int48ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(val1 >= val2);
 }
 
-/* int82relop()
- * Is 64-bit val1 relop 16-bit val2?
- */
+                
+                                     
+   
 Datum
 int82eq(PG_FUNCTION_ARGS)
 {
@@ -422,9 +422,9 @@ int82ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(val1 >= val2);
 }
 
-/* int28relop()
- * Is 16-bit val1 relop 64-bit val2?
- */
+                
+                                     
+   
 Datum
 int28eq(PG_FUNCTION_ARGS)
 {
@@ -479,12 +479,12 @@ int28ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(val1 >= val2);
 }
 
-/*
- * in_range support function for int8.
- *
- * Note: we needn't supply int8_int4 or int8_int2 variants, as implicit
- * coercion of the offset value takes care of those scenarios just as well.
- */
+   
+                                       
+   
+                                                                        
+                                                                            
+   
 Datum
 in_range_int8_int8(PG_FUNCTION_ARGS)
 {
@@ -502,16 +502,16 @@ in_range_int8_int8(PG_FUNCTION_ARGS)
 
   if (sub)
   {
-    offset = -offset; /* cannot overflow */
+    offset = -offset;                      
   }
 
   if (unlikely(pg_add_s64_overflow(base, offset, &sum)))
   {
-    /*
-     * If sub is false, the true sum is surely more than val, so correct
-     * answer is the same as "less".  If sub is true, the true sum is
-     * surely less than val, so the answer is "!less".
-     */
+       
+                                                                         
+                                                                      
+                                                       
+       
     PG_RETURN_BOOL(sub ? !less : less);
   }
 
@@ -525,9 +525,9 @@ in_range_int8_int8(PG_FUNCTION_ARGS)
   }
 }
 
-/*----------------------------------------------------------
- *	Arithmetic operators on 64-bit integers.
- *---------------------------------------------------------*/
+                                                             
+                                            
+                                                             
 
 Datum
 int8um(PG_FUNCTION_ARGS)
@@ -603,16 +603,16 @@ int8div(PG_FUNCTION_ARGS)
   if (arg2 == 0)
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * INT64_MIN / -1 is problematic, since the result can't be represented on
-   * a two's-complement machine.  Some machines produce INT64_MIN, some
-   * produce zero, some throw an exception.  We can dodge the problem by
-   * recognizing that division by -1 is the same as negation.
-   */
+     
+                                                                             
+                                                                        
+                                                                         
+                                                              
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT64_MIN))
@@ -623,16 +623,16 @@ int8div(PG_FUNCTION_ARGS)
     PG_RETURN_INT64(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
   PG_RETURN_INT64(result);
 }
 
-/* int8abs()
- * Absolute value
- */
+             
+                  
+   
 Datum
 int8abs(PG_FUNCTION_ARGS)
 {
@@ -647,9 +647,9 @@ int8abs(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(result);
 }
 
-/* int8mod()
- * Modulo operation.
- */
+             
+                     
+   
 Datum
 int8mod(PG_FUNCTION_ARGS)
 {
@@ -659,21 +659,21 @@ int8mod(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * Some machines throw a floating-point exception for INT64_MIN % -1,
-   * which is a bit silly since the correct answer is perfectly
-   * well-defined, namely zero.
-   */
+     
+                                                                        
+                                                                
+                                
+     
   if (arg2 == -1)
   {
     PG_RETURN_INT64(0);
   }
 
-  /* No overflow is possible */
+                               
 
   PG_RETURN_INT64(arg1 % arg2);
 }
@@ -681,14 +681,14 @@ int8mod(PG_FUNCTION_ARGS)
 Datum
 int8inc(PG_FUNCTION_ARGS)
 {
-  /*
-   * When int8 is pass-by-reference, we provide this special case to avoid
-   * palloc overhead for COUNT(): when called as an aggregate, we know that
-   * the argument is modifiable local storage, so just update it in-place.
-   * (If int8 is pass-by-value, then of course this is useless as well as
-   * incorrect, so just ifdef it out.)
-   */
-#ifndef USE_FLOAT8_BYVAL /* controls int8 too */
+     
+                                                                           
+                                                                            
+                                                                           
+                                                                          
+                                       
+     
+#ifndef USE_FLOAT8_BYVAL                        
   if (AggCheckCallContext(fcinfo, NULL))
   {
     int64 *arg = (int64 *)PG_GETARG_POINTER(0);
@@ -703,7 +703,7 @@ int8inc(PG_FUNCTION_ARGS)
   else
 #endif
   {
-    /* Not called as an aggregate, so just do it the dumb way */
+                                                                
     int64 arg = PG_GETARG_INT64(0);
     int64 result;
 
@@ -719,14 +719,14 @@ int8inc(PG_FUNCTION_ARGS)
 Datum
 int8dec(PG_FUNCTION_ARGS)
 {
-  /*
-   * When int8 is pass-by-reference, we provide this special case to avoid
-   * palloc overhead for COUNT(): when called as an aggregate, we know that
-   * the argument is modifiable local storage, so just update it in-place.
-   * (If int8 is pass-by-value, then of course this is useless as well as
-   * incorrect, so just ifdef it out.)
-   */
-#ifndef USE_FLOAT8_BYVAL /* controls int8 too */
+     
+                                                                           
+                                                                            
+                                                                           
+                                                                          
+                                       
+     
+#ifndef USE_FLOAT8_BYVAL                        
   if (AggCheckCallContext(fcinfo, NULL))
   {
     int64 *arg = (int64 *)PG_GETARG_POINTER(0);
@@ -740,7 +740,7 @@ int8dec(PG_FUNCTION_ARGS)
   else
 #endif
   {
-    /* Not called as an aggregate, so just do it the dumb way */
+                                                                
     int64 arg = PG_GETARG_INT64(0);
     int64 result;
 
@@ -753,14 +753,14 @@ int8dec(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * These functions are exactly like int8inc/int8dec but are used for
- * aggregates that count only non-null values.  Since the functions are
- * declared strict, the null checks happen before we ever get here, and all we
- * need do is increment the state value.  We could actually make these pg_proc
- * entries point right at int8inc/int8dec, but then the opr_sanity regression
- * test would complain about mismatched entries for a built-in function.
- */
+   
+                                                                     
+                                                                        
+                                                                               
+                                                                               
+                                                                              
+                                                                         
+   
 
 Datum
 int8inc_any(PG_FUNCTION_ARGS)
@@ -856,16 +856,16 @@ int84div(PG_FUNCTION_ARGS)
   if (arg2 == 0)
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * INT64_MIN / -1 is problematic, since the result can't be represented on
-   * a two's-complement machine.  Some machines produce INT64_MIN, some
-   * produce zero, some throw an exception.  We can dodge the problem by
-   * recognizing that division by -1 is the same as negation.
-   */
+     
+                                                                             
+                                                                        
+                                                                         
+                                                              
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT64_MIN))
@@ -876,7 +876,7 @@ int84div(PG_FUNCTION_ARGS)
     PG_RETURN_INT64(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
@@ -934,11 +934,11 @@ int48div(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /* No overflow is possible */
+                               
   PG_RETURN_INT64((int64)arg1 / arg2);
 }
 
@@ -994,16 +994,16 @@ int82div(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * INT64_MIN / -1 is problematic, since the result can't be represented on
-   * a two's-complement machine.  Some machines produce INT64_MIN, some
-   * produce zero, some throw an exception.  We can dodge the problem by
-   * recognizing that division by -1 is the same as negation.
-   */
+     
+                                                                             
+                                                                        
+                                                                         
+                                                              
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT64_MIN))
@@ -1014,7 +1014,7 @@ int82div(PG_FUNCTION_ARGS)
     PG_RETURN_INT64(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
@@ -1072,23 +1072,23 @@ int28div(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /* No overflow is possible */
+                               
   PG_RETURN_INT64((int64)arg1 / arg2);
 }
 
-/* Binary arithmetics
- *
- *		int8and		- returns arg1 & arg2
- *		int8or		- returns arg1 | arg2
- *		int8xor		- returns arg1 # arg2
- *		int8not		- returns ~arg1
- *		int8shl		- returns arg1 << arg2
- *		int8shr		- returns arg1 >> arg2
- */
+                      
+   
+                                   
+                                  
+                                   
+                             
+                                    
+                                    
+   
 
 Datum
 int8and(PG_FUNCTION_ARGS)
@@ -1143,9 +1143,9 @@ int8shr(PG_FUNCTION_ARGS)
   PG_RETURN_INT64(arg1 >> arg2);
 }
 
-/*----------------------------------------------------------
- *	Conversion operators.
- *---------------------------------------------------------*/
+                                                             
+                         
+                                                             
 
 Datum
 int48(PG_FUNCTION_ARGS)
@@ -1200,22 +1200,22 @@ i8tod(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/* dtoi8()
- * Convert float8 to 8-byte integer.
- */
+           
+                                     
+   
 Datum
 dtoi8(PG_FUNCTION_ARGS)
 {
   float8 num = PG_GETARG_FLOAT8(0);
 
-  /*
-   * Get rid of any fractional part in the input.  This is so we don't fail
-   * on just-out-of-range values that would round into range.  Note
-   * assumption that rint() will pass through a NaN or Inf unchanged.
-   */
+     
+                                                                            
+                                                                    
+                                                                      
+     
   num = rint(num);
 
-  /* Range check */
+                   
   if (unlikely(isnan(num) || !FLOAT8_FITS_IN_INT64(num)))
   {
     ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("bigint out of range")));
@@ -1235,22 +1235,22 @@ i8tof(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT4(result);
 }
 
-/* ftoi8()
- * Convert float4 to 8-byte integer.
- */
+           
+                                     
+   
 Datum
 ftoi8(PG_FUNCTION_ARGS)
 {
   float4 num = PG_GETARG_FLOAT4(0);
 
-  /*
-   * Get rid of any fractional part in the input.  This is so we don't fail
-   * on just-out-of-range values that would round into range.  Note
-   * assumption that rint() will pass through a NaN or Inf unchanged.
-   */
+     
+                                                                            
+                                                                    
+                                                                      
+     
   num = rint(num);
 
-  /* Range check */
+                   
   if (unlikely(isnan(num) || !FLOAT4_FITS_IN_INT64(num)))
   {
     ereport(ERROR, (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE), errmsg("bigint out of range")));
@@ -1280,9 +1280,9 @@ oidtoi8(PG_FUNCTION_ARGS)
   PG_RETURN_INT64((int64)arg);
 }
 
-/*
- * non-persistent numeric series generator
- */
+   
+                                           
+   
 Datum
 generate_series_int8(PG_FUNCTION_ARGS)
 {
@@ -1297,14 +1297,14 @@ generate_series_step_int8(PG_FUNCTION_ARGS)
   int64 result;
   MemoryContext oldcontext;
 
-  /* stuff done only on the first call of the function */
+                                                         
   if (SRF_IS_FIRSTCALL())
   {
     int64 start = PG_GETARG_INT64(0);
     int64 finish = PG_GETARG_INT64(1);
     int64 step = 1;
 
-    /* see if we were given an explicit step size */
+                                                    
     if (PG_NARGS() == 3)
     {
       step = PG_GETARG_INT64(2);
@@ -1314,21 +1314,21 @@ generate_series_step_int8(PG_FUNCTION_ARGS)
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("step size cannot equal zero")));
     }
 
-    /* create a function context for cross-call persistence */
+                                                              
     funcctx = SRF_FIRSTCALL_INIT();
 
-    /*
-     * switch to memory context appropriate for multiple function calls
-     */
+       
+                                                                        
+       
     oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-    /* allocate memory for user context */
+                                          
     fctx = (generate_series_fctx *)palloc(sizeof(generate_series_fctx));
 
-    /*
-     * Use fctx to keep state from call to call. Seed current with the
-     * original start value
-     */
+       
+                                                                       
+                            
+       
     fctx->current = start;
     fctx->finish = finish;
     fctx->step = step;
@@ -1337,39 +1337,39 @@ generate_series_step_int8(PG_FUNCTION_ARGS)
     MemoryContextSwitchTo(oldcontext);
   }
 
-  /* stuff done on every call of the function */
+                                                
   funcctx = SRF_PERCALL_SETUP();
 
-  /*
-   * get the saved state and use current as the result for this iteration
-   */
+     
+                                                                          
+     
   fctx = funcctx->user_fctx;
   result = fctx->current;
 
   if ((fctx->step > 0 && fctx->current <= fctx->finish) || (fctx->step < 0 && fctx->current >= fctx->finish))
   {
-    /*
-     * Increment current in preparation for next iteration. If next-value
-     * computation overflows, this is the final result.
-     */
+       
+                                                                          
+                                                        
+       
     if (pg_add_s64_overflow(fctx->current, fctx->step, &fctx->current))
     {
       fctx->step = 0;
     }
 
-    /* do when there is more left to send */
+                                            
     SRF_RETURN_NEXT(funcctx, Int64GetDatum(result));
   }
   else
   {
-    /* do when there is no more left */
+                                       
     SRF_RETURN_DONE(funcctx);
   }
 }
 
-/*
- * Planner support function for generate_series(int8, int8 [, int8])
- */
+   
+                                                                     
+   
 Datum
 generate_series_int8_support(PG_FUNCTION_ARGS)
 {
@@ -1378,15 +1378,15 @@ generate_series_int8_support(PG_FUNCTION_ARGS)
 
   if (IsA(rawreq, SupportRequestRows))
   {
-    /* Try to estimate the number of rows returned */
+                                                     
     SupportRequestRows *req = (SupportRequestRows *)rawreq;
 
-    if (is_funcclause(req->node)) /* be paranoid */
+    if (is_funcclause(req->node))                  
     {
       List *args = ((FuncExpr *)req->node)->args;
       Node *arg1, *arg2, *arg3;
 
-      /* We can use estimated argument values here */
+                                                     
       arg1 = estimate_expression_value(req->root, linitial(args));
       arg2 = estimate_expression_value(req->root, lsecond(args));
       if (list_length(args) >= 3)
@@ -1398,12 +1398,12 @@ generate_series_int8_support(PG_FUNCTION_ARGS)
         arg3 = NULL;
       }
 
-      /*
-       * If any argument is constant NULL, we can safely assume that
-       * zero rows are returned.  Otherwise, if they're all non-NULL
-       * constants, we can calculate the number of rows that will be
-       * returned.  Use double arithmetic to avoid overflow hazards.
-       */
+         
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+         
       if ((IsA(arg1, Const) && ((Const *)arg1)->constisnull) || (IsA(arg2, Const) && ((Const *)arg2)->constisnull) || (arg3 != NULL && IsA(arg3, Const) && ((Const *)arg3)->constisnull))
       {
         req->rows = 0;
@@ -1417,7 +1417,7 @@ generate_series_int8_support(PG_FUNCTION_ARGS)
         finish = DatumGetInt64(((Const *)arg2)->constvalue);
         step = arg3 ? DatumGetInt64(((Const *)arg3)->constvalue) : 1;
 
-        /* This equation works for either sign of step */
+                                                         
         if (step != 0)
         {
           req->rows = floor((finish - start + step) / step);

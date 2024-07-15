@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * spgkdtreeproc.c
- *	  implementation of k-d tree over points for SP-GiST
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/spgist/spgkdtreeproc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                                                        
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                               
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -26,11 +26,11 @@
 Datum
 spg_kd_config(PG_FUNCTION_ARGS)
 {
-  /* spgConfigIn *cfgin = (spgConfigIn *) PG_GETARG_POINTER(0); */
+                                                                  
   spgConfigOut *cfg = (spgConfigOut *)PG_GETARG_POINTER(1);
 
   cfg->prefixType = FLOAT8OID;
-  cfg->labelType = VOIDOID; /* we don't need node labels */
+  cfg->labelType = VOIDOID;                                
   cfg->canReturnData = true;
   cfg->longValuesOK = false;
   PG_RETURN_VOID();
@@ -138,20 +138,20 @@ spg_kd_picksplit(PG_FUNCTION_ARGS)
   out->prefixDatum = Float8GetDatum(coord);
 
   out->nNodes = 2;
-  out->nodeLabels = NULL; /* we don't need node labels */
+  out->nodeLabels = NULL;                                
 
   out->mapTuplesToNodes = palloc(sizeof(int) * in->nTuples);
   out->leafTupleDatums = palloc(sizeof(Datum) * in->nTuples);
 
-  /*
-   * Note: points that have coordinates exactly equal to coord may get
-   * classified into either node, depending on where they happen to fall in
-   * the sorted list.  This is okay as long as the inner_consistent function
-   * descends into both sides for such cases.  This is better than the
-   * alternative of trying to have an exact boundary, because it keeps the
-   * tree balanced even when we have many instances of the same point value.
-   * So we should never trigger the allTheSame logic.
-   */
+     
+                                                                       
+                                                                            
+                                                                             
+                                                                       
+                                                                           
+                                                                             
+                                                      
+     
   for (i = 0; i < in->nTuples; i++)
   {
     Point *p = sorted[i].p;
@@ -184,7 +184,7 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
   Assert(in->nNodes == 2);
 
-  /* "which" is a bitmask of children that satisfy all constraints */
+                                                                     
   which = (1 << 1) | (1 << 2);
 
   for (i = 0; i < in->nkeys; i++)
@@ -244,11 +244,11 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
       break;
     case RTContainedByStrategyNumber:
 
-      /*
-       * For this operator, the query is a box not a point.  We
-       * cheat to the extent of assuming that DatumGetPointP won't
-       * do anything that would be bad for a pointer-to-box.
-       */
+         
+                                                                
+                                                                   
+                                                             
+         
       boxQuery = DatumGetBoxP(in->scankeys[i].sk_argument);
 
       if ((in->level % 2) != 0)
@@ -281,14 +281,14 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
     if (which == 0)
     {
-      break; /* no need to consider remaining conditions */
+      break;                                               
     }
   }
 
-  /* We must descend into the children identified by which */
+                                                             
   out->nNodes = 0;
 
-  /* Fast-path for no matching children */
+                                          
   if (!which)
   {
     PG_RETURN_VOID();
@@ -296,13 +296,13 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
   out->nodeNumbers = (int *)palloc(sizeof(int) * 2);
 
-  /*
-   * When ordering scan keys are specified, we've to calculate distance for
-   * them.  In order to do that, we need calculate bounding boxes for both
-   * children nodes.  Calculation of those bounding boxes on non-zero level
-   * require knowledge of bounding box of upper node.  So, we save bounding
-   * boxes to traversalValues.
-   */
+     
+                                                                            
+                                                                           
+                                                                            
+                                                                            
+                               
+     
   if (in->norderbys > 0)
   {
     BOX infArea;
@@ -332,14 +332,14 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
 
     if (in->level % 2)
     {
-      /* split box by x */
+                          
       bboxes[0].high.x = bboxes[1].low.x = coord;
       bboxes[0].high.y = area->high.y;
       bboxes[1].low.y = area->low.y;
     }
     else
     {
-      /* split box by y */
+                          
       bboxes[0].high.y = bboxes[1].low.y = coord;
       bboxes[0].high.x = area->high.x;
       bboxes[1].low.x = area->low.x;
@@ -368,7 +368,7 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Set up level increments, too */
+                                    
   out->levelAdds = (int *)palloc(sizeof(int) * 2);
   out->levelAdds[0] = 1;
   out->levelAdds[1] = 1;
@@ -376,8 +376,8 @@ spg_kd_inner_consistent(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * spg_kd_leaf_consistent() is the same as spg_quad_leaf_consistent(),
- * since we support the same operators and the same leaf data type.
- * So we just borrow that function.
- */
+   
+                                                                       
+                                                                    
+                                    
+   

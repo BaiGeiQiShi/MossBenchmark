@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pg_lsn.c
- *	  Operations for the pg_lsn datatype.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/pg_lsn.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                         
+   
+                                                                         
+                                                                        
+   
+                  
+                                    
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "funcapi.h"
@@ -21,9 +21,9 @@
 #define MAXPG_LSNLEN 17
 #define MAXPG_LSNCOMPONENT 8
 
-/*----------------------------------------------------------
- * Formatting and conversion routines.
- *---------------------------------------------------------*/
+                                                             
+                                       
+                                                             
 
 XLogRecPtr
 pg_lsn_in_internal(const char *str, bool *have_error)
@@ -32,7 +32,7 @@ pg_lsn_in_internal(const char *str, bool *have_error)
   uint32 id, off;
   XLogRecPtr result;
 
-  /* Sanity check input format. */
+                                  
   len1 = strspn(str, "0123456789abcdefABCDEF");
   if (len1 < 1 || len1 > MAXPG_LSNCOMPONENT || str[len1] != '/')
   {
@@ -46,7 +46,7 @@ pg_lsn_in_internal(const char *str, bool *have_error)
     return InvalidXLogRecPtr;
   }
 
-  /* Decode result. */
+                      
   id = (uint32)strtoul(str, NULL, 16);
   off = (uint32)strtoul(str + len1 + 1, NULL, 16);
   result = ((uint64)id << 32) | off;
@@ -78,7 +78,7 @@ pg_lsn_out(PG_FUNCTION_ARGS)
   char *result;
   uint32 id, off;
 
-  /* Decode ID and offset */
+                            
   id = (uint32)(lsn >> 32);
   off = (uint32)lsn;
 
@@ -108,9 +108,9 @@ pg_lsn_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*----------------------------------------------------------
- *	Operators for PostgreSQL LSNs
- *---------------------------------------------------------*/
+                                                             
+                                 
+                                                             
 
 Datum
 pg_lsn_eq(PG_FUNCTION_ARGS)
@@ -166,7 +166,7 @@ pg_lsn_ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(lsn1 >= lsn2);
 }
 
-/* btree index opclass support */
+                                 
 Datum
 pg_lsn_cmp(PG_FUNCTION_ARGS)
 {
@@ -187,11 +187,11 @@ pg_lsn_cmp(PG_FUNCTION_ARGS)
   }
 }
 
-/* hash index opclass support */
+                                
 Datum
 pg_lsn_hash(PG_FUNCTION_ARGS)
 {
-  /* We can use hashint8 directly */
+                                    
   return hashint8(fcinfo);
 }
 
@@ -201,9 +201,9 @@ pg_lsn_hash_extended(PG_FUNCTION_ARGS)
   return hashint8extended(fcinfo);
 }
 
-/*----------------------------------------------------------
- *	Arithmetic operators on PostgreSQL LSNs.
- *---------------------------------------------------------*/
+                                                             
+                                            
+                                                             
 
 Datum
 pg_lsn_mi(PG_FUNCTION_ARGS)
@@ -213,7 +213,7 @@ pg_lsn_mi(PG_FUNCTION_ARGS)
   char buf[256];
   Datum result;
 
-  /* Output could be as large as plus or minus 2^63 - 1. */
+                                                           
   if (lsn1 < lsn2)
   {
     snprintf(buf, sizeof buf, "-" UINT64_FORMAT, lsn2 - lsn1);
@@ -223,7 +223,7 @@ pg_lsn_mi(PG_FUNCTION_ARGS)
     snprintf(buf, sizeof buf, UINT64_FORMAT, lsn1 - lsn2);
   }
 
-  /* Convert to numeric. */
+                           
   result = DirectFunctionCall3(numeric_in, CStringGetDatum(buf), ObjectIdGetDatum(0), Int32GetDatum(-1));
 
   return result;

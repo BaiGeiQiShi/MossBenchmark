@@ -1,10 +1,10 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/large_obj.c
- */
+   
+                                              
+   
+                                                                
+   
+                            
+   
 #include "postgres_fe.h"
 #include "large_obj.h"
 
@@ -51,13 +51,13 @@ print_lo_result(const char *fmt, ...)
   }
 }
 
-/*
- * Prepare to do a large-object operation.  We *must* be inside a transaction
- * block for all these operations, so start one if needed.
- *
- * Returns true if okay, false if failed.  *own_transaction is set to indicate
- * if we started our own transaction or not.
- */
+   
+                                                                              
+                                                           
+   
+                                                                               
+                                             
+   
 static bool
 start_lo_xact(const char *operation, bool *own_transaction)
 {
@@ -77,7 +77,7 @@ start_lo_xact(const char *operation, bool *own_transaction)
   switch (tstatus)
   {
   case PQTRANS_IDLE:
-    /* need to start our own xact */
+                                    
     if (!(res = PSQLexec("BEGIN")))
     {
       return false;
@@ -86,7 +86,7 @@ start_lo_xact(const char *operation, bool *own_transaction)
     *own_transaction = true;
     break;
   case PQTRANS_INTRANS:
-    /* use the existing xact */
+                               
     break;
   case PQTRANS_INERROR:
     pg_log_error("%s: current transaction is aborted", operation);
@@ -99,9 +99,9 @@ start_lo_xact(const char *operation, bool *own_transaction)
   return true;
 }
 
-/*
- * Clean up after a successful LO operation
- */
+   
+                                            
+   
 static bool
 finish_lo_xact(const char *operation, bool own_transaction)
 {
@@ -109,7 +109,7 @@ finish_lo_xact(const char *operation, bool own_transaction)
 
   if (own_transaction && pset.autocommit)
   {
-    /* close out our own xact */
+                                
     if (!(res = PSQLexec("COMMIT")))
     {
       res = PSQLexec("ROLLBACK");
@@ -122,9 +122,9 @@ finish_lo_xact(const char *operation, bool own_transaction)
   return true;
 }
 
-/*
- * Clean up after a failed LO operation
- */
+   
+                                        
+   
 static bool
 fail_lo_xact(const char *operation, bool own_transaction)
 {
@@ -132,19 +132,19 @@ fail_lo_xact(const char *operation, bool own_transaction)
 
   if (own_transaction && pset.autocommit)
   {
-    /* close out our own xact */
+                                
     res = PSQLexec("ROLLBACK");
     PQclear(res);
   }
 
-  return false; /* always */
+  return false;             
 }
 
-/*
- * do_lo_export()
- *
- * Write a large object to a file
- */
+   
+                  
+   
+                                  
+   
 bool
 do_lo_export(const char *loid_arg, const char *filename_arg)
 {
@@ -160,7 +160,7 @@ do_lo_export(const char *loid_arg, const char *filename_arg)
   status = lo_export(pset.db, atooid(loid_arg), filename_arg);
   ResetCancelConn();
 
-  /* of course this status is documented nowhere :( */
+                                                      
   if (status != 1)
   {
     pg_log_info("%s", PQerrorMessage(pset.db));
@@ -177,11 +177,11 @@ do_lo_export(const char *loid_arg, const char *filename_arg)
   return true;
 }
 
-/*
- * do_lo_import()
- *
- * Copy large object from file to database
- */
+   
+                  
+   
+                                           
+   
 bool
 do_lo_import(const char *filename_arg, const char *comment_arg)
 {
@@ -205,7 +205,7 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
     return fail_lo_xact("\\lo_import", own_transaction);
   }
 
-  /* insert description if given */
+                                   
   if (comment_arg)
   {
     char *cmdbuf;
@@ -245,11 +245,11 @@ do_lo_import(const char *filename_arg, const char *comment_arg)
   return true;
 }
 
-/*
- * do_lo_unlink()
- *
- * removes a large object out of the database
- */
+   
+                  
+   
+                                              
+   
 bool
 do_lo_unlink(const char *loid_arg)
 {
@@ -282,11 +282,11 @@ do_lo_unlink(const char *loid_arg)
   return true;
 }
 
-/*
- * do_lo_list()
- *
- * Show all large objects in database with comments
- */
+   
+                
+   
+                                                    
+   
 bool
 do_lo_list(void)
 {

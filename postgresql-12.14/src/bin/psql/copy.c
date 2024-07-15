@@ -1,19 +1,19 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/copy.c
- */
+   
+                                              
+   
+                                                                
+   
+                       
+   
 #include "postgres_fe.h"
 #include "copy.h"
 
 #include <signal.h>
 #include <sys/stat.h>
 #ifndef WIN32
-#include <unistd.h> /* for isatty */
+#include <unistd.h>                 
 #else
-#include <io.h> /* I think */
+#include <io.h>              
 #endif
 
 #include "libpq-fe.h"
@@ -26,40 +26,40 @@
 
 #include "common/logging.h"
 
-/*
- * parse_slash_copy
- * -- parses \copy command line
- *
- * The documented syntax is:
- *	\copy tablename [(columnlist)] from|to filename [options]
- *	\copy ( query stmt ) to filename [options]
- *
- * where 'filename' can be one of the following:
- *	'<file path>' | PROGRAM '<command>' | stdin | stdout | pstdout | pstdout
- * and 'query' can be one of the following:
- *	SELECT | UPDATE | INSERT | DELETE
- *
- * An undocumented fact is that you can still write BINARY before the
- * tablename; this is a hangover from the pre-7.3 syntax.  The options
- * syntax varies across backend versions, but we avoid all that mess
- * by just transmitting the stuff after the filename literally.
- *
- * table name can be double-quoted and can have a schema part.
- * column names can be double-quoted.
- * filename can be single-quoted like SQL literals.
- * command must be single-quoted like SQL literals.
- *
- * returns a malloc'ed structure with the options, or NULL on parsing error
- */
+   
+                    
+                                
+   
+                             
+                                                             
+                                              
+   
+                                                 
+                                                                            
+                                            
+                                     
+   
+                                                                      
+                                                                       
+                                                                     
+                                                                
+   
+                                                               
+                                      
+                                                    
+                                                    
+   
+                                                                            
+   
 
 struct copy_options
 {
-  char *before_tofrom; /* COPY string before TO/FROM */
-  char *after_tofrom;  /* COPY string after TO/FROM filename */
-  char *file;          /* NULL = stdin/stdout */
-  bool program;        /* is 'file' a program to popen? */
-  bool psql_inout;     /* true = use psql stdin/stdout */
-  bool from;           /* true = FROM, false = TO */
+  char *before_tofrom;                                 
+  char *after_tofrom;                                          
+  char *file;                                   
+  bool program;                                           
+  bool psql_inout;                                       
+  bool from;                                        
 };
 
 static void
@@ -75,7 +75,7 @@ free_copy_options(struct copy_options *ptr)
   free(ptr);
 }
 
-/* concatenate "more" onto "var", freeing the original value of *var */
+                                                                       
 static void
 xstrcat(char **var, const char *more)
 {
@@ -102,7 +102,7 @@ parse_slash_copy(const char *args)
 
   result = pg_malloc0(sizeof(struct copy_options));
 
-  result->before_tofrom = pg_strdup(""); /* initialize for appending */
+  result->before_tofrom = pg_strdup("");                               
 
   token = strtokx(args, whitespace, ".,()", "\"", 0, false, false, pset.encoding);
   if (!token)
@@ -110,7 +110,7 @@ parse_slash_copy(const char *args)
     goto error;
   }
 
-  /* The following can be removed when we drop 7.3 syntax support */
+                                                                    
   if (pg_strcasecmp(token, "binary") == 0)
   {
     xstrcat(&result->before_tofrom, token);
@@ -121,7 +121,7 @@ parse_slash_copy(const char *args)
     }
   }
 
-  /* Handle COPY (query) case */
+                                
   if (token[0] == '(')
   {
     int parens = 1;
@@ -154,13 +154,13 @@ parse_slash_copy(const char *args)
     goto error;
   }
 
-  /*
-   * strtokx() will not have returned a multi-character token starting with
-   * '.', so we don't need strcmp() here.  Likewise for '(', etc, below.
-   */
+     
+                                                                            
+                                                                         
+     
   if (token[0] == '.')
   {
-    /* handle schema . table */
+                               
     xstrcat(&result->before_tofrom, token);
     token = strtokx(NULL, whitespace, ".,()", "\"", 0, false, false, pset.encoding);
     if (!token)
@@ -177,7 +177,7 @@ parse_slash_copy(const char *args)
 
   if (token[0] == '(')
   {
-    /* handle parenthesized column list */
+                                          
     for (;;)
     {
       xstrcat(&result->before_tofrom, " ");
@@ -214,7 +214,7 @@ parse_slash_copy(const char *args)
     goto error;
   }
 
-  /* { 'filename' | PROGRAM 'command' | STDIN | STDOUT | PSTDIN | PSTDOUT } */
+                                                                              
   token = strtokx(NULL, whitespace, ";", "'", 0, false, false, pset.encoding);
   if (!token)
   {
@@ -231,10 +231,10 @@ parse_slash_copy(const char *args)
       goto error;
     }
 
-    /*
-     * The shell command must be quoted. This isn't fool-proof, but
-     * catches most quoting errors.
-     */
+       
+                                                                    
+                                    
+       
     toklen = strlen(token);
     if (token[0] != '\'' || toklen < 2 || token[toklen - 1] != '\'')
     {
@@ -257,13 +257,13 @@ parse_slash_copy(const char *args)
   }
   else
   {
-    /* filename can be optionally quoted */
+                                           
     strip_quotes(token, '\'', 0, pset.encoding);
     result->file = pg_strdup(token);
     expand_tilde(&result->file);
   }
 
-  /* Collect the rest of the line (COPY options) */
+                                                   
   token = strtokx(NULL, "", NULL, NULL, 0, false, false, pset.encoding);
   if (token)
   {
@@ -286,11 +286,11 @@ error:
   return NULL;
 }
 
-/*
- * Execute a \copy command (frontend copy). We have to open a file (or execute
- * a command), then submit a COPY query to the backend and either feed it data
- * from the file or route its response into the file.
- */
+   
+                                                                               
+                                                                               
+                                                      
+   
 bool
 do_copy(const char *args)
 {
@@ -299,7 +299,7 @@ do_copy(const char *args)
   struct copy_options *options;
   bool success;
 
-  /* parse options */
+                     
   options = parse_slash_copy(args);
 
   if (!options)
@@ -307,7 +307,7 @@ do_copy(const char *args)
     return false;
   }
 
-  /* prepare to read or write the target file */
+                                                
   if (options->file && !options->program)
   {
     canonicalize_path(options->file);
@@ -384,7 +384,7 @@ do_copy(const char *args)
     struct stat st;
     int result;
 
-    /* make sure the specified file is not a directory */
+                                                         
     if ((result = fstat(fileno(copystream), &st)) < 0)
     {
       pg_log_error("could not stat file \"%s\": %m", options->file);
@@ -403,7 +403,7 @@ do_copy(const char *args)
     }
   }
 
-  /* build the command we will send to the backend */
+                                                     
   initPQExpBuffer(&query);
   printfPQExpBuffer(&query, "COPY ");
   appendPQExpBufferStr(&query, options->before_tofrom);
@@ -420,7 +420,7 @@ do_copy(const char *args)
     appendPQExpBufferStr(&query, options->after_tofrom);
   }
 
-  /* run it like a user command, but with copystream as data source/sink */
+                                                                           
   pset.copyStream = copystream;
   success = SendQuery(query.data);
   pset.copyStream = NULL;
@@ -465,28 +465,28 @@ do_copy(const char *args)
   return success;
 }
 
-/*
- * Functions for handling COPY IN/OUT data transfer.
- *
- * If you want to use COPY TO STDOUT/FROM STDIN in your application,
- * this is the code to steal ;)
- */
+   
+                                                     
+   
+                                                                     
+                                
+   
 
-/*
- * handleCopyOut
- * receives data as a result of a COPY ... TO STDOUT command
- *
- * conn should be a database connection that you just issued COPY TO on
- * and got back a PGRES_COPY_OUT result.
- *
- * copystream is the file stream for the data to go to.
- * copystream can be NULL to eat the data without writing it anywhere.
- *
- * The final status for the COPY is returned into *res (but note
- * we already reported the error, if it's not a success result).
- *
- * result is true if successful, false if not.
- */
+   
+                 
+                                                             
+   
+                                                                        
+                                         
+   
+                                                        
+                                                                       
+   
+                                                                 
+                                                                 
+   
+                                               
+   
 bool
 handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
 {
@@ -500,7 +500,7 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
 
     if (ret < 0)
     {
-      break; /* done or server/connection error */
+      break;                                      
     }
 
     if (buf)
@@ -508,7 +508,7 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
       if (OK && copystream && fwrite(buf, 1, ret, copystream) != ret)
       {
         pg_log_error("could not write COPY data: %m");
-        /* complain only once, keep reading data from server */
+                                                               
         OK = false;
       }
       PQfreemem(buf);
@@ -527,18 +527,18 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
     OK = false;
   }
 
-  /*
-   * Check command status and return to normal libpq state.
-   *
-   * If for some reason libpq is still reporting PGRES_COPY_OUT state, we
-   * would like to forcibly exit that state, since our caller would be
-   * unable to distinguish that situation from reaching the next COPY in a
-   * command string that happened to contain two consecutive COPY TO STDOUT
-   * commands.  However, libpq provides no API for doing that, and in
-   * principle it's a libpq bug anyway if PQgetCopyData() returns -1 or -2
-   * but hasn't exited COPY_OUT state internally.  So we ignore the
-   * possibility here.
-   */
+     
+                                                            
+     
+                                                                          
+                                                                       
+                                                                           
+                                                                            
+                                                                      
+                                                                           
+                                                                    
+                       
+     
   *res = PQgetResult(conn);
   if (PQresultStatus(*res) != PGRES_COMMAND_OK)
   {
@@ -549,21 +549,21 @@ handleCopyOut(PGconn *conn, FILE *copystream, PGresult **res)
   return OK;
 }
 
-/*
- * handleCopyIn
- * sends data to complete a COPY ... FROM STDIN command
- *
- * conn should be a database connection that you just issued COPY FROM on
- * and got back a PGRES_COPY_IN result.
- * copystream is the file stream to read the data from.
- * isbinary can be set from PQbinaryTuples().
- * The final status for the COPY is returned into *res (but note
- * we already reported the error, if it's not a success result).
- *
- * result is true if successful, false if not.
- */
+   
+                
+                                                        
+   
+                                                                          
+                                        
+                                                        
+                                              
+                                                                 
+                                                                 
+   
+                                               
+   
 
-/* read chunk size for COPY IN - size is not critical */
+                                                        
 #define COPYBUFSIZ 8192
 
 bool
@@ -573,22 +573,22 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
   char buf[COPYBUFSIZ];
   bool showprompt;
 
-  /*
-   * Establish longjmp destination for exiting from wait-for-input. (This is
-   * only effective while sigint_interrupt_enabled is TRUE.)
-   */
+     
+                                                                             
+                                                             
+     
   if (sigsetjmp(sigint_interrupt_jmp, 1) != 0)
   {
-    /* got here with longjmp */
+                               
 
-    /* Terminate data transfer */
+                                 
     PQputCopyEnd(conn, (PQprotocolVersion(conn) < 3) ? NULL : _("canceled by user"));
 
     OK = false;
     goto copyin_cleanup;
   }
 
-  /* Prompt if interactive input */
+                                   
   if (isatty(fileno(copystream)))
   {
     showprompt = true;
@@ -607,7 +607,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 
   if (isbinary)
   {
-    /* interactive input probably silly, but give one prompt anyway */
+                                                                      
     if (showprompt)
     {
       const char *prompt = get_prompt(PROMPT_COPY, NULL);
@@ -620,7 +620,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
     {
       int buflen;
 
-      /* enable longjmp while waiting for input */
+                                                  
       sigint_interrupt_enabled = true;
 
       buflen = fread(buf, 1, COPYBUFSIZ, copystream);
@@ -644,7 +644,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
     bool copydone = false;
 
     while (!copydone)
-    { /* for each input line ... */
+    {                              
       bool firstload;
       bool linedone;
 
@@ -660,11 +660,11 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
       linedone = false;
 
       while (!linedone)
-      { /* for each bufferload in line ... */
+      {                                      
         int linelen;
         char *fgresult;
 
-        /* enable longjmp while waiting for input */
+                                                    
         sigint_interrupt_enabled = true;
 
         fgresult = fgets(buf, sizeof(buf), copystream);
@@ -679,20 +679,20 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 
         linelen = strlen(buf);
 
-        /* current line is done? */
+                                   
         if (linelen > 0 && buf[linelen - 1] == '\n')
         {
           linedone = true;
         }
 
-        /* check for EOF marker, but not on a partial line */
+                                                             
         if (firstload)
         {
-          /*
-           * This code erroneously assumes '\.' on a line alone
-           * inside a quoted CSV string terminates the \copy.
-           * http://www.postgresql.org/message-id/E1TdNVQ-0001ju-GO@wrigleys.postgresql.org
-           */
+             
+                                                                
+                                                              
+                                                                                            
+             
           if (strcmp(buf, "\\.\n") == 0 || strcmp(buf, "\\.\r\n") == 0)
           {
             copydone = true;
@@ -718,16 +718,16 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
     }
   }
 
-  /* Check for read error */
+                            
   if (ferror(copystream))
   {
     OK = false;
   }
 
-  /*
-   * Terminate data transfer.  We can't send an error message if we're using
-   * protocol version 2.
-   */
+     
+                                                                             
+                         
+     
   if (PQputCopyEnd(conn, (OK || PQprotocolVersion(conn) < 3) ? NULL : _("aborted because of read failure")) <= 0)
   {
     OK = false;
@@ -735,33 +735,33 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 
 copyin_cleanup:
 
-  /*
-   * Clear the EOF flag on the stream, in case copying ended due to an EOF
-   * signal.  This allows an interactive TTY session to perform another COPY
-   * FROM STDIN later.  (In non-STDIN cases, we're about to close the file
-   * anyway, so it doesn't matter.)  Although we don't ever test the flag
-   * with feof(), some fread() implementations won't read more data if it's
-   * set.  This also clears the error flag, but we already checked that.
-   */
+     
+                                                                           
+                                                                             
+                                                                           
+                                                                          
+                                                                            
+                                                                         
+     
   clearerr(copystream);
 
-  /*
-   * Check command status and return to normal libpq state.
-   *
-   * We do not want to return with the status still PGRES_COPY_IN: our
-   * caller would be unable to distinguish that situation from reaching the
-   * next COPY in a command string that happened to contain two consecutive
-   * COPY FROM STDIN commands.  We keep trying PQputCopyEnd() in the hope
-   * it'll work eventually.  (What's actually likely to happen is that in
-   * attempting to flush the data, libpq will eventually realize that the
-   * connection is lost.  But that's fine; it will get us out of COPY_IN
-   * state, which is what we need.)
-   */
+     
+                                                            
+     
+                                                                       
+                                                                            
+                                                                            
+                                                                          
+                                                                          
+                                                                          
+                                                                         
+                                    
+     
   while (*res = PQgetResult(conn), PQresultStatus(*res) == PGRES_COPY_IN)
   {
     OK = false;
     PQclear(*res);
-    /* We can't send an error message if we're using protocol version 2 */
+                                                                          
     PQputCopyEnd(conn, (PQprotocolVersion(conn) < 3) ? NULL : _("trying to exit copy mode"));
   }
   if (PQresultStatus(*res) != PGRES_COMMAND_OK)

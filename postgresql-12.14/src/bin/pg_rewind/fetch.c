@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- *
- * fetch.c
- *	  Functions for fetching files from a local or remote data dir
- *
- * This file forms an abstraction of getting files from the "source".
- * There are two implementations of this interface: one for copying files
- * from a data directory via normal filesystem operations (copy_fetch.c),
- * and another for fetching files from a remote server via a libpq
- * connection (libpq_fetch.c)
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                                                  
+   
+                                                                      
+                                                                          
+                                                                          
+                                                                   
+                              
+   
+   
+                                                                         
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <sys/stat.h>
@@ -37,9 +37,9 @@ fetchSourceFileList(void)
   }
 }
 
-/*
- * Fetch all relation data files that are marked in the given data page map.
- */
+   
+                                                                             
+   
 void
 executeFileMap(void)
 {
@@ -53,11 +53,11 @@ executeFileMap(void)
   }
 }
 
-/*
- * Fetch a single file into a malloc'd buffer. The file size is returned
- * in *filesize. The returned buffer is always zero-terminated, which is
- * handy for text files.
- */
+   
+                                                                         
+                                                                         
+                         
+   
 char *
 fetchFile(const char *filename, size_t *filesize)
 {

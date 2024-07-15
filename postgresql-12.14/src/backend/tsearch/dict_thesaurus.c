@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * dict_thesaurus.c
- *		Thesaurus dictionary: phrase to phrase substitution
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/dict_thesaurus.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+                                                        
+   
+                                                                         
+   
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "catalog/namespace.h"
@@ -21,16 +21,16 @@
 #include "utils/builtins.h"
 #include "utils/regproc.h"
 
-/*
- * Temporary we use TSLexeme.flags for inner use...
- */
+   
+                                                    
+   
 #define DT_USEASIS 0x1000
 
 typedef struct LexemeInfo
 {
-  uint32 idsubst;    /* entry's number in DictThesaurus->subst */
-  uint16 posinsubst; /* pos info in entry */
-  uint16 tnvariant;  /* total num lexemes in one variant */
+  uint32 idsubst;                                                
+  uint16 posinsubst;                        
+  uint16 tnvariant;                                        
   struct LexemeInfo *nextentry;
   struct LexemeInfo *nextvariant;
 } LexemeInfo;
@@ -43,25 +43,25 @@ typedef struct
 
 typedef struct
 {
-  uint16 lastlexeme; /* number lexemes to substitute */
+  uint16 lastlexeme;                                   
   uint16 reslen;
-  TSLexeme *res; /* prepared substituted result */
+  TSLexeme *res;                                  
 } TheSubstitute;
 
 typedef struct
 {
-  /* subdictionary to normalize lexemes */
+                                          
   Oid subdictOid;
   TSDictionaryCacheEntry *subdict;
 
-  /* Array to search lexeme by exact match */
+                                             
   TheLexeme *wrds;
-  int nwrds;  /* current number of words */
-  int ntwrds; /* allocated array length */
+  int nwrds;                               
+  int ntwrds;                             
 
-  /*
-   * Storage of substituted result, n-th element is for n-th expression
-   */
+     
+                                                                        
+     
   TheSubstitute *subst;
   int nsubst;
 } DictThesaurus;
@@ -190,7 +190,7 @@ thesaurusRead(const char *filename, DictThesaurus *d)
 
     ptr = line;
 
-    /* is it a comment? */
+                          
     while (*ptr && t_isspace(ptr))
     {
       ptr += pg_mblen(ptr);
@@ -290,11 +290,11 @@ thesaurusRead(const char *filename, DictThesaurus *d)
       ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("unexpected end of line")));
     }
 
-    /*
-     * Note: currently, tsearch_readline can't return lines exceeding 4KB,
-     * so overflow of the word counts is impossible.  But that may not
-     * always be true, so let's check.
-     */
+       
+                                                                           
+                                                                       
+                                       
+       
     if (nwrd != (uint16)nwrd || posinsubst != (uint16)posinsubst)
     {
       ereport(ERROR, (errcode(ERRCODE_CONFIG_FILE_ERROR), errmsg("too many lexemes in thesaurus entry")));
@@ -418,7 +418,7 @@ compileTheLexeme(DictThesaurus *d)
   {
     TSLexeme *ptr;
 
-    if (strcmp(d->wrds[i].lexeme, "?") == 0) /* Is stop word marker? */
+    if (strcmp(d->wrds[i].lexeme, "?") == 0)                           
     {
       newwrds = addCompiledLexeme(newwrds, &nnw, &tnm, NULL, d->wrds[i].entries, 0);
     }
@@ -442,7 +442,7 @@ compileTheLexeme(DictThesaurus *d)
           int tnvar = 1;
           int curvar = ptr->nvariant;
 
-          /* compute n words in one variant */
+                                              
           while (remptr->lexeme)
           {
             if (remptr->nvariant != (remptr - 1)->nvariant)
@@ -481,7 +481,7 @@ compileTheLexeme(DictThesaurus *d)
   {
     qsort(d->wrds, d->nwrds, sizeof(TheLexeme), cmpTheLexeme);
 
-    /* uniq */
+              
     newwrds = d->wrds;
     ptrwrds = d->wrds + 1;
     while (ptrwrds - d->wrds < d->nwrds)
@@ -536,7 +536,7 @@ compileTheSubstitute(DictThesaurus *d)
       TSLexeme *lexized, tmplex[2];
 
       if (inptr->flags & DT_USEASIS)
-      { /* do not lexize */
+      {                    
         tmplex[0] = *inptr;
         tmplex[0].flags = 0;
         tmplex[1].lexeme = NULL;
@@ -752,13 +752,13 @@ findVariant(LexemeInfo *in, LexemeInfo *stored, uint16 curpos, LexemeInfo **newi
     }
 
     if (i == newn && matchIdSubst(stored, ptr->idsubst) && (in == NULL || !matchIdSubst(in, ptr->idsubst)))
-    { /* found */
+    {            
 
       ptr->nextvariant = in;
       in = ptr;
     }
 
-    /* step forward */
+                      
     for (i = 0; i < newn; i++)
     {
       newin[i] = newin[i]->nextentry;
@@ -866,7 +866,7 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
 
       if (i < nlex)
       {
-        /* no chance to find */
+                               
         pfree(infos);
         continue;
       }
@@ -875,14 +875,14 @@ thesaurus_lexize(PG_FUNCTION_ARGS)
     }
   }
   else if (res)
-  { /* stop-word */
+  {                
     LexemeInfo *infos = findTheLexeme(d, NULL);
 
     info = findVariant(NULL, stored, curpos, &infos, 1);
   }
   else
   {
-    info = NULL; /* word isn't recognized */
+    info = NULL;                            
   }
 
   dstate->private_state = (void *)info;

@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- * oracle_compat.c
- *	Oracle compatible functions.
- *
- * Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *	Author: Edmund Mergl <E.Mergl@bawue.de>
- *	Multibyte enhancement: Tatsuo Ishii <ishii@postgresql.org>
- *
- *
- * IDENTIFICATION
- *	src/backend/utils/adt/oracle_compat.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+                   
+                                
+   
+                                                                
+   
+                                           
+                                                              
+   
+   
+                  
+                                         
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "common/int.h"
@@ -24,19 +24,19 @@
 static text *
 dotrim(const char *string, int stringlen, const char *set, int setlen, bool doltrim, bool dortrim);
 
-/********************************************************************
- *
- * lower
- *
- * Syntax:
- *
- *	 text lower(text string)
- *
- * Purpose:
- *
- *	 Returns string, with all letters forced to lowercase.
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                            
+   
+            
+   
+                                                          
+   
+                                                                      
 
 Datum
 lower(PG_FUNCTION_ARGS)
@@ -52,19 +52,19 @@ lower(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(result);
 }
 
-/********************************************************************
- *
- * upper
- *
- * Syntax:
- *
- *	 text upper(text string)
- *
- * Purpose:
- *
- *	 Returns string, with all letters forced to uppercase.
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                            
+   
+            
+   
+                                                          
+   
+                                                                      
 
 Datum
 upper(PG_FUNCTION_ARGS)
@@ -80,22 +80,22 @@ upper(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(result);
 }
 
-/********************************************************************
- *
- * initcap
- *
- * Syntax:
- *
- *	 text initcap(text string)
- *
- * Purpose:
- *
- *	 Returns string, with first letter of each word in uppercase, all
- *	 other letters in lowercase. A word is defined as a sequence of
- *	 alphanumeric characters, delimited by non-alphanumeric
- *	 characters.
- *
- ********************************************************************/
+                                                                      
+   
+           
+   
+           
+   
+                              
+   
+            
+   
+                                                                     
+                                                                   
+                                                           
+                
+   
+                                                                      
 
 Datum
 initcap(PG_FUNCTION_ARGS)
@@ -111,21 +111,21 @@ initcap(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(result);
 }
 
-/********************************************************************
- *
- * lpad
- *
- * Syntax:
- *
- *	 text lpad(text string1, int4 len, text string2)
- *
- * Purpose:
- *
- *	 Returns string1, left-padded to length len with the sequence of
- *	 characters in string2.  If len is less than the length of string1,
- *	 instead truncate (on the right) to len.
- *
- ********************************************************************/
+                                                                      
+   
+        
+   
+           
+   
+                                                    
+   
+            
+   
+                                                                    
+                                                                       
+                                            
+   
+                                                                      
 
 Datum
 lpad(PG_FUNCTION_ARGS)
@@ -139,7 +139,7 @@ lpad(PG_FUNCTION_ARGS)
 
   int bytelen;
 
-  /* Negative len is silently taken as zero */
+                                              
   if (len < 0)
   {
     len = 0;
@@ -148,30 +148,30 @@ lpad(PG_FUNCTION_ARGS)
   s1len = VARSIZE_ANY_EXHDR(string1);
   if (s1len < 0)
   {
-    s1len = 0; /* shouldn't happen */
+    s1len = 0;                       
   }
 
   s2len = VARSIZE_ANY_EXHDR(string2);
   if (s2len < 0)
   {
-    s2len = 0; /* shouldn't happen */
+    s2len = 0;                       
   }
 
   s1len = pg_mbstrlen_with_len(VARDATA_ANY(string1), s1len);
 
   if (s1len > len)
   {
-    s1len = len; /* truncate string1 to len chars */
+    s1len = len;                                    
   }
 
   if (s2len <= 0)
   {
-    len = s1len; /* nothing to pad with, so don't pad */
+    len = s1len;                                        
   }
 
   bytelen = pg_database_encoding_max_length() * len;
 
-  /* check for integer overflow */
+                                  
   if (len != 0 && bytelen / pg_database_encoding_max_length() != len)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
@@ -192,7 +192,7 @@ lpad(PG_FUNCTION_ARGS)
     memcpy(ptr_ret, ptr2, mlen);
     ptr_ret += mlen;
     ptr2 += mlen;
-    if (ptr2 == ptr2end) /* wrap around at end of s2 */
+    if (ptr2 == ptr2end)                               
     {
       ptr2 = ptr2start;
     }
@@ -214,21 +214,21 @@ lpad(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * rpad
- *
- * Syntax:
- *
- *	 text rpad(text string1, int4 len, text string2)
- *
- * Purpose:
- *
- *	 Returns string1, right-padded to length len with the sequence of
- *	 characters in string2.  If len is less than the length of string1,
- *	 instead truncate (on the right) to len.
- *
- ********************************************************************/
+                                                                      
+   
+        
+   
+           
+   
+                                                    
+   
+            
+   
+                                                                     
+                                                                       
+                                            
+   
+                                                                      
 
 Datum
 rpad(PG_FUNCTION_ARGS)
@@ -242,7 +242,7 @@ rpad(PG_FUNCTION_ARGS)
 
   int bytelen;
 
-  /* Negative len is silently taken as zero */
+                                              
   if (len < 0)
   {
     len = 0;
@@ -251,30 +251,30 @@ rpad(PG_FUNCTION_ARGS)
   s1len = VARSIZE_ANY_EXHDR(string1);
   if (s1len < 0)
   {
-    s1len = 0; /* shouldn't happen */
+    s1len = 0;                       
   }
 
   s2len = VARSIZE_ANY_EXHDR(string2);
   if (s2len < 0)
   {
-    s2len = 0; /* shouldn't happen */
+    s2len = 0;                       
   }
 
   s1len = pg_mbstrlen_with_len(VARDATA_ANY(string1), s1len);
 
   if (s1len > len)
   {
-    s1len = len; /* truncate string1 to len chars */
+    s1len = len;                                    
   }
 
   if (s2len <= 0)
   {
-    len = s1len; /* nothing to pad with, so don't pad */
+    len = s1len;                                        
   }
 
   bytelen = pg_database_encoding_max_length() * len;
 
-  /* Check for integer overflow */
+                                  
   if (len != 0 && bytelen / pg_database_encoding_max_length() != len)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
@@ -305,7 +305,7 @@ rpad(PG_FUNCTION_ARGS)
     memcpy(ptr_ret, ptr2, mlen);
     ptr_ret += mlen;
     ptr2 += mlen;
-    if (ptr2 == ptr2end) /* wrap around at end of s2 */
+    if (ptr2 == ptr2end)                               
     {
       ptr2 = ptr2start;
     }
@@ -316,20 +316,20 @@ rpad(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * btrim
- *
- * Syntax:
- *
- *	 text btrim(text string, text set)
- *
- * Purpose:
- *
- *	 Returns string with characters removed from the front and back
- *	 up to the first character not in set.
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                                      
+   
+            
+   
+                                                                   
+                                          
+   
+                                                                      
 
 Datum
 btrim(PG_FUNCTION_ARGS)
@@ -343,11 +343,11 @@ btrim(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * btrim1 --- btrim with set fixed as ' '
- *
- ********************************************************************/
+                                                                      
+   
+                                          
+   
+                                                                      
 
 Datum
 btrim1(PG_FUNCTION_ARGS)
@@ -360,24 +360,24 @@ btrim1(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/*
- * Common implementation for btrim, ltrim, rtrim
- */
+   
+                                                 
+   
 static text *
 dotrim(const char *string, int stringlen, const char *set, int setlen, bool doltrim, bool dortrim)
 {
   int i;
 
-  /* Nothing to do if either string or set is empty */
+                                                      
   if (stringlen > 0 && setlen > 0)
   {
     if (pg_database_encoding_max_length() > 1)
     {
-      /*
-       * In the multibyte-encoding case, build arrays of pointers to
-       * character starts, so that we can avoid inefficient checks in
-       * the inner loops.
-       */
+         
+                                                                     
+                                                                      
+                          
+         
       const char **stringchars;
       const char **setchars;
       int *stringmblen;
@@ -420,7 +420,7 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
         len -= mblen;
       }
 
-      resultndx = 0; /* index in stringchars[] */
+      resultndx = 0;                             
       resultnchars = stringnchars;
 
       if (doltrim)
@@ -438,7 +438,7 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
           }
           if (i >= setnchars)
           {
-            break; /* no match here */
+            break;                    
           }
           string += str_len;
           stringlen -= str_len;
@@ -462,7 +462,7 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
           }
           if (i >= setnchars)
           {
-            break; /* no match here */
+            break;                    
           }
           stringlen -= str_len;
           resultnchars--;
@@ -476,9 +476,9 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
     }
     else
     {
-      /*
-       * In the single-byte-encoding case, we don't need such overhead.
-       */
+         
+                                                                        
+         
       if (doltrim)
       {
         while (stringlen > 0)
@@ -494,7 +494,7 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
           }
           if (i >= setlen)
           {
-            break; /* no match here */
+            break;                    
           }
           string++;
           stringlen--;
@@ -516,7 +516,7 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
           }
           if (i >= setlen)
           {
-            break; /* no match here */
+            break;                    
           }
           stringlen--;
         }
@@ -524,25 +524,25 @@ dotrim(const char *string, int stringlen, const char *set, int setlen, bool dolt
     }
   }
 
-  /* Return selected portion of string */
+                                         
   return cstring_to_text_with_len(string, stringlen);
 }
 
-/********************************************************************
- *
- * byteatrim
- *
- * Syntax:
- *
- *	 bytea byteatrim(bytea string, bytea set)
- *
- * Purpose:
- *
- *	 Returns string with characters removed from the front and back
- *	 up to the first character not in set.
- *
- * Cloned from btrim and modified as required.
- ********************************************************************/
+                                                                      
+   
+             
+   
+           
+   
+                                             
+   
+            
+   
+                                                                   
+                                          
+   
+                                               
+                                                                      
 
 Datum
 byteatrim(PG_FUNCTION_ARGS)
@@ -612,20 +612,20 @@ byteatrim(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(ret);
 }
 
-/********************************************************************
- *
- * ltrim
- *
- * Syntax:
- *
- *	 text ltrim(text string, text set)
- *
- * Purpose:
- *
- *	 Returns string with initial characters removed up to the first
- *	 character not in set.
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                                      
+   
+            
+   
+                                                                   
+                          
+   
+                                                                      
 
 Datum
 ltrim(PG_FUNCTION_ARGS)
@@ -639,11 +639,11 @@ ltrim(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * ltrim1 --- ltrim with set fixed as ' '
- *
- ********************************************************************/
+                                                                      
+   
+                                          
+   
+                                                                      
 
 Datum
 ltrim1(PG_FUNCTION_ARGS)
@@ -656,20 +656,20 @@ ltrim1(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * rtrim
- *
- * Syntax:
- *
- *	 text rtrim(text string, text set)
- *
- * Purpose:
- *
- *	 Returns string with final characters removed after the last
- *	 character not in set.
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                                      
+   
+            
+   
+                                                                
+                          
+   
+                                                                      
 
 Datum
 rtrim(PG_FUNCTION_ARGS)
@@ -683,11 +683,11 @@ rtrim(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * rtrim1 --- rtrim with set fixed as ' '
- *
- ********************************************************************/
+                                                                      
+   
+                                          
+   
+                                                                      
 
 Datum
 rtrim1(PG_FUNCTION_ARGS)
@@ -700,22 +700,22 @@ rtrim1(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(ret);
 }
 
-/********************************************************************
- *
- * translate
- *
- * Syntax:
- *
- *	 text translate(text string, text from, text to)
- *
- * Purpose:
- *
- *	 Returns string after replacing all occurrences of characters in from
- *	 with the corresponding character in to.  If from is longer than to,
- *	 occurrences of the extra characters in from are deleted.
- *	 Improved by Edwin Ramirez <ramirez@doc.mssm.edu>.
- *
- ********************************************************************/
+                                                                      
+   
+             
+   
+           
+   
+                                                    
+   
+            
+   
+                                                                         
+                                                                        
+                                                             
+                                                      
+   
+                                                                      
 
 Datum
 translate(PG_FUNCTION_ARGS)
@@ -744,13 +744,13 @@ translate(PG_FUNCTION_ARGS)
   tolen = VARSIZE_ANY_EXHDR(to);
   to_ptr = VARDATA_ANY(to);
 
-  /*
-   * The worst-case expansion is to substitute a max-length character for a
-   * single-byte character at each position of the string.
-   */
+     
+                                                                            
+                                                           
+     
   worst_len = pg_database_encoding_max_length() * m;
 
-  /* check for integer overflow */
+                                  
   if (worst_len / pg_database_encoding_max_length() != m)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested length too large")));
@@ -777,7 +777,7 @@ translate(PG_FUNCTION_ARGS)
     }
     if (i < fromlen)
     {
-      /* substitute */
+                      
       char *p = to_ptr;
 
       for (i = 0; i < from_index; i++)
@@ -798,7 +798,7 @@ translate(PG_FUNCTION_ARGS)
     }
     else
     {
-      /* no match, so copy */
+                             
       memcpy(target, source, source_len);
       target += source_len;
       retlen += source_len;
@@ -810,36 +810,36 @@ translate(PG_FUNCTION_ARGS)
 
   SET_VARSIZE(result, retlen + VARHDRSZ);
 
-  /*
-   * The function result is probably much bigger than needed, if we're using
-   * a multibyte encoding, but it's not worth reallocating it; the result
-   * probably won't live long anyway.
-   */
+     
+                                                                             
+                                                                          
+                                      
+     
 
   PG_RETURN_TEXT_P(result);
 }
 
-/********************************************************************
- *
- * ascii
- *
- * Syntax:
- *
- *	 int ascii(text string)
- *
- * Purpose:
- *
- *	 Returns the decimal representation of the first character from
- *	 string.
- *	 If the string is empty we return 0.
- *	 If the database encoding is UTF8, we return the Unicode codepoint.
- *	 If the database encoding is any other multi-byte encoding, we
- *	 return the value of the first byte if it is an ASCII character
- *	 (range 1 .. 127), or raise an error.
- *	 For all other encodings we return the value of the first byte,
- *	 (range 1..255).
- *
- ********************************************************************/
+                                                                      
+   
+         
+   
+           
+   
+                           
+   
+            
+   
+                                                                   
+            
+                                        
+                                                                       
+                                                                  
+                                                                   
+                                         
+                                                                   
+                    
+   
+                                                                      
 
 Datum
 ascii(PG_FUNCTION_ARGS)
@@ -857,7 +857,7 @@ ascii(PG_FUNCTION_ARGS)
 
   if (encoding == PG_UTF8 && *data > 127)
   {
-    /* return the code point for Unicode */
+                                           
 
     int result = 0, tbytes = 0, i;
 
@@ -899,27 +899,27 @@ ascii(PG_FUNCTION_ARGS)
   }
 }
 
-/********************************************************************
- *
- * chr
- *
- * Syntax:
- *
- *	 text chr(int val)
- *
- * Purpose:
- *
- *	Returns the character having the binary equivalent to val.
- *
- * For UTF8 we treat the argument as a Unicode code point.
- * For other multi-byte encodings we raise an error for arguments
- * outside the strict ASCII range (1..127).
- *
- * It's important that we don't ever return a value that is not valid
- * in the database encoding, so that this doesn't become a way for
- * invalid data to enter the database.
- *
- ********************************************************************/
+                                                                      
+   
+       
+   
+           
+   
+                      
+   
+            
+   
+                                                              
+   
+                                                           
+                                                                  
+                                            
+   
+                                                                      
+                                                                   
+                                       
+   
+                                                                      
 
 Datum
 chr(PG_FUNCTION_ARGS)
@@ -930,15 +930,15 @@ chr(PG_FUNCTION_ARGS)
 
   if (encoding == PG_UTF8 && cvalue > 127)
   {
-    /* for Unicode we treat the argument as a code point */
+                                                           
     int bytes;
     unsigned char *wch;
 
-    /*
-     * We only allow valid Unicode code points; per RFC3629 that stops at
-     * U+10FFFF, even though 4-byte UTF8 sequences can hold values up to
-     * U+1FFFFF.
-     */
+       
+                                                                          
+                                                                         
+                 
+       
     if (cvalue > 0x0010ffff)
     {
       ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character too large for encoding: %d", cvalue)));
@@ -980,11 +980,11 @@ chr(PG_FUNCTION_ARGS)
       wch[3] = 0x80 | (cvalue & 0x3F);
     }
 
-    /*
-     * The preceding range check isn't sufficient, because UTF8 excludes
-     * Unicode "surrogate pair" codes.  Make sure what we created is valid
-     * UTF8.
-     */
+       
+                                                                         
+                                                                           
+             
+       
     if (!pg_utf8_islegal(wch, bytes))
     {
       ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("requested character not valid for encoding: %d", cvalue)));
@@ -994,10 +994,10 @@ chr(PG_FUNCTION_ARGS)
   {
     bool is_mb;
 
-    /*
-     * Error out on arguments that make no sense or that we can't validly
-     * represent in the encoding.
-     */
+       
+                                                                          
+                                  
+       
     if (cvalue == 0)
     {
       ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("null character not permitted")));
@@ -1018,19 +1018,19 @@ chr(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(result);
 }
 
-/********************************************************************
- *
- * repeat
- *
- * Syntax:
- *
- *	 text repeat(text string, int val)
- *
- * Purpose:
- *
- *	Repeat string by val.
- *
- ********************************************************************/
+                                                                      
+   
+          
+   
+           
+   
+                                      
+   
+            
+   
+                         
+   
+                                                                      
 
 Datum
 repeat(PG_FUNCTION_ARGS)

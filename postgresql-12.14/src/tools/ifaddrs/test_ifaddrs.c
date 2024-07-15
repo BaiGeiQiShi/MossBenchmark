@@ -1,10 +1,10 @@
-/*
- * src/tools/ifaddrs/test_ifaddrs.c
- *
- *
- *	test_ifaddrs.c
- *		test pg_foreach_ifaddr()
- */
+   
+                                    
+   
+   
+                  
+                             
+   
 
 #include "postgres.h"
 

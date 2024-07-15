@@ -1,10 +1,10 @@
-/**********************************************************************
- * pltcl.c		- PostgreSQL support for Tcl as
- *				  procedural language (PL)
- *
- *	  src/pl/tcl/pltcl.c
- *
- **********************************************************************/
+                                                                        
+                                            
+                                 
+   
+                        
+   
+                                                                        
 
 #include "postgres.h"
 
@@ -42,29 +42,29 @@ PG_MODULE_MAGIC;
 
 #define HAVE_TCL_VERSION(maj, min) ((TCL_MAJOR_VERSION > maj) || (TCL_MAJOR_VERSION == maj && TCL_MINOR_VERSION >= min))
 
-/* Insist on Tcl >= 8.4 */
+                          
 #if !HAVE_TCL_VERSION(8, 4)
 #error PostgreSQL only supports Tcl 8.4 or later.
 #endif
 
-/* Hack to deal with Tcl 8.6 const-ification without losing compatibility */
+                                                                            
 #ifndef CONST86
 #define CONST86
 #endif
 
-/* define our text domain for translations */
+                                             
 #undef TEXTDOMAIN
 #define TEXTDOMAIN PG_TEXTDOMAIN("pltcl")
 
-/*
- * Support for converting between UTF8 (which is what all strings going into
- * or out of Tcl should be) and the database encoding.
- *
- * If you just use utf_u2e() or utf_e2u() directly, they will leak some
- * palloc'd space when doing a conversion.  This is not worth worrying about
- * if it only happens, say, once per PL/Tcl function call.  If it does seem
- * worth worrying about, use the wrapper macros.
- */
+   
+                                                                             
+                                                       
+   
+                                                                        
+                                                                             
+                                                                            
+                                                 
+   
 
 static inline char *
 utf_u2e(const char *src)
@@ -94,65 +94,65 @@ utf_e2u(const char *src)
 
 #define UTF_E2U(x) (_pltcl_utf_dst = utf_e2u(_pltcl_utf_src = (x)))
 
-/**********************************************************************
- * Information associated with a Tcl interpreter.  We have one interpreter
- * that is used for all pltclu (untrusted) functions.  For pltcl (trusted)
- * functions, there is a separate interpreter for each effective SQL userid.
- * (This is needed to ensure that an unprivileged user can't inject Tcl code
- * that'll be executed with the privileges of some other SQL user.)
- *
- * The pltcl_interp_desc structs are kept in a Postgres hash table indexed
- * by userid OID, with OID 0 used for the single untrusted interpreter.
- **********************************************************************/
+                                                                        
+                                                                           
+                                                                           
+                                                                             
+                                                                             
+                                                                    
+   
+                                                                           
+                                                                        
+                                                                        
 typedef struct pltcl_interp_desc
 {
-  Oid user_id;              /* Hash key (must be first!) */
-  Tcl_Interp *interp;       /* The interpreter */
-  Tcl_HashTable query_hash; /* pltcl_query_desc structs */
+  Oid user_id;                                             
+  Tcl_Interp *interp;                            
+  Tcl_HashTable query_hash;                               
 } pltcl_interp_desc;
 
-/**********************************************************************
- * The information we cache about loaded procedures
- *
- * The pltcl_proc_desc struct itself, as well as all subsidiary data,
- * is stored in the memory context identified by the fn_cxt field.
- * We can reclaim all the data by deleting that context, and should do so
- * when the fn_refcount goes to zero.  (But note that we do not bother
- * trying to clean up Tcl's copy of the procedure definition: it's Tcl's
- * problem to manage its memory when we replace a proc definition.  We do
- * not clean up pltcl_proc_descs when a pg_proc row is deleted, only when
- * it is updated, and the same policy applies to Tcl's copy as well.)
- *
- * Note that the data in this struct is shared across all active calls;
- * nothing except the fn_refcount should be changed by a call instance.
- **********************************************************************/
+                                                                        
+                                                    
+   
+                                                                      
+                                                                   
+                                                                          
+                                                                       
+                                                                         
+                                                                          
+                                                                          
+                                                                      
+   
+                                                                        
+                                                                        
+                                                                        
 typedef struct pltcl_proc_desc
 {
-  char *user_proname;             /* user's name (from pg_proc.proname) */
-  char *internal_proname;         /* Tcl name (based on function OID) */
-  MemoryContext fn_cxt;           /* memory context for this procedure */
-  unsigned long fn_refcount;      /* number of active references */
-  TransactionId fn_xmin;          /* xmin of pg_proc row */
-  ItemPointerData fn_tid;         /* TID of pg_proc row */
-  bool fn_readonly;               /* is function readonly? */
-  bool lanpltrusted;              /* is it pltcl (vs. pltclu)? */
-  pltcl_interp_desc *interp_desc; /* interpreter to use */
-  Oid result_typid;               /* OID of fn's result type */
-  FmgrInfo result_in_func;        /* input function for fn's result type */
-  Oid result_typioparam;          /* param to pass to same */
-  bool fn_retisset;               /* true if function returns a set */
-  bool fn_retistuple;             /* true if function returns composite */
-  bool fn_retisdomain;            /* true if function returns domain */
-  void *domain_info;              /* opaque cache for domain checks */
-  int nargs;                      /* number of arguments */
-  /* these arrays have nargs entries: */
-  FmgrInfo *arg_out_func; /* output fns for arg types */
-  bool *arg_is_rowtype;   /* is each arg composite? */
+  char *user_proname;                                                     
+  char *internal_proname;                                               
+  MemoryContext fn_cxt;                                                  
+  unsigned long fn_refcount;                                       
+  TransactionId fn_xmin;                                   
+  ItemPointerData fn_tid;                                 
+  bool fn_readonly;                                          
+  bool lanpltrusted;                                             
+  pltcl_interp_desc *interp_desc;                         
+  Oid result_typid;                                            
+  FmgrInfo result_in_func;                                                 
+  Oid result_typioparam;                                     
+  bool fn_retisset;                                                   
+  bool fn_retistuple;                                                     
+  bool fn_retisdomain;                                                 
+  void *domain_info;                                                  
+  int nargs;                                               
+                                        
+  FmgrInfo *arg_out_func;                               
+  bool *arg_is_rowtype;                               
 } pltcl_proc_desc;
 
-/**********************************************************************
- * The information we cache about prepared and saved plans
- **********************************************************************/
+                                                                        
+                                                           
+                                                                        
 typedef struct pltcl_query_desc
 {
   char qname[20];
@@ -163,66 +163,66 @@ typedef struct pltcl_query_desc
   Oid *argtypioparams;
 } pltcl_query_desc;
 
-/**********************************************************************
- * For speedy lookup, we maintain a hash table mapping from
- * function OID + trigger flag + user OID to pltcl_proc_desc pointers.
- * The reason the pltcl_proc_desc struct isn't directly part of the hash
- * entry is to simplify recovery from errors during compile_pltcl_function.
- *
- * Note: if the same function is called by multiple userIDs within a session,
- * there will be a separate pltcl_proc_desc entry for each userID in the case
- * of pltcl functions, but only one entry for pltclu functions, because we
- * set user_id = 0 for that case.
- **********************************************************************/
+                                                                        
+                                                            
+                                                                       
+                                                                         
+                                                                            
+   
+                                                                              
+                                                                              
+                                                                           
+                                  
+                                                                        
 typedef struct pltcl_proc_key
 {
-  Oid proc_id; /* Function OID */
+  Oid proc_id;                   
 
-  /*
-   * is_trigger is really a bool, but declare as Oid to ensure this struct
-   * contains no padding
-   */
-  Oid is_trigger; /* is it a trigger function? */
-  Oid user_id;    /* User calling the function, or 0 */
+     
+                                                                           
+                         
+     
+  Oid is_trigger;                                
+  Oid user_id;                                         
 } pltcl_proc_key;
 
 typedef struct pltcl_proc_ptr
 {
-  pltcl_proc_key proc_key; /* Hash key (must be first!) */
+  pltcl_proc_key proc_key;                                
   pltcl_proc_desc *proc_ptr;
 } pltcl_proc_ptr;
 
-/**********************************************************************
- * Per-call state
- **********************************************************************/
+                                                                        
+                  
+                                                                        
 typedef struct pltcl_call_state
 {
-  /* Call info struct, or NULL in a trigger */
+                                              
   FunctionCallInfo fcinfo;
 
-  /* Trigger data, if we're in a normal (not event) trigger; else NULL */
+                                                                         
   TriggerData *trigdata;
 
-  /* Function we're executing (NULL if not yet identified) */
+                                                             
   pltcl_proc_desc *prodesc;
 
-  /*
-   * Information for SRFs and functions returning composite types.
-   * ret_tupdesc and attinmeta are set up if either fn_retistuple or
-   * fn_retisset, since even a scalar-returning SRF needs a tuplestore.
-   */
-  TupleDesc ret_tupdesc;    /* return rowtype, if retistuple or retisset */
-  AttInMetadata *attinmeta; /* metadata for building tuples of that type */
+     
+                                                                   
+                                                                     
+                                                                        
+     
+  TupleDesc ret_tupdesc;                                                   
+  AttInMetadata *attinmeta;                                                
 
-  ReturnSetInfo *rsi;            /* passed-in ReturnSetInfo, if any */
-  Tuplestorestate *tuple_store;  /* SRFs accumulate result here */
-  MemoryContext tuple_store_cxt; /* context and resowner for tuplestore */
+  ReturnSetInfo *rsi;                                                 
+  Tuplestorestate *tuple_store;                                   
+  MemoryContext tuple_store_cxt;                                          
   ResourceOwner tuple_store_owner;
 } pltcl_call_state;
 
-/**********************************************************************
- * Global data
- **********************************************************************/
+                                                                        
+               
+                                                                        
 static char *pltcl_start_proc = NULL;
 static char *pltclu_start_proc = NULL;
 static bool pltcl_pm_init_done = false;
@@ -230,12 +230,12 @@ static Tcl_Interp *pltcl_hold_interp = NULL;
 static HTAB *pltcl_interp_htab = NULL;
 static HTAB *pltcl_proc_htab = NULL;
 
-/* this is saved and restored by pltcl_handler */
+                                                 
 static pltcl_call_state *pltcl_current_call_state = NULL;
 
-/**********************************************************************
- * Lookup table for SQLSTATE condition names
- **********************************************************************/
+                                                                        
+                                             
+                                                                        
 typedef struct
 {
   const char *label;
@@ -243,12 +243,12 @@ typedef struct
 } TclExceptionNameMap;
 
 static const TclExceptionNameMap exception_name_map[] = {
-#include "pltclerrcodes.h" /* pgrminclude ignore */
+#include "pltclerrcodes.h"                         
     {NULL, 0}};
 
-/**********************************************************************
- * Forward declarations
- **********************************************************************/
+                                                                        
+                        
+                                                                        
 void
 _PG_init(void);
 
@@ -322,21 +322,21 @@ pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl
 static void
 pltcl_init_tuple_store(pltcl_call_state *call_state);
 
-/*
- * Hack to override Tcl's builtin Notifier subsystem.  This prevents the
- * backend from becoming multithreaded, which breaks all sorts of things.
- * That happens in the default version of Tcl_InitNotifier if the TCL library
- * has been compiled with multithreading support (i.e. when TCL_THREADS is
- * defined under Unix, and in all cases under Windows).
- * It's okay to disable the notifier because we never enter the Tcl event loop
- * from Postgres, so the notifier capabilities are initialized, but never
- * used.  Only InitNotifier and DeleteFileHandler ever seem to get called
- * within Postgres, but we implement all the functions for completeness.
- */
+   
+                                                                         
+                                                                          
+                                                                              
+                                                                           
+                                                        
+                                                                               
+                                                                          
+                                                                          
+                                                                         
+   
 static ClientData
 pltcl_InitNotifier(void)
 {
-  static int fakeThreadKey; /* To give valid address for ClientData */
+  static int fakeThreadKey;                                           
 
   return (ClientData) & (fakeThreadKey);
 }
@@ -377,21 +377,21 @@ pltcl_WaitForEvent(CONST86 Tcl_Time *timePtr)
   return 0;
 }
 
-/*
- * _PG_init()			- library load-time initialization
- *
- * DO NOT make this static nor change its name!
- *
- * The work done here must be safe to do in the postmaster process,
- * in case the pltcl library is preloaded in the postmaster.
- */
+   
+                                                   
+   
+                                                
+   
+                                                                    
+                                                             
+   
 void
 _PG_init(void)
 {
   Tcl_NotifierProcs notifier;
   HASHCTL hash_ctl;
 
-  /* Be sure we do initialization only once (should be redundant now) */
+                                                                        
   if (pltcl_pm_init_done)
   {
     return;
@@ -400,13 +400,13 @@ _PG_init(void)
   pg_bindtextdomain(TEXTDOMAIN);
 
 #ifdef WIN32
-  /* Required on win32 to prevent error loading init.tcl */
+                                                           
   Tcl_FindExecutable("");
 #endif
 
-  /*
-   * Override the functions in the Notifier subsystem.  See comments above.
-   */
+     
+                                                                            
+     
   notifier.setTimerProc = pltcl_SetTimer;
   notifier.waitForEventProc = pltcl_WaitForEvent;
   notifier.createFileHandlerProc = pltcl_CreateFileHandler;
@@ -417,10 +417,10 @@ _PG_init(void)
   notifier.serviceModeHookProc = pltcl_ServiceModeHook;
   Tcl_SetNotifier(&notifier);
 
-  /************************************************************
-   * Create the dummy hold interpreter to prevent close of
-   * stdout and stderr on DeleteInterp
-   ************************************************************/
+                                                                
+                                                           
+                                       
+                                                                
   if ((pltcl_hold_interp = Tcl_CreateInterp()) == NULL)
   {
     elog(ERROR, "could not create master Tcl interpreter");
@@ -430,59 +430,59 @@ _PG_init(void)
     elog(ERROR, "could not initialize master Tcl interpreter");
   }
 
-  /************************************************************
-   * Create the hash table for working interpreters
-   ************************************************************/
+                                                                
+                                                    
+                                                                
   memset(&hash_ctl, 0, sizeof(hash_ctl));
   hash_ctl.keysize = sizeof(Oid);
   hash_ctl.entrysize = sizeof(pltcl_interp_desc);
   pltcl_interp_htab = hash_create("PL/Tcl interpreters", 8, &hash_ctl, HASH_ELEM | HASH_BLOBS);
 
-  /************************************************************
-   * Create the hash table for function lookup
-   ************************************************************/
+                                                                
+                                               
+                                                                
   memset(&hash_ctl, 0, sizeof(hash_ctl));
   hash_ctl.keysize = sizeof(pltcl_proc_key);
   hash_ctl.entrysize = sizeof(pltcl_proc_ptr);
   pltcl_proc_htab = hash_create("PL/Tcl functions", 100, &hash_ctl, HASH_ELEM | HASH_BLOBS);
 
-  /************************************************************
-   * Define PL/Tcl's custom GUCs
-   ************************************************************/
+                                                                
+                                 
+                                                                
   DefineCustomStringVariable("pltcl.start_proc", gettext_noop("PL/Tcl function to call once when pltcl is first used."), NULL, &pltcl_start_proc, NULL, PGC_SUSET, 0, NULL, NULL, NULL);
   DefineCustomStringVariable("pltclu.start_proc", gettext_noop("PL/TclU function to call once when pltclu is first used."), NULL, &pltclu_start_proc, NULL, PGC_SUSET, 0, NULL, NULL, NULL);
 
   pltcl_pm_init_done = true;
 }
 
-/**********************************************************************
- * pltcl_init_interp() - initialize a new Tcl interpreter
- **********************************************************************/
+                                                                        
+                                                          
+                                                                        
 static void
 pltcl_init_interp(pltcl_interp_desc *interp_desc, Oid prolang, bool pltrusted)
 {
   Tcl_Interp *interp;
   char interpname[32];
 
-  /************************************************************
-   * Create the Tcl interpreter as a slave of pltcl_hold_interp.
-   * Note: Tcl automatically does Tcl_Init in the untrusted case,
-   * and it's not wanted in the trusted case.
-   ************************************************************/
+                                                                
+                                                                 
+                                                                  
+                                              
+                                                                
   snprintf(interpname, sizeof(interpname), "slave_%u", interp_desc->user_id);
   if ((interp = Tcl_CreateSlave(pltcl_hold_interp, interpname, pltrusted ? 1 : 0)) == NULL)
   {
     elog(ERROR, "could not create slave Tcl interpreter");
   }
 
-  /************************************************************
-   * Initialize the query hash table associated with interpreter
-   ************************************************************/
+                                                                
+                                                                 
+                                                                
   Tcl_InitHashTable(&interp_desc->query_hash, TCL_STRING_KEYS);
 
-  /************************************************************
-   * Install the commands for SPI support in the interpreter
-   ************************************************************/
+                                                                
+                                                             
+                                                                
   Tcl_CreateObjCommand(interp, "elog", pltcl_elog, NULL, NULL);
   Tcl_CreateObjCommand(interp, "quote", pltcl_quote, NULL, NULL);
   Tcl_CreateObjCommand(interp, "argisnull", pltcl_argisnull, NULL, NULL);
@@ -495,13 +495,13 @@ pltcl_init_interp(pltcl_interp_desc *interp_desc, Oid prolang, bool pltrusted)
   Tcl_CreateObjCommand(interp, "commit", pltcl_commit, NULL, NULL);
   Tcl_CreateObjCommand(interp, "rollback", pltcl_rollback, NULL, NULL);
 
-  /************************************************************
-   * Call the appropriate start_proc, if there is one.
-   *
-   * We must set interp_desc->interp before the call, else the start_proc
-   * won't find the interpreter it's supposed to use.  But, if the
-   * start_proc fails, we want to abandon use of the interpreter.
-   ************************************************************/
+                                                                
+                                                       
+     
+                                                                          
+                                                                   
+                                                                  
+                                                                
   PG_TRY();
   {
     interp_desc->interp = interp;
@@ -516,11 +516,11 @@ pltcl_init_interp(pltcl_interp_desc *interp_desc, Oid prolang, bool pltrusted)
   PG_END_TRY();
 }
 
-/**********************************************************************
- * pltcl_fetch_interp() - fetch the Tcl interpreter to use for a function
- *
- * This also takes care of any on-first-use initialization required.
- **********************************************************************/
+                                                                        
+                                                                          
+   
+                                                                     
+                                                                        
 static pltcl_interp_desc *
 pltcl_fetch_interp(Oid prolang, bool pltrusted)
 {
@@ -528,7 +528,7 @@ pltcl_fetch_interp(Oid prolang, bool pltrusted)
   pltcl_interp_desc *interp_desc;
   bool found;
 
-  /* Find or create the interpreter hashtable entry for this userid */
+                                                                      
   if (pltrusted)
   {
     user_id = GetUserId();
@@ -544,7 +544,7 @@ pltcl_fetch_interp(Oid prolang, bool pltrusted)
     interp_desc->interp = NULL;
   }
 
-  /* If we haven't yet successfully made an interpreter, try to do that */
+                                                                          
   if (!interp_desc->interp)
   {
     pltcl_init_interp(interp_desc, prolang, pltrusted);
@@ -553,9 +553,9 @@ pltcl_fetch_interp(Oid prolang, bool pltrusted)
   return interp_desc;
 }
 
-/**********************************************************************
- * call_pltcl_start_proc()	 - Call user-defined initialization proc, if any
- **********************************************************************/
+                                                                        
+                                                                            
+                                                                        
 static void
 call_pltcl_start_proc(Oid prolang, bool pltrusted)
 {
@@ -564,7 +564,7 @@ call_pltcl_start_proc(Oid prolang, bool pltrusted)
   const char *gucname;
   ErrorContextCallback errcallback;
   List *namelist;
-  Oid fargtypes[1]; /* dummy */
+  Oid fargtypes[1];            
   Oid procOid;
   HeapTuple procTup;
   Form_pg_proc procStruct;
@@ -572,34 +572,34 @@ call_pltcl_start_proc(Oid prolang, bool pltrusted)
   FmgrInfo finfo;
   PgStat_FunctionCallUsage fcusage;
 
-  /* select appropriate GUC */
+                              
   start_proc = pltrusted ? pltcl_start_proc : pltclu_start_proc;
   gucname = pltrusted ? "pltcl.start_proc" : "pltclu.start_proc";
 
-  /* Nothing to do if it's empty or unset */
+                                            
   if (start_proc == NULL || start_proc[0] == '\0')
   {
     return;
   }
 
-  /* Set up errcontext callback to make errors more helpful */
+                                                              
   errcallback.callback = start_proc_error_callback;
   errcallback.arg = unconstify(char *, gucname);
   errcallback.previous = error_context_stack;
   error_context_stack = &errcallback;
 
-  /* Parse possibly-qualified identifier and look up the function */
+                                                                    
   namelist = stringToQualifiedNameList(start_proc);
   procOid = LookupFuncName(namelist, 0, fargtypes, false);
 
-  /* Current user must have permission to call function */
+                                                          
   aclresult = pg_proc_aclcheck(procOid, GetUserId(), ACL_EXECUTE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_FUNCTION, start_proc);
   }
 
-  /* Get the function's pg_proc entry */
+                                        
   procTup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procOid));
   if (!HeapTupleIsValid(procTup))
   {
@@ -607,31 +607,31 @@ call_pltcl_start_proc(Oid prolang, bool pltrusted)
   }
   procStruct = (Form_pg_proc)GETSTRUCT(procTup);
 
-  /* It must be same language as the function we're currently calling */
+                                                                        
   if (procStruct->prolang != prolang)
   {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("function \"%s\" is in the wrong language", start_proc)));
   }
 
-  /*
-   * It must not be SECURITY DEFINER, either.  This together with the
-   * language match check ensures that the function will execute in the same
-   * Tcl interpreter we just finished initializing.
-   */
+     
+                                                                      
+                                                                             
+                                                    
+     
   if (procStruct->prosecdef)
   {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("function \"%s\" must not be SECURITY DEFINER", start_proc)));
   }
 
-  /* A-OK */
+            
   ReleaseSysCache(procTup);
 
-  /*
-   * Call the function using the normal SQL function call mechanism.  We
-   * could perhaps cheat and jump directly to pltcl_handler(), but it seems
-   * better to do it this way so that the call is exposed to, eg, call
-   * statistics collection.
-   */
+     
+                                                                         
+                                                                            
+                                                                       
+                            
+     
   InvokeFunctionExecuteHook(procOid);
   fmgr_info(procOid, &finfo);
   InitFunctionCallInfoData(*fcinfo, &finfo, 0, InvalidOid, NULL, NULL);
@@ -639,54 +639,54 @@ call_pltcl_start_proc(Oid prolang, bool pltrusted)
   (void)FunctionCallInvoke(fcinfo);
   pgstat_end_function_usage(&fcusage, true);
 
-  /* Pop the error context stack */
+                                   
   error_context_stack = errcallback.previous;
 }
 
-/*
- * Error context callback for errors occurring during start_proc processing.
- */
+   
+                                                                             
+   
 static void
 start_proc_error_callback(void *arg)
 {
   const char *gucname = (const char *)arg;
 
-  /* translator: %s is "pltcl.start_proc" or "pltclu.start_proc" */
+                                                                   
   errcontext("processing %s parameter", gucname);
 }
 
-/**********************************************************************
- * pltcl_call_handler		- This is the only visible function
- *				  of the PL interpreter. The PostgreSQL
- *				  function manager and trigger manager
- *				  call this function for execution of
- *				  PL/Tcl procedures.
- **********************************************************************/
+                                                                        
+                                                           
+                                              
+                                             
+                                            
+                           
+                                                                        
 PG_FUNCTION_INFO_V1(pltcl_call_handler);
 
-/* keep non-static */
+                     
 Datum
 pltcl_call_handler(PG_FUNCTION_ARGS)
 {
   return pltcl_handler(fcinfo, true);
 }
 
-/*
- * Alternative handler for unsafe functions
- */
+   
+                                            
+   
 PG_FUNCTION_INFO_V1(pltclu_call_handler);
 
-/* keep non-static */
+                     
 Datum
 pltclu_call_handler(PG_FUNCTION_ARGS)
 {
   return pltcl_handler(fcinfo, false);
 }
 
-/**********************************************************************
- * pltcl_handler()		- Handler for function and trigger calls, for
- *						  both trusted and untrusted interpreters.
- **********************************************************************/
+                                                                        
+                                                                  
+                                                   
+                                                                        
 static Datum
 pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted)
 {
@@ -694,50 +694,50 @@ pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted)
   pltcl_call_state current_call_state;
   pltcl_call_state *save_call_state;
 
-  /*
-   * Initialize current_call_state to nulls/zeroes; in particular, set its
-   * prodesc pointer to null.  Anything that sets it non-null should
-   * increase the prodesc's fn_refcount at the same time.  We'll decrease
-   * the refcount, and then delete the prodesc if it's no longer referenced,
-   * on the way out of this function.  This ensures that prodescs live as
-   * long as needed even if somebody replaces the originating pg_proc row
-   * while they're executing.
-   */
+     
+                                                                           
+                                                                     
+                                                                          
+                                                                             
+                                                                          
+                                                                          
+                              
+     
   memset(&current_call_state, 0, sizeof(current_call_state));
 
-  /*
-   * Ensure that static pointer is saved/restored properly
-   */
+     
+                                                           
+     
   save_call_state = pltcl_current_call_state;
   pltcl_current_call_state = &current_call_state;
 
   PG_TRY();
   {
-    /*
-     * Determine if called as function or trigger and call appropriate
-     * subhandler
-     */
+       
+                                                                       
+                  
+       
     if (CALLED_AS_TRIGGER(fcinfo))
     {
-      /* invoke the trigger handler */
+                                      
       retval = PointerGetDatum(pltcl_trigger_handler(fcinfo, &current_call_state, pltrusted));
     }
     else if (CALLED_AS_EVENT_TRIGGER(fcinfo))
     {
-      /* invoke the event trigger handler */
+                                            
       pltcl_event_trigger_handler(fcinfo, &current_call_state, pltrusted);
       retval = (Datum)0;
     }
     else
     {
-      /* invoke the regular function handler */
+                                               
       current_call_state.fcinfo = fcinfo;
       retval = pltcl_func_handler(fcinfo, &current_call_state, pltrusted);
     }
   }
   PG_CATCH();
   {
-    /* Restore static pointer, then clean up the prodesc refcount if any */
+                                                                           
     pltcl_current_call_state = save_call_state;
     if (current_call_state.prodesc != NULL)
     {
@@ -751,8 +751,8 @@ pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted)
   }
   PG_END_TRY();
 
-  /* Restore static pointer, then clean up the prodesc refcount if any */
-  /* (We're being paranoid in case an error is thrown in context deletion) */
+                                                                         
+                                                                             
   pltcl_current_call_state = save_call_state;
   if (current_call_state.prodesc != NULL)
   {
@@ -766,9 +766,9 @@ pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted)
   return retval;
 }
 
-/**********************************************************************
- * pltcl_func_handler()		- Handler for regular function calls
- **********************************************************************/
+                                                                        
+                                                              
+                                                                        
 static Datum
 pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltrusted)
 {
@@ -782,13 +782,13 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
 
   nonatomic = fcinfo->context && IsA(fcinfo->context, CallContext) && !castNode(CallContext, fcinfo->context)->atomic;
 
-  /* Connect to SPI manager */
+                              
   if (SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0) != SPI_OK_CONNECT)
   {
     elog(ERROR, "could not connect to SPI manager");
   }
 
-  /* Find or compile the function */
+                                    
   prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, InvalidOid, false, pltrusted);
 
   call_state->prodesc = prodesc;
@@ -796,12 +796,12 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
 
   interp = prodesc->interp_desc->interp;
 
-  /*
-   * If we're a SRF, check caller can handle materialize mode, and save
-   * relevant info into call_state.  We must ensure that the returned
-   * tuplestore is owned by the caller's context, even if we first create it
-   * inside a subtransaction.
-   */
+     
+                                                                        
+                                                                      
+                                                                             
+                              
+     
   if (prodesc->fn_retisset)
   {
     ReturnSetInfo *rsi = (ReturnSetInfo *)fcinfo->resultinfo;
@@ -816,28 +816,28 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
     call_state->tuple_store_owner = CurrentResourceOwner;
   }
 
-  /************************************************************
-   * Create the tcl command to call the internal
-   * proc in the Tcl interpreter
-   ************************************************************/
+                                                                
+                                                 
+                                 
+                                                                
   tcl_cmd = Tcl_NewObj();
   Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(prodesc->internal_proname, -1));
 
-  /* We hold a refcount on tcl_cmd just to be sure it stays around */
+                                                                     
   Tcl_IncrRefCount(tcl_cmd);
 
-  /************************************************************
-   * Add all call arguments to the command
-   ************************************************************/
+                                                                
+                                           
+                                                                
   PG_TRY();
   {
     for (i = 0; i < prodesc->nargs; i++)
     {
       if (prodesc->arg_is_rowtype[i])
       {
-        /**************************************************
-         * For tuple values, add a list for 'array set ...'
-         **************************************************/
+                                                            
+                                                            
+                                                            
         if (fcinfo->args[i].isnull)
         {
           Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewObj());
@@ -852,11 +852,11 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
           Tcl_Obj *list_tmp;
 
           td = DatumGetHeapTupleHeader(fcinfo->args[i].value);
-          /* Extract rowtype info and find a tupdesc */
+                                                       
           tupType = HeapTupleHeaderGetTypeId(td);
           tupTypmod = HeapTupleHeaderGetTypMod(td);
           tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
-          /* Build a temporary HeapTuple control structure */
+                                                             
           tmptup.t_len = HeapTupleHeaderGetDatumLength(td);
           tmptup.t_data = td;
 
@@ -868,10 +868,10 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
       }
       else
       {
-        /**************************************************
-         * Single values are added as string element
-         * of their external representation
-         **************************************************/
+                                                            
+                                                     
+                                            
+                                                            
         if (fcinfo->args[i].isnull)
         {
           Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewObj());
@@ -891,39 +891,39 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
   }
   PG_CATCH();
   {
-    /* Release refcount to free tcl_cmd */
+                                          
     Tcl_DecrRefCount(tcl_cmd);
     PG_RE_THROW();
   }
   PG_END_TRY();
 
-  /************************************************************
-   * Call the Tcl function
-   *
-   * We assume no PG error can be thrown directly from this call.
-   ************************************************************/
+                                                                
+                           
+     
+                                                                  
+                                                                
   tcl_rc = Tcl_EvalObjEx(interp, tcl_cmd, (TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL));
 
-  /* Release refcount to free tcl_cmd (and all subsidiary objects) */
+                                                                     
   Tcl_DecrRefCount(tcl_cmd);
 
-  /************************************************************
-   * Check for errors reported by Tcl.
-   ************************************************************/
+                                                                
+                                       
+                                                                
   if (tcl_rc != TCL_OK)
   {
     throw_tcl_error(interp, prodesc->user_proname);
   }
 
-  /************************************************************
-   * Disconnect from SPI manager and then create the return
-   * value datum (if the input function does a palloc for it
-   * this must not be allocated in the SPI memory context
-   * because SPI_finish would free it).  But don't try to call
-   * the result_in_func if we've been told to return a NULL;
-   * the Tcl result may not be a valid value of the result type
-   * in that case.
-   ************************************************************/
+                                                                
+                                                            
+                                                             
+                                                          
+                                                               
+                                                             
+                                                                
+                   
+                                                                
   if (SPI_finish() != SPI_OK_FINISH)
   {
     elog(ERROR, "SPI_finish() failed");
@@ -933,10 +933,10 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
   {
     ReturnSetInfo *rsi = call_state->rsi;
 
-    /* We already checked this is OK */
+                                       
     rsi->returnMode = SFRM_Materialize;
 
-    /* If we produced any tuples, send back the result */
+                                                         
     if (call_state->tuple_store)
     {
       rsi->setResult = call_state->tuple_store;
@@ -964,29 +964,29 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
     Tcl_Obj **resultObjv;
     int resultObjc;
 
-    /*
-     * Set up data about result type.  XXX it's tempting to consider
-     * caching this in the prodesc, in the common case where the rowtype
-     * is determined by the function not the calling query.  But we'd have
-     * to be able to deal with ADD/DROP/ALTER COLUMN events when the
-     * result type is a named composite type, so it's not exactly trivial.
-     * Maybe worth improving someday.
-     */
+       
+                                                                     
+                                                                         
+                                                                           
+                                                                     
+                                                                           
+                                      
+       
     switch (get_call_result_type(fcinfo, NULL, &td))
     {
     case TYPEFUNC_COMPOSITE:
-      /* success */
+                   
       break;
     case TYPEFUNC_COMPOSITE_DOMAIN:
       Assert(prodesc->fn_retisdomain);
       break;
     case TYPEFUNC_RECORD:
-      /* failed to determine actual type of RECORD */
+                                                     
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function returning record called in context "
                                                                      "that cannot accept type record")));
       break;
     default:
-      /* result type isn't composite? */
+                                        
       elog(ERROR, "return type must be a row type");
       break;
     }
@@ -996,7 +996,7 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
     call_state->ret_tupdesc = td;
     call_state->attinmeta = TupleDescGetAttInMetadata(td);
 
-    /* Convert function result to tuple */
+                                          
     resultObj = Tcl_GetObjResult(interp);
     if (Tcl_ListObjGetElements(interp, resultObj, &resultObjc, &resultObjv) == TCL_ERROR)
     {
@@ -1014,9 +1014,9 @@ pltcl_func_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltruste
   return retval;
 }
 
-/**********************************************************************
- * pltcl_trigger_handler()	- Handler for trigger calls
- **********************************************************************/
+                                                                        
+                                                       
+                                                                        
 static HeapTuple
 pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltrusted)
 {
@@ -1037,18 +1037,18 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
 
   call_state->trigdata = trigdata;
 
-  /* Connect to SPI manager */
+                              
   if (SPI_connect() != SPI_OK_CONNECT)
   {
     elog(ERROR, "could not connect to SPI manager");
   }
 
-  /* Make transition tables visible to this SPI connection */
+                                                             
   rc = SPI_register_trigger_data(trigdata);
   Assert(rc >= 0);
 
-  /* Find or compile the function */
-  prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, RelationGetRelid(trigdata->tg_relation), false, /* not an event trigger */
+                                    
+  prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, RelationGetRelid(trigdata->tg_relation), false,                           
       pltrusted);
 
   call_state->prodesc = prodesc;
@@ -1058,38 +1058,38 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
 
   tupdesc = RelationGetDescr(trigdata->tg_relation);
 
-  /************************************************************
-   * Create the tcl command to call the internal
-   * proc in the interpreter
-   ************************************************************/
+                                                                
+                                                 
+                             
+                                                                
   tcl_cmd = Tcl_NewObj();
   Tcl_IncrRefCount(tcl_cmd);
 
   PG_TRY();
   {
-    /* The procedure name (note this is all ASCII, so no utf_e2u) */
+                                                                    
     Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(prodesc->internal_proname, -1));
 
-    /* The trigger name for argument TG_name */
+                                               
     Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(utf_e2u(trigdata->tg_trigger->tgname), -1));
 
-    /* The oid of the trigger relation for argument TG_relid */
-    /* Consider not converting to a string for more performance? */
+                                                               
+                                                                   
     stroid = DatumGetCString(DirectFunctionCall1(oidout, ObjectIdGetDatum(trigdata->tg_relation->rd_id)));
     Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(stroid, -1));
     pfree(stroid);
 
-    /* The name of the table the trigger is acting on: TG_table_name */
+                                                                       
     stroid = SPI_getrelname(trigdata->tg_relation);
     Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(utf_e2u(stroid), -1));
     pfree(stroid);
 
-    /* The schema of the table the trigger is acting on: TG_table_schema */
+                                                                           
     stroid = SPI_getnspname(trigdata->tg_relation);
     Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(utf_e2u(stroid), -1));
     pfree(stroid);
 
-    /* A list of attribute names for argument TG_relatts */
+                                                           
     tcl_trigtup = Tcl_NewObj();
     Tcl_ListObjAppendElement(NULL, tcl_trigtup, Tcl_NewObj());
     for (i = 0; i < tupdesc->natts; i++)
@@ -1107,7 +1107,7 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
     }
     Tcl_ListObjAppendElement(NULL, tcl_cmd, tcl_trigtup);
 
-    /* The when part of the event for TG_when */
+                                                
     if (TRIGGER_FIRED_BEFORE(trigdata->tg_event))
     {
       Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj("BEFORE", -1));
@@ -1125,18 +1125,18 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
       elog(ERROR, "unrecognized WHEN tg_event: %u", trigdata->tg_event);
     }
 
-    /* The level part of the event for TG_level */
+                                                  
     if (TRIGGER_FIRED_FOR_ROW(trigdata->tg_event))
     {
       Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj("ROW", -1));
 
-      /*
-       * Now the command part of the event for TG_op and data for NEW
-       * and OLD
-       *
-       * Note: In BEFORE trigger, stored generated columns are not
-       * computed yet, so don't make them accessible in NEW row.
-       */
+         
+                                                                      
+                 
+         
+                                                                   
+                                                                 
+         
       if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event))
       {
         Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj("INSERT", -1));
@@ -1204,7 +1204,7 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
       elog(ERROR, "unrecognized LEVEL tg_event: %u", trigdata->tg_event);
     }
 
-    /* Finally append the arguments from CREATE TRIGGER */
+                                                          
     for (i = 0; i < trigdata->tg_trigger->tgnargs; i++)
     {
       Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(utf_e2u(trigdata->tg_trigger->tgargs[i]), -1));
@@ -1217,37 +1217,37 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
   }
   PG_END_TRY();
 
-  /************************************************************
-   * Call the Tcl function
-   *
-   * We assume no PG error can be thrown directly from this call.
-   ************************************************************/
+                                                                
+                           
+     
+                                                                  
+                                                                
   tcl_rc = Tcl_EvalObjEx(interp, tcl_cmd, (TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL));
 
-  /* Release refcount to free tcl_cmd (and all subsidiary objects) */
+                                                                     
   Tcl_DecrRefCount(tcl_cmd);
 
-  /************************************************************
-   * Check for errors reported by Tcl.
-   ************************************************************/
+                                                                
+                                       
+                                                                
   if (tcl_rc != TCL_OK)
   {
     throw_tcl_error(interp, prodesc->user_proname);
   }
 
-  /************************************************************
-   * Exit SPI environment.
-   ************************************************************/
+                                                                
+                           
+                                                                
   if (SPI_finish() != SPI_OK_FINISH)
   {
     elog(ERROR, "SPI_finish() failed");
   }
 
-  /************************************************************
-   * The return value from the procedure might be one of
-   * the magic strings OK or SKIP, or a list from array get.
-   * We can check for OK or SKIP without worrying about encoding.
-   ************************************************************/
+                                                                
+                                                         
+                                                             
+                                                                  
+                                                                
   result = Tcl_GetStringResult(interp);
 
   if (strcmp(result, "OK") == 0)
@@ -1259,24 +1259,24 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltru
     return (HeapTuple)NULL;
   }
 
-  /************************************************************
-   * Otherwise, the return value should be a column name/value list
-   * specifying the modified tuple to return.
-   ************************************************************/
+                                                                
+                                                                    
+                                              
+                                                                
   if (Tcl_ListObjGetElements(interp, Tcl_GetObjResult(interp), &result_Objc, &result_Objv) != TCL_OK)
   {
     ereport(ERROR, (errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED), errmsg("could not split return value from trigger: %s", utf_u2e(Tcl_GetStringResult(interp)))));
   }
 
-  /* Convert function result to tuple */
+                                        
   rettup = pltcl_build_tuple_result(interp, result_Objv, result_Objc, call_state);
 
   return rettup;
 }
 
-/**********************************************************************
- * pltcl_event_trigger_handler()	- Handler for event trigger calls
- **********************************************************************/
+                                                                        
+                                                                   
+                                                                        
 static void
 pltcl_event_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool pltrusted)
 {
@@ -1286,13 +1286,13 @@ pltcl_event_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool
   Tcl_Obj *tcl_cmd;
   int tcl_rc;
 
-  /* Connect to SPI manager */
+                              
   if (SPI_connect() != SPI_OK_CONNECT)
   {
     elog(ERROR, "could not connect to SPI manager");
   }
 
-  /* Find or compile the function */
+                                    
   prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, InvalidOid, true, pltrusted);
 
   call_state->prodesc = prodesc;
@@ -1300,7 +1300,7 @@ pltcl_event_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool
 
   interp = prodesc->interp_desc->interp;
 
-  /* Create the tcl command and call the internal proc */
+                                                         
   tcl_cmd = Tcl_NewObj();
   Tcl_IncrRefCount(tcl_cmd);
   Tcl_ListObjAppendElement(NULL, tcl_cmd, Tcl_NewStringObj(prodesc->internal_proname, -1));
@@ -1309,10 +1309,10 @@ pltcl_event_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool
 
   tcl_rc = Tcl_EvalObjEx(interp, tcl_cmd, (TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL));
 
-  /* Release refcount to free tcl_cmd (and all subsidiary objects) */
+                                                                     
   Tcl_DecrRefCount(tcl_cmd);
 
-  /* Check for errors reported by Tcl. */
+                                         
   if (tcl_rc != TCL_OK)
   {
     throw_tcl_error(interp, prodesc->user_proname);
@@ -1324,19 +1324,19 @@ pltcl_event_trigger_handler(PG_FUNCTION_ARGS, pltcl_call_state *call_state, bool
   }
 }
 
-/**********************************************************************
- * throw_tcl_error	- ereport an error returned from the Tcl interpreter
- **********************************************************************/
+                                                                        
+                                                                        
+                                                                        
 static void
 throw_tcl_error(Tcl_Interp *interp, const char *proname)
 {
-  /*
-   * Caution is needed here because Tcl_GetVar could overwrite the
-   * interpreter result (even though it's not really supposed to), and we
-   * can't control the order of evaluation of ereport arguments. Hence, make
-   * real sure we have our own copy of the result string before invoking
-   * Tcl_GetVar.
-   */
+     
+                                                                   
+                                                                          
+                                                                             
+                                                                         
+                 
+     
   char *emsg;
   char *econtext;
 
@@ -1345,12 +1345,12 @@ throw_tcl_error(Tcl_Interp *interp, const char *proname)
   ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION), errmsg("%s", emsg), errcontext("%s\nin PL/Tcl function \"%s\"", econtext, proname)));
 }
 
-/**********************************************************************
- * compile_pltcl_function	- compile (or hopefully just look up) function
- *
- * tgreloid is the OID of the relation when compiling a trigger, or zero
- * (InvalidOid) when compiling a plain function.
- **********************************************************************/
+                                                                        
+                                                                         
+   
+                                                                         
+                                                 
+                                                                        
 static pltcl_proc_desc *
 compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool pltrusted)
 {
@@ -1365,7 +1365,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
   Tcl_DString proc_internal_def;
   Tcl_DString proc_internal_body;
 
-  /* We'll need the pg_proc tuple in any case... */
+                                                   
   procTup = SearchSysCache1(PROCOID, ObjectIdGetDatum(fn_oid));
   if (!HeapTupleIsValid(procTup))
   {
@@ -1373,10 +1373,10 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
   }
   procStruct = (Form_pg_proc)GETSTRUCT(procTup);
 
-  /*
-   * Look up function in pltcl_proc_htab; if it's not there, create an entry
-   * and set the entry's proc_ptr to NULL.
-   */
+     
+                                                                             
+                                           
+     
   proc_key.proc_id = fn_oid;
   proc_key.is_trigger = OidIsValid(tgreloid);
   proc_key.user_id = pltrusted ? GetUserId() : InvalidOid;
@@ -1389,26 +1389,26 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
 
   prodesc = proc_ptr->proc_ptr;
 
-  /************************************************************
-   * If it's present, must check whether it's still up to date.
-   * This is needed because CREATE OR REPLACE FUNCTION can modify the
-   * function's pg_proc entry without changing its OID.
-   ************************************************************/
+                                                                
+                                                                
+                                                                      
+                                                        
+                                                                
   if (prodesc != NULL && prodesc->fn_xmin == HeapTupleHeaderGetRawXmin(procTup->t_data) && ItemPointerEquals(&prodesc->fn_tid, &procTup->t_self))
   {
-    /* It's still up-to-date, so we can use it */
+                                                 
     ReleaseSysCache(procTup);
     return prodesc;
   }
 
-  /************************************************************
-   * If we haven't found it in the hashtable, we analyze
-   * the functions arguments and returntype and store
-   * the in-/out-functions in the prodesc block and create
-   * a new hashtable entry for it.
-   *
-   * Then we load the procedure into the Tcl interpreter.
-   ************************************************************/
+                                                                
+                                                         
+                                                      
+                                                           
+                                   
+     
+                                                          
+                                                                
   Tcl_DStringInit(&proc_internal_def);
   Tcl_DStringInit(&proc_internal_body);
   PG_TRY();
@@ -1427,11 +1427,11 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
     int tcl_rc;
     MemoryContext oldcontext;
 
-    /************************************************************
-     * Build our internal proc name from the function's Oid.  Append
-     * "_trigger" when appropriate to ensure the normal and trigger
-     * cases are kept separate.  Note name must be all-ASCII.
-     ************************************************************/
+                                                                  
+                                                                     
+                                                                    
+                                                              
+                                                                  
     if (is_event_trigger)
     {
       snprintf(internal_proname, sizeof(internal_proname), "__PLTcl_proc_%u_evttrigger", fn_oid);
@@ -1445,15 +1445,15 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
       snprintf(internal_proname, sizeof(internal_proname), "__PLTcl_proc_%u", fn_oid);
     }
 
-    /************************************************************
-     * Allocate a context that will hold all PG data for the procedure.
-     ************************************************************/
+                                                                  
+                                                                        
+                                                                  
     proc_cxt = AllocSetContextCreate(TopMemoryContext, "PL/Tcl function", ALLOCSET_SMALL_SIZES);
 
-    /************************************************************
-     * Allocate and fill a new procedure description block.
-     * struct prodesc and subsidiary data must all live in proc_cxt.
-     ************************************************************/
+                                                                  
+                                                            
+                                                                     
+                                                                  
     oldcontext = MemoryContextSwitchTo(proc_cxt);
     prodesc = (pltcl_proc_desc *)palloc0(sizeof(pltcl_proc_desc));
     prodesc->user_proname = pstrdup(NameStr(procStruct->proname));
@@ -1468,21 +1468,21 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
     prodesc->arg_is_rowtype = (bool *)palloc0(prodesc->nargs * sizeof(bool));
     MemoryContextSwitchTo(oldcontext);
 
-    /* Remember if function is STABLE/IMMUTABLE */
+                                                  
     prodesc->fn_readonly = (procStruct->provolatile != PROVOLATILE_VOLATILE);
-    /* And whether it is trusted */
+                                   
     prodesc->lanpltrusted = pltrusted;
 
-    /************************************************************
-     * Identify the interpreter to use for the function
-     ************************************************************/
+                                                                  
+                                                        
+                                                                  
     prodesc->interp_desc = pltcl_fetch_interp(procStruct->prolang, prodesc->lanpltrusted);
     interp = prodesc->interp_desc->interp;
 
-    /************************************************************
-     * Get the required information for input conversion of the
-     * return value.
-     ************************************************************/
+                                                                  
+                                                                
+                     
+                                                                  
     if (!is_trigger && !is_event_trigger)
     {
       Oid rettype = procStruct->prorettype;
@@ -1494,11 +1494,11 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
       }
       typeStruct = (Form_pg_type)GETSTRUCT(typeTup);
 
-      /* Disallow pseudotype result, except VOID and RECORD */
+                                                              
       if (typeStruct->typtype == TYPTYPE_PSEUDO)
       {
         if (rettype == VOIDOID || rettype == RECORDOID)
-          /* okay */;
+                    ;
         else if (rettype == TRIGGEROID || rettype == EVTTRIGGEROID)
         {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("trigger functions can only be called as triggers")));
@@ -1521,10 +1521,10 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
       ReleaseSysCache(typeTup);
     }
 
-    /************************************************************
-     * Get the required information for output conversion
-     * of all procedure arguments, and set up argument naming info.
-     ************************************************************/
+                                                                  
+                                                          
+                                                                    
+                                                                  
     if (!is_trigger && !is_event_trigger)
     {
       proc_internal_args[0] = '\0';
@@ -1539,7 +1539,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
         }
         typeStruct = (Form_pg_type)GETSTRUCT(typeTup);
 
-        /* Disallow pseudotype argument, except RECORD */
+                                                         
         if (typeStruct->typtype == TYPTYPE_PSEUDO && argtype != RECORDOID)
         {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/Tcl functions cannot accept type %s", format_type_be(argtype))));
@@ -1568,32 +1568,32 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
     }
     else if (is_trigger)
     {
-      /* trigger procedure has fixed args */
+                                            
       strcpy(proc_internal_args, "TG_name TG_relid TG_table_name TG_table_schema TG_relatts TG_when TG_level TG_op __PLTcl_Tup_NEW __PLTcl_Tup_OLD args");
     }
     else if (is_event_trigger)
     {
-      /* event trigger procedure has fixed args */
+                                                  
       strcpy(proc_internal_args, "TG_event TG_tag");
     }
 
-    /************************************************************
-     * Create the tcl command to define the internal
-     * procedure
-     *
-     * Leave this code as DString - performance is not critical here,
-     * and we don't want to duplicate the knowledge of the Tcl quoting
-     * rules that's embedded in Tcl_DStringAppendElement.
-     ************************************************************/
+                                                                  
+                                                     
+                 
+       
+                                                                      
+                                                                       
+                                                          
+                                                                  
     Tcl_DStringAppendElement(&proc_internal_def, "proc");
     Tcl_DStringAppendElement(&proc_internal_def, internal_proname);
     Tcl_DStringAppendElement(&proc_internal_def, proc_internal_args);
 
-    /************************************************************
-     * prefix procedure body with
-     * upvar #0 <internal_procname> GD
-     * and with appropriate setting of arguments
-     ************************************************************/
+                                                                  
+                                  
+                                       
+                                                 
+                                                                  
     Tcl_DStringAppend(&proc_internal_body, "upvar #0 ", -1);
     Tcl_DStringAppend(&proc_internal_body, internal_proname, -1);
     Tcl_DStringAppend(&proc_internal_body, " GD\n", -1);
@@ -1613,7 +1613,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
     }
     else if (is_event_trigger)
     {
-      /* no argument support for event triggers */
+                                                  
     }
     else
     {
@@ -1627,9 +1627,9 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
       }
     }
 
-    /************************************************************
-     * Add user's function definition to proc body
-     ************************************************************/
+                                                                  
+                                                   
+                                                                  
     prosrcdatum = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_prosrc, &isnull);
     if (isnull)
     {
@@ -1642,9 +1642,9 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
     pfree(proc_source);
     Tcl_DStringAppendElement(&proc_internal_def, Tcl_DStringValue(&proc_internal_body));
 
-    /************************************************************
-     * Create the procedure in the interpreter
-     ************************************************************/
+                                                                  
+                                               
+                                                                  
     tcl_rc = Tcl_EvalEx(interp, Tcl_DStringValue(&proc_internal_def), Tcl_DStringLength(&proc_internal_def), TCL_EVAL_GLOBAL);
     if (tcl_rc != TCL_OK)
     {
@@ -1653,10 +1653,10 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
   }
   PG_CATCH();
   {
-    /*
-     * If we failed anywhere above, clean up whatever got allocated.  It
-     * should all be in the proc_cxt, except for the DStrings.
-     */
+       
+                                                                         
+                                                               
+       
     if (proc_cxt)
     {
       MemoryContextDelete(proc_cxt);
@@ -1667,16 +1667,16 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
   }
   PG_END_TRY();
 
-  /*
-   * Install the new proc description block in the hashtable, incrementing
-   * its refcount (the hashtable link counts as a reference).  Then, if
-   * there was a previous definition of the function, decrement that one's
-   * refcount, and delete it if no longer referenced.  The order of
-   * operations here is important: if something goes wrong during the
-   * MemoryContextDelete, leaking some memory for the old definition is OK,
-   * but we don't want to corrupt the live hashtable entry.  (Likewise,
-   * freeing the DStrings is pretty low priority if that happens.)
-   */
+     
+                                                                           
+                                                                        
+                                                                           
+                                                                    
+                                                                      
+                                                                            
+                                                                        
+                                                                   
+     
   old_prodesc = proc_ptr->proc_ptr;
 
   proc_ptr->proc_ptr = prodesc;
@@ -1699,9 +1699,9 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool is_event_trigger, bool plt
   return prodesc;
 }
 
-/**********************************************************************
- * pltcl_elog()		- elog() support for PLTcl
- **********************************************************************/
+                                                                        
+                                            
+                                                                        
 static int
 pltcl_elog(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -1728,24 +1728,24 @@ pltcl_elog(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]
 
   if (level == ERROR)
   {
-    /*
-     * We just pass the error back to Tcl.  If it's not caught, it'll
-     * eventually get converted to a PG error when we reach the call
-     * handler.
-     */
+       
+                                                                      
+                                                                     
+                
+       
     Tcl_SetObjResult(interp, objv[2]);
     return TCL_ERROR;
   }
 
-  /*
-   * For non-error messages, just pass 'em to ereport().  We do not expect
-   * that this will fail, but just on the off chance it does, report the
-   * error back to Tcl.  Note we are assuming that ereport() can't have any
-   * internal failures that are so bad as to require a transaction abort.
-   *
-   * This path is also used for FATAL errors, which aren't going to come
-   * back to us at all.
-   */
+     
+                                                                           
+                                                                         
+                                                                            
+                                                                          
+     
+                                                                         
+                        
+     
   oldcontext = CurrentMemoryContext;
   PG_TRY();
   {
@@ -1757,12 +1757,12 @@ pltcl_elog(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]
   {
     ErrorData *edata;
 
-    /* Must reset elog.c's state */
+                                   
     MemoryContextSwitchTo(oldcontext);
     edata = CopyErrorData();
     FlushErrorState();
 
-    /* Pass the error data to Tcl */
+                                    
     pltcl_construct_errorCode(interp, edata);
     UTF_BEGIN;
     Tcl_SetObjResult(interp, Tcl_NewStringObj(UTF_E2U(edata->message), -1));
@@ -1776,10 +1776,10 @@ pltcl_elog(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_construct_errorCode()		- construct a Tcl errorCode
- *		list with detailed information from the PostgreSQL server
- **********************************************************************/
+                                                                        
+                                                            
+                                                              
+                                                                        
 static void
 pltcl_construct_errorCode(Tcl_Interp *interp, ErrorData *edata)
 {
@@ -1851,7 +1851,7 @@ pltcl_construct_errorCode(Tcl_Interp *interp, ErrorData *edata)
     Tcl_ListObjAppendElement(interp, obj, Tcl_NewStringObj(UTF_E2U(edata->constraint_name), -1));
     UTF_END;
   }
-  /* cursorpos is never interesting here; report internal query/pos */
+                                                                      
   if (edata->internalquery)
   {
     Tcl_ListObjAppendElement(interp, obj, Tcl_NewStringObj("statement", -1));
@@ -1887,9 +1887,9 @@ pltcl_construct_errorCode(Tcl_Interp *interp, ErrorData *edata)
   Tcl_SetObjErrorCode(interp, obj);
 }
 
-/**********************************************************************
- * pltcl_get_condition_name()	- find name for SQLSTATE
- **********************************************************************/
+                                                                        
+                                                       
+                                                                        
 static const char *
 pltcl_get_condition_name(int sqlstate)
 {
@@ -1905,10 +1905,10 @@ pltcl_get_condition_name(int sqlstate)
   return "unrecognized_sqlstate";
 }
 
-/**********************************************************************
- * pltcl_quote()	- quote literal strings that are to
- *			  be used in SPI_execute query strings
- **********************************************************************/
+                                                                        
+                                                     
+                                            
+                                                                        
 static int
 pltcl_quote(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -1917,26 +1917,26 @@ pltcl_quote(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[
   char *cp2;
   int length;
 
-  /************************************************************
-   * Check call syntax
-   ************************************************************/
+                                                                
+                       
+                                                                
   if (objc != 2)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "string");
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Allocate space for the maximum the string can
-   * grow to and initialize pointers
-   ************************************************************/
+                                                                
+                                                   
+                                     
+                                                                
   cp1 = Tcl_GetStringFromObj(objv[1], &length);
   tmp = palloc(length * 2 + 1);
   cp2 = tmp;
 
-  /************************************************************
-   * Walk through string and double every quote and backslash
-   ************************************************************/
+                                                                
+                                                              
+                                                                
   while (*cp1)
   {
     if (*cp1 == '\'')
@@ -1953,53 +1953,53 @@ pltcl_quote(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[
     *cp2++ = *cp1++;
   }
 
-  /************************************************************
-   * Terminate the string and set it as result
-   ************************************************************/
+                                                                
+                                               
+                                                                
   *cp2 = '\0';
   Tcl_SetObjResult(interp, Tcl_NewStringObj(tmp, -1));
   pfree(tmp);
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_argisnull()	- determine if a specific argument is NULL
- **********************************************************************/
+                                                                        
+                                                                
+                                                                        
 static int
 pltcl_argisnull(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
   int argno;
   FunctionCallInfo fcinfo = pltcl_current_call_state->fcinfo;
 
-  /************************************************************
-   * Check call syntax
-   ************************************************************/
+                                                                
+                       
+                                                                
   if (objc != 2)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "argno");
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Check that we're called as a normal function
-   ************************************************************/
+                                                                
+                                                  
+                                                                
   if (fcinfo == NULL)
   {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("argisnull cannot be used in triggers", -1));
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Get the argument number
-   ************************************************************/
+                                                                
+                             
+                                                                
   if (Tcl_GetIntFromObj(interp, objv[1], &argno) != TCL_OK)
   {
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Check that the argno is valid
-   ************************************************************/
+                                                                
+                                   
+                                                                
   argno--;
   if (argno < 0 || argno >= fcinfo->nargs)
   {
@@ -2007,51 +2007,51 @@ pltcl_argisnull(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const o
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Get the requested NULL state
-   ************************************************************/
+                                                                
+                                  
+                                                                
   Tcl_SetObjResult(interp, Tcl_NewBooleanObj(PG_ARGISNULL(argno)));
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_returnnull()	- Cause a NULL return from the current function
- **********************************************************************/
+                                                                        
+                                                                      
+                                                                        
 static int
 pltcl_returnnull(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
   FunctionCallInfo fcinfo = pltcl_current_call_state->fcinfo;
 
-  /************************************************************
-   * Check call syntax
-   ************************************************************/
+                                                                
+                       
+                                                                
   if (objc != 1)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "");
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Check that we're called as a normal function
-   ************************************************************/
+                                                                
+                                                  
+                                                                
   if (fcinfo == NULL)
   {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("return_null cannot be used in triggers", -1));
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Set the NULL return flag and cause Tcl to return from the
-   * procedure.
-   ************************************************************/
+                                                                
+                                                               
+                
+                                                                
   fcinfo->isnull = true;
 
   return TCL_RETURN;
 }
 
-/**********************************************************************
- * pltcl_returnnext()	- Add a row to the result tuplestore in a SRF.
- **********************************************************************/
+                                                                        
+                                                                     
+                                                                        
 static int
 pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2062,9 +2062,9 @@ pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const 
   ResourceOwner oldowner = CurrentResourceOwner;
   volatile int result = TCL_OK;
 
-  /*
-   * Check that we're called as a set-returning function
-   */
+     
+                                                         
+     
   if (fcinfo == NULL)
   {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("return_next cannot be used in triggers", -1));
@@ -2077,27 +2077,27 @@ pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const 
     return TCL_ERROR;
   }
 
-  /*
-   * Check call syntax
-   */
+     
+                       
+     
   if (objc != 2)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "result");
     return TCL_ERROR;
   }
 
-  /*
-   * The rest might throw elog(ERROR), so must run in a subtransaction.
-   *
-   * A small advantage of using a subtransaction is that it provides a
-   * short-lived memory context for free, so we needn't worry about leaking
-   * memory here.  To use that context, call BeginInternalSubTransaction
-   * directly instead of going through pltcl_subtrans_begin.
-   */
+     
+                                                                        
+     
+                                                                       
+                                                                            
+                                                                         
+                                                             
+     
   BeginInternalSubTransaction(NULL);
   PG_TRY();
   {
-    /* Set up tuple store if first output row */
+                                                
     if (call_state->tuple_store == NULL)
     {
       pltcl_init_tuple_store(call_state);
@@ -2108,7 +2108,7 @@ pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const 
       Tcl_Obj **rowObjv;
       int rowObjc;
 
-      /* result should be a list, so break it down */
+                                                     
       if (Tcl_ListObjGetElements(interp, objv[1], &rowObjc, &rowObjv) == TCL_ERROR)
       {
         result = TCL_ERROR;
@@ -2126,7 +2126,7 @@ pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const 
       Datum retval;
       bool isNull = false;
 
-      /* for paranoia's sake, check that tupdesc has exactly one column */
+                                                                          
       if (call_state->ret_tupdesc->natts != 1)
       {
         elog(ERROR, "wrong result type supplied in return_next");
@@ -2148,43 +2148,43 @@ pltcl_returnnext(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const 
   return result;
 }
 
-/*----------
- * Support for running SPI operations inside subtransactions
- *
- * Intended usage pattern is:
- *
- *	MemoryContext oldcontext = CurrentMemoryContext;
- *	ResourceOwner oldowner = CurrentResourceOwner;
- *
- *	...
- *	pltcl_subtrans_begin(oldcontext, oldowner);
- *	PG_TRY();
- *	{
- *		do something risky;
- *		pltcl_subtrans_commit(oldcontext, oldowner);
- *	}
- *	PG_CATCH();
- *	{
- *		pltcl_subtrans_abort(interp, oldcontext, oldowner);
- *		return TCL_ERROR;
- *	}
- *	PG_END_TRY();
- *	return TCL_OK;
- *----------
- */
+             
+                                                             
+   
+                              
+   
+                                                    
+                                                  
+   
+       
+                                               
+             
+     
+                        
+                                                 
+     
+               
+     
+                                                        
+                      
+     
+                 
+                  
+             
+   
 static void
 pltcl_subtrans_begin(MemoryContext oldcontext, ResourceOwner oldowner)
 {
   BeginInternalSubTransaction(NULL);
 
-  /* Want to run inside function's memory context */
+                                                    
   MemoryContextSwitchTo(oldcontext);
 }
 
 static void
 pltcl_subtrans_commit(MemoryContext oldcontext, ResourceOwner oldowner)
 {
-  /* Commit the inner transaction, return to outer xact context */
+                                                                  
   ReleaseCurrentSubTransaction();
   MemoryContextSwitchTo(oldcontext);
   CurrentResourceOwner = oldowner;
@@ -2195,17 +2195,17 @@ pltcl_subtrans_abort(Tcl_Interp *interp, MemoryContext oldcontext, ResourceOwner
 {
   ErrorData *edata;
 
-  /* Save error info */
+                       
   MemoryContextSwitchTo(oldcontext);
   edata = CopyErrorData();
   FlushErrorState();
 
-  /* Abort the inner transaction */
+                                   
   RollbackAndReleaseCurrentSubTransaction();
   MemoryContextSwitchTo(oldcontext);
   CurrentResourceOwner = oldowner;
 
-  /* Pass the error data to Tcl */
+                                  
   pltcl_construct_errorCode(interp, edata);
   UTF_BEGIN;
   Tcl_SetObjResult(interp, Tcl_NewStringObj(UTF_E2U(edata->message), -1));
@@ -2213,10 +2213,10 @@ pltcl_subtrans_abort(Tcl_Interp *interp, MemoryContext oldcontext, ResourceOwner
   FreeErrorData(edata);
 }
 
-/**********************************************************************
- * pltcl_SPI_execute()		- The builtin SPI_execute command
- *				  for the Tcl interpreter
- **********************************************************************/
+                                                                        
+                                                          
+                                
+                                                                        
 static int
 pltcl_SPI_execute(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2239,9 +2239,9 @@ pltcl_SPI_execute(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
 
   static const char *options[] = {"-array", "-count", (const char *)NULL};
 
-  /************************************************************
-   * Check the call syntax and get the options
-   ************************************************************/
+                                                                
+                                               
+                                                                
   if (objc < 2)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "?-count n? ?-array name? query ?loop body?");
@@ -2289,10 +2289,10 @@ pltcl_SPI_execute(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
     loop_body = objv[query_idx + 1];
   }
 
-  /************************************************************
-   * Execute the query inside a sub-transaction, so we can cope with
-   * errors sanely
-   ************************************************************/
+                                                                
+                                                                     
+                   
+                                                                
 
   pltcl_subtrans_begin(oldcontext, oldowner);
 
@@ -2316,11 +2316,11 @@ pltcl_SPI_execute(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
   return my_rc;
 }
 
-/*
- * Process the result from SPI_execute or SPI_execute_plan
- *
- * Shared code between pltcl_SPI_execute and pltcl_SPI_execute_plan
- */
+   
+                                                           
+   
+                                                                    
+   
 static int
 pltcl_process_SPI_result(Tcl_Interp *interp, const char *arrayname, Tcl_Obj *loop_body, int spi_rc, SPITupleTable *tuptable, uint64 ntuples)
 {
@@ -2345,26 +2345,26 @@ pltcl_process_SPI_result(Tcl_Interp *interp, const char *arrayname, Tcl_Obj *loo
       Tcl_SetObjResult(interp, Tcl_NewIntObj(0));
       break;
     }
-    /* fall through for utility returning tuples */
-    /* FALLTHROUGH */
+                                                   
+                     
 
   case SPI_OK_SELECT:
   case SPI_OK_INSERT_RETURNING:
   case SPI_OK_DELETE_RETURNING:
   case SPI_OK_UPDATE_RETURNING:
 
-    /*
-     * Process the tuples we got
-     */
+       
+                                 
+       
     tuples = tuptable->vals;
     tupdesc = tuptable->tupdesc;
 
     if (loop_body == NULL)
     {
-      /*
-       * If there is no loop body given, just set the variables from
-       * the first tuple (if any)
-       */
+         
+                                                                     
+                                  
+         
       if (ntuples > 0)
       {
         pltcl_set_tuple_values(interp, arrayname, 0, tuples[0], tupdesc);
@@ -2372,10 +2372,10 @@ pltcl_process_SPI_result(Tcl_Interp *interp, const char *arrayname, Tcl_Obj *loo
     }
     else
     {
-      /*
-       * There is a loop body - process all tuples and evaluate the
-       * body on each
-       */
+         
+                                                                    
+                      
+         
       uint64 i;
 
       for (i = 0; i < ntuples; i++)
@@ -2423,14 +2423,14 @@ pltcl_process_SPI_result(Tcl_Interp *interp, const char *arrayname, Tcl_Obj *loo
   return my_rc;
 }
 
-/**********************************************************************
- * pltcl_SPI_prepare()		- Builtin support for prepared plans
- *				  The Tcl command SPI_prepare
- *				  always saves the plan using
- *				  SPI_keepplan and returns a key for
- *				  access. There is no chance to prepare
- *				  and not save the plan currently.
- **********************************************************************/
+                                                                        
+                                                             
+                                    
+                                    
+                                           
+                                              
+                                         
+                                                                        
 static int
 pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2445,30 +2445,30 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
   MemoryContext oldcontext = CurrentMemoryContext;
   ResourceOwner oldowner = CurrentResourceOwner;
 
-  /************************************************************
-   * Check the call syntax
-   ************************************************************/
+                                                                
+                           
+                                                                
   if (objc != 3)
   {
     Tcl_WrongNumArgs(interp, 1, objv, "query argtypes");
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Split the argument type list
-   ************************************************************/
+                                                                
+                                  
+                                                                
   if (Tcl_ListObjGetElements(interp, objv[2], &nargs, &argsObj) != TCL_OK)
   {
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Allocate the new querydesc structure
-   *
-   * struct qdesc and subsidiary data all live in plan_cxt.  Note that if the
-   * function is recompiled for whatever reason, permanent memory leaks
-   * occur.  FIXME someday.
-   ************************************************************/
+                                                                
+                                          
+     
+                                                                              
+                                                                        
+                            
+                                                                
   plan_cxt = AllocSetContextCreate(TopMemoryContext, "PL/Tcl spi_prepare query", ALLOCSET_SMALL_SIZES);
   MemoryContextSwitchTo(plan_cxt);
   qdesc = (pltcl_query_desc *)palloc0(sizeof(pltcl_query_desc));
@@ -2479,20 +2479,20 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
   qdesc->argtypioparams = (Oid *)palloc(nargs * sizeof(Oid));
   MemoryContextSwitchTo(oldcontext);
 
-  /************************************************************
-   * Execute the prepare inside a sub-transaction, so we can cope with
-   * errors sanely
-   ************************************************************/
+                                                                
+                                                                       
+                   
+                                                                
 
   pltcl_subtrans_begin(oldcontext, oldowner);
 
   PG_TRY();
   {
-    /************************************************************
-     * Resolve argument type names and then look them up by oid
-     * in the system cache, and remember the required information
-     * for input conversion.
-     ************************************************************/
+                                                                  
+                                                                
+                                                                  
+                             
+                                                                  
     for (i = 0; i < nargs; i++)
     {
       Oid typId, typInput, typIOParam;
@@ -2507,9 +2507,9 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
       qdesc->argtypioparams[i] = typIOParam;
     }
 
-    /************************************************************
-     * Prepare the plan and check for errors
-     ************************************************************/
+                                                                  
+                                             
+                                                                  
     UTF_BEGIN;
     qdesc->plan = SPI_prepare(UTF_U2E(Tcl_GetString(objv[1])), nargs, qdesc->argtypes);
     UTF_END;
@@ -2519,10 +2519,10 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
       elog(ERROR, "SPI_prepare() failed");
     }
 
-    /************************************************************
-     * Save the plan into permanent memory (right now it's in the
-     * SPI procCxt, which will go away at function end).
-     ************************************************************/
+                                                                  
+                                                                  
+                                                         
+                                                                  
     if (SPI_keepplan(qdesc->plan))
     {
       elog(ERROR, "SPI_keepplan() failed");
@@ -2540,23 +2540,23 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const
   }
   PG_END_TRY();
 
-  /************************************************************
-   * Insert a hashtable entry for the plan and return
-   * the key to the caller
-   ************************************************************/
+                                                                
+                                                      
+                           
+                                                                
   query_hash = &pltcl_current_call_state->prodesc->interp_desc->query_hash;
 
   hashent = Tcl_CreateHashEntry(query_hash, qdesc->qname, &hashnew);
   Tcl_SetHashValue(hashent, (ClientData)qdesc);
 
-  /* qname is ASCII, so no need for encoding conversion */
+                                                          
   Tcl_SetObjResult(interp, Tcl_NewStringObj(qdesc->qname, -1));
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_SPI_execute_plan()		- Execute a prepared plan
- **********************************************************************/
+                                                                        
+                                                       
+                                                                        
 static int
 pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2587,9 +2587,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
 
   static const char *options[] = {"-array", "-count", "-nulls", (const char *)NULL};
 
-  /************************************************************
-   * Get the options and check syntax
-   ************************************************************/
+                                                                
+                                      
+                                                                
   i = 1;
   while (i < objc)
   {
@@ -2623,9 +2623,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
     }
   }
 
-  /************************************************************
-   * Get the prepared plan descriptor by its key
-   ************************************************************/
+                                                                
+                                                 
+                                                                
   if (i >= objc)
   {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("missing argument to -count or -array", -1));
@@ -2643,9 +2643,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
   qdesc = (pltcl_query_desc *)Tcl_GetHashValue(hashent);
   i++;
 
-  /************************************************************
-   * If a nulls string is given, check for correct length
-   ************************************************************/
+                                                                
+                                                          
+                                                                
   if (nulls != NULL)
   {
     if (strlen(nulls) != qdesc->nargs)
@@ -2655,10 +2655,10 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
     }
   }
 
-  /************************************************************
-   * If there was an argtype list on preparation, we need
-   * an argument value list now
-   ************************************************************/
+                                                                
+                                                          
+                                
+                                                                
   if (qdesc->nargs > 0)
   {
     if (i >= objc)
@@ -2667,17 +2667,17 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
       return TCL_ERROR;
     }
 
-    /************************************************************
-     * Split the argument values
-     ************************************************************/
+                                                                  
+                                 
+                                                                  
     if (Tcl_ListObjGetElements(interp, objv[i++], &callObjc, &callObjv) != TCL_OK)
     {
       return TCL_ERROR;
     }
 
-    /************************************************************
-     * Check that the number of arguments matches
-     ************************************************************/
+                                                                  
+                                                  
+                                                                  
     if (callObjc != qdesc->nargs)
     {
       Tcl_SetObjResult(interp, Tcl_NewStringObj("argument list length doesn't match number of arguments for query", -1));
@@ -2689,9 +2689,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
     callObjc = 0;
   }
 
-  /************************************************************
-   * Get loop body if present
-   ************************************************************/
+                                                                
+                              
+                                                                
   if (i < objc)
   {
     loop_body = objv[i++];
@@ -2705,19 +2705,19 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
     return TCL_ERROR;
   }
 
-  /************************************************************
-   * Execute the plan inside a sub-transaction, so we can cope with
-   * errors sanely
-   ************************************************************/
+                                                                
+                                                                    
+                   
+                                                                
 
   pltcl_subtrans_begin(oldcontext, oldowner);
 
   PG_TRY();
   {
-    /************************************************************
-     * Setup the value array for SPI_execute_plan() using
-     * the type specific input functions
-     ************************************************************/
+                                                                  
+                                                          
+                                         
+                                                                  
     argvalues = (Datum *)palloc(callObjc * sizeof(Datum));
 
     for (j = 0; j < callObjc; j++)
@@ -2734,9 +2734,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
       }
     }
 
-    /************************************************************
-     * Execute the plan
-     ************************************************************/
+                                                                  
+                        
+                                                                  
     spi_rc = SPI_execute_plan(qdesc->plan, argvalues, nulls, pltcl_current_call_state->prodesc->fn_readonly, count);
 
     my_rc = pltcl_process_SPI_result(interp, arrayname, loop_body, spi_rc, SPI_tuptable, SPI_processed);
@@ -2753,12 +2753,12 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *
   return my_rc;
 }
 
-/**********************************************************************
- * pltcl_subtransaction()	- Execute some Tcl code in a subtransaction
- *
- * The subtransaction is aborted if the Tcl code fragment returns TCL_ERROR,
- * otherwise it's subcommitted.
- **********************************************************************/
+                                                                        
+                                                                      
+   
+                                                                             
+                                
+                                                                        
 static int
 pltcl_subtransaction(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2772,11 +2772,11 @@ pltcl_subtransaction(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *co
     return TCL_ERROR;
   }
 
-  /*
-   * Note: we don't use pltcl_subtrans_begin and friends here because we
-   * don't want the error handling in pltcl_subtrans_abort.  But otherwise
-   * the processing should be about the same as in those functions.
-   */
+     
+                                                                         
+                                                                           
+                                                                    
+     
   BeginInternalSubTransaction(NULL);
   MemoryContextSwitchTo(oldcontext);
 
@@ -2784,27 +2784,27 @@ pltcl_subtransaction(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *co
 
   if (retcode == TCL_ERROR)
   {
-    /* Rollback the subtransaction */
+                                     
     RollbackAndReleaseCurrentSubTransaction();
   }
   else
   {
-    /* Commit the subtransaction */
+                                   
     ReleaseCurrentSubTransaction();
   }
 
-  /* In either case, restore previous memory context and resource owner */
+                                                                          
   MemoryContextSwitchTo(oldcontext);
   CurrentResourceOwner = oldowner;
 
   return retcode;
 }
 
-/**********************************************************************
- * pltcl_commit()
- *
- * Commit the transaction and start a new one.
- **********************************************************************/
+                                                                        
+                  
+   
+                                               
+                                                                        
 static int
 pltcl_commit(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2818,12 +2818,12 @@ pltcl_commit(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv
   {
     ErrorData *edata;
 
-    /* Save error info */
+                         
     MemoryContextSwitchTo(oldcontext);
     edata = CopyErrorData();
     FlushErrorState();
 
-    /* Pass the error data to Tcl */
+                                    
     pltcl_construct_errorCode(interp, edata);
     UTF_BEGIN;
     Tcl_SetObjResult(interp, Tcl_NewStringObj(UTF_E2U(edata->message), -1));
@@ -2837,11 +2837,11 @@ pltcl_commit(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_rollback()
- *
- * Abort the transaction and start a new one.
- **********************************************************************/
+                                                                        
+                    
+   
+                                              
+                                                                        
 static int
 pltcl_rollback(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
@@ -2855,12 +2855,12 @@ pltcl_rollback(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const ob
   {
     ErrorData *edata;
 
-    /* Save error info */
+                         
     MemoryContextSwitchTo(oldcontext);
     edata = CopyErrorData();
     FlushErrorState();
 
-    /* Pass the error data to Tcl */
+                                    
     pltcl_construct_errorCode(interp, edata);
     UTF_BEGIN;
     Tcl_SetObjResult(interp, Tcl_NewStringObj(UTF_E2U(edata->message), -1));
@@ -2874,12 +2874,12 @@ pltcl_rollback(ClientData cdata, Tcl_Interp *interp, int objc, Tcl_Obj *const ob
   return TCL_OK;
 }
 
-/**********************************************************************
- * pltcl_set_tuple_values() - Set variables for all attributes
- *				  of a given tuple
- *
- * Note: arrayname is presumed to be UTF8; it usually came from Tcl
- **********************************************************************/
+                                                                        
+                                                               
+                         
+   
+                                                                    
+                                                                        
 static void
 pltcl_set_tuple_values(Tcl_Interp *interp, const char *arrayname, uint64 tupno, HeapTuple tuple, TupleDesc tupdesc)
 {
@@ -2894,9 +2894,9 @@ pltcl_set_tuple_values(Tcl_Interp *interp, const char *arrayname, uint64 tupno, 
   const char **nameptr;
   const char *nullname = NULL;
 
-  /************************************************************
-   * Prepare pointers for Tcl_SetVar2() below
-   ************************************************************/
+                                                                
+                                              
+                                                                
   if (arrayname == NULL)
   {
     arrptr = &attname;
@@ -2907,11 +2907,11 @@ pltcl_set_tuple_values(Tcl_Interp *interp, const char *arrayname, uint64 tupno, 
     arrptr = &arrayname;
     nameptr = &attname;
 
-    /*
-     * When outputting to an array, fill the ".tupno" element with the
-     * current tuple number.  This will be overridden below if ".tupno" is
-     * in use as an actual field name in the rowtype.
-     */
+       
+                                                                       
+                                                                           
+                                                      
+       
     Tcl_SetVar2Ex(interp, arrayname, ".tupno", Tcl_NewWideIntObj(tupno), 0);
   }
 
@@ -2919,32 +2919,32 @@ pltcl_set_tuple_values(Tcl_Interp *interp, const char *arrayname, uint64 tupno, 
   {
     Form_pg_attribute att = TupleDescAttr(tupdesc, i);
 
-    /* ignore dropped attributes */
+                                   
     if (att->attisdropped)
     {
       continue;
     }
 
-    /************************************************************
-     * Get the attribute name
-     ************************************************************/
+                                                                  
+                              
+                                                                  
     UTF_BEGIN;
     attname = pstrdup(UTF_E2U(NameStr(att->attname)));
     UTF_END;
 
-    /************************************************************
-     * Get the attributes value
-     ************************************************************/
+                                                                  
+                                
+                                                                  
     attr = heap_getattr(tuple, i + 1, tupdesc, &isnull);
 
-    /************************************************************
-     * If there is a value, set the variable
-     * If not, unset it
-     *
-     * Hmmm - Null attributes will cause functions to
-     *		  crash if they don't expect them - need something
-     *		  smarter here.
-     ************************************************************/
+                                                                  
+                                             
+                        
+       
+                                                      
+                                                           
+                        
+                                                                  
     if (!isnull)
     {
       getTypeOutputInfo(att->atttypid, &typoutput, &typisvarlena);
@@ -2963,10 +2963,10 @@ pltcl_set_tuple_values(Tcl_Interp *interp, const char *arrayname, uint64 tupno, 
   }
 }
 
-/**********************************************************************
- * pltcl_build_tuple_argument() - Build a list object usable for 'array set'
- *				  from all attributes of a given tuple
- **********************************************************************/
+                                                                        
+                                                                             
+                                             
+                                                                        
 static Tcl_Obj *
 pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc, bool include_generated)
 {
@@ -2983,7 +2983,7 @@ pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc, bool include_gene
   {
     Form_pg_attribute att = TupleDescAttr(tupdesc, i);
 
-    /* ignore dropped attributes */
+                                   
     if (att->attisdropped)
     {
       continue;
@@ -2991,31 +2991,31 @@ pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc, bool include_gene
 
     if (att->attgenerated)
     {
-      /* don't include unless requested */
+                                          
       if (!include_generated)
       {
         continue;
       }
     }
 
-    /************************************************************
-     * Get the attribute name
-     ************************************************************/
+                                                                  
+                              
+                                                                  
     attname = NameStr(att->attname);
 
-    /************************************************************
-     * Get the attributes value
-     ************************************************************/
+                                                                  
+                                
+                                                                  
     attr = heap_getattr(tuple, i + 1, tupdesc, &isnull);
 
-    /************************************************************
-     * If there is a value, append the attribute name and the
-     * value to the list
-     *
-     * Hmmm - Null attributes will cause functions to
-     *		  crash if they don't expect them - need something
-     *		  smarter here.
-     ************************************************************/
+                                                                  
+                                                              
+                         
+       
+                                                      
+                                                           
+                        
+                                                                  
     if (!isnull)
     {
       getTypeOutputInfo(att->atttypid, &typoutput, &typisvarlena);
@@ -3033,17 +3033,17 @@ pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc, bool include_gene
   return retobj;
 }
 
-/**********************************************************************
- * pltcl_build_tuple_result() - Build a tuple of function's result rowtype
- *				  from a Tcl list of column names and values
- *
- * In a trigger function, we build a tuple of the trigger table's rowtype.
- *
- * Note: this function leaks memory.  Even if we made it clean up its own
- * mess, there's no way to prevent the datatype input functions it calls
- * from leaking.  Run it in a short-lived context, unless we're about to
- * exit the procedure anyway.
- **********************************************************************/
+                                                                        
+                                                                           
+                                                   
+   
+                                                                           
+   
+                                                                          
+                                                                         
+                                                                         
+                              
+                                                                        
 static HeapTuple
 pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl_call_state *call_state)
 {
@@ -3066,7 +3066,7 @@ pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl
   else
   {
     elog(ERROR, "PL/Tcl function does not return a tuple");
-    tupdesc = NULL; /* keep compiler quiet */
+    tupdesc = NULL;                          
     attinmeta = NULL;
   }
 
@@ -3082,11 +3082,11 @@ pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl
     char *fieldName = utf_u2e(Tcl_GetString(kvObjv[i]));
     int attn = SPI_fnumber(tupdesc, fieldName);
 
-    /*
-     * We silently ignore ".tupno", if it's present but doesn't match any
-     * actual output column.  This allows direct use of a row returned by
-     * pltcl_set_tuple_values().
-     */
+       
+                                                                          
+                                                                          
+                                 
+       
     if (attn == SPI_ERROR_NOATTRIBUTE)
     {
       if (strcmp(fieldName, ".tupno") == 0)
@@ -3111,7 +3111,7 @@ pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl
 
   tuple = BuildTupleFromCStrings(attinmeta, values);
 
-  /* if result type is domain-over-composite, check domain constraints */
+                                                                         
   if (call_state->prodesc->fn_retisdomain)
   {
     domain_check(HeapTupleGetDatum(tuple), false, call_state->prodesc->result_typid, &call_state->prodesc->domain_info, call_state->prodesc->fn_cxt);
@@ -3120,9 +3120,9 @@ pltcl_build_tuple_result(Tcl_Interp *interp, Tcl_Obj **kvObjv, int kvObjc, pltcl
   return tuple;
 }
 
-/**********************************************************************
- * pltcl_init_tuple_store() - Initialize the result tuplestore for a SRF
- **********************************************************************/
+                                                                        
+                                                                         
+                                                                        
 static void
 pltcl_init_tuple_store(pltcl_call_state *call_state)
 {
@@ -3130,30 +3130,30 @@ pltcl_init_tuple_store(pltcl_call_state *call_state)
   MemoryContext oldcxt;
   ResourceOwner oldowner;
 
-  /* Should be in a SRF */
+                          
   Assert(rsi);
-  /* Should be first time through */
+                                    
   Assert(!call_state->tuple_store);
   Assert(!call_state->attinmeta);
 
-  /* We expect caller to provide an appropriate result tupdesc */
+                                                                 
   Assert(rsi->expectedDesc);
   call_state->ret_tupdesc = rsi->expectedDesc;
 
-  /*
-   * Switch to the right memory context and resource owner for storing the
-   * tuplestore. If we're within a subtransaction opened for an exception
-   * block, for example, we must still create the tuplestore in the resource
-   * owner that was active when this function was entered, and not in the
-   * subtransaction's resource owner.
-   */
+     
+                                                                           
+                                                                          
+                                                                             
+                                                                          
+                                      
+     
   oldcxt = MemoryContextSwitchTo(call_state->tuple_store_cxt);
   oldowner = CurrentResourceOwner;
   CurrentResourceOwner = call_state->tuple_store_owner;
 
   call_state->tuple_store = tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize_Random, false, work_mem);
 
-  /* Build attinmeta in this context, too */
+                                            
   call_state->attinmeta = TupleDescGetAttInMetadata(call_state->ret_tupdesc);
 
   CurrentResourceOwner = oldowner;

@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/preproc/output.c */
+                                          
 
 #include "postgres_fe.h"
 
@@ -28,9 +28,9 @@ output_simple_statement(char *stmt, int whenever_mode)
   free(stmt);
 }
 
-/*
- * store the whenever action here
- */
+   
+                                  
+   
 struct when when_error, when_nf, when_warn;
 
 static void
@@ -57,7 +57,7 @@ print_action(struct when *w)
     fprintf(base_yyout, "continue;");
     break;
   default:
-    fprintf(base_yyout, "{/* %d not implemented yet */}", w->code);
+    fprintf(base_yyout, "{                            }", w->code);
     break;
   }
 }
@@ -95,14 +95,14 @@ whenever_action(int mode)
 char *
 hashline_number(void)
 {
-  /* do not print line numbers if we are in debug mode */
+                                                         
   if (input_filename
 #ifdef YYDEBUG
       && !base_yydebug
 #endif
   )
   {
-    /* "* 2" here is for escaping '\' and '"' below */
+                                                      
     char *line = mm_alloc(strlen("\n#line %d \"%s\"\n") + sizeof(int) * CHAR_BIT * 10 / 3 + strlen(input_filename) * 2);
     char *src, *dest;
 
@@ -138,11 +138,11 @@ output_statement(char *stmt, int whenever_mode, enum ECPG_statement_type st)
     st = ECPGst_normal;
   }
 
-  /*
-   * In following cases, stmt is CSTRING or char_variable. They must be
-   * output directly. - prepared_name of EXECUTE without exprlist -
-   * execstring of EXECUTE IMMEDIATE
-   */
+     
+                                                                        
+                                                                    
+                                     
+     
   fprintf(base_yyout, "%s, ", ecpg_statement_type_name[st]);
   if (st == ECPGst_execute || st == ECPGst_exec_immediate)
   {
@@ -155,7 +155,7 @@ output_statement(char *stmt, int whenever_mode, enum ECPG_statement_type st)
     fputs("\", ", base_yyout);
   }
 
-  /* dump variables to C file */
+                                
   dump_variables(argsinsert, 1);
   fputs("ECPGt_EOIT, ", base_yyout);
   dump_variables(argsresult, 1);
@@ -219,16 +219,16 @@ output_escaped_str(char *str, bool quoted)
   int i = 0;
   int len = strlen(str);
 
-  if (quoted && str[0] == '"' && str[len - 1] == '"') /* do not escape quotes
-                                                       * at beginning and end
-                                                       * if quoted string */
+  if (quoted && str[0] == '"' && str[len - 1] == '"')                         
+                                                                              
+                                                                            
   {
     i = 1;
     len--;
     fputs("\"", base_yyout);
   }
 
-  /* output this char by char as we have to filter " and \n */
+                                                              
   for (; i < len; i++)
   {
     if (str[i] == '"')
@@ -243,19 +243,19 @@ output_escaped_str(char *str, bool quoted)
     {
       int j = i;
 
-      /*
-       * check whether this is a continuation line if it is, do not
-       * output anything because newlines are escaped anyway
-       */
+         
+                                                                    
+                                                             
+         
 
-      /* accept blanks after the '\' as some other compilers do too */
+                                                                      
       do
       {
         j++;
       } while (str[j] == ' ' || str[j] == '\t');
 
-      if ((str[j] != '\n') && (str[j] != '\r' || str[j + 1] != '\n')) /* not followed by a
-                                                                       * newline */
+      if ((str[j] != '\n') && (str[j] != '\r' || str[j + 1] != '\n'))                      
+                                                                                   
       {
         fputs("\\\\", base_yyout);
       }

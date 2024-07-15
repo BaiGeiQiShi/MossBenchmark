@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * pl_handler.c		- Handler for the PL/pgSQL
- *			  procedural language
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/pl/plpgsql/src/pl_handler.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                            
+                           
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -37,7 +37,7 @@ plpgsql_extra_errors_assign_hook(const char *newvalue, void *extra);
 
 PG_MODULE_MAGIC;
 
-/* Custom GUC variable */
+                         
 static const struct config_enum_entry variable_conflict_options[] = {{"error", PLPGSQL_RESOLVE_ERROR, false}, {"use_variable", PLPGSQL_RESOLVE_VARIABLE, false}, {"use_column", PLPGSQL_RESOLVE_COLUMN, false}, {NULL, 0, false}};
 
 int plpgsql_variable_conflict = PLPGSQL_RESOLVE_ERROR;
@@ -51,7 +51,7 @@ char *plpgsql_extra_errors_string = NULL;
 int plpgsql_extra_warnings;
 int plpgsql_extra_errors;
 
-/* Hook for plugins */
+                      
 PLpgSQL_plugin **plpgsql_plugin_ptr = NULL;
 
 static bool
@@ -73,13 +73,13 @@ plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
   }
   else
   {
-    /* Need a modifiable copy of string */
+                                          
     rawstring = pstrdup(*newvalue);
 
-    /* Parse string into list of identifiers */
+                                               
     if (!SplitIdentifierString(rawstring, ',', &elemlist))
     {
-      /* syntax error in list */
+                                
       GUC_check_errdetail("List syntax is invalid.");
       pfree(rawstring);
       list_free(elemlist);
@@ -145,15 +145,15 @@ plpgsql_extra_errors_assign_hook(const char *newvalue, void *extra)
   plpgsql_extra_errors = *((int *)extra);
 }
 
-/*
- * _PG_init()			- library load-time initialization
- *
- * DO NOT make this static nor change its name!
- */
+   
+                                                   
+   
+                                                
+   
 void
 _PG_init(void)
 {
-  /* Be sure we do initialization only once (should be redundant now) */
+                                                                        
   static bool inited = false;
 
   if (inited)
@@ -179,19 +179,19 @@ _PG_init(void)
   RegisterXactCallback(plpgsql_xact_cb, NULL);
   RegisterSubXactCallback(plpgsql_subxact_cb, NULL);
 
-  /* Set up a rendezvous point with optional instrumentation plugin */
+                                                                      
   plpgsql_plugin_ptr = (PLpgSQL_plugin **)find_rendezvous_variable("PLpgSQL_plugin");
 
   inited = true;
 }
 
-/* ----------
- * plpgsql_call_handler
- *
- * The PostgreSQL function manager and trigger manager
- * call this function for execution of PL/pgSQL procedures.
- * ----------
- */
+              
+                        
+   
+                                                       
+                                                            
+              
+   
 PG_FUNCTION_INFO_V1(plpgsql_call_handler);
 
 Datum
@@ -205,29 +205,29 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 
   nonatomic = fcinfo->context && IsA(fcinfo->context, CallContext) && !castNode(CallContext, fcinfo->context)->atomic;
 
-  /*
-   * Connect to SPI manager
-   */
+     
+                            
+     
   if ((rc = SPI_connect_ext(nonatomic ? SPI_OPT_NONATOMIC : 0)) != SPI_OK_CONNECT)
   {
     elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
   }
 
-  /* Find or compile the function */
+                                    
   func = plpgsql_compile(fcinfo, false);
 
-  /* Must save and restore prior value of cur_estate */
+                                                       
   save_cur_estate = func->cur_estate;
 
-  /* Mark the function as busy, so it can't be deleted from under us */
+                                                                       
   func->use_count++;
 
   PG_TRY();
   {
-    /*
-     * Determine if called as function or trigger and call appropriate
-     * subhandler
-     */
+       
+                                                                       
+                  
+       
     if (CALLED_AS_TRIGGER(fcinfo))
     {
       retval = PointerGetDatum(plpgsql_exec_trigger(func, (TriggerData *)fcinfo->context));
@@ -244,7 +244,7 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
   }
   PG_CATCH();
   {
-    /* Decrement use-count, restore cur_estate, and propagate error */
+                                                                      
     func->use_count--;
     func->cur_estate = save_cur_estate;
     PG_RE_THROW();
@@ -255,9 +255,9 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 
   func->cur_estate = save_cur_estate;
 
-  /*
-   * Disconnect from SPI manager
-   */
+     
+                                 
+     
   if ((rc = SPI_finish()) != SPI_OK_FINISH)
   {
     elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
@@ -266,12 +266,12 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
   return retval;
 }
 
-/* ----------
- * plpgsql_inline_handler
- *
- * Called by PostgreSQL to execute an anonymous code block
- * ----------
- */
+              
+                          
+   
+                                                           
+              
+   
 PG_FUNCTION_INFO_V1(plpgsql_inline_handler);
 
 Datum
@@ -285,92 +285,92 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
   Datum retval;
   int rc;
 
-  /*
-   * Connect to SPI manager
-   */
+     
+                            
+     
   if ((rc = SPI_connect_ext(codeblock->atomic ? 0 : SPI_OPT_NONATOMIC)) != SPI_OK_CONNECT)
   {
     elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
   }
 
-  /* Compile the anonymous code block */
+                                        
   func = plpgsql_compile_inline(codeblock->source_text);
 
-  /* Mark the function as busy, just pro forma */
+                                                 
   func->use_count++;
 
-  /*
-   * Set up a fake fcinfo with just enough info to satisfy
-   * plpgsql_exec_function().  In particular note that this sets things up
-   * with no arguments passed.
-   */
+     
+                                                           
+                                                                           
+                               
+     
   MemSet(fake_fcinfo, 0, SizeForFunctionCallInfo(0));
   MemSet(&flinfo, 0, sizeof(flinfo));
   fake_fcinfo->flinfo = &flinfo;
   flinfo.fn_oid = InvalidOid;
   flinfo.fn_mcxt = CurrentMemoryContext;
 
-  /*
-   * Create a private EState for simple-expression execution.  Notice that
-   * this is NOT tied to transaction-level resources; it must survive any
-   * COMMIT/ROLLBACK the DO block executes, since we will unconditionally
-   * try to clean it up below.  (Hence, be wary of adding anything that
-   * could fail between here and the PG_TRY block.)  See the comments for
-   * shared_simple_eval_estate.
-   */
+     
+                                                                           
+                                                                          
+                                                                          
+                                                                        
+                                                                          
+                                
+     
   simple_eval_estate = CreateExecutorState();
 
-  /* And run the function */
+                            
   PG_TRY();
   {
     retval = plpgsql_exec_function(func, fake_fcinfo, simple_eval_estate, codeblock->atomic);
   }
   PG_CATCH();
   {
-    /*
-     * We need to clean up what would otherwise be long-lived resources
-     * accumulated by the failed DO block, principally cached plans for
-     * statements (which can be flushed with plpgsql_free_function_memory)
-     * and execution trees for simple expressions, which are in the
-     * private EState.
-     *
-     * Before releasing the private EState, we must clean up any
-     * simple_econtext_stack entries pointing into it, which we can do by
-     * invoking the subxact callback.  (It will be called again later if
-     * some outer control level does a subtransaction abort, but no harm
-     * is done.)  We cheat a bit knowing that plpgsql_subxact_cb does not
-     * pay attention to its parentSubid argument.
-     */
+       
+                                                                        
+                                                                        
+                                                                           
+                                                                    
+                       
+       
+                                                                 
+                                                                          
+                                                                         
+                                                                         
+                                                                          
+                                                  
+       
     plpgsql_subxact_cb(SUBXACT_EVENT_ABORT_SUB, GetCurrentSubTransactionId(), 0, NULL);
 
-    /* Clean up the private EState */
+                                     
     FreeExecutorState(simple_eval_estate);
 
-    /* Function should now have no remaining use-counts ... */
+                                                              
     func->use_count--;
     Assert(func->use_count == 0);
 
-    /* ... so we can free subsidiary storage */
+                                               
     plpgsql_free_function_memory(func);
 
-    /* And propagate the error */
+                                 
     PG_RE_THROW();
   }
   PG_END_TRY();
 
-  /* Clean up the private EState */
+                                   
   FreeExecutorState(simple_eval_estate);
 
-  /* Function should now have no remaining use-counts ... */
+                                                            
   func->use_count--;
   Assert(func->use_count == 0);
 
-  /* ... so we can free subsidiary storage */
+                                             
   plpgsql_free_function_memory(func);
 
-  /*
-   * Disconnect from SPI manager
-   */
+     
+                                 
+     
   if ((rc = SPI_finish()) != SPI_OK_FINISH)
   {
     elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));
@@ -379,13 +379,13 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
   return retval;
 }
 
-/* ----------
- * plpgsql_validator
- *
- * This function attempts to validate a PL/pgSQL function at
- * CREATE FUNCTION time.
- * ----------
- */
+              
+                     
+   
+                                                             
+                         
+              
+   
 PG_FUNCTION_INFO_V1(plpgsql_validator);
 
 Datum
@@ -408,7 +408,7 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     PG_RETURN_VOID();
   }
 
-  /* Get the new function's pg_proc entry */
+                                            
   tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
   if (!HeapTupleIsValid(tuple))
   {
@@ -418,11 +418,11 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 
   functyptype = get_typtype(proc->prorettype);
 
-  /* Disallow pseudotype result */
-  /* except for TRIGGER, RECORD, VOID, or polymorphic */
+                                  
+                                                        
   if (functyptype == TYPTYPE_PSEUDO)
   {
-    /* we assume OPAQUE with no arguments means a trigger */
+                                                            
     if (proc->prorettype == TRIGGEROID || (proc->prorettype == OPAQUEOID && proc->pronargs == 0))
     {
       is_dml_trigger = true;
@@ -437,8 +437,8 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Disallow pseudotypes in arguments (either IN or OUT) */
-  /* except for RECORD and polymorphic */
+                                                            
+                                         
   numargs = get_func_arg_info(tuple, &argtypes, &argnames, &argmodes);
   for (i = 0; i < numargs; i++)
   {
@@ -451,7 +451,7 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Postpone body checks if !check_function_bodies */
+                                                      
   if (check_function_bodies)
   {
     LOCAL_FCINFO(fake_fcinfo, 0);
@@ -460,18 +460,18 @@ plpgsql_validator(PG_FUNCTION_ARGS)
     TriggerData trigdata;
     EventTriggerData etrigdata;
 
-    /*
-     * Connect to SPI manager (is this needed for compilation?)
-     */
+       
+                                                                
+       
     if ((rc = SPI_connect()) != SPI_OK_CONNECT)
     {
       elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
     }
 
-    /*
-     * Set up a fake fcinfo with just enough info to satisfy
-     * plpgsql_compile().
-     */
+       
+                                                             
+                          
+       
     MemSet(fake_fcinfo, 0, SizeForFunctionCallInfo(0));
     MemSet(&flinfo, 0, sizeof(flinfo));
     fake_fcinfo->flinfo = &flinfo;
@@ -490,12 +490,12 @@ plpgsql_validator(PG_FUNCTION_ARGS)
       fake_fcinfo->context = (Node *)&etrigdata;
     }
 
-    /* Test-compile the function */
+                                   
     plpgsql_compile(fake_fcinfo, true);
 
-    /*
-     * Disconnect from SPI manager
-     */
+       
+                                   
+       
     if ((rc = SPI_finish()) != SPI_OK_FINISH)
     {
       elog(ERROR, "SPI_finish failed: %s", SPI_result_code_string(rc));

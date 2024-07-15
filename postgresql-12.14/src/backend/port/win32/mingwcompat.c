@@ -1,37 +1,37 @@
-/*-------------------------------------------------------------------------
- *
- * mingwcompat.c
- *	  MinGW compatibility functions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/port/win32/mingwcompat.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                   
+   
+                                                                         
+   
+                  
+                                          
+   
+                                                                            
+   
 
 #include "postgres.h"
 
 #ifndef _MSC_VER
-/*
- * MingW defines an extern to this struct, but the actual struct isn't present
- * in any library. It's trivial enough that we can safely define it
- * ourselves.
- */
+   
+                                                                               
+                                                                    
+              
+   
 const struct in6_addr in6addr_any = {{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}};
 
-/*
- * This file contains loaders for functions that are missing in the MinGW
- * import libraries. It's only for actual Win32 API functions, so they are
- * all present in proper Win32 compilers.
- */
+   
+                                                                          
+                                                                           
+                                          
+   
 static HMODULE kernel32 = NULL;
 
-/*
- * Load DLL file just once regardless of how many functions
- * we load/call in it.
- */
+   
+                                                            
+                       
+   
 static void
 LoadKernel32()
 {
@@ -47,10 +47,10 @@ LoadKernel32()
   }
 }
 
-/*
- * Replacement for RegisterWaitForSingleObject(), which lives in
- * kernel32.dll
- */
+   
+                                                                 
+                
+   
 typedef BOOL(WINAPI *__RegisterWaitForSingleObject)(PHANDLE, HANDLE, WAITORTIMERCALLBACK, PVOID, ULONG, ULONG);
 static __RegisterWaitForSingleObject _RegisterWaitForSingleObject = NULL;
 

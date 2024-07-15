@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * tsearchcmds.c
- *
- *	  Routines for tsearch manipulation commands
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/commands/tsearchcmds.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+   
+                                                
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                        
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -52,13 +52,13 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
 static void
 DropConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation relMap);
 
-/* --------------------- TS Parser commands ------------------------ */
+                                                                       
 
-/*
- * lookup a parser support function and return its OID (as a Datum)
- *
- * attnum is the pg_ts_parser column the function will go into
- */
+   
+                                                                    
+   
+                                                               
+   
 static Datum
 get_ts_parser_func(DefElem *defel, int attnum)
 {
@@ -68,7 +68,7 @@ get_ts_parser_func(DefElem *defel, int attnum)
   int nargs;
   Oid procOid;
 
-  retTypeId = INTERNALOID; /* correct for most */
+  retTypeId = INTERNALOID;                       
   typeId[0] = INTERNALOID;
   switch (attnum)
   {
@@ -93,16 +93,16 @@ get_ts_parser_func(DefElem *defel, int attnum)
   case Anum_pg_ts_parser_prslextype:
     nargs = 1;
 
-    /*
-     * Note: because the lextype method returns type internal, it must
-     * have an internal-type argument for security reasons.  The
-     * argument is not actually used, but is just passed as a zero.
-     */
+       
+                                                                       
+                                                                 
+                                                                    
+       
     break;
   default:
-    /* should not be here */
+                            
     elog(ERROR, "unrecognized attribute for text search parser: %d", attnum);
-    nargs = 0; /* keep compiler quiet */
+    nargs = 0;                          
   }
 
   procOid = LookupFuncName(funcName, nargs, typeId, false);
@@ -114,11 +114,11 @@ get_ts_parser_func(DefElem *defel, int attnum)
   return ObjectIdGetDatum(procOid);
 }
 
-/*
- * make pg_depend entries for a new pg_ts_parser entry
- *
- * Return value is the address of said new entry.
- */
+   
+                                                       
+   
+                                                  
+   
 static ObjectAddress
 makeParserDependencies(HeapTuple tuple)
 {
@@ -129,16 +129,16 @@ makeParserDependencies(HeapTuple tuple)
   myself.objectId = prs->oid;
   myself.objectSubId = 0;
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = prs->prsnamespace;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, false);
 
-  /* dependencies on functions */
+                                 
   referenced.classId = ProcedureRelationId;
   referenced.objectSubId = 0;
 
@@ -163,9 +163,9 @@ makeParserDependencies(HeapTuple tuple)
   return myself;
 }
 
-/*
- * CREATE TEXT SEARCH PARSER
- */
+   
+                             
+   
 ObjectAddress
 DefineTSParser(List *names, List *parameters)
 {
@@ -187,10 +187,10 @@ DefineTSParser(List *names, List *parameters)
 
   prsRel = table_open(TSParserRelationId, RowExclusiveLock);
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(names, &prsname);
 
-  /* initialize tuple fields with name/namespace */
+                                                   
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -200,9 +200,9 @@ DefineTSParser(List *names, List *parameters)
   values[Anum_pg_ts_parser_prsname - 1] = NameGetDatum(&pname);
   values[Anum_pg_ts_parser_prsnamespace - 1] = ObjectIdGetDatum(namespaceoid);
 
-  /*
-   * loop over the definition list and extract the information we need.
-   */
+     
+                                                                        
+     
   foreach (pl, parameters)
   {
     DefElem *defel = (DefElem *)lfirst(pl);
@@ -233,9 +233,9 @@ DefineTSParser(List *names, List *parameters)
     }
   }
 
-  /*
-   * Validation
-   */
+     
+                
+     
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_parser_prsstart - 1])))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser start method is required")));
@@ -256,16 +256,16 @@ DefineTSParser(List *names, List *parameters)
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser lextypes method is required")));
   }
 
-  /*
-   * Looks good, insert
-   */
+     
+                        
+     
   tup = heap_form_tuple(prsRel->rd_att, values, nulls);
 
   CatalogTupleInsert(prsRel, tup);
 
   address = makeParserDependencies(tup);
 
-  /* Post creation hook for new text search parser */
+                                                     
   InvokeObjectPostCreateHook(TSParserRelationId, prsOid, 0);
 
   heap_freetuple(tup);
@@ -275,9 +275,9 @@ DefineTSParser(List *names, List *parameters)
   return address;
 }
 
-/*
- * Guts of TS parser deletion.
- */
+   
+                               
+   
 void
 RemoveTSParserById(Oid prsId)
 {
@@ -300,13 +300,13 @@ RemoveTSParserById(Oid prsId)
   table_close(relation, RowExclusiveLock);
 }
 
-/* ---------------------- TS Dictionary commands -----------------------*/
+                                                                          
 
-/*
- * make pg_depend entries for a new pg_ts_dict entry
- *
- * Return value is address of the new entry
- */
+   
+                                                     
+   
+                                            
+   
 static ObjectAddress
 makeDictionaryDependencies(HeapTuple tuple)
 {
@@ -317,19 +317,19 @@ makeDictionaryDependencies(HeapTuple tuple)
   myself.objectId = dict->oid;
   myself.objectSubId = 0;
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = dict->dictnamespace;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on owner */
+                           
   recordDependencyOnOwner(myself.classId, myself.objectId, dict->dictowner);
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, false);
 
-  /* dependency on template */
+                              
   referenced.classId = TSTemplateRelationId;
   referenced.objectId = dict->dicttemplate;
   referenced.objectSubId = 0;
@@ -338,9 +338,9 @@ makeDictionaryDependencies(HeapTuple tuple)
   return myself;
 }
 
-/*
- * verify that a template's init method accepts a proposed option list
- */
+   
+                                                                       
+   
 static void
 verify_dictoptions(Oid tmplId, List *dictoptions)
 {
@@ -348,20 +348,20 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
   Form_pg_ts_template tform;
   Oid initmethod;
 
-  /*
-   * Suppress this test when running in a standalone backend.  This is a
-   * hack to allow initdb to create prefab dictionaries that might not
-   * actually be usable in template1's encoding (due to using external files
-   * that can't be translated into template1's encoding).  We want to create
-   * them anyway, since they might be usable later in other databases.
-   */
+     
+                                                                         
+                                                                       
+                                                                             
+                                                                             
+                                                                       
+     
   if (!IsUnderPostmaster)
   {
     return;
   }
 
   tup = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(tmplId));
-  if (!HeapTupleIsValid(tup)) /* should not happen */
+  if (!HeapTupleIsValid(tup))                        
   {
     elog(ERROR, "cache lookup failed for text search template %u", tmplId);
   }
@@ -371,7 +371,7 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
 
   if (!OidIsValid(initmethod))
   {
-    /* If there is no init method, disallow any options */
+                                                          
     if (dictoptions)
     {
       ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("text search template \"%s\" does not accept options", NameStr(tform->tmplname))));
@@ -379,25 +379,25 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
   }
   else
   {
-    /*
-     * Copy the options just in case init method thinks it can scribble on
-     * them ...
-     */
+       
+                                                                           
+                
+       
     dictoptions = copyObject(dictoptions);
 
-    /*
-     * Call the init method and see if it complains.  We don't worry about
-     * it leaking memory, since our command will soon be over anyway.
-     */
+       
+                                                                           
+                                                                      
+       
     (void)OidFunctionCall1(initmethod, PointerGetDatum(dictoptions));
   }
 
   ReleaseSysCache(tup);
 }
 
-/*
- * CREATE TEXT SEARCH DICTIONARY
- */
+   
+                                 
+   
 ObjectAddress
 DefineTSDictionary(List *names, List *parameters)
 {
@@ -415,19 +415,19 @@ DefineTSDictionary(List *names, List *parameters)
   char *dictname;
   ObjectAddress address;
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(names, &dictname);
 
-  /* Check we have creation rights in target namespace */
+                                                         
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
-  /*
-   * loop over the definition list and extract the information we need.
-   */
+     
+                                                                        
+     
   foreach (pl, parameters)
   {
     DefElem *defel = (DefElem *)lfirst(pl);
@@ -438,14 +438,14 @@ DefineTSDictionary(List *names, List *parameters)
     }
     else
     {
-      /* Assume it's an option for the dictionary itself */
+                                                           
       dictoptions = lappend(dictoptions, defel);
     }
   }
 
-  /*
-   * Validation
-   */
+     
+                
+     
   if (!OidIsValid(templId))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search template is required")));
@@ -455,9 +455,9 @@ DefineTSDictionary(List *names, List *parameters)
 
   dictRel = table_open(TSDictionaryRelationId, RowExclusiveLock);
 
-  /*
-   * Looks good, insert
-   */
+     
+                        
+     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -483,7 +483,7 @@ DefineTSDictionary(List *names, List *parameters)
 
   address = makeDictionaryDependencies(tup);
 
-  /* Post creation hook for new text search dictionary */
+                                                         
   InvokeObjectPostCreateHook(TSDictionaryRelationId, dictOid, 0);
 
   heap_freetuple(tup);
@@ -493,9 +493,9 @@ DefineTSDictionary(List *names, List *parameters)
   return address;
 }
 
-/*
- * Guts of TS dictionary deletion.
- */
+   
+                                   
+   
 void
 RemoveTSDictionaryById(Oid dictId)
 {
@@ -518,9 +518,9 @@ RemoveTSDictionaryById(Oid dictId)
   table_close(relation, RowExclusiveLock);
 }
 
-/*
- * ALTER TEXT SEARCH DICTIONARY
- */
+   
+                                
+   
 ObjectAddress
 AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 {
@@ -547,13 +547,13 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
     elog(ERROR, "cache lookup failed for text search dictionary %u", dictId);
   }
 
-  /* must be owner */
+                     
   if (!pg_ts_dict_ownercheck(dictId, GetUserId()))
   {
     aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TSDICTIONARY, NameListToString(stmt->dictname));
   }
 
-  /* deserialize the existing set of options */
+                                               
   opt = SysCacheGetAttr(TSDICTOID, tup, Anum_pg_ts_dict_dictinitoption, &isnull);
   if (isnull)
   {
@@ -564,9 +564,9 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
     dictoptions = deserialize_deflist(opt);
   }
 
-  /*
-   * Modify the options list as per specified changes
-   */
+     
+                                                      
+     
   foreach (pl, stmt->options)
   {
     DefElem *defel = (DefElem *)lfirst(pl);
@@ -574,9 +574,9 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
     ListCell *prev;
     ListCell *next;
 
-    /*
-     * Remove any matches ...
-     */
+       
+                              
+       
     prev = NULL;
     for (cell = list_head(dictoptions); cell; cell = next)
     {
@@ -593,23 +593,23 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
       }
     }
 
-    /*
-     * and add new value if it's got one
-     */
+       
+                                         
+       
     if (defel->arg)
     {
       dictoptions = lappend(dictoptions, defel);
     }
   }
 
-  /*
-   * Validate
-   */
+     
+              
+     
   verify_dictoptions(((Form_pg_ts_dict)GETSTRUCT(tup))->dicttemplate, dictoptions);
 
-  /*
-   * Looks good, update
-   */
+     
+                        
+     
   memset(repl_val, 0, sizeof(repl_val));
   memset(repl_null, false, sizeof(repl_null));
   memset(repl_repl, false, sizeof(repl_repl));
@@ -632,11 +632,11 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 
   ObjectAddressSet(address, TSDictionaryRelationId, dictId);
 
-  /*
-   * NOTE: because we only support altering the options, not the template,
-   * there is no need to update dependencies.  This might have to change if
-   * the options ever reference inside-the-database objects.
-   */
+     
+                                                                           
+                                                                            
+                                                             
+     
 
   heap_freetuple(newtup);
   ReleaseSysCache(tup);
@@ -646,13 +646,13 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
   return address;
 }
 
-/* ---------------------- TS Template commands -----------------------*/
+                                                                        
 
-/*
- * lookup a template support function and return its OID (as a Datum)
- *
- * attnum is the pg_ts_template column the function will go into
- */
+   
+                                                                      
+   
+                                                                 
+   
 static Datum
 get_ts_template_func(DefElem *defel, int attnum)
 {
@@ -676,9 +676,9 @@ get_ts_template_func(DefElem *defel, int attnum)
     nargs = 4;
     break;
   default:
-    /* should not be here */
+                            
     elog(ERROR, "unrecognized attribute for text search template: %d", attnum);
-    nargs = 0; /* keep compiler quiet */
+    nargs = 0;                          
   }
 
   procOid = LookupFuncName(funcName, nargs, typeId, false);
@@ -690,9 +690,9 @@ get_ts_template_func(DefElem *defel, int attnum)
   return ObjectIdGetDatum(procOid);
 }
 
-/*
- * make pg_depend entries for a new pg_ts_template entry
- */
+   
+                                                         
+   
 static ObjectAddress
 makeTSTemplateDependencies(HeapTuple tuple)
 {
@@ -703,16 +703,16 @@ makeTSTemplateDependencies(HeapTuple tuple)
   myself.objectId = tmpl->oid;
   myself.objectSubId = 0;
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = tmpl->tmplnamespace;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, false);
 
-  /* dependencies on functions */
+                                 
   referenced.classId = ProcedureRelationId;
   referenced.objectSubId = 0;
 
@@ -728,9 +728,9 @@ makeTSTemplateDependencies(HeapTuple tuple)
   return myself;
 }
 
-/*
- * CREATE TEXT SEARCH TEMPLATE
- */
+   
+                               
+   
 ObjectAddress
 DefineTSTemplate(List *names, List *parameters)
 {
@@ -751,7 +751,7 @@ DefineTSTemplate(List *names, List *parameters)
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create text search templates")));
   }
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(names, &tmplname);
 
   tmplRel = table_open(TSTemplateRelationId, RowExclusiveLock);
@@ -768,9 +768,9 @@ DefineTSTemplate(List *names, List *parameters)
   values[Anum_pg_ts_template_tmplname - 1] = NameGetDatum(&dname);
   values[Anum_pg_ts_template_tmplnamespace - 1] = ObjectIdGetDatum(namespaceoid);
 
-  /*
-   * loop over the definition list and extract the information we need.
-   */
+     
+                                                                        
+     
   foreach (pl, parameters)
   {
     DefElem *defel = (DefElem *)lfirst(pl);
@@ -791,24 +791,24 @@ DefineTSTemplate(List *names, List *parameters)
     }
   }
 
-  /*
-   * Validation
-   */
+     
+                
+     
   if (!OidIsValid(DatumGetObjectId(values[Anum_pg_ts_template_tmpllexize - 1])))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search template lexize method is required")));
   }
 
-  /*
-   * Looks good, insert
-   */
+     
+                        
+     
   tup = heap_form_tuple(tmplRel->rd_att, values, nulls);
 
   CatalogTupleInsert(tmplRel, tup);
 
   address = makeTSTemplateDependencies(tup);
 
-  /* Post creation hook for new text search template */
+                                                       
   InvokeObjectPostCreateHook(TSTemplateRelationId, tmplOid, 0);
 
   heap_freetuple(tup);
@@ -818,9 +818,9 @@ DefineTSTemplate(List *names, List *parameters)
   return address;
 }
 
-/*
- * Guts of TS template deletion.
- */
+   
+                                 
+   
 void
 RemoveTSTemplateById(Oid tmplId)
 {
@@ -843,12 +843,12 @@ RemoveTSTemplateById(Oid tmplId)
   table_close(relation, RowExclusiveLock);
 }
 
-/* ---------------------- TS Configuration commands -----------------------*/
+                                                                             
 
-/*
- * Finds syscache tuple of configuration.
- * Returns NULL if no such cfg.
- */
+   
+                                          
+                                
+   
 static HeapTuple
 GetTSConfigTuple(List *names)
 {
@@ -863,7 +863,7 @@ GetTSConfigTuple(List *names)
 
   tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
-  if (!HeapTupleIsValid(tup)) /* should not happen */
+  if (!HeapTupleIsValid(tup))                        
   {
     elog(ERROR, "cache lookup failed for text search configuration %u", cfgId);
   }
@@ -871,12 +871,12 @@ GetTSConfigTuple(List *names)
   return tup;
 }
 
-/*
- * make pg_depend entries for a new or updated pg_ts_config entry
- *
- * Pass opened pg_ts_config_map relation if there might be any config map
- * entries for the config.
- */
+   
+                                                                  
+   
+                                                                          
+                           
+   
 static ObjectAddress
 makeConfigurationDependencies(HeapTuple tuple, bool removeOld, Relation mapRel)
 {
@@ -888,46 +888,46 @@ makeConfigurationDependencies(HeapTuple tuple, bool removeOld, Relation mapRel)
   myself.objectId = cfg->oid;
   myself.objectSubId = 0;
 
-  /* for ALTER case, first flush old dependencies, except extension deps */
+                                                                           
   if (removeOld)
   {
     deleteDependencyRecordsFor(myself.classId, myself.objectId, true);
     deleteSharedDependencyRecordsFor(myself.classId, myself.objectId, 0);
   }
 
-  /*
-   * We use an ObjectAddresses list to remove possible duplicate
-   * dependencies from the config map info.  The pg_ts_config items
-   * shouldn't be duplicates, but might as well fold them all into one call.
-   */
+     
+                                                                 
+                                                                    
+                                                                             
+     
   addrs = new_object_addresses();
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = cfg->cfgnamespace;
   referenced.objectSubId = 0;
   add_exact_object_address(&referenced, addrs);
 
-  /* dependency on owner */
+                           
   recordDependencyOnOwner(myself.classId, myself.objectId, cfg->cfgowner);
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, removeOld);
 
-  /* dependency on parser */
+                            
   referenced.classId = TSParserRelationId;
   referenced.objectId = cfg->cfgparser;
   referenced.objectSubId = 0;
   add_exact_object_address(&referenced, addrs);
 
-  /* dependencies on dictionaries listed in config map */
+                                                         
   if (mapRel)
   {
     ScanKeyData skey;
     SysScanDesc scan;
     HeapTuple maptup;
 
-    /* CCI to ensure we can see effects of caller's changes */
+                                                              
     CommandCounterIncrement();
 
     ScanKeyInit(&skey, Anum_pg_ts_config_map_mapcfg, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(myself.objectId));
@@ -947,7 +947,7 @@ makeConfigurationDependencies(HeapTuple tuple, bool removeOld, Relation mapRel)
     systable_endscan(scan);
   }
 
-  /* Record 'em (this includes duplicate elimination) */
+                                                        
   record_object_address_dependencies(&myself, addrs, DEPENDENCY_NORMAL);
 
   free_object_addresses(addrs);
@@ -955,9 +955,9 @@ makeConfigurationDependencies(HeapTuple tuple, bool removeOld, Relation mapRel)
   return myself;
 }
 
-/*
- * CREATE TEXT SEARCH CONFIGURATION
- */
+   
+                                    
+   
 ObjectAddress
 DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
 {
@@ -976,19 +976,19 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
   ListCell *pl;
   ObjectAddress address;
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(names, &cfgname);
 
-  /* Check we have creation rights in target namespace */
+                                                         
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
-  /*
-   * loop over the definition list and extract the information we need.
-   */
+     
+                                                                        
+     
   foreach (pl, parameters)
   {
     DefElem *defel = (DefElem *)lfirst(pl);
@@ -1012,15 +1012,15 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
     ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("cannot specify both PARSER and COPY options")));
   }
 
-  /* make copied tsconfig available to callers */
+                                                 
   if (copied && OidIsValid(sourceOid))
   {
     ObjectAddressSet(*copied, TSConfigRelationId, sourceOid);
   }
 
-  /*
-   * Look up source config if given.
-   */
+     
+                                     
+     
   if (OidIsValid(sourceOid))
   {
     Form_pg_ts_config cfg;
@@ -1033,15 +1033,15 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
 
     cfg = (Form_pg_ts_config)GETSTRUCT(tup);
 
-    /* use source's parser */
+                             
     prsOid = cfg->cfgparser;
 
     ReleaseSysCache(tup);
   }
 
-  /*
-   * Validation
-   */
+     
+                
+     
   if (!OidIsValid(prsOid))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("text search parser is required")));
@@ -1049,9 +1049,9 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
 
   cfgRel = table_open(TSConfigRelationId, RowExclusiveLock);
 
-  /*
-   * Looks good, build tuple and insert
-   */
+     
+                                        
+     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -1069,9 +1069,9 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
 
   if (OidIsValid(sourceOid))
   {
-    /*
-     * Copy token-dicts map from source config
-     */
+       
+                                               
+       
     ScanKeyData skey;
     SysScanDesc scan;
     HeapTuple maptup;
@@ -1109,7 +1109,7 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
 
   address = makeConfigurationDependencies(tup, false, mapRel);
 
-  /* Post creation hook for new text search configuration */
+                                                            
   InvokeObjectPostCreateHook(TSConfigRelationId, cfgOid, 0);
 
   heap_freetuple(tup);
@@ -1123,9 +1123,9 @@ DefineTSConfiguration(List *names, List *parameters, ObjectAddress *copied)
   return address;
 }
 
-/*
- * Guts of TS configuration deletion.
- */
+   
+                                      
+   
 void
 RemoveTSConfigurationById(Oid cfgId)
 {
@@ -1134,7 +1134,7 @@ RemoveTSConfigurationById(Oid cfgId)
   ScanKeyData skey;
   SysScanDesc scan;
 
-  /* Remove the pg_ts_config entry */
+                                     
   relCfg = table_open(TSConfigRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
@@ -1150,7 +1150,7 @@ RemoveTSConfigurationById(Oid cfgId)
 
   table_close(relCfg, RowExclusiveLock);
 
-  /* Remove any pg_ts_config_map entries */
+                                           
   relMap = table_open(TSConfigMapRelationId, RowExclusiveLock);
 
   ScanKeyInit(&skey, Anum_pg_ts_config_map_mapcfg, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(cfgId));
@@ -1167,9 +1167,9 @@ RemoveTSConfigurationById(Oid cfgId)
   table_close(relMap, RowExclusiveLock);
 }
 
-/*
- * ALTER TEXT SEARCH CONFIGURATION - main entry point
- */
+   
+                                                      
+   
 ObjectAddress
 AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 {
@@ -1178,7 +1178,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
   Relation relMap;
   ObjectAddress address;
 
-  /* Find the configuration */
+                              
   tup = GetTSConfigTuple(stmt->cfgname);
   if (!HeapTupleIsValid(tup))
   {
@@ -1187,7 +1187,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 
   cfgId = ((Form_pg_ts_config)GETSTRUCT(tup))->oid;
 
-  /* must be owner */
+                     
   if (!pg_ts_config_ownercheck(cfgId, GetUserId()))
   {
     aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TSCONFIGURATION, NameListToString(stmt->cfgname));
@@ -1195,7 +1195,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 
   relMap = table_open(TSConfigMapRelationId, RowExclusiveLock);
 
-  /* Add or drop mappings */
+                            
   if (stmt->dicts)
   {
     MakeConfigurationMapping(stmt, tup, relMap);
@@ -1205,7 +1205,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
     DropConfigurationMapping(stmt, tup, relMap);
   }
 
-  /* Update dependencies */
+                           
   makeConfigurationDependencies(tup, true, relMap);
 
   InvokeObjectPostAlterHook(TSConfigRelationId, cfgId, 0);
@@ -1219,9 +1219,9 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
   return address;
 }
 
-/*
- * Translate a list of token type names to an array of token type numbers
- */
+   
+                                                                          
+   
 static int *
 getTokenTypes(Oid prsId, List *tokennames)
 {
@@ -1242,7 +1242,7 @@ getTokenTypes(Oid prsId, List *tokennames)
     elog(ERROR, "method lextype isn't defined for text search parser %u", prsId);
   }
 
-  /* lextype takes one dummy argument */
+                                        
   list = (LexDescr *)DatumGetPointer(OidFunctionCall1(prs->lextypeOid, (Datum)0));
 
   i = 0;
@@ -1273,9 +1273,9 @@ getTokenTypes(Oid prsId, List *tokennames)
   return res;
 }
 
-/*
- * ALTER TEXT SEARCH CONFIGURATION ADD/ALTER MAPPING
- */
+   
+                                                     
+   
 static void
 MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation relMap)
 {
@@ -1301,9 +1301,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
 
   if (stmt->override)
   {
-    /*
-     * delete maps for tokens if they exist and command was ALTER
-     */
+       
+                                                                  
+       
     for (i = 0; i < ntoken; i++)
     {
       ScanKeyInit(&skey[0], Anum_pg_ts_config_map_mapcfg, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(cfgId));
@@ -1320,9 +1320,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
     }
   }
 
-  /*
-   * Convert list of dictionary names to array of dict OIDs
-   */
+     
+                                                            
+     
   ndict = list_length(stmt->dicts);
   dictIds = (Oid *)palloc(sizeof(Oid) * ndict);
   i = 0;
@@ -1336,9 +1336,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
 
   if (stmt->replace)
   {
-    /*
-     * Replace a specific dictionary in existing entries
-     */
+       
+                                                         
+       
     Oid dictOld = dictIds[0], dictNew = dictIds[1];
 
     ScanKeyInit(&skey[0], Anum_pg_ts_config_map_mapcfg, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(cfgId));
@@ -1349,9 +1349,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
     {
       Form_pg_ts_config_map cfgmap = (Form_pg_ts_config_map)GETSTRUCT(maptup);
 
-      /*
-       * check if it's one of target token types
-       */
+         
+                                                 
+         
       if (tokens)
       {
         bool tokmatch = false;
@@ -1370,9 +1370,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
         }
       }
 
-      /*
-       * replace dictionary if match
-       */
+         
+                                     
+         
       if (cfgmap->mapdict == dictOld)
       {
         Datum repl_val[Natts_pg_ts_config_map];
@@ -1396,9 +1396,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
   }
   else
   {
-    /*
-     * Insertion of new entries
-     */
+       
+                                
+       
     for (i = 0; i < ntoken; i++)
     {
       for (j = 0; j < ndict; j++)
@@ -1423,9 +1423,9 @@ MakeConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
   EventTriggerCollectAlterTSConfig(stmt, cfgId, dictIds, ndict);
 }
 
-/*
- * ALTER TEXT SEARCH CONFIGURATION DROP MAPPING
- */
+   
+                                                
+   
 static void
 DropConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation relMap)
 {
@@ -1482,17 +1482,17 @@ DropConfigurationMapping(AlterTSConfigurationStmt *stmt, HeapTuple tup, Relation
   EventTriggerCollectAlterTSConfig(stmt, cfgId, NULL, 0);
 }
 
-/*
- * Serialize dictionary options, producing a TEXT datum from a List of DefElem
- *
- * This is used to form the value stored in pg_ts_dict.dictinitoption.
- * For the convenience of pg_dump, the output is formatted exactly as it
- * would need to appear in CREATE TEXT SEARCH DICTIONARY to reproduce the
- * same options.
- *
- * Note that we assume that only the textual representation of an option's
- * value is interesting --- hence, non-string DefElems get forced to strings.
- */
+   
+                                                                               
+   
+                                                                       
+                                                                         
+                                                                          
+                 
+   
+                                                                           
+                                                                              
+   
 text *
 serialize_deflist(List *deflist)
 {
@@ -1508,7 +1508,7 @@ serialize_deflist(List *deflist)
     char *val = defGetString(defel);
 
     appendStringInfo(&buf, "%s = ", quote_identifier(defel->defname));
-    /* If backslashes appear, force E syntax to determine their handling */
+                                                                           
     if (strchr(val, '\\'))
     {
       appendStringInfoChar(&buf, ESCAPE_STRING_SYNTAX);
@@ -1536,17 +1536,17 @@ serialize_deflist(List *deflist)
   return result;
 }
 
-/*
- * Deserialize dictionary options, reconstructing a List of DefElem from TEXT
- *
- * This is also used for prsheadline options, so for backward compatibility
- * we need to accept a few things serialize_deflist() will never emit:
- * in particular, unquoted and double-quoted values.
- */
+   
+                                                                              
+   
+                                                                            
+                                                                       
+                                                     
+   
 List *
 deserialize_deflist(Datum txt)
 {
-  text *in = DatumGetTextPP(txt); /* in case it's toasted */
+  text *in = DatumGetTextPP(txt);                           
   List *result = NIL;
   int len = VARSIZE_ANY_EXHDR(in);
   char *ptr, *endptr, *workspace, *wsptr = NULL, *startvalue = NULL;
@@ -1563,7 +1563,7 @@ deserialize_deflist(Datum txt)
   } ds_state;
   ds_state state = CS_WAITKEY;
 
-  workspace = (char *)palloc(len + 1); /* certainly enough room */
+  workspace = (char *)palloc(len + 1);                            
   ptr = VARDATA_ANY(in);
   endptr = ptr + len;
   for (; ptr < endptr; ptr++)
@@ -1608,7 +1608,7 @@ deserialize_deflist(Datum txt)
       {
         if (ptr + 1 < endptr && ptr[1] == '"')
         {
-          /* copy only one of the two quotes */
+                                               
           *wsptr++ = *ptr++;
         }
         else
@@ -1661,7 +1661,7 @@ deserialize_deflist(Datum txt)
       {
         if (ptr + 1 < endptr && ptr[1] == '\'')
         {
-          /* copy only one of the two quotes */
+                                               
           *wsptr++ = *ptr++;
         }
         else
@@ -1675,7 +1675,7 @@ deserialize_deflist(Datum txt)
       {
         if (ptr + 1 < endptr && ptr[1] == '\\')
         {
-          /* copy only one of the two backslashes */
+                                                    
           *wsptr++ = *ptr++;
         }
         else
@@ -1693,7 +1693,7 @@ deserialize_deflist(Datum txt)
       {
         if (ptr + 1 < endptr && ptr[1] == '"')
         {
-          /* copy only one of the two quotes */
+                                               
           *wsptr++ = *ptr++;
         }
         else

@@ -1,31 +1,31 @@
-/*-------------------------------------------------------------------------
- *
- * getrusage.c
- *	  get information about resource utilisation
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/port/getrusage.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                                
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                          
+   
+                                                                            
+   
 
 #include "c.h"
 
 #include "rusagestub.h"
 
-/* This code works on:
- *		solaris_i386
- *		solaris_sparc
- *		hpux 9.*
- *		win32
- * which currently is all the supported platforms that don't have a
- * native version of getrusage().  So, if configure decides to compile
- * this file at all, we just use this version unconditionally.
- */
+                       
+                 
+                  
+             
+          
+                                                                    
+                                                                       
+                                                               
+   
 
 int
 getrusage(int who, struct rusage *rusage)
@@ -39,7 +39,7 @@ getrusage(int who, struct rusage *rusage)
 
   if (who != RUSAGE_SELF)
   {
-    /* Only RUSAGE_SELF is supported in this implementation for now */
+                                                                      
     errno = EINVAL;
     return -1;
   }
@@ -56,20 +56,20 @@ getrusage(int who, struct rusage *rusage)
     return -1;
   }
 
-  /* Convert FILETIMEs (0.1 us) to struct timeval */
+                                                    
   memcpy(&li, &kerneltime, sizeof(FILETIME));
-  li.QuadPart /= 10L; /* Convert to microseconds */
+  li.QuadPart /= 10L;                              
   rusage->ru_stime.tv_sec = li.QuadPart / 1000000L;
   rusage->ru_stime.tv_usec = li.QuadPart % 1000000L;
 
   memcpy(&li, &usertime, sizeof(FILETIME));
-  li.QuadPart /= 10L; /* Convert to microseconds */
+  li.QuadPart /= 10L;                              
   rusage->ru_utime.tv_sec = li.QuadPart / 1000000L;
   rusage->ru_utime.tv_usec = li.QuadPart % 1000000L;
-#else /* all but WIN32 */
+#else                    
 
   struct tms tms;
-  int tick_rate = CLK_TCK; /* ticks per second */
+  int tick_rate = CLK_TCK;                       
   clock_t u, s;
 
   if (rusage == (struct rusage *)NULL)
@@ -79,7 +79,7 @@ getrusage(int who, struct rusage *rusage)
   }
   if (times(&tms) < 0)
   {
-    /* errno set by times */
+                            
     return -1;
   }
   switch (who)
@@ -102,7 +102,7 @@ getrusage(int who, struct rusage *rusage)
   rusage->ru_utime.tv_usec = TICK_TO_USEC(u, tick_rate);
   rusage->ru_stime.tv_sec = TICK_TO_SEC(s, tick_rate);
   rusage->ru_stime.tv_usec = TICK_TO_USEC(u, tick_rate);
-#endif /* WIN32 */
+#endif            
 
   return 0;
 }

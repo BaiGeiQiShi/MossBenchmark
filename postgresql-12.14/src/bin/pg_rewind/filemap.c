@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- *
- * filemap.c
- *	  A data structure for keeping track of files that have changed.
- *
- * Copyright (c) 2013-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                                    
+   
+                                                                
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -36,94 +36,94 @@ filemap_list_to_array(filemap_t *map);
 static bool
 check_file_excluded(const char *path, bool is_source);
 
-/*
- * Definition of one element part of an exclusion list, used to exclude
- * contents when rewinding.  "name" is the name of the file or path to
- * check for exclusion.  If "match_prefix" is true, any items matching
- * the name as prefix are excluded.
- */
+   
+                                                                        
+                                                                       
+                                                                       
+                                    
+   
 struct exclude_list_item
 {
   const char *name;
   bool match_prefix;
 };
 
-/*
- * The contents of these directories are removed or recreated during server
- * start so they are not included in data processed by pg_rewind.
- *
- * Note: those lists should be kept in sync with what basebackup.c provides.
- * Some of the values, contrary to what basebackup.c uses, are hardcoded as
- * they are defined in backend-only headers.  So this list is maintained
- * with a best effort in mind.
- */
+   
+                                                                            
+                                                                  
+   
+                                                                             
+                                                                            
+                                                                         
+                               
+   
 static const char *excludeDirContents[] = {
-    /*
-     * Skip temporary statistics files. PG_STAT_TMP_DIR must be skipped even
-     * when stats_temp_directory is set because PGSS_TEXT_FILE is always
-     * created there.
-     */
-    "pg_stat_tmp", /* defined as PG_STAT_TMP_DIR */
+       
+                                                                             
+                                                                         
+                      
+       
+    "pg_stat_tmp",                                 
 
-    /*
-     * It is generally not useful to backup the contents of this directory
-     * even if the intention is to restore to another master. See backup.sgml
-     * for a more detailed description.
-     */
+       
+                                                                           
+                                                                              
+                                        
+       
     "pg_replslot",
 
-    /* Contents removed on startup, see dsm_cleanup_for_mmap(). */
-    "pg_dynshmem", /* defined as PG_DYNSHMEM_DIR */
+                                                                  
+    "pg_dynshmem",                                 
 
-    /* Contents removed on startup, see AsyncShmemInit(). */
+                                                            
     "pg_notify",
 
-    /*
-     * Old contents are loaded for possible debugging but are not required for
-     * normal operation, see OldSerXidInit().
-     */
+       
+                                                                               
+                                              
+       
     "pg_serial",
 
-    /* Contents removed on startup, see DeleteAllExportedSnapshotFiles(). */
+                                                                            
     "pg_snapshots",
 
-    /* Contents zeroed on startup, see StartupSUBTRANS(). */
+                                                            
     "pg_subtrans",
 
-    /* end of list */
+                     
     NULL};
 
-/*
- * List of files excluded from filemap processing.   Files are excluded
- * if their prefix match.
- */
+   
+                                                                        
+                          
+   
 static const struct exclude_list_item excludeFiles[] = {
-    /* Skip auto conf temporary file. */
-    {"postgresql.auto.conf.tmp", false}, /* defined as PG_AUTOCONF_FILENAME */
+                                        
+    {"postgresql.auto.conf.tmp", false},                                      
 
-    /* Skip current log file temporary file */
-    {"current_logfiles.tmp", false}, /* defined as
-                                      * LOG_METAINFO_DATAFILE_TMP */
+                                              
+    {"current_logfiles.tmp", false},               
+                                                                    
 
-    /* Skip relation cache because it is rebuilt on startup */
-    {"pg_internal.init", true}, /* defined as RELCACHE_INIT_FILENAME */
+                                                              
+    {"pg_internal.init", true},                                        
 
-    /*
-     * If there's a backup_label or tablespace_map file, it belongs to a
-     * backup started by the user with pg_start_backup().  It is *not* correct
-     * for this backup.  Our backup_label is written later on separately.
-     */
-    {"backup_label", false},   /* defined as BACKUP_LABEL_FILE */
-    {"tablespace_map", false}, /* defined as TABLESPACE_MAP */
+       
+                                                                         
+                                                                               
+                                                                          
+       
+    {"backup_label", false},                                     
+    {"tablespace_map", false},                                
 
     {"postmaster.pid", false}, {"postmaster.opts", false},
 
-    /* end of list */
+                     
     {NULL, false}};
 
-/*
- * Create a new file map (stored in the global pointer "filemap").
- */
+   
+                                                                   
+   
 void
 filemap_create(void)
 {
@@ -139,13 +139,13 @@ filemap_create(void)
   filemap = map;
 }
 
-/*
- * Callback for processing source file list.
- *
- * This is called once for every file in the source server. We decide what
- * action needs to be taken for the file, depending on whether the file
- * exists in the target and whether the size matches.
- */
+   
+                                             
+   
+                                                                           
+                                                                        
+                                                      
+   
 void
 process_source_file(const char *path, file_type_t type, size_t newsize, const char *link_target)
 {
@@ -159,30 +159,30 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
 
   Assert(map->array == NULL);
 
-  /*
-   * Skip any files matching the exclusion filters. This has the effect to
-   * remove all those files on the target.
-   */
+     
+                                                                           
+                                           
+     
   if (check_file_excluded(path, true))
   {
     return;
   }
 
-  /*
-   * Pretend that pg_wal is a directory, even if it's really a symlink. We
-   * don't want to mess with the symlink itself, nor complain if it's a
-   * symlink in source but not in target or vice versa.
-   */
+     
+                                                                           
+                                                                        
+                                                        
+     
   if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK)
   {
     type = FILE_TYPE_DIRECTORY;
   }
 
-  /*
-   * Skip temporary files, .../pgsql_tmp/... and .../pgsql_tmp.* in source.
-   * This has the effect that all temporary files in the destination will be
-   * removed.
-   */
+     
+                                                                            
+                                                                             
+              
+     
   if (strstr(path, "/" PG_TEMP_FILE_PREFIX) != NULL)
   {
     return;
@@ -192,10 +192,10 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
     return;
   }
 
-  /*
-   * sanity check: a filename that looks like a data file better be a
-   * regular file
-   */
+     
+                                                                      
+                  
+     
   if (type != FILE_TYPE_REGULAR && isRelDataFile(path))
   {
     pg_fatal("data file \"%s\" in source is not a regular file", path);
@@ -203,7 +203,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
 
   snprintf(localpath, sizeof(localpath), "%s/%s", datadir_target, path);
 
-  /* Does the corresponding file exist in the target data dir? */
+                                                                 
   if (lstat(localpath, &statbuf) < 0)
   {
     if (errno != ENOENT)
@@ -223,7 +223,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
   case FILE_TYPE_DIRECTORY:
     if (exists && !S_ISDIR(statbuf.st_mode) && strcmp(path, "pg_wal") != 0)
     {
-      /* it's a directory in source, but not in target. Strange.. */
+                                                                    
       pg_fatal("\"%s\" is not a directory", localpath);
     }
 
@@ -247,10 +247,10 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
 #endif
     )
     {
-      /*
-       * It's a symbolic link in source, but not in target.
-       * Strange..
-       */
+         
+                                                            
+                   
+         
       pg_fatal("\"%s\" is not a symbolic link", localpath);
     }
 
@@ -273,14 +273,14 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
 
     if (!exists || !isRelDataFile(path))
     {
-      /*
-       * File exists in source, but not in target. Or it's a
-       * non-data file that we have no special processing for. Copy
-       * it in toto.
-       *
-       * An exception: PG_VERSIONs should be identical, but avoid
-       * overwriting it for paranoia.
-       */
+         
+                                                             
+                                                                    
+                     
+         
+                                                                  
+                                      
+         
       if (pg_str_endswith(path, "PG_VERSION"))
       {
         action = FILE_ACTION_NONE;
@@ -294,30 +294,30 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
     }
     else
     {
-      /*
-       * It's a data file that exists in both.
-       *
-       * If it's larger in target, we can truncate it. There will
-       * also be a WAL record of the truncation in the source
-       * system, so WAL replay would eventually truncate the target
-       * too, but we might as well do it now.
-       *
-       * If it's smaller in the target, it means that it has been
-       * truncated in the target, or enlarged in the source, or
-       * both. If it was truncated in the target, we need to copy
-       * the missing tail from the source system. If it was enlarged
-       * in the source system, there will be WAL records in the
-       * source system for the new blocks, so we wouldn't need to
-       * copy them here. But we don't know which scenario we're
-       * dealing with, and there's no harm in copying the missing
-       * blocks now, so do it now.
-       *
-       * If it's the same size, do nothing here. Any blocks modified
-       * in the target will be copied based on parsing the target
-       * system's WAL, and any blocks modified in the source will be
-       * updated after rewinding, when the source system's WAL is
-       * replayed.
-       */
+         
+                                               
+         
+                                                                  
+                                                              
+                                                                    
+                                              
+         
+                                                                  
+                                                                
+                                                                  
+                                                                     
+                                                                
+                                                                  
+                                                                
+                                                                  
+                                   
+         
+                                                                     
+                                                                  
+                                                                     
+                                                                  
+                   
+         
       oldsize = statbuf.st_size;
       if (oldsize < newsize)
       {
@@ -335,7 +335,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
     break;
   }
 
-  /* Create a new entry for this file */
+                                        
   entry = pg_malloc(sizeof(file_entry_t));
   entry->path = pg_strdup(path);
   entry->type = type;
@@ -360,13 +360,13 @@ process_source_file(const char *path, file_type_t type, size_t newsize, const ch
   map->nlist++;
 }
 
-/*
- * Callback for processing target file list.
- *
- * All source files must be already processed before calling this. This only
- * marks target data directory's files that didn't exist in the source for
- * deletion.
- */
+   
+                                             
+   
+                                                                             
+                                                                           
+             
+   
 void
 process_target_file(const char *path, file_type_t type, size_t oldsize, const char *link_target)
 {
@@ -376,18 +376,18 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
   filemap_t *map = filemap;
   file_entry_t *entry;
 
-  /*
-   * Do not apply any exclusion filters here.  This has advantage to remove
-   * from the target data folder all paths which have been filtered out from
-   * the source data folder when processing the source files.
-   */
+     
+                                                                            
+                                                                             
+                                                              
+     
 
   if (map->array == NULL)
   {
-    /* on first call, initialize lookup array */
+                                                
     if (map->nlist == 0)
     {
-      /* should not happen */
+                             
       pg_fatal("source file list is empty");
     }
 
@@ -398,9 +398,9 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
     qsort(map->array, map->narray, sizeof(file_entry_t *), path_cmp);
   }
 
-  /*
-   * Like in process_source_file, pretend that xlog is always a  directory.
-   */
+     
+                                                                            
+     
   if (strcmp(path, "pg_wal") == 0 && type == FILE_TYPE_SYMLINK)
   {
     type = FILE_TYPE_DIRECTORY;
@@ -410,7 +410,7 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
   key_ptr = &key;
   exists = (bsearch(&key_ptr, map->array, map->narray, sizeof(file_entry_t *), path_cmp) != NULL);
 
-  /* Remove any file or folder that doesn't exist in the source system. */
+                                                                          
   if (!exists)
   {
     entry = pg_malloc(sizeof(file_entry_t));
@@ -438,18 +438,18 @@ process_target_file(const char *path, file_type_t type, size_t oldsize, const ch
   }
   else
   {
-    /*
-     * We already handled all files that exist in the source system in
-     * process_source_file().
-     */
+       
+                                                                       
+                              
+       
   }
 }
 
-/*
- * This callback gets called while we read the WAL in the target, for every
- * block that have changed in the target system. It makes note of all the
- * changed blocks in the pagemap of the file.
- */
+   
+                                                                            
+                                                                          
+                                              
+   
 void
 process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
 {
@@ -491,7 +491,7 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
     {
     case FILE_ACTION_NONE:
     case FILE_ACTION_TRUNCATE:
-      /* skip if we're truncating away the modified block anyway */
+                                                                   
       if ((blkno_inseg + 1) * BLCKSZ <= entry->newsize)
       {
         datapagemap_add(&entry->pagemap, blkno_inseg);
@@ -500,10 +500,10 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
 
     case FILE_ACTION_COPY_TAIL:
 
-      /*
-       * skip the modified block if it is part of the "tail" that
-       * we're copying anyway.
-       */
+         
+                                                                  
+                               
+         
       if ((blkno_inseg + 1) * BLCKSZ <= entry->oldsize)
       {
         datapagemap_add(&entry->pagemap, blkno_inseg);
@@ -520,18 +520,18 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
   }
   else
   {
-    /*
-     * If we don't have any record of this file in the file map, it means
-     * that it's a relation that doesn't exist in the source system, and
-     * it was subsequently removed in the target system, too. We can
-     * safely ignore it.
-     */
+       
+                                                                          
+                                                                         
+                                                                     
+                         
+       
   }
 }
 
-/*
- * Is this the path of file that pg_rewind can skip copying?
- */
+   
+                                                             
+   
 static bool
 check_file_excluded(const char *path, bool is_source)
 {
@@ -539,7 +539,7 @@ check_file_excluded(const char *path, bool is_source)
   int excludeIdx;
   const char *filename;
 
-  /* check individual files... */
+                                 
   for (excludeIdx = 0; excludeFiles[excludeIdx].name != NULL; excludeIdx++)
   {
     int cmplen = strlen(excludeFiles[excludeIdx].name);
@@ -572,10 +572,10 @@ check_file_excluded(const char *path, bool is_source)
     }
   }
 
-  /*
-   * ... And check some directories.  Note that this includes any contents
-   * within the directories themselves.
-   */
+     
+                                                                           
+                                        
+     
   for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++)
   {
     snprintf(localpath, sizeof(localpath), "%s/", excludeDirContents[excludeIdx]);
@@ -596,10 +596,10 @@ check_file_excluded(const char *path, bool is_source)
   return false;
 }
 
-/*
- * Convert the linked list of entries in map->first/last to the array,
- * map->array.
- */
+   
+                                                                       
+               
+   
 static void
 filemap_list_to_array(filemap_t *map)
 {
@@ -653,9 +653,9 @@ action_to_str(file_action_t action)
   }
 }
 
-/*
- * Calculate the totals needed for progress reports.
- */
+   
+                                                     
+   
 void
 calculate_totals(void)
 {
@@ -727,14 +727,14 @@ print_filemap(void)
   fflush(stdout);
 }
 
-/*
- * Does it look like a relation data file?
- *
- * For our purposes, only files belonging to the main fork are considered
- * relation files. Other forks are always copied in toto, because we cannot
- * reliably track changes to them, because WAL only contains block references
- * for the main fork.
- */
+   
+                                           
+   
+                                                                          
+                                                                            
+                                                                              
+                      
+   
 static bool
 isRelDataFile(const char *path)
 {
@@ -743,25 +743,25 @@ isRelDataFile(const char *path)
   int nmatch;
   bool matched;
 
-  /*----
-   * Relation data files can be in one of the following directories:
-   *
-   * global/
-   *		shared relations
-   *
-   * base/<db oid>/
-   *		regular relations, default tablespace
-   *
-   * pg_tblspc/<tblspc oid>/<tblspc version>/
-   *		within a non-default tablespace (the name of the directory
-   *		depends on version)
-   *
-   * And the relation data files themselves have a filename like:
-   *
-   * <oid>.<segment number>
-   *
-   *----
-   */
+         
+                                                                     
+     
+             
+                       
+     
+                    
+                                            
+     
+                                              
+                                                                 
+                          
+     
+                                                                  
+     
+                            
+     
+         
+     
   rnode.spcNode = InvalidOid;
   rnode.dbNode = InvalidOid;
   rnode.relNode = InvalidOid;
@@ -793,12 +793,12 @@ isRelDataFile(const char *path)
     }
   }
 
-  /*
-   * The sscanf tests above can match files that have extra characters at
-   * the end. To eliminate such cases, cross-check that GetRelationPath
-   * creates the exact same filename, when passed the RelFileNode
-   * information we extracted from the filename.
-   */
+     
+                                                                          
+                                                                        
+                                                                  
+                                                 
+     
   if (matched)
   {
     char *check_path = datasegpath(rnode, MAIN_FORKNUM, segNo);
@@ -814,11 +814,11 @@ isRelDataFile(const char *path)
   return matched;
 }
 
-/*
- * A helper function to create the path of a relation file and segment.
- *
- * The returned path is palloc'd
- */
+   
+                                                                        
+   
+                                 
+   
 static char *
 datasegpath(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 {
@@ -847,16 +847,16 @@ path_cmp(const void *a, const void *b)
   return strcmp(fa->path, fb->path);
 }
 
-/*
- * In the final stage, the filemap is sorted so that removals come last.
- * From disk space usage point of view, it would be better to do removals
- * first, but for now, safety first. If a whole directory is deleted, all
- * files and subdirectories inside it need to removed first. On creation,
- * parent directory needs to be created before files and directories inside
- * it. To achieve that, the file_action_t enum is ordered so that we can
- * just sort on that first. Furthermore, sort REMOVE entries in reverse
- * path order, so that "foo/bar" subdirectory is removed before "foo".
- */
+   
+                                                                         
+                                                                          
+                                                                          
+                                                                          
+                                                                            
+                                                                         
+                                                                        
+                                                                       
+   
 static int
 final_filemap_cmp(const void *a, const void *b)
 {

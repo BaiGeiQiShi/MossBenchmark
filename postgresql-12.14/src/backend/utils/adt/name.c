@@ -1,23 +1,23 @@
-/*-------------------------------------------------------------------------
- *
- * name.c
- *	  Functions for the built-in type "name".
- *
- * name replaces char16 and is carefully implemented so that it
- * is a string of physical length NAMEDATALEN.
- * DO NOT use hard-coded constants anywhere
- * always use NAMEDATALEN as the symbolic constant!   - jolly 8/21/95
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/name.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                             
+   
+                                                                
+                                               
+                                            
+                                                                      
+   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                  
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "catalog/namespace.h"
@@ -31,17 +31,17 @@
 #include "utils/lsyscache.h"
 #include "utils/varlena.h"
 
-/*****************************************************************************
- *	 USER I/O ROUTINES (none)												 *
- *****************************************************************************/
+                                                                               
+                                           
+                                                                               
 
-/*
- *		namein	- converts "..." to internal representation
- *
- *		Note:
- *				[Old] Currently if strlen(s) < NAMEDATALEN, the extra chars are nulls
- *				Now, always NULL terminated
- */
+   
+                                                       
+   
+          
+                                                                            
+                                  
+   
 Datum
 namein(PG_FUNCTION_ARGS)
 {
@@ -51,22 +51,22 @@ namein(PG_FUNCTION_ARGS)
 
   len = strlen(s);
 
-  /* Truncate oversize input */
+                               
   if (len >= NAMEDATALEN)
   {
     len = pg_mbcliplen(s, len, NAMEDATALEN - 1);
   }
 
-  /* We use palloc0 here to ensure result is zero-padded */
+                                                           
   result = (Name)palloc0(NAMEDATALEN);
   memcpy(NameStr(*result), s, len);
 
   PG_RETURN_NAME(result);
 }
 
-/*
- *		nameout - converts internal representation to "..."
- */
+   
+                                                        
+   
 Datum
 nameout(PG_FUNCTION_ARGS)
 {
@@ -75,9 +75,9 @@ nameout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(pstrdup(NameStr(*s)));
 }
 
-/*
- *		namerecv			- converts external binary format to name
- */
+   
+                                                         
+   
 Datum
 namerecv(PG_FUNCTION_ARGS)
 {
@@ -97,9 +97,9 @@ namerecv(PG_FUNCTION_ARGS)
   PG_RETURN_NAME(result);
 }
 
-/*
- *		namesend			- converts name to binary format
- */
+   
+                                                
+   
 Datum
 namesend(PG_FUNCTION_ARGS)
 {
@@ -111,33 +111,33 @@ namesend(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*****************************************************************************
- *	 COMPARISON/SORTING ROUTINES											 *
- *****************************************************************************/
+                                                                               
+                                             
+                                                                               
 
-/*
- *		nameeq	- returns 1 iff arguments are equal
- *		namene	- returns 1 iff arguments are not equal
- *		namelt	- returns 1 iff a < b
- *		namele	- returns 1 iff a <= b
- *		namegt	- returns 1 iff a > b
- *		namege	- returns 1 iff a >= b
- *
- * Note that the use of strncmp with NAMEDATALEN limit is mostly historical;
- * strcmp would do as well, because we do not allow NAME values that don't
- * have a '\0' terminator.  Whatever might be past the terminator is not
- * considered relevant to comparisons.
- */
+   
+                                               
+                                                   
+                                 
+                                  
+                                 
+                                  
+   
+                                                                             
+                                                                           
+                                                                         
+                                       
+   
 static int
 namecmp(Name arg1, Name arg2, Oid collid)
 {
-  /* Fast path for common case used in system catalogs */
+                                                         
   if (collid == C_COLLATION_OID)
   {
     return strncmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN);
   }
 
-  /* Else rely on the varstr infrastructure */
+                                              
   return varstr_cmp(NameStr(*arg1), strlen(NameStr(*arg1)), NameStr(*arg2), strlen(NameStr(*arg2)), collid);
 }
 
@@ -213,7 +213,7 @@ btnamesortsupport(PG_FUNCTION_ARGS)
 
   oldcontext = MemoryContextSwitchTo(ssup->ssup_cxt);
 
-  /* Use generic string SortSupport */
+                                      
   varstr_sortsupport(ssup, NAMEOID, collid);
 
   MemoryContextSwitchTo(oldcontext);
@@ -221,9 +221,9 @@ btnamesortsupport(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*****************************************************************************
- *	 MISCELLANEOUS PUBLIC ROUTINES											 *
- *****************************************************************************/
+                                                                               
+                                               
+                                                                               
 
 int
 namecpy(Name n1, const NameData *n2)
@@ -240,7 +240,7 @@ namecpy(Name n1, const NameData *n2)
 int
 namecat(Name n1, Name n2)
 {
-  return namestrcat(n1, NameStr(*n2)); /* n2 can't be any longer than n1 */
+  return namestrcat(n1, NameStr(*n2));                                     
 }
 #endif
 
@@ -280,12 +280,12 @@ namestrcat(Name name, const char *str)
 }
 #endif
 
-/*
- * Compare a NAME to a C string
- *
- * Assumes C collation always; be careful when using this for
- * anything but equality checks!
- */
+   
+                                
+   
+                                                              
+                                 
+   
 int
 namestrcmp(Name name, const char *str)
 {
@@ -295,18 +295,18 @@ namestrcmp(Name name, const char *str)
   }
   if (!name)
   {
-    return -1; /* NULL < anything */
+    return -1;                      
   }
   if (!str)
   {
-    return 1; /* NULL < anything */
+    return 1;                      
   }
   return strncmp(NameStr(*name), str, NAMEDATALEN);
 }
 
-/*
- * SQL-functions CURRENT_USER, SESSION_USER
- */
+   
+                                            
+   
 Datum
 current_user(PG_FUNCTION_ARGS)
 {
@@ -319,9 +319,9 @@ session_user(PG_FUNCTION_ARGS)
   PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(GetSessionUserId(), false))));
 }
 
-/*
- * SQL-functions CURRENT_SCHEMA, CURRENT_SCHEMAS
- */
+   
+                                                 
+   
 Datum
 current_schema(PG_FUNCTION_ARGS)
 {
@@ -336,7 +336,7 @@ current_schema(PG_FUNCTION_ARGS)
   list_free(search_path);
   if (!nspname)
   {
-    PG_RETURN_NULL(); /* recently-deleted namespace? */
+    PG_RETURN_NULL();                                  
   }
   PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(nspname)));
 }
@@ -357,7 +357,7 @@ current_schemas(PG_FUNCTION_ARGS)
     char *nspname;
 
     nspname = get_namespace_name(lfirst_oid(l));
-    if (nspname) /* watch out for deleted namespace */
+    if (nspname)                                      
     {
       names[i] = DirectFunctionCall1(namein, CStringGetDatum(nspname));
       i++;
@@ -365,23 +365,23 @@ current_schemas(PG_FUNCTION_ARGS)
   }
   list_free(search_path);
 
-  array = construct_array(names, i, NAMEOID, NAMEDATALEN, /* sizeof(Name) */
-      false,                                              /* Name is not by-val */
-      'c');                                               /* alignment of Name */
+  array = construct_array(names, i, NAMEOID, NAMEDATALEN,                   
+      false,                                                                      
+      'c');                                                                      
 
   PG_RETURN_POINTER(array);
 }
 
-/*
- * SQL-function nameconcatoid(name, oid) returns name
- *
- * This is used in the information_schema to produce specific_name columns,
- * which are supposed to be unique per schema.  We achieve that (in an ugly
- * way) by appending the object's OID.  The result is the same as
- *		($1::text || '_' || $2::text)::name
- * except that, if it would not fit in NAMEDATALEN, we make it do so by
- * truncating the name input (not the oid).
- */
+   
+                                                      
+   
+                                                                            
+                                                                            
+                                                                  
+                                        
+                                                                        
+                                            
+   
 Datum
 nameconcatoid(PG_FUNCTION_ARGS)
 {
@@ -395,13 +395,13 @@ nameconcatoid(PG_FUNCTION_ARGS)
   suflen = snprintf(suffix, sizeof(suffix), "_%u", oid);
   namlen = strlen(NameStr(*nam));
 
-  /* Truncate oversize input by truncating name part, not suffix */
+                                                                   
   if (namlen + suflen >= NAMEDATALEN)
   {
     namlen = pg_mbcliplen(NameStr(*nam), namlen, NAMEDATALEN - 1 - suflen);
   }
 
-  /* We use palloc0 here to ensure result is zero-padded */
+                                                           
   result = (Name)palloc0(NAMEDATALEN);
   memcpy(NameStr(*result), NameStr(*nam), namlen);
   memcpy(NameStr(*result) + namlen, suffix, suflen);

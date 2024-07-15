@@ -1,13 +1,13 @@
-/*
- * brin_xlog.c
- *		XLog replay routines for BRIN indexes
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/access/brin/brin_xlog.c
- */
+   
+               
+                                          
+   
+                                                                         
+                                                                        
+   
+                  
+                                         
+   
 #include "postgres.h"
 
 #include "access/brin_page.h"
@@ -16,9 +16,9 @@
 #include "access/bufmask.h"
 #include "access/xlogutils.h"
 
-/*
- * xlog replay routines
- */
+   
+                        
+   
 static void
 brin_xlog_createidx(XLogReaderState *record)
 {
@@ -27,7 +27,7 @@ brin_xlog_createidx(XLogReaderState *record)
   Buffer buf;
   Page page;
 
-  /* create the index' metapage */
+                                  
   buf = XLogInitBufferForRedo(record, 0);
   Assert(BufferIsValid(buf));
   page = (Page)BufferGetPage(buf);
@@ -37,10 +37,10 @@ brin_xlog_createidx(XLogReaderState *record)
   UnlockReleaseBuffer(buf);
 }
 
-/*
- * Common part of an insert or update. Inserts the new tuple and updates the
- * revmap.
- */
+   
+                                                                             
+           
+   
 static void
 brin_xlog_insert_update(XLogReaderState *record, xl_brin_insert *xlrec)
 {
@@ -50,10 +50,10 @@ brin_xlog_insert_update(XLogReaderState *record, xl_brin_insert *xlrec)
   Page page;
   XLogRedoAction action;
 
-  /*
-   * If we inserted the first and only tuple on the page, re-initialize the
-   * page from scratch.
-   */
+     
+                                                                            
+                        
+     
   if (XLogRecGetInfo(record) & XLOG_BRIN_INIT_PAGE)
   {
     buffer = XLogInitBufferForRedo(record, 0);
@@ -66,10 +66,10 @@ brin_xlog_insert_update(XLogReaderState *record, xl_brin_insert *xlrec)
     action = XLogReadBufferForRedo(record, 0, &buffer);
   }
 
-  /* need this page's blkno to store in revmap */
+                                                 
   regpgno = BufferGetBlockNumber(buffer);
 
-  /* insert the index item into the page */
+                                           
   if (action == BLK_NEEDS_REDO)
   {
     OffsetNumber offnum;
@@ -101,7 +101,7 @@ brin_xlog_insert_update(XLogReaderState *record, xl_brin_insert *xlrec)
     UnlockReleaseBuffer(buffer);
   }
 
-  /* update the revmap */
+                         
   action = XLogReadBufferForRedo(record, 1, &buffer);
   if (action == BLK_NEEDS_REDO)
   {
@@ -119,12 +119,12 @@ brin_xlog_insert_update(XLogReaderState *record, xl_brin_insert *xlrec)
     UnlockReleaseBuffer(buffer);
   }
 
-  /* XXX no FSM updates here ... */
+                                   
 }
 
-/*
- * replay a BRIN index insertion
- */
+   
+                                 
+   
 static void
 brin_xlog_insert(XLogReaderState *record)
 {
@@ -133,9 +133,9 @@ brin_xlog_insert(XLogReaderState *record)
   brin_xlog_insert_update(record, xlrec);
 }
 
-/*
- * replay a BRIN index update
- */
+   
+                              
+   
 static void
 brin_xlog_update(XLogReaderState *record)
 {
@@ -144,7 +144,7 @@ brin_xlog_update(XLogReaderState *record)
   Buffer buffer;
   XLogRedoAction action;
 
-  /* First remove the old tuple */
+                                  
   action = XLogReadBufferForRedo(record, 2, &buffer);
   if (action == BLK_NEEDS_REDO)
   {
@@ -161,7 +161,7 @@ brin_xlog_update(XLogReaderState *record)
     MarkBufferDirty(buffer);
   }
 
-  /* Then insert the new tuple and update revmap, like in an insertion. */
+                                                                          
   brin_xlog_insert_update(record, &xlrec->insert);
 
   if (BufferIsValid(buffer))
@@ -170,9 +170,9 @@ brin_xlog_update(XLogReaderState *record)
   }
 }
 
-/*
- * Update a tuple on a single page.
- */
+   
+                                    
+   
 static void
 brin_xlog_samepage_update(XLogReaderState *record)
 {
@@ -209,12 +209,12 @@ brin_xlog_samepage_update(XLogReaderState *record)
     UnlockReleaseBuffer(buffer);
   }
 
-  /* XXX no FSM updates here ... */
+                                   
 }
 
-/*
- * Replay a revmap page extension
- */
+   
+                                  
+   
 static void
 brin_xlog_revmap_extend(XLogReaderState *record)
 {
@@ -231,7 +231,7 @@ brin_xlog_revmap_extend(XLogReaderState *record)
   XLogRecGetBlockTag(record, 1, NULL, NULL, &targetBlk);
   Assert(xlrec->targetBlk == targetBlk);
 
-  /* Update the metapage */
+                           
   action = XLogReadBufferForRedo(record, 0, &metabuf);
   if (action == BLK_NEEDS_REDO)
   {
@@ -246,22 +246,22 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 
     PageSetLSN(metapg, lsn);
 
-    /*
-     * Set pd_lower just past the end of the metadata.  This is essential,
-     * because without doing so, metadata will be lost if xlog.c
-     * compresses the page.  (We must do this here because pre-v11
-     * versions of PG did not set the metapage's pd_lower correctly, so a
-     * pg_upgraded index might contain the wrong value.)
-     */
+       
+                                                                           
+                                                                 
+                                                                   
+                                                                          
+                                                         
+       
     ((PageHeader)metapg)->pd_lower = ((char *)metadata + sizeof(BrinMetaPageData)) - (char *)metapg;
 
     MarkBufferDirty(metabuf);
   }
 
-  /*
-   * Re-init the target block as a revmap page.  There's never a full- page
-   * image here.
-   */
+     
+                                                                            
+                 
+     
 
   buf = XLogInitBufferForRedo(record, 1);
   page = (Page)BufferGetPage(buf);
@@ -287,7 +287,7 @@ brin_xlog_desummarize_page(XLogReaderState *record)
 
   xlrec = (xl_brin_desummarize *)XLogRecGetData(record);
 
-  /* Update the revmap */
+                         
   action = XLogReadBufferForRedo(record, 0, &buffer);
   if (action == BLK_NEEDS_REDO)
   {
@@ -304,7 +304,7 @@ brin_xlog_desummarize_page(XLogReaderState *record)
     UnlockReleaseBuffer(buffer);
   }
 
-  /* remove the leftover entry from the regular page */
+                                                       
   action = XLogReadBufferForRedo(record, 1, &buffer);
   if (action == BLK_NEEDS_REDO)
   {
@@ -351,9 +351,9 @@ brin_redo(XLogReaderState *record)
   }
 }
 
-/*
- * Mask a BRIN page before doing consistency checks.
- */
+   
+                                                     
+   
 void
 brin_mask(char *pagedata, BlockNumber blkno)
 {
@@ -364,19 +364,19 @@ brin_mask(char *pagedata, BlockNumber blkno)
 
   mask_page_hint_bits(page);
 
-  /*
-   * Regular brin pages contain unused space which needs to be masked.
-   * Similarly for meta pages, but mask it only if pd_lower appears to have
-   * been set correctly.
-   */
+     
+                                                                       
+                                                                            
+                         
+     
   if (BRIN_IS_REGULAR_PAGE(page) || (BRIN_IS_META_PAGE(page) && pagehdr->pd_lower > SizeOfPageHeaderData))
   {
     mask_unused_space(page);
   }
 
-  /*
-   * BRIN_EVACUATE_PAGE is not WAL-logged, since it's of no use in recovery.
-   * Mask it.  See brin_start_evacuating_page() for details.
-   */
+     
+                                                                             
+                                                             
+     
   BrinPageFlags(page) &= ~BRIN_EVACUATE_PAGE;
 }

@@ -1,13 +1,13 @@
-/*-------------------------------------------------------------------------
- *
- * pg_isready --- checks the status of the PostgreSQL server
- *
- * Copyright (c) 2013-2019, PostgreSQL Global Development Group
- *
- * src/bin/scripts/pg_isready.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                             
+   
+                                                                
+   
+                                
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -49,10 +49,10 @@ main(int argc, char **argv)
   PQconninfoOption *def;
   char *errmsg = NULL;
 
-  /*
-   * We accept user and database as options to avoid useless errors from
-   * connecting with invalid params
-   */
+     
+                                                                         
+                                    
+     
 
   static struct option long_options[] = {{"dbname", required_argument, NULL, 'd'}, {"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"quiet", no_argument, NULL, 'q'}, {"timeout", required_argument, NULL, 't'}, {"username", required_argument, NULL, 'U'}, {NULL, 0, NULL, 0}};
 
@@ -86,10 +86,10 @@ main(int argc, char **argv)
     default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 
-      /*
-       * We need to make sure we don't return 1 here because someone
-       * checking the return code might infer unintended meaning
-       */
+         
+                                                                     
+                                                                 
+         
       exit(PQPING_NO_ATTEMPT);
     }
   }
@@ -99,10 +99,10 @@ main(int argc, char **argv)
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
     fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 
-    /*
-     * We need to make sure we don't return 1 here because someone
-     * checking the return code might infer unintended meaning
-     */
+       
+                                                                   
+                                                               
+       
     exit(PQPING_NO_ATTEMPT);
   }
 
@@ -121,9 +121,9 @@ main(int argc, char **argv)
   keywords[6] = NULL;
   values[6] = NULL;
 
-  /*
-   * Get the host and port so we can display them in our output
-   */
+     
+                                                                
+     
   if (pgdbname && (strncmp(pgdbname, "postgresql://", 13) == 0 || strncmp(pgdbname, "postgres://", 11) == 0 || strchr(pgdbname, '=') != NULL))
   {
     opts = PQconninfoParse(pgdbname, &errmsg);

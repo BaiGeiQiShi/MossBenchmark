@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * dropcmds.c
- *	  handle various "DROP" operations
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/commands/dropcmds.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                      
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/htup_details.h"
@@ -39,17 +39,17 @@ schema_does_not_exist_skipping(List *object, const char **msg, char **name);
 static bool
 type_in_list_does_not_exist_skipping(List *typenames, const char **msg, char **name);
 
-/*
- * Drop one or more objects.
- *
- * We don't currently handle all object types here.  Relations, for example,
- * require special handling, because (for example) indexes have additional
- * locking requirements.
- *
- * We look up all the objects first, and then delete them in a single
- * performMultipleDeletions() call.  This avoids unnecessary DROP RESTRICT
- * errors if there are dependencies between them.
- */
+   
+                             
+   
+                                                                             
+                                                                           
+                         
+   
+                                                                      
+                                                                           
+                                                  
+   
 void
 RemoveObjects(DropStmt *stmt)
 {
@@ -65,14 +65,14 @@ RemoveObjects(DropStmt *stmt)
     Relation relation = NULL;
     Oid namespaceId;
 
-    /* Get an ObjectAddress for the object. */
+                                              
     address = get_object_address(stmt->removeType, object, &relation, AccessExclusiveLock, stmt->missing_ok);
 
-    /*
-     * Issue NOTICE if supplied object was not found.  Note this is only
-     * relevant in the missing_ok case, because otherwise
-     * get_object_address would have thrown an error.
-     */
+       
+                                                                         
+                                                          
+                                                      
+       
     if (!OidIsValid(address.objectId))
     {
       Assert(stmt->missing_ok);
@@ -80,11 +80,11 @@ RemoveObjects(DropStmt *stmt)
       continue;
     }
 
-    /*
-     * Although COMMENT ON FUNCTION, SECURITY LABEL ON FUNCTION, etc. are
-     * happy to operate on an aggregate as on any other function, we have
-     * historically not allowed this for DROP FUNCTION.
-     */
+       
+                                                                          
+                                                                          
+                                                        
+       
     if (stmt->removeType == OBJECT_FUNCTION)
     {
       if (get_func_prokind(address.objectId) == PROKIND_AGGREGATE)
@@ -93,23 +93,23 @@ RemoveObjects(DropStmt *stmt)
       }
     }
 
-    /* Check permissions. */
+                            
     namespaceId = get_object_namespace(&address);
     if (!OidIsValid(namespaceId) || !pg_namespace_ownercheck(namespaceId, GetUserId()))
     {
       check_object_ownership(GetUserId(), stmt->removeType, address, object, relation);
     }
 
-    /*
-     * Make note if a temporary namespace has been accessed in this
-     * transaction.
-     */
+       
+                                                                    
+                    
+       
     if (OidIsValid(namespaceId) && isTempNamespace(namespaceId))
     {
       MyXactFlags |= XACT_FLAGS_ACCESSEDTEMPNAMESPACE;
     }
 
-    /* Release any relcache reference count, but keep lock until commit. */
+                                                                           
     if (relation)
     {
       table_close(relation, NoLock);
@@ -118,22 +118,22 @@ RemoveObjects(DropStmt *stmt)
     add_exact_object_address(&address, objects);
   }
 
-  /* Here we really delete them. */
+                                   
   performMultipleDeletions(objects, stmt->behavior, 0);
 
   free_object_addresses(objects);
 }
 
-/*
- * owningrel_does_not_exist_skipping
- *		Subroutine for RemoveObjects
- *
- * After determining that a specification for a rule or trigger returns that
- * the specified object does not exist, test whether its owning relation, and
- * its schema, exist or not; if they do, return false --- the trigger or rule
- * itself is missing instead.  If the owning relation or its schema do not
- * exist, fill the error message format string and name, and return true.
- */
+   
+                                     
+                                 
+   
+                                                                             
+                                                                              
+                                                                              
+                                                                           
+                                                                          
+   
 static bool
 owningrel_does_not_exist_skipping(List *object, const char **msg, char **name)
 {
@@ -160,17 +160,17 @@ owningrel_does_not_exist_skipping(List *object, const char **msg, char **name)
   return false;
 }
 
-/*
- * schema_does_not_exist_skipping
- *		Subroutine for RemoveObjects
- *
- * After determining that a specification for a schema-qualifiable object
- * refers to an object that does not exist, test whether the specified schema
- * exists or not.  If no schema was specified, or if the schema does exist,
- * return false -- the object itself is missing instead.  If the specified
- * schema does not exist, fill the error message format string and the
- * specified schema name, and return true.
- */
+   
+                                  
+                                 
+   
+                                                                          
+                                                                              
+                                                                            
+                                                                           
+                                                                       
+                                           
+   
 static bool
 schema_does_not_exist_skipping(List *object, const char **msg, char **name)
 {
@@ -189,19 +189,19 @@ schema_does_not_exist_skipping(List *object, const char **msg, char **name)
   return false;
 }
 
-/*
- * type_in_list_does_not_exist_skipping
- *		Subroutine for RemoveObjects
- *
- * After determining that a specification for a function, cast, aggregate or
- * operator returns that the specified object does not exist, test whether the
- * involved datatypes, and their schemas, exist or not; if they do, return
- * false --- the original object itself is missing instead.  If the datatypes
- * or schemas do not exist, fill the error message format string and the
- * missing name, and return true.
- *
- * First parameter is a list of TypeNames.
- */
+   
+                                        
+                                 
+   
+                                                                             
+                                                                               
+                                                                           
+                                                                              
+                                                                         
+                                  
+   
+                                           
+   
 static bool
 type_in_list_does_not_exist_skipping(List *typenames, const char **msg, char **name)
 {
@@ -215,7 +215,7 @@ type_in_list_does_not_exist_skipping(List *typenames, const char **msg, char **n
     {
       if (!OidIsValid(LookupTypeNameOid(NULL, typeName, true)))
       {
-        /* type doesn't exist, try to find why */
+                                                 
         if (schema_does_not_exist_skipping(typeName->names, msg, name))
         {
           return true;
@@ -232,14 +232,14 @@ type_in_list_does_not_exist_skipping(List *typenames, const char **msg, char **n
   return false;
 }
 
-/*
- * does_not_exist_skipping
- *		Subroutine for RemoveObjects
- *
- * Generate a NOTICE stating that the named object was not found, and is
- * being skipped.  This is only relevant when "IF EXISTS" is used; otherwise,
- * get_object_address() in RemoveObjects would have thrown an ERROR.
- */
+   
+                           
+                                 
+   
+                                                                         
+                                                                              
+                                                                     
+   
 static void
 does_not_exist_skipping(ObjectType objtype, Node *object)
 {
@@ -389,7 +389,7 @@ does_not_exist_skipping(ObjectType objtype, Node *object)
   {
     if (!type_in_list_does_not_exist_skipping(list_make1(linitial(castNode(List, object))), &msg, &name) && !type_in_list_does_not_exist_skipping(list_make1(lsecond(castNode(List, object))), &msg, &name))
     {
-      /* XXX quote or no quote? */
+                                  
       msg = gettext_noop("cast from type %s to type %s does not exist, skipping");
       name = TypeNameToString(linitial_node(TypeName, castNode(List, object)));
       args = TypeNameToString(lsecond_node(TypeName, castNode(List, object)));

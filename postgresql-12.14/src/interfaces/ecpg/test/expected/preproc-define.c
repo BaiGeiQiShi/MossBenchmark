@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "define.pgc"
@@ -16,10 +16,10 @@
 
 #line 6 "define.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 8 "define.pgc"
 
-/* exec sql type intarray is int [ 6 ] */
+                                         
 #line 13 "define.pgc"
 
 typedef int intarray[6];
@@ -27,7 +27,7 @@ typedef int intarray[6];
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
   typedef char string[8];
 
@@ -48,7 +48,7 @@ main(void)
  int not_used ;
 
 #endif
-/* exec sql end declare section */
+                                  
 #line 29 "define.pgc"
 
   int i, j;
@@ -134,7 +134,7 @@ main(void)
 
   for (i = 0, j = sqlca.sqlerrd[2]; i < j; i++)
   {
-    /* exec sql begin declare section */
+                                        
 
 #line 48 "define.pgc"
     string n;
@@ -144,7 +144,7 @@ main(void)
 
 #line 50 "define.pgc"
     int a = amount[i];
-/* exec sql end declare section */
+                                  
 #line 51 "define.pgc"
 
     strncpy(n, name[i], 8);

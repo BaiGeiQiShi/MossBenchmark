@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pg_subscription.c
- *		replication subscriptions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *		src/backend/catalog/pg_subscription.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                     
+                              
+   
+                                                                         
+                                                                        
+   
+                  
+                                          
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -41,9 +41,9 @@
 static List *
 textarray_to_stringlist(ArrayType *textarray);
 
-/*
- * Fetch the subscription from the syscache.
- */
+   
+                                             
+   
 Subscription *
 GetSubscription(Oid subid, bool missing_ok)
 {
@@ -74,12 +74,12 @@ GetSubscription(Oid subid, bool missing_ok)
   sub->owner = subform->subowner;
   sub->enabled = subform->subenabled;
 
-  /* Get conninfo */
+                    
   datum = SysCacheGetAttr(SUBSCRIPTIONOID, tup, Anum_pg_subscription_subconninfo, &isnull);
   Assert(!isnull);
   sub->conninfo = TextDatumGetCString(datum);
 
-  /* Get slotname */
+                    
   datum = SysCacheGetAttr(SUBSCRIPTIONOID, tup, Anum_pg_subscription_subslotname, &isnull);
   if (!isnull)
   {
@@ -90,12 +90,12 @@ GetSubscription(Oid subid, bool missing_ok)
     sub->slotname = NULL;
   }
 
-  /* Get synccommit */
+                      
   datum = SysCacheGetAttr(SUBSCRIPTIONOID, tup, Anum_pg_subscription_subsynccommit, &isnull);
   Assert(!isnull);
   sub->synccommit = TextDatumGetCString(datum);
 
-  /* Get publications */
+                        
   datum = SysCacheGetAttr(SUBSCRIPTIONOID, tup, Anum_pg_subscription_subpublications, &isnull);
   Assert(!isnull);
   sub->publications = textarray_to_stringlist(DatumGetArrayTypeP(datum));
@@ -105,10 +105,10 @@ GetSubscription(Oid subid, bool missing_ok)
   return sub;
 }
 
-/*
- * Return number of subscriptions defined in given database.
- * Used by dropdb() to check if database can indeed be dropped.
- */
+   
+                                                             
+                                                                
+   
 int
 CountDBSubscriptions(Oid dbid)
 {
@@ -136,9 +136,9 @@ CountDBSubscriptions(Oid dbid)
   return nsubs;
 }
 
-/*
- * Free memory allocated by subscription struct.
- */
+   
+                                                 
+   
 void
 FreeSubscription(Subscription *sub)
 {
@@ -152,12 +152,12 @@ FreeSubscription(Subscription *sub)
   pfree(sub);
 }
 
-/*
- * get_subscription_oid - given a subscription name, look up the OID
- *
- * If missing_ok is false, throw an error if name not found.  If true, just
- * return InvalidOid.
- */
+   
+                                                                     
+   
+                                                                            
+                      
+   
 Oid
 get_subscription_oid(const char *subname, bool missing_ok)
 {
@@ -171,12 +171,12 @@ get_subscription_oid(const char *subname, bool missing_ok)
   return oid;
 }
 
-/*
- * get_subscription_name - given a subscription OID, look up the name
- *
- * If missing_ok is false, throw an error if name not found.  If true, just
- * return NULL.
- */
+   
+                                                                      
+   
+                                                                            
+                
+   
 char *
 get_subscription_name(Oid subid, bool missing_ok)
 {
@@ -203,11 +203,11 @@ get_subscription_name(Oid subid, bool missing_ok)
   return subname;
 }
 
-/*
- * Convert text array to list of strings.
- *
- * Note: the resulting list of strings is pallocated here.
- */
+   
+                                          
+   
+                                                           
+   
 static List *
 textarray_to_stringlist(ArrayType *textarray)
 {
@@ -230,9 +230,9 @@ textarray_to_stringlist(ArrayType *textarray)
   return res;
 }
 
-/*
- * Add new state record for a subscription table.
- */
+   
+                                                  
+   
 void
 AddSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 {
@@ -245,14 +245,14 @@ AddSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 
   rel = table_open(SubscriptionRelRelationId, RowExclusiveLock);
 
-  /* Try finding existing mapping. */
+                                     
   tup = SearchSysCacheCopy2(SUBSCRIPTIONRELMAP, ObjectIdGetDatum(relid), ObjectIdGetDatum(subid));
   if (HeapTupleIsValid(tup))
   {
     elog(ERROR, "subscription table %u in subscription %u already exists", relid, subid);
   }
 
-  /* Form the tuple. */
+                       
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
   values[Anum_pg_subscription_rel_srsubid - 1] = ObjectIdGetDatum(subid);
@@ -269,18 +269,18 @@ AddSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 
   tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
-  /* Insert tuple into catalog. */
+                                  
   CatalogTupleInsert(rel, tup);
 
   heap_freetuple(tup);
 
-  /* Cleanup. */
+                
   table_close(rel, NoLock);
 }
 
-/*
- * Update the state of a subscription table.
- */
+   
+                                             
+   
 void
 UpdateSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 {
@@ -294,14 +294,14 @@ UpdateSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 
   rel = table_open(SubscriptionRelRelationId, RowExclusiveLock);
 
-  /* Try finding existing mapping. */
+                                     
   tup = SearchSysCacheCopy2(SUBSCRIPTIONRELMAP, ObjectIdGetDatum(relid), ObjectIdGetDatum(subid));
   if (!HeapTupleIsValid(tup))
   {
     elog(ERROR, "subscription table %u in subscription %u does not exist", relid, subid);
   }
 
-  /* Update the tuple. */
+                         
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
   memset(replaces, false, sizeof(replaces));
@@ -321,18 +321,18 @@ UpdateSubscriptionRelState(Oid subid, Oid relid, char state, XLogRecPtr sublsn)
 
   tup = heap_modify_tuple(tup, RelationGetDescr(rel), values, nulls, replaces);
 
-  /* Update the catalog. */
+                           
   CatalogTupleUpdate(rel, &tup->t_self, tup);
 
-  /* Cleanup. */
+                
   table_close(rel, NoLock);
 }
 
-/*
- * Get state of subscription table.
- *
- * Returns SUBREL_STATE_UNKNOWN when not found and missing_ok is true.
- */
+   
+                                    
+   
+                                                                       
+   
 char
 GetSubscriptionRelState(Oid subid, Oid relid, XLogRecPtr *sublsn, bool missing_ok)
 {
@@ -344,7 +344,7 @@ GetSubscriptionRelState(Oid subid, Oid relid, XLogRecPtr *sublsn, bool missing_o
 
   rel = table_open(SubscriptionRelRelationId, AccessShareLock);
 
-  /* Try finding the mapping. */
+                                
   tup = SearchSysCache2(SUBSCRIPTIONRELMAP, ObjectIdGetDatum(relid), ObjectIdGetDatum(subid));
 
   if (!HeapTupleIsValid(tup))
@@ -359,7 +359,7 @@ GetSubscriptionRelState(Oid subid, Oid relid, XLogRecPtr *sublsn, bool missing_o
     elog(ERROR, "subscription table %u in subscription %u does not exist", relid, subid);
   }
 
-  /* Get the state. */
+                      
   d = SysCacheGetAttr(SUBSCRIPTIONRELMAP, tup, Anum_pg_subscription_rel_srsubstate, &isnull);
   Assert(!isnull);
   substate = DatumGetChar(d);
@@ -373,17 +373,17 @@ GetSubscriptionRelState(Oid subid, Oid relid, XLogRecPtr *sublsn, bool missing_o
     *sublsn = DatumGetLSN(d);
   }
 
-  /* Cleanup */
+               
   ReleaseSysCache(tup);
   table_close(rel, AccessShareLock);
 
   return substate;
 }
 
-/*
- * Drop subscription relation mapping. These can be for a particular
- * subscription, or for a particular relation, or both.
- */
+   
+                                                                     
+                                                        
+   
 void
 RemoveSubscriptionRel(Oid subid, Oid relid)
 {
@@ -405,7 +405,7 @@ RemoveSubscriptionRel(Oid subid, Oid relid)
     ScanKeyInit(&skey[nkeys++], Anum_pg_subscription_rel_srrelid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(relid));
   }
 
-  /* Do the search and delete what we found. */
+                                               
   scan = table_beginscan_catalog(rel, nkeys, skey);
   while (HeapTupleIsValid(tup = heap_getnext(scan, ForwardScanDirection)))
   {
@@ -416,11 +416,11 @@ RemoveSubscriptionRel(Oid subid, Oid relid)
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Get all relations for subscription.
- *
- * Returned list is palloc'ed in current memory context.
- */
+   
+                                       
+   
+                                                         
+   
 List *
 GetSubscriptionRelations(Oid subid)
 {
@@ -462,18 +462,18 @@ GetSubscriptionRelations(Oid subid)
     res = lappend(res, relstate);
   }
 
-  /* Cleanup */
+               
   systable_endscan(scan);
   table_close(rel, AccessShareLock);
 
   return res;
 }
 
-/*
- * Get all relations for subscription that are not in a ready state.
- *
- * Returned list is palloc'ed in current memory context.
- */
+   
+                                                                     
+   
+                                                         
+   
 List *
 GetSubscriptionNotReadyRelations(Oid subid)
 {
@@ -517,7 +517,7 @@ GetSubscriptionNotReadyRelations(Oid subid)
     res = lappend(res, relstate);
   }
 
-  /* Cleanup */
+               
   systable_endscan(scan);
   table_close(rel, AccessShareLock);
 

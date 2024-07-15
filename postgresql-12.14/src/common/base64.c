@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * base64.c
- *	  Encoding and decoding routines for base64 without whitespace.
- *
- * Copyright (c) 2001-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/common/base64.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                                                   
+   
+                                                                
+   
+   
+                  
+                         
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -20,9 +20,9 @@
 
 #include "common/base64.h"
 
-/*
- * BASE64
- */
+   
+          
+   
 
 static const char _base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -157,12 +157,12 @@ static const int8 b64lookup[128] = {
     -1,
 };
 
-/*
- * pg_b64_encode
- *
- * Encode into base64 the given string.  Returns the length of the encoded
- * string.
- */
+   
+                 
+   
+                                                                           
+           
+   
 int
 pg_b64_encode(const char *src, int len, char *dst)
 {
@@ -180,7 +180,7 @@ pg_b64_encode(const char *src, int len, char *dst)
     pos--;
     s++;
 
-    /* write it out */
+                      
     if (pos < 0)
     {
       *p++ = _base64[(buf >> 18) & 0x3f];
@@ -203,12 +203,12 @@ pg_b64_encode(const char *src, int len, char *dst)
   return p - dst;
 }
 
-/*
- * pg_b64_decode
- *
- * Decode the given base64 string.  Returns the length of the decoded
- * string on success, and -1 in the event of an error.
- */
+   
+                 
+   
+                                                                      
+                                                       
+   
 int
 pg_b64_decode(const char *src, int len, char *dst)
 {
@@ -223,7 +223,7 @@ pg_b64_decode(const char *src, int len, char *dst)
   {
     c = *s++;
 
-    /* Leave if a whitespace is found */
+                                        
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
     {
       return -1;
@@ -231,7 +231,7 @@ pg_b64_decode(const char *src, int len, char *dst)
 
     if (c == '=')
     {
-      /* end sequence */
+                        
       if (!end)
       {
         if (pos == 2)
@@ -244,10 +244,10 @@ pg_b64_decode(const char *src, int len, char *dst)
         }
         else
         {
-          /*
-           * Unexpected "=" character found while decoding base64
-           * sequence.
-           */
+             
+                                                                  
+                       
+             
           return -1;
         }
       }
@@ -262,11 +262,11 @@ pg_b64_decode(const char *src, int len, char *dst)
       }
       if (b < 0)
       {
-        /* invalid symbol found */
+                                  
         return -1;
       }
     }
-    /* add it to buffer */
+                          
     buf = (buf << 6) + b;
     pos++;
     if (pos == 4)
@@ -287,39 +287,39 @@ pg_b64_decode(const char *src, int len, char *dst)
 
   if (pos != 0)
   {
-    /*
-     * base64 end sequence is invalid.  Input data is missing padding, is
-     * truncated or is otherwise corrupted.
-     */
+       
+                                                                          
+                                            
+       
     return -1;
   }
 
   return p - dst;
 }
 
-/*
- * pg_b64_enc_len
- *
- * Returns to caller the length of the string if it were encoded with
- * base64 based on the length provided by caller.  This is useful to
- * estimate how large a buffer allocation needs to be done before doing
- * the actual encoding.
- */
+   
+                  
+   
+                                                                      
+                                                                     
+                                                                        
+                        
+   
 int
 pg_b64_enc_len(int srclen)
 {
-  /* 3 bytes will be converted to 4 */
+                                      
   return (srclen + 2) * 4 / 3;
 }
 
-/*
- * pg_b64_dec_len
- *
- * Returns to caller the length of the string if it were to be decoded
- * with base64, based on the length given by caller.  This is useful to
- * estimate how large a buffer allocation needs to be done before doing
- * the actual decoding.
- */
+   
+                  
+   
+                                                                       
+                                                                        
+                                                                        
+                        
+   
 int
 pg_b64_dec_len(int srclen)
 {

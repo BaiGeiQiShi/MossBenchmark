@@ -1,38 +1,38 @@
-/*-------------------------------------------------------------------------
- *
- * pg_resetwal.c
- *	  A utility to "zero out" the xlog when it's corrupt beyond recovery.
- *	  Can also rebuild pg_control if needed.
- *
- * The theory of operation is fairly simple:
- *	  1. Read the existing pg_control (which will include the last
- *		 checkpoint record).  If it is an old format then update to
- *		 current format.
- *	  2. If pg_control is corrupt, attempt to intuit reasonable values,
- *		 by scanning the old xlog if necessary.
- *	  3. Modify pg_control to reflect a "shutdown" state with a checkpoint
- *		 record at the start of xlog.
- *	  4. Flush the existing xlog files and write a new segment with
- *		 just a checkpoint record in it.  The new segment is positioned
- *		 just past the end of the old xlog, so that existing LSNs in
- *		 data pages will appear to be "in the past".
- * This is all pretty straightforward except for the intuition part of
- * step 2 ...
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/pg_resetwal/pg_resetwal.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                                         
+                                            
+   
+                                             
+                                                                  
+                                                                
+                     
+                                                                       
+                                            
+                                                                          
+                                  
+                                                                   
+                                                                    
+                                                                 
+                                                 
+                                                                       
+              
+   
+   
+                                                                         
+                                                                        
+   
+                                     
+   
+                                                                            
+   
 
-/*
- * We have to use postgres.h not postgres_fe.h here, because there's so much
- * backend-only stuff in the XLOG include files we need.  But we need a
- * frontend-ish environment otherwise.  Hence this ugly hack.
- */
+   
+                                                                             
+                                                                        
+                                                              
+   
 #define FRONTEND 1
 
 #include "postgres.h"
@@ -58,9 +58,9 @@
 #include "pg_getopt.h"
 #include "getopt_long.h"
 
-static ControlFileData ControlFile; /* pg_control values */
-static XLogSegNo newXlogSegNo;      /* new XLOG segment # */
-static bool guessed = false;        /* T if we had to guess at any values */
+static ControlFileData ControlFile;                        
+static XLogSegNo newXlogSegNo;                              
+static bool guessed = false;                                                
 static const char *progname;
 static uint32 set_xid_epoch = (uint32)-1;
 static TransactionId set_oldest_xid = 0;
@@ -151,8 +151,8 @@ main(int argc, char *argv[])
       set_xid_epoch = strtoul(optarg, &endptr, 0);
       if (endptr == optarg || *endptr != '\0')
       {
-        /*------
-          translator: the second %s is a command line argument (-e, etc) */
+                 
+                                                                           
         pg_log_error("invalid argument for option %s", "-e");
         fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
         exit(1);
@@ -260,10 +260,10 @@ main(int argc, char *argv[])
         exit(1);
       }
 
-      /*
-       * XXX It'd be nice to have more sanity checks here, e.g. so
-       * that oldest is not wrapped around w.r.t. nextMulti.
-       */
+         
+                                                                   
+                                                             
+         
       if (set_oldestmxid == 0)
       {
         pg_log_error("oldest multitransaction ID (-m) must not be 0");
@@ -294,10 +294,10 @@ main(int argc, char *argv[])
         exit(1);
       }
 
-      /*
-       * XLogFromFileName requires wal segment size which is not yet
-       * set. Hence wal details are set later on.
-       */
+         
+                                                                     
+                                                  
+         
       log_fname = pg_strdup(optarg);
       break;
 
@@ -326,7 +326,7 @@ main(int argc, char *argv[])
     DataDir = argv[optind++];
   }
 
-  /* Complain if any arguments remain */
+                                        
   if (optind < argc)
   {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
@@ -341,12 +341,12 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /*
-   * Don't allow pg_resetwal to be run as root, to avoid overwriting the
-   * ownership of files in the data directory. We need only check for root
-   * -- any other user won't have sufficient permissions to modify files in
-   * the data directory.
-   */
+     
+                                                                         
+                                                                           
+                                                                            
+                         
+     
 #ifndef WIN32
   if (geteuid() == 0)
   {
@@ -358,7 +358,7 @@ main(int argc, char *argv[])
 
   get_restricted_token();
 
-  /* Set mask based on PGDATA permissions */
+                                            
   if (!GetDataDirectoryCreatePerm(DataDir))
   {
     pg_log_error("could not read permissions of directory \"%s\": %m", DataDir);
@@ -373,13 +373,13 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* Check that data directory matches our server version */
+                                                            
   CheckDataVersion();
 
-  /*
-   * Check for a postmaster lock file --- if there is one, refuse to
-   * proceed, on grounds we might be interfering with a live installation.
-   */
+     
+                                                                     
+                                                                           
+     
   if ((fd = open("postmaster.pid", O_RDONLY, 0)) < 0)
   {
     if (errno != ENOENT)
@@ -395,17 +395,17 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /*
-   * Attempt to read the existing pg_control file
-   */
+     
+                                                  
+     
   if (!ReadControlFile())
   {
     GuessControlValues();
   }
 
-  /*
-   * If no new WAL segment size was specified, use the control file value.
-   */
+     
+                                                                           
+     
   if (set_wal_segsize != 0)
   {
     WalSegSz = set_wal_segsize;
@@ -420,24 +420,24 @@ main(int argc, char *argv[])
     XLogFromFileName(log_fname, &minXlogTli, &minXlogSegNo, WalSegSz);
   }
 
-  /*
-   * Also look at existing segment files to set up newXlogSegNo
-   */
+     
+                                                                
+     
   FindEndOfXLOG();
 
-  /*
-   * If we're not going to proceed with the reset, print the current control
-   * file parameters.
-   */
+     
+                                                                             
+                      
+     
   if ((guessed && !force) || noupdate)
   {
     PrintControlValues(guessed);
   }
 
-  /*
-   * Adjust fields if required by switches.  (Do this now so that printout,
-   * if any, includes these values.)
-   */
+     
+                                                                            
+                                     
+     
   if (set_xid_epoch != -1)
   {
     ControlFile.checkPointCopy.nextFullXid = FullTransactionIdFromEpochAndXid(set_xid_epoch, XidFromFullTransactionId(ControlFile.checkPointCopy.nextFullXid));
@@ -501,10 +501,10 @@ main(int argc, char *argv[])
     newXlogSegNo = minXlogSegNo;
   }
 
-  /*
-   * If we had to guess anything, and -f was not given, just print the
-   * guessed values and exit.  Also print if -n is given.
-   */
+     
+                                                                       
+                                                          
+     
   if ((guessed && !force) || noupdate)
   {
     PrintNewControlValues();
@@ -519,9 +519,9 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Don't reset from a dirty pg_control without -f, either.
-   */
+     
+                                                             
+     
   if (ControlFile.state != DB_SHUTDOWNED && !force)
   {
     printf(_("The database server was not shut down cleanly.\n"
@@ -530,9 +530,9 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /*
-   * Else, do the dirty deed.
-   */
+     
+                              
+     
   RewriteControlFile();
   KillExistingXLOG();
   KillExistingArchiveStatus();
@@ -542,18 +542,18 @@ main(int argc, char *argv[])
   return 0;
 }
 
-/*
- * Look at the version string stored in PG_VERSION and decide if this utility
- * can be run safely or not.
- *
- * We don't want to inject pg_control and WAL files that are for a different
- * major version; that can't do anything good.  Note that we don't treat
- * mismatching version info in pg_control as a reason to bail out, because
- * recovering from a corrupted pg_control is one of the main reasons for this
- * program to exist at all.  However, PG_VERSION is unlikely to get corrupted,
- * and if it were it would be easy to fix by hand.  So let's make this check
- * to prevent simple user errors.
- */
+   
+                                                                              
+                             
+   
+                                                                             
+                                                                         
+                                                                           
+                                                                              
+                                                                               
+                                                                             
+                                  
+   
 static void
 CheckDataVersion(void)
 {
@@ -568,7 +568,7 @@ CheckDataVersion(void)
     exit(1);
   }
 
-  /* version number has to be the first line read */
+                                                    
   if (!fgets(rawline, sizeof(rawline), ver_fd))
   {
     if (!ferror(ver_fd))
@@ -582,7 +582,7 @@ CheckDataVersion(void)
     exit(1);
   }
 
-  /* remove trailing newline, handling Windows newlines as well */
+                                                                  
   len = strlen(rawline);
   if (len > 0 && rawline[len - 1] == '\n')
   {
@@ -603,12 +603,12 @@ CheckDataVersion(void)
   fclose(ver_fd);
 }
 
-/*
- * Try to read the existing pg_control file.
- *
- * This routine is also responsible for updating old pg_control versions
- * to the current format.  (Currently we don't do anything of the sort.)
- */
+   
+                                             
+   
+                                                                         
+                                                                         
+   
 static bool
 ReadControlFile(void)
 {
@@ -619,11 +619,11 @@ ReadControlFile(void)
 
   if ((fd = open(XLOG_CONTROL_FILE, O_RDONLY | PG_BINARY, 0)) < 0)
   {
-    /*
-     * If pg_control is not there at all, or we can't read it, the odds
-     * are we've been handed a bad DataDir path, so give up. User can do
-     * "touch pg_control" to force us to proceed.
-     */
+       
+                                                                        
+                                                                         
+                                                  
+       
     pg_log_error("could not open file \"%s\" for reading: %m", XLOG_CONTROL_FILE);
     if (errno == ENOENT)
     {
@@ -635,7 +635,7 @@ ReadControlFile(void)
     exit(1);
   }
 
-  /* Use malloc to ensure we have a maxaligned buffer */
+                                                        
   buffer = (char *)pg_malloc(PG_CONTROL_FILE_SIZE);
 
   len = read(fd, buffer, PG_CONTROL_FILE_SIZE);
@@ -648,21 +648,21 @@ ReadControlFile(void)
 
   if (len >= sizeof(ControlFileData) && ((ControlFileData *)buffer)->pg_control_version == PG_CONTROL_VERSION)
   {
-    /* Check the CRC. */
+                        
     INIT_CRC32C(crc);
     COMP_CRC32C(crc, buffer, offsetof(ControlFileData, crc));
     FIN_CRC32C(crc);
 
     if (!EQ_CRC32C(crc, ((ControlFileData *)buffer)->crc))
     {
-      /* We will use the data but treat it as guessed. */
+                                                         
       pg_log_warning("pg_control exists but has invalid CRC; proceed with caution");
       guessed = true;
     }
 
     memcpy(&ControlFile, buffer, sizeof(ControlFile));
 
-    /* return false if WAL segment size is not valid */
+                                                       
     if (!IsValidWalSegSize(ControlFile.xlog_seg_size))
     {
       pg_log_warning(ngettext("pg_control specifies invalid WAL segment size (%d byte); proceed with caution", "pg_control specifies invalid WAL segment size (%d bytes); proceed with caution", ControlFile.xlog_seg_size), ControlFile.xlog_seg_size);
@@ -672,33 +672,33 @@ ReadControlFile(void)
     return true;
   }
 
-  /* Looks like it's a mess. */
+                               
   pg_log_warning("pg_control exists but is broken or wrong version; ignoring it");
   return false;
 }
 
-/*
- * Guess at pg_control values when we can't read the old ones.
- */
+   
+                                                               
+   
 static void
 GuessControlValues(void)
 {
   uint64 sysidentifier;
   struct timeval tv;
 
-  /*
-   * Set up a completely default set of pg_control values.
-   */
+     
+                                                           
+     
   guessed = true;
   memset(&ControlFile, 0, sizeof(ControlFile));
 
   ControlFile.pg_control_version = PG_CONTROL_VERSION;
   ControlFile.catalog_version_no = CATALOG_VERSION_NO;
 
-  /*
-   * Create a new unique installation identifier, since we can no longer use
-   * any old XLOG records.  See notes in xlog.c about the algorithm.
-   */
+     
+                                                                             
+                                                                     
+     
   gettimeofday(&tv, NULL);
   sysidentifier = ((uint64)tv.tv_sec) << 32;
   sysidentifier |= ((uint64)tv.tv_usec) << 12;
@@ -726,7 +726,7 @@ GuessControlValues(void)
   ControlFile.checkPoint = ControlFile.checkPointCopy.redo;
   ControlFile.unloggedLSN = FirstNormalUnloggedLSN;
 
-  /* minRecoveryPoint, backupStartPoint and backupEndPoint can be left zero */
+                                                                              
 
   ControlFile.wal_level = WAL_LEVEL_MINIMAL;
   ControlFile.wal_log_hints = false;
@@ -750,18 +750,18 @@ GuessControlValues(void)
   ControlFile.float4ByVal = FLOAT4PASSBYVAL;
   ControlFile.float8ByVal = FLOAT8PASSBYVAL;
 
-  /*
-   * XXX eventually, should try to grovel through old XLOG to develop more
-   * accurate values for TimeLineID, nextXID, etc.
-   */
+     
+                                                                           
+                                                   
+     
 }
 
-/*
- * Print the guessed pg_control values when we had to guess.
- *
- * NB: this display should be just those fields that will not be
- * reset by RewriteControlFile().
- */
+   
+                                                             
+   
+                                                                 
+                                  
+   
 static void
 PrintControlValues(bool guessed)
 {
@@ -776,10 +776,10 @@ PrintControlValues(bool guessed)
     printf(_("Current pg_control values:\n\n"));
   }
 
-  /*
-   * Format system_identifier separately to keep platform-dependent format
-   * code out of the translatable message string.
-   */
+     
+                                                                           
+                                                  
+     
   snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, ControlFile.system_identifier);
 
   printf(_("pg_control version number:            %u\n"), ControlFile.pg_control_version);
@@ -799,7 +799,7 @@ PrintControlValues(bool guessed)
   printf(_("Latest checkpoint's oldestCommitTsXid:%u\n"), ControlFile.checkPointCopy.oldestCommitTsXid);
   printf(_("Latest checkpoint's newestCommitTsXid:%u\n"), ControlFile.checkPointCopy.newestCommitTsXid);
   printf(_("Maximum data alignment:               %u\n"), ControlFile.maxAlign);
-  /* we don't print floatFormat since can't say much useful about it */
+                                                                       
   printf(_("Database block size:                  %u\n"), ControlFile.blcksz);
   printf(_("Blocks per segment of large relation: %u\n"), ControlFile.relseg_size);
   printf(_("WAL block size:                       %u\n"), ControlFile.xlog_blcksz);
@@ -808,22 +808,22 @@ PrintControlValues(bool guessed)
   printf(_("Maximum columns in an index:          %u\n"), ControlFile.indexMaxKeys);
   printf(_("Maximum size of a TOAST chunk:        %u\n"), ControlFile.toast_max_chunk_size);
   printf(_("Size of a large-object chunk:         %u\n"), ControlFile.loblksize);
-  /* This is no longer configurable, but users may still expect to see it: */
+                                                                             
   printf(_("Date/time type storage:               %s\n"), _("64-bit integers"));
   printf(_("Float4 argument passing:              %s\n"), (ControlFile.float4ByVal ? _("by value") : _("by reference")));
   printf(_("Float8 argument passing:              %s\n"), (ControlFile.float8ByVal ? _("by value") : _("by reference")));
   printf(_("Data page checksum version:           %u\n"), ControlFile.data_checksum_version);
 }
 
-/*
- * Print the values to be changed.
- */
+   
+                                   
+   
 static void
 PrintNewControlValues(void)
 {
   char fname[MAXFNAMELEN];
 
-  /* This will be always printed in order to keep format same. */
+                                                                 
   printf(_("\n\nValues to be changed:\n\n"));
 
   XLogFileName(fname, ControlFile.checkPointCopy.ThisTimeLineID, newXlogSegNo, WalSegSz);
@@ -873,16 +873,16 @@ PrintNewControlValues(void)
   }
 }
 
-/*
- * Write out the new pg_control file.
- */
+   
+                                      
+   
 static void
 RewriteControlFile(void)
 {
-  /*
-   * Adjust fields as needed to force an empty XLOG starting at
-   * newXlogSegNo.
-   */
+     
+                                                                
+                   
+     
   XLogSegNoOffsetToRecPtr(newXlogSegNo, SizeOfXLogLongPHD, WalSegSz, ControlFile.checkPointCopy.redo);
   ControlFile.checkPointCopy.time = (pg_time_t)time(NULL);
 
@@ -895,11 +895,11 @@ RewriteControlFile(void)
   ControlFile.backupEndPoint = 0;
   ControlFile.backupEndRequired = false;
 
-  /*
-   * Force the defaults for max_* settings. The values don't really matter
-   * as long as wal_level='minimal'; the postmaster will reset these fields
-   * anyway at startup.
-   */
+     
+                                                                           
+                                                                            
+                        
+     
   ControlFile.wal_level = WAL_LEVEL_MINIMAL;
   ControlFile.wal_log_hints = false;
   ControlFile.track_commit_timestamp = false;
@@ -909,18 +909,18 @@ RewriteControlFile(void)
   ControlFile.max_prepared_xacts = 0;
   ControlFile.max_locks_per_xact = 64;
 
-  /* The control file gets flushed here. */
+                                           
   update_controlfile(".", &ControlFile, true);
 }
 
-/*
- * Scan existing XLOG files and determine the highest existing WAL address
- *
- * On entry, ControlFile.checkPointCopy.redo and ControlFile.xlog_seg_size
- * are assumed valid (note that we allow the old xlog seg size to differ
- * from what we're using).  On exit, newXlogId and newXlogSeg are set to
- * suitable values for the beginning of replacement WAL (in our seg size).
- */
+   
+                                                                           
+   
+                                                                           
+                                                                         
+                                                                         
+                                                                           
+   
 static void
 FindEndOfXLOG(void)
 {
@@ -929,19 +929,19 @@ FindEndOfXLOG(void)
   uint64 segs_per_xlogid;
   uint64 xlogbytepos;
 
-  /*
-   * Initialize the max() computation using the last checkpoint address from
-   * old pg_control.  Note that for the moment we are working with segment
-   * numbering according to the old xlog seg size.
-   */
+     
+                                                                             
+                                                                           
+                                                   
+     
   segs_per_xlogid = (UINT64CONST(0x0000000100000000) / ControlFile.xlog_seg_size);
   newXlogSegNo = ControlFile.checkPointCopy.redo / ControlFile.xlog_seg_size;
 
-  /*
-   * Scan the pg_wal directory to find existing WAL segment files. We assume
-   * any present have been used; in most scenarios this should be
-   * conservative, because of xlog.c's attempts to pre-create files.
-   */
+     
+                                                                             
+                                                                  
+                                                                     
+     
   xldir = opendir(XLOGDIR);
   if (xldir == NULL)
   {
@@ -956,20 +956,20 @@ FindEndOfXLOG(void)
       unsigned int tli, log, seg;
       XLogSegNo segno;
 
-      /*
-       * Note: We don't use XLogFromFileName here, because we want to
-       * use the segment size from the control file, not the size the
-       * pg_resetwal binary was compiled with
-       */
+         
+                                                                      
+                                                                      
+                                              
+         
       sscanf(xlde->d_name, "%08X%08X%08X", &tli, &log, &seg);
       segno = ((uint64)log) * segs_per_xlogid + seg;
 
-      /*
-       * Note: we take the max of all files found, regardless of their
-       * timelines.  Another possibility would be to ignore files of
-       * timelines other than the target TLI, but this seems safer.
-       * Better too large a result than too small...
-       */
+         
+                                                                       
+                                                                     
+                                                                    
+                                                     
+         
       if (segno > newXlogSegNo)
       {
         newXlogSegNo = segno;
@@ -989,18 +989,18 @@ FindEndOfXLOG(void)
     exit(1);
   }
 
-  /*
-   * Finally, convert to new xlog seg size, and advance by one to ensure we
-   * are in virgin territory.
-   */
+     
+                                                                            
+                              
+     
   xlogbytepos = newXlogSegNo * ControlFile.xlog_seg_size;
   newXlogSegNo = (xlogbytepos + ControlFile.xlog_seg_size - 1) / WalSegSz;
   newXlogSegNo++;
 }
 
-/*
- * Remove existing XLOG files
- */
+   
+                              
+   
 static void
 KillExistingXLOG(void)
 {
@@ -1041,9 +1041,9 @@ KillExistingXLOG(void)
   }
 }
 
-/*
- * Remove existing archive status files
- */
+   
+                                        
+   
 static void
 KillExistingArchiveStatus(void)
 {
@@ -1086,10 +1086,10 @@ KillExistingArchiveStatus(void)
   }
 }
 
-/*
- * Write an empty XLOG file, containing only the checkpoint record
- * already set up in ControlFile.
- */
+   
+                                                                   
+                                  
+   
 static void
 WriteEmptyXLOG(void)
 {
@@ -1105,7 +1105,7 @@ WriteEmptyXLOG(void)
 
   memset(buffer.data, 0, XLOG_BLCKSZ);
 
-  /* Set up the XLOG page header */
+                                   
   page = (XLogPageHeader)buffer.data;
   page->xlp_magic = XLOG_PAGE_MAGIC;
   page->xlp_info = XLP_LONG_HEADER;
@@ -1116,7 +1116,7 @@ WriteEmptyXLOG(void)
   longpage->xlp_seg_size = WalSegSz;
   longpage->xlp_xlog_blcksz = XLOG_BLCKSZ;
 
-  /* Insert the initial checkpoint record */
+                                            
   recptr = (char *)page + SizeOfXLogLongPHD;
   record = (XLogRecord *)recptr;
   record->xl_prev = 0;
@@ -1136,7 +1136,7 @@ WriteEmptyXLOG(void)
   FIN_CRC32C(crc);
   record->xl_crc = crc;
 
-  /* Write the first page */
+                            
   XLogFilePath(path, ControlFile.checkPointCopy.ThisTimeLineID, newXlogSegNo, WalSegSz);
 
   unlink(path);
@@ -1151,7 +1151,7 @@ WriteEmptyXLOG(void)
   errno = 0;
   if (write(fd, buffer.data, XLOG_BLCKSZ) != XLOG_BLCKSZ)
   {
-    /* if write didn't set errno, assume problem is no disk space */
+                                                                    
     if (errno == 0)
     {
       errno = ENOSPC;
@@ -1160,7 +1160,7 @@ WriteEmptyXLOG(void)
     exit(1);
   }
 
-  /* Fill the rest of the file with zeroes */
+                                             
   memset(buffer.data, 0, XLOG_BLCKSZ);
   for (nbytes = XLOG_BLCKSZ; nbytes < WalSegSz; nbytes += XLOG_BLCKSZ)
   {

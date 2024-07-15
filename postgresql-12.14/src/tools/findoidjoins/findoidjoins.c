@@ -1,10 +1,10 @@
-/*
- * findoidjoins.c
- *
- * Copyright (c) 2002-2019, PostgreSQL Global Development Group
- *
- * src/tools/findoidjoins/findoidjoins.c
- */
+   
+                  
+   
+                                                                
+   
+                                         
+   
 #include "postgres_fe.h"
 
 #include "catalog/pg_class_d.h"
@@ -26,7 +26,7 @@ main(int argc, char **argv)
   char *fk_attname;
   char *pk_relname;
   char *pk_nspname;
-  int fk, pk; /* loop counters */
+  int fk, pk;                    
 
   if (argc != 2)
   {
@@ -53,7 +53,7 @@ main(int argc, char **argv)
   }
   PQclear(res);
 
-  /* Get a list of relations that have OIDs */
+                                              
 
   printfPQExpBuffer(&sql, "%s",
       "SET search_path = public;"
@@ -73,7 +73,7 @@ main(int argc, char **argv)
   }
   pkrel_res = res;
 
-  /* Get a list of columns of OID type (or any OID-alias type) */
+                                                                 
 
   printfPQExpBuffer(&sql, "%s",
       "SELECT c.relname, "
@@ -101,10 +101,10 @@ main(int argc, char **argv)
   }
   fkrel_res = res;
 
-  /*
-   * For each column and each relation-having-OIDs, look to see if the
-   * column contains any values matching entries in the relation.
-   */
+     
+                                                                       
+                                                                  
+     
 
   for (fk = 0; fk < PQntuples(fkrel_res); fk++)
   {
@@ -143,9 +143,9 @@ main(int argc, char **argv)
 
   PQclear(fkrel_res);
 
-  /* Now, do the same for referencing columns that are arrays */
+                                                                
 
-  /* Get a list of columns of OID-array type (or any OID-alias type) */
+                                                                       
 
   printfPQExpBuffer(&sql, "%s",
       "SELECT c.relname, "
@@ -173,10 +173,10 @@ main(int argc, char **argv)
   }
   fkrel_res = res;
 
-  /*
-   * For each column and each relation-having-OIDs, look to see if the
-   * column contains any values matching entries in the relation.
-   */
+     
+                                                                       
+                                                                  
+     
 
   for (fk = 0; fk < PQntuples(fkrel_res); fk++)
   {

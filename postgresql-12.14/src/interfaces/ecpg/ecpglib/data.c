@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/ecpglib/data.c */
+                                        
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -15,7 +15,7 @@
 #include "pgtypes_timestamp.h"
 #include "pgtypes_interval.h"
 
-/* returns true if character c is a delimiter for the given array type */
+                                                                         
 static bool
 array_delimiter(enum ARRAY_TYPE isarray, char c)
 {
@@ -32,7 +32,7 @@ array_delimiter(enum ARRAY_TYPE isarray, char c)
   return false;
 }
 
-/* returns true if character c marks the boundary for the given array type */
+                                                                             
 static bool
 array_boundary(enum ARRAY_TYPE isarray, char c)
 {
@@ -49,19 +49,19 @@ array_boundary(enum ARRAY_TYPE isarray, char c)
   return false;
 }
 
-/* returns true if some garbage is found at the end of the scanned string */
+                                                                            
 static bool
 garbage_left(enum ARRAY_TYPE isarray, char **scan_length, enum COMPAT_MODE compat)
 {
-  /*
-   * INFORMIX allows for selecting a numeric into an int, the result is
-   * truncated
-   */
+     
+                                                                        
+               
+     
   if (isarray == ECPG_ARRAY_NONE)
   {
     if (INFORMIX_MODE(compat) && **scan_length == '.')
     {
-      /* skip invalid characters */
+                                   
       do
       {
         (*scan_length)++;
@@ -81,7 +81,7 @@ garbage_left(enum ARRAY_TYPE isarray, char **scan_length, enum COMPAT_MODE compa
   return false;
 }
 
-/* stolen code from src/backend/utils/adt/float.c */
+                                                    
 #if defined(WIN32) && !defined(NAN)
 static const uint32 nan[2] = {0xffffffff, 0x7fffffff};
 
@@ -101,7 +101,7 @@ get_float8_infinity(void)
 static double
 get_float8_nan(void)
 {
-  /* (double) NAN doesn't work on some NetBSD/MIPS releases */
+                                                              
 #if defined(NAN) && !(defined(__NetBSD__) && defined(__mips__))
   return (double)NAN;
 #else
@@ -134,7 +134,7 @@ check_special_value(char *ptr, double *retval, char **endptr)
   return false;
 }
 
-/* imported from src/backend/utils/adt/encode.c */
+                                                  
 
 unsigned
 ecpg_hex_enc_len(unsigned srclen)
@@ -351,10 +351,10 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
     return false;
   }
 
-  /*
-   * If we are running in a regression test, do not log the offset variable,
-   * it depends on the machine's alignment.
-   */
+     
+                                                                             
+                                            
+     
   if (ecpg_internal_regression_mode)
   {
     log_offset = -1;
@@ -366,23 +366,23 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 
   ecpg_log("ecpg_get_data on line %d: RESULT: %s offset: %ld; array: %s\n", lineno, pval ? (binary ? "BINARY" : pval) : "EMPTY", log_offset, ECPG_IS_ARRAY(isarray) ? "yes" : "no");
 
-  /* pval is a pointer to the value */
+                                      
   if (!pval)
   {
-    /*
-     * This should never happen because we already checked that we found
-     * at least one tuple, but let's play it safe.
-     */
+       
+                                                                         
+                                                   
+       
     ecpg_raise(lineno, ECPG_NOT_FOUND, ECPG_SQLSTATE_NO_DATA, NULL);
     return false;
   }
 
-  /* We will have to decode the value */
+                                        
 
-  /*
-   * check for null value and set indicator accordingly, i.e. -1 if NULL and
-   * 0 if not
-   */
+     
+                                                                             
+              
+     
   if (PQgetisnull(results, act_tuple, act_field))
   {
     value_for_indicator = -1;
@@ -407,16 +407,16 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
   case ECPGt_unsigned_long_long:
     *((long long int *)(ind + ind_offset * act_tuple)) = value_for_indicator;
     break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
   case ECPGt_NO_INDICATOR:
     if (value_for_indicator == -1)
     {
       if (force_indicator == false)
       {
-        /*
-         * Informix has an additional way to specify NULLs note
-         * that this uses special values to denote NULL
-         */
+           
+                                                                
+                                                        
+           
         ECPGset_noind_null(type, var + offset * act_tuple);
       }
       else
@@ -437,7 +437,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
     return true;
   }
 
-  /* let's check if it really is an array if it should be one */
+                                                                
   if (isarray == ECPG_ARRAY_ARRAY)
   {
     if (*pval != '{')
@@ -474,7 +474,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 
         if (varcharsize * offset < size)
         {
-          /* truncation */
+                          
           switch (ind_type)
           {
           case ECPGt_short:
@@ -494,7 +494,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           case ECPGt_unsigned_long_long:
             *((long long int *)(ind + ind_offset * act_tuple)) = size;
             break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
           default:
             break;
           }
@@ -540,7 +540,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           *((long *)(var + offset * act_tuple)) = (long)res;
           break;
         default:
-          /* Cannot happen */
+                             
           break;
         }
         break;
@@ -568,7 +568,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           *((unsigned long *)(var + offset * act_tuple)) = (unsigned long)ures;
           break;
         default:
-          /* Cannot happen */
+                             
           break;
         }
         break;
@@ -585,7 +585,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         pval = scan_length;
 
         break;
-#endif /* HAVE_STRTOLL */
+#endif                   
 #ifdef HAVE_STRTOULL
       case ECPGt_unsigned_long_long:
         *((unsigned long long int *)(var + offset * act_tuple)) = strtoull(pval, &scan_length, 10);
@@ -597,8 +597,8 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         pval = scan_length;
 
         break;
-#endif /* HAVE_STRTOULL */
-#endif /* HAVE_LONG_LONG_INT */
+#endif                    
+#endif                         
 
       case ECPGt_float:
       case ECPGt_double:
@@ -617,7 +617,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           scan_length++;
         }
 
-        /* no special INFORMIX treatment for floats */
+                                                      
         if (garbage_left(isarray, &scan_length, ECPG_COMPAT_PGSQL))
         {
           ecpg_raise(lineno, ECPG_FLOAT_FORMAT, ECPG_SQLSTATE_DATATYPE_MISMATCH, pval);
@@ -634,7 +634,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           *((double *)(var + offset * act_tuple)) = dres;
           break;
         default:
-          /* Cannot happen */
+                             
           break;
         }
         break;
@@ -654,7 +654,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         }
         else if (pval[0] == '\0' && PQgetisnull(results, act_tuple, act_field))
         {
-          /* NULL is valid */
+                             
           break;
         }
 
@@ -668,7 +668,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         long dst_size, src_size, dec_size;
 
         dst_size = ecpg_hex_enc_len(varcharsize);
-        src_size = size - 2; /* exclude backslash + 'x' */
+        src_size = size - 2;                              
         dec_size = src_size < dst_size ? src_size : dst_size;
         variable->len = hex_decode(pval + 2, dec_size, variable->arr);
 
@@ -676,7 +676,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         {
           long rcv_size = ecpg_hex_dec_len(size - 2);
 
-          /* truncation */
+                          
           switch (ind_type)
           {
           case ECPGt_short:
@@ -696,7 +696,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           case ECPGt_unsigned_long_long:
             *((long long int *)(ind + ind_offset * act_tuple)) = rcv_size;
             break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
           default:
             break;
           }
@@ -713,11 +713,11 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
       {
         char *str = (char *)(var + offset * act_tuple);
 
-        /*
-         * If varcharsize is unknown and the offset is that of
-         * char *, then this variable represents the array of
-         * character pointers. So, use extra indirection.
-         */
+           
+                                                               
+                                                              
+                                                          
+           
         if (varcharsize == 0 && offset == sizeof(char *))
         {
           str = *(char **)str;
@@ -725,23 +725,23 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 
         if (varcharsize == 0 || varcharsize > size)
         {
-          /*
-           * compatibility mode, blank pad and null
-           * terminate char array
-           */
+             
+                                                    
+                                  
+             
           if (ORACLE_MODE(compat) && (type == ECPGt_char || type == ECPGt_unsigned_char))
           {
             memset(str, ' ', varcharsize);
             memcpy(str, pval, size);
             str[varcharsize - 1] = '\0';
 
-            /*
-             * compatibility mode empty string gets -1
-             * indicator but no warning
-             */
+               
+                                                       
+                                        
+               
             if (size == 0)
             {
-              /* truncation */
+                              
               switch (ind_type)
               {
               case ECPGt_short:
@@ -761,7 +761,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
               case ECPGt_unsigned_long_long:
                 *((long long int *)(ind + ind_offset * act_tuple)) = -1;
                 break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
               default:
                 break;
               }
@@ -771,7 +771,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
           {
             strncpy(str, pval, size + 1);
           }
-          /* do the rtrim() */
+                              
           if (type == ECPGt_string)
           {
             char *last = str + size;
@@ -787,7 +787,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         {
           strncpy(str, pval, varcharsize);
 
-          /* compatibility mode, null terminate char array */
+                                                             
           if (ORACLE_MODE(compat) && (varcharsize - 1) < size)
           {
             if (type == ECPGt_char || type == ECPGt_unsigned_char)
@@ -798,7 +798,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 
           if (varcharsize < size || (ORACLE_MODE(compat) && (varcharsize - 1) < size))
           {
-            /* truncation */
+                            
             switch (ind_type)
             {
             case ECPGt_short:
@@ -818,7 +818,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
             case ECPGt_unsigned_long_long:
               *((long long int *)(ind + ind_offset * act_tuple)) = size;
               break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
             default:
               break;
             }
@@ -844,7 +844,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 
           if (variable->len > varcharsize)
           {
-            /* truncation */
+                            
             switch (ind_type)
             {
             case ECPGt_short:
@@ -864,7 +864,7 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
             case ECPGt_unsigned_long_long:
               *((long long int *)(ind + ind_offset * act_tuple)) = variable->len;
               break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
             default:
               break;
             }
@@ -886,17 +886,17 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         nres = PGTYPESnumeric_from_asc(pval, &scan_length);
         *endptr = endchar;
 
-        /* did we get an error? */
+                                  
         if (nres == NULL)
         {
           ecpg_log("ecpg_get_data on line %d: RESULT %s; errno %d\n", lineno, pval, errno);
 
           if (INFORMIX_MODE(compat))
           {
-            /*
-             * Informix wants its own NULL value here instead
-             * of an error
-             */
+               
+                                                              
+                           
+               
             nres = PGTYPESnumeric_new();
             if (nres)
             {
@@ -950,17 +950,17 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         ires = PGTYPESinterval_from_asc(pval, &scan_length);
         *endptr = endchar;
 
-        /* did we get an error? */
+                                  
         if (ires == NULL)
         {
           ecpg_log("ecpg_get_data on line %d: RESULT %s; errno %d\n", lineno, pval, errno);
 
           if (INFORMIX_MODE(compat))
           {
-            /*
-             * Informix wants its own NULL value here instead
-             * of an error
-             */
+               
+                                                              
+                           
+               
             ires = (interval *)ecpg_alloc(sizeof(interval), lineno);
             if (!ires)
             {
@@ -1008,17 +1008,17 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         ddres = PGTYPESdate_from_asc(pval, &scan_length);
         *endptr = endchar;
 
-        /* did we get an error? */
+                                  
         if (errno != 0)
         {
           ecpg_log("ecpg_get_data on line %d: RESULT %s; errno %d\n", lineno, pval, errno);
 
           if (INFORMIX_MODE(compat))
           {
-            /*
-             * Informix wants its own NULL value here instead
-             * of an error
-             */
+               
+                                                              
+                           
+               
             ECPGset_noind_null(ECPGt_date, &ddres);
           }
           else
@@ -1058,17 +1058,17 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
         tres = PGTYPEStimestamp_from_asc(pval, &scan_length);
         *endptr = endchar;
 
-        /* did we get an error? */
+                                  
         if (errno != 0)
         {
           ecpg_log("ecpg_get_data on line %d: RESULT %s; errno %d\n", lineno, pval, errno);
 
           if (INFORMIX_MODE(compat))
           {
-            /*
-             * Informix wants its own NULL value here instead
-             * of an error
-             */
+               
+                                                              
+                           
+               
             ECPGset_noind_null(ECPGt_timestamp, &tres);
           }
           else
@@ -1104,15 +1104,15 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
       {
         bool string = false;
 
-        /* set array to next entry */
+                                     
         ++act_tuple;
 
-        /* set pval to the next entry */
+                                        
 
-        /*
-         * *pval != '\0' should not be needed, but is used as a safety
-         * guard
-         */
+           
+                                                                       
+                 
+           
         for (; *pval != '\0' && (string || (!array_delimiter(isarray, *pval) && !array_boundary(isarray, *pval))); ++pval)
         {
           if (*pval == '"')

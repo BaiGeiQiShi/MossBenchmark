@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * getpeereid.c
- *		get peer userid for UNIX-domain socket connection
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/port/getpeereid.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                      
+   
+                                                                         
+   
+   
+                  
+                           
+   
+                                                                            
+   
 
 #include "c.h"
 
@@ -27,14 +27,14 @@
 #include <sys/ucred.h>
 #endif
 
-/*
- * BSD-style getpeereid() for platforms that lack it.
- */
+   
+                                                      
+   
 int
 getpeereid(int sock, uid_t *uid, gid_t *gid)
 {
 #if defined(SO_PEERCRED)
-  /* Linux: use getsockopt(SO_PEERCRED) */
+                                          
   struct ucred peercred;
   ACCEPT_TYPE_ARG3 so_len = sizeof(peercred);
 
@@ -46,7 +46,7 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   *gid = peercred.gid;
   return 0;
 #elif defined(LOCAL_PEERCRED)
-  /* Debian with FreeBSD kernel: use getsockopt(LOCAL_PEERCRED) */
+                                                                  
   struct xucred peercred;
   ACCEPT_TYPE_ARG3 so_len = sizeof(peercred);
 
@@ -58,10 +58,10 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   *gid = peercred.cr_gid;
   return 0;
 #elif defined(HAVE_GETPEERUCRED)
-  /* Solaris: use getpeerucred() */
+                                   
   ucred_t *ucred;
 
-  ucred = NULL; /* must be initialized to NULL */
+  ucred = NULL;                                  
   if (getpeerucred(sock, &ucred) == -1)
   {
     return -1;
@@ -77,7 +77,7 @@ getpeereid(int sock, uid_t *uid, gid_t *gid)
   }
   return 0;
 #else
-  /* No implementation available on this platform */
+                                                    
   errno = ENOSYS;
   return -1;
 #endif

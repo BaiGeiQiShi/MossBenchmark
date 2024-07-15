@@ -1,24 +1,24 @@
-/* src/tutorial/funcs.c */
+                          
 
-/******************************************************************************
-  These are user-defined functions that can be bound to a Postgres backend
-  and called by Postgres to execute SQL functions of the same name.
+                                                                                
+                                                                           
+                                                                    
+ 
+                                                                           
+                                                
+ 
+                                                                           
+                                               
+                                                                              
 
-  The calling format for these functions is defined by the CREATE FUNCTION
-  SQL statement that binds them to the backend.
+#include "postgres.h"                                    
 
-  NOTE: this file shows examples of "old style" function call conventions.
-  See funcs_new.c for examples of "new style".
-*****************************************************************************/
-
-#include "postgres.h" /* general Postgres declarations */
-
-#include "executor/executor.h" /* for GetAttributeByName() */
-#include "utils/geo_decls.h"   /* for point type */
+#include "executor/executor.h"                               
+#include "utils/geo_decls.h"                       
 
 PG_MODULE_MAGIC;
 
-/* These prototypes just prevent possible warnings from gcc. */
+                                                               
 
 int
 add_one(int arg);
@@ -31,10 +31,10 @@ copytext(text *t);
 text *
 concat_text(text *arg1, text *arg2);
 bool
-c_overpaid(HeapTupleHeader t, /* the current instance of EMP */
+c_overpaid(HeapTupleHeader t,                                  
     int32 limit);
 
-/* By Value */
+              
 
 int
 add_one(int arg)
@@ -42,7 +42,7 @@ add_one(int arg)
   return arg + 1;
 }
 
-/* By Reference, Fixed Length */
+                                
 
 float8 *
 add_one_float8(float8 *arg)
@@ -65,24 +65,24 @@ makepoint(Point *pointx, Point *pointy)
   return new_point;
 }
 
-/* By Reference, Variable Length */
+                                   
 
 text *
 copytext(text *t)
 {
-  /*
-   * VARSIZE is the total size of the struct in bytes.
-   */
+     
+                                                       
+     
   text *new_t = (text *)palloc(VARSIZE(t));
 
   SET_VARSIZE(new_t, VARSIZE(t));
 
-  /*
-   * VARDATA is a pointer to the data region of the struct.
-   */
-  memcpy((void *)VARDATA(new_t), /* destination */
-      (void *)VARDATA(t),        /* source */
-      VARSIZE(t) - VARHDRSZ);    /* how many bytes */
+     
+                                                            
+     
+  memcpy((void *)VARDATA(new_t),                  
+      (void *)VARDATA(t),                    
+      VARSIZE(t) - VARHDRSZ);                        
   return new_t;
 }
 
@@ -100,10 +100,10 @@ concat_text(text *arg1, text *arg2)
   return new_text;
 }
 
-/* Composite types */
+                     
 
 bool
-c_overpaid(HeapTupleHeader t, /* the current instance of EMP */
+c_overpaid(HeapTupleHeader t,                                  
     int32 limit)
 {
   bool isnull;

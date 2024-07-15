@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * win32security.c
- *	  Microsoft Windows Win32 Security Support Functions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/port/win32security.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                                                        
+   
+                                                                         
+   
+                  
+                              
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -17,10 +17,10 @@
 #include "postgres_fe.h"
 #endif
 
-/*
- * Utility wrapper for frontend and backend when reporting an error
- * message.
- */
+   
+                                                                    
+            
+   
 static pg_attribute_printf(1, 2) void log_error(const char *fmt, ...)
 {
   va_list ap;
@@ -34,13 +34,13 @@ static pg_attribute_printf(1, 2) void log_error(const char *fmt, ...)
   va_end(ap);
 }
 
-/*
- * Returns nonzero if the current user has administrative privileges,
- * or zero if not.
- *
- * Note: this cannot use ereport() because it's called too early during
- * startup.
- */
+   
+                                                                      
+                   
+   
+                                                                        
+            
+   
 int
 pgwin32_is_admin(void)
 {
@@ -81,28 +81,28 @@ pgwin32_is_admin(void)
   }
 }
 
-/*
- * We consider ourselves running as a service if one of the following is
- * true:
- *
- * 1) We are running as LocalSystem (only used by services)
- * 2) Our token contains SECURITY_SERVICE_RID (automatically added to the
- *	  process token by the SCM when starting a service)
- *
- * The check for LocalSystem is needed, because surprisingly, if a service
- * is running as LocalSystem, it does not have SECURITY_SERVICE_RID in its
- * process token.
- *
- * Return values:
- *	 0 = Not service
- *	 1 = Service
- *	-1 = Error
- *
- * Note: we can't report errors via either ereport (we're called too early
- * in the backend) or write_stderr (because that calls this).  We are
- * therefore reduced to writing directly on stderr, which sucks, but we
- * have few alternatives.
- */
+   
+                                                                         
+         
+   
+                                                            
+                                                                          
+                                                       
+   
+                                                                           
+                                                                           
+                  
+   
+                  
+                    
+                
+              
+   
+                                                                           
+                                                                      
+                                                                        
+                          
+   
 int
 pgwin32_is_service(void)
 {
@@ -112,13 +112,13 @@ pgwin32_is_service(void)
   PSID LocalSystemSid;
   SID_IDENTIFIER_AUTHORITY NtAuthority = {SECURITY_NT_AUTHORITY};
 
-  /* Only check the first time */
+                                 
   if (_is_service != -1)
   {
     return _is_service;
   }
 
-  /* First check for LocalSystem */
+                                   
   if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0, &LocalSystemSid))
   {
     fprintf(stderr, "could not get SID for local system account\n");
@@ -139,7 +139,7 @@ pgwin32_is_service(void)
     return _is_service;
   }
 
-  /* Check for service group membership */
+                                          
   if (!AllocateAndInitializeSid(&NtAuthority, 1, SECURITY_SERVICE_RID, 0, 0, 0, 0, 0, 0, 0, &ServiceSid))
   {
     fprintf(stderr, "could not get SID for service group: error code %lu\n", GetLastError());

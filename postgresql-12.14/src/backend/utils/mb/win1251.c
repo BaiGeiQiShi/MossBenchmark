@@ -1,11 +1,11 @@
-/*
- * make KOI8->CP1251(win-1251) and CP1251(win-1251)->KOI8 translation table
- * from koi-win.tab.
- *
- * Tatsuo Ishii
- *
- * src/backend/utils/mb/win1251.c
- */
+   
+                                                                            
+                     
+   
+                
+   
+                                  
+   
 
 #include <stdio.h>
 

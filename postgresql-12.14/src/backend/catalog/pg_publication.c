@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pg_publication.c
- *		publication C API manipulation
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *		pg_publication.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+                                   
+   
+                                                                         
+                                                                        
+   
+                  
+                     
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -43,79 +43,79 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
-/*
- * Check if relation can be in given publication and throws appropriate
- * error if not.
- */
+   
+                                                                        
+                 
+   
 static void
 check_publication_add_relation(Relation targetrel)
 {
-  /* Give more specific error for partitioned tables */
+                                                       
   if (RelationGetForm(targetrel)->relkind == RELKIND_PARTITIONED_TABLE)
   {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("\"%s\" is a partitioned table", RelationGetRelationName(targetrel)), errdetail("Adding partitioned tables to publications is not supported."), errhint("You can add the table partitions individually.")));
   }
 
-  /* Must be table */
+                     
   if (RelationGetForm(targetrel)->relkind != RELKIND_RELATION)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("\"%s\" is not a table", RelationGetRelationName(targetrel)), errdetail("Only tables can be added to publications.")));
   }
 
-  /* Can't be system table */
+                             
   if (IsCatalogRelation(targetrel))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("\"%s\" is a system table", RelationGetRelationName(targetrel)), errdetail("System tables cannot be added to publications.")));
   }
 
-  /* UNLOGGED and TEMP relations cannot be part of publication. */
+                                                                  
   if (!RelationNeedsWAL(targetrel))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("table \"%s\" cannot be replicated", RelationGetRelationName(targetrel)), errdetail("Temporary and unlogged relations cannot be replicated.")));
   }
 }
 
-/*
- * Returns if relation represented by oid and Form_pg_class entry
- * is publishable.
- *
- * Does same checks as the above, but does not need relation to be opened
- * and also does not throw errors.
- *
- * XXX  This also excludes all tables with relid < FirstNormalObjectId,
- * ie all tables created during initdb.  This mainly affects the preinstalled
- * information_schema.  IsCatalogRelationOid() only excludes tables with
- * relid < FirstBootstrapObjectId, making that test rather redundant,
- * but really we should get rid of the FirstNormalObjectId test not
- * IsCatalogRelationOid.  We can't do so today because we don't want
- * information_schema tables to be considered publishable; but this test
- * is really inadequate for that, since the information_schema could be
- * dropped and reloaded and then it'll be considered publishable.  The best
- * long-term solution may be to add a "relispublishable" bool to pg_class,
- * and depend on that instead of OID checks.
- */
+   
+                                                                  
+                   
+   
+                                                                          
+                                   
+   
+                                                                        
+                                                                              
+                                                                         
+                                                                      
+                                                                    
+                                                                     
+                                                                         
+                                                                        
+                                                                            
+                                                                           
+                                             
+   
 static bool
 is_publishable_class(Oid relid, Form_pg_class reltuple)
 {
   return reltuple->relkind == RELKIND_RELATION && !IsCatalogRelationOid(relid) && reltuple->relpersistence == RELPERSISTENCE_PERMANENT && relid >= FirstNormalObjectId;
 }
 
-/*
- * Another variant of this, taking a Relation.
- */
+   
+                                               
+   
 bool
 is_publishable_relation(Relation rel)
 {
   return is_publishable_class(RelationGetRelid(rel), rel->rd_rel);
 }
 
-/*
- * SQL-callable variant of the above
- *
- * This returns null when the relation does not exist.  This is intended to be
- * used for example in psql to avoid gratuitous errors when there are
- * concurrent catalog changes.
- */
+   
+                                     
+   
+                                                                               
+                                                                      
+                               
+   
 Datum
 pg_relation_is_publishable(PG_FUNCTION_ARGS)
 {
@@ -133,9 +133,9 @@ pg_relation_is_publishable(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(result);
 }
 
-/*
- * Insert new publication / relation mapping.
- */
+   
+                                              
+   
 ObjectAddress
 publication_add_relation(Oid pubid, Relation targetrel, bool if_not_exists)
 {
@@ -150,11 +150,11 @@ publication_add_relation(Oid pubid, Relation targetrel, bool if_not_exists)
 
   rel = table_open(PublicationRelRelationId, RowExclusiveLock);
 
-  /*
-   * Check for duplicates. Note that this does not really prevent
-   * duplicates, it's here just to provide nicer error message in common
-   * case. The real protection is the unique key on the catalog.
-   */
+     
+                                                                  
+                                                                         
+                                                                 
+     
   if (SearchSysCacheExists2(PUBLICATIONRELMAP, ObjectIdGetDatum(relid), ObjectIdGetDatum(pubid)))
   {
     table_close(rel, RowExclusiveLock);
@@ -169,7 +169,7 @@ publication_add_relation(Oid pubid, Relation targetrel, bool if_not_exists)
 
   check_publication_add_relation(targetrel);
 
-  /* Form a tuple. */
+                     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -180,32 +180,32 @@ publication_add_relation(Oid pubid, Relation targetrel, bool if_not_exists)
 
   tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
-  /* Insert tuple into catalog. */
+                                  
   CatalogTupleInsert(rel, tup);
   heap_freetuple(tup);
 
   ObjectAddressSet(myself, PublicationRelRelationId, prrelid);
 
-  /* Add dependency on the publication */
+                                         
   ObjectAddressSet(referenced, PublicationRelationId, pubid);
   recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-  /* Add dependency on the relation */
+                                      
   ObjectAddressSet(referenced, RelationRelationId, relid);
   recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-  /* Close the table. */
+                        
   table_close(rel, RowExclusiveLock);
 
-  /* Invalidate relcache so that publication info is rebuilt. */
+                                                                
   CacheInvalidateRelcache(targetrel);
 
   return myself;
 }
 
-/*
- * Gets list of publication oids for a relation oid.
- */
+   
+                                                     
+   
 List *
 GetRelationPublications(Oid relid)
 {
@@ -213,7 +213,7 @@ GetRelationPublications(Oid relid)
   CatCList *pubrellist;
   int i;
 
-  /* Find all publications associated with the relation. */
+                                                           
   pubrellist = SearchSysCacheList1(PUBLICATIONRELMAP, ObjectIdGetDatum(relid));
   for (i = 0; i < pubrellist->n_members; i++)
   {
@@ -228,12 +228,12 @@ GetRelationPublications(Oid relid)
   return result;
 }
 
-/*
- * Gets list of relation oids for a publication.
- *
- * This should only be used for normal publications, the FOR ALL TABLES
- * should use GetAllTablesPublicationRelations().
- */
+   
+                                                 
+   
+                                                                        
+                                                  
+   
 List *
 GetPublicationRelations(Oid pubid)
 {
@@ -243,7 +243,7 @@ GetPublicationRelations(Oid pubid)
   SysScanDesc scan;
   HeapTuple tup;
 
-  /* Find all publications associated with the relation. */
+                                                           
   pubrelsrel = table_open(PublicationRelRelationId, AccessShareLock);
 
   ScanKeyInit(&scankey, Anum_pg_publication_rel_prpubid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(pubid));
@@ -266,9 +266,9 @@ GetPublicationRelations(Oid pubid)
   return result;
 }
 
-/*
- * Gets list of publication oids for publications marked as FOR ALL TABLES.
- */
+   
+                                                                            
+   
 List *
 GetAllTablesPublications(void)
 {
@@ -278,7 +278,7 @@ GetAllTablesPublications(void)
   SysScanDesc scan;
   HeapTuple tup;
 
-  /* Find all publications that are marked as for all tables. */
+                                                                
   rel = table_open(PublicationRelationId, AccessShareLock);
 
   ScanKeyInit(&scankey, Anum_pg_publication_puballtables, BTEqualStrategyNumber, F_BOOLEQ, BoolGetDatum(true));
@@ -299,9 +299,9 @@ GetAllTablesPublications(void)
   return result;
 }
 
-/*
- * Gets list of all relation published by FOR ALL TABLES publication(s).
- */
+   
+                                                                         
+   
 List *
 GetAllTablesPublicationRelations(void)
 {
@@ -334,11 +334,11 @@ GetAllTablesPublicationRelations(void)
   return result;
 }
 
-/*
- * Get publication using oid
- *
- * The Publication struct and its data are palloc'ed here.
- */
+   
+                             
+   
+                                                           
+   
 Publication *
 GetPublication(Oid pubid)
 {
@@ -369,9 +369,9 @@ GetPublication(Oid pubid)
   return pub;
 }
 
-/*
- * Get Publication using name.
- */
+   
+                               
+   
 Publication *
 GetPublicationByName(const char *pubname, bool missing_ok)
 {
@@ -391,12 +391,12 @@ GetPublicationByName(const char *pubname, bool missing_ok)
   return GetPublication(oid);
 }
 
-/*
- * get_publication_oid - given a publication name, look up the OID
- *
- * If missing_ok is false, throw an error if name not found.  If true, just
- * return InvalidOid.
- */
+   
+                                                                   
+   
+                                                                            
+                      
+   
 Oid
 get_publication_oid(const char *pubname, bool missing_ok)
 {
@@ -410,12 +410,12 @@ get_publication_oid(const char *pubname, bool missing_ok)
   return oid;
 }
 
-/*
- * get_publication_name - given a publication Oid, look up the name
- *
- * If missing_ok is false, throw an error if name not found.  If true, just
- * return NULL.
- */
+   
+                                                                    
+   
+                                                                            
+                
+   
 char *
 get_publication_name(Oid pubid, bool missing_ok)
 {
@@ -442,9 +442,9 @@ get_publication_name(Oid pubid, bool missing_ok)
   return pubname;
 }
 
-/*
- * Returns Oids of tables in a publication.
- */
+   
+                                            
+   
 Datum
 pg_get_publication_tables(PG_FUNCTION_ARGS)
 {
@@ -454,15 +454,15 @@ pg_get_publication_tables(PG_FUNCTION_ARGS)
   List *tables;
   ListCell **lcp;
 
-  /* stuff done only on the first call of the function */
+                                                         
   if (SRF_IS_FIRSTCALL())
   {
     MemoryContext oldcontext;
 
-    /* create a function context for cross-call persistence */
+                                                              
     funcctx = SRF_FIRSTCALL_INIT();
 
-    /* switch to memory context appropriate for multiple function calls */
+                                                                          
     oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
     publication = GetPublicationByName(pubname, false);
@@ -481,7 +481,7 @@ pg_get_publication_tables(PG_FUNCTION_ARGS)
     MemoryContextSwitchTo(oldcontext);
   }
 
-  /* stuff done on every call of the function */
+                                                
   funcctx = SRF_PERCALL_SETUP();
   lcp = (ListCell **)funcctx->user_fctx;
 

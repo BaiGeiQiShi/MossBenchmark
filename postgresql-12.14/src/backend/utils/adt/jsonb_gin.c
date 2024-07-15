@@ -1,61 +1,61 @@
-/*-------------------------------------------------------------------------
- *
- * jsonb_gin.c
- *	 GIN support functions for jsonb
- *
- * Copyright (c) 2014-2019, PostgreSQL Global Development Group
- *
- * We provide two opclasses for jsonb indexing: jsonb_ops and jsonb_path_ops.
- * For their description see json.sgml and comments in jsonb.h.
- *
- * The operators support, among the others, "jsonb @? jsonpath" and
- * "jsonb @@ jsonpath".  Expressions containing these operators are easily
- * expressed through each other.
- *
- *	jb @? 'path' <=> jb @@ 'EXISTS(path)'
- *	jb @@ 'expr' <=> jb @? '$ ? (expr)'
- *
- * Thus, we're going to consider only @@ operator, while regarding @? operator
- * the same is true for jb @@ 'EXISTS(path)'.
- *
- * Result of jsonpath query extraction is a tree, which leaf nodes are index
- * entries and non-leaf nodes are AND/OR logical expressions.  Basically we
- * extract following statements out of jsonpath:
- *
- *	1) "accessors_chain = const",
- *	2) "EXISTS(accessors_chain)".
- *
- * Accessors chain may consist of .key, [*] and [index] accessors.  jsonb_ops
- * additionally supports .* and .**.
- *
- * For now, both jsonb_ops and jsonb_path_ops supports only statements of
- * the 1st find.  jsonb_ops might also support statements of the 2nd kind,
- * but given we have no statistics keys extracted from accessors chain
- * are likely non-selective.  Therefore, we choose to not confuse optimizer
- * and skip statements of the 2nd kind altogether.  In future versions that
- * might be changed.
- *
- * In jsonb_ops statement of the 1st kind is split into expression of AND'ed
- * keys and const.  Sometimes const might be interpreted as both value or key
- * in jsonb_ops.  Then statement of 1st kind is decomposed into the expression
- * below.
- *
- *	key1 AND key2 AND ... AND keyN AND (const_as_value OR const_as_key)
- *
- * jsonb_path_ops transforms each statement of the 1st kind into single hash
- * entry below.
- *
- *	HASH(key1, key2, ... , keyN, const)
- *
- * Despite statements of the 2nd kind are not supported by both jsonb_ops and
- * jsonb_path_ops, EXISTS(path) expressions might be still supported,
- * when statements of 1st kind could be extracted out of their filters.
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/jsonb_gin.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                    
+   
+                                                                
+   
+                                                                              
+                                                                
+   
+                                                                    
+                                                                           
+                                 
+   
+                                         
+                                       
+   
+                                                                               
+                                              
+   
+                                                                             
+                                                                            
+                                                 
+   
+                                 
+                                 
+   
+                                                                              
+                                     
+   
+                                                                          
+                                                                           
+                                                                       
+                                                                            
+                                                                            
+                     
+   
+                                                                             
+                                                                              
+                                                                               
+          
+   
+                                                                       
+   
+                                                                             
+                
+   
+                                       
+   
+                                                                              
+                                                                      
+                                                                        
+   
+                  
+                                       
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -76,7 +76,7 @@ typedef struct PathHashStack
   struct PathHashStack *parent;
 } PathHashStack;
 
-/* Buffer for GIN entries */
+                            
 typedef struct GinEntries
 {
   Datum *buf;
@@ -93,53 +93,53 @@ typedef enum JsonPathGinNodeType
 
 typedef struct JsonPathGinNode JsonPathGinNode;
 
-/* Node in jsonpath expression tree */
+                                      
 struct JsonPathGinNode
 {
   JsonPathGinNodeType type;
   union
   {
-    int nargs;        /* valid for OR and AND nodes */
-    int entryIndex;   /* index in GinEntries array, valid for ENTRY
-                       * nodes after entries output */
-    Datum entryDatum; /* path hash or key name/scalar, valid for
-                       * ENTRY nodes before entries output */
+    int nargs;                                        
+    int entryIndex;                                                 
+                                                      
+    Datum entryDatum;                                            
+                                                             
   } val;
-  JsonPathGinNode *args[FLEXIBLE_ARRAY_MEMBER]; /* valid for OR and AND
-                                                 * nodes */
+  JsonPathGinNode *args[FLEXIBLE_ARRAY_MEMBER];                         
+                                                           
 };
 
-/*
- * jsonb_ops entry extracted from jsonpath item.  Corresponding path item
- * may be: '.key', '.*', '.**', '[index]' or '[*]'.
- * Entry type is stored in 'type' field.
- */
+   
+                                                                          
+                                                    
+                                         
+   
 typedef struct JsonPathGinPathItem
 {
   struct JsonPathGinPathItem *parent;
-  Datum keyName;         /* key name (for '.key' path item) or NULL */
-  JsonPathItemType type; /* type of jsonpath item */
+  Datum keyName;                                                      
+  JsonPathItemType type;                            
 } JsonPathGinPathItem;
 
-/* GIN representation of the extracted json path */
+                                                   
 typedef union JsonPathGinPath
 {
-  JsonPathGinPathItem *items; /* list of path items (jsonb_ops) */
-  uint32 hash;                /* hash of the path (jsonb_path_ops) */
+  JsonPathGinPathItem *items;                                     
+  uint32 hash;                                                       
 } JsonPathGinPath;
 
 typedef struct JsonPathGinContext JsonPathGinContext;
 
-/* Callback, which stores information about path item into JsonPathGinPath */
+                                                                             
 typedef bool (*JsonPathGinAddPathItemFunc)(JsonPathGinPath *path, JsonPathItem *jsp);
 
-/*
- * Callback, which extracts set of nodes from statement of 1st kind
- * (scalar != NULL) or statement of 2nd kind (scalar == NULL).
- */
+   
+                                                                    
+                                                               
+   
 typedef List *(*JsonPathGinExtractNodesFunc)(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbValue *scalar, List *nodes);
 
-/* Context for jsonpath entries extraction */
+                                             
 struct JsonPathGinContext
 {
   JsonPathGinAddPathItemFunc add_path_item;
@@ -155,7 +155,7 @@ make_scalar_key(const JsonbValue *scalarVal, bool is_key);
 static JsonPathGinNode *
 extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathItem *jsp, bool not );
 
-/* Initialize GinEntries struct */
+                                  
 static void
 init_gin_entries(GinEntries *entries, int preallocated)
 {
@@ -164,7 +164,7 @@ init_gin_entries(GinEntries *entries, int preallocated)
   entries->count = 0;
 }
 
-/* Add new entry to GinEntries */
+                                 
 static int
 add_gin_entry(GinEntries *entries, Datum entry)
 {
@@ -189,11 +189,11 @@ add_gin_entry(GinEntries *entries, Datum entry)
   return id;
 }
 
-/*
- *
- * jsonb_ops GIN opclass support functions
- *
- */
+   
+   
+                                           
+   
+   
 
 Datum
 gin_compare_jsonb(PG_FUNCTION_ARGS)
@@ -210,7 +210,7 @@ gin_compare_jsonb(PG_FUNCTION_ARGS)
   len1 = VARSIZE_ANY_EXHDR(arg1);
   len2 = VARSIZE_ANY_EXHDR(arg2);
 
-  /* Compare text as bttextcmp does, but always using C collation */
+                                                                    
   result = varstr_cmp(a1p, len1, a2p, len2, C_COLLATION_OID);
 
   PG_FREE_IF_COPY(arg1, 0);
@@ -230,14 +230,14 @@ gin_extract_jsonb(PG_FUNCTION_ARGS)
   JsonbIteratorToken r;
   GinEntries entries;
 
-  /* If the root level is empty, we certainly have no keys */
+                                                             
   if (total == 0)
   {
     *nentries = 0;
     PG_RETURN_POINTER(NULL);
   }
 
-  /* Otherwise, use 2 * root count as initial estimate of result size */
+                                                                        
   init_gin_entries(&entries, 2 * total);
 
   it = JsonbIteratorInit(&jb->root);
@@ -250,14 +250,14 @@ gin_extract_jsonb(PG_FUNCTION_ARGS)
       add_gin_entry(&entries, make_scalar_key(&v, true));
       break;
     case WJB_ELEM:
-      /* Pretend string array elements are keys, see jsonb.h */
+                                                               
       add_gin_entry(&entries, make_scalar_key(&v, v.type == jbvString));
       break;
     case WJB_VALUE:
       add_gin_entry(&entries, make_scalar_key(&v, false));
       break;
     default:
-      /* we can ignore structural items */
+                                          
       break;
     }
   }
@@ -267,7 +267,7 @@ gin_extract_jsonb(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(entries.buf);
 }
 
-/* Append JsonPathGinPathItem to JsonPathGinPath (jsonb_ops) */
+                                                               
 static bool
 jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
 {
@@ -277,7 +277,7 @@ jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
   switch (jsp->type)
   {
   case jpiRoot:
-    path->items = NULL; /* reset path */
+    path->items = NULL;                 
     return true;
 
   case jpiKey:
@@ -297,7 +297,7 @@ jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
     break;
 
   default:
-    /* other path items like item methods are not supported */
+                                                              
     return false;
   }
 
@@ -312,14 +312,14 @@ jsonb_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
   return true;
 }
 
-/* Combine existing path hash with next key hash (jsonb_path_ops) */
+                                                                    
 static bool
 jsonb_path_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
 {
   switch (jsp->type)
   {
   case jpiRoot:
-    path->hash = 0; /* reset path hash */
+    path->hash = 0;                      
     return true;
 
   case jpiKey:
@@ -335,10 +335,10 @@ jsonb_path_ops__add_path_item(JsonPathGinPath *path, JsonPathItem *jsp)
 
   case jpiIndexArray:
   case jpiAnyArray:
-    return true; /* path hash is unchanged */
+    return true;                             
 
   default:
-    /* other items (wildcard paths, item methods) are not supported */
+                                                                      
     return false;
   }
 }
@@ -397,7 +397,7 @@ make_jsp_expr_node_binary(JsonPathGinNodeType type, JsonPathGinNode *arg1, JsonP
   return node;
 }
 
-/* Append a list of nodes from the jsonpath (jsonb_ops). */
+                                                           
 static List *
 jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbValue *scalar, List *nodes)
 {
@@ -407,37 +407,37 @@ jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbVal
   {
     JsonPathGinNode *node;
 
-    /*
-     * Append path entry nodes only if scalar is provided.  See header
-     * comment for details.
-     */
+       
+                                                                       
+                            
+       
     for (pentry = path.items; pentry; pentry = pentry->parent)
     {
-      if (pentry->type == jpiKey) /* only keys are indexed */
+      if (pentry->type == jpiKey)                            
       {
         nodes = lappend(nodes, make_jsp_entry_node(pentry->keyName));
       }
     }
 
-    /* Append scalar node for equality queries. */
+                                                  
     if (scalar->type == jbvString)
     {
       JsonPathGinPathItem *last = path.items;
       GinTernaryValue key_entry;
 
-      /*
-       * Assuming that jsonb_ops interprets string array elements as
-       * keys, we may extract key or non-key entry or even both.  In the
-       * latter case we create OR-node.  It is possible in lax mode
-       * where arrays are automatically unwrapped, or in strict mode for
-       * jpiAny items.
-       */
+         
+                                                                     
+                                                                         
+                                                                    
+                                                                         
+                       
+         
 
       if (cxt->lax)
       {
         key_entry = GIN_MAYBE;
       }
-      else if (!last) /* root ($) */
+      else if (!last)               
       {
         key_entry = GIN_FALSE;
       }
@@ -477,13 +477,13 @@ jsonb_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbVal
   return nodes;
 }
 
-/* Append a list of nodes from the jsonpath (jsonb_path_ops). */
+                                                                
 static List *
 jsonb_path_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonbValue *scalar, List *nodes)
 {
   if (scalar)
   {
-    /* append path hash node for equality queries */
+                                                    
     uint32 hash = path.hash;
 
     JsonbHashScalarValue(scalar, &hash);
@@ -492,16 +492,16 @@ jsonb_path_ops__extract_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, Jso
   }
   else
   {
-    /* jsonb_path_ops doesn't support EXISTS queries => nothing to append */
+                                                                            
     return nodes;
   }
 }
 
-/*
- * Extract a list of expression nodes that need to be AND-ed by the caller.
- * Extracted expression is 'path == scalar' if 'scalar' is non-NULL, and
- * 'EXISTS(path)' otherwise.
- */
+   
+                                                                            
+                                                                         
+                             
+   
 static List *
 extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathItem *jsp, JsonbValue *scalar)
 {
@@ -536,10 +536,10 @@ extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonP
       if (!cxt->add_path_item(&path, jsp))
       {
 
-        /*
-         * Path is not supported by the index opclass, return only
-         * the extracted filter nodes.
-         */
+           
+                                                                   
+                                       
+           
         return nodes;
       }
       break;
@@ -553,42 +553,42 @@ extract_jsp_path_expr_nodes(JsonPathGinContext *cxt, JsonPathGinPath path, JsonP
     jsp = &next;
   }
 
-  /*
-   * Append nodes from the path expression itself to the already extracted
-   * list of filter nodes.
-   */
+     
+                                                                           
+                           
+     
   return cxt->extract_nodes(cxt, path, scalar, nodes);
 }
 
-/*
- * Extract an expression node from one of following jsonpath path expressions:
- *   EXISTS(jsp)    (when 'scalar' is NULL)
- *   jsp == scalar  (when 'scalar' is not NULL).
- *
- * The current path (@) is passed in 'path'.
- */
+   
+                                                                               
+                                            
+                                                 
+   
+                                             
+   
 static JsonPathGinNode *
 extract_jsp_path_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathItem *jsp, JsonbValue *scalar)
 {
-  /* extract a list of nodes to be AND-ed */
+                                            
   List *nodes = extract_jsp_path_expr_nodes(cxt, path, jsp, scalar);
 
   if (list_length(nodes) <= 0)
   {
-    /* no nodes were extracted => full scan is needed for this path */
+                                                                      
     return NULL;
   }
 
   if (list_length(nodes) == 1)
   {
-    return linitial(nodes); /* avoid extra AND-node */
+    return linitial(nodes);                           
   }
 
-  /* construct AND-node for path with filters */
+                                                
   return make_jsp_expr_node_args(JSP_GIN_AND, nodes);
 }
 
-/* Recursively extract nodes from the boolean jsonpath expression. */
+                                                                     
 static JsonPathGinNode *
 extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathItem *jsp, bool not )
 {
@@ -596,8 +596,8 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
 
   switch (jsp->type)
   {
-  case jpiAnd: /* expr && expr */
-  case jpiOr:  /* expr || expr */
+  case jpiAnd:                   
+  case jpiOr:                    
   {
     JsonPathItem arg;
     JsonPathGinNode *larg;
@@ -625,23 +625,23 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
     return make_jsp_expr_node_binary(type, larg, rarg);
   }
 
-  case jpiNot: /* !expr  */
+  case jpiNot:             
   {
     JsonPathItem arg;
 
     jspGetArg(jsp, &arg);
 
-    /* extract child expression inverting 'not' flag */
+                                                       
     return extract_jsp_bool_expr(cxt, path, &arg, !not );
   }
 
-  case jpiExists: /* EXISTS(path) */
+  case jpiExists:                   
   {
     JsonPathItem arg;
 
     if (not )
     {
-      return NULL; /* NOT EXISTS is not supported */
+      return NULL;                                  
     }
 
     jspGetArg(jsp, &arg);
@@ -651,22 +651,22 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
 
   case jpiNotEqual:
 
-    /*
-     * 'not' == true case is not supported here because '!(path !=
-     * scalar)' is not equivalent to 'path == scalar' in the general
-     * case because of sequence comparison semantics: 'path == scalar'
-     * === 'EXISTS (path, @ == scalar)', '!(path != scalar)' ===
-     * 'FOR_ALL(path, @ == scalar)'. So, we should translate '!(path
-     * != scalar)' into GIN query 'path == scalar || EMPTY(path)', but
-     * 'EMPTY(path)' queries are not supported by the both jsonb
-     * opclasses.  However in strict mode we could omit 'EMPTY(path)'
-     * part if the path can return exactly one item (it does not
-     * contain wildcard accessors or item methods like .keyvalue()
-     * etc.).
-     */
+       
+                                                                   
+                                                                     
+                                                                       
+                                                                 
+                                                                     
+                                                                       
+                                                                 
+                                                                      
+                                                                 
+                                                                   
+              
+       
     return NULL;
 
-  case jpiEqual: /* path == scalar */
+  case jpiEqual:                     
   {
     JsonPathItem left_item;
     JsonPathItem right_item;
@@ -694,7 +694,7 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
     }
     else
     {
-      return NULL; /* at least one operand should be a scalar */
+      return NULL;                                              
     }
 
     switch (scalar_item->type)
@@ -724,11 +724,11 @@ extract_jsp_bool_expr(JsonPathGinContext *cxt, JsonPathGinPath path, JsonPathIte
   }
 
   default:
-    return NULL; /* not a boolean expression */
+    return NULL;                               
   }
 }
 
-/* Recursively emit all GIN entries found in the node tree */
+                                                             
 static void
 emit_jsp_gin_entries(JsonPathGinNode *node, GinEntries *entries)
 {
@@ -737,7 +737,7 @@ emit_jsp_gin_entries(JsonPathGinNode *node, GinEntries *entries)
   switch (node->type)
   {
   case JSP_GIN_ENTRY:
-    /* replace datum with its index in the array */
+                                                   
     node->val.entryIndex = add_gin_entry(entries, node->val.entryDatum);
     break;
 
@@ -756,10 +756,10 @@ emit_jsp_gin_entries(JsonPathGinNode *node, GinEntries *entries)
   }
 }
 
-/*
- * Recursively extract GIN entries from jsonpath query.
- * Root expression node is put into (*extra_data)[0].
- */
+   
+                                                        
+                                                      
+   
 static Datum *
 extract_jsp_query(JsonPath *jp, StrategyNumber strat, bool pathOps, int32 *nentries, Pointer **extra_data)
 {
@@ -806,10 +806,10 @@ extract_jsp_query(JsonPath *jp, StrategyNumber strat, bool pathOps, int32 *nentr
   return entries.buf;
 }
 
-/*
- * Recursively execute jsonpath expression.
- * 'check' is a bool[] or a GinTernaryValue[] depending on 'ternary' flag.
- */
+   
+                                            
+                                                                           
+   
 static GinTernaryValue
 execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
 {
@@ -867,7 +867,7 @@ execute_jsp_gin_node(JsonPathGinNode *node, void *check, bool ternary)
 
   default:
     elog(ERROR, "invalid jsonpath gin node type: %d", node->type);
-    return GIN_FALSE; /* keep compiler quiet */
+    return GIN_FALSE;                          
   }
 }
 
@@ -881,9 +881,9 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
 
   if (strategy == JsonbContainsStrategyNumber)
   {
-    /* Query is a jsonb, so just apply gin_extract_jsonb... */
+                                                              
     entries = (Datum *)DatumGetPointer(DirectFunctionCall2(gin_extract_jsonb, PG_GETARG_DATUM(0), PointerGetDatum(nentries)));
-    /* ...although "contains {}" requires a full index scan */
+                                                              
     if (*nentries == 0)
     {
       *searchMode = GIN_SEARCH_MODE_ALL;
@@ -891,7 +891,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
   }
   else if (strategy == JsonbExistsStrategyNumber)
   {
-    /* Query is a text string, which we treat as a key */
+                                                         
     text *query = PG_GETARG_TEXT_PP(0);
 
     *nentries = 1;
@@ -900,7 +900,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
   }
   else if (strategy == JsonbExistsAnyStrategyNumber || strategy == JsonbExistsAllStrategyNumber)
   {
-    /* Query is a text array; each element is treated as a key */
+                                                                 
     ArrayType *query = PG_GETARG_ARRAYTYPE_P(0);
     Datum *key_datums;
     bool *key_nulls;
@@ -913,7 +913,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
 
     for (i = 0, j = 0; i < key_count; i++)
     {
-      /* Nulls in the array are ignored */
+                                          
       if (key_nulls[i])
       {
         continue;
@@ -922,7 +922,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
     }
 
     *nentries = j;
-    /* ExistsAll with no keys should match everything */
+                                                        
     if (j == 0 && strategy == JsonbExistsAllStrategyNumber)
     {
       *searchMode = GIN_SEARCH_MODE_ALL;
@@ -943,7 +943,7 @@ gin_extract_jsonb_query(PG_FUNCTION_ARGS)
   else
   {
     elog(ERROR, "unrecognized strategy number: %d", strategy);
-    entries = NULL; /* keep compiler quiet */
+    entries = NULL;                          
   }
 
   PG_RETURN_POINTER(entries);
@@ -955,7 +955,7 @@ gin_consistent_jsonb(PG_FUNCTION_ARGS)
   bool *check = (bool *)PG_GETARG_POINTER(0);
   StrategyNumber strategy = PG_GETARG_UINT16(1);
 
-  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+                                               
   int32 nkeys = PG_GETARG_INT32(3);
 
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
@@ -965,14 +965,14 @@ gin_consistent_jsonb(PG_FUNCTION_ARGS)
 
   if (strategy == JsonbContainsStrategyNumber)
   {
-    /*
-     * We must always recheck, since we can't tell from the index whether
-     * the positions of the matched items match the structure of the query
-     * object.  (Even if we could, we'd also have to worry about hashed
-     * keys and the index's failure to distinguish keys from string array
-     * elements.)  However, the tuple certainly doesn't match unless it
-     * contains all the query keys.
-     */
+       
+                                                                          
+                                                                           
+                                                                        
+                                                                          
+                                                                        
+                                    
+       
     *recheck = true;
     for (i = 0; i < nkeys; i++)
     {
@@ -985,27 +985,27 @@ gin_consistent_jsonb(PG_FUNCTION_ARGS)
   }
   else if (strategy == JsonbExistsStrategyNumber)
   {
-    /*
-     * Although the key is certainly present in the index, we must recheck
-     * because (1) the key might be hashed, and (2) the index match might
-     * be for a key that's not at top level of the JSON object.  For (1),
-     * we could look at the query key to see if it's hashed and not
-     * recheck if not, but the index lacks enough info to tell about (2).
-     */
+       
+                                                                           
+                                                                          
+                                                                          
+                                                                    
+                                                                          
+       
     *recheck = true;
     res = true;
   }
   else if (strategy == JsonbExistsAnyStrategyNumber)
   {
-    /* As for plain exists, we must recheck */
+                                              
     *recheck = true;
     res = true;
   }
   else if (strategy == JsonbExistsAllStrategyNumber)
   {
-    /* As for plain exists, we must recheck */
+                                              
     *recheck = true;
-    /* ... but unless all the keys are present, we can say "false" */
+                                                                     
     for (i = 0; i < nkeys; i++)
     {
       if (!check[i])
@@ -1039,20 +1039,20 @@ gin_triconsistent_jsonb(PG_FUNCTION_ARGS)
   GinTernaryValue *check = (GinTernaryValue *)PG_GETARG_POINTER(0);
   StrategyNumber strategy = PG_GETARG_UINT16(1);
 
-  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+                                               
   int32 nkeys = PG_GETARG_INT32(3);
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
   GinTernaryValue res = GIN_MAYBE;
   int32 i;
 
-  /*
-   * Note that we never return GIN_TRUE, only GIN_MAYBE or GIN_FALSE; this
-   * corresponds to always forcing recheck in the regular consistent
-   * function, for the reasons listed there.
-   */
+     
+                                                                           
+                                                                     
+                                             
+     
   if (strategy == JsonbContainsStrategyNumber || strategy == JsonbExistsAllStrategyNumber)
   {
-    /* All extracted keys must be present */
+                                            
     for (i = 0; i < nkeys; i++)
     {
       if (check[i] == GIN_FALSE)
@@ -1064,7 +1064,7 @@ gin_triconsistent_jsonb(PG_FUNCTION_ARGS)
   }
   else if (strategy == JsonbExistsStrategyNumber || strategy == JsonbExistsAnyStrategyNumber)
   {
-    /* At least one extracted key must be present */
+                                                    
     res = GIN_FALSE;
     for (i = 0; i < nkeys; i++)
     {
@@ -1082,7 +1082,7 @@ gin_triconsistent_jsonb(PG_FUNCTION_ARGS)
       Assert(extra_data && extra_data[0]);
       res = execute_jsp_gin_node((JsonPathGinNode *)extra_data[0], check, true);
 
-      /* Should always recheck the result */
+                                            
       if (res == GIN_TRUE)
       {
         res = GIN_MAYBE;
@@ -1097,17 +1097,17 @@ gin_triconsistent_jsonb(PG_FUNCTION_ARGS)
   PG_RETURN_GIN_TERNARY_VALUE(res);
 }
 
-/*
- *
- * jsonb_path_ops GIN opclass support functions
- *
- * In a jsonb_path_ops index, the GIN keys are uint32 hashes, one per JSON
- * value; but the JSON key(s) leading to each value are also included in its
- * hash computation.  This means we can only support containment queries,
- * but the index can distinguish, for example, {"foo": 42} from {"bar": 42}
- * since different hashes will be generated.
- *
- */
+   
+   
+                                                
+   
+                                                                           
+                                                                             
+                                                                          
+                                                                            
+                                             
+   
+   
 
 Datum
 gin_extract_jsonb_path(PG_FUNCTION_ARGS)
@@ -1122,17 +1122,17 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
   PathHashStack *stack;
   GinEntries entries;
 
-  /* If the root level is empty, we certainly have no keys */
+                                                             
   if (total == 0)
   {
     *nentries = 0;
     PG_RETURN_POINTER(NULL);
   }
 
-  /* Otherwise, use 2 * root count as initial estimate of result size */
+                                                                        
   init_gin_entries(&entries, 2 * total);
 
-  /* We keep a stack of partial hashes corresponding to parent key levels */
+                                                                            
   tail.parent = NULL;
   tail.hash = 0;
   stack = &tail;
@@ -1147,43 +1147,43 @@ gin_extract_jsonb_path(PG_FUNCTION_ARGS)
     {
     case WJB_BEGIN_ARRAY:
     case WJB_BEGIN_OBJECT:
-      /* Push a stack level for this object */
+                                              
       parent = stack;
       stack = (PathHashStack *)palloc(sizeof(PathHashStack));
 
-      /*
-       * We pass forward hashes from outer nesting levels so that
-       * the hashes for nested values will include outer keys as
-       * well as their own keys.
-       *
-       * Nesting an array within another array will not alter
-       * innermost scalar element hash values, but that seems
-       * inconsequential.
-       */
+         
+                                                                  
+                                                                 
+                                 
+         
+                                                              
+                                                              
+                          
+         
       stack->hash = parent->hash;
       stack->parent = parent;
       break;
     case WJB_KEY:
-      /* mix this key into the current outer hash */
+                                                    
       JsonbHashScalarValue(&v, &stack->hash);
-      /* hash is now ready to incorporate the value */
+                                                      
       break;
     case WJB_ELEM:
     case WJB_VALUE:
-      /* mix the element or value's hash into the prepared hash */
+                                                                  
       JsonbHashScalarValue(&v, &stack->hash);
-      /* and emit an index entry */
+                                   
       add_gin_entry(&entries, UInt32GetDatum(stack->hash));
-      /* reset hash for next key, value, or sub-object */
+                                                         
       stack->hash = stack->parent->hash;
       break;
     case WJB_END_ARRAY:
     case WJB_END_OBJECT:
-      /* Pop the stack */
+                         
       parent = stack->parent;
       pfree(stack);
       stack = parent;
-      /* reset hash for next key, value, or sub-object */
+                                                         
       if (stack->parent)
       {
         stack->hash = stack->parent->hash;
@@ -1213,10 +1213,10 @@ gin_extract_jsonb_query_path(PG_FUNCTION_ARGS)
 
   if (strategy == JsonbContainsStrategyNumber)
   {
-    /* Query is a jsonb, so just apply gin_extract_jsonb_path ... */
+                                                                    
     entries = (Datum *)DatumGetPointer(DirectFunctionCall2(gin_extract_jsonb_path, PG_GETARG_DATUM(0), PointerGetDatum(nentries)));
 
-    /* ... although "contains {}" requires a full index scan */
+                                                               
     if (*nentries == 0)
     {
       *searchMode = GIN_SEARCH_MODE_ALL;
@@ -1249,7 +1249,7 @@ gin_consistent_jsonb_path(PG_FUNCTION_ARGS)
   bool *check = (bool *)PG_GETARG_POINTER(0);
   StrategyNumber strategy = PG_GETARG_UINT16(1);
 
-  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+                                               
   int32 nkeys = PG_GETARG_INT32(3);
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
   bool *recheck = (bool *)PG_GETARG_POINTER(5);
@@ -1258,15 +1258,15 @@ gin_consistent_jsonb_path(PG_FUNCTION_ARGS)
 
   if (strategy == JsonbContainsStrategyNumber)
   {
-    /*
-     * jsonb_path_ops is necessarily lossy, not only because of hash
-     * collisions but also because it doesn't preserve complete
-     * information about the structure of the JSON object.  Besides, there
-     * are some special rules around the containment of raw scalars in
-     * arrays that are not handled here.  So we must always recheck a
-     * match.  However, if not all of the keys are present, the tuple
-     * certainly doesn't match.
-     */
+       
+                                                                     
+                                                                
+                                                                           
+                                                                       
+                                                                      
+                                                                      
+                                
+       
     *recheck = true;
     for (i = 0; i < nkeys; i++)
     {
@@ -1301,7 +1301,7 @@ gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS)
   GinTernaryValue *check = (GinTernaryValue *)PG_GETARG_POINTER(0);
   StrategyNumber strategy = PG_GETARG_UINT16(1);
 
-  /* Jsonb	   *query = PG_GETARG_JSONB_P(2); */
+                                               
   int32 nkeys = PG_GETARG_INT32(3);
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
   GinTernaryValue res = GIN_MAYBE;
@@ -1309,11 +1309,11 @@ gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS)
 
   if (strategy == JsonbContainsStrategyNumber)
   {
-    /*
-     * Note that we never return GIN_TRUE, only GIN_MAYBE or GIN_FALSE;
-     * this corresponds to always forcing recheck in the regular
-     * consistent function, for the reasons listed there.
-     */
+       
+                                                                        
+                                                                 
+                                                          
+       
     for (i = 0; i < nkeys; i++)
     {
       if (check[i] == GIN_FALSE)
@@ -1330,7 +1330,7 @@ gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS)
       Assert(extra_data && extra_data[0]);
       res = execute_jsp_gin_node((JsonPathGinNode *)extra_data[0], check, true);
 
-      /* Should always recheck the result */
+                                            
       if (res == GIN_TRUE)
       {
         res = GIN_MAYBE;
@@ -1345,12 +1345,12 @@ gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS)
   PG_RETURN_GIN_TERNARY_VALUE(res);
 }
 
-/*
- * Construct a jsonb_ops GIN key from a flag byte and a textual representation
- * (which need not be null-terminated).  This function is responsible
- * for hashing overlength text representations; it will add the
- * JGINFLAG_HASHED bit to the flag value if it does that.
- */
+   
+                                                                               
+                                                                      
+                                                                
+                                                          
+   
 static Datum
 make_text_key(char flag, const char *str, int len)
 {
@@ -1368,11 +1368,11 @@ make_text_key(char flag, const char *str, int len)
     flag |= JGINFLAG_HASHED;
   }
 
-  /*
-   * Now build the text Datum.  For simplicity we build a 4-byte-header
-   * varlena text Datum here, but we expect it will get converted to short
-   * header format when stored in the index.
-   */
+     
+                                                                        
+                                                                           
+                                             
+     
   item = (text *)palloc(VARHDRSZ + len + 1);
   SET_VARSIZE(item, VARHDRSZ + len + 1);
 
@@ -1383,12 +1383,12 @@ make_text_key(char flag, const char *str, int len)
   return PointerGetDatum(item);
 }
 
-/*
- * Create a textual representation of a JsonbValue that will serve as a GIN
- * key in a jsonb_ops index.  is_key is true if the JsonbValue is a key,
- * or if it is a string array element (since we pretend those are keys,
- * see jsonb.h).
- */
+   
+                                                                            
+                                                                         
+                                                                        
+                 
+   
 static Datum
 make_scalar_key(const JsonbValue *scalarVal, bool is_key)
 {
@@ -1408,16 +1408,16 @@ make_scalar_key(const JsonbValue *scalarVal, bool is_key)
   case jbvNumeric:
     Assert(!is_key);
 
-    /*
-     * A normalized textual representation, free of trailing zeroes,
-     * is required so that numerically equal values will produce equal
-     * strings.
-     *
-     * It isn't ideal that numerics are stored in a relatively bulky
-     * textual format.  However, it's a notationally convenient way of
-     * storing a "union" type in the GIN B-Tree, and indexing Jsonb
-     * strings takes precedence.
-     */
+       
+                                                                     
+                                                                       
+                
+       
+                                                                     
+                                                                       
+                                                                    
+                                 
+       
     cstr = numeric_normalize(scalarVal->val.numeric);
     item = make_text_key(JGINFLAG_NUM, cstr, strlen(cstr));
     pfree(cstr);
@@ -1427,7 +1427,7 @@ make_scalar_key(const JsonbValue *scalarVal, bool is_key)
     break;
   default:
     elog(ERROR, "unrecognized jsonb scalar type: %d", scalarVal->type);
-    item = 0; /* keep compiler quiet */
+    item = 0;                          
     break;
   }
 

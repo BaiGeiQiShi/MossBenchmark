@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * dict_simple.c
- *		Simple dictionary: just lowercase and check for stopword
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/dict_simple.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                             
+   
+                                                                         
+   
+   
+                  
+                                       
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "commands/defrem.h"
@@ -32,7 +32,7 @@ dsimple_init(PG_FUNCTION_ARGS)
   bool stoploaded = false, acceptloaded = false;
   ListCell *l;
 
-  d->accept = true; /* default */
+  d->accept = true;              
 
   foreach (l, dictoptions)
   {
@@ -78,21 +78,21 @@ dsimple_lexize(PG_FUNCTION_ARGS)
 
   if (*txt == '\0' || searchstoplist(&(d->stoplist), txt))
   {
-    /* reject as stopword */
+                            
     pfree(txt);
     res = palloc0(sizeof(TSLexeme) * 2);
     PG_RETURN_POINTER(res);
   }
   else if (d->accept)
   {
-    /* accept */
+                
     res = palloc0(sizeof(TSLexeme) * 2);
     res[0].lexeme = txt;
     PG_RETURN_POINTER(res);
   }
   else
   {
-    /* report as unrecognized */
+                                
     pfree(txt);
     PG_RETURN_POINTER(NULL);
   }

@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "prepareas.pgc"
@@ -15,17 +15,17 @@
 
 #line 5 "prepareas.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 6 "prepareas.pgc"
 
 static void
 check_result_of_insert(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 12 "prepareas.pgc"
   int ivar1 = 0, ivar2 = 0;
-/* exec sql end declare section */
+                                  
 #line 13 "prepareas.pgc"
 
   {
@@ -45,14 +45,14 @@ check_result_of_insert(void)
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 22 "prepareas.pgc"
   int ivar1 = 1, ivar2 = 2;
 
 #line 23 "prepareas.pgc"
   char v_include_dq_name[16], v_include_ws_name[16], v_normal_name[16], v_query[64];
-/* exec sql end declare section */
+                                  
 #line 24 "prepareas.pgc"
 
   strcpy(v_normal_name, "normal_name");
@@ -60,9 +60,9 @@ main(void)
   strcpy(v_include_ws_name, "include_ _name");
   strcpy(v_query, "insert into test values(?,?)");
 
-  /*
-   * preparing for test
-   */
+     
+                        
+     
   {
     ECPGconnect(__LINE__, 0, "ecpg1_regression", NULL, NULL, NULL, 0);
 #line 34 "prepareas.pgc"
@@ -118,9 +118,9 @@ main(void)
   }
 #line 38 "prepareas.pgc"
 
-  /*
-   * Non dynamic statement
-   */
+     
+                           
+     
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 43 "prepareas.pgc"
@@ -173,9 +173,9 @@ main(void)
 
   check_result_of_insert();
 
-  /*
-   * PREPARE FROM
-   */
+     
+                  
+     
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
 #line 58 "prepareas.pgc"
@@ -404,9 +404,9 @@ main(void)
 
   check_result_of_insert();
 
-  /*
-   * PREPARE AS
-   */
+     
+                
+     
   {
     ECPGdeallocate(__LINE__, 0, NULL, "ident_name");
 #line 109 "prepareas.pgc"

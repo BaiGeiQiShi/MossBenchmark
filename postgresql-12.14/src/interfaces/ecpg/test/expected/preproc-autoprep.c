@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "autoprep.pgc"
@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* test automatic prepare for all statements */
+                                               
 
 #line 1 "regression.h"
 
@@ -20,7 +20,7 @@
 static void
 test(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 10 "autoprep.pgc"
   int item[4], ind[4], i = 1;
@@ -30,7 +30,7 @@ test(void)
 
 #line 12 "autoprep.pgc"
   char sqlstr[64] = "SELECT item2 FROM T ORDER BY item2 NULLS LAST";
-/* exec sql end declare section */
+                                  
 #line 13 "autoprep.pgc"
 
   ECPGdebug(1, stderr);
@@ -39,10 +39,10 @@ test(void)
   }
 #line 16 "autoprep.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 18 "autoprep.pgc"
 
-  /* exec sql whenever sqlerror  sqlprint ; */
+                                              
 #line 19 "autoprep.pgc"
 
   {
@@ -170,7 +170,7 @@ test(void)
     printf("item[%d] = %d\n", i, ind[i] ? -1 : item[i]);
   }
 
-  /* declare C cursor for select Item1 from T */
+                                                
 #line 35 "autoprep.pgc"
 
   {
@@ -243,7 +243,7 @@ test(void)
   }
 #line 44 "autoprep.pgc"
 
-  /* declare cur1 cursor for $1 */
+                                  
 #line 46 "autoprep.pgc"
 
   {
@@ -263,7 +263,7 @@ test(void)
   }
 #line 48 "autoprep.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 50 "autoprep.pgc"
 
   i = 0;
@@ -352,7 +352,7 @@ int
 main()
 {
   test();
-  test(); /* retry */
+  test();            
 
   return 0;
 }

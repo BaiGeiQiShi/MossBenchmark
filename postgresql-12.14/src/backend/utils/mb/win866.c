@@ -1,11 +1,11 @@
-/*
- * make KOI8->CP866(ALT) and CP866(ALT)->KOI8 translation table
- * from koi-alt.tab.
- *
- * Tatsuo Ishii
- *
- * src/backend/utils/mb/win866.c
- */
+   
+                                                                
+                     
+   
+                
+   
+                                 
+   
 
 #include <stdio.h>
 

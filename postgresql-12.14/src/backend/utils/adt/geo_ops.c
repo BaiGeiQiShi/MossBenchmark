@@ -1,27 +1,27 @@
-/*-------------------------------------------------------------------------
- *
- * geo_ops.c
- *	  2D geometric operations
- *
- * This module implements the geometric functions and operators.  The
- * geometric types are (from simple to more complicated):
- *
- * - point
- * - line
- * - line segment
- * - box
- * - circle
- * - polygon
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/geo_ops.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                             
+   
+                                                                      
+                                                          
+   
+           
+          
+                  
+         
+            
+             
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <math.h>
@@ -35,38 +35,38 @@
 #include "utils/fmgrprotos.h"
 #include "utils/geo_decls.h"
 
-/*
- * * Type constructors have this form:
- *   void type_construct(Type *result, ...);
- *
- * * Operators commonly have signatures such as
- *   void type1_operator_type2(Type *result, Type1 *obj1, Type2 *obj2);
- *
- * Common operators are:
- * * Intersection point:
- *   bool type1_interpt_type2(Point *result, Type1 *obj1, Type2 *obj2);
- *		Return whether the two objects intersect. If *result is not NULL,
- *		it is set to the intersection point.
- *
- * * Containment:
- *   bool type1_contain_type2(Type1 *obj1, Type2 *obj2);
- *		Return whether obj1 contains obj2.
- *   bool type1_contain_type2(Type1 *contains_obj, Type1 *contained_obj);
- *		Return whether obj1 contains obj2 (used when types are the same)
- *
- * * Distance of closest point in or on obj1 to obj2:
- *   float8 type1_closept_type2(Point *result, Type1 *obj1, Type2 *obj2);
- *		Returns the shortest distance between two objects.  If *result is not
- *		NULL, it is set to the closest point in or on obj1 to obj2.
- *
- * These functions may be used to implement multiple SQL-level operators.  For
- * example, determining whether two lines are parallel is done by checking
- * whether they don't intersect.
- */
+   
+                                       
+                                             
+   
+                                                
+                                                                        
+   
+                         
+                         
+                                                                        
+                                                                      
+                                         
+   
+                  
+                                                         
+                                       
+                                                                          
+                                                                     
+   
+                                                      
+                                                                          
+                                                                          
+                                                                
+   
+                                                                               
+                                                                           
+                                 
+   
 
-/*
- * Internal routines
- */
+   
+                     
+   
 
 enum path_delim
 {
@@ -75,7 +75,7 @@ enum path_delim
   PATH_CLOSED
 };
 
-/* Routines for points */
+                         
 static inline void
 point_construct(Point *result, float8 x, float8 y);
 static inline void
@@ -95,7 +95,7 @@ point_sl(Point *pt1, Point *pt2);
 static int
 point_inside(Point *p, int npts, Point *plist);
 
-/* Routines for lines */
+                        
 static inline void
 line_construct(LINE *result, Point *pt, float8 m);
 static inline float8
@@ -109,7 +109,7 @@ line_contain_point(LINE *line, Point *point);
 static float8
 line_closept_point(Point *result, LINE *line, Point *pt);
 
-/* Routines for line segments */
+                                
 static inline void
 statlseg_construct(LSEG *lseg, Point *pt1, Point *pt2);
 static inline float8
@@ -131,7 +131,7 @@ lseg_closept_line(Point *result, LSEG *lseg, LINE *line);
 static float8
 lseg_closept_lseg(Point *result, LSEG *on_lseg, LSEG *to_lseg);
 
-/* Routines for boxes */
+                        
 static inline void
 box_construct(BOX *result, Point *pt1, Point *pt2);
 static void
@@ -157,11 +157,11 @@ box_closept_point(Point *result, BOX *box, Point *point);
 static float8
 box_closept_lseg(Point *result, BOX *box, LSEG *lseg);
 
-/* Routines for circles */
+                          
 static float8
 circle_ar(CIRCLE *circle);
 
-/* Routines for polygons */
+                           
 static void
 make_bound_box(POLYGON *poly);
 static void
@@ -175,7 +175,7 @@ plist_same(int npts, Point *p1, Point *p2);
 static float8
 dist_ppoly_internal(Point *pt, POLYGON *poly);
 
-/* Routines for encoding and decoding */
+                                        
 static float8
 single_decode(char *num, char **endptr_p, const char *type_name, const char *orig_string);
 static void
@@ -191,11 +191,11 @@ path_decode(char *str, bool opentype, int npts, Point *p, bool *isopen, char **e
 static char *
 path_encode(enum path_delim path_delim, int npts, Point *pt);
 
-/*
- * Delimiters for input and output strings.
- * LDELIM, RDELIM, and DELIM are left, right, and separator delimiters, respectively.
- * LDELIM_EP, RDELIM_EP are left and right delimiters for paths with endpoints.
- */
+   
+                                            
+                                                                                      
+                                                                                
+   
 
 #define LDELIM '('
 #define RDELIM ')'
@@ -207,36 +207,36 @@ path_encode(enum path_delim path_delim, int npts, Point *pt);
 #define LDELIM_L '{'
 #define RDELIM_L '}'
 
-/*
- * Geometric data types are composed of points.
- * This code tries to support a common format throughout the data types,
- *	to allow for more predictable usage and data type conversion.
- * The fundamental unit is the point. Other units are line segments,
- *	open paths, boxes, closed paths, and polygons (which should be considered
- *	non-intersecting closed paths).
- *
- * Data representation is as follows:
- *	point:				(x,y)
- *	line segment:		[(x1,y1),(x2,y2)]
- *	box:				(x1,y1),(x2,y2)
- *	open path:			[(x1,y1),...,(xn,yn)]
- *	closed path:		((x1,y1),...,(xn,yn))
- *	polygon:			((x1,y1),...,(xn,yn))
- *
- * For boxes, the points are opposite corners with the first point at the top right.
- * For closed paths and polygons, the points should be reordered to allow
- *	fast and correct equality comparisons.
- *
- * XXX perhaps points in complex shapes should be reordered internally
- *	to allow faster internal operations, but should keep track of input order
- *	and restore that order for text output - tgl 97/01/16
- */
+   
+                                                
+                                                                         
+                                                                 
+                                                                     
+                                                                             
+                                   
+   
+                                      
+                   
+                                    
+                           
+                                      
+                                       
+                                    
+   
+                                                                                     
+                                                                          
+                                          
+   
+                                                                       
+                                                                             
+                                                         
+   
 
 static float8
 single_decode(char *num, char **endptr_p, const char *type_name, const char *orig_string)
 {
   return float8in_internal(num, endptr_p, type_name, orig_string);
-} /* single_decode() */
+}                      
 
 static void
 single_encode(float8 x, StringInfo str)
@@ -245,7 +245,7 @@ single_encode(float8 x, StringInfo str)
 
   appendStringInfoString(str, xstr);
   pfree(xstr);
-} /* single_encode() */
+}                      
 
 static void
 pair_decode(char *str, float8 *x, float8 *y, char **endptr_p, const char *type_name, const char *orig_string)
@@ -282,7 +282,7 @@ pair_decode(char *str, float8 *x, float8 *y, char **endptr_p, const char *type_n
     }
   }
 
-  /* report stopping point if wanted, else complain if not end of string */
+                                                                           
   if (endptr_p)
   {
     *endptr_p = str;
@@ -317,7 +317,7 @@ path_decode(char *str, bool opentype, int npts, Point *p, bool *isopen, char **e
   }
   if ((*isopen = (*str == LDELIM_EP)))
   {
-    /* no open delimiter allowed? */
+                                    
     if (!opentype)
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", type_name, orig_string)));
@@ -371,7 +371,7 @@ path_decode(char *str, bool opentype, int npts, Point *p, bool *isopen, char **e
     }
   }
 
-  /* report stopping point if wanted, else complain if not end of string */
+                                                                           
   if (endptr_p)
   {
     *endptr_p = str;
@@ -380,7 +380,7 @@ path_decode(char *str, bool opentype, int npts, Point *p, bool *isopen, char **e
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", type_name, orig_string)));
   }
-} /* path_decode() */
+}                    
 
 static char *
 path_encode(enum path_delim path_delim, int npts, Point *pt)
@@ -427,15 +427,15 @@ path_encode(enum path_delim path_delim, int npts, Point *pt)
   }
 
   return str.data;
-} /* path_encode() */
+}                    
 
-/*-------------------------------------------------------------
- * pair_count - count the number of points
- * allow the following notation:
- * '((1,2),(3,4))'
- * '(1,3,2,4)'
- * require an odd number of delim characters in the string
- *-------------------------------------------------------------*/
+                                                                
+                                           
+                                 
+                   
+               
+                                                           
+                                                                 
 static int
 pair_count(char *s, char delim)
 {
@@ -449,22 +449,22 @@ pair_count(char *s, char delim)
   return (ndelim % 2) ? ((ndelim + 1) / 2) : -1;
 }
 
-/***********************************************************************
- **
- **		Routines for two-dimensional boxes.
- **
- ***********************************************************************/
+                                                                         
+    
+                                         
+    
+                                                                         
 
-/*----------------------------------------------------------
- * Formatting and conversion routines.
- *---------------------------------------------------------*/
+                                                             
+                                       
+                                                             
 
-/*		box_in	-		convert a string to internal form.
- *
- *		External format: (two corners of box)
- *				"(f8, f8), (f8, f8)"
- *				also supports the older style "(f8, f8, f8, f8)"
- */
+                                                 
+   
+                                          
+                           
+                                                       
+   
 Datum
 box_in(PG_FUNCTION_ARGS)
 {
@@ -475,7 +475,7 @@ box_in(PG_FUNCTION_ARGS)
 
   path_decode(str, false, 2, &(box->high), &isopen, NULL, "box", str);
 
-  /* reorder corners if necessary... */
+                                       
   if (float8_lt(box->high.x, box->low.x))
   {
     x = box->high.x;
@@ -492,8 +492,8 @@ box_in(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(box);
 }
 
-/*		box_out -		convert a box to external form.
- */
+                                               
+   
 Datum
 box_out(PG_FUNCTION_ARGS)
 {
@@ -502,9 +502,9 @@ box_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(path_encode(PATH_NONE, 2, &(box->high)));
 }
 
-/*
- *		box_recv			- converts external binary format to box
- */
+   
+                                                        
+   
 Datum
 box_recv(PG_FUNCTION_ARGS)
 {
@@ -519,7 +519,7 @@ box_recv(PG_FUNCTION_ARGS)
   box->low.x = pq_getmsgfloat8(buf);
   box->low.y = pq_getmsgfloat8(buf);
 
-  /* reorder corners if necessary... */
+                                       
   if (float8_lt(box->high.x, box->low.x))
   {
     x = box->high.x;
@@ -536,9 +536,9 @@ box_recv(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(box);
 }
 
-/*
- *		box_send			- converts box to binary format
- */
+   
+                                               
+   
 Datum
 box_send(PG_FUNCTION_ARGS)
 {
@@ -553,8 +553,8 @@ box_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*		box_construct	-		fill in a new box.
- */
+                                        
+   
 static inline void
 box_construct(BOX *result, Point *pt1, Point *pt2)
 {
@@ -580,13 +580,13 @@ box_construct(BOX *result, Point *pt1, Point *pt2)
   }
 }
 
-/*----------------------------------------------------------
- *	Relational operators for BOXes.
- *		<, >, <=, >=, and == are based on box area.
- *---------------------------------------------------------*/
+                                                             
+                                   
+                                                
+                                                             
 
-/*		box_same		-		are two boxes identical?
- */
+                                          
+   
 Datum
 box_same(PG_FUNCTION_ARGS)
 {
@@ -596,8 +596,8 @@ box_same(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(point_eq_point(&box1->high, &box2->high) && point_eq_point(&box1->low, &box2->low));
 }
 
-/*		box_overlap		-		does box1 overlap box2?
- */
+                                            
+   
 Datum
 box_overlap(PG_FUNCTION_ARGS)
 {
@@ -613,8 +613,8 @@ box_ov(BOX *box1, BOX *box2)
   return (FPle(box1->low.x, box2->high.x) && FPle(box2->low.x, box1->high.x) && FPle(box1->low.y, box2->high.y) && FPle(box2->low.y, box1->high.y));
 }
 
-/*		box_left		-		is box1 strictly left of box2?
- */
+                                                
+   
 Datum
 box_left(PG_FUNCTION_ARGS)
 {
@@ -624,12 +624,12 @@ box_left(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPlt(box1->high.x, box2->low.x));
 }
 
-/*		box_overleft	-		is the right edge of box1 at or left of
- *								the right edge of box2?
- *
- *		This is "less than or equal" for the end of a time range,
- *		when time ranges are stored as rectangles.
- */
+                                                            
+                                  
+   
+                                                              
+                                               
+   
 Datum
 box_overleft(PG_FUNCTION_ARGS)
 {
@@ -639,8 +639,8 @@ box_overleft(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(box1->high.x, box2->high.x));
 }
 
-/*		box_right		-		is box1 strictly right of box2?
- */
+                                                  
+   
 Datum
 box_right(PG_FUNCTION_ARGS)
 {
@@ -650,12 +650,12 @@ box_right(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPgt(box1->low.x, box2->high.x));
 }
 
-/*		box_overright	-		is the left edge of box1 at or right of
- *								the left edge of box2?
- *
- *		This is "greater than or equal" for time ranges, when time ranges
- *		are stored as rectangles.
- */
+                                                             
+                                 
+   
+                                                                      
+                              
+   
 Datum
 box_overright(PG_FUNCTION_ARGS)
 {
@@ -665,8 +665,8 @@ box_overright(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(box1->low.x, box2->low.x));
 }
 
-/*		box_below		-		is box1 strictly below box2?
- */
+                                               
+   
 Datum
 box_below(PG_FUNCTION_ARGS)
 {
@@ -676,9 +676,9 @@ box_below(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPlt(box1->high.y, box2->low.y));
 }
 
-/*		box_overbelow	-		is the upper edge of box1 at or below
- *								the upper edge of box2?
- */
+                                                           
+                                  
+   
 Datum
 box_overbelow(PG_FUNCTION_ARGS)
 {
@@ -688,8 +688,8 @@ box_overbelow(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(box1->high.y, box2->high.y));
 }
 
-/*		box_above		-		is box1 strictly above box2?
- */
+                                               
+   
 Datum
 box_above(PG_FUNCTION_ARGS)
 {
@@ -699,9 +699,9 @@ box_above(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPgt(box1->low.y, box2->high.y));
 }
 
-/*		box_overabove	-		is the lower edge of box1 at or above
- *								the lower edge of box2?
- */
+                                                           
+                                  
+   
 Datum
 box_overabove(PG_FUNCTION_ARGS)
 {
@@ -711,8 +711,8 @@ box_overabove(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(box1->low.y, box2->low.y));
 }
 
-/*		box_contained	-		is box1 contained by box2?
- */
+                                                
+   
 Datum
 box_contained(PG_FUNCTION_ARGS)
 {
@@ -722,8 +722,8 @@ box_contained(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(box_contain_box(box2, box1));
 }
 
-/*		box_contain		-		does box1 contain box2?
- */
+                                            
+   
 Datum
 box_contain(PG_FUNCTION_ARGS)
 {
@@ -733,23 +733,23 @@ box_contain(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(box_contain_box(box1, box2));
 }
 
-/*
- * Check whether the second box is in the first box or on its border
- */
+   
+                                                                     
+   
 static bool
 box_contain_box(BOX *contains_box, BOX *contained_box)
 {
   return FPge(contains_box->high.x, contained_box->high.x) && FPle(contains_box->low.x, contained_box->low.x) && FPge(contains_box->high.y, contained_box->high.y) && FPle(contains_box->low.y, contained_box->low.y);
 }
 
-/*		box_positionop	-
- *				is box1 entirely {above,below} box2?
- *
- * box_below_eq and box_above_eq are obsolete versions that (probably
- * erroneously) accept the equal-boundaries case.  Since these are not
- * in sync with the box_left and box_right code, they are deprecated and
- * not supported in the PG 8.1 rtree operator class extension.
- */
+                     
+                                           
+   
+                                                                      
+                                                                       
+                                                                         
+                                                               
+   
 Datum
 box_below_eq(PG_FUNCTION_ARGS)
 {
@@ -768,9 +768,9 @@ box_above_eq(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(box1->low.y, box2->high.y));
 }
 
-/*		box_relop		-		is area(box1) relop area(box2), within
- *								our accuracy constraint?
- */
+                                                         
+                                   
+   
 Datum
 box_lt(PG_FUNCTION_ARGS)
 {
@@ -816,12 +816,12 @@ box_ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(box_ar(box1), box_ar(box2)));
 }
 
-/*----------------------------------------------------------
- *	"Arithmetic" operators on boxes.
- *---------------------------------------------------------*/
+                                                             
+                                    
+                                                             
 
-/*		box_area		-		returns the area of the box.
- */
+                                              
+   
 Datum
 box_area(PG_FUNCTION_ARGS)
 {
@@ -830,9 +830,9 @@ box_area(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(box_ar(box));
 }
 
-/*		box_width		-		returns the width of the box
- *								  (horizontal magnitude).
- */
+                                               
+                                    
+   
 Datum
 box_width(PG_FUNCTION_ARGS)
 {
@@ -841,9 +841,9 @@ box_width(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(box_wd(box));
 }
 
-/*		box_height		-		returns the height of the box
- *								  (vertical magnitude).
- */
+                                                 
+                                  
+   
 Datum
 box_height(PG_FUNCTION_ARGS)
 {
@@ -852,9 +852,9 @@ box_height(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(box_ht(box));
 }
 
-/*		box_distance	-		returns the distance between the
- *								  center points of two boxes.
- */
+                                                     
+                                        
+   
 Datum
 box_distance(PG_FUNCTION_ARGS)
 {
@@ -868,8 +868,8 @@ box_distance(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(point_dt(&a, &b));
 }
 
-/*		box_center		-		returns the center point of the box.
- */
+                                                        
+   
 Datum
 box_center(PG_FUNCTION_ARGS)
 {
@@ -881,16 +881,16 @@ box_center(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*		box_ar	-		returns the area of the box.
- */
+                                           
+   
 static float8
 box_ar(BOX *box)
 {
   return float8_mul(box_wd(box), box_ht(box));
 }
 
-/*		box_cn	-		stores the centerpoint of the box into *center.
- */
+                                                              
+   
 static void
 box_cn(Point *center, BOX *box)
 {
@@ -898,32 +898,32 @@ box_cn(Point *center, BOX *box)
   center->y = float8_div(float8_pl(box->high.y, box->low.y), 2.0);
 }
 
-/*		box_wd	-		returns the width (length) of the box
- *								  (horizontal magnitude).
- */
+                                                    
+                                    
+   
 static float8
 box_wd(BOX *box)
 {
   return float8_mi(box->high.x, box->low.x);
 }
 
-/*		box_ht	-		returns the height of the box
- *								  (vertical magnitude).
- */
+                                            
+                                  
+   
 static float8
 box_ht(BOX *box)
 {
   return float8_mi(box->high.y, box->low.y);
 }
 
-/*----------------------------------------------------------
- *	Funky operations.
- *---------------------------------------------------------*/
+                                                             
+                     
+                                                             
 
-/*		box_intersect	-
- *				returns the overlapping portion of two boxes,
- *				  or NULL if they do not intersect.
- */
+                    
+                                                    
+                                          
+   
 Datum
 box_intersect(PG_FUNCTION_ARGS)
 {
@@ -946,10 +946,10 @@ box_intersect(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(result);
 }
 
-/*		box_diagonal	-
- *				returns a line segment which happens to be the
- *				  positive-slope diagonal of "box".
- */
+                   
+                                                     
+                                          
+   
 Datum
 box_diagonal(PG_FUNCTION_ARGS)
 {
@@ -961,16 +961,16 @@ box_diagonal(PG_FUNCTION_ARGS)
   PG_RETURN_LSEG_P(result);
 }
 
-/***********************************************************************
- **
- **		Routines for 2D lines.
- **
- ***********************************************************************/
+                                                                         
+    
+                            
+    
+                                                                         
 
 static bool
 line_decode(char *s, const char *str, LINE *line)
 {
-  /* s was already advanced over leading '{' */
+                                               
   line->A = single_decode(s, &s, "line", str);
   if (*s++ != DELIM)
   {
@@ -1046,9 +1046,9 @@ line_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(psprintf("%c%s%c%s%c%s%c", LDELIM_L, astr, DELIM, bstr, DELIM, cstr, RDELIM_L));
 }
 
-/*
- *		line_recv			- converts external binary format to line
- */
+   
+                                                          
+   
 Datum
 line_recv(PG_FUNCTION_ARGS)
 {
@@ -1069,9 +1069,9 @@ line_recv(PG_FUNCTION_ARGS)
   PG_RETURN_LINE_P(line);
 }
 
-/*
- *		line_send			- converts line to binary format
- */
+   
+                                                 
+   
 Datum
 line_send(PG_FUNCTION_ARGS)
 {
@@ -1085,31 +1085,31 @@ line_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*----------------------------------------------------------
- *	Conversion routines from one line formula to internal.
- *		Internal form:	Ax+By+C=0
- *---------------------------------------------------------*/
+                                                             
+                                                          
+                             
+                                                             
 
-/*
- * Fill already-allocated LINE struct from the point and the slope
- */
+   
+                                                                   
+   
 static inline void
 line_construct(LINE *result, Point *pt, float8 m)
 {
   if (m == DBL_MAX)
   {
-    /* vertical - use "x = C" */
+                                
     result->A = -1.0;
     result->B = 0.0;
     result->C = pt->x;
   }
   else
   {
-    /* use "mx - y + yinter = 0" */
+                                   
     result->A = m;
     result->B = -1.0;
     result->C = float8_mi(pt->y, float8_mul(m, pt->x));
-    /* on some platforms, the preceding expression tends to produce -0 */
+                                                                         
     if (result->C == 0.0)
     {
       result->C = 0.0;
@@ -1117,9 +1117,9 @@ line_construct(LINE *result, Point *pt, float8 m)
   }
 }
 
-/* line_construct_pp()
- * two points
- */
+                       
+              
+   
 Datum
 line_construct_pp(PG_FUNCTION_ARGS)
 {
@@ -1137,9 +1137,9 @@ line_construct_pp(PG_FUNCTION_ARGS)
   PG_RETURN_LINE_P(result);
 }
 
-/*----------------------------------------------------------
- *	Relative position routines.
- *---------------------------------------------------------*/
+                                                             
+                               
+                                                             
 
 Datum
 line_intersect(PG_FUNCTION_ARGS)
@@ -1201,12 +1201,12 @@ line_horizontal(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPzero(line->A));
 }
 
-/*
- * Check whether the two lines are the same
- *
- * We consider NaNs values to be equal to each other to let those lines
- * to be found.
- */
+   
+                                            
+   
+                                                                        
+                
+   
 Datum
 line_eq(PG_FUNCTION_ARGS)
 {
@@ -1234,13 +1234,13 @@ line_eq(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL((FPeq(l1->A, float8_mul(ratio, l2->A)) && FPeq(l1->B, float8_mul(ratio, l2->B)) && FPeq(l1->C, float8_mul(ratio, l2->C))) || (float8_eq(l1->A, l2->A) && float8_eq(l1->B, l2->B) && float8_eq(l1->C, l2->C)));
 }
 
-/*----------------------------------------------------------
- *	Line arithmetic routines.
- *---------------------------------------------------------*/
+                                                             
+                             
+                                                             
 
-/*
- * Return slope of the line
- */
+   
+                            
+   
 static inline float8
 line_sl(LINE *line)
 {
@@ -1255,9 +1255,9 @@ line_sl(LINE *line)
   return float8_div(line->A, -line->B);
 }
 
-/*
- * Return inverse slope of the line
- */
+   
+                                    
+   
 static inline float8
 line_invsl(LINE *line)
 {
@@ -1272,9 +1272,9 @@ line_invsl(LINE *line)
   return float8_div(line->B, line->A);
 }
 
-/* line_distance()
- * Distance between two lines.
- */
+                   
+                               
+   
 Datum
 line_distance(PG_FUNCTION_ARGS)
 {
@@ -1282,7 +1282,7 @@ line_distance(PG_FUNCTION_ARGS)
   LINE *l2 = PG_GETARG_LINE_P(1);
   float8 ratio;
 
-  if (line_interpt_line(NULL, l1, l2)) /* intersecting? */
+  if (line_interpt_line(NULL, l1, l2))                    
   {
     PG_RETURN_FLOAT8(0.0);
   }
@@ -1303,9 +1303,9 @@ line_distance(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(float8_div(fabs(float8_mi(l1->C, float8_mul(ratio, l2->C))), HYPOT(l1->A, l1->B)));
 }
 
-/* line_interpt()
- * Point where two lines l1, l2 intersect (if any)
- */
+                  
+                                                   
+   
 Datum
 line_interpt(PG_FUNCTION_ARGS)
 {
@@ -1322,20 +1322,20 @@ line_interpt(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Internal version of line_interpt
- *
- * Return whether two lines intersect. If *result is not NULL, it is set to
- * the intersection point.
- *
- * NOTE: If the lines are identical then we will find they are parallel
- * and report "no intersection".  This is a little weird, but since
- * there's no *unique* intersection, maybe it's appropriate behavior.
- *
- * If the lines have NaN constants, we will return true, and the intersection
- * point would have NaN coordinates.  We shouldn't return false in this case
- * because that would mean the lines are parallel.
- */
+   
+                                    
+   
+                                                                            
+                           
+   
+                                                                        
+                                                                    
+                                                                      
+   
+                                                                              
+                                                                             
+                                                   
+   
 static bool
 line_interpt_line(Point *result, LINE *l1, LINE *l2)
 {
@@ -1366,7 +1366,7 @@ line_interpt_line(Point *result, LINE *l1, LINE *l2)
     return false;
   }
 
-  /* On some platforms, the preceding expressions tend to produce -0. */
+                                                                        
   if (x == 0.0)
   {
     x = 0.0;
@@ -1384,27 +1384,27 @@ line_interpt_line(Point *result, LINE *l1, LINE *l2)
   return true;
 }
 
-/***********************************************************************
- **
- **		Routines for 2D paths (sequences of line segments, also
- **				called `polylines').
- **
- **				This is not a general package for geometric paths,
- **				which of course include polygons; the emphasis here
- **				is on (for example) usefulness in wire layout.
- **
- ***********************************************************************/
+                                                                         
+    
+                                                             
+                            
+    
+                                                          
+                                                           
+                                                      
+    
+                                                                         
 
-/*----------------------------------------------------------
- *	String to path / path to string conversion.
- *		External format:
- *				"((xcoord, ycoord),... )"
- *				"[(xcoord, ycoord),... ]"
- *				"(xcoord, ycoord),... "
- *				"[xcoord, ycoord,... ]"
- *		Also support older format:
- *				"(closed, npts, xcoord, ycoord,... )"
- *---------------------------------------------------------*/
+                                                             
+                                               
+                     
+                                
+                                
+                              
+                              
+                               
+                                            
+                                                             
 
 Datum
 path_area(PG_FUNCTION_ARGS)
@@ -1451,7 +1451,7 @@ path_in(PG_FUNCTION_ARGS)
     s++;
   }
 
-  /* skip single leading paren */
+                                 
   if ((*s == LDELIM) && (strrchr(s, LDELIM) == s))
   {
     s++;
@@ -1461,7 +1461,7 @@ path_in(PG_FUNCTION_ARGS)
   base_size = sizeof(path->p[0]) * npts;
   size = offsetof(PATH, p) + base_size;
 
-  /* Check for integer overflow */
+                                  
   if (base_size / npts != sizeof(path->p[0]) || size <= base_size)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many points requested")));
@@ -1491,7 +1491,7 @@ path_in(PG_FUNCTION_ARGS)
   }
 
   path->closed = (!isopen);
-  /* prevent instability in unused pad bytes */
+                                               
   path->dummy = 0;
 
   PG_RETURN_PATH_P(path);
@@ -1505,12 +1505,12 @@ path_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(path_encode(path->closed ? PATH_CLOSED : PATH_OPEN, path->npts, path->p));
 }
 
-/*
- *		path_recv			- converts external binary format to path
- *
- * External representation is closed flag (a boolean byte), int32 number
- * of points, and the points.
- */
+   
+                                                          
+   
+                                                                         
+                              
+   
 Datum
 path_recv(PG_FUNCTION_ARGS)
 {
@@ -1534,7 +1534,7 @@ path_recv(PG_FUNCTION_ARGS)
   SET_VARSIZE(path, size);
   path->npts = npts;
   path->closed = (closed ? 1 : 0);
-  /* prevent instability in unused pad bytes */
+                                               
   path->dummy = 0;
 
   for (i = 0; i < npts; i++)
@@ -1546,9 +1546,9 @@ path_recv(PG_FUNCTION_ARGS)
   PG_RETURN_PATH_P(path);
 }
 
-/*
- *		path_send			- converts path to binary format
- */
+   
+                                                 
+   
 Datum
 path_send(PG_FUNCTION_ARGS)
 {
@@ -1567,13 +1567,13 @@ path_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*----------------------------------------------------------
- *	Relational operators.
- *		These are based on the path cardinality,
- *		as stupid as that sounds.
- *
- *		Better relops and access methods coming soon.
- *---------------------------------------------------------*/
+                                                             
+                         
+                                             
+                              
+   
+                                                  
+                                                             
 
 Datum
 path_n_lt(PG_FUNCTION_ARGS)
@@ -1620,9 +1620,9 @@ path_n_ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(p1->npts >= p2->npts);
 }
 
-/*----------------------------------------------------------
- * Conversion operators.
- *---------------------------------------------------------*/
+                                                             
+                         
+                                                             
 
 Datum
 path_isclosed(PG_FUNCTION_ARGS)
@@ -1668,11 +1668,11 @@ path_open(PG_FUNCTION_ARGS)
   PG_RETURN_PATH_P(path);
 }
 
-/* path_inter -
- *		Does p1 intersect p2 at any point?
- *		Use bounding boxes for a quick (O(n)) check, then do a
- *		O(n^2) iterative edge check.
- */
+                
+                                       
+                                                           
+                                 
+   
 Datum
 path_inter(PG_FUNCTION_ARGS)
 {
@@ -1707,7 +1707,7 @@ path_inter(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /* pairwise check lseg intersections */
+                                         
   for (i = 0; i < p1->npts; i++)
   {
     int iprev;
@@ -1722,7 +1722,7 @@ path_inter(PG_FUNCTION_ARGS)
       {
         continue;
       }
-      iprev = p1->npts - 1; /* include the closure segment */
+      iprev = p1->npts - 1;                                  
     }
 
     for (j = 0; j < p2->npts; j++)
@@ -1739,7 +1739,7 @@ path_inter(PG_FUNCTION_ARGS)
         {
           continue;
         }
-        jprev = p2->npts - 1; /* include the closure segment */
+        jprev = p2->npts - 1;                                  
       }
 
       statlseg_construct(&seg1, &p1->p[iprev], &p1->p[i]);
@@ -1751,20 +1751,20 @@ path_inter(PG_FUNCTION_ARGS)
     }
   }
 
-  /* if we dropped through, no two segs intersected */
+                                                      
   PG_RETURN_BOOL(false);
 }
 
-/* path_distance()
- * This essentially does a cartesian product of the lsegs in the
- *	two paths, and finds the min distance between any two lsegs
- */
+                   
+                                                                 
+                                                               
+   
 Datum
 path_distance(PG_FUNCTION_ARGS)
 {
   PATH *p1 = PG_GETARG_PATH_P(0);
   PATH *p2 = PG_GETARG_PATH_P(1);
-  float8 min = 0.0; /* initialize to keep compiler quiet */
+  float8 min = 0.0;                                        
   bool have_min = false;
   float8 tmp;
   int i, j;
@@ -1784,7 +1784,7 @@ path_distance(PG_FUNCTION_ARGS)
       {
         continue;
       }
-      iprev = p1->npts - 1; /* include the closure segment */
+      iprev = p1->npts - 1;                                  
     }
 
     for (j = 0; j < p2->npts; j++)
@@ -1801,7 +1801,7 @@ path_distance(PG_FUNCTION_ARGS)
         {
           continue;
         }
-        jprev = p2->npts - 1; /* include the closure segment */
+        jprev = p2->npts - 1;                                  
       }
 
       statlseg_construct(&seg1, &p1->p[iprev], &p1->p[i]);
@@ -1824,9 +1824,9 @@ path_distance(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(min);
 }
 
-/*----------------------------------------------------------
- *	"Arithmetic" operations.
- *---------------------------------------------------------*/
+                                                             
+                            
+                                                             
 
 Datum
 path_length(PG_FUNCTION_ARGS)
@@ -1849,7 +1849,7 @@ path_length(PG_FUNCTION_ARGS)
       {
         continue;
       }
-      iprev = path->npts - 1; /* include the closure segment */
+      iprev = path->npts - 1;                                  
     }
 
     result = float8_pl(result, point_dt(&path->p[iprev], &path->p[i]));
@@ -1858,18 +1858,18 @@ path_length(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/***********************************************************************
- **
- **		Routines for 2D points.
- **
- ***********************************************************************/
+                                                                         
+    
+                             
+    
+                                                                         
 
-/*----------------------------------------------------------
- *	String to point, point to string conversion.
- *		External format:
- *				"(x,y)"
- *				"x,y"
- *---------------------------------------------------------*/
+                                                             
+                                                
+                     
+              
+            
+                                                             
 
 Datum
 point_in(PG_FUNCTION_ARGS)
@@ -1889,9 +1889,9 @@ point_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(path_encode(PATH_NONE, 1, pt));
 }
 
-/*
- *		point_recv			- converts external binary format to point
- */
+   
+                                                            
+   
 Datum
 point_recv(PG_FUNCTION_ARGS)
 {
@@ -1904,9 +1904,9 @@ point_recv(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(point);
 }
 
-/*
- *		point_send			- converts point to binary format
- */
+   
+                                                   
+   
 Datum
 point_send(PG_FUNCTION_ARGS)
 {
@@ -1919,9 +1919,9 @@ point_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- * Initialize a point
- */
+   
+                      
+   
 static inline void
 point_construct(Point *result, float8 x, float8 y)
 {
@@ -1929,14 +1929,14 @@ point_construct(Point *result, float8 x, float8 y)
   result->y = y;
 }
 
-/*----------------------------------------------------------
- *	Relational operators for Points.
- *		Since we do have a sense of coordinates being
- *		"equal" to a given accuracy (point_vert, point_horiz),
- *		the other ops must preserve that sense.  This means
- *		that results may, strictly speaking, be a lie (unless
- *		EPSILON = 0.0).
- *---------------------------------------------------------*/
+                                                             
+                                    
+                                                  
+                                                           
+                                                        
+                                                          
+                    
+                                                             
 
 Datum
 point_left(PG_FUNCTION_ARGS)
@@ -2010,21 +2010,21 @@ point_ne(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(!point_eq_point(pt1, pt2));
 }
 
-/*
- * Check whether the two points are the same
- *
- * We consider NaNs coordinates to be equal to each other to let those points
- * to be found.
- */
+   
+                                             
+   
+                                                                              
+                
+   
 static inline bool
 point_eq_point(Point *pt1, Point *pt2)
 {
   return ((FPeq(pt1->x, pt2->x) && FPeq(pt1->y, pt2->y)) || (float8_eq(pt1->x, pt2->x) && float8_eq(pt1->y, pt2->y)));
 }
 
-/*----------------------------------------------------------
- *	"Arithmetic" operators on points.
- *---------------------------------------------------------*/
+                                                             
+                                     
+                                                             
 
 Datum
 point_distance(PG_FUNCTION_ARGS)
@@ -2050,11 +2050,11 @@ point_slope(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(point_sl(pt1, pt2));
 }
 
-/*
- * Return slope of two points
- *
- * Note that this function returns DBL_MAX when the points are the same.
- */
+   
+                              
+   
+                                                                         
+   
 static inline float8
 point_sl(Point *pt1, Point *pt2)
 {
@@ -2069,11 +2069,11 @@ point_sl(Point *pt1, Point *pt2)
   return float8_div(float8_mi(pt1->y, pt2->y), float8_mi(pt1->x, pt2->x));
 }
 
-/*
- * Return inverse slope of two points
- *
- * Note that this function returns 0.0 when the points are the same.
- */
+   
+                                      
+   
+                                                                     
+   
 static inline float8
 point_invsl(Point *pt1, Point *pt2)
 {
@@ -2088,20 +2088,20 @@ point_invsl(Point *pt1, Point *pt2)
   return float8_div(float8_mi(pt1->x, pt2->x), float8_mi(pt2->y, pt1->y));
 }
 
-/***********************************************************************
- **
- **		Routines for 2D line segments.
- **
- ***********************************************************************/
+                                                                         
+    
+                                    
+    
+                                                                         
 
-/*----------------------------------------------------------
- *	String to lseg, lseg to string conversion.
- *		External forms: "[(x1, y1), (x2, y2)]"
- *						"(x1, y1), (x2, y2)"
- *						"x1, y1, x2, y2"
- *		closed form ok	"((x1, y1), (x2, y2))"
- *		(old form)		"(x1, y1, x2, y2)"
- *---------------------------------------------------------*/
+                                                             
+                                              
+                                           
+                             
+                         
+                                          
+                                   
+                                                             
 
 Datum
 lseg_in(PG_FUNCTION_ARGS)
@@ -2122,9 +2122,9 @@ lseg_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(path_encode(PATH_OPEN, 2, &ls->p[0]));
 }
 
-/*
- *		lseg_recv			- converts external binary format to lseg
- */
+   
+                                                          
+   
 Datum
 lseg_recv(PG_FUNCTION_ARGS)
 {
@@ -2141,9 +2141,9 @@ lseg_recv(PG_FUNCTION_ARGS)
   PG_RETURN_LSEG_P(lseg);
 }
 
-/*
- *		lseg_send			- converts lseg to binary format
- */
+   
+                                                 
+   
 Datum
 lseg_send(PG_FUNCTION_ARGS)
 {
@@ -2158,9 +2158,9 @@ lseg_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/* lseg_construct -
- *		form a LSEG from two Points.
- */
+                    
+                                 
+   
 Datum
 lseg_construct(PG_FUNCTION_ARGS)
 {
@@ -2173,7 +2173,7 @@ lseg_construct(PG_FUNCTION_ARGS)
   PG_RETURN_LSEG_P(result);
 }
 
-/* like lseg_construct, but assume space already allocated */
+                                                             
 static inline void
 statlseg_construct(LSEG *lseg, Point *pt1, Point *pt2)
 {
@@ -2183,18 +2183,18 @@ statlseg_construct(LSEG *lseg, Point *pt1, Point *pt2)
   lseg->p[1].y = pt2->y;
 }
 
-/*
- * Return slope of the line segment
- */
+   
+                                    
+   
 static inline float8
 lseg_sl(LSEG *lseg)
 {
   return point_sl(&lseg->p[0], &lseg->p[1]);
 }
 
-/*
- * Return inverse slope of the line segment
- */
+   
+                                            
+   
 static inline float8
 lseg_invsl(LSEG *lseg)
 {
@@ -2209,14 +2209,14 @@ lseg_length(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(point_dt(&lseg->p[0], &lseg->p[1]));
 }
 
-/*----------------------------------------------------------
- *	Relative position routines.
- *---------------------------------------------------------*/
+                                                             
+                               
+                                                             
 
-/*
- **  find intersection of the two lines, and see if it falls on
- **  both segments.
- */
+   
+                                                                
+                    
+   
 Datum
 lseg_intersect(PG_FUNCTION_ARGS)
 {
@@ -2235,9 +2235,9 @@ lseg_parallel(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPeq(lseg_sl(l1), lseg_sl(l2)));
 }
 
-/*
- * Determine if two line segments are perpendicular.
- */
+   
+                                                     
+   
 Datum
 lseg_perp(PG_FUNCTION_ARGS)
 {
@@ -2317,15 +2317,15 @@ lseg_ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(point_dt(&l1->p[0], &l1->p[1]), point_dt(&l2->p[0], &l2->p[1])));
 }
 
-/*----------------------------------------------------------
- *	Line arithmetic routines.
- *---------------------------------------------------------*/
+                                                             
+                             
+                                                             
 
-/* lseg_distance -
- *		If two segments don't intersect, then the closest
- *		point will be from one of the endpoints to the other
- *		segment.
- */
+                   
+                                                      
+                                                         
+             
+   
 Datum
 lseg_distance(PG_FUNCTION_ARGS)
 {
@@ -2349,13 +2349,13 @@ lseg_center(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Return whether the two segments intersect. If *result is not NULL,
- * it is set to the intersection point.
- *
- * This function is almost perfectly symmetric, even though it doesn't look
- * like it.  See lseg_interpt_line() for the other half of it.
- */
+   
+                                                                      
+                                        
+   
+                                                                            
+                                                               
+   
 static bool
 lseg_interpt_lseg(Point *result, LSEG *l1, LSEG *l2)
 {
@@ -2368,10 +2368,10 @@ lseg_interpt_lseg(Point *result, LSEG *l1, LSEG *l2)
     return false;
   }
 
-  /*
-   * If the line intersection point isn't within l2, there is no valid
-   * segment intersection point at all.
-   */
+     
+                                                                       
+                                        
+     
   if (!lseg_contain_point(l2, &interpt))
   {
     return false;
@@ -2401,21 +2401,21 @@ lseg_interpt(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/***********************************************************************
- **
- **		Routines for position comparisons of differently-typed
- **				2D objects.
- **
- ***********************************************************************/
+                                                                         
+    
+                                                            
+                   
+    
+                                                                         
 
-/*---------------------------------------------------------------------
- *		dist_
- *				Minimum distance from one object to another.
- *-------------------------------------------------------------------*/
+                                                                        
+          
+                                                   
+                                                                       
 
-/*
- * Distance from a point to a line
- */
+   
+                                   
+   
 Datum
 dist_pl(PG_FUNCTION_ARGS)
 {
@@ -2425,9 +2425,9 @@ dist_pl(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(line_closept_point(NULL, line, pt));
 }
 
-/*
- * Distance from a point to a lseg
- */
+   
+                                   
+   
 Datum
 dist_ps(PG_FUNCTION_ARGS)
 {
@@ -2437,15 +2437,15 @@ dist_ps(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(lseg_closept_point(NULL, lseg, pt));
 }
 
-/*
- * Distance from a point to a path
- */
+   
+                                   
+   
 Datum
 dist_ppath(PG_FUNCTION_ARGS)
 {
   Point *pt = PG_GETARG_POINT_P(0);
   PATH *path = PG_GETARG_PATH_P(1);
-  float8 result = 0.0; /* keep compiler quiet */
+  float8 result = 0.0;                          
   bool have_min = false;
   float8 tmp;
   int i;
@@ -2453,10 +2453,10 @@ dist_ppath(PG_FUNCTION_ARGS)
 
   Assert(path->npts > 0);
 
-  /*
-   * The distance from a point to a path is the smallest distance from the
-   * point to any of its constituent segments.
-   */
+     
+                                                                           
+                                               
+     
   for (i = 0; i < path->npts; i++)
   {
     int iprev;
@@ -2471,7 +2471,7 @@ dist_ppath(PG_FUNCTION_ARGS)
       {
         continue;
       }
-      iprev = path->npts - 1; /* Include the closure segment */
+      iprev = path->npts - 1;                                  
     }
 
     statlseg_construct(&lseg, &path->p[iprev], &path->p[i]);
@@ -2486,9 +2486,9 @@ dist_ppath(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/*
- * Distance from a point to a box
- */
+   
+                                  
+   
 Datum
 dist_pb(PG_FUNCTION_ARGS)
 {
@@ -2498,9 +2498,9 @@ dist_pb(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(box_closept_point(NULL, box, pt));
 }
 
-/*
- * Distance from a lseg to a line
- */
+   
+                                  
+   
 Datum
 dist_sl(PG_FUNCTION_ARGS)
 {
@@ -2510,9 +2510,9 @@ dist_sl(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(lseg_closept_line(NULL, lseg, line));
 }
 
-/*
- * Distance from a lseg to a box
- */
+   
+                                 
+   
 Datum
 dist_sb(PG_FUNCTION_ARGS)
 {
@@ -2522,9 +2522,9 @@ dist_sb(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(box_closept_lseg(NULL, box, lseg));
 }
 
-/*
- * Distance from a line to a box
- */
+   
+                                 
+   
 Datum
 dist_lb(PG_FUNCTION_ARGS)
 {
@@ -2533,15 +2533,15 @@ dist_lb(PG_FUNCTION_ARGS)
   BOX *box = PG_GETARG_BOX_P(1);
 #endif
 
-  /* need to think about this one for a while */
+                                                
   ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function \"dist_lb\" not implemented")));
 
   PG_RETURN_NULL();
 }
 
-/*
- * Distance from a circle to a polygon
- */
+   
+                                       
+   
 Datum
 dist_cpoly(PG_FUNCTION_ARGS)
 {
@@ -2549,7 +2549,7 @@ dist_cpoly(PG_FUNCTION_ARGS)
   POLYGON *poly = PG_GETARG_POLYGON_P(1);
   float8 result;
 
-  /* calculate distance to center, and subtract radius */
+                                                         
   result = float8_mi(dist_ppoly_internal(&circle->center, poly), circle->radius);
   if (result < 0.0)
   {
@@ -2559,9 +2559,9 @@ dist_cpoly(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/*
- * Distance from a point to a polygon
- */
+   
+                                      
+   
 Datum
 dist_ppoly(PG_FUNCTION_ARGS)
 {
@@ -2593,14 +2593,14 @@ dist_ppoly_internal(Point *pt, POLYGON *poly)
     return 0.0;
   }
 
-  /* initialize distance with segment between first and last points */
+                                                                      
   seg.p[0].x = poly->p[0].x;
   seg.p[0].y = poly->p[0].y;
   seg.p[1].x = poly->p[poly->npts - 1].x;
   seg.p[1].y = poly->p[poly->npts - 1].y;
   result = lseg_closept_point(NULL, &seg, pt);
 
-  /* check distances for other segments */
+                                          
   for (i = 0; i < poly->npts - 1; i++)
   {
     seg.p[0].x = poly->p[i].x;
@@ -2617,49 +2617,49 @@ dist_ppoly_internal(Point *pt, POLYGON *poly)
   return result;
 }
 
-/*---------------------------------------------------------------------
- *		interpt_
- *				Intersection point of objects.
- *				We choose to ignore the "point" of intersection between
- *				  lines and boxes, since there are typically two.
- *-------------------------------------------------------------------*/
+                                                                        
+             
+                                     
+                                                              
+                                                        
+                                                                       
 
-/*
- * Return whether the line segment intersect with the line. If *result is not
- * NULL, it is set to the intersection point.
- */
+   
+                                                                              
+                                              
+   
 static bool
 lseg_interpt_line(Point *result, LSEG *lseg, LINE *line)
 {
   Point interpt;
   LINE tmp;
 
-  /*
-   * First, we promote the line segment to a line, because we know how to
-   * find the intersection point of two lines.  If they don't have an
-   * intersection point, we are done.
-   */
+     
+                                                                          
+                                                                      
+                                      
+     
   line_construct(&tmp, &lseg->p[0], lseg_sl(lseg));
   if (!line_interpt_line(&interpt, &tmp, line))
   {
     return false;
   }
 
-  /*
-   * Then, we check whether the intersection point is actually on the line
-   * segment.
-   */
+     
+                                                                           
+              
+     
   if (!lseg_contain_point(lseg, &interpt))
   {
     return false;
   }
   if (result != NULL)
   {
-    /*
-     * If there is an intersection, then check explicitly for matching
-     * endpoints since there may be rounding effects with annoying LSB
-     * residue.
-     */
+       
+                                                                       
+                                                                       
+                
+       
     if (point_eq_point(&lseg->p[0], &interpt))
     {
       *result = lseg->p[0];
@@ -2677,27 +2677,27 @@ lseg_interpt_line(Point *result, LSEG *lseg, LINE *line)
   return true;
 }
 
-/*---------------------------------------------------------------------
- *		close_
- *				Point of closest proximity between objects.
- *-------------------------------------------------------------------*/
+                                                                        
+           
+                                                  
+                                                                       
 
-/*
- * If *result is not NULL, it is set to the intersection point of a
- * perpendicular of the line through the point.  Returns the distance
- * of those two points.
- */
+   
+                                                                    
+                                                                      
+                        
+   
 static float8
 line_closept_point(Point *result, LINE *line, Point *point)
 {
   Point closept;
   LINE tmp;
 
-  /*
-   * We drop a perpendicular to find the intersection point.  Ordinarily we
-   * should always find it, but that can fail in the presence of NaN
-   * coordinates, and perhaps even from simple roundoff issues.
-   */
+     
+                                                                            
+                                                                     
+                                                                
+     
   line_construct(&tmp, point, line_invsl(line));
   if (!line_interpt_line(&closept, &tmp, line))
   {
@@ -2734,22 +2734,22 @@ close_pl(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Closest point on line segment to specified point.
- *
- * If *result is not NULL, set it to the closest point on the line segment
- * to the point.  Returns the distance of the two points.
- */
+   
+                                                     
+   
+                                                                           
+                                                          
+   
 static float8
 lseg_closept_point(Point *result, LSEG *lseg, Point *pt)
 {
   Point closept;
   LINE tmp;
 
-  /*
-   * To find the closest point, we draw a perpendicular line from the point
-   * to the line segment.
-   */
+     
+                                                                            
+                          
+     
   line_construct(&tmp, pt, point_invsl(&lseg->p[0], &lseg->p[1]));
   lseg_closept_line(&closept, lseg, &tmp);
 
@@ -2778,25 +2778,25 @@ close_ps(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Closest point on line segment to line segment
- */
+   
+                                                 
+   
 static float8
 lseg_closept_lseg(Point *result, LSEG *on_lseg, LSEG *to_lseg)
 {
   Point point;
   float8 dist, d;
 
-  /* First, we handle the case when the line segments are intersecting. */
+                                                                          
   if (lseg_interpt_lseg(result, on_lseg, to_lseg))
   {
     return 0.0;
   }
 
-  /*
-   * Then, we find the closest points from the endpoints of the second line
-   * segment, and keep the closest one.
-   */
+     
+                                                                            
+                                        
+     
   dist = lseg_closept_point(result, on_lseg, &to_lseg->p[0]);
   d = lseg_closept_point(&point, on_lseg, &to_lseg->p[1]);
   if (float8_lt(d, dist))
@@ -2808,7 +2808,7 @@ lseg_closept_lseg(Point *result, LSEG *on_lseg, LSEG *to_lseg)
     }
   }
 
-  /* The closest point can still be one of the endpoints, so we test them. */
+                                                                             
   d = lseg_closept_point(NULL, to_lseg, &on_lseg->p[0]);
   if (float8_lt(d, dist))
   {
@@ -2853,12 +2853,12 @@ close_lseg(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Closest point on or in box to specified point.
- *
- * If *result is not NULL, set it to the closest point on the box to the
- * given point, and return the distance of the two points.
- */
+   
+                                                  
+   
+                                                                         
+                                                           
+   
 static float8
 box_closept_point(Point *result, BOX *box, Point *pt)
 {
@@ -2876,7 +2876,7 @@ box_closept_point(Point *result, BOX *box, Point *pt)
     return 0.0;
   }
 
-  /* pairwise check lseg distances */
+                                     
   point.x = box->low.x;
   point.y = box->high.y;
   statlseg_construct(&lseg, &box->low, &point);
@@ -2937,15 +2937,15 @@ close_pb(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/* close_sl()
- * Closest point on line to line segment.
- *
- * XXX THIS CODE IS WRONG
- * The code is actually calculating the point on the line segment
- *	which is backwards from the routine naming convention.
- * Copied code to new routine close_ls() but haven't fixed this one yet.
- * - thomas 1998-01-31
- */
+              
+                                          
+   
+                          
+                                                                  
+                                                          
+                                                                         
+                       
+   
 Datum
 close_sl(PG_FUNCTION_ARGS)
 {
@@ -2981,18 +2981,18 @@ close_sl(PG_FUNCTION_ARGS)
   PG_RETURN_NULL();
 }
 
-/*
- * Closest point on line segment to line.
- *
- * Return the distance between the line and the closest point of the line
- * segment to the line.  If *result is not NULL, set it to that point.
- *
- * NOTE: When the lines are parallel, endpoints of one of the line segment
- * are FPeq(), in presence of NaN or Infinite coordinates, or perhaps =
- * even because of simple roundoff issues, there may not be a single closest
- * point.  We are likely to set the result to the second endpoint in these
- * cases.
- */
+   
+                                          
+   
+                                                                          
+                                                                       
+   
+                                                                           
+                                                                        
+                                                                             
+                                                                           
+          
+   
 static float8
 lseg_closept_line(Point *result, LSEG *lseg, LINE *line)
 {
@@ -3048,12 +3048,12 @@ close_ls(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*
- * Closest point on or in box to line segment.
- *
- * Returns the distance between the closest point on or in the box to
- * the line segment.  If *result is not NULL, it is set to that point.
- */
+   
+                                               
+   
+                                                                      
+                                                                       
+   
 static float8
 box_closept_lseg(Point *result, BOX *box, LSEG *lseg)
 {
@@ -3066,7 +3066,7 @@ box_closept_lseg(Point *result, BOX *box, LSEG *lseg)
     return 0.0;
   }
 
-  /* pairwise check lseg distances */
+                                     
   point.x = box->low.x;
   point.y = box->high.y;
   statlseg_construct(&bseg, &box->low, &point);
@@ -3135,20 +3135,20 @@ close_lb(PG_FUNCTION_ARGS)
   BOX *box = PG_GETARG_BOX_P(1);
 #endif
 
-  /* think about this one for a while */
+                                        
   ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("function \"close_lb\" not implemented")));
 
   PG_RETURN_NULL();
 }
 
-/*---------------------------------------------------------------------
- *		on_
- *				Whether one object lies completely within another.
- *-------------------------------------------------------------------*/
+                                                                        
+        
+                                                         
+                                                                       
 
-/*
- *		Does the point satisfy the equation?
- */
+   
+                                         
+   
 static bool
 line_contain_point(LINE *line, Point *point)
 {
@@ -3164,10 +3164,10 @@ on_pl(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(line_contain_point(line, pt));
 }
 
-/*
- *		Determine colinearity by detecting a triangle inequality.
- * This algorithm seems to behave nicely even with lsb residues - tgl 1997-07-09
- */
+   
+                                                              
+                                                                                 
+   
 static bool
 lseg_contain_point(LSEG *lseg, Point *pt)
 {
@@ -3183,9 +3183,9 @@ on_ps(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(lseg_contain_point(lseg, pt));
 }
 
-/*
- * Check whether the point is in the box or on its border
- */
+   
+                                                          
+   
 static bool
 box_contain_point(BOX *box, Point *point)
 {
@@ -3210,17 +3210,17 @@ box_contain_pt(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(box_contain_point(box, pt));
 }
 
-/* on_ppath -
- *		Whether a point lies within (on) a polyline.
- *		If open, we have to (groan) check each segment.
- * (uses same algorithm as for point intersecting segment - tgl 1997-07-09)
- *		If closed, we use the old O(n) ray method for point-in-polygon.
- *				The ray is horizontal, from pt out to the right.
- *				Each segment that crosses the ray counts as an
- *				intersection; note that an endpoint or edge may touch
- *				but not cross.
- *				(we can do p-in-p in lg(n), but it takes preprocessing)
- */
+              
+                                                 
+                                                    
+                                                                            
+                                                                    
+                                                       
+                                                     
+                                                            
+                     
+                                                              
+   
 Datum
 on_ppath(PG_FUNCTION_ARGS)
 {
@@ -3229,7 +3229,7 @@ on_ppath(PG_FUNCTION_ARGS)
   int i, n;
   float8 a, b;
 
-  /*-- OPEN --*/
+                
   if (!path->closed)
   {
     n = path->npts - 1;
@@ -3246,15 +3246,15 @@ on_ppath(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /*-- CLOSED --*/
+                  
   PG_RETURN_BOOL(point_inside(pt, path->npts, path->p) != 0);
 }
 
-/*
- * Check whether the line segment is on the line or close enough
- *
- * It is, if both of its points are on the line or close enough.
- */
+   
+                                                                 
+   
+                                                                 
+   
 Datum
 on_sl(PG_FUNCTION_ARGS)
 {
@@ -3264,11 +3264,11 @@ on_sl(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(line_contain_point(line, &lseg->p[0]) && line_contain_point(line, &lseg->p[1]));
 }
 
-/*
- * Check whether the line segment is in the box or on its border
- *
- * It is, if both of its points are in the box or on its border.
- */
+   
+                                                                 
+   
+                                                                 
+   
 static bool
 box_contain_lseg(BOX *box, LSEG *lseg)
 {
@@ -3284,10 +3284,10 @@ on_sb(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(box_contain_lseg(box, lseg));
 }
 
-/*---------------------------------------------------------------------
- *		inter_
- *				Whether one object intersects another.
- *-------------------------------------------------------------------*/
+                                                                        
+           
+                                             
+                                                                       
 
 Datum
 inter_sl(PG_FUNCTION_ARGS)
@@ -3298,21 +3298,21 @@ inter_sl(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(lseg_interpt_line(NULL, lseg, line));
 }
 
-/*
- * Do line segment and box intersect?
- *
- * Segment completely inside box counts as intersection.
- * If you want only segments crossing box boundaries,
- *	try converting box to path first.
- *
- * This function also sets the *result to the closest point on the line
- * segment to the center of the box when they overlap and the result is
- * not NULL.  It is somewhat arbitrary, but maybe the best we can do as
- * there are typically two points they intersect.
- *
- * Optimize for non-intersection by checking for box intersection first.
- * - thomas 1998-01-30
- */
+   
+                                      
+   
+                                                         
+                                                      
+                                     
+   
+                                                                        
+                                                                        
+                                                                        
+                                                  
+   
+                                                                         
+                       
+   
 static bool
 box_interpt_lseg(Point *result, BOX *box, LSEG *lseg)
 {
@@ -3325,7 +3325,7 @@ box_interpt_lseg(Point *result, BOX *box, LSEG *lseg)
   lbox.high.x = float8_max(lseg->p[0].x, lseg->p[1].x);
   lbox.high.y = float8_max(lseg->p[0].y, lseg->p[1].y);
 
-  /* nothing close to overlap? then not going to intersect */
+                                                             
   if (!box_ov(&lbox, box))
   {
     return false;
@@ -3337,13 +3337,13 @@ box_interpt_lseg(Point *result, BOX *box, LSEG *lseg)
     lseg_closept_point(result, lseg, &point);
   }
 
-  /* an endpoint of segment is inside box? then clearly intersects */
+                                                                     
   if (box_contain_point(box, &lseg->p[0]) || box_contain_point(box, &lseg->p[1]))
   {
     return true;
   }
 
-  /* pairwise check lseg intersections */
+                                         
   point.x = box->low.x;
   point.y = box->high.y;
   statlseg_construct(&bseg, &box->low, &point);
@@ -3372,7 +3372,7 @@ box_interpt_lseg(Point *result, BOX *box, LSEG *lseg)
     return true;
   }
 
-  /* if we dropped through, no two segs intersected */
+                                                      
   return false;
 }
 
@@ -3385,9 +3385,9 @@ inter_sb(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(box_interpt_lseg(NULL, box, lseg));
 }
 
-/* inter_lb()
- * Do line and box intersect?
- */
+              
+                              
+   
 Datum
 inter_lb(PG_FUNCTION_ARGS)
 {
@@ -3396,7 +3396,7 @@ inter_lb(PG_FUNCTION_ARGS)
   LSEG bseg;
   Point p1, p2;
 
-  /* pairwise check lseg intersections */
+                                         
   p1.x = box->low.x;
   p1.y = box->low.y;
   p2.x = box->low.x;
@@ -3428,21 +3428,21 @@ inter_lb(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(true);
   }
 
-  /* if we dropped through, no intersection */
+                                              
   PG_RETURN_BOOL(false);
 }
 
-/*------------------------------------------------------------------
- * The following routines define a data type and operator class for
- * POLYGONS .... Part of which (the polygon's bounding box) is built on
- * top of the BOX data type.
- *
- * make_bound_box - create the bounding box for the input polygon
- *------------------------------------------------------------------*/
+                                                                     
+                                                                    
+                                                                        
+                             
+   
+                                                                  
+                                                                      
 
-/*---------------------------------------------------------------------
- * Make the smallest bounding box for the given polygon.
- *---------------------------------------------------------------------*/
+                                                                        
+                                                         
+                                                                         
 static void
 make_bound_box(POLYGON *poly)
 {
@@ -3479,14 +3479,14 @@ make_bound_box(POLYGON *poly)
   poly->boundbox.high.y = y2;
 }
 
-/*------------------------------------------------------------------
- * poly_in - read in the polygon from a string specification
- *
- *		External format:
- *				"((x0,y0),...,(xn,yn))"
- *				"x0,y0,...,xn,yn"
- *				also supports the older style "(x1,...,xn,y1,...yn)"
- *------------------------------------------------------------------*/
+                                                                     
+                                                             
+   
+                     
+                              
+                        
+                                                           
+                                                                      
 Datum
 poly_in(PG_FUNCTION_ARGS)
 {
@@ -3505,13 +3505,13 @@ poly_in(PG_FUNCTION_ARGS)
   base_size = sizeof(poly->p[0]) * npts;
   size = offsetof(POLYGON, p) + base_size;
 
-  /* Check for integer overflow */
+                                  
   if (base_size / npts != sizeof(poly->p[0]) || size <= base_size)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many points requested")));
   }
 
-  poly = (POLYGON *)palloc0(size); /* zero any holes */
+  poly = (POLYGON *)palloc0(size);                     
 
   SET_VARSIZE(poly, size);
   poly->npts = npts;
@@ -3523,10 +3523,10 @@ poly_in(PG_FUNCTION_ARGS)
   PG_RETURN_POLYGON_P(poly);
 }
 
-/*---------------------------------------------------------------
- * poly_out - convert internal POLYGON representation to the
- *			  character string format "((f8,f8),...,(f8,f8))"
- *---------------------------------------------------------------*/
+                                                                  
+                                                             
+                                                       
+                                                                   
 Datum
 poly_out(PG_FUNCTION_ARGS)
 {
@@ -3535,14 +3535,14 @@ poly_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(path_encode(PATH_CLOSED, poly->npts, poly->p));
 }
 
-/*
- *		poly_recv			- converts external binary format to polygon
- *
- * External representation is int32 number of points, and the points.
- * We recompute the bounding box on read, instead of trusting it to
- * be valid.  (Checking it would take just as long, so may as well
- * omit it from external representation.)
- */
+   
+                                                             
+   
+                                                                      
+                                                                    
+                                                                   
+                                          
+   
 Datum
 poly_recv(PG_FUNCTION_ARGS)
 {
@@ -3559,7 +3559,7 @@ poly_recv(PG_FUNCTION_ARGS)
   }
 
   size = offsetof(POLYGON, p) + sizeof(poly->p[0]) * npts;
-  poly = (POLYGON *)palloc0(size); /* zero any holes */
+  poly = (POLYGON *)palloc0(size);                     
 
   SET_VARSIZE(poly, size);
   poly->npts = npts;
@@ -3575,9 +3575,9 @@ poly_recv(PG_FUNCTION_ARGS)
   PG_RETURN_POLYGON_P(poly);
 }
 
-/*
- *		poly_send			- converts polygon to binary format
- */
+   
+                                                    
+   
 Datum
 poly_send(PG_FUNCTION_ARGS)
 {
@@ -3595,11 +3595,11 @@ poly_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*-------------------------------------------------------
- * Is polygon A strictly left of polygon B? i.e. is
- * the right most point of A left of the left most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                    
+                                                         
+         
+                                                           
 Datum
 poly_left(PG_FUNCTION_ARGS)
 {
@@ -3609,20 +3609,20 @@ poly_left(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.high.x < polyb->boundbox.low.x;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A overlapping or left of polygon B? i.e. is
- * the right most point of A at or left of the right most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                          
+                                                                
+         
+                                                           
 Datum
 poly_overleft(PG_FUNCTION_ARGS)
 {
@@ -3632,20 +3632,20 @@ poly_overleft(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.high.x <= polyb->boundbox.high.x;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A strictly right of polygon B? i.e. is
- * the left most point of A right of the right most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                     
+                                                          
+         
+                                                           
 Datum
 poly_right(PG_FUNCTION_ARGS)
 {
@@ -3655,20 +3655,20 @@ poly_right(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.low.x > polyb->boundbox.high.x;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A overlapping or right of polygon B? i.e. is
- * the left most point of A at or right of the left most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                           
+                                                               
+         
+                                                           
 Datum
 poly_overright(PG_FUNCTION_ARGS)
 {
@@ -3678,20 +3678,20 @@ poly_overright(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.low.x >= polyb->boundbox.low.x;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A strictly below polygon B? i.e. is
- * the upper most point of A below the lower most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                  
+                                                        
+         
+                                                           
 Datum
 poly_below(PG_FUNCTION_ARGS)
 {
@@ -3701,20 +3701,20 @@ poly_below(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.high.y < polyb->boundbox.low.y;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A overlapping or below polygon B? i.e. is
- * the upper most point of A at or below the upper most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                        
+                                                              
+         
+                                                           
 Datum
 poly_overbelow(PG_FUNCTION_ARGS)
 {
@@ -3724,20 +3724,20 @@ poly_overbelow(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.high.y <= polyb->boundbox.high.y;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A strictly above polygon B? i.e. is
- * the lower most point of A above the upper most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                  
+                                                        
+         
+                                                           
 Datum
 poly_above(PG_FUNCTION_ARGS)
 {
@@ -3747,20 +3747,20 @@ poly_above(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.low.y > polyb->boundbox.high.y;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A overlapping or above polygon B? i.e. is
- * the lower most point of A at or above the lower most point
- * of B?
- *-------------------------------------------------------*/
+                                                          
+                                                        
+                                                              
+         
+                                                           
 Datum
 poly_overabove(PG_FUNCTION_ARGS)
 {
@@ -3770,22 +3770,22 @@ poly_overabove(PG_FUNCTION_ARGS)
 
   result = polya->boundbox.low.y >= polyb->boundbox.low.y;
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-------------------------------------------------------
- * Is polygon A the same as polygon B? i.e. are all the
- * points the same?
- * Check all points for matches in both forward and reverse
- *	direction since polygons are non-directional and are
- *	closed shapes.
- *-------------------------------------------------------*/
+                                                          
+                                                        
+                    
+                                                            
+                                                        
+                  
+                                                           
 Datum
 poly_same(PG_FUNCTION_ARGS)
 {
@@ -3802,18 +3802,18 @@ poly_same(PG_FUNCTION_ARGS)
     result = plist_same(polya->npts, polya->p, polyb->p);
   }
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-----------------------------------------------------------------
- * Determine if polygon A overlaps polygon B
- *-----------------------------------------------------------------*/
+                                                                    
+                                             
+                                                                     
 Datum
 poly_overlap(PG_FUNCTION_ARGS)
 {
@@ -3823,29 +3823,29 @@ poly_overlap(PG_FUNCTION_ARGS)
 
   Assert(polya->npts > 0 && polyb->npts > 0);
 
-  /* Quick check by bounding box */
+                                   
   result = box_ov(&polya->boundbox, &polyb->boundbox);
 
-  /*
-   * Brute-force algorithm - try to find intersected edges, if so then
-   * polygons are overlapped else check is one polygon inside other or not
-   * by testing single point of them.
-   */
+     
+                                                                       
+                                                                           
+                                      
+     
   if (result)
   {
     int ia, ib;
     LSEG sa, sb;
 
-    /* Init first of polya's edge with last point */
+                                                    
     sa.p[0] = polya->p[polya->npts - 1];
     result = false;
 
     for (ia = 0; ia < polya->npts && !result; ia++)
     {
-      /* Second point of polya's edge is a current one */
+                                                         
       sa.p[1] = polya->p[ia];
 
-      /* Init first of polyb's edge with last point */
+                                                      
       sb.p[0] = polyb->p[polyb->npts - 1];
 
       for (ib = 0; ib < polyb->npts && !result; ib++)
@@ -3855,9 +3855,9 @@ poly_overlap(PG_FUNCTION_ARGS)
         sb.p[0] = sb.p[1];
       }
 
-      /*
-       * move current endpoint to the first point of next edge
-       */
+         
+                                                               
+         
       sa.p[0] = sa.p[1];
     }
 
@@ -3867,30 +3867,30 @@ poly_overlap(PG_FUNCTION_ARGS)
     }
   }
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*
- * Tests special kind of segment for in/out of polygon.
- * Special kind means:
- *	- point a should be on segment s
- *	- segment (a,b) should not be contained by s
- * Returns true if:
- *	- segment (a,b) is collinear to s and (a,b) is in polygon
- *	- segment (a,b) s not collinear to s. Note: that doesn't
- *	  mean that segment is in polygon!
- */
+   
+                                                        
+                       
+                                    
+                                                
+                    
+                                                             
+                                                            
+                                      
+   
 
 static bool
 touched_lseg_inside_poly(Point *a, Point *b, LSEG *s, POLYGON *poly, int start)
 {
-  /* point a is on s, b is not */
+                                 
   LSEG t;
 
   t.p[0] = *a;
@@ -3919,14 +3919,14 @@ touched_lseg_inside_poly(Point *a, Point *b, LSEG *s, POLYGON *poly, int start)
     return lseg_inside_poly(b, s->p + 1, poly, start);
   }
 
-  return true; /* may be not true, but that will check later */
+  return true;                                                 
 }
 
-/*
- * Returns true if segment (a,b) is in polygon, option
- * start is used for optimization - function checks
- * polygon's edges starting from start
- */
+   
+                                                       
+                                                    
+                                       
+   
 static bool
 lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
 {
@@ -3934,7 +3934,7 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
   int i;
   bool res = true, intersection = false;
 
-  /* since this function recurses, it could be driven to stack overflow */
+                                                                          
   check_stack_depth();
 
   t.p[0] = *a;
@@ -3953,22 +3953,22 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
     {
       if (lseg_contain_point(&s, t.p + 1))
       {
-        return true; /* t is contained by s */
+        return true;                          
       }
 
-      /* Y-cross */
+                   
       res = touched_lseg_inside_poly(t.p, t.p + 1, &s, poly, i + 1);
     }
     else if (lseg_contain_point(&s, t.p + 1))
     {
-      /* Y-cross */
+                   
       res = touched_lseg_inside_poly(t.p + 1, t.p, &s, poly, i + 1);
     }
     else if (lseg_interpt_lseg(&interpt, &t, &s))
     {
-      /*
-       * segments are X-crossing, go to check each subsegment
-       */
+         
+                                                              
+         
 
       intersection = true;
       res = lseg_inside_poly(t.p, &interpt, poly, i + 1);
@@ -3985,10 +3985,10 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
   {
     Point p;
 
-    /*
-     * if X-intersection wasn't found  then check central point of tested
-     * segment. In opposite case we already check all subsegments
-     */
+       
+                                                                          
+                                                                  
+       
     p.x = float8_div(float8_pl(t.p[0].x, t.p[1].x), 2.0);
     p.y = float8_div(float8_pl(t.p[0].y, t.p[1].y), 2.0);
 
@@ -3998,9 +3998,9 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
   return res;
 }
 
-/*
- * Check whether the first polygon contains the second
- */
+   
+                                                       
+   
 static bool
 poly_contain_poly(POLYGON *contains_poly, POLYGON *contained_poly)
 {
@@ -4009,10 +4009,10 @@ poly_contain_poly(POLYGON *contains_poly, POLYGON *contained_poly)
 
   Assert(contains_poly->npts > 0 && contained_poly->npts > 0);
 
-  /*
-   * Quick check to see if contained's bounding box is contained in
-   * contains' bb.
-   */
+     
+                                                                    
+                   
+     
   if (!box_contain_box(&contains_poly->boundbox, &contained_poly->boundbox))
   {
     return false;
@@ -4042,18 +4042,18 @@ poly_contain(PG_FUNCTION_ARGS)
 
   result = poly_contain_poly(polya, polyb);
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
   PG_RETURN_BOOL(result);
 }
 
-/*-----------------------------------------------------------------
- * Determine if polygon A is contained by polygon B
- *-----------------------------------------------------------------*/
+                                                                    
+                                                    
+                                                                     
 Datum
 poly_contained(PG_FUNCTION_ARGS)
 {
@@ -4061,12 +4061,12 @@ poly_contained(PG_FUNCTION_ARGS)
   POLYGON *polyb = PG_GETARG_POLYGON_P(1);
   bool result;
 
-  /* Just switch the arguments and pass it off to poly_contain */
+                                                                 
   result = poly_contain_poly(polyb, polya);
 
-  /*
-   * Avoid leaking memory for toasted inputs ... needed for rtree indexes
-   */
+     
+                                                                          
+     
   PG_FREE_IF_COPY(polya, 0);
   PG_FREE_IF_COPY(polyb, 1);
 
@@ -4104,11 +4104,11 @@ poly_distance(PG_FUNCTION_ARGS)
   PG_RETURN_NULL();
 }
 
-/***********************************************************************
- **
- **		Routines for 2D points.
- **
- ***********************************************************************/
+                                                                         
+    
+                             
+    
+                                                                         
 
 Datum
 construct_point(PG_FUNCTION_ARGS)
@@ -4208,11 +4208,11 @@ point_div(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/***********************************************************************
- **
- **		Routines for 2D boxes.
- **
- ***********************************************************************/
+                                                                         
+    
+                            
+    
+                                                                         
 
 Datum
 points_box(PG_FUNCTION_ARGS)
@@ -4294,9 +4294,9 @@ box_div(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(result);
 }
 
-/*
- * Convert point to empty box
- */
+   
+                              
+   
 Datum
 point_box(PG_FUNCTION_ARGS)
 {
@@ -4313,9 +4313,9 @@ point_box(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(box);
 }
 
-/*
- * Smallest bounding box that includes both of the given boxes
- */
+   
+                                                               
+   
 Datum
 boxes_bound_box(PG_FUNCTION_ARGS)
 {
@@ -4331,15 +4331,15 @@ boxes_bound_box(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(container);
 }
 
-/***********************************************************************
- **
- **		Routines for 2D paths.
- **
- ***********************************************************************/
+                                                                         
+    
+                            
+    
+                                                                         
 
-/* path_add()
- * Concatenate two paths (only if they are both open).
- */
+              
+                                                       
+   
 Datum
 path_add(PG_FUNCTION_ARGS)
 {
@@ -4357,7 +4357,7 @@ path_add(PG_FUNCTION_ARGS)
   base_size = sizeof(p1->p[0]) * (p1->npts + p2->npts);
   size = offsetof(PATH, p) + base_size;
 
-  /* Check for integer overflow */
+                                  
   if (base_size / sizeof(p1->p[0]) != (p1->npts + p2->npts) || size <= base_size)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many points requested")));
@@ -4368,7 +4368,7 @@ path_add(PG_FUNCTION_ARGS)
   SET_VARSIZE(result, size);
   result->npts = (p1->npts + p2->npts);
   result->closed = p1->closed;
-  /* prevent instability in unused pad bytes */
+                                               
   result->dummy = 0;
 
   for (i = 0; i < p1->npts; i++)
@@ -4385,9 +4385,9 @@ path_add(PG_FUNCTION_ARGS)
   PG_RETURN_PATH_P(result);
 }
 
-/* path_add_pt()
- * Translation operators.
- */
+                 
+                          
+   
 Datum
 path_add_pt(PG_FUNCTION_ARGS)
 {
@@ -4418,9 +4418,9 @@ path_sub_pt(PG_FUNCTION_ARGS)
   PG_RETURN_PATH_P(path);
 }
 
-/* path_mul_pt()
- * Rotation and scaling operators.
- */
+                 
+                                   
+   
 Datum
 path_mul_pt(PG_FUNCTION_ARGS)
 {
@@ -4471,16 +4471,16 @@ path_poly(PG_FUNCTION_ARGS)
   int size;
   int i;
 
-  /* This is not very consistent --- other similar cases return NULL ... */
+                                                                           
   if (!path->closed)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("open path cannot be converted to polygon")));
   }
 
-  /*
-   * Never overflows: the old size fit in MaxAllocSize, and the new size is
-   * just a small constant larger.
-   */
+     
+                                                                            
+                                   
+     
   size = offsetof(POLYGON, p) + sizeof(poly->p[0]) * path->npts;
   poly = (POLYGON *)palloc(size);
 
@@ -4498,11 +4498,11 @@ path_poly(PG_FUNCTION_ARGS)
   PG_RETURN_POLYGON_P(poly);
 }
 
-/***********************************************************************
- **
- **		Routines for 2D polygons.
- **
- ***********************************************************************/
+                                                                         
+    
+                               
+    
+                                                                         
 
 Datum
 poly_npoints(PG_FUNCTION_ARGS)
@@ -4539,9 +4539,9 @@ poly_box(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(box);
 }
 
-/* box_poly()
- * Convert a box to a polygon.
- */
+              
+                               
+   
 Datum
 box_poly(PG_FUNCTION_ARGS)
 {
@@ -4549,7 +4549,7 @@ box_poly(PG_FUNCTION_ARGS)
   POLYGON *poly;
   int size;
 
-  /* map four corners of the box to a polygon */
+                                                
   size = offsetof(POLYGON, p) + sizeof(poly->p[0]) * 4;
   poly = (POLYGON *)palloc(size);
 
@@ -4578,17 +4578,17 @@ poly_path(PG_FUNCTION_ARGS)
   int size;
   int i;
 
-  /*
-   * Never overflows: the old size fit in MaxAllocSize, and the new size is
-   * smaller by a small constant.
-   */
+     
+                                                                            
+                                  
+     
   size = offsetof(PATH, p) + sizeof(path->p[0]) * poly->npts;
   path = (PATH *)palloc(size);
 
   SET_VARSIZE(path, size);
   path->npts = poly->npts;
   path->closed = true;
-  /* prevent instability in unused pad bytes */
+                                               
   path->dummy = 0;
 
   for (i = 0; i < poly->npts; i++)
@@ -4600,22 +4600,22 @@ poly_path(PG_FUNCTION_ARGS)
   PG_RETURN_PATH_P(path);
 }
 
-/***********************************************************************
- **
- **		Routines for circles.
- **
- ***********************************************************************/
+                                                                         
+    
+                           
+    
+                                                                         
 
-/*----------------------------------------------------------
- * Formatting and conversion routines.
- *---------------------------------------------------------*/
+                                                             
+                                       
+                                                             
 
-/*		circle_in		-		convert a string to internal form.
- *
- *		External format: (center and radius of circle)
- *				"<(f8,f8),f8>"
- *				also supports quick entry style "f8,f8,f8"
- */
+                                                     
+   
+                                                   
+                     
+                                                 
+   
 Datum
 circle_in(PG_FUNCTION_ARGS)
 {
@@ -4635,7 +4635,7 @@ circle_in(PG_FUNCTION_ARGS)
   }
   else if (*s == LDELIM)
   {
-    /* If there are two left parens, consume the first one */
+                                                             
     cp = (s + 1);
     while (isspace((unsigned char)*cp))
     {
@@ -4647,7 +4647,7 @@ circle_in(PG_FUNCTION_ARGS)
     }
   }
 
-  /* pair_decode will consume parens around the pair, if any */
+                                                               
   pair_decode(s, &circle->center.x, &circle->center.y, &s, "circle", str);
 
   if (*s == DELIM)
@@ -4656,7 +4656,7 @@ circle_in(PG_FUNCTION_ARGS)
   }
 
   circle->radius = single_decode(s, &s, "circle", str);
-  /* We have to accept NaN. */
+                              
   if (circle->radius < 0.0)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("invalid input syntax for type %s: \"%s\"", "circle", str)));
@@ -4687,8 +4687,8 @@ circle_in(PG_FUNCTION_ARGS)
   PG_RETURN_CIRCLE_P(circle);
 }
 
-/*		circle_out		-		convert a circle to external form.
- */
+                                                      
+   
 Datum
 circle_out(PG_FUNCTION_ARGS)
 {
@@ -4708,9 +4708,9 @@ circle_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(str.data);
 }
 
-/*
- *		circle_recv			- converts external binary format to circle
- */
+   
+                                                              
+   
 Datum
 circle_recv(PG_FUNCTION_ARGS)
 {
@@ -4723,7 +4723,7 @@ circle_recv(PG_FUNCTION_ARGS)
   circle->center.y = pq_getmsgfloat8(buf);
   circle->radius = pq_getmsgfloat8(buf);
 
-  /* We have to accept NaN. */
+                              
   if (circle->radius < 0.0)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid radius in external \"circle\" value")));
@@ -4732,9 +4732,9 @@ circle_recv(PG_FUNCTION_ARGS)
   PG_RETURN_CIRCLE_P(circle);
 }
 
-/*
- *		circle_send			- converts circle to binary format
- */
+   
+                                                     
+   
 Datum
 circle_send(PG_FUNCTION_ARGS)
 {
@@ -4748,16 +4748,16 @@ circle_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*----------------------------------------------------------
- *	Relational operators for CIRCLEs.
- *		<, >, <=, >=, and == are based on circle area.
- *---------------------------------------------------------*/
+                                                             
+                                     
+                                                   
+                                                             
 
-/*		circles identical?
- *
- * We consider NaNs values to be equal to each other to let those circles
- * to be found.
- */
+                       
+   
+                                                                          
+                
+   
 Datum
 circle_same(PG_FUNCTION_ARGS)
 {
@@ -4767,8 +4767,8 @@ circle_same(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(((isnan(circle1->radius) && isnan(circle2->radius)) || FPeq(circle1->radius, circle2->radius)) && point_eq_point(&circle1->center, &circle2->center));
 }
 
-/*		circle_overlap	-		does circle1 overlap circle2?
- */
+                                                    
+   
 Datum
 circle_overlap(PG_FUNCTION_ARGS)
 {
@@ -4778,9 +4778,9 @@ circle_overlap(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(point_dt(&circle1->center, &circle2->center), float8_pl(circle1->radius, circle2->radius)));
 }
 
-/*		circle_overleft -		is the right edge of circle1 at or left of
- *								the right edge of circle2?
- */
+                                                                  
+                                     
+   
 Datum
 circle_overleft(PG_FUNCTION_ARGS)
 {
@@ -4790,8 +4790,8 @@ circle_overleft(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(float8_pl(circle1->center.x, circle1->radius), float8_pl(circle2->center.x, circle2->radius)));
 }
 
-/*		circle_left		-		is circle1 strictly left of circle2?
- */
+                                                         
+   
 Datum
 circle_left(PG_FUNCTION_ARGS)
 {
@@ -4801,8 +4801,8 @@ circle_left(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPlt(float8_pl(circle1->center.x, circle1->radius), float8_mi(circle2->center.x, circle2->radius)));
 }
 
-/*		circle_right	-		is circle1 strictly right of circle2?
- */
+                                                          
+   
 Datum
 circle_right(PG_FUNCTION_ARGS)
 {
@@ -4812,9 +4812,9 @@ circle_right(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPgt(float8_mi(circle1->center.x, circle1->radius), float8_pl(circle2->center.x, circle2->radius)));
 }
 
-/*		circle_overright	-	is the left edge of circle1 at or right of
- *								the left edge of circle2?
- */
+                                                                  
+                                    
+   
 Datum
 circle_overright(PG_FUNCTION_ARGS)
 {
@@ -4824,8 +4824,8 @@ circle_overright(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(float8_mi(circle1->center.x, circle1->radius), float8_mi(circle2->center.x, circle2->radius)));
 }
 
-/*		circle_contained		-		is circle1 contained by circle2?
- */
+                                                          
+   
 Datum
 circle_contained(PG_FUNCTION_ARGS)
 {
@@ -4835,8 +4835,8 @@ circle_contained(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(point_dt(&circle1->center, &circle2->center), float8_mi(circle2->radius, circle1->radius)));
 }
 
-/*		circle_contain	-		does circle1 contain circle2?
- */
+                                                    
+   
 Datum
 circle_contain(PG_FUNCTION_ARGS)
 {
@@ -4846,8 +4846,8 @@ circle_contain(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(point_dt(&circle1->center, &circle2->center), float8_mi(circle1->radius, circle2->radius)));
 }
 
-/*		circle_below		-		is circle1 strictly below circle2?
- */
+                                                        
+   
 Datum
 circle_below(PG_FUNCTION_ARGS)
 {
@@ -4857,8 +4857,8 @@ circle_below(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPlt(float8_pl(circle1->center.y, circle1->radius), float8_mi(circle2->center.y, circle2->radius)));
 }
 
-/*		circle_above	-		is circle1 strictly above circle2?
- */
+                                                       
+   
 Datum
 circle_above(PG_FUNCTION_ARGS)
 {
@@ -4868,9 +4868,9 @@ circle_above(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPgt(float8_mi(circle1->center.y, circle1->radius), float8_pl(circle2->center.y, circle2->radius)));
 }
 
-/*		circle_overbelow -		is the upper edge of circle1 at or below
- *								the upper edge of circle2?
- */
+                                                                 
+                                     
+   
 Datum
 circle_overbelow(PG_FUNCTION_ARGS)
 {
@@ -4880,9 +4880,9 @@ circle_overbelow(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPle(float8_pl(circle1->center.y, circle1->radius), float8_pl(circle2->center.y, circle2->radius)));
 }
 
-/*		circle_overabove	-	is the lower edge of circle1 at or above
- *								the lower edge of circle2?
- */
+                                                                
+                                     
+   
 Datum
 circle_overabove(PG_FUNCTION_ARGS)
 {
@@ -4892,9 +4892,9 @@ circle_overabove(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(float8_mi(circle1->center.y, circle1->radius), float8_mi(circle2->center.y, circle2->radius)));
 }
 
-/*		circle_relop	-		is area(circle1) relop area(circle2), within
- *								our accuracy constraint?
- */
+                                                                 
+                                   
+   
 Datum
 circle_eq(PG_FUNCTION_ARGS)
 {
@@ -4949,13 +4949,13 @@ circle_ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(FPge(circle_ar(circle1), circle_ar(circle2)));
 }
 
-/*----------------------------------------------------------
- *	"Arithmetic" operators on circles.
- *---------------------------------------------------------*/
+                                                             
+                                      
+                                                             
 
-/* circle_add_pt()
- * Translation operator.
- */
+                   
+                         
+   
 Datum
 circle_add_pt(PG_FUNCTION_ARGS)
 {
@@ -4986,9 +4986,9 @@ circle_sub_pt(PG_FUNCTION_ARGS)
   PG_RETURN_CIRCLE_P(result);
 }
 
-/* circle_mul_pt()
- * Rotation and scaling operators.
- */
+                   
+                                   
+   
 Datum
 circle_mul_pt(PG_FUNCTION_ARGS)
 {
@@ -5019,8 +5019,8 @@ circle_div_pt(PG_FUNCTION_ARGS)
   PG_RETURN_CIRCLE_P(result);
 }
 
-/*		circle_area		-		returns the area of the circle.
- */
+                                                    
+   
 Datum
 circle_area(PG_FUNCTION_ARGS)
 {
@@ -5029,8 +5029,8 @@ circle_area(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(circle_ar(circle));
 }
 
-/*		circle_diameter -		returns the diameter of the circle.
- */
+                                                           
+   
 Datum
 circle_diameter(PG_FUNCTION_ARGS)
 {
@@ -5039,8 +5039,8 @@ circle_diameter(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(float8_mul(circle->radius, 2.0));
 }
 
-/*		circle_radius	-		returns the radius of the circle.
- */
+                                                       
+   
 Datum
 circle_radius(PG_FUNCTION_ARGS)
 {
@@ -5049,9 +5049,9 @@ circle_radius(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(circle->radius);
 }
 
-/*		circle_distance -		returns the distance between
- *								  two circles.
- */
+                                                    
+                         
+   
 Datum
 circle_distance(PG_FUNCTION_ARGS)
 {
@@ -5090,9 +5090,9 @@ pt_contained_circle(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(d <= circle->radius);
 }
 
-/*		dist_pc -		returns the distance between
- *						  a point and a circle.
- */
+                                            
+                                
+   
 Datum
 dist_pc(PG_FUNCTION_ARGS)
 {
@@ -5109,9 +5109,9 @@ dist_pc(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/*
- * Distance from a circle to a point
- */
+   
+                                     
+   
 Datum
 dist_cpoint(PG_FUNCTION_ARGS)
 {
@@ -5128,8 +5128,8 @@ dist_cpoint(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/*		circle_center	-		returns the center point of the circle.
- */
+                                                             
+   
 Datum
 circle_center(PG_FUNCTION_ARGS)
 {
@@ -5143,17 +5143,17 @@ circle_center(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(result);
 }
 
-/*		circle_ar		-		returns the area of the circle.
- */
+                                                  
+   
 static float8
 circle_ar(CIRCLE *circle)
 {
   return float8_mul(float8_mul(circle->radius, circle->radius), M_PI);
 }
 
-/*----------------------------------------------------------
- *	Conversion operators.
- *---------------------------------------------------------*/
+                                                             
+                         
+                                                             
 
 Datum
 cr_circle(PG_FUNCTION_ARGS)
@@ -5190,9 +5190,9 @@ circle_box(PG_FUNCTION_ARGS)
   PG_RETURN_BOX_P(box);
 }
 
-/* box_circle()
- * Convert a box to a circle.
- */
+                
+                              
+   
 Datum
 box_circle(PG_FUNCTION_ARGS)
 {
@@ -5233,13 +5233,13 @@ circle_poly(PG_FUNCTION_ARGS)
   base_size = sizeof(poly->p[0]) * npts;
   size = offsetof(POLYGON, p) + base_size;
 
-  /* Check for integer overflow */
+                                  
   if (base_size / npts != sizeof(poly->p[0]) || size <= base_size)
   {
     ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("too many points requested")));
   }
 
-  poly = (POLYGON *)palloc0(size); /* zero any holes */
+  poly = (POLYGON *)palloc0(size);                     
   SET_VARSIZE(poly, size);
   poly->npts = npts;
 
@@ -5258,14 +5258,14 @@ circle_poly(PG_FUNCTION_ARGS)
   PG_RETURN_POLYGON_P(poly);
 }
 
-/*
- * Convert polygon to circle
- *
- * The result must be preallocated.
- *
- * XXX This algorithm should use weighted means of line segments
- *	rather than straight average values of points - tgl 97/01/21.
- */
+   
+                             
+   
+                                    
+   
+                                                                 
+                                                                 
+   
 static void
 poly_to_circle(CIRCLE *result, POLYGON *poly)
 {
@@ -5304,22 +5304,22 @@ poly_circle(PG_FUNCTION_ARGS)
   PG_RETURN_CIRCLE_P(result);
 }
 
-/***********************************************************************
- **
- **		Private routines for multiple types.
- **
- ***********************************************************************/
+                                                                         
+    
+                                          
+    
+                                                                         
 
-/*
- *	Test to see if the point is inside the polygon, returns 1/0, or 2 if
- *	the point is on the polygon.
- *	Code adapted but not copied from integer-based routines in WN: A
- *	Server for the HTTP
- *	version 1.15.1, file wn/image.c
- *	http://hopf.math.northwestern.edu/index.html
- *	Description of algorithm:  http://www.linuxjournal.com/article/2197
- *							   http://www.linuxjournal.com/article/2029
- */
+   
+                                                                        
+                                
+                                                                    
+                       
+                                   
+                                                
+                                                                       
+                                                     
+   
 
 #define POINT_ON_POLYGON INT_MAX
 
@@ -5334,20 +5334,20 @@ point_inside(Point *p, int npts, Point *plist)
 
   Assert(npts > 0);
 
-  /* compute first polygon point relative to single point */
+                                                            
   x0 = float8_mi(plist[0].x, p->x);
   y0 = float8_mi(plist[0].y, p->y);
 
   prev_x = x0;
   prev_y = y0;
-  /* loop over polygon points and aggregate total_cross */
+                                                          
   for (i = 1; i < npts; i++)
   {
-    /* compute next polygon point relative to single point */
+                                                             
     x = float8_mi(plist[i].x, p->x);
     y = float8_mi(plist[i].y, p->y);
 
-    /* compute previous to current point crossing */
+                                                    
     if ((cross = lseg_crossing(x, y, prev_x, prev_y)) == POINT_ON_POLYGON)
     {
       return 2;
@@ -5358,7 +5358,7 @@ point_inside(Point *p, int npts, Point *plist)
     prev_y = y;
   }
 
-  /* now do the first point */
+                              
   if ((cross = lseg_crossing(x0, y0, prev_x, prev_y)) == POINT_ON_POLYGON)
   {
     return 2;
@@ -5372,14 +5372,14 @@ point_inside(Point *p, int npts, Point *plist)
   return 0;
 }
 
-/* lseg_crossing()
- * Returns +/-2 if line segment crosses the positive X-axis in a +/- direction.
- * Returns +/-1 if one point is on the positive X-axis.
- * Returns 0 if both points are on the positive X-axis, or there is no crossing.
- * Returns POINT_ON_POLYGON if the segment contains (0,0).
- * Wow, that is one confusing API, but it is used above, and when summed,
- * can tell is if a point is in a polygon.
- */
+                   
+                                                                                
+                                                        
+                                                                                 
+                                                           
+                                                                          
+                                           
+   
 
 static int
 lseg_crossing(float8 x, float8 y, float8 prev_x, float8 prev_y)
@@ -5388,59 +5388,59 @@ lseg_crossing(float8 x, float8 y, float8 prev_x, float8 prev_y)
   int y_sign;
 
   if (FPzero(y))
-  {                /* y == 0, on X axis */
-    if (FPzero(x)) /* (x,y) is (0,0)? */
+  {                                       
+    if (FPzero(x))                      
     {
       return POINT_ON_POLYGON;
     }
     else if (FPgt(x, 0))
-    {                     /* x > 0 */
-      if (FPzero(prev_y)) /* y and prev_y are zero */
+    {                                
+      if (FPzero(prev_y))                            
       {
-        /* prev_x > 0? */
+                         
         return FPgt(prev_x, 0.0) ? 0 : POINT_ON_POLYGON;
       }
       return FPlt(prev_y, 0.0) ? 1 : -1;
     }
     else
-    { /* x < 0, x not on positive X axis */
+    {                                      
       if (FPzero(prev_y))
       {
-        /* prev_x < 0? */
+                         
         return FPlt(prev_x, 0.0) ? 0 : POINT_ON_POLYGON;
       }
       return 0;
     }
   }
   else
-  { /* y != 0 */
-    /* compute y crossing direction from previous point */
+  {             
+                                                          
     y_sign = FPgt(y, 0.0) ? 1 : -1;
 
     if (FPzero(prev_y))
     {
-      /* previous point was on X axis, so new point is either off or on */
+                                                                          
       return FPlt(prev_x, 0.0) ? 0 : y_sign;
     }
     else if ((y_sign < 0 && FPlt(prev_y, 0.0)) || (y_sign > 0 && FPgt(prev_y, 0.0)))
     {
-      /* both above or below X axis */
-      return 0; /* same sign */
+                                      
+      return 0;                
     }
     else
-    { /* y and prev_y cross X-axis */
+    {                                
       if (FPge(x, 0.0) && FPgt(prev_x, 0.0))
       {
-        /* both non-negative so cross positive X-axis */
+                                                        
         return 2 * y_sign;
       }
       if (FPlt(x, 0.0) && FPle(prev_x, 0.0))
       {
-        /* both non-positive so do not cross positive X-axis */
+                                                               
         return 0;
       }
 
-      /* x and y cross axes, see URL above point_inside() */
+                                                            
       z = float8_mi(float8_mul(float8_mi(x, prev_x), y), float8_mul(float8_mi(y, prev_y), x));
       if (FPzero(z))
       {
@@ -5460,13 +5460,13 @@ plist_same(int npts, Point *p1, Point *p2)
 {
   int i, ii, j;
 
-  /* find match for first point */
+                                  
   for (i = 0; i < npts; i++)
   {
     if (point_eq_point(&p2[i], &p1[0]))
     {
 
-      /* match found? then look forward through remaining points */
+                                                                   
       for (ii = 1, j = i + 1; ii < npts; ii++, j++)
       {
         if (j >= npts)
@@ -5483,7 +5483,7 @@ plist_same(int npts, Point *p1, Point *p2)
         return true;
       }
 
-      /* match not found forwards? then look backwards */
+                                                         
       for (ii = 1, j = i - 1; ii < npts; ii++, j--)
       {
         if (j < 0)
@@ -5505,33 +5505,33 @@ plist_same(int npts, Point *p1, Point *p2)
   return false;
 }
 
-/*-------------------------------------------------------------------------
- * Determine the hypotenuse.
- *
- * If required, x and y are swapped to make x the larger number. The
- * traditional formula of x^2+y^2 is rearranged to factor x outside the
- * sqrt. This allows computation of the hypotenuse for significantly
- * larger values, and with a higher precision than when using the naive
- * formula.  In particular, this cannot overflow unless the final result
- * would be out-of-range.
- *
- * sqrt( x^2 + y^2 ) = sqrt( x^2( 1 + y^2/x^2) )
- *					 = x * sqrt( 1 + y^2/x^2 )
- *					 = x * sqrt( 1 + y/x * y/x )
- *
- * It is expected that this routine will eventually be replaced with the
- * C99 hypot() function.
- *
- * This implementation conforms to IEEE Std 1003.1 and GLIBC, in that the
- * case of hypot(inf,nan) results in INF, and not NAN.
- *-----------------------------------------------------------------------
- */
+                                                                            
+                             
+   
+                                                                     
+                                                                        
+                                                                     
+                                                                        
+                                                                         
+                          
+   
+                                                 
+                                  
+                                    
+   
+                                                                         
+                         
+   
+                                                                          
+                                                       
+                                                                          
+   
 float8
 pg_hypot(float8 x, float8 y)
 {
   float8 yx, result;
 
-  /* Handle INF and NaN properly */
+                                   
   if (isinf(x) || isinf(y))
   {
     return get_float8_infinity();
@@ -5542,11 +5542,11 @@ pg_hypot(float8 x, float8 y)
     return get_float8_nan();
   }
 
-  /* Else, drop any minus signs */
+                                  
   x = fabs(x);
   y = fabs(y);
 
-  /* Swap x and y if needed to make x the larger one */
+                                                       
   if (x < y)
   {
     float8 temp = x;
@@ -5555,17 +5555,17 @@ pg_hypot(float8 x, float8 y)
     y = temp;
   }
 
-  /*
-   * If y is zero, the hypotenuse is x.  This test saves a few cycles in
-   * such cases, but more importantly it also protects against
-   * divide-by-zero errors, since now x >= y.
-   */
+     
+                                                                         
+                                                               
+                                              
+     
   if (y == 0.0)
   {
     return x;
   }
 
-  /* Determine the hypotenuse */
+                                
   yx = y / x;
   result = x * sqrt(1.0 + (yx * yx));
 

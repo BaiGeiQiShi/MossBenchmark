@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "parser.pgc"
@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* test parser addition that merges two tokens into one */
+                                                          
 
 #line 1 "regression.h"
 
@@ -20,11 +20,11 @@
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 10 "parser.pgc"
   int item[3], ind[3], i;
-/* exec sql end declare section */
+                                  
 #line 11 "parser.pgc"
 
   ECPGdebug(1, stderr);
@@ -38,10 +38,10 @@ main()
   }
 #line 16 "parser.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 17 "parser.pgc"
 
-  /* exec sql whenever sqlerror  sqlprint ; */
+                                              
 #line 18 "parser.pgc"
 
   {

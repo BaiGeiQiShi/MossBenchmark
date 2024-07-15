@@ -1,31 +1,31 @@
-/*-------------------------------------------------------------------------
- *
- * tsquery_util.c
- *	  Utilities for tsquery datatype
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tsquery_util.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                    
+   
+                                                                         
+   
+   
+                  
+                                          
+   
+                                                                            
+   
 
 #include "postgres.h"
 
 #include "tsearch/ts_utils.h"
 #include "miscadmin.h"
 
-/*
- * Build QTNode tree for a tsquery given in QueryItem array format.
- */
+   
+                                                                    
+   
 QTNode *
 QT2QTN(QueryItem *in, char *operand)
 {
   QTNode *node = (QTNode *)palloc0(sizeof(QTNode));
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   node->valnode = in;
@@ -55,12 +55,12 @@ QT2QTN(QueryItem *in, char *operand)
   return node;
 }
 
-/*
- * Free a QTNode tree.
- *
- * Referenced "word" and "valnode" items are freed if marked as transient
- * by flags.
- */
+   
+                       
+   
+                                                                          
+             
+   
 void
 QTNFree(QTNode *in)
 {
@@ -69,7 +69,7 @@ QTNFree(QTNode *in)
     return;
   }
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->valnode->type == QI_VAL && in->word && (in->flags & QTN_WORDFREE) != 0)
@@ -99,15 +99,15 @@ QTNFree(QTNode *in)
   pfree(in);
 }
 
-/*
- * Sort comparator for QTNodes.
- *
- * The sort order is somewhat arbitrary.
- */
+   
+                                
+   
+                                         
+   
 int
 QTNodeCompare(QTNode *an, QTNode *bn)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (an->valnode->type != bn->valnode->type)
@@ -164,29 +164,29 @@ QTNodeCompare(QTNode *an, QTNode *bn)
   else
   {
     elog(ERROR, "unrecognized QueryItem type: %d", an->valnode->type);
-    return 0; /* keep compiler quiet */
+    return 0;                          
   }
 }
 
-/*
- * qsort comparator for QTNode pointers.
- */
+   
+                                         
+   
 static int
 cmpQTN(const void *a, const void *b)
 {
   return QTNodeCompare(*(QTNode *const *)a, *(QTNode *const *)b);
 }
 
-/*
- * Canonicalize a QTNode tree by sorting the children of AND/OR nodes
- * into an arbitrary but well-defined order.
- */
+   
+                                                                      
+                                             
+   
 void
 QTNSort(QTNode *in)
 {
   int i;
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->valnode->type != QI_OPR)
@@ -204,9 +204,9 @@ QTNSort(QTNode *in)
   }
 }
 
-/*
- * Are two QTNode trees equal according to QTNodeCompare?
- */
+   
+                                                          
+   
 bool
 QTNEq(QTNode *a, QTNode *b)
 {
@@ -220,19 +220,19 @@ QTNEq(QTNode *a, QTNode *b)
   return (QTNodeCompare(a, b) == 0) ? true : false;
 }
 
-/*
- * Remove unnecessary intermediate nodes. For example:
- *
- *	OR			OR
- * a  OR	-> a b c
- *	 b	c
- */
+   
+                                                       
+   
+           
+                  
+        
+   
 void
 QTNTernary(QTNode *in)
 {
   int i;
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->valnode->type != QI_OPR)
@@ -245,7 +245,7 @@ QTNTernary(QTNode *in)
     QTNTernary(in->child[i]);
   }
 
-  /* Only AND and OR are associative, so don't flatten other node types */
+                                                                          
   if (in->valnode->qoperator.oper != OP_AND && in->valnode->qoperator.oper != OP_OR)
   {
     return;
@@ -279,16 +279,16 @@ QTNTernary(QTNode *in)
   }
 }
 
-/*
- * Convert a tree to binary tree by inserting intermediate nodes.
- * (Opposite of QTNTernary)
- */
+   
+                                                                  
+                            
+   
 void
 QTNBinary(QTNode *in)
 {
   int i;
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->valnode->type != QI_OPR)
@@ -324,15 +324,15 @@ QTNBinary(QTNode *in)
   }
 }
 
-/*
- * Count the total length of operand strings in tree (including '\0'-
- * terminators) and the total number of nodes.
- * Caller must initialize *sumlen and *nnode to zeroes.
- */
+   
+                                                                      
+                                               
+                                                        
+   
 static void
 cntsize(QTNode *in, int *sumlen, int *nnode)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   *nnode += 1;
@@ -358,14 +358,14 @@ typedef struct
   char *curoperand;
 } QTN2QTState;
 
-/*
- * Recursively convert a QTNode tree into flat tsquery format.
- * Caller must have allocated arrays of the correct size.
- */
+   
+                                                               
+                                                          
+   
 static void
 fillQT(QTN2QTState *state, QTNode *in)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->valnode->type == QI_VAL)
@@ -399,9 +399,9 @@ fillQT(QTN2QTState *state, QTNode *in)
   }
 }
 
-/*
- * Build flat tsquery from a QTNode tree.
- */
+   
+                                          
+   
 TSQuery
 QTN2QT(QTNode *in)
 {
@@ -429,17 +429,17 @@ QTN2QT(QTNode *in)
   return out;
 }
 
-/*
- * Copy a QTNode tree.
- *
- * Modifiable copies of the words and valnodes are made, too.
- */
+   
+                       
+   
+                                                              
+   
 QTNode *
 QTNCopy(QTNode *in)
 {
   QTNode *out;
 
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   out = (QTNode *)palloc(sizeof(QTNode));
@@ -471,13 +471,13 @@ QTNCopy(QTNode *in)
   return out;
 }
 
-/*
- * Clear the specified flag bit(s) in all nodes of a QTNode tree.
- */
+   
+                                                                  
+   
 void
 QTNClearFlags(QTNode *in, uint32 flags)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   in->flags &= ~flags;

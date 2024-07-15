@@ -1,13 +1,13 @@
-/*-------------------------------------------------------------------------
- *
- * clusterdb
- *
- * Portions Copyright (c) 2002-2019, PostgreSQL Global Development Group
- *
- * src/bin/scripts/clusterdb.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+   
+                                                                         
+   
+                               
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -96,10 +96,10 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Non-option argument specifies database name as long as it wasn't
-   * already specified with -d / --dbname
-   */
+     
+                                                                      
+                                          
+     
   if (optind < argc && dbname == NULL)
   {
     dbname = argv[optind];
@@ -113,7 +113,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* fill cparams except for dbname, which is set below */
+                                                          
   cparams.pghost = host;
   cparams.pgport = port;
   cparams.pguser = username;

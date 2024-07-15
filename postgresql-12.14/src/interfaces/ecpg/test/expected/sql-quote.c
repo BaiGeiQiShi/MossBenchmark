@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "quote.pgc"
@@ -18,14 +18,14 @@
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 9 "quote.pgc"
   char var[25];
 
 #line 10 "quote.pgc"
   int i, loopcount;
-/* exec sql end declare section */
+                                  
 #line 11 "quote.pgc"
 
   ECPGdebug(1, stderr);
@@ -39,10 +39,10 @@ main()
   }
 #line 16 "quote.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 17 "quote.pgc"
 
-  /* exec sql whenever sqlerror  stop ; */
+                                          
 #line 18 "quote.pgc"
 
   {
@@ -98,7 +98,7 @@ main()
 
   printf("Standard conforming strings: %s\n", var);
 
-  /* this is a\\b actually */
+                             
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 1 , 'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 28 "quote.pgc"
@@ -116,7 +116,7 @@ main()
   }
 #line 28 "quote.pgc"
 
-  /* this is a\\b */
+                    
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 1 , E'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 30 "quote.pgc"
@@ -170,7 +170,7 @@ main()
 
   printf("Standard conforming strings: %s\n", var);
 
-  /* this is a\\\\b actually */
+                               
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 2 , 'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 38 "quote.pgc"
@@ -188,7 +188,7 @@ main()
   }
 #line 38 "quote.pgc"
 
-  /* this is a\\b */
+                    
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into \"My_Table\" values ( 2 , E'a\\\\\\\\b' )", ECPGt_EOIT, ECPGt_EORT);
 #line 40 "quote.pgc"
@@ -223,7 +223,7 @@ main()
   }
 #line 42 "quote.pgc"
 
-  /* declare C cursor for select * from \"My_Table\" */
+                                                       
 #line 43 "quote.pgc"
 
   {
@@ -243,7 +243,7 @@ main()
   }
 #line 45 "quote.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 47 "quote.pgc"
 
   for (loopcount = 0; loopcount < 100; loopcount++)

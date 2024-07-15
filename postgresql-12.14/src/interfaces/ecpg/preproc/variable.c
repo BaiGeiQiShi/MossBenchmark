@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/preproc/variable.c */
+                                            
 
 #include "postgres_fe.h"
 
@@ -38,7 +38,7 @@ find_struct_member(char *name, char *str, struct ECPGstruct_member *members, int
     {
       if (next == NULL)
       {
-        /* found the end */
+                           
         switch (members->type->type)
         {
         case ECPGt_array:
@@ -57,10 +57,10 @@ find_struct_member(char *name, char *str, struct ECPGstruct_member *members, int
         {
           int count;
 
-          /*
-           * We don't care about what's inside the array braces so
-           * just eat up the character
-           */
+             
+                                                                   
+                                       
+             
           for (count = 1, end = next + 1; count; end++)
           {
             switch (*end)
@@ -83,8 +83,8 @@ find_struct_member(char *name, char *str, struct ECPGstruct_member *members, int
 
         switch (*end)
         {
-        case '\0': /* found the end, but this time it has to be
-                    * an array element */
+        case '\0':                                              
+                                         
           if (members->type->type != ECPGt_array)
           {
             mmfatal(PARSE_ERROR, "incorrectly formed variable \"%s\"", name);
@@ -139,7 +139,7 @@ find_struct(char *name, char *next, char *end)
   struct variable *p;
   char c = *next;
 
-  /* first get the mother structure entry */
+                                            
   *next = '\0';
   p = find_variable(name);
 
@@ -155,7 +155,7 @@ find_struct(char *name, char *next, char *end)
       mmfatal(PARSE_ERROR, "variable \"%s\" is not a pointer to a structure or a union", name);
     }
 
-    /* restore the name, we will need it later */
+                                                 
     *next = c;
 
     return find_struct_member(name, ++end, p->type->u.element->u.members, p->brace_level);
@@ -169,7 +169,7 @@ find_struct(char *name, char *next, char *end)
         mmfatal(PARSE_ERROR, "variable \"%s\" is neither a structure nor a union", name);
       }
 
-      /* restore the name, we will need it later */
+                                                   
       *next = c;
 
       return find_struct_member(name, end, p->type->u.members, p->brace_level);
@@ -186,7 +186,7 @@ find_struct(char *name, char *next, char *end)
         mmfatal(PARSE_ERROR, "variable \"%s\" is not a pointer to a structure or a union", name);
       }
 
-      /* restore the name, we will need it later */
+                                                   
       *next = c;
 
       return find_struct_member(name, end, p->type->u.element->u.members, p->brace_level);
@@ -210,8 +210,8 @@ find_simple(char *name)
   return NULL;
 }
 
-/* Note that this function will end the program in case of an unknown */
-/* variable */
+                                                                        
+              
 struct variable *
 find_variable(char *name)
 {
@@ -224,10 +224,10 @@ find_variable(char *name)
   {
     if (*next == '[')
     {
-      /*
-       * We don't care about what's inside the array braces so just eat
-       * up the characters
-       */
+         
+                                                                        
+                           
+         
       for (count = 1, end = next + 1; count; end++)
       {
         switch (*end)
@@ -297,7 +297,7 @@ remove_typedefs(int brace_level)
   {
     if (p->brace_level >= brace_level)
     {
-      /* remove it */
+                     
       if (p == types)
       {
         prev = types = p->next;
@@ -340,7 +340,7 @@ remove_variables(int brace_level)
   {
     if (p->brace_level >= brace_level)
     {
-      /* is it still referenced by a cursor? */
+                                               
       struct cursor *ptr;
 
       for (ptr = cur; ptr != NULL; ptr = ptr->next)
@@ -351,7 +351,7 @@ remove_variables(int brace_level)
         {
           if (p == varptr->variable)
           {
-            /* remove from list */
+                                  
             if (varptr == ptr->argsinsert)
             {
               ptr->argsinsert = varptr->next;
@@ -366,7 +366,7 @@ remove_variables(int brace_level)
         {
           if (p == varptr->variable)
           {
-            /* remove from list */
+                                  
             if (varptr == ptr->argsresult)
             {
               ptr->argsresult = varptr->next;
@@ -379,7 +379,7 @@ remove_variables(int brace_level)
         }
       }
 
-      /* remove it */
+                     
       if (p == allvariables)
       {
         prev = allvariables = p->next;
@@ -409,11 +409,11 @@ remove_variables(int brace_level)
   }
 }
 
-/*
- * Here are the variables that need to be handled on every request.
- * These are of two kinds: input and output.
- * I will make two lists for them.
- */
+   
+                                                                    
+                                             
+                                   
+   
 
 struct arguments *argsinsert = NULL;
 struct arguments *argsresult = NULL;
@@ -425,9 +425,9 @@ reset_variables(void)
   argsresult = NULL;
 }
 
-/* Insert a new variable into our request list.
- * Note: The list is dumped from the end,
- * so we have to add new entries at the beginning */
+                                                
+                                          
+                                                    
 void
 add_variable_to_head(struct arguments **list, struct variable *var, struct variable *ind)
 {
@@ -439,7 +439,7 @@ add_variable_to_head(struct arguments **list, struct variable *var, struct varia
   *list = p;
 }
 
-/* Append a new variable to our request list. */
+                                                
 void
 add_variable_to_tail(struct arguments **list, struct variable *var, struct variable *ind)
 {
@@ -490,10 +490,10 @@ remove_variable_from_list(struct arguments **list, struct variable *var)
   }
 }
 
-/* Dump out a list of all the variable on this list.
-   This is a recursive function that works from the end of the list and
-   deletes the list as we go on.
- */
+                                                     
+                                                                        
+                                 
+   
 void
 dump_variables(struct arguments *list, int mode)
 {
@@ -506,17 +506,17 @@ dump_variables(struct arguments *list, int mode)
 
   str_zero = mm_strdup("0");
 
-  /*
-   * The list is build up from the beginning so lets first dump the end of
-   * the list:
-   */
+     
+                                                                           
+               
+     
 
   dump_variables(list->next, mode);
 
-  /* Then the current element and its indicator */
+                                                  
   ECPGdump_a_type(base_yyout, list->variable->name, list->variable->type, list->variable->brace_level, list->indicator->name, list->indicator->type, list->indicator->brace_level, NULL, NULL, str_zero, NULL, NULL);
 
-  /* Then release the list element. */
+                                      
   if (mode != 0)
   {
     free(list);
@@ -528,7 +528,7 @@ dump_variables(struct arguments *list, int mode)
 void
 check_indicator(struct ECPGtype *var)
 {
-  /* make sure this is a valid indicator variable */
+                                                    
   switch (var->type)
   {
     struct ECPGstruct_member *p;
@@ -627,7 +627,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
   {
   case ECPGt_struct:
   case ECPGt_union:
-    /* pointer has to get dimension 0 */
+                                        
     if (pointer_len)
     {
       *length = *dimension;
@@ -642,13 +642,13 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
     break;
   case ECPGt_varchar:
   case ECPGt_bytea:
-    /* pointer has to get dimension 0 */
+                                        
     if (pointer_len)
     {
       *dimension = mm_strdup("0");
     }
 
-    /* one index is the string length */
+                                        
     if (atoi(*length) < 0)
     {
       *length = *dimension;
@@ -659,33 +659,33 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
   case ECPGt_char:
   case ECPGt_unsigned_char:
   case ECPGt_string:
-    /* char ** */
+                 
     if (pointer_len == 2)
     {
       *length = *dimension = mm_strdup("0");
       break;
     }
 
-    /* pointer has to get length 0 */
+                                     
     if (pointer_len == 1)
     {
       *length = mm_strdup("0");
     }
 
-    /* one index is the string length */
+                                        
     if (atoi(*length) < 0)
     {
-      /*
-       * make sure we return length = -1 for arrays without given
-       * bounds
-       */
+         
+                                                                  
+                
+         
       if (atoi(*dimension) < 0 && !type_definition)
       {
 
-        /*
-         * do not change this for typedefs since it will be
-         * changed later on when the variable is defined
-         */
+           
+                                                            
+                                                         
+           
         *length = mm_strdup("1");
       }
       else if (strcmp(*dimension, "0") == 0)
@@ -701,7 +701,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
     }
     break;
   default:
-    /* a pointer has dimension = 0 */
+                                     
     if (pointer_len)
     {
       *length = *dimension;

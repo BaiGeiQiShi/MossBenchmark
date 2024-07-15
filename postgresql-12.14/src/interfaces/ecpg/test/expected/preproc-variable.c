@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "variable.pgc"
@@ -14,21 +14,21 @@
 
 #line 4 "variable.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 6 "variable.pgc"
 
-/* exec sql type c is char reference */
+                                       
 #line 8 "variable.pgc"
 
 typedef char *c;
 
-/* exec sql type ind is union {
-#line 11 "variable.pgc"
- int integer ;
-
-#line 11 "variable.pgc"
- short smallint ;
- } */
+                                
+                        
+               
+ 
+                        
+                  
+     
 #line 11 "variable.pgc"
 
 typedef union
@@ -38,10 +38,10 @@ typedef union
 } ind;
 
 #define BUFFERSIZ 8
-/* exec sql type str is [ BUFFERSIZ ] */
+                                        
 #line 15 "variable.pgc"
 
-/* declare cur cursor for select name , born , age , married , children from family */
+                                                                                      
 #line 18 "variable.pgc"
 
 int
@@ -57,7 +57,7 @@ main(void)
   };
 #line 23 "variable.pgc"
 
-  /* exec sql begin declare section */
+                                      
 
 #line 27 "variable.pgc"
   struct personal_struct
@@ -122,7 +122,7 @@ main(void)
 
 #line 34 "variable.pgc"
   static int i1, i2, i3;
-/* exec sql end declare section */
+                                  
 #line 35 "variable.pgc"
 
 #line 37 "variable.pgc"
@@ -261,7 +261,7 @@ main(void)
   }
 #line 65 "variable.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 67 "variable.pgc"
 
   p = &personal;
@@ -358,7 +358,7 @@ main(void)
   }
 #line 100 "variable.pgc"
 
-  /* this just to silence unused-variable warnings: */
+                                                      
   vc1.len = vc2.len = vc3.len = 0;
   i1 = i2 = i3 = 0;
   printf("%d %d %d %d %d %d\n", vc1.len, vc2.len, vc3.len, i1, i2, i3);

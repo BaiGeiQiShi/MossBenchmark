@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * uuid.c
- *	  Functions for the built-in type "uuid".
- *
- * Copyright (c) 2007-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/uuid.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                             
+   
+                                                                
+   
+                  
+                                  
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -22,13 +22,13 @@
 #include "utils/sortsupport.h"
 #include "utils/uuid.h"
 
-/* sortsupport for uuid */
+                          
 typedef struct
 {
-  int64 input_count; /* number of non-null values seen */
-  bool estimating;   /* true if estimating cardinality */
+  int64 input_count;                                     
+  bool estimating;                                       
 
-  hyperLogLogState abbr_card; /* cardinality estimator */
+  hyperLogLogState abbr_card;                            
 } uuid_sortsupport_state;
 
 static void
@@ -69,11 +69,11 @@ uuid_out(PG_FUNCTION_ARGS)
     int hi;
     int lo;
 
-    /*
-     * We print uuid values as a string of 8, 4, 4, 4, and then 12
-     * hexadecimal characters, with each group is separated by a hyphen
-     * ("-"). Therefore, add the hyphens at the appropriate places here.
-     */
+       
+                                                                   
+                                                                        
+                                                                         
+       
     if (i == 4 || i == 6 || i == 8 || i == 10)
     {
       appendStringInfoChar(&buf, '-');
@@ -89,12 +89,12 @@ uuid_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(buf.data);
 }
 
-/*
- * We allow UUIDs as a series of 32 hexadecimal digits with an optional dash
- * after each group of 4 hexadecimal digits, and optionally surrounded by {}.
- * (The canonical format 8x-4x-4x-4x-12x, where "nx" means n hexadecimal
- * digits, is the only one used for output.)
- */
+   
+                                                                             
+                                                                              
+                                                                         
+                                             
+   
 static void
 string_to_uuid(const char *source, pg_uuid_t *uuid)
 {
@@ -173,7 +173,7 @@ uuid_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buffer));
 }
 
-/* internal uuid compare function */
+                                    
 static int
 uuid_internal_cmp(const pg_uuid_t *arg1, const pg_uuid_t *arg2)
 {
@@ -234,7 +234,7 @@ uuid_ne(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(uuid_internal_cmp(arg1, arg2) != 0);
 }
 
-/* handler for btree index operator */
+                                      
 Datum
 uuid_cmp(PG_FUNCTION_ARGS)
 {
@@ -244,9 +244,9 @@ uuid_cmp(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(uuid_internal_cmp(arg1, arg2));
 }
 
-/*
- * Sort support strategy routine
- */
+   
+                                 
+   
 Datum
 uuid_sortsupport(PG_FUNCTION_ARGS)
 {
@@ -280,9 +280,9 @@ uuid_sortsupport(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * SortSupport comparison func
- */
+   
+                               
+   
 static int
 uuid_fast_cmp(Datum x, Datum y, SortSupport ssup)
 {
@@ -292,9 +292,9 @@ uuid_fast_cmp(Datum x, Datum y, SortSupport ssup)
   return uuid_internal_cmp(arg1, arg2);
 }
 
-/*
- * Abbreviated key comparison func
- */
+   
+                                   
+   
 static int
 uuid_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
 {
@@ -312,12 +312,12 @@ uuid_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
   }
 }
 
-/*
- * Callback for estimating effectiveness of abbreviated key optimization.
- *
- * We pay no attention to the cardinality of the non-abbreviated data, because
- * there is no equality fast-path within authoritative uuid comparator.
- */
+   
+                                                                          
+   
+                                                                               
+                                                                        
+   
 static bool
 uuid_abbrev_abort(int memtupcount, SortSupport ssup)
 {
@@ -331,12 +331,12 @@ uuid_abbrev_abort(int memtupcount, SortSupport ssup)
 
   abbr_card = estimateHyperLogLog(&uss->abbr_card);
 
-  /*
-   * If we have >100k distinct values, then even if we were sorting many
-   * billion rows we'd likely still break even, and the penalty of undoing
-   * that many rows of abbrevs would probably not be worth it.  Stop even
-   * counting at that point.
-   */
+     
+                                                                         
+                                                                           
+                                                                          
+                             
+     
   if (abbr_card > 100000.0)
   {
 #ifdef TRACE_SORT
@@ -352,12 +352,12 @@ uuid_abbrev_abort(int memtupcount, SortSupport ssup)
     return false;
   }
 
-  /*
-   * Target minimum cardinality is 1 per ~2k of non-null inputs.  0.5 row
-   * fudge factor allows us to abort earlier on genuinely pathological data
-   * where we've had exactly one abbreviated value in the first 2k
-   * (non-null) rows.
-   */
+     
+                                                                          
+                                                                            
+                                                                   
+                      
+     
   if (abbr_card < uss->input_count / 2000.0 + 0.5)
   {
 #ifdef TRACE_SORT
@@ -382,13 +382,13 @@ uuid_abbrev_abort(int memtupcount, SortSupport ssup)
   return false;
 }
 
-/*
- * Conversion routine for sortsupport.  Converts original uuid representation
- * to abbreviated key representation.  Our encoding strategy is simple -- pack
- * the first `sizeof(Datum)` bytes of uuid data into a Datum (on little-endian
- * machines, the bytes are stored in reverse order), and treat it as an
- * unsigned integer.
- */
+   
+                                                                              
+                                                                               
+                                                                               
+                                                                        
+                     
+   
 static Datum
 uuid_abbrev_convert(Datum original, SortSupport ssup)
 {
@@ -405,27 +405,27 @@ uuid_abbrev_convert(Datum original, SortSupport ssup)
 
 #if SIZEOF_DATUM == 8
     tmp = (uint32)res ^ (uint32)((uint64)res >> 32);
-#else /* SIZEOF_DATUM != 8 */
+#else                        
     tmp = (uint32)res;
 #endif
 
     addHyperLogLog(&uss->abbr_card, DatumGetUInt32(hash_uint32(tmp)));
   }
 
-  /*
-   * Byteswap on little-endian machines.
-   *
-   * This is needed so that uuid_cmp_abbrev() (an unsigned integer 3-way
-   * comparator) works correctly on all platforms.  If we didn't do this,
-   * the comparator would have to call memcmp() with a pair of pointers to
-   * the first byte of each abbreviated key, which is slower.
-   */
+     
+                                         
+     
+                                                                         
+                                                                          
+                                                                           
+                                                              
+     
   res = DatumBigEndianToNative(res);
 
   return res;
 }
 
-/* hash index support */
+                        
 Datum
 uuid_hash(PG_FUNCTION_ARGS)
 {

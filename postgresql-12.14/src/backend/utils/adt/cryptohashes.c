@@ -1,32 +1,32 @@
-/*-------------------------------------------------------------------------
- *
- * cryptohashes.c
- *	  Cryptographic hash functions
- *
- * Portions Copyright (c) 2018-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/cryptohashes.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                  
+   
+                                                                         
+   
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "common/md5.h"
 #include "common/sha2.h"
 #include "utils/builtins.h"
 
-/*
- * MD5
- */
+   
+       
+   
 
-/* MD5 produces a 16 byte (128 bit) hash; double it for hex */
+                                                              
 #define MD5_HASH_LEN 32
 
-/*
- * Create an MD5 hash of a text value and return it as hex string.
- */
+   
+                                                                   
+   
 Datum
 md5_text(PG_FUNCTION_ARGS)
 {
@@ -34,22 +34,22 @@ md5_text(PG_FUNCTION_ARGS)
   size_t len;
   char hexsum[MD5_HASH_LEN + 1];
 
-  /* Calculate the length of the buffer using varlena metadata */
+                                                                 
   len = VARSIZE_ANY_EXHDR(in_text);
 
-  /* get the hash result */
+                           
   if (pg_md5_hash(VARDATA_ANY(in_text), len, hexsum) == false)
   {
     ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
   }
 
-  /* convert to text and return it */
+                                     
   PG_RETURN_TEXT_P(cstring_to_text(hexsum));
 }
 
-/*
- * Create an MD5 hash of a bytea value and return it as a hex string.
- */
+   
+                                                                      
+   
 Datum
 md5_bytea(PG_FUNCTION_ARGS)
 {
@@ -66,9 +66,9 @@ md5_bytea(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(cstring_to_text(hexsum));
 }
 
-/*
- * SHA-2 variants
- */
+   
+                  
+   
 
 Datum
 sha224_bytea(PG_FUNCTION_ARGS)

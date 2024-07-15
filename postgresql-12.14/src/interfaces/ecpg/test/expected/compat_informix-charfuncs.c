@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "charfuncs.pgc"
@@ -17,7 +17,7 @@ int
 main(void)
 {
   char t1[] = "abc  def  ghi  ";
-  /* 123456789012345 */
+                       
   char buf[50];
   int k;
 

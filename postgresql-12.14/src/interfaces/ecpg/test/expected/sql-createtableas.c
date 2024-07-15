@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "createtableas.pgc"
@@ -16,17 +16,17 @@
 
 #line 6 "createtableas.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 8 "createtableas.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 14 "createtableas.pgc"
   int id;
-/* exec sql end declare section */
+                                  
 #line 15 "createtableas.pgc"
 
   ECPGdebug(1, stderr);
@@ -52,10 +52,10 @@ main(void)
   }
 #line 20 "createtableas.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 21 "createtableas.pgc"
 
-  /* exec sql whenever sqlerror  sqlprint ; */
+                                              
 #line 22 "createtableas.pgc"
 
   {

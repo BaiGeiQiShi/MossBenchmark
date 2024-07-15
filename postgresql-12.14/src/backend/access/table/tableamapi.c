@@ -1,14 +1,14 @@
-/*----------------------------------------------------------------------
- *
- * tableamapi.c
- *		Support routines for API for Postgres table access methods
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/backend/access/table/tableamapi.c
- *----------------------------------------------------------------------
- */
+                                                                         
+   
+                
+                                                               
+   
+                                                                         
+                                                                        
+   
+                                         
+                                                                         
+   
 #include "postgres.h"
 
 #include "access/heapam.h"
@@ -23,12 +23,12 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 
-/*
- * GetTableAmRoutine
- *		Call the specified access method handler routine to get its
- *		TableAmRoutine struct, which will be palloc'd in the caller's
- *		memory context.
- */
+   
+                     
+                                                                
+                                                                  
+                    
+   
 const TableAmRoutine *
 GetTableAmRoutine(Oid amhandler)
 {
@@ -43,11 +43,11 @@ GetTableAmRoutine(Oid amhandler)
     elog(ERROR, "table access method handler %u did not return a TableAmRoutine struct", amhandler);
   }
 
-  /*
-   * Assert that all required callbacks are present. That makes it a bit
-   * easier to keep AMs up to date, e.g. when forward porting them to a new
-   * major version.
-   */
+     
+                                                                         
+                                                                            
+                    
+     
   Assert(routine->scan_begin != NULL);
   Assert(routine->scan_end != NULL);
   Assert(routine->scan_rescan != NULL);
@@ -70,10 +70,10 @@ GetTableAmRoutine(Oid amhandler)
 
   Assert(routine->tuple_insert != NULL);
 
-  /*
-   * Could be made optional, but would require throwing error during
-   * parse-analysis.
-   */
+     
+                                                                     
+                     
+     
   Assert(routine->tuple_insert_speculative != NULL);
   Assert(routine->tuple_complete_speculative != NULL);
 
@@ -97,7 +97,7 @@ GetTableAmRoutine(Oid amhandler)
 
   Assert(routine->relation_estimate_size != NULL);
 
-  /* optional, but one callback implies presence of the other */
+                                                                
   Assert((routine->scan_bitmap_next_block == NULL) == (routine->scan_bitmap_next_tuple == NULL));
   Assert(routine->scan_sample_next_block != NULL);
   Assert(routine->scan_sample_next_tuple != NULL);
@@ -105,7 +105,7 @@ GetTableAmRoutine(Oid amhandler)
   return routine;
 }
 
-/* check_hook: validate new default_table_access_method */
+                                                          
 bool
 check_default_table_access_method(char **newval, void **extra, GucSource source)
 {
@@ -121,20 +121,20 @@ check_default_table_access_method(char **newval, void **extra, GucSource source)
     return false;
   }
 
-  /*
-   * If we aren't inside a transaction, or not connected to a database, we
-   * cannot do the catalog access necessary to verify the method.  Must
-   * accept the value on faith.
-   */
+     
+                                                                           
+                                                                        
+                                
+     
   if (IsTransactionState() && MyDatabaseId != InvalidOid)
   {
     if (!OidIsValid(get_table_am_oid(*newval, true)))
     {
-      /*
-       * When source == PGC_S_TEST, don't throw a hard error for a
-       * nonexistent table access method, only a NOTICE. See comments in
-       * guc.h.
-       */
+         
+                                                                   
+                                                                         
+                
+         
       if (source == PGC_S_TEST)
       {
         ereport(NOTICE, (errcode(ERRCODE_UNDEFINED_OBJECT), errmsg("table access method \"%s\" does not exist", *newval)));

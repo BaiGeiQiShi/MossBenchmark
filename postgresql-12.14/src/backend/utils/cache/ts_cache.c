@@ -1,29 +1,29 @@
-/*-------------------------------------------------------------------------
- *
- * ts_cache.c
- *	  Tsearch related object caches.
- *
- * Tsearch performance is very sensitive to performance of parsers,
- * dictionaries and mapping, so lookups should be cached as much
- * as possible.
- *
- * Once a backend has created a cache entry for a particular TS object OID,
- * the cache entry will exist for the life of the backend; hence it is
- * safe to hold onto a pointer to the cache entry while doing things that
- * might result in recognizing a cache invalidation.  Beware however that
- * subsidiary information might be deleted and reallocated somewhere else
- * if a cache inval and reval happens!	This does not look like it will be
- * a big problem as long as parser and dictionary methods do not attempt
- * any database access.
- *
- *
- * Copyright (c) 2006-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/cache/ts_cache.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                    
+   
+                                                                    
+                                                                 
+                
+   
+                                                                            
+                                                                       
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                         
+                        
+   
+   
+                                                                
+   
+                  
+                                        
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -49,12 +49,12 @@
 #include "utils/regproc.h"
 #include "utils/syscache.h"
 
-/*
- * MAXTOKENTYPE/MAXDICTSPERTT are arbitrary limits on the workspace size
- * used in lookup_ts_config_cache().  We could avoid hardwiring a limit
- * by making the workspace dynamically enlargeable, but it seems unlikely
- * to be worth the trouble.
- */
+   
+                                                                         
+                                                                        
+                                                                          
+                            
+   
 #define MAXTOKENTYPE 256
 #define MAXDICTSPERTT 100
 
@@ -67,25 +67,25 @@ static TSDictionaryCacheEntry *lastUsedDictionary = NULL;
 static HTAB *TSConfigCacheHash = NULL;
 static TSConfigCacheEntry *lastUsedConfig = NULL;
 
-/*
- * GUC default_text_search_config, and a cache of the current config's OID
- */
+   
+                                                                           
+   
 char *TSCurrentConfig = NULL;
 
 static Oid TSCurrentConfigCache = InvalidOid;
 
-/*
- * We use this syscache callback to detect when a visible change to a TS
- * catalog entry has been made, by either our own backend or another one.
- *
- * In principle we could just flush the specific cache entry that changed,
- * but given that TS configuration changes are probably infrequent, it
- * doesn't seem worth the trouble to determine that; we just flush all the
- * entries of the related hash table.
- *
- * We can use the same function for all TS caches by passing the hash
- * table address as the "arg".
- */
+   
+                                                                         
+                                                                          
+   
+                                                                           
+                                                                       
+                                                                           
+                                      
+   
+                                                                      
+                               
+   
 static void
 InvalidateTSCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
 {
@@ -99,16 +99,16 @@ InvalidateTSCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
     entry->isvalid = false;
   }
 
-  /* Also invalidate the current-config cache if it's pg_ts_config */
+                                                                     
   if (hash == TSConfigCacheHash)
   {
     TSCurrentConfigCache = InvalidOid;
   }
 }
 
-/*
- * Fetch parser cache entry
- */
+   
+                            
+   
 TSParserCacheEntry *
 lookup_ts_parser_cache(Oid prsId)
 {
@@ -116,37 +116,37 @@ lookup_ts_parser_cache(Oid prsId)
 
   if (TSParserCacheHash == NULL)
   {
-    /* First time through: initialize the hash table */
+                                                       
     HASHCTL ctl;
 
     MemSet(&ctl, 0, sizeof(ctl));
     ctl.keysize = sizeof(Oid);
     ctl.entrysize = sizeof(TSParserCacheEntry);
     TSParserCacheHash = hash_create("Tsearch parser cache", 4, &ctl, HASH_ELEM | HASH_BLOBS);
-    /* Flush cache on pg_ts_parser changes */
+                                             
     CacheRegisterSyscacheCallback(TSPARSEROID, InvalidateTSCacheCallBack, PointerGetDatum(TSParserCacheHash));
 
-    /* Also make sure CacheMemoryContext exists */
+                                                  
     if (!CacheMemoryContext)
     {
       CreateCacheMemoryContext();
     }
   }
 
-  /* Check single-entry cache */
+                                
   if (lastUsedParser && lastUsedParser->prsId == prsId && lastUsedParser->isvalid)
   {
     return lastUsedParser;
   }
 
-  /* Try to look up an existing entry */
+                                        
   entry = (TSParserCacheEntry *)hash_search(TSParserCacheHash, (void *)&prsId, HASH_FIND, NULL);
   if (entry == NULL || !entry->isvalid)
   {
-    /*
-     * If we didn't find one, we want to make one. But first look up the
-     * object to be sure the OID is real.
-     */
+       
+                                                                         
+                                          
+       
     HeapTuple tp;
     Form_pg_ts_parser prs;
 
@@ -157,9 +157,9 @@ lookup_ts_parser_cache(Oid prsId)
     }
     prs = (Form_pg_ts_parser)GETSTRUCT(tp);
 
-    /*
-     * Sanity checks
-     */
+       
+                     
+       
     if (!OidIsValid(prs->prsstart))
     {
       elog(ERROR, "text search parser %u has no prsstart method", prsId);
@@ -177,9 +177,9 @@ lookup_ts_parser_cache(Oid prsId)
     {
       bool found;
 
-      /* Now make the cache entry */
+                                    
       entry = (TSParserCacheEntry *)hash_search(TSParserCacheHash, (void *)&prsId, HASH_ENTER, &found);
-      Assert(!found); /* it wasn't there a moment ago */
+      Assert(!found);                                   
     }
 
     MemSet(entry, 0, sizeof(TSParserCacheEntry));
@@ -208,9 +208,9 @@ lookup_ts_parser_cache(Oid prsId)
   return entry;
 }
 
-/*
- * Fetch dictionary cache entry
- */
+   
+                                
+   
 TSDictionaryCacheEntry *
 lookup_ts_dictionary_cache(Oid dictId)
 {
@@ -218,38 +218,38 @@ lookup_ts_dictionary_cache(Oid dictId)
 
   if (TSDictionaryCacheHash == NULL)
   {
-    /* First time through: initialize the hash table */
+                                                       
     HASHCTL ctl;
 
     MemSet(&ctl, 0, sizeof(ctl));
     ctl.keysize = sizeof(Oid);
     ctl.entrysize = sizeof(TSDictionaryCacheEntry);
     TSDictionaryCacheHash = hash_create("Tsearch dictionary cache", 8, &ctl, HASH_ELEM | HASH_BLOBS);
-    /* Flush cache on pg_ts_dict and pg_ts_template changes */
+                                                              
     CacheRegisterSyscacheCallback(TSDICTOID, InvalidateTSCacheCallBack, PointerGetDatum(TSDictionaryCacheHash));
     CacheRegisterSyscacheCallback(TSTEMPLATEOID, InvalidateTSCacheCallBack, PointerGetDatum(TSDictionaryCacheHash));
 
-    /* Also make sure CacheMemoryContext exists */
+                                                  
     if (!CacheMemoryContext)
     {
       CreateCacheMemoryContext();
     }
   }
 
-  /* Check single-entry cache */
+                                
   if (lastUsedDictionary && lastUsedDictionary->dictId == dictId && lastUsedDictionary->isvalid)
   {
     return lastUsedDictionary;
   }
 
-  /* Try to look up an existing entry */
+                                        
   entry = (TSDictionaryCacheEntry *)hash_search(TSDictionaryCacheHash, (void *)&dictId, HASH_FIND, NULL);
   if (entry == NULL || !entry->isvalid)
   {
-    /*
-     * If we didn't find one, we want to make one. But first look up the
-     * object to be sure the OID is real.
-     */
+       
+                                                                         
+                                          
+       
     HeapTuple tpdict, tptmpl;
     Form_pg_ts_dict dict;
     Form_pg_ts_template template;
@@ -262,17 +262,17 @@ lookup_ts_dictionary_cache(Oid dictId)
     }
     dict = (Form_pg_ts_dict)GETSTRUCT(tpdict);
 
-    /*
-     * Sanity checks
-     */
+       
+                     
+       
     if (!OidIsValid(dict->dicttemplate))
     {
       elog(ERROR, "text search dictionary %u has no template", dictId);
     }
 
-    /*
-     * Retrieve dictionary's template
-     */
+       
+                                      
+       
     tptmpl = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(dict->dicttemplate));
     if (!HeapTupleIsValid(tptmpl))
     {
@@ -280,9 +280,9 @@ lookup_ts_dictionary_cache(Oid dictId)
     }
     template = (Form_pg_ts_template)GETSTRUCT(tptmpl);
 
-    /*
-     * Sanity checks
-     */
+       
+                     
+       
     if (!OidIsValid(template->tmpllexize))
     {
       elog(ERROR, "text search template %u has no lexize method", template->tmpllexize);
@@ -292,19 +292,19 @@ lookup_ts_dictionary_cache(Oid dictId)
     {
       bool found;
 
-      /* Now make the cache entry */
+                                    
       entry = (TSDictionaryCacheEntry *)hash_search(TSDictionaryCacheHash, (void *)&dictId, HASH_ENTER, &found);
-      Assert(!found); /* it wasn't there a moment ago */
+      Assert(!found);                                   
 
-      /* Create private memory context the first time through */
+                                                                
       saveCtx = AllocSetContextCreate(CacheMemoryContext, "TS dictionary", ALLOCSET_SMALL_SIZES);
       MemoryContextCopyAndSetIdentifier(saveCtx, NameStr(dict->dictname));
     }
     else
     {
-      /* Clear the existing entry's private context */
+                                                      
       saveCtx = entry->dictCtx;
-      /* Don't let context's ident pointer dangle while we reset it */
+                                                                      
       MemoryContextSetIdentifier(saveCtx, NULL);
       MemoryContextReset(saveCtx);
       MemoryContextCopyAndSetIdentifier(saveCtx, NameStr(dict->dictname));
@@ -323,10 +323,10 @@ lookup_ts_dictionary_cache(Oid dictId)
       bool isnull;
       MemoryContext oldcontext;
 
-      /*
-       * Init method runs in dictionary's private memory context, and we
-       * make sure the options are stored there too
-       */
+         
+                                                                         
+                                                    
+         
       oldcontext = MemoryContextSwitchTo(entry->dictCtx);
 
       opt = SysCacheGetAttr(TSDICTOID, tpdict, Anum_pg_ts_dict_dictinitoption, &isnull);
@@ -357,11 +357,11 @@ lookup_ts_dictionary_cache(Oid dictId)
   return entry;
 }
 
-/*
- * Initialize config cache and prepare callbacks.  This is split out of
- * lookup_ts_config_cache because we need to activate the callback before
- * caching TSCurrentConfigCache, too.
- */
+   
+                                                                        
+                                                                          
+                                      
+   
 static void
 init_ts_config_cache(void)
 {
@@ -371,20 +371,20 @@ init_ts_config_cache(void)
   ctl.keysize = sizeof(Oid);
   ctl.entrysize = sizeof(TSConfigCacheEntry);
   TSConfigCacheHash = hash_create("Tsearch configuration cache", 16, &ctl, HASH_ELEM | HASH_BLOBS);
-  /* Flush cache on pg_ts_config and pg_ts_config_map changes */
+                                                                
   CacheRegisterSyscacheCallback(TSCONFIGOID, InvalidateTSCacheCallBack, PointerGetDatum(TSConfigCacheHash));
   CacheRegisterSyscacheCallback(TSCONFIGMAP, InvalidateTSCacheCallBack, PointerGetDatum(TSConfigCacheHash));
 
-  /* Also make sure CacheMemoryContext exists */
+                                                
   if (!CacheMemoryContext)
   {
     CreateCacheMemoryContext();
   }
 }
 
-/*
- * Fetch configuration cache entry
- */
+   
+                                   
+   
 TSConfigCacheEntry *
 lookup_ts_config_cache(Oid cfgId)
 {
@@ -392,24 +392,24 @@ lookup_ts_config_cache(Oid cfgId)
 
   if (TSConfigCacheHash == NULL)
   {
-    /* First time through: initialize the hash table */
+                                                       
     init_ts_config_cache();
   }
 
-  /* Check single-entry cache */
+                                
   if (lastUsedConfig && lastUsedConfig->cfgId == cfgId && lastUsedConfig->isvalid)
   {
     return lastUsedConfig;
   }
 
-  /* Try to look up an existing entry */
+                                        
   entry = (TSConfigCacheEntry *)hash_search(TSConfigCacheHash, (void *)&cfgId, HASH_FIND, NULL);
   if (entry == NULL || !entry->isvalid)
   {
-    /*
-     * If we didn't find one, we want to make one. But first look up the
-     * object to be sure the OID is real.
-     */
+       
+                                                                         
+                                          
+       
     HeapTuple tp;
     Form_pg_ts_config cfg;
     Relation maprel;
@@ -430,9 +430,9 @@ lookup_ts_config_cache(Oid cfgId)
     }
     cfg = (Form_pg_ts_config)GETSTRUCT(tp);
 
-    /*
-     * Sanity checks
-     */
+       
+                     
+       
     if (!OidIsValid(cfg->cfgparser))
     {
       elog(ERROR, "text search configuration %u has no parser", cfgId);
@@ -442,13 +442,13 @@ lookup_ts_config_cache(Oid cfgId)
     {
       bool found;
 
-      /* Now make the cache entry */
+                                    
       entry = (TSConfigCacheEntry *)hash_search(TSConfigCacheHash, (void *)&cfgId, HASH_ENTER, &found);
-      Assert(!found); /* it wasn't there a moment ago */
+      Assert(!found);                                   
     }
     else
     {
-      /* Cleanup old contents */
+                                
       if (entry->map)
       {
         for (i = 0; i < entry->lenmap; i++)
@@ -468,13 +468,13 @@ lookup_ts_config_cache(Oid cfgId)
 
     ReleaseSysCache(tp);
 
-    /*
-     * Scan pg_ts_config_map to gather dictionary list for each token type
-     *
-     * Because the index is on (mapcfg, maptokentype, mapseqno), we will
-     * see the entries in maptokentype order, and in mapseqno order for
-     * each token type, even though we didn't explicitly ask for that.
-     */
+       
+                                                                           
+       
+                                                                         
+                                                                        
+                                                                       
+       
     MemSet(maplists, 0, sizeof(maplists));
     maxtokentype = 0;
     ndicts = 0;
@@ -500,7 +500,7 @@ lookup_ts_config_cache(Oid cfgId)
       }
       if (toktype > maxtokentype)
       {
-        /* starting a new token type, but first save the prior data */
+                                                                      
         if (ndicts > 0)
         {
           maplists[maxtokentype].len = ndicts;
@@ -513,7 +513,7 @@ lookup_ts_config_cache(Oid cfgId)
       }
       else
       {
-        /* continuing data for current token type */
+                                                    
         if (ndicts >= MAXDICTSPERTT)
         {
           elog(ERROR, "too many pg_ts_config_map entries for one token type");
@@ -528,11 +528,11 @@ lookup_ts_config_cache(Oid cfgId)
 
     if (ndicts > 0)
     {
-      /* save the last token type's dictionaries */
+                                                   
       maplists[maxtokentype].len = ndicts;
       maplists[maxtokentype].dictIds = (Oid *)MemoryContextAlloc(CacheMemoryContext, sizeof(Oid) * ndicts);
       memcpy(maplists[maxtokentype].dictIds, mapdicts, sizeof(Oid) * ndicts);
-      /* and save the overall map */
+                                    
       entry->lenmap = maxtokentype + 1;
       entry->map = (ListDictionary *)MemoryContextAlloc(CacheMemoryContext, sizeof(ListDictionary) * entry->lenmap);
       memcpy(entry->map, maplists, sizeof(ListDictionary) * entry->lenmap);
@@ -546,21 +546,21 @@ lookup_ts_config_cache(Oid cfgId)
   return entry;
 }
 
-/*---------------------------------------------------
- * GUC variable "default_text_search_config"
- *---------------------------------------------------
- */
+                                                      
+                                             
+                                                      
+   
 
 Oid
 getTSCurrentConfig(bool emitError)
 {
-  /* if we have a cached value, return it */
+                                            
   if (OidIsValid(TSCurrentConfigCache))
   {
     return TSCurrentConfigCache;
   }
 
-  /* fail if GUC hasn't been set up yet */
+                                          
   if (TSCurrentConfig == NULL || *TSCurrentConfig == '\0')
   {
     if (emitError)
@@ -575,25 +575,25 @@ getTSCurrentConfig(bool emitError)
 
   if (TSConfigCacheHash == NULL)
   {
-    /* First time through: initialize the tsconfig inval callback */
+                                                                    
     init_ts_config_cache();
   }
 
-  /* Look up the config */
+                          
   TSCurrentConfigCache = get_ts_config_oid(stringToQualifiedNameList(TSCurrentConfig), !emitError);
 
   return TSCurrentConfigCache;
 }
 
-/* GUC check_hook for default_text_search_config */
+                                                   
 bool
 check_TSCurrentConfig(char **newval, void **extra, GucSource source)
 {
-  /*
-   * If we aren't inside a transaction, or connected to a database, we
-   * cannot do the catalog accesses necessary to verify the config name.
-   * Must accept it on faith.
-   */
+     
+                                                                       
+                                                                         
+                              
+     
   if (IsTransactionState() && MyDatabaseId != InvalidOid)
   {
     Oid cfgId;
@@ -603,10 +603,10 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
 
     cfgId = get_ts_config_oid(stringToQualifiedNameList(*newval), true);
 
-    /*
-     * When source == PGC_S_TEST, don't throw a hard error for a
-     * nonexistent configuration, only a NOTICE.  See comments in guc.h.
-     */
+       
+                                                                 
+                                                                         
+       
     if (!OidIsValid(cfgId))
     {
       if (source == PGC_S_TEST)
@@ -620,10 +620,10 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
       }
     }
 
-    /*
-     * Modify the actually stored value to be fully qualified, to ensure
-     * later changes of search_path don't affect it.
-     */
+       
+                                                                         
+                                                     
+       
     tuple = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
     if (!HeapTupleIsValid(tuple))
     {
@@ -635,7 +635,7 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
 
     ReleaseSysCache(tuple);
 
-    /* GUC wants it malloc'd not palloc'd */
+                                            
     free(*newval);
     *newval = strdup(buf);
     pfree(buf);
@@ -648,10 +648,10 @@ check_TSCurrentConfig(char **newval, void **extra, GucSource source)
   return true;
 }
 
-/* GUC assign_hook for default_text_search_config */
+                                                    
 void
 assign_TSCurrentConfig(const char *newval, void *extra)
 {
-  /* Just reset the cache to force a lookup on first use */
+                                                           
   TSCurrentConfigCache = InvalidOid;
 }

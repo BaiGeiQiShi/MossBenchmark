@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "num_test2.pgc"
@@ -18,15 +18,15 @@
 #line 7 "num_test2.pgc"
 
 #line 1 "printf_hack.h"
-/*
- * print_double(x) has the same effect as printf("%g", x), but is intended
- * to produce the same formatting across all platforms.
- */
+   
+                                                                           
+                                                        
+   
 static void
 print_double(double x)
 {
 #ifdef WIN32
-  /* Change Windows' 3-digit exponents to look like everyone else's */
+                                                                      
   char convert[128];
   int vallen;
 
@@ -48,10 +48,10 @@ print_double(double x)
 
 #line 9 "num_test2.pgc"
 
-char *nums[] = {"2E394", "-2", ".794", "3.44", "592.49E21", "-32.84e4", "2E-394", ".1E-2", "+.0", "-592.49E-07", "+32.84e-4", ".500001", "-.5000001", "1234567890123456789012345678.91", /* 30 digits should fit
-                                                                                                                                                                                            into decimal */
-    "1234567890123456789012345678.921",                                                                                                                                                  /* 31 digits should NOT
-                                                                                                                                                                                            fit into decimal */
+char *nums[] = {"2E394", "-2", ".794", "3.44", "592.49E21", "-32.84e4", "2E-394", ".1E-2", "+.0", "-592.49E-07", "+32.84e-4", ".500001", "-.5000001", "1234567890123456789012345678.91",                         
+                                                                                                                                                                                                           
+    "1234567890123456789012345678.921",                                                                                                                                                                          
+                                                                                                                                                                                                               
     "not a number", NULL};
 
 static void
@@ -172,8 +172,8 @@ main(void)
 
     if (i != 6)
     {
-      /* underflow does not work reliable on several archs, so not testing it here */
-      /* this is a libc problem since we only call strtod() */
+                                                                                     
+                                                              
 
       r = PGTYPESnumeric_to_double(num, &d);
       if (r)
@@ -185,10 +185,10 @@ main(void)
       printf(" (r: %d)\n", r);
     }
 
-    /* do not test double to numeric because
-     * - extra digits are different on different architectures
-     * - PGTYPESnumeric_from_double internally calls PGTYPESnumeric_from_asc anyway
-     */
+                                             
+                                                               
+                                                                                    
+       
 
     dec = PGTYPESdecimal_new();
     r = PGTYPESnumeric_to_decimal(num, dec);
@@ -196,8 +196,8 @@ main(void)
     {
       check_errno();
     }
-    /* we have no special routine for outputting decimal, it would
-     * convert to a numeric anyway */
+                                                                   
+                                     
     printf("num[%d,11]: - (r: %d)\n", i, r);
     if (r == 0)
     {

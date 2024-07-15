@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * restricted_token.c
- *		helper routine to ensure restricted token on Windows
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/common/restricted_token.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                      
+                                                         
+   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                   
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #error "This file is not expected to be compiled for backend code"
@@ -25,24 +25,24 @@
 
 #ifdef WIN32
 
-/* internal vars */
+                   
 char *restrict_env;
 
 typedef BOOL(WINAPI *__CreateRestrictedToken)(HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
 
-/* Windows API define missing from some versions of MingW headers */
+                                                                    
 #ifndef DISABLE_MAX_PRIVILEGE
 #define DISABLE_MAX_PRIVILEGE 0x1
 #endif
 
-/*
- * Create a restricted token and execute the specified process with it.
- *
- * Returns restricted token on success and 0 on failure.
- *
- * On NT4, or any other system not containing the required functions, will
- * NOT execute anything.
- */
+   
+                                                                        
+   
+                                                         
+   
+                                                                           
+                         
+   
 HANDLE
 CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
 {
@@ -74,14 +74,14 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
     return 0;
   }
 
-  /* Open the current token to use as a base for the restricted one */
+                                                                      
   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
   {
     pg_log_error("could not open process token: error code %lu", GetLastError());
     return 0;
   }
 
-  /* Allocate list of SIDs to remove */
+                                       
   ZeroMemory(&dropSids, sizeof(dropSids));
   if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &dropSids[0].Sid) || !AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid))
   {
@@ -118,20 +118,20 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
 }
 #endif
 
-/*
- * On Windows make sure that we are running with a restricted token,
- * On other platforms do nothing.
- */
+   
+                                                                     
+                                  
+   
 void
 get_restricted_token(void)
 {
 #ifdef WIN32
   HANDLE restrictedToken;
 
-  /*
-   * Before we execute another program, make sure that we are running with a
-   * restricted token. If not, re-execute ourselves with one.
-   */
+     
+                                                                             
+                                                              
+     
 
   if ((restrict_env = getenv("PG_RESTRICT_EXEC")) == NULL || strcmp(restrict_env, "1") != 0)
   {
@@ -150,10 +150,10 @@ get_restricted_token(void)
     }
     else
     {
-      /*
-       * Successfully re-execed. Now wait for child process to capture
-       * exitcode.
-       */
+         
+                                                                       
+                   
+         
       DWORD x;
 
       CloseHandle(restrictedToken);

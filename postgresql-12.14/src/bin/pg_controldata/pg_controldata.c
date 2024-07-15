@@ -1,19 +1,19 @@
-/*
- * pg_controldata
- *
- * reads the data from $PGDATA/global/pg_control
- *
- * copyright (c) Oliver Elphick <olly@lfix.co.uk>, 2001;
- * licence: BSD
- *
- * src/bin/pg_controldata/pg_controldata.c
- */
+   
+                  
+   
+                                                 
+   
+                                                         
+                
+   
+                                           
+   
 
-/*
- * We have to use postgres.h not postgres_fe.h here, because there's so much
- * backend-only stuff in the XLOG include files we need.  But we need a
- * frontend-ish environment otherwise.  Hence this ugly hack.
- */
+   
+                                                                             
+                                                                        
+                                                              
+   
 #define FRONTEND 1
 
 #include "postgres.h"
@@ -146,7 +146,7 @@ main(int argc, char *argv[])
     }
   }
 
-  /* Complain if any arguments remain */
+                                        
   if (optind < argc)
   {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
@@ -161,7 +161,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* get a copy of the control file */
+                                      
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {
@@ -170,7 +170,7 @@ main(int argc, char *argv[])
              "is expecting.  The results below are untrustworthy.\n\n"));
   }
 
-  /* set wal segment size */
+                            
   WalSegSz = ControlFile->xlog_seg_size;
 
   if (!IsValidWalSegSize(WalSegSz))
@@ -186,27 +186,27 @@ main(int argc, char *argv[])
         WalSegSz);
   }
 
-  /*
-   * This slightly-chintzy coding will work as long as the control file
-   * timestamps are within the range of time_t; that should be the case in
-   * all foreseeable circumstances, so we don't bother importing the
-   * backend's timezone library into pg_controldata.
-   *
-   * Use variable for format to suppress overly-anal-retentive gcc warning
-   * about %c
-   */
+     
+                                                                        
+                                                                           
+                                                                     
+                                                     
+     
+                                                                           
+              
+     
   time_tmp = (time_t)ControlFile->time;
   strftime(pgctime_str, sizeof(pgctime_str), strftime_fmt, localtime(&time_tmp));
   time_tmp = (time_t)ControlFile->checkPointCopy.time;
   strftime(ckpttime_str, sizeof(ckpttime_str), strftime_fmt, localtime(&time_tmp));
 
-  /*
-   * Calculate name of the WAL file containing the latest checkpoint's REDO
-   * start point.
-   *
-   * A corrupted control file could report a WAL segment size of 0, and to
-   * guard against division by zero, we need to treat that specially.
-   */
+     
+                                                                            
+                  
+     
+                                                                           
+                                                                      
+     
   if (WalSegSz != 0)
   {
     XLogSegNo segno;
@@ -219,11 +219,11 @@ main(int argc, char *argv[])
     strcpy(xlogfilename, _("???"));
   }
 
-  /*
-   * Format system_identifier and mock_authentication_nonce separately to
-   * keep platform-dependent format code out of the translatable message
-   * string.
-   */
+     
+                                                                          
+                                                                         
+             
+     
   snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, ControlFile->system_identifier);
   for (i = 0; i < MOCK_AUTH_NONCE_LEN; i++)
   {
@@ -268,7 +268,7 @@ main(int argc, char *argv[])
   printf(_("max_locks_per_xact setting:           %d\n"), ControlFile->max_locks_per_xact);
   printf(_("track_commit_timestamp setting:       %s\n"), ControlFile->track_commit_timestamp ? _("on") : _("off"));
   printf(_("Maximum data alignment:               %u\n"), ControlFile->maxAlign);
-  /* we don't print floatFormat since can't say much useful about it */
+                                                                       
   printf(_("Database block size:                  %u\n"), ControlFile->blcksz);
   printf(_("Blocks per segment of large relation: %u\n"), ControlFile->relseg_size);
   printf(_("WAL block size:                       %u\n"), ControlFile->xlog_blcksz);
@@ -277,7 +277,7 @@ main(int argc, char *argv[])
   printf(_("Maximum columns in an index:          %u\n"), ControlFile->indexMaxKeys);
   printf(_("Maximum size of a TOAST chunk:        %u\n"), ControlFile->toast_max_chunk_size);
   printf(_("Size of a large-object chunk:         %u\n"), ControlFile->loblksize);
-  /* This is no longer configurable, but users may still expect to see it: */
+                                                                             
   printf(_("Date/time type storage:               %s\n"), _("64-bit integers"));
   printf(_("Float4 argument passing:              %s\n"), (ControlFile->float4ByVal ? _("by value") : _("by reference")));
   printf(_("Float8 argument passing:              %s\n"), (ControlFile->float8ByVal ? _("by value") : _("by reference")));

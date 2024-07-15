@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * gininsert.c
- *	  insert routines for the postgres inverted index access method.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/gin/gininsert.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                                                    
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                        
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -37,13 +37,13 @@ typedef struct
   BuildAccumulator accum;
 } GinBuildState;
 
-/*
- * Adds array of item pointers to tuple's posting list, or
- * creates posting tree and tuple pointing to tree in case
- * of not enough space.  Max size of tuple is defined in
- * GinFormTuple().  Returns a new, modified index tuple.
- * items[] must be in sorted order with no duplicates.
- */
+   
+                                                           
+                                                           
+                                                         
+                                                         
+                                                       
+   
 static IndexTuple
 addItemPointersToLeafTuple(GinState *ginstate, IndexTuple old, ItemPointerData *items, uint32 nitem, GinStatsData *buildStats, Buffer buffer)
 {
@@ -60,12 +60,12 @@ addItemPointersToLeafTuple(GinState *ginstate, IndexTuple old, ItemPointerData *
   attnum = gintuple_get_attrnum(ginstate, old);
   key = gintuple_get_key(ginstate, old, &category);
 
-  /* merge the old and new posting lists */
+                                           
   oldItems = ginReadTuple(ginstate, attnum, old, &oldNPosting);
 
   newItems = ginMergeItemPointers(items, nitem, oldItems, oldNPosting, &newNPosting);
 
-  /* Compress the posting list, and try to a build tuple with room for it */
+                                                                            
   res = NULL;
   compressedList = ginCompressPostingList(newItems, newNPosting, GinMaxItemSize, NULL);
   pfree(newItems);
@@ -76,20 +76,20 @@ addItemPointersToLeafTuple(GinState *ginstate, IndexTuple old, ItemPointerData *
   }
   if (!res)
   {
-    /* posting list would be too big, convert to posting tree */
+                                                                
     BlockNumber postingRoot;
 
-    /*
-     * Initialize posting tree with the old tuple's posting list.  It's
-     * surely small enough to fit on one posting-tree page, and should
-     * already be in order with no duplicates.
-     */
+       
+                                                                        
+                                                                       
+                                               
+       
     postingRoot = createPostingTree(ginstate->index, oldItems, oldNPosting, buildStats, buffer);
 
-    /* Now insert the TIDs-to-be-added into the posting tree */
+                                                               
     ginInsertItemPointers(ginstate->index, postingRoot, items, nitem, buildStats);
 
-    /* And build a new posting-tree-only result tuple */
+                                                        
     res = GinFormTuple(ginstate, attnum, key, category, NULL, 0, 0, true);
     GinSetPostingTree(res, postingRoot);
   }
@@ -98,21 +98,21 @@ addItemPointersToLeafTuple(GinState *ginstate, IndexTuple old, ItemPointerData *
   return res;
 }
 
-/*
- * Build a fresh leaf tuple, either posting-list or posting-tree format
- * depending on whether the given items list will fit.
- * items[] must be in sorted order with no duplicates.
- *
- * This is basically the same logic as in addItemPointersToLeafTuple,
- * but working from slightly different input.
- */
+   
+                                                                        
+                                                       
+                                                       
+   
+                                                                      
+                                              
+   
 static IndexTuple
 buildFreshLeafTuple(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCategory category, ItemPointerData *items, uint32 nitem, GinStatsData *buildStats, Buffer buffer)
 {
   IndexTuple res = NULL;
   GinPostingList *compressedList;
 
-  /* try to build a posting list tuple with all the items */
+                                                            
   compressedList = ginCompressPostingList(items, nitem, GinMaxItemSize, NULL);
   if (compressedList)
   {
@@ -121,34 +121,34 @@ buildFreshLeafTuple(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullC
   }
   if (!res)
   {
-    /* posting list would be too big, build posting tree */
+                                                           
     BlockNumber postingRoot;
 
-    /*
-     * Build posting-tree-only result tuple.  We do this first so as to
-     * fail quickly if the key is too big.
-     */
+       
+                                                                        
+                                           
+       
     res = GinFormTuple(ginstate, attnum, key, category, NULL, 0, 0, true);
 
-    /*
-     * Initialize a new posting tree with the TIDs.
-     */
+       
+                                                    
+       
     postingRoot = createPostingTree(ginstate->index, items, nitem, buildStats, buffer);
 
-    /* And save the root link in the result tuple */
+                                                    
     GinSetPostingTree(res, postingRoot);
   }
 
   return res;
 }
 
-/*
- * Insert one or more heap TIDs associated with the given key value.
- * This will either add a single key entry, or enlarge a pre-existing entry.
- *
- * During an index build, buildStats is non-null and the counters
- * it contains should be incremented as needed.
- */
+   
+                                                                     
+                                                                             
+   
+                                                                  
+                                                
+   
 void
 ginEntryInsert(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCategory category, ItemPointerData *items, uint32 nitem, GinStatsData *buildStats)
 {
@@ -160,7 +160,7 @@ ginEntryInsert(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCatego
 
   insertdata.isDelete = false;
 
-  /* During index build, count the to-be-inserted entry */
+                                                          
   if (buildStats)
   {
     buildStats->nEntries++;
@@ -174,25 +174,25 @@ ginEntryInsert(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCatego
 
   if (btree.findItem(&btree, stack))
   {
-    /* found pre-existing entry */
+                                  
     itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, stack->off));
 
     if (GinIsPostingTree(itup))
     {
-      /* add entries to existing posting tree */
+                                                
       BlockNumber rootPostingTree = GinGetPostingTree(itup);
 
-      /* release all stack */
+                             
       LockBuffer(stack->buffer, GIN_UNLOCK);
       freeGinBtreeStack(stack);
 
-      /* insert into posting tree */
+                                    
       ginInsertItemPointers(ginstate->index, rootPostingTree, items, nitem, buildStats);
       return;
     }
 
     CheckForSerializableConflictIn(ginstate->index, NULL, stack->buffer);
-    /* modify an existing leaf entry */
+                                       
     itup = addItemPointersToLeafTuple(ginstate, itup, items, nitem, buildStats, stack->buffer);
 
     insertdata.isDelete = true;
@@ -200,22 +200,22 @@ ginEntryInsert(GinState *ginstate, OffsetNumber attnum, Datum key, GinNullCatego
   else
   {
     CheckForSerializableConflictIn(ginstate->index, NULL, stack->buffer);
-    /* no match, so construct a new leaf entry */
+                                                 
     itup = buildFreshLeafTuple(ginstate, attnum, key, category, items, nitem, buildStats, stack->buffer);
   }
 
-  /* Insert the new or modified leaf tuple */
+                                             
   insertdata.entry = itup;
   ginInsertValue(&btree, stack, &insertdata, buildStats);
   pfree(itup);
 }
 
-/*
- * Extract index entries for a single indexable item, and add them to the
- * BuildAccumulator's state.
- *
- * This function is used only during initial index creation.
- */
+   
+                                                                          
+                             
+   
+                                                             
+   
 static void
 ginHeapTupleBulkInsert(GinBuildState *buildstate, OffsetNumber attnum, Datum value, bool isNull, ItemPointer heapptr)
 {
@@ -249,7 +249,7 @@ ginBuildCallback(Relation index, HeapTuple htup, Datum *values, bool *isnull, bo
     ginHeapTupleBulkInsert(buildstate, (OffsetNumber)(i + 1), values[i], isnull[i], &htup->t_self);
   }
 
-  /* If we've maxed out our available memory, dump everything to the index */
+                                                                             
   if (buildstate->accum.allocatedMemory >= (Size)maintenance_work_mem * 1024L)
   {
     ItemPointerData *list;
@@ -261,7 +261,7 @@ ginBuildCallback(Relation index, HeapTuple htup, Datum *values, bool *isnull, bo
     ginBeginBAScan(&buildstate->accum);
     while ((list = ginGetBAEntry(&buildstate->accum, &attnum, &key, &category, &nlist)) != NULL)
     {
-      /* there could be many entries, so be willing to abort here */
+                                                                    
       CHECK_FOR_INTERRUPTS();
       ginEntryInsert(&buildstate->ginstate, attnum, key, category, list, nlist, &buildstate->buildStats);
     }
@@ -296,10 +296,10 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
   buildstate.indtuples = 0;
   memset(&buildstate.buildStats, 0, sizeof(GinStatsData));
 
-  /* initialize the meta page */
+                                
   MetaBuffer = GinNewBuffer(index);
 
-  /* initialize the root page */
+                                
   RootBuffer = GinNewBuffer(index);
 
   START_CRIT_SECTION();
@@ -312,36 +312,36 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
   UnlockReleaseBuffer(RootBuffer);
   END_CRIT_SECTION();
 
-  /* count the root as first entry page */
+                                          
   buildstate.buildStats.nEntryPages++;
 
-  /*
-   * create a temporary memory context that is used to hold data not yet
-   * dumped out to the index
-   */
+     
+                                                                         
+                             
+     
   buildstate.tmpCtx = AllocSetContextCreate(CurrentMemoryContext, "Gin build temporary context", ALLOCSET_DEFAULT_SIZES);
 
-  /*
-   * create a temporary memory context that is used for calling
-   * ginExtractEntries(), and can be reset after each tuple
-   */
+     
+                                                                
+                                                            
+     
   buildstate.funcCtx = AllocSetContextCreate(CurrentMemoryContext, "Gin build temporary context for user-defined function", ALLOCSET_DEFAULT_SIZES);
 
   buildstate.accum.ginstate = &buildstate.ginstate;
   ginInitBA(&buildstate.accum);
 
-  /*
-   * Do the heap scan.  We disallow sync scan here because dataPlaceToPage
-   * prefers to receive tuples in TID order.
-   */
+     
+                                                                           
+                                             
+     
   reltuples = table_index_build_scan(heap, index, indexInfo, false, true, ginBuildCallback, (void *)&buildstate, NULL);
 
-  /* dump remaining entries to the index */
+                                           
   oldCtx = MemoryContextSwitchTo(buildstate.tmpCtx);
   ginBeginBAScan(&buildstate.accum);
   while ((list = ginGetBAEntry(&buildstate.accum, &attnum, &key, &category, &nlist)) != NULL)
   {
-    /* there could be many entries, so be willing to abort here */
+                                                                  
     CHECK_FOR_INTERRUPTS();
     ginEntryInsert(&buildstate.ginstate, attnum, key, category, list, nlist, &buildstate.buildStats);
   }
@@ -350,24 +350,24 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
   MemoryContextDelete(buildstate.funcCtx);
   MemoryContextDelete(buildstate.tmpCtx);
 
-  /*
-   * Update metapage stats
-   */
+     
+                           
+     
   buildstate.buildStats.nTotalPages = RelationGetNumberOfBlocks(index);
   ginUpdateStats(index, &buildstate.buildStats, true);
 
-  /*
-   * We didn't write WAL records as we built the index, so if WAL-logging is
-   * required, write all pages to the WAL now.
-   */
+     
+                                                                             
+                                               
+     
   if (RelationNeedsWAL(index))
   {
     log_newpage_range(index, MAIN_FORKNUM, 0, RelationGetNumberOfBlocks(index), true);
   }
 
-  /*
-   * Return statistics
-   */
+     
+                       
+     
   result = (IndexBuildResult *)palloc(sizeof(IndexBuildResult));
 
   result->heap_tuples = reltuples;
@@ -376,21 +376,21 @@ ginbuild(Relation heap, Relation index, IndexInfo *indexInfo)
   return result;
 }
 
-/*
- *	ginbuildempty() -- build an empty gin index in the initialization fork
- */
+   
+                                                                          
+   
 void
 ginbuildempty(Relation index)
 {
   Buffer RootBuffer, MetaBuffer;
 
-  /* An empty GIN index has two pages. */
+                                         
   MetaBuffer = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
   LockBuffer(MetaBuffer, BUFFER_LOCK_EXCLUSIVE);
   RootBuffer = ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
   LockBuffer(RootBuffer, BUFFER_LOCK_EXCLUSIVE);
 
-  /* Initialize and xlog metabuffer and root buffer. */
+                                                       
   START_CRIT_SECTION();
   GinInitMetabuffer(MetaBuffer);
   MarkBufferDirty(MetaBuffer);
@@ -400,15 +400,15 @@ ginbuildempty(Relation index)
   log_newpage_buffer(RootBuffer, false);
   END_CRIT_SECTION();
 
-  /* Unlock and release the buffers. */
+                                       
   UnlockReleaseBuffer(MetaBuffer);
   UnlockReleaseBuffer(RootBuffer);
 }
 
-/*
- * Insert index entries for a single indexable item during "normal"
- * (non-fast-update) insertion
- */
+   
+                                                                    
+                               
+   
 static void
 ginHeapTupleInsert(GinState *ginstate, OffsetNumber attnum, Datum value, bool isNull, ItemPointer item)
 {
@@ -432,7 +432,7 @@ gininsert(Relation index, Datum *values, bool *isnull, ItemPointer ht_ctid, Rela
   MemoryContext insertCtx;
   int i;
 
-  /* Initialize GinState cache if first call in this statement */
+                                                                 
   if (ginstate == NULL)
   {
     oldCtx = MemoryContextSwitchTo(indexInfo->ii_Context);

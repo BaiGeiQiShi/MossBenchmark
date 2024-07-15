@@ -1,17 +1,17 @@
-/* src/interfaces/ecpg/ecpglib/execute.c */
+                                           
 
-/*
- * The aim is to get a simpler interface to the database routines.
- * All the tedious messing around with tuples is supposed to be hidden
- * by this function.
- */
-/* Author: Linus Tolke
-   (actually most if the code is "borrowed" from the distribution and just
-   slightly modified)
- */
+   
+                                                                   
+                                                                       
+                     
+   
+                       
+                                                                           
+                      
+   
 
-/* Taken over as part of PostgreSQL by Michael Meskes <meskes@postgresql.org>
-   on Feb. 5th, 1998 */
+                                                                              
+                       
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -33,10 +33,10 @@
 #include "pgtypes_timestamp.h"
 #include "pgtypes_interval.h"
 
-/*
- *	This function returns a newly malloced string that has ' and \
- *	escaped.
- */
+   
+                                                                \
+            
+   
 static char *
 quote_postgres(char *arg, bool quote, int lineno)
 {
@@ -45,10 +45,10 @@ quote_postgres(char *arg, bool quote, int lineno)
   size_t escaped_len;
   size_t buffer_len;
 
-  /*
-   * if quote is false we just need to store things in a descriptor they
-   * will be quoted once they are inserted in a statement
-   */
+     
+                                                                         
+                                                          
+     
   if (!quote)
   {
     return arg;
@@ -70,10 +70,10 @@ quote_postgres(char *arg, bool quote, int lineno)
     }
     else
     {
-      /*
-       * We don't know if the target database is using
-       * standard_conforming_strings, so we always use E'' strings.
-       */
+         
+                                                       
+                                                                    
+         
       memmove(res + 2, res + 1, escaped_len);
       res[0] = ESCAPE_STRING_SYNTAX;
       res[1] = res[escaped_len + 2] = '\'';
@@ -122,7 +122,7 @@ next_insert(char *text, int pos, bool questionmarks, bool std_strings)
 
   for (; text[p] != '\0'; p++)
   {
-    if (string && !std_strings && text[p] == '\\') /* escape character */
+    if (string && !std_strings && text[p] == '\\')                       
     {
       p++;
     }
@@ -134,20 +134,20 @@ next_insert(char *text, int pos, bool questionmarks, bool std_strings)
     {
       if (text[p] == '$' && isdigit((unsigned char)text[p + 1]))
       {
-        /* this can be either a dollar quote or a variable */
+                                                             
         int i;
 
         for (i = p + 1; isdigit((unsigned char)text[i]); i++)
-          /* empty loop body */;
+                               ;
         if (!isalpha((unsigned char)text[i]) && isascii((unsigned char)text[i]) && text[i] != '_')
         {
-          /* not dollar delimited quote */
+                                          
           return p;
         }
       }
       else if (questionmarks && text[p] == '?')
       {
-        /* also allow old style placeholders */
+                                               
         return p;
       }
     }
@@ -183,13 +183,13 @@ ecpg_is_type_an_array(int type, const struct statement *stmt, const struct varia
 
   if ((stmt->connection->cache_head) == NULL)
   {
-    /*
-     * Text like types are not an array for ecpg, but postgres counts them
-     * as an array. This define reminds you to not 'correct' these values.
-     */
+       
+                                                                           
+                                                                           
+       
 #define not_an_array_in_ecpg ECPG_ARRAY_NONE
 
-    /* populate cache with well known types to speed things up */
+                                                                 
     if (!ecpg_type_infocache_push(&(stmt->connection->cache_head), BOOLOID, ECPG_ARRAY_NONE, stmt->lineno))
     {
       return ECPG_ARRAY_ERROR;
@@ -380,9 +380,9 @@ ecpg_is_type_an_array(int type, const struct statement *stmt, const struct varia
       isarray = (atol((char *)PQgetvalue(query, 0, 0)) == -1) ? ECPG_ARRAY_ARRAY : ECPG_ARRAY_VECTOR;
       if (ecpg_dynamic_type(type) == SQL3_CHARACTER || ecpg_dynamic_type(type) == SQL3_CHARACTER_VARYING)
       {
-        /*
-         * arrays of character strings are not yet implemented
-         */
+           
+                                                               
+           
         isarray = ECPG_ARRAY_NONE;
       }
     }
@@ -413,9 +413,9 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
 
   if (isarray == ECPG_ARRAY_NONE)
   {
-    /*
-     * if we don't have enough space, we cannot read all tuples
-     */
+       
+                                                                
+       
     if ((var->arrsize > 0 && ntuples > var->arrsize) || (var->ind_arrsize > 0 && ntuples > var->ind_arrsize))
     {
       ecpg_log("ecpg_store_result on line %d: incorrect number of matches; %d don't fit into array of %ld\n", stmt->lineno, ntuples, var->arrsize);
@@ -425,9 +425,9 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
   }
   else
   {
-    /*
-     * since we read an array, the variable has to be an array too
-     */
+       
+                                                                   
+       
     if (var->arrsize == 0)
     {
       ecpg_raise(stmt->lineno, ECPG_NO_ARRAY, ECPG_SQLSTATE_DATATYPE_MISMATCH, NULL);
@@ -435,9 +435,9 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
     }
   }
 
-  /*
-   * allocate memory for NULL pointers
-   */
+     
+                                       
+     
   if ((var->arrsize == 0 || var->varcharsize == 0) && var->value == NULL)
   {
     int len = 0;
@@ -451,18 +451,18 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
       case ECPGt_string:
         if (!var->varcharsize && !var->arrsize)
         {
-          /* special mode for handling char**foo=0 */
+                                                     
           for (act_tuple = 0; act_tuple < ntuples; act_tuple++)
           {
             len += strlen(PQgetvalue(results, act_tuple, act_field)) + 1;
           }
-          len *= var->offset; /* should be 1, but YMNK */
+          len *= var->offset;                            
           len += (ntuples + 1) * sizeof(char *);
         }
         else
         {
           var->varcharsize = 0;
-          /* check strlen for each tuple */
+                                           
           for (act_tuple = 0; act_tuple < ntuples; act_tuple++)
           {
             int len = strlen(PQgetvalue(results, act_tuple, act_field)) + 1;
@@ -501,7 +501,7 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
     *((char **)var->pointer) = var->value;
   }
 
-  /* allocate indicator variable if needed */
+                                             
   if ((var->ind_arrsize == 0 || var->ind_varcharsize == 0) && var->ind_value == NULL && var->ind_pointer != NULL)
   {
     int len = var->ind_offset * ntuples;
@@ -514,15 +514,15 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
     *((char **)var->ind_pointer) = var->ind_value;
   }
 
-  /* fill the variable with the tuple(s) */
+                                           
   if (!var->varcharsize && !var->arrsize && (var->type == ECPGt_char || var->type == ECPGt_unsigned_char || var->type == ECPGt_string))
   {
-    /* special mode for handling char**foo=0 */
+                                               
 
-    /* filling the array of (char*)s */
+                                       
     char **current_string = (char **)var->value;
 
-    /* storing the data (after the last array element) */
+                                                         
     char *current_data_location = (char *)&current_string[ntuples + 1];
 
     for (act_tuple = 0; act_tuple < ntuples && status; act_tuple++)
@@ -541,7 +541,7 @@ ecpg_store_result(const PGresult *results, int act_field, const struct statement
       }
     }
 
-    /* terminate the list */
+                            
     *current_string = NULL;
   }
   else
@@ -609,8 +609,8 @@ static char *
 convert_bytea_to_string(char *from_data, int from_len, int lineno)
 {
   char *to_data;
-  int to_len = ecpg_hex_enc_len(from_len) + 4 + 1; /* backslash + 'x' +
-                                                    * quote + quote */
+  int to_len = ecpg_hex_enc_len(from_len) + 4 + 1;                      
+                                                                      
 
   to_data = ecpg_alloc(to_len, lineno);
   if (!to_data)
@@ -631,20 +631,20 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
   char *mallocedval = NULL;
   char *newcopy = NULL;
 
-  /*
-   * arrays are not possible unless the column is an array, too FIXME: we do
-   * not know if the column is an array here array input to singleton column
-   * will result in a runtime error
-   */
+     
+                                                                             
+                                                                             
+                                    
+     
 
-  /*
-   * Some special treatment is needed for records since we want their
-   * contents to arrive in a comma-separated list on insert (I think).
-   */
+     
+                                                                      
+                                                                       
+     
 
   *tobeinserted_p = "";
 
-  /* check for null value and set input buffer accordingly */
+                                                             
   switch (var->ind_type)
   {
   case ECPGt_short:
@@ -676,7 +676,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
       *tobeinserted_p = NULL;
     }
     break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
   case ECPGt_NO_INDICATOR:
     if (force_indicator == false)
     {
@@ -896,7 +896,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
       *tobeinserted_p = mallocedval;
       break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
     case ECPGt_float:
       if (!(mallocedval = ecpg_alloc(asize * 25, lineno)))
       {
@@ -987,7 +987,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
     case ECPGt_unsigned_char:
     case ECPGt_string:
     {
-      /* set slen to string length if type is char * */
+                                                       
       int slen = (var->varcharsize == 0) ? strlen((char *)var->value) : (unsigned int)var->varcharsize;
 
       if (!(newcopy = ecpg_alloc(slen + 1, lineno)))
@@ -1122,7 +1122,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
         }
         mallocedval = newcopy;
 
-        /* also copy trailing '\0' */
+                                     
         memcpy(mallocedval + strlen(mallocedval), str, slen + 1);
         if (var->arrsize > 1)
         {
@@ -1179,7 +1179,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
         }
         mallocedval = newcopy;
 
-        /* also copy trailing '\0' */
+                                     
         memcpy(mallocedval + strlen(mallocedval), str, slen + 1);
         if (var->arrsize > 1)
         {
@@ -1236,7 +1236,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
         }
         mallocedval = newcopy;
 
-        /* also copy trailing '\0' */
+                                     
         memcpy(mallocedval + strlen(mallocedval), str, slen + 1);
         if (var->arrsize > 1)
         {
@@ -1293,7 +1293,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
         }
         mallocedval = newcopy;
 
-        /* also copy trailing '\0' */
+                                     
         memcpy(mallocedval + strlen(mallocedval), str, slen + 1);
         if (var->arrsize > 1)
         {
@@ -1317,7 +1317,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
       break;
 
     default:
-      /* Not implemented yet */
+                               
       ecpg_raise(lineno, ECPG_UNSUPPORTED, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, ecpg_type_name(var->type));
       return false;
       break;
@@ -1399,10 +1399,10 @@ insert_tobeinserted(int position, int ph_len, struct statement *stmt, char *tobe
   strcpy(newcopy, stmt->command);
   strcpy(newcopy + position - 1, tobeinserted);
 
-  /*
-   * The strange thing in the second argument is the rest of the string from
-   * the old string
-   */
+     
+                                                                             
+                    
+     
   strcat(newcopy, stmt->command + position + ph_len - 1);
 
   ecpg_free(stmt->command);
@@ -1417,11 +1417,11 @@ store_input_from_desc(struct statement *stmt, struct descriptor_item *desc_item,
 {
   struct variable var;
 
-  /*
-   * In case of binary data, only allocate memory and memcpy because binary
-   * data have been already stored into desc_item->data with
-   * ecpg_store_input() at ECPGset_desc().
-   */
+     
+                                                                            
+                                                             
+                                           
+     
   if (desc_item->is_binary)
   {
     if (!(*tobeinserted = ecpg_alloc(desc_item->data_len, stmt->lineno)))
@@ -1462,13 +1462,13 @@ store_input_from_desc(struct statement *stmt, struct descriptor_item *desc_item,
   return true;
 }
 
-/*
- * ecpg_build_params
- *		Build statement parameters
- *
- * The input values are taken from user variables, and the results are stored
- * in arrays which can be used by PQexecParams().
- */
+   
+                     
+                               
+   
+                                                                              
+                                                  
+   
 bool
 ecpg_build_params(struct statement *stmt)
 {
@@ -1478,18 +1478,18 @@ ecpg_build_params(struct statement *stmt)
   const char *value;
   bool std_strings = false;
 
-  /* Get standard_conforming_strings setting. */
+                                                
   value = PQparameterStatus(stmt->connection->connection, "standard_conforming_strings");
   if (value && strcmp(value, "on") == 0)
   {
     std_strings = true;
   }
 
-  /*
-   * If the type is one of the fill in types then we take the argument and
-   * enter it to our parameter array at the first position. Then if there
-   * are any more fill in types we add more parameters.
-   */
+     
+                                                                           
+                                                                          
+                                                        
+     
   var = stmt->inlist;
   while (var)
   {
@@ -1502,16 +1502,16 @@ ecpg_build_params(struct statement *stmt)
     binary_length = 0;
     binary_format = false;
 
-    /*
-     * A descriptor is a special case since it contains many variables but
-     * is listed only once.
-     */
+       
+                                                                           
+                            
+       
     if (var->type == ECPGt_descriptor)
     {
-      /*
-       * We create an additional variable list here, so the same logic
-       * applies.
-       */
+         
+                                                                       
+                  
+         
       struct descriptor *desc;
       struct descriptor_item *desc_item;
 
@@ -1582,7 +1582,7 @@ ecpg_build_params(struct statement *stmt)
             if (sqlda->sqlvar[i].sqlind)
             {
               desc_inlist.ind_type = ECPGt_short;
-              /* ECPG expects indicator value < 0 */
+                                                    
               if (*(sqlda->sqlvar[i].sqlind))
               {
                 *(sqlda->sqlvar[i].sqlind) = -1;
@@ -1645,7 +1645,7 @@ ecpg_build_params(struct statement *stmt)
             if (sqlda->sqlvar[i].sqlind)
             {
               desc_inlist.ind_type = ECPGt_short;
-              /* ECPG expects indicator value < 0 */
+                                                    
               if (*(sqlda->sqlvar[i].sqlind))
               {
                 *(sqlda->sqlvar[i].sqlind) = -1;
@@ -1689,27 +1689,27 @@ ecpg_build_params(struct statement *stmt)
       }
     }
 
-    /*
-     * now tobeinserted points to an area that contains the next
-     * parameter; now find the position in the string where it belongs
-     */
+       
+                                                                 
+                                                                       
+       
     if ((position = next_insert(stmt->command, position, stmt->questionmarks, std_strings) + 1) == 0)
     {
-      /*
-       * We have an argument but we don't have the matched up
-       * placeholder in the string
-       */
+         
+                                                              
+                                   
+         
       ecpg_raise(stmt->lineno, ECPG_TOO_MANY_ARGUMENTS, ECPG_SQLSTATE_USING_CLAUSE_DOES_NOT_MATCH_PARAMETERS, NULL);
       ecpg_free_params(stmt, false);
       ecpg_free(tobeinserted);
       return false;
     }
 
-    /*
-     * if var->type=ECPGt_char_variable we have a dynamic cursor we have
-     * to simulate a dynamic cursor because there is no backend
-     * functionality for it
-     */
+       
+                                                                         
+                                                                
+                            
+       
     if (var->type == ECPGt_char_variable)
     {
       int ph_len = (stmt->command[position] == '?') ? strlen("?") : strlen("$1");
@@ -1722,16 +1722,16 @@ ecpg_build_params(struct statement *stmt)
       tobeinserted = NULL;
     }
 
-    /*
-     * if the placeholder is '$0' we have to replace it on the client side
-     * this is for places we want to support variables at that are not
-     * supported in the backend
-     */
+       
+                                                                           
+                                                                       
+                                
+       
     else if (stmt->command[position] == '0')
     {
       if (stmt->statement_type == ECPGst_prepare || stmt->statement_type == ECPGst_exec_with_exprlist)
       {
-        /* Need to double-quote the inserted statement name. */
+                                                               
         char *str = ecpg_alloc(strlen(tobeinserted) + 2 + 1, stmt->lineno);
 
         if (!str)
@@ -1781,7 +1781,7 @@ ecpg_build_params(struct statement *stmt)
       int *newparamlengths;
       int *newparamformats;
 
-      /* enlarge all the param arrays */
+                                        
       if ((newparamvalues = (char **)ecpg_realloc(stmt->paramvalues, sizeof(char *) * (stmt->nparams + 1), stmt->lineno)))
       {
         stmt->paramvalues = newparamvalues;
@@ -1816,18 +1816,18 @@ ecpg_build_params(struct statement *stmt)
         return false;
       }
 
-      /* only now can we assign ownership of "tobeinserted" to stmt */
+                                                                      
       stmt->paramvalues[stmt->nparams] = tobeinserted;
       stmt->paramlengths[stmt->nparams] = binary_length;
       stmt->paramformats[stmt->nparams] = (binary_format ? 1 : 0);
       stmt->nparams++;
 
-      /* let's see if this was an old style placeholder */
+                                                          
       if (stmt->command[position] == '?')
       {
-        /* yes, replace with new style */
-        int buffersize = sizeof(int) * CHAR_BIT * 10 / 3; /* a rough guess of the
-                                                           * size we need */
+                                         
+        int buffersize = sizeof(int) * CHAR_BIT * 10 / 3;                         
+                                                                            
 
         if (!(tobeinserted = (char *)ecpg_alloc(buffersize, stmt->lineno)))
         {
@@ -1852,10 +1852,10 @@ ecpg_build_params(struct statement *stmt)
     }
   }
 
-  /*
-   * Check if there are unmatched things left. PREPARE AS has no parameter.
-   * Check other statement.
-   */
+     
+                                                                            
+                            
+     
   if (stmt->statement_type != ECPGst_prepare && next_insert(stmt->command, position, stmt->questionmarks, std_strings) >= 0)
   {
     ecpg_raise(stmt->lineno, ECPG_TOO_FEW_ARGUMENTS, ECPG_SQLSTATE_USING_CLAUSE_DOES_NOT_MATCH_PARAMETERS, NULL);
@@ -1866,10 +1866,10 @@ ecpg_build_params(struct statement *stmt)
   return true;
 }
 
-/*
- * ecpg_autostart_transaction
- *		If we are in non-autocommit mode, automatically start a transaction.
- */
+   
+                              
+                                                                         
+   
 bool
 ecpg_autostart_transaction(struct statement *stmt)
 {
@@ -1887,10 +1887,10 @@ ecpg_autostart_transaction(struct statement *stmt)
   return true;
 }
 
-/*
- * ecpg_execute
- *		Execute the SQL statement.
- */
+   
+                
+                               
+   
 bool
 ecpg_execute(struct statement *stmt)
 {
@@ -1934,23 +1934,23 @@ ecpg_execute(struct statement *stmt)
   return true;
 }
 
-/*-------
- * ecpg_process_output
- *
- *	Process the statement result and store it into application variables.  This
- *	function can be called repeatedly during the same statement in case cursor
- *	readahead is used and the application does FETCH N which overflows the
- *	readahead window.
- *
- * Parameters
- *	stmt	statement structure holding the PGresult and
- *			the list of output variables
- *	clear_result
- *			PQclear() the result upon returning from this function
- *
- * Returns success as boolean. Also an SQL error is raised in case of failure.
- *-------
- */
+          
+                       
+   
+                                                                               
+                                                                              
+                                                                          
+                     
+   
+              
+                                                     
+                                  
+                
+                                                            
+   
+                                                                               
+          
+   
 bool
 ecpg_process_output(struct statement *stmt, bool clear_result)
 {
@@ -2017,10 +2017,10 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
         struct sqlda_compat *sqlda_new;
         int i;
 
-        /*
-         * If we are passed in a previously existing sqlda (chain)
-         * then free it.
-         */
+           
+                                                                   
+                         
+           
         while (sqlda)
         {
           sqlda_new = sqlda->desc_next;
@@ -2030,15 +2030,15 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
         *_sqlda = sqlda = sqlda_new = NULL;
         for (i = ntuples - 1; i >= 0; i--)
         {
-          /*
-           * Build a new sqlda structure. Note that only
-           * fetching 1 record is supported
-           */
+             
+                                                         
+                                            
+             
           sqlda_new = ecpg_build_compat_sqlda(stmt->lineno, stmt->results, i, stmt->compat);
 
           if (!sqlda_new)
           {
-            /* cleanup all SQLDAs we created up */
+                                                  
             while (sqlda)
             {
               sqlda_new = sqlda->desc_next;
@@ -2072,10 +2072,10 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
         struct sqlda_struct *sqlda_new;
         int i;
 
-        /*
-         * If we are passed in a previously existing sqlda (chain)
-         * then free it.
-         */
+           
+                                                                   
+                         
+           
         while (sqlda)
         {
           sqlda_new = sqlda->desc_next;
@@ -2085,15 +2085,15 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
         *_sqlda = sqlda = sqlda_new = NULL;
         for (i = ntuples - 1; i >= 0; i--)
         {
-          /*
-           * Build a new sqlda structure. Note that only
-           * fetching 1 record is supported
-           */
+             
+                                                         
+                                            
+             
           sqlda_new = ecpg_build_native_sqlda(stmt->lineno, stmt->results, i, stmt->compat);
 
           if (!sqlda_new)
           {
-            /* cleanup all SQLDAs we created up */
+                                                  
             while (sqlda)
             {
               sqlda_new = sqlda->desc_next;
@@ -2171,7 +2171,7 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
     }
     if (res == -1)
     {
-      /* COPY done */
+                     
       PQclear(stmt->results);
       stmt->results = PQgetResult(stmt->connection->connection);
       if (PQresultStatus(stmt->results) == PGRES_COMMAND_OK)
@@ -2187,10 +2187,10 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
   }
   default:
 
-    /*
-     * execution should never reach this code because it is already
-     * handled in ECPGcheck_PQresult()
-     */
+       
+                                                                    
+                                       
+       
     ecpg_log("ecpg_process_output on line %d: unknown execution status type\n", stmt->lineno);
     ecpg_raise_backend(stmt->lineno, stmt->results, stmt->connection->connection, stmt->compat);
     status = false;
@@ -2203,7 +2203,7 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
     stmt->results = NULL;
   }
 
-  /* check for asynchronous returns */
+                                      
   PQconsumeInput(stmt->connection->connection);
   while ((notify = PQnotifies(stmt->connection->connection)) != NULL)
   {
@@ -2215,16 +2215,16 @@ ecpg_process_output(struct statement *stmt, bool clear_result)
   return status;
 }
 
-/*
- * ecpg_do_prologue
- *
- * Initialize various infrastructure elements for executing the statement:
- *
- *	- create the statement structure
- *	- set the C numeric locale for communicating with the backend
- *	- preprocess the variable list of input/output parameters into
- *	  linked lists
- */
+   
+                    
+   
+                                                                           
+   
+                                    
+                                                                 
+                                                                  
+                  
+   
 bool
 ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const char *connection_name, const bool questionmarks, enum ECPG_statement_type statement_type, const char *query, va_list args, struct statement **stmt_out)
 {
@@ -2261,20 +2261,20 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
     return false;
   }
 
-  /*
-   * Make sure we do NOT honor the locale for numeric input/output since the
-   * database wants the standard decimal point.  If available, use
-   * uselocale() for this because it's thread-safe.  Windows doesn't have
-   * that, but it usually does have _configthreadlocale().  In some versions
-   * of MinGW, _configthreadlocale() exists but always returns -1 --- so
-   * treat that situation as if the function doesn't exist.
-   */
+     
+                                                                             
+                                                                   
+                                                                          
+                                                                             
+                                                                         
+                                                            
+     
 #ifdef HAVE_USELOCALE
 
-  /*
-   * Since ecpg_init() succeeded, we have a connection.  Any successful
-   * connection initializes ecpg_clocale.
-   */
+     
+                                                                        
+                                          
+     
   Assert(ecpg_clocale);
   stmt->oldlocale = uselocale(ecpg_clocale);
   if (stmt->oldlocale == (locale_t)0)
@@ -2295,10 +2295,10 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
   setlocale(LC_NUMERIC, "C");
 #endif
 
-  /*
-   * If statement type is ECPGst_prepnormal we are supposed to prepare the
-   * statement before executing them
-   */
+     
+                                                                           
+                                     
+     
   if (statement_type == ECPGst_prepnormal)
   {
     if (!ecpg_auto_prepare(lineno, connection_name, compat, &prepname, query))
@@ -2307,10 +2307,10 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
       return false;
     }
 
-    /*
-     * statement is now prepared, so instead of the query we have to
-     * execute the name
-     */
+       
+                                                                     
+                        
+       
     stmt->command = prepname;
     statement_type = ECPGst_execute;
   }
@@ -2323,7 +2323,7 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
 
   if (statement_type == ECPGst_execute)
   {
-    /* if we have an EXECUTE command, only the name is send */
+                                                              
     char *command = ecpg_prepared(stmt->command, con);
 
     if (command)
@@ -2338,7 +2338,7 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
       return false;
     }
   }
-  /* name of PREPARE AS will be set in loop of inlist */
+                                                        
 
   stmt->connection = con;
   stmt->lineno = lineno;
@@ -2347,26 +2347,26 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
   stmt->questionmarks = questionmarks;
   stmt->statement_type = statement_type;
 
-  /*------
-   * create a list of variables
-   *
-   * The variables are listed with input variables preceding outputvariables
-   * The end of each group is marked by an end marker. per variable we list:
-   *
-   * type - as defined in ecpgtype.h
-   * value - where to store the data
-   * varcharsize - length of string in case we have a stringvariable, else 0
-   * arraysize - 0 for pointer (we don't know the size of the array), 1 for
-   * simple variable, size for arrays
-   * offset - offset between ith and (i+1)th entry in an array, normally
-   * that means sizeof(type)
-   * ind_type - type of indicator variable
-   * ind_value - pointer to indicator variable
-   * ind_varcharsize - empty
-   * ind_arraysize - arraysize of indicator array
-   * ind_offset - indicator offset
-   *------
-   */
+           
+                                
+     
+                                                                             
+                                                                             
+     
+                                     
+                                     
+                                                                             
+                                                                            
+                                      
+                                                                         
+                             
+                                           
+                                               
+                             
+                                                  
+                                   
+           
+     
 
   is_prepared_name_set = false;
 
@@ -2397,12 +2397,12 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
       var->arrsize = va_arg(args, long);
       var->offset = va_arg(args, long);
 
-      /*
-       * Unknown array size means pointer to an array. Unknown
-       * varcharsize usually also means pointer. But if the type is
-       * character and the array size is known, it is an array of
-       * pointers to char, so use var->pointer as it is.
-       */
+         
+                                                               
+                                                                    
+                                                                  
+                                                         
+         
       if (var->arrsize == 0 || (var->varcharsize == 0 && ((var->type != ECPGt_char && var->type != ECPGt_unsigned_char) || (var->arrsize <= 1))))
       {
         var->value = *((char **)(var->pointer));
@@ -2412,11 +2412,11 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
         var->value = var->pointer;
       }
 
-      /*
-       * negative values are used to indicate an array without given
-       * bounds
-       */
-      /* reset to zero for us */
+         
+                                                                     
+                
+         
+                                
       if (var->arrsize < 0)
       {
         var->arrsize = 0;
@@ -2443,11 +2443,11 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
         var->ind_value = var->ind_pointer;
       }
 
-      /*
-       * negative values are used to indicate an array without given
-       * bounds
-       */
-      /* reset to zero for us */
+         
+                                                                     
+                
+         
+                                
       if (var->ind_arrsize < 0)
       {
         var->ind_arrsize = 0;
@@ -2457,7 +2457,7 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
         var->ind_varcharsize = 0;
       }
 
-      /* if variable is NULL, the statement hasn't been prepared */
+                                                                   
       if (var->pointer == NULL)
       {
         ecpg_raise(lineno, ECPG_INVALID_STMT, ECPG_SQLSTATE_INVALID_SQL_STATEMENT_NAME, NULL);
@@ -2488,7 +2488,7 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
     type = va_arg(args, enum ECPGttype);
   }
 
-  /* are we connected? */
+                         
   if (con == NULL || con->connection == NULL)
   {
     ecpg_raise(lineno, ECPG_NOT_CONN, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, (con) ? con->name : ecpg_gettext("<empty>"));
@@ -2503,7 +2503,7 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
     return false;
   }
 
-  /* initialize auto_mem struct */
+                                  
   ecpg_clear_auto_mem();
 
   *stmt_out = stmt;
@@ -2511,10 +2511,10 @@ ecpg_do_prologue(int lineno, const int compat, const int force_indicator, const 
   return true;
 }
 
-/*
- * ecpg_do_epilogue
- *	  Restore the application locale and free the statement structure.
- */
+   
+                    
+                                                                      
+   
 void
 ecpg_do_epilogue(struct statement *stmt)
 {
@@ -2535,11 +2535,11 @@ ecpg_do_epilogue(struct statement *stmt)
   }
 #ifdef HAVE__CONFIGTHREADLOCALE
 
-  /*
-   * This is a bit trickier than it looks: if we failed partway through
-   * statement initialization, oldthreadlocale could still be 0.  But that's
-   * okay because a call with 0 is defined to be a no-op.
-   */
+     
+                                                                        
+                                                                             
+                                                          
+     
   if (stmt->oldthreadlocale != -1)
   {
     (void)_configthreadlocale(stmt->oldthreadlocale);
@@ -2550,11 +2550,11 @@ ecpg_do_epilogue(struct statement *stmt)
   free_statement(stmt);
 }
 
-/*
- * Execute SQL statements in the backend.
- * The input/output parameters (variable argument list) are passed
- * in a va_list, so other functions can use this interface.
- */
+   
+                                          
+                                                                   
+                                                            
+   
 bool
 ecpg_do(const int lineno, const int compat, const int force_indicator, const char *connection_name, const bool questionmarks, const int st, const char *query, va_list args)
 {
@@ -2593,10 +2593,10 @@ fail:
   return false;
 }
 
-/*
- * Execute SQL statements in the backend.
- * The input/output parameters are passed as variable-length argument list.
- */
+   
+                                          
+                                                                            
+   
 bool
 ECPGdo(const int lineno, const int compat, const int force_indicator, const char *connection_name, const bool questionmarks, const int st, const char *query, ...)
 {
@@ -2610,7 +2610,7 @@ ECPGdo(const int lineno, const int compat, const int force_indicator, const char
   return ret;
 }
 
-/* old descriptor interface */
+                              
 bool
 ECPGdo_descriptor(int line, const char *connection, const char *descriptor, const char *query)
 {

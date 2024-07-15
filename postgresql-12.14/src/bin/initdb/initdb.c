@@ -1,50 +1,50 @@
-/*-------------------------------------------------------------------------
- *
- * initdb --- initialize a PostgreSQL installation
- *
- * initdb creates (initializes) a PostgreSQL database cluster (site,
- * instance, installation, whatever).  A database cluster is a
- * collection of PostgreSQL databases all managed by the same server.
- *
- * To create the database cluster, we create the directory that contains
- * all its data, create the files that hold the global tables, create
- * a few other control files for it, and create three databases: the
- * template databases "template0" and "template1", and a default user
- * database "postgres".
- *
- * The template databases are ordinary PostgreSQL databases.  template0
- * is never supposed to change after initdb, whereas template1 can be
- * changed to add site-local standard data.  Either one can be copied
- * to produce a new database.
- *
- * For largely-historical reasons, the template1 database is the one built
- * by the basic bootstrap process.  After it is complete, template0 and
- * the default database, postgres, are made just by copying template1.
- *
- * To create template1, we run the postgres (backend) program in bootstrap
- * mode and feed it data from the postgres.bki library file.  After this
- * initial bootstrap phase, some additional stuff is created by normal
- * SQL commands fed to a standalone backend.  Some of those commands are
- * just embedded into this program (yeah, it's ugly), but larger chunks
- * are taken from script files.
- *
- *
- * Note:
- *	 The program has some memory leakage - it isn't worth cleaning it up.
- *
- * This is a C implementation of the previous shell script for setting up a
- * PostgreSQL cluster location, and should be highly compatible with it.
- * author of C translation: Andrew Dunstan	   mailto:andrew@dunslane.net
- *
- * This code is released under the terms of the PostgreSQL License.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/initdb/initdb.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                   
+   
+                                                                     
+                                                               
+                                                                      
+   
+                                                                         
+                                                                      
+                                                                     
+                                                                      
+                        
+   
+                                                                        
+                                                                      
+                                                                      
+                              
+   
+                                                                           
+                                                                        
+                                                                       
+   
+                                                                           
+                                                                         
+                                                                       
+                                                                         
+                                                                        
+                                
+   
+   
+         
+                                                                         
+   
+                                                                            
+                                                                         
+                                                                         
+   
+                                                                    
+   
+                                                                         
+                                                                        
+   
+                           
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -61,7 +61,7 @@
 
 #include "access/xlog_internal.h"
 #include "catalog/pg_authid_d.h"
-#include "catalog/pg_class_d.h" /* pgrminclude ignore */
+#include "catalog/pg_class_d.h"                         
 #include "catalog/pg_collation_d.h"
 #include "common/file_perm.h"
 #include "common/file_utils.h"
@@ -74,7 +74,7 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 
-/* Ideally this would be in a .h file, but it hardly seems worth the trouble */
+                                                                               
 extern const char *
 select_default_timezone(const char *share_path);
 
@@ -110,12 +110,12 @@ static const char *const auth_methods_local[] = {"trust", "reject", "scram-sha-2
 #endif
     NULL};
 
-/*
- * these values are passed in by makefile defines
- */
+   
+                                                  
+   
 static char *share_path = NULL;
 
-/* values to be obtained from arguments */
+                                          
 static char *pg_data = NULL;
 static char *encoding = NULL;
 static char *locale = NULL;
@@ -142,7 +142,7 @@ static char *xlog_dir = NULL;
 static char *str_wal_segment_size_mb = NULL;
 static int wal_segment_size_mb;
 
-/* internal vars */
+                   
 static const char *progname;
 static int encodingid;
 static char *bki_file;
@@ -166,15 +166,15 @@ static bool output_failed = false;
 static int output_errno = 0;
 static char *pgdata_native;
 
-/* defaults */
+              
 static int n_connections = 10;
 static int n_buffers = 50;
 static const char *dynamic_shared_memory_type = NULL;
 static const char *default_timezone = NULL;
 
-/*
- * Warning messages for authentication methods
- */
+   
+                                               
+   
 #define AUTHTRUST_WARNING                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
   "# CAUTION: Configuring the system for local \"trust\" authentication\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   "# allows any local user to connect as any PostgreSQL user, including\n"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
@@ -182,22 +182,22 @@ static const char *default_timezone = NULL;
   "# use another authentication method.\n"
 static bool authwarning = false;
 
-/*
- * Centralized knowledge of switches to pass to backend
- *
- * Note: we run the backend with -F (fsync disabled) and then do a single
- * pass of fsync'ing at the end.  This is faster than fsync'ing each step.
- *
- * Note: in the shell-script version, we also passed PGDATA as a -D switch,
- * but here it is more convenient to pass it as an environment variable
- * (no quoting to worry about).
- */
+   
+                                                        
+   
+                                                                          
+                                                                           
+   
+                                                                            
+                                                                        
+                                
+   
 static const char *boot_options = "-F";
 static const char *backend_options = "--single -F -O -j -c search_path=pg_catalog -c exit_on_error=true";
 
 static const char *const subdirs[] = {"global", "pg_wal/archive_status", "pg_commit_ts", "pg_dynshmem", "pg_notify", "pg_serial", "pg_snapshots", "pg_subtrans", "pg_twophase", "pg_multixact", "pg_multixact/members", "pg_multixact/offsets", "base", "base/1", "pg_replslot", "pg_tblspc", "pg_stat", "pg_stat_tmp", "pg_xact", "pg_logical", "pg_logical/snapshots", "pg_logical/mappings"};
 
-/* path to 'initdb' binary directory */
+                                       
 static char bin_path[MAXPGPATH];
 static char backend_exec[MAXPGPATH];
 
@@ -299,9 +299,9 @@ warn_on_mount_point(int error);
 void
 initialize_data_directory(void);
 
-/*
- * macros for running pipes to postgres
- */
+   
+                                        
+   
 #define PG_CMD_DECL                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   char cmd[MAXPGPATH];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   FILE *cmdfd
@@ -311,14 +311,14 @@ initialize_data_directory(void);
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     cmdfd = popen_check(cmd, "w");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     if (cmdfd == NULL)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-      exit(1); /* message already printed by popen_check */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
+      exit(1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   } while (0)
 
 #define PG_CMD_CLOSE                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (pclose_check(cmdfd))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
-      exit(1); /* message already printed by pclose_check */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+      exit(1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   } while (0)
 
 #define PG_CMD_PUTS(line)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
@@ -349,10 +349,10 @@ initialize_data_directory(void);
       output_failed = true, output_errno = errno;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   } while (0)
 
-/*
- * Escape single quotes and backslashes, suitably for insertions into
- * configuration files or SQL E'' strings.
- */
+   
+                                                                      
+                                           
+   
 static char *
 escape_quotes(const char *src)
 {
@@ -366,15 +366,15 @@ escape_quotes(const char *src)
   return result;
 }
 
-/*
- * Escape a field value to be inserted into the BKI data.
- * Here, we first run the value through escape_quotes (which
- * will be inverted by the backend's scanstr() function) and
- * then overlay special processing of double quotes, which
- * bootscanner.l will only accept as data if converted to octal
- * representation ("\042").  We always wrap the value in double
- * quotes, even if that isn't strictly necessary.
- */
+   
+                                                          
+                                                             
+                                                             
+                                                           
+                                                                
+                                                                
+                                                  
+   
 static char *
 escape_quotes_bki(const char *src)
 {
@@ -384,7 +384,7 @@ escape_quotes_bki(const char *src)
   char *datap;
   int nquotes = 0;
 
-  /* count double quotes in data */
+                                   
   datap = data;
   while ((datap = strchr(datap, '"')) != NULL)
   {
@@ -414,13 +414,13 @@ escape_quotes_bki(const char *src)
   return result;
 }
 
-/*
- * make a copy of the array of lines, with token replaced by replacement
- * the first time it occurs on each line.
- *
- * This does most of what sed was used for in the shell script, but
- * doesn't need any regexp stuff.
- */
+   
+                                                                         
+                                          
+   
+                                                                    
+                                  
+   
 static char **
 replace_token(char **lines, const char *token, const char *replacement)
 {
@@ -446,14 +446,14 @@ replace_token(char **lines, const char *token, const char *replacement)
     char *newline;
     int pre;
 
-    /* just copy pointer if NULL or no change needed */
+                                                       
     if (lines[i] == NULL || (where = strstr(lines[i], token)) == NULL)
     {
       result[i] = lines[i];
       continue;
     }
 
-    /* if we get here a change is needed - set up new line */
+                                                             
 
     newline = (char *)pg_malloc(strlen(lines[i]) + diff + 1);
 
@@ -471,11 +471,11 @@ replace_token(char **lines, const char *token, const char *replacement)
   return result;
 }
 
-/*
- * make a copy of lines without any that contain the token
- *
- * a sort of poor man's grep -v
- */
+   
+                                                           
+   
+                                
+   
 #ifndef HAVE_UNIX_SOCKETS
 static char **
 filter_lines_with_token(char **lines, const char *token)
@@ -503,9 +503,9 @@ filter_lines_with_token(char **lines, const char *token)
 }
 #endif
 
-/*
- * get the lines from a text file
- */
+   
+                                  
+   
 static char **
 readfile(const char *path)
 {
@@ -523,7 +523,7 @@ readfile(const char *path)
     exit(1);
   }
 
-  /* pass over the file twice - the first time to size the result */
+                                                                    
 
   while ((c = fgetc(infile)) != EOF)
   {
@@ -539,7 +539,7 @@ readfile(const char *path)
     }
   }
 
-  /* handle last line without a terminating newline (yuck) */
+                                                             
   if (linelen)
   {
     nlines++;
@@ -549,11 +549,11 @@ readfile(const char *path)
     maxlength = linelen;
   }
 
-  /* set up the result and the line buffer */
+                                             
   result = (char **)pg_malloc((nlines + 1) * sizeof(char *));
   buffer = (char *)pg_malloc(maxlength + 1);
 
-  /* now reprocess the file and store the lines */
+                                                  
   rewind(infile);
   n = 0;
   while (fgets(buffer, maxlength + 1, infile) != NULL && n < nlines)
@@ -568,12 +568,12 @@ readfile(const char *path)
   return result;
 }
 
-/*
- * write an array of lines to a file
- *
- * This is only used to write text files.  Use fopen "w" not PG_BINARY_W
- * so that the resulting configuration files are nicely editable on Windows.
- */
+   
+                                     
+   
+                                                                         
+                                                                             
+   
 static void
 writefile(char *path, char **lines)
 {
@@ -601,9 +601,9 @@ writefile(char *path, char **lines)
   }
 }
 
-/*
- * Open a subcommand with suitable error messaging
- */
+   
+                                                   
+   
 static FILE *
 popen_check(const char *command, const char *mode)
 {
@@ -620,10 +620,10 @@ popen_check(const char *command, const char *mode)
   return cmdfd;
 }
 
-/*
- * clean up any files we created on failure
- * if we created the data directory remove it too
- */
+   
+                                            
+                                                  
+   
 static void
 cleanup_directories_atexit(void)
 {
@@ -667,7 +667,7 @@ cleanup_directories_atexit(void)
         pg_log_error("failed to remove contents of WAL directory");
       }
     }
-    /* otherwise died during startup, do nothing! */
+                                                    
   }
   else
   {
@@ -683,18 +683,18 @@ cleanup_directories_atexit(void)
   }
 }
 
-/*
- * find the current user
- *
- * on unix make sure it isn't root
- */
+   
+                         
+   
+                                   
+   
 static char *
 get_id(void)
 {
   const char *username;
 
 #ifndef WIN32
-  if (geteuid() == 0) /* 0 is root's uid */
+  if (geteuid() == 0)                      
   {
     pg_log_error("cannot be run as root");
     fprintf(stderr, _("Please log in (using, e.g., \"su\") as the (unprivileged) user that will\n"
@@ -717,9 +717,9 @@ encodingid_to_string(int enc)
   return pg_strdup(result);
 }
 
-/*
- * get the encoding id for a given encoding name
- */
+   
+                                                 
+   
 static int
 get_encoding_id(const char *encoding_name)
 {
@@ -736,10 +736,10 @@ get_encoding_id(const char *encoding_name)
   exit(1);
 }
 
-/*
- * Support for determining the best default text search configuration.
- * We key this off the first part of LC_CTYPE (ie, the language name).
- */
+   
+                                                                       
+                                                                       
+   
 struct tsearch_config_match
 {
   const char *tsconfname;
@@ -747,30 +747,30 @@ struct tsearch_config_match
 };
 
 static const struct tsearch_config_match tsearch_config_languages[] = {
-    {"arabic", "ar"}, {"arabic", "Arabic"}, {"danish", "da"}, {"danish", "Danish"}, {"dutch", "nl"}, {"dutch", "Dutch"}, {"english", "C"}, {"english", "POSIX"}, {"english", "en"}, {"english", "English"}, {"finnish", "fi"}, {"finnish", "Finnish"}, {"french", "fr"}, {"french", "French"}, {"german", "de"}, {"german", "German"}, {"hungarian", "hu"}, {"hungarian", "Hungarian"}, {"indonesian", "id"}, {"indonesian", "Indonesian"}, {"irish", "ga"}, {"irish", "Irish"}, {"italian", "it"}, {"italian", "Italian"}, {"lithuanian", "lt"}, {"lithuanian", "Lithuanian"}, {"nepali", "ne"}, {"nepali", "Nepali"}, {"norwegian", "no"}, {"norwegian", "Norwegian"}, {"portuguese", "pt"}, {"portuguese", "Portuguese"}, {"romanian", "ro"}, {"russian", "ru"}, {"russian", "Russian"}, {"spanish", "es"}, {"spanish", "Spanish"}, {"swedish", "sv"}, {"swedish", "Swedish"}, {"tamil", "ta"}, {"tamil", "Tamil"}, {"turkish", "tr"}, {"turkish", "Turkish"}, {NULL, NULL} /* end marker */
+    {"arabic", "ar"}, {"arabic", "Arabic"}, {"danish", "da"}, {"danish", "Danish"}, {"dutch", "nl"}, {"dutch", "Dutch"}, {"english", "C"}, {"english", "POSIX"}, {"english", "en"}, {"english", "English"}, {"finnish", "fi"}, {"finnish", "Finnish"}, {"french", "fr"}, {"french", "French"}, {"german", "de"}, {"german", "German"}, {"hungarian", "hu"}, {"hungarian", "Hungarian"}, {"indonesian", "id"}, {"indonesian", "Indonesian"}, {"irish", "ga"}, {"irish", "Irish"}, {"italian", "it"}, {"italian", "Italian"}, {"lithuanian", "lt"}, {"lithuanian", "Lithuanian"}, {"nepali", "ne"}, {"nepali", "Nepali"}, {"norwegian", "no"}, {"norwegian", "Norwegian"}, {"portuguese", "pt"}, {"portuguese", "Portuguese"}, {"romanian", "ro"}, {"russian", "ru"}, {"russian", "Russian"}, {"spanish", "es"}, {"spanish", "Spanish"}, {"swedish", "sv"}, {"swedish", "Swedish"}, {"tamil", "ta"}, {"tamil", "Tamil"}, {"turkish", "tr"}, {"turkish", "Turkish"}, {NULL, NULL}                 
 };
 
-/*
- * Look for a text search configuration matching lc_ctype, and return its
- * name; return NULL if no match.
- */
+   
+                                                                          
+                                  
+   
 static const char *
 find_matching_ts_config(const char *lc_type)
 {
   int i;
   char *langname, *ptr;
 
-  /*
-   * Convert lc_ctype to a language name by stripping everything after an
-   * underscore (usual case) or a hyphen (Windows "locale name"; see
-   * comments at IsoLocaleName()).
-   *
-   * XXX Should ' ' be a stop character?	This would select "norwegian" for
-   * the Windows locale "Norwegian (Nynorsk)_Norway.1252".  If we do so, we
-   * should also accept the "nn" and "nb" Unix locales.
-   *
-   * Just for paranoia, we also stop at '.' or '@'.
-   */
+     
+                                                                          
+                                                                     
+                                   
+     
+                                                                           
+                                                                            
+                                                        
+     
+                                                    
+     
   if (lc_type == NULL)
   {
     langname = pg_strdup("");
@@ -798,18 +798,18 @@ find_matching_ts_config(const char *lc_type)
   return NULL;
 }
 
-/*
- * set name of given input file variable under data directory
- */
+   
+                                                              
+   
 static void
 set_input(char **dest, const char *filename)
 {
   *dest = psprintf("%s/%s", share_path, filename);
 }
 
-/*
- * check that given input file exists
- */
+   
+                                      
+   
 static void
 check_input(char *path)
 {
@@ -840,10 +840,10 @@ check_input(char *path)
   }
 }
 
-/*
- * write out the PG_VERSION file in the data dir, or its subdirectory
- * if extrapath is not NULL
- */
+   
+                                                                      
+                            
+   
 static void
 write_version_file(const char *extrapath)
 {
@@ -872,10 +872,10 @@ write_version_file(const char *extrapath)
   free(path);
 }
 
-/*
- * set up an empty config file so we can check config settings by launching
- * a test backend
- */
+   
+                                                                            
+                  
+   
 static void
 set_null_conf(void)
 {
@@ -897,24 +897,24 @@ set_null_conf(void)
   free(path);
 }
 
-/*
- * Determine which dynamic shared memory implementation should be used on
- * this platform.  POSIX shared memory is preferable because the default
- * allocation limits are much higher than the limits for System V on most
- * systems that support both, but the fact that a platform has shm_open
- * doesn't guarantee that that call will succeed when attempted.  So, we
- * attempt to reproduce what the postmaster will do when allocating a POSIX
- * segment in dsm_impl.c; if it doesn't work, we assume it won't work for
- * the postmaster either, and configure the cluster for System V shared
- * memory instead.
- */
+   
+                                                                          
+                                                                         
+                                                                          
+                                                                        
+                                                                         
+                                                                            
+                                                                          
+                                                                        
+                   
+   
 static const char *
 choose_dsm_implementation(void)
 {
 #ifdef HAVE_SHM_OPEN
   int ntries = 10;
 
-  /* Initialize random(); this function is its only user in this program. */
+                                                                            
   srandom((unsigned int)(getpid() ^ time(NULL)));
 
   while (ntries > 0)
@@ -946,18 +946,18 @@ choose_dsm_implementation(void)
 #endif
 }
 
-/*
- * Determine platform-specific config settings
- *
- * Use reasonable values if kernel will let us, else scale back.
- */
+   
+                                               
+   
+                                                                 
+   
 static void
 test_config_settings(void)
 {
-  /*
-   * This macro defines the minimum shared_buffers we want for a given
-   * max_connections value. The arrays show the settings to try.
-   */
+     
+                                                                       
+                                                                 
+     
 #define MIN_BUFS_FOR_CONNS(nconns) ((nconns) * 10)
 
   static const int trial_conns[] = {100, 50, 40, 30, 20};
@@ -968,19 +968,19 @@ test_config_settings(void)
   const int bufslen = sizeof(trial_bufs) / sizeof(int);
   int i, status, test_conns, test_buffs, ok_buffers = 0;
 
-  /*
-   * Need to determine working DSM implementation first so that subsequent
-   * tests don't fail because DSM setting doesn't work.
-   */
+     
+                                                                           
+                                                        
+     
   printf(_("selecting dynamic shared memory implementation ... "));
   fflush(stdout);
   dynamic_shared_memory_type = choose_dsm_implementation();
   printf("%s\n", dynamic_shared_memory_type);
 
-  /*
-   * Probe for max_connections before shared_buffers, since it is subject to
-   * more constraints than shared_buffers.
-   */
+     
+                                                                             
+                                           
+     
   printf(_("selecting default max_connections ... "));
   fflush(stdout);
 
@@ -1016,7 +1016,7 @@ test_config_settings(void)
 
   for (i = 0; i < bufslen; i++)
   {
-    /* Use same amount of memory, independent of BLCKSZ */
+                                                          
     test_buffs = (trial_bufs[i] * 8192) / BLCKSZ;
     if (test_buffs <= ok_buffers)
     {
@@ -1054,9 +1054,9 @@ test_config_settings(void)
   printf("%s\n", default_timezone ? default_timezone : "GMT");
 }
 
-/*
- * Calculate the default wal_size with a "pretty" unit.
- */
+   
+                                                        
+   
 static char *
 pretty_wal_size(int segment_count)
 {
@@ -1075,9 +1075,9 @@ pretty_wal_size(int segment_count)
   return result;
 }
 
-/*
- * set up all the config files
- */
+   
+                               
+   
 static void
 setup_config(void)
 {
@@ -1089,7 +1089,7 @@ setup_config(void)
   fputs(_("creating configuration files ... "), stdout);
   fflush(stdout);
 
-  /* postgresql.conf */
+                       
 
   conflines = readfile(conf_file);
 
@@ -1118,7 +1118,7 @@ setup_config(void)
   conflines = replace_token(conflines, "#port = 5432", repltok);
 #endif
 
-  /* set default max_wal_size and min_wal_size */
+                                                 
   snprintf(repltok, sizeof(repltok), "min_wal_size = %s", pretty_wal_size(DEFAULT_MIN_WAL_SEGS));
   conflines = replace_token(conflines, "#min_wal_size = 80MB", repltok);
 
@@ -1194,12 +1194,12 @@ setup_config(void)
     conflines = replace_token(conflines, "#password_encryption = md5", "password_encryption = scram-sha-256");
   }
 
-  /*
-   * If group access has been enabled for the cluster then it makes sense to
-   * ensure that the log files also allow group access.  Otherwise a backup
-   * from a user in the group would fail if the log files were not
-   * relocated.
-   */
+     
+                                                                             
+                                                                            
+                                                                   
+                
+     
   if (pg_dir_create_mode == PG_DIR_MODE_GROUP)
   {
     conflines = replace_token(conflines, "#log_file_mode = 0600", "log_file_mode = 0640");
@@ -1214,12 +1214,12 @@ setup_config(void)
     exit(1);
   }
 
-  /*
-   * create the automatic configuration file to store the configuration
-   * parameters set by ALTER SYSTEM command. The parameters present in this
-   * file will override the value of parameters that exists before parse of
-   * this file.
-   */
+     
+                                                                        
+                                                                            
+                                                                            
+                
+     
   autoconflines[0] = pg_strdup("# Do not edit this file manually!\n");
   autoconflines[1] = pg_strdup("# It will be overwritten by the ALTER SYSTEM command.\n");
   autoconflines[2] = NULL;
@@ -1235,7 +1235,7 @@ setup_config(void)
 
   free(conflines);
 
-  /* pg_hba.conf */
+                   
 
   conflines = readfile(hba_file);
 
@@ -1247,26 +1247,26 @@ setup_config(void)
 
 #ifdef HAVE_IPV6
 
-  /*
-   * Probe to see if there is really any platform support for IPv6, and
-   * comment out the relevant pg_hba line if not.  This avoids runtime
-   * warnings if getaddrinfo doesn't actually cope with IPv6.  Particularly
-   * useful on Windows, where executables built on a machine with IPv6 may
-   * have to run on a machine without.
-   */
+     
+                                                                        
+                                                                       
+                                                                            
+                                                                           
+                                       
+     
   {
     struct addrinfo *gai_result;
     struct addrinfo hints;
     int err = 0;
 
 #ifdef WIN32
-    /* need to call WSAStartup before calling getaddrinfo */
+                                                            
     WSADATA wsaData;
 
     err = WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
 
-    /* for best results, this code should match parse_hba() */
+                                                              
     hints.ai_flags = AI_NUMERICHOST;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = 0;
@@ -1282,13 +1282,13 @@ setup_config(void)
       conflines = replace_token(conflines, "host    replication     all             ::1", "#host    replication     all             ::1");
     }
   }
-#else  /* !HAVE_IPV6 */
-  /* If we didn't compile IPV6 support at all, always comment it out */
+#else                  
+                                                                       
   conflines = replace_token(conflines, "host    all             all             ::1", "#host    all             all             ::1");
   conflines = replace_token(conflines, "host    replication     all             ::1", "#host    replication     all             ::1");
-#endif /* HAVE_IPV6 */
+#endif                
 
-  /* Replace default authentication methods */
+                                              
   conflines = replace_token(conflines, "@authmethodhost@", authmethodhost);
   conflines = replace_token(conflines, "@authmethodlocal@", authmethodlocal);
 
@@ -1305,7 +1305,7 @@ setup_config(void)
 
   free(conflines);
 
-  /* pg_ident.conf */
+                     
 
   conflines = readfile(ident_file);
 
@@ -1323,9 +1323,9 @@ setup_config(void)
   check_ok();
 }
 
-/*
- * run the BKI script in bootstrap mode to create template1
- */
+   
+                                                            
+   
 static void
 bootstrap_template1(void)
 {
@@ -1340,7 +1340,7 @@ bootstrap_template1(void)
 
   bki_lines = readfile(bki_file);
 
-  /* Check that bki file appears to be of the right version */
+                                                              
 
   snprintf(headerline, sizeof(headerline), "# PostgreSQL %s\n", PG_MAJORVERSION);
 
@@ -1352,7 +1352,7 @@ bootstrap_template1(void)
     exit(1);
   }
 
-  /* Substitute for various symbols used in the BKI file */
+                                                           
 
   sprintf(buf, "%d", NAMEDATALEN);
   bki_lines = replace_token(bki_lines, "NAMEDATALEN", buf);
@@ -1374,12 +1374,12 @@ bootstrap_template1(void)
 
   bki_lines = replace_token(bki_lines, "LC_CTYPE", escape_quotes_bki(lc_ctype));
 
-  /*
-   * Pass correct LC_xxx environment to bootstrap.
-   *
-   * The shell script arranged to restore the LC settings afterwards, but
-   * there doesn't seem to be any compelling reason to do that.
-   */
+     
+                                                   
+     
+                                                                          
+                                                                
+     
   snprintf(cmd, sizeof(cmd), "LC_COLLATE=%s", lc_collate);
   putenv(pg_strdup(cmd));
 
@@ -1388,7 +1388,7 @@ bootstrap_template1(void)
 
   unsetenv("LC_ALL");
 
-  /* Also ensure backend isn't confused by this environment var: */
+                                                                   
   unsetenv("PGCLIENTENCODING");
 
   snprintf(cmd, sizeof(cmd), "\"%s\" --boot -x1 -X %u %s %s %s", backend_exec, wal_segment_size_mb * (1024 * 1024), data_checksums ? "-k" : "", boot_options, debug ? "-d 5" : "");
@@ -1408,17 +1408,17 @@ bootstrap_template1(void)
   check_ok();
 }
 
-/*
- * set up the shadow password table
- */
+   
+                                    
+   
 static void
 setup_auth(FILE *cmdfd)
 {
   const char *const *line;
-  static const char *const pg_authid_setup[] = {/*
-                                                 * The authid table shouldn't be readable except through views, to
-                                                 * ensure passwords are not publicly visible.
-                                                 */
+  static const char *const pg_authid_setup[] = {   
+                                                                                                                   
+                                                                                              
+                                                   
       "REVOKE ALL on pg_authid FROM public;\n\n", NULL};
 
   for (line = pg_authid_setup; *line != NULL; line++)
@@ -1432,9 +1432,9 @@ setup_auth(FILE *cmdfd)
   }
 }
 
-/*
- * get the superuser password if required
- */
+   
+                                          
+   
 static void
 get_su_pwd(void)
 {
@@ -1443,9 +1443,9 @@ get_su_pwd(void)
 
   if (pwprompt)
   {
-    /*
-     * Read password from terminal
-     */
+       
+                                   
+       
     printf("\n");
     fflush(stdout);
     simple_prompt("Enter new superuser password: ", pwd1, sizeof(pwd1), false);
@@ -1458,14 +1458,14 @@ get_su_pwd(void)
   }
   else
   {
-    /*
-     * Read password from file
-     *
-     * Ideally this should insist that the file not be world-readable.
-     * However, this option is mainly intended for use on Windows where
-     * file permissions may not exist at all, so we'll skip the paranoia
-     * for now.
-     */
+       
+                               
+       
+                                                                       
+                                                                        
+                                                                         
+                
+       
     FILE *pwf = fopen(pwfilename, "r");
     int i;
 
@@ -1498,34 +1498,34 @@ get_su_pwd(void)
   superuser_password = pg_strdup(pwd1);
 }
 
-/*
- * set up pg_depend
- */
+   
+                    
+   
 static void
 setup_depend(FILE *cmdfd)
 {
   const char *const *line;
-  static const char *const pg_depend_setup[] = {/*
-                                                 * Make PIN entries in pg_depend for all objects made so far in the
-                                                 * tables that the dependency code handles.  This is overkill (the
-                                                 * system doesn't really depend on having every last weird datatype,
-                                                 * for instance) but generating only the minimum required set of
-                                                 * dependencies seems hard.
-                                                 *
-                                                 * Catalogs that are intentionally not scanned here are:
-                                                 *
-                                                 * pg_database: it's a feature, not a bug, that template1 is not
-                                                 * pinned.
-                                                 *
-                                                 * pg_extension: a pinned extension isn't really an extension, hmm?
-                                                 *
-                                                 * pg_tablespace: tablespaces don't participate in the dependency
-                                                 * code, and DropTableSpace() explicitly protects the built-in
-                                                 * tablespaces.
-                                                 *
-                                                 * First delete any already-made entries; PINs override all else, and
-                                                 * must be the only entries for their objects.
-                                                 */
+  static const char *const pg_depend_setup[] = {   
+                                                                                                                    
+                                                                                                                   
+                                                                                                                     
+                                                                                                                 
+                                                                            
+                                                   
+                                                                                                         
+                                                   
+                                                                                                                 
+                                                           
+                                                   
+                                                                                                                    
+                                                   
+                                                                                                                  
+                                                                                                               
+                                                                
+                                                   
+                                                                                                                      
+                                                                                               
+                                                   
       "DELETE FROM pg_depend;\n\n", "VACUUM pg_depend;\n\n", "DELETE FROM pg_shdepend;\n\n", "VACUUM pg_shdepend;\n\n",
 
       "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
@@ -1561,9 +1561,9 @@ setup_depend(FILE *cmdfd)
       "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
       " FROM pg_trigger;\n\n",
 
-      /*
-       * restriction here to avoid pinning the public namespace
-       */
+         
+                                                                
+         
       "INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
       " FROM pg_namespace "
       "    WHERE nspname LIKE 'pg%';\n\n",
@@ -1588,9 +1588,9 @@ setup_depend(FILE *cmdfd)
   }
 }
 
-/*
- * set up system views
- */
+   
+                       
+   
 static void
 setup_sysviews(FILE *cmdfd)
 {
@@ -1610,9 +1610,9 @@ setup_sysviews(FILE *cmdfd)
   free(sysviews_setup);
 }
 
-/*
- * load description data
- */
+   
+                         
+   
 static void
 setup_description(FILE *cmdfd)
 {
@@ -1641,7 +1641,7 @@ setup_description(FILE *cmdfd)
               "  FROM tmp_pg_shdescription t, pg_class c "
               "   WHERE c.relname = t.classname;\n\n");
 
-  /* Create default descriptions for operator implementation functions */
+                                                                         
   PG_CMD_PUTS("WITH funcdescs AS ( "
               "SELECT p.oid as p_oid, o.oid as o_oid, oprname "
               "FROM pg_proc p JOIN pg_operator o ON oprcode = p.oid ) "
@@ -1655,36 +1655,36 @@ setup_description(FILE *cmdfd)
               "   WHERE objoid = o_oid AND classoid = 'pg_operator'::regclass"
               "         AND description LIKE 'deprecated%');\n\n");
 
-  /*
-   * Even though the tables are temp, drop them explicitly so they don't get
-   * copied into template0/postgres databases.
-   */
+     
+                                                                             
+                                               
+     
   PG_CMD_PUTS("DROP TABLE tmp_pg_description;\n\n");
   PG_CMD_PUTS("DROP TABLE tmp_pg_shdescription;\n\n");
 }
 
-/*
- * populate pg_collation
- */
+   
+                         
+   
 static void
 setup_collation(FILE *cmdfd)
 {
-  /*
-   * Add an SQL-standard name.  We don't want to pin this, so it doesn't go
-   * in pg_collation.h.  But add it before reading system collations, so
-   * that it wins if libc defines a locale named ucs_basic.
-   */
+     
+                                                                            
+                                                                         
+                                                            
+     
   PG_CMD_PRINTF3("INSERT INTO pg_collation (oid, collname, collnamespace, collowner, collprovider, collisdeterministic, collencoding, collcollate, collctype)"
                  "VALUES (pg_nextoid('pg_catalog.pg_collation', 'oid', 'pg_catalog.pg_collation_oid_index'), 'ucs_basic', 'pg_catalog'::regnamespace, %u, '%c', true, %d, 'C', 'C');\n\n",
       BOOTSTRAP_SUPERUSERID, COLLPROVIDER_LIBC, PG_UTF8);
 
-  /* Now import all collations we can find in the operating system */
+                                                                     
   PG_CMD_PUTS("SELECT pg_import_system_collations('pg_catalog');\n\n");
 }
 
-/*
- * load extra dictionaries (Snowball stemmers)
- */
+   
+                                               
+   
 static void
 setup_dictionary(FILE *cmdfd)
 {
@@ -1703,25 +1703,25 @@ setup_dictionary(FILE *cmdfd)
   free(conv_lines);
 }
 
-/*
- * Set up privileges
- *
- * We mark most system catalogs as world-readable.  We don't currently have
- * to touch functions, languages, or databases, because their default
- * permissions are OK.
- *
- * Some objects may require different permissions by default, so we
- * make sure we don't overwrite privilege sets that have already been
- * set (NOT NULL).
- *
- * Also populate pg_init_privs to save what the privileges are at init
- * time.  This is used by pg_dump to allow users to change privileges
- * on catalog objects and to have those privilege changes preserved
- * across dump/reload and pg_upgrade.
- *
- * Note that pg_init_privs is only for per-database objects and therefore
- * we don't include databases or tablespaces.
- */
+   
+                     
+   
+                                                                            
+                                                                      
+                       
+   
+                                                                    
+                                                                      
+                   
+   
+                                                                       
+                                                                      
+                                                                    
+                                      
+   
+                                                                          
+                                              
+   
 static void
 setup_privileges(FILE *cmdfd)
 {
@@ -1860,10 +1860,10 @@ setup_privileges(FILE *cmdfd)
   }
 }
 
-/*
- * extract the strange version of version required for information schema
- * (09.08.0007abc)
- */
+   
+                                                                          
+                   
+   
 static void
 set_info_version(void)
 {
@@ -1891,9 +1891,9 @@ set_info_version(void)
   snprintf(infoversion, sizeof(infoversion), "%02ld.%02ld.%04ld%s", major, minor, micro, letterversion);
 }
 
-/*
- * load info schema and populate from features file
- */
+   
+                                                    
+   
 static void
 setup_schema(FILE *cmdfd)
 {
@@ -1924,53 +1924,53 @@ setup_schema(FILE *cmdfd)
       escape_quotes(features_file));
 }
 
-/*
- * load PL/pgSQL server-side language
- */
+   
+                                      
+   
 static void
 load_plpgsql(FILE *cmdfd)
 {
   PG_CMD_PUTS("CREATE EXTENSION plpgsql;\n\n");
 }
 
-/*
- * clean everything up in template1
- */
+   
+                                    
+   
 static void
 vacuum_db(FILE *cmdfd)
 {
-  /* Run analyze before VACUUM so the statistics are frozen. */
+                                                               
   PG_CMD_PUTS("ANALYZE;\n\nVACUUM FREEZE;\n\n");
 }
 
-/*
- * copy template1 to template0
- */
+   
+                               
+   
 static void
 make_template0(FILE *cmdfd)
 {
   const char *const *line;
   static const char *const template0_setup[] = {"CREATE DATABASE template0 IS_TEMPLATE = true ALLOW_CONNECTIONS = false;\n\n",
 
-      /*
-       * We use the OID of template0 to determine lastsysoid
-       */
+         
+                                                             
+         
       "UPDATE pg_database SET datlastsysoid = "
       "    (SELECT oid FROM pg_database "
       "    WHERE datname = 'template0');\n\n",
 
-      /*
-       * Explicitly revoke public create-schema and create-temp-table
-       * privileges in template1 and template0; else the latter would be on
-       * by default
-       */
+         
+                                                                      
+                                                                            
+                    
+         
       "REVOKE CREATE,TEMPORARY ON DATABASE template1 FROM public;\n\n", "REVOKE CREATE,TEMPORARY ON DATABASE template0 FROM public;\n\n",
 
       "COMMENT ON DATABASE template0 IS 'unmodifiable empty database';\n\n",
 
-      /*
-       * Finally vacuum to clean up dead rows in pg_database
-       */
+         
+                                                             
+         
       "VACUUM pg_database;\n\n", NULL};
 
   for (line = template0_setup; *line; line++)
@@ -1979,9 +1979,9 @@ make_template0(FILE *cmdfd)
   }
 }
 
-/*
- * copy template1 to postgres
- */
+   
+                              
+   
 static void
 make_postgres(FILE *cmdfd)
 {
@@ -1994,39 +1994,39 @@ make_postgres(FILE *cmdfd)
   }
 }
 
-/*
- * signal handler in case we are interrupted.
- *
- * The Windows runtime docs at
- * http://msdn.microsoft.com/library/en-us/vclib/html/_crt_signal.asp
- * specifically forbid a number of things being done from a signal handler,
- * including IO, memory allocation and system calls, and only allow jmpbuf
- * if you are handling SIGFPE.
- *
- * I avoided doing the forbidden things by setting a flag instead of calling
- * exit() directly.
- *
- * Also note the behaviour of Windows with SIGINT, which says this:
- *	 Note	SIGINT is not supported for any Win32 application, including
- *	 Windows 98/Me and Windows NT/2000/XP. When a CTRL+C interrupt occurs,
- *	 Win32 operating systems generate a new thread to specifically handle
- *	 that interrupt. This can cause a single-thread application such as UNIX,
- *	 to become multithreaded, resulting in unexpected behavior.
- *
- * I have no idea how to handle this. (Strange they call UNIX an application!)
- * So this will need some testing on Windows.
- */
+   
+                                              
+   
+                               
+                                                                      
+                                                                            
+                                                                           
+                               
+   
+                                                                             
+                    
+   
+                                                                    
+                                                                      
+                                                                          
+                                                                         
+                                                                             
+                                                               
+   
+                                                                               
+                                              
+   
 static void
 trapsig(int signum)
 {
-  /* handle systems that reset the handler, like Windows (grr) */
+                                                                 
   pqsignal(signum, trapsig);
   caught_signal = true;
 }
 
-/*
- * call exit() if we got a signal, or else output "ok".
- */
+   
+                                                        
+   
 static void
 check_ok(void)
 {
@@ -2044,22 +2044,22 @@ check_ok(void)
   }
   else
   {
-    /* all seems well */
+                        
     printf(_("ok\n"));
     fflush(stdout);
   }
 }
 
-/* Hack to suppress a warning about %x from some versions of gcc */
+                                                                   
 static inline size_t
 my_strftime(char *s, size_t max, const char *fmt, const struct tm *tm)
 {
   return strftime(s, max, fmt, tm);
 }
 
-/*
- * Determine likely date order from locale
- */
+   
+                                           
+   
 static int
 locale_date_order(const char *locale)
 {
@@ -2072,7 +2072,7 @@ locale_date_order(const char *locale)
   size_t res;
   int result;
 
-  result = DATEORDER_MDY; /* default */
+  result = DATEORDER_MDY;              
 
   save = setlocale(LC_TIME, NULL);
   if (!save)
@@ -2085,8 +2085,8 @@ locale_date_order(const char *locale)
 
   memset(&testtime, 0, sizeof(testtime));
   testtime.tm_mday = 22;
-  testtime.tm_mon = 10;   /* November, should come out as "11" */
-  testtime.tm_year = 133; /* 2033 */
+  testtime.tm_mon = 10;                                          
+  testtime.tm_year = 133;           
 
   res = my_strftime(buf, sizeof(buf), "%x", &testtime);
 
@@ -2123,18 +2123,18 @@ locale_date_order(const char *locale)
   return result;
 }
 
-/*
- * Verify that locale name is valid for the locale category.
- *
- * If successful, and canonname isn't NULL, a malloc'd copy of the locale's
- * canonical name is stored there.  This is especially useful for figuring out
- * what locale name "" means (ie, the environment value).  (Actually,
- * it seems that on most implementations that's the only thing it's good for;
- * we could wish that setlocale gave back a canonically spelled version of
- * the locale name, but typically it doesn't.)
- *
- * this should match the backend's check_locale() function
- */
+   
+                                                             
+   
+                                                                            
+                                                                               
+                                                                      
+                                                                              
+                                                                           
+                                               
+   
+                                                           
+   
 static void
 check_locale_name(int category, const char *locale, char **canonname)
 {
@@ -2143,7 +2143,7 @@ check_locale_name(int category, const char *locale, char **canonname)
 
   if (canonname)
   {
-    *canonname = NULL; /* in case of failure */
+    *canonname = NULL;                         
   }
 
   save = setlocale(category, NULL);
@@ -2153,25 +2153,25 @@ check_locale_name(int category, const char *locale, char **canonname)
     exit(1);
   }
 
-  /* save may be pointing at a modifiable scratch variable, so copy it. */
+                                                                          
   save = pg_strdup(save);
 
-  /* for setlocale() call */
+                            
   if (!locale)
   {
     locale = "";
   }
 
-  /* set the locale with setlocale, to see if it accepts it. */
+                                                               
   res = setlocale(category, locale);
 
-  /* save canonical name if requested. */
+                                         
   if (res && canonname)
   {
     *canonname = pg_strdup(res);
   }
 
-  /* restore old value. */
+                          
   if (!setlocale(category, save))
   {
     pg_log_error("failed to restore old locale \"%s\"", save);
@@ -2179,7 +2179,7 @@ check_locale_name(int category, const char *locale, char **canonname)
   }
   free(save);
 
-  /* complain if locale wasn't valid */
+                                       
   if (res == NULL)
   {
     if (*locale)
@@ -2188,25 +2188,25 @@ check_locale_name(int category, const char *locale, char **canonname)
     }
     else
     {
-      /*
-       * If no relevant switch was given on command line, locale is an
-       * empty string, which is not too helpful to report.  Presumably
-       * setlocale() found something it did not like in the environment.
-       * Ideally we'd report the bad environment variable, but since
-       * setlocale's behavior is implementation-specific, it's hard to
-       * be sure what it didn't like.  Print a safe generic message.
-       */
+         
+                                                                       
+                                                                       
+                                                                         
+                                                                     
+                                                                       
+                                                                     
+         
       pg_log_error("invalid locale settings; check LANG and LC_* environment variables");
     }
     exit(1);
   }
 }
 
-/*
- * check if the chosen encoding matches the encoding required by the locale
- *
- * this should match the similar check in the backend createdb() function
- */
+   
+                                                                            
+   
+                                                                          
+   
 static bool
 check_locale_encoding(const char *locale, int user_enc)
 {
@@ -2214,7 +2214,7 @@ check_locale_encoding(const char *locale, int user_enc)
 
   locale_enc = pg_get_encoding_from_locale(locale, true);
 
-  /* See notes in createdb() to understand these tests */
+                                                         
   if (!(locale_enc == user_enc || locale_enc == PG_SQL_ASCII || locale_enc == -1 ||
 #ifdef WIN32
           user_enc == PG_UTF8 ||
@@ -2234,17 +2234,17 @@ check_locale_encoding(const char *locale, int user_enc)
   return true;
 }
 
-/*
- * set up the locale variables
- *
- * assumes we have called setlocale(LC_ALL, "") -- see set_pglocale_pgservice
- */
+   
+                               
+   
+                                                                              
+   
 static void
 setlocales(void)
 {
   char *canonname;
 
-  /* set empty lc_* values to locale config if set */
+                                                     
 
   if (locale)
   {
@@ -2274,10 +2274,10 @@ setlocales(void)
     }
   }
 
-  /*
-   * canonicalize locale names, and obtain any missing values from our
-   * current environment
-   */
+     
+                                                                       
+                         
+     
 
   check_locale_name(LC_CTYPE, lc_ctype, &canonname);
   lc_ctype = canonname;
@@ -2293,15 +2293,15 @@ setlocales(void)
   check_locale_name(LC_MESSAGES, lc_messages, &canonname);
   lc_messages = canonname;
 #else
-  /* when LC_MESSAGES is not available, use the LC_CTYPE setting */
+                                                                   
   check_locale_name(LC_CTYPE, lc_messages, &canonname);
   lc_messages = canonname;
 #endif
 }
 
-/*
- * print help text
- */
+   
+                   
+   
 static void
 usage(const char *progname)
 {
@@ -2365,7 +2365,7 @@ check_authmethod_valid(const char *authmethod, const char *const *valid_methods,
     {
       return;
     }
-    /* with space = param */
+                            
     if (strchr(authmethod, ' '))
     {
       if (strncmp(authmethod, *p, (authmethod - strchr(authmethod, ' '))) == 0)
@@ -2399,7 +2399,7 @@ setup_pgdata(void)
     pgdata_get_env = getenv("PGDATA");
     if (pgdata_get_env && strlen(pgdata_get_env))
     {
-      /* PGDATA found */
+                        
       pg_data = pg_strdup(pgdata_get_env);
     }
     else
@@ -2415,12 +2415,12 @@ setup_pgdata(void)
   pgdata_native = pg_strdup(pg_data);
   canonicalize_path(pg_data);
 
-  /*
-   * we have to set PGDATA for postgres rather than pass it on the command
-   * line to avoid dumb quoting problems on Windows, and we would especially
-   * need quotes otherwise on Windows because paths there are most likely to
-   * have embedded spaces.
-   */
+     
+                                                                           
+                                                                             
+                                                                             
+                           
+     
   pgdata_set_env = psprintf("PGDATA=%s", pg_data);
   putenv(pgdata_set_env);
 }
@@ -2456,7 +2456,7 @@ setup_bin_paths(const char *argv0)
     exit(1);
   }
 
-  /* store binary directory */
+                              
   strcpy(bin_path, backend_exec);
   *last_dir_separator(bin_path) = '\0';
   canonicalize_path(bin_path);
@@ -2504,7 +2504,7 @@ setup_locale_encoding(void)
 
     if (ctype_enc == -1)
     {
-      /* Couldn't recognize the locale's codeset */
+                                                   
       pg_log_error("could not find suitable encoding for locale \"%s\"", lc_ctype);
       fprintf(stderr, _("Rerun %s with the -E option.\n"), progname);
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -2512,11 +2512,11 @@ setup_locale_encoding(void)
     }
     else if (!pg_valid_server_encoding_id(ctype_enc))
     {
-      /*
-       * We recognized it, but it's not a legal server encoding. On
-       * Windows, UTF-8 works with any locale, so we can fall back to
-       * UTF-8.
-       */
+         
+                                                                    
+                                                                      
+                
+         
 #ifdef WIN32
       encodingid = PG_UTF8;
       printf(_("Encoding \"%s\" implied by locale is not allowed as a server-side encoding.\n"
@@ -2544,7 +2544,7 @@ setup_locale_encoding(void)
 
   if (!check_locale_encoding(lc_ctype, encodingid) || !check_locale_encoding(lc_collate, encodingid))
   {
-    exit(1); /* check_locale_encoding printed the error */
+    exit(1);                                              
   }
 }
 
@@ -2622,7 +2622,7 @@ setup_text_search(void)
 void
 setup_signals(void)
 {
-  /* some of these are not valid on Windows */
+                                              
 #ifdef SIGHUP
   pqsignal(SIGHUP, trapsig);
 #endif
@@ -2636,12 +2636,12 @@ setup_signals(void)
   pqsignal(SIGTERM, trapsig);
 #endif
 
-  /* Ignore SIGPIPE when writing to backend, so we can clean up */
+                                                                  
 #ifdef SIGPIPE
   pqsignal(SIGPIPE, SIG_IGN);
 #endif
 
-  /* Prevent SIGSYS so we can probe for kernel calls that might not work */
+                                                                           
 #ifdef SIGSYS
   pqsignal(SIGSYS, SIG_IGN);
 #endif
@@ -2655,7 +2655,7 @@ create_data_directory(void)
   switch ((ret = pg_check_dir(pg_data)))
   {
   case 0:
-    /* PGDATA not there, must create it */
+                                          
     printf(_("creating directory %s ... "), pg_data);
     fflush(stdout);
 
@@ -2673,7 +2673,7 @@ create_data_directory(void)
     break;
 
   case 1:
-    /* Present but empty, fix permissions and use it */
+                                                       
     printf(_("fixing permissions on existing directory %s ... "), pg_data);
     fflush(stdout);
 
@@ -2693,7 +2693,7 @@ create_data_directory(void)
   case 2:
   case 3:
   case 4:
-    /* Present and not empty */
+                               
     pg_log_error("directory \"%s\" exists but is not empty", pg_data);
     if (ret != 4)
     {
@@ -2707,29 +2707,29 @@ create_data_directory(void)
             "with an argument other than \"%s\".\n"),
           pg_data, progname, pg_data);
     }
-    exit(1); /* no further message needed */
+    exit(1);                                
 
   default:
-    /* Trouble accessing directory */
+                                     
     pg_log_error("could not access directory \"%s\": %m", pg_data);
     exit(1);
   }
 }
 
-/* Create WAL directory, and symlink if required */
+                                                   
 void
 create_xlog_or_symlink(void)
 {
   char *subdirloc;
 
-  /* form name of the place for the subdirectory or symlink */
+                                                              
   subdirloc = psprintf("%s/pg_wal", pg_data);
 
   if (xlog_dir)
   {
     int ret;
 
-    /* clean up xlog directory name, check it's absolute */
+                                                           
     canonicalize_path(xlog_dir);
     if (!is_absolute_path(xlog_dir))
     {
@@ -2737,11 +2737,11 @@ create_xlog_or_symlink(void)
       exit(1);
     }
 
-    /* check if the specified xlog directory exists/is empty */
+                                                               
     switch ((ret = pg_check_dir(xlog_dir)))
     {
     case 0:
-      /* xlog directory not there, must create it */
+                                                    
       printf(_("creating directory %s ... "), xlog_dir);
       fflush(stdout);
 
@@ -2759,7 +2759,7 @@ create_xlog_or_symlink(void)
       break;
 
     case 1:
-      /* Present but empty, fix permissions and use it */
+                                                         
       printf(_("fixing permissions on existing directory %s ... "), xlog_dir);
       fflush(stdout);
 
@@ -2779,7 +2779,7 @@ create_xlog_or_symlink(void)
     case 2:
     case 3:
     case 4:
-      /* Present and not empty */
+                                 
       pg_log_error("directory \"%s\" exists but is not empty", xlog_dir);
       if (ret != 4)
       {
@@ -2795,7 +2795,7 @@ create_xlog_or_symlink(void)
       exit(1);
 
     default:
-      /* Trouble accessing directory */
+                                       
       pg_log_error("could not access directory \"%s\": %m", xlog_dir);
       exit(1);
     }
@@ -2813,7 +2813,7 @@ create_xlog_or_symlink(void)
   }
   else
   {
-    /* Without -X option, just make the subdirectory normally */
+                                                                
     if (mkdir(subdirloc, pg_dir_create_mode) < 0)
     {
       pg_log_error("could not create directory \"%s\": %m", subdirloc);
@@ -2848,19 +2848,19 @@ initialize_data_directory(void)
 
   setup_signals();
 
-  /*
-   * Set mask based on requested PGDATA permissions.  pg_mode_mask, and
-   * friends like pg_dir_create_mode, are set to owner-only by default and
-   * then updated if -g is passed in by calling SetDataDirectoryCreatePerm()
-   * when parsing our options (see above).
-   */
+     
+                                                                        
+                                                                           
+                                                                             
+                                           
+     
   umask(pg_mode_mask);
 
   create_data_directory();
 
   create_xlog_or_symlink();
 
-  /* Create required subdirectories (other than pg_wal) */
+                                                          
   printf(_("creating subdirectories ... "));
   fflush(stdout);
 
@@ -2870,10 +2870,10 @@ initialize_data_directory(void)
 
     path = psprintf("%s/%s", pg_data, subdirs[i]);
 
-    /*
-     * The parent directory already exists, so we only need mkdir() not
-     * pg_mkdir_p() here, which avoids some failure modes; cf bug #13853.
-     */
+       
+                                                                        
+                                                                          
+       
     if (mkdir(path, pg_dir_create_mode) < 0)
     {
       pg_log_error("could not create directory \"%s\": %m", path);
@@ -2885,28 +2885,28 @@ initialize_data_directory(void)
 
   check_ok();
 
-  /* Top level PG_VERSION is checked by bootstrapper, so make it first */
+                                                                         
   write_version_file(NULL);
 
-  /* Select suitable configuration settings */
+                                              
   set_null_conf();
   test_config_settings();
 
-  /* Now create all the text config files */
+                                            
   setup_config();
 
-  /* Bootstrap template1 */
+                           
   bootstrap_template1();
 
-  /*
-   * Make the per-database PG_VERSION for template1 only after init'ing it
-   */
+     
+                                                                           
+     
   write_version_file("base/1");
 
-  /*
-   * Create the stuff we don't need to use bootstrap mode for, using a
-   * backend running in simple standalone mode.
-   */
+     
+                                                                       
+                                                
+     
   fputs(_("performing post-bootstrap initialization ... "), stdout);
   fflush(stdout);
 
@@ -2918,10 +2918,10 @@ initialize_data_directory(void)
 
   setup_depend(cmdfd);
 
-  /*
-   * Note that no objects created after setup_depend() will be "pinned".
-   * They are all droppable at the whim of the DBA.
-   */
+     
+                                                                         
+                                                    
+     
 
   setup_sysviews(cmdfd);
 
@@ -2951,26 +2951,26 @@ initialize_data_directory(void)
 int
 main(int argc, char *argv[])
 {
-  static struct option long_options[] = {{"pgdata", required_argument, NULL, 'D'}, {"encoding", required_argument, NULL, 'E'}, {"locale", required_argument, NULL, 1}, {"lc-collate", required_argument, NULL, 2}, {"lc-ctype", required_argument, NULL, 3}, {"lc-monetary", required_argument, NULL, 4}, {"lc-numeric", required_argument, NULL, 5}, {"lc-time", required_argument, NULL, 6}, {"lc-messages", required_argument, NULL, 7}, {"no-locale", no_argument, NULL, 8}, {"text-search-config", required_argument, NULL, 'T'}, {"auth", required_argument, NULL, 'A'}, {"auth-local", required_argument, NULL, 10}, {"auth-host", required_argument, NULL, 11}, {"pwprompt", no_argument, NULL, 'W'}, {"pwfile", required_argument, NULL, 9}, {"username", required_argument, NULL, 'U'}, {"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"debug", no_argument, NULL, 'd'}, {"show", no_argument, NULL, 's'}, {"noclean", no_argument, NULL, 'n'}, /* for backwards compatibility */
-      {"no-clean", no_argument, NULL, 'n'}, {"nosync", no_argument, NULL, 'N'},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    /* for backwards compatibility */
+  static struct option long_options[] = {{"pgdata", required_argument, NULL, 'D'}, {"encoding", required_argument, NULL, 'E'}, {"locale", required_argument, NULL, 1}, {"lc-collate", required_argument, NULL, 2}, {"lc-ctype", required_argument, NULL, 3}, {"lc-monetary", required_argument, NULL, 4}, {"lc-numeric", required_argument, NULL, 5}, {"lc-time", required_argument, NULL, 6}, {"lc-messages", required_argument, NULL, 7}, {"no-locale", no_argument, NULL, 8}, {"text-search-config", required_argument, NULL, 'T'}, {"auth", required_argument, NULL, 'A'}, {"auth-local", required_argument, NULL, 10}, {"auth-host", required_argument, NULL, 11}, {"pwprompt", no_argument, NULL, 'W'}, {"pwfile", required_argument, NULL, 9}, {"username", required_argument, NULL, 'U'}, {"help", no_argument, NULL, '?'}, {"version", no_argument, NULL, 'V'}, {"debug", no_argument, NULL, 'd'}, {"show", no_argument, NULL, 's'}, {"noclean", no_argument, NULL, 'n'},                                  
+      {"no-clean", no_argument, NULL, 'n'}, {"nosync", no_argument, NULL, 'N'},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
       {"no-sync", no_argument, NULL, 'N'}, {"sync-only", no_argument, NULL, 'S'}, {"waldir", required_argument, NULL, 'X'}, {"wal-segsize", required_argument, NULL, 12}, {"data-checksums", no_argument, NULL, 'k'}, {"allow-group-access", no_argument, NULL, 'g'}, {NULL, 0, NULL, 0}};
 
-  /*
-   * options with no short version return a low integer, the rest return
-   * their short version value
-   */
+     
+                                                                         
+                               
+     
   int c;
   int option_index;
   char *effective_user;
   PQExpBuffer start_db_cmd;
   char pg_ctl_path[MAXPGPATH];
 
-  /*
-   * Ensure that buffering behavior of stdout matches what it is in
-   * interactive usage (at least on most platforms).  This prevents
-   * unexpected output ordering when, eg, output is redirected to a file.
-   * POSIX says we must do this before any other usage of these files.
-   */
+     
+                                                                    
+                                                                    
+                                                                          
+                                                                       
+     
   setvbuf(stdout, NULL, PG_IOLBF, 0);
 
   pg_logging_init(argv[0]);
@@ -2991,7 +2991,7 @@ main(int argc, char *argv[])
     }
   }
 
-  /* process command-line options */
+                                    
 
   while ((c = getopt_long(argc, argv, "A:dD:E:gkL:nNsST:U:WX:", long_options, &option_index)) != -1)
   {
@@ -3000,11 +3000,11 @@ main(int argc, char *argv[])
     case 'A':
       authmethodlocal = authmethodhost = pg_strdup(optarg);
 
-      /*
-       * When ident is specified, use peer for local connections.
-       * Mirrored, when peer is specified, use ident for TCP/IP
-       * connections.
-       */
+         
+                                                                  
+                                                                
+                      
+         
       if (strcmp(authmethodhost, "ident") == 0)
       {
         authmethodlocal = "peer";
@@ -3095,16 +3095,16 @@ main(int argc, char *argv[])
       SetDataDirectoryCreatePerm(PG_DIR_MODE_GROUP);
       break;
     default:
-      /* getopt_long already emitted a complaint */
+                                                   
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
       exit(1);
     }
   }
 
-  /*
-   * Non-option argument specifies data directory as long as it wasn't
-   * already specified with -D / --pgdata
-   */
+     
+                                                                       
+                                          
+     
   if (optind < argc && !pg_data)
   {
     pg_data = pg_strdup(argv[optind]);
@@ -3120,12 +3120,12 @@ main(int argc, char *argv[])
 
   atexit(cleanup_directories_atexit);
 
-  /* If we only need to fsync, just do it and exit */
+                                                     
   if (sync_only)
   {
     setup_pgdata();
 
-    /* must check that directory is readable */
+                                               
     if (pg_check_dir(pg_data) <= 0)
     {
       pg_log_error("could not access directory \"%s\": %m", pg_data);
@@ -3153,7 +3153,7 @@ main(int argc, char *argv[])
 
   check_need_password(authmethodlocal, authmethodhost);
 
-  /* set wal segment size */
+                            
   if (str_wal_segment_size_mb == NULL)
   {
     wal_segment_size_mb = (DEFAULT_XLOG_SEG_SIZE) / (1024 * 1024);
@@ -3162,10 +3162,10 @@ main(int argc, char *argv[])
   {
     char *endptr;
 
-    /* check that the argument is a number */
+                                             
     wal_segment_size_mb = strtol(str_wal_segment_size_mb, &endptr, 10);
 
-    /* verify that wal segment size is valid */
+                                               
     if (endptr == str_wal_segment_size_mb || *endptr != '\0')
     {
       pg_log_error("argument of --wal-segsize must be a number");
@@ -3249,30 +3249,30 @@ main(int argc, char *argv[])
                       "--auth-local and --auth-host, the next time you run initdb.\n"));
   }
 
-  /*
-   * Build up a shell command to tell the user how to start the server
-   */
+     
+                                                                       
+     
   start_db_cmd = createPQExpBuffer();
 
-  /* Get directory specification used to start initdb ... */
+                                                            
   strlcpy(pg_ctl_path, argv[0], sizeof(pg_ctl_path));
   canonicalize_path(pg_ctl_path);
   get_parent_directory(pg_ctl_path);
-  /* ... and tag on pg_ctl instead */
+                                     
   join_path_components(pg_ctl_path, pg_ctl_path, "pg_ctl");
 
-  /* Convert the path to use native separators */
+                                                 
   make_native_path(pg_ctl_path);
 
-  /* path to pg_ctl, properly quoted */
+                                       
   appendShellString(start_db_cmd, pg_ctl_path);
 
-  /* add -D switch, with properly quoted data directory */
+                                                          
   appendPQExpBufferStr(start_db_cmd, " -D ");
   appendShellString(start_db_cmd, pgdata_native);
 
-  /* add suggested -l switch and "start" command */
-  /* translator: This is a placeholder in a shell command. */
+                                                   
+                                                             
   appendPQExpBuffer(start_db_cmd, " -l %s start", _("logfile"));
 
   printf(_("\nSuccess. You can now start the database server using:\n\n"

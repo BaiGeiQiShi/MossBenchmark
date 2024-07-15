@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * ginvalidate.c
- *	  Opclass validator for GIN.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/gin/ginvalidate.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                
+   
+                                                                         
+                                                                        
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/amvalidate.h"
@@ -26,9 +26,9 @@
 #include "utils/syscache.h"
 #include "utils/regproc.h"
 
-/*
- * Validator for a GIN opclass.
- */
+   
+                                
+   
 bool
 ginvalidate(Oid opclassoid)
 {
@@ -48,7 +48,7 @@ ginvalidate(Oid opclassoid)
   int i;
   ListCell *lc;
 
-  /* Fetch opclass information */
+                                 
   classtup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassoid));
   if (!HeapTupleIsValid(classtup))
   {
@@ -65,7 +65,7 @@ ginvalidate(Oid opclassoid)
   }
   opclassname = NameStr(classform->opcname);
 
-  /* Fetch opfamily information */
+                                  
   familytup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyoid));
   if (!HeapTupleIsValid(familytup))
   {
@@ -75,52 +75,52 @@ ginvalidate(Oid opclassoid)
 
   opfamilyname = NameStr(familyform->opfname);
 
-  /* Fetch all operators and support functions of the opfamily */
+                                                                 
   oprlist = SearchSysCacheList1(AMOPSTRATEGY, ObjectIdGetDatum(opfamilyoid));
   proclist = SearchSysCacheList1(AMPROCNUM, ObjectIdGetDatum(opfamilyoid));
 
-  /* Check individual support functions */
+                                          
   for (i = 0; i < proclist->n_members; i++)
   {
     HeapTuple proctup = &proclist->members[i]->tuple;
     Form_pg_amproc procform = (Form_pg_amproc)GETSTRUCT(proctup);
     bool ok;
 
-    /*
-     * All GIN support functions should be registered with matching
-     * left/right types
-     */
+       
+                                                                    
+                        
+       
     if (procform->amproclefttype != procform->amprocrighttype)
     {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains support function %s with different left and right input types", opfamilyname, "gin", format_procedure(procform->amproc))));
       result = false;
     }
 
-    /*
-     * We can't check signatures except within the specific opclass, since
-     * we need to know the associated opckeytype in many cases.
-     */
+       
+                                                                           
+                                                                
+       
     if (procform->amproclefttype != opcintype)
     {
       continue;
     }
 
-    /* Check procedure numbers and function signatures */
+                                                         
     switch (procform->amprocnum)
     {
     case GIN_COMPARE_PROC:
       ok = check_amproc_signature(procform->amproc, INT4OID, false, 2, 2, opckeytype, opckeytype);
       break;
     case GIN_EXTRACTVALUE_PROC:
-      /* Some opclasses omit nullFlags */
+                                         
       ok = check_amproc_signature(procform->amproc, INTERNALOID, false, 2, 3, opcintype, INTERNALOID, INTERNALOID);
       break;
     case GIN_EXTRACTQUERY_PROC:
-      /* Some opclasses omit nullFlags and searchMode */
+                                                        
       ok = check_amproc_signature(procform->amproc, INTERNALOID, false, 5, 7, opcintype, INTERNALOID, INT2OID, INTERNALOID, INTERNALOID, INTERNALOID, INTERNALOID);
       break;
     case GIN_CONSISTENT_PROC:
-      /* Some opclasses omit queryKeys and nullFlags */
+                                                       
       ok = check_amproc_signature(procform->amproc, BOOLOID, false, 6, 8, INTERNALOID, INT2OID, opcintype, INT4OID, INTERNALOID, INTERNALOID, INTERNALOID, INTERNALOID);
       break;
     case GIN_COMPARE_PARTIAL_PROC:
@@ -132,7 +132,7 @@ ginvalidate(Oid opclassoid)
     default:
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains function %s with invalid support number %d", opfamilyname, "gin", format_procedure(procform->amproc), procform->amprocnum)));
       result = false;
-      continue; /* don't want additional message */
+      continue;                                    
     }
 
     if (!ok)
@@ -142,27 +142,27 @@ ginvalidate(Oid opclassoid)
     }
   }
 
-  /* Check individual operators */
+                                  
   for (i = 0; i < oprlist->n_members; i++)
   {
     HeapTuple oprtup = &oprlist->members[i]->tuple;
     Form_pg_amop oprform = (Form_pg_amop)GETSTRUCT(oprtup);
 
-    /* TODO: Check that only allowed strategy numbers exist */
+                                                              
     if (oprform->amopstrategy < 1 || oprform->amopstrategy > 63)
     {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains operator %s with invalid strategy number %d", opfamilyname, "gin", format_operator(oprform->amopopr), oprform->amopstrategy)));
       result = false;
     }
 
-    /* gin doesn't support ORDER BY operators */
+                                                
     if (oprform->amoppurpose != AMOP_SEARCH || OidIsValid(oprform->amopsortfamily))
     {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains invalid ORDER BY specification for operator %s", opfamilyname, "gin", format_operator(oprform->amopopr))));
       result = false;
     }
 
-    /* Check operator signature --- same for all gin strategies */
+                                                                  
     if (!check_amop_signature(oprform->amopopr, BOOLOID, oprform->amoplefttype, oprform->amoprighttype))
     {
       ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator family \"%s\" of access method %s contains operator %s with wrong signature", opfamilyname, "gin", format_operator(oprform->amopopr))));
@@ -170,43 +170,43 @@ ginvalidate(Oid opclassoid)
     }
   }
 
-  /* Now check for inconsistent groups of operators/functions */
+                                                                
   grouplist = identify_opfamily_groups(oprlist, proclist);
   opclassgroup = NULL;
   foreach (lc, grouplist)
   {
     OpFamilyOpFuncGroup *thisgroup = (OpFamilyOpFuncGroup *)lfirst(lc);
 
-    /* Remember the group exactly matching the test opclass */
+                                                              
     if (thisgroup->lefttype == opcintype && thisgroup->righttype == opcintype)
     {
       opclassgroup = thisgroup;
     }
 
-    /*
-     * There is not a lot we can do to check the operator sets, since each
-     * GIN opclass is more or less a law unto itself, and some contain
-     * only operators that are binary-compatible with the opclass datatype
-     * (meaning that empty operator sets can be OK).  That case also means
-     * that we shouldn't insist on nonempty function sets except for the
-     * opclass's own group.
-     */
+       
+                                                                           
+                                                                       
+                                                                           
+                                                                           
+                                                                         
+                            
+       
   }
 
-  /* Check that the originally-named opclass is complete */
+                                                           
   for (i = 1; i <= GINNProcs; i++)
   {
     if (opclassgroup && (opclassgroup->functionset & (((uint64)1) << i)) != 0)
     {
-      continue; /* got it */
+      continue;             
     }
     if (i == GIN_COMPARE_PROC || i == GIN_COMPARE_PARTIAL_PROC)
     {
-      continue; /* optional method */
+      continue;                      
     }
     if (i == GIN_CONSISTENT_PROC || i == GIN_TRICONSISTENT_PROC)
     {
-      continue; /* don't need both, see check below loop */
+      continue;                                            
     }
     ereport(INFO, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("operator class \"%s\" of access method %s is missing support function %d", opclassname, "gin", i)));
     result = false;

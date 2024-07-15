@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "test_informix2.pgc"
@@ -22,8 +22,8 @@
 #define PGDLLIMPORT __declspec(dllimport)
 #else
 #define PGDLLIMPORT
-#endif /* __CYGWIN__ */
-#endif /* PGDLLIMPORT */
+#endif                 
+#endif                  
 
 #define SQLERRMC_LEN 150
 
@@ -44,27 +44,27 @@ extern "C"
     } sqlerrm;
     char sqlerrp[8];
     long sqlerrd[6];
-    /* Element 0: empty						*/
-    /* 1: OID of processed tuple if applicable			*/
-    /* 2: number of rows processed				*/
-    /* after an INSERT, UPDATE or				*/
-    /* DELETE statement					*/
-    /* 3: empty						*/
-    /* 4: empty						*/
-    /* 5: empty						*/
+                               
+                                                   
+                                        
+                                       
+                              
+                       
+                       
+                       
     char sqlwarn[8];
-    /* Element 0: set to 'W' if at least one other is 'W'	*/
-    /* 1: if 'W' at least one character string		*/
-    /* value was truncated when it was			*/
-    /* stored into a host variable.             */
+                                                            
+                                                  
+                                           
+                                                  
 
-    /*
-     * 2: if 'W' a (hopefully) non-fatal notice occurred
-     */	/* 3: empty */
-    /* 4: empty						*/
-    /* 5: empty						*/
-    /* 6: empty						*/
-    /* 7: empty						*/
+       
+                                                         
+       	              
+                       
+                       
+                       
+                       
 
     char sqlstate[5];
   };
@@ -88,7 +88,7 @@ extern "C"
 
 #line 6 "test_informix2.pgc"
 
-/* Check SQLCODE, and produce a "standard error" if it's wrong! */
+                                                                  
 static void
 sql_check(const char *fn, const char *caller, int ignore)
 {
@@ -107,7 +107,7 @@ sql_check(const char *fn, const char *caller, int ignore)
       fprintf(stderr, "%s", errorstring);
       printf("%s\n", errorstring);
 
-      /* attempt a ROLLBACK */
+                              
       {
         ECPGtrans(__LINE__, NULL, "rollback");
       }
@@ -133,7 +133,7 @@ sql_check(const char *fn, const char *caller, int ignore)
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 47 "test_informix2.pgc"
   int c;
@@ -149,12 +149,12 @@ main(void)
 
 #line 51 "test_informix2.pgc"
   char dbname[30];
-/* exec sql end declare section */
+                                  
 #line 52 "test_informix2.pgc"
 
   interval *intvl;
 
-  /* exec sql whenever sqlerror  stop ; */
+                                          
 #line 56 "test_informix2.pgc"
 
   ECPGdebug(1, stderr);
@@ -308,13 +308,13 @@ main(void)
 
   exit(0);
 
-  /*
-                   Table "public.history"
-      Column    |            Type             | Nullable
-  --------------+-----------------------------+----------
-   customerid   | integer                     | not null
-   timestamp    | timestamp without time zone | not null
-   action_taken | character(5)                | not null
-   narrative    | character varying(100)      |
-  */
+     
+                                          
+                                                         
+                                                          
+                                                         
+                                                         
+                                                         
+                                                
+    
 }

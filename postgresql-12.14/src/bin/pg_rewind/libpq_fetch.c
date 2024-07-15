@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- *
- * libpq_fetch.c
- *	  Functions for fetching files from a remote server.
- *
- * Copyright (c) 2013-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                        
+   
+                                                                
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <sys/stat.h>
@@ -27,13 +27,13 @@
 
 static PGconn *conn = NULL;
 
-/*
- * Files are fetched max CHUNKSIZE bytes at a time.
- *
- * (This only applies to files that are copied in whole, or for truncated
- * files where we copy the tail. Relation files, where we know the individual
- * blocks that need to be fetched, are fetched in BLCKSZ chunks.)
- */
+   
+                                                    
+   
+                                                                          
+                                                                              
+                                                                  
+   
 #define CHUNKSIZE 1000000
 
 static void
@@ -62,7 +62,7 @@ libpqConnect(const char *connstr)
     pg_log_info("connected to server");
   }
 
-  /* disable all types of timeouts */
+                                     
   run_simple_command("SET statement_timeout = 0");
   run_simple_command("SET lock_timeout = 0");
   run_simple_command("SET idle_in_transaction_session_timeout = 0");
@@ -74,12 +74,12 @@ libpqConnect(const char *connstr)
   }
   PQclear(res);
 
-  /*
-   * Check that the server is not in hot standby mode. There is no
-   * fundamental reason that couldn't be made to work, but it doesn't
-   * currently because we use a temporary table. Better to check for it
-   * explicitly than error out, for a better error message.
-   */
+     
+                                                                   
+                                                                      
+                                                                        
+                                                            
+     
   str = run_simple_query("SELECT pg_is_in_recovery()");
   if (strcmp(str, "f") != 0)
   {
@@ -87,11 +87,11 @@ libpqConnect(const char *connstr)
   }
   pg_free(str);
 
-  /*
-   * Also check that full_page_writes is enabled.  We can get torn pages if
-   * a page is modified while we read it with pg_read_binary_file(), and we
-   * rely on full page images to fix them.
-   */
+     
+                                                                            
+                                                                            
+                                           
+     
   str = run_simple_query("SHOW full_page_writes");
   if (strcmp(str, "on") != 0)
   {
@@ -99,20 +99,20 @@ libpqConnect(const char *connstr)
   }
   pg_free(str);
 
-  /*
-   * Although we don't do any "real" updates, we do work with a temporary
-   * table. We don't care about synchronous commit for that. It doesn't
-   * otherwise matter much, but if the server is using synchronous
-   * replication, and replication isn't working for some reason, we don't
-   * want to get stuck, waiting for it to start working again.
-   */
+     
+                                                                          
+                                                                        
+                                                                   
+                                                                          
+                                                               
+     
   run_simple_command("SET synchronous_commit = off");
 }
 
-/*
- * Runs a query that returns a single value.
- * The result should be pg_free'd after use.
- */
+   
+                                             
+                                             
+   
 static char *
 run_simple_query(const char *sql)
 {
@@ -126,7 +126,7 @@ run_simple_query(const char *sql)
     pg_fatal("error running query (%s) in source server: %s", sql, PQresultErrorMessage(res));
   }
 
-  /* sanity check the result set */
+                                   
   if (PQnfields(res) != 1 || PQntuples(res) != 1 || PQgetisnull(res, 0, 0))
   {
     pg_fatal("unexpected result set from query");
@@ -139,10 +139,10 @@ run_simple_query(const char *sql)
   return result;
 }
 
-/*
- * Runs a command.
- * In the event of a failure, exit immediately.
- */
+   
+                   
+                                                
+   
 static void
 run_simple_command(const char *sql)
 {
@@ -158,9 +158,9 @@ run_simple_command(const char *sql)
   PQclear(res);
 }
 
-/*
- * Calls pg_current_wal_insert_lsn() function
- */
+   
+                                              
+   
 XLogRecPtr
 libpqGetCurrentXlogInsertLocation(void)
 {
@@ -183,9 +183,9 @@ libpqGetCurrentXlogInsertLocation(void)
   return result;
 }
 
-/*
- * Get a list of all files in the data directory.
- */
+   
+                                                  
+   
 void
 libpqProcessFileList(void)
 {
@@ -193,16 +193,16 @@ libpqProcessFileList(void)
   const char *sql;
   int i;
 
-  /*
-   * Create a recursive directory listing of the whole data directory.
-   *
-   * The WITH RECURSIVE part does most of the work. The second part gets the
-   * targets of the symlinks in pg_tblspc directory.
-   *
-   * XXX: There is no backend function to get a symbolic link's target in
-   * general, so if the admin has put any custom symbolic links in the data
-   * directory, they won't be copied correctly.
-   */
+     
+                                                                       
+     
+                                                                             
+                                                     
+     
+                                                                          
+                                                                            
+                                                
+     
   sql = "WITH RECURSIVE files (path, filename, size, isdir) AS (\n"
         "  SELECT '' AS path, filename, size, isdir FROM\n"
         "  (SELECT pg_ls_dir('.', true, false) AS filename) AS fn,\n"
@@ -227,13 +227,13 @@ libpqProcessFileList(void)
     pg_fatal("could not fetch file list: %s", PQresultErrorMessage(res));
   }
 
-  /* sanity check the result set */
+                                   
   if (PQnfields(res) != 4)
   {
     pg_fatal("unexpected result set while fetching file list");
   }
 
-  /* Read result to local variables */
+                                      
   for (i = 0; i < PQntuples(res); i++)
   {
     char *path;
@@ -244,10 +244,10 @@ libpqProcessFileList(void)
 
     if (PQgetisnull(res, i, 1))
     {
-      /*
-       * The file was removed from the server while the query was
-       * running. Ignore it.
-       */
+         
+                                                                  
+                             
+         
       continue;
     }
 
@@ -274,16 +274,16 @@ libpqProcessFileList(void)
   PQclear(res);
 }
 
-/*----
- * Runs a query, which returns pieces of files from the remote source data
- * directory, and overwrites the corresponding parts of target files with
- * the received parts. The result set is expected to be of format:
- *
- * path		text	-- path in the data directory, e.g "base/1/123"
- * begin	int8	-- offset within the file
- * chunk	bytea	-- file content
- *----
- */
+       
+                                                                           
+                                                                          
+                                                                   
+   
+                                                              
+                                        
+                               
+       
+   
 static void
 receiveFileChunks(const char *sql)
 {
@@ -317,13 +317,13 @@ receiveFileChunks(const char *sql)
 
     case PGRES_TUPLES_OK:
       PQclear(res);
-      continue; /* final zero-row result */
+      continue;                            
 
     default:
       pg_fatal("unexpected result while fetching remote files: %s", PQresultErrorMessage(res));
     }
 
-    /* sanity check the result set */
+                                     
     if (PQnfields(res) != 3 || PQntuples(res) != 1)
     {
       pg_fatal("unexpected result set size while fetching remote files");
@@ -349,7 +349,7 @@ receiveFileChunks(const char *sql)
       pg_fatal("unexpected result length while fetching remote files");
     }
 
-    /* Read result set to local variables */
+                                            
     memcpy(&chunkoff, PQgetvalue(res, 0, 1), sizeof(int64));
     chunkoff = pg_ntoh64(chunkoff);
     chunksize = PQgetlength(res, 0, 2);
@@ -361,14 +361,14 @@ receiveFileChunks(const char *sql)
 
     chunk = PQgetvalue(res, 0, 2);
 
-    /*
-     * If a file has been deleted on the source, remove it on the target
-     * as well.  Note that multiple unlink() calls may happen on the same
-     * file if multiple data chunks are associated with it, hence ignore
-     * unconditionally anything missing.  If this file is not a relation
-     * data file, then it has been already truncated when creating the
-     * file chunk list at the previous execution of the filemap.
-     */
+       
+                                                                         
+                                                                          
+                                                                         
+                                                                         
+                                                                       
+                                                                 
+       
     if (PQgetisnull(res, 0, 2))
     {
       pg_log_debug("received null value for chunk for file \"%s\", file has been deleted", filename);
@@ -378,10 +378,10 @@ receiveFileChunks(const char *sql)
       continue;
     }
 
-    /*
-     * Separate step to keep platform-dependent format code out of
-     * translatable strings.
-     */
+       
+                                                                   
+                             
+       
     snprintf(chunkoff_str, sizeof(chunkoff_str), INT64_FORMAT, chunkoff);
     pg_log_debug("received chunk for file \"%s\", offset %s, size %d", filename, chunkoff_str, chunksize);
 
@@ -395,9 +395,9 @@ receiveFileChunks(const char *sql)
   }
 }
 
-/*
- * Receive a single file as a malloc'd buffer.
- */
+   
+                                               
+   
 char *
 libpqGetFile(const char *filename, size_t *filesize)
 {
@@ -414,13 +414,13 @@ libpqGetFile(const char *filename, size_t *filesize)
     pg_fatal("could not fetch remote file \"%s\": %s", filename, PQresultErrorMessage(res));
   }
 
-  /* sanity check the result set */
+                                   
   if (PQntuples(res) != 1 || PQgetisnull(res, 0, 0))
   {
     pg_fatal("unexpected result set while fetching remote file \"%s\"", filename);
   }
 
-  /* Read result to local variables */
+                                      
   len = PQgetlength(res, 0, 0);
   result = pg_malloc(len + 1);
   memcpy(result, PQgetvalue(res, 0, 0), len);
@@ -437,24 +437,24 @@ libpqGetFile(const char *filename, size_t *filesize)
   return result;
 }
 
-/*
- * Write a file range to a temporary table in the server.
- *
- * The range is sent to the server as a COPY formatted line, to be inserted
- * into the 'fetchchunks' temporary table. It is used in receiveFileChunks()
- * function to actually fetch the data.
- */
+   
+                                                          
+   
+                                                                            
+                                                                             
+                                        
+   
 static void
 fetch_file_range(const char *path, uint64 begin, uint64 end)
 {
   char linebuf[MAXPGPATH + 23];
 
-  /* Split the range into CHUNKSIZE chunks */
+                                             
   while (end - begin > 0)
   {
     unsigned int len;
 
-    /* Fine as long as CHUNKSIZE is not bigger than UINT32_MAX */
+                                                                 
     if (end - begin > CHUNKSIZE)
     {
       len = CHUNKSIZE;
@@ -475,9 +475,9 @@ fetch_file_range(const char *path, uint64 begin, uint64 end)
   }
 }
 
-/*
- * Fetch all changed blocks from remote source data directory.
- */
+   
+                                                               
+   
 void
 libpq_executeFileMap(filemap_t *map)
 {
@@ -486,10 +486,10 @@ libpq_executeFileMap(filemap_t *map)
   PGresult *res;
   int i;
 
-  /*
-   * First create a temporary table, and load it with the blocks that we
-   * need to fetch.
-   */
+     
+                                                                         
+                    
+     
   sql = "CREATE TEMPORARY TABLE fetchchunks(path text, begin int8, len int4);";
   run_simple_command(sql);
 
@@ -506,17 +506,17 @@ libpq_executeFileMap(filemap_t *map)
   {
     entry = map->array[i];
 
-    /* If this is a relation file, copy the modified blocks */
+                                                              
     execute_pagemap(&entry->pagemap, entry->path);
 
     switch (entry->action)
     {
     case FILE_ACTION_NONE:
-      /* nothing else to do */
+                              
       break;
 
     case FILE_ACTION_COPY:
-      /* Truncate the old file out of the way, if any */
+                                                        
       open_target_file(entry->path, true);
       fetch_file_range(entry->path, 0, entry->newsize);
       break;
@@ -553,10 +553,10 @@ libpq_executeFileMap(filemap_t *map)
     PQclear(res);
   }
 
-  /*
-   * We've now copied the list of file ranges that we need to fetch to the
-   * temporary table. Now, actually fetch all of those ranges.
-   */
+     
+                                                                           
+                                                               
+     
   sql = "SELECT path, begin,\n"
         "  pg_read_binary_file(path, begin, len, true) AS chunk\n"
         "FROM fetchchunks\n";

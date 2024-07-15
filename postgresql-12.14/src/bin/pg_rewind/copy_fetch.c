@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- *
- * copy_fetch.c
- *	  Functions for using a data directory as the source.
- *
- * Portions Copyright (c) 2013-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                         
+   
+                                                                         
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <sys/stat.h>
@@ -26,22 +26,22 @@ recurse_dir(const char *datadir, const char *path, process_file_callback_t callb
 static void
 execute_pagemap(datapagemap_t *pagemap, const char *path);
 
-/*
- * Traverse through all files in a data directory, calling 'callback'
- * for each file.
- */
+   
+                                                                      
+                  
+   
 void
 traverse_datadir(const char *datadir, process_file_callback_t callback)
 {
   recurse_dir(datadir, NULL, callback);
 }
 
-/*
- * recursive part of traverse_datadir
- *
- * parentpath is the current subdirectory's path relative to datadir,
- * or NULL at the top level.
- */
+   
+                                      
+   
+                                                                      
+                             
+   
 static void
 recurse_dir(const char *datadir, const char *parentpath, process_file_callback_t callback)
 {
@@ -81,14 +81,14 @@ recurse_dir(const char *datadir, const char *parentpath, process_file_callback_t
     {
       if (errno == ENOENT)
       {
-        /*
-         * File doesn't exist anymore. This is ok, if the new master
-         * is running and the file was just removed. If it was a data
-         * file, there should be a WAL record of the removal. If it
-         * was something else, it couldn't have been anyway.
-         *
-         * TODO: But complain if we're processing the target dir!
-         */
+           
+                                                                     
+                                                                      
+                                                                    
+                                                             
+           
+                                                                  
+           
       }
       else
       {
@@ -112,7 +112,7 @@ recurse_dir(const char *datadir, const char *parentpath, process_file_callback_t
     else if (S_ISDIR(fst.st_mode))
     {
       callback(path, FILE_TYPE_DIRECTORY, 0, NULL);
-      /* recurse to handle subdirectories */
+                                            
       recurse_dir(datadir, path, callback);
     }
 #ifndef WIN32
@@ -138,18 +138,18 @@ recurse_dir(const char *datadir, const char *parentpath, process_file_callback_t
 
       callback(path, FILE_TYPE_SYMLINK, 0, link_target);
 
-      /*
-       * If it's a symlink within pg_tblspc, we need to recurse into it,
-       * to process all the tablespaces.  We also follow a symlink if
-       * it's for pg_wal.  Symlinks elsewhere are ignored.
-       */
+         
+                                                                         
+                                                                      
+                                                           
+         
       if ((parentpath && strcmp(parentpath, "pg_tblspc") == 0) || strcmp(path, "pg_wal") == 0)
       {
         recurse_dir(datadir, path, callback);
       }
 #else
       pg_fatal("\"%s\" is a symbolic link, but symbolic links are not supported on this platform", fullpath);
-#endif /* HAVE_READLINK */
+#endif                    
     }
   }
 
@@ -164,11 +164,11 @@ recurse_dir(const char *datadir, const char *parentpath, process_file_callback_t
   }
 }
 
-/*
- * Copy a file from source to target, between 'begin' and 'end' offsets.
- *
- * If 'trunc' is true, any existing file with the same name is truncated.
- */
+   
+                                                                         
+   
+                                                                          
+   
 static void
 rewind_copy_file_range(const char *path, off_t begin, off_t end, bool trunc)
 {
@@ -226,10 +226,10 @@ rewind_copy_file_range(const char *path, off_t begin, off_t end, bool trunc)
   }
 }
 
-/*
- * Copy all relation data files from datadir_source to datadir_target, which
- * are marked in the given data page map.
- */
+   
+                                                                             
+                                          
+   
 void
 copy_executeFileMap(filemap_t *map)
 {
@@ -244,7 +244,7 @@ copy_executeFileMap(filemap_t *map)
     switch (entry->action)
     {
     case FILE_ACTION_NONE:
-      /* ok, do nothing.. */
+                            
       break;
 
     case FILE_ACTION_COPY:
@@ -284,7 +284,7 @@ execute_pagemap(datapagemap_t *pagemap, const char *path)
   {
     offset = blkno * BLCKSZ;
     rewind_copy_file_range(path, offset, offset + BLCKSZ, false);
-    /* Ok, this block has now been copied from new data dir to old */
+                                                                     
   }
   pg_free(iter);
 }

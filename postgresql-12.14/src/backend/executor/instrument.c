@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * instrument.c
- *	 functions for instrumentation of plan execution
- *
- *
- * Copyright (c) 2001-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/executor/instrument.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                    
+   
+   
+                                                                
+   
+                  
+                                       
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <unistd.h>
@@ -25,13 +25,13 @@ BufferUsageAdd(BufferUsage *dst, const BufferUsage *add);
 static void
 BufferUsageAccumDiff(BufferUsage *dst, const BufferUsage *add, const BufferUsage *sub);
 
-/* Allocate new instrumentation structure(s) */
+                                               
 Instrumentation *
 InstrAlloc(int n, int instrument_options)
 {
   Instrumentation *instr;
 
-  /* initialize all fields to zeroes, then modify as needed */
+                                                              
   instr = palloc0(n * sizeof(Instrumentation));
   if (instrument_options & (INSTRUMENT_BUFFERS | INSTRUMENT_TIMER))
   {
@@ -49,7 +49,7 @@ InstrAlloc(int n, int instrument_options)
   return instr;
 }
 
-/* Initialize a pre-allocated instrumentation structure. */
+                                                           
 void
 InstrInit(Instrumentation *instr, int instrument_options)
 {
@@ -58,7 +58,7 @@ InstrInit(Instrumentation *instr, int instrument_options)
   instr->need_timer = (instrument_options & INSTRUMENT_TIMER) != 0;
 }
 
-/* Entry to a plan node */
+                          
 void
 InstrStartNode(Instrumentation *instr)
 {
@@ -67,23 +67,23 @@ InstrStartNode(Instrumentation *instr)
     elog(ERROR, "InstrStartNode called twice in a row");
   }
 
-  /* save buffer usage totals at node entry, if needed */
+                                                         
   if (instr->need_bufusage)
   {
     instr->bufusage_start = pgBufferUsage;
   }
 }
 
-/* Exit from a plan node */
+                           
 void
 InstrStopNode(Instrumentation *instr, double nTuples)
 {
   instr_time endtime;
 
-  /* count the returned tuples */
+                                 
   instr->tuplecount += nTuples;
 
-  /* let's update the time only if the timer was requested */
+                                                             
   if (instr->need_timer)
   {
     if (INSTR_TIME_IS_ZERO(instr->starttime))
@@ -97,13 +97,13 @@ InstrStopNode(Instrumentation *instr, double nTuples)
     INSTR_TIME_SET_ZERO(instr->starttime);
   }
 
-  /* Add delta of buffer usage since entry to node's totals */
+                                                              
   if (instr->need_bufusage)
   {
     BufferUsageAccumDiff(&instr->bufusage, &pgBufferUsage, &instr->bufusage_start);
   }
 
-  /* Is this the first tuple of this cycle? */
+                                              
   if (!instr->running)
   {
     instr->running = true;
@@ -111,13 +111,13 @@ InstrStopNode(Instrumentation *instr, double nTuples)
   }
 }
 
-/* Finish a run cycle for a plan node */
+                                        
 void
 InstrEndLoop(Instrumentation *instr)
 {
   double totaltime;
 
-  /* Skip if nothing has happened, or already shut down */
+                                                          
   if (!instr->running)
   {
     return;
@@ -128,7 +128,7 @@ InstrEndLoop(Instrumentation *instr)
     elog(ERROR, "InstrEndLoop called on running node");
   }
 
-  /* Accumulate per-cycle statistics into totals */
+                                                   
   totaltime = INSTR_TIME_GET_DOUBLE(instr->counter);
 
   instr->startup += instr->firsttuple;
@@ -136,7 +136,7 @@ InstrEndLoop(Instrumentation *instr)
   instr->ntuples += instr->tuplecount;
   instr->nloops += 1;
 
-  /* Reset for next cycle (if any) */
+                                     
   instr->running = false;
   INSTR_TIME_SET_ZERO(instr->starttime);
   INSTR_TIME_SET_ZERO(instr->counter);
@@ -144,7 +144,7 @@ InstrEndLoop(Instrumentation *instr)
   instr->tuplecount = 0;
 }
 
-/* aggregate instrumentation information */
+                                           
 void
 InstrAggNode(Instrumentation *dst, Instrumentation *add)
 {
@@ -169,21 +169,21 @@ InstrAggNode(Instrumentation *dst, Instrumentation *add)
   dst->nfiltered1 += add->nfiltered1;
   dst->nfiltered2 += add->nfiltered2;
 
-  /* Add delta of buffer usage since entry to node's totals */
+                                                              
   if (dst->need_bufusage)
   {
     BufferUsageAdd(&dst->bufusage, &add->bufusage);
   }
 }
 
-/* note current values during parallel executor startup */
+                                                          
 void
 InstrStartParallelQuery(void)
 {
   save_pgBufferUsage = pgBufferUsage;
 }
 
-/* report usage after parallel executor shutdown */
+                                                   
 void
 InstrEndParallelQuery(BufferUsage *result)
 {
@@ -191,14 +191,14 @@ InstrEndParallelQuery(BufferUsage *result)
   BufferUsageAccumDiff(result, &pgBufferUsage, &save_pgBufferUsage);
 }
 
-/* accumulate work done by workers in leader's stats */
+                                                       
 void
 InstrAccumParallelQuery(BufferUsage *result)
 {
   BufferUsageAdd(&pgBufferUsage, result);
 }
 
-/* dst += add */
+                
 static void
 BufferUsageAdd(BufferUsage *dst, const BufferUsage *add)
 {
@@ -216,7 +216,7 @@ BufferUsageAdd(BufferUsage *dst, const BufferUsage *add)
   INSTR_TIME_ADD(dst->blk_write_time, add->blk_write_time);
 }
 
-/* dst += add - sub */
+                      
 static void
 BufferUsageAccumDiff(BufferUsage *dst, const BufferUsage *add, const BufferUsage *sub)
 {

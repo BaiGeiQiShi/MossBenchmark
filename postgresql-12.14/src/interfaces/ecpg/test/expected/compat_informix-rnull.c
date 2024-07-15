@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "rnull.pgc"
@@ -77,7 +77,7 @@ main(void)
 #line 24 "rnull.pgc"
 
   ECPGdebug(1, stderr);
-  /* exec sql whenever sqlerror  do sqlprint ( ) ; */
+                                                     
 #line 27 "rnull.pgc"
 
   {

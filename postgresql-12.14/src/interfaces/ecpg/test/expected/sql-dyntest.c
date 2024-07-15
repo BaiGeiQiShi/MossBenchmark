@@ -1,14 +1,14 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "dyntest.pgc"
-/* dynamic SQL test program
- */
+                            
+   
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +17,9 @@
 #ifndef _ECPG_SQL3TYPES_H
 #define _ECPG_SQL3TYPES_H
 
-/* SQL3 dynamic type codes */
+                             
 
-/* chapter 13.1 table 2: Codes used for SQL data types in Dynamic SQL */
+                                                                        
 
 enum
 {
@@ -32,17 +32,17 @@ enum
   SQL3_REAL,
   SQL3_DOUBLE_PRECISION,
   SQL3_DATE_TIME_TIMESTAMP,
-  SQL3_INTERVAL, /* 10 */
+  SQL3_INTERVAL,         
   SQL3_CHARACTER_VARYING = 12,
   SQL3_ENUMERATED,
   SQL3_BIT,
   SQL3_BIT_VARYING,
   SQL3_BOOLEAN,
   SQL3_abstract
-  /* the rest is xLOB stuff */
+                              
 };
 
-/* chapter 13.1 table 3: Codes associated with datetime data types in Dynamic SQL */
+                                                                                    
 
 enum
 {
@@ -52,11 +52,11 @@ enum
   SQL3_DDT_TIME_WITH_TIME_ZONE,
   SQL3_DDT_TIMESTAMP_WITH_TIME_ZONE,
 
-  SQL3_DDT_ILLEGAL /* not a datetime data type (not part of
-                    * standard) */
+  SQL3_DDT_ILLEGAL                                          
+                                  
 };
 
-#endif /* !_ECPG_SQL3TYPES_H */
+#endif                         
 
 #line 7 "dyntest.pgc"
 
@@ -69,8 +69,8 @@ enum
 #define PGDLLIMPORT __declspec(dllimport)
 #else
 #define PGDLLIMPORT
-#endif /* __CYGWIN__ */
-#endif /* PGDLLIMPORT */
+#endif                 
+#endif                  
 
 #define SQLERRMC_LEN 150
 
@@ -91,27 +91,27 @@ extern "C"
     } sqlerrm;
     char sqlerrp[8];
     long sqlerrd[6];
-    /* Element 0: empty						*/
-    /* 1: OID of processed tuple if applicable			*/
-    /* 2: number of rows processed				*/
-    /* after an INSERT, UPDATE or				*/
-    /* DELETE statement					*/
-    /* 3: empty						*/
-    /* 4: empty						*/
-    /* 5: empty						*/
+                               
+                                                   
+                                        
+                                       
+                              
+                       
+                       
+                       
     char sqlwarn[8];
-    /* Element 0: set to 'W' if at least one other is 'W'	*/
-    /* 1: if 'W' at least one character string		*/
-    /* value was truncated when it was			*/
-    /* stored into a host variable.             */
+                                                            
+                                                  
+                                           
+                                                  
 
-    /*
-     * 2: if 'W' a (hopefully) non-fatal notice occurred
-     */	/* 3: empty */
-    /* 4: empty						*/
-    /* 5: empty						*/
-    /* 6: empty						*/
-    /* 7: empty						*/
+       
+                                                         
+       	              
+                       
+                       
+                       
+                       
 
     char sqlstate[5];
   };
@@ -145,7 +145,7 @@ error(void)
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 22 "dyntest.pgc"
   int COUNT;
@@ -176,19 +176,19 @@ main()
 
 #line 31 "dyntest.pgc"
   char *QUERY;
-/* exec sql end declare section */
+                                  
 #line 32 "dyntest.pgc"
 
   int done = 0;
 
-  /* exec sql var BOOLVAR is bool */
+                                    
 #line 35 "dyntest.pgc"
 
   ECPGdebug(1, stderr);
 
   QUERY = "select * from dyntest";
 
-  /* exec sql whenever sqlerror  do error ( ) ; */
+                                                  
 #line 43 "dyntest.pgc"
 
   ECPGallocate_desc(__LINE__, "MYDESC");
@@ -266,7 +266,7 @@ main()
   }
 #line 57 "dyntest.pgc"
 
-  /* declare MYCURS cursor for $1 */
+                                    
 #line 58 "dyntest.pgc"
 
   {

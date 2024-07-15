@@ -1,67 +1,67 @@
-/*-------------------------------------------------------------------------
- *
- * compress_io.c
- *	 Routines for archivers to write an uncompressed or compressed data
- *	 stream.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * This file includes two APIs for dealing with compressed data. The first
- * provides more flexibility, using callbacks to read/write data from the
- * underlying stream. The second API is a wrapper around fopen/gzopen and
- * friends, providing an interface similar to those, but abstracts away
- * the possible compression. Both APIs use libz for the compression, but
- * the second API uses gzip headers, so the resulting files can be easily
- * manipulated with the gzip utility.
- *
- * Compressor API
- * --------------
- *
- *	The interface for writing to an archive consists of three functions:
- *	AllocateCompressor, WriteDataToArchive and EndCompressor. First you call
- *	AllocateCompressor, then write all the data by calling WriteDataToArchive
- *	as many times as needed, and finally EndCompressor. WriteDataToArchive
- *	and EndCompressor will call the WriteFunc that was provided to
- *	AllocateCompressor for each chunk of compressed data.
- *
- *	The interface for reading an archive consists of just one function:
- *	ReadDataFromArchive. ReadDataFromArchive reads the whole compressed input
- *	stream, by repeatedly calling the given ReadFunc. ReadFunc returns the
- *	compressed data chunk at a time, and ReadDataFromArchive decompresses it
- *	and passes the decompressed data to ahwrite(), until ReadFunc returns 0
- *	to signal EOF.
- *
- *	The interface is the same for compressed and uncompressed streams.
- *
- * Compressed stream API
- * ----------------------
- *
- *	The compressed stream API is a wrapper around the C standard fopen() and
- *	libz's gzopen() APIs. It allows you to use the same functions for
- *	compressed and uncompressed streams. cfopen_read() first tries to open
- *	the file with given name, and if it fails, it tries to open the same
- *	file with the .gz suffix. cfopen_write() opens a file for writing, an
- *	extra argument specifies if the file should be compressed, and adds the
- *	.gz suffix to the filename if so. This allows you to easily handle both
- *	compressed and uncompressed files.
- *
- * IDENTIFICATION
- *	   src/bin/pg_dump/compress_io.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                                       
+            
+   
+                                                                         
+                                                                        
+   
+                                                                           
+                                                                          
+                                                                          
+                                                                        
+                                                                         
+                                                                          
+                                      
+   
+                  
+                  
+   
+                                                                        
+                                                                            
+                                                                             
+                                                                          
+                                                                  
+                                                         
+   
+                                                                       
+                                                                             
+                                                                          
+                                                                            
+                                                                           
+                  
+   
+                                                                      
+   
+                         
+                          
+   
+                                                                            
+                                                                     
+                                                                          
+                                                                        
+                                                                         
+                                                                           
+                                                                           
+                                      
+   
+                  
+                                    
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include "compress_io.h"
 #include "pg_backup_utils.h"
 
-/*----------------------
- * Compressor API
- *----------------------
- */
+                         
+                  
+                         
+   
 
-/* typedef appears in compress_io.h */
+                                      
 struct CompressorState
 {
   CompressionAlgorithm comprAlg;
@@ -77,7 +77,7 @@ struct CompressorState
 static void
 ParseCompressionOption(int compression, CompressionAlgorithm *alg, int *level);
 
-/* Routines that support zlib compressed data I/O */
+                                                    
 #ifdef HAVE_LIBZ
 static void
 InitCompressorZlib(CompressorState *cs, int level);
@@ -91,17 +91,17 @@ static void
 EndCompressorZlib(ArchiveHandle *AH, CompressorState *cs);
 #endif
 
-/* Routines that support uncompressed data I/O */
+                                                 
 static void
 ReadDataFromArchiveNone(ArchiveHandle *AH, ReadFunc readF);
 static void
 WriteDataToArchiveNone(ArchiveHandle *AH, CompressorState *cs, const char *data, size_t dLen);
 
-/*
- * Interprets a numeric 'compression' value. The algorithm implied by the
- * value (zlib or none at the moment), is returned in *alg, and the
- * zlib compression level in *level.
- */
+   
+                                                                          
+                                                                    
+                                     
+   
 static void
 ParseCompressionOption(int compression, CompressionAlgorithm *alg, int *level)
 {
@@ -116,19 +116,19 @@ ParseCompressionOption(int compression, CompressionAlgorithm *alg, int *level)
   else
   {
     fatal("invalid compression code: %d", compression);
-    *alg = COMPR_ALG_NONE; /* keep compiler quiet */
+    *alg = COMPR_ALG_NONE;                          
   }
 
-  /* The level is just the passed-in value. */
+                                              
   if (level)
   {
     *level = compression;
   }
 }
 
-/* Public interface routines */
+                               
 
-/* Allocate a new compressor */
+                               
 CompressorState *
 AllocateCompressor(int compression, WriteFunc writeF)
 {
@@ -149,9 +149,9 @@ AllocateCompressor(int compression, WriteFunc writeF)
   cs->writeF = writeF;
   cs->comprAlg = alg;
 
-  /*
-   * Perform compression algorithm specific initialization.
-   */
+     
+                                                            
+     
 #ifdef HAVE_LIBZ
   if (alg == COMPR_ALG_LIBZ)
   {
@@ -162,10 +162,10 @@ AllocateCompressor(int compression, WriteFunc writeF)
   return cs;
 }
 
-/*
- * Read all compressed data from the input stream (via readF) and print it
- * out with ahwrite().
- */
+   
+                                                                           
+                       
+   
 void
 ReadDataFromArchive(ArchiveHandle *AH, int compression, ReadFunc readF)
 {
@@ -187,9 +187,9 @@ ReadDataFromArchive(ArchiveHandle *AH, int compression, ReadFunc readF)
   }
 }
 
-/*
- * Compress and write data to the output stream (via writeF).
- */
+   
+                                                              
+   
 void
 WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs, const void *data, size_t dLen)
 {
@@ -209,9 +209,9 @@ WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs, const void *data, siz
   return;
 }
 
-/*
- * Terminate compression library context and flush its buffers.
- */
+   
+                                                                
+   
 void
 EndCompressor(ArchiveHandle *AH, CompressorState *cs)
 {
@@ -224,12 +224,12 @@ EndCompressor(ArchiveHandle *AH, CompressorState *cs)
   free(cs);
 }
 
-/* Private routines, specific to each compression method. */
+                                                            
 
 #ifdef HAVE_LIBZ
-/*
- * Functions for zlib compressed output.
- */
+   
+                                         
+   
 
 static void
 InitCompressorZlib(CompressorState *cs, int level)
@@ -241,11 +241,11 @@ InitCompressorZlib(CompressorState *cs, int level)
   zp->zfree = Z_NULL;
   zp->opaque = Z_NULL;
 
-  /*
-   * zlibOutSize is the buffer size we tell zlib it can output to.  We
-   * actually allocate one extra byte because some routines want to append a
-   * trailing zero byte to the zlib output.
-   */
+     
+                                                                       
+                                                                             
+                                            
+     
   cs->zlibOut = (char *)pg_malloc(ZLIB_OUT_SIZE + 1);
   cs->zlibOutSize = ZLIB_OUT_SIZE;
 
@@ -254,7 +254,7 @@ InitCompressorZlib(CompressorState *cs, int level)
     fatal("could not initialize compression library: %s", zp->msg);
   }
 
-  /* Just be paranoid - maybe End is called after Start, with no Write */
+                                                                         
   zp->next_out = (void *)cs->zlibOut;
   zp->avail_out = cs->zlibOutSize;
 }
@@ -267,7 +267,7 @@ EndCompressorZlib(ArchiveHandle *AH, CompressorState *cs)
   zp->next_in = NULL;
   zp->avail_in = 0;
 
-  /* Flush any remaining data from zlib buffer */
+                                                 
   DeflateCompressorZlib(AH, cs, true);
 
   if (deflateEnd(zp) != Z_OK)
@@ -295,17 +295,17 @@ DeflateCompressorZlib(ArchiveHandle *AH, CompressorState *cs, bool flush)
     }
     if ((flush && (zp->avail_out < cs->zlibOutSize)) || (zp->avail_out == 0) || (zp->avail_in != 0))
     {
-      /*
-       * Extra paranoia: avoid zero-length chunks, since a zero length
-       * chunk is the EOF marker in the custom format. This should never
-       * happen but...
-       */
+         
+                                                                       
+                                                                         
+                       
+         
       if (zp->avail_out < cs->zlibOutSize)
       {
-        /*
-         * Any write function should do its own error checking but to
-         * make sure we do a check here as well...
-         */
+           
+                                                                      
+                                                   
+           
         size_t len = cs->zlibOutSize - zp->avail_out;
 
         cs->writeF(AH, out, len);
@@ -356,7 +356,7 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
     fatal("could not initialize compression library: %s", zp->msg);
   }
 
-  /* no minimal chunk size for zlib */
+                                      
   while ((cnt = readF(AH, &buf, &buflen)))
   {
     zp->next_in = (void *)buf;
@@ -403,11 +403,11 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
   free(out);
   free(zp);
 }
-#endif /* HAVE_LIBZ */
+#endif                
 
-/*
- * Functions for uncompressed output.
- */
+   
+                                      
+   
 
 static void
 ReadDataFromArchiveNone(ArchiveHandle *AH, ReadFunc readF)
@@ -434,15 +434,15 @@ WriteDataToArchiveNone(ArchiveHandle *AH, CompressorState *cs, const char *data,
   return;
 }
 
-/*----------------------
- * Compressed stream API
- *----------------------
- */
+                         
+                         
+                         
+   
 
-/*
- * cfp represents an open stream, wrapping the underlying FILE or gzFile
- * pointer. This is opaque to the callers.
- */
+   
+                                                                         
+                                           
+   
 struct cfp
 {
   FILE *uncompressedfp;
@@ -456,7 +456,7 @@ static int
 hasSuffix(const char *filename, const char *suffix);
 #endif
 
-/* free() without changing errno; useful in several places below */
+                                                                   
 static void
 free_keep_errno(void *p)
 {
@@ -466,16 +466,16 @@ free_keep_errno(void *p)
   errno = save_errno;
 }
 
-/*
- * Open a file for reading. 'path' is the file to open, and 'mode' should
- * be either "r" or "rb".
- *
- * If the file at 'path' does not exist, we append the ".gz" suffix (if 'path'
- * doesn't already have it) and try again. So if you pass "foo" as 'path',
- * this will open either "foo" or "foo.gz".
- *
- * On failure, return NULL with an error code in errno.
- */
+   
+                                                                          
+                          
+   
+                                                                               
+                                                                           
+                                            
+   
+                                                        
+   
 cfp *
 cfopen_read(const char *path, const char *mode)
 {
@@ -504,17 +504,17 @@ cfopen_read(const char *path, const char *mode)
   return fp;
 }
 
-/*
- * Open a file for writing. 'path' indicates the path name, and 'mode' must
- * be a filemode as accepted by fopen() and gzopen() that indicates writing
- * ("w", "wb", "a", or "ab").
- *
- * If 'compression' is non-zero, a gzip compressed stream is opened, and
- * 'compression' indicates the compression level used. The ".gz" suffix
- * is automatically added to 'path' in that case.
- *
- * On failure, return NULL with an error code in errno.
- */
+   
+                                                                            
+                                                                            
+                              
+   
+                                                                         
+                                                                        
+                                                  
+   
+                                                        
+   
 cfp *
 cfopen_write(const char *path, const char *mode, int compression)
 {
@@ -534,18 +534,18 @@ cfopen_write(const char *path, const char *mode, int compression)
     free_keep_errno(fname);
 #else
     fatal("not built with zlib support");
-    fp = NULL; /* keep compiler quiet */
+    fp = NULL;                          
 #endif
   }
   return fp;
 }
 
-/*
- * Opens file 'path' in 'mode'. If 'compression' is non-zero, the file
- * is opened with libz gzopen(), otherwise with plain fopen().
- *
- * On failure, return NULL with an error code in errno.
- */
+   
+                                                                       
+                                                               
+   
+                                                        
+   
 cfp *
 cfopen(const char *path, const char *mode, int compression)
 {
@@ -556,7 +556,7 @@ cfopen(const char *path, const char *mode, int compression)
 #ifdef HAVE_LIBZ
     if (compression != Z_DEFAULT_COMPRESSION)
     {
-      /* user has specified a compression level, so tell zlib to use it */
+                                                                          
       char mode_compression[32];
 
       snprintf(mode_compression, sizeof(mode_compression), "%s%d", mode, compression);
@@ -564,7 +564,7 @@ cfopen(const char *path, const char *mode, int compression)
     }
     else
     {
-      /* don't specify a level, just use the zlib default */
+                                                            
       fp->compressedfp = gzopen(path, mode);
     }
 

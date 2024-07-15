@@ -1,20 +1,20 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/help.c
- */
+   
+                                              
+   
+                                                                
+   
+                       
+   
 #include "postgres_fe.h"
 
 #ifndef WIN32
-#include <unistd.h> /* for geteuid() */
+#include <unistd.h>                    
 #else
 #include <win32.h>
 #endif
 
 #ifndef WIN32
-#include <sys/ioctl.h> /* for ioctl() */
+#include <sys/ioctl.h>                  
 #endif
 
 #ifdef HAVE_TERMIOS_H
@@ -30,18 +30,18 @@
 #include "settings.h"
 #include "sql_help.h"
 
-/*
- * PLEASE:
- * If you change something in this file, also make the same changes
- * in the DocBook documentation, file ref/psql-ref.sgml. If you don't
- * know how to do it, please find someone who can help you.
- */
+   
+           
+                                                                    
+                                                                      
+                                                            
+   
 
-/*
- * usage
- *
- * print out command line arguments
- */
+   
+         
+   
+                                    
+   
 #define ON(var) (var ? _("on") : _("off"))
 
 void
@@ -52,7 +52,7 @@ usage(unsigned short int pager)
   char *errstr;
   FILE *output;
 
-  /* Find default user, in case we need it. */
+                                              
   user = getenv("PGUSER");
   if (!user)
   {
@@ -64,10 +64,10 @@ usage(unsigned short int pager)
     }
   }
 
-  /*
-   * Keep this line count in sync with the number of lines printed below!
-   * Use "psql --help=options | wc" to count correctly.
-   */
+     
+                                                                          
+                                                        
+     
   output = PageOutput(62, pager ? &(pset.popt.topt) : NULL);
 
   fprintf(output, _("psql is the PostgreSQL interactive terminal.\n\n"));
@@ -75,7 +75,7 @@ usage(unsigned short int pager)
   fprintf(output, _("  psql [OPTION]... [DBNAME [USERNAME]]\n\n"));
 
   fprintf(output, _("General options:\n"));
-  /* Display default database */
+                                
   env = getenv("PGDATABASE");
   if (!env)
   {
@@ -128,13 +128,13 @@ usage(unsigned short int pager)
                     "                           set record separator for unaligned output to zero byte\n"));
 
   fprintf(output, _("\nConnection options:\n"));
-  /* Display default host */
+                            
   env = getenv("PGHOST");
   fprintf(output, _("  -h, --host=HOSTNAME      database server host or socket directory (default: \"%s\")\n"), env ? env : _("local socket"));
-  /* Display default port */
+                            
   env = getenv("PGPORT");
   fprintf(output, _("  -p, --port=PORT          database server port (default: \"%s\")\n"), env ? env : DEF_PGPORT_STR);
-  /* Display default user */
+                            
   env = getenv("PGUSER");
   if (!env)
   {
@@ -152,11 +152,11 @@ usage(unsigned short int pager)
   ClosePager(output);
 }
 
-/*
- * slashUsage
- *
- * print out help for the backslash commands
- */
+   
+              
+   
+                                             
+   
 void
 slashUsage(unsigned short int pager)
 {
@@ -165,11 +165,11 @@ slashUsage(unsigned short int pager)
 
   currdb = PQdb(pset.db);
 
-  /*
-   * Keep this line count in sync with the number of lines printed below!
-   * Use "psql --help=commands | wc" to count correctly.  It's okay to count
-   * the USE_READLINE line even in builds without that.
-   */
+     
+                                                                          
+                                                                             
+                                                        
+     
   output = PageOutput(127, pager ? &(pset.popt.topt) : NULL);
 
   fprintf(output, _("General\n"));
@@ -326,22 +326,22 @@ slashUsage(unsigned short int pager)
   ClosePager(output);
 }
 
-/*
- * helpVariables
- *
- * show list of available variables (options) from command line
- */
+   
+                 
+   
+                                                                
+   
 void
 helpVariables(unsigned short int pager)
 {
   FILE *output;
 
-  /*
-   * Keep this line count in sync with the number of lines printed below!
-   * Use "psql --help=variables | wc" to count correctly; but notice that
-   * Windows builds currently print one more line than non-Windows builds.
-   * Using the larger number is fine.
-   */
+     
+                                                                          
+                                                                          
+                                                                           
+                                      
+     
   output = PageOutput(158, pager ? &(pset.popt.topt) : NULL);
 
   fprintf(output, _("List of specially treated variables\n\n"));
@@ -509,11 +509,11 @@ helpVariables(unsigned short int pager)
   ClosePager(output);
 }
 
-/*
- * helpSQL -- help with SQL commands
- *
- * Note: we assume caller removed any trailing spaces in "topic".
- */
+   
+                                     
+   
+                                                                  
+   
 void
 helpSQL(const char *topic, unsigned short int pager)
 {
@@ -521,7 +521,7 @@ helpSQL(const char *topic, unsigned short int pager)
 
   if (!topic || strlen(topic) == 0)
   {
-    /* Print all the available command names */
+                                               
     int screen_width;
     int ncolumns;
     int nrows;
@@ -529,20 +529,20 @@ helpSQL(const char *topic, unsigned short int pager)
     int i;
     int j;
 
-    /* Find screen width to determine how many columns will fit */
+                                                                  
 #ifdef TIOCGWINSZ
     struct winsize screen_size;
 
     if (ioctl(fileno(stdout), TIOCGWINSZ, &screen_size) == -1)
     {
-      screen_width = 80; /* ioctl failed, assume 80 */
+      screen_width = 80;                              
     }
     else
     {
       screen_width = screen_size.ws_col;
     }
 #else
-    screen_width = 80; /* default assumption */
+    screen_width = 80;                         
 #endif
 
     ncolumns = (screen_width - 3) / (QL_MAX_CMD_LEN + 1);
@@ -576,17 +576,17 @@ helpSQL(const char *topic, unsigned short int pager)
     size_t len, wordlen, j;
     int nl_count;
 
-    /*
-     * len is the amount of the input to compare to the help topic names.
-     * We first try exact match, then first + second words, then first
-     * word only.
-     */
+       
+                                                                          
+                                                                       
+                  
+       
     len = strlen(topic);
 
     for (pass = 1; pass <= 3; pass++)
     {
-      if (pass > 1) /* Nothing on first pass - try the opening
-                     * word(s) */
+      if (pass > 1)                                            
+                                 
       {
         wordlen = j = 1;
         while (j < len && topic[j++] != ' ')
@@ -603,32 +603,32 @@ helpSQL(const char *topic, unsigned short int pager)
         }
         if (wordlen >= len)
         {
-          /* Failed to shorten input, so try next pass if any */
+                                                                
           continue;
         }
         len = wordlen;
       }
 
-      /*
-       * Count newlines for pager.  This logic must agree with what the
-       * following loop will do!
-       */
+         
+                                                                        
+                                 
+         
       nl_count = 0;
       for (i = 0; QL_HELP[i].cmd; i++)
       {
         if (pg_strncasecmp(topic, QL_HELP[i].cmd, len) == 0 || strcmp(topic, "*") == 0)
         {
-          /* magic constant here must match format below! */
+                                                            
           nl_count += 7 + QL_HELP[i].nl_count;
 
-          /* If we have an exact match, exit.  Fixes \h SELECT */
+                                                                 
           if (pg_strcasecmp(topic, QL_HELP[i].cmd) == 0)
           {
             break;
           }
         }
       }
-      /* If no matches, don't open the output yet */
+                                                    
       if (nl_count == 0)
       {
         continue;
@@ -649,7 +649,7 @@ helpSQL(const char *topic, unsigned short int pager)
           initPQExpBuffer(&buffer);
           QL_HELP[i].syntaxfunc(&buffer);
           url = psprintf("https://www.postgresql.org/docs/%s/%s.html", strstr(PG_VERSION, "devel") ? "devel" : PG_MAJORVERSION, QL_HELP[i].docbook_id);
-          /* # of newlines in format must match constant above! */
+                                                                  
           fprintf(output,
               _("Command:     %s\n"
                 "Description: %s\n"
@@ -659,7 +659,7 @@ helpSQL(const char *topic, unsigned short int pager)
           free(url);
           termPQExpBuffer(&buffer);
 
-          /* If we have an exact match, exit.  Fixes \h SELECT */
+                                                                 
           if (pg_strcasecmp(topic, QL_HELP[i].cmd) == 0)
           {
             break;
@@ -669,7 +669,7 @@ helpSQL(const char *topic, unsigned short int pager)
       break;
     }
 
-    /* If we never found anything, report that */
+                                                 
     if (!output)
     {
       output = PageOutput(2, pager ? &(pset.popt.topt) : NULL);

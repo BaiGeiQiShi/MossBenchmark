@@ -1,11 +1,11 @@
-/*
- *	dump.c
- *
- *	dump functions
- *
- *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *	src/bin/pg_upgrade/dump.c
- */
+   
+          
+   
+                  
+   
+                                                                
+                             
+   
 
 #include "postgres_fe.h"
 
@@ -20,7 +20,7 @@ generate_old_dump(void)
 
   prep_status("Creating dump of global objects");
 
-  /* run new pg_dumpall binary for globals */
+                                             
   exec_prog(UTILITY_LOG_FILE, NULL, true, true,
       "\"%s/pg_dumpall\" %s --globals-only --quote-all-identifiers "
       "--binary-upgrade %s -f %s",
@@ -29,7 +29,7 @@ generate_old_dump(void)
 
   prep_status("Creating dump of database schemas\n");
 
-  /* create per-db dump files */
+                                
   for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
   {
     char sql_file_name[MAXPGPATH], log_file_name[MAXPGPATH];
@@ -55,7 +55,7 @@ generate_old_dump(void)
     termPQExpBuffer(&escaped_connstr);
   }
 
-  /* reap all children */
+                         
   while (reap_child(true) == true)
     ;
 

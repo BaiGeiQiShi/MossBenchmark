@@ -1,11 +1,11 @@
-/*
- * make KOI8->ISO8859-5 and ISO8859-5->KOI8 translation table
- * from koi-iso.tab.
- *
- * Tatsuo Ishii
- *
- * src/backend/utils/mb/iso.c
- */
+   
+                                                              
+                     
+   
+                
+   
+                              
+   
 
 #include <stdio.h>
 

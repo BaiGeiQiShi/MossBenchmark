@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "array_of_struct.pgc"
@@ -13,13 +13,13 @@
 
 #line 3 "array_of_struct.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 5 "array_of_struct.pgc"
 
-/* exec sql whenever sql_warning  sqlprint ; */
+                                               
 #line 6 "array_of_struct.pgc"
 
-/* exec sql whenever not found  sqlprint ; */
+                                             
 #line 7 "array_of_struct.pgc"
 
 typedef struct
@@ -49,7 +49,7 @@ typedef struct ind
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
   typedef struct
   {
@@ -112,7 +112,7 @@ main()
     int len;
     char arr[50];
   } onlyname[2];
-/* exec sql end declare section */
+                                  
 #line 46 "array_of_struct.pgc"
 
   ECPGdebug(1, stderr);

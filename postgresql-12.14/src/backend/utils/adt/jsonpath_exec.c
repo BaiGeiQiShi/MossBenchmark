@@ -1,61 +1,61 @@
-/*-------------------------------------------------------------------------
- *
- * jsonpath_exec.c
- *	 Routines for SQL/JSON path execution.
- *
- * Jsonpath is executed in the global context stored in JsonPathExecContext,
- * which is passed to almost every function involved into execution.  Entry
- * point for jsonpath execution is executeJsonPath() function, which
- * initializes execution context including initial JsonPathItem and JsonbValue,
- * flags, stack for calculation of @ in filters.
- *
- * The result of jsonpath query execution is enum JsonPathExecResult and
- * if succeeded sequence of JsonbValue, written to JsonValueList *found, which
- * is passed through the jsonpath items.  When found == NULL, we're inside
- * exists-query and we're interested only in whether result is empty.  In this
- * case execution is stopped once first result item is found, and the only
- * execution result is JsonPathExecResult.  The values of JsonPathExecResult
- * are following:
- * - jperOk			-- result sequence is not empty
- * - jperNotFound	-- result sequence is empty
- * - jperError		-- error occurred during execution
- *
- * Jsonpath is executed recursively (see executeItem()) starting form the
- * first path item (which in turn might be, for instance, an arithmetic
- * expression evaluated separately).  On each step single JsonbValue obtained
- * from previous path item is processed.  The result of processing is a
- * sequence of JsonbValue (probably empty), which is passed to the next path
- * item one by one.  When there is no next path item, then JsonbValue is added
- * to the 'found' list.  When found == NULL, then execution functions just
- * return jperOk (see executeNextItem()).
- *
- * Many of jsonpath operations require automatic unwrapping of arrays in lax
- * mode.  So, if input value is array, then corresponding operation is
- * processed not on array itself, but on all of its members one by one.
- * executeItemOptUnwrapTarget() function have 'unwrap' argument, which indicates
- * whether unwrapping of array is needed.  When unwrap == true, each of array
- * members is passed to executeItemOptUnwrapTarget() again but with unwrap == false
- * in order to evade subsequent array unwrapping.
- *
- * All boolean expressions (predicates) are evaluated by executeBoolItem()
- * function, which returns tri-state JsonPathBool.  When error is occurred
- * during predicate execution, it returns jpbUnknown.  According to standard
- * predicates can be only inside filters.  But we support their usage as
- * jsonpath expression.  This helps us to implement @@ operator.  In this case
- * resulting JsonPathBool is transformed into jsonb bool or null.
- *
- * Arithmetic and boolean expression are evaluated recursively from expression
- * tree top down to the leaves.  Therefore, for binary arithmetic expressions
- * we calculate operands first.  Then we check that results are numeric
- * singleton lists, calculate the result and pass it to the next path item.
- *
- * Copyright (c) 2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	src/backend/utils/adt/jsonpath_exec.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                                          
+   
+                                                                             
+                                                                            
+                                                                     
+                                                                                
+                                                 
+   
+                                                                         
+                                                                               
+                                                                           
+                                                                               
+                                                                           
+                                                                             
+                  
+                                              
+                                              
+                                                   
+   
+                                                                          
+                                                                        
+                                                                              
+                                                                        
+                                                                             
+                                                                               
+                                                                           
+                                          
+   
+                                                                             
+                                                                       
+                                                                        
+                                                                                 
+                                                                              
+                                                                                    
+                                                  
+   
+                                                                           
+                                                                           
+                                                                             
+                                                                         
+                                                                               
+                                                                  
+   
+                                                                               
+                                                                              
+                                                                        
+                                                                            
+   
+                                                           
+   
+                  
+                                         
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -76,46 +76,46 @@
 #include "utils/timestamp.h"
 #include "utils/varlena.h"
 
-/*
- * Represents "base object" and it's "id" for .keyvalue() evaluation.
- */
+   
+                                                                      
+   
 typedef struct JsonBaseObjectInfo
 {
   JsonbContainer *jbc;
   int id;
 } JsonBaseObjectInfo;
 
-/*
- * Context of jsonpath execution.
- */
+   
+                                  
+   
 typedef struct JsonPathExecContext
 {
-  Jsonb *vars;                   /* variables to substitute into jsonpath */
-  JsonbValue *root;              /* for $ evaluation */
-  JsonbValue *current;           /* for @ evaluation */
-  JsonBaseObjectInfo baseObject; /* "base object" for .keyvalue()
-                                  * evaluation */
-  int lastGeneratedObjectId;     /* "id" counter for .keyvalue()
-                                  * evaluation */
-  int innermostArraySize;        /* for LAST array index evaluation */
-  bool laxMode;                  /* true for "lax" mode, false for "strict"
-                                  * mode */
-  bool ignoreStructuralErrors;   /* with "true" structural errors such
-                                  * as absence of required json item or
-                                  * unexpected json item type are
-                                  * ignored */
-  bool throwErrors;              /* with "false" all suppressible errors are
-                                  * suppressed */
+  Jsonb *vars;                                                              
+  JsonbValue *root;                                    
+  JsonbValue *current;                                 
+  JsonBaseObjectInfo baseObject;                                  
+                                                 
+  int lastGeneratedObjectId;                                     
+                                                 
+  int innermostArraySize;                                             
+  bool laxMode;                                                             
+                                           
+  bool ignoreStructuralErrors;                                         
+                                                                        
+                                                                  
+                                              
+  bool throwErrors;                                                          
+                                                 
 } JsonPathExecContext;
 
-/* Context for LIKE_REGEX execution. */
+                                       
 typedef struct JsonLikeRegexContext
 {
   text *regex;
   int cflags;
 } JsonLikeRegexContext;
 
-/* Result of jsonpath predicate evaluation */
+                                             
 typedef enum JsonPathBool
 {
   jpbFalse = 0,
@@ -123,7 +123,7 @@ typedef enum JsonPathBool
   jpbUnknown = 2
 } JsonPathBool;
 
-/* Result of jsonpath expression evaluation */
+                                              
 typedef enum JsonPathExecResult
 {
   jperOk = 0,
@@ -133,9 +133,9 @@ typedef enum JsonPathExecResult
 
 #define jperIsError(jper) ((jper) == jperError)
 
-/*
- * List of jsonb values with shortcut for single-value list.
- */
+   
+                                                             
+   
 typedef struct JsonValueList
 {
   JsonbValue *singleton;
@@ -148,14 +148,14 @@ typedef struct JsonValueListIterator
   ListCell *next;
 } JsonValueListIterator;
 
-/* strict/lax flags is decomposed into four [un]wrap/error flags */
+                                                                   
 #define jspStrictAbsenseOfErrors(cxt) (!(cxt)->laxMode)
 #define jspAutoUnwrap(cxt) ((cxt)->laxMode)
 #define jspAutoWrap(cxt) ((cxt)->laxMode)
 #define jspIgnoreStructuralErrors(cxt) ((cxt)->ignoreStructuralErrors)
 #define jspThrowErrors(cxt) ((cxt)->throwErrors)
 
-/* Convenience macro: return or throw error depending on context */
+                                                                   
 #define RETURN_ERROR(throw_error)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -247,20 +247,20 @@ getScalar(JsonbValue *scalar, enum jbvType type);
 static JsonbValue *
 wrapItemsInArray(const JsonValueList *items);
 
-/****************** User interface to JsonPath executor ********************/
+                                                                             
 
-/*
- * jsonb_path_exists
- *		Returns true if jsonpath returns at least one item for the specified
- *		jsonb value.  This function and jsonb_path_match() are used to
- *		implement @? and @@ operators, which in turn are intended to have an
- *		index support.  Thus, it's desirable to make it easier to achieve
- *		consistency between index scan results and sequential scan results.
- *		So, we throw as less errors as possible.  Regarding this function,
- *		such behavior also matches behavior of JSON_EXISTS() clause of
- *		SQL/JSON.  Regarding jsonb_path_match(), this function doesn't have
- *		an analogy in SQL/JSON, so we define its behavior on our own.
- */
+   
+                     
+                                                                         
+                                                                   
+                                                                         
+                                                                      
+                                                                        
+                                                                       
+                                                                   
+                                                                        
+                                                                  
+   
 Datum
 jsonb_path_exists(PG_FUNCTION_ARGS)
 {
@@ -289,23 +289,23 @@ jsonb_path_exists(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(res == jperOk);
 }
 
-/*
- * jsonb_path_exists_opr
- *		Implementation of operator "jsonb @? jsonpath" (2-argument version of
- *		jsonb_path_exists()).
- */
+   
+                         
+                                                                          
+                          
+   
 Datum
 jsonb_path_exists_opr(PG_FUNCTION_ARGS)
 {
-  /* just call the other one -- it can handle both cases */
+                                                           
   return jsonb_path_exists(fcinfo);
 }
 
-/*
- * jsonb_path_match
- *		Returns jsonpath predicate result item for the specified jsonb value.
- *		See jsonb_path_exists() comment for details regarding error handling.
- */
+   
+                    
+                                                                          
+                                                                          
+   
 Datum
 jsonb_path_match(PG_FUNCTION_ARGS)
 {
@@ -349,23 +349,23 @@ jsonb_path_match(PG_FUNCTION_ARGS)
   PG_RETURN_NULL();
 }
 
-/*
- * jsonb_path_match_opr
- *		Implementation of operator "jsonb @@ jsonpath" (2-argument version of
- *		jsonb_path_match()).
- */
+   
+                        
+                                                                          
+                         
+   
 Datum
 jsonb_path_match_opr(PG_FUNCTION_ARGS)
 {
-  /* just call the other one -- it can handle both cases */
+                                                           
   return jsonb_path_match(fcinfo);
 }
 
-/*
- * jsonb_path_query
- *		Executes jsonpath for given jsonb document and returns result as
- *		rowset.
- */
+   
+                    
+                                                                     
+            
+   
 Datum
 jsonb_path_query(PG_FUNCTION_ARGS)
 {
@@ -414,11 +414,11 @@ jsonb_path_query(PG_FUNCTION_ARGS)
   SRF_RETURN_NEXT(funcctx, JsonbPGetDatum(JsonbValueToJsonb(v)));
 }
 
-/*
- * jsonb_path_query_array
- *		Executes jsonpath for given jsonb document and returns result as
- *		jsonb array.
- */
+   
+                          
+                                                                     
+                 
+   
 Datum
 jsonb_path_query_array(PG_FUNCTION_ARGS)
 {
@@ -433,11 +433,11 @@ jsonb_path_query_array(PG_FUNCTION_ARGS)
   PG_RETURN_JSONB_P(JsonbValueToJsonb(wrapItemsInArray(&found)));
 }
 
-/*
- * jsonb_path_query_first
- *		Executes jsonpath for given jsonb document and returns first result
- *		item.  If there are no items, NULL returned.
- */
+   
+                          
+                                                                        
+                                                 
+   
 Datum
 jsonb_path_query_first(PG_FUNCTION_ARGS)
 {
@@ -459,27 +459,27 @@ jsonb_path_query_first(PG_FUNCTION_ARGS)
   }
 }
 
-/********************Execute functions for JsonPath**************************/
+                                                                              
 
-/*
- * Interface to jsonpath executor
- *
- * 'path' - jsonpath to be executed
- * 'vars' - variables to be substituted to jsonpath
- * 'json' - target document for jsonpath evaluation
- * 'throwErrors' - whether we should throw suppressible errors
- * 'result' - list to store result items into
- *
- * Returns an error if a recoverable error happens during processing, or NULL
- * on no error.
- *
- * Note, jsonb and jsonpath values should be available and untoasted during
- * work because JsonPathItem, JsonbValue and result item could have pointers
- * into input values.  If caller needs to just check if document matches
- * jsonpath, then it doesn't provide a result arg.  In this case executor
- * works till first positive result and does not check the rest if possible.
- * In other case it tries to find all the satisfied result items.
- */
+   
+                                  
+   
+                                    
+                                                    
+                                                    
+                                                               
+                                              
+   
+                                                                              
+                
+   
+                                                                            
+                                                                             
+                                                                         
+                                                                          
+                                                                             
+                                                                  
+   
 static JsonPathExecResult
 executeJsonPath(JsonPath *path, Jsonb *vars, Jsonb *json, bool throwErrors, JsonValueList *result)
 {
@@ -513,10 +513,10 @@ executeJsonPath(JsonPath *path, Jsonb *vars, Jsonb *json, bool throwErrors, Json
 
   if (jspStrictAbsenseOfErrors(&cxt) && !result)
   {
-    /*
-     * In strict mode we must get a complete list of values to check that
-     * there are no errors at all.
-     */
+       
+                                                                          
+                                   
+       
     JsonValueList vals = {0};
 
     res = executeItem(&cxt, &jsp, &jbv, &vals);
@@ -536,20 +536,20 @@ executeJsonPath(JsonPath *path, Jsonb *vars, Jsonb *json, bool throwErrors, Json
   return res;
 }
 
-/*
- * Execute jsonpath with automatic unwrapping of current item in lax mode.
- */
+   
+                                                                           
+   
 static JsonPathExecResult
 executeItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, JsonValueList *found)
 {
   return executeItemOptUnwrapTarget(cxt, jsp, jb, found, jspAutoUnwrap(cxt));
 }
 
-/*
- * Main jsonpath executor function: walks on jsonpath structure, finds
- * relevant parts of jsonb and evaluates expressions over them.
- * When 'unwrap' is true current SQL/JSON item is unwrapped if it is an array.
- */
+   
+                                                                       
+                                                                
+                                                                               
+   
 static JsonPathExecResult
 executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, JsonValueList *found, bool unwrap)
 {
@@ -562,7 +562,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
   switch (jsp->type)
   {
-    /* all boolean item types: */
+                                 
   case jpiAnd:
   case jpiOr:
   case jpiNot:
@@ -598,7 +598,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
       {
         res = executeNextItem(cxt, jsp, NULL, v, found, false);
 
-        /* free value if it was not added to found list */
+                                                          
         if (jspHasNext(jsp) || !found)
         {
           pfree(v);
@@ -669,7 +669,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
         size = 1;
       }
 
-      cxt->innermostArraySize = size; /* for LAST evaluation */
+      cxt->innermostArraySize = size;                          
 
       for (i = 0; i < jsp->content.array.nelems; i++)
       {
@@ -876,7 +876,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   {
     bool hasNext = jspGetNext(jsp, &elem);
 
-    /* first try without any intermediate steps */
+                                                  
     if (jsp->content.anybounds.first == 0)
     {
       bool savedIgnoreStructuralErrors;
@@ -911,10 +911,10 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
 
     if (!hasNext && !found && jsp->type != jpiVariable)
     {
-      /*
-       * Skip evaluation, but not for variables.  We must
-       * trigger an error for the missing variable.
-       */
+         
+                                                          
+                                                    
+         
       res = jperOk;
       break;
     }
@@ -1002,7 +1002,7 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
     }
     else if (jb->type == jbvString)
     {
-      /* cast string as double */
+                                 
       double val;
       char *tmp = pnstrdup(jb->val.string.val, jb->val.string.len);
       bool have_error = false;
@@ -1044,9 +1044,9 @@ executeItemOptUnwrapTarget(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   return res;
 }
 
-/*
- * Unwrap current array item and execute jsonpath for each of its elements.
- */
+   
+                                                                            
+   
 static JsonPathExecResult
 executeItemUnwrapTargetArray(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, JsonValueList *found, bool unwrapElements)
 {
@@ -1059,10 +1059,10 @@ executeItemUnwrapTargetArray(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbV
   return executeAnyItem(cxt, jsp, jb->val.binary.data, found, 1, 1, 1, false, unwrapElements);
 }
 
-/*
- * Execute next jsonpath item if exists.  Otherwise put "v" to the "found"
- * list if provided.
- */
+   
+                                                                           
+                     
+   
 static JsonPathExecResult
 executeNextItem(JsonPathExecContext *cxt, JsonPathItem *cur, JsonPathItem *next, JsonbValue *v, JsonValueList *found, bool copy)
 {
@@ -1096,10 +1096,10 @@ executeNextItem(JsonPathExecContext *cxt, JsonPathItem *cur, JsonPathItem *next,
   return jperOk;
 }
 
-/*
- * Same as executeItem(), but when "unwrap == true" automatically unwraps
- * each array item from the resulting sequence in lax mode.
- */
+   
+                                                                          
+                                                            
+   
 static JsonPathExecResult
 executeItemOptUnwrapResult(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, bool unwrap, JsonValueList *found)
 {
@@ -1136,9 +1136,9 @@ executeItemOptUnwrapResult(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbVal
   return executeItem(cxt, jsp, jb, found);
 }
 
-/*
- * Same as executeItemOptUnwrapResult(), but with error suppression.
- */
+   
+                                                                     
+   
 static JsonPathExecResult
 executeItemOptUnwrapResultNoThrow(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, bool unwrap, JsonValueList *found)
 {
@@ -1152,7 +1152,7 @@ executeItemOptUnwrapResultNoThrow(JsonPathExecContext *cxt, JsonPathItem *jsp, J
   return res;
 }
 
-/* Execute boolean-valued jsonpath expression. */
+                                                 
 static JsonPathBool
 executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, bool canHaveNext)
 {
@@ -1177,10 +1177,10 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
       return jpbFalse;
     }
 
-    /*
-     * SQL/JSON says that we should check second arg in case of
-     * jperError
-     */
+       
+                                                                
+                 
+       
 
     jspGetRightArg(jsp, &rarg);
     res2 = executeBoolItem(cxt, &rarg, jb, false);
@@ -1228,19 +1228,19 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
     jspGetRightArg(jsp, &rarg);
     return executePredicate(cxt, jsp, &larg, &rarg, jb, true, executeComparison, NULL);
 
-  case jpiStartsWith:           /* 'whole STARTS WITH initial' */
-    jspGetLeftArg(jsp, &larg);  /* 'whole' */
-    jspGetRightArg(jsp, &rarg); /* 'initial' */
+  case jpiStartsWith:                                            
+    jspGetLeftArg(jsp, &larg);               
+    jspGetRightArg(jsp, &rarg);                
     return executePredicate(cxt, jsp, &larg, &rarg, jb, false, executeStartsWith, NULL);
 
-  case jpiLikeRegex: /* 'expr LIKE_REGEX pattern FLAGS flags' */
+  case jpiLikeRegex:                                            
   {
-    /*
-     * 'expr' is a sequence-returning expression.  'pattern' is a
-     * regex string literal.  SQL/JSON standard requires XQuery
-     * regexes, but we use Postgres regexes here.  'flags' is a
-     * string literal converted to integer flags at compile-time.
-     */
+       
+                                                                  
+                                                                
+                                                                
+                                                                  
+       
     JsonLikeRegexContext lrcxt = {0};
 
     jspInitByBuffer(&larg, jsp->base, jsp->content.like_regex.expr);
@@ -1253,10 +1253,10 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
 
     if (jspStrictAbsenseOfErrors(cxt))
     {
-      /*
-       * In strict mode we must get a complete list of values to
-       * check that there are no errors at all.
-       */
+         
+                                                                 
+                                                
+         
       JsonValueList vals = {0};
       JsonPathExecResult res = executeItemOptUnwrapResultNoThrow(cxt, &larg, jb, false, &vals);
 
@@ -1285,10 +1285,10 @@ executeBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, boo
   }
 }
 
-/*
- * Execute nested (filters etc.) boolean expression pushing current SQL/JSON
- * item onto the stack.
- */
+   
+                                                                             
+                        
+   
 static JsonPathBool
 executeNestedBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb)
 {
@@ -1303,12 +1303,12 @@ executeNestedBoolItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *j
   return res;
 }
 
-/*
- * Implementation of several jsonpath nodes:
- *  - jpiAny (.** accessor),
- *  - jpiAnyKey (.* accessor),
- *  - jpiAnyArray ([*] accessor)
- */
+   
+                                             
+                             
+                               
+                                 
+   
 static JsonPathExecResult
 executeAnyItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbContainer *jbc, JsonValueList *found, uint32 level, uint32 first, uint32 last, bool ignoreStructuralErrors, bool unwrapNext)
 {
@@ -1326,9 +1326,9 @@ executeAnyItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbContainer *jbc,
 
   it = JsonbIteratorInit(jbc);
 
-  /*
-   * Recursively iterate over jsonb objects/arrays
-   */
+     
+                                                   
+     
   while ((r = JsonbIteratorNext(&it, &v, true)) != WJB_DONE)
   {
     if (r == WJB_KEY)
@@ -1340,9 +1340,9 @@ executeAnyItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbContainer *jbc,
     if (r == WJB_VALUE || r == WJB_ELEM)
     {
 
-      if (level >= first || (first == PG_UINT32_MAX && last == PG_UINT32_MAX && v.type != jbvBinary)) /* leaves only requested */
+      if (level >= first || (first == PG_UINT32_MAX && last == PG_UINT32_MAX && v.type != jbvBinary))                            
       {
-        /* check expression */
+                              
         if (jsp)
         {
           if (ignoreStructuralErrors)
@@ -1399,16 +1399,16 @@ executeAnyItem(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbContainer *jbc,
   return res;
 }
 
-/*
- * Execute unary or binary predicate.
- *
- * Predicates have existence semantics, because their operands are item
- * sequences.  Pairs of items from the left and right operand's sequences are
- * checked.  TRUE returned only if any pair satisfying the condition is found.
- * In strict mode, even if the desired pair has already been found, all pairs
- * still need to be examined to check the absence of errors.  If any error
- * occurs, UNKNOWN (analogous to SQL NULL) is returned.
- */
+   
+                                      
+   
+                                                                        
+                                                                              
+                                                                               
+                                                                              
+                                                                           
+                                                        
+   
 static JsonPathBool
 executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *larg, JsonPathItem *rarg, JsonbValue *jb, bool unwrapRightArg, JsonPathPredicateCallback exec, void *param)
 {
@@ -1420,7 +1420,7 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
   bool error = false;
   bool found = false;
 
-  /* Left argument is always auto-unwrapped. */
+                                               
   res = executeItemOptUnwrapResultNoThrow(cxt, larg, jb, true, &lseq);
   if (jperIsError(res))
   {
@@ -1429,7 +1429,7 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
 
   if (rarg)
   {
-    /* Right argument is conditionally auto-unwrapped. */
+                                                         
     res = executeItemOptUnwrapResultNoThrow(cxt, rarg, jb, unwrapRightArg, &rseq);
     if (jperIsError(res))
     {
@@ -1454,7 +1454,7 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
       rval = NULL;
     }
 
-    /* Loop over right arg sequence or do single pass otherwise */
+                                                                  
     while (rarg ? (rval != NULL) : first)
     {
       JsonPathBool res = exec(pred, lval, rval, param);
@@ -1486,12 +1486,12 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
     }
   }
 
-  if (found) /* possible only in strict mode */
+  if (found)                                   
   {
     return jpbTrue;
   }
 
-  if (error) /* possible only in lax mode */
+  if (error)                                
   {
     return jpbUnknown;
   }
@@ -1499,10 +1499,10 @@ executePredicate(JsonPathExecContext *cxt, JsonPathItem *pred, JsonPathItem *lar
   return jpbFalse;
 }
 
-/*
- * Execute binary arithmetic expression on singleton numeric operands.
- * Array operands are automatically unwrapped in lax mode.
- */
+   
+                                                                       
+                                                           
+   
 static JsonPathExecResult
 executeBinaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, BinaryArithmFunc func, JsonValueList *found)
 {
@@ -1516,10 +1516,10 @@ executeBinaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue 
 
   jspGetLeftArg(jsp, &elem);
 
-  /*
-   * XXX: By standard only operands of multiplicative expressions are
-   * unwrapped.  We extend it to other binary arithmetic expressions too.
-   */
+     
+                                                                      
+                                                                          
+     
   jper = executeItemOptUnwrapResult(cxt, &elem, jb, true, &lseq);
   if (jperIsError(jper))
   {
@@ -1572,10 +1572,10 @@ executeBinaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue 
   return executeNextItem(cxt, jsp, &elem, lval, found, false);
 }
 
-/*
- * Execute unary arithmetic expression for each numeric item in its operand's
- * sequence.  Array operand is automatically unwrapped in lax mode.
- */
+   
+                                                                              
+                                                                    
+   
 static JsonPathExecResult
 executeUnaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, PGFunction func, JsonValueList *found)
 {
@@ -1613,7 +1613,7 @@ executeUnaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *
     {
       if (!found && !hasNext)
       {
-        continue; /* skip non-numerics processing */
+        continue;                                   
       }
 
       RETURN_ERROR(ereport(ERROR, (errcode(ERRCODE_SQL_JSON_NUMBER_NOT_FOUND), errmsg("operand of unary jsonpath operator %s is not a numeric value", jspOperationName(jsp->type)))));
@@ -1644,22 +1644,22 @@ executeUnaryArithmExpr(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *
   return jper;
 }
 
-/*
- * STARTS_WITH predicate callback.
- *
- * Check if the 'whole' string starts from 'initial' string.
- */
+   
+                                   
+   
+                                                             
+   
 static JsonPathBool
 executeStartsWith(JsonPathItem *jsp, JsonbValue *whole, JsonbValue *initial, void *param)
 {
   if (!(whole = getScalar(whole, jbvString)))
   {
-    return jpbUnknown; /* error */
+    return jpbUnknown;            
   }
 
   if (!(initial = getScalar(initial, jbvString)))
   {
-    return jpbUnknown; /* error */
+    return jpbUnknown;            
   }
 
   if (whole->val.string.len >= initial->val.string.len && !memcmp(whole->val.string.val, initial->val.string.val, initial->val.string.len))
@@ -1670,11 +1670,11 @@ executeStartsWith(JsonPathItem *jsp, JsonbValue *whole, JsonbValue *initial, voi
   return jpbFalse;
 }
 
-/*
- * LIKE_REGEX predicate callback.
- *
- * Check if the string matches regex pattern.
- */
+   
+                                  
+   
+                                              
+   
 static JsonPathBool
 executeLikeRegex(JsonPathItem *jsp, JsonbValue *str, JsonbValue *rarg, void *param)
 {
@@ -1685,7 +1685,7 @@ executeLikeRegex(JsonPathItem *jsp, JsonbValue *str, JsonbValue *rarg, void *par
     return jpbUnknown;
   }
 
-  /* Cache regex text and converted flags. */
+                                             
   if (!cxt->regex)
   {
     cxt->regex = cstring_to_text_with_len(jsp->content.like_regex.pattern, jsp->content.like_regex.patternlen);
@@ -1700,10 +1700,10 @@ executeLikeRegex(JsonPathItem *jsp, JsonbValue *str, JsonbValue *rarg, void *par
   return jpbFalse;
 }
 
-/*
- * Execute numeric item methods (.abs(), .floor(), .ceil()) using the specified
- * user function 'func'.
- */
+   
+                                                                                
+                         
+   
 static JsonPathExecResult
 executeNumericItemMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, bool unwrap, PGFunction func, JsonValueList *found)
 {
@@ -1734,29 +1734,29 @@ executeNumericItemMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue
   return executeNextItem(cxt, jsp, &next, jb, found, false);
 }
 
-/*
- * Implementation of .keyvalue() method.
- *
- * .keyvalue() method returns a sequence of object's key-value pairs in the
- * following format: '{ "key": key, "value": value, "id": id }'.
- *
- * "id" field is an object identifier which is constructed from the two parts:
- * base object id and its binary offset in base object's jsonb:
- * id = 10000000000 * base_object_id + obj_offset_in_base_object
- *
- * 10000000000 (10^10) -- is a first round decimal number greater than 2^32
- * (maximal offset in jsonb).  Decimal multiplier is used here to improve the
- * readability of identifiers.
- *
- * Base object is usually a root object of the path: context item '$' or path
- * variable '$var', literals can't produce objects for now.  But if the path
- * contains generated objects (.keyvalue() itself, for example), then they
- * become base object for the subsequent .keyvalue().
- *
- * Id of '$' is 0. Id of '$var' is its ordinal (positive) number in the list
- * of variables (see getJsonPathVariable()).  Ids for generated objects
- * are assigned using global counter JsonPathExecContext.lastGeneratedObjectId.
- */
+   
+                                         
+   
+                                                                            
+                                                                 
+   
+                                                                               
+                                                                
+                                                                 
+   
+                                                                            
+                                                                              
+                               
+   
+                                                                              
+                                                                             
+                                                                           
+                                                      
+   
+                                                                             
+                                                                        
+                                                                                
+   
 static JsonPathExecResult
 executeKeyValueMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, JsonValueList *found)
 {
@@ -1783,7 +1783,7 @@ executeKeyValueMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *j
 
   if (!JsonContainerSize(jbc))
   {
-    return jperNotFound; /* no key-value pairs */
+    return jperNotFound;                         
   }
 
   hasNext = jspGetNext(jsp, &next);
@@ -1800,7 +1800,7 @@ executeKeyValueMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *j
   idstr.val.string.val = "id";
   idstr.val.string.len = 2;
 
-  /* construct object id from its base object and offset inside that */
+                                                                       
   id = jb->type != jbvBinary ? 0 : (int64)((char *)jbc - (char *)cxt->baseObject.jbc);
   id += (int64)cxt->baseObject.id * INT64CONST(10000000000);
 
@@ -1870,10 +1870,10 @@ executeKeyValueMethod(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *j
   return res;
 }
 
-/*
- * Convert boolean execution status 'res' to a boolean JSON item and execute
- * next jsonpath.
- */
+   
+                                                                             
+                  
+   
 static JsonPathExecResult
 appendBoolResult(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonValueList *found, JsonPathBool res)
 {
@@ -1882,7 +1882,7 @@ appendBoolResult(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonValueList *fou
 
   if (!jspGetNext(jsp, &next) && !found)
   {
-    return jperOk; /* found singleton boolean value */
+    return jperOk;                                    
   }
 
   if (res == jpbUnknown)
@@ -1898,11 +1898,11 @@ appendBoolResult(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonValueList *fou
   return executeNextItem(cxt, jsp, &next, &jbv, found, true);
 }
 
-/*
- * Convert jsonpath's scalar or variable node to actual jsonb value.
- *
- * If node is a variable then its id returned, otherwise 0 returned.
- */
+   
+                                                                     
+   
+                                                                     
+   
 static void
 getJsonPathItem(JsonPathExecContext *cxt, JsonPathItem *item, JsonbValue *value)
 {
@@ -1931,9 +1931,9 @@ getJsonPathItem(JsonPathExecContext *cxt, JsonPathItem *item, JsonbValue *value)
   }
 }
 
-/*
- * Get the value of variable passed to jsonpath executor
- */
+   
+                                                         
+   
 static void
 getJsonPathVariable(JsonPathExecContext *cxt, JsonPathItem *variable, Jsonb *vars, JsonbValue *value)
 {
@@ -1970,11 +1970,11 @@ getJsonPathVariable(JsonPathExecContext *cxt, JsonPathItem *variable, Jsonb *var
   setBaseObject(cxt, &tmp, 1);
 }
 
-/**************** Support functions for JsonPath execution *****************/
+                                                                             
 
-/*
- * Returns the size of an array item, or -1 if item is not an array.
- */
+   
+                                                                     
+   
 static int
 JsonbArraySize(JsonbValue *jb)
 {
@@ -1993,16 +1993,16 @@ JsonbArraySize(JsonbValue *jb)
   return -1;
 }
 
-/* Comparison predicate callback. */
+                                    
 static JsonPathBool
 executeComparison(JsonPathItem *cmp, JsonbValue *lv, JsonbValue *rv, void *p)
 {
   return compareItems(cmp->type, lv, rv);
 }
 
-/*
- * Perform per-byte comparison of two strings.
- */
+   
+                                               
+   
 static int
 binaryCompareStrings(const char *s1, int len1, const char *s2, int len2)
 {
@@ -2023,20 +2023,20 @@ binaryCompareStrings(const char *s1, int len1, const char *s2, int len2)
   return len1 < len2 ? -1 : 1;
 }
 
-/*
- * Compare two strings in the current server encoding using Unicode codepoint
- * collation.
- */
+   
+                                                                              
+              
+   
 static int
 compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
 {
   if (GetDatabaseEncoding() == PG_SQL_ASCII || GetDatabaseEncoding() == PG_UTF8)
   {
-    /*
-     * It's known property of UTF-8 strings that their per-byte comparison
-     * result matches codepoints comparison result.  ASCII can be
-     * considered as special case of UTF-8.
-     */
+       
+                                                                           
+                                                                  
+                                            
+       
     return binaryCompareStrings(mbstr1, mblen1, mbstr2, mblen2);
   }
   else
@@ -2044,12 +2044,12 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
     char *utf8str1, *utf8str2;
     int cmp, utf8len1, utf8len2;
 
-    /*
-     * We have to convert other encodings to UTF-8 first, then compare.
-     * Input strings may be not null-terminated and pg_server_to_any() may
-     * return them "as is".  So, use strlen() only if there is real
-     * conversion.
-     */
+       
+                                                                        
+                                                                           
+                                                                    
+                   
+       
     utf8str1 = pg_server_to_any(mbstr1, mblen1, PG_UTF8);
     utf8str2 = pg_server_to_any(mbstr2, mblen2, PG_UTF8);
     utf8len1 = (mbstr1 == utf8str1) ? mblen1 : strlen(utf8str1);
@@ -2057,16 +2057,16 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
 
     cmp = binaryCompareStrings(utf8str1, utf8len1, utf8str2, utf8len2);
 
-    /*
-     * If pg_server_to_any() did no real conversion, then we actually
-     * compared original strings.  So, we already done.
-     */
+       
+                                                                      
+                                                        
+       
     if (mbstr1 == utf8str1 && mbstr2 == utf8str2)
     {
       return cmp;
     }
 
-    /* Free memory if needed */
+                               
     if (mbstr1 != utf8str1)
     {
       pfree(utf8str1);
@@ -2076,15 +2076,15 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
       pfree(utf8str2);
     }
 
-    /*
-     * When all Unicode codepoints are equal, return result of binary
-     * comparison.  In some edge cases, same characters may have different
-     * representations in encoding.  Then our behavior could diverge from
-     * standard.  However, that allow us to do simple binary comparison
-     * for "==" operator, which is performance critical in typical cases.
-     * In future to implement strict standard conformance, we can do
-     * normalization of input JSON strings.
-     */
+       
+                                                                      
+                                                                           
+                                                                          
+                                                                        
+                                                                          
+                                                                     
+                                            
+       
     if (cmp == 0)
     {
       return binaryCompareStrings(mbstr1, mblen1, mbstr2, mblen2);
@@ -2096,9 +2096,9 @@ compareStrings(const char *mbstr1, int mblen1, const char *mbstr2, int mblen2)
   }
 }
 
-/*
- * Compare two SQL/JSON items using comparison operation 'op'.
- */
+   
+                                                               
+   
 static JsonPathBool
 compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
 {
@@ -2110,14 +2110,14 @@ compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
     if (jb1->type == jbvNull || jb2->type == jbvNull)
     {
 
-      /*
-       * Equality and order comparison of nulls to non-nulls returns
-       * always false, but inequality comparison returns true.
-       */
+         
+                                                                     
+                                                               
+         
       return op == jpiNotEqual ? jpbTrue : jpbFalse;
     }
 
-    /* Non-null items of different types are not comparable. */
+                                                               
     return jpbUnknown;
   }
 
@@ -2144,7 +2144,7 @@ compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
   case jbvBinary:
   case jbvArray:
   case jbvObject:
-    return jpbUnknown; /* non-scalars are not comparable */
+    return jpbUnknown;                                     
 
   default:
     elog(ERROR, "invalid jsonb value type %d", jb1->type);
@@ -2178,7 +2178,7 @@ compareItems(int32 op, JsonbValue *jb1, JsonbValue *jb2)
   return res ? jpbTrue : jpbFalse;
 }
 
-/* Compare two numerics */
+                          
 static int
 compareNumeric(Numeric a, Numeric b)
 {
@@ -2195,10 +2195,10 @@ copyJsonbValue(JsonbValue *src)
   return dst;
 }
 
-/*
- * Execute array subscript expression and convert resulting numeric item to
- * the integer type with truncation.
- */
+   
+                                                                            
+                                     
+   
 static JsonPathExecResult
 getArrayIndex(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, int32 *index)
 {
@@ -2230,7 +2230,7 @@ getArrayIndex(JsonPathExecContext *cxt, JsonPathItem *jsp, JsonbValue *jb, int32
   return jperOk;
 }
 
-/* Save base object and its id needed for the execution of .keyvalue(). */
+                                                                          
 static JsonBaseObjectInfo
 setBaseObject(JsonPathExecContext *cxt, JsonbValue *jbv, int32 id)
 {
@@ -2309,9 +2309,9 @@ JsonValueListInitIterator(const JsonValueList *jvl, JsonValueListIterator *it)
   }
 }
 
-/*
- * Get the next item from the sequence advancing iterator.
- */
+   
+                                                           
+   
 static JsonbValue *
 JsonValueListNext(const JsonValueList *jvl, JsonValueListIterator *it)
 {
@@ -2330,9 +2330,9 @@ JsonValueListNext(const JsonValueList *jvl, JsonValueListIterator *it)
   return result;
 }
 
-/*
- * Initialize a binary JsonbValue with the given jsonb container.
- */
+   
+                                                                  
+   
 static JsonbValue *
 JsonbInitBinary(JsonbValue *jbv, Jsonb *jb)
 {
@@ -2343,9 +2343,9 @@ JsonbInitBinary(JsonbValue *jbv, Jsonb *jb)
   return jbv;
 }
 
-/*
- * Returns jbv* type of of JsonbValue. Note, it never returns jbvBinary as is.
- */
+   
+                                                                               
+   
 static int
 JsonbType(JsonbValue *jb)
 {
@@ -2355,7 +2355,7 @@ JsonbType(JsonbValue *jb)
   {
     JsonbContainer *jbc = (void *)jb->val.binary.data;
 
-    /* Scalars should be always extracted during jsonpath execution. */
+                                                                       
     Assert(!JsonContainerIsScalar(jbc));
 
     if (JsonContainerIsObject(jbc))
@@ -2375,17 +2375,17 @@ JsonbType(JsonbValue *jb)
   return type;
 }
 
-/* Get scalar of given type or NULL on type mismatch */
+                                                       
 static JsonbValue *
 getScalar(JsonbValue *scalar, enum jbvType type)
 {
-  /* Scalars should be always extracted during jsonpath execution. */
+                                                                     
   Assert(scalar->type != jbvBinary || !JsonContainerIsScalar(scalar->val.binary.data));
 
   return scalar->type == type ? scalar : NULL;
 }
 
-/* Construct a JSON array from the item list */
+                                               
 static JsonbValue *
 wrapItemsInArray(const JsonValueList *items)
 {

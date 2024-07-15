@@ -1,43 +1,43 @@
-/*
- * re_*comp and friends - compile REs
- * This file #includes several others (see the bottom).
- *
- * Copyright (c) 1998, 1999 Henry Spencer.  All rights reserved.
- *
- * Development of this software was funded, in part, by Cray Research Inc.,
- * UUNET Communications Services Inc., Sun Microsystems Inc., and Scriptics
- * Corporation, none of whom are responsible for the results.  The author
- * thanks all of them.
- *
- * Redistribution and use in source and binary forms -- with or without
- * modification -- are permitted for any purpose, provided that
- * redistributions in source form retain this entire copyright notice and
- * indicate the origin and nature of any modifications.
- *
- * I'd appreciate being given credit for this package in the documentation
- * of software which uses it, but that is not a requirement.
- *
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * HENRY SPENCER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * src/backend/regex/regcomp.c
- *
- */
+   
+                                      
+                                                        
+   
+                                                                 
+   
+                                                                            
+                                                                            
+                                                                          
+                       
+   
+                                                                        
+                                                                
+                                                                          
+                                                        
+   
+                                                                           
+                                                             
+   
+                                                                              
+                                                                            
+                                                                           
+                                                                          
+                                                                       
+                                                                               
+                                                                            
+                                                                           
+                                                                          
+                                              
+   
+                               
+   
+   
 
 #include "regex/regguts.h"
 
-/*
- * forward declarations, up here so forward datatypes etc. are defined early
- */
-/* === regcomp.c === */
+   
+                                                                             
+   
+                       
 static void
 moresubs(struct vars *, int);
 static int
@@ -111,7 +111,7 @@ stdump(struct subre *, FILE *, int);
 static const char *
 stid(struct subre *, char *, size_t);
 #endif
-/* === regc_lex.c === */
+                        
 static void
 lexstart(struct vars *);
 static void
@@ -135,7 +135,7 @@ newline(void);
 static chr
 chrnamed(struct vars *, const chr *, const chr *, chr);
 
-/* === regc_color.c === */
+                          
 static void
 initcm(struct vars *, struct colormap *);
 static void
@@ -183,7 +183,7 @@ dumpcolors(struct colormap *, FILE *);
 static void
 dumpchr(chr, FILE *);
 #endif
-/* === regc_nfa.c === */
+                        
 static struct nfa *
 newnfa(struct vars *, struct colormap *, struct nfa *);
 static void
@@ -259,9 +259,9 @@ pushfwd(struct nfa *, FILE *);
 static int
 push(struct nfa *, struct arc *, struct state **);
 
-#define INCOMPATIBLE 1 /* destroys arc */
-#define SATISFIED 2    /* constraint satisfied */
-#define COMPATIBLE 3   /* compatible but not satisfied yet */
+#define INCOMPATIBLE 1                   
+#define SATISFIED 2                              
+#define COMPATIBLE 3                                         
 static int
 combine(struct arc *, struct arc *);
 static void
@@ -311,7 +311,7 @@ dumpcnfa(struct cnfa *, FILE *);
 static void
 dumpcstate(int, struct cnfa *, FILE *);
 #endif
-/* === regc_cvec.c === */
+                         
 static struct cvec *
 newcvec(int, int);
 static struct cvec *
@@ -325,7 +325,7 @@ getcvec(struct vars *, int, int);
 static void
 freecvec(struct cvec *);
 
-/* === regc_pg_locale.c === */
+                              
 static int
 pg_wc_isdigit(pg_wchar c);
 static int
@@ -349,7 +349,7 @@ pg_wc_toupper(pg_wchar c);
 static pg_wchar
 pg_wc_tolower(pg_wchar c);
 
-/* === regc_locale.c === */
+                           
 static chr
 element(struct vars *, const chr *, const chr *);
 static struct cvec *
@@ -368,108 +368,108 @@ cmp(const chr *, const chr *, size_t);
 static int
 casecmp(const chr *, const chr *, size_t);
 
-/* internal variables, bundled for easy passing around */
+                                                         
 struct vars
 {
   regex_t *re;
-  const chr *now;     /* scan pointer into string */
-  const chr *stop;    /* end of string */
-  const chr *savenow; /* saved now and stop for "subroutine call" */
+  const chr *now;                                   
+  const chr *stop;                       
+  const chr *savenow;                                               
   const chr *savestop;
-  int err;                 /* error code (0 if none) */
-  int cflags;              /* copy of compile flags */
-  int lasttype;            /* type of previous token */
-  int nexttype;            /* type of next token */
-  chr nextvalue;           /* value (if any) of next token */
-  int lexcon;              /* lexical context type (see lex.c) */
-  int nsubexp;             /* subexpression count */
-  struct subre **subs;     /* subRE pointer vector */
-  size_t nsubs;            /* length of vector */
-  struct subre *sub10[10]; /* initial vector, enough for most */
-  struct nfa *nfa;         /* the NFA */
-  struct colormap *cm;     /* character color map */
-  color nlcolor;           /* color of newline */
-  struct state *wordchrs;  /* state in nfa holding word-char outarcs */
-  struct subre *tree;      /* subexpression tree */
-  struct subre *treechain; /* all tree nodes allocated */
-  struct subre *treefree;  /* any free tree nodes */
-  int ntree;               /* number of tree nodes, plus one */
-  struct cvec *cv;         /* interface cvec */
-  struct cvec *cv2;        /* utility cvec */
-  struct subre *lacons;    /* lookaround-constraint vector */
-  int nlacons;             /* size of lacons[]; note that only slots
-                            * numbered 1 .. nlacons-1 are used */
-  size_t spaceused;        /* approx. space used for compilation */
+  int err;                                             
+  int cflags;                                         
+  int lasttype;                                        
+  int nexttype;                                    
+  chr nextvalue;                                             
+  int lexcon;                                                    
+  int nsubexp;                                      
+  struct subre **subs;                               
+  size_t nsubs;                                  
+  struct subre *sub10[10];                                      
+  struct nfa *nfa;                      
+  struct colormap *cm;                              
+  color nlcolor;                                 
+  struct state *wordchrs;                                              
+  struct subre *tree;                              
+  struct subre *treechain;                               
+  struct subre *treefree;                           
+  int ntree;                                                   
+  struct cvec *cv;                             
+  struct cvec *cv2;                          
+  struct subre *lacons;                                      
+  int nlacons;                                                       
+                                                                 
+  size_t spaceused;                                                
 };
 
-/* parsing macros; most know that `v' is the struct vars pointer */
-#define NEXT() (next(v))            /* advance by one token */
-#define SEE(t) (v->nexttype == (t)) /* is next token this? */
-#define EAT(t) (SEE(t) && next(v))  /* if next is this, swallow it */
-#define VISERR(vv) ((vv)->err != 0) /* have we seen an error yet? */
+                                                                   
+#define NEXT() (next(v))                                      
+#define SEE(t) (v->nexttype == (t))                          
+#define EAT(t) (SEE(t) && next(v))                                   
+#define VISERR(vv) ((vv)->err != 0)                                 
 #define ISERR() VISERR(v)
 #define VERR(vv, e) ((vv)->nexttype = EOS, (vv)->err = ((vv)->err ? (vv)->err : (e)))
-#define ERR(e) VERR(v, e) /* record an error */
+#define ERR(e) VERR(v, e)                      
 #define NOERR()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (ISERR())                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       return;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-  } /* if error seen, return */
+  }                            
 #define NOERRN()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (ISERR())                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       return NULL;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-  } /* NOERR with retval */
+  }                        
 #define NOERRZ()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (ISERR())                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
       return 0;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-  } /* NOERR with retval */
+  }                        
 #define INSIST(c, e)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if (!(c))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
       ERR(e);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
-  } while (0) /* error if c false */
-#define NOTE(b) (v->re->re_info |= (b)) /* note visible condition */
+  } while (0)                       
+#define NOTE(b) (v->re->re_info |= (b))                             
 #define EMPTYARC(x, y) newarc(v->nfa, EMPTY, 0, x, y)
 
-/* token type codes, some also used as NFA arc types */
-#define EMPTY 'n'   /* no token present */
-#define EOS 'e'     /* end of string */
-#define PLAIN 'p'   /* ordinary character */
-#define DIGIT 'd'   /* digit (in bound) */
-#define BACKREF 'b' /* back reference */
-#define COLLEL 'I'  /* start of [. */
-#define ECLASS 'E'  /* start of [= */
-#define CCLASS 'C'  /* start of [: */
-#define END 'X'     /* end of [. [= [: */
-#define RANGE 'R'   /* - within [] which might be range delim. */
-#define LACON 'L'   /* lookaround constraint subRE */
-#define AHEAD 'a'   /* color-lookahead arc */
-#define BEHIND 'r'  /* color-lookbehind arc */
-#define WBDRY 'w'   /* word boundary constraint */
-#define NWBDRY 'W'  /* non-word-boundary constraint */
-#define SBEGIN 'A'  /* beginning of string (even if not BOL) */
-#define SEND 'Z'    /* end of string (even if not EOL) */
-#define PREFER 'P'  /* length preference */
+                                                       
+#define EMPTY 'n'                         
+#define EOS 'e'                        
+#define PLAIN 'p'                           
+#define DIGIT 'd'                         
+#define BACKREF 'b'                     
+#define COLLEL 'I'                   
+#define ECLASS 'E'                   
+#define CCLASS 'C'                   
+#define END 'X'                          
+#define RANGE 'R'                                                
+#define LACON 'L'                                    
+#define AHEAD 'a'                            
+#define BEHIND 'r'                            
+#define WBDRY 'w'                                 
+#define NWBDRY 'W'                                    
+#define SBEGIN 'A'                                             
+#define SEND 'Z'                                         
+#define PREFER 'P'                         
 
-/* is an arc colored, and hence on a color chain? */
+                                                    
 #define COLORED(a) ((a)->type == PLAIN || (a)->type == AHEAD || (a)->type == BEHIND)
 
-/* static function list */
+                          
 static const struct fns functions = {
-    rfree,            /* regfree insides */
-    rcancelrequested, /* check for cancel request */
-    rstacktoodeep     /* check for stack getting dangerously deep */
+    rfree,                                 
+    rcancelrequested,                               
+    rstacktoodeep                                                   
 };
 
-/*
- * pg_regcomp - compile regular expression
- *
- * Note: on failure, no resources remain allocated, so pg_regfree()
- * need not be applied to re.
- */
+   
+                                           
+   
+                                                                    
+                              
+   
 int
 pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
 {
@@ -491,7 +491,7 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
       return freev(v, v->err);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   }
 
-  /* sanity checks */
+                     
 
   if (re == NULL || string == NULL)
   {
@@ -506,10 +506,10 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
     return REG_INVARG;
   }
 
-  /* Initialize locale-dependent support */
+                                           
   pg_set_regex_collation(collation);
 
-  /* initial setup (after which freev() is callable) */
+                                                       
   v->re = re;
   v->now = string;
   v->stop = v->now + len;
@@ -536,13 +536,13 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   v->nlacons = 0;
   v->spaceused = 0;
   re->re_magic = REMAGIC;
-  re->re_info = 0; /* bits get set during parse */
+  re->re_info = 0;                                
   re->re_csize = sizeof(chr);
   re->re_collation = collation;
   re->re_guts = NULL;
   re->re_fns = VS(&functions);
 
-  /* more complex setup, malloced things */
+                                           
   re->re_guts = VS(MALLOC(sizeof(struct guts)));
   if (re->re_guts == NULL)
   {
@@ -557,28 +557,28 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   ZAPCNFA(g->search);
   v->nfa = newnfa(v, v->cm, (struct nfa *)NULL);
   CNOERR();
-  /* set up a reasonably-sized transient cvec for getcvec usage */
+                                                                  
   v->cv = newcvec(100, 20);
   if (v->cv == NULL)
   {
     return freev(v, REG_ESPACE);
   }
 
-  /* parsing */
-  lexstart(v); /* also handles prefixes */
+               
+  lexstart(v);                            
   if ((v->cflags & REG_NLSTOP) || (v->cflags & REG_NLANCH))
   {
-    /* assign newline a unique color */
+                                       
     v->nlcolor = subcolor(v->cm, newline());
     okcolors(v->nfa, v->cm);
   }
   CNOERR();
   v->tree = parse(v, EOS, PLAIN, v->nfa->init, v->nfa->final);
-  assert(SEE(EOS)); /* even if error; ISERR() => SEE(EOS) */
+  assert(SEE(EOS));                                         
   CNOERR();
   assert(v->tree != NULL);
 
-  /* finish setup of nfa and its subre tree */
+                                              
   specialcolors(v->nfa);
   CNOERR();
 #ifdef REG_DEBUG
@@ -601,7 +601,7 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   }
 #endif
 
-  /* build compacted NFAs for tree and lacons */
+                                                
   re->re_info |= nfatree(v, v->tree, debug);
   CNOERR();
   assert(v->nlacons == 0 || v->lacons != NULL);
@@ -616,7 +616,7 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
     }
 #endif
 
-    /* Prepend .* to pattern if it's a lookbehind LACON */
+                                                          
     nfanode(v, lasub, !LATYPE_IS_AHEAD(lasub->subno), debug);
   }
   CNOERR();
@@ -625,14 +625,14 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
     NOTE(REG_USHORTEST);
   }
 
-  /* build compacted NFAs for tree, lacons, fast search */
+                                                          
 #ifdef REG_DEBUG
   if (debug != NULL)
   {
     fprintf(debug, "\n\n\n========= SEARCH ==========\n");
   }
 #endif
-  /* can sacrifice main NFA now, so use it as work area */
+                                                          
   (DISCARD) optimize(v->nfa, debug);
   CNOERR();
   makesearch(v, v->nfa);
@@ -640,9 +640,9 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   compact(v->nfa, &g->search);
   CNOERR();
 
-  /* looks okay, package it up */
+                                 
   re->re_nsub = v->nsubexp;
-  v->re = NULL; /* freev no longer frees re */
+  v->re = NULL;                               
   g->magic = GUTSMAGIC;
   g->cflags = v->cflags;
   g->info = re->re_info;
@@ -666,11 +666,11 @@ pg_regcomp(regex_t *re, const chr *string, size_t len, int flags, Oid collation)
   return freev(v, 0);
 }
 
-/*
- * moresubs - enlarge subRE vector
- */
+   
+                                   
+   
 static void
-moresubs(struct vars *v, int wanted) /* want enough room for this one */
+moresubs(struct vars *v, int wanted)                                    
 {
   struct subre **p;
   size_t n;
@@ -704,12 +704,12 @@ moresubs(struct vars *v, int wanted) /* want enough room for this one */
   assert((size_t)wanted < v->nsubs);
 }
 
-/*
- * freev - free vars struct's substructures where necessary
- *
- * Optionally does error-number setting, and always returns error code
- * (if any), to make error-handling code terser.
- */
+   
+                                                            
+   
+                                                                       
+                                                 
+   
 static int
 freev(struct vars *v, int err)
 {
@@ -745,15 +745,15 @@ freev(struct vars *v, int err)
   {
     freelacons(v->lacons, v->nlacons);
   }
-  ERR(err); /* nop if err==0 */
+  ERR(err);                    
 
   return v->err;
 }
 
-/*
- * makesearch - turn an NFA into a search NFA (implicit prepend of .*?)
- * NFA must have been optimize()d already.
- */
+   
+                                                                        
+                                           
+   
 static void
 makesearch(struct vars *v, struct nfa *nfa)
 {
@@ -764,7 +764,7 @@ makesearch(struct vars *v, struct nfa *nfa)
   struct state *s2;
   struct state *slist;
 
-  /* no loops are needed if it's anchored */
+                                            
   for (a = pre->outs; a != NULL; a = a->outchain)
   {
     assert(a->type == PLAIN);
@@ -775,24 +775,24 @@ makesearch(struct vars *v, struct nfa *nfa)
   }
   if (a != NULL)
   {
-    /* add implicit .* in front */
+                                  
     rainbow(nfa, v->cm, PLAIN, COLORLESS, pre, pre);
 
-    /* and ^* and \A* too -- not always necessary, but harmless */
+                                                                  
     newarc(nfa, PLAIN, nfa->bos[0], pre, pre);
     newarc(nfa, PLAIN, nfa->bos[1], pre, pre);
   }
 
-  /*
-   * Now here's the subtle part.  Because many REs have no lookback
-   * constraints, often knowing when you were in the pre state tells you
-   * little; it's the next state(s) that are informative.  But some of them
-   * may have other inarcs, i.e. it may be possible to make actual progress
-   * and then return to one of them.  We must de-optimize such cases,
-   * splitting each such state into progress and no-progress states.
-   */
+     
+                                                                    
+                                                                         
+                                                                            
+                                                                            
+                                                                      
+                                                                     
+     
 
-  /* first, make a list of the states reachable from pre and elsewhere */
+                                                                         
   slist = NULL;
   for (a = pre->outs; a != NULL; a = a->outchain)
   {
@@ -805,12 +805,12 @@ makesearch(struct vars *v, struct nfa *nfa)
       }
     }
 
-    /*
-     * We want to mark states as being in the list already by having non
-     * NULL tmp fields, but we can't just store the old slist value in tmp
-     * because that doesn't work for the first such state.  Instead, the
-     * first list entry gets its own address in tmp.
-     */
+       
+                                                                         
+                                                                           
+                                                                         
+                                                     
+       
     if (b != NULL && s->tmp == NULL)
     {
       s->tmp = (slist != NULL) ? slist : s;
@@ -818,7 +818,7 @@ makesearch(struct vars *v, struct nfa *nfa)
     }
   }
 
-  /* do the splits */
+                     
   for (s = slist; s != NULL; s = s2)
   {
     s2 = newstate(nfa);
@@ -835,29 +835,29 @@ makesearch(struct vars *v, struct nfa *nfa)
       }
     }
     s2 = (s->tmp != s) ? s->tmp : NULL;
-    s->tmp = NULL; /* clean up while we're at it */
+    s->tmp = NULL;                                 
   }
 }
 
-/*
- * parse - parse an RE
- *
- * This is actually just the top level, which parses a bunch of branches
- * tied together with '|'.  They appear in the tree as the left children
- * of a chain of '|' subres.
- */
+   
+                       
+   
+                                                                         
+                                                                         
+                             
+   
 static struct subre *
-parse(struct vars *v, int stopper, /* EOS or ')' */
-    int type,                      /* LACON (lookaround subRE) or PLAIN */
-    struct state *init,            /* initial state */
-    struct state *final)           /* final state */
+parse(struct vars *v, int stopper,                 
+    int type,                                                             
+    struct state *init,                               
+    struct state *final)                            
 {
-  struct state *left; /* scaffolding for branch */
+  struct state *left;                             
   struct state *right;
-  struct subre *branches; /* top level */
-  struct subre *branch;   /* current branch */
-  struct subre *t;        /* temporary */
-  int firstbranch;        /* is this the first branch? */
+  struct subre *branches;                
+  struct subre *branch;                       
+  struct subre *t;                       
+  int firstbranch;                                       
 
   assert(stopper == ')' || stopper == EOS);
 
@@ -866,10 +866,10 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
   branch = branches;
   firstbranch = 1;
   do
-  { /* a branch */
+  {               
     if (!firstbranch)
     {
-      /* need a place to hang it */
+                                   
       branch->right = subre(v, '|', LONGER, init, final);
       NOERRN();
       branch = branch->right;
@@ -884,7 +884,7 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
     branch->left = parsebranch(v, stopper, type, left, right, 0);
     NOERRN();
     branch->flags |= UP(branch->flags | branch->left->flags);
-    if ((branch->flags & ~branches->flags) != 0) /* new flags */
+    if ((branch->flags & ~branches->flags) != 0)                
     {
       for (t = branches; t != branch; t = t->right)
       {
@@ -900,9 +900,9 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
     ERR(REG_EPAREN);
   }
 
-  /* optimize out simple cases */
+                                 
   if (branch == branches)
-  { /* only one branch */
+  {                      
     assert(branch->right == NULL);
     t = branch->left;
     branch->left = NULL;
@@ -910,7 +910,7 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
     branches = t;
   }
   else if (!MESSY(branches->flags))
-  { /* no interesting innards */
+  {                             
     freesubre(v, branches->left);
     branches->left = NULL;
     freesubre(v, branches->right);
@@ -921,45 +921,45 @@ parse(struct vars *v, int stopper, /* EOS or ')' */
   return branches;
 }
 
-/*
- * parsebranch - parse one branch of an RE
- *
- * This mostly manages concatenation, working closely with parseqatom().
- * Concatenated things are bundled up as much as possible, with separate
- * ',' nodes introduced only when necessary due to substructure.
- */
+   
+                                           
+   
+                                                                         
+                                                                         
+                                                                 
+   
 static struct subre *
-parsebranch(struct vars *v, int stopper, /* EOS or ')' */
-    int type,                            /* LACON (lookaround subRE) or PLAIN */
-    struct state *left,                  /* leftmost state */
-    struct state *right,                 /* rightmost state */
-    int partial)                         /* is this only part of a branch? */
+parsebranch(struct vars *v, int stopper,                 
+    int type,                                                                   
+    struct state *left,                                      
+    struct state *right,                                      
+    int partial)                                                             
 {
-  struct state *lp; /* left end of current construct */
-  int seencontent;  /* is there anything in this branch yet? */
+  struct state *lp;                                    
+  int seencontent;                                             
   struct subre *t;
 
   lp = left;
   seencontent = 0;
-  t = subre(v, '=', 0, left, right); /* op '=' is tentative */
+  t = subre(v, '=', 0, left, right);                          
   NOERRN();
   while (!SEE('|') && !SEE(stopper) && !SEE(EOS))
   {
     if (seencontent)
-    { /* implicit concat operator */
+    {                               
       lp = newstate(v->nfa);
       NOERRN();
       moveins(v->nfa, right, lp);
     }
     seencontent = 1;
 
-    /* NB, recursion in parseqatom() may swallow rest of branch */
+                                                                  
     parseqatom(v, stopper, type, lp, right, t);
     NOERRN();
   }
 
   if (!seencontent)
-  { /* empty branch */
+  {                   
     if (!partial)
     {
       NOTE(REG_UUNSPEC);
@@ -971,46 +971,46 @@ parsebranch(struct vars *v, int stopper, /* EOS or ')' */
   return t;
 }
 
-/*
- * parseqatom - parse one quantified atom or constraint of an RE
- *
- * The bookkeeping near the end cooperates very closely with parsebranch();
- * in particular, it contains a recursion that can involve parsing the rest
- * of the branch, making this function's name somewhat inaccurate.
- */
+   
+                                                                 
+   
+                                                                            
+                                                                            
+                                                                   
+   
 static void
-parseqatom(struct vars *v, int stopper, /* EOS or ')' */
-    int type,                           /* LACON (lookaround subRE) or PLAIN */
-    struct state *lp,                   /* left state to hang it on */
-    struct state *rp,                   /* right state to hang it on */
-    struct subre *top)                  /* subtree top */
+parseqatom(struct vars *v, int stopper,                 
+    int type,                                                                  
+    struct state *lp,                                                 
+    struct state *rp,                                                  
+    struct subre *top)                                   
 {
-  struct state *s; /* temporaries for new states */
+  struct state *s;                                 
   struct state *s2;
 
 #define ARCV(t, val) newarc(v->nfa, t, val, lp, rp)
   int m, n;
-  struct subre *atom; /* atom's subtree */
+  struct subre *atom;                     
   struct subre *t;
-  int cap;    /* capturing parens? */
-  int latype; /* lookaround constraint type */
-  int subno;  /* capturing-parens or backref number */
+  int cap;                           
+  int latype;                                 
+  int subno;                                          
   int atomtype;
-  int qprefer; /* quantifier short/long preference */
+  int qprefer;                                       
   int f;
-  struct subre **atomp; /* where the pointer to atom is */
+  struct subre **atomp;                                   
 
-  /* initial bookkeeping */
+                           
   atom = NULL;
-  assert(lp->nouts == 0); /* must string new code */
-  assert(rp->nins == 0);  /* between lp and rp */
-  subno = 0;              /* just to shut lint up */
+  assert(lp->nouts == 0);                           
+  assert(rp->nins == 0);                         
+  subno = 0;                                        
 
-  /* an atom or constraint... */
+                                
   atomtype = v->nexttype;
   switch (atomtype)
   {
-    /* first, constraints, which end by returning */
+                                                    
   case '^':
     ARCV('^', 1);
     if (v->cflags & REG_NLANCH)
@@ -1030,19 +1030,19 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
     break;
   case SBEGIN:
-    ARCV('^', 1); /* BOL */
-    ARCV('^', 0); /* or BOS */
+    ARCV('^', 1);          
+    ARCV('^', 0);             
     NEXT();
     return;
     break;
   case SEND:
-    ARCV('$', 1); /* EOL */
-    ARCV('$', 0); /* or EOS */
+    ARCV('$', 1);          
+    ARCV('$', 0);             
     NEXT();
     return;
     break;
   case '<':
-    wordchrs(v); /* does NEXT() */
+    wordchrs(v);                  
     s = newstate(v->nfa);
     NOERR();
     nonword(v, BEHIND, lp, s);
@@ -1050,7 +1050,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
     break;
   case '>':
-    wordchrs(v); /* does NEXT() */
+    wordchrs(v);                  
     s = newstate(v->nfa);
     NOERR();
     word(v, BEHIND, lp, s);
@@ -1058,7 +1058,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
     break;
   case WBDRY:
-    wordchrs(v); /* does NEXT() */
+    wordchrs(v);                  
     s = newstate(v->nfa);
     NOERR();
     nonword(v, BEHIND, lp, s);
@@ -1070,7 +1070,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
     break;
   case NWBDRY:
-    wordchrs(v); /* does NEXT() */
+    wordchrs(v);                  
     s = newstate(v->nfa);
     NOERR();
     word(v, BEHIND, lp, s);
@@ -1081,21 +1081,21 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     nonword(v, AHEAD, s, rp);
     return;
     break;
-  case LACON: /* lookaround constraint */
+  case LACON:                            
     latype = v->nextvalue;
     NEXT();
     s = newstate(v->nfa);
     s2 = newstate(v->nfa);
     NOERR();
     t = parse(v, ')', LACON, s, s2);
-    freesubre(v, t); /* internal structure irrelevant */
+    freesubre(v, t);                                    
     NOERR();
     assert(SEE(')'));
     NEXT();
     processlacon(v, s, s2, latype, lp, rp);
     return;
     break;
-    /* then errors, to get them out of the way */
+                                                 
   case '*':
   case '+':
   case '?':
@@ -1107,17 +1107,17 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     ERR(REG_ASSERT);
     return;
     break;
-    /* then plain characters, and minor variants on that theme */
-  case ')': /* unbalanced paren */
+                                                                 
+  case ')':                       
     if ((v->cflags & REG_ADVANCED) != REG_EXTENDED)
     {
       ERR(REG_EPAREN);
       return;
     }
-    /* legal in EREs due to specification botch */
+                                                  
     NOTE(REG_UPBOTCH);
-    /* fall through into case PLAIN */
-    /* FALLTHROUGH */
+                                      
+                     
   case PLAIN:
     onechr(v, v->nextvalue, lp, rp);
     okcolors(v->nfa, v->cm);
@@ -1140,8 +1140,8 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     rainbow(v->nfa, v->cm, PLAIN, (v->cflags & REG_NLSTOP) ? v->nlcolor : COLORLESS, lp, rp);
     NEXT();
     break;
-    /* and finally the ugly stuff */
-  case '(': /* value flags as capturing or non */
+                                    
+  case '(':                                      
     cap = (type == LACON) ? 0 : v->nextvalue;
     if (cap)
     {
@@ -1155,10 +1155,10 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     }
     else
     {
-      atomtype = PLAIN; /* something that's not '(' */
+      atomtype = PLAIN;                               
     }
     NEXT();
-    /* need new endpoints because tree will contain pointers */
+                                                               
     s = newstate(v->nfa);
     s2 = newstate(v->nfa);
     NOERR();
@@ -1178,9 +1178,9 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
       t->left = atom;
       atom = t;
     }
-    /* postpone everything else pending possible {0} */
+                                                       
     break;
-  case BACKREF: /* the Feature From The Black Lagoon */
+  case BACKREF:                                        
     INSIST(type != LACON, REG_ESUBREG);
     INSIST(v->nextvalue < v->nsubs, REG_ESUBREG);
     INSIST(v->subs[v->nextvalue] != NULL, REG_ESUBREG);
@@ -1190,12 +1190,12 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     NOERR();
     subno = v->nextvalue;
     atom->subno = subno;
-    EMPTYARC(lp, rp); /* temporarily, so there's something */
+    EMPTYARC(lp, rp);                                        
     NEXT();
     break;
   }
 
-  /* ...and an atom may be followed by a quantifier */
+                                                      
   switch (v->nexttype)
   {
   case '*':
@@ -1234,36 +1234,36 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
         ERR(REG_BADBR);
         return;
       }
-      /* {m,n} exercises preference, even if it's {m,m} */
+                                                          
       qprefer = (v->nextvalue) ? LONGER : SHORTER;
     }
     else
     {
       n = m;
-      /* {m} passes operand's preference through */
+                                                   
       qprefer = 0;
     }
     if (!SEE('}'))
-    { /* catches errors too */
+    {                         
       ERR(REG_BADBR);
       return;
     }
     NEXT();
     break;
-  default: /* no quantifier */
+  default:                    
     m = n = 1;
     qprefer = 0;
     break;
   }
 
-  /* annoying special case:  {0} or {0,0} cancels everything */
+                                                               
   if (m == 0 && n == 0)
   {
-    /*
-     * If we had capturing subexpression(s) within the atom, we don't want
-     * to destroy them, because it's legal (if useless) to back-ref them
-     * later.  Hence, just unlink the atom from lp/rp and then ignore it.
-     */
+       
+                                                                           
+                                                                         
+                                                                          
+       
     if (atom != NULL && (atom->flags & CAP))
     {
       delsub(v->nfa, lp, atom->begin);
@@ -1271,7 +1271,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     }
     else
     {
-      /* Otherwise, we can clean up any subre infrastructure we made */
+                                                                       
       if (atom != NULL)
       {
         freesubre(v, atom);
@@ -1282,7 +1282,7 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
   }
 
-  /* if not a messy case, avoid hard part */
+                                            
   assert(!MESSY(top->flags));
   f = top->flags | qprefer | ((atom != NULL) ? atom->flags : 0);
   if (atomtype != '(' && atomtype != BACKREF && !MESSY(UP(f)))
@@ -1299,37 +1299,37 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     return;
   }
 
-  /*
-   * hard part:  something messy
-   *
-   * That is, capturing parens, back reference, short/long clash, or an atom
-   * with substructure containing one of those.
-   */
+     
+                                 
+     
+                                                                             
+                                                
+     
 
-  /* now we'll need a subre for the contents even if they're boring */
+                                                                      
   if (atom == NULL)
   {
     atom = subre(v, '=', 0, lp, rp);
     NOERR();
   }
 
-  /*----------
-   * Prepare a general-purpose state skeleton.
-   *
-   * In the no-backrefs case, we want this:
-   *
-   * [lp] ---> [s] ---prefix---> [begin] ---atom---> [end] ---rest---> [rp]
-   *
-   * where prefix is some repetitions of atom.  In the general case we need
-   *
-   * [lp] ---> [s] ---iterator---> [s2] ---rest---> [rp]
-   *
-   * where the iterator wraps around [begin] ---atom---> [end]
-   *
-   * We make the s state here for both cases; s2 is made below if needed
-   *----------
-   */
-  s = newstate(v->nfa); /* first, new endpoints for the atom */
+               
+                                               
+     
+                                            
+     
+                                                                            
+     
+                                                                            
+     
+                                                         
+     
+                                                               
+     
+                                                                         
+               
+     
+  s = newstate(v->nfa);                                        
   s2 = newstate(v->nfa);
   NOERR();
   moveouts(v->nfa, lp, s);
@@ -1337,91 +1337,91 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
   NOERR();
   atom->begin = s;
   atom->end = s2;
-  s = newstate(v->nfa); /* set up starting state */
+  s = newstate(v->nfa);                            
   NOERR();
   EMPTYARC(lp, s);
   NOERR();
 
-  /* break remaining subRE into x{...} and what follows */
+                                                          
   t = subre(v, '.', COMBINE(qprefer, atom->flags), lp, rp);
   NOERR();
   t->left = atom;
   atomp = &t->left;
 
-  /* here we should recurse... but we must postpone that to the end */
+                                                                      
 
-  /* split top into prefix and remaining */
+                                           
   assert(top->op == '=' && top->left == NULL && top->right == NULL);
   top->left = subre(v, '=', top->flags, top->begin, lp);
   NOERR();
   top->op = '.';
   top->right = t;
 
-  /* if it's a backref, now is the time to replicate the subNFA */
+                                                                  
   if (atomtype == BACKREF)
   {
-    assert(atom->begin->nouts == 1); /* just the EMPTY */
+    assert(atom->begin->nouts == 1);                     
     delsub(v->nfa, atom->begin, atom->end);
     assert(v->subs[subno] != NULL);
 
-    /*
-     * And here's why the recursion got postponed: it must wait until the
-     * skeleton is filled in, because it may hit a backref that wants to
-     * copy the filled-in skeleton.
-     */
+       
+                                                                          
+                                                                         
+                                    
+       
     dupnfa(v->nfa, v->subs[subno]->begin, v->subs[subno]->end, atom->begin, atom->end);
     NOERR();
   }
 
-  /*
-   * It's quantifier time.  If the atom is just a backref, we'll let it deal
-   * with quantifiers internally.
-   */
+     
+                                                                             
+                                  
+     
   if (atomtype == BACKREF)
   {
-    /* special case:  backrefs have internal quantifiers */
-    EMPTYARC(s, atom->begin); /* empty prefix */
-    /* just stuff everything into atom */
+                                                           
+    EMPTYARC(s, atom->begin);                   
+                                         
     repeat(v, atom->begin, atom->end, m, n);
     atom->min = (short)m;
     atom->max = (short)n;
     atom->flags |= COMBINE(qprefer, atom->flags);
-    /* rest of branch can be strung starting from atom->end */
+                                                              
     s2 = atom->end;
   }
   else if (m == 1 && n == 1 && (qprefer == 0 || (atom->flags & (LONGER | SHORTER | MIXED)) == 0 || qprefer == (atom->flags & (LONGER | SHORTER | MIXED))))
   {
-    /* no/vacuous quantifier:  done */
-    EMPTYARC(s, atom->begin); /* empty prefix */
-    /* rest of branch can be strung starting from atom->end */
+                                      
+    EMPTYARC(s, atom->begin);                   
+                                                              
     s2 = atom->end;
   }
   else if (m > 0 && !(atom->flags & BACKR))
   {
-    /*
-     * If there's no backrefs involved, we can turn x{m,n} into
-     * x{m-1,n-1}x, with capturing parens in only the second x.  This is
-     * valid because we only care about capturing matches from the final
-     * iteration of the quantifier.  It's a win because we can implement
-     * the backref-free left side as a plain DFA node, since we don't
-     * really care where its submatches are.
-     */
+       
+                                                                
+                                                                         
+                                                                         
+                                                                         
+                                                                      
+                                             
+       
     dupnfa(v->nfa, atom->begin, atom->end, s, atom->begin);
     assert(m >= 1 && m != DUPINF && n >= 1);
     repeat(v, s, atom->begin, m - 1, (n == DUPINF) ? n : n - 1);
     f = COMBINE(qprefer, atom->flags);
-    t = subre(v, '.', f, s, atom->end); /* prefix and atom */
+    t = subre(v, '.', f, s, atom->end);                      
     NOERR();
     t->left = subre(v, '=', PREF(f), s, atom->begin);
     NOERR();
     t->right = atom;
     *atomp = t;
-    /* rest of branch can be strung starting from atom->end */
+                                                              
     s2 = atom->end;
   }
   else
   {
-    /* general case: need an iteration node */
+                                              
     s2 = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, atom->end, s2);
@@ -1435,10 +1435,10 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
     t->max = (short)n;
     t->left = atom;
     *atomp = t;
-    /* rest of branch is to be strung from iteration's end state */
+                                                                   
   }
 
-  /* and finally, look after that postponed recursion */
+                                                        
   t = top->right;
   if (!(SEE('|') || SEE(stopper) || SEE(EOS)))
   {
@@ -1455,11 +1455,11 @@ parseqatom(struct vars *v, int stopper, /* EOS or ')' */
   top->flags |= COMBINE(top->flags, t->flags);
 }
 
-/*
- * nonword - generate arcs for non-word-character ahead or behind
- */
+   
+                                                                  
+   
 static void
-nonword(struct vars *v, int dir, /* AHEAD or BEHIND */
+nonword(struct vars *v, int dir,                      
     struct state *lp, struct state *rp)
 {
   int anchor = (dir == AHEAD) ? '$' : '^';
@@ -1468,25 +1468,25 @@ nonword(struct vars *v, int dir, /* AHEAD or BEHIND */
   newarc(v->nfa, anchor, 1, lp, rp);
   newarc(v->nfa, anchor, 0, lp, rp);
   colorcomplement(v->nfa, v->cm, dir, v->wordchrs, lp, rp);
-  /* (no need for special attention to \n) */
+                                             
 }
 
-/*
- * word - generate arcs for word character ahead or behind
- */
+   
+                                                           
+   
 static void
-word(struct vars *v, int dir, /* AHEAD or BEHIND */
+word(struct vars *v, int dir,                      
     struct state *lp, struct state *rp)
 {
   assert(dir == AHEAD || dir == BEHIND);
   cloneouts(v->nfa, v->wordchrs, lp, rp, dir);
-  /* (no need for special attention to \n) */
+                                             
 }
 
-/*
- * scannum - scan a number
- */
-static int /* value, <= DUPMAX */
+   
+                           
+   
+static int                       
 scannum(struct vars *v)
 {
   int n = 0;
@@ -1504,19 +1504,19 @@ scannum(struct vars *v)
   return n;
 }
 
-/*
- * repeat - replicate subNFA for quantifiers
- *
- * The sub-NFA strung from lp to rp is modified to represent m to n
- * repetitions of its initial contents.
- *
- * The duplication sequences used here are chosen carefully so that any
- * pointers starting out pointing into the subexpression end up pointing into
- * the last occurrence.  (Note that it may not be strung between the same
- * left and right end states, however!)  This used to be important for the
- * subRE tree, although the important bits are now handled by the in-line
- * code in parse(), and when this is called, it doesn't matter any more.
- */
+   
+                                             
+   
+                                                                    
+                                        
+   
+                                                                        
+                                                                              
+                                                                          
+                                                                           
+                                                                          
+                                                                         
+   
 static void
 repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
 {
@@ -1531,19 +1531,19 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
 
   switch (PAIR(rm, rn))
   {
-  case PAIR(0, 0): /* empty string */
+  case PAIR(0, 0):                   
     delsub(v->nfa, lp, rp);
     EMPTYARC(lp, rp);
     break;
-  case PAIR(0, 1): /* do as x| */
+  case PAIR(0, 1):               
     EMPTYARC(lp, rp);
     break;
-  case PAIR(0, SOME): /* do as x{1,n}| */
+  case PAIR(0, SOME):                    
     repeat(v, lp, rp, 1, n);
     NOERR();
     EMPTYARC(lp, rp);
     break;
-  case PAIR(0, INF): /* loop x around */
+  case PAIR(0, INF):                    
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1551,9 +1551,9 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     EMPTYARC(lp, s);
     EMPTYARC(s, rp);
     break;
-  case PAIR(1, 1): /* no action required */
+  case PAIR(1, 1):                         
     break;
-  case PAIR(1, SOME): /* do as x{0,n-1}x = (x{1,n-1}|)x */
+  case PAIR(1, SOME):                                     
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1563,7 +1563,7 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     NOERR();
     EMPTYARC(lp, s);
     break;
-  case PAIR(1, INF): /* add loopback arc */
+  case PAIR(1, INF):                       
     s = newstate(v->nfa);
     s2 = newstate(v->nfa);
     NOERR();
@@ -1573,7 +1573,7 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     EMPTYARC(s2, rp);
     EMPTYARC(s2, s);
     break;
-  case PAIR(SOME, SOME): /* do as x{m-1,n-1}x */
+  case PAIR(SOME, SOME):                        
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1581,7 +1581,7 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
     NOERR();
     repeat(v, lp, s, m - 1, n - 1);
     break;
-  case PAIR(SOME, INF): /* do as x{m-1,}x */
+  case PAIR(SOME, INF):                     
     s = newstate(v->nfa);
     NOERR();
     moveouts(v->nfa, lp, s);
@@ -1595,10 +1595,10 @@ repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
   }
 }
 
-/*
- * bracket - handle non-complemented bracket expression
- * Also called from cbracket for complemented bracket expressions.
- */
+   
+                                                        
+                                                                   
+   
 static void
 bracket(struct vars *v, struct state *lp, struct state *rp)
 {
@@ -1612,12 +1612,12 @@ bracket(struct vars *v, struct state *lp, struct state *rp)
   okcolors(v->nfa, v->cm);
 }
 
-/*
- * cbracket - handle complemented bracket expression
- * We do it by calling bracket() with dummy endpoints, and then complementing
- * the result.  The alternative would be to invoke rainbow(), and then delete
- * arcs as the b.e. is seen... but that gets messy.
- */
+   
+                                                     
+                                                                              
+                                                                              
+                                                    
+   
 static void
 cbracket(struct vars *v, struct state *lp, struct state *rp)
 {
@@ -1632,12 +1632,12 @@ cbracket(struct vars *v, struct state *lp, struct state *rp)
   }
   NOERR();
 
-  assert(lp->nouts == 0); /* all outarcs will be ours */
+  assert(lp->nouts == 0);                               
 
-  /*
-   * Easy part of complementing, and all there is to do since the MCCE code
-   * was removed.
-   */
+     
+                                                                            
+                  
+     
   colorcomplement(v->nfa, v->cm, PLAIN, left, lp, rp);
   NOERR();
   dropstate(v->nfa, left);
@@ -1645,9 +1645,9 @@ cbracket(struct vars *v, struct state *lp, struct state *rp)
   freestate(v->nfa, right);
 }
 
-/*
- * brackpart - handle one item (or range) within a bracket expression
- */
+   
+                                                                      
+   
 static void
 brackpart(struct vars *v, struct state *lp, struct state *rp)
 {
@@ -1658,17 +1658,17 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
   const chr *endp;
   chr c[1];
 
-  /* parse something, get rid of special cases, take shortcuts */
+                                                                 
   switch (v->nexttype)
   {
-  case RANGE: /* a-b-c or other botch */
+  case RANGE:                           
     ERR(REG_ERANGE);
     return;
     break;
   case PLAIN:
     c[0] = v->nextvalue;
     NEXT();
-    /* shortcut for ordinary chr (not range) */
+                                               
     if (!SEE(RANGE))
     {
       onechr(v, c[0], lp, rp);
@@ -1744,10 +1744,10 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
     endc = startc;
   }
 
-  /*
-   * Ranges are unportable.  Actually, standard C does guarantee that digits
-   * are contiguous, but making that an exception is just too complicated.
-   */
+     
+                                                                             
+                                                                           
+     
   if (startc != endc)
   {
     NOTE(REG_UUNPORT);
@@ -1757,13 +1757,13 @@ brackpart(struct vars *v, struct state *lp, struct state *rp)
   subcolorcvec(v, cv, lp, rp);
 }
 
-/*
- * scanplain - scan PLAIN contents of [. etc.
- *
- * Certain bits of trickery in lex.c know that this code does not try
- * to look past the final bracket of the [. etc.
- */
-static const chr * /* just after end of sequence */
+   
+                                              
+   
+                                                                      
+                                                 
+   
+static const chr *                                 
 scanplain(struct vars *v)
 {
   const chr *endp;
@@ -1784,10 +1784,10 @@ scanplain(struct vars *v)
   return endp;
 }
 
-/*
- * onechr - fill in arcs for a plain character, and possible case complements
- * This is mostly a shortcut for efficient handling of the common case.
- */
+   
+                                                                              
+                                                                        
+   
 static void
 onechr(struct vars *v, chr c, struct state *lp, struct state *rp)
 {
@@ -1799,19 +1799,19 @@ onechr(struct vars *v, chr c, struct state *lp, struct state *rp)
     return;
   }
 
-  /* rats, need general case anyway... */
+                                         
   subcolorcvec(v, allcases(v, c), lp, rp);
 }
 
-/*
- * wordchrs - set up word-chr list for word-boundary stuff, if needed
- *
- * The list is kept as a bunch of arcs between two dummy states; it's
- * disposed of by the unreachable-states sweep in NFA optimization.
- * Does NEXT().  Must not be called from any unusual lexical context.
- * This should be reconciled with the \w etc. handling in lex.c, and
- * should be cleaned up to reduce dependencies on input scanning.
- */
+   
+                                                                      
+   
+                                                                      
+                                                                    
+                                                                      
+                                                                     
+                                                                  
+   
 static void
 wordchrs(struct vars *v)
 {
@@ -1820,14 +1820,14 @@ wordchrs(struct vars *v)
 
   if (v->wordchrs != NULL)
   {
-    NEXT(); /* for consistency */
+    NEXT();                      
     return;
   }
 
   left = newstate(v->nfa);
   right = newstate(v->nfa);
   NOERR();
-  /* fine point:	implemented with [::], and lexer will set REG_ULOCALE */
+                                                                         
   lexword(v);
   NEXT();
   assert(v->savenow != NULL && SEE('['));
@@ -1838,30 +1838,30 @@ wordchrs(struct vars *v)
   v->wordchrs = left;
 }
 
-/*
- * processlacon - generate the NFA representation of a LACON
- *
- * In the general case this is just newlacon() + newarc(), but some cases
- * can be optimized.
- */
+   
+                                                             
+   
+                                                                          
+                     
+   
 static void
-processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-re */
-    struct state *end,                            /* end of parsed LACON sub-re */
-    int latype, struct state *lp,                 /* left state to hang it on */
-    struct state *rp)                             /* right state to hang it on */
+processlacon(struct vars *v, struct state *begin,                                   
+    struct state *end,                                                            
+    int latype, struct state *lp,                                               
+    struct state *rp)                                                            
 {
   struct state *s1;
   int n;
 
-  /*
-   * Check for lookaround RE consisting of a single plain color arc (or set
-   * of arcs); this would typically be a simple chr or a bracket expression.
-   */
+     
+                                                                            
+                                                                             
+     
   s1 = single_color_transition(begin, end);
   switch (latype)
   {
   case LATYPE_AHEAD_POS:
-    /* If lookahead RE is just colorset C, convert to AHEAD(C) */
+                                                                 
     if (s1 != NULL)
     {
       cloneouts(v->nfa, s1, lp, rp, AHEAD);
@@ -1869,7 +1869,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
     }
     break;
   case LATYPE_AHEAD_NEG:
-    /* If lookahead RE is just colorset C, convert to AHEAD(^C)|$ */
+                                                                    
     if (s1 != NULL)
     {
       colorcomplement(v->nfa, v->cm, AHEAD, s1, lp, rp);
@@ -1879,7 +1879,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
     }
     break;
   case LATYPE_BEHIND_POS:
-    /* If lookbehind RE is just colorset C, convert to BEHIND(C) */
+                                                                   
     if (s1 != NULL)
     {
       cloneouts(v->nfa, s1, lp, rp, BEHIND);
@@ -1887,7 +1887,7 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
     }
     break;
   case LATYPE_BEHIND_NEG:
-    /* If lookbehind RE is just colorset C, convert to BEHIND(^C)|^ */
+                                                                      
     if (s1 != NULL)
     {
       colorcomplement(v->nfa, v->cm, BEHIND, s1, lp, rp);
@@ -1900,23 +1900,23 @@ processlacon(struct vars *v, struct state *begin, /* start of parsed LACON sub-r
     assert(NOTREACHED);
   }
 
-  /* General case: we need a LACON subre and arc */
+                                                   
   n = newlacon(v, begin, end, latype);
   newarc(v->nfa, LACON, n, lp, rp);
 }
 
-/*
- * subre - allocate a subre
- */
+   
+                            
+   
 static struct subre *
 subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
 {
   struct subre *ret = v->treefree;
 
-  /*
-   * Checking for stack overflow here is sufficient to protect parse() and
-   * its recursive subroutines.
-   */
+     
+                                                                           
+                                
+     
   if (STACK_TOO_DEEP(v->re))
   {
     ERR(REG_ETOOBIG);
@@ -1943,7 +1943,7 @@ subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
 
   ret->op = op;
   ret->flags = flags;
-  ret->id = 0; /* will be assigned later */
+  ret->id = 0;                             
   ret->subno = 0;
   ret->min = ret->max = 1;
   ret->left = NULL;
@@ -1955,11 +1955,11 @@ subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
   return ret;
 }
 
-/*
- * freesubre - free a subRE subtree
- */
+   
+                                    
+   
 static void
-freesubre(struct vars *v, /* might be NULL */
+freesubre(struct vars *v,                    
     struct subre *sr)
 {
   if (sr == NULL)
@@ -1979,11 +1979,11 @@ freesubre(struct vars *v, /* might be NULL */
   freesrnode(v, sr);
 }
 
-/*
- * freesrnode - free one node in a subRE subtree
- */
+   
+                                                 
+   
 static void
-freesrnode(struct vars *v, /* might be NULL */
+freesrnode(struct vars *v,                    
     struct subre *sr)
 {
   if (sr == NULL)
@@ -1999,7 +1999,7 @@ freesrnode(struct vars *v, /* might be NULL */
 
   if (v != NULL && v->treechain != NULL)
   {
-    /* we're still parsing, maybe we can reuse the subre */
+                                                           
     sr->left = v->treefree;
     v->treefree = sr;
   }
@@ -2009,26 +2009,26 @@ freesrnode(struct vars *v, /* might be NULL */
   }
 }
 
-/*
- * optst - optimize a subRE subtree
- */
+   
+                                    
+   
 static void
 optst(struct vars *v, struct subre *t)
 {
-  /*
-   * DGP (2007-11-13): I assume it was the programmer's intent to eventually
-   * come back and add code to optimize subRE trees, but the routine coded
-   * just spends effort traversing the tree and doing nothing. We can do
-   * nothing with less effort.
-   */
+     
+                                                                             
+                                                                           
+                                                                         
+                               
+     
   return;
 }
 
-/*
- * numst - number tree nodes (assigning "id" indexes)
- */
-static int                        /* next number */
-numst(struct subre *t, int start) /* starting point for subtree numbers */
+   
+                                                      
+   
+static int                                         
+numst(struct subre *t, int start)                                         
 {
   int i;
 
@@ -2047,23 +2047,23 @@ numst(struct subre *t, int start) /* starting point for subtree numbers */
   return i;
 }
 
-/*
- * markst - mark tree nodes as INUSE
- *
- * Note: this is a great deal more subtle than it looks.  During initial
- * parsing of a regex, all subres are linked into the treechain list;
- * discarded ones are also linked into the treefree list for possible reuse.
- * After we are done creating all subres required for a regex, we run markst()
- * then cleanst(), which results in discarding all subres not reachable from
- * v->tree.  We then clear v->treechain, indicating that subres must be found
- * by descending from v->tree.  This changes the behavior of freesubre(): it
- * will henceforth FREE() unwanted subres rather than sticking them into the
- * treefree list.  (Doing that any earlier would result in dangling links in
- * the treechain list.)  This all means that freev() will clean up correctly
- * if invoked before or after markst()+cleanst(); but it would not work if
- * called partway through this state conversion, so we mustn't error out
- * in or between these two functions.
- */
+   
+                                     
+   
+                                                                         
+                                                                      
+                                                                             
+                                                                               
+                                                                             
+                                                                              
+                                                                             
+                                                                             
+                                                                             
+                                                                             
+                                                                           
+                                                                         
+                                      
+   
 static void
 markst(struct subre *t)
 {
@@ -2080,9 +2080,9 @@ markst(struct subre *t)
   }
 }
 
-/*
- * cleanst - free any tree nodes not marked INUSE
- */
+   
+                                                  
+   
 static void
 cleanst(struct vars *v)
 {
@@ -2098,14 +2098,14 @@ cleanst(struct vars *v)
     }
   }
   v->treechain = NULL;
-  v->treefree = NULL; /* just on general principles */
+  v->treefree = NULL;                                 
 }
 
-/*
- * nfatree - turn a subRE subtree into a tree of compacted NFAs
- */
-static long                                       /* optimize results from top node */
-nfatree(struct vars *v, struct subre *t, FILE *f) /* for debug output */
+   
+                                                                
+   
+static long                                                                           
+nfatree(struct vars *v, struct subre *t, FILE *f)                       
 {
   assert(t != NULL && t->begin != NULL);
 
@@ -2121,13 +2121,13 @@ nfatree(struct vars *v, struct subre *t, FILE *f) /* for debug output */
   return nfanode(v, t, 0, f);
 }
 
-/*
- * nfanode - do one NFA for nfatree or lacons
- *
- * If converttosearch is true, apply makesearch() to the NFA.
- */
-static long                                                            /* optimize results */
-nfanode(struct vars *v, struct subre *t, int converttosearch, FILE *f) /* for debug output */
+   
+                                              
+   
+                                                              
+   
+static long                                                                                  
+nfanode(struct vars *v, struct subre *t, int converttosearch, FILE *f)                       
 {
   struct nfa *nfa;
   long ret = 0;
@@ -2166,10 +2166,10 @@ nfanode(struct vars *v, struct subre *t, int converttosearch, FILE *f) /* for de
   return ret;
 }
 
-/*
- * newlacon - allocate a lookaround-constraint subRE
- */
-static int /* lacon number */
+   
+                                                     
+   
+static int                   
 newlacon(struct vars *v, struct state *begin, struct state *end, int latype)
 {
   int n;
@@ -2178,7 +2178,7 @@ newlacon(struct vars *v, struct state *begin, struct state *end, int latype)
 
   if (v->nlacons == 0)
   {
-    n = 1; /* skip 0th */
+    n = 1;               
     newlacons = (struct subre *)MALLOC(2 * sizeof(struct subre));
   }
   else
@@ -2201,9 +2201,9 @@ newlacon(struct vars *v, struct state *begin, struct state *end, int latype)
   return n;
 }
 
-/*
- * freelacons - free lookaround-constraint subRE vector
- */
+   
+                                                        
+   
 static void
 freelacons(struct subre *subs, int n)
 {
@@ -2211,7 +2211,7 @@ freelacons(struct subre *subs, int n)
   int i;
 
   assert(n > 0);
-  for (sub = subs + 1, i = n - 1; i > 0; sub++, i--) /* no 0th */
+  for (sub = subs + 1, i = n - 1; i > 0; sub++, i--)             
   {
     if (!NULLCNFA(sub->cnfa))
     {
@@ -2221,9 +2221,9 @@ freelacons(struct subre *subs, int n)
   FREE(subs);
 }
 
-/*
- * rfree - free a whole RE (insides of regfree)
- */
+   
+                                                
+   
 static void
 rfree(regex_t *re)
 {
@@ -2234,7 +2234,7 @@ rfree(regex_t *re)
     return;
   }
 
-  re->re_magic = 0; /* invalidate RE */
+  re->re_magic = 0;                    
   g = (struct guts *)re->re_guts;
   re->re_guts = NULL;
   re->re_fns = NULL;
@@ -2258,32 +2258,32 @@ rfree(regex_t *re)
   }
 }
 
-/*
- * rcancelrequested - check for external request to cancel regex operation
- *
- * Return nonzero to fail the operation with error code REG_CANCEL,
- * zero to keep going
- *
- * The current implementation is Postgres-specific.  If we ever get around
- * to splitting the regex code out as a standalone library, there will need
- * to be some API to let applications define a callback function for this.
- */
+   
+                                                                           
+   
+                                                                    
+                      
+   
+                                                                           
+                                                                            
+                                                                           
+   
 static int
 rcancelrequested(void)
 {
   return InterruptPending && (QueryCancelPending || ProcDiePending);
 }
 
-/*
- * rstacktoodeep - check for stack getting dangerously deep
- *
- * Return nonzero to fail the operation with error code REG_ETOOBIG,
- * zero to keep going
- *
- * The current implementation is Postgres-specific.  If we ever get around
- * to splitting the regex code out as a standalone library, there will need
- * to be some API to let applications define a callback function for this.
- */
+   
+                                                            
+   
+                                                                     
+                      
+   
+                                                                           
+                                                                            
+                                                                           
+   
 static int
 rstacktoodeep(void)
 {
@@ -2292,9 +2292,9 @@ rstacktoodeep(void)
 
 #ifdef REG_DEBUG
 
-/*
- * dump - dump an RE in human-readable form
- */
+   
+                                            
+   
 static void
 dump(regex_t *re, FILE *f)
 {
@@ -2355,11 +2355,11 @@ dump(regex_t *re, FILE *f)
   dumpst(g->tree, f, 0);
 }
 
-/*
- * dumpst - dump a subRE tree
- */
+   
+                              
+   
 static void
-dumpst(struct subre *t, FILE *f, int nfapresent) /* is the original NFA still around? */
+dumpst(struct subre *t, FILE *f, int nfapresent)                                        
 {
   if (t == NULL)
   {
@@ -2372,11 +2372,11 @@ dumpst(struct subre *t, FILE *f, int nfapresent) /* is the original NFA still ar
   fflush(f);
 }
 
-/*
- * stdump - recursive guts of dumpst
- */
+   
+                                     
+   
 static void
-stdump(struct subre *t, FILE *f, int nfapresent) /* is the original NFA still around? */
+stdump(struct subre *t, FILE *f, int nfapresent)                                        
 {
   char idbuf[50];
 
@@ -2446,13 +2446,13 @@ stdump(struct subre *t, FILE *f, int nfapresent) /* is the original NFA still ar
   }
 }
 
-/*
- * stid - identify a subtree node for dumping
- */
-static const char * /* points to buf or constant string */
+   
+                                              
+   
+static const char *                                       
 stid(struct subre *t, char *buf, size_t bufsize)
 {
-  /* big enough for hex int or decimal t->id? */
+                                                
   if (bufsize < sizeof(void *) * 2 + 3 || bufsize < sizeof(t->id) * 3 + 1)
   {
     return "unable";
@@ -2467,7 +2467,7 @@ stid(struct subre *t, char *buf, size_t bufsize)
   }
   return buf;
 }
-#endif /* REG_DEBUG */
+#endif                
 
 #include "regc_lex.c"
 #include "regc_color.c"

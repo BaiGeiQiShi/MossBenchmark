@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * logicalfuncs.c
- *
- *	   Support functions for using logical decoding and management of
- *	   logical replication slots via SQL.
- *
- *
- * Copyright (c) 2012-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/replication/logicalfuncs.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+   
+                                                                     
+                                         
+   
+   
+                                                                
+   
+                  
+                                            
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -48,7 +48,7 @@
 
 #include "storage/fd.h"
 
-/* private date for writing out data */
+                                       
 typedef struct DecodingOutputState
 {
   Tuplestorestate *tupstore;
@@ -57,18 +57,18 @@ typedef struct DecodingOutputState
   int64 returned_rows;
 } DecodingOutputState;
 
-/*
- * Prepare for an output plugin write.
- */
+   
+                                       
+   
 static void
 LogicalOutputPrepareWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid, bool last_write)
 {
   resetStringInfo(ctx->out);
 }
 
-/*
- * Perform output plugin write into tuplestore.
- */
+   
+                                                
+   
 static void
 LogicalOutputWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid, bool last_write)
 {
@@ -76,7 +76,7 @@ LogicalOutputWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xi
   bool nulls[3];
   DecodingOutputState *p;
 
-  /* SQL Datums can only be of a limited length... */
+                                                     
   if (ctx->out->len > MaxAllocSize - VARHDRSZ)
   {
     elog(ERROR, "too much output for sql interface");
@@ -88,16 +88,16 @@ LogicalOutputWrite(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xi
   values[0] = LSNGetDatum(lsn);
   values[1] = TransactionIdGetDatum(xid);
 
-  /*
-   * Assert ctx->out is in database encoding when we're writing textual
-   * output.
-   */
+     
+                                                                        
+             
+     
   if (!p->binary_output)
   {
     Assert(pg_verify_mbstr(GetDatabaseEncoding(), ctx->out->data, ctx->out->len, false));
   }
 
-  /* ick, but cstring_to_text_with_len works for bytea perfectly fine */
+                                                                        
   values[2] = PointerGetDatum(cstring_to_text_with_len(ctx->out->data, ctx->out->len));
 
   tuplestore_putvalues(p->tupstore, p->tupdesc, values, nulls);
@@ -119,9 +119,9 @@ logical_read_local_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr, i
   return read_local_xlog_page(state, targetPagePtr, reqLen, targetRecPtr, cur_page, pageTLI);
 }
 
-/*
- * Helper function for the various SQL callable logical decoding functions.
- */
+   
+                                                                            
+   
 static Datum
 pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool binary)
 {
@@ -174,7 +174,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
   }
   arr = PG_GETARG_ARRAYTYPE_P(3);
 
-  /* check to see if caller supports us returning a tuplestore */
+                                                                 
   if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
   {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
@@ -184,12 +184,12 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("materialize mode required, but it is not allowed in this context")));
   }
 
-  /* state to write output to */
+                                
   p = palloc0(sizeof(DecodingOutputState));
 
   p->binary_output = binary;
 
-  /* Build a tuple descriptor for our result type */
+                                                    
   if (get_call_result_type(fcinfo, NULL, &p->tupdesc) != TYPEFUNC_COMPOSITE)
   {
     elog(ERROR, "return type must be a row type");
@@ -198,7 +198,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
   per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
   oldcontext = MemoryContextSwitchTo(per_query_ctx);
 
-  /* Deconstruct options array */
+                                 
   ndim = ARR_NDIM(arr);
   if (ndim > 1)
   {
@@ -237,10 +237,10 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
   rsinfo->setResult = p->tupstore;
   rsinfo->setDesc = p->tupdesc;
 
-  /*
-   * Compute the current end-of-wal and maintain ThisTimeLineID.
-   * RecoveryInProgress() will update ThisTimeLineID on promotion.
-   */
+     
+                                                                 
+                                                                   
+     
   if (!RecoveryInProgress())
   {
     end_of_wal = GetFlushRecPtr();
@@ -254,15 +254,15 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 
   PG_TRY();
   {
-    /* restart at slot's confirmed_flush */
+                                           
     ctx = CreateDecodingContext(InvalidXLogRecPtr, options, false, logical_read_local_xlog_page, LogicalOutputPrepareWrite, LogicalOutputWrite, NULL);
 
     MemoryContextSwitchTo(oldcontext);
 
-    /*
-     * Check whether the output plugin writes textual output if that's
-     * what we need.
-     */
+       
+                                                                       
+                     
+       
     if (!binary && ctx->options.output_type != OUTPUT_PLUGIN_TEXTUAL_OUTPUT)
     {
       ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("logical decoding output plugin \"%s\" produces binary output, but function \"%s\" expects textual data", NameStr(MyReplicationSlot->data.plugin), format_procedure(fcinfo->flinfo->fn_oid))));
@@ -270,17 +270,17 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 
     ctx->output_writer_private = p;
 
-    /*
-     * Decoding of WAL must start at restart_lsn so that the entirety of
-     * xacts that committed after the slot's confirmed_flush can be
-     * accumulated into reorder buffers.
-     */
+       
+                                                                         
+                                                                    
+                                         
+       
     startptr = MyReplicationSlot->data.restart_lsn;
 
-    /* invalidate non-timetravel entries */
+                                           
     InvalidateSystemCaches();
 
-    /* Decode until we run out of records */
+                                            
     while ((startptr != InvalidXLogRecPtr && startptr < end_of_wal) || (ctx->reader->EndRecPtr != InvalidXLogRecPtr && ctx->reader->EndRecPtr < end_of_wal))
     {
       XLogRecord *record;
@@ -292,22 +292,22 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
         elog(ERROR, "%s", errm);
       }
 
-      /*
-       * Now that we've set up the xlog reader state, subsequent calls
-       * pass InvalidXLogRecPtr to say "continue from last record"
-       */
+         
+                                                                       
+                                                                   
+         
       startptr = InvalidXLogRecPtr;
 
-      /*
-       * The {begin_txn,change,commit_txn}_wrapper callbacks above will
-       * store the description into our tuplestore.
-       */
+         
+                                                                        
+                                                    
+         
       if (record != NULL)
       {
         LogicalDecodingProcessRecord(ctx, ctx->reader);
       }
 
-      /* check limits */
+                        
       if (upto_lsn != InvalidXLogRecPtr && upto_lsn <= ctx->reader->EndRecPtr)
       {
         break;
@@ -321,38 +321,38 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
 
     tuplestore_donestoring(tupstore);
 
-    /*
-     * Logical decoding could have clobbered CurrentResourceOwner during
-     * transaction management, so restore the executor's value.  (This is
-     * a kluge, but it's not worth cleaning up right now.)
-     */
+       
+                                                                         
+                                                                          
+                                                           
+       
     CurrentResourceOwner = old_resowner;
 
-    /*
-     * Next time, start where we left off. (Hunting things, the family
-     * business..)
-     */
+       
+                                                                       
+                   
+       
     if (ctx->reader->EndRecPtr != InvalidXLogRecPtr && confirm)
     {
       LogicalConfirmReceivedLocation(ctx->reader->EndRecPtr);
 
-      /*
-       * If only the confirmed_flush_lsn has changed the slot won't get
-       * marked as dirty by the above. Callers on the walsender
-       * interface are expected to keep track of their own progress and
-       * don't need it written out. But SQL-interface users cannot
-       * specify their own start positions and it's harder for them to
-       * keep track of their progress, so we should make more of an
-       * effort to save it for them.
-       *
-       * Dirty the slot so it's written out at the next checkpoint.
-       * We'll still lose its position on crash, as documented, but it's
-       * better than always losing the position even on clean restart.
-       */
+         
+                                                                        
+                                                                
+                                                                        
+                                                                   
+                                                                       
+                                                                    
+                                     
+         
+                                                                    
+                                                                         
+                                                                       
+         
       ReplicationSlotMarkDirty();
     }
 
-    /* free context, call shutdown callback */
+                                              
     FreeDecodingContext(ctx);
 
     ReplicationSlotRelease();
@@ -360,7 +360,7 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
   }
   PG_CATCH();
   {
-    /* clear all timetravel entries */
+                                      
     InvalidateSystemCaches();
 
     PG_RE_THROW();
@@ -370,45 +370,45 @@ pg_logical_slot_get_changes_guts(FunctionCallInfo fcinfo, bool confirm, bool bin
   return (Datum)0;
 }
 
-/*
- * SQL function returning the changestream as text, consuming the data.
- */
+   
+                                                                        
+   
 Datum
 pg_logical_slot_get_changes(PG_FUNCTION_ARGS)
 {
   return pg_logical_slot_get_changes_guts(fcinfo, true, false);
 }
 
-/*
- * SQL function returning the changestream as text, only peeking ahead.
- */
+   
+                                                                        
+   
 Datum
 pg_logical_slot_peek_changes(PG_FUNCTION_ARGS)
 {
   return pg_logical_slot_get_changes_guts(fcinfo, false, false);
 }
 
-/*
- * SQL function returning the changestream in binary, consuming the data.
- */
+   
+                                                                          
+   
 Datum
 pg_logical_slot_get_binary_changes(PG_FUNCTION_ARGS)
 {
   return pg_logical_slot_get_changes_guts(fcinfo, true, true);
 }
 
-/*
- * SQL function returning the changestream in binary, only peeking ahead.
- */
+   
+                                                                          
+   
 Datum
 pg_logical_slot_peek_binary_changes(PG_FUNCTION_ARGS)
 {
   return pg_logical_slot_get_changes_guts(fcinfo, false, true);
 }
 
-/*
- * SQL function for writing logical decoding message into WAL.
- */
+   
+                                                               
+   
 Datum
 pg_logical_emit_message_bytea(PG_FUNCTION_ARGS)
 {
@@ -424,6 +424,6 @@ pg_logical_emit_message_bytea(PG_FUNCTION_ARGS)
 Datum
 pg_logical_emit_message_text(PG_FUNCTION_ARGS)
 {
-  /* bytea and text are compatible */
+                                     
   return pg_logical_emit_message_bytea(fcinfo);
 }

@@ -1,13 +1,13 @@
-/*
- * pg_db_role_setting.c
- *		Routines to support manipulation of the pg_db_role_setting relation
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *		src/backend/catalog/pg_db_role_setting.c
- */
+   
+                        
+                                                                        
+   
+                                                                         
+                                                                        
+   
+                  
+                                             
+   
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -31,7 +31,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 
   valuestr = ExtractSetVariableArgs(setstmt);
 
-  /* Get the old tuple, if any. */
+                                  
 
   rel = table_open(DbRoleSettingRelationId, RowExclusiveLock);
   ScanKeyInit(&scankey[0], Anum_pg_db_role_setting_setdatabase, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(databaseid));
@@ -39,18 +39,18 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
   scan = systable_beginscan(rel, DbRoleSettingDatidRolidIndexId, true, NULL, 2, scankey);
   tuple = systable_getnext(scan);
 
-  /*
-   * There are three cases:
-   *
-   * - in RESET ALL, request GUC to reset the settings array and update the
-   * catalog if there's anything left, delete it otherwise
-   *
-   * - in other commands, if there's a tuple in pg_db_role_setting, update
-   * it; if it ends up empty, delete it
-   *
-   * - otherwise, insert a new pg_db_role_setting tuple, but only if the
-   * command is not RESET
-   */
+     
+                            
+     
+                                                                            
+                                                           
+     
+                                                                           
+                                        
+     
+                                                                         
+                          
+     
   if (setstmt->kind == VAR_RESET_ALL)
   {
     if (HeapTupleIsValid(tuple))
@@ -102,11 +102,11 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
     repl_repl[Anum_pg_db_role_setting_setconfig - 1] = true;
     repl_null[Anum_pg_db_role_setting_setconfig - 1] = false;
 
-    /* Extract old value of setconfig */
+                                        
     datum = heap_getattr(tuple, Anum_pg_db_role_setting_setconfig, RelationGetDescr(rel), &isnull);
     a = isnull ? NULL : DatumGetArrayTypeP(datum);
 
-    /* Update (valuestr is NULL in RESET cases) */
+                                                  
     if (valuestr)
     {
       a = GUCArrayAdd(a, setstmt->name, valuestr);
@@ -130,7 +130,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
   }
   else if (valuestr)
   {
-    /* non-null valuestr means it's not RESET, so insert a new tuple */
+                                                                       
     HeapTuple newtuple;
     Datum values[Natts_pg_db_role_setting];
     bool nulls[Natts_pg_db_role_setting];
@@ -152,15 +152,15 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 
   systable_endscan(scan);
 
-  /* Close pg_db_role_setting, but keep lock till commit */
+                                                           
   table_close(rel, NoLock);
 }
 
-/*
- * Drop some settings from the catalog.  These can be for a particular
- * database, or for a particular role.  (It is of course possible to do both
- * too, but it doesn't make sense for current uses.)
- */
+   
+                                                                       
+                                                                             
+                                                     
+   
 void
 DropSetting(Oid databaseid, Oid roleid)
 {
@@ -193,16 +193,16 @@ DropSetting(Oid databaseid, Oid roleid)
   table_close(relsetting, RowExclusiveLock);
 }
 
-/*
- * Scan pg_db_role_setting looking for applicable settings, and load them on
- * the current process.
- *
- * relsetting is pg_db_role_setting, already opened and locked.
- *
- * Note: we only consider setting for the exact databaseid/roleid combination.
- * This probably needs to be called more than once, with InvalidOid passed as
- * databaseid/roleid.
- */
+   
+                                                                             
+                        
+   
+                                                                
+   
+                                                                               
+                                                                              
+                      
+   
 void
 ApplySetting(Snapshot snapshot, Oid databaseid, Oid roleid, Relation relsetting, GucSource source)
 {
@@ -224,11 +224,11 @@ ApplySetting(Snapshot snapshot, Oid databaseid, Oid roleid, Relation relsetting,
     {
       ArrayType *a = DatumGetArrayTypeP(datum);
 
-      /*
-       * We process all the options at SUSET level.  We assume that the
-       * right to insert an option into pg_db_role_setting was checked
-       * when it was inserted.
-       */
+         
+                                                                        
+                                                                       
+                               
+         
       ProcessGUCArray(a, PGC_SUSET, source, GUC_ACTION_SET);
     }
   }

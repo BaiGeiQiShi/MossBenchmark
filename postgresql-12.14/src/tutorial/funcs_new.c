@@ -1,24 +1,24 @@
-/* src/tutorial/funcs_new.c */
+                              
 
-/******************************************************************************
-  These are user-defined functions that can be bound to a Postgres backend
-  and called by Postgres to execute SQL functions of the same name.
+                                                                                
+                                                                           
+                                                                    
+ 
+                                                                           
+                                                
+ 
+                                                                           
+                                           
+                                                                              
 
-  The calling format for these functions is defined by the CREATE FUNCTION
-  SQL statement that binds them to the backend.
+#include "postgres.h"                                    
 
-  NOTE: this file shows examples of "new style" function call conventions.
-  See funcs.c for examples of "old style".
-*****************************************************************************/
-
-#include "postgres.h" /* general Postgres declarations */
-
-#include "executor/executor.h" /* for GetAttributeByName() */
-#include "utils/geo_decls.h"   /* for point type */
+#include "executor/executor.h"                               
+#include "utils/geo_decls.h"                       
 
 PG_MODULE_MAGIC;
 
-/* By Value */
+              
 
 PG_FUNCTION_INFO_V1(add_one);
 
@@ -30,14 +30,14 @@ add_one(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(arg + 1);
 }
 
-/* By Reference, Fixed Length */
+                                
 
 PG_FUNCTION_INFO_V1(add_one_float8);
 
 Datum
 add_one_float8(PG_FUNCTION_ARGS)
 {
-  /* The macros for FLOAT8 hide its pass-by-reference nature */
+                                                               
   float8 arg = PG_GETARG_FLOAT8(0);
 
   PG_RETURN_FLOAT8(arg + 1.0);
@@ -58,7 +58,7 @@ makepoint(PG_FUNCTION_ARGS)
   PG_RETURN_POINT_P(new_point);
 }
 
-/* By Reference, Variable Length */
+                                   
 
 PG_FUNCTION_INFO_V1(copytext);
 
@@ -67,22 +67,22 @@ copytext(PG_FUNCTION_ARGS)
 {
   text *t = PG_GETARG_TEXT_PP(0);
 
-  /*
-   * VARSIZE_ANY_EXHDR is the size of the struct in bytes, minus the
-   * VARHDRSZ or VARHDRSZ_SHORT of its header.  Construct the copy with a
-   * full-length header.
-   */
+     
+                                                                     
+                                                                          
+                         
+     
   text *new_t = (text *)palloc(VARSIZE_ANY_EXHDR(t) + VARHDRSZ);
 
   SET_VARSIZE(new_t, VARSIZE_ANY_EXHDR(t) + VARHDRSZ);
 
-  /*
-   * VARDATA is a pointer to the data region of the new struct.  The source
-   * could be a short datum, so retrieve its data through VARDATA_ANY.
-   */
-  memcpy((void *)VARDATA(new_t), /* destination */
-      (void *)VARDATA_ANY(t),    /* source */
-      VARSIZE_ANY_EXHDR(t));     /* how many bytes */
+     
+                                                                            
+                                                                       
+     
+  memcpy((void *)VARDATA(new_t),                  
+      (void *)VARDATA_ANY(t),                
+      VARSIZE_ANY_EXHDR(t));                         
   PG_RETURN_TEXT_P(new_t);
 }
 
@@ -104,7 +104,7 @@ concat_text(PG_FUNCTION_ARGS)
   PG_RETURN_TEXT_P(new_text);
 }
 
-/* Composite types */
+                     
 
 PG_FUNCTION_INFO_V1(c_overpaid);
 
@@ -122,9 +122,9 @@ c_overpaid(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(false);
   }
 
-  /*
-   * Alternatively, we might prefer to do PG_RETURN_NULL() for null salary
-   */
+     
+                                                                           
+     
 
   PG_RETURN_BOOL(salary > limit);
 }

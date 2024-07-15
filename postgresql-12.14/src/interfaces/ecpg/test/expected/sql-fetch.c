@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "fetch.pgc"
@@ -18,14 +18,14 @@
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 9 "fetch.pgc"
   char str[25];
 
 #line 10 "fetch.pgc"
   int i, count = 1, loopcount;
-/* exec sql end declare section */
+                                  
 #line 11 "fetch.pgc"
 
   ECPGdebug(1, stderr);
@@ -34,10 +34,10 @@ main()
   }
 #line 14 "fetch.pgc"
 
-  /* exec sql whenever sql_warning  sqlprint ; */
+                                                 
 #line 16 "fetch.pgc"
 
-  /* exec sql whenever sqlerror  stop ; */
+                                          
 #line 17 "fetch.pgc"
 
   {
@@ -125,7 +125,7 @@ main()
   }
 #line 24 "fetch.pgc"
 
-  /* declare C cursor for select * from My_Table */
+                                                   
 #line 26 "fetch.pgc"
 
   {
@@ -145,7 +145,7 @@ main()
   }
 #line 28 "fetch.pgc"
 
-  /* exec sql whenever not found  break ; */
+                                            
 #line 30 "fetch.pgc"
 
   for (loopcount = 0; loopcount < 100; loopcount++)
@@ -176,7 +176,7 @@ main()
     printf("%d: %s\n", i, str);
   }
 
-  /* exec sql whenever not found  continue ; */
+                                               
 #line 36 "fetch.pgc"
 
   {
@@ -232,7 +232,7 @@ main()
   }
 #line 42 "fetch.pgc"
 
-  /* declare D cursor for select * from My_Table where Item1 = $1 */
+                                                                    
 #line 44 "fetch.pgc"
 
   {

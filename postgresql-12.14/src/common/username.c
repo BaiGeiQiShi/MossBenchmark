@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * username.c
- *	  get user name
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/common/username.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                   
+   
+                                                                         
+                                                                        
+   
+                  
+                           
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -23,10 +23,10 @@
 
 #include "common/username.h"
 
-/*
- * Returns the current user name in a static buffer
- * On error, returns NULL and sets *errstr to point to a palloc'd message
- */
+   
+                                                    
+                                                                          
+   
 const char *
 get_user_name(char **errstr)
 {
@@ -36,7 +36,7 @@ get_user_name(char **errstr)
 
   *errstr = NULL;
 
-  errno = 0; /* clear errno before call */
+  errno = 0;                              
   pw = getpwuid(user_id);
   if (!pw)
   {
@@ -46,8 +46,8 @@ get_user_name(char **errstr)
 
   return pw->pw_name;
 #else
-  /* Microsoft recommends buffer size of UNLEN+1, where UNLEN = 256 */
-  /* "static" variable remains after function exit */
+                                                                      
+                                                     
   static char username[256 + 1];
   DWORD len = sizeof(username);
 
@@ -63,9 +63,9 @@ get_user_name(char **errstr)
 #endif
 }
 
-/*
- * Returns the current user name in a static buffer or exits
- */
+   
+                                                             
+   
 const char *
 get_user_name_or_exit(const char *progname)
 {

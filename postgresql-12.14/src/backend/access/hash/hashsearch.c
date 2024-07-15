@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * hashsearch.c
- *	  search code for postgres hash tables
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/hash/hashsearch.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                          
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/hash.h"
@@ -30,20 +30,20 @@ _hash_saveitem(HashScanOpaque so, int itemIndex, OffsetNumber offnum, IndexTuple
 static void
 _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *opaquep);
 
-/*
- *	_hash_next() -- Get the next item in a scan.
- *
- *		On entry, so->currPos describes the current page, which may
- *		be pinned but not locked, and so->currPos.itemIndex identifies
- *		which item was previously returned.
- *
- *		On successful exit, scan->xs_ctup.t_self is set to the TID
- *		of the next heap tuple. so->currPos is updated as needed.
- *
- *		On failure exit (no more tuples), we return false with pin
- *		held on bucket page but no pins or locks held on overflow
- *		page.
- */
+   
+                                                
+   
+                                                                
+                                                                   
+                                        
+   
+                                                               
+                                                              
+   
+                                                               
+                                                              
+          
+   
 bool
 _hash_next(IndexScanDesc scan, ScanDirection dir)
 {
@@ -54,12 +54,12 @@ _hash_next(IndexScanDesc scan, ScanDirection dir)
   Buffer buf;
   bool end_of_scan = false;
 
-  /*
-   * Advance to the next tuple on the current page; or if done, try to read
-   * data from the next or previous page based on the scan direction. Before
-   * moving to the next or previous page make sure that we deal with all the
-   * killed items.
-   */
+     
+                                                                            
+                                                                             
+                                                                             
+                   
+     
   if (ScanDirectionIsForward(dir))
   {
     if (++so->currPos.itemIndex > so->currPos.lastItem)
@@ -100,11 +100,11 @@ _hash_next(IndexScanDesc scan, ScanDirection dir)
         buf = _hash_getbuf(rel, blkno, HASH_READ, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
         TestForOldSnapshot(scan->xs_snapshot, rel, BufferGetPage(buf));
 
-        /*
-         * We always maintain the pin on bucket page for whole scan
-         * operation, so releasing the additional pin we have acquired
-         * here.
-         */
+           
+                                                                    
+                                                                       
+                 
+           
         if (buf == so->hashso_bucket_buf || buf == so->hashso_split_bucket_buf)
         {
           _hash_dropbuf(rel, buf);
@@ -129,18 +129,18 @@ _hash_next(IndexScanDesc scan, ScanDirection dir)
     return false;
   }
 
-  /* OK, itemIndex says what to return */
+                                         
   currItem = &so->currPos.items[so->currPos.itemIndex];
   scan->xs_heaptid = currItem->heapTid;
 
   return true;
 }
 
-/*
- * Advance to next page in a bucket, if any.  If we are scanning the bucket
- * being populated during split operation then this function advances to the
- * bucket being split after the last bucket page of bucket being populated.
- */
+   
+                                                                            
+                                                                             
+                                                                            
+   
 static void
 _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *opaquep)
 {
@@ -151,10 +151,10 @@ _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
 
   blkno = (*opaquep)->hasho_nextblkno;
 
-  /*
-   * Retain the pin on primary bucket page till the end of scan.  Refer the
-   * comments in _hash_first to know the reason of retaining pin.
-   */
+     
+                                                                            
+                                                                  
+     
   if (*bufp == so->hashso_bucket_buf || *bufp == so->hashso_split_bucket_buf)
   {
     LockBuffer(*bufp, BUFFER_LOCK_UNLOCK);
@@ -165,7 +165,7 @@ _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
   }
 
   *bufp = InvalidBuffer;
-  /* check for interrupts while we're not holding any buffer lock */
+                                                                    
   CHECK_FOR_INTERRUPTS();
   if (BlockNumberIsValid(blkno))
   {
@@ -174,25 +174,25 @@ _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
   }
   else if (so->hashso_buc_populated && !so->hashso_buc_split)
   {
-    /*
-     * end of bucket, scan bucket being split if there was a split in
-     * progress at the start of scan.
-     */
+       
+                                                                      
+                                      
+       
     *bufp = so->hashso_split_bucket_buf;
 
-    /*
-     * buffer for bucket being split must be valid as we acquire the pin
-     * on it before the start of scan and retain it till end of scan.
-     */
+       
+                                                                         
+                                                                      
+       
     Assert(BufferIsValid(*bufp));
 
     LockBuffer(*bufp, BUFFER_LOCK_SHARE);
     PredicateLockPage(rel, BufferGetBlockNumber(*bufp), scan->xs_snapshot);
 
-    /*
-     * setting hashso_buc_split to true indicates that we are scanning
-     * bucket being split.
-     */
+       
+                                                                       
+                           
+       
     so->hashso_buc_split = true;
 
     block_found = true;
@@ -206,11 +206,11 @@ _hash_readnext(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
   }
 }
 
-/*
- * Advance to previous page in a bucket, if any.  If the current scan has
- * started during split operation then this function advances to bucket
- * being populated after the first bucket page of bucket being split.
- */
+   
+                                                                          
+                                                                        
+                                                                      
+   
 static void
 _hash_readprev(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *opaquep)
 {
@@ -221,10 +221,10 @@ _hash_readprev(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
 
   blkno = (*opaquep)->hasho_prevblkno;
 
-  /*
-   * Retain the pin on primary bucket page till the end of scan.  Refer the
-   * comments in _hash_first to know the reason of retaining pin.
-   */
+     
+                                                                            
+                                                                  
+     
   if (*bufp == so->hashso_bucket_buf || *bufp == so->hashso_split_bucket_buf)
   {
     LockBuffer(*bufp, BUFFER_LOCK_UNLOCK);
@@ -237,7 +237,7 @@ _hash_readprev(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
   }
 
   *bufp = InvalidBuffer;
-  /* check for interrupts while we're not holding any buffer lock */
+                                                                    
   CHECK_FOR_INTERRUPTS();
 
   if (haveprevblk)
@@ -248,10 +248,10 @@ _hash_readprev(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
     TestForOldSnapshot(scan->xs_snapshot, rel, *pagep);
     *opaquep = (HashPageOpaque)PageGetSpecialPointer(*pagep);
 
-    /*
-     * We always maintain the pin on bucket page for whole scan operation,
-     * so releasing the additional pin we have acquired here.
-     */
+       
+                                                                           
+                                                              
+       
     if (*bufp == so->hashso_bucket_buf || *bufp == so->hashso_split_bucket_buf)
     {
       _hash_dropbuf(rel, *bufp);
@@ -259,52 +259,52 @@ _hash_readprev(IndexScanDesc scan, Buffer *bufp, Page *pagep, HashPageOpaque *op
   }
   else if (so->hashso_buc_populated && so->hashso_buc_split)
   {
-    /*
-     * end of bucket, scan bucket being populated if there was a split in
-     * progress at the start of scan.
-     */
+       
+                                                                          
+                                      
+       
     *bufp = so->hashso_bucket_buf;
 
-    /*
-     * buffer for bucket being populated must be valid as we acquire the
-     * pin on it before the start of scan and retain it till end of scan.
-     */
+       
+                                                                         
+                                                                          
+       
     Assert(BufferIsValid(*bufp));
 
     LockBuffer(*bufp, BUFFER_LOCK_SHARE);
     *pagep = BufferGetPage(*bufp);
     *opaquep = (HashPageOpaque)PageGetSpecialPointer(*pagep);
 
-    /* move to the end of bucket chain */
+                                         
     while (BlockNumberIsValid((*opaquep)->hasho_nextblkno))
     {
       _hash_readnext(scan, bufp, pagep, opaquep);
     }
 
-    /*
-     * setting hashso_buc_split to false indicates that we are scanning
-     * bucket being populated.
-     */
+       
+                                                                        
+                               
+       
     so->hashso_buc_split = false;
   }
 }
 
-/*
- *	_hash_first() -- Find the first item in a scan.
- *
- *		We find the first item (or, if backward scan, the last item) in the
- *		index that satisfies the qualification associated with the scan
- *		descriptor.
- *
- *		On successful exit, if the page containing current index tuple is an
- *		overflow page, both pin and lock are released whereas if it is a bucket
- *		page then it is pinned but not locked and data about the matching
- *		tuple(s) on the page has been loaded into so->currPos,
- *		scan->xs_ctup.t_self is set to the heap TID of the current tuple.
- *
- *		On failure exit (no more tuples), we return false, with pin held on
- *		bucket page but no pins or locks held on overflow page.
- */
+   
+                                                   
+   
+                                                                        
+                                                                    
+                
+   
+                                                                         
+                                                                            
+                                                                      
+                                                           
+                                                                      
+   
+                                                                        
+                                                            
+   
 bool
 _hash_first(IndexScanDesc scan, ScanDirection dir)
 {
@@ -320,44 +320,44 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
 
   pgstat_count_index_scan(rel);
 
-  /*
-   * We do not support hash scans with no index qualification, because we
-   * would have to read the whole index rather than just one bucket. That
-   * creates a whole raft of problems, since we haven't got a practical way
-   * to lock all the buckets against splits or compactions.
-   */
+     
+                                                                          
+                                                                          
+                                                                            
+                                                            
+     
   if (scan->numberOfKeys < 1)
   {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("hash indexes do not support whole-index scans")));
   }
 
-  /* There may be more than one index qual, but we hash only the first */
+                                                                         
   cur = &scan->keyData[0];
 
-  /* We support only single-column hash indexes */
+                                                  
   Assert(cur->sk_attno == 1);
-  /* And there's only one operator strategy, too */
+                                                   
   Assert(cur->sk_strategy == HTEqualStrategyNumber);
 
-  /*
-   * If the constant in the index qual is NULL, assume it cannot match any
-   * items in the index.
-   */
+     
+                                                                           
+                         
+     
   if (cur->sk_flags & SK_ISNULL)
   {
     return false;
   }
 
-  /*
-   * Okay to compute the hash key.  We want to do this before acquiring any
-   * locks, in case a user-defined hash function happens to be slow.
-   *
-   * If scankey operator is not a cross-type comparison, we can use the
-   * cached hash function; otherwise gotta look it up in the catalogs.
-   *
-   * We support the convention that sk_subtype == InvalidOid means the
-   * opclass input type; this is a hack to simplify life for ScanKeyInit().
-   */
+     
+                                                                            
+                                                                     
+     
+                                                                        
+                                                                       
+     
+                                                                       
+                                                                            
+     
   if (cur->sk_subtype == rel->rd_opcintype[0] || cur->sk_subtype == InvalidOid)
   {
     hashkey = _hash_datum2hashkey(rel, cur->sk_argument);
@@ -378,22 +378,22 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
 
   so->hashso_bucket_buf = buf;
 
-  /*
-   * If a bucket split is in progress, then while scanning the bucket being
-   * populated, we need to skip tuples that were copied from bucket being
-   * split.  We also need to maintain a pin on the bucket being split to
-   * ensure that split-cleanup work done by vacuum doesn't remove tuples
-   * from it till this scan is done.  We need to maintain a pin on the
-   * bucket being populated to ensure that vacuum doesn't squeeze that
-   * bucket till this scan is complete; otherwise, the ordering of tuples
-   * can't be maintained during forward and backward scans.  Here, we have
-   * to be cautious about locking order: first, acquire the lock on bucket
-   * being split; then, release the lock on it but not the pin; then,
-   * acquire a lock on bucket being populated and again re-verify whether
-   * the bucket split is still in progress.  Acquiring the lock on bucket
-   * being split first ensures that the vacuum waits for this scan to
-   * finish.
-   */
+     
+                                                                            
+                                                                          
+                                                                         
+                                                                         
+                                                                       
+                                                                       
+                                                                          
+                                                                           
+                                                                           
+                                                                      
+                                                                          
+                                                                          
+                                                                      
+             
+     
   if (H_BUCKET_BEING_POPULATED(opaque))
   {
     BlockNumber old_blkno;
@@ -401,19 +401,19 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
 
     old_blkno = _hash_get_oldblock_from_newbucket(rel, bucket);
 
-    /*
-     * release the lock on new bucket and re-acquire it after acquiring
-     * the lock on old bucket.
-     */
+       
+                                                                        
+                               
+       
     LockBuffer(buf, BUFFER_LOCK_UNLOCK);
 
     old_buf = _hash_getbuf(rel, old_blkno, HASH_READ, LH_BUCKET_PAGE);
     TestForOldSnapshot(scan->xs_snapshot, rel, BufferGetPage(old_buf));
 
-    /*
-     * remember the split bucket buffer so as to use it later for
-     * scanning.
-     */
+       
+                                                                  
+                 
+       
     so->hashso_split_bucket_buf = old_buf;
     LockBuffer(old_buf, BUFFER_LOCK_UNLOCK);
 
@@ -433,47 +433,47 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
     }
   }
 
-  /* If a backwards scan is requested, move to the end of the chain */
+                                                                      
   if (ScanDirectionIsBackward(dir))
   {
-    /*
-     * Backward scans that start during split needs to start from end of
-     * bucket being split.
-     */
+       
+                                                                         
+                           
+       
     while (BlockNumberIsValid(opaque->hasho_nextblkno) || (so->hashso_buc_populated && !so->hashso_buc_split))
     {
       _hash_readnext(scan, &buf, &page, &opaque);
     }
   }
 
-  /* remember which buffer we have pinned, if any */
+                                                    
   Assert(BufferIsInvalid(so->currPos.buf));
   so->currPos.buf = buf;
 
-  /* Now find all the tuples satisfying the qualification from a page */
+                                                                        
   if (!_hash_readpage(scan, &buf, dir))
   {
     return false;
   }
 
-  /* OK, itemIndex says what to return */
+                                         
   currItem = &so->currPos.items[so->currPos.itemIndex];
   scan->xs_heaptid = currItem->heapTid;
 
-  /* if we're here, _hash_readpage found a valid tuples */
+                                                          
   return true;
 }
 
-/*
- *	_hash_readpage() -- Load data from current index page into so->currPos
- *
- *	We scan all the items in the current index page and save them into
- *	so->currPos if it satisfies the qualification. If no matching items
- *	are found in the current page, we move to the next or previous page
- *	in a bucket chain as indicated by the direction.
- *
- *	Return true if any matching items are found else return false.
- */
+   
+                                                                          
+   
+                                                                      
+                                                                       
+                                                                       
+                                                    
+   
+                                                                  
+   
 static bool
 _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
 {
@@ -500,7 +500,7 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
 
     for (;;)
     {
-      /* new page, locate starting position by binary search */
+                                                               
       offnum = _hash_binsearch(page, so->hashso_sk_hash);
 
       itemIndex = _hash_load_qualified_items(scan, page, offnum, dir);
@@ -510,20 +510,20 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
         break;
       }
 
-      /*
-       * Could not find any matching tuples in the current page, move to
-       * the next page. Before leaving the current page, deal with any
-       * killed items.
-       */
+         
+                                                                         
+                                                                       
+                       
+         
       if (so->numKilled > 0)
       {
         _hash_kill_items(scan);
       }
 
-      /*
-       * If this is a primary bucket page, hasho_prevblkno is not a real
-       * block number.
-       */
+         
+                                                                         
+                       
+         
       if (so->currPos.buf == so->hashso_bucket_buf || so->currPos.buf == so->hashso_split_bucket_buf)
       {
         prev_blkno = InvalidBlockNumber;
@@ -541,14 +541,14 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
       }
       else
       {
-        /*
-         * Remember next and previous block numbers for scrollable
-         * cursors to know the start position and return false
-         * indicating that no more matching tuples were found. Also,
-         * don't reset currPage or lsn, because we expect
-         * _hash_kill_items to be called for the old page after this
-         * function returns.
-         */
+           
+                                                                   
+                                                               
+                                                                     
+                                                          
+                                                                     
+                             
+           
         so->currPos.prevPage = prev_blkno;
         so->currPos.nextPage = InvalidBlockNumber;
         so->currPos.buf = buf;
@@ -566,7 +566,7 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
 
     for (;;)
     {
-      /* new page, locate starting position by binary search */
+                                                               
       offnum = _hash_binsearch_last(page, so->hashso_sk_hash);
 
       itemIndex = _hash_load_qualified_items(scan, page, offnum, dir);
@@ -576,11 +576,11 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
         break;
       }
 
-      /*
-       * Could not find any matching tuples in the current page, move to
-       * the previous page. Before leaving the current page, deal with
-       * any killed items.
-       */
+         
+                                                                         
+                                                                       
+                           
+         
       if (so->numKilled > 0)
       {
         _hash_kill_items(scan);
@@ -599,14 +599,14 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
       }
       else
       {
-        /*
-         * Remember next and previous block numbers for scrollable
-         * cursors to know the start position and return false
-         * indicating that no more matching tuples were found. Also,
-         * don't reset currPage or lsn, because we expect
-         * _hash_kill_items to be called for the old page after this
-         * function returns.
-         */
+           
+                                                                   
+                                                               
+                                                                     
+                                                          
+                                                                     
+                             
+           
         so->currPos.prevPage = InvalidBlockNumber;
         so->currPos.nextPage = next_blkno;
         so->currPos.buf = buf;
@@ -637,10 +637,10 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP, ScanDirection dir)
   return true;
 }
 
-/*
- * Load all the qualified items from a current index page
- * into so->currPos. Helper function for _hash_readpage.
- */
+   
+                                                          
+                                                         
+   
 static int
 _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, ScanDirection dir)
 {
@@ -653,7 +653,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, S
 
   if (ScanDirectionIsForward(dir))
   {
-    /* load items[] in ascending order */
+                                         
     itemIndex = 0;
 
     while (offnum <= maxoff)
@@ -661,29 +661,29 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, S
       Assert(offnum >= FirstOffsetNumber);
       itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, offnum));
 
-      /*
-       * skip the tuples that are moved by split operation for the scan
-       * that has started when split was in progress. Also, skip the
-       * tuples that are marked as dead.
-       */
+         
+                                                                        
+                                                                     
+                                         
+         
       if ((so->hashso_buc_populated && !so->hashso_buc_split && (itup->t_info & INDEX_MOVED_BY_SPLIT_MASK)) || (scan->ignore_killed_tuples && (ItemIdIsDead(PageGetItemId(page, offnum)))))
       {
-        offnum = OffsetNumberNext(offnum); /* move forward */
+        offnum = OffsetNumberNext(offnum);                   
         continue;
       }
 
       if (so->hashso_sk_hash == _hash_get_indextuple_hashkey(itup) && _hash_checkqual(scan, itup))
       {
-        /* tuple is qualified, so remember it */
+                                                
         _hash_saveitem(so, itemIndex, offnum, itup);
         itemIndex++;
       }
       else
       {
-        /*
-         * No more matching tuples exist in this page. so, exit while
-         * loop.
-         */
+           
+                                                                      
+                 
+           
         break;
       }
 
@@ -695,7 +695,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, S
   }
   else
   {
-    /* load items[] in descending order */
+                                          
     itemIndex = MaxIndexTuplesPerPage;
 
     while (offnum >= FirstOffsetNumber)
@@ -703,29 +703,29 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, S
       Assert(offnum <= maxoff);
       itup = (IndexTuple)PageGetItem(page, PageGetItemId(page, offnum));
 
-      /*
-       * skip the tuples that are moved by split operation for the scan
-       * that has started when split was in progress. Also, skip the
-       * tuples that are marked as dead.
-       */
+         
+                                                                        
+                                                                     
+                                         
+         
       if ((so->hashso_buc_populated && !so->hashso_buc_split && (itup->t_info & INDEX_MOVED_BY_SPLIT_MASK)) || (scan->ignore_killed_tuples && (ItemIdIsDead(PageGetItemId(page, offnum)))))
       {
-        offnum = OffsetNumberPrev(offnum); /* move back */
+        offnum = OffsetNumberPrev(offnum);                
         continue;
       }
 
       if (so->hashso_sk_hash == _hash_get_indextuple_hashkey(itup) && _hash_checkqual(scan, itup))
       {
         itemIndex--;
-        /* tuple is qualified, so remember it */
+                                                
         _hash_saveitem(so, itemIndex, offnum, itup);
       }
       else
       {
-        /*
-         * No more matching tuples exist in this page. so, exit while
-         * loop.
-         */
+           
+                                                                      
+                 
+           
         break;
       }
 
@@ -737,7 +737,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page, OffsetNumber offnum, S
   }
 }
 
-/* Save an index item into so->currPos.items[itemIndex] */
+                                                          
 static inline void
 _hash_saveitem(HashScanOpaque so, int itemIndex, OffsetNumber offnum, IndexTuple itup)
 {

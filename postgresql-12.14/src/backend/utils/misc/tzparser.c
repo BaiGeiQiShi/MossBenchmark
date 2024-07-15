@@ -1,24 +1,24 @@
-/*-------------------------------------------------------------------------
- *
- * tzparser.c
- *	  Functions for parsing timezone offset files
- *
- * Note: this code is invoked from the check_hook for the GUC variable
- * timezone_abbreviations.  Therefore, it should report problems using
- * GUC_check_errmsg() and related functions, and try to avoid throwing
- * elog(ERROR).  This is not completely bulletproof at present --- in
- * particular out-of-memory will throw an error.  Could probably fix with
- * PG_TRY if necessary.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/misc/tzparser.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                 
+   
+                                                                       
+                                                                       
+                                                                       
+                                                                      
+                                                                          
+                        
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                       
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -41,38 +41,38 @@ addToArray(tzEntry **base, int *arraysize, int n, tzEntry *entry, bool override)
 static int
 ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int n);
 
-/*
- * Apply additional validation checks to a tzEntry
- *
- * Returns true if OK, else false
- */
+   
+                                                   
+   
+                                  
+   
 static bool
 validateTzEntry(tzEntry *tzentry)
 {
   unsigned char *p;
 
-  /*
-   * Check restrictions imposed by datetkntbl storage format (see
-   * datetime.c)
-   */
+     
+                                                                  
+                 
+     
   if (strlen(tzentry->abbrev) > TOKMAXLEN)
   {
     GUC_check_errmsg("time zone abbreviation \"%s\" is too long (maximum %d characters) in time zone file \"%s\", line %d", tzentry->abbrev, TOKMAXLEN, tzentry->filename, tzentry->lineno);
     return false;
   }
 
-  /*
-   * Sanity-check the offset: shouldn't exceed 14 hours
-   */
+     
+                                                        
+     
   if (tzentry->offset > 14 * 60 * 60 || tzentry->offset < -14 * 60 * 60)
   {
     GUC_check_errmsg("time zone offset %d is out of range in time zone file \"%s\", line %d", tzentry->offset, tzentry->filename, tzentry->lineno);
     return false;
   }
 
-  /*
-   * Convert abbrev to lowercase (must match datetime.c's conversion)
-   */
+     
+                                                                      
+     
   for (p = (unsigned char *)tzentry->abbrev; *p; p++)
   {
     *p = pg_tolower(*p);
@@ -81,15 +81,15 @@ validateTzEntry(tzEntry *tzentry)
   return true;
 }
 
-/*
- * Attempt to parse the line as a timezone abbrev spec
- *
- * Valid formats are:
- *	name  zone
- *	name  offset  dst
- *
- * Returns true if OK, else false; data is stored in *tzentry
- */
+   
+                                                       
+   
+                      
+              
+                     
+   
+                                                              
+   
 static bool
 splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
 {
@@ -117,7 +117,7 @@ splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
     return false;
   }
 
-  /* We assume zone names don't begin with a digit or sign */
+                                                             
   if (isdigit((unsigned char)*offset) || *offset == '+' || *offset == '-')
   {
     tzentry->zone = NULL;
@@ -136,30 +136,30 @@ splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
     }
     else
     {
-      /* there was no 'D' dst specifier */
+                                          
       tzentry->is_dst = false;
       remain = is_dst;
     }
   }
   else
   {
-    /*
-     * Assume entry is a zone name.  We do not try to validate it by
-     * looking up the zone, because that would force loading of a lot of
-     * zones that probably will never be used in the current session.
-     */
+       
+                                                                     
+                                                                         
+                                                                      
+       
     tzentry->zone = pstrdup(offset);
     tzentry->offset = 0;
     tzentry->is_dst = false;
     remain = strtok(NULL, WHITESPACE);
   }
 
-  if (!remain) /* no more non-whitespace chars */
+  if (!remain)                                   
   {
     return true;
   }
 
-  if (remain[0] != '#') /* must be a comment */
+  if (remain[0] != '#')                        
   {
     GUC_check_errmsg("invalid syntax in time zone file \"%s\", line %d", filename, lineno);
     return false;
@@ -167,17 +167,17 @@ splitTzLine(const char *filename, int lineno, char *line, tzEntry *tzentry)
   return true;
 }
 
-/*
- * Insert entry into sorted array
- *
- * *base: base address of array (changeable if must enlarge array)
- * *arraysize: allocated length of array (changeable if must enlarge array)
- * n: current number of valid elements in array
- * entry: new data to insert
- * override: true if OK to override
- *
- * Returns the new array length (new value for n), or -1 if error
- */
+   
+                                  
+   
+                                                                   
+                                                                            
+                                                
+                             
+                                    
+   
+                                                                  
+   
 static int
 addToArray(tzEntry **base, int *arraysize, int n, tzEntry *entry, bool override)
 {
@@ -185,11 +185,11 @@ addToArray(tzEntry **base, int *arraysize, int n, tzEntry *entry, bool override)
   int low;
   int high;
 
-  /*
-   * Search the array for a duplicate; as a useful side effect, the array is
-   * maintained in sorted order.  We use strcmp() to ensure we match the
-   * sort order datetime.c expects.
-   */
+     
+                                                                             
+                                                                         
+                                    
+     
   arrayptr = *base;
   low = 0;
   high = n - 1;
@@ -210,32 +210,32 @@ addToArray(tzEntry **base, int *arraysize, int n, tzEntry *entry, bool override)
     }
     else
     {
-      /*
-       * Found a duplicate entry; complain unless it's the same.
-       */
+         
+                                                                 
+         
       if ((midptr->zone == NULL && entry->zone == NULL && midptr->offset == entry->offset && midptr->is_dst == entry->is_dst) || (midptr->zone != NULL && entry->zone != NULL && strcmp(midptr->zone, entry->zone) == 0))
       {
-        /* return unchanged array */
+                                    
         return n;
       }
       if (override)
       {
-        /* same abbrev but something is different, override */
+                                                              
         midptr->zone = entry->zone;
         midptr->offset = entry->offset;
         midptr->is_dst = entry->is_dst;
         return n;
       }
-      /* same abbrev but something is different, complain */
+                                                            
       GUC_check_errmsg("time zone abbreviation \"%s\" is multiply defined", entry->abbrev);
       GUC_check_errdetail("Entry in time zone file \"%s\", line %d, conflicts with entry in file \"%s\", line %d.", midptr->filename, midptr->lineno, entry->filename, entry->lineno);
       return -1;
     }
   }
 
-  /*
-   * No match, insert at position "low".
-   */
+     
+                                         
+     
   if (n >= *arraysize)
   {
     *arraysize *= 2;
@@ -251,17 +251,17 @@ addToArray(tzEntry **base, int *arraysize, int n, tzEntry *entry, bool override)
   return n + 1;
 }
 
-/*
- * Parse a single timezone abbrev file --- can recurse to handle @INCLUDE
- *
- * filename: user-specified file name (does not include path)
- * depth: current recursion depth
- * *base: array for results (changeable if must enlarge array)
- * *arraysize: allocated length of array (changeable if must enlarge array)
- * n: current number of valid elements in array
- *
- * Returns the new array length (new value for n), or -1 if error
- */
+   
+                                                                          
+   
+                                                              
+                                  
+                                                               
+                                                                            
+                                                
+   
+                                                                  
+   
 static int
 ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int n)
 {
@@ -275,17 +275,17 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
   bool override = false;
   const char *p;
 
-  /*
-   * We enforce that the filename is all alpha characters.  This may be
-   * overly restrictive, but we don't want to allow access to anything
-   * outside the timezonesets directory, so for instance '/' *must* be
-   * rejected.
-   */
+     
+                                                                        
+                                                                       
+                                                                       
+               
+     
   for (p = filename; *p; p++)
   {
     if (!isalpha((unsigned char)*p))
     {
-      /* at level 0, just use guc.c's regular "invalid value" message */
+                                                                        
       if (depth > 0)
       {
         GUC_check_errmsg("invalid time zone file name \"%s\"", filename);
@@ -294,11 +294,11 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
     }
   }
 
-  /*
-   * The maximal recursion depth is a pretty arbitrary setting. It is hard
-   * to imagine that someone needs more than 3 levels so stick with this
-   * conservative setting until someone complains.
-   */
+     
+                                                                           
+                                                                         
+                                                   
+     
   if (depth > 3)
   {
     GUC_check_errmsg("time zone file recursion limit exceeded in file \"%s\"", filename);
@@ -310,12 +310,12 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
   tzFile = AllocateFile(file_path, "r");
   if (!tzFile)
   {
-    /*
-     * Check to see if the problem is not the filename but the directory.
-     * This is worth troubling over because if the installation share/
-     * directory is missing or unreadable, this is likely to be the first
-     * place we notice a problem during postmaster startup.
-     */
+       
+                                                                          
+                                                                       
+                                                                          
+                                                            
+       
     int save_errno = errno;
     DIR *tzdir;
 
@@ -330,10 +330,10 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
     FreeDir(tzdir);
     errno = save_errno;
 
-    /*
-     * otherwise, if file doesn't exist and it's level 0, guc.c's
-     * complaint is enough
-     */
+       
+                                                                  
+                           
+       
     if (errno != ENOENT || depth > 0)
     {
       GUC_check_errmsg("could not read time zone file \"%s\": %m", filename);
@@ -353,36 +353,36 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
         n = -1;
         break;
       }
-      /* else we're at EOF after all */
+                                       
       break;
     }
     if (strlen(tzbuf) == sizeof(tzbuf) - 1)
     {
-      /* the line is too long for tzbuf */
+                                          
       GUC_check_errmsg("line is too long in time zone file \"%s\", line %d", filename, lineno);
       n = -1;
       break;
     }
 
-    /* skip over whitespace */
+                              
     line = tzbuf;
     while (*line && isspace((unsigned char)*line))
     {
       line++;
     }
 
-    if (*line == '\0') /* empty line */
+    if (*line == '\0')                 
     {
       continue;
     }
-    if (*line == '#') /* comment line */
+    if (*line == '#')                   
     {
       continue;
     }
 
     if (pg_strncasecmp(line, "@INCLUDE", strlen("@INCLUDE")) == 0)
     {
-      /* pstrdup so we can use filename in result data structure */
+                                                                   
       char *includeFile = pstrdup(line + strlen("@INCLUDE"));
 
       includeFile = strtok(includeFile, WHITESPACE);
@@ -428,13 +428,13 @@ ParseTzFile(const char *filename, int depth, tzEntry **base, int *arraysize, int
   return n;
 }
 
-/*
- * load_tzoffsets --- read and parse the specified timezone offset file
- *
- * On success, return a filled-in TimeZoneAbbrevTable, which must have been
- * malloc'd not palloc'd.  On failure, return NULL, using GUC_check_errmsg
- * and friends to give details of the problem.
- */
+   
+                                                                        
+   
+                                                                            
+                                                                           
+                                               
+   
 TimeZoneAbbrevTable *
 load_tzoffsets(const char *filename)
 {
@@ -445,21 +445,21 @@ load_tzoffsets(const char *filename)
   int arraysize;
   int n;
 
-  /*
-   * Create a temp memory context to work in.  This makes it easy to clean
-   * up afterwards.
-   */
+     
+                                                                           
+                    
+     
   tmpContext = AllocSetContextCreate(CurrentMemoryContext, "TZParserMemory", ALLOCSET_SMALL_SIZES);
   oldContext = MemoryContextSwitchTo(tmpContext);
 
-  /* Initialize array at a reasonable size */
+                                             
   arraysize = 128;
   array = (tzEntry *)palloc(arraysize * sizeof(tzEntry));
 
-  /* Parse the file(s) */
+                         
   n = ParseTzFile(filename, 0, &array, &arraysize, 0);
 
-  /* If no errors so far, let datetime.c allocate memory & convert format */
+                                                                            
   if (n >= 0)
   {
     result = ConvertTimeZoneAbbrevs(array, n);
@@ -469,7 +469,7 @@ load_tzoffsets(const char *filename)
     }
   }
 
-  /* Clean up */
+                
   MemoryContextSwitchTo(oldContext);
   MemoryContextDelete(tmpContext);
 

@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "init.pgc"
@@ -17,8 +17,8 @@
 #define PGDLLIMPORT __declspec(dllimport)
 #else
 #define PGDLLIMPORT
-#endif /* __CYGWIN__ */
-#endif /* PGDLLIMPORT */
+#endif                 
+#endif                  
 
 #define SQLERRMC_LEN 150
 
@@ -39,27 +39,27 @@ extern "C"
     } sqlerrm;
     char sqlerrp[8];
     long sqlerrd[6];
-    /* Element 0: empty						*/
-    /* 1: OID of processed tuple if applicable			*/
-    /* 2: number of rows processed				*/
-    /* after an INSERT, UPDATE or				*/
-    /* DELETE statement					*/
-    /* 3: empty						*/
-    /* 4: empty						*/
-    /* 5: empty						*/
+                               
+                                                   
+                                        
+                                       
+                              
+                       
+                       
+                       
     char sqlwarn[8];
-    /* Element 0: set to 'W' if at least one other is 'W'	*/
-    /* 1: if 'W' at least one character string		*/
-    /* value was truncated when it was			*/
-    /* stored into a host variable.             */
+                                                            
+                                                  
+                                           
+                                                  
 
-    /*
-     * 2: if 'W' a (hopefully) non-fatal notice occurred
-     */	/* 3: empty */
-    /* 4: empty						*/
-    /* 5: empty						*/
-    /* 6: empty						*/
-    /* 7: empty						*/
+       
+                                                         
+       	              
+                       
+                       
+                       
+                       
 
     char sqlstate[5];
   };
@@ -147,9 +147,9 @@ int
 main(void)
 {
   struct sa x = {14}, *y = &x;
-  /* exec sql begin declare section */
+                                      
 
-  /* = 1L */
+            
 
 #line 60 "init.pgc"
   int a = (int)2;
@@ -183,18 +183,18 @@ main(void)
 
 #line 71 "init.pgc"
   long iay;
-/* exec sql end declare section */
+                                  
 #line 72 "init.pgc"
 
   int f = fa();
 
 #ifdef _cplusplus
-  /* exec sql begin declare section */
-  /* compile error */
+                                      
+                     
 
 #line 78 "init.pgc"
   int k = N : : i;
-/* exec sql end declare section */
+                                  
 #line 79 "init.pgc"
 
 #endif
@@ -204,7 +204,7 @@ main(void)
   printf("%d %d %d %d %d %d %d %d %d %d %d\n", a, b, b2, c, d, e, f, g, h, i, j);
   iay = 0;
   printf("%ld\n", iay);
-  /* exec sql whenever sqlerror  do fa ( ) ; */
+                                               
 #line 87 "init.pgc"
 
   {
@@ -218,7 +218,7 @@ main(void)
   }
 #line 88 "init.pgc"
 
-  /* exec sql whenever sqlerror  do fb ( 20 ) ; */
+                                                  
 #line 89 "init.pgc"
 
   {
@@ -232,7 +232,7 @@ main(void)
   }
 #line 90 "init.pgc"
 
-  /* exec sql whenever sqlerror  do fc ( \"50\" ) ; */
+                                                      
 #line 91 "init.pgc"
 
   {
@@ -246,7 +246,7 @@ main(void)
   }
 #line 92 "init.pgc"
 
-  /* exec sql whenever sqlerror  do fd ( \"50\" , 1 ) ; */
+                                                          
 #line 93 "init.pgc"
 
   {
@@ -260,7 +260,7 @@ main(void)
   }
 #line 94 "init.pgc"
 
-  /* exec sql whenever sqlerror  do fe ( ENUM0 ) ; */
+                                                     
 #line 95 "init.pgc"
 
   {
@@ -274,7 +274,7 @@ main(void)
   }
 #line 96 "init.pgc"
 
-  /* exec sql whenever sqlerror  do sqlnotice ( NULL , 0 ) ; */
+                                                               
 #line 97 "init.pgc"
 
   {

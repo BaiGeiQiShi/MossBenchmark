@@ -1,18 +1,18 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/startup.c
- */
+   
+                                              
+   
+                                                                
+   
+                          
+   
 #include "postgres_fe.h"
 
 #ifndef WIN32
 #include <unistd.h>
-#else /* WIN32 */
+#else            
 #include <io.h>
 #include <win32.h>
-#endif /* WIN32 */
+#endif            
 
 #include "getopt_long.h"
 
@@ -27,9 +27,9 @@
 #include "mainloop.h"
 #include "settings.h"
 
-/*
- * Global psql options
- */
+   
+                       
+   
 PsqlSettings pset;
 
 #ifndef WIN32
@@ -40,10 +40,10 @@ PsqlSettings pset;
 #define PSQLRC "psqlrc.conf"
 #endif
 
-/*
- * Structures to pass information between the option parsing routine
- * and the main function
- */
+   
+                                                                     
+                         
+   
 enum _actions
 {
   ACT_SINGLE_QUERY,
@@ -117,11 +117,11 @@ log_locus_callback(const char **filename, uint64 *lineno)
   }
 }
 
-/*
- *
- * main
- *
- */
+   
+   
+        
+   
+   
 int
 main(int argc, char *argv[])
 {
@@ -162,7 +162,7 @@ main(int argc, char *argv[])
   pset.cur_cmd_source = stdin;
   pset.cur_cmd_interactive = false;
 
-  /* We rely on unmentioned fields of pset.popt to start out 0/false/NULL */
+                                                                            
   pset.popt.topt.format = PRINT_ALIGNED;
   pset.popt.topt.border = 1;
   pset.popt.topt.pager = 1;
@@ -180,7 +180,7 @@ main(int argc, char *argv[])
 
   refresh_utf8format(&(pset.popt.topt));
 
-  /* We must get COLUMNS here before readline() sets it */
+                                                          
   pset.popt.topt.env_columns = getenv("COLUMNS") ? atoi(getenv("COLUMNS")) : 0;
 
   pset.notty = (!isatty(fileno(stdin)) || !isatty(fileno(stdout)));
@@ -189,16 +189,16 @@ main(int argc, char *argv[])
 
   EstablishVariableSpace();
 
-  /* Create variables showing psql version number */
+                                                    
   SetVariable(pset.vars, "VERSION", PG_VERSION_STR);
   SetVariable(pset.vars, "VERSION_NAME", PG_VERSION);
   SetVariable(pset.vars, "VERSION_NUM", CppAsString2(PG_VERSION_NUM));
 
-  /* Initialize variables for last error */
+                                           
   SetVariable(pset.vars, "LAST_ERROR_MESSAGE", "");
   SetVariable(pset.vars, "LAST_ERROR_SQLSTATE", "00000");
 
-  /* Default values for variables (that don't match the result of \unset) */
+                                                                            
   SetVariableBool(pset.vars, "AUTOCOMMIT");
   SetVariable(pset.vars, "PROMPT1", DEFAULT_PROMPT1);
   SetVariable(pset.vars, "PROMPT2", DEFAULT_PROMPT2);
@@ -206,17 +206,17 @@ main(int argc, char *argv[])
 
   parse_psql_options(argc, argv, &options);
 
-  /*
-   * If no action was specified and we're in non-interactive mode, treat it
-   * as if the user had specified "-f -".  This lets single-transaction mode
-   * work in this case.
-   */
+     
+                                                                            
+                                                                             
+                        
+     
   if (options.actions.head == NULL && pset.notty)
   {
     simple_action_list_append(&options.actions, ACT_FILE, NULL);
   }
 
-  /* Bail out if -1 was specified but will be ignored. */
+                                                         
   if (options.single_txn && options.actions.head == NULL)
   {
     pg_log_fatal("-1 can only be used in non-interactive mode");
@@ -236,16 +236,16 @@ main(int argc, char *argv[])
 
   if (pset.getPassword == TRI_YES)
   {
-    /*
-     * We can't be sure yet of the username that will be used, so don't
-     * offer a potentially wrong one.  Typical uses of this option are
-     * noninteractive anyway.
-     */
+       
+                                                                        
+                                                                       
+                              
+       
     simple_prompt("Password: ", password, sizeof(password), false);
     have_password = true;
   }
 
-  /* loop until we have a password if requested by backend */
+                                                             
   do
   {
 #define PARAMS_ARRAY_SIZE 8
@@ -260,7 +260,7 @@ main(int argc, char *argv[])
     values[2] = options.username;
     keywords[3] = "password";
     values[3] = have_password ? password : NULL;
-    keywords[4] = "dbname"; /* see do_connect() */
+    keywords[4] = "dbname";                       
     values[4] = (options.list_dbs && options.dbname == NULL) ? "postgres" : options.dbname;
     keywords[5] = "fallback_application_name";
     values[5] = pset.progname;
@@ -276,11 +276,11 @@ main(int argc, char *argv[])
 
     if (PQstatus(pset.db) == CONNECTION_BAD && PQconnectionNeedsPassword(pset.db) && !have_password && pset.getPassword != TRI_NO)
     {
-      /*
-       * Before closing the old PGconn, extract the user name that was
-       * actually connected with --- it might've come out of a URI or
-       * connstring "database name" rather than options.username.
-       */
+         
+                                                                       
+                                                                      
+                                                                  
+         
       const char *realusername = PQuser(pset.db);
       char *password_prompt;
 
@@ -343,16 +343,16 @@ main(int argc, char *argv[])
     process_psqlrc(argv[0]);
   }
 
-  /*
-   * If any actions were given by user, process them in the order in which
-   * they were specified.  Note single_txn is only effective in this mode.
-   */
+     
+                                                                           
+                                                                           
+     
   if (options.actions.head != NULL)
   {
     PGresult *res;
     SimpleActionListCell *cell;
 
-    successResult = EXIT_SUCCESS; /* silence compiler */
+    successResult = EXIT_SUCCESS;                       
 
     if (options.single_txn)
     {
@@ -411,7 +411,7 @@ main(int argc, char *argv[])
       }
       else
       {
-        /* should never come here */
+                                    
         Assert(false);
       }
 
@@ -440,9 +440,9 @@ main(int argc, char *argv[])
   error:;
   }
 
-  /*
-   * or otherwise enter interactive main loop
-   */
+     
+                                              
+     
   else
   {
     pg_logging_config(PG_LOG_FLAG_TERSE);
@@ -455,7 +455,7 @@ main(int argc, char *argv[])
     successResult = MainLoop(stdin);
   }
 
-  /* clean up */
+                
   if (pset.logfile)
   {
     fclose(pset.logfile);
@@ -466,9 +466,9 @@ main(int argc, char *argv[])
   return successResult;
 }
 
-/*
- * Parse command line options
- */
+   
+                              
+   
 
 static void
 parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
@@ -604,7 +604,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
       {
         if (!DeleteVariable(pset.vars, value))
         {
-          exit(EXIT_FAILURE); /* error already printed */
+          exit(EXIT_FAILURE);                            
         }
       }
       else
@@ -612,7 +612,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
         *equal_loc = '\0';
         if (!SetVariable(pset.vars, value, equal_loc + 1))
         {
-          exit(EXIT_FAILURE); /* error already printed */
+          exit(EXIT_FAILURE);                            
         }
       }
 
@@ -646,13 +646,13 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
     case '?':
       if (optind <= argc && strcmp(argv[optind - 1], "-?") == 0)
       {
-        /* actual help option given */
+                                      
         usage(NOPAGER);
         exit(EXIT_SUCCESS);
       }
       else
       {
-        /* getopt error (unknown option or missing argument) */
+                                                               
         goto unknown_option;
       }
       break;
@@ -689,9 +689,9 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
     }
   }
 
-  /*
-   * if we still have arguments, use it as the database name and username
-   */
+     
+                                                                          
+     
   while (argc - optind >= 1)
   {
     if (!options->dbname)
@@ -711,10 +711,10 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts *options)
   }
 }
 
-/*
- * Append a new item to the end of the SimpleActionList.
- * Note that "val" is copied if it's not NULL.
- */
+   
+                                                         
+                                               
+   
 static void
 simple_action_list_append(SimpleActionList *list, enum _actions action, const char *val)
 {
@@ -744,9 +744,9 @@ simple_action_list_append(SimpleActionList *list, enum _actions action, const ch
   list->tail = cell;
 }
 
-/*
- * Load .psqlrc file, if found.
- */
+   
+                                
+   
 static void
 process_psqlrc(char *argv0)
 {
@@ -769,7 +769,7 @@ process_psqlrc(char *argv0)
 
   if (envrc != NULL && strlen(envrc) > 0)
   {
-    /* might need to free() this */
+                                   
     char *envrc_alloc = pstrdup(envrc);
 
     expand_tilde(&envrc_alloc);
@@ -794,7 +794,7 @@ process_psqlrc_file(char *filename)
   psqlrc_minor = psprintf("%s-%s", filename, PG_VERSION);
   psqlrc_major = psprintf("%s-%s", filename, PG_MAJORVERSION);
 
-  /* check for minor version first, then major, then no version */
+                                                                  
   if (access(psqlrc_minor, R_OK) == 0)
   {
     (void)process_file(psqlrc_minor, false);
@@ -812,38 +812,38 @@ process_psqlrc_file(char *filename)
   free(psqlrc_major);
 }
 
-/* showVersion
- *
- * This output format is intended to match GNU standards.
- */
+               
+   
+                                                          
+   
 static void
 showVersion(void)
 {
   puts("psql (PostgreSQL) " PG_VERSION);
 }
 
-/*
- * Substitute hooks and assign hooks for psql variables.
- *
- * This isn't an amazingly good place for them, but neither is anywhere else.
- *
- * By policy, every special variable that controls any psql behavior should
- * have one or both hooks, even if they're just no-ops.  This ensures that
- * the variable will remain present in variables.c's list even when unset,
- * which ensures that it's known to tab completion.
- */
+   
+                                                         
+   
+                                                                              
+   
+                                                                            
+                                                                           
+                                                                           
+                                                    
+   
 
 static char *
 bool_substitute_hook(char *newval)
 {
   if (newval == NULL)
   {
-    /* "\unset FOO" becomes "\set FOO off" */
+                                             
     newval = pg_strdup("off");
   }
   else if (newval[0] == '\0')
   {
-    /* "\set FOO" becomes "\set FOO on" */
+                                          
     pg_free(newval);
     newval = pg_strdup("on");
   }
@@ -899,10 +899,10 @@ fetch_count_hook(const char *newval)
 static bool
 histfile_hook(const char *newval)
 {
-  /*
-   * Someday we might try to validate the filename, but for now, this is
-   * just a placeholder to ensure HISTFILE is known to tab completion.
-   */
+     
+                                                                         
+                                                                       
+     
   return true;
 }
 
@@ -927,15 +927,15 @@ ignoreeof_substitute_hook(char *newval)
 {
   int dummy;
 
-  /*
-   * This tries to mimic the behavior of bash, to wit "If set, the value is
-   * the number of consecutive EOF characters which must be typed as the
-   * first characters on an input line before bash exits.  If the variable
-   * exists but does not have a numeric value, or has no value, the default
-   * value is 10.  If it does not exist, EOF signifies the end of input to
-   * the shell."  Unlike bash, however, we insist on the stored value
-   * actually being a valid integer.
-   */
+     
+                                                                            
+                                                                         
+                                                                           
+                                                                            
+                                                                           
+                                                                      
+                                     
+     
   if (newval == NULL)
   {
     newval = pg_strdup("0");
@@ -966,7 +966,7 @@ echo_substitute_hook(char *newval)
 static bool
 echo_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "queries") == 0)
   {
     pset.echo = PSQL_ECHO_QUERIES;
@@ -994,7 +994,7 @@ echo_hook(const char *newval)
 static bool
 echo_hidden_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "noexec") == 0)
   {
     pset.echo_hidden = PSQL_ECHO_HIDDEN_NOEXEC;
@@ -1019,7 +1019,7 @@ echo_hidden_hook(const char *newval)
 static bool
 on_error_rollback_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "interactive") == 0)
   {
     pset.on_error_rollback = PSQL_ERROR_ROLLBACK_INTERACTIVE;
@@ -1054,7 +1054,7 @@ comp_keyword_case_substitute_hook(char *newval)
 static bool
 comp_keyword_case_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "preserve-upper") == 0)
   {
     pset.comp_case = PSQL_COMP_CASE_PRESERVE_UPPER;
@@ -1092,7 +1092,7 @@ histcontrol_substitute_hook(char *newval)
 static bool
 histcontrol_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "ignorespace") == 0)
   {
     pset.histcontrol = hctl_ignorespace;
@@ -1151,7 +1151,7 @@ verbosity_substitute_hook(char *newval)
 static bool
 verbosity_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "default") == 0)
   {
     pset.verbosity = PQERRORS_DEFAULT;
@@ -1194,7 +1194,7 @@ show_context_substitute_hook(char *newval)
 static bool
 show_context_hook(const char *newval)
 {
-  Assert(newval != NULL); /* else substitute hook messed up */
+  Assert(newval != NULL);                                     
   if (pg_strcasecmp(newval, "never") == 0)
   {
     pset.show_context = PQSHOW_CONTEXT_NEVER;

@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "describe.pgc"
@@ -32,11 +32,11 @@ typedef struct sqlda_struct sqlda_t;
 
 #endif
 
-#endif /* ECPG_SQLDA_H */
+#endif                   
 
 #line 5 "describe.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 7 "describe.pgc"
 
 sqlda_t *sqlda1, *sqlda2, *sqlda3;
@@ -44,7 +44,7 @@ sqlda_t *sqlda1, *sqlda2, *sqlda3;
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 15 "describe.pgc"
   char *stmt1 = "SELECT id, t FROM descr_t2";
@@ -60,7 +60,7 @@ main(void)
 
 #line 19 "describe.pgc"
   char field_name2[30] = "not set";
-/* exec sql end declare section */
+                                  
 #line 20 "describe.pgc"
 
   char msg[128];
@@ -160,11 +160,11 @@ main(void)
   }
 #line 42 "describe.pgc"
 
-  /*
-   * Test DESCRIBE with a query producing tuples.
-   * DESCRIPTOR and SQL DESCRIPTOR are NOT the same in
-   * Informix-compat mode.
-   */
+     
+                                                  
+                                                       
+                           
+     
 
   strcpy(msg, "allocate");
   ECPGallocate_desc(__LINE__, "desc1");
@@ -357,7 +357,7 @@ main(void)
   }
 #line 132 "describe.pgc"
 
-  /* Test DESCRIBE with a query not producing tuples */
+                                                       
 
   strcpy(msg, "allocate");
   ECPGallocate_desc(__LINE__, "desc1");
@@ -518,7 +518,7 @@ main(void)
   }
 #line 185 "describe.pgc"
 
-  /* End test */
+                
 
   strcpy(msg, "drop");
   {

@@ -1,0 +1,19 @@
+# Modified PostgreSQL for Benchmark Testing
+
+This version of PostgreSQL has been modified for the purpose of benchmark testing. All comments have been removed to facilitate this testing.
+
+## Original PostgreSQL License
+
+The original PostgreSQL License is included below:
+
+/MossBenchmark/postgresql-12.14/COPYRIGHT
+
+## Modifications
+
+The following changes have been made to the original PostgreSQL source code:
+
+- All comments have been removed from the source code to facilitate benchmark testing. This is done by `/MossBenchmark/postgresql-12.14/deletecomments.py`
+
+## Acknowledgments
+
+This software is based on PostgreSQL, which is an open-source project maintained by the PostgreSQL Global Development Group. For more information, please visit [https://www.postgresql.org/](https://www.postgresql.org/).

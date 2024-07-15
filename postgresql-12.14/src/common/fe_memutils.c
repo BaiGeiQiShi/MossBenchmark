@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * fe_memutils.c
- *	  memory management support for frontend code
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/common/fe_memutils.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                 
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                              
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #error "This file is not expected to be compiled for backend code"
@@ -24,7 +24,7 @@ pg_malloc_internal(size_t size, int flags)
 {
   void *tmp;
 
-  /* Avoid unportable behavior of malloc(0) */
+                                              
   if (size == 0)
   {
     size = 1;
@@ -70,7 +70,7 @@ pg_realloc(void *ptr, size_t size)
 {
   void *tmp;
 
-  /* Avoid unportable behavior of realloc(NULL, 0) */
+                                                     
   if (ptr == NULL && size == 0)
   {
     size = 1;
@@ -84,9 +84,9 @@ pg_realloc(void *ptr, size_t size)
   return tmp;
 }
 
-/*
- * "Safe" wrapper around strdup().
- */
+   
+                                   
+   
 char *
 pg_strdup(const char *in)
 {
@@ -115,10 +115,10 @@ pg_free(void *ptr)
   }
 }
 
-/*
- * Frontend emulation of backend memory management functions.  Useful for
- * programs that compile backend files.
- */
+   
+                                                                          
+                                        
+   
 void *
 palloc(Size size)
 {

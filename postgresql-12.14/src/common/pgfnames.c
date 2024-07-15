@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pgfnames.c
- *	  directory handling functions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/common/pgfnames.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                  
+   
+                                                                         
+                                                                        
+   
+                  
+                           
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -26,13 +26,13 @@
 #include "common/logging.h"
 #endif
 
-/*
- * pgfnames
- *
- * return a list of the names of objects in the argument directory.  Caller
- * must call pgfnames_cleanup later to free the memory allocated by this
- * function.
- */
+   
+            
+   
+                                                                            
+                                                                         
+             
+   
 char **
 pgfnames(const char *path)
 {
@@ -40,7 +40,7 @@ pgfnames(const char *path)
   struct dirent *file;
   char **filenames;
   int numnames = 0;
-  int fnsize = 200; /* enough for many small dbs */
+  int fnsize = 200;                                
 
   dir = opendir(path);
   if (dir == NULL)
@@ -79,11 +79,11 @@ pgfnames(const char *path)
   return filenames;
 }
 
-/*
- *	pgfnames_cleanup
- *
- *	deallocate memory used for filenames
- */
+   
+                    
+   
+                                        
+   
 void
 pgfnames_cleanup(char **filenames)
 {

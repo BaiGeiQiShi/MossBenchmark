@@ -1,11 +1,11 @@
-/*
- * pg_archivecleanup.c
- *
- * To be used as archive_cleanup_command to clean an archive when using
- * standby mode.
- *
- * src/bin/pg_archivecleanup/pg_archivecleanup.c
- */
+   
+                       
+   
+                                                                        
+                 
+   
+                                                 
+   
 #include "postgres_fe.h"
 
 #include <ctype.h>
@@ -23,42 +23,42 @@
 
 const char *progname;
 
-/* Options and defaults */
-bool dryrun = false;         /* are we performing a dry-run operation? */
-char *additional_ext = NULL; /* Extension to remove from filenames */
+                          
+bool dryrun = false;                                                     
+char *additional_ext = NULL;                                         
 
-char *archiveLocation;                      /* where to find the archive? */
-char *restartWALFileName;                   /* the file from which we can restart restore */
-char exclusiveCleanupFileName[MAXFNAMELEN]; /* the oldest file we want
-                                             * to remain in archive */
+char *archiveLocation;                                                      
+char *restartWALFileName;                                                                   
+char exclusiveCleanupFileName[MAXFNAMELEN];                            
+                                                                      
 
-/* =====================================================================
- *
- *		  Customizable section
- *
- * =====================================================================
- *
- *	Currently, this section assumes that the Archive is a locally
- *	accessible directory. If you want to make other assumptions,
- *	such as using a vendor-specific archive and access API, these
- *	routines are the ones you'll need to change. You're
- *	encouraged to submit any changes to pgsql-hackers@lists.postgresql.org
- *	or personally to the current maintainer. Those changes may be
- *	folded in to later versions of this program.
- */
+                                                                         
+   
+                           
+   
+                                                                         
+   
+                                                                 
+                                                                
+                                                                 
+                                                       
+                                                                          
+                                                                 
+                                                
+   
 
-/*
- *	Initialize allows customized commands into the archive cleanup program.
- *
- *	You may wish to add code to check for tape libraries, etc..
- */
+   
+                                                                           
+   
+                                                               
+   
 static void
 Initialize(void)
 {
-  /*
-   * This code assumes that archiveLocation is a directory, so we use stat
-   * to test if it's accessible.
-   */
+     
+                                                                           
+                                 
+     
   struct stat stat_buf;
 
   if (stat(archiveLocation, &stat_buf) != 0 || !S_ISDIR(stat_buf.st_mode))
@@ -100,46 +100,46 @@ CleanupPriorWALFiles(void)
   {
     while (errno = 0, (xlde = readdir(xldir)) != NULL)
     {
-      /*
-       * Truncation is essentially harmless, because we skip names of
-       * length other than XLOG_FNAME_LEN.  (In principle, one could use
-       * a 1000-character additional_ext and get trouble.)
-       */
+         
+                                                                      
+                                                                         
+                                                           
+         
       strlcpy(walfile, xlde->d_name, MAXPGPATH);
       TrimExtension(walfile, additional_ext);
 
-      /*
-       * We ignore the timeline part of the XLOG segment identifiers in
-       * deciding whether a segment is still needed.  This ensures that
-       * we won't prematurely remove a segment from a parent timeline.
-       * We could probably be a little more proactive about removing
-       * segments of non-parent timelines, but that would be a whole lot
-       * more complicated.
-       *
-       * We use the alphanumeric sorting property of the filenames to
-       * decide which ones are earlier than the exclusiveCleanupFileName
-       * file. Note that this means files are not removed in the order
-       * they were originally written, in case this worries you.
-       */
+         
+                                                                        
+                                                                        
+                                                                       
+                                                                     
+                                                                         
+                           
+         
+                                                                      
+                                                                         
+                                                                       
+                                                                 
+         
       if ((IsXLogFileName(walfile) || IsPartialXLogFileName(walfile)) && strcmp(walfile + 8, exclusiveCleanupFileName + 8) < 0)
       {
-        char WALFilePath[MAXPGPATH * 2]; /* the file path
-                                          * including archive */
+        char WALFilePath[MAXPGPATH * 2];                  
+                                                                
 
-        /*
-         * Use the original file name again now, including any
-         * extension that might have been chopped off before testing
-         * the sequence.
-         */
+           
+                                                               
+                                                                     
+                         
+           
         snprintf(WALFilePath, sizeof(WALFilePath), "%s/%s", archiveLocation, xlde->d_name);
 
         if (dryrun)
         {
-          /*
-           * Prints the name of the file to be removed and skips the
-           * actual removal.  The regular printout is so that the
-           * user can pipe the output into some other program.
-           */
+             
+                                                                     
+                                                                  
+                                                               
+             
           printf("%s\n", WALFilePath);
           pg_log_debug("file \"%s\" would be removed", WALFilePath);
           continue;
@@ -171,12 +171,12 @@ CleanupPriorWALFiles(void)
   }
 }
 
-/*
- * SetWALFileNameForCleanup()
- *
- *	  Set the earliest WAL filename that we want to keep on the archive
- *	  and decide whether we need cleanup
- */
+   
+                              
+   
+                                                                       
+                                        
+   
 static void
 SetWALFileNameForCleanup(void)
 {
@@ -184,14 +184,14 @@ SetWALFileNameForCleanup(void)
 
   TrimExtension(restartWALFileName, additional_ext);
 
-  /*
-   * If restartWALFileName is a WAL file name then just use it directly. If
-   * restartWALFileName is a .partial or .backup filename, make sure we use
-   * the prefix of the filename, otherwise we will remove wrong files since
-   * 000000010000000000000010.partial and
-   * 000000010000000000000010.00000020.backup are after
-   * 000000010000000000000010.
-   */
+     
+                                                                            
+                                                                            
+                                                                            
+                                          
+                                                        
+                               
+     
   if (IsXLogFileName(restartWALFileName))
   {
     strcpy(exclusiveCleanupFileName, restartWALFileName);
@@ -207,10 +207,10 @@ SetWALFileNameForCleanup(void)
     {
       fnameOK = true;
 
-      /*
-       * Use just the prefix of the filename, ignore everything after
-       * first period
-       */
+         
+                                                                      
+                      
+         
       XLogFileNameById(exclusiveCleanupFileName, tli, log, seg);
     }
   }
@@ -224,10 +224,10 @@ SetWALFileNameForCleanup(void)
     {
       fnameOK = true;
 
-      /*
-       * Use just the prefix of the filename, ignore everything after
-       * first period
-       */
+         
+                                                                      
+                      
+         
       XLogFileNameById(exclusiveCleanupFileName, tli, log, seg);
     }
   }
@@ -240,10 +240,10 @@ SetWALFileNameForCleanup(void)
   }
 }
 
-/* =====================================================================
- *		  End of Customizable section
- * =====================================================================
- */
+                                                                         
+                                  
+                                                                         
+   
 
 static void
 usage(void)
@@ -269,7 +269,7 @@ usage(void)
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
-/*------------ MAIN ----------------------------------------*/
+                                                              
 int
 main(int argc, char **argv)
 {
@@ -297,15 +297,15 @@ main(int argc, char **argv)
   {
     switch (c)
     {
-    case 'd': /* Debug mode */
+    case 'd':                 
       pg_logging_set_level(PG_LOG_DEBUG);
       break;
-    case 'n': /* Dry-Run mode */
+    case 'n':                   
       dryrun = true;
       break;
     case 'x':
-      additional_ext = pg_strdup(optarg); /* Extension to remove
-                                           * from xlogfile names */
+      additional_ext = pg_strdup(optarg);                        
+                                                                   
       break;
     default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -314,13 +314,13 @@ main(int argc, char **argv)
     }
   }
 
-  /*
-   * We will go to the archiveLocation to check restartWALFileName.
-   * restartWALFileName may not exist anymore, which would not be an error,
-   * so we separate the archiveLocation and restartWALFileName so we can
-   * check separately whether archiveLocation exists, if not that is an
-   * error
-   */
+     
+                                                                    
+                                                                            
+                                                                         
+                                                                        
+           
+     
   if (optind < argc)
   {
     archiveLocation = argv[optind];
@@ -352,21 +352,21 @@ main(int argc, char **argv)
     exit(2);
   }
 
-  /*
-   * Check archive exists and other initialization if required.
-   */
+     
+                                                                
+     
   Initialize();
 
-  /*
-   * Check filename is a valid name, then process to find cut-off
-   */
+     
+                                                                  
+     
   SetWALFileNameForCleanup();
 
   pg_log_debug("keeping WAL file \"%s/%s\" and later", archiveLocation, exclusiveCleanupFileName);
 
-  /*
-   * Remove WAL files older than cut-off
-   */
+     
+                                         
+     
   CleanupPriorWALFiles();
 
   exit(0);

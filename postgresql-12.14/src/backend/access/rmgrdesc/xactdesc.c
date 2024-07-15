@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * xactdesc.c
- *	  rmgr descriptor routines for access/transam/xact.c
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/rmgrdesc/xactdesc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                            
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/transam.h"
@@ -20,15 +20,15 @@
 #include "storage/standbydefs.h"
 #include "utils/timestamp.h"
 
-/*
- * Parse the WAL format of an xact commit and abort records into an easier to
- * understand format.
- *
- * This routines are in xactdesc.c because they're accessed in backend (when
- * replaying WAL) and frontend (pg_waldump) code. This file is the only xact
- * specific one shared between both. They're complicated enough that
- * duplication would be bothersome.
- */
+   
+                                                                              
+                      
+   
+                                                                             
+                                                                             
+                                                                     
+                                    
+   
 
 void
 ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *parsed)
@@ -37,8 +37,8 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 
   memset(parsed, 0, sizeof(*parsed));
 
-  parsed->xinfo = 0; /* default, if no XLOG_XACT_HAS_INFO is
-                      * present */
+  parsed->xinfo = 0;                                         
+                                  
 
   parsed->xact_time = xlrec->xact_time;
 
@@ -109,13 +109,13 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
     }
   }
 
-  /* Note: no alignment is guaranteed after this point */
+                                                         
 
   if (parsed->xinfo & XACT_XINFO_HAS_ORIGIN)
   {
     xl_xact_origin xl_origin;
 
-    /* no alignment is guaranteed, so copy onto stack */
+                                                        
     memcpy(&xl_origin, data, sizeof(xl_origin));
 
     parsed->origin_lsn = xl_origin.origin_lsn;
@@ -132,8 +132,8 @@ ParseAbortRecord(uint8 info, xl_xact_abort *xlrec, xl_xact_parsed_abort *parsed)
 
   memset(parsed, 0, sizeof(*parsed));
 
-  parsed->xinfo = 0; /* default, if no XLOG_XACT_HAS_INFO is
-                      * present */
+  parsed->xinfo = 0;                                         
+                                  
 
   parsed->xact_time = xlrec->xact_time;
 
@@ -193,13 +193,13 @@ ParseAbortRecord(uint8 info, xl_xact_abort *xlrec, xl_xact_parsed_abort *parsed)
     }
   }
 
-  /* Note: no alignment is guaranteed after this point */
+                                                         
 
   if (parsed->xinfo & XACT_XINFO_HAS_ORIGIN)
   {
     xl_xact_origin xl_origin;
 
-    /* no alignment is guaranteed, so copy onto stack */
+                                                        
     memcpy(&xl_origin, data, sizeof(xl_origin));
 
     parsed->origin_lsn = xl_origin.origin_lsn;
@@ -217,7 +217,7 @@ xact_desc_commit(StringInfo buf, uint8 info, xl_xact_commit *xlrec, RepOriginId 
 
   ParseCommitRecord(info, xlrec, &parsed);
 
-  /* If this is a prepared xact, show the xid of the original xact */
+                                                                     
   if (TransactionIdIsValid(parsed.twophase_xid))
   {
     appendStringInfo(buf, "%u: ", parsed.twophase_xid);
@@ -268,7 +268,7 @@ xact_desc_abort(StringInfo buf, uint8 info, xl_xact_abort *xlrec)
 
   ParseAbortRecord(info, xlrec, &parsed);
 
-  /* If this is a prepared xact, show the xid of the original xact */
+                                                                     
   if (TransactionIdIsValid(parsed.twophase_xid))
   {
     appendStringInfo(buf, "%u: ", parsed.twophase_xid);
@@ -332,11 +332,11 @@ xact_desc(StringInfo buf, XLogReaderState *record)
   {
     xl_xact_assignment *xlrec = (xl_xact_assignment *)rec;
 
-    /*
-     * Note that we ignore the WAL record's xid, since we're more
-     * interested in the top-level xid that issued the record and which
-     * xids are being reported here.
-     */
+       
+                                                                  
+                                                                        
+                                     
+       
     appendStringInfo(buf, "xtop %u: ", xlrec->xtop);
     xact_desc_assignment(buf, xlrec);
   }

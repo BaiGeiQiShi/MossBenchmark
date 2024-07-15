@@ -1,19 +1,19 @@
-/*
- * functions needed for descriptor handling
- *
- * src/interfaces/ecpg/preproc/descriptor.c
- *
- * since descriptor might be either a string constant or a string var
- * we need to check for a constant if we expect a constant
- */
+   
+                                            
+   
+                                            
+   
+                                                                      
+                                                           
+   
 
 #include "postgres_fe.h"
 
 #include "preproc_extern.h"
 
-/*
- * assignment handling function (descriptor)
- */
+   
+                                             
+   
 
 static struct assignment *assignments;
 
@@ -66,9 +66,9 @@ ECPGnumeric_lvalue(char *name)
   }
 }
 
-/*
- * descriptor name lookup
- */
+   
+                          
+   
 
 static struct descriptor *descriptors;
 
@@ -325,11 +325,11 @@ output_set_descr(char *desc_name, char *index)
   whenever_action(2 | 1);
 }
 
-/* I consider dynamic allocation overkill since at most two descriptor
-   variables are possible per statement. (input and output descriptor)
-   And descriptors are no normal variables, so they don't belong into
-   the variable list.
-*/
+                                                                       
+                                                                       
+                                                                      
+                      
+  
 
 #define MAX_DESCRIPTOR_NAMELEN 128
 struct variable *

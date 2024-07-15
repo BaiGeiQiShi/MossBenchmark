@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * pg_range.c
- *	  routines to support manipulation of the pg_range relation
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/catalog/pg_range.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -27,10 +27,10 @@
 #include "utils/fmgroids.h"
 #include "utils/rel.h"
 
-/*
- * RangeCreate
- *		Create an entry in pg_range.
- */
+   
+               
+                                 
+   
 void
 RangeCreate(Oid rangeTypeOid, Oid rangeSubType, Oid rangeCollation, Oid rangeSubOpclass, RegProcedure rangeCanonical, RegProcedure rangeSubDiff)
 {
@@ -57,7 +57,7 @@ RangeCreate(Oid rangeTypeOid, Oid rangeSubType, Oid rangeCollation, Oid rangeSub
   CatalogTupleInsert(pg_range, tup);
   heap_freetuple(tup);
 
-  /* record type's dependencies on range-related items */
+                                                         
 
   myself.classId = TypeRelationId;
   myself.objectId = rangeTypeOid;
@@ -100,10 +100,10 @@ RangeCreate(Oid rangeTypeOid, Oid rangeSubType, Oid rangeCollation, Oid rangeSub
   table_close(pg_range, RowExclusiveLock);
 }
 
-/*
- * RangeDelete
- *		Remove the pg_range entry for the specified type.
- */
+   
+               
+                                                      
+   
 void
 RangeDelete(Oid rangeTypeOid)
 {

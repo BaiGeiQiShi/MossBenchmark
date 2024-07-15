@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * funcapi.c
- *	  Utility and convenience functions for fmgr functions that return
- *	  sets and/or composite types, or deal with VARIADIC inputs.
- *
- * Copyright (c) 2002-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/fmgr/funcapi.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                                      
+                                                                
+   
+                                                                
+   
+                  
+                                      
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/htup_details.h"
@@ -31,9 +31,9 @@
 
 typedef struct polymorphic_actuals
 {
-  Oid anyelement_type; /* anyelement mapping, if known */
-  Oid anyarray_type;   /* anyarray mapping, if known */
-  Oid anyrange_type;   /* anyrange mapping, if known */
+  Oid anyelement_type;                                   
+  Oid anyarray_type;                                   
+  Oid anyrange_type;                                   
 } polymorphic_actuals;
 
 static void
@@ -51,20 +51,20 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
 static TypeFuncClass
 get_type_func_class(Oid typid, Oid *base_typeid);
 
-/*
- * init_MultiFuncCall
- * Create an empty FuncCallContext data structure
- * and do some other basic Multi-function call setup
- * and error checking
- */
+   
+                      
+                                                  
+                                                     
+                      
+   
 FuncCallContext *
 init_MultiFuncCall(PG_FUNCTION_ARGS)
 {
   FuncCallContext *retval;
 
-  /*
-   * Bail if we're called in the wrong context
-   */
+     
+                                               
+     
   if (fcinfo->resultinfo == NULL || !IsA(fcinfo->resultinfo, ReturnSetInfo))
   {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
@@ -72,25 +72,25 @@ init_MultiFuncCall(PG_FUNCTION_ARGS)
 
   if (fcinfo->flinfo->fn_extra == NULL)
   {
-    /*
-     * First call
-     */
+       
+                  
+       
     ReturnSetInfo *rsi = (ReturnSetInfo *)fcinfo->resultinfo;
     MemoryContext multi_call_ctx;
 
-    /*
-     * Create a suitably long-lived context to hold cross-call data
-     */
+       
+                                                                    
+       
     multi_call_ctx = AllocSetContextCreate(fcinfo->flinfo->fn_mcxt, "SRF multi-call context", ALLOCSET_SMALL_SIZES);
 
-    /*
-     * Allocate suitably long-lived space and zero it
-     */
+       
+                                                      
+       
     retval = (FuncCallContext *)MemoryContextAllocZero(multi_call_ctx, sizeof(FuncCallContext));
 
-    /*
-     * initialize the elements
-     */
+       
+                               
+       
     retval->call_cntr = 0;
     retval->max_calls = 0;
     retval->user_fctx = NULL;
@@ -98,34 +98,34 @@ init_MultiFuncCall(PG_FUNCTION_ARGS)
     retval->tuple_desc = NULL;
     retval->multi_call_memory_ctx = multi_call_ctx;
 
-    /*
-     * save the pointer for cross-call use
-     */
+       
+                                           
+       
     fcinfo->flinfo->fn_extra = retval;
 
-    /*
-     * Ensure we will get shut down cleanly if the exprcontext is not run
-     * to completion.
-     */
+       
+                                                                          
+                      
+       
     RegisterExprContextCallback(rsi->econtext, shutdown_MultiFuncCall, PointerGetDatum(fcinfo->flinfo));
   }
   else
   {
-    /* second and subsequent calls */
+                                     
     elog(ERROR, "init_MultiFuncCall cannot be called more than once");
 
-    /* never reached, but keep compiler happy */
+                                                
     retval = NULL;
   }
 
   return retval;
 }
 
-/*
- * per_MultiFuncCall
- *
- * Do Multi-function per-call setup
- */
+   
+                     
+   
+                                    
+   
 FuncCallContext *
 per_MultiFuncCall(PG_FUNCTION_ARGS)
 {
@@ -134,73 +134,73 @@ per_MultiFuncCall(PG_FUNCTION_ARGS)
   return retval;
 }
 
-/*
- * end_MultiFuncCall
- * Clean up after init_MultiFuncCall
- */
+   
+                     
+                                     
+   
 void
 end_MultiFuncCall(PG_FUNCTION_ARGS, FuncCallContext *funcctx)
 {
   ReturnSetInfo *rsi = (ReturnSetInfo *)fcinfo->resultinfo;
 
-  /* Deregister the shutdown callback */
+                                        
   UnregisterExprContextCallback(rsi->econtext, shutdown_MultiFuncCall, PointerGetDatum(fcinfo->flinfo));
 
-  /* But use it to do the real work */
+                                      
   shutdown_MultiFuncCall(PointerGetDatum(fcinfo->flinfo));
 }
 
-/*
- * shutdown_MultiFuncCall
- * Shutdown function to clean up after init_MultiFuncCall
- */
+   
+                          
+                                                          
+   
 static void
 shutdown_MultiFuncCall(Datum arg)
 {
   FmgrInfo *flinfo = (FmgrInfo *)DatumGetPointer(arg);
   FuncCallContext *funcctx = (FuncCallContext *)flinfo->fn_extra;
 
-  /* unbind from flinfo */
+                          
   flinfo->fn_extra = NULL;
 
-  /*
-   * Delete context that holds all multi-call data, including the
-   * FuncCallContext itself
-   */
+     
+                                                                  
+                            
+     
   MemoryContextDelete(funcctx->multi_call_memory_ctx);
 }
 
-/*
- * get_call_result_type
- *		Given a function's call info record, determine the kind of datatype
- *		it is supposed to return.  If resultTypeId isn't NULL, *resultTypeId
- *		receives the actual datatype OID (this is mainly useful for scalar
- *		result types).  If resultTupleDesc isn't NULL, *resultTupleDesc
- *		receives a pointer to a TupleDesc when the result is of a composite
- *		type, or NULL when it's a scalar result.
- *
- * One hard case that this handles is resolution of actual rowtypes for
- * functions returning RECORD (from either the function's OUT parameter
- * list, or a ReturnSetInfo context node).  TYPEFUNC_RECORD is returned
- * only when we couldn't resolve the actual rowtype for lack of information.
- *
- * The other hard case that this handles is resolution of polymorphism.
- * We will never return polymorphic pseudotypes (ANYELEMENT etc), either
- * as a scalar result type or as a component of a rowtype.
- *
- * This function is relatively expensive --- in a function returning set,
- * try to call it only the first time through.
- */
+   
+                        
+                                                                        
+                                                                         
+                                                                       
+                                                                    
+                                                                        
+                                             
+   
+                                                                        
+                                                                        
+                                                                        
+                                                                             
+   
+                                                                        
+                                                                         
+                                                           
+   
+                                                                          
+                                               
+   
 TypeFuncClass
 get_call_result_type(FunctionCallInfo fcinfo, Oid *resultTypeId, TupleDesc *resultTupleDesc)
 {
   return internal_get_result_type(fcinfo->flinfo->fn_oid, fcinfo->flinfo->fn_expr, (ReturnSetInfo *)fcinfo->resultinfo, resultTypeId, resultTupleDesc);
 }
 
-/*
- * get_expr_result_type
- *		As above, but work from a calling expression node tree
- */
+   
+                        
+                                                           
+   
 TypeFuncClass
 get_expr_result_type(Node *expr, Oid *resultTypeId, TupleDesc *resultTupleDesc)
 {
@@ -216,7 +216,7 @@ get_expr_result_type(Node *expr, Oid *resultTypeId, TupleDesc *resultTupleDesc)
   }
   else
   {
-    /* handle as a generic expression; no chance to resolve RECORD */
+                                                                     
     Oid typid = exprType(expr);
     Oid base_typid;
 
@@ -238,26 +238,26 @@ get_expr_result_type(Node *expr, Oid *resultTypeId, TupleDesc *resultTupleDesc)
   return result;
 }
 
-/*
- * get_func_result_type
- *		As above, but work from a function's OID only
- *
- * This will not be able to resolve pure-RECORD results nor polymorphism.
- */
+   
+                        
+                                                  
+   
+                                                                          
+   
 TypeFuncClass
 get_func_result_type(Oid functionId, Oid *resultTypeId, TupleDesc *resultTupleDesc)
 {
   return internal_get_result_type(functionId, NULL, NULL, resultTypeId, resultTupleDesc);
 }
 
-/*
- * internal_get_result_type -- workhorse code implementing all the above
- *
- * funcid must always be supplied.  call_expr and rsinfo can be NULL if not
- * available.  We will return TYPEFUNC_RECORD, and store NULL into
- * *resultTupleDesc, if we cannot deduce the complete result rowtype from
- * the available information.
- */
+   
+                                                                         
+   
+                                                                            
+                                                                   
+                                                                          
+                              
+   
 static TypeFuncClass
 internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid *resultTypeId, TupleDesc *resultTupleDesc)
 {
@@ -268,7 +268,7 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   Oid base_rettype;
   TupleDesc tupdesc;
 
-  /* First fetch the function's pg_proc row to inspect its rettype */
+                                                                     
   tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
   if (!HeapTupleIsValid(tp))
   {
@@ -278,15 +278,15 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
 
   rettype = procform->prorettype;
 
-  /* Check for OUT parameters defining a RECORD result */
+                                                         
   tupdesc = build_function_result_tupdesc_t(tp);
   if (tupdesc)
   {
-    /*
-     * It has OUT parameters, so it's basically like a regular composite
-     * type, except we have to be able to resolve any polymorphic OUT
-     * parameters.
-     */
+       
+                                                                         
+                                                                      
+                   
+       
     if (resultTypeId)
     {
       *resultTypeId = rettype;
@@ -318,14 +318,14 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
     return result;
   }
 
-  /*
-   * If scalar polymorphic result, try to resolve it.
-   */
+     
+                                                      
+     
   if (IsPolymorphicType(rettype))
   {
     Oid newrettype = exprType(call_expr);
 
-    if (newrettype == InvalidOid) /* this probably should not happen */
+    if (newrettype == InvalidOid)                                      
     {
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine actual result type for function \"%s\" declared to return type %s", NameStr(procform->proname), format_type_be(rettype))));
     }
@@ -338,10 +338,10 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   }
   if (resultTupleDesc)
   {
-    *resultTupleDesc = NULL; /* default result */
+    *resultTupleDesc = NULL;                     
   }
 
-  /* Classify the result type */
+                                
   result = get_type_func_class(rettype, &base_rettype);
   switch (result)
   {
@@ -351,12 +351,12 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
     {
       *resultTupleDesc = lookup_rowtype_tupdesc_copy(base_rettype, -1);
     }
-    /* Named composite types can't have any polymorphic columns */
+                                                                  
     break;
   case TYPEFUNC_SCALAR:
     break;
   case TYPEFUNC_RECORD:
-    /* We must get the tupledesc from call context */
+                                                     
     if (rsinfo && IsA(rsinfo, ReturnSetInfo) && rsinfo->expectedDesc != NULL)
     {
       result = TYPEFUNC_COMPOSITE;
@@ -364,7 +364,7 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
       {
         *resultTupleDesc = rsinfo->expectedDesc;
       }
-      /* Assume no polymorphic columns here, either */
+                                                      
     }
     break;
   default:
@@ -376,16 +376,16 @@ internal_get_result_type(Oid funcid, Node *call_expr, ReturnSetInfo *rsinfo, Oid
   return result;
 }
 
-/*
- * get_expr_result_tupdesc
- *		Get a tupdesc describing the result of a composite-valued expression
- *
- * If expression is not composite or rowtype can't be determined, returns NULL
- * if noError is true, else throws error.
- *
- * This is a simpler version of get_expr_result_type() for use when the caller
- * is only interested in determinate rowtype results.
- */
+   
+                           
+                                                                         
+   
+                                                                               
+                                          
+   
+                                                                               
+                                                      
+   
 TupleDesc
 get_expr_result_tupdesc(Node *expr, bool noError)
 {
@@ -416,20 +416,20 @@ get_expr_result_tupdesc(Node *expr, bool noError)
   return NULL;
 }
 
-/*
- * Resolve actual type of ANYELEMENT from other polymorphic inputs
- *
- * Note: the error cases here and in the sibling functions below are not
- * really user-facing; they could only occur if the function signature is
- * incorrect or the parser failed to enforce consistency of the actual
- * argument types.  Hence, we don't sweat too much over the error messages.
- */
+   
+                                                                   
+   
+                                                                         
+                                                                          
+                                                                       
+                                                                            
+   
 static void
 resolve_anyelement_from_others(polymorphic_actuals *actuals)
 {
   if (OidIsValid(actuals->anyarray_type))
   {
-    /* Use the element type corresponding to actual type */
+                                                           
     Oid array_base_type = getBaseType(actuals->anyarray_type);
     Oid array_typelem = get_element_type(array_base_type);
 
@@ -441,7 +441,7 @@ resolve_anyelement_from_others(polymorphic_actuals *actuals)
   }
   else if (OidIsValid(actuals->anyrange_type))
   {
-    /* Use the element type corresponding to actual type */
+                                                           
     Oid range_base_type = getBaseType(actuals->anyrange_type);
     Oid range_typelem = get_range_subtype(range_base_type);
 
@@ -457,13 +457,13 @@ resolve_anyelement_from_others(polymorphic_actuals *actuals)
   }
 }
 
-/*
- * Resolve actual type of ANYARRAY from other polymorphic inputs
- */
+   
+                                                                 
+   
 static void
 resolve_anyarray_from_others(polymorphic_actuals *actuals)
 {
-  /* If we don't know ANYELEMENT, resolve that first */
+                                                       
   if (!OidIsValid(actuals->anyelement_type))
   {
     resolve_anyelement_from_others(actuals);
@@ -471,7 +471,7 @@ resolve_anyarray_from_others(polymorphic_actuals *actuals)
 
   if (OidIsValid(actuals->anyelement_type))
   {
-    /* Use the array type corresponding to actual type */
+                                                         
     Oid array_typeid = get_array_type(actuals->anyelement_type);
 
     if (!OidIsValid(array_typeid))
@@ -486,27 +486,27 @@ resolve_anyarray_from_others(polymorphic_actuals *actuals)
   }
 }
 
-/*
- * Resolve actual type of ANYRANGE from other polymorphic inputs
- */
+   
+                                                                 
+   
 static void
 resolve_anyrange_from_others(polymorphic_actuals *actuals)
 {
-  /*
-   * We can't deduce a range type from other polymorphic inputs, because
-   * there may be multiple range types with the same subtype.
-   */
+     
+                                                                         
+                                                              
+     
   elog(ERROR, "could not determine polymorphic type");
 }
 
-/*
- * Given the result tuple descriptor for a function with OUT parameters,
- * replace any polymorphic column types (ANYELEMENT etc) in the tupdesc
- * with concrete data types deduced from the input arguments.
- * declared_args is an oidvector of the function's declared input arg types
- * (showing which are polymorphic), and call_expr is the call expression.
- * Returns true if able to deduce all types, false if not.
- */
+   
+                                                                         
+                                                                        
+                                                              
+                                                                            
+                                                                          
+                                                           
+   
 static bool
 resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *call_expr)
 {
@@ -520,7 +520,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
   Oid anycollation = InvalidOid;
   int i;
 
-  /* See if there are any polymorphic outputs; quick out if not */
+                                                                  
   for (i = 0; i < natts; i++)
   {
     switch (TupleDescAttr(tupdesc, i)->atttypid)
@@ -548,13 +548,13 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
     return true;
   }
 
-  /*
-   * Otherwise, extract actual datatype(s) from input arguments.  (We assume
-   * the parser already validated consistency of the arguments.)
-   */
+     
+                                                                             
+                                                                 
+     
   if (!call_expr)
   {
-    return false; /* no hope */
+    return false;              
   }
 
   memset(&poly_actuals, 0, sizeof(poly_actuals));
@@ -600,7 +600,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
     }
   }
 
-  /* If needed, deduce one polymorphic type from others */
+                                                          
   if (have_anyelement_result && !OidIsValid(poly_actuals.anyelement_type))
   {
     resolve_anyelement_from_others(&poly_actuals);
@@ -616,12 +616,12 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
     resolve_anyrange_from_others(&poly_actuals);
   }
 
-  /*
-   * Identify the collation to use for polymorphic OUT parameters. (It'll
-   * necessarily be the same for both anyelement and anyarray.)  Note that
-   * range types are not collatable, so any possible internal collation of a
-   * range type is not considered here.
-   */
+     
+                                                                          
+                                                                           
+                                                                             
+                                        
+     
   if (OidIsValid(poly_actuals.anyelement_type))
   {
     anycollation = get_typcollation(poly_actuals.anyelement_type);
@@ -633,11 +633,11 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
 
   if (OidIsValid(anycollation))
   {
-    /*
-     * The types are collatable, so consider whether to use a nondefault
-     * collation.  We do so if we can identify the input collation used
-     * for the function.
-     */
+       
+                                                                         
+                                                                        
+                         
+       
     Oid inputcollation = exprInputCollation(call_expr);
 
     if (OidIsValid(inputcollation))
@@ -646,7 +646,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
     }
   }
 
-  /* And finally replace the tuple column types as needed */
+                                                            
   for (i = 0; i < natts; i++)
   {
     Form_pg_attribute att = TupleDescAttr(tupdesc, i);
@@ -665,7 +665,7 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
       break;
     case ANYRANGEOID:
       TupleDescInitEntry(tupdesc, i + 1, NameStr(att->attname), poly_actuals.anyrange_type, -1, 0);
-      /* no collation should be attached to a range type */
+                                                           
       break;
     default:
       break;
@@ -675,17 +675,17 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args, Node *c
   return true;
 }
 
-/*
- * Given the declared argument types and modes for a function, replace any
- * polymorphic types (ANYELEMENT etc) in argtypes[] with concrete data types
- * deduced from the input arguments found in call_expr.
- * Returns true if able to deduce all types, false if not.
- *
- * This is the same logic as resolve_polymorphic_tupdesc, but with a different
- * argument representation, and slightly different output responsibilities.
- *
- * argmodes may be NULL, in which case all arguments are assumed to be IN mode.
- */
+   
+                                                                           
+                                                                             
+                                                        
+                                                           
+   
+                                                                               
+                                                                            
+   
+                                                                                
+   
 bool
 resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *call_expr)
 {
@@ -697,11 +697,11 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
   int inargno;
   int i;
 
-  /*
-   * First pass: resolve polymorphic inputs, check for outputs.  As in
-   * resolve_polymorphic_tupdesc, we rely on the parser to have enforced
-   * type consistency.
-   */
+     
+                                                                       
+                                                                         
+                       
+     
   memset(&poly_actuals, 0, sizeof(poly_actuals));
   inargno = 0;
   for (i = 0; i < numargs; i++)
@@ -778,13 +778,13 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
     }
   }
 
-  /* Done? */
+             
   if (!have_polymorphic_result)
   {
     return true;
   }
 
-  /* If needed, deduce one polymorphic type from others */
+                                                          
   if (have_anyelement_result && !OidIsValid(poly_actuals.anyelement_type))
   {
     resolve_anyelement_from_others(&poly_actuals);
@@ -800,7 +800,7 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
     resolve_anyrange_from_others(&poly_actuals);
   }
 
-  /* And finally replace the output column types as needed */
+                                                             
   for (i = 0; i < numargs; i++)
   {
     switch (argtypes[i])
@@ -824,15 +824,15 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes, Node *c
   return true;
 }
 
-/*
- * get_type_func_class
- *		Given the type OID, obtain its TYPEFUNC classification.
- *		Also, if it's a domain, return the base type OID.
- *
- * This is intended to centralize a bunch of formerly ad-hoc code for
- * classifying types.  The categories used here are useful for deciding
- * how to handle functions returning the datatype.
- */
+   
+                       
+                                                            
+                                                      
+   
+                                                                      
+                                                                        
+                                                   
+   
 static TypeFuncClass
 get_type_func_class(Oid typid, Oid *base_typeid)
 {
@@ -852,7 +852,7 @@ get_type_func_class(Oid typid, Oid *base_typeid)
     {
       return TYPEFUNC_COMPOSITE_DOMAIN;
     }
-    else /* domain base type can't be a pseudotype */
+    else                                             
     {
       return TYPEFUNC_SCALAR;
     }
@@ -862,34 +862,34 @@ get_type_func_class(Oid typid, Oid *base_typeid)
       return TYPEFUNC_RECORD;
     }
 
-    /*
-     * We treat VOID and CSTRING as legitimate scalar datatypes,
-     * mostly for the convenience of the JDBC driver (which wants to
-     * be able to do "SELECT * FROM foo()" for all legitimately
-     * user-callable functions).
-     */
+       
+                                                                 
+                                                                     
+                                                                
+                                 
+       
     if (typid == VOIDOID || typid == CSTRINGOID)
     {
       return TYPEFUNC_SCALAR;
     }
     return TYPEFUNC_OTHER;
   }
-  /* shouldn't get here, probably */
+                                    
   return TYPEFUNC_OTHER;
 }
 
-/*
- * get_func_arg_info
- *
- * Fetch info about the argument types, names, and IN/OUT modes from the
- * pg_proc tuple.  Return value is the total number of arguments.
- * Other results are palloc'd.  *p_argtypes is always filled in, but
- * *p_argnames and *p_argmodes will be set NULL in the default cases
- * (no names, and all IN arguments, respectively).
- *
- * Note that this function simply fetches what is in the pg_proc tuple;
- * it doesn't do any interpretation of polymorphic types.
- */
+   
+                     
+   
+                                                                         
+                                                                  
+                                                                     
+                                                                     
+                                                   
+   
+                                                                        
+                                                          
+   
 int
 get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char **p_argmodes)
 {
@@ -904,17 +904,17 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   int nelems;
   int i;
 
-  /* First discover the total number of parameters and get their types */
+                                                                         
   proallargtypes = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_proallargtypes, &isNull);
   if (!isNull)
   {
-    /*
-     * We expect the arrays to be 1-D arrays of the right types; verify
-     * that.  For the OID and char arrays, we don't need to use
-     * deconstruct_array() since the array data is just going to look like
-     * a C array of values.
-     */
-    arr = DatumGetArrayTypeP(proallargtypes); /* ensure not toasted */
+       
+                                                                        
+                                                                
+                                                                           
+                            
+       
+    arr = DatumGetArrayTypeP(proallargtypes);                         
     numargs = ARR_DIMS(arr)[0];
     if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
     {
@@ -926,14 +926,14 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   }
   else
   {
-    /* If no proallargtypes, use proargtypes */
+                                               
     numargs = procStruct->proargtypes.dim1;
     Assert(numargs == procStruct->pronargs);
     *p_argtypes = (Oid *)palloc(numargs * sizeof(Oid));
     memcpy(*p_argtypes, procStruct->proargtypes.values, numargs * sizeof(Oid));
   }
 
-  /* Get argument names, if available */
+                                        
   proargnames = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_proargnames, &isNull);
   if (isNull)
   {
@@ -942,7 +942,7 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   else
   {
     deconstruct_array(DatumGetArrayTypeP(proargnames), TEXTOID, -1, false, 'i', &elems, NULL, &nelems);
-    if (nelems != numargs) /* should not happen */
+    if (nelems != numargs)                        
     {
       elog(ERROR, "proargnames must have the same number of elements as the function has arguments");
     }
@@ -953,7 +953,7 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
     }
   }
 
-  /* Get argument modes, if available */
+                                        
   proargmodes = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_proargmodes, &isNull);
   if (isNull)
   {
@@ -961,7 +961,7 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   }
   else
   {
-    arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
+    arr = DatumGetArrayTypeP(proargmodes);                         
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
       elog(ERROR, "proargmodes is not a 1-D char array");
@@ -973,13 +973,13 @@ get_func_arg_info(HeapTuple procTup, Oid **p_argtypes, char ***p_argnames, char 
   return numargs;
 }
 
-/*
- * get_func_trftypes
- *
- * Returns the number of transformed types used by the function.
- * If there are any, a palloc'd array of the type OIDs is returned
- * into *p_trftypes.
- */
+   
+                     
+   
+                                                                 
+                                                                   
+                     
+   
 int
 get_func_trftypes(HeapTuple procTup, Oid **p_trftypes)
 {
@@ -991,13 +991,13 @@ get_func_trftypes(HeapTuple procTup, Oid **p_trftypes)
   protrftypes = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_protrftypes, &isNull);
   if (!isNull)
   {
-    /*
-     * We expect the arrays to be 1-D arrays of the right types; verify
-     * that.  For the OID and char arrays, we don't need to use
-     * deconstruct_array() since the array data is just going to look like
-     * a C array of values.
-     */
-    arr = DatumGetArrayTypeP(protrftypes); /* ensure not toasted */
+       
+                                                                        
+                                                                
+                                                                           
+                            
+       
+    arr = DatumGetArrayTypeP(protrftypes);                         
     nelems = ARR_DIMS(arr)[0];
     if (ARR_NDIM(arr) != 1 || nelems < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
     {
@@ -1014,16 +1014,16 @@ get_func_trftypes(HeapTuple procTup, Oid **p_trftypes)
   }
 }
 
-/*
- * get_func_input_arg_names
- *
- * Extract the names of input arguments only, given a function's
- * proargnames and proargmodes entries in Datum form.
- *
- * Returns the number of input arguments, which is the length of the
- * palloc'd array returned to *arg_names.  Entries for unnamed args
- * are set to NULL.  You don't get anything if proargnames is NULL.
- */
+   
+                            
+   
+                                                                 
+                                                      
+   
+                                                                     
+                                                                    
+                                                                    
+   
 int
 get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names)
 {
@@ -1035,19 +1035,19 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
   int numinargs;
   int i;
 
-  /* Do nothing if null proargnames */
+                                      
   if (proargnames == PointerGetDatum(NULL))
   {
     *arg_names = NULL;
     return 0;
   }
 
-  /*
-   * We expect the arrays to be 1-D arrays of the right types; verify that.
-   * For proargmodes, we don't need to use deconstruct_array() since the
-   * array data is just going to look like a C array of values.
-   */
-  arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
+     
+                                                                            
+                                                                         
+                                                                
+     
+  arr = DatumGetArrayTypeP(proargnames);                         
   if (ARR_NDIM(arr) != 1 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
   {
     elog(ERROR, "proargnames is not a 1-D text array");
@@ -1055,7 +1055,7 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
   deconstruct_array(arr, TEXTOID, -1, false, 'i', &argnames, NULL, &numargs);
   if (proargmodes != PointerGetDatum(NULL))
   {
-    arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
+    arr = DatumGetArrayTypeP(proargmodes);                         
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
       elog(ERROR, "proargmodes is not a 1-D char array");
@@ -1067,14 +1067,14 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
     argmodes = NULL;
   }
 
-  /* zero elements probably shouldn't happen, but handle it gracefully */
+                                                                         
   if (numargs <= 0)
   {
     *arg_names = NULL;
     return 0;
   }
 
-  /* extract input-argument names */
+                                    
   inargnames = (char **)palloc(numargs * sizeof(char *));
   numinargs = 0;
   for (i = 0; i < numargs; i++)
@@ -1099,15 +1099,15 @@ get_func_input_arg_names(Datum proargnames, Datum proargmodes, char ***arg_names
   return numinargs;
 }
 
-/*
- * get_func_result_name
- *
- * If the function has exactly one output parameter, and that parameter
- * is named, return the name (as a palloc'd string).  Else return NULL.
- *
- * This is used to determine the default output column name for functions
- * returning scalar types.
- */
+   
+                        
+   
+                                                                        
+                                                                        
+   
+                                                                          
+                           
+   
 char *
 get_func_result_name(Oid functionId)
 {
@@ -1124,40 +1124,40 @@ get_func_result_name(Oid functionId)
   int nargnames;
   int i;
 
-  /* First fetch the function's pg_proc row */
+                                              
   procTuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(functionId));
   if (!HeapTupleIsValid(procTuple))
   {
     elog(ERROR, "cache lookup failed for function %u", functionId);
   }
 
-  /* If there are no named OUT parameters, return NULL */
+                                                         
   if (heap_attisnull(procTuple, Anum_pg_proc_proargmodes, NULL) || heap_attisnull(procTuple, Anum_pg_proc_proargnames, NULL))
   {
     result = NULL;
   }
   else
   {
-    /* Get the data out of the tuple */
+                                       
     proargmodes = SysCacheGetAttr(PROCOID, procTuple, Anum_pg_proc_proargmodes, &isnull);
     Assert(!isnull);
     proargnames = SysCacheGetAttr(PROCOID, procTuple, Anum_pg_proc_proargnames, &isnull);
     Assert(!isnull);
 
-    /*
-     * We expect the arrays to be 1-D arrays of the right types; verify
-     * that.  For the char array, we don't need to use deconstruct_array()
-     * since the array data is just going to look like a C array of
-     * values.
-     */
-    arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
+       
+                                                                        
+                                                                           
+                                                                    
+               
+       
+    arr = DatumGetArrayTypeP(proargmodes);                         
     numargs = ARR_DIMS(arr)[0];
     if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
     {
       elog(ERROR, "proargmodes is not a 1-D char array");
     }
     argmodes = (char *)ARR_DATA_PTR(arr);
-    arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
+    arr = DatumGetArrayTypeP(proargnames);                         
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
     {
       elog(ERROR, "proargnames is not a 1-D text array");
@@ -1165,7 +1165,7 @@ get_func_result_name(Oid functionId)
     deconstruct_array(arr, TEXTOID, -1, false, 'i', &argnames, NULL, &nargnames);
     Assert(nargnames == numargs);
 
-    /* scan for output argument(s) */
+                                     
     result = NULL;
     numoutargs = 0;
     for (i = 0; i < numargs; i++)
@@ -1177,14 +1177,14 @@ get_func_result_name(Oid functionId)
       Assert(argmodes[i] == PROARGMODE_OUT || argmodes[i] == PROARGMODE_INOUT || argmodes[i] == PROARGMODE_TABLE);
       if (++numoutargs > 1)
       {
-        /* multiple out args, so forget it */
+                                             
         result = NULL;
         break;
       }
       result = TextDatumGetCString(argnames[i]);
       if (result == NULL || result[0] == '\0')
       {
-        /* Parameter is not named, so forget it */
+                                                  
         result = NULL;
         break;
       }
@@ -1196,15 +1196,15 @@ get_func_result_name(Oid functionId)
   return result;
 }
 
-/*
- * build_function_result_tupdesc_t
- *
- * Given a pg_proc row for a function, return a tuple descriptor for the
- * result rowtype, or NULL if the function does not have OUT parameters.
- *
- * Note that this does not handle resolution of polymorphic types;
- * that is deliberate.
- */
+   
+                                   
+   
+                                                                         
+                                                                         
+   
+                                                                   
+                       
+   
 TupleDesc
 build_function_result_tupdesc_t(HeapTuple procTuple)
 {
@@ -1214,19 +1214,19 @@ build_function_result_tupdesc_t(HeapTuple procTuple)
   Datum proargnames;
   bool isnull;
 
-  /* Return NULL if the function isn't declared to return RECORD */
+                                                                   
   if (procform->prorettype != RECORDOID)
   {
     return NULL;
   }
 
-  /* If there are no OUT parameters, return NULL */
+                                                   
   if (heap_attisnull(procTuple, Anum_pg_proc_proallargtypes, NULL) || heap_attisnull(procTuple, Anum_pg_proc_proargmodes, NULL))
   {
     return NULL;
   }
 
-  /* Get the data out of the tuple */
+                                     
   proallargtypes = SysCacheGetAttr(PROCOID, procTuple, Anum_pg_proc_proallargtypes, &isnull);
   Assert(!isnull);
   proargmodes = SysCacheGetAttr(PROCOID, procTuple, Anum_pg_proc_proargmodes, &isnull);
@@ -1234,23 +1234,23 @@ build_function_result_tupdesc_t(HeapTuple procTuple)
   proargnames = SysCacheGetAttr(PROCOID, procTuple, Anum_pg_proc_proargnames, &isnull);
   if (isnull)
   {
-    proargnames = PointerGetDatum(NULL); /* just to be sure */
+    proargnames = PointerGetDatum(NULL);                      
   }
 
   return build_function_result_tupdesc_d(procform->prokind, proallargtypes, proargmodes, proargnames);
 }
 
-/*
- * build_function_result_tupdesc_d
- *
- * Build a RECORD function's tupledesc from the pg_proc proallargtypes,
- * proargmodes, and proargnames arrays.  This is split out for the
- * convenience of ProcedureCreate, which needs to be able to compute the
- * tupledesc before actually creating the function.
- *
- * For functions (but not for procedures), returns NULL if there are not at
- * least two OUT or INOUT arguments.
- */
+   
+                                   
+   
+                                                                        
+                                                                   
+                                                                         
+                                                    
+   
+                                                                            
+                                     
+   
 TupleDesc
 build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proargmodes, Datum proargnames)
 {
@@ -1266,25 +1266,25 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
   int nargnames;
   int i;
 
-  /* Can't have output args if columns are null */
+                                                  
   if (proallargtypes == PointerGetDatum(NULL) || proargmodes == PointerGetDatum(NULL))
   {
     return NULL;
   }
 
-  /*
-   * We expect the arrays to be 1-D arrays of the right types; verify that.
-   * For the OID and char arrays, we don't need to use deconstruct_array()
-   * since the array data is just going to look like a C array of values.
-   */
-  arr = DatumGetArrayTypeP(proallargtypes); /* ensure not toasted */
+     
+                                                                            
+                                                                           
+                                                                          
+     
+  arr = DatumGetArrayTypeP(proallargtypes);                         
   numargs = ARR_DIMS(arr)[0];
   if (ARR_NDIM(arr) != 1 || numargs < 0 || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != OIDOID)
   {
     elog(ERROR, "proallargtypes is not a 1-D Oid array");
   }
   argtypes = (Oid *)ARR_DATA_PTR(arr);
-  arr = DatumGetArrayTypeP(proargmodes); /* ensure not toasted */
+  arr = DatumGetArrayTypeP(proargmodes);                         
   if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != CHAROID)
   {
     elog(ERROR, "proargmodes is not a 1-D char array");
@@ -1292,7 +1292,7 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
   argmodes = (char *)ARR_DATA_PTR(arr);
   if (proargnames != PointerGetDatum(NULL))
   {
-    arr = DatumGetArrayTypeP(proargnames); /* ensure not toasted */
+    arr = DatumGetArrayTypeP(proargnames);                         
     if (ARR_NDIM(arr) != 1 || ARR_DIMS(arr)[0] != numargs || ARR_HASNULL(arr) || ARR_ELEMTYPE(arr) != TEXTOID)
     {
       elog(ERROR, "proargnames is not a 1-D text array");
@@ -1301,13 +1301,13 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
     Assert(nargnames == numargs);
   }
 
-  /* zero elements probably shouldn't happen, but handle it gracefully */
+                                                                         
   if (numargs <= 0)
   {
     return NULL;
   }
 
-  /* extract output-argument types and names */
+                                               
   outargtypes = (Oid *)palloc(numargs * sizeof(Oid));
   outargnames = (char **)palloc(numargs * sizeof(char *));
   numoutargs = 0;
@@ -1331,17 +1331,17 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
     }
     if (pname == NULL || pname[0] == '\0')
     {
-      /* Parameter is not named, so gin up a column name */
+                                                           
       pname = psprintf("column%d", numoutargs + 1);
     }
     outargnames[numoutargs] = pname;
     numoutargs++;
   }
 
-  /*
-   * If there is no output argument, or only one, the function does not
-   * return tuples.
-   */
+     
+                                                                        
+                    
+     
   if (numoutargs < 2 && prokind != PROKIND_PROCEDURE)
   {
     return NULL;
@@ -1356,15 +1356,15 @@ build_function_result_tupdesc_d(char prokind, Datum proallargtypes, Datum proarg
   return desc;
 }
 
-/*
- * RelationNameGetTupleDesc
- *
- * Given a (possibly qualified) relation name, build a TupleDesc.
- *
- * Note: while this works as advertised, it's seldom the best way to
- * build a tupdesc for a function's result type.  It's kept around
- * only for backwards compatibility with existing user-written code.
- */
+   
+                            
+   
+                                                                  
+   
+                                                                     
+                                                                   
+                                                                     
+   
 TupleDesc
 RelationNameGetTupleDesc(const char *relname)
 {
@@ -1373,7 +1373,7 @@ RelationNameGetTupleDesc(const char *relname)
   TupleDesc tupdesc;
   List *relname_list;
 
-  /* Open relation and copy the tuple description */
+                                                    
   relname_list = stringToQualifiedNameList(relname);
   relvar = makeRangeVarFromNameList(relname_list);
   rel = relation_openrv(relvar, AccessShareLock);
@@ -1383,21 +1383,21 @@ RelationNameGetTupleDesc(const char *relname)
   return tupdesc;
 }
 
-/*
- * TypeGetTupleDesc
- *
- * Given a type Oid, build a TupleDesc.  (In most cases you should be
- * using get_call_result_type or one of its siblings instead of this
- * routine, so that you can handle OUT parameters, RECORD result type,
- * and polymorphic results.)
- *
- * If the type is composite, *and* a colaliases List is provided, *and*
- * the List is of natts length, use the aliases instead of the relation
- * attnames.  (NB: this usage is deprecated since it may result in
- * creation of unnecessary transient record types.)
- *
- * If the type is a base type, a single item alias List is required.
- */
+   
+                    
+   
+                                                                      
+                                                                     
+                                                                       
+                             
+   
+                                                                        
+                                                                        
+                                                                   
+                                                    
+   
+                                                                     
+   
 TupleDesc
 TypeGetTupleDesc(Oid typeoid, List *colaliases)
 {
@@ -1405,15 +1405,15 @@ TypeGetTupleDesc(Oid typeoid, List *colaliases)
   TypeFuncClass functypclass = get_type_func_class(typeoid, &base_typeoid);
   TupleDesc tupdesc = NULL;
 
-  /*
-   * Build a suitable tupledesc representing the output rows.  We
-   * intentionally do not support TYPEFUNC_COMPOSITE_DOMAIN here, as it's
-   * unlikely that legacy callers of this obsolete function would be
-   * prepared to apply domain constraints.
-   */
+     
+                                                                  
+                                                                          
+                                                                     
+                                           
+     
   if (functypclass == TYPEFUNC_COMPOSITE)
   {
-    /* Composite data type, e.g. a table's row type */
+                                                      
     tupdesc = lookup_rowtype_tupdesc_copy(base_typeoid, -1);
 
     if (colaliases != NIL)
@@ -1421,13 +1421,13 @@ TypeGetTupleDesc(Oid typeoid, List *colaliases)
       int natts = tupdesc->natts;
       int varattno;
 
-      /* does the list length match the number of attributes? */
+                                                                
       if (list_length(colaliases) != natts)
       {
         ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("number of aliases does not match number of columns")));
       }
 
-      /* OK, use the aliases instead */
+                                       
       for (varattno = 0; varattno < natts; varattno++)
       {
         char *label = strVal(list_nth(colaliases, varattno));
@@ -1439,29 +1439,29 @@ TypeGetTupleDesc(Oid typeoid, List *colaliases)
         }
       }
 
-      /* The tuple type is now an anonymous record type */
+                                                          
       tupdesc->tdtypeid = RECORDOID;
       tupdesc->tdtypmod = -1;
     }
   }
   else if (functypclass == TYPEFUNC_SCALAR)
   {
-    /* Base data type, i.e. scalar */
+                                     
     char *attname;
 
-    /* the alias list is required for base types */
+                                                   
     if (colaliases == NIL)
     {
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("no column alias was provided")));
     }
 
-    /* the alias list length must be 1 */
+                                         
     if (list_length(colaliases) != 1)
     {
       ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("number of aliases does not match number of columns")));
     }
 
-    /* OK, get the column alias */
+                                  
     attname = strVal(linitial(colaliases));
 
     tupdesc = CreateTemplateTupleDesc(1);
@@ -1469,32 +1469,32 @@ TypeGetTupleDesc(Oid typeoid, List *colaliases)
   }
   else if (functypclass == TYPEFUNC_RECORD)
   {
-    /* XXX can't support this because typmod wasn't passed in ... */
+                                                                    
     ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("could not determine row description for function returning record")));
   }
   else
   {
-    /* crummy error message, but parser should have caught this */
+                                                                  
     elog(ERROR, "function in FROM has unsupported return type");
   }
 
   return tupdesc;
 }
 
-/*
- * extract_variadic_args
- *
- * Extract a set of argument values, types and NULL markers for a given
- * input function which makes use of a VARIADIC input whose argument list
- * depends on the caller context. When doing a VARIADIC call, the caller
- * has provided one argument made of an array of values, so deconstruct the
- * array data before using it for the next processing. If no VARIADIC call
- * is used, just fill in the status data based on all the arguments given
- * by the caller.
- *
- * This function returns the number of arguments generated, or -1 in the
- * case of "VARIADIC NULL".
- */
+   
+                         
+   
+                                                                        
+                                                                          
+                                                                         
+                                                                            
+                                                                           
+                                                                          
+                  
+   
+                                                                         
+                            
+   
 int
 extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_unknown, Datum **args, Oid **types, bool **nulls)
 {
@@ -1529,7 +1529,7 @@ extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_
     get_typlenbyvalalign(element_type, &typlen, &typbyval, &typalign);
     deconstruct_array(array_in, element_type, typlen, typbyval, typalign, &args_res, &nulls_res, &nargs);
 
-    /* All the elements of the array have the same type */
+                                                          
     types_res = (Oid *)palloc0(nargs * sizeof(Oid));
     for (i = 0; i < nargs; i++)
     {
@@ -1549,13 +1549,13 @@ extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_
       nulls_res[i] = PG_ARGISNULL(i + variadic_start);
       types_res[i] = get_fn_expr_argtype(fcinfo->flinfo, i + variadic_start);
 
-      /*
-       * Turn a constant (more or less literal) value that's of unknown
-       * type into text if required. Unknowns come in as a cstring
-       * pointer. Note: for functions declared as taking type "any", the
-       * parser will not do any type conversion on unknown-type literals
-       * (that is, undecorated strings or NULLs).
-       */
+         
+                                                                        
+                                                                   
+                                                                         
+                                                                         
+                                                  
+         
       if (convert_unknown && types_res[i] == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, i + variadic_start))
       {
         types_res[i] = TEXTOID;
@@ -1571,7 +1571,7 @@ extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_
       }
       else
       {
-        /* no conversion needed, just take the datum as given */
+                                                                
         args_res[i] = PG_GETARG_DATUM(i + variadic_start);
       }
 
@@ -1582,7 +1582,7 @@ extract_variadic_args(FunctionCallInfo fcinfo, int variadic_start, bool convert_
     }
   }
 
-  /* Fill in results */
+                       
   *args = args_res;
   *nulls = nulls_res;
   *types = types_res;

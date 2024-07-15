@@ -1,14 +1,14 @@
-/*-------------------------------------------------------------------------
- *
- * dropdb
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/scripts/dropdb.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+   
+                                                                         
+                                                                        
+   
+                            
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -76,7 +76,7 @@ main(int argc, char *argv[])
       interactive = true;
       break;
     case 0:
-      /* this covers the long options */
+                                        
       break;
     case 2:
       maintenance_db = pg_strdup(optarg);
@@ -115,7 +115,7 @@ main(int argc, char *argv[])
 
   appendPQExpBuffer(&sql, "DROP DATABASE %s%s;", (if_exists ? "IF EXISTS " : ""), fmtId(dbname));
 
-  /* Avoid trying to drop postgres db while we are connected to it. */
+                                                                      
   if (maintenance_db == NULL && strcmp(dbname, "postgres") == 0)
   {
     maintenance_db = "template1";

@@ -1,37 +1,37 @@
-/*------------------------------------------------------------------------
- *
- * geqo_pmx.c
- *
- *	 partially matched crossover [PMX] routines;
- *	 PMX operator according to Goldberg & Lingle
- *	 (Proc Int'l Conf on GA's)
- *
- * src/backend/optimizer/geqo/geqo_pmx.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                           
+   
+              
+   
+                                                
+                                                
+                              
+   
+                                         
+   
+                                                                            
+   
 
-/* contributed by:
-   =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic Control	   *
-   =							 = University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
-   =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
- */
+                   
+                                                                         
+                                                              
+                                                    
+                                                             
+                                                                         
+   
 
-/* the pmx algorithm is adopted from Genitor : */
-/*************************************************************/
-/*															 */
-/*	Copyright (c) 1990										 */
-/*	Darrell L. Whitley										 */
-/*	Computer Science Department								 */
-/*	Colorado State University								 */
-/*															 */
-/*	Permission is hereby granted to copy all or any part of  */
-/*	this program for free distribution.   The author's name  */
-/*	and this copyright notice must be included in any copy.  */
-/*															 */
-/*************************************************************/
+                                                 
+                                                               
+                    
+                                  
+                                  
+                                         
+                                       
+                    
+                                                              
+                                                              
+                                                              
+                    
+                                                               
 
 #include "postgres.h"
 #include "optimizer/geqo_random.h"
@@ -39,10 +39,10 @@
 
 #if defined(PMX)
 
-/* pmx
- *
- *	 partially matched crossover
- */
+       
+   
+                                
+   
 void
 pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
 {
@@ -54,8 +54,8 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
   int left, right, temp, i, j, k;
   int mx_fail, found, mx_hold;
 
-  /* no mutation so start up the pmx replacement algorithm */
-  /* initialize failed[], from[], check_list[] */
+                                                             
+                                                 
   for (k = 0; k < num_gene; k++)
   {
     failed[k] = -1;
@@ -63,7 +63,7 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
     check_list[k + 1] = 0;
   }
 
-  /* locate crossover points */
+                               
   left = geqo_randint(root, num_gene - 1, 0);
   right = geqo_randint(root, num_gene - 1, 0);
 
@@ -74,7 +74,7 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
     right = temp;
   }
 
-  /* copy tour2 into offspring */
+                                 
   for (k = 0; k < num_gene; k++)
   {
     offspring[k] = tour2[k];
@@ -82,7 +82,7 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
     check_list[tour2[k]]++;
   }
 
-  /* copy tour1 into offspring */
+                                 
   for (k = left; k <= right; k++)
   {
     check_list[offspring[k]]--;
@@ -91,23 +91,23 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
     check_list[tour1[k]]++;
   }
 
-  /* pmx main part */
+                     
 
   mx_fail = 0;
 
-  /* STEP 1 */
+              
 
   for (k = left; k <= right; k++)
-  { /* for all elements in the tour1-2 */
+  {                                      
 
     if (tour1[k] == tour2[k])
     {
-      found = 1; /* find match in tour2 */
+      found = 1;                          
     }
 
     else
     {
-      found = 0; /* substitute elements */
+      found = 0;                          
 
       j = 0;
       while (!(found) && (j < num_gene))
@@ -126,17 +126,17 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
     }
 
     if (!(found))
-    { /* failed to replace gene */
+    {                             
       failed[mx_fail] = (int)tour1[k];
       indx[mx_fail] = k;
       mx_fail++;
     }
 
-  } /* ... for */
+  }              
 
-  /* STEP 2 */
+              
 
-  /* see if any genes could not be replaced */
+                                              
   if (mx_fail > 0)
   {
     mx_hold = mx_fail;
@@ -163,11 +163,11 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
         j++;
       }
 
-    } /* ... for	 */
+    }               
 
-  } /* ... if	 */
+  }              
 
-  /* STEP 3 */
+              
 
   for (k = 1; k <= num_gene; k++)
   {
@@ -196,12 +196,12 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
             j++;
           }
 
-        } /* ... if	 */
+        }              
 
         i++;
-      } /* end while */
+      }                
     }
-  } /* ... for	 */
+  }               
 
   pfree(failed);
   pfree(from);
@@ -209,4 +209,4 @@ pmx(PlannerInfo *root, Gene *tour1, Gene *tour2, Gene *offspring, int num_gene)
   pfree(check_list);
 }
 
-#endif /* defined(PMX) */
+#endif                   

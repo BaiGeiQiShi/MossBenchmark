@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * tsginidx.c
- *	 GIN support functions for tsvector_ops
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tsginidx.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                           
+   
+                                                                         
+   
+   
+                  
+                                      
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/gin.h"
@@ -50,7 +50,7 @@ gin_cmp_prefix(PG_FUNCTION_ARGS)
 
   if (cmp < 0)
   {
-    cmp = 1; /* prevent continue scan */
+    cmp = 1;                            
   }
 
   PG_FREE_IF_COPY(a, 0);
@@ -94,11 +94,11 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
   TSQuery query = PG_GETARG_TSQUERY(0);
   int32 *nentries = (int32 *)PG_GETARG_POINTER(1);
 
-  /* StrategyNumber strategy = PG_GETARG_UINT16(2); */
+                                                      
   bool **ptr_partialmatch = (bool **)PG_GETARG_POINTER(3);
   Pointer **extra_data = (Pointer **)PG_GETARG_POINTER(4);
 
-  /* bool   **nullFlags = (bool **) PG_GETARG_POINTER(5); */
+                                                            
   int32 *searchMode = (int32 *)PG_GETARG_POINTER(6);
   Datum *entries = NULL;
 
@@ -111,11 +111,11 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
     bool *partialmatch;
     int *map_item_operand;
 
-    /*
-     * If the query doesn't have any required positive matches (for
-     * instance, it's something like '! foo'), we have to do a full index
-     * scan.
-     */
+       
+                                                                    
+                                                                          
+             
+       
     if (tsquery_requires_match(item))
     {
       *searchMode = GIN_SEARCH_MODE_DEFAULT;
@@ -125,7 +125,7 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
       *searchMode = GIN_SEARCH_MODE_ALL;
     }
 
-    /* count number of VAL items */
+                                   
     j = 0;
     for (i = 0; i < query->size; i++)
     {
@@ -139,15 +139,15 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
     entries = (Datum *)palloc(sizeof(Datum) * j);
     partialmatch = *ptr_partialmatch = (bool *)palloc(sizeof(bool) * j);
 
-    /*
-     * Make map to convert item's number to corresponding operand's (the
-     * same, entry's) number. Entry's number is used in check array in
-     * consistent method. We use the same map for each entry.
-     */
+       
+                                                                         
+                                                                       
+                                                              
+       
     *extra_data = (Pointer *)palloc(sizeof(Pointer) * j);
     map_item_operand = (int *)palloc0(sizeof(int) * query->size);
 
-    /* Now rescan the VAL items and fill in the arrays */
+                                                         
     j = 0;
     for (i = 0; i < query->size; i++)
     {
@@ -184,65 +184,65 @@ checkcondition_gin_internal(GinChkVal *gcv, QueryOperand *val, ExecPhraseData *d
 {
   int j;
 
-  /*
-   * if any val requiring a weight is used or caller needs position
-   * information then set recheck flag
-   */
+     
+                                                                    
+                                       
+     
   if (val->weight != 0 || data != NULL)
   {
     *(gcv->need_recheck) = true;
   }
 
-  /* convert item's number to corresponding entry's (operand's) number */
+                                                                         
   j = gcv->map_item_operand[((QueryItem *)val) - gcv->first_item];
 
-  /* return presence of current entry in indexed value */
+                                                         
   return gcv->check[j];
 }
 
-/*
- * Wrapper of check condition function for TS_execute.
- */
+   
+                                                       
+   
 static bool
 checkcondition_gin(void *checkval, QueryOperand *val, ExecPhraseData *data)
 {
   return checkcondition_gin_internal((GinChkVal *)checkval, val, data) != GIN_FALSE;
 }
 
-/*
- * Evaluate tsquery boolean expression using ternary logic.
- *
- * Note: the reason we can't use TS_execute() for this is that its API
- * for the checkcondition callback doesn't allow a MAYBE result to be
- * returned, but we might have MAYBEs in the gcv->check array.
- * Perhaps we should change that API.
- */
+   
+                                                            
+   
+                                                                       
+                                                                      
+                                                               
+                                      
+   
 static GinTernaryValue
 TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
 {
   GinTernaryValue val1, val2, result;
 
-  /* since this function recurses, it could be driven to stack overflow */
+                                                                          
   check_stack_depth();
 
   if (curitem->type == QI_VAL)
   {
-    return checkcondition_gin_internal(gcv, (QueryOperand *)curitem, NULL /* don't have position info */);
+    return checkcondition_gin_internal(gcv, (QueryOperand *)curitem, NULL                               );
   }
 
   switch (curitem->qoperator.oper)
   {
   case OP_NOT:
 
-    /*
-     * Below a phrase search, force NOT's result to MAYBE.  We cannot
-     * invert a TRUE result from the subexpression to FALSE, since
-     * TRUE only says that the subexpression matches somewhere, not
-     * that it matches everywhere, so there might be positions where
-     * the NOT will match.  We could invert FALSE to TRUE, but there's
-     * little point in distinguishing TRUE from MAYBE, since a recheck
-     * will have been forced already.
-     */
+       
+                                                                      
+                                                                   
+                                                                    
+                                                                     
+                                                                       
+                                                                       
+                                      
+       
     if (in_phrase)
     {
       return GIN_MAYBE;
@@ -257,16 +257,16 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
 
   case OP_PHRASE:
 
-    /*
-     * GIN doesn't contain any information about positions, so treat
-     * OP_PHRASE as OP_AND with recheck requirement, and always
-     * reporting MAYBE not TRUE.
-     */
+       
+                                                                     
+                                                                
+                                 
+       
     *(gcv->need_recheck) = true;
-    /* Pass down in_phrase == true in case there's a NOT below */
+                                                                 
     in_phrase = true;
 
-    /* FALL THRU */
+                   
 
   case OP_AND:
     val1 = TS_execute_ternary(gcv, curitem + curitem->qoperator.left, in_phrase);
@@ -312,7 +312,7 @@ TS_execute_ternary(GinChkVal *gcv, QueryItem *curitem, bool in_phrase)
     elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
   }
 
-  /* not reachable, but keep compiler quiet */
+                                              
   return false;
 }
 
@@ -321,25 +321,25 @@ gin_tsquery_consistent(PG_FUNCTION_ARGS)
 {
   bool *check = (bool *)PG_GETARG_POINTER(0);
 
-  /* StrategyNumber strategy = PG_GETARG_UINT16(1); */
+                                                      
   TSQuery query = PG_GETARG_TSQUERY(2);
 
-  /* int32	nkeys = PG_GETARG_INT32(3); */
+                                         
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
   bool *recheck = (bool *)PG_GETARG_POINTER(5);
   bool res = false;
 
-  /* Initially assume query doesn't require recheck */
+                                                      
   *recheck = false;
 
   if (query->size > 0)
   {
     GinChkVal gcv;
 
-    /*
-     * check-parameter array has one entry for each value (operand) in the
-     * query.
-     */
+       
+                                                                           
+              
+       
     gcv.first_item = GETQUERY(query);
     StaticAssertStmt(sizeof(GinTernaryValue) == sizeof(bool), "sizes of GinTernaryValue and bool are not equal");
     gcv.check = (GinTernaryValue *)check;
@@ -357,25 +357,25 @@ gin_tsquery_triconsistent(PG_FUNCTION_ARGS)
 {
   GinTernaryValue *check = (GinTernaryValue *)PG_GETARG_POINTER(0);
 
-  /* StrategyNumber strategy = PG_GETARG_UINT16(1); */
+                                                      
   TSQuery query = PG_GETARG_TSQUERY(2);
 
-  /* int32	nkeys = PG_GETARG_INT32(3); */
+                                         
   Pointer *extra_data = (Pointer *)PG_GETARG_POINTER(4);
   GinTernaryValue res = GIN_FALSE;
   bool recheck;
 
-  /* Initially assume query doesn't require recheck */
+                                                      
   recheck = false;
 
   if (query->size > 0)
   {
     GinChkVal gcv;
 
-    /*
-     * check-parameter array has one entry for each value (operand) in the
-     * query.
-     */
+       
+                                                                           
+              
+       
     gcv.first_item = GETQUERY(query);
     gcv.check = check;
     gcv.map_item_operand = (int *)(extra_data[0]);
@@ -392,66 +392,66 @@ gin_tsquery_triconsistent(PG_FUNCTION_ARGS)
   PG_RETURN_GIN_TERNARY_VALUE(res);
 }
 
-/*
- * Formerly, gin_extract_tsvector had only two arguments.  Now it has three,
- * but we still need a pg_proc entry with two args to support reloading
- * pre-9.1 contrib/tsearch2 opclass declarations.  This compatibility
- * function should go away eventually.  (Note: you might say "hey, but the
- * code above is only *using* two args, so let's just declare it that way".
- * If you try that you'll find the opr_sanity regression test complains.)
- */
+   
+                                                                             
+                                                                        
+                                                                      
+                                                                           
+                                                                            
+                                                                          
+   
 Datum
 gin_extract_tsvector_2args(PG_FUNCTION_ARGS)
 {
-  if (PG_NARGS() < 3) /* should not happen */
+  if (PG_NARGS() < 3)                        
   {
     elog(ERROR, "gin_extract_tsvector requires three arguments");
   }
   return gin_extract_tsvector(fcinfo);
 }
 
-/*
- * Likewise, we need a stub version of gin_extract_tsquery declared with
- * only five arguments.
- */
+   
+                                                                         
+                        
+   
 Datum
 gin_extract_tsquery_5args(PG_FUNCTION_ARGS)
 {
-  if (PG_NARGS() < 7) /* should not happen */
+  if (PG_NARGS() < 7)                        
   {
     elog(ERROR, "gin_extract_tsquery requires seven arguments");
   }
   return gin_extract_tsquery(fcinfo);
 }
 
-/*
- * Likewise, we need a stub version of gin_tsquery_consistent declared with
- * only six arguments.
- */
+   
+                                                                            
+                       
+   
 Datum
 gin_tsquery_consistent_6args(PG_FUNCTION_ARGS)
 {
-  if (PG_NARGS() < 8) /* should not happen */
+  if (PG_NARGS() < 8)                        
   {
     elog(ERROR, "gin_tsquery_consistent requires eight arguments");
   }
   return gin_tsquery_consistent(fcinfo);
 }
 
-/*
- * Likewise, a stub version of gin_extract_tsquery declared with argument
- * types that are no longer considered appropriate.
- */
+   
+                                                                          
+                                                    
+   
 Datum
 gin_extract_tsquery_oldsig(PG_FUNCTION_ARGS)
 {
   return gin_extract_tsquery(fcinfo);
 }
 
-/*
- * Likewise, a stub version of gin_tsquery_consistent declared with argument
- * types that are no longer considered appropriate.
- */
+   
+                                                                             
+                                                    
+   
 Datum
 gin_tsquery_consistent_oldsig(PG_FUNCTION_ARGS)
 {

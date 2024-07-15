@@ -1,13 +1,13 @@
-/* -------------------------------------------------------------------------
- *
- * seclabel.c
- *	  routines to support security label feature.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * -------------------------------------------------------------------------
- */
+                                                                             
+   
+              
+                                                 
+   
+                                                                         
+                                                                        
+   
+                                                                             
+   
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -33,13 +33,13 @@ typedef struct
 
 static List *label_provider_list = NIL;
 
-/*
- * ExecSecLabelStmt --
- *
- * Apply a security label to a database object.
- *
- * Returns the ObjectAddress of the object to which the policy was applied.
- */
+   
+                       
+   
+                                                
+   
+                                                                            
+   
 ObjectAddress
 ExecSecLabelStmt(SecLabelStmt *stmt)
 {
@@ -48,10 +48,10 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
   Relation relation;
   ListCell *lc;
 
-  /*
-   * Find the named label provider, or if none specified, check whether
-   * there's exactly one, and if so use it.
-   */
+     
+                                                                        
+                                            
+     
   if (stmt->provider == NULL)
   {
     if (label_provider_list == NIL)
@@ -82,27 +82,27 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
     }
   }
 
-  /*
-   * Translate the parser representation which identifies this object into
-   * an ObjectAddress. get_object_address() will throw an error if the
-   * object does not exist, and will also acquire a lock on the target to
-   * guard against concurrent modifications.
-   */
+     
+                                                                           
+                                                                       
+                                                                          
+                                             
+     
   address = get_object_address(stmt->objtype, stmt->object, &relation, ShareUpdateExclusiveLock, false);
 
-  /* Require ownership of the target object. */
+                                               
   check_object_ownership(GetUserId(), stmt->objtype, address, stmt->object, relation);
 
-  /* Perform other integrity checks as needed. */
+                                                 
   switch (stmt->objtype)
   {
   case OBJECT_COLUMN:
 
-    /*
-     * Allow security labels only on columns of tables, views,
-     * materialized views, composite types, and foreign tables (which
-     * are the only relkinds for which pg_dump will dump labels).
-     */
+       
+                                                               
+                                                                      
+                                                                  
+       
     if (relation->rd_rel->relkind != RELKIND_RELATION && relation->rd_rel->relkind != RELKIND_VIEW && relation->rd_rel->relkind != RELKIND_MATVIEW && relation->rd_rel->relkind != RELKIND_COMPOSITE_TYPE && relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE && relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
     {
       ereport(ERROR, (errcode(ERRCODE_WRONG_OBJECT_TYPE), errmsg("\"%s\" is not a table, view, materialized view, composite type, or foreign table", RelationGetRelationName(relation))));
@@ -112,18 +112,18 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
     break;
   }
 
-  /* Provider gets control here, may throw ERROR to veto new label. */
+                                                                      
   provider->hook(&address, stmt->label);
 
-  /* Apply new label. */
+                        
   SetSecurityLabel(&address, provider->provider_name, stmt->label);
 
-  /*
-   * If get_object_address() opened the relation for us, we close it to keep
-   * the reference count correct - but we retain any locks acquired by
-   * get_object_address() until commit time, to guard against concurrent
-   * activity.
-   */
+     
+                                                                             
+                                                                       
+                                                                         
+               
+     
   if (relation != NULL)
   {
     relation_close(relation, NoLock);
@@ -132,10 +132,10 @@ ExecSecLabelStmt(SecLabelStmt *stmt)
   return address;
 }
 
-/*
- * GetSharedSecurityLabel returns the security label for a shared object for
- * a given provider, or NULL if there is no such label.
- */
+   
+                                                                             
+                                                        
+   
 static char *
 GetSharedSecurityLabel(const ObjectAddress *object, const char *provider)
 {
@@ -171,10 +171,10 @@ GetSharedSecurityLabel(const ObjectAddress *object, const char *provider)
   return seclabel;
 }
 
-/*
- * GetSecurityLabel returns the security label for a shared or database object
- * for a given provider, or NULL if there is no such label.
- */
+   
+                                                                               
+                                                            
+   
 char *
 GetSecurityLabel(const ObjectAddress *object, const char *provider)
 {
@@ -186,13 +186,13 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
   bool isnull;
   char *seclabel = NULL;
 
-  /* Shared objects have their own security label catalog. */
+                                                             
   if (IsSharedRelation(object->classId))
   {
     return GetSharedSecurityLabel(object, provider);
   }
 
-  /* Must be an unshared object, so examine pg_seclabel. */
+                                                           
   ScanKeyInit(&keys[0], Anum_pg_seclabel_objoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->objectId));
   ScanKeyInit(&keys[1], Anum_pg_seclabel_classoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->classId));
   ScanKeyInit(&keys[2], Anum_pg_seclabel_objsubid, BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(object->objectSubId));
@@ -218,10 +218,10 @@ GetSecurityLabel(const ObjectAddress *object, const char *provider)
   return seclabel;
 }
 
-/*
- * SetSharedSecurityLabel is a helper function of SetSecurityLabel to
- * handle shared database objects.
- */
+   
+                                                                      
+                                   
+   
 static void
 SetSharedSecurityLabel(const ObjectAddress *object, const char *provider, const char *label)
 {
@@ -234,7 +234,7 @@ SetSharedSecurityLabel(const ObjectAddress *object, const char *provider, const 
   bool nulls[Natts_pg_shseclabel];
   bool replaces[Natts_pg_shseclabel];
 
-  /* Prepare to form or update a tuple, if necessary. */
+                                                        
   memset(nulls, false, sizeof(nulls));
   memset(replaces, false, sizeof(replaces));
   values[Anum_pg_shseclabel_objoid - 1] = ObjectIdGetDatum(object->objectId);
@@ -245,7 +245,7 @@ SetSharedSecurityLabel(const ObjectAddress *object, const char *provider, const 
     values[Anum_pg_shseclabel_label - 1] = CStringGetTextDatum(label);
   }
 
-  /* Use the index to search for a matching old tuple */
+                                                        
   ScanKeyInit(&keys[0], Anum_pg_shseclabel_objoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->objectId));
   ScanKeyInit(&keys[1], Anum_pg_shseclabel_classoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->classId));
   ScanKeyInit(&keys[2], Anum_pg_shseclabel_provider, BTEqualStrategyNumber, F_TEXTEQ, CStringGetTextDatum(provider));
@@ -270,7 +270,7 @@ SetSharedSecurityLabel(const ObjectAddress *object, const char *provider, const 
   }
   systable_endscan(scan);
 
-  /* If we didn't find an old tuple, insert a new one */
+                                                        
   if (newtup == NULL && label != NULL)
   {
     newtup = heap_form_tuple(RelationGetDescr(pg_shseclabel), values, nulls);
@@ -285,11 +285,11 @@ SetSharedSecurityLabel(const ObjectAddress *object, const char *provider, const 
   table_close(pg_shseclabel, RowExclusiveLock);
 }
 
-/*
- * SetSecurityLabel attempts to set the security label for the specified
- * provider on the specified object to the given value.  NULL means that any
- * existing label should be deleted.
- */
+   
+                                                                         
+                                                                             
+                                     
+   
 void
 SetSecurityLabel(const ObjectAddress *object, const char *provider, const char *label)
 {
@@ -302,14 +302,14 @@ SetSecurityLabel(const ObjectAddress *object, const char *provider, const char *
   bool nulls[Natts_pg_seclabel];
   bool replaces[Natts_pg_seclabel];
 
-  /* Shared objects have their own security label catalog. */
+                                                             
   if (IsSharedRelation(object->classId))
   {
     SetSharedSecurityLabel(object, provider, label);
     return;
   }
 
-  /* Prepare to form or update a tuple, if necessary. */
+                                                        
   memset(nulls, false, sizeof(nulls));
   memset(replaces, false, sizeof(replaces));
   values[Anum_pg_seclabel_objoid - 1] = ObjectIdGetDatum(object->objectId);
@@ -321,7 +321,7 @@ SetSecurityLabel(const ObjectAddress *object, const char *provider, const char *
     values[Anum_pg_seclabel_label - 1] = CStringGetTextDatum(label);
   }
 
-  /* Use the index to search for a matching old tuple */
+                                                        
   ScanKeyInit(&keys[0], Anum_pg_seclabel_objoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->objectId));
   ScanKeyInit(&keys[1], Anum_pg_seclabel_classoid, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(object->classId));
   ScanKeyInit(&keys[2], Anum_pg_seclabel_objsubid, BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(object->objectSubId));
@@ -347,14 +347,14 @@ SetSecurityLabel(const ObjectAddress *object, const char *provider, const char *
   }
   systable_endscan(scan);
 
-  /* If we didn't find an old tuple, insert a new one */
+                                                        
   if (newtup == NULL && label != NULL)
   {
     newtup = heap_form_tuple(RelationGetDescr(pg_seclabel), values, nulls);
     CatalogTupleInsert(pg_seclabel, newtup);
   }
 
-  /* Update indexes, if necessary */
+                                    
   if (newtup != NULL)
   {
     heap_freetuple(newtup);
@@ -363,10 +363,10 @@ SetSecurityLabel(const ObjectAddress *object, const char *provider, const char *
   table_close(pg_seclabel, RowExclusiveLock);
 }
 
-/*
- * DeleteSharedSecurityLabel is a helper function of DeleteSecurityLabel
- * to handle shared database objects.
- */
+   
+                                                                         
+                                      
+   
 void
 DeleteSharedSecurityLabel(Oid objectId, Oid classId)
 {
@@ -390,10 +390,10 @@ DeleteSharedSecurityLabel(Oid objectId, Oid classId)
   table_close(pg_shseclabel, RowExclusiveLock);
 }
 
-/*
- * DeleteSecurityLabel removes all security labels for an object (and any
- * sub-objects, if applicable).
- */
+   
+                                                                          
+                                
+   
 void
 DeleteSecurityLabel(const ObjectAddress *object)
 {
@@ -403,7 +403,7 @@ DeleteSecurityLabel(const ObjectAddress *object)
   HeapTuple oldtup;
   int nkeys;
 
-  /* Shared objects have their own security label catalog. */
+                                                             
   if (IsSharedRelation(object->classId))
   {
     Assert(object->objectSubId == 0);

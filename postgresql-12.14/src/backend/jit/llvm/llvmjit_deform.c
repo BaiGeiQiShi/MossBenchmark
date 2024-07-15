@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * llvmjit_deform.c
- *	  Generate code for deforming a heap tuple.
- *
- * This gains performance benefits over unJITed deforming from compile-time
- * knowledge of the tuple descriptor. Fixed column widths, NOT NULLness, etc
- * can be taken advantage of.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/jit/llvm/llvmjit_deform.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+                                               
+   
+                                                                            
+                                                                             
+                              
+   
+                                                                         
+                                                                        
+   
+                  
+                                           
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -28,17 +28,17 @@
 #include "jit/llvmjit.h"
 #include "jit/llvmjit_emit.h"
 
-/*
- * Through an embarrassing oversight, pre-v13 installations may have
- * pg_subscription.subslotname and pg_subscription_rel.srsublsn marked as
- * attnotnull, which they should not be.  To avoid possible crashes, use
- * this macro instead of testing attnotnull directly.
- */
+   
+                                                                     
+                                                                          
+                                                                         
+                                                      
+   
 #define ATTNOTNULL(att) ((att)->attnotnull && !(((att)->attrelid == SubscriptionRelationId && (att)->attnum == Anum_pg_subscription_subslotname) || ((att)->attrelid == SubscriptionRelRelationId && (att)->attnum == Anum_pg_subscription_rel_srsublsn)))
 
-/*
- * Create a function that deforms a tuple of type desc up to natts columns.
- */
+   
+                                                                            
+   
 LLVMValueRef
 slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlotOps *ops, int natts)
 {
@@ -86,24 +86,24 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
   LLVMValueRef v_hasnulls;
 
-  /* last column (0 indexed) guaranteed to exist */
+                                                   
   int guaranteed_column_number = -1;
 
-  /* current known alignment */
+                               
   int known_alignment = 0;
 
-  /* if true, known_alignment describes definite offset of column */
+                                                                    
   bool attguaranteedalign = true;
 
   int attnum;
 
-  /* virtual tuples never need deforming, so don't generate code */
+                                                                   
   if (ops == &TTSOpsVirtual)
   {
     return NULL;
   }
 
-  /* decline to JIT for slot types we don't know to handle */
+                                                             
   if (ops != &TTSOpsHeapTuple && ops != &TTSOpsBufferHeapTuple && ops != &TTSOpsMinimalTuple)
   {
     return NULL;
@@ -113,32 +113,32 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
   funcname = llvm_expand_funcname(context, "deform");
 
-  /*
-   * Check which columns have to exist, so we don't have to check the row's
-   * natts unnecessarily.
-   */
+     
+                                                                            
+                          
+     
   for (attnum = 0; attnum < desc->natts; attnum++)
   {
     Form_pg_attribute att = TupleDescAttr(desc, attnum);
 
-    /*
-     * If the column is declared NOT NULL then it must be present in every
-     * tuple, unless there's a "missing" entry that could provide a
-     * non-NULL value for it. That in turn guarantees that the NULL bitmap
-     * - if there are any NULLable columns - is at least long enough to
-     * cover columns up to attnum.
-     *
-     * Be paranoid and also check !attisdropped, even though the
-     * combination of attisdropped && attnotnull combination shouldn't
-     * exist.
-     */
+       
+                                                                           
+                                                                    
+                                                                           
+                                                                        
+                                   
+       
+                                                                 
+                                                                       
+              
+       
     if (ATTNOTNULL(att) && !att->atthasmissing && !att->attisdropped)
     {
       guaranteed_column_number = attnum;
     }
   }
 
-  /* Create the signature and function */
+                                         
   {
     LLVMTypeRef param_types[1];
 
@@ -170,7 +170,7 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
   LLVMPositionBuilderAtEnd(b, b_entry);
 
-  /* perform allocas first, llvm only converts those to registers */
+                                                                    
   v_offp = LLVMBuildAlloca(b, TypeSizeT, "v_offp");
 
   v_slot = LLVMGetParam(v_deform_fn, 0);
@@ -198,7 +198,7 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
   }
   else
   {
-    /* should've returned at the start of the function */
+                                                         
     pg_unreachable();
   }
 
@@ -207,24 +207,24 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
   v_infomask1 = l_load_struct_gep(b, v_tuplep, FIELDNO_HEAPTUPLEHEADERDATA_INFOMASK, "infomask1");
   v_infomask2 = l_load_struct_gep(b, v_tuplep, FIELDNO_HEAPTUPLEHEADERDATA_INFOMASK2, "infomask2");
 
-  /* t_infomask & HEAP_HASNULL */
+                                 
   v_hasnulls = LLVMBuildICmp(b, LLVMIntNE, LLVMBuildAnd(b, l_int16_const(HEAP_HASNULL), v_infomask1, ""), l_int16_const(0), "hasnulls");
 
-  /* t_infomask2 & HEAP_NATTS_MASK */
+                                     
   v_maxatt = LLVMBuildAnd(b, l_int16_const(HEAP_NATTS_MASK), v_infomask2, "maxatt");
 
-  /*
-   * Need to zext, as getelementptr otherwise treats hoff as a signed 8bit
-   * integer, which'd yield a negative offset for t_hoff > 127.
-   */
+     
+                                                                           
+                                                                
+     
   v_hoff = LLVMBuildZExt(b, l_load_struct_gep(b, v_tuplep, FIELDNO_HEAPTUPLEHEADERDATA_HOFF, ""), LLVMInt32Type(), "t_hoff");
 
   v_tupdata_base = LLVMBuildGEP(b, LLVMBuildBitCast(b, v_tuplep, l_ptr(LLVMInt8Type()), ""), &v_hoff, 1, "v_tupdata_base");
 
-  /*
-   * Load tuple start offset from slot. Will be reset below in case there's
-   * no existing deformed columns in slot.
-   */
+     
+                                                                            
+                                           
+     
   {
     LLVMValueRef v_off_start;
 
@@ -233,7 +233,7 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     LLVMBuildStore(b, v_off_start, v_offp);
   }
 
-  /* build the basic block for each attribute, need them as jump target */
+                                                                          
   for (attnum = 0; attnum < natts; attnum++)
   {
     attcheckattnoblocks[attnum] = l_bb_append_v(v_deform_fn, "block.attr.%d.attcheckattno", attnum);
@@ -244,17 +244,17 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     attstoreblocks[attnum] = l_bb_append_v(v_deform_fn, "block.attr.%d.store", attnum);
   }
 
-  /*
-   * Check if it is guaranteed that all the desired attributes are available
-   * in the tuple (but still possibly NULL), by dint of either the last
-   * to-be-deformed column being NOT NULL, or subsequent ones not accessed
-   * here being NOT NULL.  If that's not guaranteed the tuple headers natt's
-   * has to be checked, and missing attributes potentially have to be
-   * fetched (using slot_getmissingattrs().
-   */
+     
+                                                                             
+                                                                        
+                                                                           
+                                                                             
+                                                                      
+                                            
+     
   if ((natts - 1) <= guaranteed_column_number)
   {
-    /* just skip through unnecessary blocks */
+                                              
     LLVMBuildBr(b, b_adjust_unavail_cols);
     LLVMPositionBuilderAtEnd(b, b_adjust_unavail_cols);
     LLVMBuildBr(b, b_find_start);
@@ -263,10 +263,10 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
   {
     LLVMValueRef v_params[3];
 
-    /* branch if not all columns available */
+                                             
     LLVMBuildCondBr(b, LLVMBuildICmp(b, LLVMIntULT, v_maxatt, l_int16_const(natts), ""), b_adjust_unavail_cols, b_find_start);
 
-    /* if not, memset tts_isnull of relevant cols to true */
+                                                            
     LLVMPositionBuilderAtEnd(b, b_adjust_unavail_cols);
 
     v_params[0] = v_slot;
@@ -280,12 +280,12 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
   v_nvalid = LLVMBuildLoad(b, v_nvalidp, "");
 
-  /*
-   * Build switch to go from nvalid to the right startblock.  Callers
-   * currently don't have the knowledge, but it'd be good for performance to
-   * avoid this check when it's known that the slot is empty (e.g. in scan
-   * nodes).
-   */
+     
+                                                                      
+                                                                             
+                                                                           
+             
+     
   if (true)
   {
     LLVMValueRef v_switch = LLVMBuildSwitch(b, v_nvalid, b_dead, natts);
@@ -299,17 +299,17 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
   }
   else
   {
-    /* jump from entry block to first block */
+                                              
     LLVMBuildBr(b, attcheckattnoblocks[0]);
   }
 
   LLVMPositionBuilderAtEnd(b, b_dead);
   LLVMBuildUnreachable(b);
 
-  /*
-   * Iterate over each attribute that needs to be deformed, build code to
-   * deform it.
-   */
+     
+                                                                          
+                
+     
   for (attnum = 0; attnum < natts; attnum++)
   {
     Form_pg_attribute att = TupleDescAttr(desc, attnum);
@@ -319,23 +319,23 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     LLVMValueRef v_attdatap;
     LLVMValueRef v_resultp;
 
-    /* build block checking whether we did all the necessary attributes */
+                                                                          
     LLVMPositionBuilderAtEnd(b, attcheckattnoblocks[attnum]);
 
-    /*
-     * If this is the first attribute, slot->tts_nvalid was 0. Therefore
-     * also reset offset to 0, it may be from a previous execution.
-     */
+       
+                                                                         
+                                                                    
+       
     if (attnum == 0)
     {
       LLVMBuildStore(b, l_sizet_const(0), v_offp);
     }
 
-    /*
-     * Build check whether column is available (i.e. whether the tuple has
-     * that many columns stored). We can avoid the branch if we know
-     * there's a subsequent NOT NULL column.
-     */
+       
+                                                                           
+                                                                     
+                                             
+       
     if (attnum <= guaranteed_column_number)
     {
       LLVMBuildBr(b, attstartblocks[attnum]);
@@ -349,11 +349,11 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     }
     LLVMPositionBuilderAtEnd(b, attstartblocks[attnum]);
 
-    /*
-     * Check for nulls if necessary. No need to take missing attributes
-     * into account, because if they're present the heaptuple's natts
-     * would have indicated that a slot_getmissingattrs() is needed.
-     */
+       
+                                                                        
+                                                                      
+                                                                     
+       
     if (!ATTNOTNULL(att))
     {
       LLVMBasicBlockRef b_ifnotnull;
@@ -389,9 +389,9 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
       LLVMPositionBuilderAtEnd(b, b_ifnull);
 
-      /* store null-byte */
+                           
       LLVMBuildStore(b, l_int8_const(1), LLVMBuildGEP(b, v_tts_nulls, &l_attno, 1, ""));
-      /* store zero datum */
+                            
       LLVMBuildStore(b, l_sizet_const(0), LLVMBuildGEP(b, v_tts_values, &l_attno, 1, ""));
 
       LLVMBuildBr(b, b_next);
@@ -399,14 +399,14 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     }
     else
     {
-      /* nothing to do */
+                         
       LLVMBuildBr(b, attcheckalignblocks[attnum]);
       LLVMPositionBuilderAtEnd(b, attisnullblocks[attnum]);
       LLVMBuildBr(b, attcheckalignblocks[attnum]);
     }
     LLVMPositionBuilderAtEnd(b, attcheckalignblocks[attnum]);
 
-    /* determine required alignment */
+                                      
     if (att->attalign == 'i')
     {
       alignto = ALIGNOF_INT;
@@ -429,33 +429,33 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
       alignto = 0;
     }
 
-    /* ------
-     * Even if alignment is required, we can skip doing it if provably
-     * unnecessary:
-     * - first column is guaranteed to be aligned
-     * - columns following a NOT NULL fixed width datum have known
-     *   alignment, can skip alignment computation if that known alignment
-     *   is compatible with current column.
-     * ------
-     */
+              
+                                                                       
+                    
+                                                  
+                                                                   
+                                                                           
+                                            
+              
+       
     if (alignto > 1 && (known_alignment < 0 || known_alignment != TYPEALIGN(alignto, known_alignment)))
     {
-      /*
-       * When accessing a varlena field, we have to "peek" to see if we
-       * are looking at a pad byte or the first byte of a 1-byte-header
-       * datum.  A zero byte must be either a pad byte, or the first
-       * byte of a correctly aligned 4-byte length word; in either case,
-       * we can align safely.  A non-zero byte must be either a 1-byte
-       * length word, or the first byte of a correctly aligned 4-byte
-       * length word; in either case, we need not align.
-       */
+         
+                                                                        
+                                                                        
+                                                                     
+                                                                         
+                                                                       
+                                                                      
+                                                         
+         
       if (att->attlen == -1)
       {
         LLVMValueRef v_possible_padbyte;
         LLVMValueRef v_ispad;
         LLVMValueRef v_off;
 
-        /* don't know if short varlena or not */
+                                                
         attguaranteedalign = false;
 
         v_off = LLVMBuildLoad(b, v_offp, "");
@@ -471,18 +471,18 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
       LLVMPositionBuilderAtEnd(b, attalignblocks[attnum]);
 
-      /* translation of alignment code (cf TYPEALIGN()) */
+                                                          
       {
         LLVMValueRef v_off_aligned;
         LLVMValueRef v_off = LLVMBuildLoad(b, v_offp, "");
 
-        /* ((ALIGNVAL) - 1) */
+                              
         LLVMValueRef v_alignval = l_sizet_const(alignto - 1);
 
-        /* ((uintptr_t) (LEN) + ((ALIGNVAL) - 1)) */
+                                                    
         LLVMValueRef v_lh = LLVMBuildAdd(b, v_off, v_alignval, "");
 
-        /* ~((uintptr_t) ((ALIGNVAL) - 1)) */
+                                             
         LLVMValueRef v_rh = l_sizet_const(~(alignto - 1));
 
         v_off_aligned = LLVMBuildAnd(b, v_lh, v_rh, "aligned_offset");
@@ -490,11 +490,11 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
         LLVMBuildStore(b, v_off_aligned, v_offp);
       }
 
-      /*
-       * As alignment either was unnecessary or has been performed, we
-       * now know the current alignment. This is only safe because this
-       * value isn't used for varlena and nullable columns.
-       */
+         
+                                                                       
+                                                                        
+                                                            
+         
       if (known_alignment >= 0)
       {
         Assert(known_alignment != 0);
@@ -513,42 +513,42 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     }
     LLVMPositionBuilderAtEnd(b, attstoreblocks[attnum]);
 
-    /*
-     * Store the current offset if known to be constant. That allows LLVM
-     * to generate better code. Without that LLVM can't figure out that
-     * the offset might be constant due to the jumps for previously
-     * decoded columns.
-     */
+       
+                                                                          
+                                                                        
+                                                                    
+                        
+       
     if (attguaranteedalign)
     {
       Assert(known_alignment >= 0);
       LLVMBuildStore(b, l_sizet_const(known_alignment), v_offp);
     }
 
-    /* compute what following columns are aligned to */
+                                                       
     if (att->attlen < 0)
     {
-      /* can't guarantee any alignment after variable length field */
+                                                                     
       known_alignment = -1;
       attguaranteedalign = false;
     }
     else if (ATTNOTNULL(att) && attguaranteedalign && known_alignment >= 0)
     {
-      /*
-       * If the offset to the column was previously known, a NOT NULL &
-       * fixed-width column guarantees that alignment is just the
-       * previous alignment plus column width.
-       */
+         
+                                                                        
+                                                                  
+                                               
+         
       Assert(att->attlen > 0);
       known_alignment += att->attlen;
     }
     else if (ATTNOTNULL(att) && (att->attlen % alignto) == 0)
     {
-      /*
-       * After a NOT NULL fixed-width column with a length that is a
-       * multiple of its alignment requirement, we know the following
-       * column is aligned to at least the current column's alignment.
-       */
+         
+                                                                     
+                                                                      
+                                                                       
+         
       Assert(att->attlen > 0);
       known_alignment = alignto;
       Assert(known_alignment > 0);
@@ -560,23 +560,23 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
       attguaranteedalign = false;
     }
 
-    /* compute address to load data from */
+                                           
     {
       LLVMValueRef v_off = LLVMBuildLoad(b, v_offp, "");
 
       v_attdatap = LLVMBuildGEP(b, v_tupdata_base, &v_off, 1, "");
     }
 
-    /* compute address to store value at */
+                                           
     v_resultp = LLVMBuildGEP(b, v_tts_values, &l_attno, 1, "");
 
-    /* store null-byte (false) */
+                                 
     LLVMBuildStore(b, l_int8_const(0), LLVMBuildGEP(b, v_tts_nulls, &l_attno, 1, ""));
 
-    /*
-     * Store datum. For byval: datums copy the value, extend to Datum's
-     * width, and store. For byref types: store pointer to data.
-     */
+       
+                                                                        
+                                                                 
+       
     if (att->attbyval)
     {
       LLVMValueRef v_tmp_loaddata;
@@ -592,12 +592,12 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     {
       LLVMValueRef v_tmp_loaddata;
 
-      /* store pointer */
+                         
       v_tmp_loaddata = LLVMBuildPtrToInt(b, v_attdatap, TypeSizeT, "attr_ptr");
       LLVMBuildStore(b, v_tmp_loaddata, v_resultp);
     }
 
-    /* increment data pointer */
+                                
     if (att->attlen > 0)
     {
       v_incby = l_sizet_const(att->attlen);
@@ -614,13 +614,13 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
 
       l_callsite_ro(v_incby);
 
-      /* add 1 for NUL byte */
+                              
       v_incby = LLVMBuildAdd(b, v_incby, l_sizet_const(1), "");
     }
     else
     {
       Assert(false);
-      v_incby = NULL; /* silence compiler */
+      v_incby = NULL;                       
     }
 
     if (attguaranteedalign)
@@ -636,13 +636,13 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
       LLVMBuildStore(b, v_off, v_offp);
     }
 
-    /*
-     * jump to next block, unless last possible column, or all desired
-     * (available) attributes have been fetched.
-     */
+       
+                                                                       
+                                                 
+       
     if (attnum + 1 == natts)
     {
-      /* jump out */
+                    
       LLVMBuildBr(b, b_out);
     }
     else
@@ -651,7 +651,7 @@ slot_compile_deform(LLVMJitContext *context, TupleDesc desc, const TupleTableSlo
     }
   }
 
-  /* build block that returns */
+                                
   LLVMPositionBuilderAtEnd(b, b_out);
 
   {

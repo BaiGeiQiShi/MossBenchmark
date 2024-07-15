@@ -1,32 +1,32 @@
-/*-------------------------------------------------------------------------
- *
- * ilist.c
- *	  support for integrated/inline doubly- and singly- linked lists
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/lib/ilist.c
- *
- * NOTES
- *	  This file only contains functions that are too big to be considered
- *	  for inlining.  See ilist.h for most of the goodies.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                                                    
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                             
+   
+         
+                                                                         
+                                                         
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "lib/ilist.h"
 
-/*
- * Delete 'node' from list.
- *
- * It is not allowed to delete a 'node' which is not in the list 'head'
- *
- * Caution: this is O(n); consider using slist_delete_current() instead.
- */
+   
+                            
+   
+                                                                        
+   
+                                                                         
+   
 void
 slist_delete(slist_head *head, slist_node *node)
 {
@@ -52,9 +52,9 @@ slist_delete(slist_head *head, slist_node *node)
 }
 
 #ifdef ILIST_DEBUG
-/*
- * Verify integrity of a doubly linked list
- */
+   
+                                            
+   
 void
 dlist_check(dlist_head *head)
 {
@@ -67,10 +67,10 @@ dlist_check(dlist_head *head)
 
   if (head->head.next == NULL && head->head.prev == NULL)
   {
-    return; /* OK, initialized as zeroes */
+    return;                                
   }
 
-  /* iterate in forward direction */
+                                    
   for (cur = head->head.next; cur != &head->head; cur = cur->next)
   {
     if (cur == NULL || cur->next == NULL || cur->prev == NULL || cur->prev->next != cur || cur->next->prev != cur)
@@ -79,7 +79,7 @@ dlist_check(dlist_head *head)
     }
   }
 
-  /* iterate in backward direction */
+                                     
   for (cur = head->head.prev; cur != &head->head; cur = cur->prev)
   {
     if (cur == NULL || cur->next == NULL || cur->prev == NULL || cur->prev->next != cur || cur->next->prev != cur)
@@ -89,9 +89,9 @@ dlist_check(dlist_head *head)
   }
 }
 
-/*
- * Verify integrity of a singly linked list
- */
+   
+                                            
+   
 void
 slist_check(slist_head *head)
 {
@@ -102,12 +102,12 @@ slist_check(slist_head *head)
     elog(ERROR, "singly linked list head address is NULL");
   }
 
-  /*
-   * there isn't much we can test in a singly linked list except that it
-   * actually ends sometime, i.e. hasn't introduced a cycle or similar
-   */
+     
+                                                                         
+                                                                       
+     
   for (cur = head->head.next; cur != NULL; cur = cur->next)
     ;
 }
 
-#endif /* ILIST_DEBUG */
+#endif                  

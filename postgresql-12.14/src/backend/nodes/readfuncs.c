@@ -1,33 +1,33 @@
-/*-------------------------------------------------------------------------
- *
- * readfuncs.c
- *	  Reader functions for Postgres tree nodes.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/nodes/readfuncs.c
- *
- * NOTES
- *	  Path nodes do not have any readfuncs support, because we never
- *	  have occasion to read them in.  (There was once code here that
- *	  claimed to read them, but it was broken as well as unused.)  We
- *	  never read executor state trees, either.
- *
- *	  Parse location fields are written out by outfuncs.c, but only for
- *	  debugging use.  When reading a location field, we normally discard
- *	  the stored value and set the location field to -1 (ie, "unknown").
- *	  This is because nodes coming from a stored rule should not be thought
- *	  to have a known location in the current query's text.
- *	  However, if restore_location_fields is true, we do restore location
- *	  fields from the string.  This is currently intended only for use by the
- *	  WRITE_READ_PARSE_PLAN_TREES test code, which doesn't want to cause
- *	  any change in the node contents.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                   
+   
+         
+                                                                    
+                                                                    
+                                                                     
+                                              
+   
+                                                                       
+                                                                        
+                                                                        
+                                                                           
+                                                           
+                                                                         
+                                                                             
+                                                                        
+                                      
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <math.h>
@@ -40,153 +40,153 @@
 #include "nodes/readfuncs.h"
 #include "utils/builtins.h"
 
-/*
- * Macros to simplify reading of different kinds of fields.  Use these
- * wherever possible to reduce the chance for silly typos.  Note that these
- * hard-wire conventions about the names of the local variables in a Read
- * routine.
- */
+   
+                                                                       
+                                                                            
+                                                                          
+            
+   
 
-/* Macros for declaring appropriate local variables */
+                                                      
 
-/* A few guys need only local_node */
+                                     
 #define READ_LOCALS_NO_FIELDS(nodeTypeName) nodeTypeName *local_node = makeNode(nodeTypeName)
 
-/* And a few guys need only the pg_strtok support fields */
+                                                           
 #define READ_TEMP_LOCALS()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   const char *token;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   int length
 
-/* ... but most need both */
+                            
 #define READ_LOCALS(nodeTypeName)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
   READ_LOCALS_NO_FIELDS(nodeTypeName);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   READ_TEMP_LOCALS()
 
-/* Read an integer field (anything written as ":fldname %d") */
+                                                               
 #define READ_INT_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = atoi(token)
 
-/* Read an unsigned integer field (anything written as ":fldname %u") */
+                                                                        
 #define READ_UINT_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = atoui(token)
 
-/* Read an unsigned integer field (anything written using UINT64_FORMAT) */
+                                                                           
 #define READ_UINT64_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = pg_strtouint64(token, NULL, 10)
 
-/* Read a long integer field (anything written as ":fldname %ld") */
+                                                                    
 #define READ_LONG_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = atol(token)
 
-/* Read an OID field (don't hard-wire assumption that OID is same as uint) */
+                                                                             
 #define READ_OID_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = atooid(token)
 
-/* Read a char field (ie, one ascii character) */
+                                                 
 #define READ_CHAR_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  /* avoid overhead of calling debackslash() for one char */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   local_node->fldname = (length == 0) ? '\0' : (token[0] == '\\' ? token[1] : token[0])
 
-/* Read an enumerated-type field that was written as an integer code */
+                                                                       
 #define READ_ENUM_FIELD(fldname, enumtype)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = (enumtype)atoi(token)
 
-/* Read a float field */
+                        
 #define READ_FLOAT_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = atof(token)
 
-/* Read a boolean field */
+                          
 #define READ_BOOL_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = strtobool(token)
 
-/* Read a character-string field */
+                                   
 #define READ_STRING_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = nullable_string(token, length)
 
-/* Read a parse location field (and possibly throw away the value) */
+                                                                     
 #ifdef WRITE_READ_PARSE_PLAN_TREES
 #define READ_LOCATION_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = restore_location_fields ? atoi(token) : -1
 #else
 #define READ_LOCATION_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  token = pg_strtok(&length); /* get field value */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  (void)token;                /* in case not used elsewhere */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
-  local_node->fldname = -1    /* set field to "unknown" */
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  (void)token;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
+  local_node->fldname = -1                                
 #endif
 
-/* Read a Node field */
+                       
 #define READ_NODE_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  (void)token;                /* in case not used elsewhere */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  (void)token;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   local_node->fldname = nodeRead(NULL, 0)
 
-/* Read a bitmapset field */
+                            
 #define READ_BITMAPSET_FIELD(fldname)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  (void)token;                /* in case not used elsewhere */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
+  (void)token;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   local_node->fldname = _readBitmapset()
 
-/* Read an attribute number array */
+                                    
 #define READ_ATTRNUMBER_ARRAY(fldname, len)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = readAttrNumberCols(len)
 
-/* Read an oid array */
+                       
 #define READ_OID_ARRAY(fldname, len)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = readOidCols(len)
 
-/* Read an int array */
+                       
 #define READ_INT_ARRAY(fldname, len)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = readIntCols(len)
 
-/* Read a bool array */
+                       
 #define READ_BOOL_ARRAY(fldname, len)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-  token = pg_strtok(&length); /* skip :fldname */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+  token = pg_strtok(&length);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   local_node->fldname = readBoolCols(len)
 
-/* Routine exit */
+                  
 #define READ_DONE() return local_node
 
-/*
- * NOTE: use atoi() to read values written with %d, or atoui() to read
- * values written with %u in outfuncs.c.  An exception is OID values,
- * for which use atooid().  (As of 7.1, outfuncs.c writes OIDs as %u,
- * but this will probably change in the future.)
- */
+   
+                                                                       
+                                                                      
+                                                                      
+                                                 
+   
 #define atoui(x) ((unsigned int)strtoul((x), NULL, 10))
 
 #define strtobool(x) ((*(x) == 't') ? true : false)
 
 #define nullable_string(token, length) ((length) == 0 ? NULL : debackslash(token, length))
 
-/*
- * _readBitmapset
- */
+   
+                  
+   
 static Bitmapset *
 _readBitmapset(void)
 {
@@ -239,18 +239,18 @@ _readBitmapset(void)
   return result;
 }
 
-/*
- * for use by extensions which define extensible nodes
- */
+   
+                                                       
+   
 Bitmapset *
 readBitmapset(void)
 {
   return _readBitmapset();
 }
 
-/*
- * _readQuery
- */
+   
+              
+   
 static Query *
 _readQuery(void)
 {
@@ -258,7 +258,7 @@ _readQuery(void)
 
   READ_ENUM_FIELD(commandType, CmdType);
   READ_ENUM_FIELD(querySource, QuerySource);
-  local_node->queryId = UINT64CONST(0); /* not saved in output format */
+  local_node->queryId = UINT64CONST(0);                                 
   READ_BOOL_FIELD(canSetTag);
   READ_NODE_FIELD(utilityStmt);
   READ_INT_FIELD(resultRelation);
@@ -296,9 +296,9 @@ _readQuery(void)
   READ_DONE();
 }
 
-/*
- * _readNotifyStmt
- */
+   
+                   
+   
 static NotifyStmt *
 _readNotifyStmt(void)
 {
@@ -310,9 +310,9 @@ _readNotifyStmt(void)
   READ_DONE();
 }
 
-/*
- * _readDeclareCursorStmt
- */
+   
+                          
+   
 static DeclareCursorStmt *
 _readDeclareCursorStmt(void)
 {
@@ -325,9 +325,9 @@ _readDeclareCursorStmt(void)
   READ_DONE();
 }
 
-/*
- * _readWithCheckOption
- */
+   
+                        
+   
 static WithCheckOption *
 _readWithCheckOption(void)
 {
@@ -342,9 +342,9 @@ _readWithCheckOption(void)
   READ_DONE();
 }
 
-/*
- * _readSortGroupClause
- */
+   
+                        
+   
 static SortGroupClause *
 _readSortGroupClause(void)
 {
@@ -359,9 +359,9 @@ _readSortGroupClause(void)
   READ_DONE();
 }
 
-/*
- * _readGroupingSet
- */
+   
+                    
+   
 static GroupingSet *
 _readGroupingSet(void)
 {
@@ -374,9 +374,9 @@ _readGroupingSet(void)
   READ_DONE();
 }
 
-/*
- * _readWindowClause
- */
+   
+                     
+   
 static WindowClause *
 _readWindowClause(void)
 {
@@ -400,9 +400,9 @@ _readWindowClause(void)
   READ_DONE();
 }
 
-/*
- * _readRowMarkClause
- */
+   
+                      
+   
 static RowMarkClause *
 _readRowMarkClause(void)
 {
@@ -416,9 +416,9 @@ _readRowMarkClause(void)
   READ_DONE();
 }
 
-/*
- * _readCommonTableExpr
- */
+   
+                        
+   
 static CommonTableExpr *
 _readCommonTableExpr(void)
 {
@@ -439,9 +439,9 @@ _readCommonTableExpr(void)
   READ_DONE();
 }
 
-/*
- * _readSetOperationStmt
- */
+   
+                         
+   
 static SetOperationStmt *
 _readSetOperationStmt(void)
 {
@@ -459,9 +459,9 @@ _readSetOperationStmt(void)
   READ_DONE();
 }
 
-/*
- *	Stuff from primnodes.h.
- */
+   
+                           
+   
 
 static Alias *
 _readAlias(void)
@@ -479,7 +479,7 @@ _readRangeVar(void)
 {
   READ_LOCALS(RangeVar);
 
-  local_node->catalogname = NULL; /* not currently saved in output format */
+  local_node->catalogname = NULL;                                           
 
   READ_STRING_FIELD(schemaname);
   READ_STRING_FIELD(relname);
@@ -491,9 +491,9 @@ _readRangeVar(void)
   READ_DONE();
 }
 
-/*
- * _readTableFunc
- */
+   
+                  
+   
 static TableFunc *
 _readTableFunc(void)
 {
@@ -533,9 +533,9 @@ _readIntoClause(void)
   READ_DONE();
 }
 
-/*
- * _readVar
- */
+   
+            
+   
 static Var *
 _readVar(void)
 {
@@ -554,9 +554,9 @@ _readVar(void)
   READ_DONE();
 }
 
-/*
- * _readConst
- */
+   
+              
+   
 static Const *
 _readConst(void)
 {
@@ -570,10 +570,10 @@ _readConst(void)
   READ_BOOL_FIELD(constisnull);
   READ_LOCATION_FIELD(location);
 
-  token = pg_strtok(&length); /* skip :constvalue */
+  token = pg_strtok(&length);                       
   if (local_node->constisnull)
   {
-    token = pg_strtok(&length); /* skip "<>" */
+    token = pg_strtok(&length);                
   }
   else
   {
@@ -583,9 +583,9 @@ _readConst(void)
   READ_DONE();
 }
 
-/*
- * _readParam
- */
+   
+              
+   
 static Param *
 _readParam(void)
 {
@@ -601,9 +601,9 @@ _readParam(void)
   READ_DONE();
 }
 
-/*
- * _readAggref
- */
+   
+               
+   
 static Aggref *
 _readAggref(void)
 {
@@ -630,9 +630,9 @@ _readAggref(void)
   READ_DONE();
 }
 
-/*
- * _readGroupingFunc
- */
+   
+                     
+   
 static GroupingFunc *
 _readGroupingFunc(void)
 {
@@ -647,9 +647,9 @@ _readGroupingFunc(void)
   READ_DONE();
 }
 
-/*
- * _readWindowFunc
- */
+   
+                   
+   
 static WindowFunc *
 _readWindowFunc(void)
 {
@@ -669,9 +669,9 @@ _readWindowFunc(void)
   READ_DONE();
 }
 
-/*
- * _readSubscriptingRef
- */
+   
+                        
+   
 static SubscriptingRef *
 _readSubscriptingRef(void)
 {
@@ -689,9 +689,9 @@ _readSubscriptingRef(void)
   READ_DONE();
 }
 
-/*
- * _readFuncExpr
- */
+   
+                 
+   
 static FuncExpr *
 _readFuncExpr(void)
 {
@@ -710,9 +710,9 @@ _readFuncExpr(void)
   READ_DONE();
 }
 
-/*
- * _readNamedArgExpr
- */
+   
+                     
+   
 static NamedArgExpr *
 _readNamedArgExpr(void)
 {
@@ -726,9 +726,9 @@ _readNamedArgExpr(void)
   READ_DONE();
 }
 
-/*
- * _readOpExpr
- */
+   
+               
+   
 static OpExpr *
 _readOpExpr(void)
 {
@@ -746,9 +746,9 @@ _readOpExpr(void)
   READ_DONE();
 }
 
-/*
- * _readDistinctExpr
- */
+   
+                     
+   
 static DistinctExpr *
 _readDistinctExpr(void)
 {
@@ -766,9 +766,9 @@ _readDistinctExpr(void)
   READ_DONE();
 }
 
-/*
- * _readNullIfExpr
- */
+   
+                   
+   
 static NullIfExpr *
 _readNullIfExpr(void)
 {
@@ -786,9 +786,9 @@ _readNullIfExpr(void)
   READ_DONE();
 }
 
-/*
- * _readScalarArrayOpExpr
- */
+   
+                          
+   
 static ScalarArrayOpExpr *
 _readScalarArrayOpExpr(void)
 {
@@ -804,17 +804,17 @@ _readScalarArrayOpExpr(void)
   READ_DONE();
 }
 
-/*
- * _readBoolExpr
- */
+   
+                 
+   
 static BoolExpr *
 _readBoolExpr(void)
 {
   READ_LOCALS(BoolExpr);
 
-  /* do-it-yourself enum representation */
-  token = pg_strtok(&length); /* skip :boolop */
-  token = pg_strtok(&length); /* get field value */
+                                          
+  token = pg_strtok(&length);                   
+  token = pg_strtok(&length);                      
   if (strncmp(token, "and", 3) == 0)
   {
     local_node->boolop = AND_EXPR;
@@ -838,9 +838,9 @@ _readBoolExpr(void)
   READ_DONE();
 }
 
-/*
- * _readSubLink
- */
+   
+                
+   
 static SubLink *
 _readSubLink(void)
 {
@@ -856,13 +856,13 @@ _readSubLink(void)
   READ_DONE();
 }
 
-/*
- * _readSubPlan is not needed since it doesn't appear in stored rules.
- */
+   
+                                                                       
+   
 
-/*
- * _readFieldSelect
- */
+   
+                    
+   
 static FieldSelect *
 _readFieldSelect(void)
 {
@@ -877,9 +877,9 @@ _readFieldSelect(void)
   READ_DONE();
 }
 
-/*
- * _readFieldStore
- */
+   
+                   
+   
 static FieldStore *
 _readFieldStore(void)
 {
@@ -893,9 +893,9 @@ _readFieldStore(void)
   READ_DONE();
 }
 
-/*
- * _readRelabelType
- */
+   
+                    
+   
 static RelabelType *
 _readRelabelType(void)
 {
@@ -911,9 +911,9 @@ _readRelabelType(void)
   READ_DONE();
 }
 
-/*
- * _readCoerceViaIO
- */
+   
+                    
+   
 static CoerceViaIO *
 _readCoerceViaIO(void)
 {
@@ -928,9 +928,9 @@ _readCoerceViaIO(void)
   READ_DONE();
 }
 
-/*
- * _readArrayCoerceExpr
- */
+   
+                        
+   
 static ArrayCoerceExpr *
 _readArrayCoerceExpr(void)
 {
@@ -947,9 +947,9 @@ _readArrayCoerceExpr(void)
   READ_DONE();
 }
 
-/*
- * _readConvertRowtypeExpr
- */
+   
+                           
+   
 static ConvertRowtypeExpr *
 _readConvertRowtypeExpr(void)
 {
@@ -963,9 +963,9 @@ _readConvertRowtypeExpr(void)
   READ_DONE();
 }
 
-/*
- * _readCollateExpr
- */
+   
+                    
+   
 static CollateExpr *
 _readCollateExpr(void)
 {
@@ -978,9 +978,9 @@ _readCollateExpr(void)
   READ_DONE();
 }
 
-/*
- * _readCaseExpr
- */
+   
+                 
+   
 static CaseExpr *
 _readCaseExpr(void)
 {
@@ -996,9 +996,9 @@ _readCaseExpr(void)
   READ_DONE();
 }
 
-/*
- * _readCaseWhen
- */
+   
+                 
+   
 static CaseWhen *
 _readCaseWhen(void)
 {
@@ -1011,9 +1011,9 @@ _readCaseWhen(void)
   READ_DONE();
 }
 
-/*
- * _readCaseTestExpr
- */
+   
+                     
+   
 static CaseTestExpr *
 _readCaseTestExpr(void)
 {
@@ -1026,9 +1026,9 @@ _readCaseTestExpr(void)
   READ_DONE();
 }
 
-/*
- * _readArrayExpr
- */
+   
+                  
+   
 static ArrayExpr *
 _readArrayExpr(void)
 {
@@ -1044,9 +1044,9 @@ _readArrayExpr(void)
   READ_DONE();
 }
 
-/*
- * _readRowExpr
- */
+   
+                
+   
 static RowExpr *
 _readRowExpr(void)
 {
@@ -1061,9 +1061,9 @@ _readRowExpr(void)
   READ_DONE();
 }
 
-/*
- * _readRowCompareExpr
- */
+   
+                       
+   
 static RowCompareExpr *
 _readRowCompareExpr(void)
 {
@@ -1079,9 +1079,9 @@ _readRowCompareExpr(void)
   READ_DONE();
 }
 
-/*
- * _readCoalesceExpr
- */
+   
+                     
+   
 static CoalesceExpr *
 _readCoalesceExpr(void)
 {
@@ -1095,9 +1095,9 @@ _readCoalesceExpr(void)
   READ_DONE();
 }
 
-/*
- * _readMinMaxExpr
- */
+   
+                   
+   
 static MinMaxExpr *
 _readMinMaxExpr(void)
 {
@@ -1113,9 +1113,9 @@ _readMinMaxExpr(void)
   READ_DONE();
 }
 
-/*
- * _readSQLValueFunction
- */
+   
+                         
+   
 static SQLValueFunction *
 _readSQLValueFunction(void)
 {
@@ -1129,9 +1129,9 @@ _readSQLValueFunction(void)
   READ_DONE();
 }
 
-/*
- * _readXmlExpr
- */
+   
+                
+   
 static XmlExpr *
 _readXmlExpr(void)
 {
@@ -1150,9 +1150,9 @@ _readXmlExpr(void)
   READ_DONE();
 }
 
-/*
- * _readNullTest
- */
+   
+                 
+   
 static NullTest *
 _readNullTest(void)
 {
@@ -1166,9 +1166,9 @@ _readNullTest(void)
   READ_DONE();
 }
 
-/*
- * _readBooleanTest
- */
+   
+                    
+   
 static BooleanTest *
 _readBooleanTest(void)
 {
@@ -1181,9 +1181,9 @@ _readBooleanTest(void)
   READ_DONE();
 }
 
-/*
- * _readCoerceToDomain
- */
+   
+                       
+   
 static CoerceToDomain *
 _readCoerceToDomain(void)
 {
@@ -1199,9 +1199,9 @@ _readCoerceToDomain(void)
   READ_DONE();
 }
 
-/*
- * _readCoerceToDomainValue
- */
+   
+                            
+   
 static CoerceToDomainValue *
 _readCoerceToDomainValue(void)
 {
@@ -1215,9 +1215,9 @@ _readCoerceToDomainValue(void)
   READ_DONE();
 }
 
-/*
- * _readSetToDefault
- */
+   
+                     
+   
 static SetToDefault *
 _readSetToDefault(void)
 {
@@ -1231,9 +1231,9 @@ _readSetToDefault(void)
   READ_DONE();
 }
 
-/*
- * _readCurrentOfExpr
- */
+   
+                      
+   
 static CurrentOfExpr *
 _readCurrentOfExpr(void)
 {
@@ -1246,9 +1246,9 @@ _readCurrentOfExpr(void)
   READ_DONE();
 }
 
-/*
- * _readNextValueExpr
- */
+   
+                      
+   
 static NextValueExpr *
 _readNextValueExpr(void)
 {
@@ -1260,9 +1260,9 @@ _readNextValueExpr(void)
   READ_DONE();
 }
 
-/*
- * _readInferenceElem
- */
+   
+                      
+   
 static InferenceElem *
 _readInferenceElem(void)
 {
@@ -1275,9 +1275,9 @@ _readInferenceElem(void)
   READ_DONE();
 }
 
-/*
- * _readTargetEntry
- */
+   
+                    
+   
 static TargetEntry *
 _readTargetEntry(void)
 {
@@ -1294,9 +1294,9 @@ _readTargetEntry(void)
   READ_DONE();
 }
 
-/*
- * _readRangeTblRef
- */
+   
+                    
+   
 static RangeTblRef *
 _readRangeTblRef(void)
 {
@@ -1307,9 +1307,9 @@ _readRangeTblRef(void)
   READ_DONE();
 }
 
-/*
- * _readJoinExpr
- */
+   
+                 
+   
 static JoinExpr *
 _readJoinExpr(void)
 {
@@ -1327,9 +1327,9 @@ _readJoinExpr(void)
   READ_DONE();
 }
 
-/*
- * _readFromExpr
- */
+   
+                 
+   
 static FromExpr *
 _readFromExpr(void)
 {
@@ -1341,9 +1341,9 @@ _readFromExpr(void)
   READ_DONE();
 }
 
-/*
- * _readOnConflictExpr
- */
+   
+                       
+   
 static OnConflictExpr *
 _readOnConflictExpr(void)
 {
@@ -1361,19 +1361,19 @@ _readOnConflictExpr(void)
   READ_DONE();
 }
 
-/*
- *	Stuff from parsenodes.h.
- */
+   
+                            
+   
 
-/*
- * _readRangeTblEntry
- */
+   
+                      
+   
 static RangeTblEntry *
 _readRangeTblEntry(void)
 {
   READ_LOCALS(RangeTblEntry);
 
-  /* put alias + eref first to make dump more legible */
+                                                        
   READ_NODE_FIELD(alias);
   READ_NODE_FIELD(eref);
   READ_ENUM_FIELD(rtekind, RTEKind);
@@ -1400,7 +1400,7 @@ _readRangeTblEntry(void)
     break;
   case RTE_TABLEFUNC:
     READ_NODE_FIELD(tablefunc);
-    /* The RTE must have a copy of the column type info, if any */
+                                                                  
     if (local_node->tablefunc)
     {
       TableFunc *tf = local_node->tablefunc;
@@ -1433,7 +1433,7 @@ _readRangeTblEntry(void)
     READ_NODE_FIELD(colcollations);
     break;
   case RTE_RESULT:
-    /* no extra fields */
+                         
     break;
   default:
     elog(ERROR, "unrecognized RTE kind: %d", (int)local_node->rtekind);
@@ -1454,9 +1454,9 @@ _readRangeTblEntry(void)
   READ_DONE();
 }
 
-/*
- * _readRangeTblFunction
- */
+   
+                         
+   
 static RangeTblFunction *
 _readRangeTblFunction(void)
 {
@@ -1473,9 +1473,9 @@ _readRangeTblFunction(void)
   READ_DONE();
 }
 
-/*
- * _readTableSampleClause
- */
+   
+                          
+   
 static TableSampleClause *
 _readTableSampleClause(void)
 {
@@ -1488,9 +1488,9 @@ _readTableSampleClause(void)
   READ_DONE();
 }
 
-/*
- * _readDefElem
- */
+   
+                
+   
 static DefElem *
 _readDefElem(void)
 {
@@ -1505,13 +1505,13 @@ _readDefElem(void)
   READ_DONE();
 }
 
-/*
- *	Stuff from plannodes.h.
- */
+   
+                           
+   
 
-/*
- * _readPlannedStmt
- */
+   
+                    
+   
 static PlannedStmt *
 _readPlannedStmt(void)
 {
@@ -1543,10 +1543,10 @@ _readPlannedStmt(void)
   READ_DONE();
 }
 
-/*
- * ReadCommonPlan
- *	Assign the basic stuff of all nodes that inherit from Plan
- */
+   
+                  
+                                                              
+   
 static void
 ReadCommonPlan(Plan *local_node)
 {
@@ -1568,9 +1568,9 @@ ReadCommonPlan(Plan *local_node)
   READ_BITMAPSET_FIELD(allParam);
 }
 
-/*
- * _readPlan
- */
+   
+             
+   
 static Plan *
 _readPlan(void)
 {
@@ -1581,9 +1581,9 @@ _readPlan(void)
   READ_DONE();
 }
 
-/*
- * _readResult
- */
+   
+               
+   
 static Result *
 _readResult(void)
 {
@@ -1596,9 +1596,9 @@ _readResult(void)
   READ_DONE();
 }
 
-/*
- * _readProjectSet
- */
+   
+                   
+   
 static ProjectSet *
 _readProjectSet(void)
 {
@@ -1609,9 +1609,9 @@ _readProjectSet(void)
   READ_DONE();
 }
 
-/*
- * _readModifyTable
- */
+   
+                    
+   
 static ModifyTable *
 _readModifyTable(void)
 {
@@ -1644,9 +1644,9 @@ _readModifyTable(void)
   READ_DONE();
 }
 
-/*
- * _readAppend
- */
+   
+               
+   
 static Append *
 _readAppend(void)
 {
@@ -1661,9 +1661,9 @@ _readAppend(void)
   READ_DONE();
 }
 
-/*
- * _readMergeAppend
- */
+   
+                    
+   
 static MergeAppend *
 _readMergeAppend(void)
 {
@@ -1682,9 +1682,9 @@ _readMergeAppend(void)
   READ_DONE();
 }
 
-/*
- * _readRecursiveUnion
- */
+   
+                       
+   
 static RecursiveUnion *
 _readRecursiveUnion(void)
 {
@@ -1702,9 +1702,9 @@ _readRecursiveUnion(void)
   READ_DONE();
 }
 
-/*
- * _readBitmapAnd
- */
+   
+                  
+   
 static BitmapAnd *
 _readBitmapAnd(void)
 {
@@ -1717,9 +1717,9 @@ _readBitmapAnd(void)
   READ_DONE();
 }
 
-/*
- * _readBitmapOr
- */
+   
+                 
+   
 static BitmapOr *
 _readBitmapOr(void)
 {
@@ -1733,10 +1733,10 @@ _readBitmapOr(void)
   READ_DONE();
 }
 
-/*
- * ReadCommonScan
- *	Assign the basic stuff of all nodes that inherit from Scan
- */
+   
+                  
+                                                              
+   
 static void
 ReadCommonScan(Scan *local_node)
 {
@@ -1747,9 +1747,9 @@ ReadCommonScan(Scan *local_node)
   READ_UINT_FIELD(scanrelid);
 }
 
-/*
- * _readScan
- */
+   
+             
+   
 static Scan *
 _readScan(void)
 {
@@ -1760,9 +1760,9 @@ _readScan(void)
   READ_DONE();
 }
 
-/*
- * _readSeqScan
- */
+   
+                
+   
 static SeqScan *
 _readSeqScan(void)
 {
@@ -1773,9 +1773,9 @@ _readSeqScan(void)
   READ_DONE();
 }
 
-/*
- * _readSampleScan
- */
+   
+                   
+   
 static SampleScan *
 _readSampleScan(void)
 {
@@ -1788,9 +1788,9 @@ _readSampleScan(void)
   READ_DONE();
 }
 
-/*
- * _readIndexScan
- */
+   
+                  
+   
 static IndexScan *
 _readIndexScan(void)
 {
@@ -1809,9 +1809,9 @@ _readIndexScan(void)
   READ_DONE();
 }
 
-/*
- * _readIndexOnlyScan
- */
+   
+                      
+   
 static IndexOnlyScan *
 _readIndexOnlyScan(void)
 {
@@ -1829,9 +1829,9 @@ _readIndexOnlyScan(void)
   READ_DONE();
 }
 
-/*
- * _readBitmapIndexScan
- */
+   
+                        
+   
 static BitmapIndexScan *
 _readBitmapIndexScan(void)
 {
@@ -1847,9 +1847,9 @@ _readBitmapIndexScan(void)
   READ_DONE();
 }
 
-/*
- * _readBitmapHeapScan
- */
+   
+                       
+   
 static BitmapHeapScan *
 _readBitmapHeapScan(void)
 {
@@ -1862,9 +1862,9 @@ _readBitmapHeapScan(void)
   READ_DONE();
 }
 
-/*
- * _readTidScan
- */
+   
+                
+   
 static TidScan *
 _readTidScan(void)
 {
@@ -1877,9 +1877,9 @@ _readTidScan(void)
   READ_DONE();
 }
 
-/*
- * _readSubqueryScan
- */
+   
+                     
+   
 static SubqueryScan *
 _readSubqueryScan(void)
 {
@@ -1892,9 +1892,9 @@ _readSubqueryScan(void)
   READ_DONE();
 }
 
-/*
- * _readFunctionScan
- */
+   
+                     
+   
 static FunctionScan *
 _readFunctionScan(void)
 {
@@ -1908,9 +1908,9 @@ _readFunctionScan(void)
   READ_DONE();
 }
 
-/*
- * _readValuesScan
- */
+   
+                   
+   
 static ValuesScan *
 _readValuesScan(void)
 {
@@ -1923,9 +1923,9 @@ _readValuesScan(void)
   READ_DONE();
 }
 
-/*
- * _readTableFuncScan
- */
+   
+                      
+   
 static TableFuncScan *
 _readTableFuncScan(void)
 {
@@ -1938,9 +1938,9 @@ _readTableFuncScan(void)
   READ_DONE();
 }
 
-/*
- * _readCteScan
- */
+   
+                
+   
 static CteScan *
 _readCteScan(void)
 {
@@ -1954,9 +1954,9 @@ _readCteScan(void)
   READ_DONE();
 }
 
-/*
- * _readNamedTuplestoreScan
- */
+   
+                            
+   
 static NamedTuplestoreScan *
 _readNamedTuplestoreScan(void)
 {
@@ -1969,9 +1969,9 @@ _readNamedTuplestoreScan(void)
   READ_DONE();
 }
 
-/*
- * _readWorkTableScan
- */
+   
+                      
+   
 static WorkTableScan *
 _readWorkTableScan(void)
 {
@@ -1984,9 +1984,9 @@ _readWorkTableScan(void)
   READ_DONE();
 }
 
-/*
- * _readForeignScan
- */
+   
+                    
+   
 static ForeignScan *
 _readForeignScan(void)
 {
@@ -2006,9 +2006,9 @@ _readForeignScan(void)
   READ_DONE();
 }
 
-/*
- * _readCustomScan
- */
+   
+                   
+   
 static CustomScan *
 _readCustomScan(void)
 {
@@ -2025,9 +2025,9 @@ _readCustomScan(void)
   READ_NODE_FIELD(custom_scan_tlist);
   READ_BITMAPSET_FIELD(custom_relids);
 
-  /* Lookup CustomScanMethods by CustomName */
-  token = pg_strtok(&length); /* skip methods: */
-  token = pg_strtok(&length); /* CustomName */
+                                              
+  token = pg_strtok(&length);                    
+  token = pg_strtok(&length);                 
   custom_name = nullable_string(token, length);
   methods = GetCustomScanMethods(custom_name, false);
   local_node->methods = methods;
@@ -2035,10 +2035,10 @@ _readCustomScan(void)
   READ_DONE();
 }
 
-/*
- * ReadCommonJoin
- *	Assign the basic stuff of all nodes that inherit from Join
- */
+   
+                  
+                                                              
+   
 static void
 ReadCommonJoin(Join *local_node)
 {
@@ -2051,9 +2051,9 @@ ReadCommonJoin(Join *local_node)
   READ_NODE_FIELD(joinqual);
 }
 
-/*
- * _readJoin
- */
+   
+             
+   
 static Join *
 _readJoin(void)
 {
@@ -2064,9 +2064,9 @@ _readJoin(void)
   READ_DONE();
 }
 
-/*
- * _readNestLoop
- */
+   
+                 
+   
 static NestLoop *
 _readNestLoop(void)
 {
@@ -2079,9 +2079,9 @@ _readNestLoop(void)
   READ_DONE();
 }
 
-/*
- * _readMergeJoin
- */
+   
+                  
+   
 static MergeJoin *
 _readMergeJoin(void)
 {
@@ -2104,9 +2104,9 @@ _readMergeJoin(void)
   READ_DONE();
 }
 
-/*
- * _readHashJoin
- */
+   
+                 
+   
 static HashJoin *
 _readHashJoin(void)
 {
@@ -2122,9 +2122,9 @@ _readHashJoin(void)
   READ_DONE();
 }
 
-/*
- * _readMaterial
- */
+   
+                 
+   
 static Material *
 _readMaterial(void)
 {
@@ -2135,9 +2135,9 @@ _readMaterial(void)
   READ_DONE();
 }
 
-/*
- * _readSort
- */
+   
+             
+   
 static Sort *
 _readSort(void)
 {
@@ -2154,9 +2154,9 @@ _readSort(void)
   READ_DONE();
 }
 
-/*
- * _readGroup
- */
+   
+              
+   
 static Group *
 _readGroup(void)
 {
@@ -2172,9 +2172,9 @@ _readGroup(void)
   READ_DONE();
 }
 
-/*
- * _readAgg
- */
+   
+            
+   
 static Agg *
 _readAgg(void)
 {
@@ -2196,9 +2196,9 @@ _readAgg(void)
   READ_DONE();
 }
 
-/*
- * _readWindowAgg
- */
+   
+                  
+   
 static WindowAgg *
 _readWindowAgg(void)
 {
@@ -2227,9 +2227,9 @@ _readWindowAgg(void)
   READ_DONE();
 }
 
-/*
- * _readUnique
- */
+   
+               
+   
 static Unique *
 _readUnique(void)
 {
@@ -2245,9 +2245,9 @@ _readUnique(void)
   READ_DONE();
 }
 
-/*
- * _readGather
- */
+   
+               
+   
 static Gather *
 _readGather(void)
 {
@@ -2264,9 +2264,9 @@ _readGather(void)
   READ_DONE();
 }
 
-/*
- * _readGatherMerge
- */
+   
+                    
+   
 static GatherMerge *
 _readGatherMerge(void)
 {
@@ -2286,9 +2286,9 @@ _readGatherMerge(void)
   READ_DONE();
 }
 
-/*
- * _readHash
- */
+   
+             
+   
 static Hash *
 _readHash(void)
 {
@@ -2305,9 +2305,9 @@ _readHash(void)
   READ_DONE();
 }
 
-/*
- * _readSetOp
- */
+   
+              
+   
 static SetOp *
 _readSetOp(void)
 {
@@ -2328,9 +2328,9 @@ _readSetOp(void)
   READ_DONE();
 }
 
-/*
- * _readLockRows
- */
+   
+                 
+   
 static LockRows *
 _readLockRows(void)
 {
@@ -2344,9 +2344,9 @@ _readLockRows(void)
   READ_DONE();
 }
 
-/*
- * _readLimit
- */
+   
+              
+   
 static Limit *
 _readLimit(void)
 {
@@ -2360,9 +2360,9 @@ _readLimit(void)
   READ_DONE();
 }
 
-/*
- * _readNestLoopParam
- */
+   
+                      
+   
 static NestLoopParam *
 _readNestLoopParam(void)
 {
@@ -2374,9 +2374,9 @@ _readNestLoopParam(void)
   READ_DONE();
 }
 
-/*
- * _readPlanRowMark
- */
+   
+                    
+   
 static PlanRowMark *
 _readPlanRowMark(void)
 {
@@ -2449,9 +2449,9 @@ _readPartitionPruneStepCombine(void)
   READ_DONE();
 }
 
-/*
- * _readPlanInvalItem
- */
+   
+                      
+   
 static PlanInvalItem *
 _readPlanInvalItem(void)
 {
@@ -2463,9 +2463,9 @@ _readPlanInvalItem(void)
   READ_DONE();
 }
 
-/*
- * _readSubPlan
- */
+   
+                
+   
 static SubPlan *
 _readSubPlan(void)
 {
@@ -2492,9 +2492,9 @@ _readSubPlan(void)
   READ_DONE();
 }
 
-/*
- * _readAlternativeSubPlan
- */
+   
+                           
+   
 static AlternativeSubPlan *
 _readAlternativeSubPlan(void)
 {
@@ -2505,9 +2505,9 @@ _readAlternativeSubPlan(void)
   READ_DONE();
 }
 
-/*
- * _readExtensibleNode
- */
+   
+                       
+   
 static ExtensibleNode *
 _readExtensibleNode(void)
 {
@@ -2517,8 +2517,8 @@ _readExtensibleNode(void)
 
   READ_TEMP_LOCALS();
 
-  token = pg_strtok(&length); /* skip :extnodename */
-  token = pg_strtok(&length); /* get extnodename */
+  token = pg_strtok(&length);                        
+  token = pg_strtok(&length);                      
 
   extnodename = nullable_string(token, length);
   if (!extnodename)
@@ -2530,15 +2530,15 @@ _readExtensibleNode(void)
   local_node = (ExtensibleNode *)newNode(methods->node_size, T_ExtensibleNode);
   local_node->extnodename = extnodename;
 
-  /* deserialize the private fields */
+                                      
   methods->nodeRead(local_node);
 
   READ_DONE();
 }
 
-/*
- * _readPartitionBoundSpec
- */
+   
+                           
+   
 static PartitionBoundSpec *
 _readPartitionBoundSpec(void)
 {
@@ -2556,9 +2556,9 @@ _readPartitionBoundSpec(void)
   READ_DONE();
 }
 
-/*
- * _readPartitionRangeDatum
- */
+   
+                            
+   
 static PartitionRangeDatum *
 _readPartitionRangeDatum(void)
 {
@@ -2571,14 +2571,14 @@ _readPartitionRangeDatum(void)
   READ_DONE();
 }
 
-/*
- * parseNodeString
- *
- * Given a character string representing a node tree, parseNodeString creates
- * the internal node structure.
- *
- * The string to be read must already have been loaded into pg_strtok().
- */
+   
+                   
+   
+                                                                              
+                                
+   
+                                                                         
+   
 Node *
 parseNodeString(void)
 {
@@ -2586,7 +2586,7 @@ parseNodeString(void)
 
   READ_TEMP_LOCALS();
 
-  /* Guard against stack overflow due to overly complex expressions */
+                                                                      
   check_stack_depth();
 
   token = pg_strtok(&length);
@@ -3068,19 +3068,19 @@ parseNodeString(void)
   else
   {
     elog(ERROR, "badly formatted node string \"%.32s\"...", token);
-    return_value = NULL; /* keep compiler quiet */
+    return_value = NULL;                          
   }
 
   return (Node *)return_value;
 }
 
-/*
- * readDatum
- *
- * Given a string representation of a constant, recreate the appropriate
- * Datum.  The string representation embeds length info, but not byValue,
- * so we must be told that.
- */
+   
+             
+   
+                                                                         
+                                                                          
+                            
+   
 Datum
 readDatum(bool typbyval)
 {
@@ -3090,13 +3090,13 @@ readDatum(bool typbyval)
   Datum res;
   char *s;
 
-  /*
-   * read the actual length of the value
-   */
+     
+                                         
+     
   token = pg_strtok(&tokenLength);
   length = atoui(token);
 
-  token = pg_strtok(&tokenLength); /* read the '[' */
+  token = pg_strtok(&tokenLength);                   
   if (token == NULL || token[0] != '[')
   {
     elog(ERROR, "expected \"[\" to start datum, but got \"%s\"; length = %zu", token ? token : "[NULL]", length);
@@ -3131,7 +3131,7 @@ readDatum(bool typbyval)
     res = PointerGetDatum(s);
   }
 
-  token = pg_strtok(&tokenLength); /* read the ']' */
+  token = pg_strtok(&tokenLength);                   
   if (token == NULL || token[0] != ']')
   {
     elog(ERROR, "expected \"]\" to end datum, but got \"%s\"; length = %zu", token ? token : "[NULL]", length);
@@ -3140,9 +3140,9 @@ readDatum(bool typbyval)
   return res;
 }
 
-/*
- * readAttrNumberCols
- */
+   
+                      
+   
 AttrNumber *
 readAttrNumberCols(int numCols)
 {
@@ -3165,9 +3165,9 @@ readAttrNumberCols(int numCols)
   return attr_vals;
 }
 
-/*
- * readOidCols
- */
+   
+               
+   
 Oid *
 readOidCols(int numCols)
 {
@@ -3190,9 +3190,9 @@ readOidCols(int numCols)
   return oid_vals;
 }
 
-/*
- * readIntCols
- */
+   
+               
+   
 int *
 readIntCols(int numCols)
 {
@@ -3215,9 +3215,9 @@ readIntCols(int numCols)
   return int_vals;
 }
 
-/*
- * readBoolCols
- */
+   
+                
+   
 bool *
 readBoolCols(int numCols)
 {

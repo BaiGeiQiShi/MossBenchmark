@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * execAmi.c
- *	  miscellaneous executor access method routines
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *	src/backend/executor/execAmi.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                   
+   
+                                                                         
+                                                                        
+   
+                                  
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/amapi.h"
@@ -65,35 +65,35 @@
 static bool
 IndexSupportsBackwardScan(Oid indexid);
 
-/*
- * ExecReScan
- *		Reset a plan node so that its output can be re-scanned.
- *
- * Note that if the plan node has parameters that have changed value,
- * the output might be different from last time.
- */
+   
+              
+                                                            
+   
+                                                                      
+                                                 
+   
 void
 ExecReScan(PlanState *node)
 {
-  /* If collecting timing stats, update them */
+                                               
   if (node->instrument)
   {
     InstrEndLoop(node->instrument);
   }
 
-  /*
-   * If we have changed parameters, propagate that info.
-   *
-   * Note: ExecReScanSetParamPlan() can add bits to node->chgParam,
-   * corresponding to the output param(s) that the InitPlan will update.
-   * Since we make only one pass over the list, that means that an InitPlan
-   * can depend on the output param(s) of a sibling InitPlan only if that
-   * sibling appears earlier in the list.  This is workable for now given
-   * the limited ways in which one InitPlan could depend on another, but
-   * eventually we might need to work harder (or else make the planner
-   * enlarge the extParam/allParam sets to include the params of depended-on
-   * InitPlans).
-   */
+     
+                                                         
+     
+                                                                    
+                                                                         
+                                                                            
+                                                                          
+                                                                          
+                                                                         
+                                                                       
+                                                                             
+                 
+     
   if (node->chgParam != NULL)
   {
     ListCell *l;
@@ -103,8 +103,8 @@ ExecReScan(PlanState *node)
       SubPlanState *sstate = (SubPlanState *)lfirst(l);
       PlanState *splan = sstate->planstate;
 
-      if (splan->plan->extParam != NULL) /* don't care about child
-                                          * local Params */
+      if (splan->plan->extParam != NULL)                           
+                                                           
       {
         UpdateChangedParamSet(splan, node->chgParam);
       }
@@ -123,7 +123,7 @@ ExecReScan(PlanState *node)
         UpdateChangedParamSet(splan, node->chgParam);
       }
     }
-    /* Well. Now set chgParam for left/right trees. */
+                                                      
     if (node->lefttree != NULL)
     {
       UpdateChangedParamSet(node->lefttree, node->chgParam);
@@ -134,13 +134,13 @@ ExecReScan(PlanState *node)
     }
   }
 
-  /* Call expression callbacks */
+                                 
   if (node->ps_ExprContext)
   {
     ReScanExprContext(node->ps_ExprContext);
   }
 
-  /* And do node-type-specific processing */
+                                            
   switch (nodeTag(node))
   {
   case T_ResultState:
@@ -311,19 +311,19 @@ ExecReScan(PlanState *node)
   }
 }
 
-/*
- * ExecMarkPos
- *
- * Marks the current scan position.
- *
- * NOTE: mark/restore capability is currently needed only for plan nodes
- * that are the immediate inner child of a MergeJoin node.  Since MergeJoin
- * requires sorted input, there is never any need to support mark/restore in
- * node types that cannot produce sorted output.  There are some cases in
- * which a node can pass through sorted data from its child; if we don't
- * implement mark/restore for such a node type, the planner compensates by
- * inserting a Material node above that node.
- */
+   
+               
+   
+                                    
+   
+                                                                         
+                                                                            
+                                                                             
+                                                                          
+                                                                         
+                                                                           
+                                              
+   
 void
 ExecMarkPos(PlanState *node)
 {
@@ -354,25 +354,25 @@ ExecMarkPos(PlanState *node)
     break;
 
   default:
-    /* don't make hard error unless caller asks to restore... */
+                                                                
     elog(DEBUG2, "unrecognized node type: %d", (int)nodeTag(node));
     break;
   }
 }
 
-/*
- * ExecRestrPos
- *
- * restores the scan position previously saved with ExecMarkPos()
- *
- * NOTE: the semantics of this are that the first ExecProcNode following
- * the restore operation will yield the same tuple as the first one following
- * the mark operation.  It is unspecified what happens to the plan node's
- * result TupleTableSlot.  (In most cases the result slot is unchanged by
- * a restore, but the node may choose to clear it or to load it with the
- * restored-to tuple.)	Hence the caller should discard any previously
- * returned TupleTableSlot after doing a restore.
- */
+   
+                
+   
+                                                                  
+   
+                                                                         
+                                                                              
+                                                                          
+                                                                          
+                                                                         
+                                                                      
+                                                  
+   
 void
 ExecRestrPos(PlanState *node)
 {
@@ -408,28 +408,28 @@ ExecRestrPos(PlanState *node)
   }
 }
 
-/*
- * ExecSupportsMarkRestore - does a Path support mark/restore?
- *
- * This is used during planning and so must accept a Path, not a Plan.
- * We keep it here to be adjacent to the routines above, which also must
- * know which plan types support mark/restore.
- */
+   
+                                                               
+   
+                                                                       
+                                                                         
+                                               
+   
 bool
 ExecSupportsMarkRestore(Path *pathnode)
 {
-  /*
-   * For consistency with the routines above, we do not examine the nodeTag
-   * but rather the pathtype, which is the Plan node type the Path would
-   * produce.
-   */
+     
+                                                                            
+                                                                         
+              
+     
   switch (pathnode->pathtype)
   {
   case T_IndexScan:
   case T_IndexOnlyScan:
-    /*
-     * Not all index types support mark/restore.
-     */
+       
+                                                 
+       
     return castNode(IndexPath, pathnode)->indexinfo->amcanmarkpos;
 
   case T_Material:
@@ -448,45 +448,45 @@ ExecSupportsMarkRestore(Path *pathnode)
   }
   case T_Result:
 
-    /*
-     * Result supports mark/restore iff it has a child plan that does.
-     *
-     * We have to be careful here because there is more than one Path
-     * type that can produce a Result plan node.
-     */
+       
+                                                                       
+       
+                                                                      
+                                                 
+       
     if (IsA(pathnode, ProjectionPath))
     {
       return ExecSupportsMarkRestore(((ProjectionPath *)pathnode)->subpath);
     }
     else if (IsA(pathnode, MinMaxAggPath))
     {
-      return false; /* childless Result */
+      return false;                       
     }
     else if (IsA(pathnode, GroupResultPath))
     {
-      return false; /* childless Result */
+      return false;                       
     }
     else
     {
-      /* Simple RTE_RESULT base relation */
+                                           
       Assert(IsA(pathnode, Path));
-      return false; /* childless Result */
+      return false;                       
     }
 
   case T_Append:
   {
     AppendPath *appendPath = castNode(AppendPath, pathnode);
 
-    /*
-     * If there's exactly one child, then there will be no Append
-     * in the final plan, so we can handle mark/restore if the
-     * child plan node can.
-     */
+       
+                                                                  
+                                                               
+                            
+       
     if (list_length(appendPath->subpaths) == 1)
     {
       return ExecSupportsMarkRestore((Path *)linitial(appendPath->subpaths));
     }
-    /* Otherwise, Append can't handle it */
+                                           
     return false;
   }
 
@@ -494,16 +494,16 @@ ExecSupportsMarkRestore(Path *pathnode)
   {
     MergeAppendPath *mapath = castNode(MergeAppendPath, pathnode);
 
-    /*
-     * Like the Append case above, single-subpath MergeAppends
-     * won't be in the final plan, so just return the child's
-     * mark/restore ability.
-     */
+       
+                                                               
+                                                              
+                             
+       
     if (list_length(mapath->subpaths) == 1)
     {
       return ExecSupportsMarkRestore((Path *)linitial(mapath->subpaths));
     }
-    /* Otherwise, MergeAppend can't handle it */
+                                                
     return false;
   }
 
@@ -514,14 +514,14 @@ ExecSupportsMarkRestore(Path *pathnode)
   return false;
 }
 
-/*
- * ExecSupportsBackwardScan - does a plan type support backwards scanning?
- *
- * Ideally, all plan types would support backwards scan, but that seems
- * unlikely to happen soon.  In some cases, a plan node passes the backwards
- * scan down to its children, and so supports backwards scan only if its
- * children do.  Therefore, this routine must be passed a complete plan tree.
- */
+   
+                                                                           
+   
+                                                                        
+                                                                             
+                                                                         
+                                                                              
+   
 bool
 ExecSupportsBackwardScan(Plan *node)
 {
@@ -530,11 +530,11 @@ ExecSupportsBackwardScan(Plan *node)
     return false;
   }
 
-  /*
-   * Parallel-aware nodes return a subset of the tuples in each worker, and
-   * in general we can't expect to have enough bookkeeping state to know
-   * which ones we returned in this worker as opposed to some other worker.
-   */
+     
+                                                                            
+                                                                         
+                                                                            
+     
   if (node->parallel_aware)
   {
     return false;
@@ -563,12 +563,12 @@ ExecSupportsBackwardScan(Plan *node)
         return false;
       }
     }
-    /* need not check tlist because Append doesn't evaluate it */
+                                                                 
     return true;
   }
 
   case T_SampleScan:
-    /* Simplify life for tablesample methods by disallowing this */
+                                                                   
     return false;
 
   case T_Gather:
@@ -612,10 +612,10 @@ ExecSupportsBackwardScan(Plan *node)
   }
 }
 
-/*
- * An IndexScan or IndexOnlyScan node supports backward scan only if the
- * index's AM does.
- */
+   
+                                                                         
+                    
+   
 static bool
 IndexSupportsBackwardScan(Oid indexid)
 {
@@ -624,7 +624,7 @@ IndexSupportsBackwardScan(Oid indexid)
   Form_pg_class idxrelrec;
   IndexAmRoutine *amroutine;
 
-  /* Fetch the pg_class tuple of the index relation */
+                                                      
   ht_idxrel = SearchSysCache1(RELOID, ObjectIdGetDatum(indexid));
   if (!HeapTupleIsValid(ht_idxrel))
   {
@@ -632,7 +632,7 @@ IndexSupportsBackwardScan(Oid indexid)
   }
   idxrelrec = (Form_pg_class)GETSTRUCT(ht_idxrel);
 
-  /* Fetch the index AM's API struct */
+                                       
   amroutine = GetIndexAmRoutineByAmId(idxrelrec->relam, false);
 
   result = amroutine->amcanbackward;
@@ -643,14 +643,14 @@ IndexSupportsBackwardScan(Oid indexid)
   return result;
 }
 
-/*
- * ExecMaterializesOutput - does a plan type materialize its output?
- *
- * Returns true if the plan node type is one that automatically materializes
- * its output (typically by keeping it in a tuplestore).  For such plans,
- * a rescan without any parameter change will have zero startup cost and
- * very low per-tuple cost.
- */
+   
+                                                                     
+   
+                                                                             
+                                                                          
+                                                                         
+                            
+   
 bool
 ExecMaterializesOutput(NodeTag plantype)
 {

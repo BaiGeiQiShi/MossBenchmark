@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/pgtypeslib/interval.c */
+                                               
 
 #include "postgres_fe.h"
 #include <time.h>
@@ -16,11 +16,11 @@
 #include "pgtypes_error.h"
 #include "pgtypes_interval.h"
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- * and changesd struct pg_tm to struct tm
- */
+                                                         
+                                          
+   
 static void
-AdjustFractSeconds(double frac, struct /* pg_ */ tm *tm, fsec_t *fsec, int scale)
+AdjustFractSeconds(double frac, struct           tm *tm, fsec_t *fsec, int scale)
 {
   int sec;
 
@@ -35,11 +35,11 @@ AdjustFractSeconds(double frac, struct /* pg_ */ tm *tm, fsec_t *fsec, int scale
   *fsec += rint(frac * 1000000);
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- * and changesd struct pg_tm to struct tm
- */
+                                                         
+                                          
+   
 static void
-AdjustFractDays(double frac, struct /* pg_ */ tm *tm, fsec_t *fsec, int scale)
+AdjustFractDays(double frac, struct           tm *tm, fsec_t *fsec, int scale)
 {
   int extra_days;
 
@@ -54,7 +54,7 @@ AdjustFractDays(double frac, struct /* pg_ */ tm *tm, fsec_t *fsec, int scale)
   AdjustFractSeconds(frac, tm, fsec, SECS_PER_DAY);
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static int
 ParseISO8601Number(const char *str, char **endptr, int *ipart, double *fpart)
 {
@@ -66,17 +66,17 @@ ParseISO8601Number(const char *str, char **endptr, int *ipart, double *fpart)
   }
   errno = 0;
   val = strtod(str, endptr);
-  /* did we not see anything that looks like a double? */
+                                                         
   if (*endptr == str || errno != 0)
   {
     return DTERR_BAD_FORMAT;
   }
-  /* watch out for overflow */
+                              
   if (val < INT_MIN || val > INT_MAX)
   {
     return DTERR_FIELD_OVERFLOW;
   }
-  /* be very sure we truncate towards zero (cf dtrunc()) */
+                                                           
   if (val >= 0)
   {
     *ipart = (int)floor(val);
@@ -89,11 +89,11 @@ ParseISO8601Number(const char *str, char **endptr, int *ipart, double *fpart)
   return 0;
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static int
 ISO8601IntegerWidth(const char *fieldstart)
 {
-  /* We might have had a leading '-' */
+                                       
   if (*fieldstart == '-')
   {
     fieldstart++;
@@ -101,11 +101,11 @@ ISO8601IntegerWidth(const char *fieldstart)
   return strspn(fieldstart, "0123456789");
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- * and changesd struct pg_tm to struct tm
- */
+                                                         
+                                          
+   
 static inline void
-ClearPgTm(struct /* pg_ */ tm *tm, fsec_t *fsec)
+ClearPgTm(struct           tm *tm, fsec_t *fsec)
 {
   tm->tm_year = 0;
   tm->tm_mon = 0;
@@ -116,14 +116,14 @@ ClearPgTm(struct /* pg_ */ tm *tm, fsec_t *fsec)
   *fsec = 0;
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- *
- * * changesd struct pg_tm to struct tm
- *
- * * Made the function static
- */
+                                                         
+   
+                                        
+   
+                              
+   
 static int
-DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fsec)
+DecodeISO8601Interval(char *str, int *dtype, struct           tm *tm, fsec_t *fsec)
 {
   bool datepart = true;
   bool havefield = false;
@@ -145,7 +145,7 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
     char unit;
     int dterr;
 
-    if (*str == 'T') /* T indicates the beginning of the time part */
+    if (*str == 'T')                                                 
     {
       datepart = false;
       havefield = false;
@@ -160,15 +160,15 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
       return dterr;
     }
 
-    /*
-     * Note: we could step off the end of the string here.  Code below
-     * *must* exit the loop if unit == '\0'.
-     */
+       
+                                                                       
+                                             
+       
     unit = *str++;
 
     if (datepart)
     {
-      switch (unit) /* before T: Y M W D */
+      switch (unit)                        
       {
       case 'Y':
         tm->tm_year += val;
@@ -186,7 +186,7 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
         tm->tm_mday += val;
         AdjustFractSeconds(fval, tm, fsec, SECS_PER_DAY);
         break;
-      case 'T': /* ISO 8601 4.4.3.3 Alternative Format / Basic */
+      case 'T':                                                  
       case '\0':
         if (ISO8601IntegerWidth(fieldstart) == 8 && !havefield)
         {
@@ -202,10 +202,10 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
           havefield = false;
           continue;
         }
-        /* Else fall through to extended alternative format */
-        /* FALLTHROUGH */
-      case '-': /* ISO 8601 4.4.3.3 Alternative Format,
-                 * Extended */
+                                                              
+                         
+      case '-':                                         
+                              
         if (havefield)
         {
           return DTERR_BAD_FORMAT;
@@ -266,13 +266,13 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
         }
         return DTERR_BAD_FORMAT;
       default:
-        /* not a valid date unit suffix */
+                                          
         return DTERR_BAD_FORMAT;
       }
     }
     else
     {
-      switch (unit) /* after T: H M S */
+      switch (unit)                     
       {
       case 'H':
         tm->tm_hour += val;
@@ -286,7 +286,7 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
         tm->tm_sec += val;
         AdjustFractSeconds(fval, tm, fsec, 1);
         break;
-      case '\0': /* ISO 8601 4.4.3.3 Alternative Format */
+      case '\0':                                          
         if (ISO8601IntegerWidth(fieldstart) == 6 && !havefield)
         {
           tm->tm_hour += val / 10000;
@@ -295,10 +295,10 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
           AdjustFractSeconds(fval, tm, fsec, 1);
           return 0;
         }
-        /* Else fall through to extended alternative format */
-        /* FALLTHROUGH */
-      case ':': /* ISO 8601 4.4.3.3 Alternative Format,
-                 * Extended */
+                                                              
+                         
+      case ':':                                         
+                              
         if (havefield)
         {
           return DTERR_BAD_FORMAT;
@@ -342,7 +342,7 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
         return DTERR_BAD_FORMAT;
 
       default:
-        /* not a valid time unit suffix */
+                                          
         return DTERR_BAD_FORMAT;
       }
     }
@@ -353,23 +353,23 @@ DecodeISO8601Interval(char *str, int *dtype, struct /* pg_ */ tm *tm, fsec_t *fs
   return 0;
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- * with 3 exceptions
- *
- *	* changesd struct pg_tm to struct tm
- *
- *	* ECPG code called this without a 'range' parameter
- *	  removed 'int range' from the argument list and
- *	  places where DecodeTime is called; and added
- *		 int range = INTERVAL_FULL_RANGE;
- *
- *	* ECPG seems not to have a global IntervalStyle
- *	  so added
- *		int IntervalStyle = INTSTYLE_POSTGRES;
- */
+                                                         
+                     
+   
+                                        
+   
+                                                       
+                                                    
+                                                  
+                                      
+   
+                                                   
+              
+                                           
+   
 int
-DecodeInterval(char **field, int *ftype, int nf, /* int range, */
-    int *dtype, struct /* pg_ */ tm *tm, fsec_t *fsec)
+DecodeInterval(char **field, int *ftype, int nf,                 
+    int *dtype, struct           tm *tm, fsec_t *fsec)
 {
   int IntervalStyle = INTSTYLE_POSTGRES_VERBOSE;
   int range = INTERVAL_FULL_RANGE;
@@ -385,13 +385,13 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
   type = IGNORE_DTF;
   ClearPgTm(tm, fsec);
 
-  /* read through list backwards to pick up units before values */
+                                                                  
   for (i = nf - 1; i >= 0; i--)
   {
     switch (ftype[i])
     {
     case DTK_TIME:
-      dterr = DecodeTime(field[i], /* range, */
+      dterr = DecodeTime(field[i],             
           &tmask, tm, fsec);
       if (dterr)
       {
@@ -402,46 +402,46 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
 
     case DTK_TZ:
 
-      /*
-       * Timezone is a token with a leading sign character and at
-       * least one digit; there could be ':', '.', '-' embedded in
-       * it as well.
-       */
+         
+                                                                  
+                                                                   
+                     
+         
       Assert(*field[i] == '-' || *field[i] == '+');
 
-      /*
-       * Try for hh:mm or hh:mm:ss.  If not, fall through to
-       * DTK_NUMBER case, which can handle signed float numbers and
-       * signed year-month values.
-       */
-      if (strchr(field[i] + 1, ':') != NULL && DecodeTime(field[i] + 1, /* INTERVAL_FULL_RANGE, */
+         
+                                                             
+                                                                    
+                                   
+         
+      if (strchr(field[i] + 1, ':') != NULL && DecodeTime(field[i] + 1,                           
                                                    &tmask, tm, fsec) == 0)
       {
         if (*field[i] == '-')
         {
-          /* flip the sign on all fields */
+                                           
           tm->tm_hour = -tm->tm_hour;
           tm->tm_min = -tm->tm_min;
           tm->tm_sec = -tm->tm_sec;
           *fsec = -(*fsec);
         }
 
-        /*
-         * Set the next type to be a day, if units are not
-         * specified. This handles the case of '1 +02:03' since we
-         * are reading right to left.
-         */
+           
+                                                           
+                                                                   
+                                      
+           
         type = DTK_DAY;
         tmask = DTK_M(TZ);
         break;
       }
-      /* FALL THROUGH */
+                        
 
     case DTK_DATE:
     case DTK_NUMBER:
       if (type == IGNORE_DTF)
       {
-        /* use typmod to decide what rightmost field is */
+                                                          
         switch (range)
         {
         case INTERVAL_MASK(YEAR):
@@ -484,7 +484,7 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
 
       if (*cp == '-')
       {
-        /* SQL "years-months" syntax */
+                                       
         int val2;
 
         val2 = strtoint(cp + 1, &cp, 10);
@@ -527,7 +527,7 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
         return DTERR_BAD_FORMAT;
       }
 
-      tmask = 0; /* DTK_M(type); */
+      tmask = 0;                   
 
       switch (type)
       {
@@ -545,10 +545,10 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
         tm->tm_sec += val;
         *fsec += rint(fval * 1000000);
 
-        /*
-         * If any subseconds were specified, consider this
-         * microsecond and millisecond input as well.
-         */
+           
+                                                           
+                                                      
+           
         if (fval == 0)
         {
           tmask = DTK_M(SECOND);
@@ -639,7 +639,7 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
         continue;
       }
 
-      tmask = 0; /* DTK_M(type); */
+      tmask = 0;                   
       switch (type)
       {
       case UNITS:
@@ -672,13 +672,13 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
     fmask |= tmask;
   }
 
-  /* ensure that at least one time field has been found */
+                                                          
   if (fmask == 0)
   {
     return DTERR_BAD_FORMAT;
   }
 
-  /* ensure fractional seconds are fractional */
+                                                
   if (*fsec != 0)
   {
     int sec;
@@ -688,25 +688,25 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
     tm->tm_sec += sec;
   }
 
-  /*----------
-   * The SQL standard defines the interval literal
-   *	 '-1 1:00:00'
-   * to mean "negative 1 days and negative 1 hours", while Postgres
-   * traditionally treats this as meaning "negative 1 days and positive
-   * 1 hours".  In SQL_STANDARD intervalstyle, we apply the leading sign
-   * to all fields if there are no other explicit signs.
-   *
-   * We leave the signs alone if there are additional explicit signs.
-   * This protects us against misinterpreting postgres-style dump output,
-   * since the postgres-style output code has always put an explicit sign on
-   * all fields following a negative field.  But note that SQL-spec output
-   * is ambiguous and can be misinterpreted on load!	(So it's best practice
-   * to dump in postgres style, not SQL style.)
-   *----------
-   */
+               
+                                                   
+                   
+                                                                    
+                                                                        
+                                                                         
+                                                         
+     
+                                                                      
+                                                                          
+                                                                             
+                                                                           
+                                                                            
+                                                
+               
+     
   if (IntervalStyle == INTSTYLE_SQL_STANDARD && *field[0] == '-')
   {
-    /* Check for additional explicit signs */
+                                             
     bool more_signs = false;
 
     for (i = 1; i < nf; i++)
@@ -720,10 +720,10 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
 
     if (!more_signs)
     {
-      /*
-       * Rather than re-determining which field was field[0], just force
-       * 'em all negative.
-       */
+         
+                                                                         
+                           
+         
       if (*fsec > 0)
       {
         *fsec = -(*fsec);
@@ -755,7 +755,7 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
     }
   }
 
-  /* finally, AGO negates everything */
+                                       
   if (is_before)
   {
     *fsec = -(*fsec);
@@ -770,7 +770,7 @@ DecodeInterval(char **field, int *ftype, int nf, /* int range, */
   return 0;
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static char *
 AddVerboseIntPart(char *cp, int value, const char *units, bool *is_zero, bool *is_before)
 {
@@ -778,7 +778,7 @@ AddVerboseIntPart(char *cp, int value, const char *units, bool *is_zero, bool *i
   {
     return cp;
   }
-  /* first nonzero value sets is_before */
+                                          
   if (*is_zero)
   {
     *is_before = (value < 0);
@@ -793,7 +793,7 @@ AddVerboseIntPart(char *cp, int value, const char *units, bool *is_zero, bool *i
   return cp + strlen(cp);
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static char *
 AddPostgresIntPart(char *cp, int value, const char *units, bool *is_zero, bool *is_before)
 {
@@ -803,16 +803,16 @@ AddPostgresIntPart(char *cp, int value, const char *units, bool *is_zero, bool *
   }
   sprintf(cp, "%s%s%d %s%s", (!*is_zero) ? " " : "", (*is_before && value > 0) ? "+" : "", value, units, (value != 1) ? "s" : "");
 
-  /*
-   * Each nonzero field sets is_before for (only) the next one.  This is a
-   * tad bizarre but it's how it worked before...
-   */
+     
+                                                                           
+                                                  
+     
   *is_before = (value < 0);
   *is_zero = false;
   return cp + strlen(cp);
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static char *
 AddISO8601IntPart(char *cp, int value, char units)
 {
@@ -824,7 +824,7 @@ AddISO8601IntPart(char *cp, int value, char units)
   return cp + strlen(cp);
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c */
+                                                           
 static void
 AppendSeconds(char *cp, int sec, fsec_t fsec, int precision, bool fillzeros)
 {
@@ -853,13 +853,13 @@ AppendSeconds(char *cp, int sec, fsec_t fsec, int precision, bool fillzeros)
   }
 }
 
-/* copy&pasted from .../src/backend/utils/adt/datetime.c
- *
- * Change pg_tm to tm
- */
+                                                         
+   
+                      
+   
 
 void
-EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
+EncodeInterval(struct           tm *tm, fsec_t fsec, int style, char *str)
 {
   char *cp = str;
   int year = tm->tm_year;
@@ -871,15 +871,15 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
   bool is_before = false;
   bool is_zero = true;
 
-  /*
-   * The sign of year and month are guaranteed to match, since they are
-   * stored internally as "month". But we'll need to check for is_before and
-   * is_zero when determining the signs of day and hour/minute/seconds
-   * fields.
-   */
+     
+                                                                        
+                                                                             
+                                                                       
+             
+     
   switch (style)
   {
-    /* SQL Standard interval format */
+                                      
   case INTSTYLE_SQL_STANDARD:
   {
     bool has_negative = year < 0 || mon < 0 || mday < 0 || hour < 0 || min < 0 || sec < 0 || fsec < 0;
@@ -889,10 +889,10 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
     bool has_day = mday != 0;
     bool sql_standard_value = !(has_negative && has_positive) && !(has_year_month && has_day_time);
 
-    /*
-     * SQL Standard wants only 1 "<sign>" preceding the whole
-     * interval ... but can't do that if mixed signs.
-     */
+       
+                                                              
+                                                      
+       
     if (has_negative && sql_standard_value)
     {
       *cp++ = '-';
@@ -911,11 +911,11 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
     }
     else if (!sql_standard_value)
     {
-      /*
-       * For non sql-standard interval values, force outputting
-       * the signs to avoid ambiguities with intervals with
-       * mixed sign components.
-       */
+         
+                                                                
+                                                            
+                                
+         
       char year_sign = (year < 0 || mon < 0) ? '-' : '+';
       char day_sign = (mday < 0) ? '-' : '+';
       char sec_sign = (hour < 0 || min < 0 || sec < 0 || fsec < 0) ? '-' : '+';
@@ -943,9 +943,9 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
   }
   break;
 
-    /* ISO 8601 "time-intervals by duration only" */
+                                                    
   case INTSTYLE_ISO_8601:
-    /* special-case zero to avoid printing nothing */
+                                                     
     if (year == 0 && mon == 0 && mday == 0 && hour == 0 && min == 0 && sec == 0 && fsec == 0)
     {
       sprintf(cp, "PT0S");
@@ -974,7 +974,7 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
     }
     break;
 
-    /* Compatible with postgresql < 8.4 when DateStyle = 'iso' */
+                                                                 
   case INTSTYLE_POSTGRES:
     cp = AddPostgresIntPart(cp, year, "year", &is_zero, &is_before);
     cp = AddPostgresIntPart(cp, mon, "mon", &is_zero, &is_before);
@@ -989,7 +989,7 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
     }
     break;
 
-    /* Compatible with postgresql < 8.4 when DateStyle != 'iso' */
+                                                                  
   case INTSTYLE_POSTGRES_VERBOSE:
   default:
     strcpy(cp, "@");
@@ -1022,7 +1022,7 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
       sprintf(cp, " sec%s", (abs(sec) != 1 || fsec != 0) ? "s" : "");
       is_zero = false;
     }
-    /* identically zero? then put in a unitless zero... */
+                                                          
     if (is_zero)
     {
       strcat(cp, " 0");
@@ -1035,9 +1035,9 @@ EncodeInterval(struct /* pg_ */ tm *tm, fsec_t fsec, int style, char *str)
   }
 }
 
-/* interval2tm()
- * Convert an interval data type to a tm structure.
- */
+                 
+                                                    
+   
 static int
 interval2tm(interval span, struct tm *tm, fsec_t *fsec)
 {
@@ -1066,7 +1066,7 @@ interval2tm(interval span, struct tm *tm, fsec_t *fsec)
   *fsec = time - (tm->tm_sec * USECS_PER_SEC);
 
   return 0;
-} /* interval2tm() */
+}                    
 
 static int
 tm2interval(struct tm *tm, fsec_t fsec, interval *span)
@@ -1079,7 +1079,7 @@ tm2interval(struct tm *tm, fsec_t fsec, interval *span)
   span->time = (((((((tm->tm_mday * INT64CONST(24)) + tm->tm_hour) * INT64CONST(60)) + tm->tm_min) * INT64CONST(60)) + tm->tm_sec) * USECS_PER_SEC) + fsec;
 
   return 0;
-} /* tm2interval() */
+}                    
 
 interval *
 PGTYPESinterval_new(void)
@@ -1087,7 +1087,7 @@ PGTYPESinterval_new(void)
   interval *result;
 
   result = (interval *)pgtypes_alloc(sizeof(interval));
-  /* result can be NULL if we run out of memory */
+                                                  
   return result;
 }
 

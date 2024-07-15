@@ -1,14 +1,14 @@
-/*-------------------------------------------------------------------------
- *
- * createuser
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/scripts/createuser.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+   
+                                                                         
+                                                                        
+   
+                                
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -23,7 +23,7 @@ int
 main(int argc, char *argv[])
 {
   static struct option long_options[] = {{"host", required_argument, NULL, 'h'}, {"port", required_argument, NULL, 'p'}, {"username", required_argument, NULL, 'U'}, {"role", required_argument, NULL, 'g'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"echo", no_argument, NULL, 'e'}, {"createdb", no_argument, NULL, 'd'}, {"no-createdb", no_argument, NULL, 'D'}, {"superuser", no_argument, NULL, 's'}, {"no-superuser", no_argument, NULL, 'S'}, {"createrole", no_argument, NULL, 'r'}, {"no-createrole", no_argument, NULL, 'R'}, {"inherit", no_argument, NULL, 'i'}, {"no-inherit", no_argument, NULL, 'I'}, {"login", no_argument, NULL, 'l'}, {"no-login", no_argument, NULL, 'L'}, {"replication", no_argument, NULL, 1}, {"no-replication", no_argument, NULL, 2}, {"interactive", no_argument, NULL, 3},
-      /* adduser is obsolete, undocumented spelling of superuser */
+                                                                   
       {"adduser", no_argument, NULL, 'a'}, {"no-adduser", no_argument, NULL, 'A'}, {"connection-limit", required_argument, NULL, 'c'}, {"pwprompt", no_argument, NULL, 'P'}, {"encrypted", no_argument, NULL, 'E'}, {NULL, 0, NULL, 0}};
 
   const char *progname;
@@ -38,13 +38,13 @@ main(int argc, char *argv[])
   ConnParams cparams;
   bool echo = false;
   bool interactive = false;
-  int conn_limit = -2; /* less than minimum valid value */
+  int conn_limit = -2;                                    
   bool pwprompt = false;
   char *newpassword = NULL;
   char newuser_buf[128];
   char newpassword_buf[100];
 
-  /* Tri-valued variables.  */
+                              
   enum trivalue createdb = TRI_DEFAULT, superuser = TRI_DEFAULT, createrole = TRI_DEFAULT, inherit = TRI_DEFAULT, login = TRI_DEFAULT, replication = TRI_DEFAULT;
 
   PQExpBufferData sql;
@@ -119,7 +119,7 @@ main(int argc, char *argv[])
       break;
     case 'c':
       conn_limit = strtol(optarg, &endptr, 10);
-      if (*endptr != '\0' || conn_limit < -1) /* minimum valid value */
+      if (*endptr != '\0' || conn_limit < -1)                          
       {
         pg_log_error("invalid value for --connection-limit: %s", optarg);
         exit(1);
@@ -129,7 +129,7 @@ main(int argc, char *argv[])
       pwprompt = true;
       break;
     case 'E':
-      /* no-op, accepted for backward compatibility */
+                                                      
       break;
     case 1:
       replication = TRI_YES;
@@ -207,7 +207,7 @@ main(int argc, char *argv[])
 
   if (superuser == TRI_YES)
   {
-    /* Not much point in trying to restrict a superuser */
+                                                          
     createdb = TRI_YES;
     createrole = TRI_YES;
   }
@@ -246,7 +246,7 @@ main(int argc, char *argv[])
     login = TRI_YES;
   }
 
-  cparams.dbname = NULL; /* this program lacks any dbname option... */
+  cparams.dbname = NULL;                                              
   cparams.pghost = host;
   cparams.pgport = port;
   cparams.pguser = username;

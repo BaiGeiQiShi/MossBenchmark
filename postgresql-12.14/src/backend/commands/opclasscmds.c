@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * opclasscmds.c
- *
- *	  Routines for opclass (and opfamily) manipulation commands
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/commands/opclasscmds.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+   
+                                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                        
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <limits.h>
@@ -71,12 +71,12 @@ dropOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *operators);
 static void
 dropProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *procedures);
 
-/*
- * OpFamilyCacheLookup
- *		Look up an existing opfamily by name.
- *
- * Returns a syscache tuple reference, or NULL if not found.
- */
+   
+                       
+                                          
+   
+                                                             
+   
 static HeapTuple
 OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
 {
@@ -84,12 +84,12 @@ OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
   char *opfname;
   HeapTuple htup;
 
-  /* deconstruct the name list */
+                                 
   DeconstructQualifiedName(opfamilyname, &schemaname, &opfname);
 
   if (schemaname)
   {
-    /* Look in specific schema only */
+                                      
     Oid namespaceId;
 
     namespaceId = LookupExplicitNamespace(schemaname, missing_ok);
@@ -104,7 +104,7 @@ OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
   }
   else
   {
-    /* Unqualified opfamily name, so search the search path */
+                                                              
     Oid opfID = OpfamilynameGetOpfid(amID, opfname);
 
     if (!OidIsValid(opfID))
@@ -132,12 +132,12 @@ OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
   return htup;
 }
 
-/*
- * get_opfamily_oid
- *	  find an opfamily OID by possibly qualified name
- *
- * If not found, returns InvalidOid if missing_ok, else throws error.
- */
+   
+                    
+                                                     
+   
+                                                                      
+   
 Oid
 get_opfamily_oid(Oid amID, List *opfamilyname, bool missing_ok)
 {
@@ -157,12 +157,12 @@ get_opfamily_oid(Oid amID, List *opfamilyname, bool missing_ok)
   return opfID;
 }
 
-/*
- * OpClassCacheLookup
- *		Look up an existing opclass by name.
- *
- * Returns a syscache tuple reference, or NULL if not found.
- */
+   
+                      
+                                         
+   
+                                                             
+   
 static HeapTuple
 OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
 {
@@ -170,12 +170,12 @@ OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
   char *opcname;
   HeapTuple htup;
 
-  /* deconstruct the name list */
+                                 
   DeconstructQualifiedName(opclassname, &schemaname, &opcname);
 
   if (schemaname)
   {
-    /* Look in specific schema only */
+                                      
     Oid namespaceId;
 
     namespaceId = LookupExplicitNamespace(schemaname, missing_ok);
@@ -190,7 +190,7 @@ OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
   }
   else
   {
-    /* Unqualified opclass name, so search the search path */
+                                                             
     Oid opcID = OpclassnameGetOpcid(amID, opcname);
 
     if (!OidIsValid(opcID))
@@ -218,12 +218,12 @@ OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
   return htup;
 }
 
-/*
- * get_opclass_oid
- *	  find an opclass OID by possibly qualified name
- *
- * If not found, returns InvalidOid if missing_ok, else throws error.
- */
+   
+                   
+                                                    
+   
+                                                                      
+   
 Oid
 get_opclass_oid(Oid amID, List *opclassname, bool missing_ok)
 {
@@ -243,12 +243,12 @@ get_opclass_oid(Oid amID, List *opclassname, bool missing_ok)
   return opcID;
 }
 
-/*
- * CreateOpFamily
- *		Internal routine to make the catalog entry for a new operator family.
- *
- * Caller must have done permissions checks etc. already.
- */
+   
+                  
+                                                                          
+   
+                                                          
+   
 static ObjectAddress
 CreateOpFamily(CreateOpFamilyStmt *stmt, const char *opfname, Oid namespaceoid, Oid amoid)
 {
@@ -262,18 +262,18 @@ CreateOpFamily(CreateOpFamilyStmt *stmt, const char *opfname, Oid namespaceoid, 
 
   rel = table_open(OperatorFamilyRelationId, RowExclusiveLock);
 
-  /*
-   * Make sure there is no existing opfamily of this name (this is just to
-   * give a more friendly error message than "duplicate key").
-   */
+     
+                                                                           
+                                                               
+     
   if (SearchSysCacheExists3(OPFAMILYAMNAMENSP, ObjectIdGetDatum(amoid), CStringGetDatum(opfname), ObjectIdGetDatum(namespaceoid)))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator family \"%s\" for access method \"%s\" already exists", opfname, stmt->amname)));
   }
 
-  /*
-   * Okay, let's create the pg_opfamily entry.
-   */
+     
+                                               
+     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -291,35 +291,35 @@ CreateOpFamily(CreateOpFamilyStmt *stmt, const char *opfname, Oid namespaceoid, 
 
   heap_freetuple(tup);
 
-  /*
-   * Create dependencies for the opfamily proper.
-   */
+     
+                                                  
+     
   myself.classId = OperatorFamilyRelationId;
   myself.objectId = opfamilyoid;
   myself.objectSubId = 0;
 
-  /* dependency on access method */
+                                   
   referenced.classId = AccessMethodRelationId;
   referenced.objectId = amoid;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = namespaceoid;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on owner */
+                           
   recordDependencyOnOwner(OperatorFamilyRelationId, opfamilyoid, GetUserId());
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, false);
 
-  /* Report the new operator family to possibly interested event triggers */
+                                                                            
   EventTriggerCollectSimpleCommand(myself, InvalidObjectAddress, (Node *)stmt);
 
-  /* Post creation hook for new operator family */
+                                                  
   InvokeObjectPostCreateHook(OperatorFamilyRelationId, opfamilyoid, 0);
 
   table_close(rel, RowExclusiveLock);
@@ -327,25 +327,25 @@ CreateOpFamily(CreateOpFamilyStmt *stmt, const char *opfname, Oid namespaceoid, 
   return myself;
 }
 
-/*
- * DefineOpClass
- *		Define a new index operator class.
- */
+   
+                 
+                                       
+   
 ObjectAddress
 DefineOpClass(CreateOpClassStmt *stmt)
 {
-  char *opcname;     /* name of opclass we're creating */
-  Oid amoid,         /* our AM's oid */
-      typeoid,       /* indexable datatype oid */
-      storageoid,    /* storage datatype oid, if any */
-      namespaceoid,  /* namespace to create opclass in */
-      opfamilyoid,   /* oid of containing opfamily */
-      opclassoid;    /* oid of opclass we create */
-  int maxOpNumber,   /* amstrategies value */
-      maxProcNumber; /* amsupport value */
-  bool amstorage;    /* amstorage flag */
-  List *operators;   /* OpFamilyMember list for operators */
-  List *procedures;  /* OpFamilyMember list for support procs */
+  char *opcname;                                         
+  Oid amoid,                           
+      typeoid,                                   
+      storageoid,                                      
+      namespaceoid,                                      
+      opfamilyoid,                                   
+      opclassoid;                                  
+  int maxOpNumber,                           
+      maxProcNumber;                      
+  bool amstorage;                        
+  List *operators;                                          
+  List *procedures;                                             
   ListCell *l;
   Relation rel;
   HeapTuple tup;
@@ -357,17 +357,17 @@ DefineOpClass(CreateOpClassStmt *stmt)
   NameData opcName;
   ObjectAddress myself, referenced;
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(stmt->opclassname, &opcname);
 
-  /* Check we have creation rights in target namespace */
+                                                         
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
-  /* Get necessary info about access method */
+                                              
   tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
   if (!HeapTupleIsValid(tup))
   {
@@ -380,7 +380,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
   ReleaseSysCache(tup);
 
   maxOpNumber = amroutine->amstrategies;
-  /* if amstrategies is zero, just enforce that op numbers fit in int16 */
+                                                                          
   if (maxOpNumber <= 0)
   {
     maxOpNumber = SHRT_MAX;
@@ -388,65 +388,65 @@ DefineOpClass(CreateOpClassStmt *stmt)
   maxProcNumber = amroutine->amsupport;
   amstorage = amroutine->amstorage;
 
-  /* XXX Should we make any privilege check against the AM? */
+                                                              
 
-  /*
-   * The question of appropriate permissions for CREATE OPERATOR CLASS is
-   * interesting.  Creating an opclass is tantamount to granting public
-   * execute access on the functions involved, since the index machinery
-   * generally does not check access permission before using the functions.
-   * A minimum expectation therefore is that the caller have execute
-   * privilege with grant option.  Since we don't have a way to make the
-   * opclass go away if the grant option is revoked, we choose instead to
-   * require ownership of the functions.  It's also not entirely clear what
-   * permissions should be required on the datatype, but ownership seems
-   * like a safe choice.
-   *
-   * Currently, we require superuser privileges to create an opclass. This
-   * seems necessary because we have no way to validate that the offered set
-   * of operators and functions are consistent with the AM's expectations.
-   * It would be nice to provide such a check someday, if it can be done
-   * without solving the halting problem :-(
-   *
-   * XXX re-enable NOT_USED code sections below if you remove this test.
-   */
+     
+                                                                          
+                                                                        
+                                                                         
+                                                                            
+                                                                     
+                                                                         
+                                                                          
+                                                                            
+                                                                         
+                         
+     
+                                                                           
+                                                                             
+                                                                           
+                                                                         
+                                             
+     
+                                                                         
+     
   if (!superuser())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create an operator class")));
   }
 
-  /* Look up the datatype */
+                            
   typeoid = typenameTypeId(NULL, stmt->datatype);
 
 #ifdef NOT_USED
-  /* XXX this is unnecessary given the superuser check above */
-  /* Check we have ownership of the datatype */
+                                                               
+                                               
   if (!pg_type_ownercheck(typeoid, GetUserId()))
   {
     aclcheck_error_type(ACLCHECK_NOT_OWNER, typeoid);
   }
 #endif
 
-  /*
-   * Look up the containing operator family, or create one if FAMILY option
-   * was omitted and there's not a match already.
-   */
+     
+                                                                            
+                                                  
+     
   if (stmt->opfamilyname)
   {
     opfamilyoid = get_opfamily_oid(amoid, stmt->opfamilyname, false);
   }
   else
   {
-    /* Lookup existing family of same name and namespace */
+                                                           
     tup = SearchSysCache3(OPFAMILYAMNAMENSP, ObjectIdGetDatum(amoid), PointerGetDatum(opcname), ObjectIdGetDatum(namespaceoid));
     if (HeapTupleIsValid(tup))
     {
       opfamilyoid = ((Form_pg_opfamily)GETSTRUCT(tup))->oid;
 
-      /*
-       * XXX given the superuser check above, there's no need for an
-       * ownership check here
-       */
+         
+                                                                     
+                              
+         
       ReleaseSysCache(tup);
     }
     else
@@ -458,9 +458,9 @@ DefineOpClass(CreateOpClassStmt *stmt)
       opfstmt->opfamilyname = stmt->opclassname;
       opfstmt->amname = stmt->amname;
 
-      /*
-       * Create it ... again no need for more permissions ...
-       */
+         
+                                                              
+         
       tmpAddr = CreateOpFamily(opfstmt, opcname, namespaceoid, amoid);
       opfamilyoid = tmpAddr.objectId;
     }
@@ -469,12 +469,12 @@ DefineOpClass(CreateOpClassStmt *stmt)
   operators = NIL;
   procedures = NIL;
 
-  /* Storage datatype is optional */
+                                    
   storageoid = InvalidOid;
 
-  /*
-   * Scan the "items" list to obtain additional info.
-   */
+     
+                                                      
+     
   foreach (l, stmt->items)
   {
     CreateOpClassItem *item = lfirst_node(CreateOpClassItem, l);
@@ -498,7 +498,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
       }
       else
       {
-        /* Default to binary op on input datatype */
+                                                    
         operOid = LookupOperName(NULL, item->name->objname, typeoid, typeoid, false, -1);
       }
 
@@ -512,8 +512,8 @@ DefineOpClass(CreateOpClassStmt *stmt)
       }
 
 #ifdef NOT_USED
-      /* XXX this is unnecessary given the superuser check above */
-      /* Caller must own operator and its underlying function */
+                                                                   
+                                                                
       if (!pg_oper_ownercheck(operOid, GetUserId()))
       {
         aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_OPERATOR, get_opname(operOid));
@@ -525,7 +525,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
       }
 #endif
 
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->object = operOid;
       member->number = item->number;
@@ -542,20 +542,20 @@ DefineOpClass(CreateOpClassStmt *stmt)
       }
       funcOid = LookupFuncWithArgs(OBJECT_FUNCTION, item->name, false);
 #ifdef NOT_USED
-      /* XXX this is unnecessary given the superuser check above */
-      /* Caller must own function */
+                                                                   
+                                    
       if (!pg_proc_ownercheck(funcOid, GetUserId()))
       {
         aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_FUNCTION, get_func_name(funcOid));
       }
 #endif
 
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->object = funcOid;
       member->number = item->number;
 
-      /* allow overriding of the function's actual arg types */
+                                                               
       if (item->class_args)
       {
         processTypesSpec(item->class_args, &member->lefttype, &member->righttype);
@@ -572,8 +572,8 @@ DefineOpClass(CreateOpClassStmt *stmt)
       storageoid = typenameTypeId(NULL, item->storedtype);
 
 #ifdef NOT_USED
-      /* XXX this is unnecessary given the superuser check above */
-      /* Check we have ownership of the datatype */
+                                                                   
+                                                   
       if (!pg_type_ownercheck(storageoid, GetUserId()))
       {
         aclcheck_error_type(ACLCHECK_NOT_OWNER, storageoid);
@@ -586,12 +586,12 @@ DefineOpClass(CreateOpClassStmt *stmt)
     }
   }
 
-  /*
-   * If storagetype is specified, make sure it's legal.
-   */
+     
+                                                        
+     
   if (OidIsValid(storageoid))
   {
-    /* Just drop the spec if same as column datatype */
+                                                       
     if (storageoid == typeoid)
     {
       storageoid = InvalidOid;
@@ -604,20 +604,20 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
   rel = table_open(OperatorClassRelationId, RowExclusiveLock);
 
-  /*
-   * Make sure there is no existing opclass of this name (this is just to
-   * give a more friendly error message than "duplicate key").
-   */
+     
+                                                                          
+                                                               
+     
   if (SearchSysCacheExists3(CLAAMNAMENSP, ObjectIdGetDatum(amoid), CStringGetDatum(opcname), ObjectIdGetDatum(namespaceoid)))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator class \"%s\" for access method \"%s\" already exists", opcname, stmt->amname)));
   }
 
-  /*
-   * If we are creating a default opclass, check there isn't one already.
-   * (Note we do not restrict this test to visible opclasses; this ensures
-   * that typcache.c can find unique solutions to its questions.)
-   */
+     
+                                                                          
+                                                                           
+                                                                  
+     
   if (stmt->isDefault)
   {
     ScanKeyData skey[1];
@@ -640,9 +640,9 @@ DefineOpClass(CreateOpClassStmt *stmt)
     systable_endscan(scan);
   }
 
-  /*
-   * Okay, let's create the pg_opclass entry.
-   */
+     
+                                              
+     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -664,43 +664,43 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
   heap_freetuple(tup);
 
-  /*
-   * Now add tuples to pg_amop and pg_amproc tying in the operators and
-   * functions.  Dependencies on them are inserted, too.
-   */
+     
+                                                                        
+                                                         
+     
   storeOperators(stmt->opfamilyname, amoid, opfamilyoid, opclassoid, operators, false);
   storeProcedures(stmt->opfamilyname, amoid, opfamilyoid, opclassoid, procedures, false);
 
-  /* let event triggers know what happened */
+                                             
   EventTriggerCollectCreateOpClass(stmt, opclassoid, operators, procedures);
 
-  /*
-   * Create dependencies for the opclass proper.  Note: we do not need a
-   * dependency link to the AM, because that exists through the opfamily.
-   */
+     
+                                                                         
+                                                                          
+     
   myself.classId = OperatorClassRelationId;
   myself.objectId = opclassoid;
   myself.objectSubId = 0;
 
-  /* dependency on namespace */
+                               
   referenced.classId = NamespaceRelationId;
   referenced.objectId = namespaceoid;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on opfamily */
+                              
   referenced.classId = OperatorFamilyRelationId;
   referenced.objectId = opfamilyoid;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-  /* dependency on indexed datatype */
+                                      
   referenced.classId = TypeRelationId;
   referenced.objectId = typeoid;
   referenced.objectSubId = 0;
   recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-  /* dependency on storage datatype */
+                                      
   if (OidIsValid(storageoid))
   {
     referenced.classId = TypeRelationId;
@@ -709,13 +709,13 @@ DefineOpClass(CreateOpClassStmt *stmt)
     recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
   }
 
-  /* dependency on owner */
+                           
   recordDependencyOnOwner(OperatorClassRelationId, opclassoid, GetUserId());
 
-  /* dependency on extension */
+                               
   recordDependencyOnCurrentExtension(&myself, false);
 
-  /* Post creation hook for new operator class */
+                                                 
   InvokeObjectPostCreateHook(OperatorClassRelationId, opclassoid, 0);
 
   table_close(rel, RowExclusiveLock);
@@ -723,66 +723,66 @@ DefineOpClass(CreateOpClassStmt *stmt)
   return myself;
 }
 
-/*
- * DefineOpFamily
- *		Define a new index operator family.
- */
+   
+                  
+                                        
+   
 ObjectAddress
 DefineOpFamily(CreateOpFamilyStmt *stmt)
 {
-  char *opfname;    /* name of opfamily we're creating */
-  Oid amoid,        /* our AM's oid */
-      namespaceoid; /* namespace to create opfamily in */
+  char *opfname;                                         
+  Oid amoid,                          
+      namespaceoid;                                      
   AclResult aclresult;
 
-  /* Convert list of names to a name and namespace */
+                                                     
   namespaceoid = QualifiedNameGetCreationNamespace(stmt->opfamilyname, &opfname);
 
-  /* Check we have creation rights in target namespace */
+                                                         
   aclresult = pg_namespace_aclcheck(namespaceoid, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_SCHEMA, get_namespace_name(namespaceoid));
   }
 
-  /* Get access method OID, throwing an error if it doesn't exist. */
+                                                                     
   amoid = get_index_am_oid(stmt->amname, false);
 
-  /* XXX Should we make any privilege check against the AM? */
+                                                              
 
-  /*
-   * Currently, we require superuser privileges to create an opfamily. See
-   * comments in DefineOpClass.
-   */
+     
+                                                                           
+                                
+     
   if (!superuser())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to create an operator family")));
   }
 
-  /* Insert pg_opfamily catalog entry */
+                                        
   return CreateOpFamily(stmt, opfname, namespaceoid, amoid);
 }
 
-/*
- * AlterOpFamily
- *		Add or remove operators/procedures within an existing operator family.
- *
- * Note: this implements only ALTER OPERATOR FAMILY ... ADD/DROP.  Some
- * other commands called ALTER OPERATOR FAMILY exist, but go through
- * different code paths.
- */
+   
+                 
+                                                                           
+   
+                                                                        
+                                                                     
+                         
+   
 Oid
 AlterOpFamily(AlterOpFamilyStmt *stmt)
 {
-  Oid amoid,         /* our AM's oid */
-      opfamilyoid;   /* oid of opfamily */
-  int maxOpNumber,   /* amstrategies value */
-      maxProcNumber; /* amsupport value */
+  Oid amoid,                           
+      opfamilyoid;                        
+  int maxOpNumber,                           
+      maxProcNumber;                      
   HeapTuple tup;
   Form_pg_am amform;
   IndexAmRoutine *amroutine;
 
-  /* Get necessary info about access method */
+                                              
   tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
   if (!HeapTupleIsValid(tup))
   {
@@ -795,31 +795,31 @@ AlterOpFamily(AlterOpFamilyStmt *stmt)
   ReleaseSysCache(tup);
 
   maxOpNumber = amroutine->amstrategies;
-  /* if amstrategies is zero, just enforce that op numbers fit in int16 */
+                                                                          
   if (maxOpNumber <= 0)
   {
     maxOpNumber = SHRT_MAX;
   }
   maxProcNumber = amroutine->amsupport;
 
-  /* XXX Should we make any privilege check against the AM? */
+                                                              
 
-  /* Look up the opfamily */
+                            
   opfamilyoid = get_opfamily_oid(amoid, stmt->opfamilyname, false);
 
-  /*
-   * Currently, we require superuser privileges to alter an opfamily.
-   *
-   * XXX re-enable NOT_USED code sections below if you remove this test.
-   */
+     
+                                                                      
+     
+                                                                         
+     
   if (!superuser())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), errmsg("must be superuser to alter an operator family")));
   }
 
-  /*
-   * ADD and DROP cases need separate code from here on down.
-   */
+     
+                                                              
+     
   if (stmt->isDrop)
   {
     AlterOpFamilyDrop(stmt, amoid, opfamilyoid, maxOpNumber, maxProcNumber, stmt->items);
@@ -832,22 +832,22 @@ AlterOpFamily(AlterOpFamilyStmt *stmt)
   return opfamilyoid;
 }
 
-/*
- * ADD part of ALTER OP FAMILY
- */
+   
+                               
+   
 static void
 AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpNumber, int maxProcNumber, List *items)
 {
-  List *operators;  /* OpFamilyMember list for operators */
-  List *procedures; /* OpFamilyMember list for support procs */
+  List *operators;                                         
+  List *procedures;                                            
   ListCell *l;
 
   operators = NIL;
   procedures = NIL;
 
-  /*
-   * Scan the "items" list to obtain additional info.
-   */
+     
+                                                      
+     
   foreach (l, items)
   {
     CreateOpClassItem *item = lfirst_node(CreateOpClassItem, l);
@@ -872,7 +872,7 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       else
       {
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("operator argument types must be specified in ALTER OPERATOR FAMILY")));
-        operOid = InvalidOid; /* keep compiler quiet */
+        operOid = InvalidOid;                          
       }
 
       if (item->order_family)
@@ -885,8 +885,8 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       }
 
 #ifdef NOT_USED
-      /* XXX this is unnecessary given the superuser check above */
-      /* Caller must own operator and its underlying function */
+                                                                   
+                                                                
       if (!pg_oper_ownercheck(operOid, GetUserId()))
       {
         aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_OPERATOR, get_opname(operOid));
@@ -898,7 +898,7 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       }
 #endif
 
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->object = operOid;
       member->number = item->number;
@@ -915,20 +915,20 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
       }
       funcOid = LookupFuncWithArgs(OBJECT_FUNCTION, item->name, false);
 #ifdef NOT_USED
-      /* XXX this is unnecessary given the superuser check above */
-      /* Caller must own function */
+                                                                   
+                                    
       if (!pg_proc_ownercheck(funcOid, GetUserId()))
       {
         aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_FUNCTION, get_func_name(funcOid));
       }
 #endif
 
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->object = funcOid;
       member->number = item->number;
 
-      /* allow overriding of the function's actual arg types */
+                                                               
       if (item->class_args)
       {
         processTypesSpec(item->class_args, &member->lefttype, &member->righttype);
@@ -946,33 +946,33 @@ AlterOpFamilyAdd(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpN
     }
   }
 
-  /*
-   * Add tuples to pg_amop and pg_amproc tying in the operators and
-   * functions.  Dependencies on them are inserted, too.
-   */
+     
+                                                                    
+                                                         
+     
   storeOperators(stmt->opfamilyname, amoid, opfamilyoid, InvalidOid, operators, true);
   storeProcedures(stmt->opfamilyname, amoid, opfamilyoid, InvalidOid, procedures, true);
 
-  /* make information available to event triggers */
+                                                    
   EventTriggerCollectAlterOpFam(stmt, opfamilyoid, operators, procedures);
 }
 
-/*
- * DROP part of ALTER OP FAMILY
- */
+   
+                                
+   
 static void
 AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOpNumber, int maxProcNumber, List *items)
 {
-  List *operators;  /* OpFamilyMember list for operators */
-  List *procedures; /* OpFamilyMember list for support procs */
+  List *operators;                                         
+  List *procedures;                                            
   ListCell *l;
 
   operators = NIL;
   procedures = NIL;
 
-  /*
-   * Scan the "items" list to obtain additional info.
-   */
+     
+                                                      
+     
   foreach (l, items)
   {
     CreateOpClassItem *item = lfirst_node(CreateOpClassItem, l);
@@ -989,7 +989,7 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
                                                                         item->number, maxOpNumber)));
       }
       processTypesSpec(item->class_args, &lefttype, &righttype);
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->number = item->number;
       member->lefttype = lefttype;
@@ -1004,7 +1004,7 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
                                                                         item->number, maxProcNumber)));
       }
       processTypesSpec(item->class_args, &lefttype, &righttype);
-      /* Save the info */
+                         
       member = (OpFamilyMember *)palloc0(sizeof(OpFamilyMember));
       member->number = item->number;
       member->lefttype = lefttype;
@@ -1012,26 +1012,26 @@ AlterOpFamilyDrop(AlterOpFamilyStmt *stmt, Oid amoid, Oid opfamilyoid, int maxOp
       addFamilyMember(&procedures, member, true);
       break;
     case OPCLASS_ITEM_STORAGETYPE:
-      /* grammar prevents this from appearing */
+                                                
     default:
       elog(ERROR, "unrecognized item type: %d", item->itemtype);
       break;
     }
   }
 
-  /*
-   * Remove tuples from pg_amop and pg_amproc.
-   */
+     
+                                               
+     
   dropOperators(stmt->opfamilyname, amoid, opfamilyoid, operators);
   dropProcedures(stmt->opfamilyname, amoid, opfamilyoid, procedures);
 
-  /* make information available to event triggers */
+                                                    
   EventTriggerCollectAlterOpFam(stmt, opfamilyoid, operators, procedures);
 }
 
-/*
- * Deal with explicit arg types used in ALTER ADD/DROP
- */
+   
+                                                       
+   
 static void
 processTypesSpec(List *args, Oid *lefttype, Oid *righttype)
 {
@@ -1058,17 +1058,17 @@ processTypesSpec(List *args, Oid *lefttype, Oid *righttype)
   }
 }
 
-/*
- * Determine the lefttype/righttype to assign to an operator,
- * and do any validity checking we can manage.
- */
+   
+                                                              
+                                               
+   
 static void
 assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 {
   Operator optup;
   Form_pg_operator opform;
 
-  /* Fetch the operator definition */
+                                     
   optup = SearchSysCache1(OPEROID, ObjectIdGetDatum(member->object));
   if (!HeapTupleIsValid(optup))
   {
@@ -1076,9 +1076,9 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   }
   opform = (Form_pg_operator)GETSTRUCT(optup);
 
-  /*
-   * Opfamily operators must be binary.
-   */
+     
+                                        
+     
   if (opform->oprkind != 'b')
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("index operators must be binary")));
@@ -1086,16 +1086,16 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 
   if (OidIsValid(member->sortfamily))
   {
-    /*
-     * Ordering op, check index supports that.  (We could perhaps also
-     * check that the operator returns a type supported by the sortfamily,
-     * but that seems more trouble than it's worth here.  If it does not,
-     * the operator will never be matchable to any ORDER BY clause, but no
-     * worse consequences can ensue.  Also, trying to check that would
-     * create an ordering hazard during dump/reload: it's possible that
-     * the family has been created but not yet populated with the required
-     * operators.)
-     */
+       
+                                                                       
+                                                                           
+                                                                          
+                                                                           
+                                                                       
+                                                                        
+                                                                           
+                   
+       
     IndexAmRoutine *amroutine = GetIndexAmRoutineByAmId(amoid, false);
 
     if (!amroutine->amcanorderbyop)
@@ -1105,18 +1105,18 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   }
   else
   {
-    /*
-     * Search operators must return boolean.
-     */
+       
+                                             
+       
     if (opform->oprresult != BOOLOID)
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("index search operators must return boolean")));
     }
   }
 
-  /*
-   * If lefttype/righttype isn't specified, use the operator's input types
-   */
+     
+                                                                           
+     
   if (!OidIsValid(member->lefttype))
   {
     member->lefttype = opform->oprleft;
@@ -1129,17 +1129,17 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   ReleaseSysCache(optup);
 }
 
-/*
- * Determine the lefttype/righttype to assign to a support procedure,
- * and do any validity checking we can manage.
- */
+   
+                                                                      
+                                               
+   
 static void
 assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 {
   HeapTuple proctup;
   Form_pg_proc procform;
 
-  /* Fetch the procedure definition */
+                                      
   proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(member->object));
   if (!HeapTupleIsValid(proctup))
   {
@@ -1147,13 +1147,13 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   }
   procform = (Form_pg_proc)GETSTRUCT(proctup);
 
-  /*
-   * btree comparison procs must be 2-arg procs returning int4.  btree
-   * sortsupport procs must take internal and return void.  btree in_range
-   * procs must be 5-arg procs returning bool.  hash support proc 1 must be
-   * a 1-arg proc returning int4, while proc 2 must be a 2-arg proc
-   * returning int8.  Otherwise we don't know.
-   */
+     
+                                                                       
+                                                                           
+                                                                            
+                                                                    
+                                               
+     
   if (amoid == BTREE_AM_OID)
   {
     if (member->number == BTORDER_PROC)
@@ -1167,10 +1167,10 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
         ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree comparison functions must return integer")));
       }
 
-      /*
-       * If lefttype/righttype isn't specified, use the proc's input
-       * types
-       */
+         
+                                                                     
+               
+         
       if (!OidIsValid(member->lefttype))
       {
         member->lefttype = procform->proargtypes.values[0];
@@ -1191,9 +1191,9 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
         ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree sort support functions must return void")));
       }
 
-      /*
-       * Can't infer lefttype/righttype from proc, so use default rule
-       */
+         
+                                                                       
+         
     }
     else if (member->number == BTINRANGE_PROC)
     {
@@ -1206,10 +1206,10 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
         ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION), errmsg("btree in_range functions must return boolean")));
       }
 
-      /*
-       * If lefttype/righttype isn't specified, use the proc's input
-       * types (we look at the test-value and offset arguments)
-       */
+         
+                                                                     
+                                                                
+         
       if (!OidIsValid(member->lefttype))
       {
         member->lefttype = procform->proargtypes.values[0];
@@ -1245,9 +1245,9 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
       }
     }
 
-    /*
-     * If lefttype/righttype isn't specified, use the proc's input type
-     */
+       
+                                                                        
+       
     if (!OidIsValid(member->lefttype))
     {
       member->lefttype = procform->proargtypes.values[0];
@@ -1258,11 +1258,11 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
     }
   }
 
-  /*
-   * The default in CREATE OPERATOR CLASS is to use the class' opcintype as
-   * lefttype and righttype.  In CREATE or ALTER OPERATOR FAMILY, opcintype
-   * isn't available, so make the user specify the types.
-   */
+     
+                                                                            
+                                                                            
+                                                          
+     
   if (!OidIsValid(member->lefttype))
   {
     member->lefttype = typeoid;
@@ -1280,10 +1280,10 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
   ReleaseSysCache(proctup);
 }
 
-/*
- * Add a new family member to the appropriate list, after checking for
- * duplicated strategy or proc number.
- */
+   
+                                                                       
+                                       
+   
 static void
 addFamilyMember(List **list, OpFamilyMember *member, bool isProc)
 {
@@ -1308,13 +1308,13 @@ addFamilyMember(List **list, OpFamilyMember *member, bool isProc)
   *list = lappend(*list, member);
 }
 
-/*
- * Dump the operators to pg_amop
- *
- * We also make dependency entries in pg_depend for the opfamily entries.
- * If opclassoid is valid then make an INTERNAL dependency on that opclass,
- * else make an AUTO dependency on the opfamily.
- */
+   
+                                 
+   
+                                                                          
+                                                                            
+                                                 
+   
 static void
 storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, List *operators, bool isAdd)
 {
@@ -1333,10 +1333,10 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
     OpFamilyMember *op = (OpFamilyMember *)lfirst(l);
     char oppurpose;
 
-    /*
-     * If adding to an existing family, check for conflict with an
-     * existing pg_amop entry (just to give a nicer error message)
-     */
+       
+                                                                   
+                                                                   
+       
     if (isAdd && SearchSysCacheExists4(AMOPSTRATEGY, ObjectIdGetDatum(opfamilyoid), ObjectIdGetDatum(op->lefttype), ObjectIdGetDatum(op->righttype), Int16GetDatum(op->number)))
     {
       ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator %d(%s,%s) already exists in operator family \"%s\"", op->number, format_type_be(op->lefttype), format_type_be(op->righttype), NameListToString(opfamilyname))));
@@ -1344,7 +1344,7 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
 
     oppurpose = OidIsValid(op->sortfamily) ? AMOP_ORDER : AMOP_SEARCH;
 
-    /* Create the pg_amop entry */
+                                  
     memset(values, 0, sizeof(values));
     memset(nulls, false, sizeof(nulls));
 
@@ -1365,7 +1365,7 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
 
     heap_freetuple(tup);
 
-    /* Make its dependencies */
+                               
     myself.classId = AccessMethodOperatorRelationId;
     myself.objectId = entryoid;
     myself.objectSubId = 0;
@@ -1376,10 +1376,10 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
 
     if (OidIsValid(opclassoid))
     {
-      /* if contained in an opclass, use a NORMAL dep on operator */
+                                                                    
       recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-      /* ... and an INTERNAL dep on the opclass */
+                                                  
       referenced.classId = OperatorClassRelationId;
       referenced.objectId = opclassoid;
       referenced.objectSubId = 0;
@@ -1387,17 +1387,17 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
     }
     else
     {
-      /* if "loose" in the opfamily, use a AUTO dep on operator */
+                                                                  
       recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-      /* ... and an AUTO dep on the opfamily */
+                                               
       referenced.classId = OperatorFamilyRelationId;
       referenced.objectId = opfamilyoid;
       referenced.objectSubId = 0;
       recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
     }
 
-    /* A search operator also needs a dep on the referenced opfamily */
+                                                                       
     if (OidIsValid(op->sortfamily))
     {
       referenced.classId = OperatorFamilyRelationId;
@@ -1405,20 +1405,20 @@ storeOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, L
       referenced.objectSubId = 0;
       recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
     }
-    /* Post create hook of this access method operator */
+                                                         
     InvokeObjectPostCreateHook(AccessMethodOperatorRelationId, entryoid, 0);
   }
 
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Dump the procedures (support routines) to pg_amproc
- *
- * We also make dependency entries in pg_depend for the opfamily entries.
- * If opclassoid is valid then make an INTERNAL dependency on that opclass,
- * else make an AUTO dependency on the opfamily.
- */
+   
+                                                       
+   
+                                                                          
+                                                                            
+                                                 
+   
 static void
 storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, List *procedures, bool isAdd)
 {
@@ -1436,16 +1436,16 @@ storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, 
   {
     OpFamilyMember *proc = (OpFamilyMember *)lfirst(l);
 
-    /*
-     * If adding to an existing family, check for conflict with an
-     * existing pg_amproc entry (just to give a nicer error message)
-     */
+       
+                                                                   
+                                                                     
+       
     if (isAdd && SearchSysCacheExists4(AMPROCNUM, ObjectIdGetDatum(opfamilyoid), ObjectIdGetDatum(proc->lefttype), ObjectIdGetDatum(proc->righttype), Int16GetDatum(proc->number)))
     {
       ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("function %d(%s,%s) already exists in operator family \"%s\"", proc->number, format_type_be(proc->lefttype), format_type_be(proc->righttype), NameListToString(opfamilyname))));
     }
 
-    /* Create the pg_amproc entry */
+                                    
     memset(values, 0, sizeof(values));
     memset(nulls, false, sizeof(nulls));
 
@@ -1463,7 +1463,7 @@ storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, 
 
     heap_freetuple(tup);
 
-    /* Make its dependencies */
+                               
     myself.classId = AccessMethodProcedureRelationId;
     myself.objectId = entryoid;
     myself.objectSubId = 0;
@@ -1474,10 +1474,10 @@ storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, 
 
     if (OidIsValid(opclassoid))
     {
-      /* if contained in an opclass, use a NORMAL dep on procedure */
+                                                                     
       recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
-      /* ... and an INTERNAL dep on the opclass */
+                                                  
       referenced.classId = OperatorClassRelationId;
       referenced.objectId = opclassoid;
       referenced.objectSubId = 0;
@@ -1485,28 +1485,28 @@ storeProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, Oid opclassoid, 
     }
     else
     {
-      /* if "loose" in the opfamily, use a AUTO dep on procedure */
+                                                                   
       recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 
-      /* ... and an AUTO dep on the opfamily */
+                                               
       referenced.classId = OperatorFamilyRelationId;
       referenced.objectId = opfamilyoid;
       referenced.objectSubId = 0;
       recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
     }
-    /* Post create hook of access method procedure */
+                                                     
     InvokeObjectPostCreateHook(AccessMethodProcedureRelationId, entryoid, 0);
   }
 
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Remove operator entries from an opfamily.
- *
- * Note: this is only allowed for "loose" members of an opfamily, hence
- * behavior is always RESTRICT.
- */
+   
+                                             
+   
+                                                                        
+                                
+   
 static void
 dropOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *operators)
 {
@@ -1532,12 +1532,12 @@ dropOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *operators)
   }
 }
 
-/*
- * Remove procedure entries from an opfamily.
- *
- * Note: this is only allowed for "loose" members of an opfamily, hence
- * behavior is always RESTRICT.
- */
+   
+                                              
+   
+                                                                        
+                                
+   
 static void
 dropProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *procedures)
 {
@@ -1563,9 +1563,9 @@ dropProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid, List *procedures)
   }
 }
 
-/*
- * Deletion subroutines for use by dependency.c.
- */
+   
+                                                 
+   
 void
 RemoveOpFamilyById(Oid opfamilyOid)
 {
@@ -1575,7 +1575,7 @@ RemoveOpFamilyById(Oid opfamilyOid)
   rel = table_open(OperatorFamilyRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyOid));
-  if (!HeapTupleIsValid(tup)) /* should not happen */
+  if (!HeapTupleIsValid(tup))                        
   {
     elog(ERROR, "cache lookup failed for opfamily %u", opfamilyOid);
   }
@@ -1596,7 +1596,7 @@ RemoveOpClassById(Oid opclassOid)
   rel = table_open(OperatorClassRelationId, RowExclusiveLock);
 
   tup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassOid));
-  if (!HeapTupleIsValid(tup)) /* should not happen */
+  if (!HeapTupleIsValid(tup))                        
   {
     elog(ERROR, "cache lookup failed for opclass %u", opclassOid);
   }
@@ -1622,7 +1622,7 @@ RemoveAmOpEntryById(Oid entryOid)
 
   scan = systable_beginscan(rel, AccessMethodOperatorOidIndexId, true, NULL, 1, skey);
 
-  /* we expect exactly one match */
+                                   
   tup = systable_getnext(scan);
   if (!HeapTupleIsValid(tup))
   {
@@ -1649,7 +1649,7 @@ RemoveAmProcEntryById(Oid entryOid)
 
   scan = systable_beginscan(rel, AccessMethodProcedureOidIndexId, true, NULL, 1, skey);
 
-  /* we expect exactly one match */
+                                   
   tup = systable_getnext(scan);
   if (!HeapTupleIsValid(tup))
   {
@@ -1662,32 +1662,32 @@ RemoveAmProcEntryById(Oid entryOid)
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Subroutine for ALTER OPERATOR CLASS SET SCHEMA/RENAME
- *
- * Is there an operator class with the given name and signature already
- * in the given namespace?	If so, raise an appropriate error message.
- */
+   
+                                                         
+   
+                                                                        
+                                                                      
+   
 void
 IsThereOpClassInNamespace(const char *opcname, Oid opcmethod, Oid opcnamespace)
 {
-  /* make sure the new name doesn't exist */
+                                            
   if (SearchSysCacheExists3(CLAAMNAMENSP, ObjectIdGetDatum(opcmethod), CStringGetDatum(opcname), ObjectIdGetDatum(opcnamespace)))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator class \"%s\" for access method \"%s\" already exists in schema \"%s\"", opcname, get_am_name(opcmethod), get_namespace_name(opcnamespace))));
   }
 }
 
-/*
- * Subroutine for ALTER OPERATOR FAMILY SET SCHEMA/RENAME
- *
- * Is there an operator family with the given name and signature already
- * in the given namespace?	If so, raise an appropriate error message.
- */
+   
+                                                          
+   
+                                                                         
+                                                                      
+   
 void
 IsThereOpFamilyInNamespace(const char *opfname, Oid opfmethod, Oid opfnamespace)
 {
-  /* make sure the new name doesn't exist */
+                                            
   if (SearchSysCacheExists3(OPFAMILYAMNAMENSP, ObjectIdGetDatum(opfmethod), CStringGetDatum(opfname), ObjectIdGetDatum(opfnamespace)))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("operator family \"%s\" for access method \"%s\" already exists in schema \"%s\"", opfname, get_am_name(opfmethod), get_namespace_name(opfnamespace))));

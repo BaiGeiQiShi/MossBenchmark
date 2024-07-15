@@ -1,26 +1,26 @@
-/*-------------------------------------------------------------------------
- *
- * pg_config.c
- *
- * This program reports various pieces of information about the
- * installed version of PostgreSQL.  Packages that interface to
- * PostgreSQL can use it to configure their build.
- *
- * This is a C implementation of the previous shell script written by
- * Peter Eisentraut <peter_e@gmx.net>, with adjustments made to
- * accommodate the possibility that the installation has been relocated from
- * the place originally configured.
- *
- * author of C translation: Andrew Dunstan	   mailto:andrew@dunslane.net
- *
- * This code is released under the terms of the PostgreSQL License.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * src/bin/pg_config/pg_config.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+   
+                                                                
+                                                                
+                                                   
+   
+                                                                      
+                                                                
+                                                                             
+                                    
+   
+                                                                         
+   
+                                                                    
+   
+                                                                         
+   
+                                 
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -29,11 +29,11 @@
 
 static const char *progname;
 
-/*
- * Table of known information items
- *
- * Be careful to keep this in sync with the help() display.
- */
+   
+                                    
+   
+                                                            
+   
 typedef struct
 {
   const char *switchname;
@@ -112,7 +112,7 @@ main(int argc, char **argv)
 
   progname = get_progname(argv[0]);
 
-  /* check for --help */
+                        
   for (i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0)
@@ -129,7 +129,7 @@ main(int argc, char **argv)
   }
 
   configdata = get_configdata(my_exec_path, &configdata_len);
-  /* no arguments -> print everything */
+                                        
   if (argc < 2)
   {
     for (i = 0; i < configdata_len; i++)
@@ -139,7 +139,7 @@ main(int argc, char **argv)
     exit(0);
   }
 
-  /* otherwise print requested items */
+                                       
   for (i = 1; i < argc; i++)
   {
     for (j = 0; info_items[j].switchname != NULL; j++)

@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * tsquery_op.c
- *	  Various operations with tsquery
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tsquery_op.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                     
+   
+                                                                         
+   
+   
+                  
+                                        
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -234,7 +234,7 @@ tsquery_cmp(PG_FUNCTION_ARGS)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
     PG_RETURN_BOOL(CONDITION);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
   }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-  /* keep compiler quiet - no extra ; */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   extern int no_such_variable
 
 CMPFUNC(tsquery_lt, res < 0);
@@ -339,11 +339,11 @@ tsq_mcontains(PG_FUNCTION_ARGS)
   int ex_nvalues;
   bool result = true;
 
-  /* Extract the query terms into arrays */
+                                           
   query_values = collectTSQueryValues(query, &query_nvalues);
   ex_values = collectTSQueryValues(ex, &ex_nvalues);
 
-  /* Sort and remove duplicates from both arrays */
+                                                   
   qsort(query_values, query_nvalues, sizeof(char *), cmp_string);
   query_nvalues = remove_duplicates(query_values, query_nvalues);
   qsort(ex_values, ex_nvalues, sizeof(char *), cmp_string);

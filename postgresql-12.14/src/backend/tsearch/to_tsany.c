@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * to_tsany.c
- *		to_ts* function definitions
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/to_tsany.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                
+   
+                                                                         
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "tsearch/ts_cache.h"
@@ -21,7 +21,7 @@
 typedef struct MorphOpaque
 {
   Oid cfg_id;
-  int qoperator; /* query operator */
+  int qoperator;                     
 } MorphOpaque;
 
 typedef struct TSVectorBuildState
@@ -39,9 +39,9 @@ get_current_ts_config(PG_FUNCTION_ARGS)
   PG_RETURN_OID(getTSCurrentConfig(true));
 }
 
-/*
- * to_tsvector
- */
+   
+               
+   
 static int
 compareWORD(const void *a, const void *b)
 {
@@ -81,30 +81,30 @@ uniqueWORD(ParsedWord *a, int32 l)
   res = a;
   ptr = a + 1;
 
-  /*
-   * Sort words with its positions
-   */
+     
+                                   
+     
   qsort((void *)a, l, sizeof(ParsedWord), compareWORD);
 
-  /*
-   * Initialize first word and its first position
-   */
+     
+                                                  
+     
   tmppos = LIMITPOS(a->pos.pos);
   a->alen = 2;
   a->pos.apos = (uint16 *)palloc(sizeof(uint16) * a->alen);
   a->pos.apos[0] = 1;
   a->pos.apos[1] = tmppos;
 
-  /*
-   * Summarize position information for each word
-   */
+     
+                                                  
+     
   while (ptr - a < l)
   {
     if (!(ptr->len == res->len && strncmp(ptr->word, res->word, res->len) == 0))
     {
-      /*
-       * Got a new word, so put it in result
-       */
+         
+                                             
+         
       res++;
       res->len = ptr->len;
       res->word = ptr->word;
@@ -116,11 +116,11 @@ uniqueWORD(ParsedWord *a, int32 l)
     }
     else
     {
-      /*
-       * The word already exists, so adjust position information. But
-       * before we should check size of position's array, max allowed
-       * value for position and uniqueness of position
-       */
+         
+                                                                      
+                                                                      
+                                                       
+         
       pfree(ptr->word);
       if (res->pos.apos[0] < MAXNUMPOS - 1 && res->pos.apos[res->pos.apos[0]] != MAXENTRYPOS - 1 && res->pos.apos[res->pos.apos[0]] != LIMITPOS(ptr->pos.pos))
       {
@@ -142,11 +142,11 @@ uniqueWORD(ParsedWord *a, int32 l)
   return res + 1 - a;
 }
 
-/*
- * make value of tsvector, given parsed text
- *
- * Note: frees prs->words and subsidiary data.
- */
+   
+                                             
+   
+                                               
+   
 TSVector
 make_tsvector(ParsedText *prs)
 {
@@ -156,13 +156,13 @@ make_tsvector(ParsedText *prs)
   char *str;
   int stroff;
 
-  /* Merge duplicate words */
+                             
   if (prs->curwords > 0)
   {
     prs->curwords = uniqueWORD(prs->words, prs->curwords);
   }
 
-  /* Determine space needed */
+                              
   for (i = 0; i < prs->curwords; i++)
   {
     lenstr += prs->words[i].len;
@@ -238,8 +238,8 @@ to_tsvector_byid(PG_FUNCTION_ARGS)
   ParsedText prs;
   TSVector out;
 
-  prs.lenwords = VARSIZE_ANY_EXHDR(in) / 6; /* just estimation of word's
-                                             * number */
+  prs.lenwords = VARSIZE_ANY_EXHDR(in) / 6;                              
+                                                        
   if (prs.lenwords < 2)
   {
     prs.lenwords = 2;
@@ -267,9 +267,9 @@ to_tsvector(PG_FUNCTION_ARGS)
   PG_RETURN_DATUM(DirectFunctionCall2(to_tsvector_byid, ObjectIdGetDatum(cfgId), PointerGetDatum(in)));
 }
 
-/*
- * Worker function for jsonb(_string)_to_tsvector(_byid)
- */
+   
+                                                         
+   
 static TSVector
 jsonb_to_tsvector_worker(Oid cfgId, Jsonb *jb, uint32 flags)
 {
@@ -346,9 +346,9 @@ jsonb_to_tsvector(PG_FUNCTION_ARGS)
   PG_RETURN_TSVECTOR(result);
 }
 
-/*
- * Worker function for json(_string)_to_tsvector(_byid)
- */
+   
+                                                        
+   
 static TSVector
 json_to_tsvector_worker(Oid cfgId, text *json, uint32 flags)
 {
@@ -425,9 +425,9 @@ json_to_tsvector(PG_FUNCTION_ARGS)
   PG_RETURN_TSVECTOR(result);
 }
 
-/*
- * Parse lexemes in an element of a json(b) value, add to TSVectorBuildState.
- */
+   
+                                                                              
+   
 static void
 add_to_tsvector(void *_state, char *elem_value, int elem_len)
 {
@@ -437,10 +437,10 @@ add_to_tsvector(void *_state, char *elem_value, int elem_len)
 
   if (prs->words == NULL)
   {
-    /*
-     * First time through: initialize words array to a reasonable size.
-     * (parsetext() will realloc it bigger as needed.)
-     */
+       
+                                                                        
+                                                       
+       
     prs->lenwords = 16;
     prs->words = (ParsedWord *)palloc(sizeof(ParsedWord) * prs->lenwords);
     prs->curwords = 0;
@@ -451,32 +451,32 @@ add_to_tsvector(void *_state, char *elem_value, int elem_len)
 
   parsetext(state->cfgId, prs, elem_value, elem_len);
 
-  /*
-   * If we extracted any words from this JSON element, advance pos to create
-   * an artificial break between elements.  This is because we don't want
-   * phrase searches to think that the last word in this element is adjacent
-   * to the first word in the next one.
-   */
+     
+                                                                             
+                                                                          
+                                                                             
+                                        
+     
   if (prs->curwords > prevwords)
   {
     prs->pos += 1;
   }
 }
 
-/*
- * to_tsquery
- */
+   
+              
+   
 
-/*
- * This function is used for morph parsing.
- *
- * The value is passed to parsetext which will call the right dictionary to
- * lexize the word. If it turns out to be a stopword, we push a QI_VALSTOP
- * to the stack.
- *
- * All words belonging to the same variant are pushed as an ANDed list,
- * and different variants are ORed together.
- */
+   
+                                            
+   
+                                                                            
+                                                                           
+                 
+   
+                                                                        
+                                             
+   
 static void
 pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, int16 weight, bool prefix)
 {
@@ -496,15 +496,15 @@ pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, 
   {
     while (count < prs.curwords)
     {
-      /*
-       * Were any stop words removed? If so, fill empty positions with
-       * placeholders linked by an appropriate operator.
-       */
+         
+                                                                       
+                                                         
+         
       if (pos > 0 && pos + 1 < prs.words[count].pos.pos)
       {
         while (pos + 1 < prs.words[count].pos.pos)
         {
-          /* put placeholders for each missing stop word */
+                                                           
           pushStop(state);
           if (cntpos)
           {
@@ -515,16 +515,16 @@ pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, 
         }
       }
 
-      /* save current word's position */
+                                        
       pos = prs.words[count].pos.pos;
 
-      /* Go through all variants obtained from this token */
+                                                            
       cntvar = 0;
       while (count < prs.curwords && pos == prs.words[count].pos.pos)
       {
         variant = prs.words[count].nvariant;
 
-        /* Push all words belonging to the same variant */
+                                                          
         cnt = 0;
         while (count < prs.curwords && pos == prs.words[count].pos.pos && variant == prs.words[count].nvariant)
         {
@@ -547,7 +547,7 @@ pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, 
 
       if (cntpos)
       {
-        /* distance may be useful */
+                                    
         pushOperator(state, data->qoperator, 1);
       }
 

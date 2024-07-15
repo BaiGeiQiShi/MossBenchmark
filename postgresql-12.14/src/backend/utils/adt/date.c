@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * date.c
- *	  implements DATE and TIME data types specified in SQL standard
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994-5, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/date.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+          
+                                                                   
+   
+                                                                         
+                                                                          
+   
+   
+                  
+                                  
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -33,10 +33,10 @@
 #include "utils/hashutils.h"
 #include "utils/sortsupport.h"
 
-/*
- * gcc's -ffast-math switch breaks routines that expect exact results from
- * expressions like timeval / SECS_PER_HOUR, where timeval is double.
- */
+   
+                                                                           
+                                                                      
+   
 #ifdef __FAST_MATH__
 #error -ffast-math is known to break this code
 #endif
@@ -48,7 +48,7 @@ tm2timetz(struct pg_tm *tm, fsec_t fsec, int tz, TimeTzADT *result);
 static void
 AdjustTimeForTypmod(TimeADT *time, int32 typmod);
 
-/* common code for timetypmodin and timetztypmodin */
+                                                     
 static int32
 anytime_typmodin(bool istz, ArrayType *ta)
 {
@@ -57,10 +57,10 @@ anytime_typmodin(bool istz, ArrayType *ta)
 
   tl = ArrayGetIntegerTypmods(ta, &n);
 
-  /*
-   * we're not too tense about good error message here because grammar
-   * shouldn't allow wrong number of modifiers for TIME
-   */
+     
+                                                                       
+                                                        
+     
   if (n != 1)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("invalid type modifier")));
@@ -69,7 +69,7 @@ anytime_typmodin(bool istz, ArrayType *ta)
   return anytime_typmod_check(istz, tl[0]);
 }
 
-/* exported so parse_expr.c can use it */
+                                         
 int32
 anytime_typmod_check(bool istz, int32 typmod)
 {
@@ -86,7 +86,7 @@ anytime_typmod_check(bool istz, int32 typmod)
   return typmod;
 }
 
-/* common code for timetypmodout and timetztypmodout */
+                                                       
 static char *
 anytime_typmodout(bool istz, int32 typmod)
 {
@@ -102,13 +102,13 @@ anytime_typmodout(bool istz, int32 typmod)
   }
 }
 
-/*****************************************************************************
- *	 Date ADT
- *****************************************************************************/
+                                                                               
+             
+                                                                               
 
-/* date_in()
- * Given date text string, convert to internal date format.
- */
+             
+                                                            
+   
 Datum
 date_in(PG_FUNCTION_ARGS)
 {
@@ -156,7 +156,7 @@ date_in(PG_FUNCTION_ARGS)
     break;
   }
 
-  /* Prevent overflow in Julian-day routines */
+                                               
   if (!IS_VALID_JULIAN(tm->tm_year, tm->tm_mon, tm->tm_mday))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range: \"%s\"", str)));
@@ -164,7 +164,7 @@ date_in(PG_FUNCTION_ARGS)
 
   date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
 
-  /* Now check for just-out-of-range dates */
+                                             
   if (!IS_VALID_DATE(date))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range: \"%s\"", str)));
@@ -173,9 +173,9 @@ date_in(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(date);
 }
 
-/* date_out()
- * Given internal format date, convert to text string.
- */
+              
+                                                       
+   
 Datum
 date_out(PG_FUNCTION_ARGS)
 {
@@ -198,9 +198,9 @@ date_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		date_recv			- converts external binary format to date
- */
+   
+                                                          
+   
 Datum
 date_recv(PG_FUNCTION_ARGS)
 {
@@ -209,9 +209,9 @@ date_recv(PG_FUNCTION_ARGS)
 
   result = (DateADT)pq_getmsgint(buf, sizeof(DateADT));
 
-  /* Limit to the same range that date_in() accepts. */
+                                                       
   if (DATE_NOT_FINITE(result))
-    /* ok */;
+            ;
   else if (!IS_VALID_DATE(result))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range")));
@@ -220,9 +220,9 @@ date_recv(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(result);
 }
 
-/*
- *		date_send			- converts date to binary format
- */
+   
+                                                 
+   
 Datum
 date_send(PG_FUNCTION_ARGS)
 {
@@ -234,9 +234,9 @@ date_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- *		make_date			- date constructor
- */
+   
+                                   
+   
 Datum
 make_date(PG_FUNCTION_ARGS)
 {
@@ -249,7 +249,7 @@ make_date(PG_FUNCTION_ARGS)
   tm.tm_mon = PG_GETARG_INT32(1);
   tm.tm_mday = PG_GETARG_INT32(2);
 
-  /* Handle negative years as BC */
+                                   
   if (tm.tm_year < 0)
   {
     bc = true;
@@ -263,7 +263,7 @@ make_date(PG_FUNCTION_ARGS)
     ereport(ERROR, (errcode(ERRCODE_DATETIME_FIELD_OVERFLOW), errmsg("date field value out of range: %d-%02d-%02d", tm.tm_year, tm.tm_mon, tm.tm_mday)));
   }
 
-  /* Prevent overflow in Julian-day routines */
+                                               
   if (!IS_VALID_JULIAN(tm.tm_year, tm.tm_mon, tm.tm_mday))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range: %d-%02d-%02d", tm.tm_year, tm.tm_mon, tm.tm_mday)));
@@ -271,7 +271,7 @@ make_date(PG_FUNCTION_ARGS)
 
   date = date2j(tm.tm_year, tm.tm_mon, tm.tm_mday) - POSTGRES_EPOCH_JDATE;
 
-  /* Now check for just-out-of-range dates */
+                                             
   if (!IS_VALID_DATE(date))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range: %d-%02d-%02d", tm.tm_year, tm.tm_mon, tm.tm_mday)));
@@ -280,9 +280,9 @@ make_date(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(date);
 }
 
-/*
- * Convert reserved date values to string.
- */
+   
+                                           
+   
 void
 EncodeSpecialDate(DateADT dt, char *str)
 {
@@ -294,15 +294,15 @@ EncodeSpecialDate(DateADT dt, char *str)
   {
     strcpy(str, LATE);
   }
-  else /* shouldn't happen */
+  else                       
   {
     elog(ERROR, "invalid argument for EncodeSpecialDate");
   }
 }
 
-/*
- * GetSQLCurrentDate -- implements CURRENT_DATE
- */
+   
+                                                
+   
 DateADT
 GetSQLCurrentDate(void)
 {
@@ -321,9 +321,9 @@ GetSQLCurrentDate(void)
   return date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
 }
 
-/*
- * GetSQLCurrentTime -- implements CURRENT_TIME, CURRENT_TIME(n)
- */
+   
+                                                                 
+   
 TimeTzADT *
 GetSQLCurrentTime(int32 typmod)
 {
@@ -346,9 +346,9 @@ GetSQLCurrentTime(int32 typmod)
   return result;
 }
 
-/*
- * GetSQLLocalTime -- implements LOCALTIME, LOCALTIME(n)
- */
+   
+                                                         
+   
 TimeADT
 GetSQLLocalTime(int32 typmod)
 {
@@ -370,9 +370,9 @@ GetSQLLocalTime(int32 typmod)
   return result;
 }
 
-/*
- * Comparison functions for dates
- */
+   
+                                  
+   
 
 Datum
 date_eq(PG_FUNCTION_ARGS)
@@ -497,8 +497,8 @@ date_smaller(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT((dateVal1 < dateVal2) ? dateVal1 : dateVal2);
 }
 
-/* Compute difference between two dates in days.
- */
+                                                 
+   
 Datum
 date_mi(PG_FUNCTION_ARGS)
 {
@@ -513,9 +513,9 @@ date_mi(PG_FUNCTION_ARGS)
   PG_RETURN_INT32((int32)(dateVal1 - dateVal2));
 }
 
-/* Add a number of days to a date, giving a new date.
- * Must handle both positive and negative numbers of days.
- */
+                                                      
+                                                           
+   
 Datum
 date_pli(PG_FUNCTION_ARGS)
 {
@@ -525,12 +525,12 @@ date_pli(PG_FUNCTION_ARGS)
 
   if (DATE_NOT_FINITE(dateVal))
   {
-    PG_RETURN_DATEADT(dateVal); /* can't change infinity */
+    PG_RETURN_DATEADT(dateVal);                            
   }
 
   result = dateVal + days;
 
-  /* Check for integer overflow and out-of-allowed-range */
+                                                           
   if ((days >= 0 ? (result < dateVal) : (result > dateVal)) || !IS_VALID_DATE(result))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range")));
@@ -539,8 +539,8 @@ date_pli(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(result);
 }
 
-/* Subtract a number of days from a date, giving a new date.
- */
+                                                             
+   
 Datum
 date_mii(PG_FUNCTION_ARGS)
 {
@@ -550,12 +550,12 @@ date_mii(PG_FUNCTION_ARGS)
 
   if (DATE_NOT_FINITE(dateVal))
   {
-    PG_RETURN_DATEADT(dateVal); /* can't change infinity */
+    PG_RETURN_DATEADT(dateVal);                            
   }
 
   result = dateVal - days;
 
-  /* Check for integer overflow and out-of-allowed-range */
+                                                           
   if ((days >= 0 ? (result > dateVal) : (result < dateVal)) || !IS_VALID_DATE(result))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range")));
@@ -564,10 +564,10 @@ date_mii(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(result);
 }
 
-/*
- * Internal routines for promoting date to timestamp and timestamp with
- * time zone
- */
+   
+                                                                        
+             
+   
 
 static Timestamp
 date2timestamp(DateADT dateVal)
@@ -584,17 +584,17 @@ date2timestamp(DateADT dateVal)
   }
   else
   {
-    /*
-     * Date's range is wider than timestamp's, so check for boundaries.
-     * Since dates have the same minimum values as timestamps, only upper
-     * boundary need be checked for overflow.
-     */
+       
+                                                                        
+                                                                          
+                                              
+       
     if (dateVal >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
     {
       ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range for timestamp")));
     }
 
-    /* date is days since 2000, timestamp is microseconds since same... */
+                                                                          
     result = dateVal * USECS_PER_DAY;
   }
 
@@ -618,11 +618,11 @@ date2timestamptz(DateADT dateVal)
   }
   else
   {
-    /*
-     * Date's range is wider than timestamp's, so check for boundaries.
-     * Since dates have the same minimum values as timestamps, only upper
-     * boundary need be checked for overflow.
-     */
+       
+                                                                        
+                                                                          
+                                              
+       
     if (dateVal >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
     {
       ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range for timestamp")));
@@ -636,10 +636,10 @@ date2timestamptz(DateADT dateVal)
 
     result = dateVal * USECS_PER_DAY + tz * USECS_PER_SEC;
 
-    /*
-     * Since it is possible to go beyond allowed timestamptz range because
-     * of time zone, check for allowed timestamp range after adding tz.
-     */
+       
+                                                                           
+                                                                        
+       
     if (!IS_VALID_TIMESTAMP(result))
     {
       ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range for timestamp")));
@@ -649,16 +649,16 @@ date2timestamptz(DateADT dateVal)
   return result;
 }
 
-/*
- * date2timestamp_no_overflow
- *
- * This is chartered to produce a double value that is numerically
- * equivalent to the corresponding Timestamp value, if the date is in the
- * valid range of Timestamps, but in any case not throw an overflow error.
- * We can do this since the numerical range of double is greater than
- * that of non-erroneous timestamps.  The results are currently only
- * used for statistical estimation purposes.
- */
+   
+                              
+   
+                                                                   
+                                                                          
+                                                                           
+                                                                      
+                                                                     
+                                             
+   
 double
 date2timestamp_no_overflow(DateADT dateVal)
 {
@@ -674,16 +674,16 @@ date2timestamp_no_overflow(DateADT dateVal)
   }
   else
   {
-    /* date is days since 2000, timestamp is microseconds since same... */
+                                                                          
     result = dateVal * (double)USECS_PER_DAY;
   }
 
   return result;
 }
 
-/*
- * Crosstype comparison functions for dates
- */
+   
+                                            
+   
 
 Datum
 date_eq_timestamp(PG_FUNCTION_ARGS)
@@ -1021,12 +1021,12 @@ timestamptz_cmp_date(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(timestamptz_cmp_internal(dt1, dt2));
 }
 
-/*
- * in_range support function for date.
- *
- * We implement this by promoting the dates to timestamp (without time zone)
- * and then using the timestamp-and-interval in_range function.
- */
+   
+                                       
+   
+                                                                             
+                                                                
+   
 Datum
 in_range_date_interval(PG_FUNCTION_ARGS)
 {
@@ -1044,12 +1044,12 @@ in_range_date_interval(PG_FUNCTION_ARGS)
   return DirectFunctionCall5(in_range_timestamp_interval, TimestampGetDatum(valStamp), TimestampGetDatum(baseStamp), IntervalPGetDatum(offset), BoolGetDatum(sub), BoolGetDatum(less));
 }
 
-/* Add an interval to a date, giving a new date.
- * Must handle both positive and negative intervals.
- *
- * We implement this by promoting the date to timestamp (without time zone)
- * and then using the timestamp plus interval function.
- */
+                                                 
+                                                     
+   
+                                                                            
+                                                        
+   
 Datum
 date_pl_interval(PG_FUNCTION_ARGS)
 {
@@ -1062,12 +1062,12 @@ date_pl_interval(PG_FUNCTION_ARGS)
   return DirectFunctionCall2(timestamp_pl_interval, TimestampGetDatum(dateStamp), PointerGetDatum(span));
 }
 
-/* Subtract an interval from a date, giving a new date.
- * Must handle both positive and negative intervals.
- *
- * We implement this by promoting the date to timestamp (without time zone)
- * and then using the timestamp minus interval function.
- */
+                                                        
+                                                     
+   
+                                                                            
+                                                         
+   
 Datum
 date_mi_interval(PG_FUNCTION_ARGS)
 {
@@ -1080,9 +1080,9 @@ date_mi_interval(PG_FUNCTION_ARGS)
   return DirectFunctionCall2(timestamp_mi_interval, TimestampGetDatum(dateStamp), PointerGetDatum(span));
 }
 
-/* date_timestamp()
- * Convert date to timestamp data type.
- */
+                    
+                                        
+   
 Datum
 date_timestamp(PG_FUNCTION_ARGS)
 {
@@ -1094,9 +1094,9 @@ date_timestamp(PG_FUNCTION_ARGS)
   PG_RETURN_TIMESTAMP(result);
 }
 
-/* timestamp_date()
- * Convert timestamp to date data type.
- */
+                    
+                                        
+   
 Datum
 timestamp_date(PG_FUNCTION_ARGS)
 {
@@ -1126,9 +1126,9 @@ timestamp_date(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(result);
 }
 
-/* date_timestamptz()
- * Convert date to timestamp with time zone data type.
- */
+                      
+                                                       
+   
 Datum
 date_timestamptz(PG_FUNCTION_ARGS)
 {
@@ -1140,9 +1140,9 @@ date_timestamptz(PG_FUNCTION_ARGS)
   PG_RETURN_TIMESTAMP(result);
 }
 
-/* timestamptz_date()
- * Convert timestamp with time zone to date data type.
- */
+                      
+                                                       
+   
 Datum
 timestamptz_date(PG_FUNCTION_ARGS)
 {
@@ -1173,9 +1173,9 @@ timestamptz_date(PG_FUNCTION_ARGS)
   PG_RETURN_DATEADT(result);
 }
 
-/*****************************************************************************
- *	 Time ADT
- *****************************************************************************/
+                                                                               
+             
+                                                                               
 
 Datum
 time_in(PG_FUNCTION_ARGS)
@@ -1213,9 +1213,9 @@ time_in(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/* tm2time()
- * Convert a tm structure to a time data type.
- */
+             
+                                               
+   
 static int
 tm2time(struct pg_tm *tm, fsec_t fsec, TimeADT *result)
 {
@@ -1223,22 +1223,22 @@ tm2time(struct pg_tm *tm, fsec_t fsec, TimeADT *result)
   return 0;
 }
 
-/* time_overflows()
- * Check to see if a broken-down time-of-day is out of range.
- */
+                    
+                                                              
+   
 bool
 time_overflows(int hour, int min, int sec, fsec_t fsec)
 {
-  /* Range-check the fields individually. */
+                                            
   if (hour < 0 || hour > HOURS_PER_DAY || min < 0 || min >= MINS_PER_HOUR || sec < 0 || sec > SECS_PER_MINUTE || fsec < 0 || fsec > USECS_PER_SEC)
   {
     return true;
   }
 
-  /*
-   * Because we allow, eg, hour = 24 or sec = 60, we must check separately
-   * that the total time value doesn't exceed 24:00:00.
-   */
+     
+                                                                           
+                                                        
+     
   if ((((((hour * MINS_PER_HOUR + min) * SECS_PER_MINUTE) + sec) * USECS_PER_SEC) + fsec) > USECS_PER_DAY)
   {
     return true;
@@ -1247,23 +1247,23 @@ time_overflows(int hour, int min, int sec, fsec_t fsec)
   return false;
 }
 
-/* float_time_overflows()
- * Same, when we have seconds + fractional seconds as one "double" value.
- */
+                          
+                                                                          
+   
 bool
 float_time_overflows(int hour, int min, double sec)
 {
-  /* Range-check the fields individually. */
+                                            
   if (hour < 0 || hour > HOURS_PER_DAY || min < 0 || min >= MINS_PER_HOUR)
   {
     return true;
   }
 
-  /*
-   * "sec", being double, requires extra care.  Cope with NaN, and round off
-   * before applying the range check to avoid unexpected errors due to
-   * imprecise input.  (We assume rint() behaves sanely with infinities.)
-   */
+     
+                                                                             
+                                                                       
+                                                                          
+     
   if (isnan(sec))
   {
     return true;
@@ -1274,11 +1274,11 @@ float_time_overflows(int hour, int min, double sec)
     return true;
   }
 
-  /*
-   * Because we allow, eg, hour = 24 or sec = 60, we must check separately
-   * that the total time value doesn't exceed 24:00:00.  This must match the
-   * way that callers will convert the fields to a time.
-   */
+     
+                                                                           
+                                                                             
+                                                         
+     
   if (((((hour * MINS_PER_HOUR + min) * SECS_PER_MINUTE) * USECS_PER_SEC) + (int64)sec) > USECS_PER_DAY)
   {
     return true;
@@ -1287,13 +1287,13 @@ float_time_overflows(int hour, int min, double sec)
   return false;
 }
 
-/* time2tm()
- * Convert time data type to POSIX time structure.
- *
- * For dates within the range of pg_time_t, convert to the local time zone.
- * If out of this range, leave as UTC (in practice that could only happen
- * if pg_time_t is just 32 bits) - thomas 97/05/27
- */
+             
+                                                   
+   
+                                                                            
+                                                                          
+                                                   
+   
 int
 time2tm(TimeADT time, struct pg_tm *tm, fsec_t *fsec)
 {
@@ -1323,9 +1323,9 @@ time_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		time_recv			- converts external binary format to time
- */
+   
+                                                          
+   
 Datum
 time_recv(PG_FUNCTION_ARGS)
 {
@@ -1349,9 +1349,9 @@ time_recv(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/*
- *		time_send			- converts time to binary format
- */
+   
+                                                 
+   
 Datum
 time_send(PG_FUNCTION_ARGS)
 {
@@ -1379,9 +1379,9 @@ timetypmodout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(anytime_typmodout(false, typmod));
 }
 
-/*
- *		make_time			- time constructor
- */
+   
+                                   
+   
 Datum
 make_time(PG_FUNCTION_ARGS)
 {
@@ -1390,23 +1390,23 @@ make_time(PG_FUNCTION_ARGS)
   double sec = PG_GETARG_FLOAT8(2);
   TimeADT time;
 
-  /* Check for time overflow */
+                               
   if (float_time_overflows(tm_hour, tm_min, sec))
   {
     ereport(ERROR, (errcode(ERRCODE_DATETIME_FIELD_OVERFLOW), errmsg("time field value out of range: %d:%02d:%02g", tm_hour, tm_min, sec)));
   }
 
-  /* This should match tm2time */
+                                 
   time = (((tm_hour * MINS_PER_HOUR + tm_min) * SECS_PER_MINUTE) * USECS_PER_SEC) + (int64)rint(sec * USECS_PER_SEC);
 
   PG_RETURN_TIMEADT(time);
 }
 
-/* time_support()
- *
- * Planner support function for the time_scale() and timetz_scale()
- * length coercion functions (we need not distinguish them here).
- */
+                  
+   
+                                                                    
+                                                                  
+   
 Datum
 time_support(PG_FUNCTION_ARGS)
 {
@@ -1423,10 +1423,10 @@ time_support(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(ret);
 }
 
-/* time_scale()
- * Adjust time type for specified scale factor.
- * Used by PostgreSQL type system to stuff columns.
- */
+                
+                                                
+                                                    
+   
 Datum
 time_scale(PG_FUNCTION_ARGS)
 {
@@ -1440,13 +1440,13 @@ time_scale(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/* AdjustTimeForTypmod()
- * Force the precision of the time value to a specified value.
- * Uses *exactly* the same code as in AdjustTimestampForTypmod()
- * but we make a separate copy because those types do not
- * have a fundamental tie together but rather a coincidence of
- * implementation. - thomas
- */
+                         
+                                                               
+                                                                 
+                                                          
+                                                               
+                            
+   
 static void
 AdjustTimeForTypmod(TimeADT *time, int32 typmod)
 {
@@ -1568,19 +1568,19 @@ time_smaller(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT((time1 < time2) ? time1 : time2);
 }
 
-/* overlaps_time() --- implements the SQL OVERLAPS operator.
- *
- * Algorithm is per SQL spec.  This is much harder than you'd think
- * because the spec requires us to deliver a non-null answer in some cases
- * where some of the inputs are null.
- */
+                                                             
+   
+                                                                    
+                                                                           
+                                      
+   
 Datum
 overlaps_time(PG_FUNCTION_ARGS)
 {
-  /*
-   * The arguments are TimeADT, but we leave them as generic Datums to avoid
-   * dereferencing nulls (TimeADT is pass-by-reference!)
-   */
+     
+                                                                             
+                                                         
+     
   Datum ts1 = PG_GETARG_DATUM(0);
   Datum te1 = PG_GETARG_DATUM(1);
   Datum ts2 = PG_GETARG_DATUM(2);
@@ -1593,18 +1593,18 @@ overlaps_time(PG_FUNCTION_ARGS)
 #define TIMEADT_GT(t1, t2) (DatumGetTimeADT(t1) > DatumGetTimeADT(t2))
 #define TIMEADT_LT(t1, t2) (DatumGetTimeADT(t1) < DatumGetTimeADT(t2))
 
-  /*
-   * If both endpoints of interval 1 are null, the result is null (unknown).
-   * If just one endpoint is null, take ts1 as the non-null one. Otherwise,
-   * take ts1 as the lesser endpoint.
-   */
+     
+                                                                             
+                                                                            
+                                      
+     
   if (ts1IsNull)
   {
     if (te1IsNull)
     {
       PG_RETURN_NULL();
     }
-    /* swap null for non-null */
+                                
     ts1 = te1;
     te1IsNull = true;
   }
@@ -1619,14 +1619,14 @@ overlaps_time(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Likewise for interval 2. */
+                                
   if (ts2IsNull)
   {
     if (te2IsNull)
     {
       PG_RETURN_NULL();
     }
-    /* swap null for non-null */
+                                
     ts2 = te2;
     te2IsNull = true;
   }
@@ -1641,16 +1641,16 @@ overlaps_time(PG_FUNCTION_ARGS)
     }
   }
 
-  /*
-   * At this point neither ts1 nor ts2 is null, so we can consider three
-   * cases: ts1 > ts2, ts1 < ts2, ts1 = ts2
-   */
+     
+                                                                         
+                                            
+     
   if (TIMEADT_GT(ts1, ts2))
   {
-    /*
-     * This case is ts1 < te2 OR te1 < te2, which may look redundant but
-     * in the presence of nulls it's not quite completely so.
-     */
+       
+                                                                         
+                                                              
+       
     if (te2IsNull)
     {
       PG_RETURN_NULL();
@@ -1664,15 +1664,15 @@ overlaps_time(PG_FUNCTION_ARGS)
       PG_RETURN_NULL();
     }
 
-    /*
-     * If te1 is not null then we had ts1 <= te1 above, and we just found
-     * ts1 >= te2, hence te1 >= te2.
-     */
+       
+                                                                          
+                                     
+       
     PG_RETURN_BOOL(false);
   }
   else if (TIMEADT_LT(ts1, ts2))
   {
-    /* This case is ts2 < te1 OR te2 < te1 */
+                                             
     if (te1IsNull)
     {
       PG_RETURN_NULL();
@@ -1686,18 +1686,18 @@ overlaps_time(PG_FUNCTION_ARGS)
       PG_RETURN_NULL();
     }
 
-    /*
-     * If te2 is not null then we had ts2 <= te2 above, and we just found
-     * ts2 >= te1, hence te2 >= te1.
-     */
+       
+                                                                          
+                                     
+       
     PG_RETURN_BOOL(false);
   }
   else
   {
-    /*
-     * For ts1 = ts2 the spec says te1 <> te2 OR te1 = te2, which is a
-     * rather silly way of saying "true if both are nonnull, else null".
-     */
+       
+                                                                       
+                                                                         
+       
     if (te1IsNull || te2IsNull)
     {
       PG_RETURN_NULL();
@@ -1709,9 +1709,9 @@ overlaps_time(PG_FUNCTION_ARGS)
 #undef TIMEADT_LT
 }
 
-/* timestamp_time()
- * Convert timestamp to time data type.
- */
+                    
+                                        
+   
 Datum
 timestamp_time(PG_FUNCTION_ARGS)
 {
@@ -1730,18 +1730,18 @@ timestamp_time(PG_FUNCTION_ARGS)
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("timestamp out of range")));
   }
 
-  /*
-   * Could also do this with time = (timestamp / USECS_PER_DAY *
-   * USECS_PER_DAY) - timestamp;
-   */
+     
+                                                                 
+                                 
+     
   result = ((((tm->tm_hour * MINS_PER_HOUR + tm->tm_min) * SECS_PER_MINUTE) + tm->tm_sec) * USECS_PER_SEC) + fsec;
 
   PG_RETURN_TIMEADT(result);
 }
 
-/* timestamptz_time()
- * Convert timestamptz to time data type.
- */
+                      
+                                          
+   
 Datum
 timestamptz_time(PG_FUNCTION_ARGS)
 {
@@ -1761,18 +1761,18 @@ timestamptz_time(PG_FUNCTION_ARGS)
     ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("timestamp out of range")));
   }
 
-  /*
-   * Could also do this with time = (timestamp / USECS_PER_DAY *
-   * USECS_PER_DAY) - timestamp;
-   */
+     
+                                                                 
+                                 
+     
   result = ((((tm->tm_hour * MINS_PER_HOUR + tm->tm_min) * SECS_PER_MINUTE) + tm->tm_sec) * USECS_PER_SEC) + fsec;
 
   PG_RETURN_TIMEADT(result);
 }
 
-/* datetime_timestamp()
- * Convert date and time to timestamp data type.
- */
+                        
+                                                 
+   
 Datum
 datetime_timestamp(PG_FUNCTION_ARGS)
 {
@@ -1793,9 +1793,9 @@ datetime_timestamp(PG_FUNCTION_ARGS)
   PG_RETURN_TIMESTAMP(result);
 }
 
-/* time_interval()
- * Convert time to interval data type.
- */
+                   
+                                       
+   
 Datum
 time_interval(PG_FUNCTION_ARGS)
 {
@@ -1811,14 +1811,14 @@ time_interval(PG_FUNCTION_ARGS)
   PG_RETURN_INTERVAL_P(result);
 }
 
-/* interval_time()
- * Convert interval to time data type.
- *
- * This is defined as producing the fractional-day portion of the interval.
- * Therefore, we can just ignore the months field.  It is not real clear
- * what to do with negative intervals, but we choose to subtract the floor,
- * so that, say, '-2 hours' becomes '22:00:00'.
- */
+                   
+                                       
+   
+                                                                            
+                                                                         
+                                                                            
+                                                
+   
 Datum
 interval_time(PG_FUNCTION_ARGS)
 {
@@ -1841,9 +1841,9 @@ interval_time(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/* time_mi_time()
- * Subtract two times to produce an interval.
- */
+                  
+                                              
+   
 Datum
 time_mi_time(PG_FUNCTION_ARGS)
 {
@@ -1860,9 +1860,9 @@ time_mi_time(PG_FUNCTION_ARGS)
   PG_RETURN_INTERVAL_P(result);
 }
 
-/* time_pl_interval()
- * Add interval to time.
- */
+                      
+                         
+   
 Datum
 time_pl_interval(PG_FUNCTION_ARGS)
 {
@@ -1880,9 +1880,9 @@ time_pl_interval(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/* time_mi_interval()
- * Subtract interval from time.
- */
+                      
+                                
+   
 Datum
 time_mi_interval(PG_FUNCTION_ARGS)
 {
@@ -1900,9 +1900,9 @@ time_mi_interval(PG_FUNCTION_ARGS)
   PG_RETURN_TIMEADT(result);
 }
 
-/*
- * in_range support function for time.
- */
+   
+                                       
+   
 Datum
 in_range_time_interval(PG_FUNCTION_ARGS)
 {
@@ -1913,21 +1913,21 @@ in_range_time_interval(PG_FUNCTION_ARGS)
   bool less = PG_GETARG_BOOL(4);
   TimeADT sum;
 
-  /*
-   * Like time_pl_interval/time_mi_interval, we disregard the month and day
-   * fields of the offset.  So our test for negative should too.
-   */
+     
+                                                                            
+                                                                 
+     
   if (offset->time < 0)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PRECEDING_OR_FOLLOWING_SIZE), errmsg("invalid preceding or following size in window function")));
   }
 
-  /*
-   * We can't use time_pl_interval/time_mi_interval here, because their
-   * wraparound behavior would give wrong (or at least undesirable) answers.
-   * Fortunately the equivalent non-wrapping behavior is trivial, especially
-   * since we don't worry about integer overflow.
-   */
+     
+                                                                        
+                                                                             
+                                                                             
+                                                  
+     
   if (sub)
   {
     sum = base - offset->time;
@@ -1947,9 +1947,9 @@ in_range_time_interval(PG_FUNCTION_ARGS)
   }
 }
 
-/* time_part()
- * Extract specified field from time type.
- */
+               
+                                           
+   
 Datum
 time_part(PG_FUNCTION_ARGS)
 {
@@ -2025,13 +2025,13 @@ time_part(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/*****************************************************************************
- *	 Time With Time Zone ADT
- *****************************************************************************/
+                                                                               
+                            
+                                                                               
 
-/* tm2timetz()
- * Convert a tm structure to a time data type.
- */
+               
+                                               
+   
 static int
 tm2timetz(struct pg_tm *tm, fsec_t fsec, int tz, TimeTzADT *result)
 {
@@ -2095,9 +2095,9 @@ timetz_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		timetz_recv			- converts external binary format to timetz
- */
+   
+                                                              
+   
 Datum
 timetz_recv(PG_FUNCTION_ARGS)
 {
@@ -2120,7 +2120,7 @@ timetz_recv(PG_FUNCTION_ARGS)
 
   result->zone = pq_getmsgint(buf, sizeof(result->zone));
 
-  /* Check for sane GMT displacement; see notes in datatype/timestamp.h */
+                                                                          
   if (result->zone <= -TZDISP_LIMIT || result->zone >= TZDISP_LIMIT)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_TIME_ZONE_DISPLACEMENT_VALUE), errmsg("time zone displacement out of range")));
@@ -2131,9 +2131,9 @@ timetz_recv(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/*
- *		timetz_send			- converts timetz to binary format
- */
+   
+                                                     
+   
 Datum
 timetz_send(PG_FUNCTION_ARGS)
 {
@@ -2162,9 +2162,9 @@ timetztypmodout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(anytime_typmodout(true, typmod));
 }
 
-/* timetz2tm()
- * Convert TIME WITH TIME ZONE data type to POSIX time structure.
- */
+               
+                                                                  
+   
 int
 timetz2tm(TimeTzADT *time, struct pg_tm *tm, fsec_t *fsec, int *tzp)
 {
@@ -2185,10 +2185,10 @@ timetz2tm(TimeTzADT *time, struct pg_tm *tm, fsec_t *fsec, int *tzp)
   return 0;
 }
 
-/* timetz_scale()
- * Adjust time type for specified scale factor.
- * Used by PostgreSQL type system to stuff columns.
- */
+                  
+                                                
+                                                    
+   
 Datum
 timetz_scale(PG_FUNCTION_ARGS)
 {
@@ -2211,7 +2211,7 @@ timetz_cmp_internal(TimeTzADT *time1, TimeTzADT *time2)
 {
   TimeOffset t1, t2;
 
-  /* Primary sort is by true (GMT-equivalent) time */
+                                                     
   t1 = time1->time + (time1->zone * USECS_PER_SEC);
   t2 = time2->time + (time2->zone * USECS_PER_SEC);
 
@@ -2224,10 +2224,10 @@ timetz_cmp_internal(TimeTzADT *time1, TimeTzADT *time2)
     return -1;
   }
 
-  /*
-   * If same GMT time, sort by timezone; we only want to say that two
-   * timetz's are equal if both the time and zone parts are equal.
-   */
+     
+                                                                      
+                                                                   
+     
   if (time1->zone > time2->zone)
   {
     return 1;
@@ -2309,10 +2309,10 @@ timetz_hash(PG_FUNCTION_ARGS)
   TimeTzADT *key = PG_GETARG_TIMETZADT_P(0);
   uint32 thash;
 
-  /*
-   * To avoid any problems with padding bytes in the struct, we figure the
-   * field hashes separately and XOR them.
-   */
+     
+                                                                           
+                                           
+     
   thash = DatumGetUInt32(DirectFunctionCall1(hashint8, Int64GetDatumFast(key->time)));
   thash ^= DatumGetUInt32(hash_uint32(key->zone));
   PG_RETURN_UINT32(thash);
@@ -2325,7 +2325,7 @@ timetz_hash_extended(PG_FUNCTION_ARGS)
   Datum seed = PG_GETARG_DATUM(1);
   uint64 thash;
 
-  /* Same approach as timetz_hash */
+                                    
   thash = DatumGetUInt64(DirectFunctionCall2(hashint8extended, Int64GetDatumFast(key->time), seed));
   thash ^= DatumGetUInt64(hash_uint32_extended(key->zone, DatumGetInt64(seed)));
   PG_RETURN_UINT64(thash);
@@ -2367,9 +2367,9 @@ timetz_smaller(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/* timetz_pl_interval()
- * Add interval to timetz.
- */
+                        
+                           
+   
 Datum
 timetz_pl_interval(PG_FUNCTION_ARGS)
 {
@@ -2391,9 +2391,9 @@ timetz_pl_interval(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/* timetz_mi_interval()
- * Subtract interval from timetz.
- */
+                        
+                                  
+   
 Datum
 timetz_mi_interval(PG_FUNCTION_ARGS)
 {
@@ -2415,9 +2415,9 @@ timetz_mi_interval(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/*
- * in_range support function for timetz.
- */
+   
+                                         
+   
 Datum
 in_range_timetz_interval(PG_FUNCTION_ARGS)
 {
@@ -2428,21 +2428,21 @@ in_range_timetz_interval(PG_FUNCTION_ARGS)
   bool less = PG_GETARG_BOOL(4);
   TimeTzADT sum;
 
-  /*
-   * Like timetz_pl_interval/timetz_mi_interval, we disregard the month and
-   * day fields of the offset.  So our test for negative should too.
-   */
+     
+                                                                            
+                                                                     
+     
   if (offset->time < 0)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PRECEDING_OR_FOLLOWING_SIZE), errmsg("invalid preceding or following size in window function")));
   }
 
-  /*
-   * We can't use timetz_pl_interval/timetz_mi_interval here, because their
-   * wraparound behavior would give wrong (or at least undesirable) answers.
-   * Fortunately the equivalent non-wrapping behavior is trivial, especially
-   * since we don't worry about integer overflow.
-   */
+     
+                                                                            
+                                                                             
+                                                                             
+                                                  
+     
   if (sub)
   {
     sum.time = base->time - offset->time;
@@ -2463,19 +2463,19 @@ in_range_timetz_interval(PG_FUNCTION_ARGS)
   }
 }
 
-/* overlaps_timetz() --- implements the SQL OVERLAPS operator.
- *
- * Algorithm is per SQL spec.  This is much harder than you'd think
- * because the spec requires us to deliver a non-null answer in some cases
- * where some of the inputs are null.
- */
+                                                               
+   
+                                                                    
+                                                                           
+                                      
+   
 Datum
 overlaps_timetz(PG_FUNCTION_ARGS)
 {
-  /*
-   * The arguments are TimeTzADT *, but we leave them as generic Datums for
-   * convenience of notation --- and to avoid dereferencing nulls.
-   */
+     
+                                                                            
+                                                                   
+     
   Datum ts1 = PG_GETARG_DATUM(0);
   Datum te1 = PG_GETARG_DATUM(1);
   Datum ts2 = PG_GETARG_DATUM(2);
@@ -2488,18 +2488,18 @@ overlaps_timetz(PG_FUNCTION_ARGS)
 #define TIMETZ_GT(t1, t2) DatumGetBool(DirectFunctionCall2(timetz_gt, t1, t2))
 #define TIMETZ_LT(t1, t2) DatumGetBool(DirectFunctionCall2(timetz_lt, t1, t2))
 
-  /*
-   * If both endpoints of interval 1 are null, the result is null (unknown).
-   * If just one endpoint is null, take ts1 as the non-null one. Otherwise,
-   * take ts1 as the lesser endpoint.
-   */
+     
+                                                                             
+                                                                            
+                                      
+     
   if (ts1IsNull)
   {
     if (te1IsNull)
     {
       PG_RETURN_NULL();
     }
-    /* swap null for non-null */
+                                
     ts1 = te1;
     te1IsNull = true;
   }
@@ -2514,14 +2514,14 @@ overlaps_timetz(PG_FUNCTION_ARGS)
     }
   }
 
-  /* Likewise for interval 2. */
+                                
   if (ts2IsNull)
   {
     if (te2IsNull)
     {
       PG_RETURN_NULL();
     }
-    /* swap null for non-null */
+                                
     ts2 = te2;
     te2IsNull = true;
   }
@@ -2536,16 +2536,16 @@ overlaps_timetz(PG_FUNCTION_ARGS)
     }
   }
 
-  /*
-   * At this point neither ts1 nor ts2 is null, so we can consider three
-   * cases: ts1 > ts2, ts1 < ts2, ts1 = ts2
-   */
+     
+                                                                         
+                                            
+     
   if (TIMETZ_GT(ts1, ts2))
   {
-    /*
-     * This case is ts1 < te2 OR te1 < te2, which may look redundant but
-     * in the presence of nulls it's not quite completely so.
-     */
+       
+                                                                         
+                                                              
+       
     if (te2IsNull)
     {
       PG_RETURN_NULL();
@@ -2559,15 +2559,15 @@ overlaps_timetz(PG_FUNCTION_ARGS)
       PG_RETURN_NULL();
     }
 
-    /*
-     * If te1 is not null then we had ts1 <= te1 above, and we just found
-     * ts1 >= te2, hence te1 >= te2.
-     */
+       
+                                                                          
+                                     
+       
     PG_RETURN_BOOL(false);
   }
   else if (TIMETZ_LT(ts1, ts2))
   {
-    /* This case is ts2 < te1 OR te2 < te1 */
+                                             
     if (te1IsNull)
     {
       PG_RETURN_NULL();
@@ -2581,18 +2581,18 @@ overlaps_timetz(PG_FUNCTION_ARGS)
       PG_RETURN_NULL();
     }
 
-    /*
-     * If te2 is not null then we had ts2 <= te2 above, and we just found
-     * ts2 >= te1, hence te2 >= te1.
-     */
+       
+                                                                          
+                                     
+       
     PG_RETURN_BOOL(false);
   }
   else
   {
-    /*
-     * For ts1 = ts2 the spec says te1 <> te2 OR te1 = te2, which is a
-     * rather silly way of saying "true if both are nonnull, else null".
-     */
+       
+                                                                       
+                                                                         
+       
     if (te1IsNull || te2IsNull)
     {
       PG_RETURN_NULL();
@@ -2610,7 +2610,7 @@ timetz_time(PG_FUNCTION_ARGS)
   TimeTzADT *timetz = PG_GETARG_TIMETZADT_P(0);
   TimeADT result;
 
-  /* swallow the time zone and just return the time */
+                                                      
   result = timetz->time;
 
   PG_RETURN_TIMEADT(result);
@@ -2637,9 +2637,9 @@ time_timetz(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/* timestamptz_timetz()
- * Convert timestamp to timetz data type.
- */
+                        
+                                          
+   
 Datum
 timestamptz_timetz(PG_FUNCTION_ARGS)
 {
@@ -2666,12 +2666,12 @@ timestamptz_timetz(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/* datetimetz_timestamptz()
- * Convert date and timetz to timestamp with time zone data type.
- * Timestamp is stored in GMT, so add the time zone
- * stored with the timetz to the result.
- * - thomas 2000-03-10
- */
+                            
+                                                                  
+                                                    
+                                         
+                       
+   
 Datum
 datetimetz_timestamptz(PG_FUNCTION_ARGS)
 {
@@ -2689,21 +2689,21 @@ datetimetz_timestamptz(PG_FUNCTION_ARGS)
   }
   else
   {
-    /*
-     * Date's range is wider than timestamp's, so check for boundaries.
-     * Since dates have the same minimum values as timestamps, only upper
-     * boundary need be checked for overflow.
-     */
+       
+                                                                        
+                                                                          
+                                              
+       
     if (date >= (TIMESTAMP_END_JULIAN - POSTGRES_EPOCH_JDATE))
     {
       ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range for timestamp")));
     }
     result = date * USECS_PER_DAY + time->time + time->zone * USECS_PER_SEC;
 
-    /*
-     * Since it is possible to go beyond allowed timestamptz range because
-     * of time zone, check for allowed timestamp range after adding tz.
-     */
+       
+                                                                           
+                                                                        
+       
     if (!IS_VALID_TIMESTAMP(result))
     {
       ereport(ERROR, (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE), errmsg("date out of range for timestamp")));
@@ -2713,9 +2713,9 @@ datetimetz_timestamptz(PG_FUNCTION_ARGS)
   PG_RETURN_TIMESTAMP(result);
 }
 
-/* timetz_part()
- * Extract specified field from time type.
- */
+                 
+                                           
+   
 Datum
 timetz_part(PG_FUNCTION_ARGS)
 {
@@ -2804,10 +2804,10 @@ timetz_part(PG_FUNCTION_ARGS)
   PG_RETURN_FLOAT8(result);
 }
 
-/* timetz_zone()
- * Encode time with time zone type with specified time zone.
- * Applies DST rules as of the current date.
- */
+                 
+                                                             
+                                             
+   
 Datum
 timetz_zone(PG_FUNCTION_ARGS)
 {
@@ -2820,44 +2820,44 @@ timetz_zone(PG_FUNCTION_ARGS)
   int type, val;
   pg_tz *tzp;
 
-  /*
-   * Look up the requested timezone.  First we look in the timezone
-   * abbreviation table (to handle cases like "EST"), and if that fails, we
-   * look in the timezone database (to handle cases like
-   * "America/New_York").  (This matches the order in which timestamp input
-   * checks the cases; it's important because the timezone database unwisely
-   * uses a few zone names that are identical to offset abbreviations.)
-   */
+     
+                                                                    
+                                                                            
+                                                         
+                                                                            
+                                                                             
+                                                                        
+     
   text_to_cstring_buffer(zone, tzname, sizeof(tzname));
 
-  /* DecodeTimezoneAbbrev requires lowercase input */
+                                                     
   lowzone = downcase_truncate_identifier(tzname, strlen(tzname), false);
 
   type = DecodeTimezoneAbbrev(0, lowzone, &val, &tzp);
 
   if (type == TZ || type == DTZ)
   {
-    /* fixed-offset abbreviation */
+                                   
     tz = -val;
   }
   else if (type == DYNTZ)
   {
-    /* dynamic-offset abbreviation, resolve using current time */
+                                                                 
     pg_time_t now = (pg_time_t)time(NULL);
     struct pg_tm *tm;
 
     tm = pg_localtime(&now, tzp);
-    tm->tm_year += 1900; /* adjust to PG conventions */
+    tm->tm_year += 1900;                               
     tm->tm_mon += 1;
     tz = DetermineTimeZoneAbbrevOffset(tm, tzname, tzp);
   }
   else
   {
-    /* try it as a full zone name */
+                                    
     tzp = pg_tzset(tzname);
     if (tzp)
     {
-      /* Get the offset-from-GMT that is valid today for the zone */
+                                                                    
       pg_time_t now = (pg_time_t)time(NULL);
       struct pg_tm *tm;
 
@@ -2867,7 +2867,7 @@ timetz_zone(PG_FUNCTION_ARGS)
     else
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("time zone \"%s\" not recognized", tzname)));
-      tz = 0; /* keep compiler quiet */
+      tz = 0;                          
     }
   }
 
@@ -2888,9 +2888,9 @@ timetz_zone(PG_FUNCTION_ARGS)
   PG_RETURN_TIMETZADT_P(result);
 }
 
-/* timetz_izone()
- * Encode time with time zone type with specified time interval as time zone.
- */
+                  
+                                                                              
+   
 Datum
 timetz_izone(PG_FUNCTION_ARGS)
 {

@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/ecpglib/connect.c */
+                                           
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -44,18 +44,18 @@ ecpg_get_connection_nr(const char *connection_name)
   if ((connection_name == NULL) || (strcmp(connection_name, "CURRENT") == 0))
   {
 #ifdef ENABLE_THREAD_SAFETY
-    ecpg_pthreads_init(); /* ensure actual_connection_key is valid */
+    ecpg_pthreads_init();                                            
 
     ret = pthread_getspecific(actual_connection_key);
 
-    /*
-     * if no connection in TSD for this thread, get the global default
-     * connection and hope the user knows what they're doing (i.e. using
-     * their own mutex to protect that connection from concurrent accesses
-     */
+       
+                                                                       
+                                                                         
+                                                                           
+       
     if (ret == NULL)
     {
-      /* no TSD connection, going for global */
+                                               
       ret = actual_connection;
     }
 #else
@@ -87,18 +87,18 @@ ecpg_get_connection(const char *connection_name)
   if ((connection_name == NULL) || (strcmp(connection_name, "CURRENT") == 0))
   {
 #ifdef ENABLE_THREAD_SAFETY
-    ecpg_pthreads_init(); /* ensure actual_connection_key is valid */
+    ecpg_pthreads_init();                                            
 
     ret = pthread_getspecific(actual_connection_key);
 
-    /*
-     * if no connection in TSD for this thread, get the global default
-     * connection and hope the user knows what they're doing (i.e. using
-     * their own mutex to protect that connection from concurrent accesses
-     */
+       
+                                                                       
+                                                                         
+                                                                           
+       
     if (ret == NULL)
     {
-      /* no TSD connection here either, using global */
+                                                       
       ret = actual_connection;
     }
 #else
@@ -131,12 +131,12 @@ ecpg_finish(struct connection *act)
     ecpg_deallocate_all_conn(0, ECPG_COMPAT_PGSQL, act);
     PQfinish(act->connection);
 
-    /*
-     * no need to lock connections_mutex - we're always called by
-     * ECPGdisconnect or ECPGconnect, which are holding the lock
-     */
+       
+                                                                  
+                                                                 
+       
 
-    /* remove act from the list */
+                                  
     if (act == all_connections)
     {
       all_connections = act->next;
@@ -170,7 +170,7 @@ ecpg_finish(struct connection *act)
       ;
     ecpg_free(act->name);
     ecpg_free(act);
-    /* delete cursor variables when last connection gets closed */
+                                                                  
     if (all_connections == NULL)
     {
       struct var_list *iv_ptr;
@@ -260,18 +260,18 @@ ECPGnoticeReceiver(void *arg, const PGresult *result)
     return;
   }
 
-  (void)arg; /* keep the compiler quiet */
+  (void)arg;                              
   if (sqlstate == NULL)
   {
     sqlstate = ECPG_SQLSTATE_ECPG_INTERNAL_ERROR;
   }
 
-  if (message == NULL) /* Shouldn't happen, but need to be sure */
+  if (message == NULL)                                            
   {
     message = ecpg_gettext("empty message text");
   }
 
-  /* these are not warnings */
+                              
   if (strncmp(sqlstate, "00", 2) == 0)
   {
     return;
@@ -279,7 +279,7 @@ ECPGnoticeReceiver(void *arg, const PGresult *result)
 
   ecpg_log("ECPGnoticeReceiver: %s\n", message);
 
-  /* map to SQLCODE for backward compatibility */
+                                                 
   if (strcmp(sqlstate, ECPG_SQLSTATE_INVALID_CURSOR_NAME) == 0)
   {
     sqlcode = ECPG_WARNING_UNKNOWN_PORTAL;
@@ -313,7 +313,7 @@ ECPGnoticeReceiver(void *arg, const PGresult *result)
   ecpg_log("raising sqlcode %d\n", sqlcode);
 }
 
-/* this contains some quick hacks, needs to be cleaned up, but it works */
+                                                                          
 bool
 ECPGconnect(int lineno, int c, const char *name, const char *user, const char *passwd, const char *connection_name, int autocommit)
 {
@@ -334,21 +334,21 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
 
   ecpg_init_sqlca(sqlca);
 
-  /*
-   * clear auto_mem structure because some error handling functions might
-   * access it
-   */
+     
+                                                                          
+               
+     
   ecpg_clear_auto_mem();
 
   if (INFORMIX_MODE(compat))
   {
     char *envname;
 
-    /*
-     * Informix uses an environment variable DBPATH that overrides the
-     * connection parameters given here. We do the same with PG_DBPATH as
-     * the syntax is different.
-     */
+       
+                                                                       
+                                                                          
+                                
+       
     envname = getenv("PG_DBPATH");
     if (envname)
     {
@@ -366,7 +366,7 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
   ecpg_pthreads_init();
 #endif
 
-  /* check if the identifier is unique */
+                                         
   if (ecpg_get_connection(connection_name))
   {
     ecpg_free(dbname);
@@ -382,14 +382,14 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
 
   if (dbname != NULL)
   {
-    /* get the detail information from dbname */
+                                                
     if (strncmp(dbname, "tcp:", 4) == 0 || strncmp(dbname, "unix:", 5) == 0)
     {
       int offset = 0;
 
-      /*
-       * only allow protocols tcp and unix
-       */
+         
+                                           
+         
       if (strncmp(dbname, "tcp:", 4) == 0)
       {
         offset = 4;
@@ -402,25 +402,25 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
       if (strncmp(dbname + offset, "postgresql://", strlen("postgresql://")) == 0)
       {
 
-        /*------
-         * new style:
-         *	<tcp|unix>:postgresql://server[:port|:/unixsocket/path:]
-         *	[/db-name][?options]
-         *------
-         */
+                 
+                      
+                                                                    
+                                
+                 
+           
         offset += strlen("postgresql://");
 
         tmp = strrchr(dbname + offset, '?');
-        if (tmp != NULL) /* options given */
+        if (tmp != NULL)                    
         {
           options = ecpg_strdup(tmp + 1, lineno);
           *tmp = '\0';
         }
 
         tmp = last_dir_separator(dbname + offset);
-        if (tmp != NULL) /* database name given */
+        if (tmp != NULL)                          
         {
-          if (tmp[1] != '\0') /* non-empty database name */
+          if (tmp[1] != '\0')                              
           {
             realname = ecpg_strdup(tmp + 1, lineno);
             connect_params++;
@@ -429,7 +429,7 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
         }
 
         tmp = strrchr(dbname + offset, ':');
-        if (tmp != NULL) /* port number or Unix socket path given */
+        if (tmp != NULL)                                            
         {
           char *tmp2;
 
@@ -448,9 +448,9 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
                 ecpg_free(host);
               }
 
-              /*
-               * port not set yet if (port) ecpg_free(port);
-               */
+                 
+                                                             
+                 
               if (options)
               {
                 ecpg_free(options);
@@ -516,9 +516,9 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
     }
     else
     {
-      /* old style: dbname[@server][:port] */
+                                             
       tmp = strrchr(dbname, ':');
-      if (tmp != NULL) /* port number given */
+      if (tmp != NULL)                        
       {
         port = ecpg_strdup(tmp + 1, lineno);
         connect_params++;
@@ -526,7 +526,7 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
       }
 
       tmp = strrchr(dbname, '@');
-      if (tmp != NULL) /* host name given */
+      if (tmp != NULL)                      
       {
         host = ecpg_strdup(tmp + 1, lineno);
         connect_params++;
@@ -549,10 +549,10 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
     realname = NULL;
   }
 
-  /*
-   * Count options for the allocation done below (this may produce an
-   * overestimate, it's ok).
-   */
+     
+                                                                      
+                             
+     
   if (options)
   {
     for (i = 0; options[i]; i++)
@@ -573,11 +573,11 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
     connect_params++;
   }
 
-  /*
-   * Allocate enough space for all connection parameters.  These allocations
-   * are done before manipulating the list of connections to ease the error
-   * handling on failure.
-   */
+     
+                                                                             
+                                                                            
+                          
+     
   conn_keywords = (const char **)ecpg_alloc((connect_params + 1) * sizeof(char *), lineno);
   conn_values = (const char **)ecpg_alloc(connect_params * sizeof(char *), lineno);
   if (conn_keywords == NULL || conn_values == NULL)
@@ -614,15 +614,15 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
     return false;
   }
 
-  /* add connection to our list */
+                                  
 #ifdef ENABLE_THREAD_SAFETY
   pthread_mutex_lock(&connections_mutex);
 #endif
 
-  /*
-   * ... but first, make certain we have created ecpg_clocale.  Rely on
-   * holding connections_mutex to ensure this is done by only one thread.
-   */
+     
+                                                                        
+                                                                          
+     
 #ifdef HAVE_USELOCALE
   if (!ecpg_clocale)
   {
@@ -731,8 +731,8 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
   {
     char *str;
 
-    /* options look like this "option1 = value1 option2 = value2 ... */
-    /* we have to break up the string into single options */
+                                                                       
+                                                            
     for (str = options; *str;)
     {
       int e, a;
@@ -742,14 +742,14 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
         ;
       for (e = 0; token1[e] && token1[e] != '='; e++)
         ;
-      if (token1[e]) /* found "=" */
+      if (token1[e])                
       {
         token1[e] = '\0';
         for (token2 = token1 + e + 1; *token2 && *token2 == ' '; token2++)
           ;
         for (a = 0; token2[a] && token2[a] != '&'; a++)
           ;
-        if (token2[a]) /* found "&" => another option follows */
+        if (token2[a])                                          
         {
           token2[a] = '\0';
           str = token2 + a + 1;
@@ -765,12 +765,12 @@ ECPGconnect(int lineno, int c, const char *name, const char *user, const char *p
       }
       else
       {
-        /* the parser should not be able to create this invalid option */
+                                                                         
         str = token1 + e;
       }
     }
   }
-  conn_keywords[i] = NULL; /* terminator */
+  conn_keywords[i] = NULL;                 
 
   this->connection = PQconnectdbParams(conn_keywords, conn_values, 0);
 

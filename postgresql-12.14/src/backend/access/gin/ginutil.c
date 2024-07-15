@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * ginutil.c
- *	  Utility routines for the Postgres inverted index access method.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/gin/ginutil.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                                     
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                      
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -28,10 +28,10 @@
 #include "utils/index_selfuncs.h"
 #include "utils/typcache.h"
 
-/*
- * GIN handler function: return IndexAmRoutine with access method parameters
- * and callbacks.
- */
+   
+                                                                             
+                  
+   
 Datum
 ginhandler(PG_FUNCTION_ARGS)
 {
@@ -79,11 +79,11 @@ ginhandler(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(amroutine);
 }
 
-/*
- * initGinState: fill in an empty GinState struct to describe the index
- *
- * Note: assorted subsidiary data is allocated in the CurrentMemoryContext.
- */
+   
+                                                                        
+   
+                                                                            
+   
 void
 initGinState(GinState *state, Relation index)
 {
@@ -113,10 +113,10 @@ initGinState(GinState *state, Relation index)
       TupleDescInitEntryCollation(state->tupdesc[i], (AttrNumber)2, attr->attcollation);
     }
 
-    /*
-     * If the compare proc isn't specified in the opclass definition, look
-     * up the index key type's default btree comparator.
-     */
+       
+                                                                           
+                                                         
+       
     if (index_getprocid(index, i + 1, GIN_COMPARE_PROC) != InvalidOid)
     {
       fmgr_info_copy(&(state->compareFn[i]), index_getprocinfo(index, i + 1, GIN_COMPARE_PROC), CurrentMemoryContext);
@@ -133,14 +133,14 @@ initGinState(GinState *state, Relation index)
       fmgr_info_copy(&(state->compareFn[i]), &(typentry->cmp_proc_finfo), CurrentMemoryContext);
     }
 
-    /* Opclass must always provide extract procs */
+                                                   
     fmgr_info_copy(&(state->extractValueFn[i]), index_getprocinfo(index, i + 1, GIN_EXTRACTVALUE_PROC), CurrentMemoryContext);
     fmgr_info_copy(&(state->extractQueryFn[i]), index_getprocinfo(index, i + 1, GIN_EXTRACTQUERY_PROC), CurrentMemoryContext);
 
-    /*
-     * Check opclass capability to do tri-state or binary logic consistent
-     * check.
-     */
+       
+                                                                           
+              
+       
     if (index_getprocid(index, i + 1, GIN_TRICONSISTENT_PROC) != InvalidOid)
     {
       fmgr_info_copy(&(state->triConsistentFn[i]), index_getprocinfo(index, i + 1, GIN_TRICONSISTENT_PROC), CurrentMemoryContext);
@@ -156,9 +156,9 @@ initGinState(GinState *state, Relation index)
       elog(ERROR, "missing GIN support function (%d or %d) for attribute %d of index \"%s\"", GIN_CONSISTENT_PROC, GIN_TRICONSISTENT_PROC, i + 1, RelationGetRelationName(index));
     }
 
-    /*
-     * Check opclass capability to do partial match.
-     */
+       
+                                                     
+       
     if (index_getprocid(index, i + 1, GIN_COMPARE_PARTIAL_PROC) != InvalidOid)
     {
       fmgr_info_copy(&(state->comparePartialFn[i]), index_getprocinfo(index, i + 1, GIN_COMPARE_PARTIAL_PROC), CurrentMemoryContext);
@@ -169,18 +169,18 @@ initGinState(GinState *state, Relation index)
       state->canPartialMatch[i] = false;
     }
 
-    /*
-     * If the index column has a specified collation, we should honor that
-     * while doing comparisons.  However, we may have a collatable storage
-     * type for a noncollatable indexed data type (for instance, hstore
-     * uses text index entries).  If there's no index collation then
-     * specify default collation in case the support functions need
-     * collation.  This is harmless if the support functions don't care
-     * about collation, so we just do it unconditionally.  (We could
-     * alternatively call get_typcollation, but that seems like expensive
-     * overkill --- there aren't going to be any cases where a GIN storage
-     * type has a nondefault collation.)
-     */
+       
+                                                                           
+                                                                           
+                                                                        
+                                                                     
+                                                                    
+                                                                        
+                                                                     
+                                                                          
+                                                                           
+                                         
+       
     if (OidIsValid(index->rd_indcollation[i]))
     {
       state->supportCollation[i] = index->rd_indcollation[i];
@@ -192,9 +192,9 @@ initGinState(GinState *state, Relation index)
   }
 }
 
-/*
- * Extract attribute (column) number of stored entry from GIN tuple
- */
+   
+                                                                    
+   
 OffsetNumber
 gintuple_get_attrnum(GinState *ginstate, IndexTuple tuple)
 {
@@ -202,7 +202,7 @@ gintuple_get_attrnum(GinState *ginstate, IndexTuple tuple)
 
   if (ginstate->oneCol)
   {
-    /* column number is not stored explicitly */
+                                                
     colN = FirstOffsetNumber;
   }
   else
@@ -210,10 +210,10 @@ gintuple_get_attrnum(GinState *ginstate, IndexTuple tuple)
     Datum res;
     bool isnull;
 
-    /*
-     * First attribute is always int16, so we can safely use any tuple
-     * descriptor to obtain first attribute of tuple
-     */
+       
+                                                                       
+                                                     
+       
     res = index_getattr(tuple, FirstOffsetNumber, ginstate->tupdesc[0], &isnull);
     Assert(!isnull);
 
@@ -224,9 +224,9 @@ gintuple_get_attrnum(GinState *ginstate, IndexTuple tuple)
   return colN;
 }
 
-/*
- * Extract stored datum (and possible null category) from GIN tuple
- */
+   
+                                                                    
+   
 Datum
 gintuple_get_key(GinState *ginstate, IndexTuple tuple, GinNullCategory *category)
 {
@@ -235,17 +235,17 @@ gintuple_get_key(GinState *ginstate, IndexTuple tuple, GinNullCategory *category
 
   if (ginstate->oneCol)
   {
-    /*
-     * Single column index doesn't store attribute numbers in tuples
-     */
+       
+                                                                     
+       
     res = index_getattr(tuple, FirstOffsetNumber, ginstate->origTupdesc, &isnull);
   }
   else
   {
-    /*
-     * Since the datum type depends on which index column it's from, we
-     * must be careful to use the right tuple descriptor here.
-     */
+       
+                                                                        
+                                                               
+       
     OffsetNumber colN = gintuple_get_attrnum(ginstate, tuple);
 
     res = index_getattr(tuple, OffsetNumberNext(FirstOffsetNumber), ginstate->tupdesc[colN - 1], &isnull);
@@ -263,18 +263,18 @@ gintuple_get_key(GinState *ginstate, IndexTuple tuple, GinNullCategory *category
   return res;
 }
 
-/*
- * Allocate a new page (either by recycling, or by extending the index file)
- * The returned buffer is already pinned and exclusive-locked
- * Caller is responsible for initializing the page by calling GinInitBuffer
- */
+   
+                                                                             
+                                                              
+                                                                            
+   
 Buffer
 GinNewBuffer(Relation index)
 {
   Buffer buffer;
   bool needLock;
 
-  /* First, try to get a page from FSM */
+                                         
   for (;;)
   {
     BlockNumber blkno = GetFreeIndexPage(index);
@@ -286,25 +286,25 @@ GinNewBuffer(Relation index)
 
     buffer = ReadBuffer(index, blkno);
 
-    /*
-     * We have to guard against the possibility that someone else already
-     * recycled this page; the buffer may be locked if so.
-     */
+       
+                                                                          
+                                                           
+       
     if (ConditionalLockBuffer(buffer))
     {
       if (GinPageIsRecyclable(BufferGetPage(buffer)))
       {
-        return buffer; /* OK to use */
+        return buffer;                
       }
 
       LockBuffer(buffer, GIN_UNLOCK);
     }
 
-    /* Can't use it, so release buffer and try again */
+                                                       
     ReleaseBuffer(buffer);
   }
 
-  /* Must extend the file */
+                            
   needLock = !RELATION_IS_LOCAL(index);
   if (needLock)
   {
@@ -361,43 +361,43 @@ GinInitMetabuffer(Buffer b)
   metadata->nEntries = 0;
   metadata->ginVersion = GIN_CURRENT_VERSION;
 
-  /*
-   * Set pd_lower just past the end of the metadata.  This is essential,
-   * because without doing so, metadata will be lost if xlog.c compresses
-   * the page.
-   */
+     
+                                                                         
+                                                                          
+               
+     
   ((PageHeader)page)->pd_lower = ((char *)metadata + sizeof(GinMetaPageData)) - (char *)page;
 }
 
-/*
- * Compare two keys of the same index column
- */
+   
+                                             
+   
 int
 ginCompareEntries(GinState *ginstate, OffsetNumber attnum, Datum a, GinNullCategory categorya, Datum b, GinNullCategory categoryb)
 {
-  /* if not of same null category, sort by that first */
+                                                        
   if (categorya != categoryb)
   {
     return (categorya < categoryb) ? -1 : 1;
   }
 
-  /* all null items in same category are equal */
+                                                 
   if (categorya != GIN_CAT_NORM_KEY)
   {
     return 0;
   }
 
-  /* both not null, so safe to call the compareFn */
+                                                    
   return DatumGetInt32(FunctionCall2Coll(&ginstate->compareFn[attnum - 1], ginstate->supportCollation[attnum - 1], a, b));
 }
 
-/*
- * Compare two keys of possibly different index columns
- */
+   
+                                                        
+   
 int
 ginCompareAttEntries(GinState *ginstate, OffsetNumber attnuma, Datum a, GinNullCategory categorya, OffsetNumber attnumb, Datum b, GinNullCategory categoryb)
 {
-  /* attribute number is the first sort key */
+                                              
   if (attnuma != attnumb)
   {
     return (attnuma < attnumb) ? -1 : 1;
@@ -406,13 +406,13 @@ ginCompareAttEntries(GinState *ginstate, OffsetNumber attnuma, Datum a, GinNullC
   return ginCompareEntries(ginstate, attnuma, a, categorya, b, categoryb);
 }
 
-/*
- * Support for sorting key datums in ginExtractEntries
- *
- * Note: we only have to worry about null and not-null keys here;
- * ginExtractEntries never generates more than one placeholder null,
- * so it doesn't have to sort those.
- */
+   
+                                                       
+   
+                                                                  
+                                                                     
+                                     
+   
 typedef struct
 {
   Datum datum;
@@ -438,27 +438,27 @@ cmpEntries(const void *a, const void *b, void *arg)
   {
     if (bb->isnull)
     {
-      res = 0; /* NULL "=" NULL */
+      res = 0;                    
     }
     else
     {
-      res = 1; /* NULL ">" not-NULL */
+      res = 1;                        
     }
   }
   else if (bb->isnull)
   {
-    res = -1; /* not-NULL "<" NULL */
+    res = -1;                        
   }
   else
   {
     res = DatumGetInt32(FunctionCall2Coll(data->cmpDatumFunc, data->collation, aa->datum, bb->datum));
   }
 
-  /*
-   * Detect if we have any duplicates.  If there are equal keys, qsort must
-   * compare them at some point, else it wouldn't know whether one should go
-   * before or after the other.
-   */
+     
+                                                                            
+                                                                             
+                                
+     
   if (res == 0)
   {
     data->haveDups = true;
@@ -467,12 +467,12 @@ cmpEntries(const void *a, const void *b, void *arg)
   return res;
 }
 
-/*
- * Extract the index key values from an indexable item
- *
- * The resulting key values are sorted, and any duplicates are removed.
- * This avoids generating redundant index entries.
- */
+   
+                                                       
+   
+                                                                        
+                                                   
+   
 Datum *
 ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isNull, int32 *nentries, GinNullCategory **categories)
 {
@@ -480,10 +480,10 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
   bool *nullFlags;
   int32 i;
 
-  /*
-   * We don't call the extractValueFn on a null item.  Instead generate a
-   * placeholder.
-   */
+     
+                                                                          
+                  
+     
   if (isNull)
   {
     *nentries = 1;
@@ -494,13 +494,13 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
     return entries;
   }
 
-  /* OK, call the opclass's extractValueFn */
-  nullFlags = NULL; /* in case extractValue doesn't set it */
+                                             
+  nullFlags = NULL;                                          
   entries = (Datum *)DatumGetPointer(FunctionCall3Coll(&ginstate->extractValueFn[attnum - 1], ginstate->supportCollation[attnum - 1], value, PointerGetDatum(nentries), PointerGetDatum(&nullFlags)));
 
-  /*
-   * Generate a placeholder if the item contained no keys.
-   */
+     
+                                                           
+     
   if (entries == NULL || *nentries <= 0)
   {
     *nentries = 1;
@@ -511,22 +511,22 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
     return entries;
   }
 
-  /*
-   * If the extractValueFn didn't create a nullFlags array, create one,
-   * assuming that everything's non-null.
-   */
+     
+                                                                        
+                                          
+     
   if (nullFlags == NULL)
   {
     nullFlags = (bool *)palloc0(*nentries * sizeof(bool));
   }
 
-  /*
-   * If there's more than one key, sort and unique-ify.
-   *
-   * XXX Using qsort here is notationally painful, and the overhead is
-   * pretty bad too.  For small numbers of keys it'd likely be better to use
-   * a simple insertion sort.
-   */
+     
+                                                        
+     
+                                                                       
+                                                                             
+                              
+     
   if (*nentries > 1)
   {
     keyEntryData *keydata;
@@ -546,7 +546,7 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
 
     if (arg.haveDups)
     {
-      /* there are duplicates, must get rid of 'em */
+                                                     
       int32 j;
 
       entries[0] = keydata[0].datum;
@@ -565,7 +565,7 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
     }
     else
     {
-      /* easy, no duplicates */
+                               
       for (i = 0; i < *nentries; i++)
       {
         entries[i] = keydata[i].datum;
@@ -576,9 +576,9 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum, Datum value, bool isN
     pfree(keydata);
   }
 
-  /*
-   * Create GinNullCategory representation from nullFlags.
-   */
+     
+                                                           
+     
   *categories = (GinNullCategory *)palloc0(*nentries * sizeof(GinNullCategory));
   for (i = 0; i < *nentries; i++)
   {
@@ -598,7 +598,7 @@ ginoptions(Datum reloptions, bool validate)
 
   options = parseRelOptions(reloptions, validate, RELOPT_KIND_GIN, &numoptions);
 
-  /* if none set, we're done */
+                               
   if (numoptions == 0)
   {
     return NULL;
@@ -613,12 +613,12 @@ ginoptions(Datum reloptions, bool validate)
   return (bytea *)rdopts;
 }
 
-/*
- * Fetch index's statistical data into *stats
- *
- * Note: in the result, nPendingPages can be trusted to be up-to-date,
- * as can ginVersion; but the other fields are as of the last VACUUM.
- */
+   
+                                              
+   
+                                                                       
+                                                                      
+   
 void
 ginGetStats(Relation index, GinStatsData *stats)
 {
@@ -641,11 +641,11 @@ ginGetStats(Relation index, GinStatsData *stats)
   UnlockReleaseBuffer(metabuffer);
 }
 
-/*
- * Write the given statistics to the index's metapage
- *
- * Note: nPendingPages and ginVersion are *not* copied over
- */
+   
+                                                      
+   
+                                                            
+   
 void
 ginUpdateStats(Relation index, const GinStatsData *stats, bool is_build)
 {
@@ -665,13 +665,13 @@ ginUpdateStats(Relation index, const GinStatsData *stats, bool is_build)
   metadata->nDataPages = stats->nDataPages;
   metadata->nEntries = stats->nEntries;
 
-  /*
-   * Set pd_lower just past the end of the metadata.  This is essential,
-   * because without doing so, metadata will be lost if xlog.c compresses
-   * the page.  (We must do this here because pre-v11 versions of PG did not
-   * set the metapage's pd_lower correctly, so a pg_upgraded index might
-   * contain the wrong value.)
-   */
+     
+                                                                         
+                                                                          
+                                                                             
+                                                                         
+                               
+     
   ((PageHeader)metapage)->pd_lower = ((char *)metadata + sizeof(GinMetaPageData)) - (char *)metapage;
 
   MarkBufferDirty(metabuffer);

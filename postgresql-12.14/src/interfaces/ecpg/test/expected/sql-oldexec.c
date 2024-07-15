@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "oldexec.pgc"
@@ -16,13 +16,13 @@
 
 #line 6 "oldexec.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 8 "oldexec.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 14 "oldexec.pgc"
   int amount[8];
@@ -38,7 +38,7 @@ main(void)
 
 #line 18 "oldexec.pgc"
   char command[128];
-/* exec sql end declare section */
+                                  
 #line 19 "oldexec.pgc"
 
   int i, j;
@@ -165,7 +165,7 @@ main(void)
   }
 #line 50 "oldexec.pgc"
 
-  /* declare CUR cursor for $1 */
+                                 
 #line 51 "oldexec.pgc"
 
   {
@@ -223,7 +223,7 @@ main(void)
   }
 #line 69 "oldexec.pgc"
 
-  /* declare CUR3 cursor for $1 */
+                                  
 #line 70 "oldexec.pgc"
 
   {

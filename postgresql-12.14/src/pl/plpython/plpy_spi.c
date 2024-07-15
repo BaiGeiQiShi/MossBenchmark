@@ -1,8 +1,8 @@
-/*
- * interface to SPI functions
- *
- * src/pl/plpython/plpy_spi.c
- */
+   
+                              
+   
+                              
+   
 
 #include "postgres.h"
 
@@ -35,10 +35,10 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status);
 static void
 PLy_spi_exception_set(PyObject *excclass, ErrorData *edata);
 
-/* prepare(query="select * from foo")
- * prepare(query="select * from foo where bar = $1", params=["text"])
- * prepare(query="select * from foo where bar = $1", params=["text"], limit=5)
- */
+                                      
+                                                                      
+                                                                               
+   
 PyObject *
 PLy_spi_prepare(PyObject *self, PyObject *args)
 {
@@ -106,23 +106,23 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
       else
       {
         ereport(ERROR, (errmsg("plpy.prepare: type name at ordinal position %d is not a string", i)));
-        sptr = NULL; /* keep compiler quiet */
+        sptr = NULL;                          
       }
 
-      /********************************************************
-       * Resolve argument type names and then look them up by
-       * oid in the system cache, and remember the required
-       *information for input conversion.
-       ********************************************************/
+                                                                
+                                                              
+                                                            
+                                          
+                                                                
 
       parseTypeString(sptr, &typeId, &typmod, false);
 
       Py_DECREF(optr);
 
-      /*
-       * set optr to NULL, so we won't try to unref it again in case of
-       * an error
-       */
+         
+                                                                        
+                  
+         
       optr = NULL;
 
       plan->types[i] = typeId;
@@ -136,7 +136,7 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
       elog(ERROR, "SPI_prepare failed: %s", SPI_result_code_string(SPI_result));
     }
 
-    /* transfer plan from procCxt to topCxt */
+                                              
     if (SPI_keepplan(plan->plan))
     {
       elog(ERROR, "SPI_keepplan failed");
@@ -158,9 +158,9 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
   return (PyObject *)plan;
 }
 
-/* execute(query="select * from foo", limit=5)
- * execute(plan=plan, values=(foo, bar), limit=5)
- */
+                                               
+                                                  
+   
 PyObject *
 PLy_spi_execute(PyObject *self, PyObject *args)
 {
@@ -283,9 +283,9 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
   {
     int k;
 
-    /*
-     * cleanup plan->values array
-     */
+       
+                                  
+       
     for (k = 0; k < nargs; k++)
     {
       if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL)))
@@ -389,7 +389,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
 
     cxt = AllocSetContextCreate(CurrentMemoryContext, "PL/Python temp context", ALLOCSET_DEFAULT_SIZES);
 
-    /* Initialize for converting result tuples to Python */
+                                                           
     PLy_input_setup_func(&ininfo, cxt, RECORDOID, -1, exec_ctx->curr_proc);
 
     oldcontext = CurrentMemoryContext;
@@ -401,11 +401,11 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
       {
         uint64 i;
 
-        /*
-         * PyList_New() and PyList_SetItem() use Py_ssize_t for list
-         * size and list indices; so we cannot support a result larger
-         * than PY_SSIZE_T_MAX.
-         */
+           
+                                                                     
+                                                                       
+                                
+           
         if (rows > (uint64)PY_SSIZE_T_MAX)
         {
           ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("query result has too many rows to fit in a Python list")));
@@ -426,14 +426,14 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
         }
       }
 
-      /*
-       * Save tuple descriptor for later use by result set metadata
-       * functions.  Save it in TopMemoryContext so that it survives
-       * outside of an SPI context.  We trust that PLy_result_dealloc()
-       * will clean it up when the time is right.  (Do this as late as
-       * possible, to minimize the number of ways the tupdesc could get
-       * leaked due to errors.)
-       */
+         
+                                                                    
+                                                                     
+                                                                        
+                                                                       
+                                                                        
+                                
+         
       oldcontext2 = MemoryContextSwitchTo(TopMemoryContext);
       result->tupdesc = CreateTupleDescCopy(tuptable->tupdesc);
       MemoryContextSwitchTo(oldcontext2);
@@ -450,7 +450,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
     MemoryContextDelete(cxt);
     SPI_freetuptable(tuptable);
 
-    /* in case PyList_New() failed above */
+                                           
     if (!result->rows)
     {
       Py_DECREF(result);
@@ -471,7 +471,7 @@ PLy_commit(PyObject *self, PyObject *args)
   {
     SPI_commit();
 
-    /* was cleared at transaction end, reset pointer */
+                                                       
     exec_ctx->scratch_ctx = NULL;
   }
   PG_CATCH();
@@ -480,23 +480,23 @@ PLy_commit(PyObject *self, PyObject *args)
     PLyExceptionEntry *entry;
     PyObject *exc;
 
-    /* Save error info */
+                         
     MemoryContextSwitchTo(oldcontext);
     edata = CopyErrorData();
     FlushErrorState();
 
-    /* was cleared at transaction end, reset pointer */
+                                                       
     exec_ctx->scratch_ctx = NULL;
 
-    /* Look up the correct exception */
+                                       
     entry = hash_search(PLy_spi_exceptions, &(edata->sqlerrcode), HASH_FIND, NULL);
 
-    /*
-     * This could be a custom error code, if that's the case fallback to
-     * SPIError
-     */
+       
+                                                                         
+                
+       
     exc = entry ? entry->exc : PLy_exc_spi_error;
-    /* Make Python raise the exception */
+                                         
     PLy_spi_exception_set(exc, edata);
     FreeErrorData(edata);
 
@@ -517,7 +517,7 @@ PLy_rollback(PyObject *self, PyObject *args)
   {
     SPI_rollback();
 
-    /* was cleared at transaction end, reset pointer */
+                                                       
     exec_ctx->scratch_ctx = NULL;
   }
   PG_CATCH();
@@ -526,23 +526,23 @@ PLy_rollback(PyObject *self, PyObject *args)
     PLyExceptionEntry *entry;
     PyObject *exc;
 
-    /* Save error info */
+                         
     MemoryContextSwitchTo(oldcontext);
     edata = CopyErrorData();
     FlushErrorState();
 
-    /* was cleared at transaction end, reset pointer */
+                                                       
     exec_ctx->scratch_ctx = NULL;
 
-    /* Look up the correct exception */
+                                       
     entry = hash_search(PLy_spi_exceptions, &(edata->sqlerrcode), HASH_FIND, NULL);
 
-    /*
-     * This could be a custom error code, if that's the case fallback to
-     * SPIError
-     */
+       
+                                                                         
+                
+       
     exc = entry ? entry->exc : PLy_exc_spi_error;
-    /* Make Python raise the exception */
+                                         
     PLy_spi_exception_set(exc, edata);
     FreeErrorData(edata);
 
@@ -553,43 +553,43 @@ PLy_rollback(PyObject *self, PyObject *args)
   Py_RETURN_NONE;
 }
 
-/*
- * Utilities for running SPI functions in subtransactions.
- *
- * Usage:
- *
- *	MemoryContext oldcontext = CurrentMemoryContext;
- *	ResourceOwner oldowner = CurrentResourceOwner;
- *
- *	PLy_spi_subtransaction_begin(oldcontext, oldowner);
- *	PG_TRY();
- *	{
- *		<call SPI functions>
- *		PLy_spi_subtransaction_commit(oldcontext, oldowner);
- *	}
- *	PG_CATCH();
- *	{
- *		<do cleanup>
- *		PLy_spi_subtransaction_abort(oldcontext, oldowner);
- *		return NULL;
- *	}
- *	PG_END_TRY();
- *
- * These utilities take care of restoring connection to the SPI manager and
- * setting a Python exception in case of an abort.
- */
+   
+                                                           
+   
+          
+   
+                                                    
+                                                  
+   
+                                                       
+             
+     
+                         
+                                                         
+     
+               
+     
+                 
+                                                        
+                 
+     
+                 
+   
+                                                                            
+                                                   
+   
 void
 PLy_spi_subtransaction_begin(MemoryContext oldcontext, ResourceOwner oldowner)
 {
   BeginInternalSubTransaction(NULL);
-  /* Want to run inside function's memory context */
+                                                    
   MemoryContextSwitchTo(oldcontext);
 }
 
 void
 PLy_spi_subtransaction_commit(MemoryContext oldcontext, ResourceOwner oldowner)
 {
-  /* Commit the inner transaction, return to outer xact context */
+                                                                  
   ReleaseCurrentSubTransaction();
   MemoryContextSwitchTo(oldcontext);
   CurrentResourceOwner = oldowner;
@@ -602,33 +602,33 @@ PLy_spi_subtransaction_abort(MemoryContext oldcontext, ResourceOwner oldowner)
   PLyExceptionEntry *entry;
   PyObject *exc;
 
-  /* Save error info */
+                       
   MemoryContextSwitchTo(oldcontext);
   edata = CopyErrorData();
   FlushErrorState();
 
-  /* Abort the inner transaction */
+                                   
   RollbackAndReleaseCurrentSubTransaction();
   MemoryContextSwitchTo(oldcontext);
   CurrentResourceOwner = oldowner;
 
-  /* Look up the correct exception */
+                                     
   entry = hash_search(PLy_spi_exceptions, &(edata->sqlerrcode), HASH_FIND, NULL);
 
-  /*
-   * This could be a custom error code, if that's the case fallback to
-   * SPIError
-   */
+     
+                                                                       
+              
+     
   exc = entry ? entry->exc : PLy_exc_spi_error;
-  /* Make Python raise the exception */
+                                       
   PLy_spi_exception_set(exc, edata);
   FreeErrorData(edata);
 }
 
-/*
- * Raise a SPIError, passing in it more error details, like the
- * internal query and error position.
- */
+   
+                                                                
+                                      
+   
 static void
 PLy_spi_exception_set(PyObject *excclass, ErrorData *edata)
 {
@@ -642,7 +642,7 @@ PLy_spi_exception_set(PyObject *excclass, ErrorData *edata)
     goto failure;
   }
 
-  /* create a new SPI exception with the error message as the parameter */
+                                                                          
   spierror = PyObject_CallObject(excclass, args);
   if (!spierror)
   {

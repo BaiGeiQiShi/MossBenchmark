@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * pg_regress_ecpg --- regression test driver for ecpg
- *
- * This is a C implementation of the previous shell script for running
- * the regression tests, and should be mostly compatible with it.
- * Initial author of C translation: Magnus Hagander
- *
- * This code is released under the terms of the PostgreSQL License.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/interfaces/ecpg/test/pg_regress_ecpg.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                       
+   
+                                                                       
+                                                                  
+                                                    
+   
+                                                                    
+   
+                                                                         
+                                                                        
+   
+                                              
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -25,10 +25,10 @@
 static void
 ecpg_filter(const char *sourcefile, const char *outfile)
 {
-  /*
-   * Create a filtered copy of sourcefile, replacing #line x
-   * "./../bla/foo.h" with #line x "foo.h"
-   */
+     
+                                                             
+                                           
+     
   FILE *s, *t;
   char linebuf[LINEBUFSIZE];
 
@@ -47,7 +47,7 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 
   while (fgets(linebuf, LINEBUFSIZE, s))
   {
-    /* check for "#line " in the beginning */
+                                             
     if (strstr(linebuf, "#line ") == linebuf)
     {
       char *p = strchr(linebuf, '"');
@@ -58,7 +58,7 @@ ecpg_filter(const char *sourcefile, const char *outfile)
       {
         plen++;
       }
-      /* plen is one more than the number of . and / characters */
+                                                                  
       if (plen > 1)
       {
         n = (char *)malloc(plen);
@@ -72,10 +72,10 @@ ecpg_filter(const char *sourcefile, const char *outfile)
   fclose(t);
 }
 
-/*
- * start an ecpg test process for specified file (including redirection),
- * and return process ID
- */
+   
+                                                                          
+                         
+   
 
 static PID_TYPE
 ecpg_start_test(const char *testname, _stringlist **resultfiles, _stringlist **expectfiles, _stringlist **tags)
@@ -98,10 +98,10 @@ ecpg_start_test(const char *testname, _stringlist **resultfiles, _stringlist **e
   snprintf(expectfile_stderr, sizeof(expectfile_stderr), "%s/expected/%s.stderr", outputdir, testname_dash);
   snprintf(expectfile_source, sizeof(expectfile_source), "%s/expected/%s.c", outputdir, testname_dash);
 
-  /*
-   * We can use replace_string() here because the replacement string does
-   * not occupy more space than the replaced one.
-   */
+     
+                                                                          
+                                                  
+     
   outfile_stdout = strdup(expectfile_stdout);
   replace_string(outfile_stdout, "/expected/", "/results/");
   outfile_stderr = strdup(expectfile_stderr);
@@ -153,7 +153,7 @@ ecpg_start_test(const char *testname, _stringlist **resultfiles, _stringlist **e
 static void
 ecpg_init(int argc, char *argv[])
 {
-  /* nothing to do here at the moment */
+                                        
 }
 
 int

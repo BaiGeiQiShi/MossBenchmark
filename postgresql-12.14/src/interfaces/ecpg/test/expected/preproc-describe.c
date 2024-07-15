@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "describe.pgc"
@@ -14,13 +14,13 @@
 
 #line 4 "describe.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 6 "describe.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 12 "describe.pgc"
   char *stmt1 = "SELECT id, t FROM t1";
@@ -42,7 +42,7 @@ main(void)
 
 #line 18 "describe.pgc"
   char field_name4[30] = "not set";
-/* exec sql end declare section */
+                                  
 #line 19 "describe.pgc"
 
   char msg[128];
@@ -142,10 +142,10 @@ main(void)
   }
 #line 41 "describe.pgc"
 
-  /*
-   * Test DESCRIBE with a query producing tuples.
-   * DESCRIPTOR and SQL DESCRIPTOR are the same in native mode.
-   */
+     
+                                                  
+                                                                
+     
 
   strcpy(msg, "allocate");
   ECPGallocate_desc(__LINE__, "desc1");
@@ -372,7 +372,7 @@ main(void)
   }
 #line 88 "describe.pgc"
 
-  /* Test DESCRIBE with a query not producing tuples */
+                                                       
 
   strcpy(msg, "allocate");
   ECPGallocate_desc(__LINE__, "desc1");
@@ -599,7 +599,7 @@ main(void)
   }
 #line 132 "describe.pgc"
 
-  /* End test */
+                
 
   strcpy(msg, "drop");
   {

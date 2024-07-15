@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * controldata_utils.c
- *		Common code for control data file output.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/common/controldata_utils.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                       
+                                              
+   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -38,15 +38,15 @@
 #include "storage/fd.h"
 #endif
 
-/*
- * get_controlfile()
- *
- * Get controlfile values.  The result is returned as a palloc'd copy of the
- * control file data.
- *
- * crc_ok_p can be used by the caller to see whether the CRC of the control
- * file data is correct.
- */
+   
+                     
+   
+                                                                             
+                      
+   
+                                                                            
+                         
+   
 ControlFileData *
 get_controlfile(const char *DataDir, bool *crc_ok_p)
 {
@@ -110,14 +110,14 @@ get_controlfile(const char *DataDir, bool *crc_ok_p)
   }
 #endif
 
-  /* Check the CRC. */
+                      
   INIT_CRC32C(crc);
   COMP_CRC32C(crc, (char *)ControlFile, offsetof(ControlFileData, crc));
   FIN_CRC32C(crc);
 
   *crc_ok_p = EQ_CRC32C(crc, ControlFile->crc);
 
-  /* Make sure the control file is valid byte order. */
+                                                       
   if (ControlFile->pg_control_version % 65536 == 0 && ControlFile->pg_control_version / 65536 != 0)
 #ifndef FRONTEND
     elog(ERROR, _("byte ordering mismatch"));
@@ -131,15 +131,15 @@ get_controlfile(const char *DataDir, bool *crc_ok_p)
   return ControlFile;
 }
 
-/*
- * update_controlfile()
- *
- * Update controlfile values with the contents given by caller.  The
- * contents to write are included in "ControlFile". "do_sync" can be
- * optionally used to flush the updated control file.  Note that it is up
- * to the caller to properly lock ControlFileLock when calling this
- * routine in the backend.
- */
+   
+                        
+   
+                                                                     
+                                                                     
+                                                                          
+                                                                    
+                           
+   
 void
 update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sync)
 {
@@ -147,22 +147,22 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
   char buffer[PG_CONTROL_FILE_SIZE];
   char ControlFilePath[MAXPGPATH];
 
-  /*
-   * Apply the same static assertions as in backend's WriteControlFile().
-   */
+     
+                                                                          
+     
   StaticAssertStmt(sizeof(ControlFileData) <= PG_CONTROL_MAX_SAFE_SIZE, "pg_control is too large for atomic disk writes");
   StaticAssertStmt(sizeof(ControlFileData) <= PG_CONTROL_FILE_SIZE, "sizeof(ControlFileData) exceeds PG_CONTROL_FILE_SIZE");
 
-  /* Recalculate CRC of control file */
+                                       
   INIT_CRC32C(ControlFile->crc);
   COMP_CRC32C(ControlFile->crc, (char *)ControlFile, offsetof(ControlFileData, crc));
   FIN_CRC32C(ControlFile->crc);
 
-  /*
-   * Write out PG_CONTROL_FILE_SIZE bytes into pg_control by zero-padding
-   * the excess over sizeof(ControlFileData), to avoid premature EOF related
-   * errors when reading it.
-   */
+     
+                                                                          
+                                                                             
+                             
+     
   memset(buffer, 0, PG_CONTROL_FILE_SIZE);
   memcpy(buffer, ControlFile, sizeof(ControlFileData));
 
@@ -170,10 +170,10 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
 
 #ifndef FRONTEND
 
-  /*
-   * All errors issue a PANIC, so no need to use OpenTransientFile() and to
-   * worry about file descriptor leaks.
-   */
+     
+                                                                            
+                                        
+     
   if ((fd = BasicOpenFile(ControlFilePath, O_RDWR | PG_BINARY)) < 0)
   {
     ereport(PANIC, (errcode_for_file_access(), errmsg("could not open file \"%s\": %m", ControlFilePath)));
@@ -192,7 +192,7 @@ update_controlfile(const char *DataDir, ControlFileData *ControlFile, bool do_sy
 #endif
   if (write(fd, buffer, PG_CONTROL_FILE_SIZE) != PG_CONTROL_FILE_SIZE)
   {
-    /* if write didn't set errno, assume problem is no disk space */
+                                                                    
     if (errno == 0)
     {
       errno = ENOSPC;

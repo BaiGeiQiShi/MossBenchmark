@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "bytea.pgc"
@@ -16,7 +16,7 @@
 
 #line 6 "bytea.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 7 "bytea.pgc"
 
 static void
@@ -38,7 +38,7 @@ dump_binary(char *buf, int len, int ind)
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 27 "bytea.pgc"
   struct bytea_1
@@ -70,7 +70,7 @@ main(void)
 
 #line 31 "bytea.pgc"
   int ind[2];
-/* exec sql end declare section */
+                                  
 #line 32 "bytea.pgc"
 
   int i, j, c;
@@ -161,7 +161,7 @@ main(void)
   }
 #line 64 "bytea.pgc"
 
-  /* Test for static sql statement with normal host variable, indicator */
+                                                                          
   init();
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
@@ -199,7 +199,7 @@ main(void)
   dump_binary(recv_buf[0].arr, recv_buf[0].len, ind[0]);
   dump_binary(recv_short_buf.arr, recv_short_buf.len, ind[1]);
 
-  /* Test for cursor */
+                       
   init();
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
@@ -223,7 +223,7 @@ main(void)
   }
 #line 77 "bytea.pgc"
 
-  ECPGset_var(0, &(send_buf[0]), __LINE__); /* declare cursor1 cursor for select data1 from test where data1 = $1  */
+  ECPGset_var(0, &(send_buf[0]), __LINE__);                                                                          
 #line 78 "bytea.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -280,7 +280,7 @@ main(void)
 
   dump_binary(recv_buf[0].arr, recv_buf[0].len, 0);
 
-  /* Test for variable length array */
+                                      
   init();
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
@@ -330,7 +330,7 @@ main(void)
   dump_binary(recv_vlen_buf[1].arr, recv_vlen_buf[1].len, 0);
   free(recv_vlen_buf);
 
-  /* Test for dynamic sql statement with normal host variable, indicator */
+                                                                           
   init();
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);
@@ -368,7 +368,7 @@ main(void)
   dump_binary(recv_buf[0].arr, recv_buf[0].len, ind[0]);
   dump_binary(recv_short_buf.arr, recv_short_buf.len, ind[1]);
 
-  /* Test for dynamic sql statement with sql descriptor */
+                                                          
   init();
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "truncate test", ECPGt_EOIT, ECPGt_EORT);

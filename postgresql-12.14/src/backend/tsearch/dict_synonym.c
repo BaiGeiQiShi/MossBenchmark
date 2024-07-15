@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * dict_synonym.c
- *		Synonym dictionary: replace word by its synonym
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/dict_synonym.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                                    
+   
+                                                                         
+   
+   
+                  
+                                        
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "commands/defrem.h"
@@ -28,31 +28,31 @@ typedef struct
 
 typedef struct
 {
-  int len; /* length of syn array */
+  int len;                          
   Syn *syn;
   bool case_sensitive;
 } DictSyn;
 
-/*
- * Finds the next whitespace-delimited word within the 'in' string.
- * Returns a pointer to the first character of the word, and a pointer
- * to the next byte after the last character in the word (in *end).
- * Character '*' at the end of word will not be threated as word
- * character if flags is not null.
- */
+   
+                                                                    
+                                                                       
+                                                                    
+                                                                 
+                                   
+   
 static char *
 findwrd(char *in, char **end, uint16 *flags)
 {
   char *start;
   char *lastchar;
 
-  /* Skip leading spaces */
+                           
   while (*in && t_isspace(in))
   {
     in += pg_mblen(in);
   }
 
-  /* Return NULL on empty lines */
+                                  
   if (*in == '\0')
   {
     *end = NULL;
@@ -61,7 +61,7 @@ findwrd(char *in, char **end, uint16 *flags)
 
   lastchar = start = in;
 
-  /* Find end of word */
+                        
   while (*in && !t_isspace(in))
   {
     lastchar = in;
@@ -142,12 +142,12 @@ dsynonym_init(PG_FUNCTION_ARGS)
     starti = findwrd(line, &end, NULL);
     if (!starti)
     {
-      /* Empty line */
+                      
       goto skipline;
     }
     if (*end == '\0')
     {
-      /* A line with only one word. Ignore silently. */
+                                                       
       goto skipline;
     }
     *end = '\0';
@@ -155,15 +155,15 @@ dsynonym_init(PG_FUNCTION_ARGS)
     starto = findwrd(end + 1, &end, &flags);
     if (!starto)
     {
-      /* A line with only one word (+whitespace). Ignore silently. */
+                                                                     
       goto skipline;
     }
     *end = '\0';
 
-    /*
-     * starti now points to the first word, and starto to the second word
-     * on the line, with a \0 terminator at the end of both words.
-     */
+       
+                                                                          
+                                                                   
+       
 
     if (cur >= d->len)
     {
@@ -218,7 +218,7 @@ dsynonym_lexize(PG_FUNCTION_ARGS)
   Syn key, *found;
   TSLexeme *res;
 
-  /* note: d->len test protects against Solaris bsearch-of-no-items bug */
+                                                                          
   if (len <= 0 || d->len <= 0)
   {
     PG_RETURN_POINTER(NULL);

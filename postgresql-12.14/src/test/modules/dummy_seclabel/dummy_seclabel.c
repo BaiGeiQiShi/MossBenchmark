@@ -1,15 +1,15 @@
-/*
- * dummy_seclabel.c
- *
- * Dummy security label provider.
- *
- * This module does not provide anything worthwhile from a security
- * perspective, but allows regression testing independent of platform-specific
- * features like SELinux.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- */
+   
+                    
+   
+                                  
+   
+                                                                    
+                                                                               
+                          
+   
+                                                                         
+                                                                        
+   
 #include "postgres.h"
 
 #include "commands/seclabel.h"
@@ -18,7 +18,7 @@
 
 PG_MODULE_MAGIC;
 
-/* Entrypoint of the module */
+                              
 void
 _PG_init(void);
 
@@ -49,10 +49,10 @@ _PG_init(void)
   register_label_provider("dummy", dummy_object_relabel);
 }
 
-/*
- * This function is here just so that the extension is not completely empty
- * and the dynamic library is loaded when CREATE EXTENSION runs.
- */
+   
+                                                                            
+                                                                 
+   
 Datum
 dummy_seclabel_dummy(PG_FUNCTION_ARGS)
 {

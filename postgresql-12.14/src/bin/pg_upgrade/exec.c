@@ -1,11 +1,11 @@
-/*
- *	exec.c
- *
- *	execution functions
- *
- *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *	src/bin/pg_upgrade/exec.c
- */
+   
+          
+   
+                       
+   
+                                                                
+                             
+   
 
 #include "postgres_fe.h"
 
@@ -27,11 +27,11 @@ static int
 win32_check_directory_write_permissions(void);
 #endif
 
-/*
- * get_bin_version
- *
- *	Fetch major version of binaries for cluster.
- */
+   
+                   
+   
+                                                
+   
 static void
 get_bin_version(ClusterInfo *cluster)
 {
@@ -55,30 +55,30 @@ get_bin_version(ClusterInfo *cluster)
 
   if (v1 < 10)
   {
-    /* old style, e.g. 9.6.1 */
+                               
     cluster->bin_version = v1 * 10000 + v2 * 100;
   }
   else
   {
-    /* new style, e.g. 10.1 */
+                              
     cluster->bin_version = v1 * 10000;
   }
 }
 
-/*
- * exec_prog()
- *		Execute an external program with stdout/stderr redirected, and report
- *		errors
- *
- * Formats a command from the given argument list, logs it to the log file,
- * and attempts to execute that command.  If the command executes
- * successfully, exec_prog() returns true.
- *
- * If the command fails, an error message is optionally written to the specified
- * log_file, and the program optionally exits.
- *
- * The code requires it be called first from the primary thread on Windows.
- */
+   
+               
+                                                                          
+           
+   
+                                                                            
+                                                                  
+                                           
+   
+                                                                                 
+                                               
+   
+                                                                            
+   
 bool
 exec_prog(const char *log_file, const char *opt_log_file, bool report_error, bool exit_on_error, const char *fmt, ...)
 {
@@ -93,7 +93,7 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
 #ifdef WIN32
   static DWORD mainThreadId = 0;
 
-  /* We assume we are called from the primary thread first */
+                                                             
   if (mainThreadId == 0)
   {
     mainThreadId = GetCurrentThreadId();
@@ -118,15 +118,15 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
 
 #ifdef WIN32
 
-  /*
-   * For some reason, Windows issues a file-in-use error if we write data to
-   * the log file from a non-primary thread just before we create a
-   * subprocess that also writes to the same log file.  One fix is to sleep
-   * for 100ms.  A cleaner fix is to write to the log file _after_ the
-   * subprocess has completed, so we do this only when writing from a
-   * non-primary thread.  fflush(), running system() twice, and pre-creating
-   * the file do not see to help.
-   */
+     
+                                                                             
+                                                                    
+                                                                            
+                                                                       
+                                                                      
+                                                                             
+                                  
+     
   if (mainThreadId != GetCurrentThreadId())
   {
     result = system(cmd);
@@ -137,18 +137,18 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
 
 #ifdef WIN32
   {
-    /*
-     * "pg_ctl -w stop" might have reported that the server has stopped
-     * because the postmaster.pid file has been removed, but "pg_ctl -w
-     * start" might still be in the process of closing and might still be
-     * holding its stdout and -l log file descriptors open.  Therefore,
-     * try to open the log file a few more times.
-     */
+       
+                                                                        
+                                                                        
+                                                                          
+                                                                        
+                                                  
+       
     int iter;
 
     for (iter = 0; iter < 4 && log == NULL; iter++)
     {
-      pg_usleep(1000000); /* 1 sec */
+      pg_usleep(1000000);            
       log = fopen(log_file, "a");
     }
   }
@@ -160,7 +160,7 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
   }
 
 #ifdef WIN32
-  /* Are we printing "command:" before its output? */
+                                                     
   if (mainThreadId == GetCurrentThreadId())
   {
     fprintf(log, "\n\n");
@@ -168,28 +168,28 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
 #endif
   fprintf(log, "command: %s\n", cmd);
 #ifdef WIN32
-  /* Are we printing "command:" after its output? */
+                                                    
   if (mainThreadId != GetCurrentThreadId())
   {
     fprintf(log, "\n\n");
   }
 #endif
 
-  /*
-   * In Windows, we must close the log file at this point so the file is not
-   * open while the command is running, or we get a share violation.
-   */
+     
+                                                                             
+                                                                     
+     
   fclose(log);
 
 #ifdef WIN32
-  /* see comment above */
+                         
   if (mainThreadId == GetCurrentThreadId())
 #endif
     result = system(cmd);
 
   if (result != 0 && report_error)
   {
-    /* we might be in on a progress status line, so go to the next line */
+                                                                          
     report_status(PG_REPORT, "\n*failure*");
     fflush(stdout);
 
@@ -212,13 +212,13 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
 
 #ifndef WIN32
 
-  /*
-   * We can't do this on Windows because it will keep the "pg_ctl start"
-   * output filename open until the server stops, so we do the \n\n above on
-   * that platform.  We use a unique filename for "pg_ctl start" that is
-   * never reused while the server is running, so it works fine.  We could
-   * log these commands to a third file, but that just adds complexity.
-   */
+     
+                                                                         
+                                                                             
+                                                                         
+                                                                           
+                                                                        
+     
   if ((log = fopen(log_file, "a")) == NULL)
   {
     pg_fatal("could not write to log file \"%s\": %m\n", log_file);
@@ -230,11 +230,11 @@ exec_prog(const char *log_file, const char *opt_log_file, bool report_error, boo
   return result == 0;
 }
 
-/*
- * pid_lock_file_exists()
- *
- * Checks whether the postmaster.pid file exists.
- */
+   
+                          
+   
+                                                  
+   
 bool
 pid_lock_file_exists(const char *datadir)
 {
@@ -245,7 +245,7 @@ pid_lock_file_exists(const char *datadir)
 
   if ((fd = open(path, O_RDONLY, 0)) < 0)
   {
-    /* ENOTDIR means we will throw a more useful error later */
+                                                               
     if (errno != ENOENT && errno != ENOTDIR)
     {
       pg_fatal("could not open file \"%s\" for reading: %s\n", path, strerror(errno));
@@ -258,14 +258,14 @@ pid_lock_file_exists(const char *datadir)
   return true;
 }
 
-/*
- * verify_directories()
- *
- * does all the hectic work of verifying directories and executables
- * of old and new server.
- *
- * NOTE: May update the values of all parameters
- */
+   
+                        
+   
+                                                                     
+                          
+   
+                                                 
+   
 void
 verify_directories(void)
 {
@@ -283,22 +283,22 @@ verify_directories(void)
 }
 
 #ifdef WIN32
-/*
- * win32_check_directory_write_permissions()
- *
- *	access() on WIN32 can't check directory permissions, so we have to
- *	optionally create, then delete a file to check.
- *		http://msdn.microsoft.com/en-us/library/1w06ktdy%28v=vs.80%29.aspx
- */
+   
+                                             
+   
+                                                                      
+                                                   
+                                                                       
+   
 static int
 win32_check_directory_write_permissions(void)
 {
   int fd;
 
-  /*
-   * We open a file we would normally create anyway.  We do this even in
-   * 'check' mode, which isn't ideal, but this is the best we can do.
-   */
+     
+                                                                         
+                                                                      
+     
   if ((fd = open(GLOBALS_DUMP_FILE, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR)) < 0)
   {
     return -1;
@@ -309,12 +309,12 @@ win32_check_directory_write_permissions(void)
 }
 #endif
 
-/*
- * check_single_dir()
- *
- *	Check for the presence of a single directory in PGDATA, and fail if
- * is it missing or not accessible.
- */
+   
+                      
+   
+                                                                       
+                                    
+   
 static void
 check_single_dir(const char *pg_data, const char *subdir)
 {
@@ -322,7 +322,7 @@ check_single_dir(const char *pg_data, const char *subdir)
   char subDirName[MAXPGPATH];
 
   snprintf(subDirName, sizeof(subDirName), "%s%s%s", pg_data,
-      /* Win32 can't stat() a directory with a trailing slash. */
+                                                                 
       *subdir ? "/" : "", subdir);
 
   if (stat(subDirName, &statBuf) != 0)
@@ -335,21 +335,21 @@ check_single_dir(const char *pg_data, const char *subdir)
   }
 }
 
-/*
- * check_data_dir()
- *
- *	This function validates the given cluster directory - we search for a
- *	small set of subdirectories that we expect to find in a valid $PGDATA
- *	directory.  If any of the subdirectories are missing (or secured against
- *	us) we display an error message and exit()
- *
- */
+   
+                    
+   
+                                                                         
+                                                                         
+                                                                            
+                                              
+   
+   
 static void
 check_data_dir(ClusterInfo *cluster)
 {
   const char *pg_data = cluster->pgdata;
 
-  /* get the cluster version */
+                               
   cluster->major_version = get_major_server_version(cluster);
 
   check_single_dir(pg_data, "");
@@ -360,7 +360,7 @@ check_data_dir(ClusterInfo *cluster)
   check_single_dir(pg_data, "pg_tblspc");
   check_single_dir(pg_data, "pg_twophase");
 
-  /* pg_xlog has been renamed to pg_wal in v10 */
+                                                 
   if (GET_MAJOR_VERSION(cluster->major_version) <= 906)
   {
     check_single_dir(pg_data, "pg_xlog");
@@ -370,7 +370,7 @@ check_data_dir(ClusterInfo *cluster)
     check_single_dir(pg_data, "pg_wal");
   }
 
-  /* pg_clog has been renamed to pg_xact in v10 */
+                                                  
   if (GET_MAJOR_VERSION(cluster->major_version) <= 906)
   {
     check_single_dir(pg_data, "pg_clog");
@@ -381,20 +381,20 @@ check_data_dir(ClusterInfo *cluster)
   }
 }
 
-/*
- * check_bin_dir()
- *
- *	This function searches for the executables that we expect to find
- *	in the binaries directory.  If we find that a required executable
- *	is missing (or secured against us), we display an error message and
- *	exit().
- */
+   
+                   
+   
+                                                                     
+                                                                     
+                                                                       
+           
+   
 static void
 check_bin_dir(ClusterInfo *cluster)
 {
   struct stat statBuf;
 
-  /* check bindir */
+                    
   if (stat(cluster->bindir, &statBuf) != 0)
   {
     report_status(PG_FATAL, "check for \"%s\" failed: %s\n", cluster->bindir, strerror(errno));
@@ -407,14 +407,14 @@ check_bin_dir(ClusterInfo *cluster)
   validate_exec(cluster->bindir, "postgres");
   validate_exec(cluster->bindir, "pg_ctl");
 
-  /*
-   * Fetch the binary version after checking for the existence of pg_ctl.
-   * This way we report a useful error if the pg_ctl binary used for version
-   * fetching is missing/broken.
-   */
+     
+                                                                          
+                                                                             
+                                 
+     
   get_bin_version(cluster);
 
-  /* pg_resetxlog has been renamed to pg_resetwal in version 10 */
+                                                                  
   if (GET_MAJOR_VERSION(cluster->bin_version) <= 906)
   {
     validate_exec(cluster->bindir, "pg_resetxlog");
@@ -425,18 +425,18 @@ check_bin_dir(ClusterInfo *cluster)
   }
   if (cluster == &new_cluster)
   {
-    /* these are only needed in the new cluster */
+                                                  
     validate_exec(cluster->bindir, "psql");
     validate_exec(cluster->bindir, "pg_dump");
     validate_exec(cluster->bindir, "pg_dumpall");
   }
 }
 
-/*
- * validate_exec()
- *
- * validate "path" as an executable file
- */
+   
+                   
+   
+                                         
+   
 static void
 validate_exec(const char *dir, const char *cmdName)
 {
@@ -446,16 +446,16 @@ validate_exec(const char *dir, const char *cmdName)
   snprintf(path, sizeof(path), "%s/%s", dir, cmdName);
 
 #ifdef WIN32
-  /* Windows requires a .exe suffix for stat() */
+                                                 
   if (strlen(path) <= strlen(EXE_EXT) || pg_strcasecmp(path + strlen(path) - strlen(EXE_EXT), EXE_EXT) != 0)
   {
     strlcat(path, EXE_EXT, sizeof(path));
   }
 #endif
 
-  /*
-   * Ensure that the file exists and is a regular file.
-   */
+     
+                                                        
+     
   if (stat(path, &buf) < 0)
   {
     pg_fatal("check for \"%s\" failed: %s\n", path, strerror(errno));
@@ -465,10 +465,10 @@ validate_exec(const char *dir, const char *cmdName)
     pg_fatal("check for \"%s\" failed: not a regular file\n", path);
   }
 
-  /*
-   * Ensure that the file is both executable and readable (required for
-   * dynamic loading).
-   */
+     
+                                                                        
+                       
+     
 #ifndef WIN32
   if (access(path, R_OK) != 0)
 #else

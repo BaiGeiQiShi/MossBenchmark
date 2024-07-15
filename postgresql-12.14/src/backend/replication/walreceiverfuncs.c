@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- *
- * walreceiverfuncs.c
- *
- * This file contains functions used by the startup process to communicate
- * with the walreceiver process. Functions implementing walreceiver itself
- * are in walreceiver.c.
- *
- * Portions Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/replication/walreceiverfuncs.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                      
+   
+                                                                           
+                                                                           
+                         
+   
+                                                                         
+   
+   
+                  
+                                                
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <sys/stat.h>
@@ -31,13 +31,13 @@
 
 WalRcvData *WalRcv = NULL;
 
-/*
- * How long to wait for walreceiver to start up after requesting
- * postmaster to launch it. In seconds.
- */
+   
+                                                                 
+                                        
+   
 #define WALRCV_STARTUP_TIMEOUT 10
 
-/* Report shared memory space needed by WalRcvShmemInit */
+                                                          
 Size
 WalRcvShmemSize(void)
 {
@@ -48,7 +48,7 @@ WalRcvShmemSize(void)
   return size;
 }
 
-/* Allocate and initialize walreceiver-related shared memory */
+                                                               
 void
 WalRcvShmemInit(void)
 {
@@ -58,7 +58,7 @@ WalRcvShmemInit(void)
 
   if (!found)
   {
-    /* First time through, so initialize */
+                                           
     MemSet(WalRcv, 0, WalRcvShmemSize());
     WalRcv->walRcvState = WALRCV_STOPPED;
     SpinLockInit(&WalRcv->mutex);
@@ -66,7 +66,7 @@ WalRcvShmemInit(void)
   }
 }
 
-/* Is walreceiver running (or starting up)? */
+                                              
 bool
 WalRcvRunning(void)
 {
@@ -81,12 +81,12 @@ WalRcvRunning(void)
 
   SpinLockRelease(&walrcv->mutex);
 
-  /*
-   * If it has taken too long for walreceiver to start up, give up. Setting
-   * the state to STOPPED ensures that if walreceiver later does start up
-   * after all, it will see that it's not supposed to be running and die
-   * without doing anything.
-   */
+     
+                                                                            
+                                                                          
+                                                                         
+                             
+     
   if (state == WALRCV_STARTING)
   {
     pg_time_t now = (pg_time_t)time(NULL);
@@ -114,10 +114,10 @@ WalRcvRunning(void)
   }
 }
 
-/*
- * Is walreceiver running and streaming (or at least attempting to connect,
- * or starting up)?
- */
+   
+                                                                            
+                    
+   
 bool
 WalRcvStreaming(void)
 {
@@ -132,12 +132,12 @@ WalRcvStreaming(void)
 
   SpinLockRelease(&walrcv->mutex);
 
-  /*
-   * If it has taken too long for walreceiver to start up, give up. Setting
-   * the state to STOPPED ensures that if walreceiver later does start up
-   * after all, it will see that it's not supposed to be running and die
-   * without doing anything.
-   */
+     
+                                                                            
+                                                                          
+                                                                         
+                             
+     
   if (state == WALRCV_STARTING)
   {
     pg_time_t now = (pg_time_t)time(NULL);
@@ -165,21 +165,21 @@ WalRcvStreaming(void)
   }
 }
 
-/*
- * Stop walreceiver (if running) and wait for it to die.
- * Executed by the Startup process.
- */
+   
+                                                         
+                                    
+   
 void
 ShutdownWalRcv(void)
 {
   WalRcvData *walrcv = WalRcv;
   pid_t walrcvpid = 0;
 
-  /*
-   * Request walreceiver to stop. Walreceiver will switch to WALRCV_STOPPED
-   * mode once it's finished, and will also request postmaster to not
-   * restart itself.
-   */
+     
+                                                                            
+                                                                      
+                     
+     
   SpinLockAcquire(&walrcv->mutex);
   switch (walrcv->walRcvState)
   {
@@ -193,44 +193,44 @@ ShutdownWalRcv(void)
   case WALRCV_WAITING:
   case WALRCV_RESTARTING:
     walrcv->walRcvState = WALRCV_STOPPING;
-    /* fall through */
+                      
   case WALRCV_STOPPING:
     walrcvpid = walrcv->pid;
     break;
   }
   SpinLockRelease(&walrcv->mutex);
 
-  /*
-   * Signal walreceiver process if it was still running.
-   */
+     
+                                                         
+     
   if (walrcvpid != 0)
   {
     kill(walrcvpid, SIGTERM);
   }
 
-  /*
-   * Wait for walreceiver to acknowledge its death by setting state to
-   * WALRCV_STOPPED.
-   */
+     
+                                                                       
+                     
+     
   while (WalRcvRunning())
   {
-    /*
-     * This possibly-long loop needs to handle interrupts of startup
-     * process.
-     */
+       
+                                                                     
+                
+       
     HandleStartupProcInterrupts();
 
-    pg_usleep(100000); /* 100ms */
+    pg_usleep(100000);            
   }
 }
 
-/*
- * Request postmaster to start walreceiver.
- *
- * recptr indicates the position where streaming should begin, conninfo
- * is a libpq connection string to use, and slotname is, optionally, the name
- * of a replication slot to acquire.
- */
+   
+                                            
+   
+                                                                        
+                                                                              
+                                     
+   
 void
 RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, const char *slotname)
 {
@@ -239,12 +239,12 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
   pg_time_t now = (pg_time_t)time(NULL);
   Latch *latch;
 
-  /*
-   * We always start at the beginning of the segment. That prevents a broken
-   * segment (i.e., with no records in the first half of a segment) from
-   * being created by XLOG streaming, which might cause trouble later on if
-   * the segment is e.g archived.
-   */
+     
+                                                                             
+                                                                         
+                                                                            
+                                  
+     
   if (XLogSegmentOffset(recptr, wal_segment_size) != 0)
   {
     recptr -= XLogSegmentOffset(recptr, wal_segment_size);
@@ -252,7 +252,7 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
 
   SpinLockAcquire(&walrcv->mutex);
 
-  /* It better be stopped if we try to restart it */
+                                                    
   Assert(walrcv->walRcvState == WALRCV_STOPPED || walrcv->walRcvState == WALRCV_WAITING);
 
   if (conninfo != NULL)
@@ -284,10 +284,10 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
   }
   walrcv->startTime = now;
 
-  /*
-   * If this is the first startup of walreceiver (on this timeline),
-   * initialize receivedUpto and latestChunkStart to the starting point.
-   */
+     
+                                                                     
+                                                                         
+     
   if (walrcv->receiveStart == 0 || walrcv->receivedTLI != tli)
   {
     walrcv->receivedUpto = recptr;
@@ -311,14 +311,14 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo, co
   }
 }
 
-/*
- * Returns the last+1 byte position that walreceiver has written.
- *
- * Optionally, returns the previous chunk start, that is the first byte
- * written in the most recent walreceiver flush cycle.  Callers not
- * interested in that value may pass NULL for latestChunkStart. Same for
- * receiveTLI.
- */
+   
+                                                                  
+   
+                                                                        
+                                                                    
+                                                                         
+               
+   
 XLogRecPtr
 GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID *receiveTLI)
 {
@@ -340,10 +340,10 @@ GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID *receiveTLI)
   return recptr;
 }
 
-/*
- * Returns the replication apply delay in ms or -1
- * if the apply delay info is not available
- */
+   
+                                                   
+                                            
+   
 int
 GetReplicationApplyDelay(void)
 {
@@ -373,10 +373,10 @@ GetReplicationApplyDelay(void)
   return TimestampDifferenceMilliseconds(chunkReplayStartTime, GetCurrentTimestamp());
 }
 
-/*
- * Returns the network latency in ms, note that this includes any
- * difference in clock settings between the servers, as well as timezone.
- */
+   
+                                                                  
+                                                                          
+   
 int
 GetReplicationTransferLatency(void)
 {

@@ -1,24 +1,24 @@
-/*-------------------------------------------------------------------------
- *
- * fe-auth.c
- *	   The front-end (client) authorization routines
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/interfaces/libpq/fe-auth.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                    
+   
+                                                                         
+                                                                        
+   
+                  
+                                    
+   
+                                                                            
+   
 
-/*
- * INTERFACE ROUTINES
- *	   frontend (client) routines:
- *		pg_fe_sendauth			send authentication information
- *		pg_fe_getauthname		get user's name according to the client side
- *								of the authentication system
- */
+   
+                      
+                                  
+                                                     
+                                                                    
+                                       
+   
 
 #include "postgres_fe.h"
 
@@ -27,13 +27,13 @@
 #else
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/param.h> /* for MAXHOSTNAMELEN on most */
+#include <sys/param.h>                                 
 #include <sys/socket.h>
 #ifdef HAVE_SYS_UCRED_H
 #include <sys/ucred.h>
 #endif
 #ifndef MAXHOSTNAMELEN
-#include <netdb.h> /* for MAXHOSTNAMELEN on some */
+#include <netdb.h>                                 
 #endif
 #include <pwd.h>
 #endif
@@ -44,15 +44,15 @@
 #include "fe-auth.h"
 
 #ifdef ENABLE_GSS
-/*
- * GSSAPI authentication system.
- */
+   
+                                 
+   
 
 #include "fe-gssapi-common.h"
 
-/*
- * Continue GSS authentication with next token as needed.
- */
+   
+                                                          
+   
 static int
 pg_GSS_continue(PGconn *conn, int payloadlen)
 {
@@ -60,10 +60,10 @@ pg_GSS_continue(PGconn *conn, int payloadlen)
   gss_buffer_desc ginbuf;
   gss_buffer_desc goutbuf;
 
-  /*
-   * On first call, there's no input token. On subsequent calls, read the
-   * input token into a GSS buffer.
-   */
+     
+                                                                          
+                                    
+     
   if (conn->gctx != GSS_C_NO_CONTEXT)
   {
     ginbuf.length = payloadlen;
@@ -75,10 +75,10 @@ pg_GSS_continue(PGconn *conn, int payloadlen)
     }
     if (pqGetnchar(ginbuf.value, payloadlen, conn))
     {
-      /*
-       * Shouldn't happen, because the caller should've ensured that the
-       * whole message is already in the input buffer.
-       */
+         
+                                                                         
+                                                       
+         
       free(ginbuf.value);
       return STATUS_ERROR;
     }
@@ -98,11 +98,11 @@ pg_GSS_continue(PGconn *conn, int payloadlen)
 
   if (goutbuf.length != 0)
   {
-    /*
-     * GSS generated data to send to the server. We don't care if it's the
-     * first or subsequent packet, just send the same kind of password
-     * packet.
-     */
+       
+                                                                           
+                                                                       
+               
+       
     if (pqPacketSend(conn, 'p', goutbuf.value, goutbuf.length) != STATUS_OK)
     {
       gss_release_buffer(&lmin_s, &goutbuf);
@@ -130,9 +130,9 @@ pg_GSS_continue(PGconn *conn, int payloadlen)
   return STATUS_OK;
 }
 
-/*
- * Send initial GSS authentication token
- */
+   
+                                         
+   
 static int
 pg_GSS_startup(PGconn *conn, int payloadlen)
 {
@@ -157,20 +157,20 @@ pg_GSS_startup(PGconn *conn, int payloadlen)
     return ret;
   }
 
-  /*
-   * Initial packet is the same as a continuation packet with no initial
-   * context.
-   */
+     
+                                                                         
+              
+     
   conn->gctx = GSS_C_NO_CONTEXT;
 
   return pg_GSS_continue(conn, payloadlen);
 }
-#endif /* ENABLE_GSS */
+#endif                 
 
 #ifdef ENABLE_SSPI
-/*
- * SSPI authentication system (Windows only)
- */
+   
+                                             
+   
 
 static void
 pg_SSPI_error(PGconn *conn, const char *mprefix, SECURITY_STATUS r)
@@ -187,9 +187,9 @@ pg_SSPI_error(PGconn *conn, const char *mprefix, SECURITY_STATUS r)
   }
 }
 
-/*
- * Continue SSPI authentication with next token as needed.
- */
+   
+                                                           
+   
 static int
 pg_SSPI_continue(PGconn *conn, int payloadlen)
 {
@@ -204,10 +204,10 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
 
   if (conn->sspictx != NULL)
   {
-    /*
-     * On runs other than the first we have some data to send. Put this
-     * data in a SecBuffer type structure.
-     */
+       
+                                                                        
+                                           
+       
     inputbuf = malloc(payloadlen);
     if (!inputbuf)
     {
@@ -216,10 +216,10 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
     }
     if (pqGetnchar(inputbuf, payloadlen, conn))
     {
-      /*
-       * Shouldn't happen, because the caller should've ensured that the
-       * whole message is already in the input buffer.
-       */
+         
+                                                                         
+                                                       
+         
       free(inputbuf);
       return STATUS_ERROR;
     }
@@ -241,7 +241,7 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
 
   r = InitializeSecurityContext(conn->sspicred, conn->sspictx, conn->sspitarget, ISC_REQ_ALLOCATE_MEMORY, 0, SECURITY_NETWORK_DREP, (conn->sspictx == NULL) ? NULL : &inbuf, 0, &newContext, &outbuf, &contextAttr, NULL);
 
-  /* we don't need the input anymore */
+                                       
   if (inputbuf)
   {
     free(inputbuf);
@@ -256,7 +256,7 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
 
   if (conn->sspictx == NULL)
   {
-    /* On first run, transfer retrieved context handle */
+                                                         
     conn->sspictx = malloc(sizeof(CtxtHandle));
     if (conn->sspictx == NULL)
     {
@@ -266,28 +266,28 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
     memcpy(conn->sspictx, &newContext, sizeof(CtxtHandle));
   }
 
-  /*
-   * If SSPI returned any data to be sent to the server (as it normally
-   * would), send this data as a password packet.
-   */
+     
+                                                                        
+                                                  
+     
   if (outbuf.cBuffers > 0)
   {
     if (outbuf.cBuffers != 1)
     {
-      /*
-       * This should never happen, at least not for Kerberos
-       * authentication. Keep check in case it shows up with other
-       * authentication methods later.
-       */
+         
+                                                             
+                                                                   
+                                       
+         
       printfPQExpBuffer(&conn->errorMessage, "SSPI returned invalid number of output buffers\n");
       return STATUS_ERROR;
     }
 
-    /*
-     * If the negotiation is complete, there may be zero bytes to send.
-     * The server is at this point not expecting any more data, so don't
-     * send it.
-     */
+       
+                                                                        
+                                                                         
+                
+       
     if (outbuf.pBuffers[0].cbBuffer > 0)
     {
       if (pqPacketSend(conn, 'p', outbuf.pBuffers[0].pvBuffer, outbuf.pBuffers[0].cbBuffer))
@@ -299,16 +299,16 @@ pg_SSPI_continue(PGconn *conn, int payloadlen)
     FreeContextBuffer(outbuf.pBuffers[0].pvBuffer);
   }
 
-  /* Cleanup is handled by the code in freePGconn() */
+                                                      
   return STATUS_OK;
 }
 
-/*
- * Send initial SSPI authentication token.
- * If use_negotiate is 0, use kerberos authentication package which is
- * compatible with Unix. If use_negotiate is 1, use the negotiate package
- * which supports both kerberos and NTLM, but is not compatible with Unix.
- */
+   
+                                           
+                                                                       
+                                                                          
+                                                                           
+   
 static int
 pg_SSPI_startup(PGconn *conn, int use_negotiate, int payloadlen)
 {
@@ -322,9 +322,9 @@ pg_SSPI_startup(PGconn *conn, int use_negotiate, int payloadlen)
     return STATUS_ERROR;
   }
 
-  /*
-   * Retrieve credentials handle
-   */
+     
+                                 
+     
   conn->sspicred = malloc(sizeof(CredHandle));
   if (conn->sspicred == NULL)
   {
@@ -341,11 +341,11 @@ pg_SSPI_startup(PGconn *conn, int use_negotiate, int payloadlen)
     return STATUS_ERROR;
   }
 
-  /*
-   * Compute target principal name. SSPI has a different format from GSSAPI,
-   * but not more complex. We can skip the @REALM part, because Windows will
-   * fill that in for us automatically.
-   */
+     
+                                                                             
+                                                                             
+                                        
+     
   if (!(host && host[0] != '\0'))
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("host name must be specified\n"));
@@ -359,19 +359,19 @@ pg_SSPI_startup(PGconn *conn, int use_negotiate, int payloadlen)
   }
   sprintf(conn->sspitarget, "%s/%s", conn->krbsrvname, host);
 
-  /*
-   * Indicate that we're in SSPI authentication mode to make sure that
-   * pg_SSPI_continue is called next time in the negotiation.
-   */
+     
+                                                                       
+                                                              
+     
   conn->usesspi = 1;
 
   return pg_SSPI_continue(conn, payloadlen);
 }
-#endif /* ENABLE_SSPI */
+#endif                  
 
-/*
- * Initialize SASL authentication exchange.
- */
+   
+                                            
+   
 static int
 pg_SASL_init(PGconn *conn, int payloadlen)
 {
@@ -391,12 +391,12 @@ pg_SASL_init(PGconn *conn, int payloadlen)
     goto error;
   }
 
-  /*
-   * Parse the list of SASL authentication mechanisms in the
-   * AuthenticationSASL message, and select the best mechanism that we
-   * support.  SCRAM-SHA-256-PLUS and SCRAM-SHA-256 are the only ones
-   * supported at the moment, listed by order of decreasing importance.
-   */
+     
+                                                             
+                                                                       
+                                                                      
+                                                                        
+     
   selected_mechanism = NULL;
   for (;;)
   {
@@ -410,43 +410,43 @@ pg_SASL_init(PGconn *conn, int payloadlen)
       goto oom_error;
     }
 
-    /* An empty string indicates end of list */
+                                               
     if (mechanism_buf.data[0] == '\0')
     {
       break;
     }
 
-    /*
-     * Select the mechanism to use.  Pick SCRAM-SHA-256-PLUS over anything
-     * else if a channel binding type is set and if the client supports
-     * it. Pick SCRAM-SHA-256 if nothing else has already been picked.  If
-     * we add more mechanisms, a more refined priority mechanism might
-     * become necessary.
-     */
+       
+                                                                           
+                                                                        
+                                                                           
+                                                                       
+                         
+       
     if (strcmp(mechanism_buf.data, SCRAM_SHA_256_PLUS_NAME) == 0)
     {
       if (conn->ssl_in_use)
       {
-        /*
-         * The server has offered SCRAM-SHA-256-PLUS, which is only
-         * supported by the client if a hash of the peer certificate
-         * can be created.
-         */
+           
+                                                                    
+                                                                     
+                           
+           
 #ifdef HAVE_PGTLS_GET_PEER_CERTIFICATE_HASH
         selected_mechanism = SCRAM_SHA_256_PLUS_NAME;
 #endif
       }
       else
       {
-        /*
-         * The server offered SCRAM-SHA-256-PLUS, but the connection
-         * is not SSL-encrypted. That's not sane. Perhaps SSL was
-         * stripped by a proxy? There's no point in continuing,
-         * because the server will reject the connection anyway if we
-         * try authenticate without channel binding even though both
-         * the client and server supported it. The SCRAM exchange
-         * checks for that, to prevent downgrade attacks.
-         */
+           
+                                                                     
+                                                                  
+                                                                
+                                                                      
+                                                                     
+                                                                  
+                                                          
+           
         printfPQExpBuffer(&conn->errorMessage, libpq_gettext("server offered SCRAM-SHA-256-PLUS authentication over a non-SSL connection\n"));
         goto error;
       }
@@ -463,16 +463,16 @@ pg_SASL_init(PGconn *conn, int payloadlen)
     goto error;
   }
 
-  /*
-   * Now that the SASL mechanism has been chosen for the exchange,
-   * initialize its state information.
-   */
+     
+                                                                   
+                                       
+     
 
-  /*
-   * First, select the password to use for the exchange, complaining if
-   * there isn't one.  Currently, all supported SASL mechanisms require a
-   * password, so we can just go ahead here without further distinction.
-   */
+     
+                                                                        
+                                                                          
+                                                                         
+     
   conn->password_needed = true;
   password = conn->connhost[conn->whichhost].password;
   if (password == NULL)
@@ -485,19 +485,19 @@ pg_SASL_init(PGconn *conn, int payloadlen)
     goto error;
   }
 
-  /*
-   * Initialize the SASL state information with all the information gathered
-   * during the initial exchange.
-   *
-   * Note: Only tls-unique is supported for the moment.
-   */
+     
+                                                                             
+                                  
+     
+                                                        
+     
   conn->sasl_state = pg_fe_scram_init(conn, password, selected_mechanism);
   if (!conn->sasl_state)
   {
     goto oom_error;
   }
 
-  /* Get the mechanism-specific Initial Client Response, if any */
+                                                                  
   pg_fe_scram_exchange(conn->sasl_state, NULL, -1, &initialresponse, &initialresponselen, &done, &success);
 
   if (done && !success)
@@ -505,9 +505,9 @@ pg_SASL_init(PGconn *conn, int payloadlen)
     goto error;
   }
 
-  /*
-   * Build a SASLInitialResponse message, and send it.
-   */
+     
+                                                       
+     
   if (pqPutMsgStart('p', true, conn))
   {
     goto error;
@@ -562,11 +562,11 @@ oom_error:
   return STATUS_ERROR;
 }
 
-/*
- * Exchange a message for SASL communication protocol with the backend.
- * This should be used after calling pg_SASL_init to set up the status of
- * the protocol.
- */
+   
+                                                                        
+                                                                          
+                 
+   
 static int
 pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
 {
@@ -577,7 +577,7 @@ pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
   int res;
   char *challenge;
 
-  /* Read the SASL challenge from the AuthenticationSASLContinue message. */
+                                                                            
   challenge = malloc(payloadlen + 1);
   if (!challenge)
   {
@@ -590,11 +590,11 @@ pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
     free(challenge);
     return STATUS_ERROR;
   }
-  /* For safety and convenience, ensure the buffer is NULL-terminated. */
+                                                                         
   challenge[payloadlen] = '\0';
 
   pg_fe_scram_exchange(conn->sasl_state, challenge, payloadlen, &output, &outputlen, &done, &success);
-  free(challenge); /* don't need the input anymore */
+  free(challenge);                                   
 
   if (final && !done)
   {
@@ -608,9 +608,9 @@ pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
   }
   if (outputlen != 0)
   {
-    /*
-     * Send the SASL response to the server.
-     */
+       
+                                             
+       
     res = pqPacketSend(conn, 'p', output, outputlen);
     free(output);
 
@@ -628,15 +628,15 @@ pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
   return STATUS_OK;
 }
 
-/*
- * Respond to AUTH_REQ_SCM_CREDS challenge.
- *
- * Note: this is dead code as of Postgres 9.1, because current backends will
- * never send this challenge.  But we must keep it as long as libpq needs to
- * interoperate with pre-9.1 servers.  It is believed to be needed only on
- * Debian/kFreeBSD (ie, FreeBSD kernel with Linux userland, so that the
- * getpeereid() function isn't provided by libc).
- */
+   
+                                            
+   
+                                                                             
+                                                                             
+                                                                           
+                                                                        
+                                                  
+   
 static int
 pg_local_sendauth(PGconn *conn)
 {
@@ -651,10 +651,10 @@ pg_local_sendauth(PGconn *conn)
     unsigned char buf[CMSG_SPACE(sizeof(struct cmsgcred))];
   } cmsgbuf;
 
-  /*
-   * The backend doesn't care what we send here, but it wants exactly one
-   * character to force recvmsg() to block and wait for us.
-   */
+     
+                                                                          
+                                                            
+     
   buf = '\0';
   iov.iov_base = &buf;
   iov.iov_len = 1;
@@ -663,7 +663,7 @@ pg_local_sendauth(PGconn *conn)
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
 
-  /* We must set up a message that will be filled in by kernel */
+                                                                 
   memset(&cmsgbuf, 0, sizeof(cmsgbuf));
   msg.msg_control = &cmsgbuf.buf;
   msg.msg_controllen = sizeof(cmsgbuf.buf);
@@ -694,16 +694,16 @@ pg_password_sendauth(PGconn *conn, const char *password, AuthRequest areq)
   const char *pwd_to_send;
   char md5Salt[4];
 
-  /* Read the salt from the AuthenticationMD5Password message. */
+                                                                 
   if (areq == AUTH_REQ_MD5)
   {
     if (pqGetnchar(md5Salt, 4, conn))
     {
-      return STATUS_ERROR; /* shouldn't happen */
+      return STATUS_ERROR;                       
     }
   }
 
-  /* Encrypt the password if needed. */
+                                       
 
   switch (areq)
   {
@@ -711,7 +711,7 @@ pg_password_sendauth(PGconn *conn, const char *password, AuthRequest areq)
   {
     char *crypt_pwd2;
 
-    /* Allocate enough space for two MD5 hashes */
+                                                  
     crypt_pwd = malloc(2 * (MD5_PASSWD_LEN + 1));
     if (!crypt_pwd)
     {
@@ -740,7 +740,7 @@ pg_password_sendauth(PGconn *conn, const char *password, AuthRequest areq)
   default:
     return STATUS_ERROR;
   }
-  /* Packet has a message type as of protocol 3.0 */
+                                                    
   if (PG_PROTOCOL_MAJOR(conn->pversion) >= 3)
   {
     ret = pqPacketSend(conn, 'p', pwd_to_send, strlen(pwd_to_send) + 1);
@@ -756,17 +756,17 @@ pg_password_sendauth(PGconn *conn, const char *password, AuthRequest areq)
   return ret;
 }
 
-/*
- * pg_fe_sendauth
- *		client demux routine for processing an authentication request
- *
- * The server has sent us an authentication challenge (or OK). Send an
- * appropriate response. The caller has ensured that the whole message is
- * now in the input buffer, and has already read the type and length of
- * it. We are responsible for reading any remaining extra data, specific
- * to the authentication method. 'payloadlen' is the remaining length in
- * the message.
- */
+   
+                  
+                                                                  
+   
+                                                                       
+                                                                          
+                                                                        
+                                                                         
+                                                                         
+                
+   
 int
 pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 {
@@ -786,7 +786,7 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 #if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
   case AUTH_REQ_GSS:
 #if !defined(ENABLE_SSPI)
-    /* no native SSPI, so use GSSAPI library for it */
+                                                      
   case AUTH_REQ_SSPI:
 #endif
   {
@@ -794,14 +794,14 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 
     pglock_thread();
 
-    /*
-     * If we have both GSS and SSPI support compiled in, use SSPI
-     * support by default. This is overridable by a connection
-     * string parameter. Note that when using SSPI we still leave
-     * the negotiate parameter off, since we want SSPI to use the
-     * GSSAPI kerberos protocol. For actual SSPI negotiate
-     * protocol, we use AUTH_REQ_SSPI.
-     */
+       
+                                                                  
+                                                               
+                                                                  
+                                                                  
+                                                           
+                                       
+       
 #if defined(ENABLE_GSS) && defined(ENABLE_SSPI)
     if (conn->gsslib && (pg_strcasecmp(conn->gsslib, "gssapi") == 0))
     {
@@ -818,7 +818,7 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 #endif
     if (r != STATUS_OK)
     {
-      /* Error message already filled in. */
+                                            
       pgunlock_thread();
       return STATUS_ERROR;
     }
@@ -847,33 +847,33 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 #endif
     if (r != STATUS_OK)
     {
-      /* Error message already filled in. */
+                                            
       pgunlock_thread();
       return STATUS_ERROR;
     }
     pgunlock_thread();
   }
   break;
-#else  /* defined(ENABLE_GSS) || defined(ENABLE_SSPI) */
-    /* No GSSAPI *or* SSPI support */
+#else                                                   
+                                     
   case AUTH_REQ_GSS:
   case AUTH_REQ_GSS_CONT:
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("GSSAPI authentication not supported\n"));
     return STATUS_ERROR;
-#endif /* defined(ENABLE_GSS) || defined(ENABLE_SSPI) */
+#endif                                                  
 
 #ifdef ENABLE_SSPI
   case AUTH_REQ_SSPI:
 
-    /*
-     * SSPI has its own startup message so libpq can decide which
-     * method to use. Indicate to pg_SSPI_startup that we want SSPI
-     * negotiation instead of Kerberos.
-     */
+       
+                                                                  
+                                                                    
+                                        
+       
     pglock_thread();
     if (pg_SSPI_startup(conn, 1, payloadlen) != STATUS_OK)
     {
-      /* Error message already filled in. */
+                                            
       pgunlock_thread();
       return STATUS_ERROR;
     }
@@ -881,18 +881,18 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
     break;
 #else
 
-    /*
-     * No SSPI support. However, if we have GSSAPI but not SSPI
-     * support, AUTH_REQ_SSPI will have been handled in the codepath
-     * for AUTH_REQ_GSS above, so don't duplicate the case label in
-     * that case.
-     */
+       
+                                                                
+                                                                     
+                                                                    
+                  
+       
 #if !defined(ENABLE_GSS)
   case AUTH_REQ_SSPI:
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("SSPI authentication not supported\n"));
     return STATUS_ERROR;
-#endif /* !define(ENABLE_GSS) */
-#endif /* ENABLE_SSPI */
+#endif                          
+#endif                  
 
   case AUTH_REQ_CRYPT:
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("Crypt authentication not supported\n"));
@@ -924,13 +924,13 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
 
   case AUTH_REQ_SASL:
 
-    /*
-     * The request contains the name (as assigned by IANA) of the
-     * authentication mechanism.
-     */
+       
+                                                                  
+                                 
+       
     if (pg_SASL_init(conn, payloadlen) != STATUS_OK)
     {
-      /* pg_SASL_init already set the error message */
+                                                      
       return STATUS_ERROR;
     }
     break;
@@ -944,7 +944,7 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
     }
     if (pg_SASL_continue(conn, payloadlen, (areq == AUTH_REQ_SASL_FIN)) != STATUS_OK)
     {
-      /* Use error message, if set already */
+                                             
       if (conn->errorMessage.len == 0)
       {
         printfPQExpBuffer(&conn->errorMessage, "fe_sendauth: error in SASL authentication\n");
@@ -968,13 +968,13 @@ pg_fe_sendauth(AuthRequest areq, int payloadlen, PGconn *conn)
   return STATUS_OK;
 }
 
-/*
- * pg_fe_getauthname
- *
- * Returns a pointer to malloc'd space containing whatever name the user
- * has authenticated to the system.  If there is an error, return NULL,
- * and put a suitable error message in *errorMessage if that's not NULL.
- */
+   
+                     
+   
+                                                                         
+                                                                        
+                                                                         
+   
 char *
 pg_fe_getauthname(PQExpBuffer errorMessage)
 {
@@ -982,7 +982,7 @@ pg_fe_getauthname(PQExpBuffer errorMessage)
   const char *name = NULL;
 
 #ifdef WIN32
-  /* Microsoft recommends buffer size of UNLEN+1, where UNLEN = 256 */
+                                                                      
   char username[256 + 1];
   DWORD namesize = sizeof(username);
 #else
@@ -993,13 +993,13 @@ pg_fe_getauthname(PQExpBuffer errorMessage)
   int pwerr;
 #endif
 
-  /*
-   * Some users are using configure --enable-thread-safety-force, so we
-   * might as well do the locking within our library to protect
-   * pqGetpwuid(). In fact, application developers can use getpwuid() in
-   * their application if they use the locking call we provide, or install
-   * their own locking function using PQregisterThreadLock().
-   */
+     
+                                                                        
+                                                                
+                                                                         
+                                                                           
+                                                              
+     
   pglock_thread();
 
 #ifdef WIN32
@@ -1044,14 +1044,14 @@ pg_fe_getauthname(PQExpBuffer errorMessage)
   return result;
 }
 
-/*
- * PQencryptPassword -- exported routine to encrypt a password with MD5
- *
- * This function is equivalent to calling PQencryptPasswordConn with
- * "md5" as the encryption method, except that this doesn't require
- * a connection object.  This function is deprecated, use
- * PQencryptPasswordConn instead.
- */
+   
+                                                                        
+   
+                                                                     
+                                                                    
+                                                          
+                                  
+   
 char *
 PQencryptPassword(const char *passwd, const char *user)
 {
@@ -1072,30 +1072,30 @@ PQencryptPassword(const char *passwd, const char *user)
   return crypt_pwd;
 }
 
-/*
- * PQencryptPasswordConn -- exported routine to encrypt a password
- *
- * This is intended to be used by client applications that wish to send
- * commands like ALTER USER joe PASSWORD 'pwd'.  The password need not
- * be sent in cleartext if it is encrypted on the client side.  This is
- * good because it ensures the cleartext password won't end up in logs,
- * pg_stat displays, etc.  We export the function so that clients won't
- * be dependent on low-level details like whether the encryption is MD5
- * or something else.
- *
- * Arguments are a connection object, the cleartext password, the SQL
- * name of the user it is for, and a string indicating the algorithm to
- * use for encrypting the password.  If algorithm is NULL, this queries
- * the server for the current 'password_encryption' value.  If you wish
- * to avoid that, e.g. to avoid blocking, you can execute
- * 'show password_encryption' yourself before calling this function, and
- * pass it as the algorithm.
- *
- * Return value is a malloc'd string.  The client may assume the string
- * doesn't contain any special characters that would require escaping.
- * On error, an error message is stored in the connection object, and
- * returns NULL.
- */
+   
+                                                                   
+   
+                                                                        
+                                                                       
+                                                                        
+                                                                        
+                                                                        
+                                                                        
+                      
+   
+                                                                      
+                                                                        
+                                                                        
+                                                                        
+                                                          
+                                                                         
+                             
+   
+                                                                        
+                                                                       
+                                                                      
+                 
+   
 char *
 PQencryptPasswordConn(PGconn *conn, const char *passwd, const char *user, const char *algorithm)
 {
@@ -1108,7 +1108,7 @@ PQencryptPasswordConn(PGconn *conn, const char *passwd, const char *user, const 
     return NULL;
   }
 
-  /* If no algorithm was given, ask the server. */
+                                                  
   if (algorithm == NULL)
   {
     PGresult *res;
@@ -1117,12 +1117,12 @@ PQencryptPasswordConn(PGconn *conn, const char *passwd, const char *user, const 
     res = PQexec(conn, "show password_encryption");
     if (res == NULL)
     {
-      /* PQexec() should've set conn->errorMessage already */
+                                                             
       return NULL;
     }
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
-      /* PQexec() should've set conn->errorMessage already */
+                                                             
       PQclear(res);
       return NULL;
     }
@@ -1146,19 +1146,19 @@ PQencryptPasswordConn(PGconn *conn, const char *passwd, const char *user, const 
     algorithm = algobuf;
   }
 
-  /*
-   * Also accept "on" and "off" as aliases for "md5", because
-   * password_encryption was a boolean before PostgreSQL 10.  We refuse to
-   * send the password in plaintext even if it was "off".
-   */
+     
+                                                              
+                                                                           
+                                                          
+     
   if (strcmp(algorithm, "on") == 0 || strcmp(algorithm, "off") == 0)
   {
     algorithm = "md5";
   }
 
-  /*
-   * Ok, now we know what algorithm to use
-   */
+     
+                                           
+     
   if (strcmp(algorithm, "scram-sha-256") == 0)
   {
     crypt_pwd = pg_fe_scram_build_verifier(passwd);

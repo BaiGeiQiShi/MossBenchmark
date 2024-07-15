@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- *	  ISO 8859 2-16 <--> UTF8
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/mb/conversion_procs/utf8_and_iso8859/utf8_and_iso8859.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                             
+   
+                                                                         
+                                                                        
+   
+                  
+                                                                               
+   
+                                                                            
+   
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -46,38 +46,38 @@ PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(iso8859_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_iso8859);
 
-/* ----------
- * conv_proc(
- *		INTEGER,	-- source encoding id
- *		INTEGER,	-- destination encoding id
- *		CSTRING,	-- source string (null terminated C string)
- *		CSTRING,	-- destination string (null terminated C string)
- *		INTEGER		-- source string length
- * ) returns VOID;
- * ----------
- */
+              
+              
+                                   
+                                        
+                                                         
+                                                              
+                                     
+                   
+              
+   
 
 typedef struct
 {
   pg_enc encoding;
-  const pg_mb_radix_tree *map1; /* to UTF8 map name */
-  const pg_mb_radix_tree *map2; /* from UTF8 map name */
+  const pg_mb_radix_tree *map1;                       
+  const pg_mb_radix_tree *map2;                         
 } pg_conv_map;
 
 static const pg_conv_map maps[] = {
-    {PG_LATIN2, &iso8859_2_to_unicode_tree, &iso8859_2_from_unicode_tree},     /* ISO-8859-2 Latin 2 */
-    {PG_LATIN3, &iso8859_3_to_unicode_tree, &iso8859_3_from_unicode_tree},     /* ISO-8859-3 Latin 3 */
-    {PG_LATIN4, &iso8859_4_to_unicode_tree, &iso8859_4_from_unicode_tree},     /* ISO-8859-4 Latin 4 */
-    {PG_LATIN5, &iso8859_9_to_unicode_tree, &iso8859_9_from_unicode_tree},     /* ISO-8859-9 Latin 5 */
-    {PG_LATIN6, &iso8859_10_to_unicode_tree, &iso8859_10_from_unicode_tree},   /* ISO-8859-10 Latin 6 */
-    {PG_LATIN7, &iso8859_13_to_unicode_tree, &iso8859_13_from_unicode_tree},   /* ISO-8859-13 Latin 7 */
-    {PG_LATIN8, &iso8859_14_to_unicode_tree, &iso8859_14_from_unicode_tree},   /* ISO-8859-14 Latin 8 */
-    {PG_LATIN9, &iso8859_15_to_unicode_tree, &iso8859_15_from_unicode_tree},   /* ISO-8859-15 Latin 9 */
-    {PG_LATIN10, &iso8859_16_to_unicode_tree, &iso8859_16_from_unicode_tree},  /* ISO-8859-16 Latin 10 */
-    {PG_ISO_8859_5, &iso8859_5_to_unicode_tree, &iso8859_5_from_unicode_tree}, /* ISO-8859-5 */
-    {PG_ISO_8859_6, &iso8859_6_to_unicode_tree, &iso8859_6_from_unicode_tree}, /* ISO-8859-6 */
-    {PG_ISO_8859_7, &iso8859_7_to_unicode_tree, &iso8859_7_from_unicode_tree}, /* ISO-8859-7 */
-    {PG_ISO_8859_8, &iso8859_8_to_unicode_tree, &iso8859_8_from_unicode_tree}, /* ISO-8859-8 */
+    {PG_LATIN2, &iso8859_2_to_unicode_tree, &iso8859_2_from_unicode_tree},                             
+    {PG_LATIN3, &iso8859_3_to_unicode_tree, &iso8859_3_from_unicode_tree},                             
+    {PG_LATIN4, &iso8859_4_to_unicode_tree, &iso8859_4_from_unicode_tree},                             
+    {PG_LATIN5, &iso8859_9_to_unicode_tree, &iso8859_9_from_unicode_tree},                             
+    {PG_LATIN6, &iso8859_10_to_unicode_tree, &iso8859_10_from_unicode_tree},                            
+    {PG_LATIN7, &iso8859_13_to_unicode_tree, &iso8859_13_from_unicode_tree},                            
+    {PG_LATIN8, &iso8859_14_to_unicode_tree, &iso8859_14_from_unicode_tree},                            
+    {PG_LATIN9, &iso8859_15_to_unicode_tree, &iso8859_15_from_unicode_tree},                            
+    {PG_LATIN10, &iso8859_16_to_unicode_tree, &iso8859_16_from_unicode_tree},                            
+    {PG_ISO_8859_5, &iso8859_5_to_unicode_tree, &iso8859_5_from_unicode_tree},                 
+    {PG_ISO_8859_6, &iso8859_6_to_unicode_tree, &iso8859_6_from_unicode_tree},                 
+    {PG_ISO_8859_7, &iso8859_7_to_unicode_tree, &iso8859_7_from_unicode_tree},                 
+    {PG_ISO_8859_8, &iso8859_8_to_unicode_tree, &iso8859_8_from_unicode_tree},                 
 };
 
 Datum

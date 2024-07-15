@@ -1,65 +1,65 @@
-/*-------------------------------------------------------------------------
- *
- * jsonpath.c
- *	 Input/output and supporting routines for jsonpath
- *
- * jsonpath expression is a chain of path items.  First path item is $, $var,
- * literal or arithmetic expression.  Subsequent path items are accessors
- * (.key, .*, [subscripts], [*]), filters (? (predicate)) and methods (.type(),
- * .size() etc).
- *
- * For instance, structure of path items for simple expression:
- *
- *		$.a[*].type()
- *
- * is pretty evident:
- *
- *		$ => .a => [*] => .type()
- *
- * Some path items such as arithmetic operations, predicates or array
- * subscripts may comprise subtrees.  For instance, more complex expression
- *
- *		($.a + $[1 to 5, 7] ? (@ > 3).double()).type()
- *
- * have following structure of path items:
- *
- *			  +  =>  .type()
- *		  ___/ \___
- *		 /		   \
- *		$ => .a 	$  =>  []  =>	?  =>  .double()
- *						  _||_		|
- *						 /	  \ 	>
- *						to	  to   / \
- *					   / \	  /   @   3
- *					  1   5  7
- *
- * Binary encoding of jsonpath constitutes a sequence of 4-bytes aligned
- * variable-length path items connected by links.  Every item has a header
- * consisting of item type (enum JsonPathItemType) and offset of next item
- * (zero means no next item).  After the header, item may have payload
- * depending on item type.  For instance, payload of '.key' accessor item is
- * length of key name and key name itself.  Payload of '>' arithmetic operator
- * item is offsets of right and left operands.
- *
- * So, binary representation of sample expression above is:
- * (bottom arrows are next links, top lines are argument links)
- *
- *								  _____
- *		 _____				  ___/____ \				__
- *	  _ /_	  \ 		_____/__/____ \ \	   __    _ /_ \
- *	 / /  \    \	   /	/  /	 \ \ \ 	  /  \  / /  \ \
- * +(LR)  $ .a	$  [](* to *, * to *) 1 5 7 ?(A)  >(LR)   @ 3 .double() .type()
- * |	  |  ^	|  ^|						 ^|					  ^		   ^
- * |	  |__|	|__||________________________||___________________|		   |
- * |_______________________________________________________________________|
- *
- * Copyright (c) 2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	src/backend/utils/adt/jsonpath.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                      
+   
+                                                                              
+                                                                          
+                                                                                
+                 
+   
+                                                                
+   
+                  
+   
+                      
+   
+                              
+   
+                                                                      
+                                                                            
+   
+                                                   
+   
+                                           
+   
+                      
+                
+           \
+                                            
+                  
+                  
+                    \
+                          
+                  
+   
+                                                                         
+                                                                           
+                                                                           
+                                                                       
+                                                                             
+                                                                               
+                                               
+   
+                                                            
+                                                                
+   
+                  
+                                 
+                                                  
+                                                   
+                                                                               
+                                         
+                                                                      
+                                                                             
+   
+                                                           
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -86,11 +86,11 @@ printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracket
 static int
 operationPriority(JsonPathItemType op);
 
-/**************************** INPUT/OUTPUT ********************************/
+                                                                            
 
-/*
- * jsonpath type input function
- */
+   
+                                
+   
 Datum
 jsonpath_in(PG_FUNCTION_ARGS)
 {
@@ -100,14 +100,14 @@ jsonpath_in(PG_FUNCTION_ARGS)
   return jsonPathFromCstring(in, len);
 }
 
-/*
- * jsonpath type recv function
- *
- * The type is sent as text in binary mode, so this is almost the same
- * as the input function, but it's prefixed with a version number so we
- * can change the binary format sent in future if necessary. For now,
- * only version 1 is supported.
- */
+   
+                               
+   
+                                                                       
+                                                                        
+                                                                      
+                                
+   
 Datum
 jsonpath_recv(PG_FUNCTION_ARGS)
 {
@@ -128,9 +128,9 @@ jsonpath_recv(PG_FUNCTION_ARGS)
   return jsonPathFromCstring(str, nbytes);
 }
 
-/*
- * jsonpath type output function
- */
+   
+                                 
+   
 Datum
 jsonpath_out(PG_FUNCTION_ARGS)
 {
@@ -139,11 +139,11 @@ jsonpath_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(jsonPathToCstring(NULL, in, VARSIZE(in)));
 }
 
-/*
- * jsonpath type send function
- *
- * Just send jsonpath as a version number, then a string of text
- */
+   
+                               
+   
+                                                                 
+   
 Datum
 jsonpath_send(PG_FUNCTION_ARGS)
 {
@@ -163,13 +163,13 @@ jsonpath_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- * Converts C-string to a jsonpath value.
- *
- * Uses jsonpath parser to turn string into an AST, then
- * flattenJsonPathParseItem() does second pass turning AST into binary
- * representation of jsonpath.
- */
+   
+                                          
+   
+                                                         
+                                                                       
+                               
+   
 static Datum
 jsonPathFromCstring(char *in, int len)
 {
@@ -178,7 +178,7 @@ jsonPathFromCstring(char *in, int len)
   StringInfoData buf;
 
   initStringInfo(&buf);
-  enlargeStringInfo(&buf, 4 * len /* estimation */);
+  enlargeStringInfo(&buf, 4 * len                 );
 
   appendStringInfoSpaces(&buf, JSONPATH_HDRSZ);
 
@@ -200,12 +200,12 @@ jsonPathFromCstring(char *in, int len)
   PG_RETURN_JSONPATH_P(res);
 }
 
-/*
- * Converts jsonpath value to a C-string.
- *
- * If 'out' argument is non-null, the resulting C-string is stored inside the
- * StringBuffer.  The resulting string is always returned.
- */
+   
+                                          
+   
+                                                                              
+                                                           
+   
 static char *
 jsonPathToCstring(StringInfo out, JsonPath *in, int estimated_len)
 {
@@ -230,14 +230,14 @@ jsonPathToCstring(StringInfo out, JsonPath *in, int estimated_len)
   return out->data;
 }
 
-/*
- * Recursive function converting given jsonpath parse item and all its
- * children into a binary representation.
- */
+   
+                                                                       
+                                          
+   
 static int
 flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLevel, bool insideArraySubscript)
 {
-  /* position from beginning of jsonpath data */
+                                                
   int32 pos = buf->len - JSONPATH_HDRSZ;
   int32 chld;
   int32 next;
@@ -248,17 +248,17 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
 
   appendStringInfoChar(buf, (char)(item->type));
 
-  /*
-   * We align buffer to int32 because a series of int32 values often goes
-   * after the header, and we want to read them directly by dereferencing
-   * int32 pointer (see jspInitByBuffer()).
-   */
+     
+                                                                          
+                                                                          
+                                            
+     
   alignStringInfoInt(buf);
 
-  /*
-   * Reserve space for next item pointer.  Actual value will be recorded
-   * later, after next and children items processing.
-   */
+     
+                                                                         
+                                                      
+     
   next = reserveSpaceForItemPointer(buf);
 
   switch (item->type)
@@ -291,11 +291,11 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
   case jpiMod:
   case jpiStartsWith:
   {
-    /*
-     * First, reserve place for left/right arg's positions, then
-     * record both args and sets actual position in reserved
-     * places.
-     */
+       
+                                                                 
+                                                             
+               
+       
     int32 left = reserveSpaceForItemPointer(buf);
     int32 right = reserveSpaceForItemPointer(buf);
 
@@ -322,7 +322,7 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
   break;
   case jpiFilter:
     argNestingLevel++;
-    /* FALLTHROUGH */
+                     
   case jpiIsUnknown:
   case jpiNot:
   case jpiPlus:
@@ -413,9 +413,9 @@ flattenJsonPathParseItem(StringInfo buf, JsonPathParseItem *item, int nestingLev
   return pos;
 }
 
-/*
- * Align StringInfo to int by adding zero padding bytes
- */
+   
+                                                        
+   
 static void
 alignStringInfoInt(StringInfo buf)
 {
@@ -423,22 +423,22 @@ alignStringInfoInt(StringInfo buf)
   {
   case 3:
     appendStringInfoCharMacro(buf, 0);
-    /* FALLTHROUGH */
+                     
   case 2:
     appendStringInfoCharMacro(buf, 0);
-    /* FALLTHROUGH */
+                     
   case 1:
     appendStringInfoCharMacro(buf, 0);
-    /* FALLTHROUGH */
+                     
   default:
     break;
   }
 }
 
-/*
- * Reserve space for int32 JsonPathItem pointer.  Now zero pointer is written,
- * actual value will be recorded at '(int32 *) &buf->data[pos]' later.
- */
+   
+                                                                               
+                                                                       
+   
 static int32
 reserveSpaceForItemPointer(StringInfo buf)
 {
@@ -450,9 +450,9 @@ reserveSpaceForItemPointer(StringInfo buf)
   return pos;
 }
 
-/*
- * Prints text representation of given jsonpath item and all its children.
- */
+   
+                                                                           
+   
 static void
 printJsonPathItem(StringInfo buf, JsonPathItem *v, bool inKey, bool printBracketes)
 {
@@ -806,11 +806,11 @@ operationPriority(JsonPathItemType op)
   }
 }
 
-/******************* Support functions for JsonPath *************************/
+                                                                              
 
-/*
- * Support macros to read stored values
- */
+   
+                                        
+   
 
 #define read_byte(v, b, p)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
@@ -833,9 +833,9 @@ operationPriority(JsonPathItemType op)
     (p) += sizeof(int32) * (n);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
   } while (0)
 
-/*
- * Read root node and fill root node representation
- */
+   
+                                                    
+   
 void
 jspInit(JsonPathItem *v, JsonPath *js)
 {
@@ -843,9 +843,9 @@ jspInit(JsonPathItem *v, JsonPath *js)
   jspInitByBuffer(v, js->data, 0);
 }
 
-/*
- * Read node from buffer and fill its representation
- */
+   
+                                                     
+   
 void
 jspInitByBuffer(JsonPathItem *v, char *base, int32 pos)
 {
@@ -875,7 +875,7 @@ jspInitByBuffer(JsonPathItem *v, char *base, int32 pos)
   case jpiString:
   case jpiVariable:
     read_int32(v->content.value.datalen, base, pos);
-    /* FALLTHROUGH */
+                     
   case jpiNumeric:
   case jpiBool:
     v->content.value.data = base + pos;

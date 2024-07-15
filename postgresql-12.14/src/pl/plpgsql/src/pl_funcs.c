@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * pl_funcs.c		- Misc functions for the PL/pgSQL
- *			  procedural language
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/pl/plpgsql/src/pl_funcs.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                 
+                           
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                   
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -19,36 +19,36 @@
 
 #include "plpgsql.h"
 
-/* ----------
- * Local variables for namespace handling
- *
- * The namespace structure actually forms a tree, of which only one linear
- * list or "chain" (from the youngest item to the root) is accessible from
- * any one plpgsql statement.  During initial parsing of a function, ns_top
- * points to the youngest item accessible from the block currently being
- * parsed.  We store the entire tree, however, since at runtime we will need
- * to access the chain that's relevant to any one statement.
- *
- * Block boundaries in the namespace chain are marked by PLPGSQL_NSTYPE_LABEL
- * items.
- * ----------
- */
+              
+                                          
+   
+                                                                           
+                                                                           
+                                                                            
+                                                                         
+                                                                             
+                                                             
+   
+                                                                              
+          
+              
+   
 static PLpgSQL_nsitem *ns_top = NULL;
 
-/* ----------
- * plpgsql_ns_init			Initialize namespace processing for a new function
- * ----------
- */
+              
+                                                                        
+              
+   
 void
 plpgsql_ns_init(void)
 {
   ns_top = NULL;
 }
 
-/* ----------
- * plpgsql_ns_push			Create a new namespace level
- * ----------
- */
+              
+                                                  
+              
+   
 void
 plpgsql_ns_push(const char *label, PLpgSQL_label_type label_type)
 {
@@ -59,10 +59,10 @@ plpgsql_ns_push(const char *label, PLpgSQL_label_type label_type)
   plpgsql_ns_additem(PLPGSQL_NSTYPE_LABEL, (int)label_type, label);
 }
 
-/* ----------
- * plpgsql_ns_pop			Pop entries back to (and including) the last label
- * ----------
- */
+              
+                                                                       
+              
+   
 void
 plpgsql_ns_pop(void)
 {
@@ -74,27 +74,27 @@ plpgsql_ns_pop(void)
   ns_top = ns_top->prev;
 }
 
-/* ----------
- * plpgsql_ns_top			Fetch the current namespace chain end
- * ----------
- */
+              
+                                                          
+              
+   
 PLpgSQL_nsitem *
 plpgsql_ns_top(void)
 {
   return ns_top;
 }
 
-/* ----------
- * plpgsql_ns_additem		Add an item to the current namespace chain
- * ----------
- */
+              
+                                                                  
+              
+   
 void
 plpgsql_ns_additem(PLpgSQL_nsitem_type itemtype, int itemno, const char *name)
 {
   PLpgSQL_nsitem *nse;
 
   Assert(name != NULL);
-  /* first item added must be a label */
+                                        
   Assert(ns_top != NULL || itemtype == PLPGSQL_NSTYPE_LABEL);
 
   nse = palloc(offsetof(PLpgSQL_nsitem, name) + strlen(name) + 1);
@@ -105,35 +105,35 @@ plpgsql_ns_additem(PLpgSQL_nsitem_type itemtype, int itemno, const char *name)
   ns_top = nse;
 }
 
-/* ----------
- * plpgsql_ns_lookup		Lookup an identifier in the given namespace chain
- *
- * Note that this only searches for variables, not labels.
- *
- * If localmode is true, only the topmost block level is searched.
- *
- * name1 must be non-NULL.  Pass NULL for name2 and/or name3 if parsing a name
- * with fewer than three components.
- *
- * If names_used isn't NULL, *names_used receives the number of names
- * matched: 0 if no match, 1 if name1 matched an unqualified variable name,
- * 2 if name1 and name2 matched a block label + variable name.
- *
- * Note that name3 is never directly matched to anything.  However, if it
- * isn't NULL, we will disregard qualified matches to scalar variables.
- * Similarly, if name2 isn't NULL, we disregard unqualified matches to
- * scalar variables.
- * ----------
- */
+              
+                                                                        
+   
+                                                           
+   
+                                                                   
+   
+                                                                               
+                                     
+   
+                                                                      
+                                                                            
+                                                               
+   
+                                                                          
+                                                                        
+                                                                       
+                     
+              
+   
 PLpgSQL_nsitem *
 plpgsql_ns_lookup(PLpgSQL_nsitem *ns_cur, bool localmode, const char *name1, const char *name2, const char *name3, int *names_used)
 {
-  /* Outer loop iterates once per block level in the namespace chain */
+                                                                       
   while (ns_cur != NULL)
   {
     PLpgSQL_nsitem *nsitem;
 
-    /* Check this level for unqualified match to variable name */
+                                                                 
     for (nsitem = ns_cur; nsitem->itemtype != PLPGSQL_NSTYPE_LABEL; nsitem = nsitem->prev)
     {
       if (strcmp(nsitem->name, name1) == 0)
@@ -149,7 +149,7 @@ plpgsql_ns_lookup(PLpgSQL_nsitem *ns_cur, bool localmode, const char *name1, con
       }
     }
 
-    /* Check this level for qualified match to variable name */
+                                                               
     if (name2 != NULL && strcmp(nsitem->name, name1) == 0)
     {
       for (nsitem = ns_cur; nsitem->itemtype != PLPGSQL_NSTYPE_LABEL; nsitem = nsitem->prev)
@@ -170,24 +170,24 @@ plpgsql_ns_lookup(PLpgSQL_nsitem *ns_cur, bool localmode, const char *name1, con
 
     if (localmode)
     {
-      break; /* do not look into upper levels */
+      break;                                    
     }
 
     ns_cur = nsitem->prev;
   }
 
-  /* This is just to suppress possibly-uninitialized-variable warnings */
+                                                                         
   if (names_used)
   {
     *names_used = 0;
   }
-  return NULL; /* No match found */
+  return NULL;                     
 }
 
-/* ----------
- * plpgsql_ns_lookup_label		Lookup a label in the given namespace chain
- * ----------
- */
+              
+                                                                        
+              
+   
 PLpgSQL_nsitem *
 plpgsql_ns_lookup_label(PLpgSQL_nsitem *ns_cur, const char *name)
 {
@@ -200,13 +200,13 @@ plpgsql_ns_lookup_label(PLpgSQL_nsitem *ns_cur, const char *name)
     ns_cur = ns_cur->prev;
   }
 
-  return NULL; /* label not found */
+  return NULL;                      
 }
 
-/* ----------
- * plpgsql_ns_find_nearest_loop		Find innermost loop label in namespace chain
- * ----------
- */
+              
+                                                                              
+              
+   
 PLpgSQL_nsitem *
 plpgsql_ns_find_nearest_loop(PLpgSQL_nsitem *ns_cur)
 {
@@ -219,12 +219,12 @@ plpgsql_ns_find_nearest_loop(PLpgSQL_nsitem *ns_cur)
     ns_cur = ns_cur->prev;
   }
 
-  return NULL; /* no loop found */
+  return NULL;                    
 }
 
-/*
- * Statement type as a string, for use in error messages etc.
- */
+   
+                                                              
+   
 const char *
 plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 {
@@ -291,9 +291,9 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
   return "unknown";
 }
 
-/*
- * GET DIAGNOSTICS item name as a string, for use in error messages etc.
- */
+   
+                                                                         
+   
 const char *
 plpgsql_getdiag_kindname(PLpgSQL_getdiag_kind kind)
 {
@@ -328,15 +328,15 @@ plpgsql_getdiag_kindname(PLpgSQL_getdiag_kind kind)
   return "unknown";
 }
 
-/**********************************************************************
- * Release memory when a PL/pgSQL function is no longer needed
- *
- * The code for recursing through the function tree is really only
- * needed to locate PLpgSQL_expr nodes, which may contain references
- * to saved SPI Plans that must be freed.  The function tree itself,
- * along with subsidiary data, is freed in one swoop by freeing the
- * function's permanent memory context.
- **********************************************************************/
+                                                                        
+                                                               
+   
+                                                                   
+                                                                     
+                                                                     
+                                                                    
+                                        
+                                                                        
 static void
 free_stmt(PLpgSQL_stmt *stmt);
 static void
@@ -762,10 +762,10 @@ plpgsql_free_function_memory(PLpgSQL_function *func)
 {
   int i;
 
-  /* Better not call this on an in-use function */
+                                                  
   Assert(func->use_count == 0);
 
-  /* Release plans associated with variable declarations */
+                                                           
   for (i = 0; i < func->ndatums; i++)
   {
     PLpgSQL_datum *d = func->datums[i];
@@ -801,18 +801,18 @@ plpgsql_free_function_memory(PLpgSQL_function *func)
   }
   func->ndatums = 0;
 
-  /* Release plans in statement tree */
+                                       
   if (func->action)
   {
     free_block(func->action);
   }
   func->action = NULL;
 
-  /*
-   * And finally, release all memory except the PLpgSQL_function struct
-   * itself (which has to be kept around because there may be multiple
-   * fn_extra pointers to it).
-   */
+     
+                                                                        
+                                                                       
+                               
+     
   if (func->fn_cxt)
   {
     MemoryContextDelete(func->fn_cxt);
@@ -820,9 +820,9 @@ plpgsql_free_function_memory(PLpgSQL_function *func)
   func->fn_cxt = NULL;
 }
 
-/**********************************************************************
- * Debug functions for analyzing the compiled code
- **********************************************************************/
+                                                                        
+                                                   
+                                                                        
 static int dump_indent;
 
 static void

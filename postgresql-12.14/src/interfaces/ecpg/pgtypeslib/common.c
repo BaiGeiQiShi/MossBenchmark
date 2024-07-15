@@ -1,11 +1,11 @@
-/* src/interfaces/ecpg/pgtypeslib/common.c */
+                                             
 
 #include "postgres_fe.h"
 
 #include "pgtypeslib_extern.h"
 #include "pgtypes.h"
 
-/* Return value is zero-filled. */
+                                  
 char *
 pgtypes_alloc(long size)
 {
@@ -33,9 +33,9 @@ pgtypes_strdup(const char *str)
 int
 pgtypes_fmt_replace(union un_fmt_comb replace_val, int replace_type, char **output, int *pstr_len)
 {
-  /*
-   * general purpose variable, set to 0 in order to fix compiler warning
-   */
+     
+                                                                         
+     
   int i = 0;
 
   switch (replace_type)
@@ -47,7 +47,7 @@ pgtypes_fmt_replace(union un_fmt_comb replace_val, int replace_type, char **outp
     i = strlen(replace_val.str_val);
     if (i + 1 <= *pstr_len)
     {
-      /* include trailing terminator in what we copy */
+                                                       
       memcpy(*output, replace_val.str_val, i + 1);
       *pstr_len -= i;
       *output += i;
@@ -123,10 +123,10 @@ pgtypes_fmt_replace(union un_fmt_comb replace_val, int replace_type, char **outp
     i = strlen(t);
     *pstr_len -= i;
 
-    /*
-     * if *pstr_len == 0, we don't have enough space for the
-     * terminator and the conversion fails
-     */
+       
+                                                             
+                                           
+       
     if (*pstr_len <= 0)
     {
       free(t);
@@ -143,9 +143,9 @@ pgtypes_fmt_replace(union un_fmt_comb replace_val, int replace_type, char **outp
   return 0;
 }
 
-/* Functions declared in pgtypes.h. */
+                                      
 
-/* Just frees memory (mostly needed for Windows) */
+                                                   
 void
 PGTYPESchar_free(char *ptr)
 {

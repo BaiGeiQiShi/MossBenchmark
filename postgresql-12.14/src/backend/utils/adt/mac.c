@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * mac.c
- *	  PostgreSQL type definitions for 6 byte, EUI-48, MAC addresses.
- *
- * Portions Copyright (c) 1998-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		  src/backend/utils/adt/mac.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+         
+                                                                    
+   
+                                                                         
+   
+                  
+                                  
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -22,21 +22,21 @@
 #include "utils/inet.h"
 #include "utils/sortsupport.h"
 
-/*
- *	Utility macros used for sorting and comparing:
- */
+   
+                                                  
+   
 
 #define hibits(addr) ((unsigned long)(((addr)->a << 16) | ((addr)->b << 8) | ((addr)->c)))
 
 #define lobits(addr) ((unsigned long)(((addr)->d << 16) | ((addr)->e << 8) | ((addr)->f)))
 
-/* sortsupport for macaddr */
+                             
 typedef struct
 {
-  int64 input_count; /* number of non-null values seen */
-  bool estimating;   /* true if estimating cardinality */
+  int64 input_count;                                     
+  bool estimating;                                       
 
-  hyperLogLogState abbr_card; /* cardinality estimator */
+  hyperLogLogState abbr_card;                            
 } macaddr_sortsupport_state;
 
 static int
@@ -50,9 +50,9 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup);
 static Datum
 macaddr_abbrev_convert(Datum original, SortSupport ssup);
 
-/*
- *	MAC address reader.  Accepts several common notations.
- */
+   
+                                                          
+   
 
 Datum
 macaddr_in(PG_FUNCTION_ARGS)
@@ -63,7 +63,7 @@ macaddr_in(PG_FUNCTION_ARGS)
   char junk[2];
   int count;
 
-  /* %1s matches iff there is trailing non-whitespace garbage */
+                                                                
 
   count = sscanf(str, "%x:%x:%x:%x:%x:%x%1s", &a, &b, &c, &d, &e, &f, junk);
   if (count != 6)
@@ -112,9 +112,9 @@ macaddr_in(PG_FUNCTION_ARGS)
   PG_RETURN_MACADDR_P(result);
 }
 
-/*
- *	MAC address output function.  Fixed format.
- */
+   
+                                               
+   
 
 Datum
 macaddr_out(PG_FUNCTION_ARGS)
@@ -129,11 +129,11 @@ macaddr_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		macaddr_recv			- converts external binary format to macaddr
- *
- * The external representation is just the six bytes, MSB first.
- */
+   
+                                                                
+   
+                                                                 
+   
 Datum
 macaddr_recv(PG_FUNCTION_ARGS)
 {
@@ -152,9 +152,9 @@ macaddr_recv(PG_FUNCTION_ARGS)
   PG_RETURN_MACADDR_P(addr);
 }
 
-/*
- *		macaddr_send			- converts macaddr to binary format
- */
+   
+                                                       
+   
 Datum
 macaddr_send(PG_FUNCTION_ARGS)
 {
@@ -171,9 +171,9 @@ macaddr_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- *	Comparison function for sorting:
- */
+   
+                                    
+   
 
 static int
 macaddr_cmp_internal(macaddr *a1, macaddr *a2)
@@ -209,9 +209,9 @@ macaddr_cmp(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(macaddr_cmp_internal(a1, a2));
 }
 
-/*
- *	Boolean comparisons.
- */
+   
+                        
+   
 
 Datum
 macaddr_lt(PG_FUNCTION_ARGS)
@@ -267,9 +267,9 @@ macaddr_ne(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(macaddr_cmp_internal(a1, a2) != 0);
 }
 
-/*
- * Support function for hash indexes on macaddr.
- */
+   
+                                                 
+   
 Datum
 hashmacaddr(PG_FUNCTION_ARGS)
 {
@@ -286,9 +286,9 @@ hashmacaddrextended(PG_FUNCTION_ARGS)
   return hash_any_extended((unsigned char *)key, sizeof(macaddr), PG_GETARG_INT64(1));
 }
 
-/*
- * Arithmetic functions: bitwise NOT, AND, OR.
- */
+   
+                                               
+   
 Datum
 macaddr_not(PG_FUNCTION_ARGS)
 {
@@ -339,10 +339,10 @@ macaddr_or(PG_FUNCTION_ARGS)
   PG_RETURN_MACADDR_P(result);
 }
 
-/*
- *	Truncation function to allow comparing mac manufacturers.
- *	From suggestion by Alex Pilosov <alex@pilosoft.com>
- */
+   
+                                                             
+                                                       
+   
 Datum
 macaddr_trunc(PG_FUNCTION_ARGS)
 {
@@ -361,10 +361,10 @@ macaddr_trunc(PG_FUNCTION_ARGS)
   PG_RETURN_MACADDR_P(result);
 }
 
-/*
- * SortSupport strategy function. Populates a SortSupport struct with the
- * information necessary to use comparison by abbreviated keys.
- */
+   
+                                                                          
+                                                                
+   
 Datum
 macaddr_sortsupport(PG_FUNCTION_ARGS)
 {
@@ -398,10 +398,10 @@ macaddr_sortsupport(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/*
- * SortSupport "traditional" comparison function. Pulls two MAC addresses from
- * the heap and runs a standard comparison on them.
- */
+   
+                                                                               
+                                                    
+   
 static int
 macaddr_fast_cmp(Datum x, Datum y, SortSupport ssup)
 {
@@ -411,11 +411,11 @@ macaddr_fast_cmp(Datum x, Datum y, SortSupport ssup)
   return macaddr_cmp_internal(arg1, arg2);
 }
 
-/*
- * SortSupport abbreviated key comparison function. Compares two MAC addresses
- * quickly by treating them like integers, and without having to go to the
- * heap.
- */
+   
+                                                                               
+                                                                           
+         
+   
 static int
 macaddr_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
 {
@@ -433,12 +433,12 @@ macaddr_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
   }
 }
 
-/*
- * Callback for estimating effectiveness of abbreviated key optimization.
- *
- * We pay no attention to the cardinality of the non-abbreviated data, because
- * there is no equality fast-path within authoritative macaddr comparator.
- */
+   
+                                                                          
+   
+                                                                               
+                                                                           
+   
 static bool
 macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
 {
@@ -452,12 +452,12 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
 
   abbr_card = estimateHyperLogLog(&uss->abbr_card);
 
-  /*
-   * If we have >100k distinct values, then even if we were sorting many
-   * billion rows we'd likely still break even, and the penalty of undoing
-   * that many rows of abbrevs would probably not be worth it. At this point
-   * we stop counting because we know that we're now fully committed.
-   */
+     
+                                                                         
+                                                                           
+                                                                             
+                                                                      
+     
   if (abbr_card > 100000.0)
   {
 #ifdef TRACE_SORT
@@ -473,12 +473,12 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
     return false;
   }
 
-  /*
-   * Target minimum cardinality is 1 per ~2k of non-null inputs. 0.5 row
-   * fudge factor allows us to abort earlier on genuinely pathological data
-   * where we've had exactly one abbreviated value in the first 2k
-   * (non-null) rows.
-   */
+     
+                                                                         
+                                                                            
+                                                                   
+                      
+     
   if (abbr_card < uss->input_count / 2000.0 + 0.5)
   {
 #ifdef TRACE_SORT
@@ -503,15 +503,15 @@ macaddr_abbrev_abort(int memtupcount, SortSupport ssup)
   return false;
 }
 
-/*
- * SortSupport conversion routine. Converts original macaddr representation
- * to abbreviated key representation.
- *
- * Packs the bytes of a 6-byte MAC address into a Datum and treats it as an
- * unsigned integer for purposes of comparison. On a 64-bit machine, there
- * will be two zeroed bytes of padding. The integer is converted to native
- * endianness to facilitate easy comparison.
- */
+   
+                                                                            
+                                      
+   
+                                                                            
+                                                                           
+                                                                           
+                                             
+   
 static Datum
 macaddr_abbrev_convert(Datum original, SortSupport ssup)
 {
@@ -519,46 +519,46 @@ macaddr_abbrev_convert(Datum original, SortSupport ssup)
   macaddr *authoritative = DatumGetMacaddrP(original);
   Datum res;
 
-  /*
-   * On a 64-bit machine, zero out the 8-byte datum and copy the 6 bytes of
-   * the MAC address in. There will be two bytes of zero padding on the end
-   * of the least significant bits.
-   */
+     
+                                                                            
+                                                                            
+                                    
+     
 #if SIZEOF_DATUM == 8
   memset(&res, 0, SIZEOF_DATUM);
   memcpy(&res, authoritative, sizeof(macaddr));
-#else /* SIZEOF_DATUM != 8 */
+#else                        
   memcpy(&res, authoritative, SIZEOF_DATUM);
 #endif
   uss->input_count += 1;
 
-  /*
-   * Cardinality estimation. The estimate uses uint32, so on a 64-bit
-   * architecture, XOR the two 32-bit halves together to produce slightly
-   * more entropy. The two zeroed bytes won't have any practical impact on
-   * this operation.
-   */
+     
+                                                                      
+                                                                          
+                                                                           
+                     
+     
   if (uss->estimating)
   {
     uint32 tmp;
 
 #if SIZEOF_DATUM == 8
     tmp = (uint32)res ^ (uint32)((uint64)res >> 32);
-#else /* SIZEOF_DATUM != 8 */
+#else                        
     tmp = (uint32)res;
 #endif
 
     addHyperLogLog(&uss->abbr_card, DatumGetUInt32(hash_uint32(tmp)));
   }
 
-  /*
-   * Byteswap on little-endian machines.
-   *
-   * This is needed so that macaddr_cmp_abbrev() (an unsigned integer 3-way
-   * comparator) works correctly on all platforms. Without this, the
-   * comparator would have to call memcmp() with a pair of pointers to the
-   * first byte of each abbreviated key, which is slower.
-   */
+     
+                                         
+     
+                                                                            
+                                                                     
+                                                                           
+                                                          
+     
   res = DatumBigEndianToNative(res);
 
   return res;

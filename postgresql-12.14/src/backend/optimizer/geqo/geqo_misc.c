@@ -1,23 +1,23 @@
-/*------------------------------------------------------------------------
- *
- * geqo_misc.c
- *	   misc. printout and debug stuff
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/backend/optimizer/geqo/geqo_misc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                           
+   
+               
+                                     
+   
+                                                                         
+                                                                        
+   
+                                          
+   
+                                                                            
+   
 
-/* contributed by:
-   =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-   *  Martin Utesch				 * Institute of Automatic Control	   *
-   =							 = University of Mining and Technology =
-   *  utesch@aut.tu-freiberg.de  * Freiberg, Germany				   *
-   =*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
- */
+                   
+                                                                         
+                                                              
+                                                    
+                                                             
+                                                                         
+   
 
 #include "postgres.h"
 
@@ -25,9 +25,9 @@
 
 #ifdef GEQO_DEBUG
 
-/*
- * avg_pool
- */
+   
+            
+   
 static double
 avg_pool(Pool *pool)
 {
@@ -39,12 +39,12 @@ avg_pool(Pool *pool)
     elog(ERROR, "pool_size is zero");
   }
 
-  /*
-   * Since the pool may contain multiple occurrences of DBL_MAX, divide by
-   * pool->size before summing, not after, to avoid overflow.  This loses a
-   * little in speed and accuracy, but this routine is only used for debug
-   * printouts, so we don't care that much.
-   */
+     
+                                                                           
+                                                                            
+                                                                           
+                                            
+     
   for (i = 0; i < pool->size; i++)
   {
     cumulative += pool->data[i].worth / pool->size;
@@ -53,14 +53,14 @@ avg_pool(Pool *pool)
   return cumulative;
 }
 
-/* print_pool
- */
+              
+   
 void
 print_pool(FILE *fp, Pool *pool, int start, int stop)
 {
   int i, j;
 
-  /* be extra careful that start and stop are valid inputs */
+                                                             
 
   if (start < 0)
   {
@@ -90,17 +90,17 @@ print_pool(FILE *fp, Pool *pool, int start, int stop)
   fflush(fp);
 }
 
-/* print_gen
- *
- *	 printout for chromosome: best, worst, mean, average
- */
+             
+   
+                                                        
+   
 void
 print_gen(FILE *fp, Pool *pool, int generation)
 {
   int lowest;
 
-  /* Get index to lowest ranking gene in population. */
-  /* Use 2nd to last since last is buffer. */
+                                                       
+                                             
   lowest = pool->size > 1 ? pool->size - 2 : 0;
 
   fprintf(fp, "%5d | Best: %g  Worst: %g  Mean: %g  Avg: %g\n", generation, pool->data[0].worth, pool->data[lowest].worth, pool->data[pool->size / 2].worth, avg_pool(pool));
@@ -130,4 +130,4 @@ print_edge_table(FILE *fp, Edge *edge_table, int num_gene)
   fflush(fp);
 }
 
-#endif /* GEQO_DEBUG */
+#endif                 

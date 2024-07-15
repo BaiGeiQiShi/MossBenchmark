@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "copystdout.pgc"
@@ -18,8 +18,8 @@
 #define PGDLLIMPORT __declspec(dllimport)
 #else
 #define PGDLLIMPORT
-#endif /* __CYGWIN__ */
-#endif /* PGDLLIMPORT */
+#endif                 
+#endif                  
 
 #define SQLERRMC_LEN 150
 
@@ -40,27 +40,27 @@ extern "C"
     } sqlerrm;
     char sqlerrp[8];
     long sqlerrd[6];
-    /* Element 0: empty						*/
-    /* 1: OID of processed tuple if applicable			*/
-    /* 2: number of rows processed				*/
-    /* after an INSERT, UPDATE or				*/
-    /* DELETE statement					*/
-    /* 3: empty						*/
-    /* 4: empty						*/
-    /* 5: empty						*/
+                               
+                                                   
+                                        
+                                       
+                              
+                       
+                       
+                       
     char sqlwarn[8];
-    /* Element 0: set to 'W' if at least one other is 'W'	*/
-    /* 1: if 'W' at least one character string		*/
-    /* value was truncated when it was			*/
-    /* stored into a host variable.             */
+                                                            
+                                                  
+                                           
+                                                  
 
-    /*
-     * 2: if 'W' a (hopefully) non-fatal notice occurred
-     */	/* 3: empty */
-    /* 4: empty						*/
-    /* 5: empty						*/
-    /* 6: empty						*/
-    /* 7: empty						*/
+       
+                                                         
+       	              
+                       
+                       
+                       
+                       
 
     char sqlstate[5];
   };
@@ -84,7 +84,7 @@ extern "C"
 
 #line 4 "copystdout.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 6 "copystdout.pgc"
 
 int

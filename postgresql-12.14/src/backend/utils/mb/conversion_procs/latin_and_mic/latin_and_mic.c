@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- *	  LATINn and MULE_INTERNAL
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *	  src/backend/utils/mb/conversion_procs/latin_and_mic/latin_and_mic.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                              
+   
+                                                                         
+                                                                        
+   
+                  
+                                                                         
+   
+                                                                            
+   
 
 #include "postgres.h"
 #include "fmgr.h"
@@ -24,16 +24,16 @@ PG_FUNCTION_INFO_V1(mic_to_latin3);
 PG_FUNCTION_INFO_V1(latin4_to_mic);
 PG_FUNCTION_INFO_V1(mic_to_latin4);
 
-/* ----------
- * conv_proc(
- *		INTEGER,	-- source encoding id
- *		INTEGER,	-- destination encoding id
- *		CSTRING,	-- source string (null terminated C string)
- *		CSTRING,	-- destination string (null terminated C string)
- *		INTEGER		-- source string length
- * ) returns VOID;
- * ----------
- */
+              
+              
+                                   
+                                        
+                                                         
+                                                              
+                                     
+                   
+              
+   
 
 Datum
 latin1_to_mic(PG_FUNCTION_ARGS)

@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "type.pgc"
@@ -32,17 +32,17 @@ typedef short mmSmallInt;
 
 #line 8 "type.pgc"
 
-/* exec sql type string is char [ 11 ] */
+                                         
 #line 10 "type.pgc"
 
 typedef char string[11];
 
-/* exec sql type c is char reference */
+                                       
 #line 13 "type.pgc"
 
 typedef char *c;
 
-/* exec sql begin declare section */
+                                    
 
 struct TBempl
 {
@@ -54,13 +54,13 @@ struct TBempl
 
 #line 21 "type.pgc"
   mmSmallInt accs;
-}; /* exec sql end declare section */
+};                                   
 #line 23 "type.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 29 "type.pgc"
   struct TBempl empl;
@@ -80,10 +80,10 @@ main(void)
 #line 35 "type.pgc"
     char text[10];
   } vc;
-/* exec sql end declare section */
+                                  
 #line 37 "type.pgc"
 
-  /* exec sql var vc is [ 10 ] */
+                                 
 #line 39 "type.pgc"
 
   ECPGdebug(1, stderr);

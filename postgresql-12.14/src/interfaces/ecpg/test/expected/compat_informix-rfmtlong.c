@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "rfmtlong.pgc"
@@ -14,10 +14,10 @@
 #include <pgtypes_error.h>
 #include <sqltypes.h>
 
-/*
- * This file tests various forms of long-input/output by means of
- * rfmtlong
- */
+   
+                                                                  
+            
+   
 
 static void
 check_return(int ret);

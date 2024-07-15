@@ -1,22 +1,22 @@
-/*-------------------------------------------------------------------------
- *
- * basebackup.c
- *	  code for taking a base backup and streaming it to a standby
- *
- * Portions Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/replication/basebackup.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                                 
+   
+                                                                         
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
 
-#include "access/xlog_internal.h" /* for pg_start/stop_backup */
+#include "access/xlog_internal.h"                               
 #include "catalog/pg_type.h"
 #include "common/file_perm.h"
 #include "lib/stringinfo.h"
@@ -80,27 +80,27 @@ throttle(size_t increment);
 static bool
 is_checksummed_file(const char *fullpath, const char *filename);
 
-/* Was the backup currently in-progress initiated in recovery mode? */
+                                                                      
 static bool backup_started_in_recovery = false;
 
-/* Relative path of temporary statistics directory */
+                                                     
 static char *statrelpath = NULL;
 
-/*
- * Size of each block sent into the tar stream for larger files.
- */
+   
+                                                                 
+   
 #define TAR_SEND_SIZE 32768
 
-/*
- * How frequently to throttle, as a fraction of the specified rate-second.
- */
+   
+                                                                           
+   
 #define THROTTLING_FREQUENCY 8
 
-/*
- * Checks whether we encountered any error in fread().  fread() doesn't give
- * any clue what has happened, so we check with ferror().  Also, neither
- * fread() nor ferror() set errno, so we just throw a generic error.
- */
+   
+                                                                             
+                                                                         
+                                                                     
+   
 #define CHECK_FREAD_ERROR(fp, filename)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -108,130 +108,130 @@ static char *statrelpath = NULL;
       ereport(ERROR, (errmsg("could not read from file \"%s\"", filename)));                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
   } while (0)
 
-/* The actual number of bytes, transfer of which may cause sleep. */
+                                                                    
 static uint64 throttling_sample;
 
-/* Amount of data already transferred but not yet throttled.  */
+                                                                
 static int64 throttling_counter;
 
-/* The minimum time required to transfer throttling_sample bytes. */
+                                                                    
 static TimeOffset elapsed_min_unit;
 
-/* The last check of the transfer rate. */
+                                          
 static TimestampTz throttled_last;
 
-/* The starting XLOG position of the base backup. */
+                                                    
 static XLogRecPtr startptr;
 
-/* Total number of checksum failures during base backup. */
+                                                           
 static int64 total_checksum_failures;
 
-/* Do not verify checksums. */
+                              
 static bool noverify_checksums = false;
 
-/*
- * Definition of one element part of an exclusion list, used for paths part
- * of checksum validation or base backups.  "name" is the name of the file
- * or path to check for exclusion.  If "match_prefix" is true, any items
- * matching the name as prefix are excluded.
- */
+   
+                                                                            
+                                                                           
+                                                                         
+                                             
+   
 struct exclude_list_item
 {
   const char *name;
   bool match_prefix;
 };
 
-/*
- * The contents of these directories are removed or recreated during server
- * start so they are not included in backups.  The directories themselves are
- * kept and included as empty to preserve access permissions.
- *
- * Note: this list should be kept in sync with the filter lists in pg_rewind's
- * filemap.c.
- */
+   
+                                                                            
+                                                                              
+                                                              
+   
+                                                                               
+              
+   
 static const char *excludeDirContents[] = {
-    /*
-     * Skip temporary statistics files. PG_STAT_TMP_DIR must be skipped even
-     * when stats_temp_directory is set because PGSS_TEXT_FILE is always
-     * created there.
-     */
+       
+                                                                             
+                                                                         
+                      
+       
     PG_STAT_TMP_DIR,
 
-    /*
-     * It is generally not useful to backup the contents of this directory
-     * even if the intention is to restore to another master. See backup.sgml
-     * for a more detailed description.
-     */
+       
+                                                                           
+                                                                              
+                                        
+       
     "pg_replslot",
 
-    /* Contents removed on startup, see dsm_cleanup_for_mmap(). */
+                                                                  
     PG_DYNSHMEM_DIR,
 
-    /* Contents removed on startup, see AsyncShmemInit(). */
+                                                            
     "pg_notify",
 
-    /*
-     * Old contents are loaded for possible debugging but are not required for
-     * normal operation, see OldSerXidInit().
-     */
+       
+                                                                               
+                                              
+       
     "pg_serial",
 
-    /* Contents removed on startup, see DeleteAllExportedSnapshotFiles(). */
+                                                                            
     "pg_snapshots",
 
-    /* Contents zeroed on startup, see StartupSUBTRANS(). */
+                                                            
     "pg_subtrans",
 
-    /* end of list */
+                     
     NULL};
 
-/*
- * List of files excluded from backups.
- */
+   
+                                        
+   
 static const struct exclude_list_item excludeFiles[] = {
-    /* Skip auto conf temporary file. */
+                                        
     {PG_AUTOCONF_FILENAME ".tmp", false},
 
-    /* Skip current log file temporary file */
+                                              
     {LOG_METAINFO_DATAFILE_TMP, false},
 
-    /*
-     * Skip relation cache because it is rebuilt on startup.  This includes
-     * temporary files.
-     */
+       
+                                                                            
+                        
+       
     {RELCACHE_INIT_FILENAME, true},
 
-    /*
-     * If there's a backup_label or tablespace_map file, it belongs to a
-     * backup started by the user with pg_start_backup().  It is *not* correct
-     * for this backup.  Our backup_label/tablespace_map is injected into the
-     * tar separately.
-     */
+       
+                                                                         
+                                                                               
+                                                                              
+                       
+       
     {BACKUP_LABEL_FILE, false}, {TABLESPACE_MAP, false},
 
     {"postmaster.pid", false}, {"postmaster.opts", false},
 
-    /* end of list */
+                     
     {NULL, false}};
 
-/*
- * List of files excluded from checksum validation.
- *
- * Note: this list should be kept in sync with what pg_checksums.c
- * includes.
- */
+   
+                                                    
+   
+                                                                   
+             
+   
 static const struct exclude_list_item noChecksumFiles[] = {{"pg_control", false}, {"pg_filenode.map", false}, {"pg_internal.init", true}, {"PG_VERSION", false},
 #ifdef EXEC_BACKEND
     {"config_exec_params", true},
 #endif
     {NULL, false}};
 
-/*
- * Actually do a base backup for the specified tablespaces.
- *
- * This is split out mainly to avoid complaints about "variable might be
- * clobbered by longjmp" from stupider versions of gcc.
- */
+   
+                                                            
+   
+                                                                         
+                                                        
+   
 static void
 perform_base_backup(basebackup_options *opt)
 {
@@ -254,12 +254,12 @@ perform_base_backup(basebackup_options *opt)
 
   startptr = do_pg_start_backup(opt->label, opt->fastcheckpoint, &starttli, labelfile, &tablespaces, tblspc_map_file, opt->progress, opt->sendtblspcmapfile);
 
-  /*
-   * Once do_pg_start_backup has been called, ensure that any failure causes
-   * us to abort the backup so we don't "leak" a backup counter. For this
-   * reason, *all* functionality between do_pg_start_backup() and the end of
-   * do_pg_stop_backup() should be inside the error cleanup block!
-   */
+     
+                                                                             
+                                                                          
+                                                                             
+                                                                   
+     
 
   PG_ENSURE_ERROR_CLEANUP(do_pg_abort_backup, BoolGetDatum(false));
   {
@@ -268,10 +268,10 @@ perform_base_backup(basebackup_options *opt)
 
     SendXlogRecPtrResult(startptr, starttli);
 
-    /*
-     * Calculate the relative path of temporary statistics directory in
-     * order to skip the files which are located in that directory later.
-     */
+       
+                                                                        
+                                                                          
+       
     if (is_absolute_path(pgstat_stat_directory) && strncmp(pgstat_stat_directory, DataDir, datadirpathlen) == 0)
     {
       statrelpath = psprintf("./%s", pgstat_stat_directory + datadirpathlen + 1);
@@ -285,60 +285,60 @@ perform_base_backup(basebackup_options *opt)
       statrelpath = pgstat_stat_directory;
     }
 
-    /* Add a node for the base directory at the end */
+                                                      
     ti = palloc0(sizeof(tablespaceinfo));
     ti->size = opt->progress ? sendDir(".", 1, true, tablespaces, true) : -1;
     tablespaces = lappend(tablespaces, ti);
 
-    /* Send tablespace header */
+                                
     SendBackupHeader(tablespaces);
 
-    /* Setup and activate network throttling, if client requested it */
+                                                                       
     if (opt->maxrate > 0)
     {
       throttling_sample = (int64)opt->maxrate * (int64)1024 / THROTTLING_FREQUENCY;
 
-      /*
-       * The minimum amount of time for throttling_sample bytes to be
-       * transferred.
-       */
+         
+                                                                      
+                      
+         
       elapsed_min_unit = USECS_PER_SEC / THROTTLING_FREQUENCY;
 
-      /* Enable throttling. */
+                              
       throttling_counter = 0;
 
-      /* The 'real data' starts now (header was ignored). */
+                                                            
       throttled_last = GetCurrentTimestamp();
     }
     else
     {
-      /* Disable throttling. */
+                               
       throttling_counter = -1;
     }
 
-    /* Send off our tablespaces one by one */
+                                             
     foreach (lc, tablespaces)
     {
       tablespaceinfo *ti = (tablespaceinfo *)lfirst(lc);
       StringInfoData buf;
 
-      /* Send CopyOutResponse message */
+                                        
       pq_beginmessage(&buf, 'H');
-      pq_sendbyte(&buf, 0);  /* overall format */
-      pq_sendint16(&buf, 0); /* natts */
+      pq_sendbyte(&buf, 0);                      
+      pq_sendint16(&buf, 0);            
       pq_endmessage(&buf);
 
       if (ti->path == NULL)
       {
         struct stat statbuf;
 
-        /* In the main tar, include the backup_label first... */
+                                                                
         sendFileWithContent(BACKUP_LABEL_FILE, labelfile->data);
 
-        /*
-         * Send tablespace_map file if required and then the bulk of
-         * the files.
-         */
+           
+                                                                     
+                      
+           
         if (tblspc_map_file && opt->sendtblspcmapfile)
         {
           sendFileWithContent(TABLESPACE_MAP, tblspc_map_file->data);
@@ -349,7 +349,7 @@ perform_base_backup(basebackup_options *opt)
           sendDir(".", 1, false, tablespaces, true);
         }
 
-        /* ... and pg_control after everything else. */
+                                                       
         if (lstat(XLOG_CONTROL_FILE, &statbuf) != 0)
         {
           ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file \"%s\": %m", XLOG_CONTROL_FILE)));
@@ -361,19 +361,19 @@ perform_base_backup(basebackup_options *opt)
         sendTablespace(ti->path, false);
       }
 
-      /*
-       * If we're including WAL, and this is the main data directory we
-       * don't terminate the tar stream here. Instead, we will append
-       * the xlog files below and terminate it then. This is safe since
-       * the main data directory is always sent *last*.
-       */
+         
+                                                                        
+                                                                      
+                                                                        
+                                                        
+         
       if (opt->includewal && ti->path == NULL)
       {
         Assert(lnext(lc) == NULL);
       }
       else
       {
-        pq_putemptymessage('c'); /* CopyDone */
+        pq_putemptymessage('c');               
       }
     }
 
@@ -383,10 +383,10 @@ perform_base_backup(basebackup_options *opt)
 
   if (opt->includewal)
   {
-    /*
-     * We've left the last tar file "open", so we can now append the
-     * required WAL files to it.
-     */
+       
+                                                                     
+                                 
+       
     char pathbuf[MAXPGPATH];
     XLogSegNo segno;
     XLogSegNo startsegno;
@@ -404,15 +404,15 @@ perform_base_backup(basebackup_options *opt)
     ListCell *lc;
     TimeLineID tli;
 
-    /*
-     * I'd rather not worry about timelines here, so scan pg_wal and
-     * include all WAL files in the range between 'startptr' and 'endptr',
-     * regardless of the timeline the file is stamped with. If there are
-     * some spurious WAL files belonging to timelines that don't belong in
-     * this server's history, they will be included too. Normally there
-     * shouldn't be such files, but if there are, there's little harm in
-     * including them.
-     */
+       
+                                                                     
+                                                                           
+                                                                         
+                                                                           
+                                                                        
+                                                                         
+                       
+       
     XLByteToSeg(startptr, startsegno, wal_segment_size);
     XLogFileName(firstoff, ThisTimeLineID, startsegno, wal_segment_size);
     XLByteToPrevSeg(endptr, endsegno, wal_segment_size);
@@ -421,12 +421,12 @@ perform_base_backup(basebackup_options *opt)
     dir = AllocateDir("pg_wal");
     while ((de = ReadDir(dir, "pg_wal")) != NULL)
     {
-      /* Does it look like a WAL segment, and is it in the range? */
+                                                                    
       if (IsXLogFileName(de->d_name) && strcmp(de->d_name + 8, firstoff + 8) >= 0 && strcmp(de->d_name + 8, lastoff + 8) <= 0)
       {
         walFileList = lappend(walFileList, pstrdup(de->d_name));
       }
-      /* Does it look like a timeline history file? */
+                                                      
       else if (IsTLHistoryFileName(de->d_name))
       {
         historyFileList = lappend(historyFileList, pstrdup(de->d_name));
@@ -434,17 +434,17 @@ perform_base_backup(basebackup_options *opt)
     }
     FreeDir(dir);
 
-    /*
-     * Before we go any further, check that none of the WAL segments we
-     * need were removed.
-     */
+       
+                                                                        
+                          
+       
     CheckXLogRemoved(startsegno, ThisTimeLineID);
 
-    /*
-     * Put the WAL filenames into an array, and sort. We send the files in
-     * order from oldest to newest, to reduce the chance that a file is
-     * recycled before we get a chance to send it over.
-     */
+       
+                                                                           
+                                                                        
+                                                        
+       
     nWalFiles = list_length(walFileList);
     walFiles = palloc(nWalFiles * sizeof(char *));
     i = 0;
@@ -454,19 +454,19 @@ perform_base_backup(basebackup_options *opt)
     }
     qsort(walFiles, nWalFiles, sizeof(char *), compareWalFileNames);
 
-    /*
-     * There must be at least one xlog file in the pg_wal directory, since
-     * we are doing backup-including-xlog.
-     */
+       
+                                                                           
+                                           
+       
     if (nWalFiles < 1)
     {
       ereport(ERROR, (errmsg("could not find any WAL files")));
     }
 
-    /*
-     * Sanity check: the first and last segment should cover startptr and
-     * endptr, with no gaps in between.
-     */
+       
+                                                                          
+                                        
+       
     XLogFromFileName(walFiles[0], &tli, &segno, wal_segment_size);
     if (segno != startsegno)
     {
@@ -497,7 +497,7 @@ perform_base_backup(basebackup_options *opt)
       ereport(ERROR, (errmsg("could not find WAL file \"%s\"", endfname)));
     }
 
-    /* Ok, we have everything we need. Send the WAL files. */
+                                                             
     for (i = 0; i < nWalFiles; i++)
     {
       FILE *fp;
@@ -513,11 +513,11 @@ perform_base_backup(basebackup_options *opt)
       {
         int save_errno = errno;
 
-        /*
-         * Most likely reason for this is that the file was already
-         * removed by a checkpoint, so check for that to get a better
-         * error message.
-         */
+           
+                                                                    
+                                                                      
+                          
+           
         CheckXLogRemoved(segno, tli);
 
         errno = save_errno;
@@ -534,13 +534,13 @@ perform_base_backup(basebackup_options *opt)
         ereport(ERROR, (errcode_for_file_access(), errmsg("unexpected WAL file size \"%s\"", walFiles[i])));
       }
 
-      /* send the WAL file itself */
+                                    
       _tarWriteHeader(pathbuf, NULL, &statbuf, false);
 
       while ((cnt = fread(buf, 1, Min(sizeof(buf), wal_segment_size - len), fp)) > 0)
       {
         CheckXLogRemoved(segno, tli);
-        /* Send the chunk as a CopyData message */
+                                                  
         if (pq_putmessage('d', buf, cnt))
         {
           ereport(ERROR, (errmsg("base backup could not send data, aborting backup")));
@@ -563,29 +563,29 @@ perform_base_backup(basebackup_options *opt)
         ereport(ERROR, (errcode_for_file_access(), errmsg("unexpected WAL file size \"%s\"", walFiles[i])));
       }
 
-      /* wal_segment_size is a multiple of 512, so no need for padding */
+                                                                         
 
       FreeFile(fp);
 
-      /*
-       * Mark file as archived, otherwise files can get archived again
-       * after promotion of a new node. This is in line with
-       * walreceiver.c always doing an XLogArchiveForceDone() after a
-       * complete segment.
-       */
+         
+                                                                       
+                                                             
+                                                                      
+                           
+         
       StatusFilePath(pathbuf, walFiles[i], ".done");
       sendFileWithContent(pathbuf, "");
     }
 
-    /*
-     * Send timeline history files too. Only the latest timeline history
-     * file is required for recovery, and even that only if there happens
-     * to be a timeline switch in the first WAL segment that contains the
-     * checkpoint record, or if we're taking a base backup from a standby
-     * server and the target timeline changes while the backup is taken.
-     * But they are small and highly useful for debugging purposes, so
-     * better include them all, always.
-     */
+       
+                                                                         
+                                                                          
+                                                                          
+                                                                          
+                                                                         
+                                                                       
+                                        
+       
     foreach (lc, historyFileList)
     {
       char *fname = lfirst(lc);
@@ -599,12 +599,12 @@ perform_base_backup(basebackup_options *opt)
 
       sendFile(pathbuf, pathbuf, &statbuf, false, InvalidOid);
 
-      /* unconditionally mark file as archived */
+                                                 
       StatusFilePath(pathbuf, fname, ".done");
       sendFileWithContent(pathbuf, "");
     }
 
-    /* Send CopyDone message for the last tar file */
+                                                     
     pq_putemptymessage('c');
   }
   SendXlogRecPtrResult(endptr, endtli);
@@ -623,10 +623,10 @@ perform_base_backup(basebackup_options *opt)
   }
 }
 
-/*
- * qsort comparison function, to compare log/seg portion of WAL segment
- * filenames, ignoring the timeline portion.
- */
+   
+                                                                        
+                                             
+   
 static int
 compareWalFileNames(const void *a, const void *b)
 {
@@ -636,9 +636,9 @@ compareWalFileNames(const void *a, const void *b)
   return strcmp(fna + 8, fnb + 8);
 }
 
-/*
- * Parse the base backup options passed down by the parser
- */
+   
+                                                           
+   
 static void
 parse_basebackup_options(List *options, basebackup_options *opt)
 {
@@ -749,13 +749,13 @@ parse_basebackup_options(List *options, basebackup_options *opt)
   }
 }
 
-/*
- * SendBaseBackup() - send a complete base backup.
- *
- * The function will put the system into backup mode like pg_start_backup()
- * does, so that the backup is consistent even though we read directly from
- * the filesystem, bypassing the buffer cache.
- */
+   
+                                                   
+   
+                                                                            
+                                                                            
+                                               
+   
 void
 SendBaseBackup(BaseBackupCmd *cmd)
 {
@@ -798,20 +798,20 @@ SendBackupHeader(List *tablespaces)
   StringInfoData buf;
   ListCell *lc;
 
-  /* Construct and send the directory information */
-  pq_beginmessage(&buf, 'T'); /* RowDescription */
-  pq_sendint16(&buf, 3);      /* 3 fields */
+                                                    
+  pq_beginmessage(&buf, 'T');                     
+  pq_sendint16(&buf, 3);                    
 
-  /* First field - spcoid */
+                            
   pq_sendstring(&buf, "spcoid");
-  pq_sendint32(&buf, 0);      /* table oid */
-  pq_sendint16(&buf, 0);      /* attnum */
-  pq_sendint32(&buf, OIDOID); /* type oid */
-  pq_sendint16(&buf, 4);      /* typlen */
-  pq_sendint32(&buf, 0);      /* typmod */
-  pq_sendint16(&buf, 0);      /* format code */
+  pq_sendint32(&buf, 0);                     
+  pq_sendint16(&buf, 0);                  
+  pq_sendint32(&buf, OIDOID);               
+  pq_sendint16(&buf, 4);                  
+  pq_sendint32(&buf, 0);                  
+  pq_sendint16(&buf, 0);                       
 
-  /* Second field - spcpath */
+                              
   pq_sendstring(&buf, "spclocation");
   pq_sendint32(&buf, 0);
   pq_sendint16(&buf, 0);
@@ -820,7 +820,7 @@ SendBackupHeader(List *tablespaces)
   pq_sendint32(&buf, 0);
   pq_sendint16(&buf, 0);
 
-  /* Third field - size */
+                          
   pq_sendstring(&buf, "size");
   pq_sendint32(&buf, 0);
   pq_sendint16(&buf, 0);
@@ -834,12 +834,12 @@ SendBackupHeader(List *tablespaces)
   {
     tablespaceinfo *ti = lfirst(lc);
 
-    /* Send one datarow message */
+                                  
     pq_beginmessage(&buf, 'D');
-    pq_sendint16(&buf, 3); /* number of columns */
+    pq_sendint16(&buf, 3);                        
     if (ti->path == NULL)
     {
-      pq_sendint32(&buf, -1); /* Length = -1 ==> NULL */
+      pq_sendint32(&buf, -1);                           
       pq_sendint32(&buf, -1);
     }
     else
@@ -860,20 +860,20 @@ SendBackupHeader(List *tablespaces)
     }
     else
     {
-      pq_sendint32(&buf, -1); /* NULL */
+      pq_sendint32(&buf, -1);           
     }
 
     pq_endmessage(&buf);
   }
 
-  /* Send a CommandComplete message */
+                                      
   pq_puttextmessage('C', "SELECT");
 }
 
-/*
- * Send a single resultset containing just a single
- * XLogRecPtr record (in text format)
- */
+   
+                                                    
+                                      
+   
 static void
 SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
 {
@@ -881,35 +881,35 @@ SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
   char str[MAXFNAMELEN];
   Size len;
 
-  pq_beginmessage(&buf, 'T'); /* RowDescription */
-  pq_sendint16(&buf, 2);      /* 2 fields */
+  pq_beginmessage(&buf, 'T');                     
+  pq_sendint16(&buf, 2);                    
 
-  /* Field headers */
+                     
   pq_sendstring(&buf, "recptr");
-  pq_sendint32(&buf, 0);       /* table oid */
-  pq_sendint16(&buf, 0);       /* attnum */
-  pq_sendint32(&buf, TEXTOID); /* type oid */
+  pq_sendint32(&buf, 0);                      
+  pq_sendint16(&buf, 0);                   
+  pq_sendint32(&buf, TEXTOID);               
   pq_sendint16(&buf, -1);
   pq_sendint32(&buf, 0);
   pq_sendint16(&buf, 0);
 
   pq_sendstring(&buf, "tli");
-  pq_sendint32(&buf, 0); /* table oid */
-  pq_sendint16(&buf, 0); /* attnum */
+  pq_sendint32(&buf, 0);                
+  pq_sendint16(&buf, 0);             
 
-  /*
-   * int8 may seem like a surprising data type for this, but in theory int4
-   * would not be wide enough for this, as TimeLineID is unsigned.
-   */
-  pq_sendint32(&buf, INT8OID); /* type oid */
+     
+                                                                            
+                                                                   
+     
+  pq_sendint32(&buf, INT8OID);               
   pq_sendint16(&buf, -1);
   pq_sendint32(&buf, 0);
   pq_sendint16(&buf, 0);
   pq_endmessage(&buf);
 
-  /* Data row */
+                
   pq_beginmessage(&buf, 'D');
-  pq_sendint16(&buf, 2); /* number of columns */
+  pq_sendint16(&buf, 2);                        
 
   len = snprintf(str, sizeof(str), "%X/%X", (uint32)(ptr >> 32), (uint32)ptr);
   pq_sendint32(&buf, len);
@@ -921,13 +921,13 @@ SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
 
   pq_endmessage(&buf);
 
-  /* Send a CommandComplete message */
+                                      
   pq_puttextmessage('C', "SELECT");
 }
 
-/*
- * Inject a file with given name and content in the output tar stream.
- */
+   
+                                                                       
+   
 static void
 sendFileWithContent(const char *filename, const char *content)
 {
@@ -936,11 +936,11 @@ sendFileWithContent(const char *filename, const char *content)
 
   len = strlen(content);
 
-  /*
-   * Construct a stat struct for the backup_label file we're injecting in
-   * the tar.
-   */
-  /* Windows doesn't have the concept of uid and gid */
+     
+                                                                          
+              
+     
+                                                       
 #ifdef WIN32
   statbuf.st_uid = 0;
   statbuf.st_gid = 0;
@@ -953,10 +953,10 @@ sendFileWithContent(const char *filename, const char *content)
   statbuf.st_size = len;
 
   _tarWriteHeader(filename, NULL, &statbuf, false);
-  /* Send the contents as a CopyData message */
+                                               
   pq_putmessage('d', content, len);
 
-  /* Pad to 512 byte boundary, per tar format requirements */
+                                                             
   pad = ((len + 511) & ~511) - len;
   if (pad > 0)
   {
@@ -967,13 +967,13 @@ sendFileWithContent(const char *filename, const char *content)
   }
 }
 
-/*
- * Include the tablespace directory pointed to by 'path' in the output tar
- * stream.  If 'sizeonly' is true, we just calculate a total length and return
- * it, without actually sending anything.
- *
- * Only used to send auxiliary tablespaces, not PGDATA.
- */
+   
+                                                                           
+                                                                               
+                                          
+   
+                                                        
+   
 int64
 sendTablespace(char *path, bool sizeonly)
 {
@@ -981,16 +981,16 @@ sendTablespace(char *path, bool sizeonly)
   char pathbuf[MAXPGPATH];
   struct stat statbuf;
 
-  /*
-   * 'path' points to the tablespace location, but we only want to include
-   * the version directory in it that belongs to us.
-   */
+     
+                                                                           
+                                                     
+     
   snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path, TABLESPACE_VERSION_DIRECTORY);
 
-  /*
-   * Store a directory entry in the tar file so we get the permissions
-   * right.
-   */
+     
+                                                                       
+            
+     
   if (lstat(pathbuf, &statbuf) != 0)
   {
     if (errno != ENOENT)
@@ -998,30 +998,30 @@ sendTablespace(char *path, bool sizeonly)
       ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file or directory \"%s\": %m", pathbuf)));
     }
 
-    /* If the tablespace went away while scanning, it's no error. */
+                                                                    
     return 0;
   }
 
   size = _tarWriteHeader(TABLESPACE_VERSION_DIRECTORY, NULL, &statbuf, sizeonly);
 
-  /* Send all the files in the tablespace version directory */
+                                                              
   size += sendDir(pathbuf, strlen(path), sizeonly, NIL, true);
 
   return size;
 }
 
-/*
- * Include all files from the given directory in the output tar stream. If
- * 'sizeonly' is true, we just calculate a total length and return it, without
- * actually sending anything.
- *
- * Omit any directory in the tablespaces list, to avoid backing up
- * tablespaces twice when they were created inside PGDATA.
- *
- * If sendtblspclinks is true, we need to include symlink
- * information in the tar file. If not, we can skip that
- * as it will be sent separately in the tablespace_map file.
- */
+   
+                                                                           
+                                                                               
+                              
+   
+                                                                   
+                                                           
+   
+                                                          
+                                                         
+                                                             
+   
 static int64
 sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, bool sendtblspclinks)
 {
@@ -1030,28 +1030,28 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
   char pathbuf[MAXPGPATH * 2];
   struct stat statbuf;
   int64 size = 0;
-  const char *lastDir;  /* Split last dir from parent path. */
-  bool isDbDir = false; /* Does this directory contain relations? */
+  const char *lastDir;                                        
+  bool isDbDir = false;                                             
 
-  /*
-   * Determine if the current path is a database directory that can contain
-   * relations.
-   *
-   * Start by finding the location of the delimiter between the parent path
-   * and the current path.
-   */
+     
+                                                                            
+                
+     
+                                                                            
+                           
+     
   lastDir = last_dir_separator(path);
 
-  /* Does this path look like a database path (i.e. all digits)? */
+                                                                   
   if (lastDir != NULL && strspn(lastDir + 1, "0123456789") == strlen(lastDir + 1))
   {
-    /* Part of path that contains the parent directory. */
+                                                          
     int parentPathLen = lastDir - path;
 
-    /*
-     * Mark path as a database directory if the parent path is either
-     * $PGDATA/base or a tablespace version path.
-     */
+       
+                                                                      
+                                                  
+       
     if (strncmp(path, "./base", parentPathLen) == 0 || (parentPathLen >= (sizeof(TABLESPACE_VERSION_DIRECTORY) - 1) && strncmp(lastDir - (sizeof(TABLESPACE_VERSION_DIRECTORY) - 1), TABLESPACE_VERSION_DIRECTORY, sizeof(TABLESPACE_VERSION_DIRECTORY) - 1) == 0))
     {
       isDbDir = true;
@@ -1063,29 +1063,29 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
   {
     int excludeIdx;
     bool excludeFound;
-    ForkNumber relForkNum; /* Type of fork if file is a relation */
-    int relOidChars;       /* Chars in filename that are the rel oid */
+    ForkNumber relForkNum;                                         
+    int relOidChars;                                                   
 
-    /* Skip special stuff */
+                            
     if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
     {
       continue;
     }
 
-    /* Skip temporary files */
+                              
     if (strncmp(de->d_name, PG_TEMP_FILE_PREFIX, strlen(PG_TEMP_FILE_PREFIX)) == 0)
     {
       continue;
     }
 
-    /*
-     * Check if the postmaster has signaled us to exit, and abort with an
-     * error in that case. The error handler further up will call
-     * do_pg_abort_backup() for us. Also check that if the backup was
-     * started while still in recovery, the server wasn't promoted.
-     * dp_pg_stop_backup() will check that too, but it's better to stop
-     * the backup early than continue to the end and fail there.
-     */
+       
+                                                                          
+                                                                  
+                                                                      
+                                                                    
+                                                                        
+                                                                 
+       
     CHECK_FOR_INTERRUPTS();
     if (RecoveryInProgress() != backup_started_in_recovery)
     {
@@ -1095,7 +1095,7 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
                                  "Try taking another online backup.")));
     }
 
-    /* Scan for files that should be excluded */
+                                                
     excludeFound = false;
     for (excludeIdx = 0; excludeFiles[excludeIdx].name != NULL; excludeIdx++)
     {
@@ -1118,19 +1118,19 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
       continue;
     }
 
-    /* Exclude all forks for unlogged tables except the init fork */
+                                                                    
     if (isDbDir && parse_filename_for_nontemp_relation(de->d_name, &relOidChars, &relForkNum))
     {
-      /* Never exclude init forks */
+                                    
       if (relForkNum != INIT_FORKNUM)
       {
         char initForkFile[MAXPGPATH];
         char relOid[OIDCHARS + 1];
 
-        /*
-         * If any other type of fork, check if there is an init fork
-         * with the same OID. If so, the file can be excluded.
-         */
+           
+                                                                     
+                                                               
+           
         memcpy(relOid, de->d_name, relOidChars);
         relOid[relOidChars] = '\0';
         snprintf(initForkFile, sizeof(initForkFile), "%s/%s_init", path, relOid);
@@ -1144,7 +1144,7 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
       }
     }
 
-    /* Exclude temporary relations */
+                                     
     if (isDbDir && looks_like_temp_rel_name(de->d_name))
     {
       elog(DEBUG2, "temporary relation file \"%s\" excluded from backup", de->d_name);
@@ -1154,7 +1154,7 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
 
     snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path, de->d_name);
 
-    /* Skip pg_control here to back up it last */
+                                                 
     if (strcmp(pathbuf, "./global/pg_control") == 0)
     {
       continue;
@@ -1167,11 +1167,11 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
         ereport(ERROR, (errcode_for_file_access(), errmsg("could not stat file or directory \"%s\": %m", pathbuf)));
       }
 
-      /* If the file went away while scanning, it's not an error. */
+                                                                    
       continue;
     }
 
-    /* Scan for directories whose contents should be excluded */
+                                                                
     excludeFound = false;
     for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++)
     {
@@ -1189,10 +1189,10 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
       continue;
     }
 
-    /*
-     * Exclude contents of directory specified by statrelpath if not set
-     * to the default (pg_stat_tmp) which is caught in the loop above.
-     */
+       
+                                                                         
+                                                                       
+       
     if (statrelpath != NULL && strcmp(pathbuf, statrelpath) == 0)
     {
       elog(DEBUG1, "contents of directory \"%s\" excluded from backup", statrelpath);
@@ -1200,26 +1200,26 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
       continue;
     }
 
-    /*
-     * We can skip pg_wal, the WAL segments need to be fetched from the
-     * WAL archive anyway. But include it as an empty directory anyway, so
-     * we get permissions right.
-     */
+       
+                                                                        
+                                                                           
+                                 
+       
     if (strcmp(pathbuf, "./pg_wal") == 0)
     {
-      /* If pg_wal is a symlink, write it as a directory anyway */
+                                                                  
       size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
 
-      /*
-       * Also send archive_status directory (by hackishly reusing
-       * statbuf from above ...).
-       */
+         
+                                                                  
+                                  
+         
       size += _tarWriteHeader("./pg_wal/archive_status", NULL, &statbuf, sizeonly);
 
-      continue; /* don't recurse into pg_wal */
+      continue;                                
     }
 
-    /* Allow symbolic links in pg_tblspc only */
+                                                
     if (strcmp(path, "./pg_tblspc") == 0 &&
 #ifndef WIN32
         S_ISLNK(statbuf.st_mode)
@@ -1246,41 +1246,41 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
       size += _tarWriteHeader(pathbuf + basepathlen + 1, linkpath, &statbuf, sizeonly);
 #else
 
-      /*
-       * If the platform does not have symbolic links, it should not be
-       * possible to have tablespaces - clearly somebody else created
-       * them. Warn about it and ignore.
-       */
+         
+                                                                        
+                                                                      
+                                         
+         
       ereport(WARNING, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("tablespaces are not supported on this platform")));
       continue;
-#endif /* HAVE_READLINK */
+#endif                    
     }
     else if (S_ISDIR(statbuf.st_mode))
     {
       bool skip_this_dir = false;
       ListCell *lc;
 
-      /*
-       * Store a directory entry in the tar file so we can get the
-       * permissions right.
-       */
+         
+                                                                   
+                            
+         
       size += _tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf, sizeonly);
 
-      /*
-       * Call ourselves recursively for a directory, unless it happens
-       * to be a separate tablespace located within PGDATA.
-       */
+         
+                                                                       
+                                                            
+         
       foreach (lc, tablespaces)
       {
         tablespaceinfo *ti = (tablespaceinfo *)lfirst(lc);
 
-        /*
-         * ti->rpath is the tablespace relative path within PGDATA, or
-         * NULL if the tablespace has been properly located somewhere
-         * else.
-         *
-         * Skip past the leading "./" in pathbuf when comparing.
-         */
+           
+                                                                       
+                                                                      
+                 
+           
+                                                                 
+           
         if (ti->rpath && strcmp(ti->rpath, pathbuf + 2) == 0)
         {
           skip_this_dir = true;
@@ -1288,9 +1288,9 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
         }
       }
 
-      /*
-       * skip sending directories inside pg_tblspc, if not required.
-       */
+         
+                                                                     
+         
       if (strcmp(pathbuf, "./pg_tblspc") == 0 && !sendtblspclinks)
       {
         skip_this_dir = true;
@@ -1312,9 +1312,9 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
 
       if (sent || sizeonly)
       {
-        /* Add size, rounded up to 512byte block */
+                                                   
         size += ((statbuf.st_size + 511) & ~511);
-        size += 512; /* Size of the header of the file */
+        size += 512;                                     
       }
     }
     else
@@ -1326,21 +1326,21 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces, boo
   return size;
 }
 
-/*
- * Check if a file should have its checksum validated.
- * We validate checksums on files in regular tablespaces
- * (including global and default) only, and in those there
- * are some files that are explicitly excluded.
- */
+   
+                                                       
+                                                         
+                                                           
+                                                
+   
 static bool
 is_checksummed_file(const char *fullpath, const char *filename)
 {
-  /* Check that the file is in a tablespace */
+                                              
   if (strncmp(fullpath, "./global/", 9) == 0 || strncmp(fullpath, "./base/", 7) == 0 || strncmp(fullpath, "/", 1) == 0)
   {
     int excludeIdx;
 
-    /* Compare file against noChecksumFiles skip list */
+                                                        
     for (excludeIdx = 0; noChecksumFiles[excludeIdx].name != NULL; excludeIdx++)
     {
       int cmplen = strlen(noChecksumFiles[excludeIdx].name);
@@ -1363,23 +1363,23 @@ is_checksummed_file(const char *fullpath, const char *filename)
   }
 }
 
-/*****
- * Functions for handling tar file format
- *
- * Copied from pg_dump, but modified to work with libpq for sending
- */
+       
+                                          
+   
+                                                                    
+   
 
-/*
- * Given the member, write the TAR header & send the file.
- *
- * If 'missing_ok' is true, will not throw an error if the file is not found.
- *
- * If dboid is anything other than InvalidOid then any checksum failures detected
- * will get reported to the stats collector.
- *
- * Returns true if the file was successfully sent, false if 'missing_ok',
- * and the file did not exist.
- */
+   
+                                                           
+   
+                                                                              
+   
+                                                                                  
+                                             
+   
+                                                                          
+                               
+   
 static bool
 sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf, bool missing_ok, Oid dboid)
 {
@@ -1415,21 +1415,21 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
   {
     char *filename;
 
-    /*
-     * Get the filename (excluding path).  As last_dir_separator()
-     * includes the last directory separator, we chop that off by
-     * incrementing the pointer.
-     */
+       
+                                                                   
+                                                                  
+                                 
+       
     filename = last_dir_separator(readfilename) + 1;
 
     if (is_checksummed_file(readfilename, filename))
     {
       verify_checksum = true;
 
-      /*
-       * Cut off at the segment boundary (".") to get the segment number
-       * in order to mix it into the checksum.
-       */
+         
+                                                                         
+                                               
+         
       segmentpath = strstr(filename, ".");
       if (segmentpath != NULL)
       {
@@ -1444,12 +1444,12 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 
   while ((cnt = fread(buf, 1, Min(sizeof(buf), statbuf->st_size - len), fp)) > 0)
   {
-    /*
-     * The checksums are verified at block level, so we iterate over the
-     * buffer in chunks of BLCKSZ, after making sure that
-     * TAR_SEND_SIZE/buf is divisible by BLCKSZ and we read a multiple of
-     * BLCKSZ bytes.
-     */
+       
+                                                                         
+                                                          
+                                                                          
+                     
+       
     Assert(TAR_SEND_SIZE % BLCKSZ == 0);
 
     if (verify_checksum && (cnt % BLCKSZ != 0))
@@ -1467,33 +1467,33 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
       {
         page = buf + BLCKSZ * i;
 
-        /*
-         * Only check pages which have not been modified since the
-         * start of the base backup. Otherwise, they might have been
-         * written only halfway and the checksum would not be valid.
-         * However, replaying WAL would reinstate the correct page in
-         * this case. We also skip completely new pages, since they
-         * don't have a checksum yet.
-         */
+           
+                                                                   
+                                                                     
+                                                                     
+                                                                      
+                                                                    
+                                      
+           
         if (!PageIsNew(page) && PageGetLSN(page) < startptr)
         {
           checksum = pg_checksum_page((char *)page, blkno + segmentno * RELSEG_SIZE);
           phdr = (PageHeader)page;
           if (phdr->pd_checksum != checksum)
           {
-            /*
-             * Retry the block on the first failure.  It's
-             * possible that we read the first 4K page of the
-             * block just before postgres updated the entire block
-             * so it ends up looking torn to us.  We only need to
-             * retry once because the LSN should be updated to
-             * something we can ignore on the next pass.  If the
-             * error happens again then it is a true validation
-             * failure.
-             */
+               
+                                                           
+                                                              
+                                                                   
+                                                                  
+                                                               
+                                                                 
+                                                                
+                        
+               
             if (block_retry == false)
             {
-              /* Reread the failed block */
+                                           
               if (fseek(fp, -(cnt - BLCKSZ * i), SEEK_CUR) == -1)
               {
                 ereport(ERROR, (errcode_for_file_access(), errmsg("could not fseek in file \"%s\": %m", readfilename)));
@@ -1501,14 +1501,14 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 
               if (fread(buf + BLCKSZ * i, 1, BLCKSZ, fp) != BLCKSZ)
               {
-                /*
-                 * If we hit end-of-file, a concurrent
-                 * truncation must have occurred, so break out
-                 * of this loop just as if the initial fread()
-                 * returned 0. We'll drop through to the same
-                 * code that handles that case. (We must fix
-                 * up cnt first, though.)
-                 */
+                   
+                                                       
+                                                               
+                                                               
+                                                              
+                                                             
+                                          
+                   
                 if (feof(fp))
                 {
                   cnt = BLCKSZ * i;
@@ -1523,10 +1523,10 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
                 ereport(ERROR, (errcode_for_file_access(), errmsg("could not fseek in file \"%s\": %m", readfilename)));
               }
 
-              /* Set flag so we know a retry was attempted */
+                                                             
               block_retry = true;
 
-              /* Reset loop to validate the block again */
+                                                          
               i--;
               continue;
             }
@@ -1554,7 +1554,7 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
       }
     }
 
-    /* Send the chunk as a CopyData message */
+                                              
     if (pq_putmessage('d', buf, cnt))
     {
       ereport(ERROR, (errmsg("base backup could not send data, aborting backup")));
@@ -1565,18 +1565,18 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 
     if (feof(fp) || len >= statbuf->st_size)
     {
-      /*
-       * Reached end of file. The file could be longer, if it was
-       * extended while we were sending it, but for a base backup we can
-       * ignore such extended data. It will be restored from WAL.
-       */
+         
+                                                                  
+                                                                         
+                                                                  
+         
       break;
     }
   }
 
   CHECK_FREAD_ERROR(fp, readfilename);
 
-  /* If the file was truncated while we were sending it, pad it with zeros */
+                                                                             
   if (len < statbuf->st_size)
   {
     MemSet(buf, 0, sizeof(buf));
@@ -1589,10 +1589,10 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
     }
   }
 
-  /*
-   * Pad to 512 byte boundary, per tar format requirements. (This small
-   * piece of data is probably not worth throttling.)
-   */
+     
+                                                                        
+                                                      
+     
   pad = ((len + 511) & ~511) - len;
   if (pad > 0)
   {
@@ -1646,14 +1646,14 @@ _tarWriteHeader(const char *filename, const char *linktarget, struct stat *statb
   return sizeof(h);
 }
 
-/*
- * Write tar header for a directory.  If the entry in statbuf is a link then
- * write it as a directory anyway.
- */
+   
+                                                                             
+                                   
+   
 static int64
 _tarWriteDir(const char *pathbuf, int basepathlen, struct stat *statbuf, bool sizeonly)
 {
-  /* If symlink, write it as a directory anyway */
+                                                  
 #ifndef WIN32
   if (S_ISLNK(statbuf->st_mode))
 #else
@@ -1664,11 +1664,11 @@ _tarWriteDir(const char *pathbuf, int basepathlen, struct stat *statbuf, bool si
   return _tarWriteHeader(pathbuf + basepathlen + 1, NULL, statbuf, sizeonly);
 }
 
-/*
- * Increment the network transfer counter by the given number of bytes,
- * and sleep if necessary to comply with the requested network transfer
- * rate.
- */
+   
+                                                                        
+                                                                        
+         
+   
 static void
 throttle(size_t increment)
 {
@@ -1685,22 +1685,22 @@ throttle(size_t increment)
     return;
   }
 
-  /* How much time should have elapsed at minimum? */
+                                                     
   elapsed_min = elapsed_min_unit * (throttling_counter / throttling_sample);
 
-  /*
-   * Since the latch could be set repeatedly because of concurrently WAL
-   * activity, sleep in a loop to ensure enough time has passed.
-   */
+     
+                                                                         
+                                                                 
+     
   for (;;)
   {
     TimeOffset elapsed, sleep;
     int wait_result;
 
-    /* Time elapsed since the last measurement (and possible wake up). */
+                                                                         
     elapsed = GetCurrentTimestamp() - throttled_last;
 
-    /* sleep if the transfer is faster than it should be */
+                                                           
     sleep = elapsed_min - elapsed;
     if (sleep <= 0)
     {
@@ -1709,13 +1709,13 @@ throttle(size_t increment)
 
     ResetLatch(MyLatch);
 
-    /* We're eating a potentially set latch, so check for interrupts */
+                                                                       
     CHECK_FOR_INTERRUPTS();
 
-    /*
-     * (TAR_SEND_SIZE / throttling_sample * elapsed_min_unit) should be
-     * the maximum time to sleep. Thus the cast to long is safe.
-     */
+       
+                                                                        
+                                                                 
+       
     wait_result = WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, (long)(sleep / 1000), WAIT_EVENT_BASE_BACKUP_THROTTLE);
 
     if (wait_result & WL_LATCH_SET)
@@ -1723,22 +1723,22 @@ throttle(size_t increment)
       CHECK_FOR_INTERRUPTS();
     }
 
-    /* Done waiting? */
+                       
     if (wait_result & WL_TIMEOUT)
     {
       break;
     }
   }
 
-  /*
-   * As we work with integers, only whole multiple of throttling_sample was
-   * processed. The rest will be done during the next call of this function.
-   */
+     
+                                                                            
+                                                                             
+     
   throttling_counter %= throttling_sample;
 
-  /*
-   * Time interval for the remaining amount and possible next increments
-   * starts now.
-   */
+     
+                                                                         
+                 
+     
   throttled_last = GetCurrentTimestamp();
 }

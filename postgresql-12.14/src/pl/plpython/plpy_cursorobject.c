@@ -1,8 +1,8 @@
-/*
- * the PLyCursor class
- *
- * src/pl/plpython/plpy_cursorobject.c
- */
+   
+                       
+   
+                                       
+   
 
 #include "postgres.h"
 
@@ -98,7 +98,7 @@ PLy_cursor_query(const char *query)
   cursor->closed = false;
   cursor->mcxt = AllocSetContextCreate(TopMemoryContext, "PL/Python cursor context", ALLOCSET_DEFAULT_SIZES);
 
-  /* Initialize for converting result tuples to Python */
+                                                         
   PLy_input_setup_func(&cursor->result, cursor->mcxt, RECORDOID, -1, exec_ctx->curr_proc);
 
   oldcontext = CurrentMemoryContext;
@@ -195,7 +195,7 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
   cursor->closed = false;
   cursor->mcxt = AllocSetContextCreate(TopMemoryContext, "PL/Python cursor context", ALLOCSET_DEFAULT_SIZES);
 
-  /* Initialize for converting result tuples to Python */
+                                                         
   PLy_input_setup_func(&cursor->result, cursor->mcxt, RECORDOID, -1, exec_ctx->curr_proc);
 
   oldcontext = CurrentMemoryContext;
@@ -256,7 +256,7 @@ PLy_cursor_plan(PyObject *ob, PyObject *args)
   {
     int k;
 
-    /* cleanup plan->values array */
+                                    
     for (k = 0; k < nargs; k++)
     {
       if (!plan->args[k].typbyval && (plan->values[k] != PointerGetDatum(NULL)))
@@ -428,11 +428,11 @@ PLy_cursor_fetch(PyObject *self, PyObject *args)
     {
       uint64 i;
 
-      /*
-       * PyList_New() and PyList_SetItem() use Py_ssize_t for list size
-       * and list indices; so we cannot support a result larger than
-       * PY_SSIZE_T_MAX.
-       */
+         
+                                                                        
+                                                                     
+                         
+         
       if (SPI_processed > (uint64)PY_SSIZE_T_MAX)
       {
         ereport(ERROR, (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), errmsg("query result has too many rows to fit in a Python list")));

@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "cursor.pgc"
@@ -14,21 +14,21 @@
 
 #line 4 "cursor.pgc"
 
-/* exec sql whenever sqlerror  stop ; */
+                                        
 #line 6 "cursor.pgc"
 
-/* exec sql type c is char reference */
+                                       
 #line 8 "cursor.pgc"
 
 typedef char *c;
 
-/* exec sql type ind is union {
-#line 11 "cursor.pgc"
- int integer ;
-
-#line 11 "cursor.pgc"
- short smallint ;
- } */
+                                
+                      
+               
+ 
+                      
+                  
+     
 #line 11 "cursor.pgc"
 
 typedef union
@@ -38,7 +38,7 @@ typedef union
 } ind;
 
 #define BUFFERSIZ 8
-/* exec sql type str is [ BUFFERSIZ ] */
+                                        
 #line 15 "cursor.pgc"
 
 #define CURNAME "mycur"
@@ -46,7 +46,7 @@ typedef union
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 23 "cursor.pgc"
   char *stmt1 = "SELECT id, t FROM t1";
@@ -78,7 +78,7 @@ main(void)
 
 #line 31 "cursor.pgc"
   char t[64];
-/* exec sql end declare section */
+                                  
 #line 32 "cursor.pgc"
 
   char msg[128];
@@ -222,10 +222,10 @@ main(void)
   }
 #line 58 "cursor.pgc"
 
-  /* Dynamic cursorname test with INTO list in FETCH stmts */
+                                                             
 
   strcpy(msg, "declare");
-  ECPGset_var(0, &(curname1), __LINE__); /* declare $0 cursor for select id , t from t1 */
+  ECPGset_var(0, &(curname1), __LINE__);                                                  
 #line 64 "cursor.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -358,12 +358,12 @@ main(void)
   }
 #line 99 "cursor.pgc"
 
-  /* Dynamic cursorname test with INTO list in DECLARE stmt */
+                                                              
 
   strcpy(msg, "declare");
   ECPGset_var(1, &(curname2), __LINE__);
   ECPGset_var(2, (t), __LINE__);
-  ECPGset_var(3, &(id), __LINE__); /* declare $0 cursor for select id , t from t1 */
+  ECPGset_var(3, &(id), __LINE__);                                                  
 #line 105 "cursor.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -496,7 +496,7 @@ main(void)
   }
 #line 140 "cursor.pgc"
 
-  /* Dynamic cursorname test with PREPARED stmt */
+                                                  
 
   strcpy(msg, "prepare");
   {
@@ -522,7 +522,7 @@ main(void)
 #line 146 "cursor.pgc"
 
   strcpy(msg, "declare");
-  ECPGset_var(4, &(curname3), __LINE__); /* declare $0 cursor for $1 */
+  ECPGset_var(4, &(curname3), __LINE__);                               
 #line 149 "cursor.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -533,7 +533,7 @@ main(void)
 
 #line 149 "cursor.pgc"
 
-  ECPGset_var(5, &(curname5), __LINE__); /* declare $0 cursor for $1 */
+  ECPGset_var(5, &(curname5), __LINE__);                               
 #line 150 "cursor.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -711,8 +711,8 @@ main(void)
   }
 #line 191 "cursor.pgc"
 
-  /* Dynamic cursorname test with PREPARED stmt,
-     cursor name in varchar */
+                                                 
+                              
 
   curname4.len = strlen(CURNAME);
   strcpy(curname4.arr, CURNAME);
@@ -730,7 +730,7 @@ main(void)
 #line 200 "cursor.pgc"
 
   strcpy(msg, "declare");
-  ECPGset_var(6, &(curname4), __LINE__); /* declare $0 cursor for $1 */
+  ECPGset_var(6, &(curname4), __LINE__);                               
 #line 203 "cursor.pgc"
 
   if (sqlca.sqlcode < 0)
@@ -875,7 +875,7 @@ main(void)
   }
 #line 241 "cursor.pgc"
 
-  /* End test */
+                
 
   strcpy(msg, "drop");
   {

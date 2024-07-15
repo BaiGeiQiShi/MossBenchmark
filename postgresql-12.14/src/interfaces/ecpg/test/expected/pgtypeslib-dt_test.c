@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "dt_test.pgc"
@@ -21,7 +21,7 @@
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 14 "dt_test.pgc"
   date date1;
@@ -34,7 +34,7 @@ main(void)
 
 #line 17 "dt_test.pgc"
   char *text;
-/* exec sql end declare section */
+                                  
 #line 18 "dt_test.pgc"
 
   date date2;
@@ -45,7 +45,7 @@ main(void)
   int i;
 
   ECPGdebug(1, stderr);
-  /* exec sql whenever sqlerror  do sqlprint ( ) ; */
+                                                     
 #line 27 "dt_test.pgc"
 
   {
@@ -134,7 +134,7 @@ main(void)
 
   PGTYPESdate_mdyjul(mdy, &date2);
   printf("m: %d, d: %d, y: %d\n", mdy[0], mdy[1], mdy[2]);
-  /* reset */
+             
   mdy[0] = mdy[1] = mdy[2] = 0;
 
   printf("date seems to get encoded to julian %ld\n", date2);
@@ -158,14 +158,14 @@ main(void)
   printf("%s\n", out);
   free(out);
 
-  /* rdate_defmt_asc() */
+                         
 
   date1 = 0;
   fmt = "yy/mm/dd";
   in = "In the year 1995, the month of December, it is the 25th day";
-  /*    0123456789012345678901234567890123456789012345678901234567890
-   *    0         1         2         3         4         5         6
-   */
+                                                                      
+                                                                      
+     
   PGTYPESdate_defmt_asc(&date1, fmt, in);
   text = PGTYPESdate_to_asc(date1);
   printf("date_defmt_asc1: %s\n", text);
@@ -253,8 +253,8 @@ main(void)
 
   PGTYPEStimestamp_current(&ts1);
   text = PGTYPEStimestamp_to_asc(ts1);
-  /* can't output this in regression mode */
-  /* printf("timestamp_current: Now: %s\n", text); */
+                                            
+                                                     
   PGTYPESchar_free(text);
 
   ts1 = PGTYPEStimestamp_from_asc("96-02-29", NULL);
@@ -272,8 +272,8 @@ main(void)
   printf("timestamp_to_asc3: %s\n", text);
   PGTYPESchar_free(text);
 
-  /*	abc-03:10:35-def-02/11/94-gh  */
-  /*      12345678901234567890123456789 */
+                                     
+                                          
 
   out = (char *)malloc(32);
   i = PGTYPEStimestamp_fmt_asc(&ts1, out, 31, "abc-%X-def-%x-ghi%%");

@@ -1,25 +1,25 @@
-/*-------------------------------------------------------------------------
- * worker.c
- *	   PostgreSQL logical replication worker (apply)
- *
- * Copyright (c) 2016-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/replication/logical/worker.c
- *
- * NOTES
- *	  This file contains the worker which applies logical changes as they come
- *	  from remote logical replication stream.
- *
- *	  The main worker (apply) is started by logical replication worker
- *	  launcher for every enabled subscription in a database. It uses
- *	  walsender protocol to communicate with publisher.
- *
- *	  This module includes server facing code and shares libpqwalreceiver
- *	  module with walreceiver for providing the libpq specific functionality.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+            
+                                                    
+   
+                                                                
+   
+                  
+                                              
+   
+         
+                                                                              
+                                             
+   
+                                                                      
+                                                                    
+                                                       
+   
+                                                                         
+                                                                             
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -75,7 +75,7 @@
 #include "utils/syscache.h"
 #include "utils/timeout.h"
 
-#define NAPTIME_PER_CYCLE 1000 /* max sleep time between cycles (1s) */
+#define NAPTIME_PER_CYCLE 1000                                         
 
 typedef struct FlushPosition
 {
@@ -112,22 +112,22 @@ store_flush_position(XLogRecPtr remote_lsn);
 static void
 maybe_reread_subscription(void);
 
-/* Flags set by signal handlers */
+                                  
 static volatile sig_atomic_t got_SIGHUP = false;
 
-/*
- * Should this worker apply changes for given relation.
- *
- * This is mainly needed for initial relation data sync as that runs in
- * separate worker process running in parallel and we need some way to skip
- * changes coming to the main apply worker during the sync of a table.
- *
- * Note we need to do smaller or equals comparison for SYNCDONE state because
- * it might hold position of end of initial slot consistent point WAL
- * record + 1 (ie start of next record) and next record can be COMMIT of
- * transaction we are now processing (which is what we set remote_final_lsn
- * to in apply_handle_begin).
- */
+   
+                                                        
+   
+                                                                        
+                                                                            
+                                                                       
+   
+                                                                              
+                                                                      
+                                                                         
+                                                                            
+                              
+   
 static bool
 should_apply_changes_for_rel(LogicalRepRelMapEntry *rel)
 {
@@ -141,13 +141,13 @@ should_apply_changes_for_rel(LogicalRepRelMapEntry *rel)
   }
 }
 
-/*
- * Begin one step (one INSERT, UPDATE, etc) of a replication transaction.
- *
- * Start a transaction, if this is the first step (else we keep using the
- * existing transaction).
- * Also provide a global snapshot and ensure we run in ApplyMessageContext.
- */
+   
+                                                                          
+   
+                                                                          
+                          
+                                                                            
+   
 static void
 begin_replication_step(void)
 {
@@ -164,13 +164,13 @@ begin_replication_step(void)
   MemoryContextSwitchTo(ApplyMessageContext);
 }
 
-/*
- * Finish up one step of a replication transaction.
- * Callers of begin_replication_step() must also call this.
- *
- * We don't close out the transaction here, but we should increment
- * the command counter to make the effects of this step visible.
- */
+   
+                                                    
+                                                            
+   
+                                                                    
+                                                                 
+   
 static void
 end_replication_step(void)
 {
@@ -179,12 +179,12 @@ end_replication_step(void)
   CommandCounterIncrement();
 }
 
-/*
- * Executor state preparation for evaluation of constraint expressions,
- * indexes and triggers.
- *
- * This is based on similar code in copy.c
- */
+   
+                                                                        
+                         
+   
+                                           
+   
 static EState *
 create_estate_for_relation(LogicalRepRelMapEntry *rel)
 {
@@ -210,34 +210,34 @@ create_estate_for_relation(LogicalRepRelMapEntry *rel)
 
   estate->es_output_cid = GetCurrentCommandId(true);
 
-  /* Prepare to catch AFTER triggers. */
+                                        
   AfterTriggerBeginQuery();
 
   return estate;
 }
 
-/*
- * Finish any operations related to the executor state created by
- * create_estate_for_relation().
- */
+   
+                                                                  
+                                 
+   
 static void
 finish_estate(EState *estate)
 {
-  /* Handle any queued AFTER triggers. */
+                                         
   AfterTriggerEndQuery(estate);
 
-  /* Cleanup. */
+                
   ExecResetTupleTable(estate->es_tupleTable, false);
   FreeExecutorState(estate);
 }
 
-/*
- * Executes default values for columns for which we can't map to remote
- * relation columns.
- *
- * This allows us to support tables which have more columns on the downstream
- * than on the upstream.
- */
+   
+                                                                        
+                     
+   
+                                                                              
+                         
+   
 static void
 slot_fill_defaults(LogicalRepRelMapEntry *rel, EState *estate, TupleTableSlot *slot)
 {
@@ -251,7 +251,7 @@ slot_fill_defaults(LogicalRepRelMapEntry *rel, EState *estate, TupleTableSlot *s
 
   econtext = GetPerTupleExprContext(estate);
 
-  /* We got all the data via replication, no need to evaluate anything. */
+                                                                          
   if (num_phys_attrs == rel->remoterel.natts)
   {
     return;
@@ -278,10 +278,10 @@ slot_fill_defaults(LogicalRepRelMapEntry *rel, EState *estate, TupleTableSlot *s
 
     if (defexpr != NULL)
     {
-      /* Run the expression through planner */
+                                              
       defexpr = expression_planner(defexpr);
 
-      /* Initialize executable expression in copycontext */
+                                                           
       defexprs[num_defaults] = ExecInitExpr(defexpr, NULL);
       defmap[num_defaults] = attnum;
       num_defaults++;
@@ -294,17 +294,17 @@ slot_fill_defaults(LogicalRepRelMapEntry *rel, EState *estate, TupleTableSlot *s
   }
 }
 
-/*
- * Error callback to give more context info about data conversion failures
- * while reading data from the remote server.
- */
+   
+                                                                           
+                                              
+   
 static void
 slot_store_error_callback(void *arg)
 {
   SlotErrCallbackArg *errarg = (SlotErrCallbackArg *)arg;
   LogicalRepRelMapEntry *rel;
 
-  /* Nothing to do if remote attribute number is not set */
+                                                           
   if (errarg->remote_attnum < 0)
   {
     return;
@@ -314,11 +314,11 @@ slot_store_error_callback(void *arg)
   errcontext("processing remote data for replication target relation \"%s.%s\" column \"%s\"", rel->remoterel.nspname, rel->remoterel.relname, rel->remoterel.attnames[errarg->remote_attnum]);
 }
 
-/*
- * Store data in C string form into slot.
- * This is similar to BuildTupleFromCStrings but TupleTableSlot fits our
- * use better.
- */
+   
+                                          
+                                                                         
+               
+   
 static void
 slot_store_cstrings(TupleTableSlot *slot, LogicalRepRelMapEntry *rel, char **values)
 {
@@ -329,7 +329,7 @@ slot_store_cstrings(TupleTableSlot *slot, LogicalRepRelMapEntry *rel, char **val
 
   ExecClearTuple(slot);
 
-  /* Push callback + info on the error context stack */
+                                                       
   errarg.rel = rel;
   errarg.remote_attnum = -1;
   errcallback.callback = slot_store_error_callback;
@@ -337,7 +337,7 @@ slot_store_cstrings(TupleTableSlot *slot, LogicalRepRelMapEntry *rel, char **val
   errcallback.previous = error_context_stack;
   error_context_stack = &errcallback;
 
-  /* Call the "in" function for each non-dropped attribute */
+                                                             
   for (i = 0; i < natts; i++)
   {
     Form_pg_attribute att = TupleDescAttr(slot->tts_tupleDescriptor, i);
@@ -358,33 +358,33 @@ slot_store_cstrings(TupleTableSlot *slot, LogicalRepRelMapEntry *rel, char **val
     }
     else
     {
-      /*
-       * We assign NULL to dropped attributes, NULL values, and missing
-       * values (missing values should be later filled using
-       * slot_fill_defaults).
-       */
+         
+                                                                        
+                                                             
+                              
+         
       slot->tts_values[i] = (Datum)0;
       slot->tts_isnull[i] = true;
     }
   }
 
-  /* Pop the error context stack */
+                                   
   error_context_stack = errcallback.previous;
 
   ExecStoreVirtualTuple(slot);
 }
 
-/*
- * Replace selected columns with user data provided as C strings.
- * This is somewhat similar to heap_modify_tuple but also calls the type
- * input functions on the user data.
- * "slot" is filled with a copy of the tuple in "srcslot", with
- * columns selected by the "replaces" array replaced with data values
- * from "values".
- * Caution: unreplaced pass-by-ref columns in "slot" will point into the
- * storage for "srcslot".  This is OK for current usage, but someday we may
- * need to materialize "slot" at the end to make it independent of "srcslot".
- */
+   
+                                                                  
+                                                                         
+                                     
+                                                                
+                                                                      
+                  
+                                                                         
+                                                                            
+                                                                              
+   
 static void
 slot_modify_cstrings(TupleTableSlot *slot, TupleTableSlot *srcslot, LogicalRepRelMapEntry *rel, char **values, bool *replaces)
 {
@@ -393,19 +393,19 @@ slot_modify_cstrings(TupleTableSlot *slot, TupleTableSlot *srcslot, LogicalRepRe
   SlotErrCallbackArg errarg;
   ErrorContextCallback errcallback;
 
-  /* We'll fill "slot" with a virtual tuple, so we must start with ... */
+                                                                         
   ExecClearTuple(slot);
 
-  /*
-   * Copy all the column data from srcslot, so that we'll have valid values
-   * for unreplaced columns.
-   */
+     
+                                                                            
+                             
+     
   Assert(natts == srcslot->tts_tupleDescriptor->natts);
   slot_getallattrs(srcslot);
   memcpy(slot->tts_values, srcslot->tts_values, natts * sizeof(Datum));
   memcpy(slot->tts_isnull, srcslot->tts_isnull, natts * sizeof(bool));
 
-  /* For error reporting, push callback + info on the error context stack */
+                                                                            
   errarg.rel = rel;
   errarg.remote_attnum = -1;
   errcallback.callback = slot_store_error_callback;
@@ -413,7 +413,7 @@ slot_modify_cstrings(TupleTableSlot *slot, TupleTableSlot *srcslot, LogicalRepRe
   errcallback.previous = error_context_stack;
   error_context_stack = &errcallback;
 
-  /* Call the "in" function for each replaced attribute */
+                                                          
   for (i = 0; i < natts; i++)
   {
     Form_pg_attribute att = TupleDescAttr(slot->tts_tupleDescriptor, i);
@@ -449,16 +449,16 @@ slot_modify_cstrings(TupleTableSlot *slot, TupleTableSlot *srcslot, LogicalRepRe
     }
   }
 
-  /* Pop the error context stack */
+                                   
   error_context_stack = errcallback.previous;
 
-  /* And finally, declare that "slot" contains a valid virtual tuple */
+                                                                       
   ExecStoreVirtualTuple(slot);
 }
 
-/*
- * Handle BEGIN message.
- */
+   
+                         
+   
 static void
 apply_handle_begin(StringInfo s)
 {
@@ -473,11 +473,11 @@ apply_handle_begin(StringInfo s)
   pgstat_report_activity(STATE_RUNNING, NULL);
 }
 
-/*
- * Handle COMMIT message.
- *
- * TODO, support tracking of multiple origins
- */
+   
+                          
+   
+                                              
+   
 static void
 apply_handle_commit(StringInfo s)
 {
@@ -490,13 +490,13 @@ apply_handle_commit(StringInfo s)
     ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg_internal("incorrect commit LSN %X/%X in commit message (expected %X/%X)", (uint32)(commit_data.commit_lsn >> 32), (uint32)commit_data.commit_lsn, (uint32)(remote_final_lsn >> 32), (uint32)remote_final_lsn)));
   }
 
-  /* The synchronization worker runs in single transaction. */
+                                                              
   if (IsTransactionState() && !am_tablesync_worker())
   {
-    /*
-     * Update origin state so we can restart streaming from correct
-     * position in case of crash.
-     */
+       
+                                                                    
+                                  
+       
     replorigin_session_origin_lsn = commit_data.end_lsn;
     replorigin_session_origin_timestamp = commit_data.committime;
 
@@ -507,45 +507,45 @@ apply_handle_commit(StringInfo s)
   }
   else
   {
-    /* Process any invalidation messages that might have accumulated. */
+                                                                        
     AcceptInvalidationMessages();
     maybe_reread_subscription();
   }
 
   in_remote_transaction = false;
 
-  /* Process any tables that are being synchronized in parallel. */
+                                                                   
   process_syncing_tables(commit_data.end_lsn);
 
   pgstat_report_activity(STATE_IDLE, NULL);
 }
 
-/*
- * Handle ORIGIN message.
- *
- * TODO, support tracking of multiple origins
- */
+   
+                          
+   
+                                              
+   
 static void
 apply_handle_origin(StringInfo s)
 {
-  /*
-   * ORIGIN message can only come inside remote transaction and before any
-   * actual writes.
-   */
+     
+                                                                           
+                    
+     
   if (!in_remote_transaction || (IsTransactionState() && !am_tablesync_worker()))
   {
     ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION), errmsg("ORIGIN message sent out of order")));
   }
 }
 
-/*
- * Handle RELATION message.
- *
- * Note we don't do validation against local schema here. The validation
- * against local schema is postponed until first change for given relation
- * comes as we only care about it when applying changes for it anyway and we
- * do less locking this way.
- */
+   
+                            
+   
+                                                                         
+                                                                           
+                                                                             
+                             
+   
 static void
 apply_handle_relation(StringInfo s)
 {
@@ -555,14 +555,14 @@ apply_handle_relation(StringInfo s)
   logicalrep_relmap_update(rel);
 }
 
-/*
- * Handle TYPE message.
- *
- * This implementation pays no attention to TYPE messages; we expect the user
- * to have set things up so that the incoming data is acceptable to the input
- * functions for the locally subscribed tables.  Hence, we just read and
- * discard the message.
- */
+   
+                        
+   
+                                                                              
+                                                                              
+                                                                         
+                        
+   
 static void
 apply_handle_type(StringInfo s)
 {
@@ -571,11 +571,11 @@ apply_handle_type(StringInfo s)
   logicalrep_read_typ(s, &typ);
 }
 
-/*
- * Get replica identity index or if it is not defined a primary key.
- *
- * If neither is defined, returns InvalidOid
- */
+   
+                                                                     
+   
+                                             
+   
 static Oid
 GetRelationIdentityOrPK(Relation rel)
 {
@@ -591,9 +591,9 @@ GetRelationIdentityOrPK(Relation rel)
   return idxoid;
 }
 
-/*
- * Handle INSERT message.
- */
+   
+                          
+   
 static void
 apply_handle_insert(StringInfo s)
 {
@@ -610,20 +610,20 @@ apply_handle_insert(StringInfo s)
   rel = logicalrep_rel_open(relid, RowExclusiveLock);
   if (!should_apply_changes_for_rel(rel))
   {
-    /*
-     * The relation can't become interesting in the middle of the
-     * transaction so it's safe to unlock it.
-     */
+       
+                                                                  
+                                              
+       
     logicalrep_rel_close(rel, RowExclusiveLock);
     end_replication_step();
     return;
   }
 
-  /* Initialize the executor state. */
+                                      
   estate = create_estate_for_relation(rel);
   remoteslot = ExecInitExtraTupleSlot(estate, RelationGetDescr(rel->localrel), &TTSOpsVirtual);
 
-  /* Process and store remote tuple in the slot */
+                                                  
   oldctx = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
   slot_store_cstrings(remoteslot, rel, newtup.values);
   slot_fill_defaults(rel, estate, remoteslot);
@@ -631,10 +631,10 @@ apply_handle_insert(StringInfo s)
 
   ExecOpenIndices(estate->es_result_relation_info, false);
 
-  /* Do the insert. */
+                      
   ExecSimpleRelationInsert(estate, remoteslot);
 
-  /* Cleanup. */
+                
   ExecCloseIndices(estate->es_result_relation_info);
 
   finish_estate(estate);
@@ -644,23 +644,23 @@ apply_handle_insert(StringInfo s)
   end_replication_step();
 }
 
-/*
- * Check if the logical replication relation is updatable and throw
- * appropriate error if it isn't.
- */
+   
+                                                                    
+                                  
+   
 static void
 check_relation_updatable(LogicalRepRelMapEntry *rel)
 {
-  /* Updatable, no error. */
+                            
   if (rel->updatable)
   {
     return;
   }
 
-  /*
-   * We are in error mode so it's fine this is somewhat slow. It's better to
-   * give user correct error.
-   */
+     
+                                                                             
+                              
+     
   if (OidIsValid(GetRelationIdentityOrPK(rel->localrel)))
   {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("publisher did not send replica identity column "
@@ -675,11 +675,11 @@ check_relation_updatable(LogicalRepRelMapEntry *rel)
                                                                          rel->remoterel.nspname, rel->remoterel.relname)));
 }
 
-/*
- * Handle UPDATE message.
- *
- * TODO: FDW support
- */
+   
+                          
+   
+                     
+   
 static void
 apply_handle_update(StringInfo s)
 {
@@ -703,31 +703,31 @@ apply_handle_update(StringInfo s)
   rel = logicalrep_rel_open(relid, RowExclusiveLock);
   if (!should_apply_changes_for_rel(rel))
   {
-    /*
-     * The relation can't become interesting in the middle of the
-     * transaction so it's safe to unlock it.
-     */
+       
+                                                                  
+                                              
+       
     logicalrep_rel_close(rel, RowExclusiveLock);
     end_replication_step();
     return;
   }
 
-  /* Check if we can do the update. */
+                                      
   check_relation_updatable(rel);
 
-  /* Initialize the executor state. */
+                                      
   estate = create_estate_for_relation(rel);
   remoteslot = ExecInitExtraTupleSlot(estate, RelationGetDescr(rel->localrel), &TTSOpsVirtual);
   localslot = table_slot_create(rel->localrel, &estate->es_tupleTable);
   EvalPlanQualInit(&epqstate, estate, NULL, NIL, -1);
 
-  /*
-   * Populate updatedCols so that per-column triggers can fire.  This could
-   * include more columns than were actually changed on the publisher
-   * because the logical replication protocol doesn't contain that
-   * information.  But it would for example exclude columns that only exist
-   * on the subscriber, since we are not touching those.
-   */
+     
+                                                                            
+                                                                      
+                                                                   
+                                                                            
+                                                         
+     
   target_rte = list_nth(estate->es_range_table, 0);
   for (int i = 0; i < remoteslot->tts_tupleDescriptor->natts; i++)
   {
@@ -743,20 +743,20 @@ apply_handle_update(StringInfo s)
     }
   }
 
-  /* Also populate extraUpdatedCols, in case we have generated columns */
+                                                                         
   fill_extraUpdatedCols(target_rte, rel->localrel);
 
   ExecOpenIndices(estate->es_result_relation_info, false);
 
-  /* Build the search tuple. */
+                               
   oldctx = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
   slot_store_cstrings(remoteslot, rel, has_oldtup ? oldtup.values : newtup.values);
   MemoryContextSwitchTo(oldctx);
 
-  /*
-   * Try to find tuple using either replica identity index, primary key or
-   * if needed, sequential scan.
-   */
+     
+                                                                           
+                                 
+     
   idxoid = GetRelationIdentityOrPK(rel->localrel);
   Assert(OidIsValid(idxoid) || (rel->remoterel.replident == REPLICA_IDENTITY_FULL && has_oldtup));
 
@@ -771,37 +771,37 @@ apply_handle_update(StringInfo s)
 
   ExecClearTuple(remoteslot);
 
-  /*
-   * Tuple found.
-   *
-   * Note this will fail if there are other conflicting unique indexes.
-   */
+     
+                  
+     
+                                                                        
+     
   if (found)
   {
-    /* Process and store remote tuple in the slot */
+                                                    
     oldctx = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
     slot_modify_cstrings(remoteslot, localslot, rel, newtup.values, newtup.changed);
     MemoryContextSwitchTo(oldctx);
 
     EvalPlanQualSetSlot(&epqstate, remoteslot);
 
-    /* Do the actual update. */
+                               
     ExecSimpleRelationUpdate(estate, &epqstate, localslot, remoteslot);
   }
   else
   {
-    /*
-     * The tuple to be updated could not be found.
-     *
-     * TODO what to do here, change the log level to LOG perhaps?
-     */
+       
+                                                   
+       
+                                                                  
+       
     elog(DEBUG1,
         "logical replication did not find row for update "
         "in replication target relation \"%s\"",
         RelationGetRelationName(rel->localrel));
   }
 
-  /* Cleanup. */
+                
   EvalPlanQualEnd(&epqstate);
   ExecCloseIndices(estate->es_result_relation_info);
 
@@ -812,11 +812,11 @@ apply_handle_update(StringInfo s)
   end_replication_step();
 }
 
-/*
- * Handle DELETE message.
- *
- * TODO: FDW support
- */
+   
+                          
+   
+                     
+   
 static void
 apply_handle_delete(StringInfo s)
 {
@@ -837,19 +837,19 @@ apply_handle_delete(StringInfo s)
   rel = logicalrep_rel_open(relid, RowExclusiveLock);
   if (!should_apply_changes_for_rel(rel))
   {
-    /*
-     * The relation can't become interesting in the middle of the
-     * transaction so it's safe to unlock it.
-     */
+       
+                                                                  
+                                              
+       
     logicalrep_rel_close(rel, RowExclusiveLock);
     end_replication_step();
     return;
   }
 
-  /* Check if we can do the delete. */
+                                      
   check_relation_updatable(rel);
 
-  /* Initialize the executor state. */
+                                      
   estate = create_estate_for_relation(rel);
   remoteslot = ExecInitExtraTupleSlot(estate, RelationGetDescr(rel->localrel), &TTSOpsVirtual);
   localslot = table_slot_create(rel->localrel, &estate->es_tupleTable);
@@ -857,15 +857,15 @@ apply_handle_delete(StringInfo s)
 
   ExecOpenIndices(estate->es_result_relation_info, false);
 
-  /* Find the tuple using the replica identity index. */
+                                                        
   oldctx = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
   slot_store_cstrings(remoteslot, rel, oldtup.values);
   MemoryContextSwitchTo(oldctx);
 
-  /*
-   * Try to find tuple using either replica identity index, primary key or
-   * if needed, sequential scan.
-   */
+     
+                                                                           
+                                 
+     
   idxoid = GetRelationIdentityOrPK(rel->localrel);
   Assert(OidIsValid(idxoid) || (rel->remoterel.replident == REPLICA_IDENTITY_FULL));
 
@@ -877,24 +877,24 @@ apply_handle_delete(StringInfo s)
   {
     found = RelationFindReplTupleSeq(rel->localrel, LockTupleExclusive, remoteslot, localslot);
   }
-  /* If found delete it. */
+                           
   if (found)
   {
     EvalPlanQualSetSlot(&epqstate, localslot);
 
-    /* Do the actual delete. */
+                               
     ExecSimpleRelationDelete(estate, &epqstate, localslot);
   }
   else
   {
-    /* The tuple to be deleted could not be found. */
+                                                     
     elog(DEBUG1,
         "logical replication could not find row for delete "
         "in replication target relation \"%s\"",
         RelationGetRelationName(rel->localrel));
   }
 
-  /* Cleanup. */
+                
   EvalPlanQualEnd(&epqstate);
   ExecCloseIndices(estate->es_result_relation_info);
 
@@ -905,11 +905,11 @@ apply_handle_delete(StringInfo s)
   end_replication_step();
 }
 
-/*
- * Handle TRUNCATE message.
- *
- * TODO: FDW support
- */
+   
+                            
+   
+                     
+   
 static void
 apply_handle_truncate(StringInfo s)
 {
@@ -935,10 +935,10 @@ apply_handle_truncate(StringInfo s)
     rel = logicalrep_rel_open(relid, lockmode);
     if (!should_apply_changes_for_rel(rel))
     {
-      /*
-       * The relation can't become interesting in the middle of the
-       * transaction so it's safe to unlock it.
-       */
+         
+                                                                    
+                                                
+         
       logicalrep_rel_close(rel, lockmode);
       continue;
     }
@@ -952,11 +952,11 @@ apply_handle_truncate(StringInfo s)
     }
   }
 
-  /*
-   * Even if we used CASCADE on the upstream master we explicitly default to
-   * replaying changes without further cascading. This might be later
-   * changeable with a user specified option.
-   */
+     
+                                                                             
+                                                                      
+                                              
+     
   ExecuteTruncateGuts(rels, relids, relids_logged, DROP_RESTRICT, restart_seqs);
 
   foreach (lc, remote_rels)
@@ -969,9 +969,9 @@ apply_handle_truncate(StringInfo s)
   end_replication_step();
 }
 
-/*
- * Logical replication protocol message dispatcher.
- */
+   
+                                                    
+   
 static void
 apply_dispatch(StringInfo s)
 {
@@ -979,39 +979,39 @@ apply_dispatch(StringInfo s)
 
   switch (action)
   {
-    /* BEGIN */
+               
   case 'B':
     apply_handle_begin(s);
     break;
-    /* COMMIT */
+                
   case 'C':
     apply_handle_commit(s);
     break;
-    /* INSERT */
+                
   case 'I':
     apply_handle_insert(s);
     break;
-    /* UPDATE */
+                
   case 'U':
     apply_handle_update(s);
     break;
-    /* DELETE */
+                
   case 'D':
     apply_handle_delete(s);
     break;
-    /* TRUNCATE */
+                  
   case 'T':
     apply_handle_truncate(s);
     break;
-    /* RELATION */
+                  
   case 'R':
     apply_handle_relation(s);
     break;
-    /* TYPE */
+              
   case 'Y':
     apply_handle_type(s);
     break;
-    /* ORIGIN */
+                
   case 'O':
     apply_handle_origin(s);
     break;
@@ -1020,19 +1020,19 @@ apply_dispatch(StringInfo s)
   }
 }
 
-/*
- * Figure out which write/flush positions to report to the walsender process.
- *
- * We can't simply report back the last LSN the walsender sent us because the
- * local transaction might not yet be flushed to disk locally. Instead we
- * build a list that associates local with remote LSNs for every commit. When
- * reporting back the flush position to the sender we iterate that list and
- * check which entries on it are already locally flushed. Those we can report
- * as having been flushed.
- *
- * The have_pending_txes is true if there are outstanding transactions that
- * need to be flushed.
- */
+   
+                                                                              
+   
+                                                                              
+                                                                          
+                                                                              
+                                                                            
+                                                                              
+                           
+   
+                                                                            
+                       
+   
 static void
 get_flush_position(XLogRecPtr *write, XLogRecPtr *flush, bool *have_pending_txes)
 {
@@ -1056,11 +1056,11 @@ get_flush_position(XLogRecPtr *write, XLogRecPtr *flush, bool *have_pending_txes
     }
     else
     {
-      /*
-       * Don't want to uselessly iterate over the rest of the list which
-       * could potentially be long. Instead get the last element and
-       * grab the write position from there.
-       */
+         
+                                                                         
+                                                                     
+                                             
+         
       pos = dlist_tail_element(FlushPosition, node, &lsn_mapping);
       *write = pos->remote_end;
       *have_pending_txes = true;
@@ -1071,18 +1071,18 @@ get_flush_position(XLogRecPtr *write, XLogRecPtr *flush, bool *have_pending_txes
   *have_pending_txes = !dlist_is_empty(&lsn_mapping);
 }
 
-/*
- * Store current remote/local lsn pair in the tracking list.
- */
+   
+                                                             
+   
 static void
 store_flush_position(XLogRecPtr remote_lsn)
 {
   FlushPosition *flushpos;
 
-  /* Need to do this in permanent context */
+                                            
   MemoryContextSwitchTo(ApplyContext);
 
-  /* Track commit lsn  */
+                         
   flushpos = (FlushPosition *)palloc(sizeof(FlushPosition));
   flushpos->local_end = XactLastCommitEnd;
   flushpos->remote_end = remote_lsn;
@@ -1091,7 +1091,7 @@ store_flush_position(XLogRecPtr remote_lsn)
   MemoryContextSwitchTo(ApplyMessageContext);
 }
 
-/* Update statistics of the worker. */
+                                      
 static void
 UpdateWorkerStats(XLogRecPtr last_lsn, TimestampTz send_time, bool reply)
 {
@@ -1105,25 +1105,25 @@ UpdateWorkerStats(XLogRecPtr last_lsn, TimestampTz send_time, bool reply)
   }
 }
 
-/*
- * Apply main loop.
- */
+   
+                    
+   
 static void
 LogicalRepApplyLoop(XLogRecPtr last_received)
 {
   TimestampTz last_recv_timestamp = GetCurrentTimestamp();
   bool ping_sent = false;
 
-  /*
-   * Init the ApplyMessageContext which we clean up after each replication
-   * protocol message.
-   */
+     
+                                                                           
+                       
+     
   ApplyMessageContext = AllocSetContextCreate(ApplyContext, "ApplyMessageContext", ALLOCSET_DEFAULT_SIZES);
 
-  /* mark as idle, before starting to loop */
+                                             
   pgstat_report_activity(STATE_IDLE, NULL);
 
-  /* This outer loop iterates once per wait. */
+                                               
   for (;;)
   {
     pgsocket fd = PGINVALID_SOCKET;
@@ -1141,7 +1141,7 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
 
     if (len != 0)
     {
-      /* Loop to process all available data (without blocking). */
+                                                                  
       for (;;)
       {
         CHECK_FOR_INTERRUPTS();
@@ -1161,11 +1161,11 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
           int c;
           StringInfoData s;
 
-          /* Reset timeout. */
+                              
           last_recv_timestamp = GetCurrentTimestamp();
           ping_sent = false;
 
-          /* Ensure we are reading the data into our memory context. */
+                                                                       
           MemoryContextSwitchTo(ApplyMessageContext);
 
           s.data = buf;
@@ -1217,7 +1217,7 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
             send_feedback(last_received, reply_requested, false);
             UpdateWorkerStats(last_received, timestamp, true);
           }
-          /* other message types are purposefully ignored */
+                                                            
 
           MemoryContextReset(ApplyMessageContext);
         }
@@ -1226,28 +1226,28 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
       }
     }
 
-    /* confirm all writes so far */
+                                   
     send_feedback(last_received, false, false);
 
     if (!in_remote_transaction)
     {
-      /*
-       * If we didn't get any transactions for a while there might be
-       * unconsumed invalidation messages in the queue, consume them
-       * now.
-       */
+         
+                                                                      
+                                                                     
+              
+         
       AcceptInvalidationMessages();
       maybe_reread_subscription();
 
-      /* Process any table synchronization changes. */
+                                                      
       process_syncing_tables(last_received);
     }
 
-    /* Cleanup the memory. */
+                             
     MemoryContextResetAndDeleteChildren(ApplyMessageContext);
     MemoryContextSwitchTo(TopMemoryContext);
 
-    /* Check if we need to exit the streaming loop. */
+                                                      
     if (endofstream)
     {
       TimeLineID tli;
@@ -1256,13 +1256,13 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
       break;
     }
 
-    /*
-     * Wait for more data or latch.  If we have unflushed transactions,
-     * wake up after WalWriterDelay to see if they've been flushed yet (in
-     * which case we should send a feedback message).  Otherwise, there's
-     * no particular urgency about waking up unless we get data or a
-     * signal.
-     */
+       
+                                                                        
+                                                                           
+                                                                          
+                                                                     
+               
+       
     if (!dlist_is_empty(&lsn_mapping))
     {
       wait_time = WalWriterDelay;
@@ -1288,20 +1288,20 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
 
     if (rc & WL_TIMEOUT)
     {
-      /*
-       * We didn't receive anything new. If we haven't heard anything
-       * from the server for more than wal_receiver_timeout / 2, ping
-       * the server. Also, if it's been longer than
-       * wal_receiver_status_interval since the last update we sent,
-       * send a status update to the master anyway, to report any
-       * progress in applying WAL.
-       */
+         
+                                                                      
+                                                                      
+                                                    
+                                                                     
+                                                                  
+                                   
+         
       bool requestReply = false;
 
-      /*
-       * Check if time since last receive from standby has reached the
-       * configured limit.
-       */
+         
+                                                                       
+                           
+         
       if (wal_receiver_timeout > 0)
       {
         TimestampTz now = GetCurrentTimestamp();
@@ -1314,7 +1314,7 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
           ereport(ERROR, (errmsg("terminating logical replication worker due to timeout")));
         }
 
-        /* Check to see if it's time for a ping. */
+                                                   
         if (!ping_sent)
         {
           timeout = TimestampTzPlusMilliseconds(last_recv_timestamp, (wal_receiver_timeout / 2));
@@ -1331,12 +1331,12 @@ LogicalRepApplyLoop(XLogRecPtr last_received)
   }
 }
 
-/*
- * Send a Standby Status Update message to server.
- *
- * 'recvpos' is the latest LSN we've received data to, force is set if we need
- * to send a response to avoid timeouts.
- */
+   
+                                                   
+   
+                                                                               
+                                         
+   
 static void
 send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
 {
@@ -1352,16 +1352,16 @@ send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
   TimestampTz now;
   bool have_pending_txes;
 
-  /*
-   * If the user doesn't want status to be reported to the publisher, be
-   * sure to exit before doing anything at all.
-   */
+     
+                                                                         
+                                                
+     
   if (!force && wal_receiver_status_interval <= 0)
   {
     return;
   }
 
-  /* It's legal to not pass a recvpos */
+                                        
   if (recvpos < last_recvpos)
   {
     recvpos = last_recvpos;
@@ -1369,10 +1369,10 @@ send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
 
   get_flush_position(&writepos, &flushpos, &have_pending_txes);
 
-  /*
-   * No outstanding transactions to flush, we can report the latest received
-   * position. This is important for synchronous replication.
-   */
+     
+                                                                             
+                                                              
+     
   if (!have_pending_txes)
   {
     flushpos = writepos = recvpos;
@@ -1390,7 +1390,7 @@ send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
 
   now = GetCurrentTimestamp();
 
-  /* if we've already reported everything we're good */
+                                                       
   if (!force && writepos == last_writepos && flushpos == last_flushpos && !TimestampDifferenceExceeds(send_time, now, wal_receiver_status_interval * 1000))
   {
     return;
@@ -1410,11 +1410,11 @@ send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
   }
 
   pq_sendbyte(reply_message, 'r');
-  pq_sendint64(reply_message, recvpos);     /* write */
-  pq_sendint64(reply_message, flushpos);    /* flush */
-  pq_sendint64(reply_message, writepos);    /* apply */
-  pq_sendint64(reply_message, now);         /* sendTime */
-  pq_sendbyte(reply_message, requestReply); /* replyRequested */
+  pq_sendint64(reply_message, recvpos);                
+  pq_sendint64(reply_message, flushpos);               
+  pq_sendint64(reply_message, writepos);               
+  pq_sendint64(reply_message, now);                       
+  pq_sendbyte(reply_message, requestReply);                     
 
   elog(DEBUG2, "sending feedback (force %d) to recv %X/%X, write %X/%X, flush %X/%X", force, (uint32)(recvpos >> 32), (uint32)recvpos, (uint32)(writepos >> 32), (uint32)writepos, (uint32)(flushpos >> 32), (uint32)flushpos);
 
@@ -1434,9 +1434,9 @@ send_feedback(XLogRecPtr recvpos, bool force, bool requestReply)
   }
 }
 
-/*
- * Reread subscription info if needed. Most changes will be exit.
- */
+   
+                                                                  
+   
 static void
 maybe_reread_subscription(void)
 {
@@ -1444,28 +1444,28 @@ maybe_reread_subscription(void)
   Subscription *newsub;
   bool started_tx = false;
 
-  /* When cache state is valid there is nothing to do here. */
+                                                              
   if (MySubscriptionValid)
   {
     return;
   }
 
-  /* This function might be called inside or outside of transaction. */
+                                                                       
   if (!IsTransactionState())
   {
     StartTransactionCommand();
     started_tx = true;
   }
 
-  /* Ensure allocations in permanent context. */
+                                                
   oldctx = MemoryContextSwitchTo(ApplyContext);
 
   newsub = GetSubscription(MyLogicalRepWorker->subid, true);
 
-  /*
-   * Exit if the subscription was removed. This normally should not happen
-   * as the worker gets killed during DROP SUBSCRIPTION.
-   */
+     
+                                                                           
+                                                         
+     
   if (!newsub)
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1475,10 +1475,10 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /*
-   * Exit if the subscription was disabled. This normally should not happen
-   * as the worker gets killed during ALTER SUBSCRIPTION ... DISABLE.
-   */
+     
+                                                                            
+                                                                      
+     
   if (!newsub->enabled)
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1488,10 +1488,10 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /*
-   * Exit if connection string was changed. The launcher will start new
-   * worker.
-   */
+     
+                                                                        
+             
+     
   if (strcmp(newsub->conninfo, MySubscription->conninfo) != 0)
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1501,10 +1501,10 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /*
-   * Exit if subscription name was changed (it's used for
-   * fallback_application_name). The launcher will start new worker.
-   */
+     
+                                                          
+                                                                     
+     
   if (strcmp(newsub->name, MySubscription->name) != 0)
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1514,13 +1514,13 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /* !slotname should never happen when enabled is true. */
+                                                           
   Assert(newsub->slotname);
 
-  /*
-   * We need to make new connection to new slot if slot name has changed so
-   * exit here as well if that's the case.
-   */
+     
+                                                                            
+                                           
+     
   if (strcmp(newsub->slotname, MySubscription->slotname) != 0)
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1530,10 +1530,10 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /*
-   * Exit if publication list was changed. The launcher will start new
-   * worker.
-   */
+     
+                                                                       
+             
+     
   if (!equal(newsub->publications, MySubscription->publications))
   {
     ereport(LOG, (errmsg("logical replication apply worker for subscription \"%s\" will "
@@ -1543,19 +1543,19 @@ maybe_reread_subscription(void)
     proc_exit(0);
   }
 
-  /* Check for other changes that should never happen too. */
+                                                             
   if (newsub->dbid != MySubscription->dbid)
   {
     elog(ERROR, "subscription %u changed unexpectedly", MyLogicalRepWorker->subid);
   }
 
-  /* Clean old subscription info and switch to new one. */
+                                                          
   FreeSubscription(MySubscription);
   MySubscription = newsub;
 
   MemoryContextSwitchTo(oldctx);
 
-  /* Change synchronous commit according to the user's wishes */
+                                                                
   SetConfigOption("synchronous_commit", MySubscription->synccommit, PGC_BACKEND, PGC_S_OVERRIDE);
 
   if (started_tx)
@@ -1566,16 +1566,16 @@ maybe_reread_subscription(void)
   MySubscriptionValid = true;
 }
 
-/*
- * Callback from subscription syscache invalidation.
- */
+   
+                                                     
+   
 static void
 subscription_change_cb(Datum arg, int cacheid, uint32 hashvalue)
 {
   MySubscriptionValid = false;
 }
 
-/* SIGHUP: set flag to reload configuration at next convenient time */
+                                                                      
 static void
 logicalrep_worker_sighup(SIGNAL_ARGS)
 {
@@ -1583,13 +1583,13 @@ logicalrep_worker_sighup(SIGNAL_ARGS)
 
   got_SIGHUP = true;
 
-  /* Waken anything waiting on the process latch */
+                                                   
   SetLatch(MyLatch);
 
   errno = save_errno;
 }
 
-/* Logical Replication Apply worker entry point */
+                                                  
 void
 ApplyWorkerMain(Datum main_arg)
 {
@@ -1600,38 +1600,38 @@ ApplyWorkerMain(Datum main_arg)
   char *myslotname;
   WalRcvStreamOptions options;
 
-  /* Attach to slot */
+                      
   logicalrep_worker_attach(worker_slot);
 
-  /* Setup signal handling */
+                             
   pqsignal(SIGHUP, logicalrep_worker_sighup);
   pqsignal(SIGTERM, die);
   BackgroundWorkerUnblockSignals();
 
-  /*
-   * We don't currently need any ResourceOwner in a walreceiver process, but
-   * if we did, we could call CreateAuxProcessResourceOwner here.
-   */
+     
+                                                                             
+                                                                  
+     
 
-  /* Initialise stats to a sanish value */
+                                          
   MyLogicalRepWorker->last_send_time = MyLogicalRepWorker->last_recv_time = MyLogicalRepWorker->reply_time = GetCurrentTimestamp();
 
-  /* Load the libpq-specific functions */
+                                         
   load_file("libpqwalreceiver", false);
 
-  /* Run as replica session replication role. */
+                                                
   SetConfigOption("session_replication_role", "replica", PGC_SUSET, PGC_S_OVERRIDE);
 
-  /* Connect to our database. */
+                                
   BackgroundWorkerInitializeConnectionByOid(MyLogicalRepWorker->dbid, MyLogicalRepWorker->userid, 0);
 
-  /*
-   * Set always-secure search path, so malicious users can't redirect user
-   * code (e.g. pg_index.indexprs).
-   */
+     
+                                                                           
+                                    
+     
   SetConfigOption("search_path", "", PGC_SUSET, PGC_S_OVERRIDE);
 
-  /* Load the subscription into persistent memory context. */
+                                                             
   ApplyContext = AllocSetContextCreate(TopMemoryContext, "ApplyContext", ALLOCSET_DEFAULT_SIZES);
   StartTransactionCommand();
   oldctx = MemoryContextSwitchTo(ApplyContext);
@@ -1657,10 +1657,10 @@ ApplyWorkerMain(Datum main_arg)
     proc_exit(0);
   }
 
-  /* Setup synchronous commit according to the user's wishes */
+                                                               
   SetConfigOption("synchronous_commit", MySubscription->synccommit, PGC_BACKEND, PGC_S_OVERRIDE);
 
-  /* Keep us informed about subscription changes. */
+                                                    
   CacheRegisterSyscacheCallback(SUBSCRIPTIONOID, subscription_change_cb, (Datum)0);
 
   if (am_tablesync_worker())
@@ -1674,17 +1674,17 @@ ApplyWorkerMain(Datum main_arg)
 
   CommitTransactionCommand();
 
-  /* Connect to the origin and start the replication. */
+                                                        
   elog(DEBUG1, "connecting to publisher using connection string \"%s\"", MySubscription->conninfo);
 
   if (am_tablesync_worker())
   {
     char *syncslotname;
 
-    /* This is table synchroniation worker, call initial sync. */
+                                                                 
     syncslotname = LogicalRepSyncTableStart(&origin_startpos);
 
-    /* The slot name needs to be allocated in permanent memory context. */
+                                                                          
     oldctx = MemoryContextSwitchTo(ApplyContext);
     myslotname = pstrdup(syncslotname);
     MemoryContextSwitchTo(oldctx);
@@ -1693,24 +1693,24 @@ ApplyWorkerMain(Datum main_arg)
   }
   else
   {
-    /* This is main apply worker */
+                                   
     RepOriginId originid;
     TimeLineID startpointTLI;
     char *err;
 
     myslotname = MySubscription->slotname;
 
-    /*
-     * This shouldn't happen if the subscription is enabled, but guard
-     * against DDL bugs or manual catalog changes.  (libpqwalreceiver will
-     * crash if slot is NULL.)
-     */
+       
+                                                                       
+                                                                           
+                               
+       
     if (!myslotname)
     {
       ereport(ERROR, (errmsg("subscription has no replication slot set")));
     }
 
-    /* Setup replication origin tracking. */
+                                            
     StartTransactionCommand();
     snprintf(originname, sizeof(originname), "pg_%u", MySubscription->oid);
     originid = replorigin_by_name(originname, true);
@@ -1729,38 +1729,38 @@ ApplyWorkerMain(Datum main_arg)
       ereport(ERROR, (errmsg("could not connect to the publisher: %s", err)));
     }
 
-    /*
-     * We don't really use the output identify_system for anything but it
-     * does some initializations on the upstream so let's still call it.
-     */
+       
+                                                                          
+                                                                         
+       
     (void)walrcv_identify_system(LogRepWorkerWalRcvConn, &startpointTLI);
   }
 
-  /*
-   * Setup callback for syscache so that we know when something changes in
-   * the subscription relation state.
-   */
+     
+                                                                           
+                                      
+     
   CacheRegisterSyscacheCallback(SUBSCRIPTIONRELMAP, invalidate_syncing_table_states, (Datum)0);
 
-  /* Build logical replication streaming options. */
+                                                    
   options.logical = true;
   options.startpoint = origin_startpos;
   options.slotname = myslotname;
   options.proto.logical.proto_version = LOGICALREP_PROTO_VERSION_NUM;
   options.proto.logical.publication_names = MySubscription->publications;
 
-  /* Start normal logical streaming replication. */
+                                                   
   walrcv_startstreaming(LogRepWorkerWalRcvConn, &options);
 
-  /* Run the main loop. */
+                          
   LogicalRepApplyLoop(origin_startpos);
 
   proc_exit(0);
 }
 
-/*
- * Is current process a logical replication worker?
- */
+   
+                                                    
+   
 bool
 IsLogicalWorker(void)
 {

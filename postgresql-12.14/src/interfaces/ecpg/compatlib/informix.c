@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/compatlib/informix.c */
+                                              
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -16,7 +16,7 @@
 #include <sqlca.h>
 #include <ecpgerrno.h>
 
-/* this is also defined in ecpglib/misc.c, by defining it twice we don't have to export the symbol */
+                                                                                                     
 
 static struct sqlca_t sqlca_init = {{'S', 'Q', 'L', 'C', 'A', ' ', ' ', ' '}, sizeof(struct sqlca_t), 0, {0, {0}}, {'N', 'O', 'T', ' ', 'S', 'E', 'T', ' '}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}, {'0', '0', '0', '0', '0'}};
 static int
@@ -64,10 +64,10 @@ deccall3(decimal *arg1, decimal *arg2, decimal *result, int (*ptr)(numeric *, nu
   numeric *a1, *a2, *nres;
   int i;
 
-  /*
-   * we must NOT set the result to NULL here because it may be the same
-   * variable as one of the arguments
-   */
+     
+                                                                        
+                                      
+     
   if (risnull(CDECIMALTYPE, (char *)arg1) || risnull(CDECIMALTYPE, (char *)arg2))
   {
     return 0;
@@ -109,10 +109,10 @@ deccall3(decimal *arg1, decimal *arg2, decimal *result, int (*ptr)(numeric *, nu
 
   i = (*ptr)(a1, a2, nres);
 
-  if (i == 0) /* No error */
+  if (i == 0)               
   {
 
-    /* set the result to null in case it errors out later */
+                                                            
     rsetnull(CDECIMALTYPE, (char *)result);
     PGTYPESnumeric_to_decimal(nres, result);
   }
@@ -124,7 +124,7 @@ deccall3(decimal *arg1, decimal *arg2, decimal *result, int (*ptr)(numeric *, nu
   return i;
 }
 
-/* we start with the numeric functions */
+                                         
 int
 decadd(decimal *arg1, decimal *arg2, decimal *sum)
 {
@@ -195,8 +195,8 @@ deccvasc(const char *cp, int len, decimal *np)
     return 0;
   }
 
-  str = ecpg_strndup(cp, len); /* decimal_in always converts the complete
-                                * string */
+  str = ecpg_strndup(cp, len);                                            
+                                           
   if (!str)
   {
     ret = ECPG_INFORMIX_NUM_UNDERFLOW;
@@ -434,10 +434,10 @@ dectoasc(decimal *np, char *cp, int len, int right)
     return -1;
   }
 
-  /*
-   * TODO: have to take care of len here and create exponential notation if
-   * necessary
-   */
+     
+                                                                            
+               
+     
   if ((int)(strlen(str) + 1) > len)
   {
     if (len > 1)
@@ -535,7 +535,7 @@ dectolong(decimal *np, long *lngp)
   return ret;
 }
 
-/* Now the date functions */
+                            
 int
 rdatestr(date d, char *str)
 {
@@ -546,19 +546,19 @@ rdatestr(date d, char *str)
     return ECPG_INFORMIX_DATE_CONVERT;
   }
 
-  /* move to user allocated buffer */
+                                     
   strcpy(str, tmp);
   free(tmp);
 
   return 0;
 }
 
-/*
- *
- * the input for this function is mmddyyyy and any non-numeric
- * character can be used as a separator
- *
- */
+   
+   
+                                                               
+                                        
+   
+   
 int
 rstrdate(const char *str, date *d)
 {
@@ -587,8 +587,8 @@ rjulmdy(date d, short *mdy)
 int
 rdefmtdate(date *d, const char *fmt, const char *str)
 {
-  /* TODO: take care of DBCENTURY environment variable */
-  /* PGSQL functions allow all centuries */
+                                                         
+                                           
 
   errno = 0;
   if (PGTYPESdate_defmt_asc(d, fmt, str) == 0)
@@ -647,7 +647,7 @@ rdayofweek(date d)
   return PGTYPESdate_dayofweek(d);
 }
 
-/* And the datetime stuff */
+                            
 
 void
 dtcurrent(timestamp *ts)
@@ -667,17 +667,17 @@ dtcvasc(char *str, timestamp *ts)
   i = errno;
   if (i)
   {
-    /* TODO: rewrite to Informix error codes */
+                                               
     return i;
   }
   if (**endptr)
   {
-    /* extra characters exist at the end */
+                                           
     return ECPG_INFORMIX_EXTRA_CHARS;
   }
-  /* TODO: other Informix error codes missing */
+                                                
 
-  /* everything went fine */
+                            
   *ts = ts_tmp;
 
   return 0;
@@ -729,10 +729,10 @@ intoasc(interval *i, char *str)
   return 0;
 }
 
-/*
- *	rfmt.c	-  description
- *	by Carsten Wolff <carsten.wolff@credativ.de>, Wed Apr 2 2003
- */
+   
+                         
+                                                                
+   
 
 static struct
 {
@@ -744,22 +744,22 @@ static struct
   char *val_string;
 } value;
 
-/**
- * initialize the struct, which holds the different forms
- * of the long value
- */
+    
+                                                          
+                     
+   
 static int
 initValue(long lng_val)
 {
   int i, j;
   long l, dig;
 
-  /* set some obvious things */
+                               
   value.val = lng_val >= 0 ? lng_val : lng_val * (-1);
   value.sign = lng_val >= 0 ? '+' : '-';
   value.maxdigits = log10(2) * (8 * sizeof(long) - 1);
 
-  /* determine the number of digits */
+                                      
   i = 0;
   l = 1;
   do
@@ -780,7 +780,7 @@ initValue(long lng_val)
 
   value.remaining = value.digits;
 
-  /* convert the long to string */
+                                  
   if ((value.val_string = (char *)malloc(value.digits + 1)) == NULL)
   {
     return -1;
@@ -796,7 +796,7 @@ initValue(long lng_val)
   return 0;
 }
 
-/* return the position oft the right-most dot in some string */
+                                                               
 static int
 getRightMostDot(const char *str)
 {
@@ -815,13 +815,13 @@ getRightMostDot(const char *str)
   return -1;
 }
 
-/* And finally some misc functions */
+                                     
 int
 rfmtlong(long lng_val, const char *fmt, char *outbuf)
 {
   size_t fmt_len = strlen(fmt);
   size_t temp_len;
-  int i, j, /* position in temp */
+  int i, j,                       
       k, dotpos;
   int leftalign = 0, blank = 0, sign = 0, entitydone = 0, signdone = 0, brackets_ok = 0;
   char *temp;
@@ -835,7 +835,7 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
     return -1;
   }
 
-  /* put all info about the long in a struct */
+                                               
   if (initValue(lng_val) == -1)
   {
     free(temp);
@@ -843,28 +843,28 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
     return -1;
   }
 
-  /* '<' is the only format, where we have to align left */
+                                                           
   if (strchr(fmt, (int)'<'))
   {
     leftalign = 1;
   }
 
-  /* '(' requires ')' */
+                        
   if (strchr(fmt, (int)'(') && strchr(fmt, (int)')'))
   {
     brackets_ok = 1;
   }
 
-  /* get position of the right-most dot in the format-string */
-  /* and fill the temp-string wit '0's up to there. */
+                                                               
+                                                      
   dotpos = getRightMostDot(fmt);
 
-  /* start to parse the formatstring */
+                                       
   temp[0] = '\0';
-  k = value.digits - 1; /* position in the value_string */
+  k = value.digits - 1;                                   
   for (i = fmt_len - 1, j = 0; i >= 0; i--, j++)
   {
-    /* qualify, where we are in the value_string */
+                                                   
     if (k < 0)
     {
       blank = 1;
@@ -874,7 +874,7 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
       }
       if (leftalign)
       {
-        /* can't use strncat(,,0) here, Solaris would freek out */
+                                                                  
         if (sign)
         {
           if (signdone)
@@ -885,7 +885,7 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
         }
       }
     }
-    /* if we're right side of the right-most dot, print '0' */
+                                                              
     if (dotpos >= 0 && dotpos <= i)
     {
       if (dotpos < i)
@@ -906,7 +906,7 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
       strcat(temp, tmp);
       continue;
     }
-    /* the ',' needs special attention, if it is in the blank area */
+                                                                     
     if (blank && fmt[i] == ',')
     {
       fmtchar = lastfmt;
@@ -915,12 +915,12 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
     {
       fmtchar = fmt[i];
     }
-    /* waiting for the sign */
+                              
     if (k < 0 && leftalign && sign && !signdone && fmtchar != '+' && fmtchar != '-')
     {
       continue;
     }
-    /* analyse this format-char */
+                                  
     switch (fmtchar)
     {
     case ',':
@@ -1036,10 +1036,10 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
     lastfmt = fmt[i];
     k--;
   }
-  /* safety-net */
+                  
   temp[fmt_len] = '\0';
 
-  /* reverse the temp-string and put it into the outbuf */
+                                                          
   temp_len = strlen(temp);
   outbuf[0] = '\0';
   for (i = temp_len - 1; i >= 0; i--)
@@ -1049,7 +1049,7 @@ rfmtlong(long lng_val, const char *fmt, char *outbuf)
   }
   outbuf[temp_len] = '\0';
 
-  /* cleaning up */
+                   
   free(temp);
   free(value.val_string);
 
@@ -1089,33 +1089,33 @@ ldchar(char *src, int len, char *dest)
 int
 rgetmsg(int msgnum, char *s, int maxsize)
 {
-  (void)msgnum;  /* keep the compiler quiet */
-  (void)s;       /* keep the compiler quiet */
-  (void)maxsize; /* keep the compiler quiet */
+  (void)msgnum;                               
+  (void)s;                                    
+  (void)maxsize;                              
   return 0;
 }
 
 int
 rtypalign(int offset, int type)
 {
-  (void)offset; /* keep the compiler quiet */
-  (void)type;   /* keep the compiler quiet */
+  (void)offset;                              
+  (void)type;                                
   return 0;
 }
 
 int
 rtypmsize(int type, int len)
 {
-  (void)type; /* keep the compiler quiet */
-  (void)len;  /* keep the compiler quiet */
+  (void)type;                              
+  (void)len;                               
   return 0;
 }
 
 int
 rtypwidth(int sqltype, int sqllen)
 {
-  (void)sqltype; /* keep the compiler quiet */
-  (void)sqllen;  /* keep the compiler quiet */
+  (void)sqltype;                              
+  (void)sqllen;                               
   return 0;
 }
 

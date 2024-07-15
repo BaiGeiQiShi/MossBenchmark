@@ -1,15 +1,15 @@
-/*--------------------------------------------------------------------------
- *
- * test_bloomfilter.c
- *		Test false positive rate of Bloom filter.
- *
- * Copyright (c) 2018-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		src/test/modules/test_bloomfilter/test_bloomfilter.c
- *
- * -------------------------------------------------------------------------
- */
+                                                                             
+   
+                      
+                                              
+   
+                                                                
+   
+                  
+                                                         
+   
+                                                                             
+   
 #include "postgres.h"
 
 #include "fmgr.h"
@@ -18,14 +18,14 @@
 
 PG_MODULE_MAGIC;
 
-/* Fits decimal representation of PG_INT64_MIN + 2 bytes: */
+                                                            
 #define MAX_ELEMENT_BYTES 21
-/* False positive rate WARNING threshold (1%): */
+                                                 
 #define FPOSITIVE_THRESHOLD 0.01
 
-/*
- * Populate an empty Bloom filter with "nelements" dummy strings.
- */
+   
+                                                                  
+   
 static void
 populate_with_dummy_strings(bloom_filter *filter, int64 nelements)
 {
@@ -41,11 +41,11 @@ populate_with_dummy_strings(bloom_filter *filter, int64 nelements)
   }
 }
 
-/*
- * Returns number of strings that are indicated as probably appearing in Bloom
- * filter that were in fact never added by populate_with_dummy_strings().
- * These are false positives.
- */
+   
+                                                                               
+                                                                          
+                              
+   
 static int64
 nfalsepos_for_missing_strings(bloom_filter *filter, int64 nelements)
 {
@@ -79,15 +79,15 @@ create_and_test_bloom(int power, int64 nelements, int callerseed)
 
   elog(DEBUG1, "bloom_work_mem (KB): %d", bloom_work_mem);
 
-  /*
-   * Generate random seed, or use caller's.  Seed should always be a
-   * positive value less than or equal to PG_INT32_MAX, to ensure that any
-   * random seed can be recreated through callerseed if the need arises.
-   * (Don't assume that RAND_MAX cannot exceed PG_INT32_MAX.)
-   */
+     
+                                                                     
+                                                                           
+                                                                         
+                                                              
+     
   seed = callerseed < 0 ? random() % PG_INT32_MAX : callerseed;
 
-  /* Create Bloom filter, populate it, and report on false positive rate */
+                                                                           
   filter = bloom_create(nelements, bloom_work_mem, seed);
   populate_with_dummy_strings(filter, nelements);
   nfalsepos = nfalsepos_for_missing_strings(filter, nelements);
@@ -99,13 +99,13 @@ create_and_test_bloom(int power, int64 nelements, int callerseed)
 
 PG_FUNCTION_INFO_V1(test_bloomfilter);
 
-/*
- * SQL-callable entry point to perform all tests.
- *
- * If a 1% false positive threshold is not met, emits WARNINGs.
- *
- * See README for details of arguments.
- */
+   
+                                                  
+   
+                                                                
+   
+                                        
+   
 Datum
 test_bloomfilter(PG_FUNCTION_ARGS)
 {

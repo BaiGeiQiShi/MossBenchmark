@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/ecpglib/misc.c */
+                                        
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -23,9 +23,9 @@
 #define LONG_LONG_MIN LLONG_MIN
 #else
 #define LONG_LONG_MIN LONGLONG_MIN
-#endif /* LLONG_MIN */
-#endif /* LONG_LONG_MIN */
-#endif /* HAVE_LONG_LONG_INT */
+#endif                
+#endif                    
+#endif                         
 
 bool ecpg_internal_regression_mode = false;
 
@@ -76,7 +76,7 @@ ecpg_init(const struct connection *con, const char *connection_name, const int l
 static void
 ecpg_sqlca_key_destructor(void *arg)
 {
-  free(arg); /* sqlca structure allocated in ECPGget_sqlca */
+  free(arg);                                                 
 }
 
 static void
@@ -121,7 +121,7 @@ ECPGstatus(int lineno, const char *connection_name)
     return false;
   }
 
-  /* are we connected? */
+                         
   if (con->connection == NULL)
   {
     ecpg_raise(lineno, ECPG_NOT_CONN, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR, con->name);
@@ -139,7 +139,7 @@ ECPGtransactionStatus(const char *connection_name)
   con = ecpg_get_connection(connection_name);
   if (con == NULL)
   {
-    /* transaction status is unknown */
+                                       
     return PQTRANS_UNKNOWN;
   }
 
@@ -159,16 +159,16 @@ ECPGtrans(int lineno, const char *connection_name, const char *transaction)
 
   ecpg_log("ECPGtrans on line %d: action \"%s\"; connection \"%s\"\n", lineno, transaction, con ? con->name : "null");
 
-  /* if we have no connection we just simulate the command */
+                                                             
   if (con && con->connection)
   {
-    /*
-     * If we got a transaction command but have no open transaction, we
-     * have to start one, unless we are in autocommit, where the
-     * developers have to take care themselves. However, if the command is
-     * a begin statement, we just execute it once. And if the command is
-     * commit or rollback prepared, we don't execute it.
-     */
+       
+                                                                        
+                                                                 
+                                                                           
+                                                                         
+                                                         
+       
     if (PQtransactionStatus(con->connection) == PQTRANS_IDLE && !con->autocommit && strncmp(transaction, "begin", 5) != 0 && strncmp(transaction, "start", 5) != 0 && strncmp(transaction, "commit prepared", 15) != 0 && strncmp(transaction, "rollback prepared", 17) != 0)
     {
       res = PQexec(con->connection, "begin transaction");
@@ -230,13 +230,13 @@ ecpg_log(const char *format, ...)
     return;
   }
 
-  /* localize the error message string */
+                                         
   intl_format = ecpg_gettext(format);
 
-  /*
-   * Insert PID into the format, unless ecpg_internal_regression_mode is set
-   * (regression tests want unchanging output).
-   */
+     
+                                                                             
+                                                
+     
   bufsize = strlen(intl_format) + 100;
   fmt = (char *)malloc(bufsize);
   if (fmt == NULL)
@@ -261,7 +261,7 @@ ecpg_log(const char *format, ...)
   vfprintf(debugstream, fmt, ap);
   va_end(ap);
 
-  /* dump out internal sqlca variables */
+                                         
   if (ecpg_internal_regression_mode && sqlca != NULL)
   {
     fprintf(debugstream, "[NO_PID]: sqlca: code: %ld, state: %s\n", sqlca->sqlcode, sqlca->sqlstate);
@@ -304,7 +304,7 @@ ECPGset_noind_null(enum ECPGttype type, void *ptr)
   case ECPGt_unsigned_long_long:
     *((long long *)ptr) = LONG_LONG_MIN;
     break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
   case ECPGt_float:
     memset((char *)ptr, 0xff, sizeof(float));
     break;
@@ -394,7 +394,7 @@ ECPGis_noind_null(enum ECPGttype type, const void *ptr)
       return true;
     }
     break;
-#endif /* HAVE_LONG_LONG_INT */
+#endif                         
   case ECPGt_float:
     return _check(ptr, sizeof(float));
     break;
@@ -474,26 +474,26 @@ win32_pthread_once(volatile pthread_once_t *once, void (*fn)(void))
     pthread_mutex_unlock(&win32_pthread_once_lock);
   }
 }
-#endif /* ENABLE_THREAD_SAFETY */
-#endif /* WIN32 */
+#endif                           
+#endif            
 
 #ifdef ENABLE_NLS
 
 char *
 ecpg_gettext(const char *msgid)
 {
-  /*
-   * If multiple threads come through here at about the same time, it's okay
-   * for more than one of them to call bindtextdomain().  But it's not okay
-   * for any of them to reach dgettext() before bindtextdomain() is
-   * complete, so don't set the flag till that's done.  Use "volatile" just
-   * to be sure the compiler doesn't try to get cute.
-   */
+     
+                                                                             
+                                                                            
+                                                                    
+                                                                            
+                                                      
+     
   static volatile bool already_bound = false;
 
   if (!already_bound)
   {
-    /* dgettext() preserves errno, but bindtextdomain() doesn't */
+                                                                  
 #ifdef WIN32
     int save_errno = GetLastError();
 #else
@@ -501,7 +501,7 @@ ecpg_gettext(const char *msgid)
 #endif
     const char *ldir;
 
-    /* No relocatable lookup here because the binary could be anywhere */
+                                                                         
     ldir = getenv("PGLOCALEDIR");
     if (!ldir)
     {
@@ -518,7 +518,7 @@ ecpg_gettext(const char *msgid)
 
   return dgettext(PG_TEXTDOMAIN("ecpglib"), msgid);
 }
-#endif /* ENABLE_NLS */
+#endif                 
 
 struct var_list *ivlist = NULL;
 
@@ -541,13 +541,13 @@ ECPGset_var(int number, void *pointer, int lineno)
   {
     if (ptr->number == number)
     {
-      /* already known => just change pointer value */
+                                                      
       ptr->pointer = pointer;
       return;
     }
   }
 
-  /* a new one has to be added */
+                                 
   ptr = (struct var_list *)calloc(1L, sizeof(struct var_list));
   if (!ptr)
   {
@@ -563,7 +563,7 @@ ECPGset_var(int number, void *pointer, int lineno)
     strncpy(sqlca->sqlstate, "YE001", sizeof(sqlca->sqlstate));
     snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc), "out of memory on line %d", lineno);
     sqlca->sqlerrm.sqlerrml = strlen(sqlca->sqlerrm.sqlerrmc);
-    /* free all memory we have allocated for the user */
+                                                        
     ECPGfree_auto_mem();
   }
   else

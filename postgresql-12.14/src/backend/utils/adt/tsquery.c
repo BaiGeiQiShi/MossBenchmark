@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * tsquery.c
- *	  I/O functions for tsquery
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tsquery.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                               
+   
+                                                                         
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -23,17 +23,17 @@
 #include "utils/memutils.h"
 #include "utils/pg_crc.h"
 
-/* FTS operator priorities, see ts_type.h */
+                                            
 const int tsearch_op_priority[OP_COUNT] = {
-    4, /* OP_NOT */
-    2, /* OP_AND */
-    1, /* OP_OR */
-    3  /* OP_PHRASE */
+    4,             
+    2,             
+    1,            
+    3                 
 };
 
-/*
- * parser's states
- */
+   
+                   
+   
 typedef enum
 {
   WAITOPERAND = 1,
@@ -41,9 +41,9 @@ typedef enum
   WAITFIRSTOPERAND = 3
 } ts_parserstate;
 
-/*
- * token types for parsing
- */
+   
+                           
+   
 typedef enum
 {
   PT_END = 0,
@@ -54,49 +54,49 @@ typedef enum
   PT_CLOSE = 5
 } ts_tokentype;
 
-/*
- * get token from query string
- *
- * *operator is filled in with OP_* when return values is PT_OPR,
- * but *weight could contain a distance value in case of phrase operator.
- * *strval, *lenval and *weight are filled in when return value is PT_VAL
- *
- */
+   
+                               
+   
+                                                                  
+                                                                          
+                                                                          
+   
+   
 typedef ts_tokentype (*ts_tokenizer)(TSQueryParserState state, int8 *operator, int * lenval, char **strval, int16 *weight, bool *prefix);
 
 struct TSQueryParserStateData
 {
-  /* Tokenizer used for parsing tsquery */
+                                          
   ts_tokenizer gettoken;
 
-  /* State of tokenizer function */
-  char *buffer;   /* entire string we are scanning */
-  char *buf;      /* current scan point */
-  int count;      /* nesting count, incremented by (,
-                   * decremented by ) */
-  bool in_quotes; /* phrase in quotes "" */
+                                   
+  char *buffer;                                      
+  char *buf;                              
+  int count;                                          
+                                        
+  bool in_quotes;                          
   ts_parserstate state;
 
-  /* polish (prefix) notation in list, filled in by push* functions */
+                                                                      
   List *polstr;
 
-  /*
-   * Strings from operands are collected in op. curop is a pointer to the
-   * end of used space of op.
-   */
+     
+                                                                          
+                              
+     
   char *op;
   char *curop;
-  int lenop;  /* allocated size of op */
-  int sumlen; /* used size of op */
+  int lenop;                            
+  int sumlen;                      
 
-  /* state for value's parser */
+                                
   TSVectorParseState valstate;
 };
 
-/*
- * subroutine to parse the modifiers (weight and prefix flag currently)
- * part, like ':AB*' of a query.
- */
+   
+                                                                        
+                                 
+   
 static char *
 get_modifiers(char *buf, int16 *weight, bool *prefix)
 {
@@ -141,15 +141,15 @@ get_modifiers(char *buf, int16 *weight, bool *prefix)
   return buf;
 }
 
-/*
- * Parse phrase operator. The operator
- * may take the following forms:
- *
- *		a <N> b (distance is exactly N lexemes)
- *		a <-> b (default distance = 1)
- *
- * The buffer should begin with '<' char
- */
+   
+                                       
+                                 
+   
+                                            
+                                   
+   
+                                         
+   
 static bool
 parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
 {
@@ -162,7 +162,7 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
   } state = PHRASE_OPEN;
   char *ptr = pstate->buf;
   char *endptr;
-  long l = 1; /* default distance */
+  long l = 1;                       
 
   while (*ptr)
   {
@@ -232,10 +232,10 @@ parse_phrase_operator(TSQueryParserState pstate, int16 *distance)
   return false;
 }
 
-/*
- * Parse OR operator used in websearch_to_tsquery(), returns true if we
- * believe that "OR" literal could be an operator OR
- */
+   
+                                                                        
+                                                     
+   
 static bool
 parse_or_operator(TSQueryParserState pstate)
 {
@@ -246,7 +246,7 @@ parse_or_operator(TSQueryParserState pstate)
     return false;
   }
 
-  /* it should begin with "OR" literal */
+                                         
   if (pg_strncasecmp(ptr, "or", 2) != 0)
   {
     return false;
@@ -254,16 +254,16 @@ parse_or_operator(TSQueryParserState pstate)
 
   ptr += 2;
 
-  /*
-   * it shouldn't be a part of any word but somewhere later it should be
-   * some operand
-   */
-  if (*ptr == '\0') /* no operand */
+     
+                                                                         
+                  
+     
+  if (*ptr == '\0')                 
   {
     return false;
   }
 
-  /* it shouldn't be a part of any word */
+                                          
   if (t_iseq(ptr, '-') || t_iseq(ptr, '_') || t_isalpha(ptr) || t_isdigit(ptr))
   {
     return false;
@@ -273,16 +273,16 @@ parse_or_operator(TSQueryParserState pstate)
   {
     ptr += pg_mblen(ptr);
 
-    if (*ptr == '\0') /* got end of string without operand */
+    if (*ptr == '\0')                                        
     {
       return false;
     }
 
-    /*
-     * Suppose, we found an operand, but could be a not correct operand.
-     * So we still treat OR literal as operation with possibly incorrect
-     * operand and  will not search it as lexeme
-     */
+       
+                                                                         
+                                                                         
+                                                 
+       
     if (!t_isspace(ptr))
     {
       break;
@@ -325,10 +325,10 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
       }
       else if (!t_isspace(state->buf))
       {
-        /*
-         * We rely on the tsvector parser to parse the value for
-         * us
-         */
+           
+                                                                 
+              
+           
         reset_tsvector_parser(state->valstate, state->buf);
         if (gettoken_tsvector(state->valstate, strval, lenval, NULL, NULL, &state->buf))
         {
@@ -364,7 +364,7 @@ gettoken_query_standard(TSQueryParserState state, int8 *operator, int * lenval, 
       }
       else if (parse_phrase_operator(state, weight))
       {
-        /* weight var is used as storage for distance */
+                                                        
         state->state = WAITOPERAND;
         *operator= OP_PHRASE;
         return PT_OPR;
@@ -425,17 +425,17 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
 
           if (strchr(state->buf, '"'))
           {
-            /* quoted text should be ordered <-> */
+                                                   
             state->in_quotes = true;
             return PT_OPEN;
           }
 
-          /* web search tolerates missing quotes */
+                                                   
           continue;
         }
         else
         {
-          /* we have to provide an operand */
+                                             
           state->in_quotes = false;
           state->state = WAITOPERATOR;
           pushStop(state);
@@ -444,17 +444,17 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
       }
       else if (ISOPERATOR(state->buf))
       {
-        /* or else gettoken_tsvector() will raise an error */
+                                                             
         state->buf++;
         state->state = WAITOPERAND;
         continue;
       }
       else if (!t_isspace(state->buf))
       {
-        /*
-         * We rely on the tsvector parser to parse the value for
-         * us
-         */
+           
+                                                                 
+              
+           
         reset_tsvector_parser(state->valstate, state->buf);
         if (gettoken_tsvector(state->valstate, strval, lenval, NULL, NULL, &state->buf))
         {
@@ -467,7 +467,7 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
         }
         else
         {
-          /* finally, we have to provide an operand */
+                                                      
           pushStop(state);
           return PT_END;
         }
@@ -479,10 +479,10 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
       {
         if (!state->in_quotes)
         {
-          /*
-           * put implicit AND after an operand and handle this
-           * quote in WAITOPERAND
-           */
+             
+                                                               
+                                  
+             
           state->state = WAITOPERAND;
           *operator= OP_AND;
           return PT_OPR;
@@ -491,7 +491,7 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
         {
           state->buf++;
 
-          /* just close quotes */
+                                 
           state->in_quotes = false;
           return PT_CLOSE;
         }
@@ -510,13 +510,13 @@ gettoken_query_websearch(TSQueryParserState state, int8 *operator, int * lenval,
       {
         if (state->in_quotes)
         {
-          /* put implicit <-> after an operand */
+                                                 
           *operator= OP_PHRASE;
           *weight = 1;
         }
         else
         {
-          /* put implicit AND after an operand */
+                                                 
           *operator= OP_AND;
         }
 
@@ -548,9 +548,9 @@ gettoken_query_plain(TSQueryParserState state, int8 *operator, int * lenval, cha
   return PT_VAL;
 }
 
-/*
- * Push an operator to state->polstr
- */
+   
+                                     
+   
 void
 pushOperator(TSQueryParserState state, int8 oper, int16 distance)
 {
@@ -562,7 +562,7 @@ pushOperator(TSQueryParserState state, int8 oper, int16 distance)
   tmp->type = QI_OPR;
   tmp->oper = oper;
   tmp->distance = (oper == OP_PHRASE) ? distance : 0;
-  /* left is filled in later with findoprnd */
+                                              
 
   state->polstr = lcons(tmp, state->polstr);
 }
@@ -592,12 +592,12 @@ pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int 
   state->polstr = lcons(tmp, state->polstr);
 }
 
-/*
- * Push an operand to state->polstr.
- *
- * strval must point to a string equal to state->curop. lenval is the length
- * of the string.
- */
+   
+                                     
+   
+                                                                             
+                  
+   
 void
 pushValue(TSQueryParserState state, char *strval, int lenval, int16 weight, bool prefix)
 {
@@ -613,7 +613,7 @@ pushValue(TSQueryParserState state, char *strval, int lenval, int16 weight, bool
   FIN_LEGACY_CRC32(valcrc);
   pushValue_internal(state, valcrc, state->curop - state->op, lenval, weight, prefix);
 
-  /* append the value string to state.op, enlarging buffer if needed first */
+                                                                             
   while (state->curop - state->op + lenval + 1 >= state->lenop)
   {
     int used = state->curop - state->op;
@@ -626,12 +626,12 @@ pushValue(TSQueryParserState state, char *strval, int lenval, int16 weight, bool
   state->curop += lenval;
   *(state->curop) = '\0';
   state->curop++;
-  state->sumlen += lenval + 1 /* \0 */;
+  state->sumlen += lenval + 1         ;
 }
 
-/*
- * Push a stopword placeholder to state->polstr
- */
+   
+                                                
+   
 void
 pushStop(TSQueryParserState state)
 {
@@ -654,7 +654,7 @@ typedef struct OperatorElement
 static void
 pushOpStack(OperatorElement *stack, int *lenstack, int8 op, int16 distance)
 {
-  if (*lenstack == STACKDEPTH) /* internal error */
+  if (*lenstack == STACKDEPTH)                     
   {
     elog(ERROR, "tsquery stack too small");
   }
@@ -672,7 +672,7 @@ cleanOpStack(TSQueryParserState state, OperatorElement *stack, int *lenstack, in
 
   while (*lenstack)
   {
-    /* NOT is right associative unlike to others */
+                                                   
     if ((op != OP_NOT && opPriority > OP_PRIORITY(stack[*lenstack - 1].op)) || (op == OP_NOT && opPriority >= OP_PRIORITY(stack[*lenstack - 1].op)))
     {
       break;
@@ -683,11 +683,11 @@ cleanOpStack(TSQueryParserState state, OperatorElement *stack, int *lenstack, in
   }
 }
 
-/*
- * Make polish (prefix) notation of query.
- *
- * See parse_tsquery for explanation of pushval.
- */
+   
+                                           
+   
+                                                 
+   
 static void
 makepol(TSQueryParserState state, PushFunction pushval, Datum opaque)
 {
@@ -700,7 +700,7 @@ makepol(TSQueryParserState state, PushFunction pushval, Datum opaque)
   int16 weight = 0;
   bool prefix;
 
-  /* since this function recurses, it could be driven to stack overflow */
+                                                                          
   check_stack_depth();
 
   while ((type = state->gettoken(state, &operator, & lenval, &strval, &weight, &prefix)) != PT_END)
@@ -718,7 +718,7 @@ makepol(TSQueryParserState state, PushFunction pushval, Datum opaque)
       makepol(state, pushval, opaque);
       break;
     case PT_CLOSE:
-      cleanOpStack(state, opstack, &lenstack, OP_OR /* lowest */);
+      cleanOpStack(state, opstack, &lenstack, OP_OR             );
       return;
     case PT_ERR:
     default:
@@ -726,13 +726,13 @@ makepol(TSQueryParserState state, PushFunction pushval, Datum opaque)
     }
   }
 
-  cleanOpStack(state, opstack, &lenstack, OP_OR /* lowest */);
+  cleanOpStack(state, opstack, &lenstack, OP_OR             );
 }
 
 static void
 findoprnd_recurse(QueryItem *ptr, uint32 *pos, int nnodes, bool *needcleanup)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (*pos >= nnodes)
@@ -746,7 +746,7 @@ findoprnd_recurse(QueryItem *ptr, uint32 *pos, int nnodes, bool *needcleanup)
   }
   else if (ptr[*pos].type == QI_VALSTOP)
   {
-    *needcleanup = true; /* we'll have to remove stop words */
+    *needcleanup = true;                                      
     (*pos)++;
   }
   else
@@ -755,37 +755,37 @@ findoprnd_recurse(QueryItem *ptr, uint32 *pos, int nnodes, bool *needcleanup)
 
     if (ptr[*pos].qoperator.oper == OP_NOT)
     {
-      ptr[*pos].qoperator.left = 1; /* fixed offset */
+      ptr[*pos].qoperator.left = 1;                   
       (*pos)++;
 
-      /* process the only argument */
+                                     
       findoprnd_recurse(ptr, pos, nnodes, needcleanup);
     }
     else
     {
       QueryOperator *curitem = &ptr[*pos].qoperator;
-      int tmp = *pos; /* save current position */
+      int tmp = *pos;                            
 
       Assert(curitem->oper == OP_AND || curitem->oper == OP_OR || curitem->oper == OP_PHRASE);
 
       (*pos)++;
 
-      /* process RIGHT argument */
+                                  
       findoprnd_recurse(ptr, pos, nnodes, needcleanup);
 
-      curitem->left = *pos - tmp; /* set LEFT arg's offset */
+      curitem->left = *pos - tmp;                            
 
-      /* process LEFT argument */
+                                 
       findoprnd_recurse(ptr, pos, nnodes, needcleanup);
     }
   }
 }
 
-/*
- * Fill in the left-fields previously left unfilled.
- * The input QueryItems must be in polish (prefix) notation.
- * Also, set *needcleanup to true if there are any QI_VALSTOP nodes.
- */
+   
+                                                     
+                                                             
+                                                                     
+   
 static void
 findoprnd(QueryItem *ptr, int size, bool *needcleanup)
 {
@@ -801,17 +801,17 @@ findoprnd(QueryItem *ptr, int size, bool *needcleanup)
   }
 }
 
-/*
- * Each value (operand) in the query is passed to pushval. pushval can
- * transform the simple value to an arbitrarily complex expression using
- * pushValue and pushOperator. It must push a single value with pushValue,
- * a complete expression with all operands, or a stopword placeholder
- * with pushStop, otherwise the prefix notation representation will be broken,
- * having an operator with no operand.
- *
- * opaque is passed on to pushval as is, pushval can use it to store its
- * private state.
- */
+   
+                                                                       
+                                                                         
+                                                                           
+                                                                      
+                                                                               
+                                       
+   
+                                                                         
+                  
+   
 TSQuery
 parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
 {
@@ -824,10 +824,10 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
   bool needcleanup;
   int tsv_flags = P_TSV_OPR_IS_DELIM | P_TSV_IS_TSQUERY;
 
-  /* plain should not be used with web */
+                                         
   Assert((flags & (P_TSQ_PLAIN | P_TSQ_WEB)) != (P_TSQ_PLAIN | P_TSQ_WEB));
 
-  /* select suitable tokenizer */
+                                 
   if (flags & P_TSQ_PLAIN)
   {
     state.gettoken = gettoken_query_plain;
@@ -842,7 +842,7 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
     state.gettoken = gettoken_query_standard;
   }
 
-  /* init state */
+                  
   state.buffer = buf;
   state.buf = buf;
   state.count = 0;
@@ -850,16 +850,16 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
   state.state = WAITFIRSTOPERAND;
   state.polstr = NIL;
 
-  /* init value parser's state */
+                                 
   state.valstate = init_tsvector_parser(state.buffer, tsv_flags);
 
-  /* init list of operand */
+                            
   state.sumlen = 0;
   state.lenop = 64;
   state.curop = state.op = (char *)palloc(state.lenop);
   *(state.curop) = '\0';
 
-  /* parse query & make polish notation (postfix, but in reverse order) */
+                                                                          
   makepol(&state, pushval, opaque);
 
   close_tsvector_parser(state.valstate);
@@ -879,13 +879,13 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
   }
   commonlen = COMPUTESIZE(list_length(state.polstr), state.sumlen);
 
-  /* Pack the QueryItems in the final TSQuery struct to return to caller */
+                                                                           
   query = (TSQuery)palloc0(commonlen);
   SET_VARSIZE(query, commonlen);
   query->size = list_length(state.polstr);
   ptr = GETQUERY(query);
 
-  /* Copy QueryItems to TSQuery */
+                                  
   i = 0;
   foreach (cell, state.polstr)
   {
@@ -908,19 +908,19 @@ parse_tsquery(char *buf, PushFunction pushval, Datum opaque, int flags)
     i++;
   }
 
-  /* Copy all the operand strings to TSQuery */
+                                               
   memcpy((void *)GETOPERAND(query), (void *)state.op, state.sumlen);
   pfree(state.op);
 
-  /*
-   * Set left operand pointers for every operator.  While we're at it,
-   * detect whether there are any QI_VALSTOP nodes.
-   */
+     
+                                                                       
+                                                    
+     
   findoprnd(ptr, query->size, &needcleanup);
 
-  /*
-   * If there are QI_VALSTOP nodes, delete them and simplify the tree.
-   */
+     
+                                                                       
+     
   if (needcleanup)
   {
     query = cleanup_tsquery_stopwords(query);
@@ -935,9 +935,9 @@ pushval_asis(Datum opaque, TSQueryParserState state, char *strval, int lenval, i
   pushValue(state, strval, lenval, weight, prefix);
 }
 
-/*
- * in without morphology
- */
+   
+                         
+   
 Datum
 tsqueryin(PG_FUNCTION_ARGS)
 {
@@ -946,9 +946,9 @@ tsqueryin(PG_FUNCTION_ARGS)
   PG_RETURN_TSQUERY(parse_tsquery(in, pushval_asis, PointerGetDatum(NULL), 0));
 }
 
-/*
- * out function
- */
+   
+                
+   
 typedef struct
 {
   QueryItem *curpol;
@@ -958,7 +958,7 @@ typedef struct
   int buflen;
 } INFIX;
 
-/* Makes sure inf->buf is large enough for adding 'addsize' bytes */
+                                                                    
 #define RESIZEBUF(inf, addsize)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
   while (((inf)->cur - (inf)->buf) + (addsize) + 1 >= (inf)->buflen)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -968,14 +968,14 @@ typedef struct
     (inf)->cur = (inf)->buf + len;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
   }
 
-/*
- * recursively traverse the tree and
- * print it in infix (human-readable) form
- */
+   
+                                     
+                                           
+   
 static void
 infix(INFIX *in, int parentPriority, bool rightPhraseOp)
 {
-  /* since this function recurses, it could be driven to stack overflow. */
+                                                                           
   check_stack_depth();
 
   if (in->curpol->type == QI_VAL)
@@ -1074,7 +1074,7 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
 
     in->curpol++;
     if (priority < parentPriority ||
-        /* phrase operator depends on order */
+                                              
         (op == OP_PHRASE && rightPhraseOp))
     {
       needParenthesis = true;
@@ -1088,15 +1088,15 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
     nrm.buflen = 16;
     nrm.cur = nrm.buf = (char *)palloc(sizeof(char) * nrm.buflen);
 
-    /* get right operand */
+                           
     infix(&nrm, priority, (op == OP_PHRASE));
 
-    /* get & print left operand */
+                                  
     in->curpol = nrm.curpol;
     infix(in, priority, false);
 
-    /* print operator & right operand */
-    RESIZEBUF(in, 3 + (2 + 10 /* distance */) + (nrm.cur - nrm.buf));
+                                        
+    RESIZEBUF(in, 3 + (2 + 10               ) + (nrm.cur - nrm.buf));
     switch (op)
     {
     case OP_OR:
@@ -1116,7 +1116,7 @@ infix(INFIX *in, int parentPriority, bool rightPhraseOp)
       }
       break;
     default:
-      /* OP_NOT is handled in above if-branch */
+                                                
       elog(ERROR, "unrecognized operator type: %d", op);
     }
     in->cur = strchr(in->cur, '\0');
@@ -1149,30 +1149,30 @@ tsqueryout(PG_FUNCTION_ARGS)
   nrm.cur = nrm.buf = (char *)palloc(sizeof(char) * nrm.buflen);
   *(nrm.cur) = '\0';
   nrm.op = GETOPERAND(query);
-  infix(&nrm, -1 /* lowest priority */, false);
+  infix(&nrm, -1                      , false);
 
   PG_FREE_IF_COPY(query, 0);
   PG_RETURN_CSTRING(nrm.buf);
 }
 
-/*
- * Binary Input / Output functions. The binary format is as follows:
- *
- * uint32	 number of operators/operands in the query
- *
- * Followed by the operators and operands, in prefix notation. For each
- * operand:
- *
- * uint8	type, QI_VAL
- * uint8	weight
- *			operand text in client encoding, null-terminated
- * uint8	prefix
- *
- * For each operator:
- * uint8	type, QI_OPR
- * uint8	operator, one of OP_AND, OP_PHRASE OP_OR, OP_NOT.
- * uint16	distance (only for OP_PHRASE)
- */
+   
+                                                                     
+   
+                                                     
+   
+                                                                        
+            
+   
+                      
+                
+                                                      
+                
+   
+                      
+                      
+                                                           
+                                        
+   
 Datum
 tsquerysend(PG_FUNCTION_ARGS)
 {
@@ -1232,10 +1232,10 @@ tsqueryrecv(PG_FUNCTION_ARGS)
     elog(ERROR, "invalid size of tsquery");
   }
 
-  /* Allocate space to temporarily hold operand strings */
+                                                          
   operands = palloc(size * sizeof(char *));
 
-  /* Allocate space for all the QueryItems. */
+                                              
   len = HDRSIZETQ + sizeof(QueryItem) * size;
   query = (TSQuery)palloc0(len);
   query->size = size;
@@ -1248,8 +1248,8 @@ tsqueryrecv(PG_FUNCTION_ARGS)
 
     if (item->type == QI_VAL)
     {
-      size_t val_len; /* length after recoding to server
-                       * encoding */
+      size_t val_len;                                    
+                                    
       uint8 weight;
       uint8 prefix;
       const char *val;
@@ -1260,7 +1260,7 @@ tsqueryrecv(PG_FUNCTION_ARGS)
       val = pq_getmsgstring(buf);
       val_len = strlen(val);
 
-      /* Sanity checks */
+                         
 
       if (weight > 0xF)
       {
@@ -1277,7 +1277,7 @@ tsqueryrecv(PG_FUNCTION_ARGS)
         elog(ERROR, "invalid tsquery: total operand length exceeded");
       }
 
-      /* Looks valid. */
+                        
 
       INIT_LEGACY_CRC32(valcrc);
       COMP_LEGACY_CRC32(valcrc, val, val_len);
@@ -1289,13 +1289,13 @@ tsqueryrecv(PG_FUNCTION_ARGS)
       item->qoperand.length = val_len;
       item->qoperand.distance = datalen;
 
-      /*
-       * Operand strings are copied to the final struct after this loop;
-       * here we just collect them to an array
-       */
+         
+                                                                         
+                                               
+         
       operands[i] = val;
 
-      datalen += val_len + 1; /* + 1 for the '\0' terminator */
+      datalen += val_len + 1;                                  
     }
     else if (item->type == QI_OPR)
     {
@@ -1325,21 +1325,21 @@ tsqueryrecv(PG_FUNCTION_ARGS)
     item++;
   }
 
-  /* Enlarge buffer to make room for the operand values. */
+                                                           
   query = (TSQuery)repalloc(query, len + datalen);
   item = GETQUERY(query);
   ptr = GETOPERAND(query);
 
-  /*
-   * Fill in the left-pointers. Checks that the tree is well-formed as a
-   * side-effect.
-   */
+     
+                                                                         
+                  
+     
   findoprnd(item, size, &needcleanup);
 
-  /* Can't have found any QI_VALSTOP nodes */
+                                             
   Assert(!needcleanup);
 
-  /* Copy operands to output struct */
+                                      
   for (i = 0; i < size; i++)
   {
     if (item->type == QI_VAL)
@@ -1359,10 +1359,10 @@ tsqueryrecv(PG_FUNCTION_ARGS)
   PG_RETURN_TSQUERY(query);
 }
 
-/*
- * debug function, used only for view query
- * which will be executed in non-leaf pages in index
- */
+   
+                                            
+                                                     
+   
 Datum
 tsquerytree(PG_FUNCTION_ARGS)
 {

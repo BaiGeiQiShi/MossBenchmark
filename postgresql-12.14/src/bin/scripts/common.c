@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- *	common.c
- *		Common support routines for bin/scripts/
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/scripts/common.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                             
+   
+   
+                                                                         
+                                                                        
+   
+                            
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -22,11 +22,11 @@
 #include "fe_utils/connect.h"
 #include "fe_utils/string_utils.h"
 
-/*
- * Write a simple string to stderr --- must be safe in a signal handler.
- * We ignore the write() result since there's not much we could do about it.
- * Certain compilers make that harder than it ought to be.
- */
+   
+                                                                         
+                                                                             
+                                                           
+   
 #define write_stderr(str)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -45,10 +45,10 @@ bool CancelRequested = false;
 static CRITICAL_SECTION cancelConnLock;
 #endif
 
-/*
- * Provide strictly harmonized handling of --help and --version
- * options.
- */
+   
+                                                                
+            
+   
 void
 handle_help_version_opts(int argc, char *argv[], const char *fixed_progname, help_handler hlp)
 {
@@ -67,17 +67,17 @@ handle_help_version_opts(int argc, char *argv[], const char *fixed_progname, hel
   }
 }
 
-/*
- * Make a database connection with the given parameters.
- *
- * An interactive password prompt is automatically issued if needed and
- * allowed by cparams->prompt_password.
- *
- * If allow_password_reuse is true, we will try to re-use any password
- * given during previous calls to this routine.  (Callers should not pass
- * allow_password_reuse=true unless reconnecting to the same database+user
- * as before, else we might create password exposure hazards.)
- */
+   
+                                                         
+   
+                                                                        
+                                        
+   
+                                                                       
+                                                                          
+                                                                           
+                                                               
+   
 PGconn *
 connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool fail_ok, bool allow_password_reuse)
 {
@@ -86,7 +86,7 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
   static bool have_password = false;
   static char password[100];
 
-  /* Callers must supply at least dbname; other params can be NULL */
+                                                                     
   Assert(cparams->dbname);
 
   if (!allow_password_reuse)
@@ -100,21 +100,21 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     have_password = true;
   }
 
-  /*
-   * Start the connection.  Loop until we have a password if requested by
-   * backend.
-   */
+     
+                                                                          
+              
+     
   do
   {
     const char *keywords[8];
     const char *values[8];
     int i = 0;
 
-    /*
-     * If dbname is a connstring, its entries can override the other
-     * values obtained from cparams; but in turn, override_dbname can
-     * override the dbname component of it.
-     */
+       
+                                                                     
+                                                                      
+                                            
+       
     keywords[i] = "host";
     values[i++] = cparams->pghost;
     keywords[i] = "port";
@@ -145,9 +145,9 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
       exit(1);
     }
 
-    /*
-     * No luck?  Trying asking (again) for a password.
-     */
+       
+                                                       
+       
     if (PQstatus(conn) == CONNECTION_BAD && PQconnectionNeedsPassword(conn) && cparams->prompt_password != TRI_NO)
     {
       PQfinish(conn);
@@ -157,7 +157,7 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     }
   } while (new_pass);
 
-  /* check to see that the backend connection was successfully made */
+                                                                      
   if (PQstatus(conn) == CONNECTION_BAD)
   {
     if (fail_ok)
@@ -169,32 +169,32 @@ connectDatabase(const ConnParams *cparams, const char *progname, bool echo, bool
     exit(1);
   }
 
-  /* Start strict; callers may override this. */
+                                                
   PQclear(executeQuery(conn, ALWAYS_SECURE_SEARCH_PATH_SQL, progname, echo));
 
   return conn;
 }
 
-/*
- * Try to connect to the appropriate maintenance database.
- *
- * This differs from connectDatabase only in that it has a rule for
- * inserting a default "dbname" if none was given (which is why cparams
- * is not const).  Note that cparams->dbname should typically come from
- * a --maintenance-db command line parameter.
- */
+   
+                                                           
+   
+                                                                    
+                                                                        
+                                                                        
+                                              
+   
 PGconn *
 connectMaintenanceDatabase(ConnParams *cparams, const char *progname, bool echo)
 {
   PGconn *conn;
 
-  /* If a maintenance database name was specified, just connect to it. */
+                                                                         
   if (cparams->dbname)
   {
     return connectDatabase(cparams, progname, echo, false, false);
   }
 
-  /* Otherwise, try postgres first and then template1. */
+                                                         
   cparams->dbname = "postgres";
   conn = connectDatabase(cparams, progname, echo, true, false);
   if (!conn)
@@ -205,9 +205,9 @@ connectMaintenanceDatabase(ConnParams *cparams, const char *progname, bool echo)
   return conn;
 }
 
-/*
- * Run a query, return the results, exit program on failure.
- */
+   
+                                                             
+   
 PGresult *
 executeQuery(PGconn *conn, const char *query, const char *progname, bool echo)
 {
@@ -230,9 +230,9 @@ executeQuery(PGconn *conn, const char *query, const char *progname, bool echo)
   return res;
 }
 
-/*
- * As above for a SQL command (which returns nothing).
- */
+   
+                                                       
+   
 void
 executeCommand(PGconn *conn, const char *query, const char *progname, bool echo)
 {
@@ -255,11 +255,11 @@ executeCommand(PGconn *conn, const char *query, const char *progname, bool echo)
   PQclear(res);
 }
 
-/*
- * As above for a SQL maintenance command (returns command success).
- * Command is executed with a cancel handler set, so Ctrl-C can
- * interrupt it.
- */
+   
+                                                                     
+                                                                
+                 
+   
 bool
 executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
 {
@@ -285,28 +285,28 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
   return r;
 }
 
-/*
- * Split TABLE[(COLUMNS)] into TABLE and [(COLUMNS)] portions.  When you
- * finish using them, pg_free(*table).  *columns is a pointer into "spec",
- * possibly to its NUL terminator.
- */
+   
+                                                                         
+                                                                           
+                                   
+   
 void
 splitTableColumnsSpec(const char *spec, int encoding, char **table, const char **columns)
 {
   bool inquotes = false;
   const char *cp = spec;
 
-  /*
-   * Find the first '(' not identifier-quoted.  Based on
-   * dequote_downcase_identifier().
-   */
+     
+                                                         
+                                    
+     
   while (*cp && (*cp != '(' || inquotes))
   {
     if (*cp == '"')
     {
       if (inquotes && cp[1] == '"')
       {
-        cp++; /* pair does not affect quoting */
+        cp++;                                   
       }
       else
       {
@@ -320,17 +320,17 @@ splitTableColumnsSpec(const char *spec, int encoding, char **table, const char *
     }
   }
   *table = pg_strdup(spec);
-  (*table)[cp - spec] = '\0'; /* no strndup */
+  (*table)[cp - spec] = '\0';                 
   *columns = cp;
 }
 
-/*
- * Break apart TABLE[(COLUMNS)] of "spec".  With the reset_val of search_path
- * in effect, have regclassin() interpret the TABLE portion.  Append to "buf"
- * the qualified name of TABLE, followed by any (COLUMNS).  Exit on failure.
- * We use this to interpret --table=foo under the search path psql would get,
- * in advance of "ANALYZE public.foo" under the always-secure search path.
- */
+   
+                                                                              
+                                                                              
+                                                                             
+                                                                              
+                                                                           
+   
 void
 appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const char *progname, bool echo)
 {
@@ -342,11 +342,11 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const c
 
   splitTableColumnsSpec(spec, PQclientEncoding(conn), &table, &columns);
 
-  /*
-   * Query must remain ABSOLUTELY devoid of unqualified names.  This would
-   * be unnecessary given a regclassin() variant taking a search_path
-   * argument.
-   */
+     
+                                                                           
+                                                                      
+               
+     
   initPQExpBuffer(&sql);
   appendPQExpBufferStr(&sql, "SELECT c.relname, ns.nspname\n"
                              " FROM pg_catalog.pg_class c,"
@@ -358,12 +358,12 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const c
 
   executeCommand(conn, "RESET search_path;", progname, echo);
 
-  /*
-   * One row is a typical result, as is a nonexistent relation ERROR.
-   * regclassin() unconditionally accepts all-digits input as an OID; if no
-   * relation has that OID; this query returns no rows.  Catalog corruption
-   * might elicit other row counts.
-   */
+     
+                                                                      
+                                                                            
+                                                                            
+                                    
+     
   res = executeQuery(conn, sql.data, progname, echo);
   ntups = PQntuples(res);
   if (ntups != 1)
@@ -381,13 +381,13 @@ appendQualifiedRelation(PQExpBuffer buf, const char *spec, PGconn *conn, const c
   PQclear(executeQuery(conn, ALWAYS_SECURE_SEARCH_PATH_SQL, progname, echo));
 }
 
-/*
- * Check yes/no answer in a localized way.  1=yes, 0=no, -1=neither.
- */
+   
+                                                                     
+   
 
-/* translator: abbreviation for "yes" */
+                                        
 #define PG_YESLETTER gettext_noop("y")
-/* translator: abbreviation for "no" */
+                                       
 #define PG_NOLETTER gettext_noop("n")
 
 bool
@@ -395,9 +395,9 @@ yesno_prompt(const char *question)
 {
   char prompt[256];
 
-  /*------
-     translator: This is a question followed by the translated options for
-     "yes" and "no". */
+           
+                                                                           
+                       
   snprintf(prompt, sizeof(prompt), _("%s (%s/%s) "), _(question), _(PG_YESLETTER), _(PG_NOLETTER));
 
   for (;;)
@@ -419,11 +419,11 @@ yesno_prompt(const char *question)
   }
 }
 
-/*
- * SetCancelConn
- *
- * Set cancelConn to point to the current database connection.
- */
+   
+                 
+   
+                                                               
+   
 void
 SetCancelConn(PGconn *conn)
 {
@@ -433,10 +433,10 @@ SetCancelConn(PGconn *conn)
   EnterCriticalSection(&cancelConnLock);
 #endif
 
-  /* Free the old one if we have one */
+                                       
   oldCancelConn = cancelConn;
 
-  /* be sure handle_sigint doesn't use pointer while freeing */
+                                                               
   cancelConn = NULL;
 
   if (oldCancelConn != NULL)
@@ -451,11 +451,11 @@ SetCancelConn(PGconn *conn)
 #endif
 }
 
-/*
- * ResetCancelConn
- *
- * Free the current cancel connection, if any, and set to NULL.
- */
+   
+                   
+   
+                                                                
+   
 void
 ResetCancelConn(void)
 {
@@ -467,7 +467,7 @@ ResetCancelConn(void)
 
   oldCancelConn = cancelConn;
 
-  /* be sure handle_sigint doesn't use pointer while freeing */
+                                                               
   cancelConn = NULL;
 
   if (oldCancelConn != NULL)
@@ -481,17 +481,17 @@ ResetCancelConn(void)
 }
 
 #ifndef WIN32
-/*
- * Handle interrupt signals by canceling the current command, if a cancelConn
- * is set.
- */
+   
+                                                                              
+           
+   
 static void
 handle_sigint(SIGNAL_ARGS)
 {
   int save_errno = errno;
   char errbuf[256];
 
-  /* Send QueryCancel if we are processing a database query */
+                                                              
   if (cancelConn != NULL)
   {
     if (PQcancel(cancelConn, errbuf, sizeof(errbuf)))
@@ -510,7 +510,7 @@ handle_sigint(SIGNAL_ARGS)
     CancelRequested = true;
   }
 
-  errno = save_errno; /* just in case the write changed it */
+  errno = save_errno;                                        
 }
 
 void
@@ -518,13 +518,13 @@ setup_cancel_handler(void)
 {
   pqsignal(SIGINT, handle_sigint);
 }
-#else /* WIN32 */
+#else            
 
-/*
- * Console control handler for Win32. Note that the control handler will
- * execute on a *different thread* than the main one, so we need to do
- * proper locking around those structures.
- */
+   
+                                                                         
+                                                                       
+                                           
+   
 static BOOL WINAPI
 consoleHandler(DWORD dwCtrlType)
 {
@@ -532,7 +532,7 @@ consoleHandler(DWORD dwCtrlType)
 
   if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT)
   {
-    /* Send QueryCancel if we are processing a database query */
+                                                                
     EnterCriticalSection(&cancelConnLock);
     if (cancelConn != NULL)
     {
@@ -558,7 +558,7 @@ consoleHandler(DWORD dwCtrlType)
   }
   else
   {
-    /* Return FALSE for any signals not being handled */
+                                                        
     return FALSE;
   }
 }
@@ -571,4 +571,4 @@ setup_cancel_handler(void)
   SetConsoleCtrlHandler(consoleHandler, TRUE);
 }
 
-#endif /* WIN32 */
+#endif            

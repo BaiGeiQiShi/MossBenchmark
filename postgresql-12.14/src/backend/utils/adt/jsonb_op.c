@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * jsonb_op.c
- *	 Special operators for jsonb only, used by various index access methods
- *
- * Copyright (c) 2014-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/jsonb_op.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                                                           
+   
+                                                                
+   
+   
+                  
+                                      
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "catalog/pg_type.h"
@@ -26,12 +26,12 @@ jsonb_exists(PG_FUNCTION_ARGS)
   JsonbValue kval;
   JsonbValue *v = NULL;
 
-  /*
-   * We only match Object keys (which are naturally always Strings), or
-   * string elements in arrays.  In particular, we do not match non-string
-   * scalar elements.  Existence of a key/element is only considered at the
-   * top level.  No recursion occurs.
-   */
+     
+                                                                        
+                                                                           
+                                                                            
+                                      
+     
   kval.type = jbvString;
   kval.val.string.val = VARDATA_ANY(key);
   kval.val.string.len = VARSIZE_ANY_EXHDR(key);
@@ -131,7 +131,7 @@ jsonb_contains(PG_FUNCTION_ARGS)
 Datum
 jsonb_contained(PG_FUNCTION_ARGS)
 {
-  /* Commutator of "contains" */
+                                
   Jsonb *tmpl = PG_GETARG_JSONB_P(0);
   Jsonb *val = PG_GETARG_JSONB_P(1);
 
@@ -162,9 +162,9 @@ jsonb_ne(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(res);
 }
 
-/*
- * B-Tree operator class operators, support function
- */
+   
+                                                     
+   
 Datum
 jsonb_lt(PG_FUNCTION_ARGS)
 {
@@ -249,9 +249,9 @@ jsonb_cmp(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(res);
 }
 
-/*
- * Hash operator class jsonb hashing function
- */
+   
+                                              
+   
 Datum
 jsonb_hash(PG_FUNCTION_ARGS)
 {
@@ -272,7 +272,7 @@ jsonb_hash(PG_FUNCTION_ARGS)
   {
     switch (r)
     {
-      /* Rotation is left to JsonbHashScalarValue() */
+                                                      
     case WJB_BEGIN_ARRAY:
       hash ^= JB_FARRAY;
       break;
@@ -317,7 +317,7 @@ jsonb_hash_extended(PG_FUNCTION_ARGS)
   {
     switch (r)
     {
-      /* Rotation is left to JsonbHashScalarValueExtended() */
+                                                              
     case WJB_BEGIN_ARRAY:
       hash ^= ((uint64)JB_FARRAY) << 32 | JB_FARRAY;
       break;

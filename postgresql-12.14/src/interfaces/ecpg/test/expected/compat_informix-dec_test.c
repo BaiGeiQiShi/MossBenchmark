@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "dec_test.pgc"
@@ -21,15 +21,15 @@
 #line 8 "dec_test.pgc"
 
 #line 1 "printf_hack.h"
-/*
- * print_double(x) has the same effect as printf("%g", x), but is intended
- * to produce the same formatting across all platforms.
- */
+   
+                                                                           
+                                                        
+   
 static void
 print_double(double x)
 {
 #ifdef WIN32
-  /* Change Windows' 3-digit exponents to look like everyone else's */
+                                                                      
   char convert[128];
   int vallen;
 
@@ -51,17 +51,17 @@ print_double(double x)
 
 #line 10 "dec_test.pgc"
 
-/*
-TODO:
-        deccmp => DECUNKNOWN
-        decimal point: , and/or . ?
-        ECPG_INFORMIX_BAD_EXPONENT ?
-*/
+   
+      
+                             
+                                    
+                                     
+  
 
-char *decs[] = {"2E394", "-2", ".794", "3.44", "592.49E21", "-32.84e4", "2E-394", ".1E-2", "+.0", "-592.49E-07", "+32.84e-4", ".500001", "-.5000001", "1234567890123456789012345678.91", /* 30 digits should fit
-                                                                                                                                                                                            into decimal */
-    "1234567890123456789012345678.921",                                                                                                                                                  /* 31 digits should NOT
-                                                                                                                                                                                            fit into decimal */
+char *decs[] = {"2E394", "-2", ".794", "3.44", "592.49E21", "-32.84e4", "2E-394", ".1E-2", "+.0", "-592.49E-07", "+32.84e-4", ".500001", "-.5000001", "1234567890123456789012345678.91",                         
+                                                                                                                                                                                                           
+    "1234567890123456789012345678.921",                                                                                                                                                                          
+                                                                                                                                                                                                               
     "not a number", NULL};
 
 static void
@@ -167,8 +167,8 @@ main(void)
 
     if (i != 6)
     {
-      /* underflow does not work reliable on several archs, so not testing it here */
-      /* this is a libc problem since we only call strtod() */
+                                                                                     
+                                                              
       r = dectodbl(dec, &dbl);
       if (r)
       {
@@ -183,7 +183,7 @@ main(void)
     printf("\n");
   }
 
-  /* add a NULL value */
+                        
   dec = PGTYPESdecimal_new();
   decarr = realloc(decarr, sizeof(decimal *) * (count + 1));
   decarr[count++] = dec;

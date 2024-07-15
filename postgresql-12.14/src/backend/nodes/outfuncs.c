@@ -1,30 +1,30 @@
-/*-------------------------------------------------------------------------
- *
- * outfuncs.c
- *	  Output functions for Postgres tree nodes.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/nodes/outfuncs.c
- *
- * NOTES
- *	  Every node type that can appear in stored rules' parsetrees *must*
- *	  have an output function defined here (as well as an input function
- *	  in readfuncs.c).  In addition, plan nodes should have input and
- *	  output functions so that they can be sent to parallel workers.
- *
- *	  For use in debugging, we also provide output functions for nodes
- *	  that appear in raw parsetrees and planner Paths.  These node types
- *	  need not have input functions.  Output support for raw parsetrees
- *	  is somewhat incomplete, too; in particular, utility statements are
- *	  almost entirely unsupported.  We try to support everything that can
- *	  appear in a raw SELECT, though.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+              
+                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                  
+   
+         
+                                                                        
+                                                                        
+                                                                     
+                                                                    
+   
+                                                                      
+                                                                        
+                                                                       
+                                                                        
+                                                                         
+                                     
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -40,53 +40,53 @@
 static void
 outChar(StringInfo str, char c);
 
-/*
- * Macros to simplify output of different kinds of fields.  Use these
- * wherever possible to reduce the chance for silly typos.  Note that these
- * hard-wire conventions about the names of the local variables in an Out
- * routine.
- */
+   
+                                                                      
+                                                                            
+                                                                          
+            
+   
 
-/* Write the label for the node type */
+                                       
 #define WRITE_NODE_TYPE(nodelabel) appendStringInfoString(str, nodelabel)
 
-/* Write an integer field (anything written as ":fldname %d") */
+                                                                
 #define WRITE_INT_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %d", node->fldname)
 
-/* Write an unsigned integer field (anything written as ":fldname %u") */
+                                                                         
 #define WRITE_UINT_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %u", node->fldname)
 
-/* Write an unsigned integer field (anything written with UINT64_FORMAT) */
+                                                                           
 #define WRITE_UINT64_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " " UINT64_FORMAT, node->fldname)
 
-/* Write an OID field (don't hard-wire assumption that OID is same as uint) */
+                                                                              
 #define WRITE_OID_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %u", node->fldname)
 
-/* Write a long-integer field */
+                                
 #define WRITE_LONG_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %ld", node->fldname)
 
-/* Write a char field (ie, one ascii character) */
+                                                  
 #define WRITE_CHAR_FIELD(fldname) (appendStringInfo(str, " :" CppAsString(fldname) " "), outChar(str, node->fldname))
 
-/* Write an enumerated-type field as an integer code */
+                                                       
 #define WRITE_ENUM_FIELD(fldname, enumtype) appendStringInfo(str, " :" CppAsString(fldname) " %d", (int)node->fldname)
 
-/* Write a float field --- caller must give format to define precision */
+                                                                         
 #define WRITE_FLOAT_FIELD(fldname, format) appendStringInfo(str, " :" CppAsString(fldname) " " format, node->fldname)
 
-/* Write a boolean field */
+                           
 #define WRITE_BOOL_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %s", booltostr(node->fldname))
 
-/* Write a character-string (possibly NULL) field */
+                                                    
 #define WRITE_STRING_FIELD(fldname) (appendStringInfoString(str, " :" CppAsString(fldname) " "), outToken(str, node->fldname))
 
-/* Write a parse location field (actually same as INT case) */
+                                                              
 #define WRITE_LOCATION_FIELD(fldname) appendStringInfo(str, " :" CppAsString(fldname) " %d", node->fldname)
 
-/* Write a Node field */
+                        
 #define WRITE_NODE_FIELD(fldname) (appendStringInfoString(str, " :" CppAsString(fldname) " "), outNode(str, node->fldname))
 
-/* Write a bitmapset field */
+                             
 #define WRITE_BITMAPSET_FIELD(fldname) (appendStringInfoString(str, " :" CppAsString(fldname) " "), outBitmapset(str, node->fldname))
 
 #define WRITE_ATTRNUMBER_ARRAY(fldname, len)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
@@ -123,13 +123,13 @@ outChar(StringInfo str, char c);
 
 #define booltostr(x) ((x) ? "true" : "false")
 
-/*
- * outToken
- *	  Convert an ordinary string (eg, an identifier) into a form that
- *	  will be decoded back to a plain token by read.c's functions.
- *
- *	  If a null or empty string is given, it is encoded as "<>".
- */
+   
+            
+                                                                     
+                                                                  
+   
+                                                                
+   
 void
 outToken(StringInfo str, const char *s)
 {
@@ -139,19 +139,19 @@ outToken(StringInfo str, const char *s)
     return;
   }
 
-  /*
-   * Look for characters or patterns that are treated specially by read.c
-   * (either in pg_strtok() or in nodeRead()), and therefore need a
-   * protective backslash.
-   */
-  /* These characters only need to be quoted at the start of the string */
+     
+                                                                          
+                                                                    
+                           
+     
+                                                                          
   if (*s == '<' || *s == '"' || isdigit((unsigned char)*s) || ((*s == '+' || *s == '-') && (isdigit((unsigned char)s[1]) || s[1] == '.')))
   {
     appendStringInfoChar(str, '\\');
   }
   while (*s)
   {
-    /* These chars must be backslashed anywhere in the string */
+                                                                
     if (*s == ' ' || *s == '\n' || *s == '\t' || *s == '(' || *s == ')' || *s == '{' || *s == '}' || *s == '\\')
     {
       appendStringInfoChar(str, '\\');
@@ -160,10 +160,10 @@ outToken(StringInfo str, const char *s)
   }
 }
 
-/*
- * Convert one char.  Goes through outToken() so that special characters are
- * escaped.
- */
+   
+                                                                             
+            
+   
 static void
 outChar(StringInfo str, char c)
 {
@@ -193,11 +193,11 @@ _outList(StringInfo str, const List *node)
 
   foreach (lc, node)
   {
-    /*
-     * For the sake of backward compatibility, we emit a slightly
-     * different whitespace format for lists of nodes vs. other types of
-     * lists. XXX: is this necessary?
-     */
+       
+                                                                  
+                                                                         
+                                      
+       
     if (IsA(node, List))
     {
       outNode(str, lfirst(lc));
@@ -223,12 +223,12 @@ _outList(StringInfo str, const List *node)
   appendStringInfoChar(str, ')');
 }
 
-/*
- * outBitmapset -
- *	   converts a bitmap set of integers
- *
- * Note: the output format is "(b int int ...)", similar to an integer List.
- */
+   
+                  
+                                        
+   
+                                                                             
+   
 void
 outBitmapset(StringInfo str, const Bitmapset *bms)
 {
@@ -244,9 +244,9 @@ outBitmapset(StringInfo str, const Bitmapset *bms)
   appendStringInfoChar(str, ')');
 }
 
-/*
- * Print the value of a Datum given its type.
- */
+   
+                                              
+   
 void
 outDatum(StringInfo str, Datum value, int typlen, bool typbyval)
 {
@@ -284,9 +284,9 @@ outDatum(StringInfo str, Datum value, int typlen, bool typbyval)
   }
 }
 
-/*
- *	Stuff from plannodes.h
- */
+   
+                          
+   
 
 static void
 _outPlannedStmt(StringInfo str, const PlannedStmt *node)
@@ -317,9 +317,9 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
   WRITE_LOCATION_FIELD(stmt_len);
 }
 
-/*
- * print the basic stuff of all nodes that inherit from Plan
- */
+   
+                                                             
+   
 static void
 _outPlanInfo(StringInfo str, const Plan *node)
 {
@@ -339,9 +339,9 @@ _outPlanInfo(StringInfo str, const Plan *node)
   WRITE_BITMAPSET_FIELD(allParam);
 }
 
-/*
- * print the basic stuff of all nodes that inherit from Scan
- */
+   
+                                                             
+   
 static void
 _outScanInfo(StringInfo str, const Scan *node)
 {
@@ -350,9 +350,9 @@ _outScanInfo(StringInfo str, const Scan *node)
   WRITE_UINT_FIELD(scanrelid);
 }
 
-/*
- * print the basic stuff of all nodes that inherit from Join
- */
+   
+                                                             
+   
 static void
 _outJoinPlanInfo(StringInfo str, const Join *node)
 {
@@ -706,7 +706,7 @@ _outCustomScan(StringInfo str, const CustomScan *node)
   WRITE_NODE_FIELD(custom_private);
   WRITE_NODE_FIELD(custom_scan_tlist);
   WRITE_BITMAPSET_FIELD(custom_relids);
-  /* CustomName is a key to lookup CustomScanMethods */
+                                                       
   appendStringInfoString(str, " :methods ");
   outToken(str, node->methods->CustomName);
 }
@@ -989,11 +989,11 @@ _outPlanInvalItem(StringInfo str, const PlanInvalItem *node)
   WRITE_UINT_FIELD(hashValue);
 }
 
-/*****************************************************************************
- *
- *	Stuff from primnodes.h.
- *
- *****************************************************************************/
+                                                                               
+   
+                           
+   
+                                                                               
 
 static void
 _outAlias(StringInfo str, const Alias *node)
@@ -1009,10 +1009,10 @@ _outRangeVar(StringInfo str, const RangeVar *node)
 {
   WRITE_NODE_TYPE("RANGEVAR");
 
-  /*
-   * we deliberately ignore catalogname here, since it is presently not
-   * semantically meaningful
-   */
+     
+                                                                        
+                             
+     
   WRITE_STRING_FIELD(schemaname);
   WRITE_STRING_FIELD(relname);
   WRITE_BOOL_FIELD(inh);
@@ -1269,7 +1269,7 @@ _outBoolExpr(StringInfo str, const BoolExpr *node)
 
   WRITE_NODE_TYPE("BOOLEXPR");
 
-  /* do-it-yourself enum representation */
+                                          
   switch (node->boolop)
   {
   case AND_EXPR:
@@ -1685,22 +1685,22 @@ _outOnConflictExpr(StringInfo str, const OnConflictExpr *node)
   WRITE_NODE_FIELD(exclRelTlist);
 }
 
-/*****************************************************************************
- *
- *	Stuff from pathnodes.h.
- *
- *****************************************************************************/
+                                                                               
+   
+                           
+   
+                                                                               
 
-/*
- * print the basic stuff of all nodes that inherit from Path
- *
- * Note we do NOT print the parent, else we'd be in infinite recursion.
- * We can print the parent's relids for identification purposes, though.
- * We print the pathtarget only if it's not the default one for the rel.
- * We also do not print the whole of param_info, since it's printed by
- * _outRelOptInfo; it's sufficient and less cluttering to print just the
- * required outer relids.
- */
+   
+                                                             
+   
+                                                                        
+                                                                         
+                                                                         
+                                                                       
+                                                                         
+                          
+   
 static void
 _outPathInfo(StringInfo str, const Path *node)
 {
@@ -1729,9 +1729,9 @@ _outPathInfo(StringInfo str, const Path *node)
   WRITE_NODE_FIELD(pathkeys);
 }
 
-/*
- * print the basic stuff of all nodes that inherit from JoinPath
- */
+   
+                                                                 
+   
 static void
 _outJoinPathInfo(StringInfo str, const JoinPath *node)
 {
@@ -2167,7 +2167,7 @@ _outPlannerGlobal(StringInfo str, const PlannerGlobal *node)
 {
   WRITE_NODE_TYPE("PLANNERGLOBAL");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_NODE_FIELD(subplans);
   WRITE_BITMAPSET_FIELD(rewindPlanIDs);
   WRITE_NODE_FIELD(finalrtable);
@@ -2192,7 +2192,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 {
   WRITE_NODE_TYPE("PLANNERINFO");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_NODE_FIELD(parse);
   WRITE_NODE_FIELD(glob);
   WRITE_UINT_FIELD(query_level);
@@ -2243,7 +2243,7 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
 {
   WRITE_NODE_TYPE("RELOPTINFO");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_ENUM_FIELD(reloptkind, RelOptKind);
   WRITE_BITMAPSET_FIELD(relids);
   WRITE_FLOAT_FIELD(rows, "%.0f");
@@ -2278,8 +2278,8 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
   WRITE_OID_FIELD(serverid);
   WRITE_OID_FIELD(userid);
   WRITE_BOOL_FIELD(useridiscurrent);
-  /* we don't try to print fdwroutine or fdw_private */
-  /* can't print unique_for_rels/non_unique_for_rels; BMSes aren't Nodes */
+                                                       
+                                                                           
   WRITE_NODE_FIELD(baserestrictinfo);
   WRITE_UINT_FIELD(baserestrict_min_security);
   WRITE_NODE_FIELD(joininfo);
@@ -2294,16 +2294,16 @@ _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
 {
   WRITE_NODE_TYPE("INDEXOPTINFO");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_OID_FIELD(indexoid);
-  /* Do NOT print rel field, else infinite recursion */
+                                                       
   WRITE_UINT_FIELD(pages);
   WRITE_FLOAT_FIELD(tuples, "%.0f");
   WRITE_INT_FIELD(tree_height);
   WRITE_INT_FIELD(ncolumns);
-  /* array fields aren't really worth the trouble to print */
+                                                             
   WRITE_OID_FIELD(relam);
-  /* indexprs is redundant since we print indextlist */
+                                                       
   WRITE_NODE_FIELD(indpred);
   WRITE_NODE_FIELD(indextlist);
   WRITE_NODE_FIELD(indrestrictinfo);
@@ -2311,7 +2311,7 @@ _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
   WRITE_BOOL_FIELD(unique);
   WRITE_BOOL_FIELD(immediate);
   WRITE_BOOL_FIELD(hypothetical);
-  /* we don't bother with fields copied from the index AM's API struct */
+                                                                         
 }
 
 static void
@@ -2330,7 +2330,7 @@ _outForeignKeyOptInfo(StringInfo str, const ForeignKeyOptInfo *node)
   WRITE_INT_FIELD(nmatched_ec);
   WRITE_INT_FIELD(nmatched_rcols);
   WRITE_INT_FIELD(nmatched_ri);
-  /* for compactness, just print the number of matches per column: */
+                                                                     
   appendStringInfoString(str, " :eclass");
   for (i = 0; i < node->nkeys; i++)
   {
@@ -2348,9 +2348,9 @@ _outStatisticExtInfo(StringInfo str, const StatisticExtInfo *node)
 {
   WRITE_NODE_TYPE("STATISTICEXTINFO");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_OID_FIELD(statOid);
-  /* don't write rel, leads to infinite recursion in plan tree dump */
+                                                                      
   WRITE_CHAR_FIELD(kind);
   WRITE_BITMAPSET_FIELD(keys);
 }
@@ -2358,10 +2358,10 @@ _outStatisticExtInfo(StringInfo str, const StatisticExtInfo *node)
 static void
 _outEquivalenceClass(StringInfo str, const EquivalenceClass *node)
 {
-  /*
-   * To simplify reading, we just chase up to the topmost merged EC and
-   * print that, without bothering to show the merge-ees separately.
-   */
+     
+                                                                        
+                                                                     
+     
   while (node->ec_merged)
   {
     node = node->ec_merged;
@@ -2444,7 +2444,7 @@ _outRestrictInfo(StringInfo str, const RestrictInfo *node)
 {
   WRITE_NODE_TYPE("RESTRICTINFO");
 
-  /* NB: this isn't a complete set of fields */
+                                               
   WRITE_NODE_FIELD(clause);
   WRITE_BOOL_FIELD(is_pushed_down);
   WRITE_BOOL_FIELD(outerjoin_delayed);
@@ -2459,12 +2459,12 @@ _outRestrictInfo(StringInfo str, const RestrictInfo *node)
   WRITE_BITMAPSET_FIELD(left_relids);
   WRITE_BITMAPSET_FIELD(right_relids);
   WRITE_NODE_FIELD(orclause);
-  /* don't write parent_ec, leads to infinite recursion in plan tree dump */
+                                                                            
   WRITE_FLOAT_FIELD(norm_selec, "%.4f");
   WRITE_FLOAT_FIELD(outer_selec, "%.4f");
   WRITE_NODE_FIELD(mergeopfamilies);
-  /* don't write left_ec, leads to infinite recursion in plan tree dump */
-  /* don't write right_ec, leads to infinite recursion in plan tree dump */
+                                                                          
+                                                                           
   WRITE_NODE_FIELD(left_em);
   WRITE_NODE_FIELD(right_em);
   WRITE_BOOL_FIELD(outer_is_left);
@@ -2546,7 +2546,7 @@ _outMinMaxAggInfo(StringInfo str, const MinMaxAggInfo *node)
   WRITE_OID_FIELD(aggfnoid);
   WRITE_OID_FIELD(aggsortop);
   WRITE_NODE_FIELD(target);
-  /* We intentionally omit subroot --- too large, not interesting enough */
+                                                                           
   WRITE_NODE_FIELD(path);
   WRITE_FLOAT_FIELD(pathcost, "%.2f");
   WRITE_NODE_FIELD(param);
@@ -2561,11 +2561,11 @@ _outPlannerParamItem(StringInfo str, const PlannerParamItem *node)
   WRITE_INT_FIELD(paramId);
 }
 
-/*****************************************************************************
- *
- *	Stuff from extensible.h
- *
- *****************************************************************************/
+                                                                               
+   
+                           
+   
+                                                                               
 
 static void
 _outExtensibleNode(StringInfo str, const ExtensibleNode *node)
@@ -2578,19 +2578,19 @@ _outExtensibleNode(StringInfo str, const ExtensibleNode *node)
 
   WRITE_STRING_FIELD(extnodename);
 
-  /* serialize the private fields */
+                                    
   methods->nodeOut(str, node);
 }
 
-/*****************************************************************************
- *
- *	Stuff from parsenodes.h.
- *
- *****************************************************************************/
+                                                                               
+   
+                            
+   
+                                                                               
 
-/*
- * print the basic stuff of all nodes that inherit from CreateStmt
- */
+   
+                                                                   
+   
 static void
 _outCreateStmtInfo(StringInfo str, const CreateStmt *node)
 {
@@ -2875,16 +2875,16 @@ _outQuery(StringInfo str, const Query *node)
 
   WRITE_ENUM_FIELD(commandType, CmdType);
   WRITE_ENUM_FIELD(querySource, QuerySource);
-  /* we intentionally do not print the queryId field */
+                                                       
   WRITE_BOOL_FIELD(canSetTag);
 
-  /*
-   * Hack to work around missing outfuncs routines for a lot of the
-   * utility-statement node types.  (The only one we actually *need* for
-   * rules support is NotifyStmt.)  Someday we ought to support 'em all, but
-   * for the meantime do this to avoid getting lots of warnings when running
-   * with debug_print_parse on.
-   */
+     
+                                                                    
+                                                                         
+                                                                             
+                                                                             
+                                
+     
   if (node->utilityStmt)
   {
     switch (nodeTag(node->utilityStmt))
@@ -3052,7 +3052,7 @@ _outRangeTblEntry(StringInfo str, const RangeTblEntry *node)
 {
   WRITE_NODE_TYPE("RTE");
 
-  /* put alias + eref first to make dump more legible */
+                                                        
   WRITE_NODE_FIELD(alias);
   WRITE_NODE_FIELD(eref);
   WRITE_ENUM_FIELD(rtekind, RTEKind);
@@ -3103,7 +3103,7 @@ _outRangeTblEntry(StringInfo str, const RangeTblEntry *node)
     WRITE_NODE_FIELD(colcollations);
     break;
   case RTE_RESULT:
-    /* no extra fields */
+                         
     break;
   default:
     elog(ERROR, "unrecognized RTE kind: %d", (int)node->rtekind);
@@ -3238,18 +3238,18 @@ _outValue(StringInfo str, const Value *value)
     break;
   case T_Float:
 
-    /*
-     * We assume the value is a valid numeric literal and so does not
-     * need quoting.
-     */
+       
+                                                                      
+                     
+       
     appendStringInfoString(str, value->val.str);
     break;
   case T_String:
 
-    /*
-     * We use outToken to provide escaping of the string's content,
-     * but we don't want it to do anything with an empty string.
-     */
+       
+                                                                    
+                                                                 
+       
     appendStringInfoChar(str, '"');
     if (value->val.str[0] != '\0')
     {
@@ -3258,11 +3258,11 @@ _outValue(StringInfo str, const Value *value)
     appendStringInfoChar(str, '"');
     break;
   case T_BitString:
-    /* internal representation already has leading 'b' */
+                                                         
     appendStringInfoString(str, value->val.str);
     break;
   case T_Null:
-    /* this is seen only within A_Const, not in transformed trees */
+                                                                    
     appendStringInfoString(str, "NULL");
     break;
   default:
@@ -3289,9 +3289,9 @@ _outParamRef(StringInfo str, const ParamRef *node)
   WRITE_LOCATION_FIELD(location);
 }
 
-/*
- * Node types found in raw parse trees (supported for debug purposes)
- */
+   
+                                                                      
+   
 
 static void
 _outRawStmt(StringInfo str, const RawStmt *node)
@@ -3515,7 +3515,7 @@ _outConstraint(StringInfo str, const Constraint *node)
     WRITE_STRING_FIELD(indexname);
     WRITE_STRING_FIELD(indexspace);
     WRITE_BOOL_FIELD(reset_default_tblspc);
-    /* access_method and where_clause not currently used */
+                                                           
     break;
 
   case CONSTR_UNIQUE:
@@ -3526,7 +3526,7 @@ _outConstraint(StringInfo str, const Constraint *node)
     WRITE_STRING_FIELD(indexname);
     WRITE_STRING_FIELD(indexspace);
     WRITE_BOOL_FIELD(reset_default_tblspc);
-    /* access_method and where_clause not currently used */
+                                                           
     break;
 
   case CONSTR_EXCLUSION:
@@ -3638,14 +3638,14 @@ _outPartitionRangeDatum(StringInfo str, const PartitionRangeDatum *node)
   WRITE_LOCATION_FIELD(location);
 }
 
-/*
- * outNode -
- *	  converts a Node into ascii string and append it to 'str'
- */
+   
+             
+                                                              
+   
 void
 outNode(StringInfo str, const void *obj)
 {
-  /* Guard against stack overflow due to overly complex expressions */
+                                                                      
   check_stack_depth();
 
   if (obj == NULL)
@@ -3658,7 +3658,7 @@ outNode(StringInfo str, const void *obj)
   }
   else if (IsA(obj, Integer) || IsA(obj, Float) || IsA(obj, String) || IsA(obj, BitString))
   {
-    /* nodeRead does not want to see { } around these! */
+                                                         
     _outValue(str, obj);
   }
   else
@@ -4302,10 +4302,10 @@ outNode(StringInfo str, const void *obj)
 
     default:
 
-      /*
-       * This should be an ERROR, but it's too useful to be able to
-       * dump structures that outNode only understands part of.
-       */
+         
+                                                                    
+                                                                
+         
       elog(WARNING, "could not dump unrecognized node type: %d", (int)nodeTag(obj));
       break;
     }
@@ -4313,31 +4313,31 @@ outNode(StringInfo str, const void *obj)
   }
 }
 
-/*
- * nodeToString -
- *	   returns the ascii representation of the Node as a palloc'd string
- */
+   
+                  
+                                                                        
+   
 char *
 nodeToString(const void *obj)
 {
   StringInfoData str;
 
-  /* see stringinfo.h for an explanation of this maneuver */
+                                                            
   initStringInfo(&str);
   outNode(&str, obj);
   return str.data;
 }
 
-/*
- * bmsToString -
- *	   returns the ascii representation of the Bitmapset as a palloc'd string
- */
+   
+                 
+                                                                             
+   
 char *
 bmsToString(const Bitmapset *bms)
 {
   StringInfoData str;
 
-  /* see stringinfo.h for an explanation of this maneuver */
+                                                            
   initStringInfo(&str);
   outBitmapset(&str, bms);
   return str.data;

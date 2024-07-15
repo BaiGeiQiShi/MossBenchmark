@@ -1,24 +1,24 @@
-/*-------------------------------------------------------------------------
- *
- * fe-lobj.c
- *	  Front-end large object interface
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/interfaces/libpq/fe-lobj.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                      
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                    
+   
+                                                                            
+   
 
 #ifdef WIN32
-/*
- *	As unlink/rename are #define'd in port.h (via postgres_fe.h), io.h
- *	must be included first on MS C.  Might as well do it for all WIN32's
- *	here.
- */
+   
+                                                                      
+                                                                        
+         
+   
 #include <io.h>
 #endif
 
@@ -36,7 +36,7 @@
 
 #include "libpq-fe.h"
 #include "libpq-int.h"
-#include "libpq/libpq-fs.h" /* must come after sys/stat.h */
+#include "libpq/libpq-fs.h"                                 
 #include "port/pg_bswap.h"
 
 #define LO_BUFSIZE 8192
@@ -50,13 +50,13 @@ lo_hton64(pg_int64 host64);
 static pg_int64
 lo_ntoh64(pg_int64 net64);
 
-/*
- * lo_open
- *	  opens an existing large object
- *
- * returns the file descriptor for use in later lo_* calls
- * return -1 upon failure.
- */
+   
+           
+                                    
+   
+                                                           
+                           
+   
 int
 lo_open(PGconn *conn, Oid lobjId, int mode)
 {
@@ -94,13 +94,13 @@ lo_open(PGconn *conn, Oid lobjId, int mode)
   }
 }
 
-/*
- * lo_close
- *	  closes an existing large object
- *
- * returns 0 upon success
- * returns -1 upon failure.
- */
+   
+            
+                                     
+   
+                          
+                            
+   
 int
 lo_close(PGconn *conn, int fd)
 {
@@ -133,13 +133,13 @@ lo_close(PGconn *conn, int fd)
   }
 }
 
-/*
- * lo_truncate
- *	  truncates an existing large object to the given size
- *
- * returns 0 upon success
- * returns -1 upon failure
- */
+   
+               
+                                                          
+   
+                          
+                           
+   
 int
 lo_truncate(PGconn *conn, int fd, size_t len)
 {
@@ -156,22 +156,22 @@ lo_truncate(PGconn *conn, int fd, size_t len)
     }
   }
 
-  /* Must check this on-the-fly because it's not there pre-8.3 */
+                                                                 
   if (conn->lobjfuncs->fn_lo_truncate == 0)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("cannot determine OID of function lo_truncate\n"));
     return -1;
   }
 
-  /*
-   * Long ago, somebody thought it'd be a good idea to declare this function
-   * as taking size_t ... but the underlying backend function only accepts a
-   * signed int32 length.  So throw error if the given value overflows
-   * int32.  (A possible alternative is to automatically redirect the call
-   * to lo_truncate64; but if the caller wanted to rely on that backend
-   * function being available, he could have called lo_truncate64 for
-   * himself.)
-   */
+     
+                                                                             
+                                                                             
+                                                                       
+                                                                           
+                                                                        
+                                                                      
+               
+     
   if (len > (size_t)INT_MAX)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("argument of lo_truncate exceeds integer range\n"));
@@ -200,13 +200,13 @@ lo_truncate(PGconn *conn, int fd, size_t len)
   }
 }
 
-/*
- * lo_truncate64
- *	  truncates an existing large object to the given size
- *
- * returns 0 upon success
- * returns -1 upon failure
- */
+   
+                 
+                                                          
+   
+                          
+                           
+   
 int
 lo_truncate64(PGconn *conn, int fd, pg_int64 len)
 {
@@ -252,13 +252,13 @@ lo_truncate64(PGconn *conn, int fd, pg_int64 len)
   }
 }
 
-/*
- * lo_read
- *	  read len bytes of the large object into buf
- *
- * returns the number of bytes read, or -1 on failure.
- * the CALLER must have allocated enough space to hold the result returned
- */
+   
+           
+                                                 
+   
+                                                       
+                                                                           
+   
 
 int
 lo_read(PGconn *conn, int fd, char *buf, size_t len)
@@ -275,12 +275,12 @@ lo_read(PGconn *conn, int fd, char *buf, size_t len)
     }
   }
 
-  /*
-   * Long ago, somebody thought it'd be a good idea to declare this function
-   * as taking size_t ... but the underlying backend function only accepts a
-   * signed int32 length.  So throw error if the given value overflows
-   * int32.
-   */
+     
+                                                                             
+                                                                             
+                                                                       
+            
+     
   if (len > (size_t)INT_MAX)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("argument of lo_read exceeds integer range\n"));
@@ -308,12 +308,12 @@ lo_read(PGconn *conn, int fd, char *buf, size_t len)
   }
 }
 
-/*
- * lo_write
- *	  write len bytes of buf into the large object fd
- *
- * returns the number of bytes written, or -1 on failure.
- */
+   
+            
+                                                     
+   
+                                                          
+   
 int
 lo_write(PGconn *conn, int fd, const char *buf, size_t len)
 {
@@ -330,12 +330,12 @@ lo_write(PGconn *conn, int fd, const char *buf, size_t len)
     }
   }
 
-  /*
-   * Long ago, somebody thought it'd be a good idea to declare this function
-   * as taking size_t ... but the underlying backend function only accepts a
-   * signed int32 length.  So throw error if the given value overflows
-   * int32.
-   */
+     
+                                                                             
+                                                                             
+                                                                       
+            
+     
   if (len > (size_t)INT_MAX)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("argument of lo_write exceeds integer range\n"));
@@ -363,10 +363,10 @@ lo_write(PGconn *conn, int fd, const char *buf, size_t len)
   }
 }
 
-/*
- * lo_lseek
- *	  change the current read or write location on a large object
- */
+   
+            
+                                                                 
+   
 int
 lo_lseek(PGconn *conn, int fd, int offset, int whence)
 {
@@ -408,10 +408,10 @@ lo_lseek(PGconn *conn, int fd, int offset, int whence)
   }
 }
 
-/*
- * lo_lseek64
- *	  change the current read or write location on a large object
- */
+   
+              
+                                                                 
+   
 pg_int64
 lo_lseek64(PGconn *conn, int fd, pg_int64 offset, int whence)
 {
@@ -460,14 +460,14 @@ lo_lseek64(PGconn *conn, int fd, pg_int64 offset, int whence)
   }
 }
 
-/*
- * lo_creat
- *	  create a new large object
- * the mode is ignored (once upon a time it had a use)
- *
- * returns the oid of the large object created or
- * InvalidOid upon failure
- */
+   
+            
+                               
+                                                       
+   
+                                                  
+                           
+   
 Oid
 lo_creat(PGconn *conn, int mode)
 {
@@ -500,14 +500,14 @@ lo_creat(PGconn *conn, int mode)
   }
 }
 
-/*
- * lo_create
- *	  create a new large object
- * if lobjId isn't InvalidOid, it specifies the OID to (attempt to) create
- *
- * returns the oid of the large object created or
- * InvalidOid upon failure
- */
+   
+             
+                               
+                                                                           
+   
+                                                  
+                           
+   
 Oid
 lo_create(PGconn *conn, Oid lobjId)
 {
@@ -524,7 +524,7 @@ lo_create(PGconn *conn, Oid lobjId)
     }
   }
 
-  /* Must check this on-the-fly because it's not there pre-8.1 */
+                                                                 
   if (conn->lobjfuncs->fn_lo_create == 0)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("cannot determine OID of function lo_create\n"));
@@ -547,10 +547,10 @@ lo_create(PGconn *conn, Oid lobjId)
   }
 }
 
-/*
- * lo_tell
- *	  returns the current seek location of the large object
- */
+   
+           
+                                                           
+   
 int
 lo_tell(PGconn *conn, int fd)
 {
@@ -584,10 +584,10 @@ lo_tell(PGconn *conn, int fd)
   }
 }
 
-/*
- * lo_tell64
- *	  returns the current seek location of the large object
- */
+   
+             
+                                                           
+   
 pg_int64
 lo_tell64(PGconn *conn, int fd)
 {
@@ -627,10 +627,10 @@ lo_tell64(PGconn *conn, int fd)
   }
 }
 
-/*
- * lo_unlink
- *	  delete a file
- */
+   
+             
+                   
+   
 
 int
 lo_unlink(PGconn *conn, Oid lobjId)
@@ -665,13 +665,13 @@ lo_unlink(PGconn *conn, Oid lobjId)
   }
 }
 
-/*
- * lo_import -
- *	  imports a file as an (inversion) large object.
- *
- * returns the oid of that object upon success,
- * returns InvalidOid upon failure
- */
+   
+               
+                                                    
+   
+                                                
+                                   
+   
 
 Oid
 lo_import(PGconn *conn, const char *filename)
@@ -679,14 +679,14 @@ lo_import(PGconn *conn, const char *filename)
   return lo_import_internal(conn, filename, InvalidOid);
 }
 
-/*
- * lo_import_with_oid -
- *	  imports a file as an (inversion) large object.
- *	  large object id can be specified.
- *
- * returns the oid of that object upon success,
- * returns InvalidOid upon failure
- */
+   
+                        
+                                                    
+                                       
+   
+                                                
+                                   
+   
 
 Oid
 lo_import_with_oid(PGconn *conn, const char *filename, Oid lobjId)
@@ -704,19 +704,19 @@ lo_import_internal(PGconn *conn, const char *filename, Oid oid)
   int lobj;
   char sebuf[PG_STRERROR_R_BUFLEN];
 
-  /*
-   * open the file to be read in
-   */
+     
+                                 
+     
   fd = open(filename, O_RDONLY | PG_BINARY, 0666);
   if (fd < 0)
-  { /* error */
+  {            
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("could not open file \"%s\": %s\n"), filename, strerror_r(errno, sebuf, sizeof(sebuf)));
     return InvalidOid;
   }
 
-  /*
-   * create an inversion object
-   */
+     
+                                
+     
   if (oid == InvalidOid)
   {
     lobjOid = lo_creat(conn, INV_READ | INV_WRITE);
@@ -728,7 +728,7 @@ lo_import_internal(PGconn *conn, const char *filename, Oid oid)
 
   if (lobjOid == InvalidOid)
   {
-    /* we assume lo_create() already set a suitable error message */
+                                                                    
     (void)close(fd);
     return InvalidOid;
   }
@@ -736,25 +736,25 @@ lo_import_internal(PGconn *conn, const char *filename, Oid oid)
   lobj = lo_open(conn, lobjOid, INV_WRITE);
   if (lobj == -1)
   {
-    /* we assume lo_open() already set a suitable error message */
+                                                                  
     (void)close(fd);
     return InvalidOid;
   }
 
-  /*
-   * read in from the file and write to the large object
-   */
+     
+                                                         
+     
   while ((nbytes = read(fd, buf, LO_BUFSIZE)) > 0)
   {
     tmp = lo_write(conn, lobj, buf, nbytes);
     if (tmp != nbytes)
     {
-      /*
-       * If lo_write() failed, we are now in an aborted transaction so
-       * there's no need for lo_close(); furthermore, if we tried it
-       * we'd overwrite the useful error result with a useless one. So
-       * just nail the doors shut and get out of town.
-       */
+         
+                                                                       
+                                                                     
+                                                                       
+                                                       
+         
       (void)close(fd);
       return InvalidOid;
     }
@@ -762,7 +762,7 @@ lo_import_internal(PGconn *conn, const char *filename, Oid oid)
 
   if (nbytes < 0)
   {
-    /* We must do lo_close before setting the errorMessage */
+                                                             
     int save_errno = errno;
 
     (void)lo_close(conn, lobj);
@@ -775,18 +775,18 @@ lo_import_internal(PGconn *conn, const char *filename, Oid oid)
 
   if (lo_close(conn, lobj) != 0)
   {
-    /* we assume lo_close() already set a suitable error message */
+                                                                   
     return InvalidOid;
   }
 
   return lobjOid;
 }
 
-/*
- * lo_export -
- *	  exports an (inversion) large object.
- * returns -1 upon failure, 1 if OK
- */
+   
+               
+                                          
+                                    
+   
 int
 lo_export(PGconn *conn, Oid lobjId, const char *filename)
 {
@@ -797,23 +797,23 @@ lo_export(PGconn *conn, Oid lobjId, const char *filename)
   int lobj;
   char sebuf[PG_STRERROR_R_BUFLEN];
 
-  /*
-   * open the large object.
-   */
+     
+                            
+     
   lobj = lo_open(conn, lobjId, INV_READ);
   if (lobj == -1)
   {
-    /* we assume lo_open() already set a suitable error message */
+                                                                  
     return -1;
   }
 
-  /*
-   * create the file to be written to
-   */
+     
+                                      
+     
   fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC | PG_BINARY, 0666);
   if (fd < 0)
   {
-    /* We must do lo_close before setting the errorMessage */
+                                                             
     int save_errno = errno;
 
     (void)lo_close(conn, lobj);
@@ -821,15 +821,15 @@ lo_export(PGconn *conn, Oid lobjId, const char *filename)
     return -1;
   }
 
-  /*
-   * read in from the large object and write to the file
-   */
+     
+                                                         
+     
   while ((nbytes = lo_read(conn, lobj, buf, LO_BUFSIZE)) > 0)
   {
     tmp = write(fd, buf, nbytes);
     if (tmp != nbytes)
     {
-      /* We must do lo_close before setting the errorMessage */
+                                                               
       int save_errno = errno;
 
       (void)lo_close(conn, lobj);
@@ -839,19 +839,19 @@ lo_export(PGconn *conn, Oid lobjId, const char *filename)
     }
   }
 
-  /*
-   * If lo_read() failed, we are now in an aborted transaction so there's no
-   * need for lo_close(); furthermore, if we tried it we'd overwrite the
-   * useful error result with a useless one. So skip lo_close() if we got a
-   * failure result.
-   */
+     
+                                                                             
+                                                                         
+                                                                            
+                     
+     
   if (nbytes < 0 || lo_close(conn, lobj) != 0)
   {
-    /* assume lo_read() or lo_close() left a suitable error message */
+                                                                      
     result = -1;
   }
 
-  /* if we already failed, don't overwrite that msg with a close error */
+                                                                         
   if (close(fd) && result >= 0)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("could not write to file \"%s\": %s\n"), filename, strerror_r(errno, sebuf, sizeof(sebuf)));
@@ -861,13 +861,13 @@ lo_export(PGconn *conn, Oid lobjId, const char *filename)
   return result;
 }
 
-/*
- * lo_initialize
- *
- * Initialize the large object interface for an existing connection.
- * We ask the backend about the functions OID's in pg_proc for all
- * functions that are required for large object operations.
- */
+   
+                 
+   
+                                                                     
+                                                                   
+                                                            
+   
 static int
 lo_initialize(PGconn *conn)
 {
@@ -883,9 +883,9 @@ lo_initialize(PGconn *conn)
     return -1;
   }
 
-  /*
-   * Allocate the structure to hold the functions OID's
-   */
+     
+                                                        
+     
   lobjfuncs = (PGlobjfuncs *)malloc(sizeof(PGlobjfuncs));
   if (lobjfuncs == NULL)
   {
@@ -894,11 +894,11 @@ lo_initialize(PGconn *conn)
   }
   MemSet((char *)lobjfuncs, 0, sizeof(PGlobjfuncs));
 
-  /*
-   * Execute the query to get all the functions at once.  In 7.3 and later
-   * we need to be schema-safe.  lo_create only exists in 8.1 and up.
-   * lo_truncate only exists in 8.3 and up.
-   */
+     
+                                                                           
+                                                                      
+                                            
+     
   if (conn->sversion >= 70300)
   {
     query = "select proname, oid from pg_catalog.pg_proc "
@@ -947,9 +947,9 @@ lo_initialize(PGconn *conn)
     return -1;
   }
 
-  /*
-   * Examine the result and put the OID's into the struct
-   */
+     
+                                                          
+     
   for (n = 0; n < PQntuples(res); n++)
   {
     fname = PQgetvalue(res, n, 0);
@@ -1010,11 +1010,11 @@ lo_initialize(PGconn *conn)
 
   PQclear(res);
 
-  /*
-   * Finally check that we got all required large object interface functions
-   * (ones that have been added later than the stone age are instead checked
-   * only if used)
-   */
+     
+                                                                             
+                                                                             
+                   
+     
   if (lobjfuncs->fn_lo_open == 0)
   {
     printfPQExpBuffer(&conn->errorMessage, libpq_gettext("cannot determine OID of function lo_open\n"));
@@ -1064,17 +1064,17 @@ lo_initialize(PGconn *conn)
     return -1;
   }
 
-  /*
-   * Put the structure into the connection control
-   */
+     
+                                                   
+     
   conn->lobjfuncs = lobjfuncs;
   return 0;
 }
 
-/*
- * lo_hton64
- *	  converts a 64-bit integer from host byte order to network byte order
- */
+   
+             
+                                                                          
+   
 static pg_int64
 lo_hton64(pg_int64 host64)
 {
@@ -1085,21 +1085,21 @@ lo_hton64(pg_int64 host64)
   } swap;
   uint32 t;
 
-  /* High order half first, since we're doing MSB-first */
+                                                          
   t = (uint32)(host64 >> 32);
   swap.i32[0] = pg_hton32(t);
 
-  /* Now the low order half */
+                              
   t = (uint32)host64;
   swap.i32[1] = pg_hton32(t);
 
   return swap.i64;
 }
 
-/*
- * lo_ntoh64
- *	  converts a 64-bit integer from network byte order to host byte order
- */
+   
+             
+                                                                          
+   
 static pg_int64
 lo_ntoh64(pg_int64 net64)
 {

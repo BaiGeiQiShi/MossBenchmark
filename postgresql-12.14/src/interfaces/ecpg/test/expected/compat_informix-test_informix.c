@@ -1,11 +1,11 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* Needed for informix compatibility */
+                                       
 #include <ecpg_informix.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "test_informix.pgc"
@@ -44,7 +44,7 @@ main(void)
 #line 16 "test_informix.pgc"
 
   ECPGdebug(1, stderr);
-  /* exec sql whenever sqlerror  do dosqlprint ( ) ; */
+                                                       
 #line 19 "test_informix.pgc"
 
   {
@@ -74,7 +74,7 @@ main(void)
   }
 #line 24 "test_informix.pgc"
 
-  /* this INSERT works */
+                         
   rsetnull(CDECIMALTYPE, (char *)&j);
   {
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into test ( i , j , c ) values ( 7 , $1  , 'test   ' )", ECPGt_decimal, &(j), (long)1, (long)1, sizeof(decimal), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EOIT, ECPGt_EORT);
@@ -98,7 +98,7 @@ main(void)
   }
 #line 29 "test_informix.pgc"
 
-  /* this INSERT should fail because i is a unique column */
+                                                            
   {
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "insert into test ( i , j , c ) values ( 7 , 12 , 'a' )", ECPGt_EOIT, ECPGt_EORT);
 #line 32 "test_informix.pgc"
@@ -145,7 +145,7 @@ main(void)
   }
 #line 37 "test_informix.pgc"
 
-  /* this will fail (more than one row in subquery) */
+                                                      
   {
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "select i from test where j = ( select j from test )", ECPGt_EOIT, ECPGt_EORT);
 #line 40 "test_informix.pgc"
@@ -168,7 +168,7 @@ main(void)
   }
 #line 41 "test_informix.pgc"
 
-  /* this however should be ok */
+                                 
   {
     ECPGdo(__LINE__, 1, 1, NULL, 0, ECPGst_normal, "select i from test where j = ( select j from test order by i limit 1 )", ECPGt_EOIT, ECPGt_EORT);
 #line 44 "test_informix.pgc"
@@ -194,7 +194,7 @@ main(void)
 #line 46 "test_informix.pgc"
 
   sqlca.sqlcode = 100;
-  ECPGset_var(0, &(i), __LINE__); /* declare c cursor for select * from test where i <= $1  */
+  ECPGset_var(0, &(i), __LINE__);                                                             
 #line 49 "test_informix.pgc"
 
   if (sqlca.sqlcode < 0)

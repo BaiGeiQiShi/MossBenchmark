@@ -1,29 +1,29 @@
-/*-------------------------------------------------------------------------
- *
- * tuptoaster.c
- *	  Support routines for external and compressed storage of
- *	  variable size attributes.
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/heap/tuptoaster.c
- *
- *
- * INTERFACE ROUTINES
- *		toast_insert_or_update -
- *			Try to make a given tuple fit into one page by compressing
- *			or moving off attributes
- *
- *		toast_delete -
- *			Reclaim toast storage when a tuple is deleted
- *
- *		heap_tuple_untoast_attr -
- *			Fetch back a given value from the "secondary" relation
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                             
+                               
+   
+                                                                
+   
+   
+                  
+                                          
+   
+   
+                      
+                             
+                                                                
+                              
+   
+                   
+                                                   
+   
+                              
+                                                            
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -46,19 +46,19 @@
 
 #undef TOAST_DEBUG
 
-/*
- *	The information at the start of the compressed toast data.
- */
+   
+                                                              
+   
 typedef struct toast_compress_header
 {
-  int32 vl_len_; /* varlena header (do not touch directly!) */
+  int32 vl_len_;                                              
   int32 rawsize;
 } toast_compress_header;
 
-/*
- * Utilities for manipulation of header information for compressed
- * toast entries.
- */
+   
+                                                                   
+                  
+   
 #define TOAST_COMPRESS_HDRSZ ((int32)sizeof(toast_compress_header))
 #define TOAST_COMPRESS_RAWSIZE(ptr) (((toast_compress_header *)(ptr))->rawsize)
 #define TOAST_COMPRESS_RAWDATA(ptr) (((char *)(ptr)) + TOAST_COMPRESS_HDRSZ)
@@ -87,18 +87,18 @@ toast_close_indexes(Relation *toastidxs, int num_indexes, LOCKMODE lock);
 static void
 init_toast_snapshot(Snapshot toast_snapshot);
 
-/* ----------
- * heap_tuple_fetch_attr -
- *
- *	Public entry point to get back a toasted value from
- *	external source (possibly still in compressed format).
- *
- * This will return a datum that contains all the data internally, ie, not
- * relying on external storage or memory, but it can still be compressed or
- * have a short header.  Note some callers assume that if the input is an
- * EXTERNAL datum, the result will be a pfree'able chunk.
- * ----------
- */
+              
+                           
+   
+                                                       
+                                                          
+   
+                                                                           
+                                                                            
+                                                                          
+                                                          
+              
+   
 struct varlena *
 heap_tuple_fetch_attr(struct varlena *attr)
 {
@@ -106,42 +106,42 @@ heap_tuple_fetch_attr(struct varlena *attr)
 
   if (VARATT_IS_EXTERNAL_ONDISK(attr))
   {
-    /*
-     * This is an external stored plain value
-     */
+       
+                                              
+       
     result = toast_fetch_datum(attr);
   }
   else if (VARATT_IS_EXTERNAL_INDIRECT(attr))
   {
-    /*
-     * This is an indirect pointer --- dereference it
-     */
+       
+                                                      
+       
     struct varatt_indirect redirect;
 
     VARATT_EXTERNAL_GET_POINTER(redirect, attr);
     attr = (struct varlena *)redirect.pointer;
 
-    /* nested indirect Datums aren't allowed */
+                                               
     Assert(!VARATT_IS_EXTERNAL_INDIRECT(attr));
 
-    /* recurse if value is still external in some other way */
+                                                              
     if (VARATT_IS_EXTERNAL(attr))
     {
       return heap_tuple_fetch_attr(attr);
     }
 
-    /*
-     * Copy into the caller's memory context, in case caller tries to
-     * pfree the result.
-     */
+       
+                                                                      
+                         
+       
     result = (struct varlena *)palloc(VARSIZE_ANY(attr));
     memcpy(result, attr, VARSIZE_ANY(attr));
   }
   else if (VARATT_IS_EXTERNAL_EXPANDED(attr))
   {
-    /*
-     * This is an expanded-object pointer --- get flat format
-     */
+       
+                                                              
+       
     ExpandedObjectHeader *eoh;
     Size resultsize;
 
@@ -152,35 +152,35 @@ heap_tuple_fetch_attr(struct varlena *attr)
   }
   else
   {
-    /*
-     * This is a plain value inside of the main tuple - why am I called?
-     */
+       
+                                                                         
+       
     result = attr;
   }
 
   return result;
 }
 
-/* ----------
- * heap_tuple_untoast_attr -
- *
- *	Public entry point to get back a toasted value from compression
- *	or external storage.  The result is always non-extended varlena form.
- *
- * Note some callers assume that if the input is an EXTERNAL or COMPRESSED
- * datum, the result will be a pfree'able chunk.
- * ----------
- */
+              
+                             
+   
+                                                                   
+                                                                         
+   
+                                                                           
+                                                 
+              
+   
 struct varlena *
 heap_tuple_untoast_attr(struct varlena *attr)
 {
   if (VARATT_IS_EXTERNAL_ONDISK(attr))
   {
-    /*
-     * This is an externally stored datum --- fetch it back from there
-     */
+       
+                                                                       
+       
     attr = toast_fetch_datum(attr);
-    /* If it's compressed, decompress it */
+                                           
     if (VARATT_IS_COMPRESSED(attr))
     {
       struct varlena *tmp = attr;
@@ -191,21 +191,21 @@ heap_tuple_untoast_attr(struct varlena *attr)
   }
   else if (VARATT_IS_EXTERNAL_INDIRECT(attr))
   {
-    /*
-     * This is an indirect pointer --- dereference it
-     */
+       
+                                                      
+       
     struct varatt_indirect redirect;
 
     VARATT_EXTERNAL_GET_POINTER(redirect, attr);
     attr = (struct varlena *)redirect.pointer;
 
-    /* nested indirect Datums aren't allowed */
+                                               
     Assert(!VARATT_IS_EXTERNAL_INDIRECT(attr));
 
-    /* recurse in case value is still extended in some other way */
+                                                                   
     attr = heap_tuple_untoast_attr(attr);
 
-    /* if it isn't, we'd better copy it */
+                                          
     if (attr == (struct varlena *)redirect.pointer)
     {
       struct varlena *result;
@@ -217,25 +217,25 @@ heap_tuple_untoast_attr(struct varlena *attr)
   }
   else if (VARATT_IS_EXTERNAL_EXPANDED(attr))
   {
-    /*
-     * This is an expanded-object pointer --- get flat format
-     */
+       
+                                                              
+       
     attr = heap_tuple_fetch_attr(attr);
-    /* flatteners are not allowed to produce compressed/short output */
+                                                                       
     Assert(!VARATT_IS_EXTENDED(attr));
   }
   else if (VARATT_IS_COMPRESSED(attr))
   {
-    /*
-     * This is a compressed value inside of the main tuple
-     */
+       
+                                                           
+       
     attr = toast_decompress_datum(attr);
   }
   else if (VARATT_IS_SHORT(attr))
   {
-    /*
-     * This is a short-header varlena --- convert to 4-byte header format
-     */
+       
+                                                                          
+       
     Size data_size = VARSIZE_SHORT(attr) - VARHDRSZ_SHORT;
     Size new_size = data_size + VARHDRSZ;
     struct varlena *new_attr;
@@ -249,16 +249,16 @@ heap_tuple_untoast_attr(struct varlena *attr)
   return attr;
 }
 
-/* ----------
- * heap_tuple_untoast_attr_slice -
- *
- *		Public entry point to get back part of a toasted value
- *		from compression or external storage.
- *
- * sliceoffset is where to start (zero or more)
- * If slicelength < 0, return everything beyond sliceoffset
- * ----------
- */
+              
+                                   
+   
+                                                           
+                                          
+   
+                                                
+                                                            
+              
+   
 struct varlena *
 heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 slicelength)
 {
@@ -273,10 +273,10 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
     elog(ERROR, "invalid sliceoffset: %d", sliceoffset);
   }
 
-  /*
-   * Compute slicelimit = offset + length, or -1 if we must fetch all of the
-   * value.  In case of integer overflow, we must fetch all.
-   */
+     
+                                                                             
+                                                             
+     
   if (slicelength < 0)
   {
     slicelimit = -1;
@@ -292,13 +292,13 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
 
     VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
-    /* fast path for non-compressed external datums */
+                                                      
     if (!VARATT_EXTERNAL_IS_COMPRESSED(toast_pointer))
     {
       return toast_fetch_datum_slice(attr, sliceoffset, slicelength);
     }
 
-    /* fetch it back (compressed marker will get set automatically) */
+                                                                      
     preslice = toast_fetch_datum(attr);
   }
   else if (VARATT_IS_EXTERNAL_INDIRECT(attr))
@@ -307,14 +307,14 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
 
     VARATT_EXTERNAL_GET_POINTER(redirect, attr);
 
-    /* nested indirect Datums aren't allowed */
+                                               
     Assert(!VARATT_IS_EXTERNAL_INDIRECT(redirect.pointer));
 
     return heap_tuple_untoast_attr_slice(redirect.pointer, sliceoffset, slicelength);
   }
   else if (VARATT_IS_EXTERNAL_EXPANDED(attr))
   {
-    /* pass it off to heap_tuple_fetch_attr to flatten */
+                                                         
     preslice = heap_tuple_fetch_attr(attr);
   }
   else
@@ -328,7 +328,7 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
   {
     struct varlena *tmp = preslice;
 
-    /* Decompress enough to encompass the slice and the offset */
+                                                                 
     if (slicelimit >= 0)
     {
       preslice = toast_decompress_datum_slice(tmp, slicelimit);
@@ -355,7 +355,7 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
     attrsize = VARSIZE(preslice) - VARHDRSZ;
   }
 
-  /* slicing of datum for compressed cases and plain value */
+                                                             
 
   if (sliceoffset >= attrsize)
   {
@@ -380,13 +380,13 @@ heap_tuple_untoast_attr_slice(struct varlena *attr, int32 sliceoffset, int32 sli
   return result;
 }
 
-/* ----------
- * toast_raw_datum_size -
- *
- *	Return the raw (detoasted) size of a varlena datum
- *	(including the VARHDRSZ header)
- * ----------
- */
+              
+                          
+   
+                                                      
+                                   
+              
+   
 Size
 toast_raw_datum_size(Datum value)
 {
@@ -395,7 +395,7 @@ toast_raw_datum_size(Datum value)
 
   if (VARATT_IS_EXTERNAL_ONDISK(attr))
   {
-    /* va_rawsize is the size of the original datum -- including header */
+                                                                          
     struct varatt_external toast_pointer;
 
     VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
@@ -407,7 +407,7 @@ toast_raw_datum_size(Datum value)
 
     VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
-    /* nested indirect Datums aren't allowed */
+                                               
     Assert(!VARATT_IS_EXTERNAL_INDIRECT(toast_pointer.pointer));
 
     return toast_raw_datum_size(PointerGetDatum(toast_pointer.pointer));
@@ -418,31 +418,31 @@ toast_raw_datum_size(Datum value)
   }
   else if (VARATT_IS_COMPRESSED(attr))
   {
-    /* here, va_rawsize is just the payload size */
+                                                   
     result = VARRAWSIZE_4B_C(attr) + VARHDRSZ;
   }
   else if (VARATT_IS_SHORT(attr))
   {
-    /*
-     * we have to normalize the header length to VARHDRSZ or else the
-     * callers of this function will be confused.
-     */
+       
+                                                                      
+                                                  
+       
     result = VARSIZE_SHORT(attr) - VARHDRSZ_SHORT + VARHDRSZ;
   }
   else
   {
-    /* plain untoasted datum */
+                               
     result = VARSIZE(attr);
   }
   return result;
 }
 
-/* ----------
- * toast_datum_size
- *
- *	Return the physical storage size (possibly compressed) of a varlena datum
- * ----------
- */
+              
+                    
+   
+                                                                             
+              
+   
 Size
 toast_datum_size(Datum value)
 {
@@ -451,11 +451,11 @@ toast_datum_size(Datum value)
 
   if (VARATT_IS_EXTERNAL_ONDISK(attr))
   {
-    /*
-     * Attribute is stored externally - return the extsize whether
-     * compressed or not.  We do not count the size of the toast pointer
-     * ... should we?
-     */
+       
+                                                                   
+                                                                         
+                      
+       
     struct varatt_external toast_pointer;
 
     VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
@@ -467,7 +467,7 @@ toast_datum_size(Datum value)
 
     VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
-    /* nested indirect Datums aren't allowed */
+                                               
     Assert(!VARATT_IS_EXTERNAL_INDIRECT(attr));
 
     return toast_datum_size(PointerGetDatum(toast_pointer.pointer));
@@ -482,21 +482,21 @@ toast_datum_size(Datum value)
   }
   else
   {
-    /*
-     * Attribute is stored inline either compressed or not, just calculate
-     * the size of the datum in either case.
-     */
+       
+                                                                           
+                                             
+       
     result = VARSIZE(attr);
   }
   return result;
 }
 
-/* ----------
- * toast_delete -
- *
- *	Cascaded delete toast-entries on DELETE
- * ----------
- */
+              
+                  
+   
+                                           
+              
+   
 void
 toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative)
 {
@@ -506,33 +506,33 @@ toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative)
   Datum toast_values[MaxHeapAttributeNumber];
   bool toast_isnull[MaxHeapAttributeNumber];
 
-  /*
-   * We should only ever be called for tuples of plain relations or
-   * materialized views --- recursing on a toast rel is bad news.
-   */
+     
+                                                                    
+                                                                  
+     
   Assert(rel->rd_rel->relkind == RELKIND_RELATION || rel->rd_rel->relkind == RELKIND_MATVIEW);
 
-  /*
-   * Get the tuple descriptor and break down the tuple into fields.
-   *
-   * NOTE: it's debatable whether to use heap_deform_tuple() here or just
-   * heap_getattr() only the varlena columns.  The latter could win if there
-   * are few varlena columns and many non-varlena ones. However,
-   * heap_deform_tuple costs only O(N) while the heap_getattr way would cost
-   * O(N^2) if there are many varlena columns, so it seems better to err on
-   * the side of linear cost.  (We won't even be here unless there's at
-   * least one varlena column, by the way.)
-   */
+     
+                                                                    
+     
+                                                                          
+                                                                             
+                                                                 
+                                                                             
+                                                                            
+                                                                        
+                                            
+     
   tupleDesc = rel->rd_att;
   numAttrs = tupleDesc->natts;
 
   Assert(numAttrs <= MaxHeapAttributeNumber);
   heap_deform_tuple(oldtup, tupleDesc, toast_values, toast_isnull);
 
-  /*
-   * Check for external stored attributes and delete them from the secondary
-   * relation.
-   */
+     
+                                                                             
+               
+     
   for (i = 0; i < numAttrs; i++)
   {
     if (TupleDescAttr(tupleDesc, i)->attlen == -1)
@@ -551,24 +551,24 @@ toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative)
   }
 }
 
-/* ----------
- * toast_insert_or_update -
- *
- *	Delete no-longer-used toast-entries and create new ones to
- *	make the new tuple fit on INSERT or UPDATE
- *
- * Inputs:
- *	newtup: the candidate new tuple to be inserted
- *	oldtup: the old row version for UPDATE, or NULL for INSERT
- *	options: options to be passed to heap_insert() for toast rows
- * Result:
- *	either newtup if no toasting is needed, or a palloc'd modified tuple
- *	that is what should actually get stored
- *
- * NOTE: neither newtup nor oldtup will be modified.  This is a change
- * from the pre-8.1 API of this routine.
- * ----------
- */
+              
+                            
+   
+                                                              
+                                              
+   
+           
+                                                  
+                                                              
+                                                                 
+           
+                                                                        
+                                           
+   
+                                                                       
+                                         
+              
+   
 HeapTuple
 toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int options)
 {
@@ -595,23 +595,23 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
   bool toast_free[MaxHeapAttributeNumber];
   bool toast_delold[MaxHeapAttributeNumber];
 
-  /*
-   * Ignore the INSERT_SPECULATIVE option. Speculative insertions/super
-   * deletions just normally insert/delete the toast values. It seems
-   * easiest to deal with that here, instead on, potentially, multiple
-   * callers.
-   */
+     
+                                                                        
+                                                                      
+                                                                       
+              
+     
   options &= ~HEAP_INSERT_SPECULATIVE;
 
-  /*
-   * We should only ever be called for tuples of plain relations or
-   * materialized views --- recursing on a toast rel is bad news.
-   */
+     
+                                                                    
+                                                                  
+     
   Assert(rel->rd_rel->relkind == RELKIND_RELATION || rel->rd_rel->relkind == RELKIND_MATVIEW);
 
-  /*
-   * Get the tuple descriptor and break down the tuple(s) into fields.
-   */
+     
+                                                                       
+     
   tupleDesc = rel->rd_att;
   numAttrs = tupleDesc->natts;
 
@@ -622,18 +622,18 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     heap_deform_tuple(oldtup, tupleDesc, toast_oldvalues, toast_oldisnull);
   }
 
-  /* ----------
-   * Then collect information about the values given
-   *
-   * NOTE: toast_action[i] can have these values:
-   *		' '		default handling
-   *		'p'		already processed --- don't touch it
-   *		'x'		incompressible, but OK to move off
-   *
-   * NOTE: toast_sizes[i] is only made valid for varlena attributes with
-   *		toast_action[i] different from 'p'.
-   * ----------
-   */
+                
+                                                     
+     
+                                                  
+                            
+                                                
+                                              
+     
+                                                                         
+                                          
+                
+     
   memset(toast_action, ' ', numAttrs * sizeof(char));
   memset(toast_oldexternal, 0, numAttrs * sizeof(struct varlena *));
   memset(toast_free, 0, numAttrs * sizeof(bool));
@@ -647,34 +647,34 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
 
     if (oldtup != NULL)
     {
-      /*
-       * For UPDATE get the old and new values of this attribute
-       */
+         
+                                                                 
+         
       old_value = (struct varlena *)DatumGetPointer(toast_oldvalues[i]);
       new_value = (struct varlena *)DatumGetPointer(toast_values[i]);
 
-      /*
-       * If the old value is stored on disk, check if it has changed so
-       * we have to delete it later.
-       */
+         
+                                                                        
+                                     
+         
       if (att->attlen == -1 && !toast_oldisnull[i] && VARATT_IS_EXTERNAL_ONDISK(old_value))
       {
         if (toast_isnull[i] || !VARATT_IS_EXTERNAL_ONDISK(new_value) || memcmp((char *)old_value, (char *)new_value, VARSIZE_EXTERNAL(old_value)) != 0)
         {
-          /*
-           * The old external stored value isn't needed any more
-           * after the update
-           */
+             
+                                                                 
+                              
+             
           toast_delold[i] = true;
           need_delold = true;
         }
         else
         {
-          /*
-           * This attribute isn't changed by this update so we reuse
-           * the original reference to the old value in the new
-           * tuple.
-           */
+             
+                                                                     
+                                                                
+                    
+             
           toast_action[i] = 'p';
           continue;
         }
@@ -682,15 +682,15 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     }
     else
     {
-      /*
-       * For INSERT simply get the new value
-       */
+         
+                                             
+         
       new_value = (struct varlena *)DatumGetPointer(toast_values[i]);
     }
 
-    /*
-     * Handle NULL attributes
-     */
+       
+                              
+       
     if (toast_isnull[i])
     {
       toast_action[i] = 'p';
@@ -698,27 +698,27 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       continue;
     }
 
-    /*
-     * Now look at varlena attributes
-     */
+       
+                                      
+       
     if (att->attlen == -1)
     {
-      /*
-       * If the table's attribute says PLAIN always, force it so.
-       */
+         
+                                                                  
+         
       if (att->attstorage == 'p')
       {
         toast_action[i] = 'p';
       }
 
-      /*
-       * We took care of UPDATE above, so any external value we find
-       * still in the tuple must be someone else's that we cannot reuse
-       * (this includes the case of an out-of-line in-memory datum).
-       * Fetch it back (without decompression, unless we are forcing
-       * PLAIN storage).  If necessary, we'll push it out as a new
-       * external value below.
-       */
+         
+                                                                     
+                                                                        
+                                                                     
+                                                                     
+                                                                   
+                               
+         
       if (VARATT_IS_EXTERNAL(new_value))
       {
         toast_oldexternal[i] = new_value;
@@ -736,45 +736,45 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
         need_free = true;
       }
 
-      /*
-       * Remember the size of this attribute
-       */
+         
+                                             
+         
       toast_sizes[i] = VARSIZE_ANY(new_value);
     }
     else
     {
-      /*
-       * Not a varlena attribute, plain storage always
-       */
+         
+                                                       
+         
       toast_action[i] = 'p';
     }
   }
 
-  /* ----------
-   * Compress and/or save external until data fits into target length
-   *
-   *	1: Inline compress attributes with attstorage 'x', and store very
-   *	   large attributes with attstorage 'x' or 'e' external immediately
-   *	2: Store attributes with attstorage 'x' or 'e' external
-   *	3: Inline compress attributes with attstorage 'm'
-   *	4: Store attributes with attstorage 'm' external
-   * ----------
-   */
+                
+                                                                      
+     
+                                                                       
+                                                                         
+                                                             
+                                                       
+                                                      
+                
+     
 
-  /* compute header overhead --- this should match heap_form_tuple() */
+                                                                       
   hoff = SizeofHeapTupleHeader;
   if (has_nulls)
   {
     hoff += BITMAPLEN(numAttrs);
   }
   hoff = MAXALIGN(hoff);
-  /* now convert to a limit on the tuple data size */
+                                                     
   maxDataLen = RelationGetToastTupleTarget(rel, TOAST_TUPLE_TARGET) - hoff;
 
-  /*
-   * Look for attributes with attstorage 'x' to compress.  Also find large
-   * attributes with attstorage 'x' or 'e', and store them external.
-   */
+     
+                                                                           
+                                                                     
+     
   while (heap_compute_data_size(tupleDesc, toast_values, toast_isnull) > maxDataLen)
   {
     int biggest_attno = -1;
@@ -782,9 +782,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     Datum old_value;
     Datum new_value;
 
-    /*
-     * Search for the biggest yet unprocessed internal attribute
-     */
+       
+                                                                 
+       
     for (i = 0; i < numAttrs; i++)
     {
       Form_pg_attribute att = TupleDescAttr(tupleDesc, i);
@@ -795,7 +795,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       }
       if (VARATT_IS_EXTERNAL(DatumGetPointer(toast_values[i])))
       {
-        continue; /* can't happen, toast_action would be 'p' */
+        continue;                                              
       }
       if (VARATT_IS_COMPRESSED(DatumGetPointer(toast_values[i])))
       {
@@ -817,9 +817,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       break;
     }
 
-    /*
-     * Attempt to compress it inline, if it has attstorage 'x'
-     */
+       
+                                                               
+       
     i = biggest_attno;
     if (TupleDescAttr(tupleDesc, i)->attstorage == 'x')
     {
@@ -828,7 +828,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
 
       if (DatumGetPointer(new_value) != NULL)
       {
-        /* successful compression */
+                                    
         if (toast_free[i])
         {
           pfree(DatumGetPointer(old_value));
@@ -841,24 +841,24 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       }
       else
       {
-        /* incompressible, ignore on subsequent compression passes */
+                                                                     
         toast_action[i] = 'x';
       }
     }
     else
     {
-      /* has attstorage 'e', ignore on subsequent compression passes */
+                                                                       
       toast_action[i] = 'x';
     }
 
-    /*
-     * If this value is by itself more than maxDataLen (after compression
-     * if any), push it out to the toast table immediately, if possible.
-     * This avoids uselessly compressing other fields in the common case
-     * where we have one long field and several short ones.
-     *
-     * XXX maybe the threshold should be less than maxDataLen?
-     */
+       
+                                                                          
+                                                                         
+                                                                         
+                                                            
+       
+                                                               
+       
     if (toast_sizes[i] > maxDataLen && rel->rd_rel->reltoastrelid != InvalidOid)
     {
       old_value = toast_values[i];
@@ -874,21 +874,21 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     }
   }
 
-  /*
-   * Second we look for attributes of attstorage 'x' or 'e' that are still
-   * inline.  But skip this if there's no toast table to push them to.
-   */
+     
+                                                                           
+                                                                       
+     
   while (heap_compute_data_size(tupleDesc, toast_values, toast_isnull) > maxDataLen && rel->rd_rel->reltoastrelid != InvalidOid)
   {
     int biggest_attno = -1;
     int32 biggest_size = MAXALIGN(TOAST_POINTER_SIZE);
     Datum old_value;
 
-    /*------
-     * Search for the biggest yet inlined attribute with
-     * attstorage equals 'x' or 'e'
-     *------
-     */
+             
+                                                         
+                                    
+             
+       
     for (i = 0; i < numAttrs; i++)
     {
       Form_pg_attribute att = TupleDescAttr(tupleDesc, i);
@@ -899,7 +899,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       }
       if (VARATT_IS_EXTERNAL(DatumGetPointer(toast_values[i])))
       {
-        continue; /* can't happen, toast_action would be 'p' */
+        continue;                                              
       }
       if (att->attstorage != 'x' && att->attstorage != 'e')
       {
@@ -917,9 +917,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       break;
     }
 
-    /*
-     * Store this external
-     */
+       
+                           
+       
     i = biggest_attno;
     old_value = toast_values[i];
     toast_action[i] = 'p';
@@ -934,10 +934,10 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     need_free = true;
   }
 
-  /*
-   * Round 3 - this time we take attributes with storage 'm' into
-   * compression
-   */
+     
+                                                                  
+                 
+     
   while (heap_compute_data_size(tupleDesc, toast_values, toast_isnull) > maxDataLen)
   {
     int biggest_attno = -1;
@@ -945,9 +945,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     Datum old_value;
     Datum new_value;
 
-    /*
-     * Search for the biggest yet uncompressed internal attribute
-     */
+       
+                                                                  
+       
     for (i = 0; i < numAttrs; i++)
     {
       if (toast_action[i] != ' ')
@@ -956,7 +956,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       }
       if (VARATT_IS_EXTERNAL(DatumGetPointer(toast_values[i])))
       {
-        continue; /* can't happen, toast_action would be 'p' */
+        continue;                                              
       }
       if (VARATT_IS_COMPRESSED(DatumGetPointer(toast_values[i])))
       {
@@ -978,16 +978,16 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       break;
     }
 
-    /*
-     * Attempt to compress it inline
-     */
+       
+                                     
+       
     i = biggest_attno;
     old_value = toast_values[i];
     new_value = toast_compress_datum(old_value);
 
     if (DatumGetPointer(new_value) != NULL)
     {
-      /* successful compression */
+                                  
       if (toast_free[i])
       {
         pfree(DatumGetPointer(old_value));
@@ -1000,16 +1000,16 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     }
     else
     {
-      /* incompressible, ignore on subsequent compression passes */
+                                                                   
       toast_action[i] = 'x';
     }
   }
 
-  /*
-   * Finally we store attributes of type 'm' externally.  At this point we
-   * increase the target tuple size, so that 'm' attributes aren't stored
-   * externally unless really necessary.
-   */
+     
+                                                                           
+                                                                          
+                                         
+     
   maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
 
   while (heap_compute_data_size(tupleDesc, toast_values, toast_isnull) > maxDataLen && rel->rd_rel->reltoastrelid != InvalidOid)
@@ -1018,11 +1018,11 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     int32 biggest_size = MAXALIGN(TOAST_POINTER_SIZE);
     Datum old_value;
 
-    /*--------
-     * Search for the biggest yet inlined attribute with
-     * attstorage = 'm'
-     *--------
-     */
+               
+                                                         
+                        
+               
+       
     for (i = 0; i < numAttrs; i++)
     {
       if (toast_action[i] == 'p')
@@ -1031,7 +1031,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       }
       if (VARATT_IS_EXTERNAL(DatumGetPointer(toast_values[i])))
       {
-        continue; /* can't happen, toast_action would be 'p' */
+        continue;                                              
       }
       if (TupleDescAttr(tupleDesc, i)->attstorage != 'm')
       {
@@ -1049,9 +1049,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
       break;
     }
 
-    /*
-     * Store this external
-     */
+       
+                           
+       
     i = biggest_attno;
     old_value = toast_values[i];
     toast_action[i] = 'p';
@@ -1066,10 +1066,10 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     need_free = true;
   }
 
-  /*
-   * In the case we toasted any values, we need to build a new heap tuple
-   * with the changed values.
-   */
+     
+                                                                          
+                              
+     
   if (need_change)
   {
     HeapTupleHeader olddata = newtup->t_data;
@@ -1078,16 +1078,16 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     int32 new_data_len;
     int32 new_tuple_len;
 
-    /*
-     * Calculate the new size of the tuple.
-     *
-     * Note: we used to assume here that the old tuple's t_hoff must equal
-     * the new_header_len value, but that was incorrect.  The old tuple
-     * might have a smaller-than-current natts, if there's been an ALTER
-     * TABLE ADD COLUMN since it was stored; and that would lead to a
-     * different conclusion about the size of the null bitmap, or even
-     * whether there needs to be one at all.
-     */
+       
+                                            
+       
+                                                                           
+                                                                        
+                                                                         
+                                                                      
+                                                                       
+                                             
+       
     new_header_len = SizeofHeapTupleHeader;
     if (has_nulls)
     {
@@ -1097,9 +1097,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     new_data_len = heap_compute_data_size(tupleDesc, toast_values, toast_isnull);
     new_tuple_len = new_header_len + new_data_len;
 
-    /*
-     * Allocate and zero the space needed, and fill HeapTupleData fields.
-     */
+       
+                                                                          
+       
     result_tuple = (HeapTuple)palloc0(HEAPTUPLESIZE + new_tuple_len);
     result_tuple->t_len = new_tuple_len;
     result_tuple->t_self = newtup->t_self;
@@ -1107,14 +1107,14 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     new_data = (HeapTupleHeader)((char *)result_tuple + HEAPTUPLESIZE);
     result_tuple->t_data = new_data;
 
-    /*
-     * Copy the existing tuple header, but adjust natts and t_hoff.
-     */
+       
+                                                                    
+       
     memcpy(new_data, olddata, SizeofHeapTupleHeader);
     HeapTupleHeaderSetNatts(new_data, numAttrs);
     new_data->t_hoff = new_header_len;
 
-    /* Copy over the data, and fill the null bitmap if needed */
+                                                                
     heap_fill_tuple(tupleDesc, toast_values, toast_isnull, (char *)new_data + new_header_len, new_data_len, &(new_data->t_infomask), has_nulls ? new_data->t_bits : NULL);
   }
   else
@@ -1122,9 +1122,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     result_tuple = newtup;
   }
 
-  /*
-   * Free allocated temp values
-   */
+     
+                                
+     
   if (need_free)
   {
     for (i = 0; i < numAttrs; i++)
@@ -1136,9 +1136,9 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
     }
   }
 
-  /*
-   * Delete external values from the old tuple
-   */
+     
+                                               
+     
   if (need_delold)
   {
     for (i = 0; i < numAttrs; i++)
@@ -1153,16 +1153,16 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int opt
   return result_tuple;
 }
 
-/* ----------
- * toast_flatten_tuple -
- *
- *	"Flatten" a tuple to contain no out-of-line toasted fields.
- *	(This does not eliminate compressed or short-header datums.)
- *
- *	Note: we expect the caller already checked HeapTupleHasExternal(tup),
- *	so there is no need for a short-circuit path.
- * ----------
- */
+              
+                         
+   
+                                                               
+                                                                
+   
+                                                                         
+                                                 
+              
+   
 HeapTuple
 toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
 {
@@ -1173,9 +1173,9 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
   bool toast_isnull[MaxTupleAttributeNumber];
   bool toast_free[MaxTupleAttributeNumber];
 
-  /*
-   * Break down the tuple into fields.
-   */
+     
+                                       
+     
   Assert(numAttrs <= MaxTupleAttributeNumber);
   heap_deform_tuple(tup, tupleDesc, toast_values, toast_isnull);
 
@@ -1183,9 +1183,9 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
 
   for (i = 0; i < numAttrs; i++)
   {
-    /*
-     * Look at non-null varlena attributes
-     */
+       
+                                           
+       
     if (!toast_isnull[i] && TupleDescAttr(tupleDesc, i)->attlen == -1)
     {
       struct varlena *new_value;
@@ -1200,16 +1200,16 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
     }
   }
 
-  /*
-   * Form the reconfigured tuple.
-   */
+     
+                                  
+     
   new_tuple = heap_form_tuple(tupleDesc, toast_values, toast_isnull);
 
-  /*
-   * Be sure to copy the tuple's identity fields.  We also make a point of
-   * copying visibility info, just in case anybody looks at those fields in
-   * a syscache entry.
-   */
+     
+                                                                           
+                                                                            
+                       
+     
   new_tuple->t_self = tup->t_self;
   new_tuple->t_tableOid = tup->t_tableOid;
 
@@ -1220,9 +1220,9 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
   new_tuple->t_data->t_infomask2 &= ~HEAP2_XACT_MASK;
   new_tuple->t_data->t_infomask2 |= tup->t_data->t_infomask2 & HEAP2_XACT_MASK;
 
-  /*
-   * Free allocated temp values
-   */
+     
+                                
+     
   for (i = 0; i < numAttrs; i++)
   {
     if (toast_free[i])
@@ -1234,35 +1234,35 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
   return new_tuple;
 }
 
-/* ----------
- * toast_flatten_tuple_to_datum -
- *
- *	"Flatten" a tuple containing out-of-line toasted fields into a Datum.
- *	The result is always palloc'd in the current memory context.
- *
- *	We have a general rule that Datums of container types (rows, arrays,
- *	ranges, etc) must not contain any external TOAST pointers.  Without
- *	this rule, we'd have to look inside each Datum when preparing a tuple
- *	for storage, which would be expensive and would fail to extend cleanly
- *	to new sorts of container types.
- *
- *	However, we don't want to say that tuples represented as HeapTuples
- *	can't contain toasted fields, so instead this routine should be called
- *	when such a HeapTuple is being converted into a Datum.
- *
- *	While we're at it, we decompress any compressed fields too.  This is not
- *	necessary for correctness, but reflects an expectation that compression
- *	will be more effective if applied to the whole tuple not individual
- *	fields.  We are not so concerned about that that we want to deconstruct
- *	and reconstruct tuples just to get rid of compressed fields, however.
- *	So callers typically won't call this unless they see that the tuple has
- *	at least one external field.
- *
- *	On the other hand, in-line short-header varlena fields are left alone.
- *	If we "untoasted" them here, they'd just get changed back to short-header
- *	format anyway within heap_fill_tuple.
- * ----------
- */
+              
+                                  
+   
+                                                                         
+                                                                
+   
+                                                                        
+                                                                       
+                                                                         
+                                                                          
+                                    
+   
+                                                                       
+                                                                          
+                                                          
+   
+                                                                            
+                                                                           
+                                                                       
+                                                                           
+                                                                         
+                                                                           
+                                
+   
+                                                                          
+                                                                             
+                                         
+              
+   
 Datum
 toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupleDesc)
 {
@@ -1278,15 +1278,15 @@ toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupl
   bool toast_isnull[MaxTupleAttributeNumber];
   bool toast_free[MaxTupleAttributeNumber];
 
-  /* Build a temporary HeapTuple control structure */
+                                                     
   tmptup.t_len = tup_len;
   ItemPointerSetInvalid(&(tmptup.t_self));
   tmptup.t_tableOid = InvalidOid;
   tmptup.t_data = tup;
 
-  /*
-   * Break down the tuple into fields.
-   */
+     
+                                       
+     
   Assert(numAttrs <= MaxTupleAttributeNumber);
   heap_deform_tuple(&tmptup, tupleDesc, toast_values, toast_isnull);
 
@@ -1294,9 +1294,9 @@ toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupl
 
   for (i = 0; i < numAttrs; i++)
   {
-    /*
-     * Look at non-null varlena attributes
-     */
+       
+                                           
+       
     if (toast_isnull[i])
     {
       has_nulls = true;
@@ -1315,11 +1315,11 @@ toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupl
     }
   }
 
-  /*
-   * Calculate the new size of the tuple.
-   *
-   * This should match the reconstruction code in toast_insert_or_update.
-   */
+     
+                                          
+     
+                                                                          
+     
   new_header_len = SizeofHeapTupleHeader;
   if (has_nulls)
   {
@@ -1331,24 +1331,24 @@ toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupl
 
   new_data = (HeapTupleHeader)palloc0(new_tuple_len);
 
-  /*
-   * Copy the existing tuple header, but adjust natts and t_hoff.
-   */
+     
+                                                                  
+     
   memcpy(new_data, tup, SizeofHeapTupleHeader);
   HeapTupleHeaderSetNatts(new_data, numAttrs);
   new_data->t_hoff = new_header_len;
 
-  /* Set the composite-Datum header fields correctly */
+                                                       
   HeapTupleHeaderSetDatumLength(new_data, new_tuple_len);
   HeapTupleHeaderSetTypeId(new_data, tupleDesc->tdtypeid);
   HeapTupleHeaderSetTypMod(new_data, tupleDesc->tdtypmod);
 
-  /* Copy over the data, and fill the null bitmap if needed */
+                                                              
   heap_fill_tuple(tupleDesc, toast_values, toast_isnull, (char *)new_data + new_header_len, new_data_len, &(new_data->t_infomask), has_nulls ? new_data->t_bits : NULL);
 
-  /*
-   * Free allocated temp values
-   */
+     
+                                
+     
   for (i = 0; i < numAttrs; i++)
   {
     if (toast_free[i])
@@ -1360,19 +1360,19 @@ toast_flatten_tuple_to_datum(HeapTupleHeader tup, uint32 tup_len, TupleDesc tupl
   return PointerGetDatum(new_data);
 }
 
-/* ----------
- * toast_build_flattened_tuple -
- *
- *	Build a tuple containing no out-of-line toasted fields.
- *	(This does not eliminate compressed or short-header datums.)
- *
- *	This is essentially just like heap_form_tuple, except that it will
- *	expand any external-data pointers beforehand.
- *
- *	It's not very clear whether it would be preferable to decompress
- *	in-line compressed datums while at it.  For now, we don't.
- * ----------
- */
+              
+                                 
+   
+                                                           
+                                                                
+   
+                                                                      
+                                                 
+   
+                                                                    
+                                                              
+              
+   
 HeapTuple
 toast_build_flattened_tuple(TupleDesc tupleDesc, Datum *values, bool *isnull)
 {
@@ -1383,19 +1383,19 @@ toast_build_flattened_tuple(TupleDesc tupleDesc, Datum *values, bool *isnull)
   Datum new_values[MaxTupleAttributeNumber];
   Pointer freeable_values[MaxTupleAttributeNumber];
 
-  /*
-   * We can pass the caller's isnull array directly to heap_form_tuple, but
-   * we potentially need to modify the values array.
-   */
+     
+                                                                            
+                                                     
+     
   Assert(numAttrs <= MaxTupleAttributeNumber);
   memcpy(new_values, values, numAttrs * sizeof(Datum));
 
   num_to_free = 0;
   for (i = 0; i < numAttrs; i++)
   {
-    /*
-     * Look at non-null varlena attributes
-     */
+       
+                                           
+       
     if (!isnull[i] && TupleDescAttr(tupleDesc, i)->attlen == -1)
     {
       struct varlena *new_value;
@@ -1410,14 +1410,14 @@ toast_build_flattened_tuple(TupleDesc tupleDesc, Datum *values, bool *isnull)
     }
   }
 
-  /*
-   * Form the reconfigured tuple.
-   */
+     
+                                  
+     
   new_tuple = heap_form_tuple(tupleDesc, new_values, isnull);
 
-  /*
-   * Free allocated temp values
-   */
+     
+                                
+     
   for (i = 0; i < num_to_free; i++)
   {
     pfree(freeable_values[i]);
@@ -1426,19 +1426,19 @@ toast_build_flattened_tuple(TupleDesc tupleDesc, Datum *values, bool *isnull)
   return new_tuple;
 }
 
-/* ----------
- * toast_compress_datum -
- *
- *	Create a compressed version of a varlena datum
- *
- *	If we fail (ie, compressed result is actually bigger than original)
- *	then return NULL.  We must not use compressed data if it'd expand
- *	the tuple!
- *
- *	We use VAR{SIZE,DATA}_ANY so we can handle short varlenas here without
- *	copying them.  But we can't handle external or compressed datums.
- * ----------
- */
+              
+                          
+   
+                                                  
+   
+                                                                       
+                                                                     
+              
+   
+                                                                          
+                                                                     
+              
+   
 Datum
 toast_compress_datum(Datum value)
 {
@@ -1449,10 +1449,10 @@ toast_compress_datum(Datum value)
   Assert(!VARATT_IS_EXTERNAL(DatumGetPointer(value)));
   Assert(!VARATT_IS_COMPRESSED(DatumGetPointer(value)));
 
-  /*
-   * No point in wasting a palloc cycle if value size is out of the allowed
-   * range for compression
-   */
+     
+                                                                            
+                           
+     
   if (valsize < PGLZ_strategy_default->min_input_size || valsize > PGLZ_strategy_default->max_input_size)
   {
     return PointerGetDatum(NULL);
@@ -1460,38 +1460,38 @@ toast_compress_datum(Datum value)
 
   tmp = (struct varlena *)palloc(PGLZ_MAX_OUTPUT(valsize) + TOAST_COMPRESS_HDRSZ);
 
-  /*
-   * We recheck the actual size even if pglz_compress() reports success,
-   * because it might be satisfied with having saved as little as one byte
-   * in the compressed data --- which could turn into a net loss once you
-   * consider header and alignment padding.  Worst case, the compressed
-   * format might require three padding bytes (plus header, which is
-   * included in VARSIZE(tmp)), whereas the uncompressed format would take
-   * only one header byte and no padding if the value is short enough.  So
-   * we insist on a savings of more than 2 bytes to ensure we have a gain.
-   */
+     
+                                                                         
+                                                                           
+                                                                          
+                                                                        
+                                                                     
+                                                                           
+                                                                           
+                                                                           
+     
   len = pglz_compress(VARDATA_ANY(DatumGetPointer(value)), valsize, TOAST_COMPRESS_RAWDATA(tmp), PGLZ_strategy_default);
   if (len >= 0 && len + TOAST_COMPRESS_HDRSZ < valsize - 2)
   {
     TOAST_COMPRESS_SET_RAWSIZE(tmp, valsize);
     SET_VARSIZE_COMPRESSED(tmp, len + TOAST_COMPRESS_HDRSZ);
-    /* successful compression */
+                                
     return PointerGetDatum(tmp);
   }
   else
   {
-    /* incompressible data */
+                             
     pfree(tmp);
     return PointerGetDatum(NULL);
   }
 }
 
-/* ----------
- * toast_get_valid_index
- *
- *	Get OID of valid index associated to given toast relation. A toast
- *	relation can have only one valid index at the same time.
- */
+              
+                         
+   
+                                                                      
+                                                            
+   
 Oid
 toast_get_valid_index(Oid toastoid, LOCKMODE lock)
 {
@@ -1501,32 +1501,32 @@ toast_get_valid_index(Oid toastoid, LOCKMODE lock)
   Relation *toastidxs;
   Relation toastrel;
 
-  /* Open the toast relation */
+                               
   toastrel = table_open(toastoid, lock);
 
-  /* Look for the valid index of the toast relation */
+                                                      
   validIndex = toast_open_indexes(toastrel, lock, &toastidxs, &num_indexes);
   validIndexOid = RelationGetRelid(toastidxs[validIndex]);
 
-  /* Close the toast relation and all its indexes */
+                                                    
   toast_close_indexes(toastidxs, num_indexes, NoLock);
   table_close(toastrel, NoLock);
 
   return validIndexOid;
 }
 
-/* ----------
- * toast_save_datum -
- *
- *	Save one single datum into the secondary relation and return
- *	a Datum reference for it.
- *
- * rel: the main relation we're working with (not the toast rel!)
- * value: datum to be pushed to toast storage
- * oldexternal: if not NULL, toast pointer previously representing the datum
- * options: options to be passed to heap_insert() for toast rows
- * ----------
- */
+              
+                      
+   
+                                                                
+                             
+   
+                                                                  
+                                              
+                                                                             
+                                                                 
+              
+   
 static Datum
 toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int options)
 {
@@ -1542,9 +1542,9 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
   union
   {
     struct varlena hdr;
-    /* this is to make the union big enough for a chunk: */
+                                                           
     char data[TOAST_MAX_CHUNK_SIZE + VARHDRSZ];
-    /* ensure union is aligned well enough: */
+                                              
     int32 align_it;
   } chunk_data;
   int32 chunk_size;
@@ -1557,40 +1557,40 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
 
   Assert(!VARATT_IS_EXTERNAL(value));
 
-  /*
-   * Open the toast relation and its indexes.  We can use the index to check
-   * uniqueness of the OID we assign to the toasted item, even though it has
-   * additional columns besides OID.
-   */
+     
+                                                                             
+                                                                             
+                                     
+     
   toastrel = table_open(rel->rd_rel->reltoastrelid, RowExclusiveLock);
   toasttupDesc = toastrel->rd_att;
 
-  /* Open all the toast indexes and look for the valid one */
+                                                             
   validIndex = toast_open_indexes(toastrel, RowExclusiveLock, &toastidxs, &num_indexes);
 
-  /*
-   * Get the data pointer and length, and compute va_rawsize and va_extsize.
-   *
-   * va_rawsize is the size of the equivalent fully uncompressed datum, so
-   * we have to adjust for short headers.
-   *
-   * va_extsize is the actual size of the data payload in the toast records.
-   */
+     
+                                                                             
+     
+                                                                           
+                                          
+     
+                                                                             
+     
   if (VARATT_IS_SHORT(dval))
   {
     data_p = VARDATA_SHORT(dval);
     data_todo = VARSIZE_SHORT(dval) - VARHDRSZ_SHORT;
-    toast_pointer.va_rawsize = data_todo + VARHDRSZ; /* as if not short */
+    toast_pointer.va_rawsize = data_todo + VARHDRSZ;                      
     toast_pointer.va_extsize = data_todo;
   }
   else if (VARATT_IS_COMPRESSED(dval))
   {
     data_p = VARDATA(dval);
     data_todo = VARSIZE(dval) - VARHDRSZ;
-    /* rawsize in a compressed datum is just the size of the payload */
+                                                                       
     toast_pointer.va_rawsize = VARRAWSIZE_4B_C(dval) + VARHDRSZ;
     toast_pointer.va_extsize = data_todo;
-    /* Assert that the numbers look like it's compressed */
+                                                           
     Assert(VARATT_EXTERNAL_IS_COMPRESSED(toast_pointer));
   }
   else
@@ -1601,14 +1601,14 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
     toast_pointer.va_extsize = data_todo;
   }
 
-  /*
-   * Insert the correct table OID into the result TOAST pointer.
-   *
-   * Normally this is the actual OID of the target toast table, but during
-   * table-rewriting operations such as CLUSTER, we have to insert the OID
-   * of the table's real permanent toast table instead.  rd_toastoid is set
-   * if we have to substitute such an OID.
-   */
+     
+                                                                 
+     
+                                                                           
+                                                                           
+                                                                            
+                                           
+     
   if (OidIsValid(rel->rd_toastoid))
   {
     toast_pointer.va_toastrelid = rel->rd_toastoid;
@@ -1618,69 +1618,69 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
     toast_pointer.va_toastrelid = RelationGetRelid(toastrel);
   }
 
-  /*
-   * Choose an OID to use as the value ID for this toast value.
-   *
-   * Normally we just choose an unused OID within the toast table.  But
-   * during table-rewriting operations where we are preserving an existing
-   * toast table OID, we want to preserve toast value OIDs too.  So, if
-   * rd_toastoid is set and we had a prior external value from that same
-   * toast table, re-use its value ID.  If we didn't have a prior external
-   * value (which is a corner case, but possible if the table's attstorage
-   * options have been changed), we have to pick a value ID that doesn't
-   * conflict with either new or existing toast value OIDs.
-   */
+     
+                                                                
+     
+                                                                        
+                                                                           
+                                                                        
+                                                                         
+                                                                           
+                                                                           
+                                                                         
+                                                            
+     
   if (!OidIsValid(rel->rd_toastoid))
   {
-    /* normal case: just choose an unused OID */
+                                                
     toast_pointer.va_valueid = GetNewOidWithIndex(toastrel, RelationGetRelid(toastidxs[validIndex]), (AttrNumber)1);
   }
   else
   {
-    /* rewrite case: check to see if value was in old toast table */
+                                                                    
     toast_pointer.va_valueid = InvalidOid;
     if (oldexternal != NULL)
     {
       struct varatt_external old_toast_pointer;
 
       Assert(VARATT_IS_EXTERNAL_ONDISK(oldexternal));
-      /* Must copy to access aligned fields */
+                                              
       VARATT_EXTERNAL_GET_POINTER(old_toast_pointer, oldexternal);
       if (old_toast_pointer.va_toastrelid == rel->rd_toastoid)
       {
-        /* This value came from the old toast table; reuse its OID */
+                                                                     
         toast_pointer.va_valueid = old_toast_pointer.va_valueid;
 
-        /*
-         * There is a corner case here: the table rewrite might have
-         * to copy both live and recently-dead versions of a row, and
-         * those versions could easily reference the same toast value.
-         * When we copy the second or later version of such a row,
-         * reusing the OID will mean we select an OID that's already
-         * in the new toast table.  Check for that, and if so, just
-         * fall through without writing the data again.
-         *
-         * While annoying and ugly-looking, this is a good thing
-         * because it ensures that we wind up with only one copy of
-         * the toast value when there is only one copy in the old
-         * toast table.  Before we detected this case, we'd have made
-         * multiple copies, wasting space; and what's worse, the
-         * copies belonging to already-deleted heap tuples would not
-         * be reclaimed by VACUUM.
-         */
+           
+                                                                     
+                                                                      
+                                                                       
+                                                                   
+                                                                     
+                                                                    
+                                                        
+           
+                                                                 
+                                                                    
+                                                                  
+                                                                      
+                                                                 
+                                                                     
+                                   
+           
         if (toastrel_valueid_exists(toastrel, toast_pointer.va_valueid))
         {
-          /* Match, so short-circuit the data storage loop below */
+                                                                   
           data_todo = 0;
         }
       }
     }
     if (toast_pointer.va_valueid == InvalidOid)
     {
-      /*
-       * new value; must choose an OID that doesn't conflict in either
-       * old or new toast table
-       */
+         
+                                                                       
+                                
+         
       do
       {
         toast_pointer.va_valueid = GetNewOidWithIndex(toastrel, RelationGetRelid(toastidxs[validIndex]), (AttrNumber)1);
@@ -1688,32 +1688,32 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
     }
   }
 
-  /*
-   * Initialize constant parts of the tuple data
-   */
+     
+                                                 
+     
   t_values[0] = ObjectIdGetDatum(toast_pointer.va_valueid);
   t_values[2] = PointerGetDatum(&chunk_data);
   t_isnull[0] = false;
   t_isnull[1] = false;
   t_isnull[2] = false;
 
-  /*
-   * Split up the item into chunks
-   */
+     
+                                   
+     
   while (data_todo > 0)
   {
     int i;
 
     CHECK_FOR_INTERRUPTS();
 
-    /*
-     * Calculate the size of this chunk
-     */
+       
+                                        
+       
     chunk_size = Min(TOAST_MAX_CHUNK_SIZE, data_todo);
 
-    /*
-     * Build a tuple and store it
-     */
+       
+                                  
+       
     t_values[1] = Int32GetDatum(chunk_seq++);
     SET_VARSIZE(&chunk_data, chunk_size + VARHDRSZ);
     memcpy(VARDATA(&chunk_data), data_p, chunk_size);
@@ -1721,49 +1721,49 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
 
     heap_insert(toastrel, toasttup, mycid, options, NULL);
 
-    /*
-     * Create the index entry.  We cheat a little here by not using
-     * FormIndexDatum: this relies on the knowledge that the index columns
-     * are the same as the initial columns of the table for all the
-     * indexes.  We also cheat by not providing an IndexInfo: this is okay
-     * for now because btree doesn't need one, but we might have to be
-     * more honest someday.
-     *
-     * Note also that there had better not be any user-created index on
-     * the TOAST table, since we don't bother to update anything else.
-     */
+       
+                                                                    
+                                                                           
+                                                                    
+                                                                           
+                                                                       
+                            
+       
+                                                                        
+                                                                       
+       
     for (i = 0; i < num_indexes; i++)
     {
-      /* Only index relations marked as ready can be updated */
+                                                               
       if (toastidxs[i]->rd_index->indisready)
       {
         index_insert(toastidxs[i], t_values, t_isnull, &(toasttup->t_self), toastrel, toastidxs[i]->rd_index->indisunique ? UNIQUE_CHECK_YES : UNIQUE_CHECK_NO, NULL);
       }
     }
 
-    /*
-     * Free memory
-     */
+       
+                   
+       
     heap_freetuple(toasttup);
 
-    /*
-     * Move on to next chunk
-     */
+       
+                             
+       
     data_todo -= chunk_size;
     data_p += chunk_size;
   }
 
-  /*
-   * Done - close toast relation and its indexes but keep the lock until
-   * commit, so as a concurrent reindex done directly on the toast relation
-   * would be able to wait for this transaction.
-   */
+     
+                                                                         
+                                                                            
+                                                 
+     
   toast_close_indexes(toastidxs, num_indexes, NoLock);
   table_close(toastrel, NoLock);
 
-  /*
-   * Create the TOAST pointer value that we'll return
-   */
+     
+                                                      
+     
   result = (struct varlena *)palloc(TOAST_POINTER_SIZE);
   SET_VARTAG_EXTERNAL(result, VARTAG_ONDISK);
   memcpy(VARDATA_EXTERNAL(result), &toast_pointer, sizeof(toast_pointer));
@@ -1771,12 +1771,12 @@ toast_save_datum(Relation rel, Datum value, struct varlena *oldexternal, int opt
   return PointerGetDatum(result);
 }
 
-/* ----------
- * toast_delete_datum -
- *
- *	Delete a single external stored value.
- * ----------
- */
+              
+                        
+   
+                                          
+              
+   
 static void
 toast_delete_datum(Relation rel, Datum value, bool is_speculative)
 {
@@ -1796,34 +1796,34 @@ toast_delete_datum(Relation rel, Datum value, bool is_speculative)
     return;
   }
 
-  /* Must copy to access aligned fields */
+                                          
   VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
-  /*
-   * Open the toast relation and its indexes
-   */
+     
+                                             
+     
   toastrel = table_open(toast_pointer.va_toastrelid, RowExclusiveLock);
 
-  /* Fetch valid relation used for process */
+                                             
   validIndex = toast_open_indexes(toastrel, RowExclusiveLock, &toastidxs, &num_indexes);
 
-  /*
-   * Setup a scan key to find chunks with matching va_valueid
-   */
+     
+                                                              
+     
   ScanKeyInit(&toastkey, (AttrNumber)1, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(toast_pointer.va_valueid));
 
-  /*
-   * Find all the chunks.  (We don't actually care whether we see them in
-   * sequence or not, but since we've already locked the index we might as
-   * well use systable_beginscan_ordered.)
-   */
+     
+                                                                          
+                                                                           
+                                           
+     
   init_toast_snapshot(&SnapshotToast);
   toastscan = systable_beginscan_ordered(toastrel, toastidxs[validIndex], &SnapshotToast, 1, &toastkey);
   while ((toasttup = systable_getnext_ordered(toastscan, ForwardScanDirection)) != NULL)
   {
-    /*
-     * Have a chunk, delete it
-     */
+       
+                               
+       
     if (is_speculative)
     {
       heap_abort_speculative(toastrel, &toasttup->t_self);
@@ -1834,24 +1834,24 @@ toast_delete_datum(Relation rel, Datum value, bool is_speculative)
     }
   }
 
-  /*
-   * End scan and close relations but keep the lock until commit, so as a
-   * concurrent reindex done directly on the toast relation would be able to
-   * wait for this transaction.
-   */
+     
+                                                                          
+                                                                             
+                                
+     
   systable_endscan_ordered(toastscan);
   toast_close_indexes(toastidxs, num_indexes, NoLock);
   table_close(toastrel, NoLock);
 }
 
-/* ----------
- * toastrel_valueid_exists -
- *
- *	Test whether a toast value with the given ID exists in the toast relation.
- *	For safety, we consider a value to exist if there are either live or dead
- *	toast rows with that ID; see notes for GetNewOidWithIndex().
- * ----------
- */
+              
+                             
+   
+                                                                              
+                                                                             
+                                                                
+              
+   
 static bool
 toastrel_valueid_exists(Relation toastrel, Oid valueid)
 {
@@ -1862,17 +1862,17 @@ toastrel_valueid_exists(Relation toastrel, Oid valueid)
   int validIndex;
   Relation *toastidxs;
 
-  /* Fetch a valid index relation */
+                                    
   validIndex = toast_open_indexes(toastrel, RowExclusiveLock, &toastidxs, &num_indexes);
 
-  /*
-   * Setup a scan key to find chunks with matching va_valueid
-   */
+     
+                                                              
+     
   ScanKeyInit(&toastkey, (AttrNumber)1, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(valueid));
 
-  /*
-   * Is there any such chunk?
-   */
+     
+                              
+     
   toastscan = systable_beginscan(toastrel, RelationGetRelid(toastidxs[validIndex]), true, SnapshotAny, 1, &toastkey);
 
   if (systable_getnext(toastscan) != NULL)
@@ -1882,18 +1882,18 @@ toastrel_valueid_exists(Relation toastrel, Oid valueid)
 
   systable_endscan(toastscan);
 
-  /* Clean up */
+                
   toast_close_indexes(toastidxs, num_indexes, RowExclusiveLock);
 
   return result;
 }
 
-/* ----------
- * toastid_valueid_exists -
- *
- *	As above, but work from toast rel's OID not an open relation
- * ----------
- */
+              
+                            
+   
+                                                                
+              
+   
 static bool
 toastid_valueid_exists(Oid toastrelid, Oid valueid)
 {
@@ -1909,13 +1909,13 @@ toastid_valueid_exists(Oid toastrelid, Oid valueid)
   return result;
 }
 
-/* ----------
- * toast_fetch_datum -
- *
- *	Reconstruct an in memory Datum from the chunks saved
- *	in the toast relation
- * ----------
- */
+              
+                       
+   
+                                                        
+                         
+              
+   
 static struct varlena *
 toast_fetch_datum(struct varlena *attr)
 {
@@ -1943,7 +1943,7 @@ toast_fetch_datum(struct varlena *attr)
     elog(ERROR, "toast_fetch_datum shouldn't be called for non-ondisk datums");
   }
 
-  /* Must copy to access aligned fields */
+                                          
   VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
   ressize = toast_pointer.va_extsize;
@@ -1960,36 +1960,36 @@ toast_fetch_datum(struct varlena *attr)
     SET_VARSIZE(result, ressize + VARHDRSZ);
   }
 
-  /*
-   * Open the toast relation and its indexes
-   */
+     
+                                             
+     
   toastrel = table_open(toast_pointer.va_toastrelid, AccessShareLock);
   toasttupDesc = toastrel->rd_att;
 
-  /* Look for the valid index of the toast relation */
+                                                      
   validIndex = toast_open_indexes(toastrel, AccessShareLock, &toastidxs, &num_indexes);
 
-  /*
-   * Setup a scan key to fetch from the index by va_valueid
-   */
+     
+                                                            
+     
   ScanKeyInit(&toastkey, (AttrNumber)1, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(toast_pointer.va_valueid));
 
-  /*
-   * Read the chunks by index
-   *
-   * Note that because the index is actually on (valueid, chunkidx) we will
-   * see the chunks in chunkidx order, even though we didn't explicitly ask
-   * for it.
-   */
+     
+                              
+     
+                                                                            
+                                                                            
+             
+     
   nextidx = 0;
 
   init_toast_snapshot(&SnapshotToast);
   toastscan = systable_beginscan_ordered(toastrel, toastidxs[validIndex], &SnapshotToast, 1, &toastkey);
   while ((ttup = systable_getnext_ordered(toastscan, ForwardScanDirection)) != NULL)
   {
-    /*
-     * Have a chunk, extract the sequence number and the data
-     */
+       
+                                                              
+       
     residx = DatumGetInt32(fastgetattr(ttup, 2, toasttupDesc, &isnull));
     Assert(!isnull);
     chunk = DatumGetPointer(fastgetattr(ttup, 3, toasttupDesc, &isnull));
@@ -2001,21 +2001,21 @@ toast_fetch_datum(struct varlena *attr)
     }
     else if (VARATT_IS_SHORT(chunk))
     {
-      /* could happen due to heap_form_tuple doing its thing */
+                                                               
       chunksize = VARSIZE_SHORT(chunk) - VARHDRSZ_SHORT;
       chunkdata = VARDATA_SHORT(chunk);
     }
     else
     {
-      /* should never happen */
+                               
       elog(ERROR, "found toasted toast chunk for toast value %u in %s", toast_pointer.va_valueid, RelationGetRelationName(toastrel));
-      chunksize = 0; /* keep compiler quiet */
+      chunksize = 0;                          
       chunkdata = NULL;
     }
 
-    /*
-     * Some checks on the data we've found
-     */
+       
+                                           
+       
     if (residx != nextidx)
     {
       elog(ERROR, "unexpected chunk number %d (expected %d) for toast value %u in %s", residx, nextidx, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
@@ -2039,25 +2039,25 @@ toast_fetch_datum(struct varlena *attr)
       elog(ERROR, "unexpected chunk number %d (out of range %d..%d) for toast value %u in %s", residx, 0, numchunks - 1, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
     }
 
-    /*
-     * Copy the data into proper place in our result
-     */
+       
+                                                     
+       
     memcpy(VARDATA(result) + residx * TOAST_MAX_CHUNK_SIZE, chunkdata, chunksize);
 
     nextidx++;
   }
 
-  /*
-   * Final checks that we successfully fetched the datum
-   */
+     
+                                                         
+     
   if (nextidx != numchunks)
   {
     elog(ERROR, "missing chunk number %d for toast value %u in %s", nextidx, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
   }
 
-  /*
-   * End scan and close relations
-   */
+     
+                                  
+     
   systable_endscan_ordered(toastscan);
   toast_close_indexes(toastidxs, num_indexes, AccessShareLock);
   table_close(toastrel, AccessShareLock);
@@ -2065,15 +2065,15 @@ toast_fetch_datum(struct varlena *attr)
   return result;
 }
 
-/* ----------
- * toast_fetch_datum_slice -
- *
- *	Reconstruct a segment of a Datum from the chunks saved
- *	in the toast relation
- *
- *	Note that this function only supports non-compressed external datums.
- * ----------
- */
+              
+                             
+   
+                                                          
+                         
+   
+                                                                         
+              
+   
 static struct varlena *
 toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
 {
@@ -2110,13 +2110,13 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
     elog(ERROR, "toast_fetch_datum_slice shouldn't be called for non-ondisk datums");
   }
 
-  /* Must copy to access aligned fields */
+                                          
   VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
 
-  /*
-   * It's nonsense to fetch slices of a compressed datum -- this isn't lo_*
-   * we can't return a compressed datum which is meaningful to toast later
-   */
+     
+                                                                            
+                                                                           
+     
   Assert(!VARATT_EXTERNAL_IS_COMPRESSED(toast_pointer));
 
   attrsize = toast_pointer.va_extsize;
@@ -2128,11 +2128,11 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
     length = 0;
   }
 
-  /*
-   * Adjust length request if needed.  (Note: our sole caller,
-   * heap_tuple_untoast_attr_slice, protects us against sliceoffset + length
-   * overflowing.)
-   */
+     
+                                                               
+                                                                             
+                   
+     
   else if (((sliceoffset + length) > attrsize) || length < 0)
   {
     length = attrsize - sliceoffset;
@@ -2144,7 +2144,7 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
 
   if (length == 0)
   {
-    return result; /* Can save a lot of work at this point! */
+    return result;                                            
   }
 
   startchunk = sliceoffset / TOAST_MAX_CHUNK_SIZE;
@@ -2154,24 +2154,24 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
   startoffset = sliceoffset % TOAST_MAX_CHUNK_SIZE;
   endoffset = (sliceoffset + length - 1) % TOAST_MAX_CHUNK_SIZE;
 
-  /*
-   * Open the toast relation and its indexes
-   */
+     
+                                             
+     
   toastrel = table_open(toast_pointer.va_toastrelid, AccessShareLock);
   toasttupDesc = toastrel->rd_att;
 
-  /* Look for the valid index of toast relation */
+                                                  
   validIndex = toast_open_indexes(toastrel, AccessShareLock, &toastidxs, &num_indexes);
 
-  /*
-   * Setup a scan key to fetch from the index. This is either two keys or
-   * three depending on the number of chunks.
-   */
+     
+                                                                          
+                                              
+     
   ScanKeyInit(&toastkey[0], (AttrNumber)1, BTEqualStrategyNumber, F_OIDEQ, ObjectIdGetDatum(toast_pointer.va_valueid));
 
-  /*
-   * Use equality condition for one chunk, a range condition otherwise:
-   */
+     
+                                                                        
+     
   if (numchunks == 1)
   {
     ScanKeyInit(&toastkey[1], (AttrNumber)2, BTEqualStrategyNumber, F_INT4EQ, Int32GetDatum(startchunk));
@@ -2184,19 +2184,19 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
     nscankeys = 3;
   }
 
-  /*
-   * Read the chunks by index
-   *
-   * The index is on (valueid, chunkidx) so they will come in order
-   */
+     
+                              
+     
+                                                                    
+     
   init_toast_snapshot(&SnapshotToast);
   nextidx = startchunk;
   toastscan = systable_beginscan_ordered(toastrel, toastidxs[validIndex], &SnapshotToast, nscankeys, toastkey);
   while ((ttup = systable_getnext_ordered(toastscan, ForwardScanDirection)) != NULL)
   {
-    /*
-     * Have a chunk, extract the sequence number and the data
-     */
+       
+                                                              
+       
     residx = DatumGetInt32(fastgetattr(ttup, 2, toasttupDesc, &isnull));
     Assert(!isnull);
     chunk = DatumGetPointer(fastgetattr(ttup, 3, toasttupDesc, &isnull));
@@ -2208,21 +2208,21 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
     }
     else if (VARATT_IS_SHORT(chunk))
     {
-      /* could happen due to heap_form_tuple doing its thing */
+                                                               
       chunksize = VARSIZE_SHORT(chunk) - VARHDRSZ_SHORT;
       chunkdata = VARDATA_SHORT(chunk);
     }
     else
     {
-      /* should never happen */
+                               
       elog(ERROR, "found toasted toast chunk for toast value %u in %s", toast_pointer.va_valueid, RelationGetRelationName(toastrel));
-      chunksize = 0; /* keep compiler quiet */
+      chunksize = 0;                          
       chunkdata = NULL;
     }
 
-    /*
-     * Some checks on the data we've found
-     */
+       
+                                           
+       
     if ((residx != nextidx) || (residx > endchunk) || (residx < startchunk))
     {
       elog(ERROR, "unexpected chunk number %d (expected %d) for toast value %u in %s", residx, nextidx, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
@@ -2246,9 +2246,9 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
       elog(ERROR, "unexpected chunk number %d (out of range %d..%d) for toast value %u in %s", residx, 0, totalchunks - 1, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
     }
 
-    /*
-     * Copy the data into proper place in our result
-     */
+       
+                                                     
+       
     chcpystrt = 0;
     chcpyend = chunksize - 1;
     if (residx == startchunk)
@@ -2265,17 +2265,17 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
     nextidx++;
   }
 
-  /*
-   * Final checks that we successfully fetched the datum
-   */
+     
+                                                         
+     
   if (nextidx != (endchunk + 1))
   {
     elog(ERROR, "missing chunk number %d for toast value %u in %s", nextidx, toast_pointer.va_valueid, RelationGetRelationName(toastrel));
   }
 
-  /*
-   * End scan and close relations
-   */
+     
+                                  
+     
   systable_endscan_ordered(toastscan);
   toast_close_indexes(toastidxs, num_indexes, AccessShareLock);
   table_close(toastrel, AccessShareLock);
@@ -2283,11 +2283,11 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
   return result;
 }
 
-/* ----------
- * toast_decompress_datum -
- *
- * Decompress a compressed version of a varlena datum
- */
+              
+                            
+   
+                                                      
+   
 static struct varlena *
 toast_decompress_datum(struct varlena *attr)
 {
@@ -2306,13 +2306,13 @@ toast_decompress_datum(struct varlena *attr)
   return result;
 }
 
-/* ----------
- * toast_decompress_datum_slice -
- *
- * Decompress the front of a compressed version of a varlena datum.
- * offset handling happens in heap_tuple_untoast_attr_slice.
- * Here we just decompress a slice from the front.
- */
+              
+                                  
+   
+                                                                    
+                                                             
+                                                   
+   
 static struct varlena *
 toast_decompress_datum_slice(struct varlena *attr, int32 slicelength)
 {
@@ -2333,14 +2333,14 @@ toast_decompress_datum_slice(struct varlena *attr, int32 slicelength)
   return result;
 }
 
-/* ----------
- * toast_open_indexes
- *
- *	Get an array of the indexes associated to the given toast relation
- *	and return as well the position of the valid index used by the toast
- *	relation in this array. It is the responsibility of the caller of this
- *	function to close the indexes as well as free them.
- */
+              
+                      
+   
+                                                                      
+                                                                        
+                                                                          
+                                                       
+   
 static int
 toast_open_indexes(Relation toastrel, LOCKMODE lock, Relation **toastidxs, int *num_indexes)
 {
@@ -2350,20 +2350,20 @@ toast_open_indexes(Relation toastrel, LOCKMODE lock, Relation **toastidxs, int *
   List *indexlist;
   ListCell *lc;
 
-  /* Get index list of the toast relation */
+                                            
   indexlist = RelationGetIndexList(toastrel);
   Assert(indexlist != NIL);
 
   *num_indexes = list_length(indexlist);
 
-  /* Open all the index relations */
+                                    
   *toastidxs = (Relation *)palloc(*num_indexes * sizeof(Relation));
   foreach (lc, indexlist)
   {
     (*toastidxs)[i++] = index_open(lfirst_oid(lc), lock);
   }
 
-  /* Fetch the first valid index in list */
+                                           
   for (i = 0; i < *num_indexes; i++)
   {
     Relation toastidx = (*toastidxs)[i];
@@ -2376,16 +2376,16 @@ toast_open_indexes(Relation toastrel, LOCKMODE lock, Relation **toastidxs, int *
     }
   }
 
-  /*
-   * Free index list, not necessary anymore as relations are opened and a
-   * valid index has been found.
-   */
+     
+                                                                          
+                                 
+     
   list_free(indexlist);
 
-  /*
-   * The toast relation should have one valid index, so something is going
-   * wrong if there is nothing.
-   */
+     
+                                                                           
+                                
+     
   if (!found)
   {
     elog(ERROR, "no valid index found for toast relation with Oid %u", RelationGetRelid(toastrel));
@@ -2394,18 +2394,18 @@ toast_open_indexes(Relation toastrel, LOCKMODE lock, Relation **toastidxs, int *
   return res;
 }
 
-/* ----------
- * toast_close_indexes
- *
- *	Close an array of indexes for a toast relation and free it. This should
- *	be called for a set of indexes opened previously with toast_open_indexes.
- */
+              
+                       
+   
+                                                                           
+                                                                             
+   
 static void
 toast_close_indexes(Relation *toastidxs, int num_indexes, LOCKMODE lock)
 {
   int i;
 
-  /* Close relations and clean up things */
+                                           
   for (i = 0; i < num_indexes; i++)
   {
     index_close(toastidxs[i], lock);
@@ -2413,32 +2413,32 @@ toast_close_indexes(Relation *toastidxs, int num_indexes, LOCKMODE lock)
   pfree(toastidxs);
 }
 
-/* ----------
- * init_toast_snapshot
- *
- *	Initialize an appropriate TOAST snapshot.  We must use an MVCC snapshot
- *	to initialize the TOAST snapshot; since we don't know which one to use,
- *	just use the oldest one.  This is safe: at worst, we will get a "snapshot
- *	too old" error that might have been avoided otherwise.
- */
+              
+                       
+   
+                                                                           
+                                                                           
+                                                                             
+                                                          
+   
 static void
 init_toast_snapshot(Snapshot toast_snapshot)
 {
   Snapshot snapshot = GetOldestSnapshot();
 
-  /*
-   * GetOldestSnapshot returns NULL if the session has no active snapshots.
-   * We can get that if, for example, a procedure fetches a toasted value
-   * into a local variable, commits, and then tries to detoast the value.
-   * Such coding is unsafe, because once we commit there is nothing to
-   * prevent the toast data from being deleted.  Detoasting *must* happen in
-   * the same transaction that originally fetched the toast pointer.  Hence,
-   * rather than trying to band-aid over the problem, throw an error.  (This
-   * is not very much protection, because in many scenarios the procedure
-   * would have already created a new transaction snapshot, preventing us
-   * from detecting the problem.  But it's better than nothing, and for sure
-   * we shouldn't expend code on masking the problem more.)
-   */
+     
+                                                                            
+                                                                          
+                                                                          
+                                                                       
+                                                                             
+                                                                             
+                                                                             
+                                                                          
+                                                                          
+                                                                             
+                                                            
+     
   if (snapshot == NULL)
   {
     elog(ERROR, "cannot fetch toast data without an active snapshot");

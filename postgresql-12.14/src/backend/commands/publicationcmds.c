@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * publicationcmds.c
- *		publication manipulation
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *		publicationcmds.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                     
+                             
+   
+                                                                         
+                                                                        
+   
+                  
+                      
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -47,7 +47,7 @@
 #include "utils/syscache.h"
 #include "utils/varlena.h"
 
-/* Same as MAXNUMMESSAGES in sinvaladt.c */
+                                           
 #define MAX_RELCACHE_INVAL_MSGS 4096
 
 static List *
@@ -66,13 +66,13 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
 
   *publish_given = false;
 
-  /* Defaults are true */
+                         
   *publish_insert = true;
   *publish_update = true;
   *publish_delete = true;
   *publish_truncate = true;
 
-  /* Parse options */
+                     
   foreach (lc, options)
   {
     DefElem *defel = (DefElem *)lfirst(lc);
@@ -88,10 +88,10 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("conflicting or redundant options")));
       }
 
-      /*
-       * If publish option was given only the explicitly listed actions
-       * should be published.
-       */
+         
+                                                                        
+                              
+         
       *publish_insert = false;
       *publish_update = false;
       *publish_delete = false;
@@ -105,7 +105,7 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
         ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), errmsg("invalid list syntax for \"publish\" option")));
       }
 
-      /* Process the option list. */
+                                    
       foreach (lc, publish_list)
       {
         char *publish_opt = (char *)lfirst(lc);
@@ -139,9 +139,9 @@ parse_publication_options(List *options, bool *publish_given, bool *publish_inse
   }
 }
 
-/*
- * Create new publication.
- */
+   
+                           
+   
 ObjectAddress
 CreatePublication(CreatePublicationStmt *stmt)
 {
@@ -158,14 +158,14 @@ CreatePublication(CreatePublicationStmt *stmt)
   bool publish_truncate;
   AclResult aclresult;
 
-  /* must have CREATE privilege on database */
+                                              
   aclresult = pg_database_aclcheck(MyDatabaseId, GetUserId(), ACL_CREATE);
   if (aclresult != ACLCHECK_OK)
   {
     aclcheck_error(aclresult, OBJECT_DATABASE, get_database_name(MyDatabaseId));
   }
 
-  /* FOR ALL TABLES requires superuser */
+                                         
   if (stmt->for_all_tables && !superuser())
   {
     ereport(ERROR, (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE), (errmsg("must be superuser to create FOR ALL TABLES publication"))));
@@ -173,14 +173,14 @@ CreatePublication(CreatePublicationStmt *stmt)
 
   rel = table_open(PublicationRelationId, RowExclusiveLock);
 
-  /* Check if name is used */
+                             
   puboid = GetSysCacheOid1(PUBLICATIONNAME, Anum_pg_publication_oid, CStringGetDatum(stmt->pubname));
   if (OidIsValid(puboid))
   {
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("publication \"%s\" already exists", stmt->pubname)));
   }
 
-  /* Form a tuple. */
+                     
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
 
@@ -199,7 +199,7 @@ CreatePublication(CreatePublicationStmt *stmt)
 
   tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
-  /* Insert tuple into catalog. */
+                                  
   CatalogTupleInsert(rel, tup);
   heap_freetuple(tup);
 
@@ -207,7 +207,7 @@ CreatePublication(CreatePublicationStmt *stmt)
 
   ObjectAddressSet(myself, PublicationRelationId, puboid);
 
-  /* Make the changes visible. */
+                                 
   CommandCounterIncrement();
 
   if (stmt->tables)
@@ -222,7 +222,7 @@ CreatePublication(CreatePublicationStmt *stmt)
   }
   else if (stmt->for_all_tables)
   {
-    /* Invalidate relcache so that publication info is rebuilt. */
+                                                                  
     CacheInvalidateRelcacheAll();
   }
 
@@ -233,9 +233,9 @@ CreatePublication(CreatePublicationStmt *stmt)
   return myself;
 }
 
-/*
- * Change options of a publication.
- */
+   
+                                    
+   
 static void
 AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
 {
@@ -252,7 +252,7 @@ AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
 
   parse_publication_options(stmt->options, &publish_given, &publish_insert, &publish_update, &publish_delete, &publish_truncate);
 
-  /* Everything ok, form a new tuple. */
+                                        
   memset(values, 0, sizeof(values));
   memset(nulls, false, sizeof(nulls));
   memset(replaces, false, sizeof(replaces));
@@ -274,14 +274,14 @@ AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
 
   tup = heap_modify_tuple(tup, RelationGetDescr(rel), values, nulls, replaces);
 
-  /* Update the catalog. */
+                           
   CatalogTupleUpdate(rel, &tup->t_self, tup);
 
   CommandCounterIncrement();
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
 
-  /* Invalidate the relcache. */
+                                
   if (pubform->puballtables)
   {
     CacheInvalidateRelcacheAll();
@@ -290,10 +290,10 @@ AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
   {
     List *relids = GetPublicationRelations(pubform->oid);
 
-    /*
-     * We don't want to send too many individual messages, at some point
-     * it's cheaper to just reset whole relcache.
-     */
+       
+                                                                         
+                                                  
+       
     if (list_length(relids) < MAX_RELCACHE_INVAL_MSGS)
     {
       ListCell *lc;
@@ -317,9 +317,9 @@ AlterPublicationOptions(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
   InvokeObjectPostAlterHook(PublicationRelationId, pubform->oid, 0);
 }
 
-/*
- * Add or remove table to/from publication.
- */
+   
+                                            
+   
 static void
 AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
 {
@@ -327,7 +327,7 @@ AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
   Form_pg_publication pubform = (Form_pg_publication)GETSTRUCT(tup);
   Oid pubid = pubform->oid;
 
-  /* Check that user is allowed to manipulate the publication tables. */
+                                                                        
   if (pubform->puballtables)
   {
     ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE), errmsg("publication \"%s\" is defined as FOR ALL TABLES", NameStr(pubform->pubname)), errdetail("Tables cannot be added to or dropped from FOR ALL TABLES publications.")));
@@ -345,13 +345,13 @@ AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
   {
     PublicationDropTables(pubid, rels, false);
   }
-  else /* DEFELEM_SET */
+  else                  
   {
     List *oldrelids = GetPublicationRelations(pubid);
     List *delrels = NIL;
     ListCell *oldlc;
 
-    /* Calculate which relations to drop. */
+                                            
     foreach (oldlc, oldrelids)
     {
       Oid oldrelid = lfirst_oid(oldlc);
@@ -377,13 +377,13 @@ AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
       }
     }
 
-    /* And drop them. */
+                        
     PublicationDropTables(pubid, delrels, true);
 
-    /*
-     * Don't bother calculating the difference for adding, we'll catch and
-     * skip existing ones when doing catalog update.
-     */
+       
+                                                                           
+                                                     
+       
     PublicationAddTables(pubid, rels, true, stmt);
 
     CloseTableList(delrels);
@@ -392,12 +392,12 @@ AlterPublicationTables(AlterPublicationStmt *stmt, Relation rel, HeapTuple tup)
   CloseTableList(rels);
 }
 
-/*
- * Alter the existing publication.
- *
- * This is dispatcher function for AlterPublicationOptions and
- * AlterPublicationTables.
- */
+   
+                                   
+   
+                                                               
+                           
+   
 void
 AlterPublication(AlterPublicationStmt *stmt)
 {
@@ -416,7 +416,7 @@ AlterPublication(AlterPublicationStmt *stmt)
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
 
-  /* must be owner */
+                     
   if (!pg_publication_ownercheck(pubform->oid, GetUserId()))
   {
     aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_PUBLICATION, stmt->pubname);
@@ -431,14 +431,14 @@ AlterPublication(AlterPublicationStmt *stmt)
     AlterPublicationTables(stmt, rel, tup);
   }
 
-  /* Cleanup. */
+                
   heap_freetuple(tup);
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Remove the publication by mapping OID.
- */
+   
+                                          
+   
 void
 RemovePublicationById(Oid pubid)
 {
@@ -457,7 +457,7 @@ RemovePublicationById(Oid pubid)
 
   pubform = (Form_pg_publication)GETSTRUCT(tup);
 
-  /* Invalidate relcache so that publication info is rebuilt. */
+                                                                
   if (pubform->puballtables)
   {
     CacheInvalidateRelcacheAll();
@@ -470,9 +470,9 @@ RemovePublicationById(Oid pubid)
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Remove relation from publication by mapping OID.
- */
+   
+                                                    
+   
 void
 RemovePublicationRelById(Oid proid)
 {
@@ -491,7 +491,7 @@ RemovePublicationRelById(Oid proid)
 
   pubrel = (Form_pg_publication_rel)GETSTRUCT(tup);
 
-  /* Invalidate relcache so that publication info is rebuilt. */
+                                                                
   CacheInvalidateRelcacheByRelid(pubrel->prrelid);
 
   CatalogTupleDelete(rel, &tup->t_self);
@@ -501,10 +501,10 @@ RemovePublicationRelById(Oid proid)
   table_close(rel, RowExclusiveLock);
 }
 
-/*
- * Open relations specified by a RangeVar list.
- * The returned tables are locked in ShareUpdateExclusiveLock mode.
- */
+   
+                                                
+                                                                    
+   
 static List *
 OpenTableList(List *tables)
 {
@@ -512,9 +512,9 @@ OpenTableList(List *tables)
   List *rels = NIL;
   ListCell *lc;
 
-  /*
-   * Open, share-lock, and check all the explicitly-specified relations
-   */
+     
+                                                                        
+     
   foreach (lc, tables)
   {
     RangeVar *rv = castNode(RangeVar, lfirst(lc));
@@ -522,19 +522,19 @@ OpenTableList(List *tables)
     Relation rel;
     Oid myrelid;
 
-    /* Allow query cancel in case this takes a long time */
+                                                           
     CHECK_FOR_INTERRUPTS();
 
     rel = table_openrv(rv, ShareUpdateExclusiveLock);
     myrelid = RelationGetRelid(rel);
 
-    /*
-     * Filter out duplicates if user specifies "foo, foo".
-     *
-     * Note that this algorithm is known to not be very efficient (O(N^2))
-     * but given that it only works on list of tables given to us by user
-     * it's deemed acceptable.
-     */
+       
+                                                           
+       
+                                                                           
+                                                                          
+                               
+       
     if (list_member_oid(relids, myrelid))
     {
       table_close(rel, ShareUpdateExclusiveLock);
@@ -544,7 +544,7 @@ OpenTableList(List *tables)
     rels = lappend(rels, rel);
     relids = lappend_oid(relids, myrelid);
 
-    /* Add children of this rel, if requested */
+                                                
     if (recurse)
     {
       List *children;
@@ -556,19 +556,19 @@ OpenTableList(List *tables)
       {
         Oid childrelid = lfirst_oid(child);
 
-        /* Allow query cancel in case this takes a long time */
+                                                               
         CHECK_FOR_INTERRUPTS();
 
-        /*
-         * Skip duplicates if user specified both parent and child
-         * tables.
-         */
+           
+                                                                   
+                   
+           
         if (list_member_oid(relids, childrelid))
         {
           continue;
         }
 
-        /* find_all_inheritors already got lock */
+                                                  
         rel = table_open(childrelid, NoLock);
         rels = lappend(rels, rel);
         relids = lappend_oid(relids, childrelid);
@@ -581,9 +581,9 @@ OpenTableList(List *tables)
   return rels;
 }
 
-/*
- * Close all relations in the list.
- */
+   
+                                    
+   
 static void
 CloseTableList(List *rels)
 {
@@ -597,9 +597,9 @@ CloseTableList(List *rels)
   }
 }
 
-/*
- * Add listed tables to the publication.
- */
+   
+                                         
+   
 static void
 PublicationAddTables(Oid pubid, List *rels, bool if_not_exists, AlterPublicationStmt *stmt)
 {
@@ -612,7 +612,7 @@ PublicationAddTables(Oid pubid, List *rels, bool if_not_exists, AlterPublication
     Relation rel = (Relation)lfirst(lc);
     ObjectAddress obj;
 
-    /* Must be owner of the table or superuser. */
+                                                  
     if (!pg_class_ownercheck(RelationGetRelid(rel), GetUserId()))
     {
       aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(rel->rd_rel->relkind), RelationGetRelationName(rel));
@@ -628,9 +628,9 @@ PublicationAddTables(Oid pubid, List *rels, bool if_not_exists, AlterPublication
   }
 }
 
-/*
- * Remove listed tables from the publication.
- */
+   
+                                              
+   
 static void
 PublicationDropTables(Oid pubid, List *rels, bool missing_ok)
 {
@@ -659,9 +659,9 @@ PublicationDropTables(Oid pubid, List *rels, bool missing_ok)
   }
 }
 
-/*
- * Internal workhorse for changing a publication owner
- */
+   
+                                                       
+   
 static void
 AlterPublicationOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
 {
@@ -678,16 +678,16 @@ AlterPublicationOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
   {
     AclResult aclresult;
 
-    /* Must be owner */
+                       
     if (!pg_publication_ownercheck(form->oid, GetUserId()))
     {
       aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_PUBLICATION, NameStr(form->pubname));
     }
 
-    /* Must be able to become new owner */
+                                          
     check_is_member_of_role(GetUserId(), newOwnerId);
 
-    /* New owner must have CREATE privilege on database */
+                                                          
     aclresult = pg_database_aclcheck(MyDatabaseId, newOwnerId, ACL_CREATE);
     if (aclresult != ACLCHECK_OK)
     {
@@ -703,15 +703,15 @@ AlterPublicationOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
   form->pubowner = newOwnerId;
   CatalogTupleUpdate(rel, &tup->t_self, tup);
 
-  /* Update owner dependency reference */
+                                         
   changeDependencyOnOwner(PublicationRelationId, form->oid, newOwnerId);
 
   InvokeObjectPostAlterHook(PublicationRelationId, form->oid, 0);
 }
 
-/*
- * Change publication owner -- by name
- */
+   
+                                       
+   
 ObjectAddress
 AlterPublicationOwner(const char *name, Oid newOwnerId)
 {
@@ -744,9 +744,9 @@ AlterPublicationOwner(const char *name, Oid newOwnerId)
   return address;
 }
 
-/*
- * Change publication owner -- by OID
- */
+   
+                                      
+   
 void
 AlterPublicationOwner_oid(Oid subid, Oid newOwnerId)
 {

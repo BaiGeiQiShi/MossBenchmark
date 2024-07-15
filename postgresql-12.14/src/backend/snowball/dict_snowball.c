@@ -1,22 +1,22 @@
-/*-------------------------------------------------------------------------
- *
- * dict_snowball.c
- *		Snowball dictionary
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/snowball/dict_snowball.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                        
+   
+                                                                         
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "commands/defrem.h"
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_utils.h"
 
-/* Some platforms define MAXINT and/or MININT, causing conflicts */
+                                                                   
 #ifdef MAXINT
 #undef MAXINT
 #endif
@@ -24,7 +24,7 @@
 #undef MININT
 #endif
 
-/* Now we can include the original Snowball header.h */
+                                                       
 #include "snowball/libstemmer/header.h"
 #include "snowball/libstemmer/stem_ISO_8859_1_danish.h"
 #include "snowball/libstemmer/stem_ISO_8859_1_dutch.h"
@@ -72,7 +72,7 @@ PG_FUNCTION_INFO_V1(dsnowball_init);
 
 PG_FUNCTION_INFO_V1(dsnowball_lexize);
 
-/* List of supported modules */
+                               
 typedef struct stemmer_module
 {
   const char *name;
@@ -82,40 +82,40 @@ typedef struct stemmer_module
   int (*stem)(struct SN_env *);
 } stemmer_module;
 
-/* Args: stemmer name, PG code for encoding, Snowball's name for encoding */
+                                                                            
 #define STEMMER_MODULE(name, enc, senc)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     #name, enc, name##_##senc##_create_env, name##_##senc##_close_env, name##_##senc##_stem                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   }
 
 static const stemmer_module stemmer_modules[] = {
-    /*
-     * Stemmers list from Snowball distribution
-     */
+       
+                                                
+       
     STEMMER_MODULE(danish, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(dutch, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(english, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(finnish, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(french, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(german, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(indonesian, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(irish, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(italian, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(norwegian, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(porter, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(portuguese, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(spanish, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(swedish, PG_LATIN1, ISO_8859_1), STEMMER_MODULE(hungarian, PG_LATIN2, ISO_8859_2), STEMMER_MODULE(romanian, PG_LATIN2, ISO_8859_2), STEMMER_MODULE(russian, PG_KOI8R, KOI8_R), STEMMER_MODULE(arabic, PG_UTF8, UTF_8), STEMMER_MODULE(danish, PG_UTF8, UTF_8), STEMMER_MODULE(dutch, PG_UTF8, UTF_8), STEMMER_MODULE(english, PG_UTF8, UTF_8),
     STEMMER_MODULE(finnish, PG_UTF8, UTF_8), STEMMER_MODULE(french, PG_UTF8, UTF_8), STEMMER_MODULE(german, PG_UTF8, UTF_8), STEMMER_MODULE(hungarian, PG_UTF8, UTF_8), STEMMER_MODULE(indonesian, PG_UTF8, UTF_8), STEMMER_MODULE(irish, PG_UTF8, UTF_8), STEMMER_MODULE(italian, PG_UTF8, UTF_8), STEMMER_MODULE(lithuanian, PG_UTF8, UTF_8), STEMMER_MODULE(nepali, PG_UTF8, UTF_8), STEMMER_MODULE(norwegian, PG_UTF8, UTF_8), STEMMER_MODULE(porter, PG_UTF8, UTF_8), STEMMER_MODULE(portuguese, PG_UTF8, UTF_8), STEMMER_MODULE(romanian, PG_UTF8, UTF_8), STEMMER_MODULE(russian, PG_UTF8, UTF_8), STEMMER_MODULE(spanish, PG_UTF8, UTF_8), STEMMER_MODULE(swedish, PG_UTF8, UTF_8), STEMMER_MODULE(tamil, PG_UTF8, UTF_8), STEMMER_MODULE(turkish, PG_UTF8, UTF_8),
 
-    /*
-     * Stemmer with PG_SQL_ASCII encoding should be valid for any server
-     * encoding
-     */
+       
+                                                                         
+                
+       
     STEMMER_MODULE(english, PG_SQL_ASCII, ISO_8859_1),
 
-    {NULL, 0, NULL, NULL, NULL} /* list end marker */
+    {NULL, 0, NULL, NULL, NULL}                      
 };
 
 typedef struct DictSnowball
 {
   struct SN_env *z;
   StopList stoplist;
-  bool needrecode; /* needs recoding before/after call stem */
+  bool needrecode;                                            
   int (*stem)(struct SN_env *z);
 
-  /*
-   * snowball saves alloced memory between calls, so we should run it in our
-   * private memory context. Note, init function is executed in long lived
-   * context, so we just remember CurrentMemoryContext
-   */
+     
+                                                                             
+                                                                           
+                                                       
+     
   MemoryContext dictCtx;
 } DictSnowball;
 
@@ -124,10 +124,10 @@ locate_stem_module(DictSnowball *d, const char *lang)
 {
   const stemmer_module *m;
 
-  /*
-   * First, try to find exact match of stemmer module. Stemmer with
-   * PG_SQL_ASCII encoding is treated as working with any server encoding
-   */
+     
+                                                                    
+                                                                          
+     
   for (m = stemmer_modules; m->name; m++)
   {
     if ((m->enc == PG_SQL_ASCII || m->enc == GetDatabaseEncoding()) && pg_strcasecmp(m->name, lang) == 0)
@@ -139,9 +139,9 @@ locate_stem_module(DictSnowball *d, const char *lang)
     }
   }
 
-  /*
-   * Second, try to find stemmer for needed language for UTF8 encoding.
-   */
+     
+                                                                        
+     
   for (m = stemmer_modules; m->name; m++)
   {
     if (m->enc == PG_UTF8 && pg_strcasecmp(m->name, lang) == 0)
@@ -212,33 +212,33 @@ dsnowball_lexize(PG_FUNCTION_ARGS)
   char *txt = lowerstr_with_len(in, len);
   TSLexeme *res = palloc0(sizeof(TSLexeme) * 2);
 
-  /*
-   * Do not pass strings exceeding 1000 bytes to the stemmer, as they're
-   * surely not words in any human language.  This restriction avoids
-   * wasting cycles on stuff like base64-encoded data, and it protects us
-   * against possible inefficiency or misbehavior in the stemmer.  (For
-   * example, the Turkish stemmer has an indefinite recursion, so it can
-   * crash on long-enough strings.)  However, Snowball dictionaries are
-   * defined to recognize all strings, so we can't reject the string as an
-   * unknown word.
-   */
+     
+                                                                         
+                                                                      
+                                                                          
+                                                                        
+                                                                         
+                                                                        
+                                                                           
+                   
+     
   if (len > 1000)
   {
-    /* return the lexeme lowercased, but otherwise unmodified */
+                                                                
     res->lexeme = txt;
   }
   else if (*txt == '\0' || searchstoplist(&(d->stoplist), txt))
   {
-    /* empty or stopword, so report as stopword */
+                                                  
     pfree(txt);
   }
   else
   {
     MemoryContext saveCtx;
 
-    /*
-     * recode to utf8 if stemmer is utf8 and doesn't match server encoding
-     */
+       
+                                                                           
+       
     if (d->needrecode)
     {
       char *recoded;
@@ -251,7 +251,7 @@ dsnowball_lexize(PG_FUNCTION_ARGS)
       }
     }
 
-    /* see comment about d->dictCtx */
+                                      
     saveCtx = MemoryContextSwitchTo(d->dictCtx);
     SN_set_current(d->z, strlen(txt), (symbol *)txt);
     d->stem(d->z);
@@ -264,7 +264,7 @@ dsnowball_lexize(PG_FUNCTION_ARGS)
       txt[d->z->l] = '\0';
     }
 
-    /* back recode if needed */
+                               
     if (d->needrecode)
     {
       char *recoded;

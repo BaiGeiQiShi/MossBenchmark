@@ -1,15 +1,15 @@
-/*-------------------------------------------------------------------------
- *
- * proto.c
- *		logical replication protocol functions
- *
- * Copyright (c) 2015-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		src/backend/replication/logical/proto.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                           
+   
+                                                                
+   
+                  
+                                            
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/sysattr.h"
@@ -21,9 +21,9 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-/*
- * Protocol message flags.
- */
+   
+                           
+   
 #define LOGICALREP_IS_REPLICA_IDENTITY 1
 
 #define TRUNCATE_CASCADE (1 << 0)
@@ -44,27 +44,27 @@ logicalrep_write_namespace(StringInfo out, Oid nspid);
 static const char *
 logicalrep_read_namespace(StringInfo in);
 
-/*
- * Write BEGIN to the output stream.
- */
+   
+                                     
+   
 void
 logicalrep_write_begin(StringInfo out, ReorderBufferTXN *txn)
 {
-  pq_sendbyte(out, 'B'); /* BEGIN */
+  pq_sendbyte(out, 'B');            
 
-  /* fixed fields */
+                    
   pq_sendint64(out, txn->final_lsn);
   pq_sendint64(out, txn->commit_time);
   pq_sendint32(out, txn->xid);
 }
 
-/*
- * Read transaction BEGIN from the stream.
- */
+   
+                                           
+   
 void
 logicalrep_read_begin(StringInfo in, LogicalRepBeginData *begin_data)
 {
-  /* read fields */
+                   
   begin_data->final_lsn = pq_getmsgint64(in);
   if (begin_data->final_lsn == InvalidXLogRecPtr)
   {
@@ -74,32 +74,32 @@ logicalrep_read_begin(StringInfo in, LogicalRepBeginData *begin_data)
   begin_data->xid = pq_getmsgint(in, 4);
 }
 
-/*
- * Write COMMIT to the output stream.
- */
+   
+                                      
+   
 void
 logicalrep_write_commit(StringInfo out, ReorderBufferTXN *txn, XLogRecPtr commit_lsn)
 {
   uint8 flags = 0;
 
-  pq_sendbyte(out, 'C'); /* sending COMMIT */
+  pq_sendbyte(out, 'C');                     
 
-  /* send the flags field (unused for now) */
+                                             
   pq_sendbyte(out, flags);
 
-  /* send fields */
+                   
   pq_sendint64(out, commit_lsn);
   pq_sendint64(out, txn->end_lsn);
   pq_sendint64(out, txn->commit_time);
 }
 
-/*
- * Read transaction COMMIT from the stream.
- */
+   
+                                            
+   
 void
 logicalrep_read_commit(StringInfo in, LogicalRepCommitData *commit_data)
 {
-  /* read flags (unused for now) */
+                                   
   uint8 flags = pq_getmsgbyte(in);
 
   if (flags != 0)
@@ -107,67 +107,67 @@ logicalrep_read_commit(StringInfo in, LogicalRepCommitData *commit_data)
     elog(ERROR, "unrecognized flags %u in commit message", flags);
   }
 
-  /* read fields */
+                   
   commit_data->commit_lsn = pq_getmsgint64(in);
   commit_data->end_lsn = pq_getmsgint64(in);
   commit_data->committime = pq_getmsgint64(in);
 }
 
-/*
- * Write ORIGIN to the output stream.
- */
+   
+                                      
+   
 void
 logicalrep_write_origin(StringInfo out, const char *origin, XLogRecPtr origin_lsn)
 {
-  pq_sendbyte(out, 'O'); /* ORIGIN */
+  pq_sendbyte(out, 'O');             
 
-  /* fixed fields */
+                    
   pq_sendint64(out, origin_lsn);
 
-  /* origin string */
+                     
   pq_sendstring(out, origin);
 }
 
-/*
- * Read ORIGIN from the output stream.
- */
+   
+                                       
+   
 char *
 logicalrep_read_origin(StringInfo in, XLogRecPtr *origin_lsn)
 {
-  /* fixed fields */
+                    
   *origin_lsn = pq_getmsgint64(in);
 
-  /* return origin */
+                     
   return pstrdup(pq_getmsgstring(in));
 }
 
-/*
- * Write INSERT to the output stream.
- */
+   
+                                      
+   
 void
 logicalrep_write_insert(StringInfo out, Relation rel, HeapTuple newtuple)
 {
-  pq_sendbyte(out, 'I'); /* action INSERT */
+  pq_sendbyte(out, 'I');                    
 
-  /* use Oid as relation identifier */
+                                      
   pq_sendint32(out, RelationGetRelid(rel));
 
-  pq_sendbyte(out, 'N'); /* new tuple follows */
+  pq_sendbyte(out, 'N');                        
   logicalrep_write_tuple(out, rel, newtuple);
 }
 
-/*
- * Read INSERT from stream.
- *
- * Fills the new tuple.
- */
+   
+                            
+   
+                        
+   
 LogicalRepRelId
 logicalrep_read_insert(StringInfo in, LogicalRepTupleData *newtup)
 {
   char action;
   LogicalRepRelId relid;
 
-  /* read the relation id */
+                            
   relid = pq_getmsgint(in, 4);
 
   action = pq_getmsgbyte(in);
@@ -181,56 +181,56 @@ logicalrep_read_insert(StringInfo in, LogicalRepTupleData *newtup)
   return relid;
 }
 
-/*
- * Write UPDATE to the output stream.
- */
+   
+                                      
+   
 void
 logicalrep_write_update(StringInfo out, Relation rel, HeapTuple oldtuple, HeapTuple newtuple)
 {
-  pq_sendbyte(out, 'U'); /* action UPDATE */
+  pq_sendbyte(out, 'U');                    
 
   Assert(rel->rd_rel->relreplident == REPLICA_IDENTITY_DEFAULT || rel->rd_rel->relreplident == REPLICA_IDENTITY_FULL || rel->rd_rel->relreplident == REPLICA_IDENTITY_INDEX);
 
-  /* use Oid as relation identifier */
+                                      
   pq_sendint32(out, RelationGetRelid(rel));
 
   if (oldtuple != NULL)
   {
     if (rel->rd_rel->relreplident == REPLICA_IDENTITY_FULL)
     {
-      pq_sendbyte(out, 'O'); /* old tuple follows */
+      pq_sendbyte(out, 'O');                        
     }
     else
     {
-      pq_sendbyte(out, 'K'); /* old key follows */
+      pq_sendbyte(out, 'K');                      
     }
     logicalrep_write_tuple(out, rel, oldtuple);
   }
 
-  pq_sendbyte(out, 'N'); /* new tuple follows */
+  pq_sendbyte(out, 'N');                        
   logicalrep_write_tuple(out, rel, newtuple);
 }
 
-/*
- * Read UPDATE from stream.
- */
+   
+                            
+   
 LogicalRepRelId
 logicalrep_read_update(StringInfo in, bool *has_oldtuple, LogicalRepTupleData *oldtup, LogicalRepTupleData *newtup)
 {
   char action;
   LogicalRepRelId relid;
 
-  /* read the relation id */
+                            
   relid = pq_getmsgint(in, 4);
 
-  /* read and verify action */
+                              
   action = pq_getmsgbyte(in);
   if (action != 'K' && action != 'O' && action != 'N')
   {
     elog(ERROR, "expected action 'N', 'O' or 'K', got %c", action);
   }
 
-  /* check for old tuple */
+                           
   if (action == 'K' || action == 'O')
   {
     logicalrep_read_tuple(in, oldtup);
@@ -243,7 +243,7 @@ logicalrep_read_update(StringInfo in, bool *has_oldtuple, LogicalRepTupleData *o
     *has_oldtuple = false;
   }
 
-  /* check for new  tuple */
+                            
   if (action != 'N')
   {
     elog(ERROR, "expected action 'N', got %c", action);
@@ -254,46 +254,46 @@ logicalrep_read_update(StringInfo in, bool *has_oldtuple, LogicalRepTupleData *o
   return relid;
 }
 
-/*
- * Write DELETE to the output stream.
- */
+   
+                                      
+   
 void
 logicalrep_write_delete(StringInfo out, Relation rel, HeapTuple oldtuple)
 {
   Assert(rel->rd_rel->relreplident == REPLICA_IDENTITY_DEFAULT || rel->rd_rel->relreplident == REPLICA_IDENTITY_FULL || rel->rd_rel->relreplident == REPLICA_IDENTITY_INDEX);
 
-  pq_sendbyte(out, 'D'); /* action DELETE */
+  pq_sendbyte(out, 'D');                    
 
-  /* use Oid as relation identifier */
+                                      
   pq_sendint32(out, RelationGetRelid(rel));
 
   if (rel->rd_rel->relreplident == REPLICA_IDENTITY_FULL)
   {
-    pq_sendbyte(out, 'O'); /* old tuple follows */
+    pq_sendbyte(out, 'O');                        
   }
   else
   {
-    pq_sendbyte(out, 'K'); /* old key follows */
+    pq_sendbyte(out, 'K');                      
   }
 
   logicalrep_write_tuple(out, rel, oldtuple);
 }
 
-/*
- * Read DELETE from stream.
- *
- * Fills the old tuple.
- */
+   
+                            
+   
+                        
+   
 LogicalRepRelId
 logicalrep_read_delete(StringInfo in, LogicalRepTupleData *oldtup)
 {
   char action;
   LogicalRepRelId relid;
 
-  /* read the relation id */
+                            
   relid = pq_getmsgint(in, 4);
 
-  /* read and verify action */
+                              
   action = pq_getmsgbyte(in);
   if (action != 'K' && action != 'O')
   {
@@ -305,20 +305,20 @@ logicalrep_read_delete(StringInfo in, LogicalRepTupleData *oldtup)
   return relid;
 }
 
-/*
- * Write TRUNCATE to the output stream.
- */
+   
+                                        
+   
 void
 logicalrep_write_truncate(StringInfo out, int nrelids, Oid relids[], bool cascade, bool restart_seqs)
 {
   int i;
   uint8 flags = 0;
 
-  pq_sendbyte(out, 'T'); /* action TRUNCATE */
+  pq_sendbyte(out, 'T');                      
 
   pq_sendint32(out, nrelids);
 
-  /* encode and send truncate flags */
+                                      
   if (cascade)
   {
     flags |= TRUNCATE_CASCADE;
@@ -335,9 +335,9 @@ logicalrep_write_truncate(StringInfo out, int nrelids, Oid relids[], bool cascad
   }
 }
 
-/*
- * Read TRUNCATE from stream.
- */
+   
+                              
+   
 List *
 logicalrep_read_truncate(StringInfo in, bool *cascade, bool *restart_seqs)
 {
@@ -348,7 +348,7 @@ logicalrep_read_truncate(StringInfo in, bool *cascade, bool *restart_seqs)
 
   nrelids = pq_getmsgint(in, 4);
 
-  /* read and decode truncate flags */
+                                      
   flags = pq_getmsgint(in, 1);
   *cascade = (flags & TRUNCATE_CASCADE) > 0;
   *restart_seqs = (flags & TRUNCATE_RESTART_SEQS) > 0;
@@ -361,34 +361,34 @@ logicalrep_read_truncate(StringInfo in, bool *cascade, bool *restart_seqs)
   return relids;
 }
 
-/*
- * Write relation description to the output stream.
- */
+   
+                                                    
+   
 void
 logicalrep_write_rel(StringInfo out, Relation rel)
 {
   char *relname;
 
-  pq_sendbyte(out, 'R'); /* sending RELATION */
+  pq_sendbyte(out, 'R');                       
 
-  /* use Oid as relation identifier */
+                                      
   pq_sendint32(out, RelationGetRelid(rel));
 
-  /* send qualified relation name */
+                                    
   logicalrep_write_namespace(out, RelationGetNamespace(rel));
   relname = RelationGetRelationName(rel);
   pq_sendstring(out, relname);
 
-  /* send replica identity */
+                             
   pq_sendbyte(out, rel->rd_rel->relreplident);
 
-  /* send the attribute info */
+                               
   logicalrep_write_attrs(out, rel);
 }
 
-/*
- * Read the relation info from stream and return as LogicalRepRelation.
- */
+   
+                                                                        
+   
 LogicalRepRelation *
 logicalrep_read_rel(StringInfo in)
 {
@@ -396,24 +396,24 @@ logicalrep_read_rel(StringInfo in)
 
   rel->remoteid = pq_getmsgint(in, 4);
 
-  /* Read relation name from stream */
+                                      
   rel->nspname = pstrdup(logicalrep_read_namespace(in));
   rel->relname = pstrdup(pq_getmsgstring(in));
 
-  /* Read the replica identity. */
+                                  
   rel->replident = pq_getmsgbyte(in);
 
-  /* Get attribute description */
+                                 
   logicalrep_read_attrs(in, rel);
 
   return rel;
 }
 
-/*
- * Write type info to the output stream.
- *
- * This function will always write base type info.
- */
+   
+                                         
+   
+                                                   
+   
 void
 logicalrep_write_typ(StringInfo out, Oid typoid)
 {
@@ -421,7 +421,7 @@ logicalrep_write_typ(StringInfo out, Oid typoid)
   HeapTuple tup;
   Form_pg_type typtup;
 
-  pq_sendbyte(out, 'Y'); /* sending TYPE */
+  pq_sendbyte(out, 'Y');                   
 
   tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(basetypoid));
   if (!HeapTupleIsValid(tup))
@@ -430,32 +430,32 @@ logicalrep_write_typ(StringInfo out, Oid typoid)
   }
   typtup = (Form_pg_type)GETSTRUCT(tup);
 
-  /* use Oid as relation identifier */
+                                      
   pq_sendint32(out, typoid);
 
-  /* send qualified type name */
+                                
   logicalrep_write_namespace(out, typtup->typnamespace);
   pq_sendstring(out, NameStr(typtup->typname));
 
   ReleaseSysCache(tup);
 }
 
-/*
- * Read type info from the output stream.
- */
+   
+                                          
+   
 void
 logicalrep_read_typ(StringInfo in, LogicalRepTyp *ltyp)
 {
   ltyp->remoteid = pq_getmsgint(in, 4);
 
-  /* Read type name from stream */
+                                  
   ltyp->nspname = pstrdup(logicalrep_read_namespace(in));
   ltyp->typname = pstrdup(pq_getmsgstring(in));
 }
 
-/*
- * Write a tuple to the outputstream, in the most efficient format possible.
- */
+   
+                                                                             
+   
 static void
 logicalrep_write_tuple(StringInfo out, Relation rel, HeapTuple tuple)
 {
@@ -477,12 +477,12 @@ logicalrep_write_tuple(StringInfo out, Relation rel, HeapTuple tuple)
   }
   pq_sendint16(out, nliveatts);
 
-  /* try to allocate enough memory from the get-go */
+                                                     
   enlargeStringInfo(out, tuple->t_len + nliveatts * (1 + 4));
 
   heap_deform_tuple(tuple, desc, values, isnull);
 
-  /* Write the values */
+                        
   for (i = 0; i < desc->natts; i++)
   {
     HeapTuple typtup;
@@ -497,12 +497,12 @@ logicalrep_write_tuple(StringInfo out, Relation rel, HeapTuple tuple)
 
     if (isnull[i])
     {
-      pq_sendbyte(out, 'n'); /* null column */
+      pq_sendbyte(out, 'n');                  
       continue;
     }
     else if (att->attlen == -1 && VARATT_IS_EXTERNAL_ONDISK(values[i]))
     {
-      pq_sendbyte(out, 'u'); /* unchanged toast column */
+      pq_sendbyte(out, 'u');                             
       continue;
     }
 
@@ -513,7 +513,7 @@ logicalrep_write_tuple(StringInfo out, Relation rel, HeapTuple tuple)
     }
     typclass = (Form_pg_type)GETSTRUCT(typtup);
 
-    pq_sendbyte(out, 't'); /* 'text' data follows */
+    pq_sendbyte(out, 't');                          
 
     outputstr = OidOutputFunctionCall(typclass->typoutput, values[i]);
     pq_sendcountedtext(out, outputstr, strlen(outputstr), false);
@@ -523,23 +523,23 @@ logicalrep_write_tuple(StringInfo out, Relation rel, HeapTuple tuple)
   }
 }
 
-/*
- * Read tuple in remote format from stream.
- *
- * The returned tuple points into the input stringinfo.
- */
+   
+                                            
+   
+                                                        
+   
 static void
 logicalrep_read_tuple(StringInfo in, LogicalRepTupleData *tuple)
 {
   int i;
   int natts;
 
-  /* Get number of attributes */
+                                
   natts = pq_getmsgint(in, 2);
 
   memset(tuple->changed, 0, sizeof(tuple->changed));
 
-  /* Read the data */
+                     
   for (i = 0; i < natts; i++)
   {
     char kind;
@@ -548,23 +548,23 @@ logicalrep_read_tuple(StringInfo in, LogicalRepTupleData *tuple)
 
     switch (kind)
     {
-    case 'n': /* null */
+    case 'n':           
       tuple->values[i] = NULL;
       tuple->changed[i] = true;
       break;
-    case 'u': /* unchanged column */
-      /* we don't receive the value of an unchanged column */
+    case 'u':                       
+                                                             
       tuple->values[i] = NULL;
       break;
-    case 't': /* text formatted value */
+    case 't':                           
     {
       int len;
 
       tuple->changed[i] = true;
 
-      len = pq_getmsgint(in, 4); /* read length */
+      len = pq_getmsgint(in, 4);                  
 
-      /* and data */
+                    
       tuple->values[i] = palloc(len + 1);
       pq_copymsgbytes(in, tuple->values[i], len);
       tuple->values[i][len] = '\0';
@@ -576,9 +576,9 @@ logicalrep_read_tuple(StringInfo in, LogicalRepTupleData *tuple)
   }
 }
 
-/*
- * Write relation attributes to the stream.
- */
+   
+                                            
+   
 static void
 logicalrep_write_attrs(StringInfo out, Relation rel)
 {
@@ -590,7 +590,7 @@ logicalrep_write_attrs(StringInfo out, Relation rel)
 
   desc = RelationGetDescr(rel);
 
-  /* send number of live attributes */
+                                      
   for (i = 0; i < desc->natts; i++)
   {
     if (TupleDescAttr(desc, i)->attisdropped || TupleDescAttr(desc, i)->attgenerated)
@@ -601,14 +601,14 @@ logicalrep_write_attrs(StringInfo out, Relation rel)
   }
   pq_sendint16(out, nliveatts);
 
-  /* fetch bitmap of REPLICATION IDENTITY attributes */
+                                                       
   replidentfull = (rel->rd_rel->relreplident == REPLICA_IDENTITY_FULL);
   if (!replidentfull)
   {
     idattrs = RelationGetIndexAttrBitmap(rel, INDEX_ATTR_BITMAP_IDENTITY_KEY);
   }
 
-  /* send the attributes */
+                           
   for (i = 0; i < desc->natts; i++)
   {
     Form_pg_attribute att = TupleDescAttr(desc, i);
@@ -619,7 +619,7 @@ logicalrep_write_attrs(StringInfo out, Relation rel)
       continue;
     }
 
-    /* REPLICA IDENTITY FULL means all columns are sent as part of key. */
+                                                                          
     if (replidentfull || bms_is_member(att->attnum - FirstLowInvalidHeapAttributeNumber, idattrs))
     {
       flags |= LOGICALREP_IS_REPLICA_IDENTITY;
@@ -627,22 +627,22 @@ logicalrep_write_attrs(StringInfo out, Relation rel)
 
     pq_sendbyte(out, flags);
 
-    /* attribute name */
+                        
     pq_sendstring(out, NameStr(att->attname));
 
-    /* attribute type id */
+                           
     pq_sendint32(out, (int)att->atttypid);
 
-    /* attribute mode */
+                        
     pq_sendint32(out, att->atttypmod);
   }
 
   bms_free(idattrs);
 }
 
-/*
- * Read relation attribute names from the stream.
- */
+   
+                                                  
+   
 static void
 logicalrep_read_attrs(StringInfo in, LogicalRepRelation *rel)
 {
@@ -656,25 +656,25 @@ logicalrep_read_attrs(StringInfo in, LogicalRepRelation *rel)
   attnames = palloc(natts * sizeof(char *));
   atttyps = palloc(natts * sizeof(Oid));
 
-  /* read the attributes */
+                           
   for (i = 0; i < natts; i++)
   {
     uint8 flags;
 
-    /* Check for replica identity column */
+                                           
     flags = pq_getmsgbyte(in);
     if (flags & LOGICALREP_IS_REPLICA_IDENTITY)
     {
       attkeys = bms_add_member(attkeys, i);
     }
 
-    /* attribute name */
+                        
     attnames[i] = pstrdup(pq_getmsgstring(in));
 
-    /* attribute type id */
+                           
     atttyps[i] = (Oid)pq_getmsgint(in, 4);
 
-    /* we ignore attribute mode for now */
+                                          
     (void)pq_getmsgint(in, 4);
   }
 
@@ -684,9 +684,9 @@ logicalrep_read_attrs(StringInfo in, LogicalRepRelation *rel)
   rel->natts = natts;
 }
 
-/*
- * Write the namespace name or empty string for pg_catalog (to save space).
- */
+   
+                                                                            
+   
 static void
 logicalrep_write_namespace(StringInfo out, Oid nspid)
 {
@@ -707,9 +707,9 @@ logicalrep_write_namespace(StringInfo out, Oid nspid)
   }
 }
 
-/*
- * Read the namespace name while treating empty string as pg_catalog.
- */
+   
+                                                                      
+   
 static const char *
 logicalrep_read_namespace(StringInfo in)
 {

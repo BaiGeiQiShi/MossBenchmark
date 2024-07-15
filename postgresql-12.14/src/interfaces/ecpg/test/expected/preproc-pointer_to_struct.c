@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "pointer_to_struct.pgc"
@@ -14,13 +14,13 @@
 
 #line 4 "pointer_to_struct.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 6 "pointer_to_struct.pgc"
 
-/* exec sql whenever sql_warning  sqlprint ; */
+                                               
 #line 7 "pointer_to_struct.pgc"
 
-/* exec sql whenever not found  sqlprint ; */
+                                             
 #line 8 "pointer_to_struct.pgc"
 
 typedef struct
@@ -50,7 +50,7 @@ typedef struct ind
 int
 main()
 {
-  /* exec sql begin declare section */
+                                      
 
   typedef struct
   {
@@ -109,7 +109,7 @@ main()
     int len;
     char arr[50];
   } onlyname[2];
-/* exec sql end declare section */
+                                  
 #line 50 "pointer_to_struct.pgc"
 
   ECPGdebug(1, stderr);
@@ -357,6 +357,6 @@ main()
   }
 #line 96 "pointer_to_struct.pgc"
 
-  /* All the memory will anyway be freed at the end */
+                                                      
   return 0;
 }

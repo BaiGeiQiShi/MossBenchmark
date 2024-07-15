@@ -1,36 +1,36 @@
-/*-------------------------------------------------------------------------
- *
- * testint128.c
- *	  Testbed for roll-our-own 128-bit integer arithmetic.
- *
- * This is a standalone test program that compares the behavior of an
- * implementation in int128.h to an (assumed correct) int128 native type.
- *
- * Copyright (c) 2017-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/tools/testint128.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                          
+   
+                                                                      
+                                                                          
+   
+                                                                
+   
+   
+                  
+                            
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
-/*
- * By default, we test the non-native implementation in int128.h; but
- * by predefining USE_NATIVE_INT128 to 1, you can test the native
- * implementation, just to be sure.
- */
+   
+                                                                      
+                                                                  
+                                    
+   
 #ifndef USE_NATIVE_INT128
 #define USE_NATIVE_INT128 0
 #endif
 
 #include "common/int128.h"
 
-/*
- * We assume the parts of this union are laid out compatibly.
- */
+   
+                                                              
+   
 typedef union
 {
   int128 i128;
@@ -47,9 +47,9 @@ typedef union
   } hl;
 } test128;
 
-/*
- * Control version of comparator.
- */
+   
+                                  
+   
 static inline int
 my_int128_compare(int128 x, int128 y)
 {
@@ -64,10 +64,10 @@ my_int128_compare(int128 x, int128 y)
   return 0;
 }
 
-/*
- * Get a random uint64 value.
- * We don't assume random() is good for more than 16 bits.
- */
+   
+                              
+                                                           
+   
 static uint64
 get_random_uint64(void)
 {
@@ -80,14 +80,14 @@ get_random_uint64(void)
   return x;
 }
 
-/*
- * Main program.
- *
- * Generates a lot of random numbers and tests the implementation for each.
- * The results should be reproducible, since we don't call srandom().
- *
- * You can give a loop count if you don't like the default 1B iterations.
- */
+   
+                 
+   
+                                                                            
+                                                                      
+   
+                                                                          
+   
 int
 main(int argc, char **argv)
 {
@@ -110,7 +110,7 @@ main(int argc, char **argv)
     test128 t1;
     test128 t2;
 
-    /* check unsigned addition */
+                                 
     t1.hl.hi = x;
     t1.hl.lo = y;
     t2 = t1;
@@ -125,7 +125,7 @@ main(int argc, char **argv)
       return 1;
     }
 
-    /* check signed addition */
+                               
     t1.hl.hi = x;
     t1.hl.lo = y;
     t2 = t1;
@@ -140,7 +140,7 @@ main(int argc, char **argv)
       return 1;
     }
 
-    /* check multiplication */
+                              
     t1.i128 = (int128)x * (int128)y;
 
     t2.hl.hi = t2.hl.lo = 0;
@@ -154,7 +154,7 @@ main(int argc, char **argv)
       return 1;
     }
 
-    /* check comparison */
+                          
     t1.hl.hi = x;
     t1.hl.lo = y;
     t2.hl.hi = z;
@@ -168,7 +168,7 @@ main(int argc, char **argv)
       return 1;
     }
 
-    /* check case with identical hi parts; above will hardly ever hit it */
+                                                                           
     t2.hl.hi = x;
 
     if (my_int128_compare(t1.i128, t2.i128) != int128_compare(t1.I128, t2.I128))

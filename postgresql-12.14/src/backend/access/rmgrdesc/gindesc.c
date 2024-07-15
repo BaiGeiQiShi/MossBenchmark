@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * gindesc.c
- *	  rmgr descriptor routines for access/transam/gin/ginxlog.c
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/access/rmgrdesc/gindesc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                               
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                           
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/ginxlog.h"
@@ -63,7 +63,7 @@ desc_recompress_leaf(StringInfo buf, ginxlogRecompressDataLeaf *insertData)
       break;
     default:
       appendStringInfo(buf, " %d unknown action %d ???", a_segno, a_action);
-      /* cannot decode unrecognized actions further */
+                                                      
       return;
     }
   }
@@ -78,7 +78,7 @@ gin_desc(StringInfo buf, XLogReaderState *record)
   switch (info)
   {
   case XLOG_GIN_CREATE_PTREE:
-    /* no further information */
+                                
     break;
   case XLOG_GIN_INSERT:
   {
@@ -138,7 +138,7 @@ gin_desc(StringInfo buf, XLogReaderState *record)
   }
   break;
   case XLOG_GIN_VACUUM_PAGE:
-    /* no further information */
+                                
     break;
   case XLOG_GIN_VACUUM_DATA_LEAF_PAGE:
   {
@@ -162,13 +162,13 @@ gin_desc(StringInfo buf, XLogReaderState *record)
   }
   break;
   case XLOG_GIN_DELETE_PAGE:
-    /* no further information */
+                                
     break;
   case XLOG_GIN_UPDATE_META_PAGE:
-    /* no further information */
+                                
     break;
   case XLOG_GIN_INSERT_LISTPAGE:
-    /* no further information */
+                                
     break;
   case XLOG_GIN_DELETE_LISTPAGE:
     appendStringInfo(buf, "ndeleted: %d", ((ginxlogDeleteListPages *)rec)->ndeleted);

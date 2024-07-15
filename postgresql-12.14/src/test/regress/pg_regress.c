@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * pg_regress --- regression test driver
- *
- * This is a C implementation of the previous shell script for running
- * the regression tests, and should be mostly compatible with it.
- * Initial author of C translation: Magnus Hagander
- *
- * This code is released under the terms of the PostgreSQL License.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/test/regress/pg_regress.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                         
+   
+                                                                       
+                                                                  
+                                                    
+   
+                                                                    
+   
+                                                                         
+                                                                        
+   
+                                 
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -35,11 +35,11 @@
 #include "common/restricted_token.h"
 #include "common/username.h"
 #include "getopt_long.h"
-#include "libpq/pqcomm.h" /* needed for UNIXSOCK_PATH() */
+#include "libpq/pqcomm.h"                                 
 #include "pg_config_paths.h"
 #include "portability/instr_time.h"
 
-/* for resultmap we need a list of pairs of strings */
+                                                      
 typedef struct _resultmap
 {
   char *test;
@@ -48,20 +48,20 @@ typedef struct _resultmap
   struct _resultmap *next;
 } _resultmap;
 
-/*
- * Values obtained from Makefile.
- */
+   
+                                  
+   
 char *host_platform = HOST_TUPLE;
 
-#ifndef WIN32 /* not used in WIN32 case */
+#ifndef WIN32                             
 static char *shellprog = SHELLPROG;
 #endif
 
-/*
- * On Windows we use -w in diff switches to avoid problems with inconsistent
- * newline representation.  The actual result files will generally have
- * Windows-style newlines, but the comparison files might or might not.
- */
+   
+                                                                             
+                                                                        
+                                                                        
+   
 #ifndef WIN32
 const char *basic_diff_opts = "";
 const char *pretty_diff_opts = "-U3";
@@ -70,7 +70,7 @@ const char *basic_diff_opts = "-w";
 const char *pretty_diff_opts = "-w -U3";
 #endif
 
-/* options settable from command line */
+                                        
 _stringlist *dblist = NULL;
 bool debug = false;
 char *inputdir = ".";
@@ -96,7 +96,7 @@ static char *user = NULL;
 static _stringlist *extraroles = NULL;
 static char *config_auth_datadir = NULL;
 
-/* internal variables */
+                        
 static const char *progname;
 static char *logfilename;
 static FILE *logfile;
@@ -129,9 +129,9 @@ status(const char *fmt, ...) pg_attribute_printf(1, 2);
 static void
 psql_command(const char *database, const char *query, ...) pg_attribute_printf(2, 3);
 
-/*
- * allow core files if possible.
- */
+   
+                                 
+   
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
 static void
 unlimit_core_size(void)
@@ -152,9 +152,9 @@ unlimit_core_size(void)
 }
 #endif
 
-/*
- * Add an item at the end of a stringlist.
- */
+   
+                                           
+   
 void
 add_stringlist_item(_stringlist **listhead, const char *str)
 {
@@ -170,14 +170,14 @@ add_stringlist_item(_stringlist **listhead, const char *str)
   else
   {
     for (oldentry = *listhead; oldentry->next; oldentry = oldentry->next)
-      /* skip */;
+                ;
     oldentry->next = newentry;
   }
 }
 
-/*
- * Free a stringlist.
- */
+   
+                      
+   
 static void
 free_stringlist(_stringlist **listhead)
 {
@@ -194,9 +194,9 @@ free_stringlist(_stringlist **listhead)
   *listhead = NULL;
 }
 
-/*
- * Split a delimited string into a stringlist
- */
+   
+                                              
+   
 static void
 split_to_stringlist(const char *s, const char *delim, _stringlist **listhead)
 {
@@ -211,9 +211,9 @@ split_to_stringlist(const char *s, const char *delim, _stringlist **listhead)
   free(sc);
 }
 
-/*
- * Print a progress banner on stdout.
- */
+   
+                                      
+   
 static void
 header(const char *fmt, ...)
 {
@@ -228,9 +228,9 @@ header(const char *fmt, ...)
   fflush(stdout);
 }
 
-/*
- * Print "doing something ..." --- supplied text should not end with newline
- */
+   
+                                                                             
+   
 static void
 status(const char *fmt, ...)
 {
@@ -249,9 +249,9 @@ status(const char *fmt, ...)
   }
 }
 
-/*
- * Done "doing something ..."
- */
+   
+                              
+   
 static void
 status_end(void)
 {
@@ -263,19 +263,19 @@ status_end(void)
   }
 }
 
-/*
- * shut down temp postmaster
- */
+   
+                             
+   
 static void
 stop_postmaster(void)
 {
   if (postmaster_running)
   {
-    /* We use pg_ctl to issue the kill and wait for stop */
+                                                           
     char buf[MAXPGPATH * 2];
     int r;
 
-    /* On Windows, system() seems not to force fflush, so... */
+                                                               
     fflush(stdout);
     fflush(stderr);
 
@@ -284,7 +284,7 @@ stop_postmaster(void)
     if (r != 0)
     {
       fprintf(stderr, _("\n%s: could not stop postmaster: exit code was %d\n"), progname, r);
-      _exit(2); /* not exit(), that could be recursive */
+      _exit(2);                                          
     }
 
     postmaster_running = false;
@@ -292,15 +292,15 @@ stop_postmaster(void)
 }
 
 #ifdef HAVE_UNIX_SOCKETS
-/*
- * Remove the socket temporary directory.  pg_regress never waits for a
- * postmaster exit, so it is indeterminate whether the postmaster has yet to
- * unlink the socket and lock file.  Unlink them here so we can proceed to
- * remove the directory.  Ignore errors; leaking a temporary directory is
- * unimportant.  This can run from a signal handler.  The code is not
- * acceptable in a Windows signal handler (see initdb.c:trapsig()), but
- * Windows is not a HAVE_UNIX_SOCKETS platform.
- */
+   
+                                                                        
+                                                                             
+                                                                           
+                                                                          
+                                                                      
+                                                                        
+                                                
+   
 static void
 remove_temp(void)
 {
@@ -310,9 +310,9 @@ remove_temp(void)
   rmdir(temp_sockdir);
 }
 
-/*
- * Signal handler that calls remove_temp() and reraises the signal.
- */
+   
+                                                                    
+   
 static void
 signal_remove_temp(int signum)
 {
@@ -322,18 +322,18 @@ signal_remove_temp(int signum)
   raise(signum);
 }
 
-/*
- * Create a temporary directory suitable for the server's Unix-domain socket.
- * The directory will have mode 0700 or stricter, so no other OS user can open
- * our socket to exploit our use of trust authentication.  Most systems
- * constrain the length of socket paths well below _POSIX_PATH_MAX, so we
- * place the directory under /tmp rather than relative to the possibly-deep
- * current working directory.
- *
- * Compared to using the compiled-in DEFAULT_PGSOCKET_DIR, this also permits
- * testing to work in builds that relocate it to a directory not writable to
- * the build/test user.
- */
+   
+                                                                              
+                                                                               
+                                                                        
+                                                                          
+                                                                            
+                              
+   
+                                                                             
+                                                                             
+                        
+   
 static const char *
 make_temp_sockdir(void)
 {
@@ -346,17 +346,17 @@ make_temp_sockdir(void)
     exit(2);
   }
 
-  /* Stage file names for remove_temp().  Unsafe in a signal handler. */
+                                                                        
   UNIXSOCK_PATH(sockself, port, temp_sockdir);
   snprintf(socklock, sizeof(socklock), "%s.lock", sockself);
 
-  /* Remove the directory during clean exit. */
+                                               
   atexit(remove_temp);
 
-  /*
-   * Remove the directory before dying to the usual signals.  Omit SIGQUIT,
-   * preserving it as a quick, untidy exit.
-   */
+     
+                                                                            
+                                            
+     
   pqsignal(SIGHUP, signal_remove_temp);
   pqsignal(SIGINT, signal_remove_temp);
   pqsignal(SIGPIPE, signal_remove_temp);
@@ -364,20 +364,20 @@ make_temp_sockdir(void)
 
   return temp_sockdir;
 }
-#endif /* HAVE_UNIX_SOCKETS */
+#endif                        
 
-/*
- * Check whether string matches pattern
- *
- * In the original shell script, this function was implemented using expr(1),
- * which provides basic regular expressions restricted to match starting at
- * the string start (in conventional regex terms, there's an implicit "^"
- * at the start of the pattern --- but no implicit "$" at the end).
- *
- * For now, we only support "." and ".*" as non-literal metacharacters,
- * because that's all that anyone has found use for in resultmap.  This
- * code could be extended if more functionality is needed.
- */
+   
+                                        
+   
+                                                                              
+                                                                            
+                                                                          
+                                                                    
+   
+                                                                        
+                                                                        
+                                                           
+   
 static bool
 string_matches_pattern(const char *str, const char *pattern)
 {
@@ -386,22 +386,22 @@ string_matches_pattern(const char *str, const char *pattern)
     if (*pattern == '.' && pattern[1] == '*')
     {
       pattern += 2;
-      /* Trailing .* matches everything. */
+                                           
       if (*pattern == '\0')
       {
         return true;
       }
 
-      /*
-       * Otherwise, scan for a text position at which we can match the
-       * rest of the pattern.
-       */
+         
+                                                                       
+                              
+         
       while (*str)
       {
-        /*
-         * Optimization to prevent most recursion: don't recurse
-         * unless first pattern char might match this text char.
-         */
+           
+                                                                 
+                                                                 
+           
         if (*str == *pattern || *pattern == '.')
         {
           if (string_matches_pattern(str, pattern))
@@ -413,17 +413,17 @@ string_matches_pattern(const char *str, const char *pattern)
         str++;
       }
 
-      /*
-       * End of text with no match.
-       */
+         
+                                    
+         
       return false;
     }
     else if (*pattern != '.' && *str != *pattern)
     {
-      /*
-       * Not the single-character wildcard and no explicit match? Then
-       * time to quit...
-       */
+         
+                                                                       
+                         
+         
       return false;
     }
 
@@ -433,26 +433,26 @@ string_matches_pattern(const char *str, const char *pattern)
 
   if (*pattern == '\0')
   {
-    return true; /* end of pattern, so declare match */
+    return true;                                       
   }
 
-  /* End of input string.  Do we have matching pattern remaining? */
+                                                                    
   while (*pattern == '.' && pattern[1] == '*')
   {
     pattern += 2;
   }
   if (*pattern == '\0')
   {
-    return true; /* end of pattern, so declare match */
+    return true;                                       
   }
 
   return false;
 }
 
-/*
- * Replace all occurrences of a string in a string with a different string.
- * NOTE: Assumes there is enough room in the target buffer!
- */
+   
+                                                                            
+                                                            
+   
 void
 replace_string(char *string, const char *replace, const char *replacement)
 {
@@ -469,12 +469,12 @@ replace_string(char *string, const char *replace, const char *replacement)
   }
 }
 
-/*
- * Convert *.source found in the "source" directory, replacing certain tokens
- * in the file contents with their intended values, and put the resulting files
- * in the "dest" directory, replacing the ".source" prefix in their names with
- * the given suffix.
- */
+   
+                                                                              
+                                                                                
+                                                                               
+                     
+   
 static void
 convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const char *dest_subdir, const char *suffix)
 {
@@ -488,21 +488,21 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 
   snprintf(indir, MAXPGPATH, "%s/%s", inputdir, source_subdir);
 
-  /* Check that indir actually exists and is a directory */
+                                                           
   ret = stat(indir, &st);
   if (ret != 0 || !S_ISDIR(st.st_mode))
   {
-    /*
-     * No warning, to avoid noise in tests that do not have these
-     * directories; for example, ecpg, contrib and src/pl.
-     */
+       
+                                                                  
+                                                           
+       
     return;
   }
 
   names = pgfnames(indir);
   if (!names)
   {
-    /* Error logged in pgfnames */
+                                  
     exit(2);
   }
 
@@ -510,16 +510,16 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 
 #ifdef WIN32
 
-  /*
-   * On Windows only, clean out the test tablespace dir, or create it if it
-   * doesn't exist.  On other platforms we expect the Makefile to take care
-   * of that.  (We don't migrate that functionality in here because it'd be
-   * harder to cope with platform-specific issues such as SELinux.)
-   *
-   * XXX it would be better if pg_regress.c had nothing at all to do with
-   * testtablespace, and this were handled by a .BAT file or similar on
-   * Windows.  See pgsql-hackers discussion of 2008-01-18.
-   */
+     
+                                                                            
+                                                                            
+                                                                            
+                                                                    
+     
+                                                                          
+                                                                        
+                                                           
+     
   if (directory_exists(testtablespace))
   {
     if (!rmtree(testtablespace, true))
@@ -531,7 +531,7 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
   make_directory(testtablespace);
 #endif
 
-  /* finally loop on each file and do the replacement */
+                                                        
   for (name = names; *name; name++)
   {
     char srcfile[MAXPGPATH];
@@ -540,7 +540,7 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
     FILE *infile, *outfile;
     char line[1024];
 
-    /* reject filenames not finishing in ".source" */
+                                                     
     if (strlen(*name) < 8)
     {
       continue;
@@ -552,7 +552,7 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
 
     count++;
 
-    /* build the full actual paths to open */
+                                             
     snprintf(prefix, strlen(*name) - 6, "%s", *name);
     snprintf(srcfile, MAXPGPATH, "%s/%s", indir, *name);
     snprintf(destfile, MAXPGPATH, "%s/%s/%s.%s", dest_dir, dest_subdir, prefix, suffix);
@@ -582,10 +582,10 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
     fclose(outfile);
   }
 
-  /*
-   * If we didn't process any files, complain because it probably means
-   * somebody neglected to pass the needed --inputdir argument.
-   */
+     
+                                                                        
+                                                                
+     
   if (count <= 0)
   {
     fprintf(stderr, _("%s: no *.source files found in \"%s\"\n"), progname, indir);
@@ -595,7 +595,7 @@ convert_sourcefiles_in(const char *source_subdir, const char *dest_dir, const ch
   pgfnames_cleanup(names);
 }
 
-/* Create the .sql and .out files from the .source files, if any */
+                                                                   
 static void
 convert_sourcefiles(void)
 {
@@ -603,31 +603,31 @@ convert_sourcefiles(void)
   convert_sourcefiles_in("output", outputdir, "expected", "out");
 }
 
-/*
- * Scan resultmap file to find which platform-specific expected files to use.
- *
- * The format of each line of the file is
- *		   testname/hostplatformpattern=substitutefile
- * where the hostplatformpattern is evaluated per the rules of expr(1),
- * namely, it is a standard regular expression with an implicit ^ at the start.
- * (We currently support only a very limited subset of regular expressions,
- * see string_matches_pattern() above.)  What hostplatformpattern will be
- * matched against is the config.guess output.  (In the shell-script version,
- * we also provided an indication of whether gcc or another compiler was in
- * use, but that facility isn't used anymore.)
- */
+   
+                                                                              
+   
+                                          
+                                                   
+                                                                        
+                                                                                
+                                                                            
+                                                                          
+                                                                              
+                                                                            
+                                               
+   
 static void
 load_resultmap(void)
 {
   char buf[MAXPGPATH];
   FILE *f;
 
-  /* scan the file ... */
+                         
   snprintf(buf, sizeof(buf), "%s/resultmap", inputdir);
   f = fopen(buf, "r");
   if (!f)
   {
-    /* OK if it doesn't exist, else complain */
+                                               
     if (errno == ENOENT)
     {
       return;
@@ -643,14 +643,14 @@ load_resultmap(void)
     char *expected;
     int i;
 
-    /* strip trailing whitespace, especially the newline */
+                                                           
     i = strlen(buf);
     while (i > 0 && isspace((unsigned char)buf[i - 1]))
     {
       buf[--i] = '\0';
     }
 
-    /* parse out the line fields */
+                                   
     file_type = strchr(buf, ':');
     if (!file_type)
     {
@@ -674,12 +674,12 @@ load_resultmap(void)
     }
     *expected++ = '\0';
 
-    /*
-     * if it's for current platform, save it in resultmap list. Note: by
-     * adding at the front of the list, we ensure that in ambiguous cases,
-     * the last match in the resultmap file is used. This mimics the
-     * behavior of the old shell script.
-     */
+       
+                                                                         
+                                                                           
+                                                                     
+                                         
+       
     if (string_matches_pattern(host_platform, platform))
     {
       _resultmap *entry = pg_malloc(sizeof(_resultmap));
@@ -694,19 +694,19 @@ load_resultmap(void)
   fclose(f);
 }
 
-/*
- * Check in resultmap if we should be looking at a different file
- */
+   
+                                                                  
+   
 static const char *
 get_expectfile(const char *testname, const char *file)
 {
   char *file_type;
   _resultmap *rm;
 
-  /*
-   * Determine the file type from the file name. This is just what is
-   * following the last dot in the file name.
-   */
+     
+                                                                      
+                                              
+     
   if (!file || !(file_type = strrchr(file, '.')))
   {
     return NULL;
@@ -725,9 +725,9 @@ get_expectfile(const char *testname, const char *file)
   return NULL;
 }
 
-/*
- * Handy subroutine for setting an environment variable "var" to "val"
- */
+   
+                                                                       
+   
 static void
 doputenv(const char *var, const char *val)
 {
@@ -737,23 +737,23 @@ doputenv(const char *var, const char *val)
   putenv(s);
 }
 
-/*
- * Prepare environment variables for running regression tests
- */
+   
+                                                              
+   
 static void
 initialize_environment(void)
 {
-  /*
-   * Set default application_name.  (The test_function may choose to
-   * override this, but if it doesn't, we have something useful in place.)
-   */
+     
+                                                                     
+                                                                           
+     
   putenv("PGAPPNAME=pg_regress");
 
   if (nolocale)
   {
-    /*
-     * Clear out any non-C locale settings
-     */
+       
+                                           
+       
     unsetenv("LC_COLLATE");
     unsetenv("LC_CTYPE");
     unsetenv("LC_MONETARY");
@@ -761,32 +761,32 @@ initialize_environment(void)
     unsetenv("LC_TIME");
     unsetenv("LANG");
 
-    /*
-     * Most platforms have adopted the POSIX locale as their
-     * implementation-defined default locale.  Exceptions include native
-     * Windows, macOS with --enable-nls, and Cygwin with --enable-nls.
-     * (Use of --enable-nls matters because libintl replaces setlocale().)
-     * Also, PostgreSQL does not support macOS with locale environment
-     * variables unset; see PostmasterMain().
-     */
+       
+                                                             
+                                                                         
+                                                                       
+                                                                           
+                                                                       
+                                              
+       
 #if defined(WIN32) || defined(__CYGWIN__) || defined(__darwin__)
     putenv("LANG=C");
 #endif
   }
 
-  /*
-   * Set translation-related settings to English; otherwise psql will
-   * produce translated messages and produce diffs.  (XXX If we ever support
-   * translation of pg_regress, this needs to be moved elsewhere, where psql
-   * is actually called.)
-   */
+     
+                                                                      
+                                                                             
+                                                                             
+                          
+     
   unsetenv("LANGUAGE");
   unsetenv("LC_ALL");
   putenv("LC_MESSAGES=C");
 
-  /*
-   * Set encoding as requested
-   */
+     
+                               
+     
   if (encoding)
   {
     doputenv("PGCLIENTENCODING", encoding);
@@ -796,17 +796,17 @@ initialize_environment(void)
     unsetenv("PGCLIENTENCODING");
   }
 
-  /*
-   * Set timezone and datestyle for datetime-related tests
-   */
+     
+                                                           
+     
   putenv("PGTZ=PST8PDT");
   putenv("PGDATESTYLE=Postgres, MDY");
 
-  /*
-   * Likewise set intervalstyle to ensure consistent results.  This is a bit
-   * more painful because we must use PGOPTIONS, and we want to preserve the
-   * user's ability to set other variables through that.
-   */
+     
+                                                                             
+                                                                             
+                                                         
+     
   {
     const char *my_pgoptions = "-c intervalstyle=postgres_verbose";
     const char *old_pgoptions = getenv("PGOPTIONS");
@@ -822,22 +822,22 @@ initialize_environment(void)
 
   if (temp_instance)
   {
-    /*
-     * Clear out any environment vars that might cause psql to connect to
-     * the wrong postmaster, or otherwise behave in nondefault ways. (Note
-     * we also use psql's -X switch consistently, so that ~/.psqlrc files
-     * won't mess things up.)  Also, set PGPORT to the temp port, and set
-     * PGHOST depending on whether we are using TCP or Unix sockets.
-     *
-     * This list should be kept in sync with TestLib.pm.
-     */
-    /* PGCLIENTENCODING, see above */
+       
+                                                                          
+                                                                           
+                                                                          
+                                                                          
+                                                                     
+       
+                                                         
+       
+                                     
     unsetenv("PGCONNECT_TIMEOUT");
     unsetenv("PGDATA");
     unsetenv("PGDATABASE");
     unsetenv("PGGSSENCMODE");
     unsetenv("PGGSSLIB");
-    /* PGHOSTADDR, see below */
+                               
     unsetenv("PGKRBSRVNAME");
     unsetenv("PGPASSFILE");
     unsetenv("PGPASSWORD");
@@ -852,8 +852,8 @@ initialize_environment(void)
     unsetenv("PGSSLROOTCERT");
     unsetenv("PGTARGETSESSIONATTRS");
     unsetenv("PGUSER");
-    /* PGPORT, see below */
-    /* PGHOST, see below */
+                           
+                           
 
 #ifdef HAVE_UNIX_SOCKETS
     if (hostname != NULL)
@@ -887,10 +887,10 @@ initialize_environment(void)
     const char *pghost;
     const char *pgport;
 
-    /*
-     * When testing an existing install, we honor existing environment
-     * variables, except if they're overridden by command line options.
-     */
+       
+                                                                       
+                                                                        
+       
     if (hostname != NULL)
     {
       doputenv("PGHOST", hostname);
@@ -908,9 +908,9 @@ initialize_environment(void)
       doputenv("PGUSER", user);
     }
 
-    /*
-     * Report what we're connecting to
-     */
+       
+                                       
+       
     pghost = getenv("PGHOST");
     pgport = getenv("PGPORT");
 #ifndef HAVE_UNIX_SOCKETS
@@ -944,7 +944,7 @@ initialize_environment(void)
 
 #ifdef ENABLE_SSPI
 
-/* support for config_sspi_auth() */
+                                    
 static const char *
 fmtHba(const char *raw)
 {
@@ -969,10 +969,10 @@ fmtHba(const char *raw)
   return ret;
 }
 
-/*
- * Get account and domain/realm names for the current user.  This is based on
- * pg_SSPI_recvauth().  The returned strings use static storage.
- */
+   
+                                                                              
+                                                                 
+   
 static void
 current_windows_user(const char **acct, const char **dom)
 {
@@ -1015,14 +1015,14 @@ current_windows_user(const char **acct, const char **dom)
   *dom = domainname;
 }
 
-/*
- * Rewrite pg_hba.conf and pg_ident.conf to use SSPI authentication.  Permit
- * the current OS user to authenticate as the bootstrap superuser and as any
- * user named in a --create-role option.
- *
- * In --config-auth mode, the --user switch can be used to specify the
- * bootstrap superuser's name, otherwise we assume it is the default.
- */
+   
+                                                                             
+                                                                             
+                                         
+   
+                                                                       
+                                                                      
+   
 static void
 config_sspi_auth(const char *pgdata, const char *superuser_name)
 {
@@ -1034,19 +1034,19 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
   FILE *hba, *ident;
   _stringlist *sl;
 
-  /* Find out the name of the current OS user */
+                                                
   current_windows_user(&accountname, &domainname);
 
-  /* Determine the bootstrap superuser's name */
+                                                
   if (superuser_name == NULL)
   {
-    /*
-     * Compute the default superuser name the same way initdb does.
-     *
-     * It's possible that this result always matches "accountname", the
-     * value SSPI authentication discovers.  But the underlying system
-     * functions do not clearly guarantee that.
-     */
+       
+                                                                    
+       
+                                                                        
+                                                                       
+                                                
+       
     superuser_name = get_user_name(&errstr);
     if (superuser_name == NULL)
     {
@@ -1055,10 +1055,10 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
     }
   }
 
-  /*
-   * Like initdb.c:setup_config(), determine whether the platform recognizes
-   * ::1 (IPv6 loopback) as a numeric host address string.
-   */
+     
+                                                                             
+                                                           
+     
   {
     struct addrinfo *gai_result;
     struct addrinfo hints;
@@ -1076,7 +1076,7 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
     have_ipv6 = (WSAStartup(MAKEWORD(2, 2), &wsaData) == 0 && getaddrinfo("::1", NULL, &hints, &gai_result) == 0);
   }
 
-  /* Check a Write outcome and report any error. */
+                                                   
 #define CW(cond)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -1090,10 +1090,10 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
   res = snprintf(fname, sizeof(fname), "%s/pg_hba.conf", pgdata);
   if (res < 0 || res >= sizeof(fname))
   {
-    /*
-     * Truncating this name is a fatal error, because we must not fail to
-     * overwrite an original trust-authentication pg_hba.conf.
-     */
+       
+                                                                          
+                                                               
+       
     fprintf(stderr, _("%s: directory name too long\n"), progname);
     exit(2);
   }
@@ -1120,11 +1120,11 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
   }
   CW(fputs("# Configuration written by config_sspi_auth()\n", ident) >= 0);
 
-  /*
-   * Double-quote for the benefit of account names containing whitespace or
-   * '#'.  Windows forbids the double-quote character itself, so don't
-   * bother escaping embedded double-quote characters.
-   */
+     
+                                                                            
+                                                                       
+                                                       
+     
   CW(fprintf(ident, "regress  \"%s@%s\"  %s\n", accountname, domainname, fmtHba(superuser_name)) >= 0);
   for (sl = extraroles; sl; sl = sl->next)
   {
@@ -1133,13 +1133,13 @@ config_sspi_auth(const char *pgdata, const char *superuser_name)
   CW(fclose(ident) == 0);
 }
 
-#endif /* ENABLE_SSPI */
+#endif                  
 
-/*
- * Issue a command via psql, connecting to the specified database
- *
- * Since we use system(), this doesn't return until the operation finishes
- */
+   
+                                                                  
+   
+                                                                           
+   
 static void
 psql_command(const char *database, const char *query, ...)
 {
@@ -1150,12 +1150,12 @@ psql_command(const char *database, const char *query, ...)
   char *s;
   char *d;
 
-  /* Generate the query with insertion of sprintf arguments */
+                                                              
   va_start(args, query);
   vsnprintf(query_formatted, sizeof(query_formatted), query, args);
   va_end(args);
 
-  /* Now escape any shell double-quote metacharacters */
+                                                        
   d = query_escaped;
   for (s = query_formatted; *s; s++)
   {
@@ -1167,32 +1167,32 @@ psql_command(const char *database, const char *query, ...)
   }
   *d = '\0';
 
-  /* And now we can build and execute the shell command */
+                                                          
   snprintf(psql_cmd, sizeof(psql_cmd), "\"%s%spsql\" -X -c \"%s\" \"%s\"", bindir ? bindir : "", bindir ? "/" : "", query_escaped, database);
 
   if (system(psql_cmd) != 0)
   {
-    /* psql probably already reported the error */
+                                                  
     fprintf(stderr, _("command failed: %s\n"), psql_cmd);
     exit(2);
   }
 }
 
-/*
- * Spawn a process to execute the given shell command; don't wait for it
- *
- * Returns the process ID (or HANDLE) so we can wait for it later
- */
+   
+                                                                         
+   
+                                                                  
+   
 PID_TYPE
 spawn_process(const char *cmdline)
 {
 #ifndef WIN32
   pid_t pid;
 
-  /*
-   * Must flush I/O buffers before fork.  Ideally we'd use fflush(NULL) here
-   * ... does anyone still care about systems where that doesn't work?
-   */
+     
+                                                                             
+                                                                       
+     
   fflush(stdout);
   fflush(stderr);
   if (logfile)
@@ -1208,21 +1208,21 @@ spawn_process(const char *cmdline)
   }
   if (pid == 0)
   {
-    /*
-     * In child
-     *
-     * Instead of using system(), exec the shell directly, and tell it to
-     * "exec" the command too.  This saves two useless processes per
-     * parallel test case.
-     */
+       
+                
+       
+                                                                          
+                                                                     
+                           
+       
     char *cmdline2;
 
     cmdline2 = psprintf("exec %s", cmdline);
     execl(shellprog, shellprog, "-c", cmdline2, (char *)NULL);
     fprintf(stderr, _("%s: could not exec \"%s\": %s\n"), progname, shellprog, strerror(errno));
-    _exit(1); /* not exit() here... */
+    _exit(1);                         
   }
-  /* in parent */
+                 
   return pid;
 #else
   PROCESS_INFORMATION pi;
@@ -1242,9 +1242,9 @@ spawn_process(const char *cmdline)
 #endif
 }
 
-/*
- * Count bytes in file
- */
+   
+                       
+   
 static long
 file_size(const char *file)
 {
@@ -1262,9 +1262,9 @@ file_size(const char *file)
   return r;
 }
 
-/*
- * Count lines in file
- */
+   
+                       
+   
 static int
 file_line_count(const char *file)
 {
@@ -1317,7 +1317,7 @@ directory_exists(const char *dir)
   return false;
 }
 
-/* Create a directory */
+                        
 static void
 make_directory(const char *dir)
 {
@@ -1328,9 +1328,9 @@ make_directory(const char *dir)
   }
 }
 
-/*
- * In: filename.ext, Return: filename_i.ext, where 0 < i <= 9
- */
+   
+                                                              
+   
 static char *
 get_alternative_expectfile(const char *expectfile, int i)
 {
@@ -1364,9 +1364,9 @@ get_alternative_expectfile(const char *expectfile, int i)
   return s;
 }
 
-/*
- * Run a "diff" command and also check that it didn't crash
- */
+   
+                                                            
+   
 static int
 run_diff(const char *cmd, const char *filename)
 {
@@ -1380,10 +1380,10 @@ run_diff(const char *cmd, const char *filename)
   }
 #ifdef WIN32
 
-  /*
-   * On WIN32, if the 'diff' command cannot be found, system() returns 1,
-   * but produces nothing to stdout, so we check for that here.
-   */
+     
+                                                                          
+                                                                
+     
   if (WEXITSTATUS(r) == 1 && file_size(filename) <= 0)
   {
     fprintf(stderr, _("diff command not found: %s\n"), cmd);
@@ -1394,12 +1394,12 @@ run_diff(const char *cmd, const char *filename)
   return WEXITSTATUS(r);
 }
 
-/*
- * Check the actual result file for the given test against expected results
- *
- * Returns true if different (failure), false if correct match found.
- * In the true case, the diff is appended to the diffs file.
- */
+   
+                                                                            
+   
+                                                                      
+                                                             
+   
 static bool
 results_differ(const char *testname, const char *resultsfile, const char *default_expectfile)
 {
@@ -1413,19 +1413,19 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
   int l;
   const char *platform_expectfile;
 
-  /*
-   * We can pass either the resultsfile or the expectfile, they should have
-   * the same type (filename.type) anyway.
-   */
+     
+                                                                            
+                                           
+     
   platform_expectfile = get_expectfile(testname, resultsfile);
 
   strlcpy(expectfile, default_expectfile, sizeof(expectfile));
   if (platform_expectfile)
   {
-    /*
-     * Replace everything after the last slash in expectfile with what the
-     * platform_expectfile contains.
-     */
+       
+                                                                           
+                                     
+       
     char *p = strrchr(expectfile, '/');
 
     if (p)
@@ -1434,20 +1434,20 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
     }
   }
 
-  /* Name to use for temporary diff file */
+                                           
   snprintf(diff, sizeof(diff), "%s.diff", resultsfile);
 
-  /* OK, run the diff */
+                        
   snprintf(cmd, sizeof(cmd), "diff %s \"%s\" \"%s\" > \"%s\"", basic_diff_opts, expectfile, resultsfile, diff);
 
-  /* Is the diff file empty? */
+                               
   if (run_diff(cmd, diff) == 0)
   {
     unlink(diff);
     return false;
   }
 
-  /* There may be secondary comparison files that match better */
+                                                                 
   best_line_count = file_line_count(diff);
   strcpy(best_expect_file, expectfile);
 
@@ -1480,17 +1480,17 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
     l = file_line_count(diff);
     if (l < best_line_count)
     {
-      /* This diff was a better match than the last one */
+                                                          
       best_line_count = l;
       strlcpy(best_expect_file, alt_expectfile, sizeof(best_expect_file));
     }
     free(alt_expectfile);
   }
 
-  /*
-   * fall back on the canonical results file if we haven't tried it yet and
-   * haven't found a complete match yet.
-   */
+     
+                                                                            
+                                         
+     
 
   if (platform_expectfile)
   {
@@ -1498,7 +1498,7 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 
     if (run_diff(cmd, diff) == 0)
     {
-      /* No diff = no changes = good */
+                                       
       unlink(diff);
       return false;
     }
@@ -1506,18 +1506,18 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
     l = file_line_count(diff);
     if (l < best_line_count)
     {
-      /* This diff was a better match than the last one */
+                                                          
       best_line_count = l;
       strlcpy(best_expect_file, default_expectfile, sizeof(best_expect_file));
     }
   }
 
-  /*
-   * Use the best comparison file to generate the "pretty" diff, which we
-   * append to the diffs summary file.
-   */
+     
+                                                                          
+                                       
+     
 
-  /* Write diff header */
+                         
   difffile = fopen(difffilename, "a");
   if (difffile)
   {
@@ -1525,7 +1525,7 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
     fclose(difffile);
   }
 
-  /* Run diff */
+                
   snprintf(cmd, sizeof(cmd), "diff %s \"%s\" \"%s\" >> \"%s\"", pretty_diff_opts, best_expect_file, resultsfile, difffilename);
   run_diff(cmd, difffilename);
 
@@ -1533,14 +1533,14 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
   return true;
 }
 
-/*
- * Wait for specified subprocesses to finish, and return their exit
- * statuses into statuses[] and stop times into stoptimes[]
- *
- * If names isn't NULL, print each subprocess's name as it finishes
- *
- * Note: it's OK to scribble on the pids array, but not on the names array
- */
+   
+                                                                    
+                                                            
+   
+                                                                    
+   
+                                                                           
+   
 static void
 wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **names, int num_tests)
 {
@@ -1579,9 +1579,9 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
       exit(2);
     }
     p = active_pids[r - WAIT_OBJECT_0];
-    /* compact the active_pids array */
+                                       
     active_pids[r - WAIT_OBJECT_0] = active_pids[tests_left - 1];
-#endif /* WIN32 */
+#endif            
 
     for (i = 0; i < num_tests; i++)
     {
@@ -1609,9 +1609,9 @@ wait_for_tests(PID_TYPE *pids, int *statuses, instr_time *stoptimes, char **name
 #endif
 }
 
-/*
- * report nonzero exit code from a test process
- */
+   
+                                                
+   
 static void
 log_child_failure(int exitstatus)
 {
@@ -1633,9 +1633,9 @@ log_child_failure(int exitstatus)
   }
 }
 
-/*
- * Run all the tests specified in one schedule file
- */
+   
+                                                    
+   
 static void
 run_schedule(const char *schedule, test_function tfunc)
 {
@@ -1675,7 +1675,7 @@ run_schedule(const char *schedule, test_function tfunc)
 
     line_num++;
 
-    /* strip trailing whitespace, especially the newline */
+                                                           
     i = strlen(scbuf);
     while (i > 0 && isspace((unsigned char)scbuf[i - 1]))
     {
@@ -1699,11 +1699,11 @@ run_schedule(const char *schedule, test_function tfunc)
       }
       add_stringlist_item(&ignorelist, c);
 
-      /*
-       * Note: ignore: lines do not run the test, they just say that
-       * failure of this test when run later on is to be ignored. A bit
-       * odd but that's how the shell-script version did it.
-       */
+         
+                                                                     
+                                                                        
+                                                             
+         
       continue;
     }
     else
@@ -1720,7 +1720,7 @@ run_schedule(const char *schedule, test_function tfunc)
       {
         if (inword)
         {
-          /* Reached end of a test name */
+                                          
           char sav;
 
           if (num_tests >= MAX_PARALLEL_TESTS)
@@ -1737,12 +1737,12 @@ run_schedule(const char *schedule, test_function tfunc)
         }
         if (*c == '\0')
         {
-          break; /* loop exit is here */
+          break;                        
         }
       }
       else if (!inword)
       {
-        /* Start of a test name */
+                                  
         test = c;
         inword = true;
       }
@@ -1760,7 +1760,7 @@ run_schedule(const char *schedule, test_function tfunc)
       pids[0] = (tfunc)(tests[0], &resultfiles[0], &expectfiles[0], &tags[0]);
       INSTR_TIME_SET_CURRENT(starttimes[0]);
       wait_for_tests(pids, statuses, stoptimes, NULL, 1);
-      /* status line is finished below */
+                                         
     }
     else if (max_concurrent_tests > 0 && max_concurrent_tests < num_tests)
     {
@@ -1797,7 +1797,7 @@ run_schedule(const char *schedule, test_function tfunc)
       status_end();
     }
 
-    /* Check results for all tests */
+                                     
     for (i = 0; i < num_tests; i++)
     {
       _stringlist *rl, *el, *tl;
@@ -1808,14 +1808,14 @@ run_schedule(const char *schedule, test_function tfunc)
         status(_("     %-28s ... "), tests[i]);
       }
 
-      /*
-       * Advance over all three lists simultaneously.
-       *
-       * Compare resultfiles[j] with expectfiles[j] always. Tags are
-       * optional but if there are tags, the tag list has the same
-       * length as the other two lists.
-       */
-      for (rl = resultfiles[i], el = expectfiles[i], tl = tags[i]; rl != NULL; /* rl and el have the same length */
+         
+                                                      
+         
+                                                                     
+                                                                   
+                                        
+         
+      for (rl = resultfiles[i], el = expectfiles[i], tl = tags[i]; rl != NULL;                                     
            rl = rl->next, el = el->next, tl = tl ? tl->next : NULL)
       {
         bool newdiff;
@@ -1854,7 +1854,7 @@ run_schedule(const char *schedule, test_function tfunc)
       }
       else
       {
-        status(_("ok    ")); /* align with FAILED */
+        status(_("ok    "));                        
         success_count++;
       }
 
@@ -1884,9 +1884,9 @@ run_schedule(const char *schedule, test_function tfunc)
   fclose(scf);
 }
 
-/*
- * Run a single test
- */
+   
+                     
+   
 static void
 run_single_test(const char *test, test_function tfunc)
 {
@@ -1905,14 +1905,14 @@ run_single_test(const char *test, test_function tfunc)
   INSTR_TIME_SET_CURRENT(starttime);
   wait_for_tests(&pid, &exit_status, &stoptime, NULL, 1);
 
-  /*
-   * Advance over all three lists simultaneously.
-   *
-   * Compare resultfiles[j] with expectfiles[j] always. Tags are optional
-   * but if there are tags, the tag list has the same length as the other
-   * two lists.
-   */
-  for (rl = resultfiles, el = expectfiles, tl = tags; rl != NULL; /* rl and el have the same length */
+     
+                                                  
+     
+                                                                          
+                                                                          
+                
+     
+  for (rl = resultfiles, el = expectfiles, tl = tags; rl != NULL;                                     
        rl = rl->next, el = el->next, tl = tl ? tl->next : NULL)
   {
     bool newdiff;
@@ -1932,7 +1932,7 @@ run_single_test(const char *test, test_function tfunc)
   }
   else
   {
-    status(_("ok    ")); /* align with FAILED */
+    status(_("ok    "));                        
     success_count++;
   }
 
@@ -1947,22 +1947,22 @@ run_single_test(const char *test, test_function tfunc)
   status_end();
 }
 
-/*
- * Create the summary-output files (making them empty if already existing)
- */
+   
+                                                                           
+   
 static void
 open_result_files(void)
 {
   char file[MAXPGPATH];
   FILE *difffile;
 
-  /* create outputdir directory if not present */
+                                                 
   if (!directory_exists(outputdir))
   {
     make_directory(outputdir);
   }
 
-  /* create the log file (copy of running status output) */
+                                                           
   snprintf(file, sizeof(file), "%s/regression.out", outputdir);
   logfilename = pg_strdup(file);
   logfile = fopen(logfilename, "w");
@@ -1972,7 +1972,7 @@ open_result_files(void)
     exit(2);
   }
 
-  /* create the diffs file as empty */
+                                      
   snprintf(file, sizeof(file), "%s/regression.diffs", outputdir);
   difffilename = pg_strdup(file);
   difffile = fopen(difffilename, "w");
@@ -1981,10 +1981,10 @@ open_result_files(void)
     fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"), progname, difffilename, strerror(errno));
     exit(2);
   }
-  /* we don't keep the diffs file open continuously */
+                                                      
   fclose(difffile);
 
-  /* also create the results directory if not present */
+                                                        
   snprintf(file, sizeof(file), "%s/results", outputdir);
   if (!directory_exists(file))
   {
@@ -2004,10 +2004,10 @@ create_database(const char *dbname)
 {
   _stringlist *sl;
 
-  /*
-   * We use template0 so that any installation-local cruft in template1 will
-   * not mess up the tests.
-   */
+     
+                                                                             
+                            
+     
   header(_("creating database \"%s\""), dbname);
   if (encoding)
   {
@@ -2026,20 +2026,20 @@ create_database(const char *dbname)
       "ALTER DATABASE \"%s\" SET timezone_abbreviations TO 'Default';",
       dbname, dbname, dbname, dbname, dbname, dbname);
 
-  /*
-   * Install any requested procedural languages.  We use CREATE OR REPLACE
-   * so that this will work whether or not the language is preinstalled.
-   */
+     
+                                                                           
+                                                                         
+     
   for (sl = loadlanguage; sl != NULL; sl = sl->next)
   {
     header(_("installing %s"), sl->str);
     psql_command(dbname, "CREATE OR REPLACE LANGUAGE \"%s\"", sl->str);
   }
 
-  /*
-   * Install any requested extensions.  We use CREATE IF NOT EXISTS so that
-   * this will work whether or not the extension is preinstalled.
-   */
+     
+                                                                            
+                                                                  
+     
   for (sl = loadextension; sl != NULL; sl = sl->next)
   {
     header(_("installing %s"), sl->str);
@@ -2137,14 +2137,14 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   atexit(stop_postmaster);
 
 #ifndef HAVE_UNIX_SOCKETS
-  /* no unix domain sockets available, so change default */
+                                                           
   hostname = "localhost";
 #endif
 
-  /*
-   * We call the initialization function here because that way we can set
-   * default parameters and let them be overwritten by the commandline.
-   */
+     
+                                                                          
+                                                                        
+     
   ifunc(argc, argv);
 
   if (getenv("PG_REGRESS_DIFF_OPTS"))
@@ -2164,10 +2164,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       exit(0);
     case 1:
 
-      /*
-       * If a default database was specified, we need to remove it
-       * before we add the specified one.
-       */
+         
+                                                                   
+                                          
+         
       free_stringlist(&dblist);
       split_to_stringlist(optarg, ",", &dblist);
       break;
@@ -2209,7 +2209,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       user = pg_strdup(optarg);
       break;
     case 16:
-      /* "--bindir=" means to use PATH */
+                                         
       if (strlen(optarg))
       {
         bindir = pg_strdup(optarg);
@@ -2244,25 +2244,25 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       max_concurrent_tests = atoi(optarg);
       break;
     default:
-      /* getopt_long already emitted a complaint */
+                                                   
       fprintf(stderr, _("\nTry \"%s -h\" for more information.\n"), progname);
       exit(2);
     }
   }
 
-  /*
-   * if we still have arguments, they are extra tests to run
-   */
+     
+                                                             
+     
   while (argc - optind >= 1)
   {
     add_stringlist_item(&extra_tests, argv[optind]);
     optind++;
   }
 
-  /*
-   * We must have a database to run the tests in; either a default name, or
-   * one supplied by the --dbname switch.
-   */
+     
+                                                                            
+                                          
+     
   if (!(dblist && dblist->str && dblist->str[0]))
   {
     fprintf(stderr, _("%s: no database name was specified\n"), progname);
@@ -2280,13 +2280,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   if (temp_instance && !port_specified_by_user)
   {
 
-    /*
-     * To reduce chances of interference with parallel installations, use
-     * a port number starting in the private range (49152-65535)
-     * calculated from the version number.  This aids !HAVE_UNIX_SOCKETS
-     * systems; elsewhere, the use of a private socket directory already
-     * prevents interference.
-     */
+       
+                                                                          
+                                                                 
+                                                                         
+                                                                         
+                              
+       
     port = 0xC000 | (PG_VERSION_NUM & 0x3FFF);
   }
 
@@ -2294,9 +2294,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   outputdir = make_absolute_path(outputdir);
   dlpath = make_absolute_path(dlpath);
 
-  /*
-   * Initialization
-   */
+     
+                    
+     
   open_result_files();
 
   initialize_environment();
@@ -2311,9 +2311,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     const char *env_wait;
     int wait_seconds;
 
-    /*
-     * Prepare the temp instance
-     */
+       
+                                 
+       
 
     if (directory_exists(temp_instance))
     {
@@ -2327,17 +2327,17 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
     header(_("creating temporary instance"));
 
-    /* make the temp instance top directory */
+                                              
     make_directory(temp_instance);
 
-    /* and a directory for log files */
+                                       
     snprintf(buf, sizeof(buf), "%s/log", outputdir);
     if (!directory_exists(buf))
     {
       make_directory(buf);
     }
 
-    /* initdb */
+                
     header(_("initializing database system"));
     snprintf(buf, sizeof(buf), "\"%s%sinitdb\" -D \"%s/data\" --no-clean --no-sync%s%s > \"%s/log/initdb.log\" 2>&1", bindir ? bindir : "", bindir ? "/" : "", temp_instance, debug ? " --debug" : "", nolocale ? " --no-locale" : "", outputdir);
     if (system(buf))
@@ -2346,14 +2346,14 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       exit(2);
     }
 
-    /*
-     * Adjust the default postgresql.conf for regression testing. The user
-     * can specify a file to be appended; in any case we expand logging
-     * and set max_prepared_transactions to enable testing of prepared
-     * xacts.  (Note: to reduce the probability of unexpected shmmax
-     * failures, don't set max_prepared_transactions any higher than
-     * actually needed by the prepared_xacts regression test.)
-     */
+       
+                                                                           
+                                                                        
+                                                                       
+                                                                     
+                                                                     
+                                                               
+       
     snprintf(buf, sizeof(buf), "%s/data/postgresql.conf", temp_instance);
     pg_conf = fopen(buf, "a");
     if (pg_conf == NULL)
@@ -2392,19 +2392,19 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
 #ifdef ENABLE_SSPI
 
-    /*
-     * Since we successfully used the same buffer for the much-longer
-     * "initdb" command, this can't truncate.
-     */
+       
+                                                                      
+                                              
+       
     snprintf(buf, sizeof(buf), "%s/data", temp_instance);
     config_sspi_auth(buf, NULL);
 #elif !defined(HAVE_UNIX_SOCKETS)
 #error Platform has no means to secure the test installation.
 #endif
 
-    /*
-     * Check if there is a postmaster running already.
-     */
+       
+                                                       
+       
     snprintf(buf2, sizeof(buf2), "\"%s%spsql\" -X postgres <%s 2>%s", bindir ? bindir : "", bindir ? "/" : "", DEVNULL, DEVNULL);
 
     for (i = 0; i < 16; i++)
@@ -2435,9 +2435,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       }
     }
 
-    /*
-     * Start the temp postmaster
-     */
+       
+                                 
+       
     header(_("starting postmaster"));
     snprintf(buf, sizeof(buf),
         "\"%s%spostgres\" -D \"%s/data\" -F%s "
@@ -2451,13 +2451,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
       exit(2);
     }
 
-    /*
-     * Wait till postmaster is able to accept connections; normally this
-     * is only a second or so, but Cygwin is reportedly *much* slower, and
-     * test builds using Valgrind or similar tools might be too.  Hence,
-     * allow the default timeout of 60 seconds to be overridden from the
-     * PGCTLTIMEOUT environment variable.
-     */
+       
+                                                                         
+                                                                           
+                                                                         
+                                                                         
+                                          
+       
     env_wait = getenv("PGCTLTIMEOUT");
     if (env_wait != NULL)
     {
@@ -2474,15 +2474,15 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
     for (i = 0; i < wait_seconds; i++)
     {
-      /* Done if psql succeeds */
+                                 
       if (system(buf2) == 0)
       {
         break;
       }
 
-      /*
-       * Fail immediately if postmaster has exited
-       */
+         
+                                                   
+         
 #ifndef WIN32
       if (waitpid(postmaster_pid, NULL, WNOHANG) == postmaster_pid)
 #else
@@ -2499,12 +2499,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     {
       fprintf(stderr, _("\n%s: postmaster did not respond within %d seconds\nExamine %s/log/postmaster.log for the reason\n"), progname, wait_seconds, outputdir);
 
-      /*
-       * If we get here, the postmaster is probably wedged somewhere in
-       * startup.  Try to kill it ungracefully rather than leaving a
-       * stuck postmaster that might interfere with subsequent test
-       * attempts.
-       */
+         
+                                                                        
+                                                                     
+                                                                    
+                   
+         
 #ifndef WIN32
       if (kill(postmaster_pid, SIGKILL) != 0 && errno != ESRCH)
       {
@@ -2523,7 +2523,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     postmaster_running = true;
 
 #ifdef _WIN64
-/* need a series of two casts to convert HANDLE without compiler warning */
+                                                                           
 #define ULONGPID(x) (unsigned long)(unsigned long long)(x)
 #else
 #define ULONGPID(x) (unsigned long)(x)
@@ -2532,10 +2532,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
   }
   else
   {
-    /*
-     * Using an existing installation, so may need to get rid of
-     * pre-existing database(s) and role(s)
-     */
+       
+                                                                 
+                                            
+       
     if (!use_existing)
     {
       for (sl = dblist; sl; sl = sl->next)
@@ -2549,9 +2549,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     }
   }
 
-  /*
-   * Create the test database(s) and role(s)
-   */
+     
+                                             
+     
   if (!use_existing)
   {
     for (sl = dblist; sl; sl = sl->next)
@@ -2564,9 +2564,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     }
   }
 
-  /*
-   * Ready to run the tests
-   */
+     
+                            
+     
   header(_("running regression test queries"));
 
   for (sl = schedulelist; sl != NULL; sl = sl->next)
@@ -2579,20 +2579,20 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
     run_single_test(sl->str, tfunc);
   }
 
-  /*
-   * Shut down temp installation's postmaster
-   */
+     
+                                              
+     
   if (temp_instance)
   {
     header(_("shutting down postmaster"));
     stop_postmaster();
   }
 
-  /*
-   * If there were no errors, remove the temp instance immediately to
-   * conserve disk space.  (If there were errors, we leave the instance in
-   * place for possible manual investigation.)
-   */
+     
+                                                                      
+                                                                           
+                                               
+     
   if (temp_instance && fail_count == 0 && fail_ignore_count == 0)
   {
     header(_("removing temporary instance"));
@@ -2604,24 +2604,24 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
   fclose(logfile);
 
-  /*
-   * Emit nice-looking summary message
-   */
+     
+                                       
+     
   if (fail_count == 0 && fail_ignore_count == 0)
   {
     snprintf(buf, sizeof(buf), _(" All %d tests passed. "), success_count);
   }
-  else if (fail_count == 0) /* fail_count=0, fail_ignore_count>0 */
+  else if (fail_count == 0)                                        
   {
     snprintf(buf, sizeof(buf), _(" %d of %d tests passed, %d failed test(s) ignored. "), success_count, success_count + fail_ignore_count, fail_ignore_count);
   }
-  else if (fail_ignore_count == 0) /* fail_count>0 && fail_ignore_count=0 */
+  else if (fail_ignore_count == 0)                                          
   {
     snprintf(buf, sizeof(buf), _(" %d of %d tests failed. "), fail_count, success_count + fail_count);
   }
   else
   {
-    /* fail_count>0 && fail_ignore_count>0 */
+                                             
     snprintf(buf, sizeof(buf), _(" %d of %d tests failed, %d of these failures ignored. "), fail_count + fail_ignore_count, success_count + fail_count + fail_ignore_count, fail_ignore_count);
   }
 

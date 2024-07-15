@@ -1,26 +1,26 @@
-/*-------------------------------------------------------------------------
- *
- * pg_backup_null.c
- *
- *	Implementation of an archive that is never saved; it is used by
- *	pg_dump to output a plain text SQL script instead of saving
- *	a real archive.
- *
- *	See the headers to pg_restore for more details.
- *
- * Copyright (c) 2000, Philip Warner
- *		Rights are granted to use this software in any way so long
- *		as this notice is not removed.
- *
- *	The author is not responsible for loss or damages that may
- *	result from its use.
- *
- *
- * IDENTIFICATION
- *		src/bin/pg_dump/pg_backup_null.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                    
+   
+                                                                   
+                                                               
+                   
+   
+                                                   
+   
+                                     
+                                                               
+                                   
+   
+                                                              
+                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include "pg_backup_archiver.h"
@@ -52,13 +52,13 @@ _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid);
 static void
 _EndBlobs(ArchiveHandle *AH, TocEntry *te);
 
-/*
- *	Initializer
- */
+   
+               
+   
 void
 InitArchiveFmt_Null(ArchiveHandle *AH)
 {
-  /* Assuming static functions, this can be copied for each format. */
+                                                                      
   AH->WriteDataPtr = _WriteData;
   AH->EndDataPtr = _EndData;
   AH->WriteBytePtr = _WriteByte;
@@ -74,38 +74,38 @@ InitArchiveFmt_Null(ArchiveHandle *AH)
   AH->ClonePtr = NULL;
   AH->DeClonePtr = NULL;
 
-  /* Initialize LO buffering */
+                               
   AH->lo_buf_size = LOBBUFSIZE;
   AH->lo_buf = (void *)pg_malloc(LOBBUFSIZE);
 
-  /*
-   * Now prevent reading...
-   */
+     
+                            
+     
   if (AH->mode == archModeRead)
   {
     fatal("this format cannot be read");
   }
 }
 
-/*
- * - Start a new TOC entry
- */
+   
+                           
+   
 
-/*
- * Called by dumper via archiver from within a data dump routine
- */
+   
+                                                                 
+   
 static void
 _WriteData(ArchiveHandle *AH, const void *data, size_t dLen)
 {
-  /* Just send it to output, ahwrite() already errors on failure */
+                                                                   
   ahwrite(data, 1, dLen, AH);
   return;
 }
 
-/*
- * Called by dumper via archiver from within a data dump routine
- * We substitute this for _WriteData while emitting a BLOB
- */
+   
+                                                                 
+                                                           
+   
 static void
 _WriteBlobData(ArchiveHandle *AH, const void *data, size_t dLen)
 {
@@ -128,28 +128,28 @@ _EndData(ArchiveHandle *AH, TocEntry *te)
   ahprintf(AH, "\n\n");
 }
 
-/*
- * Called by the archiver when starting to save all BLOB DATA (not schema).
- * This routine should save whatever format-specific information is needed
- * to read the BLOBs back into memory.
- *
- * It is called just prior to the dumper's DataDumper routine.
- *
- * Optional, but strongly recommended.
- */
+   
+                                                                            
+                                                                           
+                                       
+   
+                                                               
+   
+                                       
+   
 static void
 _StartBlobs(ArchiveHandle *AH, TocEntry *te)
 {
   ahprintf(AH, "BEGIN;\n\n");
 }
 
-/*
- * Called by the archiver when the dumper calls StartBlob.
- *
- * Mandatory.
- *
- * Must save the passed OID for retrieval at restore-time.
- */
+   
+                                                           
+   
+              
+   
+                                                           
+   
 static void
 _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 {
@@ -160,7 +160,7 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
     fatal("invalid OID for large object");
   }
 
-  /* With an old archive we must do drop and create logic here */
+                                                                 
   if (old_blob_style && AH->public.ropt->dropSchema)
   {
     DropBlobIfExists(AH, oid);
@@ -178,11 +178,11 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
   AH->WriteDataPtr = _WriteBlobData;
 }
 
-/*
- * Called by the archiver when the dumper calls EndBlob.
- *
- * Optional.
- */
+   
+                                                         
+   
+             
+   
 static void
 _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 {
@@ -191,22 +191,22 @@ _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
   ahprintf(AH, "SELECT pg_catalog.lo_close(0);\n\n");
 }
 
-/*
- * Called by the archiver when finishing saving all BLOB DATA.
- *
- * Optional.
- */
+   
+                                                               
+   
+             
+   
 static void
 _EndBlobs(ArchiveHandle *AH, TocEntry *te)
 {
   ahprintf(AH, "COMMIT;\n\n");
 }
 
-/*------
- * Called as part of a RestoreArchive call; for the NULL archive, this
- * just sends the data for a given TOC entry to the output.
- *------
- */
+         
+                                                                       
+                                                            
+         
+   
 static void
 _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 {
@@ -233,19 +233,19 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te)
 static int
 _WriteByte(ArchiveHandle *AH, const int i)
 {
-  /* Don't do anything */
+                         
   return 0;
 }
 
 static void
 _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 {
-  /* Don't do anything */
+                         
   return;
 }
 
 static void
 _CloseArchive(ArchiveHandle *AH)
 {
-  /* Nothing to do */
+                     
 }

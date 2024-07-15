@@ -1,34 +1,34 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "test1.pgc"
-/*
- * this file tests all sorts of connecting to one single database.
- */
+   
+                                                                   
+   
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-/* do not include regression.h */
+                                 
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 16 "test1.pgc"
   char db[200];
 
 #line 17 "test1.pgc"
   char pw[200];
-/* exec sql end declare section */
+                                  
 #line 18 "test1.pgc"
 
   ECPGdebug(1, stderr);
@@ -47,7 +47,7 @@ main(void)
     ECPGdisconnect(__LINE__, "CURRENT");
   }
 #line 24 "test1.pgc"
-  /* <-- "main" not specified */
+                                
 
   {
     ECPGconnect(__LINE__, 0, "ecpg2_regression@localhost", NULL, NULL, "main", 0);
@@ -69,8 +69,8 @@ main(void)
   }
 #line 30 "test1.pgc"
 
-  /* exec sql connect to :@TEMP_PORT@ as main user regress_ecpg_user2;
-  exec sql disconnect main; */
+                                                                       
+                              
 
   {
     ECPGconnect(__LINE__, 0, "tcp:postgresql://localhost/ecpg2_regression", "regress_ecpg_user1", "connectpw", NULL, 0);
@@ -124,7 +124,7 @@ main(void)
   }
 #line 50 "test1.pgc"
 
-  /* wrong db */
+                
   {
     ECPGconnect(__LINE__, 0, "tcp:postgresql://localhost/nonexistent", "regress_ecpg_user1", "connectpw", NULL, 0);
   }
@@ -135,21 +135,21 @@ main(void)
   }
 #line 54 "test1.pgc"
 
-  /* wrong port */
+                  
   {
     ECPGconnect(__LINE__, 0, "tcp:postgresql://127.0.0.1:20/ecpg2_regression", "regress_ecpg_user1", "connectpw", NULL, 0);
   }
 #line 57 "test1.pgc"
 
-  /* no disconnect necessary */
+                               
 
-  /* wrong password */
+                      
   {
     ECPGconnect(__LINE__, 0, "unix:postgresql://localhost/ecpg2_regression", "regress_ecpg_user1", "wrongpw", NULL, 0);
   }
 #line 61 "test1.pgc"
 
-  /* no disconnect necessary */
+                               
 
   return 0;
 }

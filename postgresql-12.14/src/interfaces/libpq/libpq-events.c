@@ -1,40 +1,40 @@
-/*-------------------------------------------------------------------------
- *
- * libpq-events.c
- *	  functions for supporting the libpq "events" API
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/interfaces/libpq/libpq-events.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                                     
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                         
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include "libpq-fe.h"
 #include "libpq-int.h"
 
-/*
- * Registers an event proc with the given PGconn.
- *
- * The same proc can't be registered more than once in a PGconn.  This
- * restriction is required because we use the proc address to identify
- * the event for purposes such as PQinstanceData().
- *
- * The name argument is used within error messages to aid in debugging.
- * A name must be supplied, but it needn't be unique.  The string is
- * copied, so the passed value needn't be long-lived.
- *
- * The passThrough argument is an application specific pointer and can be set
- * to NULL if not required.  It is passed through to the event proc whenever
- * the event proc is called, and is not otherwise touched by libpq.
- *
- * The function returns a non-zero if successful.  If the function fails,
- * zero is returned.
- */
+   
+                                                  
+   
+                                                                       
+                                                                       
+                                                    
+   
+                                                                        
+                                                                     
+                                                      
+   
+                                                                              
+                                                                             
+                                                                    
+   
+                                                                          
+                     
+   
 int
 PQregisterEventProc(PGconn *conn, PGEventProc proc, const char *name, void *passThrough)
 {
@@ -43,14 +43,14 @@ PQregisterEventProc(PGconn *conn, PGEventProc proc, const char *name, void *pass
 
   if (!proc || !conn || !name || !*name)
   {
-    return false; /* bad arguments */
+    return false;                    
   }
 
   for (i = 0; i < conn->nEvents; i++)
   {
     if (conn->events[i].proc == proc)
     {
-      return false; /* already registered */
+      return false;                         
     }
   }
 
@@ -100,10 +100,10 @@ PQregisterEventProc(PGconn *conn, PGEventProc proc, const char *name, void *pass
   return true;
 }
 
-/*
- * Set some "instance data" for an event within a PGconn.
- * Returns nonzero on success, zero on failure.
- */
+   
+                                                          
+                                                
+   
 int
 PQsetInstanceData(PGconn *conn, PGEventProc proc, void *data)
 {
@@ -126,9 +126,9 @@ PQsetInstanceData(PGconn *conn, PGEventProc proc, void *data)
   return false;
 }
 
-/*
- * Obtain the "instance data", if any, for the event.
- */
+   
+                                                      
+   
 void *
 PQinstanceData(const PGconn *conn, PGEventProc proc)
 {
@@ -150,10 +150,10 @@ PQinstanceData(const PGconn *conn, PGEventProc proc)
   return NULL;
 }
 
-/*
- * Set some "instance data" for an event within a PGresult.
- * Returns nonzero on success, zero on failure.
- */
+   
+                                                            
+                                                
+   
 int
 PQresultSetInstanceData(PGresult *result, PGEventProc proc, void *data)
 {
@@ -176,9 +176,9 @@ PQresultSetInstanceData(PGresult *result, PGEventProc proc, void *data)
   return false;
 }
 
-/*
- * Obtain the "instance data", if any, for the event.
- */
+   
+                                                      
+   
 void *
 PQresultInstanceData(const PGresult *result, PGEventProc proc)
 {
@@ -200,11 +200,11 @@ PQresultInstanceData(const PGresult *result, PGEventProc proc)
   return NULL;
 }
 
-/*
- * Fire RESULTCREATE events for an application-created PGresult.
- *
- * The conn argument can be NULL if event procedures won't use it.
- */
+   
+                                                                 
+   
+                                                                   
+   
 int
 PQfireResultCreateEvents(PGconn *conn, PGresult *res)
 {

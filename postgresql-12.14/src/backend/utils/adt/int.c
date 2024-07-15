@@ -1,31 +1,31 @@
-/*-------------------------------------------------------------------------
- *
- * int.c
- *	  Functions for the built-in integer types (except int8).
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/int.c
- *
- *-------------------------------------------------------------------------
- */
-/*
- * OLD COMMENTS
- *		I/O routines:
- *		 int2in, int2out, int2recv, int2send
- *		 int4in, int4out, int4recv, int4send
- *		 int2vectorin, int2vectorout, int2vectorrecv, int2vectorsend
- *		Boolean operators:
- *		 inteq, intne, intlt, intle, intgt, intge
- *		Arithmetic operators:
- *		 intpl, intmi, int4mul, intdiv
- *
- *		Arithmetic operators:
- *		 intmod
- */
+                                                                            
+   
+         
+                                                             
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                 
+   
+                                                                            
+   
+   
+                
+                  
+                                         
+                                         
+                                                                 
+                       
+                                              
+                          
+                                   
+   
+                          
+            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -51,13 +51,13 @@ typedef struct
   int32 step;
 } generate_series_fctx;
 
-/*****************************************************************************
- *	 USER I/O ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                      
+                                                                               
 
-/*
- *		int2in			- converts "num" to short
- */
+   
+                                       
+   
 Datum
 int2in(PG_FUNCTION_ARGS)
 {
@@ -66,22 +66,22 @@ int2in(PG_FUNCTION_ARGS)
   PG_RETURN_INT16(pg_strtoint16(num));
 }
 
-/*
- *		int2out			- converts short to "num"
- */
+   
+                                        
+   
 Datum
 int2out(PG_FUNCTION_ARGS)
 {
   int16 arg1 = PG_GETARG_INT16(0);
-  char *result = (char *)palloc(7); /* sign, 5 digits, '\0' */
+  char *result = (char *)palloc(7);                           
 
   pg_itoa(arg1, result);
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		int2recv			- converts external binary format to int2
- */
+   
+                                                         
+   
 Datum
 int2recv(PG_FUNCTION_ARGS)
 {
@@ -90,9 +90,9 @@ int2recv(PG_FUNCTION_ARGS)
   PG_RETURN_INT16((int16)pq_getmsgint(buf, sizeof(int16)));
 }
 
-/*
- *		int2send			- converts int2 to binary format
- */
+   
+                                                
+   
 Datum
 int2send(PG_FUNCTION_ARGS)
 {
@@ -104,11 +104,11 @@ int2send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- * construct int2vector given a raw array of int2s
- *
- * If int2s is NULL then caller must fill values[] afterward
- */
+   
+                                                   
+   
+                                                             
+   
 int2vector *
 buildint2vector(const int16 *int2s, int n)
 {
@@ -121,13 +121,13 @@ buildint2vector(const int16 *int2s, int n)
     memcpy(result->values, int2s, n * sizeof(int16));
   }
 
-  /*
-   * Attach standard array header.  For historical reasons, we set the index
-   * lower bound to 0 not 1.
-   */
+     
+                                                                             
+                             
+     
   SET_VARSIZE(result, Int2VectorSize(n));
   result->ndim = 1;
-  result->dataoffset = 0; /* never any nulls */
+  result->dataoffset = 0;                      
   result->elemtype = INT2OID;
   result->dim1 = n;
   result->lbound1 = 0;
@@ -135,9 +135,9 @@ buildint2vector(const int16 *int2s, int n)
   return result;
 }
 
-/*
- *		int2vectorin			- converts "num num ..." to internal form
- */
+   
+                                                             
+   
 Datum
 int2vectorin(PG_FUNCTION_ARGS)
 {
@@ -174,7 +174,7 @@ int2vectorin(PG_FUNCTION_ARGS)
 
   SET_VARSIZE(result, Int2VectorSize(n));
   result->ndim = 1;
-  result->dataoffset = 0; /* never any nulls */
+  result->dataoffset = 0;                      
   result->elemtype = INT2OID;
   result->dim1 = n;
   result->lbound1 = 0;
@@ -182,9 +182,9 @@ int2vectorin(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(result);
 }
 
-/*
- *		int2vectorout		- converts internal form to "num num ..."
- */
+   
+                                                             
+   
 Datum
 int2vectorout(PG_FUNCTION_ARGS)
 {
@@ -193,7 +193,7 @@ int2vectorout(PG_FUNCTION_ARGS)
   char *rp;
   char *result;
 
-  /* assumes sign, 5 digits, ' ' */
+                                   
   rp = result = (char *)palloc(nnums * 7 + 1);
   for (num = 0; num < nnums; num++)
   {
@@ -209,9 +209,9 @@ int2vectorout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		int2vectorrecv			- converts external binary format to int2vector
- */
+   
+                                                                     
+   
 Datum
 int2vectorrecv(PG_FUNCTION_ARGS)
 {
@@ -219,12 +219,12 @@ int2vectorrecv(PG_FUNCTION_ARGS)
   StringInfo buf = (StringInfo)PG_GETARG_POINTER(0);
   int2vector *result;
 
-  /*
-   * Normally one would call array_recv() using DirectFunctionCall3, but
-   * that does not work since array_recv wants to cache some data using
-   * fcinfo->flinfo->fn_extra.  So we need to pass it our own flinfo
-   * parameter.
-   */
+     
+                                                                         
+                                                                        
+                                                                     
+                
+     
   InitFunctionCallInfoData(*locfcinfo, fcinfo->flinfo, 3, InvalidOid, NULL, NULL);
 
   locfcinfo->args[0].value = PointerGetDatum(buf);
@@ -238,13 +238,13 @@ int2vectorrecv(PG_FUNCTION_ARGS)
 
   Assert(!locfcinfo->isnull);
 
-  /* sanity checks: int2vector must be 1-D, 0-based, no nulls */
+                                                                
   if (ARR_NDIM(result) != 1 || ARR_HASNULL(result) || ARR_ELEMTYPE(result) != INT2OID || ARR_LBOUND(result)[0] != 0)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_BINARY_REPRESENTATION), errmsg("invalid int2vector data")));
   }
 
-  /* check length for consistency with int2vectorin() */
+                                                        
   if (ARR_DIMS(result)[0] > FUNC_MAX_ARGS)
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("oidvector has too many elements")));
@@ -253,22 +253,22 @@ int2vectorrecv(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(result);
 }
 
-/*
- *		int2vectorsend			- converts int2vector to binary format
- */
+   
+                                                            
+   
 Datum
 int2vectorsend(PG_FUNCTION_ARGS)
 {
   return array_send(fcinfo);
 }
 
-/*****************************************************************************
- *	 PUBLIC ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                    
+                                                                               
 
-/*
- *		int4in			- converts "num" to int4
- */
+   
+                                      
+   
 Datum
 int4in(PG_FUNCTION_ARGS)
 {
@@ -277,22 +277,22 @@ int4in(PG_FUNCTION_ARGS)
   PG_RETURN_INT32(pg_strtoint32(num));
 }
 
-/*
- *		int4out			- converts int4 to "num"
- */
+   
+                                       
+   
 Datum
 int4out(PG_FUNCTION_ARGS)
 {
   int32 arg1 = PG_GETARG_INT32(0);
-  char *result = (char *)palloc(12); /* sign, 10 digits, '\0' */
+  char *result = (char *)palloc(12);                            
 
   pg_ltoa(arg1, result);
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		int4recv			- converts external binary format to int4
- */
+   
+                                                         
+   
 Datum
 int4recv(PG_FUNCTION_ARGS)
 {
@@ -301,9 +301,9 @@ int4recv(PG_FUNCTION_ARGS)
   PG_RETURN_INT32((int32)pq_getmsgint(buf, sizeof(int32)));
 }
 
-/*
- *		int4send			- converts int4 to binary format
- */
+   
+                                                
+   
 Datum
 int4send(PG_FUNCTION_ARGS)
 {
@@ -315,11 +315,11 @@ int4send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*
- *		===================
- *		CONVERSION ROUTINES
- *		===================
- */
+   
+                        
+                        
+                        
+   
 
 Datum
 i2toi4(PG_FUNCTION_ARGS)
@@ -342,7 +342,7 @@ i4toi2(PG_FUNCTION_ARGS)
   PG_RETURN_INT16((int16)arg1);
 }
 
-/* Cast int4 -> bool */
+                       
 Datum
 int4_bool(PG_FUNCTION_ARGS)
 {
@@ -356,7 +356,7 @@ int4_bool(PG_FUNCTION_ARGS)
   }
 }
 
-/* Cast bool -> int4 */
+                       
 Datum
 bool_int4(PG_FUNCTION_ARGS)
 {
@@ -370,20 +370,20 @@ bool_int4(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- *		============================
- *		COMPARISON OPERATOR ROUTINES
- *		============================
- */
+   
+                                 
+                                 
+                                 
+   
 
-/*
- *		inteq			- returns 1 iff arg1 == arg2
- *		intne			- returns 1 iff arg1 != arg2
- *		intlt			- returns 1 iff arg1 < arg2
- *		intle			- returns 1 iff arg1 <= arg2
- *		intgt			- returns 1 iff arg1 > arg2
- *		intge			- returns 1 iff arg1 >= arg2
- */
+   
+                                         
+                                         
+                                        
+                                         
+                                        
+                                         
+   
 
 Datum
 int4eq(PG_FUNCTION_ARGS)
@@ -601,15 +601,15 @@ int42ge(PG_FUNCTION_ARGS)
   PG_RETURN_BOOL(arg1 >= arg2);
 }
 
-/*----------------------------------------------------------
- *	in_range functions for int4 and int2,
- *	including cross-data-type comparisons.
- *
- *	Note: we provide separate intN_int8 functions for performance
- *	reasons.  This forces also providing intN_int2, else cases with a
- *	smallint offset value would fail to resolve which function to use.
- *	But that's an unlikely situation, so don't duplicate code for it.
- *---------------------------------------------------------*/
+                                                             
+                                         
+                                          
+   
+                                                                 
+                                                                     
+                                                                      
+                                                                     
+                                                             
 
 Datum
 in_range_int4_int4(PG_FUNCTION_ARGS)
@@ -628,16 +628,16 @@ in_range_int4_int4(PG_FUNCTION_ARGS)
 
   if (sub)
   {
-    offset = -offset; /* cannot overflow */
+    offset = -offset;                      
   }
 
   if (unlikely(pg_add_s32_overflow(base, offset, &sum)))
   {
-    /*
-     * If sub is false, the true sum is surely more than val, so correct
-     * answer is the same as "less".  If sub is true, the true sum is
-     * surely less than val, so the answer is "!less".
-     */
+       
+                                                                         
+                                                                      
+                                                       
+       
     PG_RETURN_BOOL(sub ? !less : less);
   }
 
@@ -654,14 +654,14 @@ in_range_int4_int4(PG_FUNCTION_ARGS)
 Datum
 in_range_int4_int2(PG_FUNCTION_ARGS)
 {
-  /* Doesn't seem worth duplicating code for, so just invoke int4_int4 */
+                                                                         
   return DirectFunctionCall5(in_range_int4_int4, PG_GETARG_DATUM(0), PG_GETARG_DATUM(1), Int32GetDatum((int32)PG_GETARG_INT16(2)), PG_GETARG_DATUM(3), PG_GETARG_DATUM(4));
 }
 
 Datum
 in_range_int4_int8(PG_FUNCTION_ARGS)
 {
-  /* We must do all the math in int64 */
+                                        
   int64 val = (int64)PG_GETARG_INT32(0);
   int64 base = (int64)PG_GETARG_INT32(1);
   int64 offset = PG_GETARG_INT64(2);
@@ -676,16 +676,16 @@ in_range_int4_int8(PG_FUNCTION_ARGS)
 
   if (sub)
   {
-    offset = -offset; /* cannot overflow */
+    offset = -offset;                      
   }
 
   if (unlikely(pg_add_s64_overflow(base, offset, &sum)))
   {
-    /*
-     * If sub is false, the true sum is surely more than val, so correct
-     * answer is the same as "less".  If sub is true, the true sum is
-     * surely less than val, so the answer is "!less".
-     */
+       
+                                                                         
+                                                                      
+                                                       
+       
     PG_RETURN_BOOL(sub ? !less : less);
   }
 
@@ -702,7 +702,7 @@ in_range_int4_int8(PG_FUNCTION_ARGS)
 Datum
 in_range_int2_int4(PG_FUNCTION_ARGS)
 {
-  /* We must do all the math in int32 */
+                                        
   int32 val = (int32)PG_GETARG_INT16(0);
   int32 base = (int32)PG_GETARG_INT16(1);
   int32 offset = PG_GETARG_INT32(2);
@@ -717,16 +717,16 @@ in_range_int2_int4(PG_FUNCTION_ARGS)
 
   if (sub)
   {
-    offset = -offset; /* cannot overflow */
+    offset = -offset;                      
   }
 
   if (unlikely(pg_add_s32_overflow(base, offset, &sum)))
   {
-    /*
-     * If sub is false, the true sum is surely more than val, so correct
-     * answer is the same as "less".  If sub is true, the true sum is
-     * surely less than val, so the answer is "!less".
-     */
+       
+                                                                         
+                                                                      
+                                                       
+       
     PG_RETURN_BOOL(sub ? !less : less);
   }
 
@@ -743,23 +743,23 @@ in_range_int2_int4(PG_FUNCTION_ARGS)
 Datum
 in_range_int2_int2(PG_FUNCTION_ARGS)
 {
-  /* Doesn't seem worth duplicating code for, so just invoke int2_int4 */
+                                                                         
   return DirectFunctionCall5(in_range_int2_int4, PG_GETARG_DATUM(0), PG_GETARG_DATUM(1), Int32GetDatum((int32)PG_GETARG_INT16(2)), PG_GETARG_DATUM(3), PG_GETARG_DATUM(4));
 }
 
 Datum
 in_range_int2_int8(PG_FUNCTION_ARGS)
 {
-  /* Doesn't seem worth duplicating code for, so just invoke int4_int8 */
+                                                                         
   return DirectFunctionCall5(in_range_int4_int8, Int32GetDatum((int32)PG_GETARG_INT16(0)), Int32GetDatum((int32)PG_GETARG_INT16(1)), PG_GETARG_DATUM(2), PG_GETARG_DATUM(3), PG_GETARG_DATUM(4));
 }
 
-/*
- *		int[24]pl		- returns arg1 + arg2
- *		int[24]mi		- returns arg1 - arg2
- *		int[24]mul		- returns arg1 * arg2
- *		int[24]div		- returns arg1 / arg2
- */
+   
+                                     
+                                     
+                                      
+                                      
+   
 
 Datum
 int4um(PG_FUNCTION_ARGS)
@@ -833,16 +833,16 @@ int4div(PG_FUNCTION_ARGS)
   if (arg2 == 0)
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * INT_MIN / -1 is problematic, since the result can't be represented on a
-   * two's-complement machine.  Some machines produce INT_MIN, some produce
-   * zero, some throw an exception.  We can dodge the problem by recognizing
-   * that division by -1 is the same as negation.
-   */
+     
+                                                                             
+                                                                            
+                                                                             
+                                                  
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT32_MIN))
@@ -853,7 +853,7 @@ int4div(PG_FUNCTION_ARGS)
     PG_RETURN_INT32(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
@@ -947,16 +947,16 @@ int2div(PG_FUNCTION_ARGS)
   if (arg2 == 0)
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * SHRT_MIN / -1 is problematic, since the result can't be represented on
-   * a two's-complement machine.  Some machines produce SHRT_MIN, some
-   * produce zero, some throw an exception.  We can dodge the problem by
-   * recognizing that division by -1 is the same as negation.
-   */
+     
+                                                                            
+                                                                       
+                                                                         
+                                                              
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT16_MIN))
@@ -967,7 +967,7 @@ int2div(PG_FUNCTION_ARGS)
     PG_RETURN_INT16(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
@@ -1025,11 +1025,11 @@ int24div(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /* No overflow is possible */
+                               
   PG_RETURN_INT32((int32)arg1 / arg2);
 }
 
@@ -1085,16 +1085,16 @@ int42div(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * INT_MIN / -1 is problematic, since the result can't be represented on a
-   * two's-complement machine.  Some machines produce INT_MIN, some produce
-   * zero, some throw an exception.  We can dodge the problem by recognizing
-   * that division by -1 is the same as negation.
-   */
+     
+                                                                             
+                                                                            
+                                                                             
+                                                  
+     
   if (arg2 == -1)
   {
     if (unlikely(arg1 == PG_INT32_MIN))
@@ -1105,7 +1105,7 @@ int42div(PG_FUNCTION_ARGS)
     PG_RETURN_INT32(result);
   }
 
-  /* No overflow is possible */
+                               
 
   result = arg1 / arg2;
 
@@ -1121,21 +1121,21 @@ int4mod(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * Some machines throw a floating-point exception for INT_MIN % -1, which
-   * is a bit silly since the correct answer is perfectly well-defined,
-   * namely zero.
-   */
+     
+                                                                            
+                                                                        
+                  
+     
   if (arg2 == -1)
   {
     PG_RETURN_INT32(0);
   }
 
-  /* No overflow is possible */
+                               
 
   PG_RETURN_INT32(arg1 % arg2);
 }
@@ -1149,29 +1149,29 @@ int2mod(PG_FUNCTION_ARGS)
   if (unlikely(arg2 == 0))
   {
     ereport(ERROR, (errcode(ERRCODE_DIVISION_BY_ZERO), errmsg("division by zero")));
-    /* ensure compiler realizes we mustn't reach the division (gcc bug) */
+                                                                          
     PG_RETURN_NULL();
   }
 
-  /*
-   * Some machines throw a floating-point exception for INT_MIN % -1, which
-   * is a bit silly since the correct answer is perfectly well-defined,
-   * namely zero.  (It's not clear this ever happens when dealing with
-   * int16, but we might as well have the test for safety.)
-   */
+     
+                                                                            
+                                                                        
+                                                                       
+                                                            
+     
   if (arg2 == -1)
   {
     PG_RETURN_INT16(0);
   }
 
-  /* No overflow is possible */
+                               
 
   PG_RETURN_INT16(arg1 % arg2);
 }
 
-/* int[24]abs()
- * Absolute value
- */
+                
+                  
+   
 Datum
 int4abs(PG_FUNCTION_ARGS)
 {
@@ -1236,16 +1236,16 @@ int4smaller(PG_FUNCTION_ARGS)
   PG_RETURN_INT32((arg1 < arg2) ? arg1 : arg2);
 }
 
-/*
- * Bit-pushing operators
- *
- *		int[24]and		- returns arg1 & arg2
- *		int[24]or		- returns arg1 | arg2
- *		int[24]xor		- returns arg1 # arg2
- *		int[24]not		- returns ~arg1
- *		int[24]shl		- returns arg1 << arg2
- *		int[24]shr		- returns arg1 >> arg2
- */
+   
+                         
+   
+                                      
+                                     
+                                      
+                                
+                                       
+                                       
+   
 
 Datum
 int4and(PG_FUNCTION_ARGS)
@@ -1353,9 +1353,9 @@ int2shr(PG_FUNCTION_ARGS)
   PG_RETURN_INT16(arg1 >> arg2);
 }
 
-/*
- * non-persistent numeric series generator
- */
+   
+                                           
+   
 Datum
 generate_series_int4(PG_FUNCTION_ARGS)
 {
@@ -1370,14 +1370,14 @@ generate_series_step_int4(PG_FUNCTION_ARGS)
   int32 result;
   MemoryContext oldcontext;
 
-  /* stuff done only on the first call of the function */
+                                                         
   if (SRF_IS_FIRSTCALL())
   {
     int32 start = PG_GETARG_INT32(0);
     int32 finish = PG_GETARG_INT32(1);
     int32 step = 1;
 
-    /* see if we were given an explicit step size */
+                                                    
     if (PG_NARGS() == 3)
     {
       step = PG_GETARG_INT32(2);
@@ -1387,21 +1387,21 @@ generate_series_step_int4(PG_FUNCTION_ARGS)
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("step size cannot equal zero")));
     }
 
-    /* create a function context for cross-call persistence */
+                                                              
     funcctx = SRF_FIRSTCALL_INIT();
 
-    /*
-     * switch to memory context appropriate for multiple function calls
-     */
+       
+                                                                        
+       
     oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-    /* allocate memory for user context */
+                                          
     fctx = (generate_series_fctx *)palloc(sizeof(generate_series_fctx));
 
-    /*
-     * Use fctx to keep state from call to call. Seed current with the
-     * original start value
-     */
+       
+                                                                       
+                            
+       
     fctx->current = start;
     fctx->finish = finish;
     fctx->step = step;
@@ -1410,39 +1410,39 @@ generate_series_step_int4(PG_FUNCTION_ARGS)
     MemoryContextSwitchTo(oldcontext);
   }
 
-  /* stuff done on every call of the function */
+                                                
   funcctx = SRF_PERCALL_SETUP();
 
-  /*
-   * get the saved state and use current as the result for this iteration
-   */
+     
+                                                                          
+     
   fctx = funcctx->user_fctx;
   result = fctx->current;
 
   if ((fctx->step > 0 && fctx->current <= fctx->finish) || (fctx->step < 0 && fctx->current >= fctx->finish))
   {
-    /*
-     * Increment current in preparation for next iteration. If next-value
-     * computation overflows, this is the final result.
-     */
+       
+                                                                          
+                                                        
+       
     if (pg_add_s32_overflow(fctx->current, fctx->step, &fctx->current))
     {
       fctx->step = 0;
     }
 
-    /* do when there is more left to send */
+                                            
     SRF_RETURN_NEXT(funcctx, Int32GetDatum(result));
   }
   else
   {
-    /* do when there is no more left */
+                                       
     SRF_RETURN_DONE(funcctx);
   }
 }
 
-/*
- * Planner support function for generate_series(int4, int4 [, int4])
- */
+   
+                                                                     
+   
 Datum
 generate_series_int4_support(PG_FUNCTION_ARGS)
 {
@@ -1451,15 +1451,15 @@ generate_series_int4_support(PG_FUNCTION_ARGS)
 
   if (IsA(rawreq, SupportRequestRows))
   {
-    /* Try to estimate the number of rows returned */
+                                                     
     SupportRequestRows *req = (SupportRequestRows *)rawreq;
 
-    if (is_funcclause(req->node)) /* be paranoid */
+    if (is_funcclause(req->node))                  
     {
       List *args = ((FuncExpr *)req->node)->args;
       Node *arg1, *arg2, *arg3;
 
-      /* We can use estimated argument values here */
+                                                     
       arg1 = estimate_expression_value(req->root, linitial(args));
       arg2 = estimate_expression_value(req->root, lsecond(args));
       if (list_length(args) >= 3)
@@ -1471,12 +1471,12 @@ generate_series_int4_support(PG_FUNCTION_ARGS)
         arg3 = NULL;
       }
 
-      /*
-       * If any argument is constant NULL, we can safely assume that
-       * zero rows are returned.  Otherwise, if they're all non-NULL
-       * constants, we can calculate the number of rows that will be
-       * returned.  Use double arithmetic to avoid overflow hazards.
-       */
+         
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+         
       if ((IsA(arg1, Const) && ((Const *)arg1)->constisnull) || (IsA(arg2, Const) && ((Const *)arg2)->constisnull) || (arg3 != NULL && IsA(arg3, Const) && ((Const *)arg3)->constisnull))
       {
         req->rows = 0;
@@ -1490,7 +1490,7 @@ generate_series_int4_support(PG_FUNCTION_ARGS)
         finish = DatumGetInt32(((Const *)arg2)->constvalue);
         step = arg3 ? DatumGetInt32(((Const *)arg3)->constvalue) : 1;
 
-        /* This equation works for either sign of step */
+                                                         
         if (step != 0)
         {
           req->rows = floor((finish - start + step) / step);

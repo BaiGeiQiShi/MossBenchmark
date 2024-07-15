@@ -1,21 +1,21 @@
-/*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 1996,1999 by Internet Software Consortium.
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
- * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- *	  src/port/inet_net_ntop.c
- */
+   
+                                                                   
+                                                            
+   
+                                                                         
+                                                                          
+                                                                     
+   
+                                                                     
+                                                                    
+                                                                     
+                                                                          
+                                                                         
+                                                                        
+                                                                     
+   
+                              
+   
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char rcsid[] = "Id: inet_net_ntop.c,v 1.1.2.2 2004/03/09 09:17:27 marka Exp $";
@@ -34,11 +34,11 @@ static const char rcsid[] = "Id: inet_net_ntop.c,v 1.1.2.2 2004/03/09 09:17:27 m
 #ifndef FRONTEND
 #include "utils/inet.h"
 #else
-/*
- * In a frontend build, we can't include inet.h, but we still need to have
- * sensible definitions of these two constants.  Note that inet_net_ntop()
- * assumes that PGSQL_AF_INET is equal to AF_INET.
- */
+   
+                                                                           
+                                                                           
+                                                   
+   
 #define PGSQL_AF_INET (AF_INET + 0)
 #define PGSQL_AF_INET6 (AF_INET + 1)
 #endif
@@ -47,7 +47,7 @@ static const char rcsid[] = "Id: inet_net_ntop.c,v 1.1.2.2 2004/03/09 09:17:27 m
 #define NS_INT16SZ 2
 
 #ifdef SPRINTF_CHAR
-#define SPRINTF(x) strlen(sprintf /**/ x)
+#define SPRINTF(x) strlen(sprintf      x)
 #else
 #define SPRINTF(x) ((size_t)sprintf x)
 #endif
@@ -57,30 +57,30 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size);
 static char *
 inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size);
 
-/*
- * char *
- * inet_net_ntop(af, src, bits, dst, size)
- *	convert host/network address from network to presentation format.
- *	"src"'s size is determined from its "af".
- * return:
- *	pointer to dst, or NULL if an error occurred (check errno).
- * note:
- *	192.5.5.1/28 has a nonzero host part, which means it isn't a network
- *	as called for by inet_net_pton() but it can be a host address with
- *	an included netmask.
- * author:
- *	Paul Vixie (ISC), October 1998
- */
+   
+          
+                                           
+                                                                     
+                                             
+           
+                                                               
+         
+                                                                        
+                                                                      
+                        
+           
+                                  
+   
 char *
 inet_net_ntop(int af, const void *src, int bits, char *dst, size_t size)
 {
-  /*
-   * We need to cover both the address family constants used by the PG inet
-   * type (PGSQL_AF_INET and PGSQL_AF_INET6) and those used by the system
-   * libraries (AF_INET and AF_INET6).  We can safely assume PGSQL_AF_INET
-   * == AF_INET, but the INET6 constants are very likely to be different. If
-   * AF_INET6 isn't defined, silently ignore it.
-   */
+     
+                                                                            
+                                                                          
+                                                                           
+                                                                             
+                                                 
+     
   switch (af)
   {
   case PGSQL_AF_INET:
@@ -96,19 +96,19 @@ inet_net_ntop(int af, const void *src, int bits, char *dst, size_t size)
   }
 }
 
-/*
- * static char *
- * inet_net_ntop_ipv4(src, bits, dst, size)
- *	convert IPv4 network address from network to presentation format.
- *	"src"'s size is determined from its "af".
- * return:
- *	pointer to dst, or NULL if an error occurred (check errno).
- * note:
- *	network byte order assumed.  this means 192.5.5.240/28 has
- *	0b11110000 in its fourth octet.
- * author:
- *	Paul Vixie (ISC), October 1998
- */
+   
+                 
+                                            
+                                                                     
+                                             
+           
+                                                               
+         
+                                                              
+                                   
+           
+                                  
+   
 static char *
 inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
 {
@@ -123,7 +123,7 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
     return (NULL);
   }
 
-  /* Always format all four octets, regardless of mask length. */
+                                                                 
   for (b = len; b > 0; b--)
   {
     if (size <= sizeof ".255")
@@ -139,7 +139,7 @@ inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
     size -= (size_t)(dst - t);
   }
 
-  /* don't print masklen if 32 bits */
+                                      
   if (bits != 32)
   {
     if (size <= sizeof "/32")
@@ -184,13 +184,13 @@ decoct(const u_char *src, int bytes, char *dst, size_t size)
 static char *
 inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
 {
-  /*
-   * Note that int32_t and int16_t need only be "at least" large enough to
-   * contain a value of the specified size.  On some systems, like Crays,
-   * there is no such thing as an integer variable with 16 bits. Keep this
-   * in mind if you think this function should have been coded to use
-   * pointer overlays.  All the world's not a VAX.
-   */
+     
+                                                                           
+                                                                          
+                                                                           
+                                                                      
+                                                   
+     
   char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255/128"];
   char *tp;
   struct
@@ -206,10 +206,10 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
     return (NULL);
   }
 
-  /*
-   * Preprocess: Copy the input (bytewise) array into a wordwise array. Find
-   * the longest run of 0x00's in src[] for :: shorthanding.
-   */
+     
+                                                                             
+                                                             
+     
   memset(words, '\0', sizeof words);
   for (i = 0; i < NS_IN6ADDRSZ; i++)
   {
@@ -256,13 +256,13 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
     best.base = -1;
   }
 
-  /*
-   * Format the result.
-   */
+     
+                        
+     
   tp = tmp;
   for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++)
   {
-    /* Are we inside the best run of 0x00's? */
+                                               
     if (best.base != -1 && i >= best.base && i < (best.base + best.len))
     {
       if (i == best.base)
@@ -271,12 +271,12 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
       }
       continue;
     }
-    /* Are we following an initial run of 0x00s or any real hex? */
+                                                                   
     if (i != 0)
     {
       *tp++ = ':';
     }
-    /* Is this address an encapsulated IPv4? */
+                                               
     if (i == 6 && best.base == 0 && (best.len == 6 || (best.len == 7 && words[7] != 0x0001) || (best.len == 5 && words[5] == 0xffff)))
     {
       int n;
@@ -293,7 +293,7 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
     tp += SPRINTF((tp, "%x", words[i]));
   }
 
-  /* Was it a trailing run of 0x00's? */
+                                        
   if (best.base != -1 && (best.base + best.len) == (NS_IN6ADDRSZ / NS_INT16SZ))
   {
     *tp++ = ':';
@@ -305,9 +305,9 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size)
     tp += SPRINTF((tp, "/%u", bits));
   }
 
-  /*
-   * Check for overflow, copy, and we're done.
-   */
+     
+                                               
+     
   if ((size_t)(tp - tmp) > size)
   {
     errno = EMSGSIZE;

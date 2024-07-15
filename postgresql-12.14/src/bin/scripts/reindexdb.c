@@ -1,13 +1,13 @@
-/*-------------------------------------------------------------------------
- *
- * reindexdb
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * src/bin/scripts/reindexdb.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+   
+                                                                         
+   
+                               
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 
   handle_help_version_opts(argc, argv, "reindexdb", help);
 
-  /* process command-line options */
+                                    
   while ((c = getopt_long(argc, argv, "h:p:U:wWeqS:d:ast:i:v", long_options, &optindex)) != -1)
   {
     switch (c)
@@ -115,10 +115,10 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Non-option argument specifies database name as long as it wasn't
-   * already specified with -d / --dbname
-   */
+     
+                                                                      
+                                          
+     
   if (optind < argc && dbname == NULL)
   {
     dbname = argv[optind];
@@ -132,7 +132,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* fill cparams except for dbname, which is set below */
+                                                          
   cparams.pghost = host;
   cparams.pgport = port;
   cparams.pguser = username;
@@ -260,10 +260,10 @@ main(int argc, char *argv[])
       }
     }
 
-    /*
-     * reindex database only if neither index nor table nor schema is
-     * specified
-     */
+       
+                                                                      
+                 
+       
     if (indexes.head == NULL && tables.head == NULL && schemas.head == NULL)
     {
       reindex_one_database(&cparams, "DATABASE", NULL, progname, echo, verbose, concurrently);

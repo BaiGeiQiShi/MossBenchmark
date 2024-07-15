@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * File-processing utility routines.
- *
- * Assorted utility functions to work on files.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/common/file_utils.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                     
+   
+                                                
+   
+   
+                                                                         
+                                                                        
+   
+                           
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <dirent.h>
@@ -22,16 +22,16 @@
 #include "common/file_utils.h"
 #include "common/logging.h"
 
-/* Define PG_FLUSH_DATA_WORKS if we have an implementation for pg_flush_data */
+                                                                               
 #if defined(HAVE_SYNC_FILE_RANGE)
 #define PG_FLUSH_DATA_WORKS 1
 #elif defined(USE_POSIX_FADVISE) && defined(POSIX_FADV_DONTNEED)
 #define PG_FLUSH_DATA_WORKS 1
 #endif
 
-/*
- * pg_xlog has been renamed to pg_wal in version 10.
- */
+   
+                                                     
+   
 #define MINIMUM_VERSION_FOR_PG_WAL 100000
 
 #ifdef PG_FLUSH_DATA_WORKS
@@ -41,18 +41,18 @@ pre_sync_fname(const char *fname, bool isdir);
 static void
 walkdir(const char *path, int (*action)(const char *fname, bool isdir), bool process_symlinks);
 
-/*
- * Issue fsync recursively on PGDATA and all its contents.
- *
- * We fsync regular files and directories wherever they are, but we follow
- * symlinks only for pg_wal (or pg_xlog) and immediately under pg_tblspc.
- * Other symlinks are presumed to point at files we're not responsible for
- * fsyncing, and might not have privileges to write at all.
- *
- * serverVersion indicates the version of the server to be fsync'd.
- *
- * Errors are reported but not considered fatal.
- */
+   
+                                                           
+   
+                                                                           
+                                                                          
+                                                                           
+                                                            
+   
+                                                                    
+   
+                                                 
+   
 void
 fsync_pgdata(const char *pg_data, int serverVersion)
 {
@@ -60,14 +60,14 @@ fsync_pgdata(const char *pg_data, int serverVersion)
   char pg_wal[MAXPGPATH];
   char pg_tblspc[MAXPGPATH];
 
-  /* handle renaming of pg_xlog to pg_wal in post-10 clusters */
+                                                                
   snprintf(pg_wal, MAXPGPATH, "%s/%s", pg_data, serverVersion < MINIMUM_VERSION_FOR_PG_WAL ? "pg_xlog" : "pg_wal");
   snprintf(pg_tblspc, MAXPGPATH, "%s/pg_tblspc", pg_data);
 
-  /*
-   * If pg_wal is a symlink, we'll need to recurse into it separately,
-   * because the first walkdir below will ignore it.
-   */
+     
+                                                                       
+                                                     
+     
   xlog_is_symlink = false;
 
 #ifndef WIN32
@@ -90,10 +90,10 @@ fsync_pgdata(const char *pg_data, int serverVersion)
   }
 #endif
 
-  /*
-   * If possible, hint to the kernel that we're soon going to fsync the data
-   * directory and its contents.
-   */
+     
+                                                                             
+                                 
+     
 #ifdef PG_FLUSH_DATA_WORKS
   walkdir(pg_data, pre_sync_fname, false);
   if (xlog_is_symlink)
@@ -103,15 +103,15 @@ fsync_pgdata(const char *pg_data, int serverVersion)
   walkdir(pg_tblspc, pre_sync_fname, true);
 #endif
 
-  /*
-   * Now we do the fsync()s in the same order.
-   *
-   * The main call ignores symlinks, so in addition to specially processing
-   * pg_wal if it's a symlink, pg_tblspc has to be visited separately with
-   * process_symlinks = true.  Note that if there are any plain directories
-   * in pg_tblspc, they'll get fsync'd twice.  That's not an expected case
-   * so we don't worry about optimizing it.
-   */
+     
+                                               
+     
+                                                                            
+                                                                           
+                                                                            
+                                                                           
+                                            
+     
   walkdir(pg_data, fsync_fname, false);
   if (xlog_is_symlink)
   {
@@ -120,18 +120,18 @@ fsync_pgdata(const char *pg_data, int serverVersion)
   walkdir(pg_tblspc, fsync_fname, true);
 }
 
-/*
- * Issue fsync recursively on the given directory and all its contents.
- *
- * This is a convenient wrapper on top of walkdir().
- */
+   
+                                                                        
+   
+                                                     
+   
 void
 fsync_dir_recurse(const char *dir)
 {
-  /*
-   * If possible, hint to the kernel that we're soon going to fsync the data
-   * directory and its contents.
-   */
+     
+                                                                             
+                                 
+     
 #ifdef PG_FLUSH_DATA_WORKS
   walkdir(dir, pre_sync_fname, false);
 #endif
@@ -139,20 +139,20 @@ fsync_dir_recurse(const char *dir)
   walkdir(dir, fsync_fname, false);
 }
 
-/*
- * walkdir: recursively walk a directory, applying the action to each
- * regular file and directory (including the named directory itself).
- *
- * If process_symlinks is true, the action and recursion are also applied
- * to regular files and directories that are pointed to by symlinks in the
- * given directory; otherwise symlinks are ignored.  Symlinks are always
- * ignored in subdirectories, ie we intentionally don't pass down the
- * process_symlinks flag to recursive calls.
- *
- * Errors are reported but not considered fatal.
- *
- * See also walkdir in fd.c, which is a backend version of this logic.
- */
+   
+                                                                      
+                                                                      
+   
+                                                                          
+                                                                           
+                                                                         
+                                                                      
+                                             
+   
+                                                 
+   
+                                                                       
+   
 static void
 walkdir(const char *path, int (*action)(const char *fname, bool isdir), bool process_symlinks)
 {
@@ -211,21 +211,21 @@ walkdir(const char *path, int (*action)(const char *fname, bool isdir), bool pro
 
   (void)closedir(dir);
 
-  /*
-   * It's important to fsync the destination directory itself as individual
-   * file fsyncs don't guarantee that the directory entry for the file is
-   * synced.  Recent versions of ext4 have made the window much wider but
-   * it's been an issue for ext3 and other filesystems in the past.
-   */
+     
+                                                                            
+                                                                          
+                                                                          
+                                                                    
+     
   (*action)(path, true);
 }
 
-/*
- * Hint to the OS that it should get ready to fsync() this file.
- *
- * Ignores errors trying to open unreadable files, and reports other errors
- * non-fatally.
- */
+   
+                                                                 
+   
+                                                                            
+                
+   
 #ifdef PG_FLUSH_DATA_WORKS
 
 static int
@@ -245,11 +245,11 @@ pre_sync_fname(const char *fname, bool isdir)
     return -1;
   }
 
-  /*
-   * We do what pg_flush_data() would do in the backend: prefer to use
-   * sync_file_range, but fall back to posix_fadvise.  We ignore errors
-   * because this is only a hint.
-   */
+     
+                                                                       
+                                                                        
+                                  
+     
 #if defined(HAVE_SYNC_FILE_RANGE)
   (void)sync_file_range(fd, 0, 0, SYNC_FILE_RANGE_WRITE);
 #elif defined(USE_POSIX_FADVISE) && defined(POSIX_FADV_DONTNEED)
@@ -262,15 +262,15 @@ pre_sync_fname(const char *fname, bool isdir)
   return 0;
 }
 
-#endif /* PG_FLUSH_DATA_WORKS */
+#endif                          
 
-/*
- * fsync_fname -- Try to fsync a file or directory
- *
- * Ignores errors trying to open unreadable files, or trying to fsync
- * directories on systems where that isn't allowed/required.  Reports
- * other errors non-fatally.
- */
+   
+                                                   
+   
+                                                                      
+                                                                      
+                             
+   
 int
 fsync_fname(const char *fname, bool isdir)
 {
@@ -278,12 +278,12 @@ fsync_fname(const char *fname, bool isdir)
   int flags;
   int returncode;
 
-  /*
-   * Some OSs require directories to be opened read-only whereas other
-   * systems don't allow us to fsync files opened read-only; so we need both
-   * cases here.  Using O_RDWR will cause us to fail to fsync files that are
-   * not writable by our userid, but we assume that's OK.
-   */
+     
+                                                                       
+                                                                             
+                                                                             
+                                                          
+     
   flags = PG_BINARY;
   if (!isdir)
   {
@@ -294,11 +294,11 @@ fsync_fname(const char *fname, bool isdir)
     flags |= O_RDONLY;
   }
 
-  /*
-   * Open the file, silently ignoring errors about unreadable files (or
-   * unsupported operations, e.g. opening a directory under Windows), and
-   * logging others.
-   */
+     
+                                                                        
+                                                                          
+                     
+     
   fd = open(fname, flags, 0);
   if (fd < 0)
   {
@@ -312,10 +312,10 @@ fsync_fname(const char *fname, bool isdir)
 
   returncode = fsync(fd);
 
-  /*
-   * Some OSes don't allow us to fsync directories at all, so we can ignore
-   * those errors. Anything else needs to be reported.
-   */
+     
+                                                                            
+                                                       
+     
   if (returncode != 0 && !(isdir && (errno == EBADF || errno == EINVAL)))
   {
     pg_log_error("could not fsync file \"%s\": %m", fname);
@@ -327,12 +327,12 @@ fsync_fname(const char *fname, bool isdir)
   return 0;
 }
 
-/*
- * fsync_parent_path -- fsync the parent path of a file or directory
- *
- * This is aimed at making file operations persistent on disk in case of
- * an OS crash or power failure.
- */
+   
+                                                                     
+   
+                                                                         
+                                 
+   
 int
 fsync_parent_path(const char *fname)
 {
@@ -341,11 +341,11 @@ fsync_parent_path(const char *fname)
   strlcpy(parentpath, fname, MAXPGPATH);
   get_parent_directory(parentpath);
 
-  /*
-   * get_parent_directory() returns an empty string if the input argument is
-   * just a file name (see comments in path.c), so handle that as being the
-   * current directory.
-   */
+     
+                                                                             
+                                                                            
+                        
+     
   if (strlen(parentpath) == 0)
   {
     strlcpy(parentpath, ".", MAXPGPATH);
@@ -359,23 +359,23 @@ fsync_parent_path(const char *fname)
   return 0;
 }
 
-/*
- * durable_rename -- rename(2) wrapper, issuing fsyncs required for durability
- *
- * Wrapper around rename, similar to the backend version.
- */
+   
+                                                                               
+   
+                                                          
+   
 int
 durable_rename(const char *oldfile, const char *newfile)
 {
   int fd;
 
-  /*
-   * First fsync the old and target path (if it exists), to ensure that they
-   * are properly persistent on disk. Syncing the target file is not
-   * strictly necessary, but it makes it easier to reason about crashes;
-   * because it's then guaranteed that either source or target file exists
-   * after a crash.
-   */
+     
+                                                                             
+                                                                     
+                                                                         
+                                                                           
+                    
+     
   if (fsync_fname(oldfile, false) != 0)
   {
     return -1;
@@ -401,17 +401,17 @@ durable_rename(const char *oldfile, const char *newfile)
     close(fd);
   }
 
-  /* Time to do the real deal... */
+                                   
   if (rename(oldfile, newfile) != 0)
   {
     pg_log_error("could not rename file \"%s\" to \"%s\": %m", oldfile, newfile);
     return -1;
   }
 
-  /*
-   * To guarantee renaming the file is persistent, fsync the file with its
-   * new name, and its containing directory.
-   */
+     
+                                                                           
+                                             
+     
   if (fsync_fname(newfile, false) != 0)
   {
     return -1;

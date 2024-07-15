@@ -1,13 +1,13 @@
-/*
- *	pg_upgrade_support.c
- *
- *	server-side functions to set backend global variables
- *	to control oid and relfilenode assignment, and do other special
- *	hacks needed for pg_upgrade.
- *
- *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *	src/backend/utils/adt/pg_upgrade_support.c
- */
+   
+                        
+   
+                                                         
+                                                                   
+                                
+   
+                                                                
+                                              
+   
 
 #include "postgres.h"
 
@@ -127,7 +127,7 @@ binary_upgrade_create_empty_extension(PG_FUNCTION_ARGS)
 
   CHECK_IS_BINARY_UPGRADE;
 
-  /* We must check these things before dereferencing the arguments */
+                                                                     
   if (PG_ARGISNULL(0) || PG_ARGISNULL(1) || PG_ARGISNULL(2) || PG_ARGISNULL(3))
   {
     elog(ERROR, "null argument to binary_upgrade_create_empty_extension is not allowed");

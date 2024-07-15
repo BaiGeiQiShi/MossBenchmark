@@ -1,18 +1,18 @@
-/*-------------------------------------------------------------------------
- *
- * pread.c
- *	  Implementation of pread(2) for platforms that lack one.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/port/pread.c
- *
- * Note that this implementation changes the current file position, unlike
- * the POSIX function, so we use the name pg_pread().
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                                             
+   
+                                                                         
+   
+                  
+                      
+   
+                                                                           
+                                                      
+   
+                                                                            
+   
 
 #include "c.h"
 

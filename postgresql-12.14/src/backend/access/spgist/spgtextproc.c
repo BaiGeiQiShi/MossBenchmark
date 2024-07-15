@@ -1,42 +1,42 @@
-/*-------------------------------------------------------------------------
- *
- * spgtextproc.c
- *	  implementation of radix tree (compressed trie) over text
- *
- * In a text_ops SPGiST index, inner tuples can have a prefix which is the
- * common prefix of all strings indexed under that tuple.  The node labels
- * represent the next byte of the string(s) after the prefix.  Assuming we
- * always use the longest possible prefix, we will get more than one node
- * label unless the prefix length is restricted by SPGIST_MAX_PREFIX_LENGTH.
- *
- * To reconstruct the indexed string for any index entry, concatenate the
- * inner-tuple prefixes and node labels starting at the root and working
- * down to the leaf entry, then append the datum in the leaf entry.
- * (While descending the tree, "level" is the number of bytes reconstructed
- * so far.)
- *
- * However, there are two special cases for node labels: -1 indicates that
- * there are no more bytes after the prefix-so-far, and -2 indicates that we
- * had to split an existing allTheSame tuple (in such a case we have to create
- * a node label that doesn't correspond to any string byte).  In either case,
- * the node label does not contribute anything to the reconstructed string.
- *
- * Previously, we used a node label of zero for both special cases, but
- * this was problematic because one can't tell whether a string ending at
- * the current level can be pushed down into such a child node.  For
- * backwards compatibility, we still support such node labels for reading;
- * but no new entries will ever be pushed down into a zero-labeled child.
- * No new entries ever get pushed into a -2-labeled child, either.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * IDENTIFICATION
- *			src/backend/access/spgist/spgtextproc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                 
+                                                              
+   
+                                                                           
+                                                                           
+                                                                           
+                                                                          
+                                                                             
+   
+                                                                          
+                                                                         
+                                                                    
+                                                                            
+            
+   
+                                                                           
+                                                                             
+                                                                               
+                                                                              
+                                                                            
+   
+                                                                        
+                                                                          
+                                                                     
+                                                                           
+                                                                          
+                                                                   
+   
+   
+                                                                         
+                                                                        
+   
+                  
+                                             
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/spgist.h"
@@ -47,39 +47,39 @@
 #include "utils/pg_locale.h"
 #include "utils/varlena.h"
 
-/*
- * In the worst case, an inner tuple in a text radix tree could have as many
- * as 258 nodes (one for each possible byte value, plus the two special
- * cases).  Each node can take 16 bytes on MAXALIGN=8 machines.  The inner
- * tuple must fit on an index page of size BLCKSZ.  Rather than assuming we
- * know the exact amount of overhead imposed by page headers, tuple headers,
- * etc, we leave 100 bytes for that (the actual overhead should be no more
- * than 56 bytes at this writing, so there is slop in this number).
- * So we can safely create prefixes up to BLCKSZ - 258 * 16 - 100 bytes long.
- * Unfortunately, because 258 * 16 is over 4K, there is no safe prefix length
- * when BLCKSZ is less than 8K; it is always possible to get "SPGiST inner
- * tuple size exceeds maximum" if there are too many distinct next-byte values
- * at a given place in the tree.  Since use of nonstandard block sizes appears
- * to be negligible in the field, we just live with that fact for now,
- * choosing a max prefix size of 32 bytes when BLCKSZ is configured smaller
- * than default.
- */
+   
+                                                                             
+                                                                        
+                                                                           
+                                                                            
+                                                                             
+                                                                           
+                                                                    
+                                                                              
+                                                                              
+                                                                           
+                                                                               
+                                                                               
+                                                                       
+                                                                            
+                 
+   
 #define SPGIST_MAX_PREFIX_LENGTH Max((int)(BLCKSZ - 258 * 16 - 100), 32)
 
-/*
- * Strategy for collation aware operator on text is equal to btree strategy
- * plus value of 10.
- *
- * Current collation aware strategies and their corresponding btree strategies:
- * 11 BTLessStrategyNumber
- * 12 BTLessEqualStrategyNumber
- * 14 BTGreaterEqualStrategyNumber
- * 15 BTGreaterStrategyNumber
- */
+   
+                                                                            
+                     
+   
+                                                                                
+                           
+                                
+                                   
+                              
+   
 #define SPG_STRATEGY_ADDITION (10)
 #define SPG_IS_COLLATION_AWARE_STRATEGY(s) ((s) > SPG_STRATEGY_ADDITION && (s) != RTPrefixStrategyNumber)
 
-/* Struct for sorting values in picksplit */
+                                            
 typedef struct spgNodePtr
 {
   Datum d;
@@ -90,20 +90,20 @@ typedef struct spgNodePtr
 Datum
 spg_text_config(PG_FUNCTION_ARGS)
 {
-  /* spgConfigIn *cfgin = (spgConfigIn *) PG_GETARG_POINTER(0); */
+                                                                  
   spgConfigOut *cfg = (spgConfigOut *)PG_GETARG_POINTER(1);
 
   cfg->prefixType = TEXTOID;
   cfg->labelType = INT2OID;
   cfg->canReturnData = true;
-  cfg->longValuesOK = true; /* suffixing will shorten long values */
+  cfg->longValuesOK = true;                                         
   PG_RETURN_VOID();
 }
 
-/*
- * Form a text datum from the given not-necessarily-null-terminated string,
- * using short varlena header format if possible
- */
+   
+                                                                            
+                                                 
+   
 static Datum
 formTextDatum(const char *data, int datalen)
 {
@@ -128,9 +128,9 @@ formTextDatum(const char *data, int datalen)
   return PointerGetDatum(p);
 }
 
-/*
- * Find the length of the common prefix of a and b
- */
+   
+                                                   
+   
 static int
 commonPrefix(const char *a, const char *b, int lena, int lenb)
 {
@@ -146,11 +146,11 @@ commonPrefix(const char *a, const char *b, int lena, int lenb)
   return i;
 }
 
-/*
- * Binary search an array of int16 datums for a match to c
- *
- * On success, *i gets the match location; on failure, it gets where to insert
- */
+   
+                                                           
+   
+                                                                               
+   
 static bool
 searchChar(Datum *nodeLabels, int nNodes, int16 c, int *i)
 {
@@ -194,7 +194,7 @@ spg_text_choose(PG_FUNCTION_ARGS)
   int16 nodeChar = 0;
   int i = 0;
 
-  /* Check for prefix match, set nodeChar to first byte after prefix */
+                                                                       
   if (in->hasPrefix)
   {
     text *prefixText = DatumGetTextPP(in->prefixDatum);
@@ -217,7 +217,7 @@ spg_text_choose(PG_FUNCTION_ARGS)
     }
     else
     {
-      /* Must split tuple because incoming value doesn't match prefix */
+                                                                        
       out->resultType = spgSplitTuple;
 
       if (commonLen == 0)
@@ -257,15 +257,15 @@ spg_text_choose(PG_FUNCTION_ARGS)
     nodeChar = -1;
   }
 
-  /* Look up nodeChar in the node label array */
+                                                
   if (searchChar(in->nodeLabels, in->nNodes, nodeChar, &i))
   {
-    /*
-     * Descend to existing node.  (If in->allTheSame, the core code will
-     * ignore our nodeN specification here, but that's OK.  We still have
-     * to provide the correct levelAdd and restDatum values, and those are
-     * the same regardless of which node gets chosen by core.)
-     */
+       
+                                                                         
+                                                                          
+                                                                           
+                                                               
+       
     int levelAdd;
 
     out->resultType = spgMatchNode;
@@ -287,17 +287,17 @@ spg_text_choose(PG_FUNCTION_ARGS)
   }
   else if (in->allTheSame)
   {
-    /*
-     * Can't use AddNode action, so split the tuple.  The upper tuple has
-     * the same prefix as before and uses a dummy node label -2 for the
-     * lower tuple.  The lower tuple has no prefix and the same node
-     * labels as the original tuple.
-     *
-     * Note: it might seem tempting to shorten the upper tuple's prefix,
-     * if it has one, then use its last byte as label for the lower tuple.
-     * But that doesn't win since we know the incoming value matches the
-     * whole prefix: we'd just end up splitting the lower tuple again.
-     */
+       
+                                                                          
+                                                                        
+                                                                     
+                                     
+       
+                                                                         
+                                                                           
+                                                                         
+                                                                       
+       
     out->resultType = spgSplitTuple;
     out->result.splitTuple.prefixHasPrefix = in->hasPrefix;
     out->result.splitTuple.prefixPrefixDatum = in->prefixDatum;
@@ -309,7 +309,7 @@ spg_text_choose(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* Add a node for the not-previously-seen nodeChar value */
+                                                               
     out->resultType = spgAddNode;
     out->result.addNode.nodeLabel = Int16GetDatum(nodeChar);
     out->result.addNode.nodeN = i;
@@ -318,7 +318,7 @@ spg_text_choose(PG_FUNCTION_ARGS)
   PG_RETURN_VOID();
 }
 
-/* qsort comparator to sort spgNodePtr structs by "c" */
+                                                        
 static int
 cmpNodePtr(const void *a, const void *b)
 {
@@ -337,7 +337,7 @@ spg_text_picksplit(PG_FUNCTION_ARGS)
   int i, commonLen;
   spgNodePtr *nodes;
 
-  /* Identify longest common prefix, if any */
+                                              
   commonLen = VARSIZE_ANY_EXHDR(text0);
   for (i = 1; i < in->nTuples && commonLen > 0; i++)
   {
@@ -350,13 +350,13 @@ spg_text_picksplit(PG_FUNCTION_ARGS)
     }
   }
 
-  /*
-   * Limit the prefix length, if necessary, to ensure that the resulting
-   * inner tuple will fit on a page.
-   */
+     
+                                                                         
+                                     
+     
   commonLen = Min(commonLen, SPGIST_MAX_PREFIX_LENGTH);
 
-  /* Set node prefix to be that string, if it's not empty */
+                                                            
   if (commonLen == 0)
   {
     out->hasPrefix = false;
@@ -367,7 +367,7 @@ spg_text_picksplit(PG_FUNCTION_ARGS)
     out->prefixDatum = formTextDatum(VARDATA_ANY(text0), commonLen);
   }
 
-  /* Extract the node label (first non-common byte) from each value */
+                                                                      
   nodes = (spgNodePtr *)palloc(sizeof(spgNodePtr) * in->nTuples);
 
   for (i = 0; i < in->nTuples; i++)
@@ -380,20 +380,20 @@ spg_text_picksplit(PG_FUNCTION_ARGS)
     }
     else
     {
-      nodes[i].c = -1; /* use -1 if string is all common */
+      nodes[i].c = -1;                                     
     }
     nodes[i].i = i;
     nodes[i].d = in->datums[i];
   }
 
-  /*
-   * Sort by label values so that we can group the values into nodes.  This
-   * also ensures that the nodes are ordered by label value, allowing the
-   * use of binary search in searchChar.
-   */
+     
+                                                                            
+                                                                          
+                                         
+     
   qsort(nodes, in->nTuples, sizeof(*nodes), cmpNodePtr);
 
-  /* And emit results */
+                        
   out->nNodes = 0;
   out->nodeLabels = (Datum *)palloc(sizeof(Datum) * in->nTuples);
   out->mapTuplesToNodes = (int *)palloc(sizeof(int) * in->nTuples);
@@ -439,17 +439,17 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
   int prefixSize = 0;
   int i;
 
-  /*
-   * Reconstruct values represented at this tuple, including parent data,
-   * prefix of this tuple if any, and the node label if it's non-dummy.
-   * in->level should be the length of the previously reconstructed value,
-   * and the number of bytes added here is prefixSize or prefixSize + 1.
-   *
-   * Note: we assume that in->reconstructedValue isn't toasted and doesn't
-   * have a short varlena header.  This is okay because it must have been
-   * created by a previous invocation of this routine, and we always emit
-   * long-format reconstructed values.
-   */
+     
+                                                                          
+                                                                        
+                                                                           
+                                                                         
+     
+                                                                           
+                                                                          
+                                                                          
+                                       
+     
   reconstructedValue = (text *)DatumGetPointer(in->reconstructedValue);
   Assert(reconstructedValue == NULL ? in->level == 0 : VARSIZE_ANY_EXHDR(reconstructedValue) == in->level);
 
@@ -472,13 +472,13 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
   {
     memcpy(((char *)VARDATA(reconstrText)) + in->level, VARDATA_ANY(prefixText), prefixSize);
   }
-  /* last byte of reconstrText will be filled in below */
+                                                         
 
-  /*
-   * Scan the child nodes.  For each one, complete the reconstructed value
-   * and see if it's consistent with the query.  If so, emit an entry into
-   * the output arrays.
-   */
+     
+                                                                           
+                                                                           
+                        
+     
   out->nodeNumbers = (int *)palloc(sizeof(int) * in->nNodes);
   out->levelAdds = (int *)palloc(sizeof(int) * in->nNodes);
   out->reconstructedValues = (Datum *)palloc(sizeof(Datum) * in->nNodes);
@@ -491,7 +491,7 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
     bool res = true;
     int j;
 
-    /* If nodeChar is a dummy value, don't include it in data */
+                                                                
     if (nodeChar <= 0)
     {
       thisLen = maxReconstrLen - 1;
@@ -509,14 +509,14 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
       int inSize;
       int r;
 
-      /*
-       * If it's a collation-aware operator, but the collation is C, we
-       * can treat it as non-collation-aware.  With non-C collation we
-       * need to traverse whole tree :-( so there's no point in making
-       * any check here.  (Note also that our reconstructed value may
-       * well end with a partial multibyte character, so that applying
-       * any encoding-sensitive test to it would be risky anyhow.)
-       */
+         
+                                                                        
+                                                                       
+                                                                       
+                                                                      
+                                                                       
+                                                                   
+         
       if (SPG_IS_COLLATION_AWARE_STRATEGY(strategy))
       {
         if (collate_is_c)
@@ -569,7 +569,7 @@ spg_text_inner_consistent(PG_FUNCTION_ARGS)
 
       if (!res)
       {
-        break; /* no need to consider remaining conditions */
+        break;                                               
       }
     }
 
@@ -598,12 +598,12 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
   bool res;
   int j;
 
-  /* all tests are exact */
+                           
   out->recheck = false;
 
   leafValue = DatumGetTextPP(in->leafDatum);
 
-  /* As above, in->reconstructedValue isn't toasted or short. */
+                                                                
   if (DatumGetPointer(in->reconstructedValue))
   {
     reconstrValue = (text *)DatumGetPointer(in->reconstructedValue);
@@ -611,7 +611,7 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
 
   Assert(reconstrValue == NULL ? level == 0 : VARSIZE_ANY_EXHDR(reconstrValue) == level);
 
-  /* Reconstruct the full string represented by this leaf tuple */
+                                                                  
   fullLen = level + VARSIZE_ANY_EXHDR(leafValue);
   if (VARSIZE_ANY_EXHDR(leafValue) == 0 && level > 0)
   {
@@ -635,7 +635,7 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
     out->leafValue = PointerGetDatum(fullText);
   }
 
-  /* Perform the required comparison(s) */
+                                          
   res = true;
   for (j = 0; j < in->nkeys; j++)
   {
@@ -646,13 +646,13 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
 
     if (strategy == RTPrefixStrategyNumber)
     {
-      /*
-       * if level >= length of query then reconstrValue must begin with
-       * query (prefix) string, so we don't need to check it again.
-       */
+         
+                                                                        
+                                                                    
+         
       res = (level >= queryLen) || DatumGetBool(DirectFunctionCall2Coll(text_starts_with, PG_GET_COLLATION(), out->leafValue, PointerGetDatum(query)));
 
-      if (!res) /* no need to consider remaining conditions */
+      if (!res)                                               
       {
         break;
       }
@@ -662,17 +662,17 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
 
     if (SPG_IS_COLLATION_AWARE_STRATEGY(strategy))
     {
-      /* Collation-aware comparison */
+                                      
       strategy -= SPG_STRATEGY_ADDITION;
 
-      /* If asserts enabled, verify encoding of reconstructed string */
+                                                                       
       Assert(pg_verifymbstr(fullValue, fullLen, false));
 
       r = varstr_cmp(fullValue, fullLen, VARDATA_ANY(query), queryLen, PG_GET_COLLATION());
     }
     else
     {
-      /* Non-collation-aware comparison */
+                                          
       r = memcmp(fullValue, VARDATA_ANY(query), Min(queryLen, fullLen));
 
       if (r == 0)
@@ -713,7 +713,7 @@ spg_text_leaf_consistent(PG_FUNCTION_ARGS)
 
     if (!res)
     {
-      break; /* no need to consider remaining conditions */
+      break;                                               
     }
   }
 

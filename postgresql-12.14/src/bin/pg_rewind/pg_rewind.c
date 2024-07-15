@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- *
- * pg_rewind.c
- *	  Synchronizes a PostgreSQL data directory to a new timeline
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                                                
+   
+                                                                         
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <sys/stat.h>
@@ -51,7 +51,7 @@ static ControlFileData ControlFile_source;
 const char *progname;
 int WalSegSz;
 
-/* Configuration options */
+                           
 char *datadir_target = NULL;
 char *datadir_source = NULL;
 char *connstr_source = NULL;
@@ -61,11 +61,11 @@ bool showprogress = false;
 bool dry_run = false;
 bool do_sync = true;
 
-/* Target history */
+                    
 TimeLineHistoryEntry *targetHistory;
 int targetNentries;
 
-/* Progress counters */
+                       
 uint64 fetch_size;
 uint64 fetch_done;
 
@@ -111,7 +111,7 @@ main(int argc, char **argv)
   set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_rewind"));
   progname = get_progname(argv[0]);
 
-  /* Process command-line arguments */
+                                      
   if (argc > 1)
   {
     if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
@@ -151,14 +151,14 @@ main(int argc, char **argv)
       pg_logging_set_level(PG_LOG_DEBUG);
       break;
 
-    case 'D': /* -D or --target-pgdata */
+    case 'D':                            
       datadir_target = pg_strdup(optarg);
       break;
 
-    case 1: /* --source-pgdata */
+    case 1:                      
       datadir_source = pg_strdup(optarg);
       break;
-    case 2: /* --source-server */
+    case 2:                      
       connstr_source = pg_strdup(optarg);
       break;
     }
@@ -192,12 +192,12 @@ main(int argc, char **argv)
     exit(1);
   }
 
-  /*
-   * Don't allow pg_rewind to be run as root, to avoid overwriting the
-   * ownership of files in the data directory. We need only check for root
-   * -- any other user won't have sufficient permissions to modify files in
-   * the data directory.
-   */
+     
+                                                                       
+                                                                           
+                                                                            
+                         
+     
 #ifndef WIN32
   if (geteuid() == 0)
   {
@@ -209,7 +209,7 @@ main(int argc, char **argv)
 
   get_restricted_token();
 
-  /* Set mask based on PGDATA permissions */
+                                            
   if (!GetDataDirectoryCreatePerm(datadir_target))
   {
     pg_log_error("could not read permissions of directory \"%s\": %m", datadir_target);
@@ -218,16 +218,16 @@ main(int argc, char **argv)
 
   umask(pg_mode_mask);
 
-  /* Connect to remote server */
+                                
   if (connstr_source)
   {
     libpqConnect(connstr_source);
   }
 
-  /*
-   * Ok, we have all the options and we're ready to start. Read in all the
-   * information we need from both clusters.
-   */
+     
+                                                                           
+                                             
+     
   buffer = slurpFile(datadir_target, "global/pg_control", &size);
   digestControlFile(&ControlFile_target, buffer, size);
   pg_free(buffer);
@@ -238,10 +238,10 @@ main(int argc, char **argv)
 
   sanityChecks();
 
-  /*
-   * If both clusters are already on the same timeline, there's nothing to
-   * do.
-   */
+     
+                                                                           
+         
+     
   if (ControlFile_target.checkPointCopy.ThisTimeLineID == ControlFile_source.checkPointCopy.ThisTimeLineID)
   {
     pg_log_info("source and target cluster are on the same timeline");
@@ -255,16 +255,16 @@ main(int argc, char **argv)
     findCommonAncestorTimeline(&divergerec, &lastcommontliIndex);
     pg_log_info("servers diverged at WAL location %X/%X on timeline %u", (uint32)(divergerec >> 32), (uint32)divergerec, targetHistory[lastcommontliIndex].tli);
 
-    /*
-     * Determine the end-of-WAL on the target.
-     *
-     * The WAL ends at the last shutdown checkpoint, or at
-     * minRecoveryPoint if it was a standby. (If we supported rewinding a
-     * server that was not shut down cleanly, we would need to replay
-     * until we reach the first invalid record, like crash recovery does.)
-     */
+       
+                                               
+       
+                                                           
+                                                                          
+                                                                      
+                                                                           
+       
 
-    /* read the checkpoint record on the target to see where it ends. */
+                                                                        
     chkptendrec = readOneRecord(datadir_target, ControlFile_target.checkPoint, targetNentries - 1);
 
     if (ControlFile_target.minRecoveryPoint > chkptendrec)
@@ -276,18 +276,18 @@ main(int argc, char **argv)
       target_wal_endrec = chkptendrec;
     }
 
-    /*
-     * Check for the possibility that the target is in fact a direct
-     * ancestor of the source. In that case, there is no divergent history
-     * in the target that needs rewinding.
-     */
+       
+                                                                     
+                                                                           
+                                           
+       
     if (target_wal_endrec > divergerec)
     {
       rewind_needed = true;
     }
     else
     {
-      /* the last common checkpoint record must be part of target WAL */
+                                                                        
       Assert(target_wal_endrec == divergerec);
 
       rewind_needed = false;
@@ -303,9 +303,9 @@ main(int argc, char **argv)
   findLastCheckpoint(datadir_target, divergerec, lastcommontliIndex, &chkptrec, &chkpttli, &chkptredo);
   pg_log_info("rewinding from last common checkpoint at %X/%X on timeline %u", (uint32)(chkptrec >> 32), (uint32)chkptrec, chkpttli);
 
-  /*
-   * Build the filemap, by comparing the source and target data directories.
-   */
+     
+                                                                             
+     
   filemap_create();
   if (showprogress)
   {
@@ -318,11 +318,11 @@ main(int argc, char **argv)
   }
   traverse_datadir(datadir_target, &process_target_file);
 
-  /*
-   * Read the target WAL from last checkpoint before the point of fork, to
-   * extract all the pages that were modified on the target cluster after
-   * the fork.
-   */
+     
+                                                                           
+                                                                          
+               
+     
   if (showprogress)
   {
     pg_log_info("reading WAL in target");
@@ -335,15 +335,15 @@ main(int argc, char **argv)
     calculate_totals();
   }
 
-  /* this is too verbose even for verbose mode */
+                                                 
   if (debug)
   {
     print_filemap();
   }
 
-  /*
-   * Ok, we're ready to start copying things over.
-   */
+     
+                                                   
+     
   if (showprogress)
   {
     pg_log_info("need to copy %lu MB (total source directory size is %lu MB)", (unsigned long)(filemap->fetch_size / (1024 * 1024)), (unsigned long)(filemap->total_size / (1024 * 1024)));
@@ -352,10 +352,10 @@ main(int argc, char **argv)
     fetch_done = 0;
   }
 
-  /*
-   * This is the point of no return. Once we start copying things, we have
-   * modified the target directory and there is no turning back!
-   */
+     
+                                                                           
+                                                                 
+     
 
   executeFileMap();
 
@@ -367,14 +367,14 @@ main(int argc, char **argv)
   }
   createBackupLabel(chkptredo, chkpttli, chkptrec);
 
-  /*
-   * Update control file of target. Make it ready to perform archive
-   * recovery when restarting.
-   *
-   * minRecoveryPoint is set to the current WAL insert location in the
-   * source server. Like in an online backup, it's important that we recover
-   * all the WAL that was generated while we copied the files over.
-   */
+     
+                                                                     
+                               
+     
+                                                                       
+                                                                             
+                                                                    
+     
   memcpy(&ControlFile_new, &ControlFile_source, sizeof(ControlFileData));
 
   if (connstr_source)
@@ -409,60 +409,60 @@ main(int argc, char **argv)
 static void
 sanityChecks(void)
 {
-  /* TODO Check that there's no backup_label in either cluster */
+                                                                 
 
-  /* Check system_id match */
+                             
   if (ControlFile_target.system_identifier != ControlFile_source.system_identifier)
   {
     pg_fatal("source and target clusters are from different systems");
   }
 
-  /* check version */
+                     
   if (ControlFile_target.pg_control_version != PG_CONTROL_VERSION || ControlFile_source.pg_control_version != PG_CONTROL_VERSION || ControlFile_target.catalog_version_no != CATALOG_VERSION_NO || ControlFile_source.catalog_version_no != CATALOG_VERSION_NO)
   {
     pg_fatal("clusters are not compatible with this version of pg_rewind");
   }
 
-  /*
-   * Target cluster need to use checksums or hint bit wal-logging, this to
-   * prevent from data corruption that could occur because of hint bits.
-   */
+     
+                                                                           
+                                                                         
+     
   if (ControlFile_target.data_checksum_version != PG_DATA_CHECKSUM_VERSION && !ControlFile_target.wal_log_hints)
   {
     pg_fatal("target server needs to use either data checksums or \"wal_log_hints = on\"");
   }
 
-  /*
-   * Target cluster better not be running. This doesn't guard against
-   * someone starting the cluster concurrently. Also, this is probably more
-   * strict than necessary; it's OK if the target node was not shut down
-   * cleanly, as long as it isn't running at the moment.
-   */
+     
+                                                                      
+                                                                            
+                                                                         
+                                                         
+     
   if (ControlFile_target.state != DB_SHUTDOWNED && ControlFile_target.state != DB_SHUTDOWNED_IN_RECOVERY)
   {
     pg_fatal("target server must be shut down cleanly");
   }
 
-  /*
-   * When the source is a data directory, also require that the source
-   * server is shut down. There isn't any very strong reason for this
-   * limitation, but better safe than sorry.
-   */
+     
+                                                                       
+                                                                      
+                                             
+     
   if (datadir_source && ControlFile_source.state != DB_SHUTDOWNED && ControlFile_source.state != DB_SHUTDOWNED_IN_RECOVERY)
   {
     pg_fatal("source data directory must be shut down cleanly");
   }
 }
 
-/*
- * Print a progress report based on the fetch_size and fetch_done variables.
- *
- * Progress report is written at maximum once per second, except that the
- * last progress report is always printed.
- *
- * If finished is set to true, this is the last progress report. The cursor
- * is moved to the next line.
- */
+   
+                                                                             
+   
+                                                                          
+                                           
+   
+                                                                            
+                              
+   
 void
 progress_report(bool finished)
 {
@@ -480,18 +480,18 @@ progress_report(bool finished)
   now = time(NULL);
   if (now == last_progress_report && !finished)
   {
-    return; /* Max once per second */
+    return;                          
   }
 
   last_progress_report = now;
   percent = fetch_size ? (int)((fetch_done) * 100 / fetch_size) : 0;
 
-  /*
-   * Avoid overflowing past 100% or the full size. This may make the total
-   * size number change as we approach the end of the backup (the estimate
-   * will always be wrong if WAL is included), but that's better than having
-   * the done column be bigger than the total.
-   */
+     
+                                                                           
+                                                                           
+                                                                             
+                                               
+     
   if (percent > 100)
   {
     percent = 100;
@@ -501,28 +501,28 @@ progress_report(bool finished)
     fetch_size = fetch_done;
   }
 
-  /*
-   * Separate step to keep platform-dependent format code out of
-   * translatable strings.  And we only test for INT64_FORMAT availability
-   * in snprintf, not fprintf.
-   */
+     
+                                                                 
+                                                                           
+                               
+     
   snprintf(fetch_done_str, sizeof(fetch_done_str), INT64_FORMAT, fetch_done / 1024);
   snprintf(fetch_size_str, sizeof(fetch_size_str), INT64_FORMAT, fetch_size / 1024);
 
   fprintf(stderr, _("%*s/%s kB (%d%%) copied"), (int)strlen(fetch_size_str), fetch_done_str, fetch_size_str, percent);
 
-  /*
-   * Stay on the same line if reporting to a terminal and we're not done
-   * yet.
-   */
+     
+                                                                         
+          
+     
   fputc((!finished && isatty(fileno(stderr))) ? '\r' : '\n', stderr);
 }
 
-/*
- * Find minimum from two WAL locations assuming InvalidXLogRecPtr means
- * infinity as src/include/access/timeline.h states. This routine should
- * be used only when comparing WAL locations related to history files.
- */
+   
+                                                                        
+                                                                         
+                                                                       
+   
 static XLogRecPtr
 MinXLogRecPtr(XLogRecPtr a, XLogRecPtr b)
 {
@@ -540,10 +540,10 @@ MinXLogRecPtr(XLogRecPtr a, XLogRecPtr b)
   }
 }
 
-/*
- * Retrieve timeline history for given control file which should behold
- * either source or target.
- */
+   
+                                                                        
+                            
+   
 static TimeLineHistoryEntry *
 getTimelineHistory(ControlFileData *controlFile, int *nentries)
 {
@@ -552,10 +552,10 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
 
   tli = controlFile->checkPointCopy.ThisTimeLineID;
 
-  /*
-   * Timeline 1 does not have a history file, so there is no need to check
-   * and fake an entry with infinite start and end positions.
-   */
+     
+                                                                           
+                                                              
+     
   if (tli == 1)
   {
     history = (TimeLineHistoryEntry *)pg_malloc(sizeof(TimeLineHistoryEntry));
@@ -570,7 +570,7 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
 
     TLHistoryFilePath(path, tli);
 
-    /* Get history file from appropriate source */
+                                                  
     if (controlFile == &ControlFile_source)
     {
       histfile = fetchFile(path, NULL);
@@ -605,9 +605,9 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
       Assert(false);
     }
 
-    /*
-     * Print the target timeline history.
-     */
+       
+                                          
+       
     for (i = 0; i < targetNentries; i++)
     {
       TimeLineHistoryEntry *entry;
@@ -620,17 +620,17 @@ getTimelineHistory(ControlFileData *controlFile, int *nentries)
   return history;
 }
 
-/*
- * Determine the TLI of the last common timeline in the timeline history of the
- * two clusters. targetHistory is filled with target timeline history and
- * targetNentries is number of items in targetHistory. *tliIndex is set to the
- * index of last common timeline in targetHistory array, and *recptr is set to
- * the position where the timeline history diverged (ie. the first WAL record
- * that's not the same in both clusters).
- *
- * Control files of both clusters must be read into ControlFile_target/source
- * before calling this routine.
- */
+   
+                                                                                
+                                                                          
+                                                                               
+                                                                               
+                                                                              
+                                          
+   
+                                                                              
+                                
+   
 static void
 findCommonAncestorTimeline(XLogRecPtr *recptr, int *tliIndex)
 {
@@ -638,18 +638,18 @@ findCommonAncestorTimeline(XLogRecPtr *recptr, int *tliIndex)
   int sourceNentries;
   int i, n;
 
-  /* Retrieve timelines for both source and target */
+                                                     
   sourceHistory = getTimelineHistory(&ControlFile_source, &sourceNentries);
   targetHistory = getTimelineHistory(&ControlFile_target, &targetNentries);
 
-  /*
-   * Trace the history forward, until we hit the timeline diverge. It may
-   * still be possible that the source and target nodes used the same
-   * timeline number in their history but with different start position
-   * depending on the history files that each node has fetched in previous
-   * recovery processes. Hence check the start position of the new timeline
-   * as well and move down by one extra timeline entry if they do not match.
-   */
+     
+                                                                          
+                                                                      
+                                                                        
+                                                                           
+                                                                            
+                                                                             
+     
   n = Min(sourceNentries, targetNentries);
   for (i = 0; i < n; i++)
   {
@@ -674,10 +674,10 @@ findCommonAncestorTimeline(XLogRecPtr *recptr, int *tliIndex)
   }
 }
 
-/*
- * Create a backup_label file that forces recovery to begin at the last common
- * checkpoint.
- */
+   
+                                                                               
+               
+   
 static void
 createBackupLabel(XLogRecPtr startpoint, TimeLineID starttli, XLogRecPtr checkpointloc)
 {
@@ -692,9 +692,9 @@ createBackupLabel(XLogRecPtr startpoint, TimeLineID starttli, XLogRecPtr checkpo
   XLByteToSeg(startpoint, startsegno, WalSegSz);
   XLogFileName(xlogfilename, starttli, startsegno, WalSegSz);
 
-  /*
-   * Construct backup label file
-   */
+     
+                                 
+     
   stamp_time = time(NULL);
   tmp = localtime(&stamp_time);
   strftime(strfbuf, sizeof(strfbuf), "%Y-%m-%d %H:%M:%S %Z", tmp);
@@ -705,42 +705,42 @@ createBackupLabel(XLogRecPtr startpoint, TimeLineID starttli, XLogRecPtr checkpo
       "BACKUP METHOD: pg_rewind\n"
       "BACKUP FROM: standby\n"
       "START TIME: %s\n",
-      /* omit LABEL: line */
+                            
       (uint32)(startpoint >> 32), (uint32)startpoint, xlogfilename, (uint32)(checkpointloc >> 32), (uint32)checkpointloc, strfbuf);
   if (len >= sizeof(buf))
   {
-    pg_fatal("backup label buffer too small"); /* shouldn't happen */
+    pg_fatal("backup label buffer too small");                       
   }
 
-  /* TODO: move old file out of the way, if any. */
-  open_target_file("backup_label", true); /* BACKUP_LABEL_FILE */
+                                                   
+  open_target_file("backup_label", true);                        
   write_target_range(buf, 0, len);
   close_target_file();
 }
 
-/*
- * Check CRC of control file
- */
+   
+                             
+   
 static void
 checkControlFile(ControlFileData *ControlFile)
 {
   pg_crc32c crc;
 
-  /* Calculate CRC */
+                     
   INIT_CRC32C(crc);
   COMP_CRC32C(crc, (char *)ControlFile, offsetof(ControlFileData, crc));
   FIN_CRC32C(crc);
 
-  /* And simply compare it */
+                             
   if (!EQ_CRC32C(crc, ControlFile->crc))
   {
     pg_fatal("unexpected control file CRC");
   }
 }
 
-/*
- * Verify control file contents in the buffer src, and copy it to *ControlFile.
- */
+   
+                                                                                
+   
 static void
 digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
 {
@@ -751,7 +751,7 @@ digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
 
   memcpy(ControlFile, src, sizeof(ControlFileData));
 
-  /* set and validate WalSegSz */
+                                 
   WalSegSz = ControlFile->xlog_seg_size;
 
   if (!IsValidWalSegSize(WalSegSz))
@@ -759,19 +759,19 @@ digestControlFile(ControlFileData *ControlFile, char *src, size_t size)
     pg_fatal(ngettext("WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d byte", "WAL segment size must be a power of two between 1 MB and 1 GB, but the control file specifies %d bytes", WalSegSz), WalSegSz);
   }
 
-  /* Additional checks on control file */
+                                         
   checkControlFile(ControlFile);
 }
 
-/*
- * Sync target data directory to ensure that modifications are safely on disk.
- *
- * We do this once, for the whole data directory, for performance reasons.  At
- * the end of pg_rewind's run, the kernel is likely to already have flushed
- * most dirty buffers to disk.  Additionally fsync_pgdata uses a two-pass
- * approach (only initiating writeback in the first pass), which often reduces
- * the overall amount of IO noticeably.
- */
+   
+                                                                               
+   
+                                                                               
+                                                                            
+                                                                          
+                                                                               
+                                        
+   
 static void
 syncTargetDirectory(void)
 {

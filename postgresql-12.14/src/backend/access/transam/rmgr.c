@@ -1,10 +1,10 @@
-/*
- * rmgr.c
- *
- * Resource managers definition
- *
- * src/backend/access/transam/rmgr.c
- */
+   
+          
+   
+                                
+   
+                                     
+   
 #include "postgres.h"
 
 #include "access/clog.h"
@@ -29,7 +29,7 @@
 #include "storage/standby.h"
 #include "utils/relmapper.h"
 
-/* must be kept in sync with RmgrData definition in xlog_internal.h */
+                                                                      
 #define PG_RMGR(symname, name, redo, desc, identify, startup, cleanup, mask) {name, redo, desc, identify, startup, cleanup, mask},
 
 const RmgrData RmgrTable[RM_MAX_ID + 1] = {

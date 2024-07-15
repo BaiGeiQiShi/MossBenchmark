@@ -1,10 +1,10 @@
-/*
- * SQLDA support routines
- *
- * The allocated memory area pointed by an sqlda pointer
- * contains both the metadata and the data, so freeing up
- * is a simple free(sqlda) as expected by the ESQL/C examples.
- */
+   
+                          
+   
+                                                         
+                                                          
+                                                               
+   
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -21,15 +21,15 @@
 #include "sqlda-native.h"
 #include "sqlda-compat.h"
 
-/*
- * Compute the next variable's offset with
- * the current variable's size and alignment.
- *
- *
- * Returns:
- * - the current variable's offset in *current
- * - the next variable's offset in *next
- */
+   
+                                           
+                                              
+   
+   
+            
+                                               
+                                         
+   
 static void
 ecpg_sqlda_align_add_size(long offset, int alignment, int size, long *current, long *next)
 {
@@ -55,16 +55,16 @@ sqlda_compat_empty_size(const PGresult *res)
   int i;
   int sqld = PQnfields(res);
 
-  /* Initial size to store main structure and field structures */
+                                                                 
   offset = sizeof(struct sqlda_compat) + sqld * sizeof(struct sqlvar_compat);
 
-  /* Add space for field names */
+                                 
   for (i = 0; i < sqld; i++)
   {
     offset += strlen(PQfname(res, i)) + 1;
   }
 
-  /* Add padding to the first field value */
+                                            
   ecpg_sqlda_align_add_size(offset, sizeof(int), 0, &offset, NULL);
 
   return offset;
@@ -77,7 +77,7 @@ sqlda_common_total_size(const PGresult *res, int row, enum COMPAT_MODE compat, l
   int i;
   long next_offset;
 
-  /* Add space for the field values */
+                                      
   for (i = 0; i < sqld; i++)
   {
     enum ECPGttype type = sqlda_dynamic_type(PQftype(res, i), compat);
@@ -114,14 +114,14 @@ sqlda_common_total_size(const PGresult *res, int row, enum COMPAT_MODE compat, l
       break;
     case ECPGt_numeric:
 
-      /*
-       * We align the numeric struct to allow it to store a pointer,
-       * while the digits array is aligned to int (which seems like
-       * overkill, but let's keep compatibility here).
-       *
-       * Unfortunately we need to deconstruct the value twice to
-       * find out the digits array's size and then later fill it.
-       */
+         
+                                                                     
+                                                                    
+                                                       
+         
+                                                                 
+                                                                  
+         
       ecpg_sqlda_align_add_size(offset, sizeof(NumericDigit *), sizeof(numeric), &offset, &next_offset);
       if (!PQgetisnull(res, row, i))
       {
@@ -187,10 +187,10 @@ sqlda_native_empty_size(const PGresult *res)
   long offset;
   int sqld = PQnfields(res);
 
-  /* Initial size to store main structure and field structures */
+                                                                 
   offset = sizeof(struct sqlda_struct) + (sqld - 1) * sizeof(struct sqlvar_struct);
 
-  /* Add padding to the first field value */
+                                            
   ecpg_sqlda_align_add_size(offset, sizeof(int), 0, &offset, NULL);
 
   return offset;
@@ -212,11 +212,11 @@ sqlda_native_total_size(const PGresult *res, int row, enum COMPAT_MODE compat)
   return offset;
 }
 
-/*
- * Build "struct sqlda_compat" (metadata only) from PGresult
- * leaving enough space for the field values in
- * the given row number
- */
+   
+                                                             
+                                                
+                        
+   
 struct sqlda_compat *
 ecpg_build_compat_sqlda(int line, PGresult *res, int row, enum COMPAT_MODE compat)
 {
@@ -241,7 +241,7 @@ ecpg_build_compat_sqlda(int line, PGresult *res, int row, enum COMPAT_MODE compa
 
   sqlda->sqld = sqld;
   ecpg_log("ecpg_build_compat_sqlda on line %d sqld = %d\n", line, sqld);
-  sqlda->desc_occ = size; /* cheat here, keep the full allocated size */
+  sqlda->desc_occ = size;                                               
   sqlda->sqlvar = sqlvar;
 
   for (i = 0; i < sqlda->sqld; i++)
@@ -251,11 +251,11 @@ ecpg_build_compat_sqlda(int line, PGresult *res, int row, enum COMPAT_MODE compa
     sqlda->sqlvar[i].sqlname = fname;
     fname += strlen(sqlda->sqlvar[i].sqlname) + 1;
 
-    /*
-     * this is reserved for future use, so we leave it empty for the time
-     * being
-     */
-    /* sqlda->sqlvar[i].sqlformat = (char *) (long) PQfformat(res, i); */
+       
+                                                                          
+             
+       
+                                                                         
     sqlda->sqlvar[i].sqlxid = PQftype(res, i);
     sqlda->sqlvar[i].sqltypelen = PQfsize(res, i);
   }
@@ -263,9 +263,9 @@ ecpg_build_compat_sqlda(int line, PGresult *res, int row, enum COMPAT_MODE compa
   return sqlda;
 }
 
-/*
- * Sets values from PGresult.
- */
+   
+                              
+   
 static int16 value_is_null = -1;
 static int16 value_is_not_null = 0;
 
@@ -281,12 +281,12 @@ ecpg_set_compat_sqlda(int lineno, struct sqlda_compat **_sqlda, const PGresult *
     return;
   }
 
-  /* Offset for the first field value */
+                                        
   offset = sqlda_compat_empty_size(res);
 
-  /*
-   * Set sqlvar[i]->sqldata pointers and convert values to correct format
-   */
+     
+                                                                          
+     
   for (i = 0; i < sqlda->sqld; i++)
   {
     int isnull;
@@ -476,12 +476,12 @@ ecpg_set_native_sqlda(int lineno, struct sqlda_struct **_sqlda, const PGresult *
     return;
   }
 
-  /* Offset for the first field value */
+                                        
   offset = sqlda_native_empty_size(res);
 
-  /*
-   * Set sqlvar[i]->sqldata pointers and convert values to correct format
-   */
+     
+                                                                          
+     
   for (i = 0; i < sqlda->sqld; i++)
   {
     int isnull;

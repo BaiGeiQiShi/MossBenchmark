@@ -1,23 +1,23 @@
-/*-------------------------------------------------------------------------
- *
- * streamutil.c - utility functions for pg_basebackup, pg_receivewal and
- *					pg_recvlogical
- *
- * Author: Magnus Hagander <magnus@hagander.net>
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *		  src/bin/pg_basebackup/streamutil.c
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                                                                         
+                      
+   
+                                                 
+   
+                                                                         
+   
+                  
+                                         
+                                                                            
+   
 
 #include "postgres_fe.h"
 
 #include <sys/time.h>
 #include <unistd.h>
 
-/* local includes */
+                    
 #include "receivelog.h"
 #include "streamutil.h"
 
@@ -37,12 +37,12 @@ uint32 WalSegSz;
 static bool
 RetrieveDataDirCreatePerm(PGconn *conn);
 
-/* SHOW command for replication connection was introduced in version 10 */
+                                                                          
 #define MINIMUM_VERSION_FOR_SHOW_CMD 100000
 
-/*
- * Group access is supported from version 11.
- */
+   
+                                              
+   
 #define MINIMUM_VERSION_FOR_GROUP_ACCESS 110000
 
 const char *progname;
@@ -51,22 +51,22 @@ char *dbhost = NULL;
 char *dbuser = NULL;
 char *dbport = NULL;
 char *dbname = NULL;
-int dbgetpassword = 0; /* 0=auto, -1=never, 1=always */
+int dbgetpassword = 0;                                 
 static bool have_password = false;
 static char password[100];
 PGconn *conn = NULL;
 
-/*
- * Connect to the server. Returns a valid PGconn pointer if connected,
- * or NULL on non-permanent error. On permanent error, the function will
- * call exit(1) directly.
- */
+   
+                                                                       
+                                                                         
+                          
+   
 PGconn *
 GetConnection(void)
 {
   PGconn *tmpconn;
-  int argcount = 7; /* dbname, replication, fallback_app_name,
-                     * host, user, port, password */
+  int argcount = 7;                                            
+                                                    
   int i;
   const char **keywords;
   const char **values;
@@ -76,16 +76,16 @@ GetConnection(void)
   PQconninfoOption *conn_opt;
   char *err_msg = NULL;
 
-  /* pg_recvlogical uses dbname only; others use connection_string only. */
+                                                                           
   Assert(dbname == NULL || connection_string == NULL);
 
-  /*
-   * Merge the connection info inputs given in form of connection string,
-   * options and default values (dbname=replication, replication=true, etc.)
-   * Explicitly discard any dbname value in the connection string;
-   * otherwise, PQconnectdbParams() would interpret that value as being
-   * itself a connection string.
-   */
+     
+                                                                          
+                                                                             
+                                                                   
+                                                                        
+                                 
+     
   i = 0;
   if (connection_string)
   {
@@ -152,12 +152,12 @@ GetConnection(void)
     i++;
   }
 
-  /* If -W was given, force prompt for password, but only the first time */
+                                                                           
   need_password = (dbgetpassword == 1 && !have_password);
 
   do
   {
-    /* Get a new password if appropriate */
+                                           
     if (need_password)
     {
       simple_prompt("Password: ", password, sizeof(password), false);
@@ -165,7 +165,7 @@ GetConnection(void)
       need_password = false;
     }
 
-    /* Use (or reuse, on a subsequent connection) password if we have it */
+                                                                           
     if (have_password)
     {
       keywords[i] = "password";
@@ -179,17 +179,17 @@ GetConnection(void)
 
     tmpconn = PQconnectdbParams(keywords, values, true);
 
-    /*
-     * If there is too little memory even to allocate the PGconn object
-     * and PQconnectdbParams returns NULL, we call exit(1) directly.
-     */
+       
+                                                                        
+                                                                     
+       
     if (!tmpconn)
     {
       pg_log_error("could not connect to server");
       exit(1);
     }
 
-    /* If we need a password and -w wasn't given, loop back and get one */
+                                                                          
     if (PQstatus(tmpconn) == CONNECTION_BAD && PQconnectionNeedsPassword(tmpconn) && dbgetpassword != -1)
     {
       PQfinish(tmpconn);
@@ -210,7 +210,7 @@ GetConnection(void)
     return NULL;
   }
 
-  /* Connection ok! */
+                      
   free(values);
   free(keywords);
   if (conn_opts)
@@ -218,12 +218,12 @@ GetConnection(void)
     PQconninfoFree(conn_opts);
   }
 
-  /*
-   * Set always-secure search path, so malicious users can't get control.
-   * The capacity to run normal SQL queries was added in PostgreSQL 10, so
-   * the search path cannot be changed (by us or attackers) on earlier
-   * versions.
-   */
+     
+                                                                          
+                                                                           
+                                                                       
+               
+     
   if (dbname != NULL && PQserverVersion(tmpconn) >= 100000)
   {
     PGresult *res;
@@ -239,10 +239,10 @@ GetConnection(void)
     PQclear(res);
   }
 
-  /*
-   * Ensure we have the same value of integer_datetimes (now always "on") as
-   * the server we are connecting to.
-   */
+     
+                                                                             
+                                      
+     
   tmpparam = PQparameterStatus(tmpconn, "integer_datetimes");
   if (!tmpparam)
   {
@@ -258,10 +258,10 @@ GetConnection(void)
     exit(1);
   }
 
-  /*
-   * Retrieve the source data directory mode and use it to construct a umask
-   * for creating directories and files.
-   */
+     
+                                                                             
+                                         
+     
   if (!RetrieveDataDirCreatePerm(tmpconn))
   {
     PQfinish(tmpconn);
@@ -271,10 +271,10 @@ GetConnection(void)
   return tmpconn;
 }
 
-/*
- * From version 10, explicitly set wal segment size using SHOW wal_segment_size
- * since ControlFile is not accessible here.
- */
+   
+                                                                                
+                                             
+   
 bool
 RetrieveWalSegSize(PGconn *conn)
 {
@@ -282,10 +282,10 @@ RetrieveWalSegSize(PGconn *conn)
   char xlog_unit[3];
   int xlog_val, multiplier = 1;
 
-  /* check connection existence */
+                                  
   Assert(conn != NULL);
 
-  /* for previous versions set the default xlog seg size */
+                                                           
   if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_SHOW_CMD)
   {
     WalSegSz = DEFAULT_XLOG_SEG_SIZE;
@@ -308,7 +308,7 @@ RetrieveWalSegSize(PGconn *conn)
     return false;
   }
 
-  /* fetch xlog value and unit from the result */
+                                                 
   if (sscanf(PQgetvalue(res, 0, 0), "%d%2s", &xlog_val, xlog_unit) != 2)
   {
     pg_log_error("WAL segment size could not be parsed");
@@ -318,7 +318,7 @@ RetrieveWalSegSize(PGconn *conn)
 
   PQclear(res);
 
-  /* set the multiplier based on unit to convert xlog_val to bytes */
+                                                                     
   if (strcmp(xlog_unit, "MB") == 0)
   {
     multiplier = 1024 * 1024;
@@ -328,7 +328,7 @@ RetrieveWalSegSize(PGconn *conn)
     multiplier = 1024 * 1024 * 1024;
   }
 
-  /* convert and set WalSegSz */
+                                
   WalSegSz = xlog_val * multiplier;
 
   if (!IsValidWalSegSize(WalSegSz))
@@ -340,27 +340,27 @@ RetrieveWalSegSize(PGconn *conn)
   return true;
 }
 
-/*
- * RetrieveDataDirCreatePerm
- *
- * This function is used to determine the privileges on the server's PG data
- * directory and, based on that, set what the permissions will be for
- * directories and files we create.
- *
- * PG11 added support for (optionally) group read/execute rights to be set on
- * the data directory.  Prior to PG11, only the owner was allowed to have rights
- * on the data directory.
- */
+   
+                             
+   
+                                                                             
+                                                                      
+                                    
+   
+                                                                              
+                                                                                 
+                          
+   
 static bool
 RetrieveDataDirCreatePerm(PGconn *conn)
 {
   PGresult *res;
   int data_directory_mode;
 
-  /* check connection existence */
+                                  
   Assert(conn != NULL);
 
-  /* for previous versions leave the default group access */
+                                                            
   if (PQserverVersion(conn) < MINIMUM_VERSION_FOR_GROUP_ACCESS)
   {
     return true;
@@ -396,21 +396,21 @@ RetrieveDataDirCreatePerm(PGconn *conn)
   return true;
 }
 
-/*
- * Run IDENTIFY_SYSTEM through a given connection and give back to caller
- * some result information if requested:
- * - System identifier
- * - Current timeline ID
- * - Start LSN position
- * - Database name (NULL in servers prior to 9.4)
- */
+   
+                                                                          
+                                         
+                       
+                         
+                        
+                                                  
+   
 bool
 RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *startpos, char **db_name)
 {
   PGresult *res;
   uint32 hi, lo;
 
-  /* Check connection existence */
+                                  
   Assert(conn != NULL);
 
   res = PQexec(conn, "IDENTIFY_SYSTEM");
@@ -429,19 +429,19 @@ RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *
     return false;
   }
 
-  /* Get system identifier */
+                             
   if (sysid != NULL)
   {
     *sysid = pg_strdup(PQgetvalue(res, 0, 0));
   }
 
-  /* Get timeline ID to start streaming from */
+                                               
   if (starttli != NULL)
   {
     *starttli = atoi(PQgetvalue(res, 0, 1));
   }
 
-  /* Get LSN start position if necessary */
+                                           
   if (startpos != NULL)
   {
     if (sscanf(PQgetvalue(res, 0, 2), "%X/%X", &hi, &lo) != 2)
@@ -454,7 +454,7 @@ RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *
     *startpos = ((uint64)hi) << 32 | lo;
   }
 
-  /* Get database name, only available in 9.4 and newer versions */
+                                                                   
   if (db_name != NULL)
   {
     *db_name = NULL;
@@ -478,10 +478,10 @@ RunIdentifySystem(PGconn *conn, char **sysid, TimeLineID *starttli, XLogRecPtr *
   return true;
 }
 
-/*
- * Create a replication slot for the given connection. This function
- * returns true in case of success.
- */
+   
+                                                                     
+                                    
+   
 bool
 CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, bool is_temporary, bool is_physical, bool reserve_wal, bool slot_exists_ok)
 {
@@ -493,7 +493,7 @@ CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, b
   Assert((is_physical && plugin == NULL) || (!is_physical && plugin != NULL));
   Assert(slot_name != NULL);
 
-  /* Build query */
+                   
   appendPQExpBuffer(query, "CREATE_REPLICATION_SLOT \"%s\"", slot_name);
   if (is_temporary)
   {
@@ -512,7 +512,7 @@ CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, b
     appendPQExpBuffer(query, " LOGICAL \"%s\"", plugin);
     if (PQserverVersion(conn) >= 100000)
     {
-      /* pg_recvlogical doesn't use an exported snapshot, so suppress */
+                                                                        
       appendPQExpBuffer(query, " NOEXPORT_SNAPSHOT");
     }
   }
@@ -552,10 +552,10 @@ CreateReplicationSlot(PGconn *conn, const char *slot_name, const char *plugin, b
   return true;
 }
 
-/*
- * Drop a replication slot for the given connection. This function
- * returns true in case of success.
- */
+   
+                                                                   
+                                    
+   
 bool
 DropReplicationSlot(PGconn *conn, const char *slot_name)
 {
@@ -566,7 +566,7 @@ DropReplicationSlot(PGconn *conn, const char *slot_name)
 
   query = createPQExpBuffer();
 
-  /* Build query */
+                   
   appendPQExpBuffer(query, "DROP_REPLICATION_SLOT \"%s\"", slot_name);
   res = PQexec(conn, query->data);
   if (PQresultStatus(res) != PGRES_COMMAND_OK)
@@ -592,10 +592,10 @@ DropReplicationSlot(PGconn *conn, const char *slot_name)
   return true;
 }
 
-/*
- * Frontend version of GetCurrentTimestamp(), since we are not linked with
- * backend code.
- */
+   
+                                                                           
+                 
+   
 TimestampTz
 feGetCurrentTimestamp(void)
 {
@@ -610,10 +610,10 @@ feGetCurrentTimestamp(void)
   return result;
 }
 
-/*
- * Frontend version of TimestampDifference(), since we are not linked with
- * backend code.
- */
+   
+                                                                           
+                 
+   
 void
 feTimestampDifference(TimestampTz start_time, TimestampTz stop_time, long *secs, int *microsecs)
 {
@@ -631,10 +631,10 @@ feTimestampDifference(TimestampTz start_time, TimestampTz stop_time, long *secs,
   }
 }
 
-/*
- * Frontend version of TimestampDifferenceExceeds(), since we are not
- * linked with backend code.
- */
+   
+                                                                      
+                             
+   
 bool
 feTimestampDifferenceExceeds(TimestampTz start_time, TimestampTz stop_time, int msec)
 {
@@ -643,9 +643,9 @@ feTimestampDifferenceExceeds(TimestampTz start_time, TimestampTz stop_time, int 
   return (diff >= msec * INT64CONST(1000));
 }
 
-/*
- * Converts an int64 to network byte order.
- */
+   
+                                            
+   
 void
 fe_sendint64(int64 i, char *buf)
 {
@@ -654,9 +654,9 @@ fe_sendint64(int64 i, char *buf)
   memcpy(buf, &n64, sizeof(n64));
 }
 
-/*
- * Converts an int64 from network byte order to native format.
- */
+   
+                                                               
+   
 int64
 fe_recvint64(char *buf)
 {

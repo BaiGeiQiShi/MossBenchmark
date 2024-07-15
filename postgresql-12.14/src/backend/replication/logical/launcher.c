@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- * launcher.c
- *	   PostgreSQL logical replication worker launcher process
- *
- * Copyright (c) 2016-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/replication/logical/launcher.c
- *
- * NOTES
- *	  This module contains the logical replication worker launcher which
- *	  uses the background worker infrastructure to start the logical
- *	  replication workers for every enabled subscription.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+              
+                                                             
+   
+                                                                
+   
+                  
+                                                
+   
+         
+                                                                        
+                                                                    
+                                                         
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -55,7 +55,7 @@
 #include "utils/timeout.h"
 #include "utils/snapmgr.h"
 
-/* max sleep time between cycles (3min) */
+                                          
 #define DEFAULT_NAPTIME_PER_CYCLE 180000L
 
 int max_logical_replication_workers = 4;
@@ -65,10 +65,10 @@ LogicalRepWorker *MyLogicalRepWorker = NULL;
 
 typedef struct LogicalRepCtxStruct
 {
-  /* Supervisor process. */
+                           
   pid_t launcher_pid;
 
-  /* Background workers. */
+                           
   LogicalRepWorker workers[FLEXIBLE_ARRAY_MEMBER];
 } LogicalRepCtxStruct;
 
@@ -82,16 +82,16 @@ typedef struct LogicalRepWorkerId
 
 typedef struct StopWorkersData
 {
-  int nestDepth;                  /* Sub-transaction nest level */
-  List *workers;                  /* List of LogicalRepWorkerId */
-  struct StopWorkersData *parent; /* This need not be an immediate
-                                   * subtransaction parent */
+  int nestDepth;                                                  
+  List *workers;                                                  
+  struct StopWorkersData *parent;                                  
+                                                             
 } StopWorkersData;
 
-/*
- * Stack of StopWorkersData elements. Each stack element contains the workers
- * to be stopped for that subtransaction.
- */
+   
+                                                                              
+                                          
+   
 static StopWorkersData *on_commit_stop_workers = NULL;
 
 static void
@@ -105,19 +105,19 @@ logicalrep_worker_detach(void);
 static void
 logicalrep_worker_cleanup(LogicalRepWorker *worker);
 
-/* Flags set by signal handlers */
+                                  
 static volatile sig_atomic_t got_SIGHUP = false;
 
 static bool on_commit_launcher_wakeup = false;
 
 Datum pg_stat_get_subscription(PG_FUNCTION_ARGS);
 
-/*
- * Load the list of subscriptions.
- *
- * Only the fields interesting for worker start/stop functions are filled for
- * each subscription.
- */
+   
+                                   
+   
+                                                                              
+                      
+   
 static List *
 get_subscription_list(void)
 {
@@ -127,16 +127,16 @@ get_subscription_list(void)
   HeapTuple tup;
   MemoryContext resultcxt;
 
-  /* This is the context that we will allocate our output data in */
+                                                                    
   resultcxt = CurrentMemoryContext;
 
-  /*
-   * Start a transaction so we can access pg_database, and get a snapshot.
-   * We don't have a use for the snapshot itself, but we're interested in
-   * the secondary effect that it sets RecentGlobalXmin.  (This is critical
-   * for anything that reads heap pages, because HOT may decide to prune
-   * them even if the process doesn't attempt to modify any tuples.)
-   */
+     
+                                                                           
+                                                                          
+                                                                            
+                                                                         
+                                                                     
+     
   StartTransactionCommand();
   (void)GetTransactionSnapshot();
 
@@ -149,12 +149,12 @@ get_subscription_list(void)
     Subscription *sub;
     MemoryContext oldcxt;
 
-    /*
-     * Allocate our results in the caller's context, not the
-     * transaction's. We do this inside the loop, and restore the original
-     * context at the end, so that leaky things like heap_getnext() are
-     * not called in a potentially long-lived context.
-     */
+       
+                                                             
+                                                                           
+                                                                        
+                                                       
+       
     oldcxt = MemoryContextSwitchTo(resultcxt);
 
     sub = (Subscription *)palloc0(sizeof(Subscription));
@@ -163,7 +163,7 @@ get_subscription_list(void)
     sub->owner = subform->subowner;
     sub->enabled = subform->subenabled;
     sub->name = pstrdup(NameStr(subform->subname));
-    /* We don't fill fields we are not interested in. */
+                                                        
 
     res = lappend(res, sub);
     MemoryContextSwitchTo(oldcxt);
@@ -177,12 +177,12 @@ get_subscription_list(void)
   return res;
 }
 
-/*
- * Wait for a background worker to start up and attach to the shmem context.
- *
- * This is only needed for cleaning up the shared memory in case the worker
- * fails to attach.
- */
+   
+                                                                             
+   
+                                                                            
+                    
+   
 static void
 WaitForReplicationWorkerAttach(LogicalRepWorker *worker, uint16 generation, BackgroundWorkerHandle *handle)
 {
@@ -197,7 +197,7 @@ WaitForReplicationWorkerAttach(LogicalRepWorker *worker, uint16 generation, Back
 
     LWLockAcquire(LogicalRepWorkerLock, LW_SHARED);
 
-    /* Worker either died or has started; no need to do anything. */
+                                                                    
     if (!worker->in_use || worker->proc)
     {
       LWLockRelease(LogicalRepWorkerLock);
@@ -206,13 +206,13 @@ WaitForReplicationWorkerAttach(LogicalRepWorker *worker, uint16 generation, Back
 
     LWLockRelease(LogicalRepWorkerLock);
 
-    /* Check if worker has died before attaching, and clean up after it. */
+                                                                           
     status = GetBackgroundWorkerPid(handle, &pid);
 
     if (status == BGWH_STOPPED)
     {
       LWLockAcquire(LogicalRepWorkerLock, LW_EXCLUSIVE);
-      /* Ensure that this was indeed the worker we waited for. */
+                                                                 
       if (generation == worker->generation)
       {
         logicalrep_worker_cleanup(worker);
@@ -221,10 +221,10 @@ WaitForReplicationWorkerAttach(LogicalRepWorker *worker, uint16 generation, Back
       return;
     }
 
-    /*
-     * We need timeout because we generally don't get notified via latch
-     * about the worker attach.  But we don't expect to have to wait long.
-     */
+       
+                                                                         
+                                                                           
+       
     rc = WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, 10L, WAIT_EVENT_BGWORKER_STARTUP);
 
     if (rc & WL_LATCH_SET)
@@ -237,10 +237,10 @@ WaitForReplicationWorkerAttach(LogicalRepWorker *worker, uint16 generation, Back
   return;
 }
 
-/*
- * Walks the workers array and searches for one that matches given
- * subscription id and relid.
- */
+   
+                                                                   
+                              
+   
 LogicalRepWorker *
 logicalrep_worker_find(Oid subid, Oid relid, bool only_running)
 {
@@ -249,7 +249,7 @@ logicalrep_worker_find(Oid subid, Oid relid, bool only_running)
 
   Assert(LWLockHeldByMe(LogicalRepWorkerLock));
 
-  /* Search for attached worker for a given subscription id. */
+                                                               
   for (i = 0; i < max_logical_replication_workers; i++)
   {
     LogicalRepWorker *w = &LogicalRepCtx->workers[i];
@@ -264,10 +264,10 @@ logicalrep_worker_find(Oid subid, Oid relid, bool only_running)
   return res;
 }
 
-/*
- * Similar to logicalrep_worker_find(), but returns list of all workers for
- * the subscription, instead just one.
- */
+   
+                                                                            
+                                       
+   
 List *
 logicalrep_workers_find(Oid subid, bool only_running)
 {
@@ -276,7 +276,7 @@ logicalrep_workers_find(Oid subid, bool only_running)
 
   Assert(LWLockHeldByMe(LogicalRepWorkerLock));
 
-  /* Search for attached worker for a given subscription id. */
+                                                               
   for (i = 0; i < max_logical_replication_workers; i++)
   {
     LogicalRepWorker *w = &LogicalRepCtx->workers[i];
@@ -290,9 +290,9 @@ logicalrep_workers_find(Oid subid, bool only_running)
   return res;
 }
 
-/*
- * Start new apply background worker, if possible.
- */
+   
+                                                   
+   
 void
 logicalrep_worker_launch(Oid dbid, Oid subid, const char *subname, Oid userid, Oid relid)
 {
@@ -307,20 +307,20 @@ logicalrep_worker_launch(Oid dbid, Oid subid, const char *subname, Oid userid, O
 
   ereport(DEBUG1, (errmsg("starting logical replication worker for subscription \"%s\"", subname)));
 
-  /* Report this after the initial starting message for consistency. */
+                                                                       
   if (max_replication_slots == 0)
   {
     ereport(ERROR, (errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED), errmsg("cannot start logical replication workers when max_replication_slots = 0")));
   }
 
-  /*
-   * We need to do the modification of the shared memory under lock so that
-   * we have consistent view.
-   */
+     
+                                                                            
+                              
+     
   LWLockAcquire(LogicalRepWorkerLock, LW_EXCLUSIVE);
 
 retry:
-  /* Find unused worker slot. */
+                                
   for (i = 0; i < max_logical_replication_workers; i++)
   {
     LogicalRepWorker *w = &LogicalRepCtx->workers[i];
@@ -337,11 +337,11 @@ retry:
 
   now = GetCurrentTimestamp();
 
-  /*
-   * If we didn't find a free slot, try to do garbage collection.  The
-   * reason we do this is because if some worker failed to start up and its
-   * parent has crashed while waiting, the in_use state was never cleared.
-   */
+     
+                                                                       
+                                                                            
+                                                                           
+     
   if (worker == NULL || nsyncworkers >= max_sync_workers_per_subscription)
   {
     bool did_cleanup = false;
@@ -350,10 +350,10 @@ retry:
     {
       LogicalRepWorker *w = &LogicalRepCtx->workers[i];
 
-      /*
-       * If the worker was marked in use but didn't manage to attach in
-       * time, clean it up.
-       */
+         
+                                                                        
+                            
+         
       if (w->in_use && !w->proc && TimestampDifferenceExceeds(w->launch_time, now, wal_receiver_timeout))
       {
         elog(WARNING, "logical replication worker for subscription %u took too long to start; canceled", w->subid);
@@ -369,21 +369,21 @@ retry:
     }
   }
 
-  /*
-   * We don't allow to invoke more sync workers once we have reached the sync
-   * worker limit per subscription. So, just return silently as we might get
-   * here because of an otherwise harmless race condition.
-   */
+     
+                                                                              
+                                                                             
+                                                           
+     
   if (OidIsValid(relid) && nsyncworkers >= max_sync_workers_per_subscription)
   {
     LWLockRelease(LogicalRepWorkerLock);
     return;
   }
 
-  /*
-   * However if there are no more free worker slots, inform user about it
-   * before exiting.
-   */
+     
+                                                                          
+                     
+     
   if (worker == NULL)
   {
     LWLockRelease(LogicalRepWorkerLock);
@@ -391,7 +391,7 @@ retry:
     return;
   }
 
-  /* Prepare the worker slot. */
+                                
   worker->launch_time = now;
   worker->in_use = true;
   worker->generation++;
@@ -408,12 +408,12 @@ retry:
   worker->reply_lsn = InvalidXLogRecPtr;
   TIMESTAMP_NOBEGIN(worker->reply_time);
 
-  /* Before releasing lock, remember generation for future identification. */
+                                                                             
   generation = worker->generation;
 
   LWLockRelease(LogicalRepWorkerLock);
 
-  /* Register the new dynamic worker. */
+                                        
   memset(&bgw, 0, sizeof(bgw));
   bgw.bgw_flags = BGWORKER_SHMEM_ACCESS | BGWORKER_BACKEND_DATABASE_CONNECTION;
   bgw.bgw_start_time = BgWorkerStart_RecoveryFinished;
@@ -435,7 +435,7 @@ retry:
 
   if (!RegisterDynamicBackgroundWorker(&bgw, &bgw_handle))
   {
-    /* Failed to start worker, so clean up the worker slot. */
+                                                              
     LWLockAcquire(LogicalRepWorkerLock, LW_EXCLUSIVE);
     Assert(generation == worker->generation);
     logicalrep_worker_cleanup(worker);
@@ -445,14 +445,14 @@ retry:
     return;
   }
 
-  /* Now wait until it attaches. */
+                                   
   WaitForReplicationWorkerAttach(worker, generation, bgw_handle);
 }
 
-/*
- * Stop the logical replication worker for subid/relid, if any, and wait until
- * it detaches from the slot.
- */
+   
+                                                                               
+                              
+   
 void
 logicalrep_worker_stop(Oid subid, Oid relid)
 {
@@ -463,30 +463,30 @@ logicalrep_worker_stop(Oid subid, Oid relid)
 
   worker = logicalrep_worker_find(subid, relid, false);
 
-  /* No worker, nothing to do. */
+                                 
   if (!worker)
   {
     LWLockRelease(LogicalRepWorkerLock);
     return;
   }
 
-  /*
-   * Remember which generation was our worker so we can check if what we see
-   * is still the same one.
-   */
+     
+                                                                             
+                            
+     
   generation = worker->generation;
 
-  /*
-   * If we found a worker but it does not have proc set then it is still
-   * starting up; wait for it to finish starting and then kill it.
-   */
+     
+                                                                         
+                                                                   
+     
   while (worker->in_use && !worker->proc)
   {
     int rc;
 
     LWLockRelease(LogicalRepWorkerLock);
 
-    /* Wait a bit --- we don't expect to have to wait long. */
+                                                              
     rc = WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, 10L, WAIT_EVENT_BGWORKER_STARTUP);
 
     if (rc & WL_LATCH_SET)
@@ -495,36 +495,36 @@ logicalrep_worker_stop(Oid subid, Oid relid)
       CHECK_FOR_INTERRUPTS();
     }
 
-    /* Recheck worker status. */
+                                
     LWLockAcquire(LogicalRepWorkerLock, LW_SHARED);
 
-    /*
-     * Check whether the worker slot is no longer used, which would mean
-     * that the worker has exited, or whether the worker generation is
-     * different, meaning that a different worker has taken the slot.
-     */
+       
+                                                                         
+                                                                       
+                                                                      
+       
     if (!worker->in_use || worker->generation != generation)
     {
       LWLockRelease(LogicalRepWorkerLock);
       return;
     }
 
-    /* Worker has assigned proc, so it has started. */
+                                                      
     if (worker->proc)
     {
       break;
     }
   }
 
-  /* Now terminate the worker ... */
+                                    
   kill(worker->proc->pid, SIGTERM);
 
-  /* ... and wait for it to die. */
+                                   
   for (;;)
   {
     int rc;
 
-    /* is it gone? */
+                     
     if (!worker->proc || worker->generation != generation)
     {
       break;
@@ -532,7 +532,7 @@ logicalrep_worker_stop(Oid subid, Oid relid)
 
     LWLockRelease(LogicalRepWorkerLock);
 
-    /* Wait a bit --- we don't expect to have to wait long. */
+                                                              
     rc = WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, 10L, WAIT_EVENT_BGWORKER_SHUTDOWN);
 
     if (rc & WL_LATCH_SET)
@@ -547,9 +547,9 @@ logicalrep_worker_stop(Oid subid, Oid relid)
   LWLockRelease(LogicalRepWorkerLock);
 }
 
-/*
- * Request worker for specified sub/rel to be stopped on commit.
- */
+   
+                                                                 
+   
 void
 logicalrep_worker_stop_at_commit(Oid subid, Oid relid)
 {
@@ -557,16 +557,16 @@ logicalrep_worker_stop_at_commit(Oid subid, Oid relid)
   LogicalRepWorkerId *wid;
   MemoryContext oldctx;
 
-  /* Make sure we store the info in context that survives until commit. */
+                                                                          
   oldctx = MemoryContextSwitchTo(TopTransactionContext);
 
-  /* Check that previous transactions were properly cleaned up. */
+                                                                  
   Assert(on_commit_stop_workers == NULL || nestDepth >= on_commit_stop_workers->nestDepth);
 
-  /*
-   * Push a new stack element if we don't already have one for the current
-   * nestDepth.
-   */
+     
+                                                                           
+                
+     
   if (on_commit_stop_workers == NULL || nestDepth > on_commit_stop_workers->nestDepth)
   {
     StopWorkersData *newdata = palloc(sizeof(StopWorkersData));
@@ -577,10 +577,10 @@ logicalrep_worker_stop_at_commit(Oid subid, Oid relid)
     on_commit_stop_workers = newdata;
   }
 
-  /*
-   * Finally add a new worker into the worker list of the current
-   * subtransaction.
-   */
+     
+                                                                  
+                     
+     
   wid = palloc(sizeof(LogicalRepWorkerId));
   wid->subid = subid;
   wid->relid = relid;
@@ -589,9 +589,9 @@ logicalrep_worker_stop_at_commit(Oid subid, Oid relid)
   MemoryContextSwitchTo(oldctx);
 }
 
-/*
- * Wake up (using latch) any logical replication worker for specified sub/rel.
- */
+   
+                                                                               
+   
 void
 logicalrep_worker_wakeup(Oid subid, Oid relid)
 {
@@ -609,11 +609,11 @@ logicalrep_worker_wakeup(Oid subid, Oid relid)
   LWLockRelease(LogicalRepWorkerLock);
 }
 
-/*
- * Wake up (using latch) the specified logical replication worker.
- *
- * Caller must hold lock, else worker->proc could change under us.
- */
+   
+                                                                   
+   
+                                                                   
+   
 void
 logicalrep_worker_wakeup_ptr(LogicalRepWorker *worker)
 {
@@ -622,13 +622,13 @@ logicalrep_worker_wakeup_ptr(LogicalRepWorker *worker)
   SetLatch(&worker->proc->procLatch);
 }
 
-/*
- * Attach to a slot.
- */
+   
+                     
+   
 void
 logicalrep_worker_attach(int slot)
 {
-  /* Block concurrent access. */
+                                
   LWLockAcquire(LogicalRepWorkerLock, LW_EXCLUSIVE);
 
   Assert(slot >= 0 && slot < max_logical_replication_workers);
@@ -654,13 +654,13 @@ logicalrep_worker_attach(int slot)
   LWLockRelease(LogicalRepWorkerLock);
 }
 
-/*
- * Detach the worker (cleans up the worker info).
- */
+   
+                                                  
+   
 static void
 logicalrep_worker_detach(void)
 {
-  /* Block concurrent access. */
+                                
   LWLockAcquire(LogicalRepWorkerLock, LW_EXCLUSIVE);
 
   logicalrep_worker_cleanup(MyLogicalRepWorker);
@@ -668,9 +668,9 @@ logicalrep_worker_detach(void)
   LWLockRelease(LogicalRepWorkerLock);
 }
 
-/*
- * Clean up worker info.
- */
+   
+                         
+   
 static void
 logicalrep_worker_cleanup(LogicalRepWorker *worker)
 {
@@ -684,26 +684,26 @@ logicalrep_worker_cleanup(LogicalRepWorker *worker)
   worker->relid = InvalidOid;
 }
 
-/*
- * Cleanup function for logical replication launcher.
- *
- * Called on logical replication launcher exit.
- */
+   
+                                                      
+   
+                                                
+   
 static void
 logicalrep_launcher_onexit(int code, Datum arg)
 {
   LogicalRepCtx->launcher_pid = 0;
 }
 
-/*
- * Cleanup function.
- *
- * Called on logical replication worker exit.
- */
+   
+                     
+   
+                                              
+   
 static void
 logicalrep_worker_onexit(int code, Datum arg)
 {
-  /* Disconnect gracefully from the remote side. */
+                                                   
   if (LogRepWorkerWalRcvConn)
   {
     walrcv_disconnect(LogRepWorkerWalRcvConn);
@@ -714,7 +714,7 @@ logicalrep_worker_onexit(int code, Datum arg)
   ApplyLauncherWakeup();
 }
 
-/* SIGHUP: set flag to reload configuration at next convenient time */
+                                                                      
 static void
 logicalrep_launcher_sighup(SIGNAL_ARGS)
 {
@@ -722,16 +722,16 @@ logicalrep_launcher_sighup(SIGNAL_ARGS)
 
   got_SIGHUP = true;
 
-  /* Waken anything waiting on the process latch */
+                                                   
   SetLatch(MyLatch);
 
   errno = save_errno;
 }
 
-/*
- * Count the number of registered (not necessarily running) sync workers
- * for a subscription.
- */
+   
+                                                                         
+                       
+   
 int
 logicalrep_sync_worker_count(Oid subid)
 {
@@ -740,7 +740,7 @@ logicalrep_sync_worker_count(Oid subid)
 
   Assert(LWLockHeldByMe(LogicalRepWorkerLock));
 
-  /* Search for attached worker for a given subscription id. */
+                                                               
   for (i = 0; i < max_logical_replication_workers; i++)
   {
     LogicalRepWorker *w = &LogicalRepCtx->workers[i];
@@ -754,28 +754,28 @@ logicalrep_sync_worker_count(Oid subid)
   return res;
 }
 
-/*
- * ApplyLauncherShmemSize
- *		Compute space needed for replication launcher shared memory
- */
+   
+                          
+                                                                
+   
 Size
 ApplyLauncherShmemSize(void)
 {
   Size size;
 
-  /*
-   * Need the fixed struct and the array of LogicalRepWorker.
-   */
+     
+                                                              
+     
   size = sizeof(LogicalRepCtxStruct);
   size = MAXALIGN(size);
   size = add_size(size, mul_size(max_logical_replication_workers, sizeof(LogicalRepWorker)));
   return size;
 }
 
-/*
- * ApplyLauncherRegister
- *		Register a background worker running the logical replication launcher.
- */
+   
+                         
+                                                                           
+   
 void
 ApplyLauncherRegister(void)
 {
@@ -800,10 +800,10 @@ ApplyLauncherRegister(void)
   RegisterBackgroundWorker(&bgw);
 }
 
-/*
- * ApplyLauncherShmemInit
- *		Allocate and initialize replication launcher shared memory
- */
+   
+                          
+                                                               
+   
 void
 ApplyLauncherShmemInit(void)
 {
@@ -817,7 +817,7 @@ ApplyLauncherShmemInit(void)
 
     memset(LogicalRepCtx, 0, ApplyLauncherShmemSize());
 
-    /* Initialize memory and spin locks for each worker slot. */
+                                                                
     for (slot = 0; slot < max_logical_replication_workers; slot++)
     {
       LogicalRepWorker *worker = &LogicalRepCtx->workers[slot];
@@ -828,19 +828,19 @@ ApplyLauncherShmemInit(void)
   }
 }
 
-/*
- * Check whether current transaction has manipulated logical replication
- * workers.
- */
+   
+                                                                         
+            
+   
 bool
 XactManipulatesLogicalReplicationWorkers(void)
 {
   return (on_commit_stop_workers != NULL);
 }
 
-/*
- * Wakeup the launcher on commit if requested.
- */
+   
+                                               
+   
 void
 AtEOXact_ApplyLauncher(bool isCommit)
 {
@@ -869,26 +869,26 @@ AtEOXact_ApplyLauncher(bool isCommit)
     }
   }
 
-  /*
-   * No need to pfree on_commit_stop_workers.  It was allocated in
-   * transaction memory context, which is going to be cleaned soon.
-   */
+     
+                                                                   
+                                                                    
+     
   on_commit_stop_workers = NULL;
   on_commit_launcher_wakeup = false;
 }
 
-/*
- * On commit, merge the current on_commit_stop_workers list into the
- * immediate parent, if present.
- * On rollback, discard the current on_commit_stop_workers list.
- * Pop out the stack.
- */
+   
+                                                                     
+                                 
+                                                                 
+                      
+   
 void
 AtEOSubXact_ApplyLauncher(bool isCommit, int nestDepth)
 {
   StopWorkersData *parent;
 
-  /* Exit immediately if there's no work to do at this level. */
+                                                                
   if (on_commit_stop_workers == NULL || on_commit_stop_workers->nestDepth < nestDepth)
   {
     return;
@@ -900,12 +900,12 @@ AtEOSubXact_ApplyLauncher(bool isCommit, int nestDepth)
 
   if (isCommit)
   {
-    /*
-     * If the upper stack element is not an immediate parent
-     * subtransaction, just decrement the notional nesting depth without
-     * doing any real work.  Else, we need to merge the current workers
-     * list into the parent.
-     */
+       
+                                                             
+                                                                         
+                                                                        
+                             
+       
     if (!parent || parent->nestDepth < nestDepth - 1)
     {
       on_commit_stop_workers->nestDepth--;
@@ -916,28 +916,28 @@ AtEOSubXact_ApplyLauncher(bool isCommit, int nestDepth)
   }
   else
   {
-    /*
-     * Abandon everything that was done at this nesting level.  Explicitly
-     * free memory to avoid a transaction-lifespan leak.
-     */
+       
+                                                                           
+                                                         
+       
     list_free_deep(on_commit_stop_workers->workers);
   }
 
-  /*
-   * We have taken care of the current subtransaction workers list for both
-   * abort or commit. So we are ready to pop the stack.
-   */
+     
+                                                                            
+                                                        
+     
   pfree(on_commit_stop_workers);
   on_commit_stop_workers = parent;
 }
 
-/*
- * Request wakeup of the launcher on commit of the transaction.
- *
- * This is used to send launcher signal to stop sleeping and process the
- * subscriptions when current transaction commits. Should be used when new
- * tuple was added to the pg_subscription catalog.
- */
+   
+                                                                
+   
+                                                                         
+                                                                           
+                                                   
+   
 void
 ApplyLauncherWakeupAtCommit(void)
 {
@@ -956,9 +956,9 @@ ApplyLauncherWakeup(void)
   }
 }
 
-/*
- * Main loop for the apply launcher process.
- */
+   
+                                             
+   
 void
 ApplyLauncherMain(Datum main_arg)
 {
@@ -971,18 +971,18 @@ ApplyLauncherMain(Datum main_arg)
   Assert(LogicalRepCtx->launcher_pid == 0);
   LogicalRepCtx->launcher_pid = MyProcPid;
 
-  /* Establish signal handlers. */
+                                  
   pqsignal(SIGHUP, logicalrep_launcher_sighup);
   pqsignal(SIGTERM, die);
   BackgroundWorkerUnblockSignals();
 
-  /*
-   * Establish connection to nailed catalogs (we only ever access
-   * pg_subscription).
-   */
+     
+                                                                  
+                       
+     
   BackgroundWorkerInitializeConnection(NULL, NULL, 0);
 
-  /* Enter main loop */
+                       
   for (;;)
   {
     int rc;
@@ -997,17 +997,17 @@ ApplyLauncherMain(Datum main_arg)
 
     now = GetCurrentTimestamp();
 
-    /* Limit the start retry to once a wal_retrieve_retry_interval */
+                                                                     
     if (TimestampDifferenceExceeds(last_start_time, now, wal_retrieve_retry_interval))
     {
-      /* Use temporary context for the database list and worker info. */
+                                                                        
       subctx = AllocSetContextCreate(TopMemoryContext, "Logical Replication Launcher sublist", ALLOCSET_DEFAULT_SIZES);
       oldctx = MemoryContextSwitchTo(subctx);
 
-      /* search for subscriptions to start or stop. */
+                                                      
       sublist = get_subscription_list();
 
-      /* Start the missing workers for enabled subscriptions. */
+                                                                
       foreach (lc, sublist)
       {
         Subscription *sub = (Subscription *)lfirst(lc);
@@ -1031,23 +1031,23 @@ ApplyLauncherMain(Datum main_arg)
         }
       }
 
-      /* Switch back to original memory context. */
+                                                   
       MemoryContextSwitchTo(oldctx);
-      /* Clean the temporary memory. */
+                                       
       MemoryContextDelete(subctx);
     }
     else
     {
-      /*
-       * The wait in previous cycle was interrupted in less than
-       * wal_retrieve_retry_interval since last worker was started, this
-       * usually means crash of the worker, so we should retry in
-       * wal_retrieve_retry_interval again.
-       */
+         
+                                                                 
+                                                                         
+                                                                  
+                                            
+         
       wait_time = wal_retrieve_retry_interval;
     }
 
-    /* Wait for more work. */
+                             
     rc = WaitLatch(MyLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, wait_time, WAIT_EVENT_LOGICAL_LAUNCHER_MAIN);
 
     if (rc & WL_LATCH_SET)
@@ -1063,21 +1063,21 @@ ApplyLauncherMain(Datum main_arg)
     }
   }
 
-  /* Not reachable */
+                     
 }
 
-/*
- * Is current process the logical replication launcher?
- */
+   
+                                                        
+   
 bool
 IsLogicalLauncher(void)
 {
   return LogicalRepCtx->launcher_pid == MyProcPid;
 }
 
-/*
- * Returns state of the subscriptions.
- */
+   
+                                       
+   
 Datum
 pg_stat_get_subscription(PG_FUNCTION_ARGS)
 {
@@ -1090,7 +1090,7 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
   MemoryContext per_query_ctx;
   MemoryContext oldcontext;
 
-  /* check to see if caller supports us returning a tuplestore */
+                                                                 
   if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
   {
     ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("set-valued function called in context that cannot accept a set")));
@@ -1101,7 +1101,7 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
                                                                    "allowed in this context")));
   }
 
-  /* Build a tuple descriptor for our result type */
+                                                    
   if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
   {
     elog(ERROR, "return type must be a row type");
@@ -1117,12 +1117,12 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
 
   MemoryContextSwitchTo(oldcontext);
 
-  /* Make sure we get consistent view of the workers. */
+                                                        
   LWLockAcquire(LogicalRepWorkerLock, LW_SHARED);
 
   for (i = 0; i < max_logical_replication_workers; i++)
   {
-    /* for each row */
+                      
     Datum values[PG_STAT_GET_SUBSCRIPTION_COLS];
     bool nulls[PG_STAT_GET_SUBSCRIPTION_COLS];
     int worker_pid;
@@ -1197,10 +1197,10 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
 
     tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 
-    /*
-     * If only a single subscription was requested, and we found it,
-     * break.
-     */
+       
+                                                                     
+              
+       
     if (OidIsValid(subid))
     {
       break;
@@ -1209,7 +1209,7 @@ pg_stat_get_subscription(PG_FUNCTION_ARGS)
 
   LWLockRelease(LogicalRepWorkerLock);
 
-  /* clean up and return the tuplestore */
+                                          
   tuplestore_donestoring(tupstore);
 
   return (Datum)0;

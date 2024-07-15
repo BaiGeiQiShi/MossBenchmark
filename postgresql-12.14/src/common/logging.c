@@ -1,12 +1,12 @@
-/*-------------------------------------------------------------------------
- * Logging framework for frontend programs
- *
- * Copyright (c) 2018-2019, PostgreSQL Global Development Group
- *
- * src/common/logging.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+                                           
+   
+                                                                
+   
+                        
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <unistd.h>
@@ -38,15 +38,15 @@ static const char *sgr_locus = NULL;
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
-/*
- * Attempt to enable VT100 sequence processing for colorization on Windows.
- * If current environment is not VT100-compatible or if this mode could not
- * be enabled, return false.
- */
+   
+                                                                            
+                                                                            
+                             
+   
 static bool
 enable_vt_processing(void)
 {
-  /* Check stderr */
+                    
   HANDLE hOut = GetStdHandle(STD_ERROR_HANDLE);
   DWORD dwMode = 0;
 
@@ -55,10 +55,10 @@ enable_vt_processing(void)
     return false;
   }
 
-  /*
-   * Look for the current console settings and check if VT100 is already
-   * enabled.
-   */
+     
+                                                                         
+              
+     
   if (!GetConsoleMode(hOut, &dwMode))
   {
     return false;
@@ -75,11 +75,11 @@ enable_vt_processing(void)
   }
   return true;
 }
-#endif /* WIN32 */
+#endif            
 
-/*
- * This should be called before any output happens.
- */
+   
+                                                    
+   
 void
 pg_logging_init(const char *argv0)
 {
@@ -89,17 +89,17 @@ pg_logging_init(const char *argv0)
 
 #ifdef WIN32
 
-  /*
-   * On Windows, check if environment is VT100-compatible if using a
-   * terminal.
-   */
+     
+                                                                     
+               
+     
   if (color_terminal)
   {
     color_terminal = enable_vt_processing();
   }
 #endif
 
-  /* usually the default, but not on Windows */
+                                               
   setvbuf(stderr, NULL, _IONBF, 0);
 
   progname = get_progname(argv0);
@@ -212,10 +212,10 @@ pg_log_generic_v(enum pg_log_level level, const char *pg_restrict fmt, va_list a
   Assert(fmt);
   Assert(fmt[strlen(fmt) - 1] != '\n');
 
-  /*
-   * Flush stdout before output to stderr, to ensure sync even when stdout
-   * is buffered.
-   */
+     
+                                                                           
+                  
+     
   fflush(stdout);
 
   if (log_pre_callback)
@@ -305,18 +305,18 @@ pg_log_generic_v(enum pg_log_level level, const char *pg_restrict fmt, va_list a
 
   buf = pg_malloc_extended(required_len, MCXT_ALLOC_NO_OOM);
 
-  errno = save_errno; /* malloc might change errno */
+  errno = save_errno;                                
 
   if (!buf)
   {
-    /* memory trouble, just print what we can and get out of here */
+                                                                    
     vfprintf(stderr, fmt, ap);
     return;
   }
 
   vsnprintf(buf, required_len, fmt, ap);
 
-  /* strip one newline, for PQerrorMessage() */
+                                               
   if (required_len >= 2 && buf[required_len - 2] == '\n')
   {
     buf[required_len - 2] = '\0';

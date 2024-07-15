@@ -1,8 +1,8 @@
-/*
- * utility functions
- *
- * src/pl/plpython/plpy_util.c
- */
+   
+                     
+   
+                               
+   
 
 #include "postgres.h"
 
@@ -15,18 +15,18 @@
 
 #include "plpy_elog.h"
 
-/*
- * Convert a Python unicode object to a Python string/bytes object in
- * PostgreSQL server encoding.  Reference ownership is passed to the
- * caller.
- */
+   
+                                                                      
+                                                                     
+           
+   
 PyObject *
 PLyUnicode_Bytes(PyObject *unicode)
 {
   PyObject *bytes, *rv;
   char *utf8string, *encoded;
 
-  /* First encode the Python unicode object with UTF-8. */
+                                                          
   bytes = PyUnicode_AsUTF8String(unicode);
   if (bytes == NULL)
   {
@@ -40,14 +40,14 @@ PLyUnicode_Bytes(PyObject *unicode)
     PLy_elog(ERROR, "could not extract bytes from encoded string");
   }
 
-  /*
-   * Then convert to server encoding if necessary.
-   *
-   * PyUnicode_AsEncodedString could be used to encode the object directly
-   * in the server encoding, but Python doesn't support all the encodings
-   * that PostgreSQL does (EUC_TW and MULE_INTERNAL). UTF-8 is used as an
-   * intermediary in PLyUnicode_FromString as well.
-   */
+     
+                                                   
+     
+                                                                           
+                                                                          
+                                                                          
+                                                    
+     
   if (GetDatabaseEncoding() != PG_UTF8)
   {
     PG_TRY();
@@ -66,10 +66,10 @@ PLyUnicode_Bytes(PyObject *unicode)
     encoded = utf8string;
   }
 
-  /* finally, build a bytes object in the server encoding */
+                                                            
   rv = PyBytes_FromStringAndSize(encoded, strlen(encoded));
 
-  /* if pg_any_to_server allocated memory, free it now */
+                                                         
   if (utf8string != encoded)
   {
     pfree(encoded);
@@ -79,17 +79,17 @@ PLyUnicode_Bytes(PyObject *unicode)
   return rv;
 }
 
-/*
- * Convert a Python unicode object to a C string in PostgreSQL server
- * encoding.  No Python object reference is passed out of this
- * function.  The result is palloc'ed.
- *
- * Note that this function is disguised as PyString_AsString() when
- * using Python 3.  That function returns a pointer into the internal
- * memory of the argument, which isn't exactly the interface of this
- * function.  But in either case you get a rather short-lived
- * reference that you ought to better leave alone.
- */
+   
+                                                                      
+                                                               
+                                       
+   
+                                                                    
+                                                                      
+                                                                     
+                                                              
+                                                   
+   
 char *
 PLyUnicode_AsString(PyObject *unicode)
 {
@@ -101,10 +101,10 @@ PLyUnicode_AsString(PyObject *unicode)
 }
 
 #if PY_MAJOR_VERSION >= 3
-/*
- * Convert a C string in the PostgreSQL server encoding to a Python
- * unicode object.  Reference ownership is passed to the caller.
- */
+   
+                                                                    
+                                                                 
+   
 PyObject *
 PLyUnicode_FromStringAndSize(const char *s, Py_ssize_t size)
 {
@@ -132,4 +132,4 @@ PLyUnicode_FromString(const char *s)
   return PLyUnicode_FromStringAndSize(s, strlen(s));
 }
 
-#endif /* PY_MAJOR_VERSION >= 3 */
+#endif                            

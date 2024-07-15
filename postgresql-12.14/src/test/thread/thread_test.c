@@ -1,29 +1,29 @@
-/*-------------------------------------------------------------------------
- *
- * test_thread_funcs.c
- *		libc thread test program
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *	src/test/thread/thread_test.c
- *
- *	This program tests to see if your standard libc functions use
- *	pthread_setspecific()/pthread_getspecific() to be thread-safe.
- *	See src/port/thread.c for more details.
- *
- *	This program first tests to see if each function returns a constant
- *	memory pointer within the same thread, then, assuming it does, tests
- *	to see if the pointers are different for different threads.  If they
- *	are, the function is thread-safe.
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                       
+                             
+   
+                                                                         
+                                                                        
+   
+                                 
+   
+                                                                 
+                                                                  
+                                           
+   
+                                                                       
+                                                                        
+                                                                        
+                                     
+   
+                                                                            
+   
 
 #if !defined(IN_CONFIGURE) && !defined(WIN32)
 #include "postgres.h"
 
-/* we want to know what the native strerror does, not pg_strerror */
+                                                                    
 #undef strerror
 #endif
 
@@ -37,7 +37,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-/* CYGWIN requires this for MAXHOSTNAMELEN */
+                                             
 #ifdef __CYGWIN__
 #include <sys/param.h>
 #endif
@@ -47,7 +47,7 @@
 #include <winsock2.h>
 #endif
 
-/* Test for POSIX.1c 2-arg sigwait() and fail on single-arg version */
+                                                                      
 #include <signal.h>
 int
 sigwait(const sigset_t *set, int *sig);
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 }
 #else
 
-/* This must be down here because this is the code that uses threads. */
+                                                                        
 #include <pthread.h>
 
 #define TEMP_FILENAME_1 "thread_test.1"
@@ -120,7 +120,7 @@ main(int argc, char *argv[])
   }
 
 #ifdef IN_CONFIGURE
-  /* Send stdout to 'config.log' */
+                                   
   close(1);
   dup(5);
 #endif
@@ -142,7 +142,7 @@ main(int argc, char *argv[])
   }
 #endif
 
-  /* Hold lock until we are ready for the child threads to exit. */
+                                                                   
   pthread_mutex_lock(&init_mutex);
 
   rc = pthread_create(&thread1, NULL, (void *(*)(void *))func_call_1, NULL);
@@ -154,22 +154,22 @@ main(int argc, char *argv[])
   rc = pthread_create(&thread2, NULL, (void *(*)(void *))func_call_2, NULL);
   if (rc != 0)
   {
-    /*
-     * strerror() might not be thread-safe, and we already spawned thread
-     * 1 that uses it, so avoid using it.
-     */
+       
+                                                                          
+                                          
+       
     fprintf(stderr, "Failed to create thread 2 **\nexiting\n");
     exit(1);
   }
 
   while (thread1_done == 0 || thread2_done == 0)
   {
-    sched_yield(); /* if this is a portability problem, remove it */
+    sched_yield();                                                  
   }
 
-  /* Test things while we have thread-local storage */
+                                                      
 
-  /* If we got here, we didn't exit() from a thread */
+                                                      
 #ifdef WIN32
   printf("Your GetLastError() is thread-safe.\n");
 #else
@@ -197,14 +197,14 @@ main(int argc, char *argv[])
   }
 #endif
 
-  /* close down threads */
+                          
 
-  pthread_mutex_unlock(&init_mutex); /* let children exit  */
+  pthread_mutex_unlock(&init_mutex);                         
 
-  pthread_join(thread1, NULL); /* clean up children */
+  pthread_join(thread1, NULL);                        
   pthread_join(thread2, NULL);
 
-  /* report results */
+                      
 
 #ifdef HAVE_STRERROR_R
   printf("Your system has strerror_r(); it does not need strerror().\n");
@@ -268,9 +268,9 @@ main(int argc, char *argv[])
   }
 }
 
-/*
- * func_call_1
- */
+   
+               
+   
 static void
 func_call_1(void)
 {
@@ -285,15 +285,15 @@ func_call_1(void)
 
   unlink(TEMP_FILENAME_1);
 
-  /* Set errno = EEXIST */
+                          
 
-  /* create, then try to fail on exclusive create open */
+                                                         
 
-  /*
-   * It would be great to check errno here but if errno is not thread-safe
-   * we might get a value from the other thread and mis-report the cause of
-   * the failure.
-   */
+     
+                                                                           
+                                                                            
+                  
+     
 #ifdef WIN32
   if ((h1 = CreateFile(TEMP_FILENAME_1, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL)) == INVALID_HANDLE_VALUE)
 #else
@@ -314,10 +314,10 @@ func_call_1(void)
     exit(1);
   }
 
-  /*
-   * Wait for other thread to set errno. We can't use thread-specific
-   * locking here because it might affect errno.
-   */
+     
+                                                                      
+                                                 
+     
   errno1_set = 1;
   while (errno2_set == 0)
   {
@@ -348,10 +348,10 @@ func_call_1(void)
 
 #ifndef HAVE_STRERROR_R
 
-  /*
-   * If strerror() uses sys_errlist, the pointer might change for different
-   * errno values, so we don't check to see if it varies within the thread.
-   */
+     
+                                                                            
+                                                                            
+     
   strerror_p1 = strerror(EACCES);
 #endif
 
@@ -361,29 +361,29 @@ func_call_1(void)
   if (passwd_p1 != p)
   {
     printf("Your getpwuid() changes the static memory area between calls\n");
-    passwd_p1 = NULL; /* force thread-safe failure report */
+    passwd_p1 = NULL;                                       
   }
 #endif
 
 #if !defined(HAVE_GETADDRINFO) && !defined(HAVE_GETHOSTBYNAME_R)
-  /* threads do this in opposite order */
+                                         
   hostent_p1 = gethostbyname(myhostname);
   p = gethostbyname("localhost");
   if (hostent_p1 != p)
   {
     printf("Your gethostbyname() changes the static memory area between calls\n");
-    hostent_p1 = NULL; /* force thread-safe failure report */
+    hostent_p1 = NULL;                                       
   }
 #endif
 
   thread1_done = 1;
-  pthread_mutex_lock(&init_mutex); /* wait for parent to test */
+  pthread_mutex_lock(&init_mutex);                              
   pthread_mutex_unlock(&init_mutex);
 }
 
-/*
- * func_call_2
- */
+   
+               
+   
 static void
 func_call_2(void)
 {
@@ -393,19 +393,19 @@ func_call_2(void)
 
   unlink(TEMP_FILENAME_2);
 
-  /* Set errno = ENOENT */
+                          
 
-  /* This will fail, but we can't check errno yet */
+                                                    
   if (unlink(TEMP_FILENAME_2) != -1)
   {
     fprintf(stderr, "Could not generate failure for unlink of %s in current directory **\nexiting\n", TEMP_FILENAME_2);
     exit(1);
   }
 
-  /*
-   * Wait for other thread to set errno. We can't use thread-specific
-   * locking here because it might affect errno.
-   */
+     
+                                                                      
+                                                 
+     
   errno2_set = 1;
   while (errno1_set == 0)
   {
@@ -428,10 +428,10 @@ func_call_2(void)
 
 #ifndef HAVE_STRERROR_R
 
-  /*
-   * If strerror() uses sys_errlist, the pointer might change for different
-   * errno values, so we don't check to see if it varies within the thread.
-   */
+     
+                                                                            
+                                                                            
+     
   strerror_p2 = strerror(EINVAL);
 #endif
 
@@ -441,24 +441,24 @@ func_call_2(void)
   if (passwd_p2 != p)
   {
     printf("Your getpwuid() changes the static memory area between calls\n");
-    passwd_p2 = NULL; /* force thread-safe failure report */
+    passwd_p2 = NULL;                                       
   }
 #endif
 
 #if !defined(HAVE_GETADDRINFO) && !defined(HAVE_GETHOSTBYNAME_R)
-  /* threads do this in opposite order */
+                                         
   hostent_p2 = gethostbyname("localhost");
   p = gethostbyname(myhostname);
   if (hostent_p2 != p)
   {
     printf("Your gethostbyname() changes the static memory area between calls\n");
-    hostent_p2 = NULL; /* force thread-safe failure report */
+    hostent_p2 = NULL;                                       
   }
 #endif
 
   thread2_done = 1;
-  pthread_mutex_lock(&init_mutex); /* wait for parent to test */
+  pthread_mutex_lock(&init_mutex);                              
   pthread_mutex_unlock(&init_mutex);
 }
 
-#endif /* !ENABLE_THREAD_SAFETY && !IN_CONFIGURE */
+#endif                                             

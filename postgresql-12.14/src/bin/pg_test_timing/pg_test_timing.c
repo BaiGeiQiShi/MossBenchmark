@@ -1,8 +1,8 @@
-/*
- *	pg_test_timing.c
- *		tests overhead of timing calls and their monotonicity:	that
- *		they always move forward
- */
+   
+                    
+                                                                
+                             
+   
 
 #include "postgres_fe.h"
 
@@ -19,7 +19,7 @@ static uint64 test_timing(int32);
 static void
 output(uint64 loop_count);
 
-/* record duration in powers of 2 microseconds */
+                                                 
 int64 histogram[32];
 
 int
@@ -44,8 +44,8 @@ handle_args(int argc, char *argv[])
 {
   static struct option long_options[] = {{"duration", required_argument, NULL, 'd'}, {NULL, 0, NULL, 0}};
 
-  int option;       /* Command line option */
-  int optindex = 0; /* used by getopt_long */
+  int option;                                
+  int optindex = 0;                          
 
   if (argc > 1)
   {
@@ -118,7 +118,7 @@ test_timing(int32 duration)
     cur = INSTR_TIME_GET_MICROSEC(temp);
     diff = cur - prev;
 
-    /* Did time go backwards? */
+                                
     if (diff < 0)
     {
       fprintf(stderr, _("Detected clock going backwards in time.\n"));
@@ -126,14 +126,14 @@ test_timing(int32 duration)
       exit(1);
     }
 
-    /* What is the highest bit in the time diff? */
+                                                   
     while (diff)
     {
       diff >>= 1;
       bits++;
     }
 
-    /* Update appropriate duration bucket */
+                                            
     histogram[bits]++;
 
     loop_count++;
@@ -155,13 +155,13 @@ output(uint64 loop_count)
 {
   int64 max_bit = 31, i;
   char *header1 = _("< us");
-  char *header2 = /* xgettext:no-c-format */ _("% of total");
+  char *header2 =                            _("% of total");
   char *header3 = _("count");
   int len1 = strlen(header1);
   int len2 = strlen(header2);
   int len3 = strlen(header3);
 
-  /* find highest bit value */
+                              
   while (max_bit > 0 && histogram[max_bit] == 0)
   {
     max_bit--;
@@ -174,7 +174,7 @@ output(uint64 loop_count)
   {
     char buf[100];
 
-    /* lame hack to work around INT64_FORMAT deficiencies */
+                                                            
     snprintf(buf, sizeof(buf), INT64_FORMAT, histogram[i]);
     printf("%*ld    %*.5f %*s\n", Max(6, len1), 1l << i, Max(10, len2) - 1, (double)histogram[i] * 100 / loop_count, Max(10, len3), buf);
   }

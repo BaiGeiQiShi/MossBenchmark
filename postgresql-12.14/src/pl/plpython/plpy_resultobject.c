@@ -1,8 +1,8 @@
-/*
- * the PLyResult class
- *
- * src/pl/plpython/plpy_resultobject.c
- */
+   
+                       
+   
+                                       
+   
 
 #include "postgres.h"
 
@@ -80,7 +80,7 @@ PLy_result_new(void)
     return NULL;
   }
 
-  /* ob->tuples = NULL; */
+                          
 
   Py_INCREF(Py_None);
   ob->status = Py_None;

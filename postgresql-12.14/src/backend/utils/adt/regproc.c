@@ -1,22 +1,22 @@
-/*-------------------------------------------------------------------------
- *
- * regproc.c
- *	  Functions for the built-in types regproc, regclass, regtype, etc.
- *
- * These types are all binary-compatible with type Oid, and rely on Oid
- * for comparison and so forth.  Their only interesting behavior is in
- * special I/O conversion routines.
- *
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/regproc.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                                       
+   
+                                                                        
+                                                                       
+                                    
+   
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                     
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <ctype.h>
@@ -47,18 +47,18 @@ format_procedure_internal(Oid procedure_oid, bool force_qualify);
 static void
 parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *nargs, Oid *argtypes);
 
-/*****************************************************************************
- *	 USER I/O ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                      
+                                                                               
 
-/*
- * regprocin		- converts "proname" to proc OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_proc entry.
- */
+   
+                                               
+   
+                                                                       
+   
+                                                                      
+                                    
+   
 Datum
 regprocin(PG_FUNCTION_ARGS)
 {
@@ -67,34 +67,34 @@ regprocin(PG_FUNCTION_ARGS)
   List *names;
   FuncCandidateList clist;
 
-  /* '-' ? */
+             
   if (strcmp(pro_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (pro_name_or_oid[0] >= '0' && pro_name_or_oid[0] <= '9' && strspn(pro_name_or_oid, "0123456789") == strlen(pro_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(pro_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* Else it's a name, possibly schema-qualified */
+                                                   
 
-  /*
-   * We should never get here in bootstrap mode, as all references should
-   * have been resolved by genbki.pl.
-   */
+     
+                                                                          
+                                      
+     
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regproc values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: parse the name into components and see if it matches any
-   * pg_proc entries in the current search path.
-   */
+     
+                                                                           
+                                                 
+     
   names = stringToQualifiedNameList(pro_name_or_oid);
   clist = FuncnameGetCandidates(names, -1, NIL, false, false, false);
 
@@ -112,11 +112,11 @@ regprocin(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regproc	- converts "proname" to proc OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                               
+   
+                                             
+   
 Datum
 to_regproc(PG_FUNCTION_ARGS)
 {
@@ -124,10 +124,10 @@ to_regproc(PG_FUNCTION_ARGS)
   List *names;
   FuncCandidateList clist;
 
-  /*
-   * Parse the name into components and see if it matches any pg_proc
-   * entries in the current search path.
-   */
+     
+                                                                      
+                                         
+     
   names = stringToQualifiedNameList(pro_name);
   clist = FuncnameGetCandidates(names, -1, NIL, false, false, true);
 
@@ -139,9 +139,9 @@ to_regproc(PG_FUNCTION_ARGS)
   PG_RETURN_OID(clist->oid);
 }
 
-/*
- * regprocout		- converts proc OID to "pro_name"
- */
+   
+                                                 
+   
 Datum
 regprocout(PG_FUNCTION_ARGS)
 {
@@ -162,11 +162,11 @@ regprocout(PG_FUNCTION_ARGS)
     Form_pg_proc procform = (Form_pg_proc)GETSTRUCT(proctup);
     char *proname = NameStr(procform->proname);
 
-    /*
-     * In bootstrap mode, skip the fancy namespace stuff and just return
-     * the proc name.  (This path is only needed for debugging output
-     * anyway.)
-     */
+       
+                                                                         
+                                                                      
+                
+       
     if (IsBootstrapProcessingMode())
     {
       result = pstrdup(proname);
@@ -176,10 +176,10 @@ regprocout(PG_FUNCTION_ARGS)
       char *nspname;
       FuncCandidateList clist;
 
-      /*
-       * Would this proc be found (uniquely!) by regprocin? If not,
-       * qualify it.
-       */
+         
+                                                                    
+                     
+         
       clist = FuncnameGetCandidates(list_make1(makeString(proname)), -1, NIL, false, false, false);
       if (clist != NULL && clist->next == NULL && clist->oid == proid)
       {
@@ -197,7 +197,7 @@ regprocout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* If OID doesn't match any pg_proc entry, return it numerically */
+                                                                       
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", proid);
   }
@@ -205,34 +205,34 @@ regprocout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regprocrecv			- converts external binary format to regproc
- */
+   
+                                                               
+   
 Datum
 regprocrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regprocsend			- converts regproc to binary format
- */
+   
+                                                      
+   
 Datum
 regprocsend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regprocedurein		- converts "proname(args)" to proc OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_proc entry.
- */
+   
+                                                          
+   
+                                                                       
+   
+                                                                      
+                                    
+   
 Datum
 regprocedurein(PG_FUNCTION_ARGS)
 {
@@ -243,31 +243,31 @@ regprocedurein(PG_FUNCTION_ARGS)
   Oid argtypes[FUNC_MAX_ARGS];
   FuncCandidateList clist;
 
-  /* '-' ? */
+             
   if (strcmp(pro_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (pro_name_or_oid[0] >= '0' && pro_name_or_oid[0] <= '9' && strspn(pro_name_or_oid, "0123456789") == strlen(pro_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(pro_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regprocedure values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Else it's a name and arguments.  Parse the name and arguments, look up
-   * potential matches in the current namespace search list, and scan to see
-   * which one exactly matches the given argument types.  (There will not be
-   * more than one match.)
-   */
+     
+                                                                            
+                                                                             
+                                                                             
+                           
+     
   parseNameAndArgTypes(pro_name_or_oid, false, &names, &nargs, argtypes);
 
   clist = FuncnameGetCandidates(names, nargs, NIL, false, false, false);
@@ -290,11 +290,11 @@ regprocedurein(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regprocedure	- converts "proname(args)" to proc OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                          
+   
+                                             
+   
 Datum
 to_regprocedure(PG_FUNCTION_ARGS)
 {
@@ -304,11 +304,11 @@ to_regprocedure(PG_FUNCTION_ARGS)
   Oid argtypes[FUNC_MAX_ARGS];
   FuncCandidateList clist;
 
-  /*
-   * Parse the name and arguments, look up potential matches in the current
-   * namespace search list, and scan to see which one exactly matches the
-   * given argument types.    (There will not be more than one match.)
-   */
+     
+                                                                            
+                                                                          
+                                                                       
+     
   parseNameAndArgTypes(pro_name, false, &names, &nargs, argtypes);
 
   clist = FuncnameGetCandidates(names, nargs, NIL, false, false, true);
@@ -324,12 +324,12 @@ to_regprocedure(PG_FUNCTION_ARGS)
   PG_RETURN_NULL();
 }
 
-/*
- * format_procedure		- converts proc OID to "pro_name(args)"
- *
- * This exports the useful functionality of regprocedureout for use
- * in other backend modules.  The result is a palloc'd string.
- */
+   
+                                                             
+   
+                                                                    
+                                                               
+   
 char *
 format_procedure(Oid procedure_oid)
 {
@@ -342,13 +342,13 @@ format_procedure_qualified(Oid procedure_oid)
   return format_procedure_internal(procedure_oid, true);
 }
 
-/*
- * Routine to produce regprocedure names; see format_procedure above.
- *
- * force_qualify says whether to schema-qualify; if true, the name is always
- * qualified regardless of search_path visibility.  Otherwise the name is only
- * qualified if the function is not in path.
- */
+   
+                                                                      
+   
+                                                                             
+                                                                               
+                                             
+   
 static char *
 format_procedure_internal(Oid procedure_oid, bool force_qualify)
 {
@@ -366,15 +366,15 @@ format_procedure_internal(Oid procedure_oid, bool force_qualify)
     char *nspname;
     StringInfoData buf;
 
-    /* XXX no support here for bootstrap mode */
+                                                
     Assert(!IsBootstrapProcessingMode());
 
     initStringInfo(&buf);
 
-    /*
-     * Would this proc be found (given the right args) by regprocedurein?
-     * If not, or if caller requests it, we need to qualify it.
-     */
+       
+                                                                          
+                                                                
+       
     if (!force_qualify && FunctionIsVisible(procedure_oid))
     {
       nspname = NULL;
@@ -403,7 +403,7 @@ format_procedure_internal(Oid procedure_oid, bool force_qualify)
   }
   else
   {
-    /* If OID doesn't match any pg_proc entry, return it numerically */
+                                                                       
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", procedure_oid);
   }
@@ -411,12 +411,12 @@ format_procedure_internal(Oid procedure_oid, bool force_qualify)
   return result;
 }
 
-/*
- * Output an objname/objargs representation for the procedure with the
- * given OID.  If it doesn't exist, an error is thrown.
- *
- * This can be used to feed get_object_address.
- */
+   
+                                                                       
+                                                        
+   
+                                                
+   
 void
 format_procedure_parts(Oid procedure_oid, List **objnames, List **objargs)
 {
@@ -447,9 +447,9 @@ format_procedure_parts(Oid procedure_oid, List **objnames, List **objargs)
   ReleaseSysCache(proctup);
 }
 
-/*
- * regprocedureout		- converts proc OID to "pro_name(args)"
- */
+   
+                                                            
+   
 Datum
 regprocedureout(PG_FUNCTION_ARGS)
 {
@@ -468,34 +468,34 @@ regprocedureout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regprocedurerecv			- converts external binary format to regprocedure
- */
+   
+                                                                         
+   
 Datum
 regprocedurerecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regproceduresend			- converts regprocedure to binary format
- */
+   
+                                                                
+   
 Datum
 regproceduresend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regoperin		- converts "oprname" to operator OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '0' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_operator entry.
- */
+   
+                                                   
+   
+                                                                       
+   
+                                                                      
+                                        
+   
 Datum
 regoperin(PG_FUNCTION_ARGS)
 {
@@ -504,31 +504,31 @@ regoperin(PG_FUNCTION_ARGS)
   List *names;
   FuncCandidateList clist;
 
-  /* '0' ? */
+             
   if (strcmp(opr_name_or_oid, "0") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (opr_name_or_oid[0] >= '0' && opr_name_or_oid[0] <= '9' && strspn(opr_name_or_oid, "0123456789") == strlen(opr_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(opr_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* Else it's a name, possibly schema-qualified */
+                                                   
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regoper values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: parse the name into components and see if it matches any
-   * pg_operator entries in the current search path.
-   */
+     
+                                                                           
+                                                     
+     
   names = stringToQualifiedNameList(opr_name_or_oid);
   clist = OpernameGetCandidates(names, '\0', false);
 
@@ -546,11 +546,11 @@ regoperin(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regoper		- converts "oprname" to operator OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                    
+   
+                                             
+   
 Datum
 to_regoper(PG_FUNCTION_ARGS)
 {
@@ -558,10 +558,10 @@ to_regoper(PG_FUNCTION_ARGS)
   List *names;
   FuncCandidateList clist;
 
-  /*
-   * Parse the name into components and see if it matches any pg_operator
-   * entries in the current search path.
-   */
+     
+                                                                          
+                                         
+     
   names = stringToQualifiedNameList(opr_name);
   clist = OpernameGetCandidates(names, '\0', true);
 
@@ -573,9 +573,9 @@ to_regoper(PG_FUNCTION_ARGS)
   PG_RETURN_OID(clist->oid);
 }
 
-/*
- * regoperout		- converts operator OID to "opr_name"
- */
+   
+                                                     
+   
 Datum
 regoperout(PG_FUNCTION_ARGS)
 {
@@ -596,11 +596,11 @@ regoperout(PG_FUNCTION_ARGS)
     Form_pg_operator operform = (Form_pg_operator)GETSTRUCT(opertup);
     char *oprname = NameStr(operform->oprname);
 
-    /*
-     * In bootstrap mode, skip the fancy namespace stuff and just return
-     * the oper name.  (This path is only needed for debugging output
-     * anyway.)
-     */
+       
+                                                                         
+                                                                      
+                
+       
     if (IsBootstrapProcessingMode())
     {
       result = pstrdup(oprname);
@@ -609,10 +609,10 @@ regoperout(PG_FUNCTION_ARGS)
     {
       FuncCandidateList clist;
 
-      /*
-       * Would this oper be found (uniquely!) by regoperin? If not,
-       * qualify it.
-       */
+         
+                                                                    
+                     
+         
       clist = OpernameGetCandidates(list_make1(makeString(oprname)), '\0', false);
       if (clist != NULL && clist->next == NULL && clist->oid == oprid)
       {
@@ -633,9 +633,9 @@ regoperout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /*
-     * If OID doesn't match any pg_operator entry, return it numerically
-     */
+       
+                                                                         
+       
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", oprid);
   }
@@ -643,34 +643,34 @@ regoperout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regoperrecv			- converts external binary format to regoper
- */
+   
+                                                               
+   
 Datum
 regoperrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regopersend			- converts regoper to binary format
- */
+   
+                                                      
+   
 Datum
 regopersend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regoperatorin		- converts "oprname(args)" to operator OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '0' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_operator entry.
- */
+   
+                                                             
+   
+                                                                       
+   
+                                                                      
+                                        
+   
 Datum
 regoperatorin(PG_FUNCTION_ARGS)
 {
@@ -680,31 +680,31 @@ regoperatorin(PG_FUNCTION_ARGS)
   int nargs;
   Oid argtypes[FUNC_MAX_ARGS];
 
-  /* '0' ? */
+             
   if (strcmp(opr_name_or_oid, "0") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (opr_name_or_oid[0] >= '0' && opr_name_or_oid[0] <= '9' && strspn(opr_name_or_oid, "0123456789") == strlen(opr_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(opr_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regoperator values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Else it's a name and arguments.  Parse the name and arguments, look up
-   * potential matches in the current namespace search list, and scan to see
-   * which one exactly matches the given argument types.  (There will not be
-   * more than one match.)
-   */
+     
+                                                                            
+                                                                             
+                                                                             
+                           
+     
   parseNameAndArgTypes(opr_name_or_oid, true, &names, &nargs, argtypes);
   if (nargs == 1)
   {
@@ -725,11 +725,11 @@ regoperatorin(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regoperator	- converts "oprname(args)" to operator OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                             
+   
+                                             
+   
 Datum
 to_regoperator(PG_FUNCTION_ARGS)
 {
@@ -739,11 +739,11 @@ to_regoperator(PG_FUNCTION_ARGS)
   int nargs;
   Oid argtypes[FUNC_MAX_ARGS];
 
-  /*
-   * Parse the name and arguments, look up potential matches in the current
-   * namespace search list, and scan to see which one exactly matches the
-   * given argument types.    (There will not be more than one match.)
-   */
+     
+                                                                            
+                                                                          
+                                                                       
+     
   parseNameAndArgTypes(opr_name_or_oid, true, &names, &nargs, argtypes);
   if (nargs == 1)
   {
@@ -764,12 +764,12 @@ to_regoperator(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * format_operator		- converts operator OID to "opr_name(args)"
- *
- * This exports the useful functionality of regoperatorout for use
- * in other backend modules.  The result is a palloc'd string.
- */
+   
+                                                                
+   
+                                                                   
+                                                               
+   
 static char *
 format_operator_internal(Oid operator_oid, bool force_qualify)
 {
@@ -785,15 +785,15 @@ format_operator_internal(Oid operator_oid, bool force_qualify)
     char *nspname;
     StringInfoData buf;
 
-    /* XXX no support here for bootstrap mode */
+                                                
     Assert(!IsBootstrapProcessingMode());
 
     initStringInfo(&buf);
 
-    /*
-     * Would this oper be found (given the right args) by regoperatorin?
-     * If not, or if caller explicitly requests it, we need to qualify it.
-     */
+       
+                                                                         
+                                                                           
+       
     if (force_qualify || !OperatorIsVisible(operator_oid))
     {
       nspname = get_namespace_name(operform->oprnamespace);
@@ -826,9 +826,9 @@ format_operator_internal(Oid operator_oid, bool force_qualify)
   }
   else
   {
-    /*
-     * If OID doesn't match any pg_operator entry, return it numerically
-     */
+       
+                                                                         
+       
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", operator_oid);
   }
@@ -875,9 +875,9 @@ format_operator_parts(Oid operator_oid, List **objnames, List **objargs)
   ReleaseSysCache(opertup);
 }
 
-/*
- * regoperatorout		- converts operator OID to "opr_name(args)"
- */
+   
+                                                               
+   
 Datum
 regoperatorout(PG_FUNCTION_ARGS)
 {
@@ -896,34 +896,34 @@ regoperatorout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regoperatorrecv			- converts external binary format to regoperator
- */
+   
+                                                                       
+   
 Datum
 regoperatorrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regoperatorsend			- converts regoperator to binary format
- */
+   
+                                                              
+   
 Datum
 regoperatorsend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regclassin		- converts "classname" to class OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_class entry.
- */
+   
+                                                   
+   
+                                                                       
+   
+                                                                      
+                                     
+   
 Datum
 regclassin(PG_FUNCTION_ARGS)
 {
@@ -931,44 +931,44 @@ regclassin(PG_FUNCTION_ARGS)
   Oid result = InvalidOid;
   List *names;
 
-  /* '-' ? */
+             
   if (strcmp(class_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (class_name_or_oid[0] >= '0' && class_name_or_oid[0] <= '9' && strspn(class_name_or_oid, "0123456789") == strlen(class_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(class_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* Else it's a name, possibly schema-qualified */
+                                                   
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regclass values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: parse the name into components and see if it matches any
-   * pg_class entries in the current search path.
-   */
+     
+                                                                           
+                                                  
+     
   names = stringToQualifiedNameList(class_name_or_oid);
 
-  /* We might not even have permissions on this relation; don't lock it. */
+                                                                           
   result = RangeVarGetRelid(makeRangeVarFromNameList(names), NoLock, false);
 
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regclass		- converts "classname" to class OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                    
+   
+                                             
+   
 Datum
 to_regclass(PG_FUNCTION_ARGS)
 {
@@ -976,13 +976,13 @@ to_regclass(PG_FUNCTION_ARGS)
   Oid result;
   List *names;
 
-  /*
-   * Parse the name into components and see if it matches any pg_class
-   * entries in the current search path.
-   */
+     
+                                                                       
+                                         
+     
   names = stringToQualifiedNameList(class_name);
 
-  /* We might not even have permissions on this relation; don't lock it. */
+                                                                           
   result = RangeVarGetRelid(makeRangeVarFromNameList(names), NoLock, true);
 
   if (OidIsValid(result))
@@ -995,9 +995,9 @@ to_regclass(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * regclassout		- converts class OID to "class_name"
- */
+   
+                                                     
+   
 Datum
 regclassout(PG_FUNCTION_ARGS)
 {
@@ -1018,11 +1018,11 @@ regclassout(PG_FUNCTION_ARGS)
     Form_pg_class classform = (Form_pg_class)GETSTRUCT(classtup);
     char *classname = NameStr(classform->relname);
 
-    /*
-     * In bootstrap mode, skip the fancy namespace stuff and just return
-     * the class name.  (This path is only needed for debugging output
-     * anyway.)
-     */
+       
+                                                                         
+                                                                       
+                
+       
     if (IsBootstrapProcessingMode())
     {
       result = pstrdup(classname);
@@ -1031,9 +1031,9 @@ regclassout(PG_FUNCTION_ARGS)
     {
       char *nspname;
 
-      /*
-       * Would this class be found by regclassin? If not, qualify it.
-       */
+         
+                                                                      
+         
       if (RelationIsVisible(classid))
       {
         nspname = NULL;
@@ -1050,7 +1050,7 @@ regclassout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* If OID doesn't match any pg_class entry, return it numerically */
+                                                                        
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", classid);
   }
@@ -1058,40 +1058,40 @@ regclassout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regclassrecv			- converts external binary format to regclass
- */
+   
+                                                                 
+   
 Datum
 regclassrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regclasssend			- converts regclass to binary format
- */
+   
+                                                        
+   
 Datum
 regclasssend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regtypein		- converts "typename" to type OID
- *
- * The type name can be specified using the full type syntax recognized by
- * the parser; for example, DOUBLE PRECISION and INTEGER[] will work and be
- * translated to the correct type names.  (We ignore any typmod info
- * generated by the parser, however.)
- *
- * We also accept a numeric OID, for symmetry with the output routine,
- * and for possible use in bootstrap mode.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_type entry.
- */
+   
+                                                
+   
+                                                                           
+                                                                            
+                                                                     
+                                      
+   
+                                                                       
+                                           
+   
+                                                                      
+                                    
+   
 Datum
 regtypein(PG_FUNCTION_ARGS)
 {
@@ -1099,41 +1099,41 @@ regtypein(PG_FUNCTION_ARGS)
   Oid result = InvalidOid;
   int32 typmod;
 
-  /* '-' ? */
+             
   if (strcmp(typ_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (typ_name_or_oid[0] >= '0' && typ_name_or_oid[0] <= '9' && strspn(typ_name_or_oid, "0123456789") == strlen(typ_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(typ_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* Else it's a type name, possibly schema-qualified or decorated */
+                                                                     
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regtype values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: invoke the full parser to deal with special cases such as
-   * array syntax.
-   */
+     
+                                                                            
+                   
+     
   parseTypeString(typ_name_or_oid, &result, &typmod, false);
 
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regtype		- converts "typename" to type OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                 
+   
+                                             
+   
 Datum
 to_regtype(PG_FUNCTION_ARGS)
 {
@@ -1141,9 +1141,9 @@ to_regtype(PG_FUNCTION_ARGS)
   Oid result;
   int32 typmod;
 
-  /*
-   * Invoke the full parser to deal with special cases such as array syntax.
-   */
+     
+                                                                             
+     
   parseTypeString(typ_name, &result, &typmod, true);
 
   if (OidIsValid(result))
@@ -1156,9 +1156,9 @@ to_regtype(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * regtypeout		- converts type OID to "typ_name"
- */
+   
+                                                 
+   
 Datum
 regtypeout(PG_FUNCTION_ARGS)
 {
@@ -1178,11 +1178,11 @@ regtypeout(PG_FUNCTION_ARGS)
   {
     Form_pg_type typeform = (Form_pg_type)GETSTRUCT(typetup);
 
-    /*
-     * In bootstrap mode, skip the fancy namespace stuff and just return
-     * the type name.  (This path is only needed for debugging output
-     * anyway.)
-     */
+       
+                                                                         
+                                                                      
+                
+       
     if (IsBootstrapProcessingMode())
     {
       char *typname = NameStr(typeform->typname);
@@ -1198,7 +1198,7 @@ regtypeout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* If OID doesn't match any pg_type entry, return it numerically */
+                                                                       
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", typid);
   }
@@ -1206,34 +1206,34 @@ regtypeout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regtyperecv			- converts external binary format to regtype
- */
+   
+                                                               
+   
 Datum
 regtyperecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regtypesend			- converts regtype to binary format
- */
+   
+                                                      
+   
 Datum
 regtypesend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regconfigin		- converts "tsconfigname" to tsconfig OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_ts_config entry.
- */
+   
+                                                          
+   
+                                                                       
+   
+                                                                      
+                                         
+   
 Datum
 regconfigin(PG_FUNCTION_ARGS)
 {
@@ -1241,29 +1241,29 @@ regconfigin(PG_FUNCTION_ARGS)
   Oid result;
   List *names;
 
-  /* '-' ? */
+             
   if (strcmp(cfg_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (cfg_name_or_oid[0] >= '0' && cfg_name_or_oid[0] <= '9' && strspn(cfg_name_or_oid, "0123456789") == strlen(cfg_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(cfg_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regconfig values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: parse the name into components and see if it matches any
-   * pg_ts_config entries in the current search path.
-   */
+     
+                                                                           
+                                                      
+     
   names = stringToQualifiedNameList(cfg_name_or_oid);
 
   result = get_ts_config_oid(names, false);
@@ -1271,9 +1271,9 @@ regconfigin(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * regconfigout		- converts tsconfig OID to "tsconfigname"
- */
+   
+                                                           
+   
 Datum
 regconfigout(PG_FUNCTION_ARGS)
 {
@@ -1295,9 +1295,9 @@ regconfigout(PG_FUNCTION_ARGS)
     char *cfgname = NameStr(cfgform->cfgname);
     char *nspname;
 
-    /*
-     * Would this config be found by regconfigin? If not, qualify it.
-     */
+       
+                                                                      
+       
     if (TSConfigIsVisible(cfgid))
     {
       nspname = NULL;
@@ -1313,7 +1313,7 @@ regconfigout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* If OID doesn't match any pg_ts_config row, return it numerically */
+                                                                          
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", cfgid);
   }
@@ -1321,34 +1321,34 @@ regconfigout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regconfigrecv			- converts external binary format to regconfig
- */
+   
+                                                                   
+   
 Datum
 regconfigrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regconfigsend			- converts regconfig to binary format
- */
+   
+                                                          
+   
 Datum
 regconfigsend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regdictionaryin		- converts "tsdictionaryname" to tsdictionary OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_ts_dict entry.
- */
+   
+                                                                      
+   
+                                                                       
+   
+                                                                      
+                                       
+   
 Datum
 regdictionaryin(PG_FUNCTION_ARGS)
 {
@@ -1356,29 +1356,29 @@ regdictionaryin(PG_FUNCTION_ARGS)
   Oid result;
   List *names;
 
-  /* '-' ? */
+             
   if (strcmp(dict_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (dict_name_or_oid[0] >= '0' && dict_name_or_oid[0] <= '9' && strspn(dict_name_or_oid, "0123456789") == strlen(dict_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(dict_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regdictionary values must be OIDs in bootstrap mode");
   }
 
-  /*
-   * Normal case: parse the name into components and see if it matches any
-   * pg_ts_dict entries in the current search path.
-   */
+     
+                                                                           
+                                                    
+     
   names = stringToQualifiedNameList(dict_name_or_oid);
 
   result = get_ts_dict_oid(names, false);
@@ -1386,9 +1386,9 @@ regdictionaryin(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * regdictionaryout		- converts tsdictionary OID to "tsdictionaryname"
- */
+   
+                                                                       
+   
 Datum
 regdictionaryout(PG_FUNCTION_ARGS)
 {
@@ -1410,10 +1410,10 @@ regdictionaryout(PG_FUNCTION_ARGS)
     char *dictname = NameStr(dictform->dictname);
     char *nspname;
 
-    /*
-     * Would this dictionary be found by regdictionaryin? If not, qualify
-     * it.
-     */
+       
+                                                                          
+           
+       
     if (TSDictionaryIsVisible(dictid))
     {
       nspname = NULL;
@@ -1429,7 +1429,7 @@ regdictionaryout(PG_FUNCTION_ARGS)
   }
   else
   {
-    /* If OID doesn't match any pg_ts_dict row, return it numerically */
+                                                                        
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", dictid);
   }
@@ -1437,34 +1437,34 @@ regdictionaryout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regdictionaryrecv	- converts external binary format to regdictionary
- */
+   
+                                                                         
+   
 Datum
 regdictionaryrecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regdictionarysend	- converts regdictionary to binary format
- */
+   
+                                                                
+   
 Datum
 regdictionarysend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regrolein	- converts "rolename" to role OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_authid entry.
- */
+   
+                                               
+   
+                                                                       
+   
+                                                                      
+                                      
+   
 Datum
 regrolein(PG_FUNCTION_ARGS)
 {
@@ -1472,26 +1472,26 @@ regrolein(PG_FUNCTION_ARGS)
   Oid result;
   List *names;
 
-  /* '-' ? */
+             
   if (strcmp(role_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (role_name_or_oid[0] >= '0' && role_name_or_oid[0] <= '9' && strspn(role_name_or_oid, "0123456789") == strlen(role_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(role_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regrole values must be OIDs in bootstrap mode");
   }
 
-  /* Normal case: see if the name matches any pg_authid entry. */
+                                                                 
   names = stringToQualifiedNameList(role_name_or_oid);
 
   if (list_length(names) != 1)
@@ -1504,11 +1504,11 @@ regrolein(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regrole		- converts "rolename" to role OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                 
+   
+                                             
+   
 Datum
 to_regrole(PG_FUNCTION_ARGS)
 {
@@ -1535,9 +1535,9 @@ to_regrole(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * regroleout		- converts role OID to "role_name"
- */
+   
+                                                  
+   
 Datum
 regroleout(PG_FUNCTION_ARGS)
 {
@@ -1554,12 +1554,12 @@ regroleout(PG_FUNCTION_ARGS)
 
   if (result)
   {
-    /* pstrdup is not really necessary, but it avoids a compiler warning */
+                                                                           
     result = pstrdup(quote_identifier(result));
   }
   else
   {
-    /* If OID doesn't match any role, return it numerically */
+                                                              
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", roleoid);
   }
@@ -1567,34 +1567,34 @@ regroleout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regrolerecv - converts external binary format to regrole
- */
+   
+                                                             
+   
 Datum
 regrolerecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regrolesend - converts regrole to binary format
- */
+   
+                                                    
+   
 Datum
 regrolesend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * regnamespacein		- converts "nspname" to namespace OID
- *
- * We also accept a numeric OID, for symmetry with the output routine.
- *
- * '-' signifies unknown (OID 0).  In all other cases, the input must
- * match an existing pg_namespace entry.
- */
+   
+                                                         
+   
+                                                                       
+   
+                                                                      
+                                         
+   
 Datum
 regnamespacein(PG_FUNCTION_ARGS)
 {
@@ -1602,26 +1602,26 @@ regnamespacein(PG_FUNCTION_ARGS)
   Oid result;
   List *names;
 
-  /* '-' ? */
+             
   if (strcmp(nsp_name_or_oid, "-") == 0)
   {
     PG_RETURN_OID(InvalidOid);
   }
 
-  /* Numeric OID? */
+                    
   if (nsp_name_or_oid[0] >= '0' && nsp_name_or_oid[0] <= '9' && strspn(nsp_name_or_oid, "0123456789") == strlen(nsp_name_or_oid))
   {
     result = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(nsp_name_or_oid)));
     PG_RETURN_OID(result);
   }
 
-  /* The rest of this wouldn't work in bootstrap mode */
+                                                        
   if (IsBootstrapProcessingMode())
   {
     elog(ERROR, "regnamespace values must be OIDs in bootstrap mode");
   }
 
-  /* Normal case: see if the name matches any pg_namespace entry. */
+                                                                    
   names = stringToQualifiedNameList(nsp_name_or_oid);
 
   if (list_length(names) != 1)
@@ -1634,11 +1634,11 @@ regnamespacein(PG_FUNCTION_ARGS)
   PG_RETURN_OID(result);
 }
 
-/*
- * to_regnamespace		- converts "nspname" to namespace OID
- *
- * If the name is not found, we return NULL.
- */
+   
+                                                          
+   
+                                             
+   
 Datum
 to_regnamespace(PG_FUNCTION_ARGS)
 {
@@ -1665,9 +1665,9 @@ to_regnamespace(PG_FUNCTION_ARGS)
   }
 }
 
-/*
- * regnamespaceout		- converts namespace OID to "nsp_name"
- */
+   
+                                                           
+   
 Datum
 regnamespaceout(PG_FUNCTION_ARGS)
 {
@@ -1684,12 +1684,12 @@ regnamespaceout(PG_FUNCTION_ARGS)
 
   if (result)
   {
-    /* pstrdup is not really necessary, but it avoids a compiler warning */
+                                                                           
     result = pstrdup(quote_identifier(result));
   }
   else
   {
-    /* If OID doesn't match any namespace, return it numerically */
+                                                                   
     result = (char *)palloc(NAMEDATALEN);
     snprintf(result, NAMEDATALEN, "%u", nspid);
   }
@@ -1697,33 +1697,33 @@ regnamespaceout(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*
- *		regnamespacerecv	- converts external binary format to regnamespace
- */
+   
+                                                                       
+   
 Datum
 regnamespacerecv(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidrecv, so share code */
+                                                  
   return oidrecv(fcinfo);
 }
 
-/*
- *		regnamespacesend		- converts regnamespace to binary format
- */
+   
+                                                               
+   
 Datum
 regnamespacesend(PG_FUNCTION_ARGS)
 {
-  /* Exactly the same as oidsend, so share code */
+                                                  
   return oidsend(fcinfo);
 }
 
-/*
- * text_regclass: convert text to regclass
- *
- * This could be replaced by CoerceViaIO, except that we need to treat
- * text-to-regclass as an implicit cast to support legacy forms of nextval()
- * and related functions.
- */
+   
+                                           
+   
+                                                                       
+                                                                             
+                          
+   
 Datum
 text_regclass(PG_FUNCTION_ARGS)
 {
@@ -1733,15 +1733,15 @@ text_regclass(PG_FUNCTION_ARGS)
 
   rv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 
-  /* We might not even have permissions on this relation; don't lock it. */
+                                                                           
   result = RangeVarGetRelid(rv, NoLock, false);
 
   PG_RETURN_OID(result);
 }
 
-/*
- * Given a C string, parse it into a qualified-name list.
- */
+   
+                                                          
+   
 List *
 stringToQualifiedNameList(const char *string)
 {
@@ -1750,7 +1750,7 @@ stringToQualifiedNameList(const char *string)
   List *namelist;
   ListCell *l;
 
-  /* We need a modifiable copy of the input string. */
+                                                      
   rawname = pstrdup(string);
 
   if (!SplitIdentifierString(rawname, '.', &namelist))
@@ -1776,20 +1776,20 @@ stringToQualifiedNameList(const char *string)
   return result;
 }
 
-/*****************************************************************************
- *	 SUPPORT ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                     
+                                                                               
 
-/*
- * Given a C string, parse it into a qualified function or operator name
- * followed by a parenthesized list of type names.  Reduce the
- * type names to an array of OIDs (returned into *nargs and *argtypes;
- * the argtypes array should be of size FUNC_MAX_ARGS).  The function or
- * operator name is returned to *names as a List of Strings.
- *
- * If allowNone is true, accept "NONE" and return it as InvalidOid (this is
- * for unary operators).
- */
+   
+                                                                         
+                                                               
+                                                                       
+                                                                         
+                                                             
+   
+                                                                            
+                         
+   
 static void
 parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *nargs, Oid *argtypes)
 {
@@ -1803,10 +1803,10 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
   Oid typeid;
   int32 typmod;
 
-  /* We need a modifiable copy of the input string. */
+                                                      
   rawname = pstrdup(string);
 
-  /* Scan to find the expected left paren; mustn't be quoted */
+                                                               
   in_quote = false;
   for (ptr = rawname; *ptr; ptr++)
   {
@@ -1824,11 +1824,11 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
     ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected a left parenthesis")));
   }
 
-  /* Separate the name and parse it into a list */
+                                                  
   *ptr++ = '\0';
   *names = stringToQualifiedNameList(rawname);
 
-  /* Check for the trailing right parenthesis and remove it */
+                                                              
   ptr2 = ptr + strlen(ptr);
   while (--ptr2 > ptr)
   {
@@ -1844,20 +1844,20 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
 
   *ptr2 = '\0';
 
-  /* Separate the remaining string into comma-separated type names */
+                                                                     
   *nargs = 0;
   had_comma = false;
 
   for (;;)
   {
-    /* allow leading whitespace */
+                                  
     while (scanner_isspace(*ptr))
     {
       ptr++;
     }
     if (*ptr == '\0')
     {
-      /* End of string.  Okay unless we had a comma before. */
+                                                              
       if (had_comma)
       {
         ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION), errmsg("expected a type name")));
@@ -1865,8 +1865,8 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
       break;
     }
     typename = ptr;
-    /* Find end of type name --- end of string or comma */
-    /* ... but not a quoted or parenthesized comma */
+                                                          
+                                                     
     in_quote = false;
     paren_count = 0;
     for (; *ptr; ptr++)
@@ -1910,7 +1910,7 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
       had_comma = false;
       Assert(*ptr == '\0');
     }
-    /* Lop off trailing whitespace */
+                                     
     while (--ptr2 >= typename)
     {
       if (!scanner_isspace(*ptr2))
@@ -1922,13 +1922,13 @@ parseNameAndArgTypes(const char *string, bool allowNone, List **names, int *narg
 
     if (allowNone && pg_strcasecmp(typename, "none") == 0)
     {
-      /* Special case for NONE */
+                                 
       typeid = InvalidOid;
       typmod = -1;
     }
     else
     {
-      /* Use full parser to resolve the type name */
+                                                    
       parseTypeString(typename, &typeid, &typmod, false);
     }
     if (*nargs >= FUNC_MAX_ARGS)

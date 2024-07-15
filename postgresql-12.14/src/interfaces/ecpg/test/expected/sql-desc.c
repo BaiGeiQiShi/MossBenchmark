@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "desc.pgc"
@@ -12,13 +12,13 @@
 
 #line 1 "desc.pgc"
 
-/* exec sql whenever sqlerror  sqlprint ; */
+                                            
 #line 2 "desc.pgc"
 
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 8 "desc.pgc"
   char *stmt1 = "INSERT INTO test1 VALUES ($1, $2)";
@@ -46,7 +46,7 @@ main(void)
 
 #line 17 "desc.pgc"
   char desc1[8] = "outdesc";
-/* exec sql end declare section */
+                                  
 #line 18 "desc.pgc"
 
   ECPGdebug(1, stderr);
@@ -300,7 +300,7 @@ main(void)
 
   printf("output = %s\n", val2output);
 
-  /* declare c1 cursor for $1 */
+                                
 #line 58 "desc.pgc"
 
   {
@@ -362,7 +362,7 @@ main(void)
   }
 #line 68 "desc.pgc"
 
-  /* declare c2 cursor for $1 */
+                                
 #line 70 "desc.pgc"
 
   {

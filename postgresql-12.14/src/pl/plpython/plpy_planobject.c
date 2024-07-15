@@ -1,8 +1,8 @@
-/*
- * the PLyPlan class
- *
- * src/pl/plpython/plpy_planobject.c
- */
+   
+                     
+   
+                                     
+   
 
 #include "postgres.h"
 
@@ -124,7 +124,7 @@ PLy_plan_status(PyObject *self, PyObject *args)
   {
     Py_INCREF(Py_True);
     return Py_True;
-    /* return PyInt_FromLong(self->status); */
+                                              
   }
   return NULL;
 }

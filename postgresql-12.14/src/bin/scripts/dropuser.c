@@ -1,14 +1,14 @@
-/*-------------------------------------------------------------------------
- *
- * dropuser
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * src/bin/scripts/dropuser.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+   
+                                                                         
+                                                                        
+   
+                              
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 #include "common.h"
@@ -76,7 +76,7 @@ main(int argc, char *argv[])
       interactive = true;
       break;
     case 0:
-      /* this covers the long options */
+                                        
       break;
     default:
       fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -121,7 +121,7 @@ main(int argc, char *argv[])
     }
   }
 
-  cparams.dbname = NULL; /* this program lacks any dbname option... */
+  cparams.dbname = NULL;                                              
   cparams.pghost = host;
   cparams.pgport = port;
   cparams.pguser = username;

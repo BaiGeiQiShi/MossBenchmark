@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "comment.pgc"
@@ -13,12 +13,12 @@
 
 #line 3 "comment.pgc"
 
-/* just a test comment */ int i;
-/* just a test comment int j*/;
+                          int i;
+                              ;
 
-/****************************************************************************/
-/* Test comment                                                             */
-/*--------------------------------------------------------------------------*/
+                                                                              
+                                                                              
+                                                                              
 
 int
 main(void)

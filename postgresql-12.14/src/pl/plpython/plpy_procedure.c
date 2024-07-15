@@ -1,8 +1,8 @@
-/*
- * Python procedure manipulation for plpython
- *
- * src/pl/plpython/plpy_procedure.c
- */
+   
+                                              
+   
+                                    
+   
 
 #include "postgres.h"
 
@@ -45,11 +45,11 @@ init_procedure_caches(void)
   PLy_procedure_cache = hash_create("PL/Python procedures", 32, &hash_ctl, HASH_ELEM | HASH_BLOBS);
 }
 
-/*
- * PLy_procedure_name: get the name of the specified procedure.
- *
- * NB: this returns the SQL name, not the internal Python procedure name
- */
+   
+                                                                
+   
+                                                                         
+   
 char *
 PLy_procedure_name(PLyProcedure *proc)
 {
@@ -60,18 +60,18 @@ PLy_procedure_name(PLyProcedure *proc)
   return proc->proname;
 }
 
-/*
- * PLy_procedure_get: returns a cached PLyProcedure, or creates, stores and
- * returns a new PLyProcedure.
- *
- * fn_oid is the OID of the function requested
- * fn_rel is InvalidOid or the relation this function triggers on
- * is_trigger denotes whether the function is a trigger function
- *
- * The reason that both fn_rel and is_trigger need to be passed is that when
- * trigger functions get validated we don't know which relation(s) they'll
- * be used with, so no sensible fn_rel can be passed.
- */
+   
+                                                                            
+                               
+   
+                                               
+                                                                  
+                                                                 
+   
+                                                                             
+                                                                           
+                                                      
+   
 PLyProcedure *
 PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
 {
@@ -88,11 +88,11 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
     elog(ERROR, "cache lookup failed for function %u", fn_oid);
   }
 
-  /*
-   * Look for the function in the cache, unless we don't have the necessary
-   * information (e.g. during validation). In that case we just don't cache
-   * anything.
-   */
+     
+                                                                            
+                                                                            
+               
+     
   if (use_cache)
   {
     key.fn_oid = fn_oid;
@@ -105,7 +105,7 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
   {
     if (!found)
     {
-      /* Haven't found it, create a new procedure */
+                                                    
       proc = PLy_procedure_create(procTup, fn_oid, is_trigger);
       if (use_cache)
       {
@@ -114,7 +114,7 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
     }
     else if (!PLy_procedure_valid(proc, procTup))
     {
-      /* Found it, but it's invalid, free and reuse the cache entry */
+                                                                      
       entry->proc = NULL;
       if (proc)
       {
@@ -123,11 +123,11 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
       proc = PLy_procedure_create(procTup, fn_oid, is_trigger);
       entry->proc = proc;
     }
-    /* Found it and it's valid, it's fine to use it */
+                                                      
   }
   PG_CATCH();
   {
-    /* Do not leave an uninitialized entry in the cache */
+                                                          
     if (use_cache)
     {
       hash_search(PLy_procedure_cache, &key, HASH_REMOVE, NULL);
@@ -141,9 +141,9 @@ PLy_procedure_get(Oid fn_oid, Oid fn_rel, bool is_trigger)
   return proc;
 }
 
-/*
- * Create a new PLyProcedure structure
- */
+   
+                                       
+   
 static PLyProcedure *
 PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 {
@@ -162,7 +162,7 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
     elog(ERROR, "procedure name would overrun buffer");
   }
 
-  /* Replace any not-legal-in-Python-names characters with '_' */
+                                                                 
   for (ptr = procName; *ptr; ptr++)
   {
     if (!((*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= 'a' && *ptr <= 'z') || (*ptr >= '0' && *ptr <= '9')))
@@ -171,7 +171,7 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
     }
   }
 
-  /* Create long-lived context that all procedure info will live in */
+                                                                      
   cxt = AllocSetContextCreate(TopMemoryContext, "PL/Python function", ALLOCSET_DEFAULT_SIZES);
 
   oldcxt = MemoryContextSwitchTo(cxt);
@@ -208,10 +208,10 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
     proc->calldepth = 0;
     proc->argstack = NULL;
 
-    /*
-     * get information required for output conversion of the return value,
-     * but only if this isn't a trigger.
-     */
+       
+                                                                           
+                                         
+       
     if (!is_trigger)
     {
       Oid rettype = procStruct->prorettype;
@@ -225,11 +225,11 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
       }
       rvTypeStruct = (Form_pg_type)GETSTRUCT(rvTypeTup);
 
-      /* Disallow pseudotype result, except for void or record */
+                                                                 
       if (rvTypeStruct->typtype == TYPTYPE_PSEUDO)
       {
         if (rettype == VOIDOID || rettype == RECORDOID)
-          /* okay */;
+                    ;
         else if (rettype == TRIGGEROID || rettype == EVTTRIGGEROID)
         {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("trigger functions can only be called as triggers")));
@@ -240,45 +240,45 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
         }
       }
 
-      /* set up output function for procedure result */
+                                                       
       PLy_output_setup_func(&proc->result, proc->mcxt, rettype, -1, proc);
 
       ReleaseSysCache(rvTypeTup);
     }
     else
     {
-      /*
-       * In a trigger function, we use proc->result and proc->result_in
-       * for converting tuples, but we don't yet have enough info to set
-       * them up.  PLy_exec_trigger will deal with it.
-       */
+         
+                                                                        
+                                                                         
+                                                       
+         
       proc->result.typoid = InvalidOid;
       proc->result_in.typoid = InvalidOid;
     }
 
-    /*
-     * Now get information required for input conversion of the
-     * procedure's arguments.  Note that we ignore output arguments here.
-     * If the function returns record, those I/O functions will be set up
-     * when the function is first called.
-     */
+       
+                                                                
+                                                                          
+                                                                          
+                                          
+       
     if (procStruct->pronargs)
     {
       Oid *types;
       char **names, *modes;
       int pos, total;
 
-      /* extract argument type info from the pg_proc tuple */
+                                                             
       total = get_func_arg_info(procTup, &types, &names, &modes);
 
-      /* count number of in+inout args into proc->nargs */
+                                                          
       if (modes == NULL)
       {
         proc->nargs = total;
       }
       else
       {
-        /* proc->nargs was initialized to 0 above */
+                                                    
         for (i = 0; i < total; i++)
         {
           if (modes[i] != PROARGMODE_OUT && modes[i] != PROARGMODE_TABLE)
@@ -288,7 +288,7 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
         }
       }
 
-      /* Allocate arrays for per-input-argument data */
+                                                       
       proc->argnames = (char **)palloc0(sizeof(char *) * proc->nargs);
       proc->args = (PLyDatumToOb *)palloc0(sizeof(PLyDatumToOb) * proc->nargs);
 
@@ -299,7 +299,7 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 
         if (modes && (modes[i] == PROARGMODE_OUT || modes[i] == PROARGMODE_TABLE))
         {
-          continue; /* skip OUT arguments */
+          continue;                         
         }
 
         Assert(types[i] == procStruct->proargtypes.values[pos]);
@@ -311,17 +311,17 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
         }
         argTypeStruct = (Form_pg_type)GETSTRUCT(argTypeTup);
 
-        /* disallow pseudotype arguments */
+                                           
         if (argTypeStruct->typtype == TYPTYPE_PSEUDO)
         {
           ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED), errmsg("PL/Python functions cannot accept type %s", format_type_be(types[i]))));
         }
 
-        /* set up I/O function info */
-        PLy_input_setup_func(&proc->args[pos], proc->mcxt, types[i], -1, /* typmod not known */
+                                      
+        PLy_input_setup_func(&proc->args[pos], proc->mcxt, types[i], -1,                       
             proc);
 
-        /* get argument name */
+                               
         proc->argnames[pos] = names ? pstrdup(names[i]) : NULL;
 
         ReleaseSysCache(argTypeTup);
@@ -330,9 +330,9 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
       }
     }
 
-    /*
-     * get the text of the function.
-     */
+       
+                                     
+       
     prosrcdatum = SysCacheGetAttr(PROCOID, procTup, Anum_pg_proc_prosrc, &isnull);
     if (isnull)
     {
@@ -356,9 +356,9 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
   return proc;
 }
 
-/*
- * Insert the procedure into the Python interpreter
- */
+   
+                                                    
+   
 void
 PLy_procedure_compile(PLyProcedure *proc, const char *src)
 {
@@ -367,10 +367,10 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
 
   proc->globals = PyDict_Copy(PLy_interp_globals);
 
-  /*
-   * SD is private preserved data between calls. GD is global data shared by
-   * all functions
-   */
+     
+                                                                             
+                   
+     
   proc->statics = PyDict_New();
   if (!proc->statics)
   {
@@ -378,11 +378,11 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
   }
   PyDict_SetItemString(proc->globals, "SD", proc->statics);
 
-  /*
-   * insert the function code into the interpreter
-   */
+     
+                                                   
+     
   msrc = PLy_procedure_munge_source(proc->pyname, src);
-  /* Save the mangled source for later inclusion in tracebacks */
+                                                                 
   proc->src = MemoryContextStrdup(proc->mcxt, msrc);
   crv = PyRun_String(msrc, Py_file_input, proc->globals, NULL);
   pfree(msrc);
@@ -394,9 +394,9 @@ PLy_procedure_compile(PLyProcedure *proc, const char *src)
 
     Py_DECREF(crv);
 
-    /*
-     * compile a call to the function
-     */
+       
+                                      
+       
     clen = snprintf(call, sizeof(call), "%s()", proc->pyname);
     if (clen < 0 || clen >= sizeof(call))
     {
@@ -428,9 +428,9 @@ PLy_procedure_delete(PLyProcedure *proc)
   MemoryContextDelete(proc->mcxt);
 }
 
-/*
- * Decide whether a cached PLyProcedure struct is still valid
- */
+   
+                                                              
+   
 static bool
 PLy_procedure_valid(PLyProcedure *proc, HeapTuple procTup)
 {
@@ -439,7 +439,7 @@ PLy_procedure_valid(PLyProcedure *proc, HeapTuple procTup)
     return false;
   }
 
-  /* If the pg_proc tuple has changed, it's not valid */
+                                                        
   if (!(proc->fn_xmin == HeapTupleHeaderGetRawXmin(procTup->t_data) && ItemPointerEquals(&proc->fn_tid, &procTup->t_self)))
   {
     return false;
@@ -456,9 +456,9 @@ PLy_procedure_munge_source(const char *name, const char *src)
   size_t mlen;
   int plen;
 
-  /*
-   * room for function source and the def statement
-   */
+     
+                                                    
+     
   mlen = (strlen(src) * 2) + strlen(name) + 16;
 
   mrc = palloc(mlen);

@@ -1,19 +1,19 @@
-/*-------------------------------------------------------------------------
- * help_config.c
- *
- * Displays available options under grand unified configuration scheme
- *
- * Options whose flag bits are set to GUC_NO_SHOW_ALL, GUC_NOT_IN_SAMPLE,
- * or GUC_DISALLOW_IN_FILE are not displayed, unless the user specifically
- * requests that variable by name
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/backend/utils/misc/help_config.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+                 
+   
+                                                                       
+   
+                                                                          
+                                                                           
+                                  
+   
+                                                                         
+   
+                  
+                                          
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <limits.h>
@@ -22,10 +22,10 @@
 #include "utils/guc_tables.h"
 #include "utils/help_config.h"
 
-/*
- * This union allows us to mix the numerous different types of structs
- * that we are organizing.
- */
+   
+                                                                       
+                           
+   
 typedef union
 {
   struct config_generic generic;
@@ -47,7 +47,7 @@ GucInfoMain(void)
   struct config_generic **guc_vars;
   int numOpts, i;
 
-  /* Initialize the guc_variables[] array */
+                                            
   build_guc_variables();
 
   guc_vars = get_guc_variables();
@@ -66,20 +66,20 @@ GucInfoMain(void)
   exit(0);
 }
 
-/*
- * This function will return true if the struct passed to it
- * should be displayed to the user.
- */
+   
+                                                             
+                                    
+   
 static bool
 displayStruct(mixedStruct *structToDisplay)
 {
   return !(structToDisplay->generic.flags & (GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE));
 }
 
-/*
- * This function prints out the generic struct passed to it. It will print out
- * a different format, depending on what the user wants to see.
- */
+   
+                                                                               
+                                                                
+   
 static void
 printMixedStruct(mixedStruct *structToPrint)
 {

@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/ecpglib/memory.c */
+                                          
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -63,7 +63,7 @@ ecpg_strdup(const char *string, int lineno)
   return new;
 }
 
-/* keep a list of memory we allocated for the user */
+                                                     
 struct auto_mem
 {
   void *pointer;
@@ -77,7 +77,7 @@ static pthread_once_t auto_mem_once = PTHREAD_ONCE_INIT;
 static void
 auto_mem_destructor(void *arg)
 {
-  (void)arg; /* keep the compiler quiet */
+  (void)arg;                              
   ECPGfree_auto_mem();
 }
 
@@ -149,7 +149,7 @@ ECPGfree_auto_mem(void)
 {
   struct auto_mem *am = get_auto_allocs();
 
-  /* free all memory we have allocated for the user */
+                                                      
   if (am)
   {
     do
@@ -169,7 +169,7 @@ ecpg_clear_auto_mem(void)
 {
   struct auto_mem *am = get_auto_allocs();
 
-  /* only free our own structure */
+                                   
   if (am)
   {
     do

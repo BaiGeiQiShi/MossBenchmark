@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * regis.c
- *		Fast regex subset
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/regis.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                      
+   
+                                                                         
+   
+   
+                  
+                                 
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -22,10 +22,10 @@
 #define RS_IN_NONEOF 3
 #define RS_IN_WAIT 4
 
-/*
- * Test whether a regex is of the subset supported here.
- * Keep this in sync with RS_compile!
- */
+   
+                                                         
+                                      
+   
 bool
 RS_isRegis(const char *str)
 {
@@ -37,7 +37,7 @@ RS_isRegis(const char *str)
     if (state == RS_IN_WAIT)
     {
       if (t_isalpha(c))
-        /* okay */;
+                  ;
       else if (t_iseq(c, '['))
       {
         state = RS_IN_ONEOF;
@@ -65,7 +65,7 @@ RS_isRegis(const char *str)
     else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
     {
       if (t_isalpha(c))
-        /* okay */;
+                  ;
       else if (t_iseq(c, ']'))
       {
         state = RS_IN_WAIT;
@@ -140,7 +140,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
         ptr->type = RSF_ONEOF;
         state = RS_IN_ONEOF;
       }
-      else /* shouldn't get here */
+      else                         
       {
         elog(ERROR, "invalid regis pattern: \"%s\"", str);
       }
@@ -158,7 +158,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
         ptr->len = pg_mblen(c);
         state = RS_IN_ONEOF_IN;
       }
-      else /* shouldn't get here */
+      else                         
       {
         elog(ERROR, "invalid regis pattern: \"%s\"", str);
       }
@@ -174,7 +174,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
       {
         state = RS_IN_WAIT;
       }
-      else /* shouldn't get here */
+      else                         
       {
         elog(ERROR, "invalid regis pattern: \"%s\"", str);
       }
@@ -186,7 +186,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
     c += pg_mblen(c);
   }
 
-  if (state != RS_IN_WAIT) /* shouldn't get here */
+  if (state != RS_IN_WAIT)                         
   {
     elog(ERROR, "invalid regis pattern: \"%s\"", str);
   }

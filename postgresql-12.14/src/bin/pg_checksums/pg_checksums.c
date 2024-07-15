@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pg_checksums.c
- *	  Checks, enables or disables page level checksums for an offline
- *	  cluster
- *
- * Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *
- * IDENTIFICATION
- *	  src/bin/pg_checksums/pg_checksums.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                  
+                                                                     
+             
+   
+                                                                
+   
+                  
+                                         
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -47,13 +47,13 @@ typedef enum
   PG_MODE_ENABLE
 } PgChecksumMode;
 
-/*
- * Filename components.
- *
- * XXX: fd.h is not declared here as frontend side code is not able to
- * interact with the backend-side definitions for the various fsync
- * wrappers.
- */
+   
+                        
+   
+                                                                       
+                                                                    
+             
+   
 #define PG_TEMP_FILES_DIR "pgsql_tmp"
 #define PG_TEMP_FILE_PREFIX "pgsql_tmp"
 
@@ -61,9 +61,9 @@ static PgChecksumMode mode = PG_MODE_CHECK;
 
 static const char *progname;
 
-/*
- * Progress status information.
- */
+   
+                                
+   
 int64 total_size = 0;
 int64 current_size = 0;
 static pg_time_t last_progress_report = 0;
@@ -90,33 +90,33 @@ usage(void)
   printf(_("Report bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
-/*
- * Definition of one element part of an exclusion list, used for files
- * to exclude from checksum validation.  "name" is the name of the file
- * or path to check for exclusion.  If "match_prefix" is true, any items
- * matching the name as prefix are excluded.
- */
+   
+                                                                       
+                                                                        
+                                                                         
+                                             
+   
 struct exclude_list_item
 {
   const char *name;
   bool match_prefix;
 };
 
-/*
- * List of files excluded from checksum validation.
- *
- * Note: this list should be kept in sync with what basebackup.c includes.
- */
+   
+                                                    
+   
+                                                                           
+   
 static const struct exclude_list_item skip[] = {{"pg_control", false}, {"pg_filenode.map", false}, {"pg_internal.init", true}, {"PG_VERSION", false},
 #ifdef EXEC_BACKEND
     {"config_exec_params", true},
 #endif
     {NULL, false}};
 
-/*
- * Report current progress status.  Parts borrowed from
- * src/bin/pg_basebackup/pg_basebackup.c.
- */
+   
+                                                        
+                                          
+   
 static void
 progress_report(bool finished)
 {
@@ -130,35 +130,35 @@ progress_report(bool finished)
   now = time(NULL);
   if (now == last_progress_report && !finished)
   {
-    return; /* Max once per second */
+    return;                          
   }
 
-  /* Save current time */
+                         
   last_progress_report = now;
 
-  /* Adjust total size if current_size is larger */
+                                                   
   if (current_size > total_size)
   {
     total_size = current_size;
   }
 
-  /* Calculate current percentage of size done */
+                                                 
   percent = total_size ? (int)((current_size) * 100 / total_size) : 0;
 
-  /*
-   * Separate step to keep platform-dependent format code out of
-   * translatable strings.  And we only test for INT64_FORMAT availability
-   * in snprintf, not fprintf.
-   */
+     
+                                                                 
+                                                                           
+                               
+     
   snprintf(total_size_str, sizeof(total_size_str), INT64_FORMAT, total_size / (1024 * 1024));
   snprintf(current_size_str, sizeof(current_size_str), INT64_FORMAT, current_size / (1024 * 1024));
 
   fprintf(stderr, _("%*s/%s MB (%d%%) computed"), (int)strlen(current_size_str), current_size_str, total_size_str, percent);
 
-  /*
-   * Stay on the same line if reporting to a terminal and we're not done
-   * yet.
-   */
+     
+                                                                         
+          
+     
   fputc((!finished && isatty(fileno(stderr))) ? '\r' : '\n', stderr);
 }
 
@@ -229,15 +229,15 @@ scan_file(const char *fn, BlockNumber segmentno)
     }
     blocks++;
 
-    /*
-     * Since the file size is counted as total_size for progress status
-     * information, the sizes of all pages including new ones in the file
-     * should be counted as current_size. Otherwise the progress reporting
-     * calculated using those counters may not reach 100%.
-     */
+       
+                                                                        
+                                                                          
+                                                                           
+                                                           
+       
     current_size += r;
 
-    /* New pages have no checksum yet */
+                                        
     if (PageIsNew(header))
     {
       continue;
@@ -259,17 +259,17 @@ scan_file(const char *fn, BlockNumber segmentno)
     {
       int w;
 
-      /* Set checksum in page header */
+                                       
       header->pd_checksum = csum;
 
-      /* Seek back to beginning of block */
+                                           
       if (lseek(f, -BLCKSZ, SEEK_CUR) < 0)
       {
         pg_log_error("seek failed for block %u in file \"%s\": %m", blockno, fn);
         exit(1);
       }
 
-      /* Write block with checksum */
+                                     
       w = write(f, buf.data, BLCKSZ);
       if (w != BLCKSZ)
       {
@@ -306,13 +306,13 @@ scan_file(const char *fn, BlockNumber segmentno)
   close(f);
 }
 
-/*
- * Scan the given directory for items which can be checksummed and
- * operate on each one of them.  If "sizeonly" is true, the size of
- * all the items which have checksums is computed and returned back
- * to the caller without operating on the files.  This is used to compile
- * the total size of the data directory for progress reports.
- */
+   
+                                                                   
+                                                                    
+                                                                    
+                                                                          
+                                                              
+   
 static int64
 scan_directory(const char *basedir, const char *subdir, bool sizeonly)
 {
@@ -338,13 +338,13 @@ scan_directory(const char *basedir, const char *subdir, bool sizeonly)
       continue;
     }
 
-    /* Skip temporary files */
+                              
     if (strncmp(de->d_name, PG_TEMP_FILE_PREFIX, strlen(PG_TEMP_FILE_PREFIX)) == 0)
     {
       continue;
     }
 
-    /* Skip temporary folders */
+                                
     if (strncmp(de->d_name, PG_TEMP_FILES_DIR, strlen(PG_TEMP_FILES_DIR)) == 0)
     {
       continue;
@@ -367,12 +367,12 @@ scan_directory(const char *basedir, const char *subdir, bool sizeonly)
         continue;
       }
 
-      /*
-       * Cut off at the segment boundary (".") to get the segment number
-       * in order to mix it into the checksum. Then also cut off at the
-       * fork boundary, to get the filenode the file belongs to for
-       * filtering.
-       */
+         
+                                                                         
+                                                                        
+                                                                    
+                    
+         
       strlcpy(fnonly, de->d_name, sizeof(fnonly));
       segmentpath = strchr(fnonly, '.');
       if (segmentpath != NULL)
@@ -394,16 +394,16 @@ scan_directory(const char *basedir, const char *subdir, bool sizeonly)
 
       if (only_filenode && strcmp(only_filenode, fnonly) != 0)
       {
-        /* filenode not to be included */
+                                         
         continue;
       }
 
       dirsize += st.st_size;
 
-      /*
-       * No need to work on the file when calculating only the size of
-       * the items in the data folder.
-       */
+         
+                                                                       
+                                       
+         
       if (!sizeonly)
       {
         scan_file(fn, segmentno);
@@ -415,24 +415,24 @@ scan_directory(const char *basedir, const char *subdir, bool sizeonly)
     else if (S_ISDIR(st.st_mode) || pgwin32_is_junction(fn))
 #endif
     {
-      /*
-       * If going through the entries of pg_tblspc, we assume to operate
-       * on tablespace locations where only TABLESPACE_VERSION_DIRECTORY
-       * is valid, resolving the linked locations and dive into them
-       * directly.
-       */
+         
+                                                                         
+                                                                         
+                                                                     
+                   
+         
       if (strncmp("pg_tblspc", subdir, strlen("pg_tblspc")) == 0)
       {
         char tblspc_path[MAXPGPATH];
         struct stat tblspc_st;
 
-        /*
-         * Resolve tablespace location path and check whether
-         * TABLESPACE_VERSION_DIRECTORY exists.  Not finding a valid
-         * location is unexpected, since there should be no orphaned
-         * links and no links pointing to something else than a
-         * directory.
-         */
+           
+                                                              
+                                                                     
+                                                                     
+                                                                
+                      
+           
         snprintf(tblspc_path, sizeof(tblspc_path), "%s/%s/%s", path, de->d_name, TABLESPACE_VERSION_DIRECTORY);
 
         if (lstat(tblspc_path, &tblspc_st) < 0)
@@ -441,13 +441,13 @@ scan_directory(const char *basedir, const char *subdir, bool sizeonly)
           exit(1);
         }
 
-        /*
-         * Move backwards once as the scan needs to happen for the
-         * contents of TABLESPACE_VERSION_DIRECTORY.
-         */
+           
+                                                                   
+                                                     
+           
         snprintf(tblspc_path, sizeof(tblspc_path), "%s/%s", path, de->d_name);
 
-        /* Looks like a valid tablespace location */
+                                                    
         dirsize += scan_directory(tblspc_path, TABLESPACE_VERSION_DIRECTORY, sizeonly);
       }
       else
@@ -538,7 +538,7 @@ main(int argc, char *argv[])
       DataDir = getenv("PGDATA");
     }
 
-    /* If no DataDir was specified, and none could be found, error out */
+                                                                         
     if (DataDir == NULL)
     {
       pg_log_error("no data directory specified");
@@ -547,7 +547,7 @@ main(int argc, char *argv[])
     }
   }
 
-  /* Complain if any arguments remain */
+                                        
   if (optind < argc)
   {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
@@ -555,7 +555,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* filenode checking only works in --check mode */
+                                                    
   if (mode != PG_MODE_CHECK && only_filenode)
   {
     pg_log_error("option -f/--filenode can only be used with --check");
@@ -563,7 +563,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* Read the control file and check compatibility */
+                                                     
   ControlFile = get_controlfile(DataDir, &crc_ok);
   if (!crc_ok)
   {
@@ -584,11 +584,11 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /*
-   * Check if cluster is running.  A clean shutdown is required to avoid
-   * random checksum failures caused by torn pages.  Note that this doesn't
-   * guard against someone starting the cluster concurrently.
-   */
+     
+                                                                         
+                                                                            
+                                                              
+     
   if (ControlFile->state != DB_SHUTDOWNED && ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
   {
     pg_log_error("cluster must be shut down");
@@ -613,14 +613,14 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* Operate on all files if checking or enabling checksums */
+                                                              
   if (mode == PG_MODE_CHECK || mode == PG_MODE_ENABLE)
   {
-    /*
-     * If progress status information is requested, we need to scan the
-     * directory tree twice: once to know how much total data needs to be
-     * processed and once to do the real work.
-     */
+       
+                                                                        
+                                                                          
+                                               
+       
     if (showprogress)
     {
       total_size = scan_directory(DataDir, "global", true);
@@ -652,11 +652,11 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Finally make the data durable on disk if enabling or disabling
-   * checksums.  Flush first the data directory for safety, and then update
-   * the control file to keep the switch consistent.
-   */
+     
+                                                                    
+                                                                            
+                                                     
+     
   if (mode == PG_MODE_ENABLE || mode == PG_MODE_DISABLE)
   {
     ControlFile->data_checksum_version = (mode == PG_MODE_ENABLE) ? PG_DATA_CHECKSUM_VERSION : 0;

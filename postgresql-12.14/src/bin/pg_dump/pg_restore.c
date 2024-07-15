@@ -1,43 +1,43 @@
-/*-------------------------------------------------------------------------
- *
- * pg_restore.c
- *	pg_restore is an utility extracting postgres database definitions
- *	from a backup archive created by pg_dump using the archiver
- *	interface.
- *
- *	pg_restore will read the backup archive and
- *	dump out a script that reproduces
- *	the schema of the database in terms of
- *		  user-defined types
- *		  user-defined functions
- *		  tables
- *		  indexes
- *		  aggregates
- *		  operators
- *		  ACL - grant/revoke
- *
- * the output script is SQL that is understood by PostgreSQL
- *
- * Basic process in a restore operation is:
- *
- *	Open the Archive and read the TOC.
- *	Set flags in TOC entries, and *maybe* reorder them.
- *	Generate script to stdout
- *	Exit
- *
- * Copyright (c) 2000, Philip Warner
- *		Rights are granted to use this software in any way so long
- *		as this notice is not removed.
- *
- *	The author is not responsible for loss or damages that may
- *	result from its use.
- *
- *
- * IDENTIFICATION
- *		src/bin/pg_dump/pg_restore.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+                                                                     
+                                                               
+              
+   
+                                               
+                                     
+                                          
+                         
+                             
+             
+              
+                 
+                
+                         
+   
+                                                             
+   
+                                            
+   
+                                      
+                                                       
+                             
+        
+   
+                                     
+                                                               
+                                   
+   
+                                                              
+                        
+   
+   
+                  
+                                 
+   
+                                                                            
+   
 #include "postgres_fe.h"
 
 #include <ctype.h>
@@ -79,9 +79,9 @@ main(int argc, char **argv)
 
   struct option cmdopts[] = {{"clean", 0, NULL, 'c'}, {"create", 0, NULL, 'C'}, {"data-only", 0, NULL, 'a'}, {"dbname", 1, NULL, 'd'}, {"exit-on-error", 0, NULL, 'e'}, {"exclude-schema", 1, NULL, 'N'}, {"file", 1, NULL, 'f'}, {"format", 1, NULL, 'F'}, {"function", 1, NULL, 'P'}, {"host", 1, NULL, 'h'}, {"index", 1, NULL, 'I'}, {"jobs", 1, NULL, 'j'}, {"list", 0, NULL, 'l'}, {"no-privileges", 0, NULL, 'x'}, {"no-acl", 0, NULL, 'x'}, {"no-owner", 0, NULL, 'O'}, {"no-reconnect", 0, NULL, 'R'}, {"port", 1, NULL, 'p'}, {"no-password", 0, NULL, 'w'}, {"password", 0, NULL, 'W'}, {"schema", 1, NULL, 'n'}, {"schema-only", 0, NULL, 's'}, {"superuser", 1, NULL, 'S'}, {"table", 1, NULL, 't'}, {"trigger", 1, NULL, 'T'}, {"use-list", 1, NULL, 'L'}, {"username", 1, NULL, 'U'}, {"verbose", 0, NULL, 'v'}, {"single-transaction", 0, NULL, '1'},
 
-      /*
-       * the following options don't have an equivalent short option letter
-       */
+         
+                                                                            
+         
       {"disable-triggers", no_argument, &disable_triggers, 1}, {"enable-row-security", no_argument, &enable_row_security, 1}, {"if-exists", no_argument, &if_exists, 1}, {"no-data-for-failed-tables", no_argument, &no_data_for_failed_tables, 1}, {"no-tablespaces", no_argument, &outputNoTablespaces, 1}, {"role", required_argument, NULL, 2}, {"section", required_argument, NULL, 3}, {"strict-names", no_argument, &strict_names, 1}, {"use-set-session-authorization", no_argument, &use_setsessauth, 1}, {"no-comments", no_argument, &no_comments, 1}, {"no-publications", no_argument, &no_publications, 1}, {"no-security-labels", no_argument, &no_security_labels, 1}, {"no-subscriptions", no_argument, &no_subscriptions, 1},
 
       {NULL, 0, NULL, 0}};
@@ -114,10 +114,10 @@ main(int argc, char **argv)
   {
     switch (c)
     {
-    case 'a': /* Dump data only */
+    case 'a':                     
       opts->dataOnly = 1;
       break;
-    case 'c': /* clean (i.e., drop) schema prior to create */
+    case 'c':                                                
       opts->dropSchema = 1;
       break;
     case 'C':
@@ -129,7 +129,7 @@ main(int argc, char **argv)
     case 'e':
       opts->exit_on_error = true;
       break;
-    case 'f': /* output file name */
+    case 'f':                       
       opts->filename = pg_strdup(optarg);
       break;
     case 'F':
@@ -145,23 +145,23 @@ main(int argc, char **argv)
       }
       break;
 
-    case 'j': /* number of restore jobs */
+    case 'j':                             
       numWorkers = atoi(optarg);
       break;
 
-    case 'l': /* Dump the TOC summary */
+    case 'l':                           
       opts->tocSummary = 1;
       break;
 
-    case 'L': /* input TOC summary file name */
+    case 'L':                                  
       opts->tocFile = pg_strdup(optarg);
       break;
 
-    case 'n': /* Dump data for this schema only */
+    case 'n':                                     
       simple_string_list_append(&opts->schemaNames, optarg);
       break;
 
-    case 'N': /* Do not dump data for this schema */
+    case 'N':                                       
       simple_string_list_append(&opts->schemaExcludeNames, optarg);
       break;
 
@@ -176,33 +176,33 @@ main(int argc, char **argv)
       }
       break;
     case 'R':
-      /* no-op, still accepted for backwards compatibility */
+                                                             
       break;
-    case 'P': /* Function */
+    case 'P':               
       opts->selTypes = 1;
       opts->selFunction = 1;
       simple_string_list_append(&opts->functionNames, optarg);
       break;
-    case 'I': /* Index */
+    case 'I':            
       opts->selTypes = 1;
       opts->selIndex = 1;
       simple_string_list_append(&opts->indexNames, optarg);
       break;
-    case 'T': /* Trigger */
+    case 'T':              
       opts->selTypes = 1;
       opts->selTrigger = 1;
       simple_string_list_append(&opts->triggerNames, optarg);
       break;
-    case 's': /* dump schema only */
+    case 's':                       
       opts->schemaOnly = 1;
       break;
-    case 'S': /* Superuser username */
+    case 'S':                         
       if (strlen(optarg) != 0)
       {
         opts->superuser = pg_strdup(optarg);
       }
       break;
-    case 't': /* Dump specified table(s) only */
+    case 't':                                   
       opts->selTypes = 1;
       opts->selTable = 1;
       simple_string_list_append(&opts->tableNames, optarg);
@@ -212,7 +212,7 @@ main(int argc, char **argv)
       opts->cparams.username = pg_strdup(optarg);
       break;
 
-    case 'v': /* verbose */
+    case 'v':              
       opts->verbose = 1;
       pg_logging_set_level(PG_LOG_INFO);
       break;
@@ -225,27 +225,27 @@ main(int argc, char **argv)
       opts->cparams.promptPassword = TRI_YES;
       break;
 
-    case 'x': /* skip ACL dump */
+    case 'x':                    
       opts->aclsSkip = 1;
       break;
 
-    case '1': /* Restore data in a single transaction */
+    case '1':                                           
       opts->single_txn = true;
       opts->exit_on_error = true;
       break;
 
     case 0:
 
-      /*
-       * This covers the long options without a short equivalent.
-       */
+         
+                                                                  
+         
       break;
 
-    case 2: /* SET ROLE */
+    case 2:               
       opts->use_role = pg_strdup(optarg);
       break;
 
-    case 3: /* section */
+    case 3:              
       set_dump_section(optarg, &(opts->dumpSections));
       break;
 
@@ -255,7 +255,7 @@ main(int argc, char **argv)
     }
   }
 
-  /* Get file name from command line */
+                                       
   if (optind < argc)
   {
     inputFileSpec = argv[optind++];
@@ -265,7 +265,7 @@ main(int argc, char **argv)
     inputFileSpec = NULL;
   }
 
-  /* Complain if any arguments remain */
+                                        
   if (optind < argc)
   {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
@@ -273,14 +273,14 @@ main(int argc, char **argv)
     exit_nicely(1);
   }
 
-  /* Complain if neither -f nor -d was specified (except if dumping TOC) */
+                                                                           
   if (!opts->cparams.dbname && !opts->filename && !opts->tocSummary)
   {
     pg_log_error("one of -d/--dbname and -f/--file must be specified");
     exit_nicely(1);
   }
 
-  /* Should get at most one of -d and -f, else user is confused */
+                                                                  
   if (opts->cparams.dbname)
   {
     if (opts->filename)
@@ -304,10 +304,10 @@ main(int argc, char **argv)
     exit_nicely(1);
   }
 
-  /*
-   * -C is not compatible with -1, because we can't create a database inside
-   * a transaction block.
-   */
+     
+                                                                             
+                          
+     
   if (opts->createDB && opts->single_txn)
   {
     pg_log_error("options -C/--create and -1/--single-transaction cannot be used together");
@@ -320,7 +320,7 @@ main(int argc, char **argv)
     exit(1);
   }
 
-  /* See comments in pg_dump.c */
+                                 
 #ifdef WIN32
   if (numWorkers > MAXIMUM_WAIT_OBJECTS)
   {
@@ -329,7 +329,7 @@ main(int argc, char **argv)
   }
 #endif
 
-  /* Can't do single-txn mode with multiple connections */
+                                                          
   if (opts->single_txn && numWorkers > 1)
   {
     pg_log_error("cannot specify both --single-transaction and multiple jobs");
@@ -383,19 +383,19 @@ main(int argc, char **argv)
 
   SetArchiveOptions(AH, NULL, opts);
 
-  /*
-   * We don't have a connection yet but that doesn't matter. The connection
-   * is initialized to NULL and if we terminate through exit_nicely() while
-   * it's still NULL, the cleanup function will just be a no-op.
-   */
+     
+                                                                            
+                                                                            
+                                                                 
+     
   on_exit_close_archive(AH);
 
-  /* Let the archiver know how noisy to be */
+                                             
   AH->verbose = opts->verbose;
 
-  /*
-   * Whether to keep submitting sql commands as "pg_restore ... | psql ... "
-   */
+     
+                                                                             
+     
   AH->exit_on_error = opts->exit_on_error;
 
   if (opts->tocFile)
@@ -415,13 +415,13 @@ main(int argc, char **argv)
     RestoreArchive(AH);
   }
 
-  /* done, print a summary of ignored errors */
+                                               
   if (AH->n_errors)
   {
     pg_log_warning("errors ignored on restore: %d", AH->n_errors);
   }
 
-  /* AH may be freed in CloseArchive? */
+                                        
   exit_code = AH->n_errors ? 1 : 0;
 
   CloseArchive(AH);

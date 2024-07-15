@@ -59,8 +59,8 @@ endif
 endif
 else # not PGXS
 vpath_build = no
-abs_top_builddir = /postgresql-12.14
-abs_top_srcdir = /postgresql-12.14
+abs_top_builddir = /MossBenchmark/postgresql-12.14
+abs_top_srcdir = /MossBenchmark/postgresql-12.14
 
 ifneq ($(vpath_build),yes)
 top_srcdir = $(top_builddir)

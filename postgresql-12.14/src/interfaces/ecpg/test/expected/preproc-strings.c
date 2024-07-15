@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "strings.pgc"
@@ -11,14 +11,14 @@
 #line 1 "regression.h"
 
 #line 3 "strings.pgc"
-/* exec sql begin declare section */
+                                    
 #line 1 "strings.h"
 
 #line 5 "strings.pgc"
 
 #line 1 "strings.h"
 char *s1, *s2, *s3, *s4, *s5, *s6;
-/* exec sql end declare section */
+                                  
 #line 5 "strings.pgc"
 
 int

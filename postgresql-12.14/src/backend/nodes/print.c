@@ -1,21 +1,21 @@
-/*-------------------------------------------------------------------------
- *
- * print.c
- *	  various print routines (used mostly for debugging)
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/nodes/print.c
- *
- * HISTORY
- *	  AUTHOR			DATE			MAJOR EVENT
- *	  Andrew Yu			Oct 26, 1994	file creation
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+           
+                                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                               
+   
+           
+                                 
+                                            
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -27,10 +27,10 @@
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 
-/*
- * print
- *	  print contents of Node to stdout
- */
+   
+         
+                                      
+   
 void
 print(const void *obj)
 {
@@ -45,10 +45,10 @@ print(const void *obj)
   pfree(f);
 }
 
-/*
- * pprint
- *	  pretty-print contents of Node to stdout
- */
+   
+          
+                                             
+   
 void
 pprint(const void *obj)
 {
@@ -63,10 +63,10 @@ pprint(const void *obj)
   pfree(f);
 }
 
-/*
- * elog_node_display
- *	  send pretty-printed contents of Node to postmaster log
- */
+   
+                     
+                                                            
+   
 void
 elog_node_display(int lev, const char *title, const void *obj, bool pretty)
 {
@@ -87,13 +87,13 @@ elog_node_display(int lev, const char *title, const void *obj, bool pretty)
   pfree(f);
 }
 
-/*
- * Format a nodeToString output for display on a terminal.
- *
- * The result is a palloc'd string.
- *
- * This version just tries to break at whitespace.
- */
+   
+                                                           
+   
+                                    
+   
+                                                   
+   
 char *
 format_node_dump(const char *dump)
 {
@@ -118,7 +118,7 @@ format_node_dump(const char *dump)
     }
     if (dump[i] == ' ')
     {
-      /* ok to break at adjacent space */
+                                         
       i++;
     }
     else
@@ -132,7 +132,7 @@ format_node_dump(const char *dump)
       }
       if (k > 0)
       {
-        /* back up; will reprint all after space */
+                                                   
         i -= (j - k - 1);
         j = k;
       }
@@ -149,13 +149,13 @@ format_node_dump(const char *dump)
 #undef LINELEN
 }
 
-/*
- * Format a nodeToString output for display on a terminal.
- *
- * The result is a palloc'd string.
- *
- * This version tries to indent intelligently.
- */
+   
+                                                           
+   
+                                    
+   
+                                               
+   
 char *
 pretty_format_node_dump(const char *dump)
 {
@@ -170,8 +170,8 @@ pretty_format_node_dump(const char *dump)
   int j;
 
   initStringInfo(&str);
-  indentLev = 0;  /* logical indent level */
-  indentDist = 0; /* physical indent distance */
+  indentLev = 0;                            
+  indentDist = 0;                               
   i = 0;
   for (;;)
   {
@@ -187,30 +187,30 @@ pretty_format_node_dump(const char *dump)
       case '}':
         if (j != indentDist)
         {
-          /* print data before the } */
+                                       
           line[j] = '\0';
           appendStringInfo(&str, "%s\n", line);
         }
-        /* print the } at indentDist */
+                                       
         line[indentDist] = '}';
         line[indentDist + 1] = '\0';
         appendStringInfo(&str, "%s\n", line);
-        /* outdent */
+                     
         if (indentLev > 0)
         {
           indentLev--;
           indentDist = Min(indentLev * INDENTSTOP, MAXINDENT);
         }
         j = indentDist - 1;
-        /* j will equal indentDist on next loop iteration */
-        /* suppress whitespace just after } */
+                                                            
+                                              
         while (dump[i + 1] == ' ')
         {
           i++;
         }
         break;
       case ')':
-        /* force line break after ), unless another ) follows */
+                                                                
         if (dump[i + 1] != ')')
         {
           line[j + 1] = '\0';
@@ -223,13 +223,13 @@ pretty_format_node_dump(const char *dump)
         }
         break;
       case '{':
-        /* force line break before { */
+                                       
         if (j != indentDist)
         {
           line[j] = '\0';
           appendStringInfo(&str, "%s\n", line);
         }
-        /* indent */
+                    
         indentLev++;
         indentDist = Min(indentLev * INDENTSTOP, MAXINDENT);
         for (j = 0; j < indentDist; j++)
@@ -239,7 +239,7 @@ pretty_format_node_dump(const char *dump)
         line[j] = dump[i];
         break;
       case ':':
-        /* force line break before : */
+                                       
         if (j != indentDist)
         {
           line[j] = '\0';
@@ -267,10 +267,10 @@ pretty_format_node_dump(const char *dump)
 #undef LINELEN
 }
 
-/*
- * print_rt
- *	  print contents of range table
- */
+   
+            
+                                   
+   
 void
 print_rt(const List *rtable)
 {
@@ -321,10 +321,10 @@ print_rt(const List *rtable)
   }
 }
 
-/*
- * print_expr
- *	  print an expression
- */
+   
+              
+                         
+   
 void
 print_expr(const Node *expr, const List *rtable)
 {
@@ -399,7 +399,7 @@ print_expr(const Node *expr, const List *rtable)
     }
     else
     {
-      /* we print prefix and postfix ops the same... */
+                                                       
       printf("%s ", ((opname != NULL) ? opname : "(invalid operator)"));
       print_expr(get_leftop((const Expr *)e), rtable);
     }
@@ -428,10 +428,10 @@ print_expr(const Node *expr, const List *rtable)
   }
 }
 
-/*
- * print_pathkeys -
- *	  pathkeys list of PathKeys
- */
+   
+                    
+                               
+   
 void
 print_pathkeys(const List *pathkeys, const List *rtable)
 {
@@ -446,7 +446,7 @@ print_pathkeys(const List *pathkeys, const List *rtable)
     bool first = true;
 
     eclass = pathkey->pk_eclass;
-    /* chase up, in case pathkey is non-canonical */
+                                                    
     while (eclass->ec_merged)
     {
       eclass = eclass->ec_merged;
@@ -476,10 +476,10 @@ print_pathkeys(const List *pathkeys, const List *rtable)
   printf(")\n");
 }
 
-/*
- * print_tl
- *	  print targetlist in a more legible way.
- */
+   
+            
+                                             
+   
 void
 print_tl(const List *tlist, const List *rtable)
 {
@@ -505,10 +505,10 @@ print_tl(const List *tlist, const List *rtable)
   printf(")\n");
 }
 
-/*
- * print_slot
- *	  print out the tuple with the given TupleTableSlot
- */
+   
+              
+                                                       
+   
 void
 print_slot(TupleTableSlot *slot)
 {

@@ -1,40 +1,40 @@
-/*-------------------------------------------------------------------------
- *
- * system.c
- *	   Win32 system() and popen() replacements
- *
- *
- *	Win32 needs double quotes at the beginning and end of system()
- *	strings.  If not, it gets confused with multiple quoted strings.
- *	It also requires double-quotes around the executable name and
- *	any files used for redirection.  Filter other args through
- *	appendShellString() to quote them.
- *
- *	Generated using Win32 "CMD /?":
- *
- *	1. If all of the following conditions are met, then quote characters
- *	on the command line are preserved:
- *
- *	 - no /S switch
- *	 - exactly two quote characters
- *	 - no special characters between the two quote characters, where special
- *	   is one of: &<>()@^|
- *	 - there are one or more whitespace characters between the two quote
- *	   characters
- *	 - the string between the two quote characters is the name of an
- *	   executable file.
- *
- *	 2. Otherwise, old behavior is to see if the first character is a quote
- *	 character and if so, strip the leading character and remove the last
- *	 quote character on the command line, preserving any text after the last
- *	 quote character.
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- * src/port/system.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                              
+   
+   
+                                                                  
+                                                                    
+                                                                 
+                                                              
+                                      
+   
+                                   
+   
+                                                                        
+                                      
+   
+                   
+                                   
+                                                                            
+                          
+                                                                        
+                 
+                                                                    
+                       
+   
+                                                                           
+                                                                         
+                                                                            
+                     
+   
+                                                                         
+   
+                     
+   
+                                                                            
+   
 
 #if defined(WIN32) && !defined(__CYGWIN__)
 
@@ -57,10 +57,10 @@ pgwin32_system(const char *command)
   int save_errno;
   int res;
 
-  /*
-   * Create a malloc'd copy of the command string, enclosed with an extra
-   * pair of quotes
-   */
+     
+                                                                          
+                    
+     
   buf = malloc(cmdlen + 2 + 1);
   if (buf == NULL)
   {
@@ -89,10 +89,10 @@ pgwin32_popen(const char *command, const char *type)
   int save_errno;
   FILE *res;
 
-  /*
-   * Create a malloc'd copy of the command string, enclosed with an extra
-   * pair of quotes
-   */
+     
+                                                                          
+                    
+     
   buf = malloc(cmdlen + 2 + 1);
   if (buf == NULL)
   {

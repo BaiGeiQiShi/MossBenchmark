@@ -1,16 +1,16 @@
-/*
- * src/tutorial/complex.c
- *
- ******************************************************************************
-  This file contains routines that can be bound to a Postgres backend and
-  called by the backend in the process of processing queries.  The calling
-  format for these routines is dictated by Postgres architecture.
-******************************************************************************/
+   
+                          
+   
+                                                                                
+                                                                          
+                                                                           
+                                                                  
+                                                                               
 
 #include "postgres.h"
 
 #include "fmgr.h"
-#include "libpq/pqformat.h" /* needed for send/recv functions */
+#include "libpq/pqformat.h"                                     
 
 PG_MODULE_MAGIC;
 
@@ -20,9 +20,9 @@ typedef struct Complex
   double y;
 } Complex;
 
-/*****************************************************************************
- * Input/Output functions
- *****************************************************************************/
+                                                                               
+                          
+                                                                               
 
 PG_FUNCTION_INFO_V1(complex_in);
 
@@ -56,11 +56,11 @@ complex_out(PG_FUNCTION_ARGS)
   PG_RETURN_CSTRING(result);
 }
 
-/*****************************************************************************
- * Binary Input/Output functions
- *
- * These are optional.
- *****************************************************************************/
+                                                                               
+                                 
+   
+                       
+                                                                               
 
 PG_FUNCTION_INFO_V1(complex_recv);
 
@@ -90,11 +90,11 @@ complex_send(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*****************************************************************************
- * New Operators
- *
- * A practical Complex datatype would provide much more than this, of course.
- *****************************************************************************/
+                                                                               
+                 
+   
+                                                                              
+                                                                               
 
 PG_FUNCTION_INFO_V1(complex_add);
 
@@ -111,16 +111,16 @@ complex_add(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(result);
 }
 
-/*****************************************************************************
- * Operator class for defining B-tree index
- *
- * It's essential that the comparison operators and support function for a
- * B-tree index opclass always agree on the relative ordering of any two
- * data values.  Experience has shown that it's depressingly easy to write
- * unintentionally inconsistent functions.  One way to reduce the odds of
- * making a mistake is to make all the functions simple wrappers around
- * an internal three-way-comparison function, as we do here.
- *****************************************************************************/
+                                                                               
+                                            
+   
+                                                                           
+                                                                         
+                                                                           
+                                                                          
+                                                                        
+                                                             
+                                                                               
 
 #define Mag(c) ((c)->x * (c)->x + (c)->y * (c)->y)
 

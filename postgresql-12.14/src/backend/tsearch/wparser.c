@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * wparser.c
- *		Standard interface to word parser
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/tsearch/wparser.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                      
+   
+                                                                         
+   
+   
+                  
+                                   
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "funcapi.h"
@@ -23,7 +23,7 @@
 #include "utils/jsonapi.h"
 #include "utils/varlena.h"
 
-/******sql-level interface******/
+                                 
 
 typedef struct
 {
@@ -31,7 +31,7 @@ typedef struct
   LexDescr *list;
 } TSTokenTypeStorage;
 
-/* state for ts_headline_json_* */
+                                  
 typedef struct HeadlineJsonState
 {
   HeadlineParsedText *prs;
@@ -62,7 +62,7 @@ tt_setup_firstcall(FuncCallContext *funcctx, Oid prsid)
 
   st = (TSTokenTypeStorage *)palloc(sizeof(TSTokenTypeStorage));
   st->cur = 0;
-  /* lextype takes one dummy argument */
+                                        
   st->list = (LexDescr *)DatumGetPointer(OidFunctionCall1(prs->lextypeOid, (Datum)0));
   funcctx->user_fctx = (void *)st;
 
@@ -515,9 +515,9 @@ ts_headline_json_opt(PG_FUNCTION_ARGS)
   PG_RETURN_DATUM(DirectFunctionCall4(ts_headline_json_byid_opt, ObjectIdGetDatum(getTSCurrentConfig(true)), PG_GETARG_DATUM(0), PG_GETARG_DATUM(1), PG_GETARG_DATUM(2)));
 }
 
-/*
- * Return headline in text from, generated from a json(b) element
- */
+   
+                                                                  
+   
 static text *
 headline_json_value(void *_state, char *elem_value, int elem_len)
 {

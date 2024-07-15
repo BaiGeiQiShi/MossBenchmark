@@ -1,33 +1,33 @@
-/*-------------------------------------------------------------------------
- *
- * fseeko.c
- *	  64-bit versions of fseeko/ftello()
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/port/fseeko.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                       
+   
+                                                                            
+   
 
-/*
- * We have to use the native defines here because configure hasn't
- * completed yet.
- */
+   
+                                                                   
+                  
+   
 #ifdef __NetBSD__
 
 #include "c.h"
 
 #include <sys/stat.h>
 
-/*
- *	On NetBSD, off_t and fpos_t are the same.  Standards
- *	say off_t is an arithmetic type, but not necessarily integral,
- *	while fpos_t might be neither.
- */
+   
+                                                        
+                                                                  
+                                  
+   
 
 int
 fseeko(FILE *stream, off_t offset, int whence)
@@ -57,7 +57,7 @@ fseeko(FILE *stream, off_t offset, int whence)
     return 0;
     break;
   case SEEK_END:
-    fflush(stream); /* force writes to fd for stat() */
+    fflush(stream);                                    
     if (fstat(fileno(stream), &filestat) != 0)
     {
       goto failure;

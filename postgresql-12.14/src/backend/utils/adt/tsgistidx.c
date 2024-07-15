@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * tsgistidx.c
- *	  GiST support functions for tsvector_ops
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tsgistidx.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+               
+                                             
+   
+                                                                         
+   
+   
+                  
+                                       
+   
+                                                                            
+   
 
 #include "postgres.h"
 
@@ -22,8 +22,8 @@
 #include "utils/pg_crc.h"
 
 #define SIGLENINT                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-  31 /* >121 => key will toast, so it will not work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-      * !!! */
+  31                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
+              
 
 #define SIGLEN (sizeof(int32) * SIGLENINT)
 #define SIGLENBIT (SIGLEN * BITS_PER_BYTE)
@@ -44,13 +44,13 @@ typedef char *BITVECP;
 
 #define GETENTRY(vec, pos) ((SignTSVector *)DatumGetPointer((vec)->vector[(pos)].key))
 
-/*
- * type of GiST index key
- */
+   
+                          
+   
 
 typedef struct
 {
-  int32 vl_len_; /* varlena header (do not touch directly!) */
+  int32 vl_len_;                                              
   int32 flag;
   char data[FLEXIBLE_ARRAY_MEMBER];
 } SignTSVector;
@@ -126,10 +126,10 @@ compareint(const void *va, const void *vb)
   return (a > b) ? 1 : -1;
 }
 
-/*
- * Removes duplicates from an array of int32. 'l' is
- * size of the input array. Returns the new size of the array.
- */
+   
+                                                     
+                                                               
+   
 static int
 uniqueint(int32 *a, int32 l)
 {
@@ -178,7 +178,7 @@ gtsvector_compress(PG_FUNCTION_ARGS)
   GISTENTRY *retval = entry;
 
   if (entry->leafkey)
-  { /* tsvector */
+  {               
     SignTSVector *res;
     TSVector val = DatumGetTSVector(entry->key);
     int32 len;
@@ -208,16 +208,16 @@ gtsvector_compress(PG_FUNCTION_ARGS)
     len = uniqueint(GETARR(res), val->size);
     if (len != val->size)
     {
-      /*
-       * there is a collision of hash-function; len is always less than
-       * val->size
-       */
+         
+                                                                        
+                   
+         
       len = CALCGTSIZE(ARRKEY, len);
       res = (SignTSVector *)repalloc((void *)res, len);
       SET_VARSIZE(res, len);
     }
 
-    /* make signature, if array is too long */
+                                              
     if (VARSIZE(res) > TOAST_INDEX_TARGET)
     {
       SignTSVector *ressign;
@@ -261,10 +261,10 @@ gtsvector_compress(PG_FUNCTION_ARGS)
 Datum
 gtsvector_decompress(PG_FUNCTION_ARGS)
 {
-  /*
-   * We need to detoast the stored value, because the other gtsvector
-   * support functions don't cope with toasted values.
-   */
+     
+                                                                      
+                                                       
+     
   GISTENTRY *entry = (GISTENTRY *)PG_GETARG_POINTER(0);
   SignTSVector *key = (SignTSVector *)PG_DETOAST_DATUM(entry->key);
 
@@ -286,9 +286,9 @@ typedef struct
   int32 *arre;
 } CHKVAL;
 
-/*
- * is there value 'val' in array or not ?
- */
+   
+                                          
+   
 static bool
 checkcondition_arr(void *checkval, QueryOperand *val, ExecPhraseData *data)
 {
@@ -296,11 +296,11 @@ checkcondition_arr(void *checkval, QueryOperand *val, ExecPhraseData *data)
   int32 *StopHigh = ((CHKVAL *)checkval)->arre;
   int32 *StopMiddle;
 
-  /* Loop invariant: StopLow <= val < StopHigh */
+                                                 
 
-  /*
-   * we are not able to find a prefix by hash value
-   */
+     
+                                                    
+     
   if (val->prefix)
   {
     return true;
@@ -329,9 +329,9 @@ checkcondition_arr(void *checkval, QueryOperand *val, ExecPhraseData *data)
 static bool
 checkcondition_bit(void *checkval, QueryOperand *val, ExecPhraseData *data)
 {
-  /*
-   * we are not able to find a prefix in signature tree
-   */
+     
+                                                        
+     
   if (val->prefix)
   {
     return true;
@@ -345,12 +345,12 @@ gtsvector_consistent(PG_FUNCTION_ARGS)
   GISTENTRY *entry = (GISTENTRY *)PG_GETARG_POINTER(0);
   TSQuery query = PG_GETARG_TSQUERY(1);
 
-  /* StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2); */
-  /* Oid		subtype = PG_GETARG_OID(3); */
+                                                                       
+                                        
   bool *recheck = (bool *)PG_GETARG_POINTER(4);
   SignTSVector *key = (SignTSVector *)DatumGetPointer(entry->key);
 
-  /* All cases served by this function are inexact */
+                                                     
   *recheck = true;
 
   if (!query->size)
@@ -365,11 +365,11 @@ gtsvector_consistent(PG_FUNCTION_ARGS)
       PG_RETURN_BOOL(true);
     }
 
-    /* since signature is lossy, cannot specify CALC_NOT here */
+                                                                
     PG_RETURN_BOOL(TS_execute(GETQUERY(query), (void *)GETSIGN(key), TS_EXEC_PHRASE_NO_POS, checkcondition_bit));
   }
   else
-  { /* only leaf pages */
+  {                      
     CHKVAL chkval;
 
     chkval.arrb = GETARR(key);
@@ -449,7 +449,7 @@ gtsvector_same(PG_FUNCTION_ARGS)
   bool *result = (bool *)PG_GETARG_POINTER(2);
 
   if (ISSIGNKEY(a))
-  { /* then b also ISSIGNKEY */
+  {                            
     if (ISALLTRUE(a) && ISALLTRUE(b))
     {
       *result = true;
@@ -479,7 +479,7 @@ gtsvector_same(PG_FUNCTION_ARGS)
     }
   }
   else
-  { /* a and b ISARRKEY */
+  {                       
     int32 lena = ARRNELEM(a), lenb = ARRNELEM(b);
 
     if (lena != lenb)
@@ -520,7 +520,7 @@ hemdistsign(BITVECP a, BITVECP b)
   LOOPBYTE
   {
     diff = (unsigned char)(a[i] ^ b[i]);
-    /* Using the popcount functions here isn't likely to win */
+                                                               
     dist += pg_number_of_ones[diff];
   }
   return dist;
@@ -551,7 +551,7 @@ hemdist(SignTSVector *a, SignTSVector *b)
 Datum
 gtsvector_penalty(PG_FUNCTION_ARGS)
 {
-  GISTENTRY *origentry = (GISTENTRY *)PG_GETARG_POINTER(0); /* always ISSIGNKEY */
+  GISTENTRY *origentry = (GISTENTRY *)PG_GETARG_POINTER(0);                       
   GISTENTRY *newentry = (GISTENTRY *)PG_GETARG_POINTER(1);
   float *penalty = (float *)PG_GETARG_POINTER(2);
   SignTSVector *origval = (SignTSVector *)DatumGetPointer(origentry->key);
@@ -708,7 +708,7 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
     seed_2 = 2;
   }
 
-  /* form initial .. */
+                       
   if (cache[seed_1].allistrue)
   {
     datum_l = (SignTSVector *)palloc(CALCGTSIZE(SIGNKEY | ALLISTRUE, 0));
@@ -740,7 +740,7 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
   union_r = GETSIGN(datum_r);
   maxoff = OffsetNumberNext(maxoff);
   fillcache(&cache[maxoff], GETENTRY(entryvec, maxoff));
-  /* sort before ... */
+                       
   costvector = (SPLITCOST *)palloc(sizeof(SPLITCOST) * maxoff);
   for (j = FirstOffsetNumber; j <= maxoff; j = OffsetNumberNext(j))
   {
@@ -844,13 +844,13 @@ gtsvector_picksplit(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(v);
 }
 
-/*
- * Formerly, gtsvector_consistent was declared in pg_proc.h with arguments
- * that did not match the documented conventions for GiST support functions.
- * We fixed that, but we still need a pg_proc entry with the old signature
- * to support reloading pre-9.6 contrib/tsearch2 opclass declarations.
- * This compatibility function should go away eventually.
- */
+   
+                                                                           
+                                                                             
+                                                                           
+                                                                       
+                                                          
+   
 Datum
 gtsvector_consistent_oldsig(PG_FUNCTION_ARGS)
 {

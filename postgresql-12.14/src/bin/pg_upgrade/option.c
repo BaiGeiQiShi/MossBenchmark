@@ -1,11 +1,11 @@
-/*
- *	opt.c
- *
- *	options functions
- *
- *	Copyright (c) 2010-2019, PostgreSQL Global Development Group
- *	src/bin/pg_upgrade/option.c
- */
+   
+         
+   
+                     
+   
+                                                                
+                               
+   
 
 #include "postgres_fe.h"
 
@@ -27,11 +27,11 @@ check_required_directory(char **dirpath, const char *envVarName, bool useCwd, co
 
 UserOpts user_opts;
 
-/*
- * parseCommandLine()
- *
- *	Parses the command line (argc, argv[]) and loads structures
- */
+   
+                      
+   
+                                                               
+   
 void
 parseCommandLine(int argc, char *argv[])
 {
@@ -40,8 +40,8 @@ parseCommandLine(int argc, char *argv[])
       {"username", required_argument, NULL, 'U'}, {"check", no_argument, NULL, 'c'}, {"link", no_argument, NULL, 'k'}, {"retain", no_argument, NULL, 'r'}, {"jobs", required_argument, NULL, 'j'}, {"socketdir", required_argument, NULL, 's'}, {"verbose", no_argument, NULL, 'v'}, {"clone", no_argument, NULL, 1},
 
       {NULL, 0, NULL, 0}};
-  int option;       /* Command line option */
-  int optindex = 0; /* used by getopt_long */
+  int option;                                
+  int optindex = 0;                          
   int os_user_effective_id;
   FILE *fp;
   char **filename;
@@ -51,16 +51,16 @@ parseCommandLine(int argc, char *argv[])
 
   os_info.progname = get_progname(argv[0]);
 
-  /* Process libpq env. variables; load values here for usage() output */
+                                                                         
   old_cluster.port = getenv("PGPORTOLD") ? atoi(getenv("PGPORTOLD")) : DEF_PGUPORT;
   new_cluster.port = getenv("PGPORTNEW") ? atoi(getenv("PGPORTNEW")) : DEF_PGUPORT;
 
   os_user_effective_id = get_user_info(&os_info.user);
-  /* we override just the database user name;  we got the OS id above */
+                                                                        
   if (getenv("PGUSER"))
   {
     pg_free(os_info.user);
-    /* must save value, getenv()'s pointer is not stable */
+                                                           
     os_info.user = pg_strdup(getenv("PGUSER"));
   }
 
@@ -78,7 +78,7 @@ parseCommandLine(int argc, char *argv[])
     }
   }
 
-  /* Allow help and version to be run as root, so do the test here. */
+                                                                      
   if (os_user_effective_id == 0)
   {
     pg_fatal("%s: cannot be run as root\n", os_info.progname);
@@ -117,7 +117,7 @@ parseCommandLine(int argc, char *argv[])
       break;
 
     case 'o':
-      /* append option? */
+                          
       if (!old_cluster.pgopts)
       {
         old_cluster.pgopts = pg_strdup(optarg);
@@ -132,7 +132,7 @@ parseCommandLine(int argc, char *argv[])
       break;
 
     case 'O':
-      /* append option? */
+                          
       if (!new_cluster.pgopts)
       {
         new_cluster.pgopts = pg_strdup(optarg);
@@ -146,11 +146,11 @@ parseCommandLine(int argc, char *argv[])
       }
       break;
 
-      /*
-       * Someday, the port number option could be removed and passed
-       * using -o/-O, but that requires postmaster -C to be
-       * supported on all old/new versions (added in PG 9.2).
-       */
+         
+                                                                     
+                                                            
+                                                              
+         
     case 'p':
       if ((old_cluster.port = atoi(optarg)) <= 0)
       {
@@ -180,10 +180,10 @@ parseCommandLine(int argc, char *argv[])
       os_info.user = pg_strdup(optarg);
       os_info.user_specified = true;
 
-      /*
-       * Push the user name into the environment so pre-9.1
-       * pg_ctl/libpq uses it.
-       */
+         
+                                                            
+                               
+         
       pg_putenv("PGUSER", os_info.user);
       break;
 
@@ -211,7 +211,7 @@ parseCommandLine(int argc, char *argv[])
     pg_log(PG_REPORT, "Running in verbose mode\n");
   }
 
-  /* label start of upgrade in logfiles */
+                                          
   for (filename = output_files; *filename != NULL; filename++)
   {
     if ((fp = fopen_priv(*filename, "a")) == NULL)
@@ -219,7 +219,7 @@ parseCommandLine(int argc, char *argv[])
       pg_fatal("could not write to log file \"%s\": %m\n", *filename);
     }
 
-    /* Start with newline because we might be appending to a file. */
+                                                                     
     fprintf(fp,
         "\n"
         "-----------------------------------------------------------------\n"
@@ -229,7 +229,7 @@ parseCommandLine(int argc, char *argv[])
     fclose(fp);
   }
 
-  /* Turn off read-only mode;  add prefix to PGOPTIONS? */
+                                                          
   if (getenv("PGOPTIONS"))
   {
     char *pgoptions = psprintf("%s %s", FIX_DEFAULT_READ_ONLY, getenv("PGOPTIONS"));
@@ -242,7 +242,7 @@ parseCommandLine(int argc, char *argv[])
     pg_putenv("PGOPTIONS", FIX_DEFAULT_READ_ONLY);
   }
 
-  /* Get values from env if not already set */
+                                              
   check_required_directory(&old_cluster.bindir, "PGBINOLD", false, "-b", _("old cluster binaries reside"));
   check_required_directory(&new_cluster.bindir, "PGBINNEW", false, "-B", _("new cluster binaries reside"));
   check_required_directory(&old_cluster.pgdata, "PGDATAOLD", false, "-d", _("old cluster data resides"));
@@ -251,11 +251,11 @@ parseCommandLine(int argc, char *argv[])
 
 #ifdef WIN32
 
-  /*
-   * On Windows, initdb --sync-only will fail with a "Permission denied"
-   * error on file pg_upgrade_utility.log if pg_upgrade is run inside the
-   * new cluster directory, so we do a check here.
-   */
+     
+                                                                         
+                                                                          
+                                                   
+     
   {
     char cwd[MAXPGPATH], new_cluster_pgdata[MAXPGPATH];
 
@@ -331,19 +331,19 @@ usage(void)
   printf(_("\nReport bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
-/*
- * check_required_directory()
- *
- * Checks a directory option.
- *	dirpath		  - the directory name supplied on the command line, or NULL
- *	envVarName	  - the name of an environment variable to get if dirpath is NULL
- *	useCwd		  - true if OK to default to CWD
- *	cmdLineOption - the command line option for this directory
- *	description   - a description of this directory option
- *
- * We use the last two arguments to construct a meaningful error message if the
- * user hasn't provided the required directory name.
- */
+   
+                              
+   
+                              
+                                                                         
+                                                                                
+                                            
+                                                              
+                                                          
+   
+                                                                                
+                                                     
+   
 static void
 check_required_directory(char **dirpath, const char *envVarName, bool useCwd, const char *cmdLineOption, const char *description)
 {
@@ -373,24 +373,24 @@ check_required_directory(char **dirpath, const char *envVarName, bool useCwd, co
     }
   }
 
-  /*
-   * Clean up the path, in particular trimming any trailing path separators,
-   * because we construct paths by appending to this path.
-   */
+     
+                                                                             
+                                                           
+     
   canonicalize_path(*dirpath);
 }
 
-/*
- * adjust_data_dir
- *
- * If a configuration-only directory was specified, find the real data dir
- * by querying the running server.  This has limited checking because we
- * can't check for a running server because we can't find postmaster.pid.
- *
- * On entry, cluster->pgdata has been set from command line or env variable,
- * but cluster->pgconfig isn't set.  We fill both variables with corrected
- * values.
- */
+   
+                   
+   
+                                                                           
+                                                                         
+                                                                          
+   
+                                                                             
+                                                                           
+           
+   
 void
 adjust_data_dir(ClusterInfo *cluster)
 {
@@ -398,10 +398,10 @@ adjust_data_dir(ClusterInfo *cluster)
   char cmd[MAXPGPATH], cmd_output[MAX_STRING];
   FILE *fp, *output;
 
-  /* Initially assume config dir and data dir are the same */
+                                                             
   cluster->pgconfig = pg_strdup(cluster->pgdata);
 
-  /* If there is no postgresql.conf, it can't be a config-only dir */
+                                                                     
   snprintf(filename, sizeof(filename), "%s/postgresql.conf", cluster->pgconfig);
   if ((fp = fopen(filename, "r")) == NULL)
   {
@@ -409,7 +409,7 @@ adjust_data_dir(ClusterInfo *cluster)
   }
   fclose(fp);
 
-  /* If PG_VERSION exists, it can't be a config-only dir */
+                                                           
   snprintf(filename, sizeof(filename), "%s/PG_VERSION", cluster->pgconfig);
   if ((fp = fopen(filename, "r")) != NULL)
   {
@@ -417,7 +417,7 @@ adjust_data_dir(ClusterInfo *cluster)
     return;
   }
 
-  /* Must be a configuration directory, so find the real data directory. */
+                                                                           
 
   if (cluster == &old_cluster)
   {
@@ -428,11 +428,11 @@ adjust_data_dir(ClusterInfo *cluster)
     prep_status("Finding the real data directory for the target cluster");
   }
 
-  /*
-   * We don't have a data directory yet, so we can't check the PG version,
-   * so this might fail --- only works for PG 9.2+.   If this fails,
-   * pg_upgrade will fail anyway because the data files will not be found.
-   */
+     
+                                                                           
+                                                                     
+                                                                           
+     
   snprintf(cmd, sizeof(cmd), "\"%s/postgres\" -D \"%s\" -C data_directory", cluster->bindir, cluster->pgconfig);
 
   if ((output = popen(cmd, "r")) == NULL || fgets(cmd_output, sizeof(cmd_output), output) == NULL)
@@ -442,7 +442,7 @@ adjust_data_dir(ClusterInfo *cluster)
 
   pclose(output);
 
-  /* Remove trailing newline */
+                               
   if (strchr(cmd_output, '\n') != NULL)
   {
     *strchr(cmd_output, '\n') = '\0';
@@ -453,23 +453,23 @@ adjust_data_dir(ClusterInfo *cluster)
   check_ok();
 }
 
-/*
- * get_sock_dir
- *
- * Identify the socket directory to use for this cluster.  If we're doing
- * a live check (old cluster only), we need to find out where the postmaster
- * is listening.  Otherwise, we're going to put the socket into the current
- * directory.
- */
+   
+                
+   
+                                                                          
+                                                                             
+                                                                            
+              
+   
 void
 get_sock_dir(ClusterInfo *cluster, bool live_check)
 {
 #ifdef HAVE_UNIX_SOCKETS
 
-  /*
-   * sockdir and port were added to postmaster.pid in PG 9.1. Pre-9.1 cannot
-   * process pg_ctl -w for sockets in non-default locations.
-   */
+     
+                                                                             
+                                                             
+     
   if (GET_MAJOR_VERSION(cluster->major_version) >= 901)
   {
     if (!live_check)
@@ -478,11 +478,11 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
     }
     else
     {
-      /*
-       * If we are doing a live check, we will use the old cluster's
-       * Unix domain socket directory so we can connect to the live
-       * server.
-       */
+         
+                                                                     
+                                                                    
+                 
+         
       unsigned short orig_port = cluster->port;
       char filename[MAXPGPATH], line[MAXPGPATH];
       FILE *fp;
@@ -501,7 +501,7 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
           pg_fatal("could not read line %d from file \"%s\": %s\n", lineno, filename, strerror(errno));
         }
 
-        /* potentially overwrite user-supplied value */
+                                                       
         if (lineno == LOCK_FILE_LINE_PORT)
         {
           sscanf(line, "%hu", &old_cluster.port);
@@ -509,7 +509,7 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
         if (lineno == LOCK_FILE_LINE_SOCKET_DIR)
         {
           cluster->sockdir = pg_strdup(line);
-          /* strip off newline */
+                                 
           if (strchr(cluster->sockdir, '\n') != NULL)
           {
             *strchr(cluster->sockdir, '\n') = '\0';
@@ -518,7 +518,7 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
       }
       fclose(fp);
 
-      /* warn of port number correction */
+                                          
       if (orig_port != DEF_PGUPORT && old_cluster.port != orig_port)
       {
         pg_log(PG_WARNING, "user-supplied old port number %hu corrected to %hu\n", orig_port, cluster->port);
@@ -528,13 +528,13 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
   else
   {
 
-    /*
-     * Can't get sockdir and pg_ctl -w can't use a non-default, use
-     * default
-     */
+       
+                                                                    
+               
+       
     cluster->sockdir = NULL;
   }
-#else /* !HAVE_UNIX_SOCKETS */
+#else                         
   cluster->sockdir = NULL;
 #endif
 }

@@ -1,16 +1,16 @@
-/*-------------------------------------------------------------------------
- *
- * pg_enum.c
- *	  routines to support manipulation of the pg_enum relation
- *
- * Copyright (c) 2006-2019, PostgreSQL Global Development Group
- *
- *
- * IDENTIFICATION
- *	  src/backend/catalog/pg_enum.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+             
+                                                              
+   
+                                                                
+   
+   
+                  
+                                   
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -32,18 +32,18 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 
-/* Potentially set by pg_upgrade_support functions */
+                                                     
 Oid binary_upgrade_next_pg_enum_oid = InvalidOid;
 
-/*
- * Hash table of enum value OIDs created during the current transaction by
- * AddEnumLabel.  We disallow using these values until the transaction is
- * committed; otherwise, they might get into indexes where we can't clean
- * them up, and then if the transaction rolls back we have a broken index.
- * (See comments for check_safe_enum_use() in enum.c.)  Values created by
- * EnumValuesCreate are *not* blacklisted; we assume those are created during
- * CREATE TYPE, so they can't go away unless the enum type itself does.
- */
+   
+                                                                           
+                                                                          
+                                                                          
+                                                                           
+                                                                          
+                                                                              
+                                                                        
+   
 static HTAB *enum_blacklist = NULL;
 
 static void
@@ -51,12 +51,12 @@ RenumberEnumType(Relation pg_enum, HeapTuple *existing, int nelems);
 static int
 sort_order_cmp(const void *p1, const void *p2);
 
-/*
- * EnumValuesCreate
- *		Create an entry in pg_enum for each of the supplied enum values.
- *
- * vals is a list of Value strings.
- */
+   
+                    
+                                                                     
+   
+                                    
+   
 void
 EnumValuesCreate(Oid enumTypeOid, List *vals)
 {
@@ -71,31 +71,31 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
 
   num_elems = list_length(vals);
 
-  /*
-   * We do not bother to check the list of values for duplicates --- if you
-   * have any, you'll get a less-than-friendly unique-index violation. It is
-   * probably not worth trying harder.
-   */
+     
+                                                                            
+                                                                             
+                                       
+     
 
   pg_enum = table_open(EnumRelationId, RowExclusiveLock);
 
-  /*
-   * Allocate OIDs for the enum's members.
-   *
-   * While this method does not absolutely guarantee that we generate no
-   * duplicate OIDs (since we haven't entered each oid into the table before
-   * allocating the next), trouble could only occur if the OID counter wraps
-   * all the way around before we finish. Which seems unlikely.
-   */
+     
+                                           
+     
+                                                                         
+                                                                             
+                                                                             
+                                                                
+     
   oids = (Oid *)palloc(num_elems * sizeof(Oid));
 
   for (elemno = 0; elemno < num_elems; elemno++)
   {
-    /*
-     * We assign even-numbered OIDs to all the new enum labels.  This
-     * tells the comparison functions the OIDs are in the correct sort
-     * order and can be compared directly.
-     */
+       
+                                                                      
+                                                                       
+                                           
+       
     Oid new_oid;
 
     do
@@ -105,10 +105,10 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
     oids[elemno] = new_oid;
   }
 
-  /* sort them, just in case OID counter wrapped from high to low */
+                                                                    
   qsort(oids, num_elems, sizeof(Oid), oid_cmp);
 
-  /* and make the entries */
+                            
   memset(nulls, false, sizeof(nulls));
 
   elemno = 0;
@@ -116,10 +116,10 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
   {
     char *lab = strVal(lfirst(lc));
 
-    /*
-     * labels are stored in a name field, for easier syscache lookup, so
-     * check the length to make sure it's within range.
-     */
+       
+                                                                         
+                                                        
+       
     if (strlen(lab) > (NAMEDATALEN - 1))
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid enum label \"%s\"", lab), errdetail("Labels must be %d characters or less.", NAMEDATALEN - 1)));
@@ -139,15 +139,15 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
     elemno++;
   }
 
-  /* clean up */
+                
   pfree(oids);
   table_close(pg_enum, RowExclusiveLock);
 }
 
-/*
- * EnumValuesDelete
- *		Remove all the pg_enum entries for the specified enum type.
- */
+   
+                    
+                                                                
+   
 void
 EnumValuesDelete(Oid enumTypeOid)
 {
@@ -172,9 +172,9 @@ EnumValuesDelete(Oid enumTypeOid)
   table_close(pg_enum, RowExclusiveLock);
 }
 
-/*
- * Initialize the enum blacklist for this transaction.
- */
+   
+                                                       
+   
 static void
 init_enum_blacklist(void)
 {
@@ -187,12 +187,12 @@ init_enum_blacklist(void)
   enum_blacklist = hash_create("Enum value blacklist", 32, &hash_ctl, HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 }
 
-/*
- * AddEnumLabel
- *		Add a new label to the enum set. By default it goes at
- *		the end, but the user can choose to place it before or
- *		after any existing set member.
- */
+   
+                
+                                                           
+                                                           
+                                   
+   
 void
 AddEnumLabel(Oid enumTypeOid, const char *newVal, const char *neighbor, bool newValIsAfter, bool skipIfExists)
 {
@@ -208,27 +208,27 @@ AddEnumLabel(Oid enumTypeOid, const char *newVal, const char *neighbor, bool new
   int nelems;
   int i;
 
-  /* check length of new label is ok */
+                                       
   if (strlen(newVal) > (NAMEDATALEN - 1))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid enum label \"%s\"", newVal), errdetail("Labels must be %d characters or less.", NAMEDATALEN - 1)));
   }
 
-  /*
-   * Acquire a lock on the enum type, which we won't release until commit.
-   * This ensures that two backends aren't concurrently modifying the same
-   * enum type.  Without that, we couldn't be sure to get a consistent view
-   * of the enum members via the syscache.  Note that this does not block
-   * other backends from inspecting the type; see comments for
-   * RenumberEnumType.
-   */
+     
+                                                                           
+                                                                           
+                                                                            
+                                                                          
+                                                               
+                       
+     
   LockDatabaseObject(TypeRelationId, enumTypeOid, 0, ExclusiveLock);
 
-  /*
-   * Check if label is already in use.  The unique index on pg_enum would
-   * catch this anyway, but we prefer a friendlier error message, and
-   * besides we need a check to support IF NOT EXISTS.
-   */
+     
+                                                                          
+                                                                      
+                                                       
+     
   enum_tup = SearchSysCache2(ENUMTYPOIDNAME, ObjectIdGetDatum(enumTypeOid), CStringGetDatum(newVal));
   if (HeapTupleIsValid(enum_tup))
   {
@@ -246,14 +246,14 @@ AddEnumLabel(Oid enumTypeOid, const char *newVal, const char *neighbor, bool new
 
   pg_enum = table_open(EnumRelationId, RowExclusiveLock);
 
-  /* If we have to renumber the existing members, we restart from here */
+                                                                         
 restart:
 
-  /* Get the list of existing members of the enum */
+                                                    
   list = SearchSysCacheList1(ENUMTYPOIDNAME, ObjectIdGetDatum(enumTypeOid));
   nelems = list->n_members;
 
-  /* Sort the existing members by enumsortorder */
+                                                  
   existing = (HeapTuple *)palloc(nelems * sizeof(HeapTuple));
   for (i = 0; i < nelems; i++)
   {
@@ -264,10 +264,10 @@ restart:
 
   if (neighbor == NULL)
   {
-    /*
-     * Put the new label at the end of the list. No change to existing
-     * tuples is required.
-     */
+       
+                                                                       
+                           
+       
     if (nelems > 0)
     {
       Form_pg_enum en = (Form_pg_enum)GETSTRUCT(existing[nelems - 1]);
@@ -281,13 +281,13 @@ restart:
   }
   else
   {
-    /* BEFORE or AFTER was specified */
+                                       
     int nbr_index;
     int other_nbr_index;
     Form_pg_enum nbr_en;
     Form_pg_enum other_nbr_en;
 
-    /* Locate the neighbor element */
+                                     
     for (nbr_index = 0; nbr_index < nelems; nbr_index++)
     {
       Form_pg_enum en = (Form_pg_enum)GETSTRUCT(existing[nbr_index]);
@@ -303,16 +303,16 @@ restart:
     }
     nbr_en = (Form_pg_enum)GETSTRUCT(existing[nbr_index]);
 
-    /*
-     * Attempt to assign an appropriate enumsortorder value: one less than
-     * the smallest member, one more than the largest member, or halfway
-     * between two existing members.
-     *
-     * In the "halfway" case, because of the finite precision of float4,
-     * we might compute a value that's actually equal to one or the other
-     * of its neighbors.  In that case we renumber the existing members
-     * and try again.
-     */
+       
+                                                                           
+                                                                         
+                                     
+       
+                                                                         
+                                                                          
+                                                                        
+                      
+       
     if (newValIsAfter)
     {
       other_nbr_index = nbr_index + 1;
@@ -332,13 +332,13 @@ restart:
     }
     else
     {
-      /*
-       * The midpoint value computed here has to be rounded to float4
-       * precision, else our equality comparisons against the adjacent
-       * values are meaningless.  The most portable way of forcing that
-       * to happen with non-C-standard-compliant compilers is to store
-       * it into a volatile variable.
-       */
+         
+                                                                      
+                                                                       
+                                                                        
+                                                                       
+                                      
+         
       volatile float4 midpoint;
 
       other_nbr_en = (Form_pg_enum)GETSTRUCT(existing[other_nbr_index]);
@@ -347,7 +347,7 @@ restart:
       if (midpoint == nbr_en->enumsortorder || midpoint == other_nbr_en->enumsortorder)
       {
         RenumberEnumType(pg_enum, existing, nelems);
-        /* Clean up and start over */
+                                     
         pfree(existing);
         ReleaseCatCacheList(list);
         goto restart;
@@ -357,7 +357,7 @@ restart:
     }
   }
 
-  /* Get a new OID for the new label */
+                                       
   if (IsBinaryUpgrade)
   {
     if (!OidIsValid(binary_upgrade_next_pg_enum_oid))
@@ -365,11 +365,11 @@ restart:
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("pg_enum OID value not set when in binary upgrade mode")));
     }
 
-    /*
-     * Use binary-upgrade override for pg_enum.oid, if supplied. During
-     * binary upgrade, all pg_enum.oid's are set this way so they are
-     * guaranteed to be consistent.
-     */
+       
+                                                                        
+                                                                      
+                                    
+       
     if (neighbor != NULL)
     {
       ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("ALTER TYPE ADD BEFORE/AFTER is incompatible with binary upgrade")));
@@ -380,26 +380,26 @@ restart:
   }
   else
   {
-    /*
-     * Normal case: we need to allocate a new Oid for the value.
-     *
-     * We want to give the new element an even-numbered Oid if it's safe,
-     * which is to say it compares correctly to all pre-existing even
-     * numbered Oids in the enum.  Otherwise, we must give it an odd Oid.
-     */
+       
+                                                                 
+       
+                                                                          
+                                                                      
+                                                                          
+       
     for (;;)
     {
       bool sorts_ok;
 
-      /* Get a new OID (different from all existing pg_enum tuples) */
+                                                                      
       newOid = GetNewOidWithIndex(pg_enum, EnumOidIndexId, Anum_pg_enum_oid);
 
-      /*
-       * Detect whether it sorts correctly relative to existing
-       * even-numbered labels of the enum.  We can ignore existing
-       * labels with odd Oids, since a comparison involving one of those
-       * will not take the fast path anyway.
-       */
+         
+                                                                
+                                                                   
+                                                                         
+                                             
+         
       sorts_ok = true;
       for (i = 0; i < nelems; i++)
       {
@@ -409,12 +409,12 @@ restart:
 
         if (exists_oid & 1)
         {
-          continue; /* ignore odd Oids */
+          continue;                      
         }
 
         if (exists_en->enumsortorder < newelemorder)
         {
-          /* should sort before */
+                                  
           if (exists_oid >= newOid)
           {
             sorts_ok = false;
@@ -423,7 +423,7 @@ restart:
         }
         else
         {
-          /* should sort after */
+                                 
           if (exists_oid <= newOid)
           {
             sorts_ok = false;
@@ -434,43 +434,43 @@ restart:
 
       if (sorts_ok)
       {
-        /* If it's even and sorts OK, we're done. */
+                                                    
         if ((newOid & 1) == 0)
         {
           break;
         }
 
-        /*
-         * If it's odd, and sorts OK, loop back to get another OID and
-         * try again.  Probably, the next available even OID will sort
-         * correctly too, so it's worth trying.
-         */
+           
+                                                                       
+                                                                       
+                                                
+           
       }
       else
       {
-        /*
-         * If it's odd, and does not sort correctly, we're done.
-         * (Probably, the next available even OID would sort
-         * incorrectly too, so no point in trying again.)
-         */
+           
+                                                                 
+                                                             
+                                                          
+           
         if (newOid & 1)
         {
           break;
         }
 
-        /*
-         * If it's even, and does not sort correctly, loop back to get
-         * another OID and try again.  (We *must* reject this case.)
-         */
+           
+                                                                       
+                                                                     
+           
       }
     }
   }
 
-  /* Done with info about existing members */
+                                             
   pfree(existing);
   ReleaseCatCacheList(list);
 
-  /* Create the new pg_enum entry */
+                                    
   memset(nulls, false, sizeof(nulls));
   values[Anum_pg_enum_oid - 1] = ObjectIdGetDatum(newOid);
   values[Anum_pg_enum_enumtypid - 1] = ObjectIdGetDatum(enumTypeOid);
@@ -483,20 +483,20 @@ restart:
 
   table_close(pg_enum, RowExclusiveLock);
 
-  /* Set up the blacklist hash if not already done in this transaction */
+                                                                         
   if (enum_blacklist == NULL)
   {
     init_enum_blacklist();
   }
 
-  /* Add the new value to the blacklist */
+                                          
   (void)hash_search(enum_blacklist, &newOid, HASH_ENTER, NULL);
 }
 
-/*
- * RenameEnumLabel
- *		Rename a label in an enum set.
- */
+   
+                   
+                                   
+   
 void
 RenameEnumLabel(Oid enumTypeOid, const char *oldVal, const char *newVal)
 {
@@ -509,32 +509,32 @@ RenameEnumLabel(Oid enumTypeOid, const char *oldVal, const char *newVal)
   bool found_new;
   int i;
 
-  /* check length of new label is ok */
+                                       
   if (strlen(newVal) > (NAMEDATALEN - 1))
   {
     ereport(ERROR, (errcode(ERRCODE_INVALID_NAME), errmsg("invalid enum label \"%s\"", newVal), errdetail("Labels must be %d characters or less.", NAMEDATALEN - 1)));
   }
 
-  /*
-   * Acquire a lock on the enum type, which we won't release until commit.
-   * This ensures that two backends aren't concurrently modifying the same
-   * enum type.  Since we are not changing the type's sort order, this is
-   * probably not really necessary, but there seems no reason not to take
-   * the lock to be sure.
-   */
+     
+                                                                           
+                                                                           
+                                                                          
+                                                                          
+                          
+     
   LockDatabaseObject(TypeRelationId, enumTypeOid, 0, ExclusiveLock);
 
   pg_enum = table_open(EnumRelationId, RowExclusiveLock);
 
-  /* Get the list of existing members of the enum */
+                                                    
   list = SearchSysCacheList1(ENUMTYPOIDNAME, ObjectIdGetDatum(enumTypeOid));
   nelems = list->n_members;
 
-  /*
-   * Locate the element to rename and check if the new label is already in
-   * use.  (The unique index on pg_enum would catch that anyway, but we
-   * prefer a friendlier error message.)
-   */
+     
+                                                                           
+                                                                        
+                                         
+     
   old_tup = NULL;
   found_new = false;
   for (i = 0; i < nelems; i++)
@@ -559,13 +559,13 @@ RenameEnumLabel(Oid enumTypeOid, const char *oldVal, const char *newVal)
     ereport(ERROR, (errcode(ERRCODE_DUPLICATE_OBJECT), errmsg("enum label \"%s\" already exists", newVal)));
   }
 
-  /* OK, make a writable copy of old tuple */
+                                             
   enum_tup = heap_copytuple(old_tup);
   en = (Form_pg_enum)GETSTRUCT(enum_tup);
 
   ReleaseCatCacheList(list);
 
-  /* Update the pg_enum entry */
+                                
   namestrcpy(&en->enumlabel, newVal);
   CatalogTupleUpdate(pg_enum, &enum_tup->t_self, enum_tup);
   heap_freetuple(enum_tup);
@@ -573,71 +573,71 @@ RenameEnumLabel(Oid enumTypeOid, const char *oldVal, const char *newVal)
   table_close(pg_enum, RowExclusiveLock);
 }
 
-/*
- * Test if the given enum value is on the blacklist
- */
+   
+                                                    
+   
 bool
 EnumBlacklisted(Oid enum_id)
 {
   bool found;
 
-  /* If we've made no blacklist table, all values are safe */
+                                                             
   if (enum_blacklist == NULL)
   {
     return false;
   }
 
-  /* Else, is it in the table? */
+                                 
   (void)hash_search(enum_blacklist, &enum_id, HASH_FIND, &found);
   return found;
 }
 
-/*
- * Clean up enum stuff after end of top-level transaction.
- */
+   
+                                                           
+   
 void
 AtEOXact_Enum(void)
 {
-  /*
-   * Reset the blacklist table, as all our enum values are now committed.
-   * The memory will go away automatically when TopTransactionContext is
-   * freed; it's sufficient to clear our pointer.
-   */
+     
+                                                                          
+                                                                         
+                                                  
+     
   enum_blacklist = NULL;
 }
 
-/*
- * RenumberEnumType
- *		Renumber existing enum elements to have sort positions 1..n.
- *
- * We avoid doing this unless absolutely necessary; in most installations
- * it will never happen.  The reason is that updating existing pg_enum
- * entries creates hazards for other backends that are concurrently reading
- * pg_enum.  Although system catalog scans now use MVCC semantics, the
- * syscache machinery might read different pg_enum entries under different
- * snapshots, so some other backend might get confused about the proper
- * ordering if a concurrent renumbering occurs.
- *
- * We therefore make the following choices:
- *
- * 1. Any code that is interested in the enumsortorder values MUST read
- * all the relevant pg_enum entries with a single MVCC snapshot, or else
- * acquire lock on the enum type to prevent concurrent execution of
- * AddEnumLabel().
- *
- * 2. Code that is not examining enumsortorder can use a syscache
- * (for example, enum_in and enum_out do so).
- */
+   
+                    
+                                                                 
+   
+                                                                          
+                                                                       
+                                                                            
+                                                                       
+                                                                           
+                                                                        
+                                                
+   
+                                            
+   
+                                                                        
+                                                                         
+                                                                    
+                   
+   
+                                                                  
+                                              
+   
 static void
 RenumberEnumType(Relation pg_enum, HeapTuple *existing, int nelems)
 {
   int i;
 
-  /*
-   * We should only need to increase existing elements' enumsortorders,
-   * never decrease them.  Therefore, work from the end backwards, to avoid
-   * unwanted uniqueness violations.
-   */
+     
+                                                                        
+                                                                            
+                                     
+     
   for (i = nelems - 1; i >= 0; i--)
   {
     HeapTuple newtup;
@@ -658,11 +658,11 @@ RenumberEnumType(Relation pg_enum, HeapTuple *existing, int nelems)
     heap_freetuple(newtup);
   }
 
-  /* Make the updates visible */
+                                
   CommandCounterIncrement();
 }
 
-/* qsort comparison function for tuples by sort order */
+                                                        
 static int
 sort_order_cmp(const void *p1, const void *p2)
 {
@@ -699,7 +699,7 @@ EstimateEnumBlacklistSpace(void)
     entries = 0;
   }
 
-  /* Add one for the terminator. */
+                                   
   return sizeof(Oid) * (entries + 1);
 }
 
@@ -708,13 +708,13 @@ SerializeEnumBlacklist(void *space, Size size)
 {
   Oid *serialized = (Oid *)space;
 
-  /*
-   * Make sure the hash table hasn't changed in size since the caller
-   * reserved the space.
-   */
+     
+                                                                      
+                         
+     
   Assert(size == EstimateEnumBlacklistSpace());
 
-  /* Write out all the values from the hash table, if there is one. */
+                                                                      
   if (enum_blacklist)
   {
     HASH_SEQ_STATUS status;
@@ -727,13 +727,13 @@ SerializeEnumBlacklist(void *space, Size size)
     }
   }
 
-  /* Write out the terminator. */
+                                 
   *serialized = InvalidOid;
 
-  /*
-   * Make sure the amount of space we actually used matches what was
-   * estimated.
-   */
+     
+                                                                     
+                
+     
   Assert((char *)(serialized + 1) == ((char *)space) + size);
 }
 
@@ -744,17 +744,17 @@ RestoreEnumBlacklist(void *space)
 
   Assert(!enum_blacklist);
 
-  /*
-   * As a special case, if the list is empty then don't even bother to
-   * create the hash table.  This is the usual case, since enum alteration
-   * is expected to be rare.
-   */
+     
+                                                                       
+                                                                           
+                             
+     
   if (!OidIsValid(*serialized))
   {
     return;
   }
 
-  /* Read all the values into a new hash table. */
+                                                  
   init_enum_blacklist();
   do
   {

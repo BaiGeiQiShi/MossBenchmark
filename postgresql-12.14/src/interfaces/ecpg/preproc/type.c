@@ -1,4 +1,4 @@
-/* src/interfaces/ecpg/preproc/type.c */
+                                        
 
 #include "postgres_fe.h"
 
@@ -8,7 +8,7 @@
 
 static struct ECPGstruct_member struct_no_indicator = {"no_indicator", &ecpg_no_indicator, NULL};
 
-/* malloc + error check */
+                          
 void *
 mm_alloc(size_t size)
 {
@@ -22,7 +22,7 @@ mm_alloc(size_t size)
   return ptr;
 }
 
-/* strdup + error check */
+                          
 char *
 mm_strdup(const char *string)
 {
@@ -36,7 +36,7 @@ mm_strdup(const char *string)
   return new;
 }
 
-/* duplicate memberlist */
+                          
 struct ECPGstruct_member *
 ECPGstruct_member_dup(struct ECPGstruct_member *rm)
 {
@@ -54,10 +54,10 @@ ECPGstruct_member_dup(struct ECPGstruct_member *rm)
       break;
     case ECPGt_array:
 
-      /*
-       * if this array does contain a struct again, we have to
-       * create the struct too
-       */
+         
+                                                               
+                               
+         
       if (rm->type->u.element->type == ECPGt_struct || rm->type->u.element->type == ECPGt_union)
       {
         type = ECPGmake_struct_type(rm->type->u.element->u.members, rm->type->u.element->type, rm->type->u.element->type_name, rm->type->u.element->struct_sizeof);
@@ -80,7 +80,7 @@ ECPGstruct_member_dup(struct ECPGstruct_member *rm)
   return new;
 }
 
-/* The NAME argument is copied. The type argument is preserved as a pointer. */
+                                                                               
 void
 ECPGmake_struct_member(const char *name, struct ECPGtype *type, struct ECPGstruct_member **start)
 {
@@ -113,7 +113,7 @@ ECPGmake_simple_type(enum ECPGttype type, char *size, int counter)
   ne->size = size;
   ne->u.element = NULL;
   ne->struct_sizeof = NULL;
-  ne->counter = counter; /* only needed for varchar and bytea */
+  ne->counter = counter;                                        
 
   return ne;
 }
@@ -188,13 +188,13 @@ get_type(enum ECPGttype type)
     return "ECPGt_varchar";
   case ECPGt_bytea:
     return "ECPGt_bytea";
-  case ECPGt_NO_INDICATOR: /* no indicator */
+  case ECPGt_NO_INDICATOR:                   
     return "ECPGt_NO_INDICATOR";
     break;
-  case ECPGt_char_variable: /* string that should not be quoted */
+  case ECPGt_char_variable:                                       
     return "ECPGt_char_variable";
     break;
-  case ECPGt_const: /* constant string quoted */
+  case ECPGt_const:                             
     return "ECPGt_const";
     break;
   case ECPGt_decimal:
@@ -228,20 +228,20 @@ get_type(enum ECPGttype type)
   return NULL;
 }
 
-/* Dump a type.
-   The type is dumped as:
-   type-tag <comma>				   - enum ECPGttype
-   reference-to-variable <comma>		   - char *
-   size <comma>					   - long size of this field (if varchar)
-   arrsize <comma>				   - long number of elements in the arr
-   offset <comma>				   - offset to the next element
-   Where:
-   type-tag is one of the simple types or varchar.
-   reference-to-variable can be a reference to a struct element.
-   arrsize is the size of the array in case of array fetches. Otherwise 0.
-   size is the maxsize in case it is a varchar. Otherwise it is the size of
-   the variable (required to do array fetches of structs).
- */
+                
+                          
+                                           
+                                              
+                                                              
+                                                              
+                                                     
+          
+                                                   
+                                                                 
+                                                                           
+                                                                            
+                                                           
+   
 static void
 ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varcharsize, char *arrsize, const char *size, const char *prefix, int);
 static void
@@ -296,7 +296,7 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype *type, const int brac
     switch (type->u.element->type)
     {
     case ECPGt_array:
-      mmerror(PARSE_ERROR, ET_ERROR, "nested arrays are not supported (except strings)"); /* array of array */
+      mmerror(PARSE_ERROR, ET_ERROR, "nested arrays are not supported (except strings)");                     
       break;
     case ECPGt_struct:
     case ECPGt_union:
@@ -339,15 +339,15 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype *type, const int brac
     free(str_one);
   }
   break;
-  case ECPGt_union: /* cannot dump a complete union */
+  case ECPGt_union:                                   
     base_yyerror("type of union has to be specified");
     break;
   case ECPGt_char_variable:
   {
-    /*
-     * Allocate for each, as there are code-paths where the values
-     * get stomped on.
-     */
+       
+                                                                   
+                       
+       
     char *str_varchar_one = mm_strdup("1");
     char *str_arr_one = mm_strdup("1");
     char *str_neg_one = mm_strdup("-1");
@@ -370,10 +370,10 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype *type, const int brac
   break;
   case ECPGt_descriptor:
   {
-    /*
-     * Allocate for each, as there are code-paths where the values
-     * get stomped on.
-     */
+       
+                                                                   
+                       
+       
     char *str_neg_one = mm_strdup("-1");
     char *ind_type_neg_one = mm_strdup("-1");
 
@@ -394,10 +394,10 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype *type, const int brac
   break;
   default:
   {
-    /*
-     * Allocate for each, as there are code-paths where the values
-     * get stomped on.
-     */
+       
+                                                                   
+                       
+       
     char *str_neg_one = mm_strdup("-1");
     char *ind_type_neg_one = mm_strdup("-1");
 
@@ -419,8 +419,8 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype *type, const int brac
   }
 }
 
-/* If size is NULL, then the offset is 0, if not use size as a
-   string, it represents the offset needed if we are in an array of structs. */
+                                                               
+                                                                               
 static void
 ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varcharsize, char *arrsize, const char *size, const char *prefix, int counter)
 {
@@ -430,7 +430,7 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
   }
   else if (type == ECPGt_descriptor)
   {
-    /* remember that name here already contains quotes (if needed) */
+                                                                     
     fprintf(o, "\n\tECPGt_descriptor, %s, 1L, 1L, 1L, ", name);
   }
   else if (type == ECPGt_sqlda)
@@ -445,18 +445,18 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
 
     switch (type)
     {
-      /*
-       * we have to use the & operator except for arrays and
-       * pointers
-       */
+         
+                                                             
+                  
+         
 
     case ECPGt_varchar:
     case ECPGt_bytea:
 
-      /*
-       * we have to use the pointer except for arrays with given
-       * bounds
-       */
+         
+                                                                 
+                
+         
       if (((atoi(arrsize) > 0) || (atoi(arrsize) == 0 && strcmp(arrsize, "0") != 0)) && size == NULL)
       {
         sprintf(variable, "(%s%s)", prefix ? prefix : "", name);
@@ -466,10 +466,10 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
         sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
       }
 
-      /*
-       * If we created a varchar structure automatically, counter is
-       * greater than 0.
-       */
+         
+                                                                     
+                         
+         
       if (type == ECPGt_varchar)
       {
         struct_name = "struct varchar";
@@ -495,19 +495,19 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
     {
       char *sizeof_name = "char";
 
-      /*
-       * we have to use the pointer except for arrays with given
-       * bounds, ecpglib will distinguish between * and []
-       */
+         
+                                                                 
+                                                           
+         
       if ((atoi(varcharsize) > 1 || (atoi(arrsize) > 0) || (atoi(varcharsize) == 0 && strcmp(varcharsize, "0") != 0) || (atoi(arrsize) == 0 && strcmp(arrsize, "0") != 0)) && size == NULL)
       {
         sprintf(variable, "(%s%s)", prefix ? prefix : "", name);
         if ((type == ECPGt_char || type == ECPGt_unsigned_char) && strcmp(varcharsize, "0") == 0)
         {
-          /*
-           * If this is an array of char *, the offset would
-           * be sizeof(char *) and not sizeof(char).
-           */
+             
+                                                             
+                                                     
+             
           sizeof_name = "char *";
         }
       }
@@ -521,50 +521,50 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
     }
     case ECPGt_numeric:
 
-      /*
-       * we have to use a pointer here
-       */
+         
+                                       
+         
       sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
       sprintf(offset, "sizeof(numeric)");
       break;
     case ECPGt_interval:
 
-      /*
-       * we have to use a pointer here
-       */
+         
+                                       
+         
       sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
       sprintf(offset, "sizeof(interval)");
       break;
     case ECPGt_date:
 
-      /*
-       * we have to use a pointer and translate the variable type
-       */
+         
+                                                                  
+         
       sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
       sprintf(offset, "sizeof(date)");
       break;
     case ECPGt_timestamp:
 
-      /*
-       * we have to use a pointer and translate the variable type
-       */
+         
+                                                                  
+         
       sprintf(variable, "&(%s%s)", prefix ? prefix : "", name);
       sprintf(offset, "sizeof(timestamp)");
       break;
     case ECPGt_const:
 
-      /*
-       * just dump the const as string
-       */
+         
+                                       
+         
       sprintf(variable, "\"%s\"", name);
       sprintf(offset, "strlen(\"%s\")", name);
       break;
     default:
 
-      /*
-       * we have to use the pointer except for arrays with given
-       * bounds
-       */
+         
+                                                                 
+                
+         
       if (((atoi(arrsize) > 0) || (atoi(arrsize) == 0 && strcmp(arrsize, "0") != 0)) && size == NULL)
       {
         sprintf(variable, "(%s%s)", prefix ? prefix : "", name);
@@ -578,19 +578,19 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
       break;
     }
 
-    /*
-     * Array size would be -1 for addresses of members within structure,
-     * when pointer to structure is being dumped.
-     */
+       
+                                                                         
+                                                  
+       
     if (atoi(arrsize) < 0 && !size)
     {
       strcpy(arrsize, "1");
     }
 
-    /*
-     * If size i.e. the size of structure of which this variable is part
-     * of, that gives the offset to the next element, if required
-     */
+       
+                                                                         
+                                                                  
+       
     if (size == NULL || strlen(size) == 0)
     {
       fprintf(o, "\n\t%s,%s,(long)%s,(long)%s,%s, ", get_type(type), variable, varcharsize, arrsize, offset);
@@ -605,14 +605,14 @@ ECPGdump_a_simple(FILE *o, const char *name, enum ECPGttype type, char *varchars
   }
 }
 
-/* Penetrate a struct and dump the contents. */
+                                               
 static void
 ECPGdump_a_struct(FILE *o, const char *name, const char *ind_name, char *arrsize, struct ECPGtype *type, struct ECPGtype *ind_type, const char *prefix, const char *ind_prefix)
 {
-  /*
-   * If offset is NULL, then this is the first recursive level. If not then
-   * we are in a struct and the offset is used as offset.
-   */
+     
+                                                                            
+                                                          
+     
   struct ECPGstruct_member *p, *ind_p = NULL;
   char *pbuf = (char *)mm_alloc(strlen(name) + ((prefix == NULL) ? 0 : strlen(prefix)) + 3);
   char *ind_pbuf = (char *)mm_alloc(strlen(ind_name) + ((ind_prefix == NULL) ? 0 : strlen(ind_prefix)) + 3);
@@ -699,7 +699,7 @@ ECPGfree_type(struct ECPGtype *type)
         break;
       case ECPGt_struct:
       case ECPGt_union:
-        /* Array of structs. */
+                               
         ECPGfree_struct_member(type->u.element->u.members);
         free(type->u.element);
         break;

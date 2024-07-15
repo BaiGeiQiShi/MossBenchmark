@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * dirent.c
- *	  opendir/readdir/closedir for win32/msvc
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/port/dirent.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+            
+                                             
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                       
+   
+                                                                            
+   
 
 #ifndef FRONTEND
 #include "postgres.h"
@@ -24,7 +24,7 @@
 struct DIR
 {
   char *dirname;
-  struct dirent ret; /* Used to return to caller */
+  struct dirent ret;                               
   HANDLE handle;
 };
 
@@ -34,7 +34,7 @@ opendir(const char *dirname)
   DWORD attr;
   DIR *d;
 
-  /* Make sure it is a directory */
+                                   
   attr = GetFileAttributes(dirname);
   if (attr == INVALID_FILE_ATTRIBUTES)
   {
@@ -63,12 +63,12 @@ opendir(const char *dirname)
   strcpy(d->dirname, dirname);
   if (d->dirname[strlen(d->dirname) - 1] != '/' && d->dirname[strlen(d->dirname) - 1] != '\\')
   {
-    strcat(d->dirname, "\\"); /* Append backslash if not already there */
+    strcat(d->dirname, "\\");                                            
   }
-  strcat(d->dirname, "*"); /* Search for entries named anything */
+  strcat(d->dirname, "*");                                        
   d->handle = INVALID_HANDLE_VALUE;
-  d->ret.d_ino = 0;    /* no inodes on win32 */
-  d->ret.d_reclen = 0; /* not used on win32 */
+  d->ret.d_ino = 0;                            
+  d->ret.d_reclen = 0;                        
 
   return d;
 }
@@ -83,7 +83,7 @@ readdir(DIR *d)
     d->handle = FindFirstFile(d->dirname, &fd);
     if (d->handle == INVALID_HANDLE_VALUE)
     {
-      /* If there are no files, force errno=0 (unlike mingw) */
+                                                               
       if (GetLastError() == ERROR_FILE_NOT_FOUND)
       {
         errno = 0;
@@ -99,7 +99,7 @@ readdir(DIR *d)
   {
     if (!FindNextFile(d->handle, &fd))
     {
-      /* If there are no more files, force errno=0 (like mingw) */
+                                                                  
       if (GetLastError() == ERROR_NO_MORE_FILES)
       {
         errno = 0;
@@ -111,7 +111,7 @@ readdir(DIR *d)
       return NULL;
     }
   }
-  strcpy(d->ret.d_name, fd.cFileName); /* Both strings are MAX_PATH long */
+  strcpy(d->ret.d_name, fd.cFileName);                                     
   d->ret.d_namlen = strlen(d->ret.d_name);
 
   return &d->ret;

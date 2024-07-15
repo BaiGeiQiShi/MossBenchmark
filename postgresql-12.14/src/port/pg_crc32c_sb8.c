@@ -1,22 +1,22 @@
-/*-------------------------------------------------------------------------
- *
- * pg_crc32c_sb8.c
- *	  Compute CRC-32C checksum using slicing-by-8 algorithm.
- *
- * Michael E. Kounavis, Frank L. Berry,
- * "Novel Table Lookup-Based Algorithms for High-Performance CRC
- * Generation", IEEE Transactions on Computers, vol.57, no. 11,
- * pp. 1550-1560, November 2008, doi:10.1109/TC.2008.85
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/port/pg_crc32c_sb8.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                   
+                                                            
+   
+                                        
+                                                                 
+                                                                
+                                                        
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                              
+   
+                                                                            
+   
 
 #include "c.h"
 
@@ -24,7 +24,7 @@
 
 static const uint32 pg_crc32c_table[8][256];
 
-/* Accumulate one input byte */
+                               
 #ifdef WORDS_BIGENDIAN
 #define CRC8(x) pg_crc32c_table[0][((crc >> 24) ^ (x)) & 0xFF] ^ (crc << 8)
 #else
@@ -37,19 +37,19 @@ pg_comp_crc32c_sb8(pg_crc32c crc, const void *data, size_t len)
   const unsigned char *p = data;
   const uint32 *p4;
 
-  /*
-   * Handle 0-3 initial bytes one at a time, so that the loop below starts
-   * with a pointer aligned to four bytes.
-   */
+     
+                                                                           
+                                           
+     
   while (len > 0 && ((uintptr_t)p & 3))
   {
     crc = CRC8(*p++);
     len--;
   }
 
-  /*
-   * Process eight bytes of data at a time.
-   */
+     
+                                            
+     
   p4 = (const uint32 *)p;
   while (len >= 8)
   {
@@ -81,9 +81,9 @@ pg_comp_crc32c_sb8(pg_crc32c crc, const void *data, size_t len)
     len -= 8;
   }
 
-  /*
-   * Handle any remaining bytes one at a time.
-   */
+     
+                                               
+     
   p = (const unsigned char *)p4;
   while (len > 0)
   {
@@ -94,14 +94,14 @@ pg_comp_crc32c_sb8(pg_crc32c crc, const void *data, size_t len)
   return crc;
 }
 
-/*
- * Lookup tables for the slicing-by-8 algorithm, for the so-called Castagnoli
- * polynomial (the same that is used e.g. in iSCSI), 0x1EDC6F41. Using
- * Williams' terms, this is the "normal", not "reflected" version. However, on
- * big-endian systems the values in the tables are stored in byte-reversed
- * order (IOW, the tables are stored in little-endian order even on big-endian
- * systems).
- */
+   
+                                                                              
+                                                                       
+                                                                               
+                                                                           
+                                                                               
+             
+   
 static const uint32 pg_crc32c_table[8][256] = {
 #ifndef WORDS_BIGENDIAN
     {0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4, 0xC79A971F, 0x35F1141C, 0x26A1E7E8, 0xD4CA64EB, 0x8AD958CF, 0x78B2DBCC, 0x6BE22838, 0x9989AB3B, 0x4D43CFD0, 0xBF284CD3, 0xAC78BF27, 0x5E133C24, 0x105EC76F, 0xE235446C, 0xF165B798, 0x030E349B, 0xD7C45070, 0x25AFD373, 0x36FF2087, 0xC494A384, 0x9A879FA0, 0x68EC1CA3, 0x7BBCEF57, 0x89D76C54, 0x5D1D08BF, 0xAF768BBC, 0xBC267848, 0x4E4DFB4B, 0x20BD8EDE, 0xD2D60DDD, 0xC186FE29, 0x33ED7D2A, 0xE72719C1, 0x154C9AC2, 0x061C6936, 0xF477EA35, 0xAA64D611, 0x580F5512, 0x4B5FA6E6, 0xB93425E5, 0x6DFE410E, 0x9F95C20D, 0x8CC531F9, 0x7EAEB2FA, 0x30E349B1, 0xC288CAB2, 0xD1D83946, 0x23B3BA45, 0xF779DEAE, 0x05125DAD, 0x1642AE59, 0xE4292D5A, 0xBA3A117E, 0x4851927D, 0x5B016189, 0xA96AE28A, 0x7DA08661, 0x8FCB0562, 0x9C9BF696, 0x6EF07595, 0x417B1DBC, 0xB3109EBF, 0xA0406D4B, 0x522BEE48, 0x86E18AA3, 0x748A09A0, 0x67DAFA54, 0x95B17957, 0xCBA24573, 0x39C9C670, 0x2A993584, 0xD8F2B687, 0x0C38D26C, 0xFE53516F, 0xED03A29B, 0x1F682198, 0x5125DAD3, 0xA34E59D0, 0xB01EAA24,
@@ -136,7 +136,7 @@ static const uint32 pg_crc32c_table[8][256] = {
         0x453245EF, 0xBF6B40EB, 0xF6573DCC, 0x2D13BAA5, 0x642FC782, 0xDC4DC65C, 0x9571BB7B, 0x4E353C12, 0x07094135, 0xFD504431, 0xB46C3916, 0x6F28BE7F, 0x2614C358, 0x1700AEAB, 0x5E3CD38C, 0x857854E5, 0xCC4429C2, 0x361D2CC6, 0x7F2151E1, 0xA465D688, 0xED59ABAF, 0x553BAA71, 0x1C07D756, 0xC743503F, 0x8E7F2D18, 0x7426281C, 0x3D1A553B, 0xE65ED252, 0xAF62AF75, 0x9376A71F, 0xDA4ADA38, 0x010E5D51, 0x48322076, 0xB26B2572, 0xFB575855, 0x2013DF3C, 0x692FA21B, 0xD14DA3C5, 0x9871DEE2, 0x4335598B, 0x0A0924AC, 0xF05021A8, 0xB96C5C8F, 0x6228DBE6, 0x2B14A6C1, 0x34019664, 0x7D3DEB43, 0xA6796C2A, 0xEF45110D, 0x151C1409, 0x5C20692E, 0x8764EE47, 0xCE589360, 0x763A92BE, 0x3F06EF99, 0xE44268F0, 0xAD7E15D7, 0x572710D3, 0x1E1B6DF4, 0xC55FEA9D, 0x8C6397BA, 0xB0779FD0, 0xF94BE2F7, 0x220F659E, 0x6B3318B9, 0x916A1DBD, 0xD856609A, 0x0312E7F3, 0x4A2E9AD4, 0xF24C9B0A, 0xBB70E62D, 0x60346144, 0x29081C63, 0xD3511967, 0x9A6D6440, 0x4129E329, 0x08159E0E, 0x3901F3FD, 0x703D8EDA, 0xAB7909B3, 0xE2457494, 0x181C7190,
         0x51200CB7, 0x8A648BDE, 0xC358F6F9, 0x7B3AF727, 0x32068A00, 0xE9420D69, 0xA07E704E, 0x5A27754A, 0x131B086D, 0xC85F8F04, 0x8163F223, 0xBD77FA49, 0xF44B876E, 0x2F0F0007, 0x66337D20, 0x9C6A7824, 0xD5560503, 0x0E12826A, 0x472EFF4D, 0xFF4CFE93, 0xB67083B4, 0x6D3404DD, 0x240879FA, 0xDE517CFE, 0x976D01D9, 0x4C2986B0, 0x0515FB97, 0x2E015D56, 0x673D2071, 0xBC79A718, 0xF545DA3F, 0x0F1CDF3B, 0x4620A21C, 0x9D642575, 0xD4585852, 0x6C3A598C, 0x250624AB, 0xFE42A3C2, 0xB77EDEE5, 0x4D27DBE1, 0x041BA6C6, 0xDF5F21AF, 0x96635C88, 0xAA7754E2, 0xE34B29C5, 0x380FAEAC, 0x7133D38B, 0x8B6AD68F, 0xC256ABA8, 0x19122CC1, 0x502E51E6, 0xE84C5038, 0xA1702D1F, 0x7A34AA76, 0x3308D751, 0xC951D255, 0x806DAF72, 0x5B29281B, 0x1215553C, 0x230138CF, 0x6A3D45E8, 0xB179C281, 0xF845BFA6, 0x021CBAA2, 0x4B20C785, 0x906440EC, 0xD9583DCB, 0x613A3C15, 0x28064132, 0xF342C65B, 0xBA7EBB7C, 0x4027BE78, 0x091BC35F, 0xD25F4436, 0x9B633911, 0xA777317B, 0xEE4B4C5C, 0x350FCB35, 0x7C33B612, 0x866AB316, 0xCF56CE31, 0x14124958,
         0x5D2E347F, 0xE54C35A1, 0xAC704886, 0x7734CFEF, 0x3E08B2C8, 0xC451B7CC, 0x8D6DCAEB, 0x56294D82, 0x1F1530A5}
-#else  /* !WORDS_BIGENDIAN */
+#else                        
     {
         0x00000000,
         0x03836BF2,
@@ -1947,5 +1947,5 @@ static const uint32 pg_crc32c_table[8][256] = {
         0xEF453245, 0xEB406BBF, 0xCC3D57F6, 0xA5BA132D, 0x82C72F64, 0x5CC64DDC, 0x7BBB7195, 0x123C354E, 0x35410907, 0x314450FD, 0x16396CB4, 0x7FBE286F, 0x58C31426, 0xABAE0017, 0x8CD33C5E, 0xE5547885, 0xC22944CC, 0xC62C1D36, 0xE151217F, 0x88D665A4, 0xAFAB59ED, 0x71AA3B55, 0x56D7071C, 0x3F5043C7, 0x182D7F8E, 0x1C282674, 0x3B551A3D, 0x52D25EE6, 0x75AF62AF, 0x1FA77693, 0x38DA4ADA, 0x515D0E01, 0x76203248, 0x72256BB2, 0x555857FB, 0x3CDF1320, 0x1BA22F69, 0xC5A34DD1, 0xE2DE7198, 0x8B593543, 0xAC24090A, 0xA82150F0, 0x8F5C6CB9, 0xE6DB2862, 0xC1A6142B, 0x64960134, 0x43EB3D7D, 0x2A6C79A6, 0x0D1145EF, 0x09141C15, 0x2E69205C, 0x47EE6487, 0x609358CE, 0xBE923A76, 0x99EF063F, 0xF06842E4, 0xD7157EAD, 0xD3102757, 0xF46D1B1E, 0x9DEA5FC5, 0xBA97638C, 0xD09F77B0, 0xF7E24BF9, 0x9E650F22, 0xB918336B, 0xBD1D6A91, 0x9A6056D8, 0xF3E71203, 0xD49A2E4A, 0x0A9B4CF2, 0x2DE670BB, 0x44613460, 0x631C0829, 0x671951D3, 0x40646D9A, 0x29E32941, 0x0E9E1508, 0xFDF30139, 0xDA8E3D70, 0xB30979AB, 0x947445E2, 0x90711C18,
         0xB70C2051, 0xDE8B648A, 0xF9F658C3, 0x27F73A7B, 0x008A0632, 0x690D42E9, 0x4E707EA0, 0x4A75275A, 0x6D081B13, 0x048F5FC8, 0x23F26381, 0x49FA77BD, 0x6E874BF4, 0x07000F2F, 0x207D3366, 0x24786A9C, 0x030556D5, 0x6A82120E, 0x4DFF2E47, 0x93FE4CFF, 0xB48370B6, 0xDD04346D, 0xFA790824, 0xFE7C51DE, 0xD9016D97, 0xB086294C, 0x97FB1505, 0x565D012E, 0x71203D67, 0x18A779BC, 0x3FDA45F5, 0x3BDF1C0F, 0x1CA22046, 0x7525649D, 0x525858D4, 0x8C593A6C, 0xAB240625, 0xC2A342FE, 0xE5DE7EB7, 0xE1DB274D, 0xC6A61B04, 0xAF215FDF, 0x885C6396, 0xE25477AA, 0xC5294BE3, 0xACAE0F38, 0x8BD33371, 0x8FD66A8B, 0xA8AB56C2, 0xC12C1219, 0xE6512E50, 0x38504CE8, 0x1F2D70A1, 0x76AA347A, 0x51D70833, 0x55D251C9, 0x72AF6D80, 0x1B28295B, 0x3C551512, 0xCF380123, 0xE8453D6A, 0x81C279B1, 0xA6BF45F8, 0xA2BA1C02, 0x85C7204B, 0xEC406490, 0xCB3D58D9, 0x153C3A61, 0x32410628, 0x5BC642F3, 0x7CBB7EBA, 0x78BE2740, 0x5FC31B09, 0x36445FD2, 0x1139639B, 0x7B3177A7, 0x5C4C4BEE, 0x35CB0F35, 0x12B6337C, 0x16B36A86, 0x31CE56CF, 0x58491214,
         0x7F342E5D, 0xA1354CE5, 0x864870AC, 0xEFCF3477, 0xC8B2083E, 0xCCB751C4, 0xEBCA6D8D, 0x824D2956, 0xA530151F}
-#endif /* WORDS_BIGENDIAN */
+#endif                      
 };

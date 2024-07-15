@@ -1,17 +1,17 @@
-/*-------------------------------------------------------------------------
- *
- * pg_dumpall.c
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- * pg_dumpall forces all pg_dump output to be text, since it also outputs
- * text into the same output stream.
- *
- * src/bin/pg_dump/pg_dumpall.c
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+                
+   
+                                                                         
+                                                                        
+   
+                                                                          
+                                     
+   
+                                
+   
+                                                                            
+   
 
 #include "postgres_fe.h"
 
@@ -27,7 +27,7 @@
 #include "fe_utils/connect.h"
 #include "fe_utils/string_utils.h"
 
-/* version string we expect back from pg_dump */
+                                                
 #define PGDUMP_VERSIONSTR "pg_dump (PostgreSQL) " PG_VERSION "\n"
 
 static void
@@ -112,9 +112,9 @@ main(int argc, char *argv[])
 {
   static struct option long_options[] = {{"data-only", no_argument, NULL, 'a'}, {"clean", no_argument, NULL, 'c'}, {"encoding", required_argument, NULL, 'E'}, {"file", required_argument, NULL, 'f'}, {"globals-only", no_argument, NULL, 'g'}, {"host", required_argument, NULL, 'h'}, {"dbname", required_argument, NULL, 'd'}, {"database", required_argument, NULL, 'l'}, {"no-owner", no_argument, NULL, 'O'}, {"port", required_argument, NULL, 'p'}, {"roles-only", no_argument, NULL, 'r'}, {"schema-only", no_argument, NULL, 's'}, {"superuser", required_argument, NULL, 'S'}, {"tablespaces-only", no_argument, NULL, 't'}, {"username", required_argument, NULL, 'U'}, {"verbose", no_argument, NULL, 'v'}, {"no-password", no_argument, NULL, 'w'}, {"password", no_argument, NULL, 'W'}, {"no-privileges", no_argument, NULL, 'x'}, {"no-acl", no_argument, NULL, 'x'},
 
-      /*
-       * the following options don't have an equivalent short option letter
-       */
+         
+                                                                            
+         
       {"attribute-inserts", no_argument, &column_inserts, 1}, {"binary-upgrade", no_argument, &binary_upgrade, 1}, {"column-inserts", no_argument, &column_inserts, 1}, {"disable-dollar-quoting", no_argument, &disable_dollar_quoting, 1}, {"disable-triggers", no_argument, &disable_triggers, 1}, {"exclude-database", required_argument, NULL, 6}, {"extra-float-digits", required_argument, NULL, 5}, {"if-exists", no_argument, &if_exists, 1}, {"inserts", no_argument, &inserts, 1}, {"lock-wait-timeout", required_argument, NULL, 2}, {"no-tablespaces", no_argument, &no_tablespaces, 1}, {"quote-all-identifiers", no_argument, &quote_all_identifiers, 1}, {"load-via-partition-root", no_argument, &load_via_partition_root, 1}, {"role", required_argument, NULL, 3}, {"use-set-session-authorization", no_argument, &use_setsessauth, 1}, {"no-comments", no_argument, &no_comments, 1}, {"no-publications", no_argument, &no_publications, 1}, {"no-role-passwords", no_argument, &no_role_passwords, 1},
       {"no-security-labels", no_argument, &no_security_labels, 1}, {"no-subscriptions", no_argument, &no_subscriptions, 1}, {"no-sync", no_argument, NULL, 4}, {"no-unlogged-table-data", no_argument, &no_unlogged_table_data, 1}, {"on-conflict-do-nothing", no_argument, &on_conflict_do_nothing, 1}, {"rows-per-insert", required_argument, NULL, 7},
 
@@ -314,7 +314,7 @@ main(int argc, char *argv[])
     }
   }
 
-  /* Complain if any arguments remain */
+                                        
   if (optind < argc)
   {
     pg_log_error("too many command-line arguments (first is \"%s\")", argv[optind]);
@@ -329,7 +329,7 @@ main(int argc, char *argv[])
     exit_nicely(1);
   }
 
-  /* Make sure the user hasn't specified a mix of globals-only options */
+                                                                         
   if (globals_only && roles_only)
   {
     pg_log_error("options -g/--globals-only and -r/--roles-only cannot be used together");
@@ -357,11 +357,11 @@ main(int argc, char *argv[])
     exit_nicely(1);
   }
 
-  /*
-   * If password values are not required in the dump, switch to using
-   * pg_roles which is equally useful, just more likely to have unrestricted
-   * access than pg_authid.
-   */
+     
+                                                                      
+                                                                             
+                            
+     
   if (no_role_passwords)
   {
     sprintf(role_catalog, "%s", PG_ROLES);
@@ -371,7 +371,7 @@ main(int argc, char *argv[])
     sprintf(role_catalog, "%s", PG_AUTHID);
   }
 
-  /* Add long options to the pg_dump argument list */
+                                                     
   if (binary_upgrade)
   {
     appendPQExpBufferStr(pgdumpopts, " --binary-upgrade");
@@ -433,12 +433,12 @@ main(int argc, char *argv[])
     appendPQExpBufferStr(pgdumpopts, " --on-conflict-do-nothing");
   }
 
-  /*
-   * If there was a database specified on the command line, use that,
-   * otherwise try to connect to database "postgres", and failing that
-   * "template1".  "postgres" is the preferred choice for 8.1 and later
-   * servers, but it usually will not exist on older ones.
-   */
+     
+                                                                      
+                                                                       
+                                                                        
+                                                           
+     
   if (pgdb)
   {
     conn = connectDatabase(pgdb, connstr, pghost, pgport, pguser, prompt_password, false);
@@ -466,14 +466,14 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Get a list of database names that match the exclude patterns
-   */
+     
+                                                                  
+     
   expand_dbname_patterns(conn, &database_exclude_patterns, &database_exclude_names);
 
-  /*
-   * Open the output file if required, otherwise use stdout
-   */
+     
+                                                            
+     
   if (filename)
   {
     OPF = fopen(filename, PG_BINARY_W);
@@ -488,9 +488,9 @@ main(int argc, char *argv[])
     OPF = stdout;
   }
 
-  /*
-   * Set the client encoding if requested.
-   */
+     
+                                           
+     
   if (dumpencoding)
   {
     if (PQsetClientEncoding(conn, dumpencoding) < 0)
@@ -500,10 +500,10 @@ main(int argc, char *argv[])
     }
   }
 
-  /*
-   * Get the active encoding and the standard_conforming_strings setting, so
-   * we know how to escape strings.
-   */
+     
+                                                                             
+                                    
+     
   encoding = PQclientEncoding(conn);
   std_strings = PQparameterStatus(conn, "standard_conforming_strings");
   if (!std_strings)
@@ -511,7 +511,7 @@ main(int argc, char *argv[])
     std_strings = "off";
   }
 
-  /* Set the role if requested */
+                                 
   if (use_role && server_version >= 80100)
   {
     PQExpBuffer query = createPQExpBuffer();
@@ -521,7 +521,7 @@ main(int argc, char *argv[])
     destroyPQExpBuffer(query);
   }
 
-  /* Force quoting of all identifiers if requested. */
+                                                      
   if (quote_all_identifiers && server_version >= 90100)
   {
     executeCommand(conn, "SET quote_all_identifiers = true");
@@ -533,17 +533,17 @@ main(int argc, char *argv[])
     dumpTimestamp("Started on");
   }
 
-  /*
-   * We used to emit \connect postgres here, but that served no purpose
-   * other than to break things for installations without a postgres
-   * database.  Everything we're restoring here is a global, so whichever
-   * database we're connected to at the moment is fine.
-   */
+     
+                                                                        
+                                                                     
+                                                                          
+                                                        
+     
 
-  /* Restore will need to write to the target cluster */
+                                                        
   fprintf(OPF, "SET default_transaction_read_only = off;\n\n");
 
-  /* Replicate encoding and std_strings in output */
+                                                    
   fprintf(OPF, "SET client_encoding = '%s';\n", pg_encoding_to_char(encoding));
   fprintf(OPF, "SET standard_conforming_strings = %s;\n", std_strings);
   if (strcmp(std_strings, "off") == 0)
@@ -554,12 +554,12 @@ main(int argc, char *argv[])
 
   if (!data_only)
   {
-    /*
-     * If asked to --clean, do that first.  We can avoid detailed
-     * dependency analysis because databases never depend on each other,
-     * and tablespaces never depend on each other.  Roles could have
-     * grants to each other, but DROP ROLE will clean those up silently.
-     */
+       
+                                                                  
+                                                                         
+                                                                     
+                                                                         
+       
     if (output_clean)
     {
       if (!globals_only && !roles_only && !tablespaces_only)
@@ -578,16 +578,16 @@ main(int argc, char *argv[])
       }
     }
 
-    /*
-     * Now create objects as requested.  Be careful that option logic here
-     * is the same as for drops above.
-     */
+       
+                                                                           
+                                       
+       
     if (!tablespaces_only)
     {
-      /* Dump roles (users) */
+                              
       dumpRoles(conn);
 
-      /* Dump role memberships --- need different method for pre-8.1 */
+                                                                       
       if (server_version >= 80100)
       {
         dumpRoleMembership(conn);
@@ -598,7 +598,7 @@ main(int argc, char *argv[])
       }
     }
 
-    /* Dump tablespaces */
+                          
     if (!roles_only && !no_tablespaces)
     {
       dumpTablespaces(conn);
@@ -622,7 +622,7 @@ main(int argc, char *argv[])
   {
     fclose(OPF);
 
-    /* sync the resulting file, errors are not fatal */
+                                                       
     if (dosync)
     {
       (void)fsync_fname(filename, false);
@@ -695,9 +695,9 @@ help(void)
   printf(_("Report bugs to <pgsql-bugs@lists.postgresql.org>.\n"));
 }
 
-/*
- * Drop roles
- */
+   
+              
+   
 static void
 dropRoles(PGconn *conn)
 {
@@ -757,9 +757,9 @@ dropRoles(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Dump roles
- */
+   
+              
+   
 static void
 dumpRoles(PGconn *conn)
 {
@@ -768,7 +768,7 @@ dumpRoles(PGconn *conn)
   int i_oid, i_rolname, i_rolsuper, i_rolinherit, i_rolcreaterole, i_rolcreatedb, i_rolcanlogin, i_rolconnlimit, i_rolpassword, i_rolvaliduntil, i_rolreplication, i_rolbypassrls, i_rolcomment, i_is_current_user;
   int i;
 
-  /* note: rolconfig is dumped later */
+                                       
   if (server_version >= 90600)
   {
     printfPQExpBuffer(buf,
@@ -918,14 +918,14 @@ dumpRoles(PGconn *conn)
       appendPQExpBuffer(buf, "SELECT pg_catalog.binary_upgrade_set_next_pg_authid_oid('%u'::pg_catalog.oid);\n\n", auth_oid);
     }
 
-    /*
-     * We dump CREATE ROLE followed by ALTER ROLE to ensure that the role
-     * will acquire the right properties even if it already exists (ie, it
-     * won't hurt for the CREATE to fail).  This is particularly important
-     * for the role we are connected as, since even with --clean we will
-     * have failed to drop it.  binary_upgrade cannot generate any errors,
-     * so we assume the current role is already created.
-     */
+       
+                                                                          
+                                                                           
+                                                                           
+                                                                         
+                                                                           
+                                                         
+       
     if (!binary_upgrade || strcmp(PQgetvalue(res, i, i_is_current_user), "f") == 0)
     {
       appendPQExpBuffer(buf, "CREATE ROLE %s;\n", fmtId(rolename));
@@ -1028,11 +1028,11 @@ dumpRoles(PGconn *conn)
     fprintf(OPF, "%s", buf->data);
   }
 
-  /*
-   * Dump configuration settings for roles after all roles have been dumped.
-   * We do it this way because config settings for roles could mention the
-   * names of other roles.
-   */
+     
+                                                                             
+                                                                           
+                           
+     
   for (i = 0; i < PQntuples(res); i++)
   {
     dumpUserConfig(conn, PQgetvalue(res, i, i_rolname));
@@ -1045,12 +1045,12 @@ dumpRoles(PGconn *conn)
   destroyPQExpBuffer(buf);
 }
 
-/*
- * Dump role memberships.  This code is used for 8.1 and later servers.
- *
- * Note: we expect dumpRoles already created all the roles, but there is
- * no membership yet.
- */
+   
+                                                                        
+   
+                                                                         
+                      
+   
 static void
 dumpRoleMembership(PGconn *conn)
 {
@@ -1090,10 +1090,10 @@ dumpRoleMembership(PGconn *conn)
       fprintf(OPF, " WITH ADMIN OPTION");
     }
 
-    /*
-     * We don't track the grantor very carefully in the backend, so cope
-     * with the possibility that it has been dropped.
-     */
+       
+                                                                         
+                                                      
+       
     if (!PQgetisnull(res, i, 3))
     {
       char *grantor = PQgetvalue(res, i, 3);
@@ -1109,14 +1109,14 @@ dumpRoleMembership(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Dump group memberships from a pre-8.1 server.  It's annoying that we
- * can't share any useful amount of code with the post-8.1 case, but
- * the catalog representations are too different.
- *
- * Note: we expect dumpRoles already created all the roles, but there is
- * no membership yet.
- */
+   
+                                                                        
+                                                                     
+                                                  
+   
+                                                                         
+                      
+   
 static void
 dumpGroups(PGconn *conn)
 {
@@ -1138,9 +1138,9 @@ dumpGroups(PGconn *conn)
     PGresult *res2;
     int j;
 
-    /*
-     * Array representation is {1,2,3} ... convert to (1,2,3)
-     */
+       
+                                                              
+       
     if (strlen(grolist) < 3)
     {
       continue;
@@ -1161,10 +1161,10 @@ dumpGroups(PGconn *conn)
     {
       char *usename = PQgetvalue(res2, j, 0);
 
-      /*
-       * Don't try to grant a role to itself; can happen if old
-       * installation has identically named user and group.
-       */
+         
+                                                                
+                                                            
+         
       if (strcmp(groname, usename) == 0)
       {
         continue;
@@ -1183,19 +1183,19 @@ dumpGroups(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Drop tablespaces.
- */
+   
+                     
+   
 static void
 dropTablespaces(PGconn *conn)
 {
   PGresult *res;
   int i;
 
-  /*
-   * Get all tablespaces except built-in ones (which we assume are named
-   * pg_xxx)
-   */
+     
+                                                                         
+             
+     
   res = executeQuery(conn, "SELECT spcname "
                            "FROM pg_catalog.pg_tablespace "
                            "WHERE spcname !~ '^pg_' "
@@ -1218,33 +1218,33 @@ dropTablespaces(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Dump tablespaces.
- */
+   
+                     
+   
 static void
 dumpTablespaces(PGconn *conn)
 {
   PGresult *res;
   int i;
 
-  /*
-   * Get all tablespaces except built-in ones (which we assume are named
-   * pg_xxx)
-   *
-   * For the tablespace ACLs, as of 9.6, we extract both the positive (as
-   * spcacl) and negative (as rspcacl) ACLs, relative to the default ACL for
-   * tablespaces, which are then passed to buildACLCommands() below.
-   *
-   * See buildACLQueries() and buildACLCommands().
-   *
-   * The order in which privileges are in the ACL string (the order they
-   * have been GRANT'd in, which the backend maintains) must be preserved to
-   * ensure that GRANTs WITH GRANT OPTION and subsequent GRANTs based on
-   * those are dumped in the correct order.
-   *
-   * Note that we do not support initial privileges (pg_init_privs) on
-   * tablespaces, so this logic cannot make use of buildACLQueries().
-   */
+     
+                                                                         
+             
+     
+                                                                          
+                                                                             
+                                                                     
+     
+                                                   
+     
+                                                                         
+                                                                             
+                                                                         
+                                            
+     
+                                                                       
+                                                                      
+     
   if (server_version >= 90600)
   {
     res = executeQuery(conn, "SELECT oid, spcname, "
@@ -1338,7 +1338,7 @@ dumpTablespaces(PGconn *conn)
     char *spccomment = PQgetvalue(res, i, 7);
     char *fspcname;
 
-    /* needed for buildACLCommands() */
+                                       
     fspcname = pg_strdup(fmtId(spcname));
 
     appendPQExpBuffer(buf, "CREATE TABLESPACE %s", fspcname);
@@ -1382,19 +1382,19 @@ dumpTablespaces(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Dump commands to drop each database.
- */
+   
+                                        
+   
 static void
 dropDBs(PGconn *conn)
 {
   PGresult *res;
   int i;
 
-  /*
-   * Skip databases marked not datallowconn, since we'd be unable to connect
-   * to them anyway.  This must agree with dumpDatabases().
-   */
+     
+                                                                             
+                                                            
+     
   res = executeQuery(conn, "SELECT datname "
                            "FROM pg_database d "
                            "WHERE datallowconn "
@@ -1409,11 +1409,11 @@ dropDBs(PGconn *conn)
   {
     char *dbname = PQgetvalue(res, i, 0);
 
-    /*
-     * Skip "postgres" and "template1"; dumpDatabases() will deal with
-     * them specially.  Also, be sure to skip "template0", even if for
-     * some reason it's not marked !datallowconn.
-     */
+       
+                                                                       
+                                                                       
+                                                  
+       
     if (strcmp(dbname, "template1") != 0 && strcmp(dbname, "template0") != 0 && strcmp(dbname, "postgres") != 0)
     {
       fprintf(OPF, "DROP DATABASE %s%s;\n", if_exists ? "IF EXISTS " : "", fmtId(dbname));
@@ -1425,9 +1425,9 @@ dropDBs(PGconn *conn)
   fprintf(OPF, "\n\n");
 }
 
-/*
- * Dump user-specific configuration
- */
+   
+                                    
+   
 static void
 dumpUserConfig(PGconn *conn, const char *username)
 {
@@ -1464,7 +1464,7 @@ dumpUserConfig(PGconn *conn, const char *username)
     res = executeQuery(conn, buf->data);
     if (PQntuples(res) == 1 && !PQgetisnull(res, 0, 0))
     {
-      /* comment at section start, only if needed */
+                                                    
       if (first)
       {
         fprintf(OPF, "--\n-- User Configurations\n--\n\n");
@@ -1488,10 +1488,10 @@ dumpUserConfig(PGconn *conn, const char *username)
   destroyPQExpBuffer(buf);
 }
 
-/*
- * Find a list of database names that match the given patterns.
- * See also expand_table_name_patterns() in pg_dump.c
- */
+   
+                                                                
+                                                      
+   
 static void
 expand_dbname_patterns(PGconn *conn, SimpleStringList *patterns, SimpleStringList *names)
 {
@@ -1500,16 +1500,16 @@ expand_dbname_patterns(PGconn *conn, SimpleStringList *patterns, SimpleStringLis
 
   if (patterns->head == NULL)
   {
-    return; /* nothing to do */
+    return;                    
   }
 
   query = createPQExpBuffer();
 
-  /*
-   * The loop below runs multiple SELECTs, which might sometimes result in
-   * duplicate entries in the name list, but we don't care, since all we're
-   * going to do is test membership of the list.
-   */
+     
+                                                                           
+                                                                            
+                                                 
+     
 
   for (SimpleStringListCell *cell = patterns->head; cell; cell = cell->next)
   {
@@ -1529,26 +1529,26 @@ expand_dbname_patterns(PGconn *conn, SimpleStringList *patterns, SimpleStringLis
   destroyPQExpBuffer(query);
 }
 
-/*
- * Dump contents of databases.
- */
+   
+                               
+   
 static void
 dumpDatabases(PGconn *conn)
 {
   PGresult *res;
   int i;
 
-  /*
-   * Skip databases marked not datallowconn, since we'd be unable to connect
-   * to them anyway.  This must agree with dropDBs().
-   *
-   * We arrange for template1 to be processed first, then we process other
-   * DBs in alphabetical order.  If we just did them all alphabetically, we
-   * might find ourselves trying to drop the "postgres" database while still
-   * connected to it.  This makes trying to run the restore script while
-   * connected to "template1" a bad idea, but there's no fixed order that
-   * doesn't have some failure mode with --clean.
-   */
+     
+                                                                             
+                                                      
+     
+                                                                           
+                                                                            
+                                                                             
+                                                                         
+                                                                          
+                                                  
+     
   res = executeQuery(conn, "SELECT datname "
                            "FROM pg_database d "
                            "WHERE datallowconn "
@@ -1565,13 +1565,13 @@ dumpDatabases(PGconn *conn)
     const char *create_opts;
     int ret;
 
-    /* Skip template0, even if it's not marked !datallowconn. */
+                                                                
     if (strcmp(dbname, "template0") == 0)
     {
       continue;
     }
 
-    /* Skip any explicitly excluded database */
+                                               
     if (simple_string_list_member(&database_exclude_names, dbname))
     {
       pg_log_info("excluding database \"%s\"", dbname);
@@ -1582,14 +1582,14 @@ dumpDatabases(PGconn *conn)
 
     fprintf(OPF, "--\n-- Database \"%s\" dump\n--\n\n", dbname);
 
-    /*
-     * We assume that "template1" and "postgres" already exist in the
-     * target installation.  dropDBs() won't have removed them, for fear
-     * of removing the DB the restore script is initially connected to. If
-     * --clean was specified, tell pg_dump to drop and recreate them;
-     * otherwise we'll merely restore their contents.  Other databases
-     * should simply be created.
-     */
+       
+                                                                      
+                                                                         
+                                                                           
+                                                                      
+                                                                       
+                                 
+       
     if (strcmp(dbname, "template1") == 0 || strcmp(dbname, "postgres") == 0)
     {
       if (output_clean)
@@ -1599,7 +1599,7 @@ dumpDatabases(PGconn *conn)
       else
       {
         create_opts = "";
-        /* Since pg_dump won't emit a \connect command, we must */
+                                                                  
         fprintf(OPF, "\\connect %s\n\n", dbname);
       }
     }
@@ -1634,9 +1634,9 @@ dumpDatabases(PGconn *conn)
   PQclear(res);
 }
 
-/*
- * Run pg_dump on dbname, with specified options.
- */
+   
+                                                  
+   
 static int
 runPgDump(const char *dbname, const char *create_opts)
 {
@@ -1646,10 +1646,10 @@ runPgDump(const char *dbname, const char *create_opts)
 
   appendPQExpBuffer(cmd, "\"%s\" %s %s", pg_dump_bin, pgdumpopts->data, create_opts);
 
-  /*
-   * If we have a filename, use the undocumented plain-append pg_dump
-   * format.
-   */
+     
+                                                                      
+             
+     
   if (filename)
   {
     appendPQExpBufferStr(cmd, " -Fa ");
@@ -1659,10 +1659,10 @@ runPgDump(const char *dbname, const char *create_opts)
     appendPQExpBufferStr(cmd, " -Fp ");
   }
 
-  /*
-   * Append the database name to the already-constructed stem of connection
-   * string.
-   */
+     
+                                                                            
+             
+     
   appendPQExpBuffer(connstrbuf, "%s dbname=", connstr);
   appendConnStrVal(connstrbuf, dbname);
 
@@ -1681,17 +1681,17 @@ runPgDump(const char *dbname, const char *create_opts)
   return ret;
 }
 
-/*
- * buildShSecLabels
- *
- * Build SECURITY LABEL command(s) for a shared object
- *
- * The caller has to provide object type and identity in two separate formats:
- * catalog_name (e.g., "pg_database") and object OID, as well as
- * type name (e.g., "DATABASE") and object name (not pre-quoted).
- *
- * The command(s) are appended to "buffer".
- */
+   
+                    
+   
+                                                       
+   
+                                                                               
+                                                                 
+                                                                  
+   
+                                            
+   
 static void
 buildShSecLabels(PGconn *conn, const char *catalog_name, Oid objectId, const char *objtype, const char *objname, PQExpBuffer buffer)
 {
@@ -1706,16 +1706,16 @@ buildShSecLabels(PGconn *conn, const char *catalog_name, Oid objectId, const cha
   destroyPQExpBuffer(sql);
 }
 
-/*
- * Make a database connection with the given parameters.  An
- * interactive password prompt is automatically issued if required.
- *
- * If fail_on_error is false, we return NULL without printing any message
- * on failure, but preserve any prompted password for the next try.
- *
- * On success, the global variable 'connstr' is set to a connection string
- * containing the options used.
- */
+   
+                                                             
+                                                                    
+   
+                                                                          
+                                                                    
+   
+                                                                           
+                                
+   
 static PGconn *
 connectDatabase(const char *dbname, const char *connection_string, const char *pghost, const char *pgport, const char *pguser, trivalue prompt_password, bool fail_on_error)
 {
@@ -1735,10 +1735,10 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
     have_password = true;
   }
 
-  /*
-   * Start the connection.  Loop until we have a password if requested by
-   * backend.
-   */
+     
+                                                                          
+              
+     
   do
   {
     int argcount = 6;
@@ -1759,12 +1759,12 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
       PQconninfoFree(conn_opts);
     }
 
-    /*
-     * Merge the connection info inputs given in form of connection string
-     * and other options.  Explicitly discard any dbname value in the
-     * connection string; otherwise, PQconnectdbParams() would interpret
-     * that value as being itself a connection string.
-     */
+       
+                                                                           
+                                                                      
+                                                                         
+                                                       
+       
     if (connection_string)
     {
       conn_opts = PQconninfoParse(connection_string, &err_msg);
@@ -1853,7 +1853,7 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
     }
   } while (new_pass);
 
-  /* check to see that the backend connection was successfully made */
+                                                                      
   if (PQstatus(conn) == CONNECTION_BAD)
   {
     if (fail_on_error)
@@ -1873,17 +1873,17 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
     }
   }
 
-  /*
-   * Ok, connected successfully. Remember the options used, in the form of a
-   * connection string.
-   */
+     
+                                                                             
+                        
+     
   connstr = constructConnStr(keywords, values);
 
   free(keywords);
   free(values);
   PQconninfoFree(conn_opts);
 
-  /* Check version */
+                     
   remoteversion_str = PQparameterStatus(conn, "server_version");
   if (!remoteversion_str)
   {
@@ -1899,10 +1899,10 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
 
   my_version = PG_VERSION_NUM;
 
-  /*
-   * We allow the server to be back to 8.0, and up to any minor release of
-   * our own major version.  (See also version check in pg_dump.c.)
-   */
+     
+                                                                           
+                                                                    
+     
   if (my_version != server_version && (server_version < 80000 || (server_version / 100) > (my_version / 100)))
   {
     pg_log_error("server version: %s; %s version: %s", remoteversion_str, progname, PG_VERSION);
@@ -1915,16 +1915,16 @@ connectDatabase(const char *dbname, const char *connection_string, const char *p
   return conn;
 }
 
-/* ----------
- * Construct a connection string from the given keyword/value pairs. It is
- * used to pass the connection options to the pg_dump subprocess.
- *
- * The following parameters are excluded:
- *	dbname		- varies in each pg_dump invocation
- *	password	- it's not secure to pass a password on the command line
- *	fallback_application_name - we'll let pg_dump set it
- * ----------
- */
+              
+                                                                           
+                                                                  
+   
+                                          
+                                               
+                                                                     
+                                                        
+              
+   
 static char *
 constructConnStr(const char **keywords, const char **values)
 {
@@ -1933,7 +1933,7 @@ constructConnStr(const char **keywords, const char **values)
   int i;
   bool firstkeyword = true;
 
-  /* Construct a new connection string in key='value' format. */
+                                                                
   for (i = 0; keywords[i] != NULL; i++)
   {
     if (strcmp(keywords[i], "dbname") == 0 || strcmp(keywords[i], "password") == 0 || strcmp(keywords[i], "fallback_application_name") == 0)
@@ -1955,9 +1955,9 @@ constructConnStr(const char **keywords, const char **values)
   return connstr;
 }
 
-/*
- * Run a query, return the results, exit program on failure.
- */
+   
+                                                             
+   
 static PGresult *
 executeQuery(PGconn *conn, const char *query)
 {
@@ -1977,9 +1977,9 @@ executeQuery(PGconn *conn, const char *query)
   return res;
 }
 
-/*
- * As above for a SQL command (which returns nothing).
- */
+   
+                                                       
+   
 static void
 executeCommand(PGconn *conn, const char *query)
 {
@@ -1999,9 +1999,9 @@ executeCommand(PGconn *conn, const char *query)
   PQclear(res);
 }
 
-/*
- * dumpTimestamp
- */
+   
+                 
+   
 static void
 dumpTimestamp(const char *msg)
 {

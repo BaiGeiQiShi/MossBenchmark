@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "dynalloc.pgc"
@@ -18,8 +18,8 @@
 #define PGDLLIMPORT __declspec(dllimport)
 #else
 #define PGDLLIMPORT
-#endif /* __CYGWIN__ */
-#endif /* PGDLLIMPORT */
+#endif                 
+#endif                  
 
 #define SQLERRMC_LEN 150
 
@@ -40,27 +40,27 @@ extern "C"
     } sqlerrm;
     char sqlerrp[8];
     long sqlerrd[6];
-    /* Element 0: empty						*/
-    /* 1: OID of processed tuple if applicable			*/
-    /* 2: number of rows processed				*/
-    /* after an INSERT, UPDATE or				*/
-    /* DELETE statement					*/
-    /* 3: empty						*/
-    /* 4: empty						*/
-    /* 5: empty						*/
+                               
+                                                   
+                                        
+                                       
+                              
+                       
+                       
+                       
     char sqlwarn[8];
-    /* Element 0: set to 'W' if at least one other is 'W'	*/
-    /* 1: if 'W' at least one character string		*/
-    /* value was truncated when it was			*/
-    /* stored into a host variable.             */
+                                                            
+                                                  
+                                           
+                                                  
 
-    /*
-     * 2: if 'W' a (hopefully) non-fatal notice occurred
-     */	/* 3: empty */
-    /* 4: empty						*/
-    /* 5: empty						*/
-    /* 6: empty						*/
-    /* 7: empty						*/
+       
+                                                         
+       	              
+                       
+                       
+                       
+                       
 
     char sqlstate[5];
   };
@@ -89,11 +89,11 @@ extern "C"
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
-  /*   char **d8=0; */
+                      
 
-  /*   int *i8=0; */
+                    
 
 #line 9 "dynalloc.pgc"
   int *d1 = 0;
@@ -142,14 +142,14 @@ main(void)
 
 #line 26 "dynalloc.pgc"
   int *i9 = 0;
-/* exec sql end declare section */
+                                  
 #line 27 "dynalloc.pgc"
 
   int i;
 
   ECPGdebug(1, stderr);
 
-  /* exec sql whenever sqlerror  do sqlprint ( ) ; */
+                                                     
 #line 32 "dynalloc.pgc"
 
   {
@@ -311,8 +311,8 @@ main(void)
   }
 #line 49 "dynalloc.pgc"
 
-  /* skip box for now */
-  /* exec sql get descriptor mydesc value 8 :d8=DATA, :i8=INDICATOR; */
+                        
+                                                                       
   {
     ECPGget_desc(__LINE__, "mydesc", 9, ECPGd_indicator, ECPGt_int, &(i9), (long)1, (long)0, sizeof(int), ECPGd_data, ECPGt_char, &(d9), (long)0, (long)0, (1) * sizeof(char), ECPGd_EODT);
 

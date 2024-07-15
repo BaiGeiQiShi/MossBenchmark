@@ -1,37 +1,37 @@
-/* src/port/crypt.c */
-/*	$NetBSD: crypt.c,v 1.18 2001/03/01 14:37:35 wiz Exp $	*/
+                      
+                                                           
 
-/*
- * Copyright (c) 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
- *
- * This code is derived from software contributed to Berkeley by
- * Tom Truscott.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *	  notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *	  notice, this list of conditions and the following disclaimer in the
- *	  documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
- *	  may be used to endorse or promote products derived from this software
- *	  without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- */
+   
+                            
+                                                                      
+   
+                                                                 
+                 
+   
+                                                                      
+                                                                      
+            
+                                                                     
+                                                                   
+                                                                        
+                                                                         
+                                                                          
+                                                                           
+                                                                           
+                                                
+   
+                                                                           
+                                                                         
+                                                                              
+                                                                            
+                                                                              
+                                                                           
+                                                                         
+                                                                              
+                                                                             
+                                                                          
+                
+   
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)crypt.c	8.1.1.1 (Berkeley) 8/18/93";
 #else
 __RCSID("$NetBSD: crypt.c,v 1.18 2001/03/01 14:37:35 wiz Exp $");
 #endif
-#endif /* not lint */
+#endif               
 
 #include "c.h"
 
@@ -54,30 +54,30 @@ des_setkey(const char *key);
 static int
 des_cipher(const char *in, char *out, long salt, int num_iter);
 
-/*
- * UNIX password, and DES, encryption.
- * By Tom Truscott, trt@rti.rti.org,
- * from algorithms by Robert W. Baldwin and James Gillogly.
- *
- * References:
- * "Mathematical Cryptology for Computer Scientists and Mathematicians,"
- * by Wayne Patterson, 1987, ISBN 0-8476-7438-X.
- *
- * "Password Security: A Case History," R. Morris and Ken Thompson,
- * Communications of the ACM, vol. 22, pp. 594-597, Nov. 1979.
- *
- * "DES will be Totally Insecure within Ten Years," M.E. Hellman,
- * IEEE Spectrum, vol. 16, pp. 32-39, July 1979.
- */
+   
+                                       
+                                     
+                                                            
+   
+               
+                                                                         
+                                                 
+   
+                                                                    
+                                                               
+   
+                                                                  
+                                                 
+   
 
-/* =====  Configuration ==================== */
+                                               
 
-/*
- * define "MUST_ALIGN" if your compiler cannot load/store
- * long integers at arbitrary (e.g. odd) memory locations.
- * (Either that or never pass unaligned addresses to des_cipher!)
- */
-/* #define	MUST_ALIGN */
+   
+                                                          
+                                                           
+                                                                  
+   
+                        
 
 #ifdef CHAR_BITS
 #if CHAR_BITS != 8
@@ -85,147 +85,147 @@ des_cipher(const char *in, char *out, long salt, int num_iter);
 #endif
 #endif
 
-/*
- * define "B64" to be the declaration for a 64 bit integer.
- * XXX this feature is currently unused, see "endian" comment below.
- */
-/* #define B64 int64 */
+   
+                                                            
+                                                                     
+   
+                       
 
-/*
- * define "LARGEDATA" to get faster permutations, by using about 72 kilobytes
- * of lookup tables.  This speeds up des_setkey() and des_cipher(), but has
- * little effect on crypt().
- */
-/* #define	LARGEDATA */
+   
+                                                                              
+                                                                            
+                             
+   
+                       
 
-/* compile with "-DSTATIC=void" when profiling */
+                                                 
 #ifndef STATIC
 #define STATIC static void
 #endif
 
-/*
- * Define the "int32_t" type for integral type with a width of at least
- * 32 bits.
- */
+   
+                                                                        
+            
+   
 typedef int int32_t;
 
-/* ==================================== */
+                                          
 
-#define _PASSWORD_EFMT1 '_' /* extended encryption format */
+#define _PASSWORD_EFMT1 '_'                                 
 
-/*
- * Cipher-block representation (Bob Baldwin):
- *
- * DES operates on groups of 64 bits, numbered 1..64 (sigh).  One
- * representation is to store one bit per byte in an array of bytes.  Bit N of
- * the NBS spec is stored as the LSB of the Nth byte (index N-1) in the array.
- * Another representation stores the 64 bits in 8 bytes, with bits 1..8 in the
- * first byte, 9..16 in the second, and so on.  The DES spec apparently has
- * bit 1 in the MSB of the first byte, but that is particularly noxious so we
- * bit-reverse each byte so that bit 1 is the LSB of the first byte, bit 8 is
- * the MSB of the first byte.  Specifically, the 64-bit input data and key are
- * converted to LSB format, and the output 64-bit block is converted back into
- * MSB format.
- *
- * DES operates internally on groups of 32 bits which are expanded to 48 bits
- * by permutation E and shrunk back to 32 bits by the S boxes.  To speed up
- * the computation, the expansion is applied only once, the expanded
- * representation is maintained during the encryption, and a compression
- * permutation is applied only at the end.  To speed up the S-box lookups,
- * the 48 bits are maintained as eight 6 bit groups, one per byte, which
- * directly feed the eight S-boxes.  Within each byte, the 6 bits are the
- * most significant ones.  The low two bits of each byte are zero.  (Thus,
- * bit 1 of the 48 bit E expansion is stored as the "4"-valued bit of the
- * first byte in the eight byte representation, bit 2 of the 48 bit value is
- * the "8"-valued bit, and so on.)	In fact, a combined "SPE"-box lookup is
- * used, in which the output is the 64 bit result of an S-box lookup which
- * has been permuted by P and expanded by E, and is ready for use in the next
- * iteration.  Two 32-bit wide tables, SPE[0] and SPE[1], are used for this
- * lookup.  Since each byte in the 48 bit path is a multiple of four, indexed
- * lookup of SPE[0] and SPE[1] is simple and fast.  The key schedule and
- * "salt" are also converted to this 8*(6+2) format.  The SPE table size is
- * 8*64*8 = 4K bytes.
- *
- * To speed up bit-parallel operations (such as XOR), the 8 byte
- * representation is "union"ed with 32 bit values "i0" and "i1", and, on
- * machines which support it, a 64 bit value "b64".  This data structure,
- * "C_block", has two problems.  First, alignment restrictions must be
- * honored.  Second, the byte-order (e.g. little-endian or big-endian) of
- * the architecture becomes visible.
- *
- * The byte-order problem is unfortunate, since on the one hand it is good
- * to have a machine-independent C_block representation (bits 1..8 in the
- * first byte, etc.), and on the other hand it is good for the LSB of the
- * first byte to be the LSB of i0.  We cannot have both these things, so we
- * currently use the "little-endian" representation and avoid any multi-byte
- * operations that depend on byte order.  This largely precludes use of the
- * 64-bit datatype since the relative order of i0 and i1 are unknown.  It
- * also inhibits grouping the SPE table to look up 12 bits at a time.  (The
- * 12 bits can be stored in a 16-bit field with 3 low-order zeroes and 1
- * high-order zero, providing fast indexing into a 64-bit wide SPE.)  On the
- * other hand, 64-bit datatypes are currently rare, and a 12-bit SPE lookup
- * requires a 128 kilobyte table, so perhaps this is not a big loss.
- *
- * Permutation representation (Jim Gillogly):
- *
- * A transformation is defined by its effect on each of the 8 bytes of the
- * 64-bit input.  For each byte we give a 64-bit output that has the bits in
- * the input distributed appropriately.  The transformation is then the OR
- * of the 8 sets of 64-bits.  This uses 8*256*8 = 16K bytes of storage for
- * each transformation.  Unless LARGEDATA is defined, however, a more compact
- * table is used which looks up 16 4-bit "chunks" rather than 8 8-bit chunks.
- * The smaller table uses 16*16*8 = 2K bytes for each transformation.  This
- * is slower but tolerable, particularly for password encryption in which
- * the SPE transformation is iterated many times.  The small tables total 9K
- * bytes, the large tables total 72K bytes.
- *
- * The transformations used are:
- * IE3264: MSB->LSB conversion, initial permutation, and expansion.
- *	This is done by collecting the 32 even-numbered bits and applying
- *	a 32->64 bit transformation, and then collecting the 32 odd-numbered
- *	bits and applying the same transformation.  Since there are only
- *	32 input bits, the IE3264 transformation table is half the size of
- *	the usual table.
- * CF6464: Compression, final permutation, and LSB->MSB conversion.
- *	This is done by two trivial 48->32 bit compressions to obtain
- *	a 64-bit block (the bit numbering is given in the "CIFP" table)
- *	followed by a 64->64 bit "cleanup" transformation.  (It would
- *	be possible to group the bits in the 64-bit block so that 2
- *	identical 32->32 bit transformations could be used instead,
- *	saving a factor of 4 in space and possibly 2 in time, but
- *	byte-ordering and other complications rear their ugly head.
- *	Similar opportunities/problems arise in the key schedule
- *	transforms.)
- * PC1ROT: MSB->LSB, PC1 permutation, rotate, and PC2 permutation.
- *	This admittedly baroque 64->64 bit transformation is used to
- *	produce the first code (in 8*(6+2) format) of the key schedule.
- * PC2ROT[0]: Inverse PC2 permutation, rotate, and PC2 permutation.
- *	It would be possible to define 15 more transformations, each
- *	with a different rotation, to generate the entire key schedule.
- *	To save space, however, we instead permute each code into the
- *	next by using a transformation that "undoes" the PC2 permutation,
- *	rotates the code, and then applies PC2.  Unfortunately, PC2
- *	transforms 56 bits into 48 bits, dropping 8 bits, so PC2 is not
- *	invertible.  We get around that problem by using a modified PC2
- *	which retains the 8 otherwise-lost bits in the unused low-order
- *	bits of each byte.  The low-order bits are cleared when the
- *	codes are stored into the key schedule.
- * PC2ROT[1]: Same as PC2ROT[0], but with two rotations.
- *	This is faster than applying PC2ROT[0] twice,
- *
- * The Bell Labs "salt" (Bob Baldwin):
- *
- * The salting is a simple permutation applied to the 48-bit result of E.
- * Specifically, if bit i (1 <= i <= 24) of the salt is set then bits i and
- * i+24 of the result are swapped.  The salt is thus a 24 bit number, with
- * 16777216 possible values.  (The original salt was 12 bits and could not
- * swap bits 13..24 with 36..48.)
- *
- * It is possible, but ugly, to warp the SPE table to account for the salt
- * permutation.  Fortunately, the conditional bit swapping requires only
- * about four machine instructions and can be done on-the-fly with about an
- * 8% performance penalty.
- */
+   
+                                              
+   
+                                                                  
+                                                                               
+                                                                               
+                                                                               
+                                                                            
+                                                                              
+                                                                              
+                                                                               
+                                                                               
+               
+   
+                                                                              
+                                                                            
+                                                                     
+                                                                         
+                                                                           
+                                                                         
+                                                                          
+                                                                           
+                                                                          
+                                                                             
+                                                                           
+                                                                           
+                                                                              
+                                                                            
+                                                                              
+                                                                         
+                                                                            
+                      
+   
+                                                                 
+                                                                         
+                                                                          
+                                                                       
+                                                                          
+                                     
+   
+                                                                           
+                                                                          
+                                                                          
+                                                                            
+                                                                             
+                                                                            
+                                                                          
+                                                                            
+                                                                         
+                                                                             
+                                                                            
+                                                                     
+   
+                                              
+   
+                                                                           
+                                                                             
+                                                                           
+                                                                           
+                                                                              
+                                                                              
+                                                                            
+                                                                          
+                                                                             
+                                            
+   
+                                 
+                                                                    
+                                                                     
+                                                                        
+                                                                    
+                                                                      
+                    
+                                                                    
+                                                                 
+                                                                   
+                                                                 
+                                                               
+                                                               
+                                                             
+                                                               
+                                                            
+                
+                                                                   
+                                                                
+                                                                   
+                                                                    
+                                                                
+                                                                   
+                                                                 
+                                                                     
+                                                               
+                                                                   
+                                                                   
+                                                                   
+                                                               
+                                           
+                                                         
+                                                 
+   
+                                       
+   
+                                                                          
+                                                                            
+                                                                           
+                                                                           
+                                  
+   
+                                                                           
+                                                                         
+                                                                            
+                           
+   
 
 typedef union
 {
@@ -240,10 +240,10 @@ typedef union
 #endif
 } C_block;
 
-/*
- * Convert twenty-four-bit long in host-order
- * to six bits (and 2 low-order zeroes) per char little-endian format.
- */
+   
+                                              
+                                                                       
+   
 #define TO_SIX_BIT(rslt, src)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     C_block cvt;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
@@ -257,9 +257,9 @@ typedef union
     rslt = (cvt.b32.i0 & 0x3f3f3f3fL) << 2;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   }
 
-/*
- * These macros may someday permit efficient use of 64-bit integers.
- */
+   
+                                                                     
+   
 #define ZERO(d, d0, d1) d0 = 0, d1 = 0
 #define LOAD(d, d0, d1, bl) d0 = (bl).b32.i0, d1 = (bl).b32.i1
 #define LOADREG(d, d0, d1, s, s0, s1) d0 = s0, d1 = s1
@@ -268,7 +268,7 @@ typedef union
 #define DCL_BLOCK(d, d0, d1) int32_t d0, d1
 
 #if defined(LARGEDATA)
-/* Waste memory like crazy.  Also, do permutations in line */
+                                                             
 #define LGCHUNKBITS 3
 #define CHUNKBITS (1 << LGCHUNKBITS)
 #define PERM6464(d, d0, d1, cpp, p)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -286,7 +286,7 @@ typedef union
   OR(d, d0, d1, (p)[(2 << CHUNKBITS) + (cpp)[2]]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
   OR(d, d0, d1, (p)[(3 << CHUNKBITS) + (cpp)[3]]);
 #else
-/* "small data" */
+                  
 #define LGCHUNKBITS 2
 #define CHUNKBITS (1 << LGCHUNKBITS)
 #define PERM6464(d, d0, d1, cpp, p)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -301,7 +301,7 @@ typedef union
     permute(cpp, &tblk, p, 4);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
     LOAD(d, d0, d1, tblk);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
   }
-#endif /* LARGEDATA */
+#endif                
 
 STATIC
 init_des(void);
@@ -337,12 +337,12 @@ permute(unsigned char *cp, C_block *out, C_block *p, int chars_in)
   } while (--chars_in > 0);
   STORE(D, D0, D1, *out);
 }
-#endif /* LARGEDATA */
+#endif                
 
-/* =====  (mostly) Standard DES Tables ==================== */
+                                                              
 
 static const unsigned char IP[] = {
-    /* initial permutation */
+                             
     58,
     50,
     42,
@@ -409,10 +409,10 @@ static const unsigned char IP[] = {
     7,
 };
 
-/* The final permutation is the inverse of IP - no table is necessary */
+                                                                        
 
 static const unsigned char ExpandTr[] = {
-    /* expansion operation */
+                             
     32,
     1,
     2,
@@ -464,7 +464,7 @@ static const unsigned char ExpandTr[] = {
 };
 
 static const unsigned char PC1[] = {
-    /* permuted choice table 1 */
+                                 
     57,
     49,
     41,
@@ -525,7 +525,7 @@ static const unsigned char PC1[] = {
 };
 
 static const unsigned char Rotates[] = {
-    /* PC1 rotation schedule */
+                               
     1,
     1,
     2,
@@ -544,9 +544,9 @@ static const unsigned char Rotates[] = {
     1,
 };
 
-/* note: each "row" of PC2 is left-padded with bits that make it invertible */
+                                                                              
 static const unsigned char PC2[] = {
-    /* permuted choice table 2 */
+                                 
     9,
     18,
     14,
@@ -614,26 +614,26 @@ static const unsigned char PC2[] = {
     32,
 };
 
-static const unsigned char S[8][64] = {/* 48->32 bit substitution tables */
-    /* S[1]			*/
+static const unsigned char S[8][64] = {                                    
+                
     {14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7, 0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8, 4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0, 15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13},
-    /* S[2]			*/
+                
     {15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10, 3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5, 0, 14, 7, 11, 10, 4, 13, 1, 5, 8, 12, 6, 9, 3, 2, 15, 13, 8, 10, 1, 3, 15, 4, 2, 11, 6, 7, 12, 0, 5, 14, 9},
-    /* S[3]			*/
+                
     {10, 0, 9, 14, 6, 3, 15, 5, 1, 13, 12, 7, 11, 4, 2, 8, 13, 7, 0, 9, 3, 4, 6, 10, 2, 8, 5, 14, 12, 11, 15, 1, 13, 6, 4, 9, 8, 15, 3, 0, 11, 1, 2, 12, 5, 10, 14, 7, 1, 10, 13, 0, 6, 9, 8, 7, 4, 15, 14, 3, 11, 5, 2, 12},
-    /* S[4]			*/
+                
     {7, 13, 14, 3, 0, 6, 9, 10, 1, 2, 8, 5, 11, 12, 4, 15, 13, 8, 11, 5, 6, 15, 0, 3, 4, 7, 2, 12, 1, 10, 14, 9, 10, 6, 9, 0, 12, 11, 7, 13, 15, 1, 3, 14, 5, 2, 8, 4, 3, 15, 0, 6, 10, 1, 13, 8, 9, 4, 5, 11, 12, 7, 2, 14},
-    /* S[5]			*/
+                
     {2, 12, 4, 1, 7, 10, 11, 6, 8, 5, 3, 15, 13, 0, 14, 9, 14, 11, 2, 12, 4, 7, 13, 1, 5, 0, 15, 10, 3, 9, 8, 6, 4, 2, 1, 11, 10, 13, 7, 8, 15, 9, 12, 5, 6, 3, 0, 14, 11, 8, 12, 7, 1, 14, 2, 13, 6, 15, 0, 9, 10, 4, 5, 3},
-    /* S[6]			*/
+                
     {12, 1, 10, 15, 9, 2, 6, 8, 0, 13, 3, 4, 14, 7, 5, 11, 10, 15, 4, 2, 7, 12, 9, 5, 6, 1, 13, 14, 0, 11, 3, 8, 9, 14, 15, 5, 2, 8, 12, 3, 7, 0, 4, 10, 1, 13, 11, 6, 4, 3, 2, 12, 9, 5, 15, 10, 11, 14, 1, 7, 6, 0, 8, 13},
-    /* S[7]			*/
+                
     {4, 11, 2, 14, 15, 0, 8, 13, 3, 12, 9, 7, 5, 10, 6, 1, 13, 0, 11, 7, 4, 9, 1, 10, 14, 3, 5, 12, 2, 15, 8, 6, 1, 4, 11, 13, 12, 3, 7, 14, 10, 15, 6, 8, 0, 5, 9, 2, 6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12},
-    /* S[8]			*/
+                
     {13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7, 1, 15, 13, 8, 10, 3, 7, 4, 12, 5, 6, 11, 0, 14, 9, 2, 7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8, 2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11}};
 
 static const unsigned char P32Tr[] = {
-    /* 32-bit permutation function */
+                                     
     16,
     7,
     20,
@@ -669,7 +669,7 @@ static const unsigned char P32Tr[] = {
 };
 
 static const unsigned char CIFP[] = {
-    /* compressed/interleaved permutation */
+                                            
     1,
     2,
     3,
@@ -737,42 +737,42 @@ static const unsigned char CIFP[] = {
     64,
 };
 
-static const unsigned char itoa64[] = /* 0..63 => ascii-64 */
+static const unsigned char itoa64[] =                        
     "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-/* =====  Tables that are initialized at run time  ==================== */
+                                                                          
 
-static unsigned char a64toi[128]; /* ascii-64 => 0..63 */
+static unsigned char a64toi[128];                        
 
-/* Initial key schedule permutation */
+                                      
 static C_block PC1ROT[64 / CHUNKBITS][1 << CHUNKBITS];
 
-/* Subsequent key schedule rotation permutations */
+                                                   
 static C_block PC2ROT[2][64 / CHUNKBITS][1 << CHUNKBITS];
 
-/* Initial permutation/expansion table */
+                                         
 static C_block IE3264[32 / CHUNKBITS][1 << CHUNKBITS];
 
-/* Table that combines the S, P, and E operations.  */
+                                                      
 static int32_t SPE[2][8][64];
 
-/* compressed/interleaved => final permutation table */
+                                                       
 static C_block CF6464[64 / CHUNKBITS][1 << CHUNKBITS];
 
-/* ==================================== */
+                                          
 
-static C_block constdatablock;               /* encryption constant */
-static char cryptresult[1 + 4 + 4 + 11 + 1]; /* encrypted result */
+static C_block constdatablock;                                        
+static char cryptresult[1 + 4 + 4 + 11 + 1];                       
 
 extern char *
-__md5crypt(const char *, const char *); /* XXX */
+__md5crypt(const char *, const char *);          
 extern char *
-__bcrypt(const char *, const char *); /* XXX */
+__bcrypt(const char *, const char *);          
 
-/*
- * Return a pointer to static data consisting of the "setting"
- * followed by an encryption produced by the "key" and "setting".
- */
+   
+                                                               
+                                                                  
+   
 char *
 crypt(const char *key, const char *setting)
 {
@@ -784,7 +784,7 @@ crypt(const char *key, const char *setting)
   C_block keyblock, rsltblock;
 
 #if 0
-	/* Non-DES encryption schemes hook in here. */
+	                                              
 	if (setting[0] == _PASSWORD_NONDES)
 	{
 		switch (setting[1])
@@ -806,7 +806,7 @@ crypt(const char *key, const char *setting)
     }
     keyblock.b[i] = t;
   }
-  if (des_setkey((char *)keyblock.b)) /* also initializes "a64toi" */
+  if (des_setkey((char *)keyblock.b))                                
   {
     return (NULL);
   }
@@ -816,9 +816,9 @@ crypt(const char *key, const char *setting)
   {
   case _PASSWORD_EFMT1:
 
-    /*
-     * Involve the rest of the password 8 characters at a time.
-     */
+       
+                                                                
+       
     while (*key)
     {
       if (des_cipher((char *)(void *)&keyblock, (char *)(void *)&keyblock, 0L, 1))
@@ -841,7 +841,7 @@ crypt(const char *key, const char *setting)
 
     *encp++ = *setting++;
 
-    /* get iteration count */
+                             
     num_iter = 0;
     for (i = 4; --i >= 0;)
     {
@@ -877,9 +877,9 @@ crypt(const char *key, const char *setting)
     return (NULL);
   }
 
-  /*
-   * Encode the 64 cipher bits as 11 ascii characters.
-   */
+     
+                                                       
+     
   i = ((int32_t)((rsltblock.b[0] << 8) | rsltblock.b[1]) << 8) | rsltblock.b[2];
   encp[3] = itoa64[i & 0x3f];
   i >>= 6;
@@ -910,17 +910,17 @@ crypt(const char *key, const char *setting)
   return (cryptresult);
 }
 
-/*
- * The Key Schedule, filled in by des_setkey() or setkey().
- */
+   
+                                                            
+   
 #define KS_SIZE 16
 static C_block KS[KS_SIZE];
 
 static volatile int des_ready = 0;
 
-/*
- * Set up the key schedule from the key.
- */
+   
+                                         
+   
 static int
 des_setkey(const char *key)
 {
@@ -947,18 +947,18 @@ des_setkey(const char *key)
   return (0);
 }
 
-/*
- * Encrypt (or decrypt if num_iter < 0) the 8 chars at "in" with abs(num_iter)
- * iterations of DES, using the given 24-bit salt and the pre-computed key
- * schedule, and store the resulting 8 chars at "out" (in == out is permitted).
- *
- * NOTE: the performance of this routine is critically dependent on your
- * compiler and machine architecture.
- */
+   
+                                                                               
+                                                                           
+                                                                                
+   
+                                                                         
+                                      
+   
 static int
 des_cipher(const char *in, char *out, long salt, int num_iter)
 {
-  /* variables that we want in registers, most important first */
+                                                                 
 #if defined(pdp11)
   int j;
 #endif
@@ -968,10 +968,10 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
   C_block B;
 
   L0 = salt;
-  TO_SIX_BIT(salt, L0); /* convert to 4*(6+2) format */
+  TO_SIX_BIT(salt, L0);                                
 
 #if defined(__vax__) || defined(pdp11)
-  salt = ~salt; /* "x &~ y" is faster than "x & y". */
+  salt = ~salt;                                       
 #define SALT (~salt)
 #else
 #define SALT salt
@@ -993,21 +993,21 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
   LOADREG(R, R0, R1, L, L0, L1);
   L0 &= 0x55555555L;
   L1 &= 0x55555555L;
-  L0 = (L0 << 1) | L1; /* L0 is the even-numbered input bits */
+  L0 = (L0 << 1) | L1;                                         
   R0 &= 0xaaaaaaaaL;
   R1 = (R1 >> 1) & 0x55555555L;
-  L1 = R0 | R1; /* L1 is the odd-numbered input bits */
+  L1 = R0 | R1;                                        
   STORE(L, L0, L1, B);
-  PERM3264(L, L0, L1, B.b, (C_block *)IE3264);     /* even bits */
-  PERM3264(R, R0, R1, B.b + 4, (C_block *)IE3264); /* odd bits */
+  PERM3264(L, L0, L1, B.b, (C_block *)IE3264);                    
+  PERM3264(R, R0, R1, B.b + 4, (C_block *)IE3264);               
 
   if (num_iter >= 0)
-  { /* encryption */
+  {                 
     kp = &KS[0];
     ks_inc = sizeof(*kp);
   }
   else
-  { /* decryption */
+  {                 
     num_iter = -num_iter;
     kp = &KS[KS_SIZE - 1];
     ks_inc = -(long)sizeof(*kp);
@@ -1021,19 +1021,19 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
 
 #define SPTAB(t, i) (*(int32_t *)((unsigned char *)(t) + (i) * (sizeof(int32_t) / 4)))
 #if defined(gould)
-      /* use this if B.b[i] is evaluated just once ... */
+                                                         
 #define DOXOR(x, y, i)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   x ^= SPTAB(SPE[0][i], B.b[i]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
   y ^= SPTAB(SPE[1][i], B.b[i]);
 #else
 #if defined(pdp11)
-      /* use this if your "long" int indexing is slow */
+                                                        
 #define DOXOR(x, y, i)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   j = B.b[i];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   x ^= SPTAB(SPE[0][i], j);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
   y ^= SPTAB(SPE[1][i], j);
 #else
-      /* use this if "k" is allocated to a register ... */
+                                                          
 #define DOXOR(x, y, i)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   k = B.b[i];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          \
   x ^= SPTAB(SPE[0][i], k);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
@@ -1061,7 +1061,7 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
     } while (--loop_count != 0);
     kp = (C_block *)((char *)kp - (ks_inc * KS_SIZE));
 
-    /* swap L and R */
+                      
     L0 ^= R0;
     L1 ^= R1;
     R0 ^= L0;
@@ -1070,7 +1070,7 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
     L1 ^= R1;
   }
 
-  /* store the encrypted (or decrypted) result */
+                                                 
   L0 = ((L0 >> 3) & 0x0f0f0f0fL) | ((L1 << 1) & 0xf0f0f0f0L);
   L1 = ((R0 >> 3) & 0x0f0f0f0fL) | ((R1 << 1) & 0xf0f0f0f0L);
   STORE(L, L0, L1, B);
@@ -1091,31 +1091,31 @@ des_cipher(const char *in, char *out, long salt, int num_iter)
   return (0);
 }
 
-/*
- * Initialize various tables.  This need only be done once.  It could even be
- * done at compile time, if the compiler were capable of that sort of thing.
- */
+   
+                                                                              
+                                                                             
+   
 STATIC
 init_des(void)
 {
   int i, j;
   int32_t k;
   int tableno;
-  static unsigned char perm[64], tmp32[32]; /* "static" for speed */
+  static unsigned char perm[64], tmp32[32];                         
 
-  /*	static volatile long init_start = 0; not used */
+                                                     
 
-  /*
-   * table that converts chars "./0-9A-Za-z"to integers 0-63.
-   */
+     
+                                                              
+     
   for (i = 0; i < 64; i++)
   {
     a64toi[itoa64[i]] = i;
   }
 
-  /*
-   * PC1ROT - bit reverse, then PC1, then Rotate, then PC2.
-   */
+     
+                                                            
+     
   for (i = 0; i < 64; i++)
   {
     perm[i] = 0;
@@ -1145,9 +1145,9 @@ init_des(void)
 #endif
   init_perm(PC1ROT, perm, 8, 8);
 
-  /*
-   * PC2ROT - PC2 inverse, then Rotate (once or twice), then PC2.
-   */
+     
+                                                                  
+     
   for (j = 0; j < 2; j++)
   {
     unsigned char pc2inv[64];
@@ -1183,9 +1183,9 @@ init_des(void)
     init_perm(PC2ROT[j], perm, 8, 8);
   }
 
-  /*
-   * Bit reverse, then initial permutation, then expansion.
-   */
+     
+                                                            
+     
   for (i = 0; i < 8; i++)
   {
     for (j = 0; j < 8; j++)
@@ -1213,9 +1213,9 @@ init_des(void)
 #endif
   init_perm(IE3264, perm, 4, 8);
 
-  /*
-   * Compression, then final permutation, then bit reverse.
-   */
+     
+                                                            
+     
   for (i = 0; i < 64; i++)
   {
     k = IP[CIFP[i] - 1];
@@ -1232,9 +1232,9 @@ init_des(void)
 #endif
   init_perm(CF6464, perm, 8, 8);
 
-  /*
-   * SPE table
-   */
+     
+               
+     
   for (i = 0; i < 48; i++)
   {
     perm[i] = P32Tr[ExpandTr[i] - 1];
@@ -1272,30 +1272,30 @@ init_des(void)
   des_ready = 1;
 }
 
-/*
- * Initialize "perm" to represent transformation "p", which rearranges
- * (perhaps with expansion and/or contraction) one packed array of bits
- * (of size "chars_in" characters) into another array (of size "chars_out"
- * characters).
- *
- * "perm" must be all-zeroes on entry to this routine.
- */
+   
+                                                                       
+                                                                        
+                                                                           
+                
+   
+                                                       
+   
 STATIC
 init_perm(C_block perm[64 / CHUNKBITS][1 << CHUNKBITS], unsigned char p[64], int chars_in, int chars_out)
 {
   int i, j, k, l;
 
   for (k = 0; k < chars_out * 8; k++)
-  {               /* each output bit position */
-    l = p[k] - 1; /* where this bit comes from */
+  {                                             
+    l = p[k] - 1;                                
     if (l < 0)
     {
-      continue; /* output bit is always 0 */
+      continue;                             
     }
-    i = l >> LGCHUNKBITS;           /* which chunk this bit comes from */
-    l = 1 << (l & (CHUNKBITS - 1)); /* mask for this bit */
+    i = l >> LGCHUNKBITS;                                                
+    l = 1 << (l & (CHUNKBITS - 1));                        
     for (j = 0; j < (1 << CHUNKBITS); j++)
-    { /* each chunk value */
+    {                       
       if ((j & l) != 0)
       {
         perm[i][j].b[k >> 3] |= 1 << (k & 07);
@@ -1304,9 +1304,9 @@ init_perm(C_block perm[64 / CHUNKBITS][1 << CHUNKBITS], unsigned char p[64], int
   }
 }
 
-/*
- * "setkey" routine (for backwards compatibility)
- */
+   
+                                                  
+   
 #ifdef NOT_USED
 int
 setkey(const char *key)
@@ -1327,9 +1327,9 @@ setkey(const char *key)
   return (des_setkey((char *)keyblock.b));
 }
 
-/*
- * "encrypt" routine (for backwards compatibility)
- */
+   
+                                                   
+   
 static int
 encrypt(char *block, int flag)
 {

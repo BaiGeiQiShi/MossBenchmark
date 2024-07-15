@@ -1,20 +1,20 @@
-/*-------------------------------------------------------------------------
- *
- * tid.c
- *	  Functions for the built-in type tuple id
- *
- * Portions Copyright (c) 1996-2019, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
- *
- * IDENTIFICATION
- *	  src/backend/utils/adt/tid.c
- *
- * NOTES
- *	  input routine largely stolen from boxin().
- *
- *-------------------------------------------------------------------------
- */
+                                                                            
+   
+         
+                                              
+   
+                                                                         
+                                                                        
+   
+   
+                  
+                                 
+   
+         
+                                                
+   
+                                                                            
+   
 #include "postgres.h"
 
 #include <math.h>
@@ -46,10 +46,10 @@
 #define DELIM ','
 #define NTIDARGS 2
 
-/* ----------------------------------------------------------------
- *		tidin
- * ----------------------------------------------------------------
- */
+                                                                    
+          
+                                                                    
+   
 Datum
 tidin(PG_FUNCTION_ARGS)
 {
@@ -97,10 +97,10 @@ tidin(PG_FUNCTION_ARGS)
   PG_RETURN_ITEMPOINTER(result);
 }
 
-/* ----------------------------------------------------------------
- *		tidout
- * ----------------------------------------------------------------
- */
+                                                                    
+           
+                                                                    
+   
 Datum
 tidout(PG_FUNCTION_ARGS)
 {
@@ -112,15 +112,15 @@ tidout(PG_FUNCTION_ARGS)
   blockNumber = ItemPointerGetBlockNumberNoCheck(itemPtr);
   offsetNumber = ItemPointerGetOffsetNumberNoCheck(itemPtr);
 
-  /* Perhaps someday we should output this as a record. */
+                                                          
   snprintf(buf, sizeof(buf), "(%u,%u)", blockNumber, offsetNumber);
 
   PG_RETURN_CSTRING(pstrdup(buf));
 }
 
-/*
- *		tidrecv			- converts external binary format to tid
- */
+   
+                                                       
+   
 Datum
 tidrecv(PG_FUNCTION_ARGS)
 {
@@ -139,9 +139,9 @@ tidrecv(PG_FUNCTION_ARGS)
   PG_RETURN_ITEMPOINTER(result);
 }
 
-/*
- *		tidsend			- converts tid to binary format
- */
+   
+                                              
+   
 Datum
 tidsend(PG_FUNCTION_ARGS)
 {
@@ -154,9 +154,9 @@ tidsend(PG_FUNCTION_ARGS)
   PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-/*****************************************************************************
- *	 PUBLIC ROUTINES														 *
- *****************************************************************************/
+                                                                               
+                                    
+                                                                               
 
 Datum
 tideq(PG_FUNCTION_ARGS)
@@ -244,12 +244,12 @@ hashtid(PG_FUNCTION_ARGS)
 {
   ItemPointer key = PG_GETARG_ITEMPOINTER(0);
 
-  /*
-   * While you'll probably have a lot of trouble with a compiler that
-   * insists on appending pad space to struct ItemPointerData, we can at
-   * least make this code work, by not using sizeof(ItemPointerData).
-   * Instead rely on knowing the sizes of the component fields.
-   */
+     
+                                                                      
+                                                                         
+                                                                      
+                                                                
+     
   return hash_any((unsigned char *)key, sizeof(BlockIdData) + sizeof(OffsetNumber));
 }
 
@@ -259,15 +259,15 @@ hashtidextended(PG_FUNCTION_ARGS)
   ItemPointer key = PG_GETARG_ITEMPOINTER(0);
   uint64 seed = PG_GETARG_INT64(1);
 
-  /* As above */
+                
   return hash_any_extended((unsigned char *)key, sizeof(BlockIdData) + sizeof(OffsetNumber), seed);
 }
 
-/*
- *	Functions to get latest tid of a specified tuple.
- *
- *	Maybe these implementations should be moved to another place
- */
+   
+                                                     
+   
+                                                                
+   
 
 static ItemPointerData Current_last_tid = {{0, 0}, 0};
 
@@ -277,11 +277,11 @@ setLastTid(const ItemPointer tid)
   Current_last_tid = *tid;
 }
 
-/*
- *	Handle CTIDs of views.
- *		CTID should be defined in the view and it must
- *		correspond to the CTID of a base relation.
- */
+   
+                          
+                                                   
+                                               
+   
 static Datum
 currtid_for_view(Relation viewrel, ItemPointer tid)
 {

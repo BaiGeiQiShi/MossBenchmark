@@ -1,16 +1,16 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "test2.pgc"
-/*
- * this file tests multiple connections to databases and switches
- * between them.
- */
+   
+                                                                  
+                 
+   
 
 #include <stdlib.h>
 #include <string.h>
@@ -24,14 +24,14 @@
 int
 main(void)
 {
-  /* exec sql begin declare section */
+                                      
 
 #line 17 "test2.pgc"
   char id[200];
 
 #line 18 "test2.pgc"
   char res[200];
-/* exec sql end declare section */
+                                  
 #line 19 "test2.pgc"
 
   ECPGdebug(1, stderr);
@@ -47,7 +47,7 @@ main(void)
   }
 #line 25 "test2.pgc"
 
-  /* this selects from "second" which was opened last */
+                                                        
   {
     ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "select current_database ( )", ECPGt_EOIT, ECPGt_char, (res), (long)200, (long)1, (200) * sizeof(char), ECPGt_NO_INDICATOR, NULL, 0L, 0L, 0L, ECPGt_EORT);
   }
@@ -73,7 +73,7 @@ main(void)
   }
 #line 33 "test2.pgc"
 
-  /* this will disconnect from "first" */
+                                         
   {
     ECPGdisconnect(__LINE__, "CURRENT");
   }
@@ -84,13 +84,13 @@ main(void)
   }
 #line 37 "test2.pgc"
 
-  /* error here since "first" is already disconnected */
+                                                        
   {
     ECPGdisconnect(__LINE__, id);
   }
 #line 40 "test2.pgc"
 
-  /* disconnect from "second" */
+                                
   {
     ECPGdisconnect(__LINE__, "CURRENT");
   }

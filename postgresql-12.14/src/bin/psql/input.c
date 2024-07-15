@@ -1,10 +1,10 @@
-/*
- * psql - the PostgreSQL interactive terminal
- *
- * Copyright (c) 2000-2019, PostgreSQL Global Development Group
- *
- * src/bin/psql/input.c
- */
+   
+                                              
+   
+                                                                
+   
+                        
+   
 #include "postgres_fe.h"
 
 #ifndef WIN32
@@ -26,8 +26,8 @@
 #define PSQLHISTORY "psql_history"
 #endif
 
-/* Runtime options for turning off readline and history */
-/* (of course there is no runtime command for doing that :) */
+                                                          
+                                                              
 #ifdef USE_READLINE
 static bool useReadline;
 static bool useHistory;
@@ -36,33 +36,33 @@ static char *psql_history;
 
 static int history_lines_added;
 
-/*
- *	Preserve newlines in saved queries by mapping '\n' to NL_IN_HISTORY
- *
- *	It is assumed NL_IN_HISTORY will never be entered by the user
- *	nor appear inside a multi-byte string.  0x00 is not properly
- *	handled by the readline routines so it can not be used
- *	for this purpose.
- */
+   
+                                                                       
+   
+                                                                 
+                                                                
+                                                          
+                     
+   
 #define NL_IN_HISTORY 0x01
 #endif
 
 static void
 finishInput(void);
 
-/*
- * gets_interactive()
- *
- * Gets a line of interactive input, using readline if desired.
- *
- * prompt: the prompt string to be used
- * query_buf: buffer containing lines already read in the current command
- * (query_buf is not modified here, but may be consulted for tab completion)
- *
- * The result is a malloc'd string.
- *
- * Caller *must* have set up sigint_interrupt_jmp before calling.
- */
+   
+                      
+   
+                                                                
+   
+                                        
+                                                                          
+                                                                             
+   
+                                    
+   
+                                                                  
+   
 char *
 gets_interactive(const char *prompt, PQExpBuffer query_buf)
 {
@@ -71,30 +71,30 @@ gets_interactive(const char *prompt, PQExpBuffer query_buf)
   {
     char *result;
 
-    /*
-     * Some versions of readline don't notice SIGWINCH signals that arrive
-     * when not actively reading input.  The simplest fix is to always
-     * re-read the terminal size.  This leaves a window for SIGWINCH to be
-     * missed between here and where readline() enables libreadline's
-     * signal handler, but that's probably short enough to be ignored.
-     */
+       
+                                                                           
+                                                                       
+                                                                           
+                                                                      
+                                                                       
+       
 #ifdef HAVE_RL_RESET_SCREEN_SIZE
     rl_reset_screen_size();
 #endif
 
-    /* Make current query_buf available to tab completion callback */
+                                                                     
     tab_completion_query_buf = query_buf;
 
-    /* Enable SIGINT to longjmp to sigint_interrupt_jmp */
+                                                          
     sigint_interrupt_enabled = true;
 
-    /* On some platforms, readline is declared as readline(char *) */
+                                                                     
     result = readline((char *)prompt);
 
-    /* Disable SIGINT again */
+                              
     sigint_interrupt_enabled = false;
 
-    /* Pure neatnik-ism */
+                          
     tab_completion_query_buf = NULL;
 
     return result;
@@ -106,9 +106,9 @@ gets_interactive(const char *prompt, PQExpBuffer query_buf)
   return gets_fromFile(stdin);
 }
 
-/*
- * Append the line to the history buffer, making sure there is a trailing '\n'
- */
+   
+                                                                               
+   
 void
 pg_append_history(const char *s, PQExpBuffer history_buf)
 {
@@ -124,14 +124,14 @@ pg_append_history(const char *s, PQExpBuffer history_buf)
 #endif
 }
 
-/*
- * Emit accumulated history entry to readline's history mechanism,
- * then reset the buffer to empty.
- *
- * Note: we write nothing if history_buf is empty, so extra calls to this
- * function don't hurt.  There must have been at least one line added by
- * pg_append_history before we'll do anything.
- */
+   
+                                                                   
+                                   
+   
+                                                                          
+                                                                         
+                                               
+   
 void
 pg_send_history(PQExpBuffer history_buf)
 {
@@ -141,7 +141,7 @@ pg_send_history(PQExpBuffer history_buf)
   char *s = history_buf->data;
   int i;
 
-  /* Trim any trailing \n's (OK to scribble on history_buf) */
+                                                              
   for (i = strlen(s) - 1; i >= 0 && s[i] == '\n'; i--)
     ;
   s[i + 1] = '\0';
@@ -150,19 +150,19 @@ pg_send_history(PQExpBuffer history_buf)
   {
     if (((pset.histcontrol & hctl_ignorespace) && s[0] == ' ') || ((pset.histcontrol & hctl_ignoredups) && prev_hist && strcmp(s, prev_hist) == 0))
     {
-      /* Ignore this line as far as history is concerned */
+                                                           
     }
     else
     {
-      /* Save each previous line for ignoredups processing */
+                                                             
       if (prev_hist)
       {
         free(prev_hist);
       }
       prev_hist = pg_strdup(s);
-      /* And send it to readline */
+                                   
       add_history(s);
-      /* Count lines added to history for use later */
+                                                      
       history_lines_added++;
     }
   }
@@ -171,17 +171,17 @@ pg_send_history(PQExpBuffer history_buf)
 #endif
 }
 
-/*
- * gets_fromFile
- *
- * Gets a line of noninteractive input from a file (which could be stdin).
- * The result is a malloc'd string, or NULL on EOF or input error.
- *
- * Caller *must* have set up sigint_interrupt_jmp before calling.
- *
- * Note: we re-use a static PQExpBuffer for each call.  This is to avoid
- * leaking memory if interrupted by SIGINT.
- */
+   
+                 
+   
+                                                                           
+                                                                   
+   
+                                                                  
+   
+                                                                         
+                                            
+   
 char *
 gets_fromFile(FILE *source)
 {
@@ -189,7 +189,7 @@ gets_fromFile(FILE *source)
 
   char line[1024];
 
-  if (buffer == NULL) /* first time through? */
+  if (buffer == NULL)                          
   {
     buffer = createPQExpBuffer();
   }
@@ -202,16 +202,16 @@ gets_fromFile(FILE *source)
   {
     char *result;
 
-    /* Enable SIGINT to longjmp to sigint_interrupt_jmp */
+                                                          
     sigint_interrupt_enabled = true;
 
-    /* Get some data */
+                       
     result = fgets(line, sizeof(line), source);
 
-    /* Disable SIGINT again */
+                              
     sigint_interrupt_enabled = false;
 
-    /* EOF or error? */
+                       
     if (result == NULL)
     {
       if (ferror(source))
@@ -230,7 +230,7 @@ gets_fromFile(FILE *source)
       return NULL;
     }
 
-    /* EOL? */
+              
     if (buffer->len > 0 && buffer->data[buffer->len - 1] == '\n')
     {
       buffer->data[buffer->len - 1] = '\0';
@@ -238,47 +238,47 @@ gets_fromFile(FILE *source)
     }
   }
 
-  if (buffer->len > 0) /* EOF after reading some bufferload(s) */
+  if (buffer->len > 0)                                           
   {
     return pg_strdup(buffer->data);
   }
 
-  /* EOF, so return null */
+                           
   return NULL;
 }
 
 #ifdef USE_READLINE
 
-/*
- * Macros to iterate over each element of the history list in order
- *
- * You would think this would be simple enough, but in its inimitable fashion
- * libedit has managed to break it: in libreadline we must use next_history()
- * to go from oldest to newest, but in libedit we must use previous_history().
- * To detect what to do, we make a trial call of previous_history(): if it
- * fails, then either next_history() is what to use, or there's zero or one
- * history entry so that it doesn't matter which direction we go.
- *
- * In case that wasn't disgusting enough: the code below is not as obvious as
- * it might appear.  In some libedit releases history_set_pos(0) fails until
- * at least one add_history() call has been done.  This is not an issue for
- * printHistory() or encode_history(), which cannot be invoked before that has
- * happened.  In decode_history(), that's not so, and what actually happens is
- * that we are sitting on the newest entry to start with, previous_history()
- * fails, and we iterate over all the entries using next_history().  So the
- * decode_history() loop iterates over the entries in the wrong order when
- * using such a libedit release, and if there were another attempt to use
- * BEGIN_ITERATE_HISTORY() before some add_history() call had happened, it
- * wouldn't work.  Fortunately we don't care about either of those things.
- *
- * Usage pattern is:
- *
- *		BEGIN_ITERATE_HISTORY(varname);
- *		{
- *			loop body referencing varname->line;
- *		}
- *		END_ITERATE_HISTORY();
- */
+   
+                                                                    
+   
+                                                                              
+                                                                              
+                                                                               
+                                                                           
+                                                                            
+                                                                  
+   
+                                                                              
+                                                                             
+                                                                            
+                                                                               
+                                                                               
+                                                                             
+                                                                            
+                                                                           
+                                                                          
+                                                                           
+                                                                           
+   
+                     
+   
+                                    
+      
+                                          
+      
+                           
+   
 #define BEGIN_ITERATE_HISTORY(VARNAME)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
   do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
   {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -297,9 +297,9 @@ gets_fromFile(FILE *source)
   }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
   while (0)
 
-/*
- * Convert newlines to NL_IN_HISTORY for safe saving in readline history file
- */
+   
+                                                                              
+   
 static void
 encode_history(void)
 {
@@ -307,7 +307,7 @@ encode_history(void)
   {
     char *cur_ptr;
 
-    /* some platforms declare HIST_ENTRY.line as const char * */
+                                                                
     for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++)
     {
       if (*cur_ptr == '\n')
@@ -319,9 +319,9 @@ encode_history(void)
   END_ITERATE_HISTORY();
 }
 
-/*
- * Reverse the above encoding
- */
+   
+                              
+   
 static void
 decode_history(void)
 {
@@ -329,7 +329,7 @@ decode_history(void)
   {
     char *cur_ptr;
 
-    /* some platforms declare HIST_ENTRY.line as const char * */
+                                                                
     for (cur_ptr = (char *)cur_hist->line; *cur_ptr; cur_ptr++)
     {
       if (*cur_ptr == NL_IN_HISTORY)
@@ -340,14 +340,14 @@ decode_history(void)
   }
   END_ITERATE_HISTORY();
 }
-#endif /* USE_READLINE */
+#endif                   
 
-/*
- * Put any startup stuff related to input in here. It's good to maintain
- * abstraction this way.
- *
- * The only "flag" right now is 1 for use readline & history.
- */
+   
+                                                                         
+                         
+   
+                                                              
+   
 void
 initializeInput(int flags)
 {
@@ -359,7 +359,7 @@ initializeInput(int flags)
 
     useReadline = true;
 
-    /* these two things must be done in this order: */
+                                                      
     initialize_readline();
     rl_initialize();
 
@@ -404,61 +404,61 @@ initializeInput(int flags)
   atexit(finishInput);
 }
 
-/*
- * This function saves the readline history when psql exits.
- *
- * fname: pathname of history file.  (Should really be "const char *",
- * but some ancient versions of readline omit the const-decoration.)
- *
- * max_lines: if >= 0, limit history file to that many entries.
- */
+   
+                                                             
+   
+                                                                       
+                                                                     
+   
+                                                                
+   
 #ifdef USE_READLINE
 static bool
 saveHistory(char *fname, int max_lines)
 {
   int errnum;
 
-  /*
-   * Suppressing the write attempt when HISTFILE is set to /dev/null may
-   * look like a negligible optimization, but it's necessary on e.g. macOS,
-   * where write_history will fail because it tries to chmod the target
-   * file.
-   */
+     
+                                                                         
+                                                                            
+                                                                        
+           
+     
   if (strcmp(fname, DEVNULL) != 0)
   {
-    /*
-     * Encode \n, since otherwise readline will reload multiline history
-     * entries as separate lines.  (libedit doesn't really need this, but
-     * we do it anyway since it's too hard to tell which implementation we
-     * are using.)
-     */
+       
+                                                                         
+                                                                          
+                                                                           
+                   
+       
     encode_history();
 
-    /*
-     * On newer versions of libreadline, truncate the history file as
-     * needed and then append what we've added.  This avoids overwriting
-     * history from other concurrent sessions (although there are still
-     * race conditions when two sessions exit at about the same time). If
-     * we don't have those functions, fall back to write_history().
-     */
+       
+                                                                      
+                                                                         
+                                                                        
+                                                                          
+                                                                    
+       
 #if defined(HAVE_HISTORY_TRUNCATE_FILE) && defined(HAVE_APPEND_HISTORY)
     {
       int nlines;
       int fd;
 
-      /* truncate previous entries if needed */
+                                               
       if (max_lines >= 0)
       {
         nlines = Max(max_lines - history_lines_added, 0);
         (void)history_truncate_file(fname, nlines);
       }
-      /* append_history fails if file doesn't already exist :-( */
+                                                                  
       fd = open(fname, O_CREAT | O_WRONLY | PG_BINARY, 0600);
       if (fd >= 0)
       {
         close(fd);
       }
-      /* append the appropriate number of lines */
+                                                  
       if (max_lines >= 0)
       {
         nlines = Min(max_lines, history_lines_added);
@@ -473,14 +473,14 @@ saveHistory(char *fname, int max_lines)
         return true;
       }
     }
-#else /* don't have append support */
+#else                                
     {
-      /* truncate what we have ... */
+                                     
       if (max_lines >= 0)
       {
         stifle_history(max_lines);
       }
-      /* ... and overwrite file.  Tough luck for concurrent sessions. */
+                                                                        
       errnum = write_history(fname);
       if (errnum == 0)
       {
@@ -495,15 +495,15 @@ saveHistory(char *fname, int max_lines)
 }
 #endif
 
-/*
- * Print history to the specified file, or to the console if fname is NULL
- * (psql \s command)
- *
- * We used to use saveHistory() for this purpose, but that doesn't permit
- * use of a pager; moreover libedit's implementation behaves incompatibly
- * (preferring to encode its output) and may fail outright when the target
- * file is specified as /dev/tty.
- */
+   
+                                                                           
+                     
+   
+                                                                          
+                                                                          
+                                                                           
+                                  
+   
 bool
 printHistory(const char *fname, unsigned short int pager)
 {
@@ -518,7 +518,7 @@ printHistory(const char *fname, unsigned short int pager)
 
   if (fname == NULL)
   {
-    /* use pager, if enabled, when printing to console */
+                                                         
     output = PageOutput(INT_MAX, pager ? &(pset.popt.topt) : NULL);
     is_pager = true;
   }

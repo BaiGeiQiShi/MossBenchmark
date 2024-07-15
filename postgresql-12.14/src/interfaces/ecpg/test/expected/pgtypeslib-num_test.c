@@ -1,9 +1,9 @@
-/* Processed by ecpg (regression mode) */
-/* These include files are added by the preprocessor */
+                                         
+                                                       
 #include <ecpglib.h>
 #include <ecpgerrno.h>
 #include <sqlca.h>
-/* End of automatic include section */
+                                      
 #define ECPGdebug(X, Y) ECPGdebug((X) + 100, (Y))
 
 #line 1 "num_test.pgc"
@@ -17,15 +17,15 @@
 #line 6 "num_test.pgc"
 
 #line 1 "printf_hack.h"
-/*
- * print_double(x) has the same effect as printf("%g", x), but is intended
- * to produce the same formatting across all platforms.
- */
+   
+                                                                           
+                                                        
+   
 static void
 print_double(double x)
 {
 #ifdef WIN32
-  /* Change Windows' 3-digit exponents to look like everyone else's */
+                                                                      
   char convert[128];
   int vallen;
 
@@ -52,13 +52,13 @@ main(void)
 {
   char *text = "error\n";
   numeric *value1, *value2, *res;
-  /* exec sql begin declare section */
+                                      
 
-  /* = {0, 0, 0, 0, 0, NULL, NULL} ; */
+                                       
 
 #line 17 "num_test.pgc"
   numeric *des;
-/* exec sql end declare section */
+                                  
 #line 19 "num_test.pgc"
 
   double d;
@@ -66,7 +66,7 @@ main(void)
   int i, min, max;
 
   ECPGdebug(1, stderr);
-  /* exec sql whenever sqlerror  do sqlprint ( ) ; */
+                                                     
 #line 25 "num_test.pgc"
 
   {
@@ -178,7 +178,7 @@ main(void)
   PGTYPESnumeric_free(value2);
   PGTYPESnumeric_free(res);
 
-  /* check conversion of numeric to int */
+                                          
   value1 = PGTYPESnumeric_from_asc("-2147483648", NULL);
   PGTYPESnumeric_to_int(value1, &min);
   printf("min int = %d\n", min);
