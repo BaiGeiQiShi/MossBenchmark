@@ -1,1 +1,0 @@
-/postgresql-12.14/src/backend/catalog/pg_user_mapping_d.h
