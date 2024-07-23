@@ -128,6 +128,9 @@ for k in ks:
 
             print(f"-{CURRDIR}/path_generator/generate_cov.py", f"{CURRDIR}/pgsql/bin", COV, DOMGAD_DIR)
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", f"{CURRDIR}/pgsql/bin", COV, DOMGAD_DIR])
+
+            os.system(f"chmod -R 777 backend bin common config contrib doc fe_utils include includetest interfaces pgsql pl port template test timezone tools tutorial")
+            
             #region init envs and do some cleaning
             subprocess.run(" ".join(["rm","-rf","originscore","output.origin","inputfile","*BEST.c"]),shell=True)
             os.system(f"cp programlist tmp/")
