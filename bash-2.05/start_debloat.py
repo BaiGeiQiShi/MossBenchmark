@@ -93,6 +93,9 @@ def TMCMC(alpha,beta,k):
 #subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
 #subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
 
+if(not os.path.isdir(f"{CURRDIR}/log")):
+    os.system(f"mkdir {CURRDIR}/log")
+
 for k in ks:
     for alpha in alphas:
         for beta in betas:
