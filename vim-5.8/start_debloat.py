@@ -88,6 +88,9 @@ def TMCMC(alpha,beta,k):
         best=rid.readline().split()
         os.system(f"cp {CURRDIR}/tmp/sample_output/{best[0]}.c {CURRDIR}/TMCMCBEST.c")
 
+if(not os.path.isdir(f"{CURRDIR}/log")):
+    os.system(f"mkdir {CURRDIR}/log")
+
 for k in ks:
     for alpha in alphas:
         for beta in betas:
