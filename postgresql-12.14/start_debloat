@@ -1,4 +1,0 @@
-#!/bin/bash
-./start_debloat.py 0.75 0.25
-./start_debloat.py 0.75 0.5
-./start_debloat.py 0.75 0.75
