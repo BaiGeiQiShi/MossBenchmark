@@ -40,3 +40,19 @@ you need to modify path of `lib` in `compile.sh`
 Use "/postgresql-12.14" (absolute path) as working directory, or you have to change path in `postgresql-12.14/path_generator/generate_cov.py` and `postgresql-12.14/cleanup` to your preference.
 
 Due to the impact of long comment blocks on parsing code, we use `postgresql-12.14/deletecomments.py` to delete all comments in the source code. 
+
+## In the debloating scripts:
+- `METHOD`: 
+- `PROGNAME`: 
+- `version`: 
+- `debop_samplenum`:
+- `domgad_samplenum`:
+- `alphas`:
+- `ks`:
+- `betas`:
+- `CURRDIR`:
+- `DEBOP_DIR`:
+- `DOMGAD_DIR`:
+- `COV`:
+- `iternum`:
+- `realorcov`:
