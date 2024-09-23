@@ -1,9 +1,10 @@
 # MossBenchmark
-## chown
 
+## 1.Adjustments to some programs
+### 1.1 chown
 Before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```
 
-## vim: 
+### 1.2 vim: 
 
     1.you need to download ncurses library and expect
 
@@ -17,31 +18,31 @@ Before running chown, you must create a user ```mychown``` that belongs to a use
 
     5. modify the `cleanup` path
 
-## bash
+### 1.3 bash
 
 you need to modify path of `lib` in `compile.sh` 
 
-## make
+### 1.4 make
 
 1. you need to modify path of `lib` in `compile.sh`
 2. `date-8.21` and `make-3.79` have crisis. `date-8.12` may change the system time which will be used in `make`'s testscripts. Don't run them together.
 
-## mkdir
+### 1.5 mkdir
 
   Moss use `rsync` to remove garbage files in `/`
     `apt install rsync`
  
-## gzip, bzip2, tar
+### 1.6 gzip, bzip2, tar
 
   Moss use `chattr +/-i` to keep `/` and working dir unchanged
 
-## postgresql-12.14
+### 1.7 postgresql-12.14
 
 Use "/postgresql-12.14" (absolute path) as working directory, or you have to change path in `postgresql-12.14/path_generator/generate_cov.py` and `postgresql-12.14/cleanup` to your preference.
 
 Due to the impact of long comment blocks on parsing code, we use `postgresql-12.14/deletecomments.py` to delete all comments in the source code. 
 
-## In the debloating scripts:
+## 2. Settings in the debloating scripts:
 - `METHOD`: 
 - `PROGNAME`: 
 - `version`: 
