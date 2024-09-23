@@ -1,4 +1,5 @@
 # MossBenchmark
+This repository contains 26 programs used by Moss. If you want to know how to use this benchmark, please refer to [Moss](https://github.com/BaiGeiQiShi/Moss).
 
 ## 1.Adjustments to some programs
 ### 1.1 chown-8.2:
