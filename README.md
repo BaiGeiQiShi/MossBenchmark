@@ -16,11 +16,11 @@ Before running chown, you must create a user ```mychown``` that belongs to a use
 
 ### 1.3 bash-2.05:
 
-You need to modify the path of `lib` in `compile.sh` 
+You need to modify the path of `lib` in `compile.sh`.
 
 ### 1.4 make-3.79:
 
-①You need to modify the path of `lib` in `compile.sh`
+①You need to modify the path of `lib` in `compile.sh`.
 
 ②`date-8.21` and `make-3.79` have crisis. `date-8.12` may change the system time which is used in `make`'s testscripts. Don't run them together.
 
@@ -41,15 +41,15 @@ Moss use `chattr +/-i` to keep `/bin`, `/usr`, and working directory unchanged.
 ②Due to the impact of long comment blocks on parsing code, we use `postgresql-12.14/deletecomments.py` to delete all comments in the source code. 
 
 ## 2. Key parameters in the debloating scripts:
-- `PROGNAME`: The program name
-- `version`: The debloating strategy. (3 is Moss, 2 is Moss-s1, 1 is Moss-s2, 0 is Moss-s3)
-- `debop_samplenum`: The sample number of the second and third stages
-- `domgad_samplenum`: The sample number of the first stage
-- `alphas`: Alpha value (weight for attack surface reduction)
-- `ks`: K value (for computing density values)
-- `betas`: Beta value (weight for generality)
-- `DEBOP_DIR`: The path of CovBlock_Stmt
-- `DOMGAD_DIR`: The path of CovPath
-- `COV`: The path of cov
-- `iternum`: The iteration number of each stage of Moss
-- `realorcov`: Use real or top program as the baseline
+- `PROGNAME`: The program name.
+- `version`: The debloating strategy (3 is Moss, 2 is Moss-s1, 1 is Moss-s2, 0 is Moss-s3).
+- `debop_samplenum`: The sample number of the second and third stages.
+- `domgad_samplenum`: The sample number of the first stage.
+- `alphas`: Alpha value (weight for attack surface reduction).
+- `ks`: K value (for computing density values).
+- `betas`: Beta value (weight for generality).
+- `DEBOP_DIR`: The path of CovBlock_Stmt.
+- `DOMGAD_DIR`: The path of CovPath.
+- `COV`: The path of cov.
+- `iternum`: The iteration number of each stage of Moss.
+- `realorcov`: Use real or top program as the baseline.
