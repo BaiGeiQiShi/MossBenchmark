@@ -7,7 +7,7 @@ TESTSET_DIR=$CURR_DIR/testscript
 KN_DIR=$TESTSET_DIR/kn
 FINAL_OUTDIR=$CURR_DIR/final_out
 
-SCORE_REPO_CSV=$FINAL_OUTDIR/chisel_final_score.csv
+SCORE_REPO_CSV=$CURR_DIR/chisel_final_score.csv
 
 if [ -z ${PROG_NAME} ]; then
 	echo "Missing argument"
