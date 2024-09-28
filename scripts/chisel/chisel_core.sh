@@ -49,7 +49,7 @@ if [ ! -d ${OUTDIR_ORIGIN} ]; then
 
     #
     chattr +i ${CURR_DIR}/*
-    chattr -i ${CURR_DIR}/tmp $CURR_DIR/output $CURR_DIR/output.origin
+    chattr -i ${CURR_DIR}/tmp ${OUTDIR_ORIGIN} ${OUTDIR}
     #
 	cd ${CURR_DIR}/tmp
 	for testfile in ${TEST_SET}/*; do
@@ -134,7 +134,7 @@ cp -r ${TEST_SET}/* ${INDIR}
 exit_value=0
 #
 chattr +i ${CURR_DIR}/*
-chattr -i ${CURR_DIR}/tmp $CURR_DIR/output.origin $CURR_DIR/output
+chattr -i ${CURR_DIR}/tmp $OUTDIR $OUTDIR_ORIGIN
 #
 cd ${CURR_DIR}/tmp
 for testfile in ${TEST_SET}/*; do
