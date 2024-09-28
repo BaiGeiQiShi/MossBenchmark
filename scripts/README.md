@@ -1,5 +1,7 @@
 # Common
 
+启动容器需要添加flag：docker run --cap-add LINUX_IMMUTABLE -it bash
+
 在目录 MossBenchmark/$PROGRAM/ 下新建 feat_config 文件夹，
 feat_config 为 Chisel 和 Razor 的输入文件夹，存放保留指定功能的配置文件
 
