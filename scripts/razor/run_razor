@@ -1,0 +1,155 @@
+#!/bin/bash
+
+PROG_NAME=$1
+
+CURR_DIR=$(pwd)
+COMPARE_DIR=${CURR_DIR}/feat_config
+TESTSET_DIR=${CURR_DIR}/testscript
+KN_DIR=${TESTSET_DIR}/kn
+KN_DIR_MOD=${TESTSET_DIR}/kn.mod
+
+DRRUN=/razor/tracers/dynamorio/bin64/drrun
+CLIENT=${CURR_DIR}/logs/libcbr_indcall.so
+
+LOG_DIR=${CURR_DIR}/log
+LOG_FILE="log_$(date +'%Y-%m-%d_%H:%M:%S').txt"
+SCORE_REPO_CSV="${CURR_DIR}/razor_final_score.csv"
+
+if [ -z ${PROG_NAME} ]; then
+	echo "Missing argument"
+	exit 1
+fi
+
+if [ ! -d ${COMPARE_DIR} ] || [ -z $(ls ${COMPARE_DIR}/ | grep ^config_* | wc -l) ]; then
+	echo "Missing config_*.txt"	
+	exit 1
+fi
+
+if [ ! -d ${LOG_DIR} ]; then
+	mkdir ${LOG_DIR}
+fi
+
+progabbr=`echo ${progname} | cut -d'-' -f1`
+if [ -f ${progabbr}.orig ]; then
+	rm ${progabbr}.orig
+fi
+
+cp ${PROG_NAME}.c.real.origin.c ${PROG_NAME}.c
+
+>${LOG_FILE}
+>${SCORE_REPO_CSV}
+### Generate Input Set 
+echo "The input set found" >> ${LOG_FILE}
+if [ ! -d ${KN_DIR_MOD} ]; then
+	mkdir ${KN_DIR_MOD}
+else
+	rm -rf ${KN_DIR_MOD}/*
+fi
+cp -r ${KN_DIR}/* ${KN_DIR_MOD}/
+
+#sed -i "s|timeout -k 9 \${TIMEOUT}s||g" $(ls ${KN_DIR_MOD}/test_*)
+#sed -i "s|timeout \${TIMEOUT}s||g" $(ls ${KN_DIR_MOD}/test_*)
+sed -i "s|\$BIN|${DRRUN} -c ${CLIENT} -- \$BIN|g"  $(ls ${KN_DIR_MOD}/test_*)
+
+for compare_file in ${COMPARE_DIR}/config_*; do
+	input_set=$(basename ${compare_file} | grep -oE "a0\.[0-9]+\.b0\.[0-9]+")
+	if [ -z ${input_set} ]; then
+		continue
+	fi
+	echo "${input_set}" >> ${LOG_FILE}
+	if [ ! -d ${TESTSET_DIR}/${input_set} ]; then
+		mkdir ${TESTSET_DIR}/${input_set}
+	else
+		rm -rf ${TESTSET_DIR}/${input_set}/*
+	fi
+	if [ ! -d ${TESTSET_DIR}/origin.${input_set} ]; then
+		mkdir ${TESTSET_DIR}/origin.${input_set}
+	else
+		rm -rf ${TESTSET_DIR}/origin.${input_set}/*
+	fi
+	while read line; do
+		if [[ ${line} == "pass"* ]]; then
+			testid=$(echo ${line} | sed 's/^pass-kn-o//g')
+			file=test_${testid}
+			cp ${KN_DIR}/${file} ${TESTSET_DIR}/origin.${input_set}
+			cp ${KN_DIR_MOD}/${file} ${TESTSET_DIR}/${input_set}
+		fi
+	done < ${compare_file}
+	echo "${input_set}"
+done
+
+### Run razor
+echo "Run razor" >>${LOG_FILE}
+echo "inputset, method, SR, AR, G, O" >> ${SCORE_REPO_CSV}
+for input_set in ${TESTSET_DIR}/a0.*.b0.*; do
+	set_name=$(basename ${input_set})
+	echo "Running inputset: ${set_name}" >> ${LOG_FILE}
+	start_time_s=$(date +%s)
+	./razor.sh ${PROG_NAME} ${set_name}
+	exit_code=$?
+	echo "exit ${exit_code} at $(date +'%Y-%m-%d_%H:%M:%S')" >> ${LOG_FILE}
+	end_time_s=$(date +%s)
+	total_time_s=$[ ${end_time_s} - ${start_time_s} ]
+ 	echo "Total time spent running inputset ${set_name}: ${total_time_s}s" >> ${LOG_FILE}	
+	./razor_check.sh ${PROG_NAME} ${set_name}  
+	if [ -f test_check_${set_name}.repo ]; then
+		grep "Pass: " test_check_${set_name}.repo >> ${LOG_FILE}
+		grep "Fail: " test_check_${set_name}.repo >> ${LOG_FILE}
+	else
+		grep "ERROR: test_check_${set_name}.repo not found" >> ${LOG_FILE}
+	fi
+	g_pass_rate=($(grep "Pass rate(All): " "test_check_${set_name}.repo" | sed 's/Pass rate(All): //g'))
+	i_pass_rate=($(grep "Pass rate: " "test_check_${set_name}.repo" | sed 's/Pass rate: //g'))
+	read gpass_rate_cov gpass_rate_covl1 gpass_rate_covl2 gpass_rate_covl3 gpass_rate_covl4 <<< ${g_pass_rate[*]}
+	read ipass_rate_cov ipass_rate_covl1 ipass_rate_covl2 ipass_rate_covl3 ipass_rate_covl4 <<< ${i_pass_rate[*]}
+	BIN_COV=$CURR_DIR/razor_code/reduced/${set_name}_cov/$PROG_NAME
+	BIN_COV_L1=$CURR_DIR/razor_code/reduced/${set_name}_covl1/$PROG_NAME
+  	BIN_COV_L2=$CURR_DIR/razor_code/reduced/${set_name}_covl2/$PROG_NAME
+  	BIN_COV_L3=$CURR_DIR/razor_code/reduced/${set_name}_covl3/$PROG_NAME
+  	BIN_COV_L4=$CURR_DIR/razor_code/reduced/${set_name}_covl4/$PROG_NAME
+  	BIN_ORIGIN=$CURR_DIR/razor_code/origin/$PROG_NAME
+  	gdt_origin=$(ROPgadget --binary ${BIN_ORIGIN} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	gdt_cov=$(ROPgadget --binary ${BIN_COV} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	gdt_cov_l1=$(ROPgadget --binary ${BIN_COV_L1} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	gdt_cov_l2=$(ROPgadget --binary ${BIN_COV_L2} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	gdt_cov_l3=$(ROPgadget --binary ${BIN_COV_L3} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	gdt_cov_l4=$(ROPgadget --binary ${BIN_COV_L4} | grep 'Unique gadgets' | cut -d' ' -f4)
+  	ar_cov=$(awk 'BEGIN{printf "%.16f\n",('$gdt_origin'-'$gdt_cov')/'$gdt_origin'}')
+	ar_covl1=$(awk 'BEGIN{printf "%.16f\n",('$gdt_origin'-'$gdt_cov_l1')/'$gdt_origin'}')
+	ar_covl2=$(awk 'BEGIN{printf "%.16f\n",('$gdt_origin'-'$gdt_cov_l2')/'$gdt_origin'}')
+	ar_covl3=$(awk 'BEGIN{printf "%.16f\n",('$gdt_origin'-'$gdt_cov_l3')/'$gdt_origin'}')
+	ar_covl4=$(awk 'BEGIN{printf "%.16f\n",('$gdt_origin'-'$gdt_cov_l4')/'$gdt_origin'}')
+	size_origin=$(python /razor/tools/get_code_size.py ${BIN_ORIGIN} | grep 'size: ' | sed 's/size: //g')
+	size_cov=$(python /razor/tools/get_code_size.py ${BIN_COV} | grep 'size: ' | sed 's/size: //g')
+	size_cov_l1=$(python /razor/tools/get_code_size.py ${BIN_COV_L1} | grep 'size: ' | sed 's/size: //g')
+	size_cov_l2=$(python /razor/tools/get_code_size.py ${BIN_COV_L2} | grep 'size: ' | sed 's/size: //g')
+	size_cov_l3=$(python /razor/tools/get_code_size.py ${BIN_COV_L3} | grep 'size: ' | sed 's/size: //g')
+	size_cov_l4=$(python /razor/tools/get_code_size.py ${BIN_COV_L4} | grep 'size: ' | sed 's/size: //g')
+	crr_cov=$(awk 'BEGIN{printf "%.16f\n",('$size_origin'-'$size_cov')/'$size_origin'}')
+	crr_covl1=$(awk 'BEGIN{printf "%.16f\n",('$size_origin'-'$size_cov_l1')/'$size_origin'}')
+	crr_covl2=$(awk 'BEGIN{printf "%.16f\n",('$size_origin'-'$size_cov_l2')/'$size_origin'}')
+	crr_covl3=$(awk 'BEGIN{printf "%.16f\n",('$size_origin'-'$size_cov_l3')/'$size_origin'}')
+	crr_covl4=$(awk 'BEGIN{printf "%.16f\n",('$size_origin'-'$size_cov_l4')/'$size_origin'}')
+
+	alpha=$(echo ${set_name} | grep -oE 'a0\.[0-9]+' | sed "s/a//g")
+	beta=$(echo ${set_name} | grep -oE 'b0\.[0-9]+' | sed "s/b//g")
+	oscore_cov=$(awk 'BEGIN{printf "%.16f",((1-'$beta')*((1-'$alpha')*'$crr_cov'+'$alpha'*'$ar_cov')+'$beta'*'$gpass_rate_cov')}')
+	oscore_cov_l1=$(awk 'BEGIN{printf "%.16f",((1-'$beta')*((1-'$alpha')*'$crr_covl1'+'$alpha'*'$ar_covl1')+'$beta'*'$gpass_rate_covl1')}')
+	oscore_cov_l2=$(awk 'BEGIN{printf "%.16f",((1-'$beta')*((1-'$alpha')*'$crr_covl2'+'$alpha'*'$ar_covl2')+'$beta'*'$gpass_rate_covl2')}')
+	oscore_cov_l3=$(awk 'BEGIN{printf "%.16f",((1-'$beta')*((1-'$alpha')*'$crr_covl3'+'$alpha'*'$ar_covl3')+'$beta'*'$gpass_rate_covl3')}')
+	oscore_cov_l4=$(awk 'BEGIN{printf "%.16f",((1-'$beta')*((1-'$alpha')*'$crr_covl4'+'$alpha'*'$ar_covl4')+'$beta'*'$gpass_rate_covl4')}')
+	echo "${set_name}, debloat, ${crr_cov}, ${ar_cov}, ${gpass_rate_cov}, ${oscore_cov}" >> ${SCORE_REPO_CSV}
+	echo "${set_name}, extend1, ${crr_covl1}, ${ar_covl1}, ${gpass_rate_covl1}, ${oscore_cov_l1}" >> ${SCORE_REPO_CSV}
+	echo "${set_name}, extend2, ${crr_covl2}, ${ar_covl2}, ${gpass_rate_covl2}, ${oscore_cov_l2}" >> ${SCORE_REPO_CSV}
+	echo "${set_name}, extend3, ${crr_covl3}, ${ar_covl3}, ${gpass_rate_covl3}, ${oscore_cov_l3}" >> ${SCORE_REPO_CSV}
+	echo "${set_name}, extend4, ${crr_covl4}, ${ar_covl4}, ${gpass_rate_covl4}, ${oscore_cov_l4}" >> ${SCORE_REPO_CSV}
+
+	echo "===== Report of ${set_name} =====" | tee -a ${LOG_FILE}
+	echo "debloat ${set_name} i_pass_rate:${ipass_rate_cov} g_pass_rate:${gpass_rate_cov} crr:${crr_cov} ar:${ar_cov}" | tee -a ${LOG_FILE}
+	echo "ext-debloat-l1 ${set_name} i_pass_rate:${ipass_rate_covl1} g_pass_rate:${gpass_rate_covl1} crr:${crr_covl1} ar:${ar_covl1}" | tee -a ${LOG_FILE}
+	echo "ext-debloat-l2 ${set_name} i_pass_rate:${ipass_rate_covl2} g_pass_rate:${gpass_rate_covl2} crr:${crr_covl2} ar:${ar_covl2}" | tee -a ${LOG_FILE}
+	echo "ext-debloat-l3 ${set_name} i_pass_rate:${ipass_rate_covl3} g_pass_rate:${gpass_rate_covl3} crr:${crr_covl3} ar:${ar_covl3}" | tee -a ${LOG_FILE}
+	echo "ext-debloat-l4 ${set_name} i_pass_rate:${ipass_rate_covl4} g_pass_rate:${gpass_rate_covl4} crr:${crr_covl4} ar:${ar_covl4}" | tee -a ${LOG_FILE}
+	./clean.sh ${PROG_NAME} "razor"
+done
+
