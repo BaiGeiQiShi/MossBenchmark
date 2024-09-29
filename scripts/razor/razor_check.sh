@@ -14,7 +14,7 @@ if [ -z ${PROG_NAME} ] || [ -z ${INPUT_SET} ]; then
 	echo "Missing arguments."
 	exit 1
 fi
-progabbr=`echo ${progname} | cut -d'-' -f1`
+progabbr=`echo ${PROG_NAME} | cut -d'-' -f1`
 CURR_DIR=$(pwd)
 BIN_COV=$CURR_DIR/razor_code/reduced/${INPUT_SET}_cov/$PROG_NAME
 BIN_COV_L1=$CURR_DIR/razor_code/reduced/${INPUT_SET}_covl1/$PROG_NAME
