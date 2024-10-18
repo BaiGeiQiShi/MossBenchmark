@@ -1,0 +1,146 @@
+#!/bin/bash
+
+#####
+# Chisel
+#####
+
+ARG_PROG_NAME=$1
+ARG_CHISEL_TIMEOUT=$2
+
+if [ -z ${ARG_PROG_NAME} ]; then
+    ARG_PROG_NAME=$(basename $(pwd))
+fi
+if [ -z ${ARG_CHISEL_TIMEOUT} ]; then
+    ARG_CHISEL_TIMEOUT=1h
+fi
+
+PROG_NAME=${ARG_PROG_NAME}
+CURR_DIR=$(pwd)
+COMPARE_DIR=${CURR_DIR}/feat_config
+TESTSET_DIR=${CURR_DIR}/testscript
+KN_DIR=${TESTSET_DIR}/kn
+FINAL_OUTDIR=${CURR_DIR}/final_out
+
+CHISEL_BIN=chisel
+CHISEL_TIMEOUT=${ARG_CHISEL_TIMEOUT}
+CHISEL_OUTDIR=${CURR_DIR}/chisel_out
+
+LOG_FILE=${CURR_DIR}/log/log_$(date +'%Y-%m-%d_%H-%M-%S').txt
+
+if [ ! -d ${COMPARE_DIR} ] || [ -z $(ls ${COMPARE_DIR}/ | grep ^config_* | wc -l) ]; then
+	echo "Missing ${COMPARE_DIR}/config_*.txt"	
+	exit 1
+fi
+
+if [ ! -d ${CURR_DIR}/log ]; then
+	mkdir ${CURR_DIR}/log
+fi
+>${LOG_FILE}
+
+
+function run_chisel(){
+    local input_set=$1
+    local outdir_origin=${CURR_DIR}/output.origin/${input_set}
+    local test_oracle=${CURR_DIR}/test_chisel.sh
+    local result_dir=${CHISEL_OUTDIR}/${input_set}
+    local exit_value=0
+
+    if [ -d ${outdir_origin} ]; then
+        rm -rf ${outdir_origin}
+    fi
+
+    cp ${CURR_DIR}/${PROG_NAME}.c.real.origin.c ${CURR_DIR}/${PROG_NAME}.c.origin.c
+    cp ${CURR_DIR}/${PROG_NAME}.c.real.origin.c ${CURR_DIR}/${PROG_NAME}.c
+    echo "#!/bin/bash" > ${test_oracle}
+    echo "" >> ${test_oracle}
+    echo "./chisel_core.sh ${PROG_NAME} ${input_set}" >> ${test_oracle}
+    chmod 700 ${test_oracle}
+
+    if [ ! -d ${result_dir} ]; then
+        mkdir -p ${result_dir}
+    else
+        rm -rf ${result_dir}/*
+    fi
+
+    timeout -k 9 ${CHISEL_TIMEOUT} ${CHISEL_BIN} -t ${result_dir} -s ${test_oracle} ${PROG_NAME}.c
+
+    if [ -f ${PROG_NAME}.c.chisel.c ]; then
+        mv ${PROG_NAME}.c.chisel.c ${result_dir}
+    else
+        exit_value=1
+    fi
+
+    return ${exit_value}
+}
+
+### Generate Input Set 
+echo "The input set found" >> ${LOG_FILE}
+for compare_file in ${COMPARE_DIR}/config_*; do
+	input_set=$(basename ${compare_file} | grep -oE "a0\.[0-9]+\.b0\.[0-9]+")
+	if [ -z ${input_set} ]; then
+		continue
+	fi
+	echo "${input_set}" >> ${LOG_FILE}
+	if [ ! -d ${TESTSET_DIR}/${input_set} ]; then
+		mkdir ${TESTSET_DIR}/${input_set}
+	else
+		rm -rf ${TESTSET_DIR}/${input_set}/*
+	fi
+	while read line; do
+		if [[ ${line} == "pass"* ]]; then
+			testid=$(echo ${line} | sed 's/^pass-kn-o//g')
+			file=test_${testid}
+			cp ${KN_DIR}/${file} ${TESTSET_DIR}/${input_set}
+		fi
+	done < ${compare_file}
+	echo ${input_set}
+done
+
+### Run chisel
+echo "Run chisel" >> ${LOG_FILE}
+if [ ! -d ${FINAL_OUTDIR} ]; then
+	mkdir ${FINAL_OUTDIR}
+else
+	rm -rf ${FINAL_OUTDIR}/*
+fi
+
+./clean.sh ${PROG_NAME} "chisel" "true"
+
+for input_set in ${TESTSET_DIR}/a0.*.b0.*; do
+	set_name=$(basename ${input_set})
+	echo "Running inputset: ${set_name}" >> ${LOG_FILE}
+	if [ ! -d ${FINAL_OUTDIR}/${set_name} ]; then
+		mkdir ${FINAL_OUTDIR}/${set_name}
+	else
+		rm -rf ${FINAL_OUTDIR}/${set_name}/*
+	fi
+	start_time_s=$(date +%s)
+    run_chisel ${set_name}
+	exit_code=$?
+	end_time_s=$(date +%s)
+	total_time_s=$[ ${end_time_s} - ${start_time_s} ]
+	echo "exit ${exit_code} at $(date +'%Y-%m-%d %H:%M:%S')" >> ${LOG_FILE}
+	echo "Total time spent running inputset ${set_name}: ${total_time_s}s" >> ${LOG_FILE}
+	if [ ${exit_code} -eq 0 ]; then
+		./chisel_check.sh ${PROG_NAME} ${set_name}  
+		tail -12 ${CHISEL_OUTDIR}/${set_name}/log.txt >> ${LOG_FILE}
+		if [ -f test_check_${set_name}.repo ]; then
+			grep "Pass: " test_check_${set_name}.repo >> ${LOG_FILE}
+			grep "Fail: " test_check_${set_name}.repo >> ${LOG_FILE}
+		else
+			grep "ERROR: test_check_${set_name}.repo not found"
+		fi
+		cp ${CHISEL_OUTDIR}/${set_name}/${PROG_NAME}.c.chisel.c ${FINAL_OUTDIR}/${set_name}/
+	else
+		echo "Timeout while running inputset ${set_name}" >> ${LOG_FILE}
+		cp ${CHISEL_OUTDIR}/${set_name}/log.txt ${FINAL_OUTDIR}/${set_name}/
+		cp ${CHISEL_OUTDIR}/${set_name}/*.success.c ${FINAL_OUTDIR}/${set_name}/
+	fi
+	count_success=$(ls ${CHISEL_OUTDIR}/${set_name}/*.success.c | wc -l)
+	count_fail=$(ls ${CHISEL_OUTDIR}/${set_name}/*.fail.c | wc -l)
+	echo "Count-success:${count_success} Count-fail:${count_fail}" >> ${LOG_FILE}
+	echo "Success Rate of ${set_name}: $(awk 'BEGIN{printf "%.5f\n",('${count_success}'/('${count_success}'+'${count_fail}'))}')" >> ${LOG_FILE}
+	rm -rf ${CHISEL_OUTDIR}/${set_name}/*.c
+	./clean.sh ${PROG_NAME} "chisel"
+done
+./chisel_score.sh ${PROG_NAME}
