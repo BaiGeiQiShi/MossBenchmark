@@ -2,7 +2,7 @@
 import subprocess,os, time, sys
 import json
 #region ENVSandARGS
-METHOD={"DEBOP":0,"COVBLOAT":1,"TMCMC":2,"MOSS":3}
+METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="psql"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
@@ -10,13 +10,16 @@ domgad_samplenum=str(100000)
 TMCMC_TIMEOUT="4h"
 TIMEOUT="4h"
 alphas=list(map(str,[0.25,0.5,0.75]))
+#alphas=[sys.argv[1]]
 ks=list(map(str,[50,]))
-betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
+betas=list(map(str,[0.25, 0.5, 0.75]))
+#betas=list(map(str,[0.9]))
+#betas=[sys.argv[2]]
 CURRDIR=os.getcwd()
-DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
+DEBOP_DIR="/usr/local/Moss/multiFiles/CovBlock_Stmt"
 DEBOP_BIN=f"{DEBOP_DIR}/build/bin/reducer"
-DOMGAD_DIR="/usr/local/Moss/CovPath"
-COV="/usr/local/cov"
+DOMGAD_DIR="/usr/local/Moss/multiFiles/CovPath"
+COV="/usr/local/Moss/cov"
 LINEPRINTERBIN=f"{DOMGAD_DIR}/build/bin/instrumenter -g statement test.sh"
 SEARCHBIN=f"java -Xmx64g  -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*:{DOMGAD_DIR}/lib/java/commons-cli-1.5.0/*' moss.covpath.GCovBasedMCMCSearch"
 # SEARCHBIN=f"java -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*:{DOMGAD_DIR}/lib/java/commons-cli-1.5.0/*' -Djava.util.logging.config.file={DOMGAD_DIR}/src/java/main/logging.properties moss.covpath.GCovBasedMCMCSearch"
