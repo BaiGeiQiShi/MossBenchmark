@@ -16,8 +16,8 @@ BASE_BIN=$CURRDIR/$PROGNAME.base.origin
 ORIGIN_SRC=$CURRDIR/$PROGNAME.c.cov.origin.c
 ORIGIN_BIN=$CURRDIR/$PROGNAME.cov.origin
 ORIGIN_OUTDIR=$CURRDIR/output.origin
-DOMGAD=/usr/local/Moss/CovPath/
-debdce=/usr/local/debdce/build/bin/debdce
+DOMGAD=/usr/local/Moss/singleFile/CovPath/
+debdce=/usr/local/Moss/debdce/build/bin/debdce
 
 clearProgram(){
  cwtty=$(tty)

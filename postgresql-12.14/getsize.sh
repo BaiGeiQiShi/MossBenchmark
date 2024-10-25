@@ -3,9 +3,9 @@
 PROGNAME=integration1
 TIMEOUT=1
 GDTBIN=ROPgadget
-DOMGAD=/usr/local/Moss/CovPath
+DOMGAD=/usr/local/Moss/multiFiles/CovPath
 STMT_COUNTER="${DOMGAD}/build/bin/instrumenter -S"
-debdce=/usr/local/debdce/build/bin/debdce
+debdce=/usr/local/Moss/debdce/build/bin/debdce
 WORKDIR=$(pwd)
 EVALRESULTFILE=$WORKDIR/size_rslt.txt
 MAKEFILE=$WORKDIR/Makefile

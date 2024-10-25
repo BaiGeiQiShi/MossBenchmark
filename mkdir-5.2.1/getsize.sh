@@ -3,10 +3,10 @@
 PROGNAME=mkdir-5.2.1
 TIMEOUT=1
 GDTBIN=ROPgadget
-DOMGAD=/usr/local/Moss/CovPath
+DOMGAD=/usr/local/Moss/singleFile/CovPath
 #PROG_COUNTER_BIN="/home/qxin6/progcounter/build/bin/counter"
 PROG_COUNTER_BIN="${DOMGAD}/build/bin/instrumenter -S"
-debdce=/usr/local/debdce/build/bin/debdce
+debdce=/usr/local/Moss/debdce/build/bin/debdce
 WORKDIR=$(pwd)
 SRC=$WORKDIR/$PROGNAME.tmp.c
 #ORIGIN_SRC=$WORKDIR/$PROGNAME.c.real.origin.c
@@ -15,7 +15,6 @@ BIN=$WORKDIR/$PROGNAME.reduced
 ORIGIN_BIN=$WORKDIR/$PROGNAME.origin
 BASE_SRC=$WORKDIR/$PROGNAME.c.base.origin.c
 BASE_BIN=$WORKDIR/$PROGNAME.base
-debdce=/usr/local/debdce/build/bin/debdce
 #Reset file content (original binary bytes; reduced binary bytes; original gadgets; reduced gadgets; original #stmts; reduced #stmts)
 echo "-1" > size_rslt.txt
 echo "-1" >> size_rslt.txt
