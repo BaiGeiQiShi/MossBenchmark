@@ -3,7 +3,9 @@ This repository contains 26 programs used by Moss. If you want to know how to us
 
 ## 1.Adjustments to some programs
 ### 1.1 chown-8.2:
-Before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```.
+Since Docker containers default to the root user, the test cases for chown-8.2 involve many changes related to the root user. So we created a new user group and user called ```mychown```, and modified the test cases to better serve as Oracles.
+
+Therefore, before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```.
 
 ### 1.2 vim-5.8: 
 ①You need to download ncurses library and expect.
