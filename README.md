@@ -5,7 +5,7 @@ This repository contains 26 programs used by Moss. If you want to know how to us
 ### 1.1 chown-8.2:
 Since Docker containers default to the root user, the test cases for chown-8.2 involve many changes related to the root user. So we created a new user group and user called ```mychown```, and modified the test cases to better serve as Oracles.
 
-Therefore, before running chown, you must create a user ```mychown``` that belongs to a user group ```mychown```.
+Therefore, before running chown-8.2, you must create a user ```mychown``` that belongs to a user group ```mychown```.
 
 ### 1.2 vim-5.8: 
 ①You need to download ncurses library and expect.
@@ -30,7 +30,7 @@ You need to modify the path of `lib` in `compile.sh`.
 
 Moss use `rsync` to remove garbage files in `/`.
 
-`apt install rsync`
+Therefore, before running mkdir-5.2.1, you must run `apt install rsync`.
  
 ### 1.6 gzip-1.2.4, gzip-1.3, bzip2-1.0.5, tar-1.14
 
