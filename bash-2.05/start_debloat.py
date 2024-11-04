@@ -103,6 +103,8 @@ for k in ks:
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
 
+            subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c.bk",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c"])
+
 #            print(beta);os.system("sleep 1")
             #region init envs and do some cleaning
             os.system(f"echo {PROGNAME}.c.origin.c {PROGNAME}.c | xargs -n 1 cp {PROGNAME}.c.{realorcov}.origin.c")
