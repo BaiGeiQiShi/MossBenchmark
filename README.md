@@ -2,6 +2,8 @@
 This repository contains 26 programs used by Moss. If you want to know how to use this benchmark, please refer to [Moss](https://github.com/BaiGeiQiShi/Moss).
 
 ## 1. Adjustments to some programs
+**Note:** The Dockerfile provided in [Moss](https://github.com/BaiGeiQiShi/Moss) already includes all the adjustments. Here is just a detailed explanation of each adjustment we made.
+
 ### 1.1 chown-8.2:
 **Our adjustments:** Since docker containers default to the root user, some of the test cases for chown-8.2 involves operations related to the root user. To address this, we created a new user group and user named mychown, and adjusted the test cases to serve more effectively as oracles.
 
