@@ -2,7 +2,7 @@
 import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
-PROGNAME="bash-2.05"
+PROGNAME="vim-5.8"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(0)
