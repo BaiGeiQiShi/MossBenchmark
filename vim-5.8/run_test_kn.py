@@ -33,7 +33,7 @@ def DoTestcase(args):
     os.chdir("%s/tmp/%s"%(CURRDIR,testcase))
     t1 = time.perf_counter()
     subprocess.run([f"{CURRDIR}/testscript/kn/{testcase}",BIN,OUTDIR,TIMEOUT,INDIR,"%s/tmp/%s"%(CURRDIR,testcase)])
-    os.system(["{CURRDIR}/cleanup"])
+    os.system(f"{CURRDIR}/cleanup")
     t = time.perf_counter()-t1
     os.chmod("%s/tmp/%s"%(CURRDIR,testcase),755)
     os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
