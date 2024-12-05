@@ -106,12 +106,12 @@ def DoTestcase(args):
     # os.chmod("%s/tmp/%s"%(CURRDIR,testcase),755)
     #os.system("rm -rf %s/tmp/%s"%(CURRDIR,testcase))
 
-with Pool(1) as pool:
-    pool.map(DoTestcase, os.listdir(INDIR))
-os.system(f"cp -r {CURRDIR}/tmp {CURRDIR}/tmp_new")
-bar.finish()
+#with Pool(1) as pool:
+#    pool.map(DoTestcase, os.listdir(INDIR))
+#os.system(f"cp -r {CURRDIR}/tmp {CURRDIR}/tmp_new")
+#bar.finish()
 
-# os.system(f"cp -r {CURRDIR}/tmp_400_pg/* {CURRDIR}/tmp")
+os.system(f"cp -r {CURRDIR}/tmp_400_pg/* {CURRDIR}/tmp")
 os.system(f"{CURRDIR}/cleanup")
 
 # Note: you can accelerate path_generate process if run more than one time, by copying {CURRDIR}/tmp_new to {CURRDIR}/tmp, as example below shows: 
