@@ -168,11 +168,10 @@ for cf in cov_files:
     os.system(f"echo '{cf}:{cf}.line.txt' >> {CURRDIR}/lines")
     # os.system(f"echo '{cf}' >> {CURRDIR}/programlist")
 
-'''
+
 #get cov_info.txt
 print("extract info")
 shutil.copyfile(f"{CURRDIR}/extract_info.c",f"{TMP}/extract_info.c")
 os.system(" ".join(["g++","extract_info.c","-o","extract_info"]))
 os.system(" ".join(["./extract_info",">",f"{CURRDIR}/Cov_info.json"]))
 # os.system(" ".join(["sort","-n",f"{CURRDIR}/Cov_info.txt","-o",f"{CURRDIR}/Cov_info.txt"]))
-'''
