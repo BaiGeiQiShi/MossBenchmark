@@ -45,7 +45,7 @@ os.system(f'CC=clang CFLAGS="-fprofile-instr-generate -fcoverage-mapping" ./conf
 os.system(f"su postgres -c 'make>/dev/null'")
 os.system(f"rm -rf pgsql/*")
 os.system(f'su postgres -c "make install>/dev/null"')
-os.system(f'su postgres -c "pgsql/data"')
+os.system(f'su postgres -c "mkdir pgsql/data"')
 
 # programs = os.listdir("pgsql/bin")
 programs=["psql"]
