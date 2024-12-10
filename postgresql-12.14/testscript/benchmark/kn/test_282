@@ -5,7 +5,7 @@ TIMEOUT=$3
 INDIR=$4
 
 # 初始化环境
-su postgres -m -c whoami
+#su postgres -m -c whoami
 export PATH="$INDIR/pgsql/bin:$PATH" && export LD_LIBRARY_PATH="$INDIR/pgsql/lib" && export PGDATESTYLE="Postgres, MDY" && export PGTZ="PST8PDT"
 rm -rf ${INDIR}/pgsql/data/*
 
