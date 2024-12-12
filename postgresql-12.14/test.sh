@@ -53,7 +53,7 @@ else
 
     if [ ! -d ${ORIGIN_OUTDIR} ]; then
         mkdir -m 777 ${ORIGIN_OUTDIR}
-        su postgres -c ./generate_sql.py
+        su postgres -m -c ./generate_sql.py
         ./run_test $BINFOLDER ${ORIGIN_OUTDIR} $TIMEOUT $CURRDIR
 	./cleanup
     fi
@@ -74,7 +74,7 @@ reduced_gdt=$(calculate_ar_sum)
 
 rm -rf $OUTDIR
 mkdir -m 777 $OUTDIR
-su postgres -c ./generate_sql.py
+su postgres -m -c ./generate_sql.py
 ./run_test $BINFOLDER $OUTDIR $TIMEOUT $CURRDIR
 ./cleanup
 
