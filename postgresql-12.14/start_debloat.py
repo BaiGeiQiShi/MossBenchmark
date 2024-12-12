@@ -124,6 +124,9 @@ for k in ks:
             os.system(f"cp /tmp/postgresql-12.14/src ./ -r") 
             print(f"chmod -R a+rw src")
             os.system(f"chmod -R a+rw src")
+            print(f"chown -R postgres:postgres src")
+            os.system(f"chown -R postgres:postgres src")
+
 
             print(f"-{CURRDIR}/path_generator/generate_cov.py", f"{CURRDIR}/pgsql/bin", COV, DOMGAD_DIR)
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", f"{CURRDIR}/pgsql/bin", COV, DOMGAD_DIR])
