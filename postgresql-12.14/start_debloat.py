@@ -109,7 +109,7 @@ for k in ks:
     for alpha in alphas:
         for beta in betas:
             print(alpha,beta)
-            os.system(f"su postgres -c ./generate_sql.py")
+            os.system(f"su postgres -m -c ./generate_sql.py")
 
             print(f"rm `sample` files in src/ folder")
             os.system("find ./src/ -name '*.sample*.c' | xargs -n 1 rm")
