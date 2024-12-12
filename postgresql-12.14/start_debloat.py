@@ -109,7 +109,7 @@ for k in ks:
     for alpha in alphas:
         for beta in betas:
             print(alpha,beta)
-            os.system(f"./generate_sql.py")
+            os.system(f"su postgres -c ./generate_sql.py")
 
             print(f"rm `sample` files in src/ folder")
             os.system("find ./src/ -name '*.sample*.c' | xargs -n 1 rm")
@@ -129,6 +129,7 @@ for k in ks:
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", f"{CURRDIR}/pgsql/bin", COV, DOMGAD_DIR])
 
             os.system(f"chmod -R 777 backend bin common config contrib doc fe_utils include includetest interfaces pgsql pl port template test timezone tools tutorial")
+            os.system(f"chown -R postgres:postgres backend bin common config contrib doc fe_utils include includetest interfaces pgsql pl port template test timezone tools tutorial")
             
             #region init envs and do some cleaning
             subprocess.run(" ".join(["rm","-rf","originscore","output.origin","inputfile","*BEST.c"]),shell=True)
