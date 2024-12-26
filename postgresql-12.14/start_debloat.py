@@ -111,6 +111,8 @@ for k in ks:
             print(alpha,beta)
             os.system(f"su postgres -m -c ./generate_sql.py")
 
+            print(f"cleanup")
+            os.system("./cleanup")
             print(f"rm `sample` files in src/ folder")
             os.system("find ./src/ -name '*.sample*.c' | xargs -n 1 rm")
             print(f"rm `origin` files in src/ folder")
