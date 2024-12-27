@@ -21,7 +21,7 @@ if [ -z ${PROG_NAME} ] || [ -z ${INPUT_SET} ]; then
 	exit 1
 fi
 
-if [ ${SIZE_UNIT} = "bin" ]; then
+if [ "${SIZE_UNIT}" = "bin" ]; then
 	SIZE_UNIT = "bin"
 else
 	SIZE_UNIT = "stmt"
@@ -47,7 +47,7 @@ fi
 
 ./compile.sh ${SRC_ORIGIN} ${BIN} ${SANITIZER} || exit 1
 GDT_ORIGIN=$(ROPgadget --binary ${BIN} | grep 'Unique gadgets' | cut -d' ' -f4)
-if [ ${SIZE_UNIT} = "bin" ]; then
+if [ "${SIZE_UNIT}" = "bin" ]; then
 	SIZE_ORIGIN=$(ls -l ${BIN} | cut -d' ' -f5)
 else
 	SIZE_ORIGIN=$(${instrumenter} -S ${SRC_ORIGIN})
