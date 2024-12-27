@@ -28,7 +28,7 @@ Output：MossBenchmark/$PROGRAM/final_out/a0.\*.b0.\*/
 Output：MossBenchmark/$PROGRAM/chisel_final_score.csv
 
 ## 3. Run Razor
-./run_razor $PROGRAM $RAZOR_TIMEOUT (eg, `./run_razor mkdir-5.2.1 5m`)
+./run_razor $PROGRAM (eg, `./run_razor mkdir-5.2.1`)
 
 Output：MossBenchmark/$PROGRAM/razor_code/reduced/a0.\*.b0.\*_(cov|covl1|covl2|covl3|covl4)/  
 
