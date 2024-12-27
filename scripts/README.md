@@ -7,7 +7,7 @@ In our experiments, Chisel and Razor can only work properly on 22 programs excep
 
 ①`feat_config` is the input folder for Chisel and Razor, storing configuration files that specify the test cases that need to be passed.
 
-②The configuration file in `filefeat_config` must conform to the following format:
+②The configuration file in `feat_config` must conform to the following format:
 
 **File Name:**  
 config_a${alpha}.b${beta}.txt (eg, `config_a0.25.b0.3.txt`)  
