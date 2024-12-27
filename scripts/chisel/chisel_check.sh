@@ -7,7 +7,7 @@
 PROG_NAME=$1
 INPUT_SET=$2
 SANITIZER="-O3 -w"
-debdce=/usr/local/debdce/build/bin/debdce
+debdce=/usr/local/Moss/debdce/build/bin/debdce
 TIMEOUT=1
 
 if [ -z ${PROG_NAME} ] || [ -z ${INPUT_SET} ]; then
