@@ -13,8 +13,8 @@ SIZE_UNIT=$5
 SANITIZER="-O3 -w"
 
 TIMEOUT=1
-debdce=/usr/local/debdce/build/bin/debdce
-instrumenter=/usr/local/Moss/CovPath/build/bin/instrumenter
+debdce=/usr/local/Moss/debdce/build/bin/debdce
+instrumenter=/usr/local/Moss/singleFile/CovPath/build/bin/instrumenter
 
 if [ -z ${PROG_NAME} ] || [ -z ${INPUT_SET} ]; then
 	echo "Missing arguments."
