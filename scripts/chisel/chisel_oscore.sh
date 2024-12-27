@@ -22,9 +22,9 @@ if [ -z ${PROG_NAME} ] || [ -z ${INPUT_SET} ]; then
 fi
 
 if [ "${SIZE_UNIT}" = "bin" ]; then
-	SIZE_UNIT = "bin"
+	SIZE_UNIT="bin"
 else
-	SIZE_UNIT = "stmt"
+	SIZE_UNIT="stmt"
 fi
 
 CURR_DIR=$(pwd)
