@@ -6,17 +6,17 @@ PROGNAME="vim-5.8"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="6h"
+TIMEOUT="4h"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=map(str,[50,])
-betas=list(map(str,[0.25,0.5,0.75]))
+betas=map(str,[0.25,0.5,0.75])
 CURRDIR=os.getcwd()
-DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
+DEBOP_DIR="/usr/local/Moss/singleFile/CovBlock_Stmt"
 DEBOP_BIN=f"{DEBOP_DIR}/build/bin/reducer"
-DOMGAD_DIR="/usr/local/Moss/CovPath"
-COV="/usr/local/cov"
+DOMGAD_DIR="/usr/local/Moss/singleFile/CovPath"
+COV="/usr/local/Moss/cov"
 LINEPRINTERBIN=f"{DOMGAD_DIR}/build/bin/instrumenter -g statement test.sh"
-SEARCHBIN=f"java -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*' edu.gatech.cc.domgad.GCovBasedMCMCSearch"
+SEARCHBIN=f"java -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*:{DOMGAD_DIR}/lib/java/commons-cli-1.5.0/*' moss.covpath.GCovBasedMCMCSearch"
 iternum=str(100000000)
 realorcov="cov"
 filter="nodeclstmt"
@@ -24,55 +24,48 @@ filter="nodeclstmt"
 def DEBOP(_rid):
     try:
         best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
-        os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
-        os.system(f"chattr -i {CURRDIR}/*")
         if(e.returncode==137):pass
         else:raise e
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{_rid}.txt", f"{CURRDIR}/log/stat.{_rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
+            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
         else:
             os.system(f"cp {CURRDIR}/COVBLOATBEST.c {CURRDIR}/DEBOPBEST.c")
 
 def BASICBLOCK(_rid):
     try:
         best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -B -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
-        os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
-        os.system(f"chattr -i {CURRDIR}/*")
         if(e.returncode==137):pass
         else:raise e
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{_rid}.txt", f"{CURRDIR}/log/stat.{_rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
+            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
         else:
             os.system(f"cp {CURRDIR}/{PROGNAME}.c.cov.origin.c {CURRDIR}/BASICBLOCKBEST.c")
 
 def COVBLOAT(_rid):
     try:
-        os.system(f"diff {PROGNAME}.c {CURRDIR}/TMCMCBEST.c");print("\n"*5)
         subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
-        os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
-        os.system(f"chattr -i {CURRDIR}/*")
         if(e.returncode==137):pass
         else:raise e
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{_rid}.txt", f"{CURRDIR}/log/stat.{_rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
+            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
         else:
             os.system(f"cp {CURRDIR}/TMCMCBEST.c {CURRDIR}/COVBLOATBEST.c")
 
 def TMCMC(alpha,beta,k):
     #make identify_path and quantify_path
-    os.system("rm -rf identify_path quantify_path moss-out.{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3")
+    os.system("rm -rf identify_path quantify_path domgad_sample_output")
     os.system("mkdir identify_path")
     for test in os.listdir(f"{CURRDIR}/tmp/bin.gcov"):
         subprocess.run(["cp",f"{CURRDIR}/tmp/bin.gcov/{test}",f"{CURRDIR}/identify_path/{test[5:].split('.')[0]}"])
@@ -88,8 +81,7 @@ def TMCMC(alpha,beta,k):
     subprocess.run(["cp",f"{CURRDIR}/getsize.sh",f"{CURRDIR}/tmp/getsize.sh"])
     subprocess.run(["cp",f"{CURRDIR}/compile.sh",f"{CURRDIR}/tmp/compile.sh"])
     rid=f"{realorcov}.{filter}.s{domgad_samplenum}.a{alpha}.b{beta}.k{k}.v3"
-    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"2",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
-    os.system(f"chattr -i {CURRDIR}/*")
+    os.system(" ".join(["timeout","-s", "9", TIMEOUT, SEARCHBIN,f"{CURRDIR}/tmp/path_counted.txt",f"{CURRDIR}/identify_path",f"{CURRDIR}/tmp/sample_output",domgad_samplenum,f"{CURRDIR}/tmp/{PROGNAME}.c",f"{CURRDIR}/tmp/line.txt",f"{CURRDIR}/tmp",PROGNAME,alpha,beta,k,quan_num,"1",f"{CURRDIR}/BaseInputs.txt"])+f">{CURRDIR}/log/{rid}.txt")
     subprocess.run(["cp","tmp/sample_output",f"{CURRDIR}/moss-out.{rid}","-r"])
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{rid}.txt", f"{CURRDIR}/log/stat.{rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{rid}.txt") as rid:
@@ -98,28 +90,24 @@ def TMCMC(alpha,beta,k):
 
 if(not os.path.isdir(f"{CURRDIR}/log")):
     os.system(f"mkdir {CURRDIR}/log")
-    
+
 for k in ks:
     for alpha in alphas:
         for beta in betas:
-            os.system(f"chattr -i {CURRDIR}/*")
-            os.system(f"chmod 755 /*")
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
-           
-            os.system(f"chmod 555 /*")
 
-#            print(beta);os.system("sleep 1")
+            subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c.bk",f"{CURRDIR}/{PROGNAME}.c.cov.origin.c"])
+            
             #region init envs and do some cleaning
             os.system(f"echo {PROGNAME}.c.origin.c {PROGNAME}.c | xargs -n 1 cp {PROGNAME}.c.{realorcov}.origin.c")
-#            subprocess.run(" ".join(["rm","-rf","output.origin","inputfile","*BEST.c"]),shell=True)
             subprocess.run(" ".join(["rm","-rf","output.origin","inputfile","*BEST.c"]),shell=True)
             # subprocess.run(["source","/etc/profile"])
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ("TMCMC","COVBLOAT"):
+                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
                     try:
 #                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
                         if(subversion=="TMCMC"):
@@ -148,5 +136,3 @@ for k in ks:
                         break
                     except subprocess.CalledProcessError as e:#error and need restart
                         print(e)
-
-            os.system(f"chmod 755 /*")
