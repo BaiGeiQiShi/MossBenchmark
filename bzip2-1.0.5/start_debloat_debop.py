@@ -3,27 +3,27 @@ import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="bzip2-1.0.5"
-version=str.upper("DEBOP")
+version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="1h"
+TIMEOUT="20m"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=list(map(str,[50,]))
 betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
 CURRDIR=os.getcwd()
-DEBOP_DIR="/usr/local/Moss/CovBlock_Stmt"
+DEBOP_DIR="/usr/local/Moss/singleFile/CovBlock_Stmt"
 DEBOP_BIN=f"{DEBOP_DIR}/build/bin/reducer"
-DOMGAD_DIR="/usr/local/Moss/CovPath"
-COV="/usr/local/cov"
+DOMGAD_DIR="/usr/local/Moss/singleFile/CovPath"
+COV="/usr/local/Moss/cov"
 LINEPRINTERBIN=f"{DOMGAD_DIR}/build/bin/instrumenter -g statement test.sh"
-SEARCHBIN=f"java -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*' edu.gatech.cc.domgad.GCovBasedMCMCSearch"
+SEARCHBIN=f"java -cp ':{DOMGAD_DIR}/build/java:{DOMGAD_DIR}/lib/java/*:{DOMGAD_DIR}/lib/java/commons-cli-1.5.0/*' moss.covpath.GCovBasedMCMCSearch"
 iternum=str(100000000)
 realorcov="cov"
 filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
         os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
         os.system(f"chattr -i {CURRDIR}/*")
@@ -103,13 +103,11 @@ for k in ks:
     for alpha in alphas:
         for beta in betas:
             os.system(f"chattr -i {CURRDIR}/*")
-            os.system(f"chmod 755 /*")
+            os.system(f"chattr +i /bin /usr/bin")
             os.system(f"{LINEPRINTERBIN} {CURRDIR}/{PROGNAME}.c.real.origin.c > {CURRDIR}/path_generator/line.txt")
             subprocess.run([f"{CURRDIR}/path_generator/generate_cov.py", PROGNAME, COV])
             subprocess.run(["cp",f"{CURRDIR}/{PROGNAME}.c.base.origin.c",f"{CURRDIR}/tmp"])
            
-            os.system(f"chmod 555 /*")
-
 #            print(beta);os.system("sleep 1")
             #region init envs and do some cleaning
             os.system(f"echo {PROGNAME}.c.origin.c {PROGNAME}.c | xargs -n 1 cp {PROGNAME}.c.{realorcov}.origin.c")
@@ -149,4 +147,4 @@ for k in ks:
                     except subprocess.CalledProcessError as e:#error and need restart
                         print(e)
 
-            os.system(f"chmod 755 /*")
+            os.system(f"chattr -i /bin /usr/bin")
