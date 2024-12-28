@@ -6,7 +6,7 @@ PROGNAME="vim-5.8"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="4h"
+TIMEOUT="6h"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=map(str,[50,])
 betas=map(str,[0.25,0.5,0.75])
@@ -51,7 +51,7 @@ def BASICBLOCK(_rid):
 
 def COVBLOAT(_rid):
     try:
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -107,7 +107,7 @@ for k in ks:
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
+                for subversion in ("COVBLOAT","DEBOP"):
                     try:
 #                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
                         if(subversion=="TMCMC"):

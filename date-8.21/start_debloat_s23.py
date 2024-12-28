@@ -6,7 +6,7 @@ PROGNAME="date-8.21"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="20m"
+TIMEOUT="30m"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=list(map(str,[50,]))
 betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
@@ -52,7 +52,7 @@ def BASICBLOCK(_rid):
 def COVBLOAT(_rid):
     try:
         os.system(f"diff {PROGNAME}.c {CURRDIR}/TMCMCBEST.c");print("\n"*5)
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.txt -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e

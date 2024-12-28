@@ -6,7 +6,7 @@ PROGNAME="vim-5.8"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="4h"
+TIMEOUT="6h"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=map(str,[50,])
 betas=map(str,[0.25,0.5,0.75])
@@ -107,7 +107,7 @@ for k in ks:
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
+                for subversion in ("TMCMC","COVBLOAT"):
                     try:
 #                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
                         if(subversion=="TMCMC"):

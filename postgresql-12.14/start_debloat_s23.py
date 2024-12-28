@@ -7,8 +7,8 @@ PROGNAME="psql"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TMCMC_TIMEOUT="4h"
-TIMEOUT="4h"
+TMCMC_TIMEOUT="6h"
+TIMEOUT="6h"
 #alphas=list(map(str,[0.25,0.5,0.75]))
 alphas=[sys.argv[1]]
 ks=list(map(str,[50,]))
@@ -55,7 +55,7 @@ def DEBOP(_rid):
 def COVBLOAT(_rid):
     os.system("rm originscore")
     try:
-        print(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.json -T TMCMCBEST -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt")
+        print(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.json -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt")
         subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -v -F ./Cov_info.json -T TMCMCBEST -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
@@ -143,7 +143,7 @@ for k in ks:
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ["TMCMC","COVBLOAT","DEBOP"]:
+                for subversion in ["COVBLOAT","DEBOP"]:
                     try:
                         if(subversion=="TMCMC"):
                             eval(subversion)(alpha,beta,k)

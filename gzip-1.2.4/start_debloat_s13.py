@@ -6,7 +6,7 @@ PROGNAME="gzip-1.2.4"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="20m"
+TIMEOUT="30m"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=list(map(str,[50,]))
 betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))
@@ -23,7 +23,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
         os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
         os.system(f"chattr -i {CURRDIR}/*")
@@ -117,7 +117,7 @@ for k in ks:
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
+                for subversion in ("TMCMC","DEBOP"):
                     try:
 #                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
                         if(subversion=="TMCMC"):

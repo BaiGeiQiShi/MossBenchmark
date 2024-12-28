@@ -3,10 +3,10 @@ import subprocess,os
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="grep-2.19"
-version=str.upper("MOSS")
+version=str.upper("DEBOP")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="20m"
+TIMEOUT="1h"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=list(map(str,[50,]))
 betas=list(map(str,[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]))

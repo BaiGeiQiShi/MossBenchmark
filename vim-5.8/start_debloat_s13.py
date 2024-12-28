@@ -6,7 +6,7 @@ PROGNAME="vim-5.8"
 version=str.upper("MOSS")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
-TIMEOUT="4h"
+TIMEOUT="6h"
 alphas=list(map(str,[0.25,0.5,0.75]))
 ks=map(str,[50,])
 betas=map(str,[0.25,0.5,0.75])
@@ -23,7 +23,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -44,7 +44,7 @@ def BASICBLOCK(_rid):
     subprocess.run(["/usr/local/bin/getLog.py",f"{CURRDIR}/log/{_rid}.txt", f"{CURRDIR}/log/stat.{_rid}.txt"])
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
-        if(best[0]!="-1"):
+.        if(best[0]!="-1"):
             os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
         else:
             os.system(f"cp {CURRDIR}/{PROGNAME}.c.cov.origin.c {CURRDIR}/BASICBLOCKBEST.c")
@@ -107,7 +107,7 @@ for k in ks:
             #endregion init envs and do some cleaning
 
             if(version=="MOSS"):
-                for subversion in ("TMCMC","COVBLOAT","DEBOP"):
+                for subversion in ("TMCMC","DEBOP"):
                     try:
 #                        os.system(f"echo {alpha} {beta} {subversion} >>check.txt")
                         if(subversion=="TMCMC"):
