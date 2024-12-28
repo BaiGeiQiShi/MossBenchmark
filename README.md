@@ -74,3 +74,6 @@ Use "/postgresql-12.14" (absolute path) as working directory, or you need to cha
 - `COV`: The path of cov.
 - `iternum`: The iteration number of each stage of Moss.
 - `realorcov`: Use real or top program as the baseline.
+
+## 3. To run Chisel and Razor:
+Please refer to [here](./scripts/README.md).
