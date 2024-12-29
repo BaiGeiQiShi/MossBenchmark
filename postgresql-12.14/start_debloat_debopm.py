@@ -4,11 +4,11 @@ import json
 #region ENVSandARGS
 METHOD={"DEBOP":0,"BASICBLOCK":1,"COVBLOAT":2,"TMCMC":3,"MOSS":4}
 PROGNAME="psql"
-version=str.upper("MOSS")
+version=str.upper("DEBOP")
 debop_samplenum=str(100000)
 domgad_samplenum=str(100000)
 TMCMC_TIMEOUT="4h"
-TIMEOUT="4h"
+TIMEOUT="12h"
 #alphas=list(map(str,[0.25,0.5,0.75]))
 alphas=[sys.argv[1]]
 ks=list(map(str,[50,]))
@@ -46,7 +46,7 @@ def BESTTEMP_builder(stage, sampleid):
 def DEBOP(_rid):
     os.system("rm originscore")
     try:
-        subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.json -T COVBLOATBEST -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
+        subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -I HasBaseInputs.txt -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
         os.system(f"sort -k 8 {CURRDIR}/moss-out.{_rid}/Simplifiedlog.txt -nrb | head -n 1 > log/stat.{_rid}.txt && cat {CURRDIR}/moss-out.{_rid}/Simplifiedlog.txt >> log/stat.{_rid}.txt && awk -F'\t' '{{print $2\"\\t\"$3\"\\t\"$4\"\\t\"$5\"\\t\"$6\"\\t\"$7\"\\t\"$8}}' log/stat.{_rid}.txt > log/temp && mv log/temp log/stat.{_rid}.txt")
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass

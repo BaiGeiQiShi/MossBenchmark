@@ -23,7 +23,7 @@ filter="nodeclstmt"
 #endregion ENVSandARGS
 def DEBOP(_rid):
     try:
-        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        best=subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T COVBLOATBEST.c -I HasBaseInputs.txt -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
         os.system(f"chattr -i {CURRDIR}/*")
     except subprocess.CalledProcessError as e:
         os.system(f"chattr -i {CURRDIR}/*")

@@ -46,7 +46,7 @@ def BESTTEMP_builder(stage, sampleid):
 def DEBOP(_rid):
     os.system("rm originscore")
     try:
-        subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.json -T COVBLOATBEST -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
+        subprocess.check_output(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.json -T COVBLOATBEST -I HasBaseInputs.txt -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
         os.system(f"sort -k 8 {CURRDIR}/moss-out.{_rid}/Simplifiedlog.txt -nrb | head -n 1 > log/stat.{_rid}.txt && cat {CURRDIR}/moss-out.{_rid}/Simplifiedlog.txt >> log/stat.{_rid}.txt && awk -F'\t' '{{print $2\"\\t\"$3\"\\t\"$4\"\\t\"$5\"\\t\"$6\"\\t\"$7\"\\t\"$8}}' log/stat.{_rid}.txt > log/temp && mv log/temp log/stat.{_rid}.txt")
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
@@ -55,8 +55,8 @@ def DEBOP(_rid):
 def COVBLOAT(_rid):
     os.system("rm originscore")
     try:
-        print(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.json -T TMCMCBEST -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt")
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -v -F ./Cov_info.json -T TMCMCBEST -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
+        print(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F ./Cov_info.json -T TMCMCBEST -I HasBaseInputs.txt -m {debop_samplenum} -i {iternum} -t {CURRDIR}/moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt")
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -v -F ./Cov_info.json -T TMCMCBEST -I HasBaseInputs.txt -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -P {CURRDIR}/programlist -s ./test.sh --build -- make > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
@@ -87,8 +87,8 @@ def TMCMC(alpha,beta,k):
     os.system(f"echo {quan_num} > {CURRDIR}/tmp/quan_num.txt")
 
 
-    print(f"timeout -s 9 {TMCMC_TIMEOUT} {SEARCHBIN} -t {CURRDIR}/tmp/path_counted.txt -i {CURRDIR}/identify_path -s {CURRDIR}/tmp/sample_output -I {iternum} -m {domgad_samplenum} -F {CURRDIR}/programlist -L {CURRDIR}/lines -p {CURRDIR} -n {PROGNAME} -r {alpha} -w  {beta} -k {k} -q {quan_num} -S 2 &>{CURRDIR}/log/{rid}.txt")
-    os.system(f"timeout -s 9 {TIMEOUT} {SEARCHBIN} -t {CURRDIR}/tmp/path_counted.txt -i {CURRDIR}/identify_path -s {CURRDIR}/tmp/sample_output -I {iternum} -m {domgad_samplenum} -F {CURRDIR}/programlist -L {CURRDIR}/lines -p {CURRDIR} -n {PROGNAME} -r {alpha} -w  {beta} -k {k} -q {quan_num} -S 2 >{CURRDIR}/log/{rid}.txt")
+    print(f"timeout -s 9 {TMCMC_TIMEOUT} {SEARCHBIN} -t {CURRDIR}/tmp/path_counted.txt -i {CURRDIR}/identify_path -s {CURRDIR}/tmp/sample_output -I {iternum} -m {domgad_samplenum} -F {CURRDIR}/programlist -L {CURRDIR}/lines -p {CURRDIR} -n {PROGNAME} -r {alpha} -w  {beta} -k {k} -q {quan_num} -B HasBaseInputs.txt -S 2 &>{CURRDIR}/log/{rid}.txt")
+    os.system(f"timeout -s 9 {TIMEOUT} {SEARCHBIN} -t {CURRDIR}/tmp/path_counted.txt -i {CURRDIR}/identify_path -s {CURRDIR}/tmp/sample_output -I {iternum} -m {domgad_samplenum} -F {CURRDIR}/programlist -L {CURRDIR}/lines -p {CURRDIR} -n {PROGNAME} -r {alpha} -w  {beta} -k {k} -q {quan_num} -B HasBaseInputs.txt -S 2 >{CURRDIR}/log/{rid}.txt")
     
     time.sleep(2) # wait for sample_output
     subprocess.run(["cp",f"{CURRDIR}/tmp/sample_output",f"{CURRDIR}/moss-out.{rid}","-r"])
