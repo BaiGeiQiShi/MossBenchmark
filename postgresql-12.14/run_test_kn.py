@@ -31,6 +31,7 @@ UsedTime = Manager().dict()
 def DoTestcase(args):
     testcase, UsedTime, lock=args
     os.system('ps -ef | awk \'$1 == "postgres" {print $2}\' | xargs -n 1 kill -s 9')
+    os.system("rm -rf /tmp/.s.PGSQL.5432*")
 
     os.mkdir("%s/tmp/%s"%(CURRDIR,testcase), mode=0o777)
     os.chmod("%s/tmp/%s"%(CURRDIR,testcase),511)
