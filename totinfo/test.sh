@@ -31,7 +31,7 @@ echo "-1" >> eval_rslt.txt
 echo "-1" >> eval_rslt.txt
 echo "-1" >> eval_rslt.txt
 
-if [ ! -f ${BASE_BIN} ]; then
+if [ -f "${BASE_SRC}" ] && [ ! -f "${BASE_BIN}" ]; then
    cp ${BASE_SRC} $SRC
    ./compile.sh $SRC $BASE_BIN "-O3 -w -lm"
 fi
