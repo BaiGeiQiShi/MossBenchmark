@@ -1,3 +1,18 @@
-#!/bin/bash -x
+#!/bin/bash
+  
+# Log processes before cleanup for debugging
+echo "--- cleanup start at $(date) ---" >> /MossBenchmark/vim-5.8/cleanup.log
+ps -eo pid,ppid,comm,cmd | grep 'vim-5.8$' >> /MossBenchmark/vim-5.8/cleanup.log
 
-ps -ef | grep vim-5.8 | awk -F' ' '{print $2}' | xargs -n 4 kill -9 &>/dev/null
+# Find vim-5.8 processes with PPID=1 (orphaned processes)
+pids=$(ps -eo pid,ppid,comm | grep 'vim-5.8$' | grep '^ *[0-9]\+ \+1 \+' | awk '{print $1}' | xargs)
+
+# Kill matching processes
+if [ -n "$pids" ]; then
+    echo "Killing vim-5.8 PIDs: $pids" >> /MossBenchmark/vim-5.8/cleanup.log
+    kill -9 $pids &>/dev/null
+fi
+
+# Log processes after cleanup
+ps -eo pid,ppid,comm,cmd | grep 'vim-5.8$' >> /MossBenchmark/vim-5.8/cleanup.log
+echo "--- cleanup end ---" >> /MossBenchmark/vim-5.8/cleanup.log
