@@ -69,7 +69,7 @@ rm -rf debdcetmp
 
 
 #Compile Reduced Program
-./compile.sh $SRC $BIN "-w -O3 -D__msan_unpoison(s,z) -lpcre"
+./compile.sh $SRC $BIN "-w -O3 -D__msan_unpoison(s,z) -lpcre" || exit 1
 
 #Compute Size Reduction
 #original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))

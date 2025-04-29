@@ -69,7 +69,7 @@ rm -rf debdcetmp
 
 
 #Compile Reduced Program
-./compile.sh $SRC $BIN "-O3 -w -lm"
+./compile.sh $SRC $BIN "-O3 -w -lm" || exit 1
 
 #Compute Size Reduction
 #original_size=$(($(ls -l ${ORIGIN_BIN} | cut -d' ' -f5)-$(ls -l ${BASE_BIN} | cut -d' ' -f5)))

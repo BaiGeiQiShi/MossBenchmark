@@ -67,8 +67,8 @@ done < programlist
 
 #find $CURRDIR/src -name "*.o" | xargs -n 1 rm 
 chown -R "postgres" $CURRDIR/src
-su postgres -m -c "make > /dev/null"
-su postgres -m -c "make install > /dev/null"
+su postgres -m -c "make > /dev/null" || exit 1
+su postgres -m -c "make install > /dev/null" || exit 1
 reduced_size=$(du -s $BINFOLDER | cut -f 1)
 reduced_gdt=$(calculate_ar_sum)
 
