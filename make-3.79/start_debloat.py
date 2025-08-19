@@ -52,7 +52,7 @@ def BASICBLOCK(_rid):
 def COVBLOAT(_rid):
     try:
         os.system(f"diff {PROGNAME}.c {CURRDIR}/TMCMCBEST.c");print("\n"*5)
-        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -M Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
+        subprocess.run(f"timeout -s 9 {TIMEOUT} {DEBOP_BIN} -F Cov_info.txt -T TMCMCBEST.c -m {debop_samplenum} -i {iternum} -t moss-out.{_rid} -a {alpha} -e {beta} -k {k} -s ./test.sh {PROGNAME}.c > log/{_rid}.txt",shell=True)
     except subprocess.CalledProcessError as e:
         if(e.returncode==137):pass
         else:raise e
