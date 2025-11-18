@@ -10,7 +10,7 @@ except Exception as e:
     print(f"Error when parsing argv:{sys.argv[1:]}")
     exit()
 
-capture_path="debop-out/capture.txt"
+capture_path="moss-out/capture.txt"
 if("-t " in OPTION):
     capture_path = OPTION[OPTION.index("-t ")+3:].split()[0]+"/capture.txt"
 

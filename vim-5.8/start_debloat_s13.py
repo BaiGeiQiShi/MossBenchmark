@@ -31,7 +31,7 @@ def DEBOP(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/DEBOPBEST.c")
         else:
             os.system(f"cp {CURRDIR}/COVBLOATBEST.c {CURRDIR}/DEBOPBEST.c")
 
@@ -45,7 +45,7 @@ def BASICBLOCK(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
 .        if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/BASICBLOCKBEST.c")
         else:
             os.system(f"cp {CURRDIR}/{PROGNAME}.c.cov.origin.c {CURRDIR}/BASICBLOCKBEST.c")
 
@@ -59,7 +59,7 @@ def COVBLOAT(_rid):
     with open(f"{CURRDIR}/log/stat.{_rid}.txt") as rid:
         best=rid.readline().split()
         if(best[0]!="-1"):
-            os.system(f"cp {CURRDIR}/debop-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
+            os.system(f"cp {CURRDIR}/moss-out.{_rid}/{PROGNAME}.c.sample{best[0]}.c {CURRDIR}/COVBLOATBEST.c")
         else:
             os.system(f"cp {CURRDIR}/TMCMCBEST.c {CURRDIR}/COVBLOATBEST.c")
 
